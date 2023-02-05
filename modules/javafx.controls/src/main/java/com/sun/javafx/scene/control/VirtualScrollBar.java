@@ -131,8 +131,8 @@ public class VirtualScrollBar extends ScrollBar {
             double oldValue = flow.getPosition();
             double newValue = ((getMax() - getMin()) * Utils.clamp(0, pos, 1)) + getMin();
             /**
-             * JDK-8173321: Click on trough has no effect when cell height > viewport height:
-             * Solution: Scroll one cell further up resp. down if only one cell is shown.
+             * Scroll one cell further in the direction the user has clicked if only one cell is shown.
+             * Otherwise, a click on the trough would have no effect when cell height > viewport height.
              */
             IndexedCell firstVisibleCell = flow.getFirstVisibleCell();
             IndexedCell lastVisibleCell = flow.getLastVisibleCell();
@@ -147,13 +147,15 @@ public class VirtualScrollBar extends ScrollBar {
             } else {
                 if (newValue < oldValue) {
                     IndexedCell cell = firstVisibleCell;
-                    if (cell == null)
+                    if (cell == null) {
                         return;
+                    }
                     flow.scrollToBottom(cell);
                 } else if (newValue > oldValue) {
                     IndexedCell cell = lastVisibleCell;
-                    if (cell == null)
+                    if (cell == null) {
                         return;
+                    }
                     flow.scrollToTop(cell);
                 }
             }

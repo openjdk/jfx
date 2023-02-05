@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,41 +82,22 @@ public class TableViewClickOnTroughTest {
         ScrollBar verticalBar = (ScrollBar) table.lookup(".scroll-bar:vertical");
         StackPane thumb = (StackPane) verticalBar.getChildrenUnmodifiable().stream()
                 .filter(c -> c.getStyleClass().contains("thumb")).findFirst().orElse(null);
-        StackPane trackBackground = (StackPane) verticalBar.getChildrenUnmodifiable().stream()
-                .filter(c -> c.getStyleClass().contains("track-background")).findFirst().orElse(null);
         Bounds verticalBarBoundsInScreen = verticalBar.localToScreen(verticalBar.getBoundsInLocal());
         Bounds thumbBoundsInScreen = thumb.localToScreen(thumb.getBoundsInLocal());
         double posX = verticalBarBoundsInScreen.getCenterX();
-        // set posY to point into the middle of the area of the verticalBar under the thumb.
-        double posY = verticalBarBoundsInScreen.getMaxY() - ((verticalBarBoundsInScreen.getMaxY()-thumbBoundsInScreen.getMaxY())/2.0);
+        // set posY to point into the middle of the area of the verticalBar under the
+        // thumb.
+        double posY = verticalBarBoundsInScreen.getMaxY()
+                - ((verticalBarBoundsInScreen.getMaxY() - thumbBoundsInScreen.getMaxY()) / 2.0);
         double oldPosition = verticalBar.getValue();
 
-        // Wait a second for the bar to be moved
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e1) {
-            e1.printStackTrace();
-        }
-        double tableRowHeight = tableRow.getHeight();
-        CountDownLatch latch = new CountDownLatch(1);
-        Platform.runLater(() -> {
+        Util.runAndWait(() -> {
             robot.mouseMove((int) posX, (int) posY);
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
-            latch.countDown();
         });
-        Util.waitForLatch(latch, 5, "Timeout while waiting for mouse click");
-        try {
-            Thread.sleep(1000); // Delay for table moving Scrollbar
-        } catch (Exception e) {
-            Assert.fail("Thread was interrupted." + e);
-        }
+        Util.sleep(1000); // Delay for table moving Scrollbar
         double newPosition = verticalBar.getValue();
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e1) {
-            e1.printStackTrace();
-        }
         Assert.assertTrue("moveTroughTest failed", oldPosition != newPosition);
     }
 
