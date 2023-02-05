@@ -146,6 +146,17 @@ public interface ObservableValue<T> extends Observable {
     T getValue();
 
     /**
+     * Checks if this {@code ObservableValue} is currently observed. If unknown or
+     * unsupported, {@code true} is returned.
+     *
+     * @return {@code true} if this ObservableValue currently has one or more
+     *     listeners registered on it, otherwise {@code false}
+     */
+    default boolean isObserved() {
+        return true;
+    }
+
+    /**
      * Returns an {@code ObservableValue} that holds the result of applying the
      * given mapping function on this value. The result is updated when this
      * {@code ObservableValue} changes. If this value is {@code null}, no

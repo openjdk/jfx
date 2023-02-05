@@ -54,7 +54,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, this::observed);
     }
 
     /**
@@ -62,7 +62,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, this::observed);
     }
 
     /**
@@ -70,7 +70,14 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        ExpressionHelper<T> newHelper = ExpressionHelper.removeListener(helper, listener);
+        boolean unobserved = newHelper == null && helper != null;
+
+        helper = newHelper;
+
+        if (unobserved) {
+            unobserved();  // when called, isObserved should already be returning false
+        }
     }
 
     /**
@@ -78,7 +85,31 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        ExpressionHelper<T> newHelper = ExpressionHelper.removeListener(helper, listener);
+        boolean unobserved = newHelper == null && helper != null;
+
+        helper = newHelper;
+
+        if (unobserved) {
+            unobserved();  // when called, isObserved should already be returning false
+        }
+    }
+
+    @Override
+    public final boolean isObserved() {
+        return helper != null;
+    }
+
+    /**
+     * Called immediately before this observable transitions from unobserved to observed.
+     */
+    protected void observed() {
+    }
+
+    /**
+     * Called immediately after this observable transitions from observed to unobserved.
+     */
+    protected void unobserved() {
     }
 
     /**

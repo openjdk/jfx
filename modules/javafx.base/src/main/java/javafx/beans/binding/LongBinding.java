@@ -81,7 +81,7 @@ public abstract class LongBinding extends LongExpression implements
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, this::observed);
     }
 
     @Override
@@ -91,12 +91,29 @@ public abstract class LongBinding extends LongExpression implements
 
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, this::observed);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
+    }
+
+    @Override
+    public final boolean isObserved() {
+        return helper != null;
+    }
+
+    /**
+     * Called immediately before this observable transitions from unobserved to observed.
+     */
+    protected void observed() {
+    }
+
+    /**
+     * Called immediately after this observable transitions from observed to unobserved.
+     */
+    protected void unobserved() {
     }
 
     /**

@@ -211,7 +211,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
      */
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
     }
 
     /**
@@ -227,7 +227,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
     }
 
     /**
@@ -253,6 +253,11 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
     public void dispose() {
         descriptor.removeListener(listener);
 
+    }
+
+    @Override
+    public boolean isObserved() {
+        return helper != null;
     }
 
     /**

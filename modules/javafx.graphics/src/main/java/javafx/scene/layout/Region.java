@@ -913,34 +913,17 @@ public class Region extends Parent {
     private final InsetsProperty insets = new InsetsProperty();
     public final Insets getInsets() { return insets.get(); }
     public final ReadOnlyObjectProperty<Insets> insetsProperty() { return insets; }
-    private final class InsetsProperty extends ReadOnlyObjectProperty<Insets> {
+    private final class InsetsProperty extends ReadOnlyObjectPropertyBase<Insets> {
         private Insets cache = null;
-        private ExpressionHelper<Insets> helper = null;
 
         @Override public Object getBean() { return Region.this; }
         @Override public String getName() { return "insets"; }
-
-        @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override public void addListener(ChangeListener<? super Insets> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(ChangeListener<? super Insets> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         void fireValueChanged() {
             cache = null;
             updateSnappedInsets();
             requestLayout();
-            ExpressionHelper.fireValueChangedEvent(helper);
+            fireValueChangedEvent();
         }
 
         @Override public Insets get() {

@@ -62,7 +62,7 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
 
     @Override
     protected T computeValue() {
-        if (isObserved() && isActive()) {
+        if (isSubscribed() && isActive()) {
             if (subscription == null) {
                 subscription = Subscription.subscribeInvalidations(source, this::invalidate);
             }

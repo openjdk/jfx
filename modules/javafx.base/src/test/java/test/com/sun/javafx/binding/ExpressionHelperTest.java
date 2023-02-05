@@ -71,12 +71,12 @@ public class ExpressionHelperTest {
 
     @Test (expected = NullPointerException.class)
     public void testAddInvalidation_Null_X() {
-        ExpressionHelper.addListener(helper, null, invalidationListener[0]);
+        ExpressionHelper.addListener(helper, null, invalidationListener[0], () -> {});
     }
 
     @Test (expected = NullPointerException.class)
     public void testAddInvalidation_X_Null() {
-        ExpressionHelper.addListener(helper, observable, (InvalidationListener) null);
+        ExpressionHelper.addListener(helper, observable, (InvalidationListener) null, () -> {});
     }
 
     @Test (expected = NullPointerException.class)
@@ -86,12 +86,12 @@ public class ExpressionHelperTest {
 
     @Test (expected = NullPointerException.class)
     public void testAddChange_Null_X() {
-        ExpressionHelper.addListener(helper, null, changeListener[0]);
+        ExpressionHelper.addListener(helper, null, changeListener[0], () -> {});
     }
 
     @Test (expected = NullPointerException.class)
     public void testAddChange_X_Null() {
-        ExpressionHelper.addListener(helper, observable, (ChangeListener) null);
+        ExpressionHelper.addListener(helper, observable, (ChangeListener) null, () -> {});
     }
 
     @Test (expected = NullPointerException.class)
@@ -109,7 +109,7 @@ public class ExpressionHelperTest {
 
     @Test
     public void testSingeInvalidation() {
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
 
@@ -123,7 +123,7 @@ public class ExpressionHelperTest {
         invalidationListener[0].check(observable, 1);
         changeListener[1].check(null, UNDEFINED, UNDEFINED, 0);
 
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1], () -> {});
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
         invalidationListener[1].check(observable, 1);
@@ -133,7 +133,7 @@ public class ExpressionHelperTest {
         invalidationListener[0].check(observable, 1);
         invalidationListener[1].check(null, 0);
 
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[1], () -> {});
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
@@ -152,7 +152,7 @@ public class ExpressionHelperTest {
 
     @Test
     public void testSingeChange() {
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
         changeListener[0].check(observable, DATA_1, DATA_2, 1);
@@ -169,7 +169,7 @@ public class ExpressionHelperTest {
         changeListener[0].check(observable, DATA_1, DATA_2, 1);
         changeListener[1].check(null, UNDEFINED, UNDEFINED, 0);
 
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1], () -> {});
         observable.set(DATA_1);
         ExpressionHelper.fireValueChangedEvent(helper);
         changeListener[0].check(observable, DATA_2, DATA_1, 1);
@@ -181,7 +181,7 @@ public class ExpressionHelperTest {
         changeListener[0].check(observable, DATA_1, DATA_2, 1);
         invalidationListener[1].check(null, 0);
 
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[1], () -> {});
         observable.set(DATA_1);
         ExpressionHelper.fireValueChangedEvent(helper);
         changeListener[0].check(observable, DATA_2, DATA_1, 1);
@@ -202,22 +202,22 @@ public class ExpressionHelperTest {
     public void testAddInvalidation() {
         final InvalidationListener weakListener = new WeakInvalidationListenerMock();
 
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[1], () -> {});
 
-        helper = ExpressionHelper.addListener(helper, observable, weakListener);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, weakListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
 
-        helper = ExpressionHelper.addListener(helper, observable, weakListener);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, weakListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1], () -> {});
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
         invalidationListener[1].check(observable, 1);
 
-        helper = ExpressionHelper.addListener(helper, observable, weakListener);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[2]);
+        helper = ExpressionHelper.addListener(helper, observable, weakListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[2], () -> {});
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
         invalidationListener[1].check(observable, 1);
@@ -226,17 +226,17 @@ public class ExpressionHelperTest {
 
     @Test
     public void testRemoveInvalidation() {
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[1], () -> {});
 
         helper = ExpressionHelper.removeListener(helper, invalidationListener[1]);
 
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
 
         helper = ExpressionHelper.removeListener(helper, invalidationListener[1]);
 
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[2]);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[2], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1], () -> {});
 
         helper = ExpressionHelper.removeListener(helper, invalidationListener[0]);
         ExpressionHelper.fireValueChangedEvent(helper);
@@ -263,12 +263,12 @@ public class ExpressionHelperTest {
             int index = 0;
             @Override public void changed(ObservableValue observable, Object oldValue, Object newValue) {
                 if (index < invalidationListener.length) {
-                    helper = ExpressionHelper.addListener(helper, ExpressionHelperTest.this.observable, invalidationListener[index++]);
+                    helper = ExpressionHelper.addListener(helper, ExpressionHelperTest.this.observable, invalidationListener[index++], () -> {});
                 }
             }
         };
-        helper = ExpressionHelper.addListener(helper, observable, addingListener);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, addingListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
 
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
@@ -310,11 +310,11 @@ public class ExpressionHelperTest {
                 }
             }
         };
-        helper = ExpressionHelper.addListener(helper, observable, removingListener);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[2]);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, removingListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[2], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1], () -> {});
 
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
@@ -345,24 +345,24 @@ public class ExpressionHelperTest {
     public void testAddChange() {
         final ChangeListener<Object> weakListener = new WeakChangeListenerMock();
 
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1], () -> {});
 
-        helper = ExpressionHelper.addListener(helper, observable, weakListener);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, weakListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
         changeListener[0].check(observable, DATA_1, DATA_2, 1);
 
-        helper = ExpressionHelper.addListener(helper, observable, weakListener);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, weakListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[1], () -> {});
         observable.set(DATA_1);
         ExpressionHelper.fireValueChangedEvent(helper);
         changeListener[0].check(observable, DATA_2, DATA_1, 1);
         changeListener[1].check(observable, DATA_2, DATA_1, 1);
 
-        helper = ExpressionHelper.addListener(helper, observable, weakListener);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[2]);
+        helper = ExpressionHelper.addListener(helper, observable, weakListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[2], () -> {});
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
         changeListener[0].check(observable, DATA_1, DATA_2, 1);
@@ -372,17 +372,17 @@ public class ExpressionHelperTest {
 
     @Test
     public void testRemoveChange() {
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[1], () -> {});
 
         helper = ExpressionHelper.removeListener(helper, changeListener[1]);
 
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
 
         helper = ExpressionHelper.removeListener(helper, changeListener[1]);
 
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[2]);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[2], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[1], () -> {});
 
         helper = ExpressionHelper.removeListener(helper, changeListener[0]);
         observable.set(DATA_2);
@@ -412,12 +412,12 @@ public class ExpressionHelperTest {
             int index = 0;
             @Override public void invalidated(Observable observable) {
                 if (index < invalidationListener.length) {
-                    helper = ExpressionHelper.addListener(helper, ExpressionHelperTest.this.observable, changeListener[index++]);
+                    helper = ExpressionHelper.addListener(helper, ExpressionHelperTest.this.observable, changeListener[index++], () -> {});
                 }
             }
         };
-        helper = ExpressionHelper.addListener(helper, observable, addingListener);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, addingListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
 
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
@@ -459,11 +459,11 @@ public class ExpressionHelperTest {
                 }
             }
         };
-        helper = ExpressionHelper.addListener(helper, observable, removingListener);
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[2]);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[1]);
+        helper = ExpressionHelper.addListener(helper, observable, removingListener, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[2], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[1], () -> {});
 
         observable.set(DATA_2);
         ExpressionHelper.fireValueChangedEvent(helper);
@@ -492,8 +492,8 @@ public class ExpressionHelperTest {
 
     @Test
     public void testFireValueChangedEvent() {
-        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
-        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0], () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0], () -> {});
 
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
@@ -520,7 +520,7 @@ public class ExpressionHelperTest {
 
     @Test
     public void testExceptionNotPropagatedFromSingleInvalidation() {
-        helper = ExpressionHelper.addListener(helper, observable,(o) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable,(o) -> {throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
     }
@@ -529,8 +529,8 @@ public class ExpressionHelperTest {
     public void testExceptionNotPropagatedFromMultipleInvalidation() {
         BitSet called = new BitSet();
 
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(0); throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(1); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(0); throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(1); throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 
@@ -540,7 +540,7 @@ public class ExpressionHelperTest {
 
     @Test
     public void testExceptionNotPropagatedFromSingleChange() {
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
     }
@@ -549,8 +549,8 @@ public class ExpressionHelperTest {
     public void testExceptionNotPropagatedFromMultipleChange() {
         BitSet called = new BitSet();
 
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 
@@ -562,10 +562,10 @@ public class ExpressionHelperTest {
     public void testExceptionNotPropagatedFromMultipleChangeAndInvalidation() {
         BitSet called = new BitSet();
 
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(2); throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(3); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(2); throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(3); throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 
@@ -581,7 +581,7 @@ public class ExpressionHelperTest {
 
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.set(true));
 
-        helper = ExpressionHelper.addListener(helper, observable,(o) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable,(o) -> {throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 
@@ -595,8 +595,8 @@ public class ExpressionHelperTest {
 
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
 
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 
@@ -608,7 +608,7 @@ public class ExpressionHelperTest {
         AtomicBoolean called = new AtomicBoolean(false);
 
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.set(true));
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 
@@ -621,8 +621,8 @@ public class ExpressionHelperTest {
 
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
 
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 
@@ -635,10 +635,10 @@ public class ExpressionHelperTest {
 
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
 
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> { throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> { throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> { throw new RuntimeException();});
-        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> { throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> { throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> { throw new RuntimeException();}, () -> {});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();}, () -> {});
         observable.set(null);
         ExpressionHelperShim.fireValueChangedEvent(helper);
 

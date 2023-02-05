@@ -311,7 +311,7 @@ public class TextArea extends TextInputControl {
         }
 
         @Override public void addListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.addListener(helper, this, changeListener);
+            helper = ExpressionHelper.addListener(helper, this, changeListener, () -> {});
         }
 
         @Override public void removeListener(ChangeListener<? super String> changeListener) {
@@ -323,11 +323,16 @@ public class TextArea extends TextInputControl {
         }
 
         @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+            helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
         }
 
         @Override public void removeListener(InvalidationListener listener) {
             helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override
+        public boolean isObserved() {
+            return helper != null;
         }
 
         private void fireParagraphListChangeEvent(int from, int to, List<CharSequence> removed) {

@@ -46,12 +46,20 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Static methods
 
-    public static <T> ExpressionHelper<T> addListener(ExpressionHelper<T> helper, ObservableValue<T> observable, InvalidationListener listener) {
+    public static <T> ExpressionHelper<T> addListener(ExpressionHelper<T> helper, ObservableValue<T> observable, InvalidationListener listener, Runnable observed) {
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
+
         observable.getValue(); // validate observable
-        return (helper == null)? new SingleInvalidation<>(observable, listener) : helper.addListener(listener);
+
+        if (helper == null) {
+            observed.run();
+
+            return new SingleInvalidation<>(observable, listener);
+        }
+
+        return helper.addListener(listener);
     }
 
     public static <T> ExpressionHelper<T> removeListener(ExpressionHelper<T> helper, InvalidationListener listener) {
@@ -61,11 +69,18 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         return (helper == null)? null : helper.removeListener(listener);
     }
 
-    public static <T> ExpressionHelper<T> addListener(ExpressionHelper<T> helper, ObservableValue<T> observable, ChangeListener<? super T> listener) {
+    public static <T> ExpressionHelper<T> addListener(ExpressionHelper<T> helper, ObservableValue<T> observable, ChangeListener<? super T> listener, Runnable observed) {
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleChange<>(observable, listener) : helper.addListener(listener);
+
+        if (helper == null) {
+            observed.run();
+
+            return new SingleChange<>(observable, listener);
+        }
+
+        return helper.addListener(listener);
     }
 
     public static <T> ExpressionHelper<T> removeListener(ExpressionHelper<T> helper, ChangeListener<? super T> listener) {

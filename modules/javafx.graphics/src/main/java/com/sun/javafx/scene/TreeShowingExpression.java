@@ -25,9 +25,7 @@
 
 package com.sun.javafx.scene;
 
-import com.sun.javafx.binding.ExpressionHelper;
-import javafx.beans.InvalidationListener;
-import javafx.beans.binding.BooleanExpression;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -41,15 +39,13 @@ import javafx.stage.Window;
  * This class provides the exact same functionality as {@link NodeHelper#isTreeShowing(Node)} in
  * an observable form.
  */
-public class TreeShowingExpression extends BooleanExpression {
+public class TreeShowingExpression extends BooleanBinding {
     private final ChangeListener<Boolean> windowShowingChangedListener = (obs, old, current) -> updateTreeShowing();
     private final ChangeListener<Window> sceneWindowChangedListener = (obs, old, current) -> windowChanged(old, current);
     private final ChangeListener<Scene> nodeSceneChangedListener = (obs, old, current) -> sceneChanged(old, current);
 
     private final Node node;
 
-    private ExpressionHelper<Boolean> helper;
-    private boolean valid;
     private boolean treeShowing;
 
     /**
@@ -70,50 +66,13 @@ public class TreeShowingExpression extends BooleanExpression {
      * Cleans up any listeners that this class may have registered on the {@link Node}
      * that was supplied at construction.
      */
+    @Override
     public void dispose() {
         node.sceneProperty().removeListener(nodeSceneChangedListener);
 
         NodeHelper.treeVisibleProperty(node).removeListener(windowShowingChangedListener);
 
-        valid = false;  // prevents unregistration from triggering an invalidation notification
         sceneChanged(node.getScene(), null);
-    }
-
-    @Override
-    public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
-    }
-
-    @Override
-    public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
-    }
-
-    @Override
-    public void addListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
-    }
-
-    @Override
-    public void removeListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
-    }
-
-    protected void invalidate() {
-        if (valid) {
-            valid = false;
-            ExpressionHelper.fireValueChangedEvent(helper);
-        }
-    }
-
-    @Override
-    public boolean get() {
-        if (!valid) {
-            updateTreeShowing();
-            valid = true;
-        }
-
-        return treeShowing;
     }
 
     private void sceneChanged(Scene oldScene, Scene newScene) {
@@ -148,5 +107,10 @@ public class TreeShowingExpression extends BooleanExpression {
             treeShowing = newValue;
             invalidate();
         }
+    }
+
+    @Override
+    protected boolean computeValue() {
+        return treeShowing;
     }
 }

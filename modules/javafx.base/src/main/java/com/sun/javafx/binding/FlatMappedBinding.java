@@ -69,7 +69,7 @@ public class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
         S value = source.getValue();
         ObservableValue<? extends T> newIndirectSource = value == null ? null : mapper.apply(value);
 
-        if (isObserved() && indirectSource != newIndirectSource) {  // only resubscribe when observed and the indirect source changed
+        if (isSubscribed() && indirectSource != newIndirectSource) {  // only resubscribe when observed and the indirect source changed
             indirectSourceSubscription.unsubscribe();
             indirectSourceSubscription = newIndirectSource == null ? Subscription.EMPTY : Subscription.subscribeInvalidations(newIndirectSource, this::invalidate);
             indirectSource = newIndirectSource;

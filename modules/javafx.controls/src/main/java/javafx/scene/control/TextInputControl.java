@@ -1431,7 +1431,7 @@ public abstract class TextInputControl extends Control {
         }
 
         @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+            helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
         }
 
         @Override public void removeListener(InvalidationListener listener) {
@@ -1439,11 +1439,15 @@ public abstract class TextInputControl extends Control {
         }
 
         @Override public void addListener(ChangeListener<? super String> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+            helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
         }
 
         @Override public void removeListener(ChangeListener<? super String> listener) {
             helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override public boolean isObserved() {
+            return helper != null;
         }
 
         @Override public Object getBean() {

@@ -81,22 +81,48 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, this::observed);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        ExpressionHelper<T> newHelper = ExpressionHelper.removeListener(helper, listener);
+        boolean unobserved = newHelper == null && helper != null;
+
+        helper = newHelper;
+
+        if (unobserved) {
+            unobserved();  // when called, isObserved should already be returning false
+        }
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, this::observed);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        ExpressionHelper<T> newHelper = ExpressionHelper.removeListener(helper, listener);
+        boolean unobserved = newHelper == null && helper != null;
+
+        helper = newHelper;
+
+        if (unobserved) {
+            unobserved();  // when called, isObserved should already be returning false
+        }
+    }
+
+    /**
+     * Called immediately before this observable transitions from unobserved to observed.
+     */
+    protected void observed() {
+    }
+
+    /**
+     * Called immediately after this observable transitions from observed to unobserved.
+     */
+    protected void unobserved() {
     }
 
     /**
@@ -210,7 +236,8 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      *     listeners registered on it, otherwise {@code false}
      * @since 19
      */
-    protected final boolean isObserved() {
+    @Override
+    public final boolean isObserved() {
         return helper != null;
     }
 

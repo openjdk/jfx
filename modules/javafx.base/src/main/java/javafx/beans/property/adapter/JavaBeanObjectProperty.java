@@ -214,7 +214,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      */
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
     }
 
     /**
@@ -230,7 +230,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
     }
 
     /**
@@ -256,6 +256,11 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
     public void dispose() {
         descriptor.removeListener(listener);
 
+    }
+
+    @Override
+    public boolean isObserved() {
+        return helper != null;
     }
 
     /**

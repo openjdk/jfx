@@ -210,7 +210,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
      */
     @Override
     public void addListener(ChangeListener<? super String> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
     }
 
     /**
@@ -226,7 +226,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        helper = ExpressionHelper.addListener(helper, this, listener, () -> {});
     }
 
     /**
@@ -252,5 +252,10 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
     public void dispose() {
         descriptor.removeListener(listener);
 
+    }
+
+    @Override
+    public boolean isObserved() {
+        return helper != null;
     }
 }
