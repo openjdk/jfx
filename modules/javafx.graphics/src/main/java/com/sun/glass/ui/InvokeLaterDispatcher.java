@@ -30,15 +30,15 @@ import java.util.concurrent.*;
  * A dispatcher for Application.invokeLater() that submits deferred runnables
  * to the native system one by one.
  *
- * A native system may by default execute all submitted runnables before
+ * A native system may, by default, execute all submitted runnables before
  * actually leaving a nested event loop. However, there is an assumption that a
  * runnable that calls the Application.leaveNestedEventLoop() method must be
  * the last runnable executed in the current inner event loop. The next
- * runnable that might have already been submitted by client code, must be
- * invoked in the context of the outer event loop. To satisfy this requirement
+ * runnable that might have already been submitted by client code must be
+ * invoked in the context of the outer event loop. To satisfy this requirement,
  * the runnables must be submitted to the native system one by one. This allows
- * for fine grain control over executing the deferred tasks when it comes to
- * entering/leaving nested event loops despite of native system limitations.
+ * for a fine grained control over the execution of the deferred tasks when it comes to
+ * entering/leaving nested event loops despite native system limitations.
  */
 public final class InvokeLaterDispatcher extends Thread {
     // The runnables queue
@@ -82,7 +82,7 @@ public final class InvokeLaterDispatcher extends Thread {
         }
 
         /**
-         * Tells whether the runnbale has finished execution.
+         * Tells whether the runnable has finished execution.
          *
          * This method must be called under the LOCK lock.
          */

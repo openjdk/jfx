@@ -462,17 +462,14 @@ public class ListView<T> extends Control {
         return items;
     }
 
-
-    // --- Placeholder Node
-    private ObjectProperty<Node> placeholder;
     /**
-     * This Node is shown to the user when the listview has no content to show.
-     * This may be the case because the table model has no data in the first
-     * place or that a filter has been applied to the list model, resulting
-     * in there being nothing to show the user..
-     * @return the placeholder property for this ListView
+     * The {@code Node} to show to the user when the {@code ListView} has no content to show.
+     * This happens when the table model has no data or when a filter has been applied to the list model, resulting in
+     * there being nothing to show the user.
+     *
      * @since JavaFX 8.0
      */
+    private ObjectProperty<Node> placeholder;
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
             placeholder = new SimpleObjectProperty<>(this, "placeholder");
