@@ -42,9 +42,13 @@ public:
 
     String name() const { return qualifiedName().toString(); }
     bool specified() const { return true; }
-    Element* ownerElement() const { return m_element; }
+#if !PLATFORM(JAVA)
+    Element* ownerElement() const { return m_element.get(); }
+#else
+    Element* ownerElement() const;
+#endif
 
-    WEBCORE_EXPORT const AtomString& value() const;
+    WEBCORE_EXPORT AtomString value() const;
     WEBCORE_EXPORT void setValue(const AtomString&);
 
     const QualifiedName& qualifiedName() const { return m_name; }
@@ -66,7 +70,7 @@ private:
     NodeType nodeType() const final { return ATTRIBUTE_NODE; }
 
     String nodeValue() const final { return value(); }
-    ExceptionOr<void> setNodeValue(const String&) final;
+    void setNodeValue(const String&) final;
 
     ExceptionOr<void> setPrefix(const AtomString&) final;
 
@@ -74,11 +78,9 @@ private:
 
     bool isAttributeNode() const final { return true; }
 
-    Attribute& elementAttribute();
-
     // Attr wraps either an element/name, or a name/value pair (when it's a standalone Node.)
     // Note that m_name is always set, but m_element/m_standaloneValue may be null.
-    Element* m_element { nullptr };
+    WeakPtr<Element> m_element;
     QualifiedName m_name;
     AtomString m_standaloneValue;
 

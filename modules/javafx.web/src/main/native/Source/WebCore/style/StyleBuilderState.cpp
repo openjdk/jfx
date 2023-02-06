@@ -63,7 +63,7 @@ BuilderState::BuilderState(Builder& builder, RenderStyle& style, BuilderContext&
     , m_styleMap(*this)
     , m_style(style)
     , m_context(WTFMove(context))
-    , m_cssToLengthConversionData(&style, rootElementStyle(), &parentStyle(), document().renderView())
+    , m_cssToLengthConversionData(style, m_context)
 {
 }
 
@@ -172,8 +172,8 @@ bool BuilderState::createFilterOperations(const CSSValue& inValue, FilterOperati
                 continue;
 
             auto filterURL = primitiveValue.stringValue();
-            auto fragment = document().completeURL(filterURL).fragmentIdentifier().toString();
-            operations.operations().append(ReferenceFilterOperation::create(filterURL, fragment));
+            auto fragment = document().completeURL(filterURL).fragmentIdentifier().toAtomString();
+            operations.operations().append(ReferenceFilterOperation::create(filterURL, WTFMove(fragment)));
             continue;
         }
 
@@ -319,6 +319,7 @@ Color BuilderState::colorFromPrimitiveValueWithResolvedCurrentColor(const CSSPri
     if (value.valueID() == CSSValueCurrentcolor) {
         // Color is an inherited property so depending on it effectively makes the property inherited.
         m_style.setHasExplicitlyInheritedProperties();
+        m_style.setDisallowsFastPathInheritance();
         return m_style.color();
     }
 

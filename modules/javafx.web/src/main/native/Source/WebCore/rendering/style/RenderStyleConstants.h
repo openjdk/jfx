@@ -49,7 +49,7 @@ enum class PrintColorAdjust : uint8_t {
 // - StyleDifference::Equal - The two styles are identical
 // - StyleDifference::RecompositeLayer - The layer needs its position and transform updated, but no repaint
 // - StyleDifference::Repaint - The object just needs to be repainted.
-// - StyleDifference::RepaintIfTextOrBorderOrOutline - The object needs to be repainted if it contains text or a border or outline.
+// - StyleDifference::RepaintIfText - The object needs to be repainted if it contains text.
 // - StyleDifference::RepaintLayer - The layer and its descendant layers needs to be repainted.
 // - StyleDifference::LayoutPositionedMovementOnly - Only the position of this positioned object has been updated
 // - StyleDifference::SimplifiedLayout - Only overflow needs to be recomputed
@@ -59,7 +59,7 @@ enum class StyleDifference {
     Equal,
     RecompositeLayer,
     Repaint,
-    RepaintIfTextOrBorderOrOutline,
+    RepaintIfText,
     RepaintLayer,
     LayoutPositionedMovementOnly,
     SimplifiedLayout,
@@ -575,7 +575,9 @@ enum class Resize : uint8_t {
     None,
     Both,
     Horizontal,
-    Vertical
+    Vertical,
+    Block,
+    Inline,
 };
 
 // The order of this enum must match the order of the list style types in CSSValueKeywords.in.
@@ -734,9 +736,8 @@ enum class TextTransform : uint8_t {
     None
 };
 
-static const size_t TextDecorationBits = 4;
+static const size_t TextDecorationLineBits = 4;
 enum class TextDecorationLine : uint8_t {
-    None          = 0,
     Underline     = 1 << 0,
     Overline      = 1 << 1,
     LineThrough   = 1 << 2,
@@ -751,7 +752,6 @@ enum class TextDecorationStyle : uint8_t {
     Wavy
 };
 
-#if ENABLE(CSS3_TEXT)
 enum class TextAlignLast : uint8_t {
     Auto,
     Start,
@@ -766,9 +766,8 @@ enum class TextJustify : uint8_t {
     Auto,
     None,
     InterWord,
-    Distribute
+    InterCharacter
 };
-#endif // CSS3_TEXT
 
 enum class TextDecorationSkipInk : uint8_t {
     None,
@@ -1161,34 +1160,6 @@ enum class TrailingWord : uint8_t {
 };
 #endif
 
-#if ENABLE(APPLE_PAY)
-enum class ApplePayButtonStyle : uint8_t {
-    White,
-    WhiteOutline,
-    Black,
-};
-
-enum class ApplePayButtonType : uint8_t {
-    Plain,
-    Buy,
-    SetUp,
-    Donate,
-    CheckOut,
-    Book,
-    Subscribe,
-#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
-    Reload,
-    AddMoney,
-    TopUp,
-    Order,
-    Rent,
-    Support,
-    Contribute,
-    Tip,
-#endif
-};
-#endif
-
 // These are all minimized combinations of paint-order.
 enum class PaintOrder : uint8_t {
     Normal,
@@ -1217,6 +1188,7 @@ enum class FontLoadingBehavior : uint8_t {
 enum class EventListenerRegionType : uint8_t {
     Wheel           = 1 << 0,
     NonPassiveWheel = 1 << 1,
+    MouseClick      = 1 << 2,
 };
 
 enum class MathStyle : uint8_t {
@@ -1233,9 +1205,15 @@ enum class Containment : uint8_t {
 };
 
 enum class ContainerType : uint8_t {
-    None,
+    Normal,
     Size,
     InlineSize,
+};
+
+enum class ContainIntrinsicSizeType : uint8_t {
+    None,
+    Length,
+    AutoAndLength
 };
 
 CSSBoxType transformBoxToCSSBoxType(TransformBox);
@@ -1244,10 +1222,6 @@ extern const float defaultMiterLimit;
 
 WTF::TextStream& operator<<(WTF::TextStream&, AnimationFillMode);
 WTF::TextStream& operator<<(WTF::TextStream&, AnimationPlayState);
-#if ENABLE(APPLE_PAY)
-WTF::TextStream& operator<<(WTF::TextStream&, ApplePayButtonStyle);
-WTF::TextStream& operator<<(WTF::TextStream&, ApplePayButtonType);
-#endif
 WTF::TextStream& operator<<(WTF::TextStream&, AspectRatioType);
 WTF::TextStream& operator<<(WTF::TextStream&, AutoRepeatType);
 WTF::TextStream& operator<<(WTF::TextStream&, BackfaceVisibility);
@@ -1330,6 +1304,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, SpeakAs);
 WTF::TextStream& operator<<(WTF::TextStream&, StyleDifference);
 WTF::TextStream& operator<<(WTF::TextStream&, TableLayoutType);
 WTF::TextStream& operator<<(WTF::TextStream&, TextAlignMode);
+WTF::TextStream& operator<<(WTF::TextStream&, TextAlignLast);
 WTF::TextStream& operator<<(WTF::TextStream&, TextCombine);
 WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationLine);
 WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationSkipInk);
@@ -1337,6 +1312,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationStyle);
 WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisFill);
 WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisMark);
 WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, TextJustify);
 WTF::TextStream& operator<<(WTF::TextStream&, TextOrientation);
 WTF::TextStream& operator<<(WTF::TextStream&, TextOverflow);
 WTF::TextStream& operator<<(WTF::TextStream&, TextSecurity);
@@ -1353,6 +1329,7 @@ WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
 WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpace);
 WTF::TextStream& operator<<(WTF::TextStream&, WordBreak);
 WTF::TextStream& operator<<(WTF::TextStream&, MathStyle);
+WTF::TextStream& operator<<(WTF::TextStream&, ContainIntrinsicSizeType);
 
 } // namespace WebCore
 

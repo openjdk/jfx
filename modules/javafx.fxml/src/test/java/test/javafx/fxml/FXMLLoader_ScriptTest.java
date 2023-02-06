@@ -40,6 +40,10 @@ import static org.junit.Assume.assumeTrue;
 public class FXMLLoader_ScriptTest {
     @Test
     public void testStaticScriptLoad() throws IOException {
+        // This test needs Nashorn script engine.
+        // Test will be rewritten under - JDK-8245568
+        assumeTrue(isNashornEngineAvailable());
+
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("static_script_load.fxml"));
         FXMLLoaderHelper.setStaticLoad(fxmlLoader, true);
         AtomicBoolean scriptCalled = new AtomicBoolean();

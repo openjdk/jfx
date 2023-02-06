@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InputMode.h"
 
+#include "CommonAtomStrings.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -82,50 +83,44 @@ namespace InputModeNames {
 
 const AtomString& none()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("none", AtomString::ConstructFromLiteral);
-    return mode;
+    return noneAtom();
 }
 
 const AtomString& text()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("text", AtomString::ConstructFromLiteral);
-    return mode;
+    return textAtom();
 }
 
 const AtomString& tel()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("tel", AtomString::ConstructFromLiteral);
-    return mode;
+    return telAtom();
 }
 
 const AtomString& url()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("url", AtomString::ConstructFromLiteral);
-    return mode;
+    return urlAtom();
 }
 
 const AtomString& email()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("email", AtomString::ConstructFromLiteral);
-    return mode;
+    return emailAtom();
 }
 
 const AtomString& numeric()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("numeric", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> mode("numeric"_s);
     return mode;
 }
 
 const AtomString& decimal()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("decimal", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> mode("decimal"_s);
     return mode;
 }
 
 const AtomString& search()
 {
-    static MainThreadNeverDestroyed<const AtomString> mode("search", AtomString::ConstructFromLiteral);
-    return mode;
+    return searchAtom();
 }
 
 } // namespace InputModeNames

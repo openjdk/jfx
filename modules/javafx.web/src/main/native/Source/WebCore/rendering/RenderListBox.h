@@ -66,12 +66,14 @@ public:
     bool scrolledToLeft() const final;
     bool scrolledToRight() const final;
 
+    bool isVisibleToHitTesting() const final { return visibleToHitTesting(); };
+
 private:
     void willBeDestroyed() override;
 
     void element() const = delete;
 
-    const char* renderName() const override { return "RenderListBox"; }
+    ASCIILiteral renderName() const override { return "RenderListBox"_s; }
 
     bool isListBox() const override { return true; }
 

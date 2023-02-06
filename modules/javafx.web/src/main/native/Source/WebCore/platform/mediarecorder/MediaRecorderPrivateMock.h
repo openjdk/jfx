@@ -42,7 +42,7 @@ public:
 
 private:
     // MediaRecorderPrivate
-    void videoSampleAvailable(MediaSample&, VideoSampleMetadata) final;
+    void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final;
     void fetchData(FetchDataCallback&&) final;
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
     void stopRecording(CompletionHandler<void()>&&) final;

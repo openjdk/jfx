@@ -48,8 +48,9 @@
 
 namespace WebCore {
 
-RealtimeMediaSource::RealtimeMediaSource(Type type, String&& name, String&& deviceID, String&& hashSalt)
-    : m_idHashSalt(WTFMove(hashSalt))
+RealtimeMediaSource::RealtimeMediaSource(Type type, AtomString&& name, String&& deviceID, String&& hashSalt, PageIdentifier pageIdentifier)
+    : m_pageIdentifier(pageIdentifier)
+    , m_idHashSalt(WTFMove(hashSalt))
     , m_persistentID(WTFMove(deviceID))
     , m_type(type)
     , m_name(WTFMove(name))
@@ -57,7 +58,7 @@ RealtimeMediaSource::RealtimeMediaSource(Type type, String&& name, String&& devi
     if (m_persistentID.isEmpty())
         m_persistentID = createVersion4UUIDString();
 
-    m_hashedID = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(m_persistentID, m_idHashSalt);
+    m_hashedID = AtomString { RealtimeMediaSourceCenter::singleton().hashStringWithSalt(m_persistentID, m_idHashSalt) };
 }
 
 void RealtimeMediaSource::addAudioSampleObserver(AudioSampleObserver& observer)
@@ -74,18 +75,18 @@ void RealtimeMediaSource::removeAudioSampleObserver(AudioSampleObserver& observe
     m_audioSampleObservers.remove(&observer);
 }
 
-void RealtimeMediaSource::addVideoSampleObserver(VideoSampleObserver& observer)
+void RealtimeMediaSource::addVideoFrameObserver(VideoFrameObserver& observer)
 {
     ASSERT(isMainThread());
-    Locker locker { m_videoSampleObserversLock };
-    m_videoSampleObservers.add(&observer);
+    Locker locker { m_videoFrameObserversLock };
+    m_videoFrameObservers.add(&observer);
 }
 
-void RealtimeMediaSource::removeVideoSampleObserver(VideoSampleObserver& observer)
+void RealtimeMediaSource::removeVideoFrameObserver(VideoFrameObserver& observer)
 {
     ASSERT(isMainThread());
-    Locker locker { m_videoSampleObserversLock };
-    m_videoSampleObservers.remove(&observer);
+    Locker locker { m_videoFrameObserversLock };
+    m_videoFrameObservers.remove(&observer);
 }
 
 void RealtimeMediaSource::addObserver(Observer& observer)
@@ -146,6 +147,13 @@ void RealtimeMediaSource::forEachObserver(const Function<void(Observer&)>& apply
     m_observers.forEach(apply);
 }
 
+void RealtimeMediaSource::forEachVideoFrameObserver(const Function<void(VideoFrameObserver&)>& apply)
+{
+    Locker locker { m_videoFrameObserversLock };
+    for (auto* observer : m_videoFrameObservers)
+        apply(*observer);
+}
+
 void RealtimeMediaSource::notifyMutedObservers()
 {
     forEachObserver([](auto& observer) {
@@ -191,7 +199,7 @@ void RealtimeMediaSource::updateHasStartedProducingData()
     });
 }
 
-void RealtimeMediaSource::videoSampleAvailable(MediaSample& mediaSample, VideoSampleMetadata metadata)
+void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrameTimeMetadata metadata)
 {
 #if !RELEASE_LOG_DISABLED
     ++m_frameCount;
@@ -209,9 +217,9 @@ void RealtimeMediaSource::videoSampleAvailable(MediaSample& mediaSample, VideoSa
 
     updateHasStartedProducingData();
 
-    Locker locker { m_videoSampleObserversLock };
-    for (auto* observer : m_videoSampleObservers)
-        observer->videoSampleAvailable(mediaSample, metadata);
+    Locker locker { m_videoFrameObserversLock };
+    for (auto* observer : m_videoFrameObservers)
+        observer->videoFrameAvailable(videoFrame, metadata);
 }
 
 void RealtimeMediaSource::audioSamplesAvailable(const MediaTime& time, const PlatformAudioData& audioData, const AudioStreamDescription& description, size_t numberOfFrames)
@@ -277,9 +285,9 @@ void RealtimeMediaSource::end(Observer* callingObserver)
 
     Ref protectedThis { *this };
 
-    stop();
+    endProducingData();
     m_isEnded = true;
-    hasEnded();
+    didEnd();
 
     forEachObserver([&callingObserver](auto& observer) {
         if (&observer != callingObserver)
@@ -292,11 +300,7 @@ void RealtimeMediaSource::captureFailed()
     ERROR_LOG_IF(m_logger, LOGIDENTIFIER);
 
     m_captureDidFailed = true;
-
-    stop();
-    forEachObserver([](auto& observer) {
-        observer.sourceStopped();
-    });
+    end();
 }
 
 bool RealtimeMediaSource::supportsSizeAndFrameRate(std::optional<int>, std::optional<int>, std::optional<double>)
@@ -1099,7 +1103,7 @@ void RealtimeMediaSource::scheduleDeferredTask(Function<void()>&& function)
     });
 }
 
-const String& RealtimeMediaSource::hashedId() const
+const AtomString& RealtimeMediaSource::hashedId() const
 {
 #ifndef NDEBUG
     ASSERT(!m_hashedID.isEmpty());
@@ -1147,19 +1151,11 @@ WTFLogChannel& RealtimeMediaSource::logChannel() const
 String convertEnumerationToString(RealtimeMediaSource::Type enumerationValue)
 {
     static const NeverDestroyed<String> values[] = {
-        MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("Audio"),
-        MAKE_STATIC_STRING_IMPL("Video"),
-        MAKE_STATIC_STRING_IMPL("Screen"),
-        MAKE_STATIC_STRING_IMPL("Window"),
-        MAKE_STATIC_STRING_IMPL("SystemAudio"),
+        MAKE_STATIC_STRING_IMPL("Video")
     };
-    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::None) == 0, "RealtimeMediaSource::Type::None is not 0 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Audio) == 1, "RealtimeMediaSource::Type::Audio is not 1 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Video) == 2, "RealtimeMediaSource::Type::Video is not 2 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Screen) == 3, "RealtimeMediaSource::Type::Screen is not 3 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Window) == 4, "RealtimeMediaSource::Type::Window is not 4 as expected");
-    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::SystemAudio) == 5, "RealtimeMediaSource::Type::SystemAudio is not 5 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Audio) == 0, "RealtimeMediaSource::Type::Audio is not 0 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Video) == 1, "RealtimeMediaSource::Type::Video is not 1 as expected");
     ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
     return values[static_cast<size_t>(enumerationValue)];
 }

@@ -55,8 +55,8 @@ public:
 private:
     friend void initialize();
 
-    friend Instruction* exceptionInstructions();
-    friend Instruction* wasmExceptionInstructions();
+    friend JSInstruction* exceptionInstructions();
+    friend WasmInstruction* wasmExceptionInstructions();
     friend Opcode* opcodeMap();
     friend Opcode* opcodeMapWide16();
     friend Opcode* opcodeMapWide32();
@@ -74,14 +74,14 @@ private:
 
 void initialize();
 
-inline Instruction* exceptionInstructions()
+inline JSInstruction* exceptionInstructions()
 {
-    return reinterpret_cast<Instruction*>(g_jscConfig.llint.exceptionInstructions);
+    return reinterpret_cast<JSInstruction*>(g_jscConfig.llint.exceptionInstructions);
 }
 
-inline Instruction* wasmExceptionInstructions()
+inline WasmInstruction* wasmExceptionInstructions()
 {
-    return bitwise_cast<Instruction*>(g_jscConfig.llint.wasmExceptionInstructions);
+    return bitwise_cast<WasmInstruction*>(g_jscConfig.llint.wasmExceptionInstructions);
 }
 
 inline Opcode* opcodeMap()
@@ -393,13 +393,13 @@ struct Registers {
 
 #if CPU(X86_64) && !OS(WINDOWS)
     static constexpr GPRReg metadataTableGPR = GPRInfo::regCS1;
-    static constexpr GPRReg pbGPR = GPRInfo::regCS2;
+    static constexpr GPRReg pbGPR = GPRInfo::constantsRegister;
 #elif CPU(X86_64) && OS(WINDOWS)
     static constexpr GPRReg metadataTableGPR = GPRInfo::regCS3;
-    static constexpr GPRReg pbGPR = GPRInfo::regCS4;
+    static constexpr GPRReg pbGPR = GPRInfo::constantsRegister;
 #elif CPU(ARM64) || CPU(RISCV64)
     static constexpr GPRReg metadataTableGPR = GPRInfo::regCS6;
-    static constexpr GPRReg pbGPR = GPRInfo::regCS7;
+    static constexpr GPRReg pbGPR = GPRInfo::constantsRegister;
 #elif CPU(MIPS) || CPU(ARM_THUMB2)
     static constexpr GPRReg metadataTableGPR = GPRInfo::regCS0;
     static constexpr GPRReg pbGPR = GPRInfo::regCS1;

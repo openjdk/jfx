@@ -38,44 +38,27 @@
 #include "AudioTrackConfiguration.h"
 #include "AudioTrackList.h"
 #include "AudioTrackPrivate.h"
+#include "CommonAtomStrings.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-const AtomString& AudioTrack::alternativeKeyword()
-{
-    static MainThreadNeverDestroyed<const AtomString> alternative("alternative", AtomString::ConstructFromLiteral);
-    return alternative;
-}
-
 const AtomString& AudioTrack::descriptionKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> description("description", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> description("description"_s);
     return description;
-}
-
-const AtomString& AudioTrack::mainKeyword()
-{
-    static MainThreadNeverDestroyed<const AtomString> main("main", AtomString::ConstructFromLiteral);
-    return main;
 }
 
 const AtomString& AudioTrack::mainDescKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> mainDesc("main-desc", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> mainDesc("main-desc"_s);
     return mainDesc;
 }
 
 const AtomString& AudioTrack::translationKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> translation("translation", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> translation("translation"_s);
     return translation;
-}
-
-const AtomString& AudioTrack::commentaryKeyword()
-{
-    static MainThreadNeverDestroyed<const AtomString> commentary("commentary", AtomString::ConstructFromLiteral);
-    return commentary;
 }
 
 AudioTrack::AudioTrack(ScriptExecutionContext* context, AudioTrackPrivate& trackPrivate)
@@ -123,10 +106,10 @@ void AudioTrack::setLanguage(const AtomString& language)
 
 bool AudioTrack::isValidKind(const AtomString& value) const
 {
-    return value == alternativeKeyword()
-        || value == commentaryKeyword()
+    return value == alternativeAtom()
+        || value == commentaryAtom()
         || value == descriptionKeyword()
-        || value == mainKeyword()
+        || value == mainAtom()
         || value == mainDescKeyword()
         || value == translationKeyword();
 }
@@ -208,13 +191,13 @@ void AudioTrack::updateKindFromPrivate()
 {
     switch (m_private->kind()) {
     case AudioTrackPrivate::Alternative:
-        setKind(AudioTrack::alternativeKeyword());
+        setKind(alternativeAtom());
         break;
     case AudioTrackPrivate::Description:
         setKind(AudioTrack::descriptionKeyword());
         break;
     case AudioTrackPrivate::Main:
-        setKind(AudioTrack::mainKeyword());
+        setKind(mainAtom());
         break;
     case AudioTrackPrivate::MainDesc:
         setKind(AudioTrack::mainDescKeyword());
@@ -223,10 +206,10 @@ void AudioTrack::updateKindFromPrivate()
         setKind(AudioTrack::translationKeyword());
         break;
     case AudioTrackPrivate::Commentary:
-        setKind(AudioTrack::commentaryKeyword());
+        setKind(commentaryAtom());
         break;
     case AudioTrackPrivate::None:
-        setKind(emptyString());
+        setKind(emptyAtom());
         break;
     default:
         ASSERT_NOT_REACHED();

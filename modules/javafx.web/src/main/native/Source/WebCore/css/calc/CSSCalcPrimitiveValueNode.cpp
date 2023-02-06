@@ -85,11 +85,6 @@ void CSSCalcPrimitiveValueNode::negate()
 void CSSCalcPrimitiveValueNode::invert()
 {
     ASSERT(isNumericValue());
-    if (!m_value->doubleValue()) {
-        m_value = CSSPrimitiveValue::create(std::numeric_limits<double>::infinity(), m_value->primitiveType());
-        return;
-    }
-
     m_value = CSSPrimitiveValue::create(1.0 / m_value->doubleValue(), m_value->primitiveType());
 }
 
@@ -214,6 +209,11 @@ void CSSCalcPrimitiveValueNode::collectDirectComputationalDependencies(HashSet<C
 void CSSCalcPrimitiveValueNode::collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>& values) const
 {
     m_value->collectDirectRootComputationalDependencies(values);
+}
+
+bool CSSCalcPrimitiveValueNode::convertingToLengthRequiresNonNullStyle(int lengthConversion) const
+{
+    return m_value->convertingToLengthRequiresNonNullStyle(lengthConversion);
 }
 
 bool CSSCalcPrimitiveValueNode::isZero() const

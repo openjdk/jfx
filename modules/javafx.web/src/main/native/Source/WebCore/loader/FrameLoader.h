@@ -129,7 +129,7 @@ public:
 #endif
     ResourceLoaderIdentifier loadResourceSynchronously(const ResourceRequest&, ClientCredentialPolicy, const FetchOptions&, const HTTPHeaderMap&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>& data);
 
-    WEBCORE_EXPORT void changeLocation(const URL&, const String& target, Event*, const ReferrerPolicy&, ShouldOpenExternalURLsPolicy, std::optional<NewFrameOpenerPolicy> = std::nullopt, const AtomString& downloadAttribute = nullAtom(), const SystemPreviewInfo& = { }, std::optional<PrivateClickMeasurement>&& = std::nullopt);
+    WEBCORE_EXPORT void changeLocation(const URL&, const AtomString& target, Event*, const ReferrerPolicy&, ShouldOpenExternalURLsPolicy, std::optional<NewFrameOpenerPolicy> = std::nullopt, const AtomString& downloadAttribute = nullAtom(), const SystemPreviewInfo& = { }, std::optional<PrivateClickMeasurement>&& = std::nullopt);
     void changeLocation(FrameLoadRequest&&, Event* = nullptr, std::optional<PrivateClickMeasurement>&& = std::nullopt);
     void submitForm(Ref<FormSubmission>&&);
 
@@ -152,7 +152,7 @@ public:
     void stopLoading(UnloadEventPolicy);
     void closeURL();
     // FIXME: clear() is trying to do too many things. We should break it down into smaller functions (ideally with fewer raw Boolean parameters).
-    void clear(Document* newDocument, bool clearWindowProperties = true, bool clearScriptObjects = true, bool clearFrameView = true, Function<void()>&& handleDOMWindowCreation = nullptr);
+    void clear(RefPtr<Document>&& newDocument, bool clearWindowProperties = true, bool clearScriptObjects = true, bool clearFrameView = true, Function<void()>&& handleDOMWindowCreation = nullptr);
 
     bool isLoading() const;
     WEBCORE_EXPORT bool frameHasLoaded() const;
@@ -318,8 +318,9 @@ public:
     bool alwaysAllowLocalWebarchive() const { return m_alwaysAllowLocalWebarchive; }
 
     enum class IsServiceWorkerNavigationLoad : bool { No, Yes };
+    enum class WillOpenInNewWindow : bool { No, Yes };
     // For subresource requests the FrameLoadType parameter has no effect and can be skipped.
-    void updateRequestAndAddExtraFields(ResourceRequest&, IsMainResource, FrameLoadType = FrameLoadType::Standard, ShouldUpdateAppInitiatedValue = ShouldUpdateAppInitiatedValue::Yes, IsServiceWorkerNavigationLoad = IsServiceWorkerNavigationLoad::No, Document* = nullptr);
+    void updateRequestAndAddExtraFields(ResourceRequest&, IsMainResource, FrameLoadType = FrameLoadType::Standard, ShouldUpdateAppInitiatedValue = ShouldUpdateAppInitiatedValue::Yes, IsServiceWorkerNavigationLoad = IsServiceWorkerNavigationLoad::No, WillOpenInNewWindow = WillOpenInNewWindow::No, Document* = nullptr);
 
     void scheduleRefreshIfNeeded(Document&, const String& content, IsMetaRefresh);
 
@@ -356,8 +357,8 @@ private:
     void dispatchUnloadEvents(UnloadEventPolicy);
 
     void continueLoadAfterNavigationPolicy(const ResourceRequest&, FormState*, NavigationPolicyDecision, AllowNavigationToInvalidURL);
-    void continueLoadAfterNewWindowPolicy(const ResourceRequest&, FormState*, const String& frameName, const NavigationAction&, ShouldContinuePolicyCheck, AllowNavigationToInvalidURL, NewFrameOpenerPolicy);
-    void continueFragmentScrollAfterNavigationPolicy(const ResourceRequest&, bool shouldContinue);
+    void continueLoadAfterNewWindowPolicy(const ResourceRequest&, FormState*, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck, AllowNavigationToInvalidURL, NewFrameOpenerPolicy);
+    void continueFragmentScrollAfterNavigationPolicy(const ResourceRequest&, const SecurityOrigin* requesterOrigin, bool shouldContinue);
 
     bool shouldPerformFragmentNavigation(bool isFormSubmission, const String& httpMethod, FrameLoadType, const URL&);
     void scrollToFragmentWithParentBoundary(const URL&, bool isNewNavigation = true);
@@ -379,7 +380,7 @@ private:
     void dispatchDidCommitLoad(std::optional<HasInsecureContent> initialHasInsecureContent, std::optional<UsedLegacyTLS> initialUsedLegacyTLS);
 
     void loadWithDocumentLoader(DocumentLoader*, FrameLoadType, RefPtr<FormState>&&, AllowNavigationToInvalidURL, CompletionHandler<void()>&& = [] { }); // Calls continueLoadAfterNavigationPolicy
-    void load(DocumentLoader&); // Calls loadWithDocumentLoader
+    void load(DocumentLoader&, const SecurityOrigin* requesterOrigin); // Calls loadWithDocumentLoader
 
     void loadWithNavigationAction(const ResourceRequest&, NavigationAction&&, FrameLoadType, RefPtr<FormState>&&, AllowNavigationToInvalidURL, ShouldTreatAsContinuingLoad, CompletionHandler<void()>&& = [] { }); // Calls loadWithDocumentLoader
 
@@ -393,7 +394,7 @@ private:
     WEBCORE_EXPORT void detachChildren();
     void closeAndRemoveChild(Frame&);
 
-    void loadInSameDocument(URL, RefPtr<SerializedScriptValue> stateObject, bool isNewNavigation);
+    void loadInSameDocument(URL, RefPtr<SerializedScriptValue> stateObject, const SecurityOrigin* requesterOrigin, bool isNewNavigation);
 
     void prepareForLoadStart();
     void provisionalLoadStarted();
@@ -404,7 +405,7 @@ private:
     void scheduleCheckLoadComplete();
     void startCheckCompleteTimer();
 
-    bool shouldTreatURLAsSameAsCurrent(const URL&) const;
+    bool shouldTreatURLAsSameAsCurrent(const SecurityOrigin* requesterOrigin, const URL&) const;
 
     void dispatchGlobalObjectAvailableInAllWorlds();
 

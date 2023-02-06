@@ -68,20 +68,22 @@ static inline SharedWorkerObjectConnection* mainThreadConnection()
 ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, String&& scriptURLString, std::optional<std::variant<String, WorkerOptions>>&& maybeOptions)
 {
     if (!mainThreadConnection())
-        return Exception { NotSupportedError, "Shared workers are not supported" };
+        return Exception { NotSupportedError, "Shared workers are not supported"_s };
 
     auto url = document.completeURL(scriptURLString);
     if (!url.isValid())
         return Exception { SyntaxError, "Invalid script URL"_s };
 
+    auto* contentSecurityPolicy = document.contentSecurityPolicy();
+    if (contentSecurityPolicy)
+        contentSecurityPolicy->upgradeInsecureRequestIfNeeded(url, ContentSecurityPolicy::InsecureRequestType::Load);
+
     // Per the specification, any same-origin URL (including blob: URLs) can be used. data: URLs can also be used, but they create a worker with an opaque origin.
     if (!document.securityOrigin().canRequest(url) && !url.protocolIsData())
         return Exception { SecurityError, "URL of the shared worker is cross-origin"_s };
 
-    if (auto* contentSecurityPolicy = document.contentSecurityPolicy()) {
-        if (!contentSecurityPolicy->allowWorkerFromSource(url))
-            return Exception { SecurityError };
-    }
+    if (contentSecurityPolicy && !contentSecurityPolicy->allowWorkerFromSource(url))
+        return Exception { SecurityError };
 
     WorkerOptions options;
     if (maybeOptions) {
@@ -163,6 +165,22 @@ void SharedWorker::stop()
     SHARED_WORKER_RELEASE_LOG("stop:");
     m_isActive = false;
     mainThreadConnection()->sharedWorkerObjectIsGoingAway(m_key, m_identifier);
+}
+
+void SharedWorker::suspend(ReasonForSuspension reason)
+{
+    if (reason == ReasonForSuspension::BackForwardCache) {
+        mainThreadConnection()->suspendForBackForwardCache(m_key, m_identifier);
+        m_isSuspendedForBackForwardCache = true;
+    }
+}
+
+void SharedWorker::resume()
+{
+    if (m_isSuspendedForBackForwardCache) {
+        mainThreadConnection()->resumeForBackForwardCache(m_key, m_identifier);
+        m_isSuspendedForBackForwardCache = false;
+    }
 }
 
 #undef SHARED_WORKER_RELEASE_LOG

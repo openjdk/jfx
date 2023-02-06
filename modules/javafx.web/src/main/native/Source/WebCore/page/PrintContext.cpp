@@ -21,13 +21,14 @@
 #include "config.h"
 #include "PrintContext.h"
 
+#include "CommonAtomStrings.h"
+#include "DeprecatedGlobalSettings.h"
 #include "ElementTraversal.h"
 #include "GraphicsContext.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "LengthBox.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -84,7 +85,7 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
 {
     if (!frame() || !frame()->document())
         return printMargin;
-    if (!RuntimeEnabledFeatures::sharedFeatures().pageAtRuleSupportEnabled())
+    if (!DeprecatedGlobalSettings::pageAtRuleSupportEnabled())
         return printMargin;
     // FIXME Currently no pseudo class is supported.
     auto style = frame()->document()->styleScope().resolver().styleForPage(0);
@@ -362,7 +363,7 @@ String PrintContext::pageProperty(Frame* frame, const char* propertyName, int pa
     // Implement formatters for properties we care about.
     if (!strcmp(propertyName, "margin-left")) {
         if (style->marginLeft().isAuto())
-            return "auto"_s;
+            return autoAtom();
         return String::number(style->marginLeft().value());
     }
     if (!strcmp(propertyName, "line-height"))

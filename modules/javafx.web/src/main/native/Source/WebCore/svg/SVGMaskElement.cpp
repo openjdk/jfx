@@ -100,13 +100,12 @@ void SVGMaskElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isAnimatedLengthAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationalHintStyle();
+        setPresentationalHintStyleIsDirty();
         return;
     }
 
     if (PropertyRegistry::isKnownAttribute(attrName)) {
-        if (auto* renderer = this->renderer())
-            renderer->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -120,8 +119,7 @@ void SVGMaskElement::childrenChanged(const ChildChange& change)
     if (change.source == ChildChange::Source::Parser)
         return;
 
-    if (RenderObject* object = renderer())
-        object->setNeedsLayout();
+    updateSVGRendererForElementChange();
 }
 
 RenderPtr<RenderElement> SVGMaskElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

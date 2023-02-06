@@ -37,7 +37,9 @@
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
+#include "NodeRenderStyle.h"
 #include "RenderSearchField.h"
+#include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "TextControlInnerElements.h"
@@ -111,13 +113,14 @@ void SearchInputType::createShadowSubtree()
     TextFieldInputType::createShadowSubtree();
     RefPtr<HTMLElement> container = containerElement();
     RefPtr<HTMLElement> textWrapper = innerBlockElement();
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *container };
     ASSERT(container);
     ASSERT(textWrapper);
 
     ASSERT(element());
     m_resultsButton = SearchFieldResultsButtonElement::create(element()->document());
-    updateResultButtonPseudoType(*m_resultsButton, element()->maxResults());
     container->insertBefore(*m_resultsButton, textWrapper.get());
+    updateResultButtonPseudoType(*m_resultsButton, element()->maxResults());
 
     m_cancelButton = SearchFieldCancelButtonElement::create(element()->document());
     container->insertBefore(*m_cancelButton, textWrapper->nextSibling());
@@ -140,7 +143,7 @@ auto SearchInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBase
         return TextFieldInputType::handleKeydownEvent(event);
 
     const String& key = event.keyIdentifier();
-    if (key == "U+001B") {
+    if (key == "U+001B"_s) {
         Ref<HTMLInputElement> protectedInputElement(*element());
         protectedInputElement->setValueForUser(emptyString());
         protectedInputElement->onSearch();
@@ -217,6 +220,16 @@ float SearchInputType::decorationWidth() const
     if (m_cancelButton)
         width += m_cancelButton->computedStyle()->logicalWidth().value();
     return width;
+}
+
+void SearchInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
+{
+    bool emptinessChanged = valueChanged && sanitizedValue.isEmpty() != element()->value().isEmpty();
+
+    BaseTextInputType::setValue(sanitizedValue, valueChanged, eventBehavior, selection);
+
+    if (m_cancelButton && emptinessChanged)
+        m_cancelButton->invalidateStyleInternal();
 }
 
 } // namespace WebCore

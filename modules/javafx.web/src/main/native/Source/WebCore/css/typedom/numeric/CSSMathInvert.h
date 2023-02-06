@@ -31,13 +31,20 @@
 
 namespace WebCore {
 
-class CSSMathInvert : public CSSMathValue {
+class CSSMathInvert final : public CSSMathValue {
     WTF_MAKE_ISO_ALLOCATED(CSSMathInvert);
 public:
     static Ref<CSSMathInvert> create(CSSNumberish&&);
+    CSSNumericValue& value() { return m_value.get(); }
     const CSSNumericValue& value() const { return m_value.get(); }
 
 private:
+    CSSMathOperator getOperator() const final { return CSSMathOperator::Invert; }
+    CSSStyleValueType getType() const final { return CSSStyleValueType::CSSMathInvert; }
+    void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
+    std::optional<SumValue> toSumValue() const final;
+    bool equals(const CSSNumericValue&) const final;
+
     CSSMathInvert(CSSNumberish&&);
     Ref<CSSNumericValue> m_value;
 };
@@ -45,9 +52,9 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMathInvert)
-    static bool isType(const WebCore::CSSStyleValue& styleValue) { return is<WebCore::CSSNumericValue>(styleValue) && isType(downcast<WebCore::CSSNumericValue>(styleValue)); }
-    static bool isType(const WebCore::CSSNumericValue& numericValue) { return is<WebCore::CSSMathValue>(numericValue) && isType(downcast<WebCore::CSSMathValue>(numericValue)); }
-    static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getOperator() == WebCore::CSSMathOperator::Invert; }
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSMathInvert; }
+static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathInvert; }
+static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getType() == WebCore::CSSStyleValueType::CSSMathInvert; }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

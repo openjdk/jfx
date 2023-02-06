@@ -78,10 +78,13 @@ void ApplyBlockElementCommand::doApply()
     }
 
     VisibleSelection selection = selectionForParagraphIteration(endingSelection());
+
     VisiblePosition startOfSelection = selection.visibleStart();
+    if (startOfSelection.isNull())
+        return;
     VisiblePosition endOfSelection = selection.visibleEnd();
-    ASSERT(!startOfSelection.isNull());
-    ASSERT(!endOfSelection.isNull());
+    if (endOfSelection.isNull())
+        return;
     RefPtr<ContainerNode> startScope;
     int startIndex = indexForVisiblePosition(startOfSelection, startScope);
     RefPtr<ContainerNode> endScope;
@@ -238,7 +241,7 @@ void ApplyBlockElementCommand::rangeForParagraphSplittingTextNodesIfNeeded(const
         unsigned endOffset = end.offsetInContainerNode();
         bool preservesNewLine = endStyle->preserveNewline();
         bool collapseWhiteSpace = endStyle->collapseWhiteSpace();
-        auto userModify = endStyle->userModify();
+        auto userModify = endStyle->effectiveUserModify();
         endStyle = nullptr;
 
         if (preservesNewLine && start == end && endOffset < end.containerNode()->length()) {

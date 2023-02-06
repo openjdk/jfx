@@ -29,30 +29,48 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 
+struct WGPUSamplerImpl {
+};
+
 namespace WebGPU {
 
-class Sampler : public RefCounted<Sampler> {
+class Device;
+
+// https://gpuweb.github.io/gpuweb/#gpusampler
+class Sampler : public WGPUSamplerImpl, public RefCounted<Sampler> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<Sampler> create(id <MTLSamplerState> samplerState)
+    static Ref<Sampler> create(id<MTLSamplerState> samplerState, const WGPUSamplerDescriptor& descriptor, Device& device)
     {
-        return adoptRef(*new Sampler(samplerState));
+        return adoptRef(*new Sampler(samplerState, descriptor, device));
+    }
+    static Ref<Sampler> createInvalid(Device& device)
+    {
+        return adoptRef(*new Sampler(device));
     }
 
     ~Sampler();
 
-    void setLabel(const char*);
+    void setLabel(String&&);
 
-    id <MTLSamplerState> samplerState() const { return m_samplerState; }
+    bool isValid() const { return m_samplerState; }
+
+    id<MTLSamplerState> samplerState() const { return m_samplerState; }
+    const WGPUSamplerDescriptor& descriptor() const { return m_descriptor; }
+    bool isComparison() const { return descriptor().compare != WGPUCompareFunction_Undefined; }
+    bool isFiltering() const { return descriptor().minFilter == WGPUFilterMode_Linear || descriptor().magFilter == WGPUFilterMode_Linear || descriptor().mipmapFilter == WGPUFilterMode_Linear; }
+
+    Device& device() const { return m_device; }
 
 private:
-    Sampler(id <MTLSamplerState>);
+    Sampler(id<MTLSamplerState>, const WGPUSamplerDescriptor&, Device&);
+    Sampler(Device&);
 
-    id <MTLSamplerState> m_samplerState { nil };
+    const id<MTLSamplerState> m_samplerState { nil };
+
+    const WGPUSamplerDescriptor m_descriptor { };
+
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-struct WGPUSamplerImpl {
-    Ref<WebGPU::Sampler> sampler;
-};

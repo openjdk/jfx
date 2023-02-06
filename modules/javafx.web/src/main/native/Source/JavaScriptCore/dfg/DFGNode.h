@@ -124,8 +124,8 @@ struct NewArrayBufferData {
         uint64_t asQuadWord;
     };
 };
-static_assert(sizeof(IndexingType) <= sizeof(unsigned), "");
-static_assert(sizeof(NewArrayBufferData) == sizeof(uint64_t), "");
+static_assert(sizeof(IndexingType) <= sizeof(unsigned));
+static_assert(sizeof(NewArrayBufferData) == sizeof(uint64_t));
 
 struct DataViewData {
     union {
@@ -138,7 +138,7 @@ struct DataViewData {
         uint64_t asQuadWord;
     };
 };
-static_assert(sizeof(DataViewData) == sizeof(uint64_t), "");
+static_assert(sizeof(DataViewData) == sizeof(uint64_t));
 
 struct BranchTarget {
     BranchTarget()
@@ -911,11 +911,11 @@ public:
     }
 
     template<typename T>
-    T dynamicCastConstant(VM& vm)
+    T dynamicCastConstant()
     {
         if (!isCellConstant())
             return nullptr;
-        return jsDynamicCast<T>(vm, asCell());
+        return jsDynamicCast<T>(asCell());
     }
 
     bool hasLazyJSValue()
@@ -1965,9 +1965,6 @@ public:
     bool hasStorageChild() const
     {
         switch (op()) {
-        case StringCharAt:
-        case StringCharCodeAt:
-        case StringCodePointAt:
         case EnumeratorGetByVal:
         case GetByVal:
         case PutByValDirect:
@@ -2000,9 +1997,6 @@ public:
     {
         ASSERT(hasStorageChild());
         switch (op()) {
-        case StringCharAt:
-        case StringCharCodeAt:
-        case StringCodePointAt:
         case EnumeratorGetByVal:
         case GetByVal:
             return 2;

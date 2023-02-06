@@ -104,11 +104,17 @@ public:
     bool supportsDragging() const;
     bool isDraggableIgnoringAttributes() const final;
 
+    bool isInteractive() const;
+
 #if PLATFORM(COCOA)
     Vector<RetainPtr<id>> accessibilityChildren();
 #endif
 
     void sizeMayHaveChanged();
+
+#if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
+    WEBCORE_EXPORT String inlinePreviewUUIDForTesting() const;
+#endif
 
 private:
     HTMLModelElement(const QualifiedName&, Document&);
@@ -148,8 +154,6 @@ private:
     LayoutPoint flippedLocationInElementForMouseEvent(MouseEvent&);
 
     void setAnimationIsPlaying(bool, DOMPromiseDeferred<void>&&);
-
-    bool isInteractive() const;
 
     LayoutSize contentSize() const;
 

@@ -91,8 +91,8 @@ public:
 
     void positionLineBox(LegacyInlineTextBox&);
 
-    virtual float width(unsigned from, unsigned length, const FontCascade&, float xPos, HashSet<const Font*>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
-    virtual float width(unsigned from, unsigned length, float xPos, bool firstLine = false, HashSet<const Font*>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
+    float width(unsigned from, unsigned length, const FontCascade&, float xPos, HashSet<const Font*>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
+    float width(unsigned from, unsigned length, float xPos, bool firstLine = false, HashSet<const Font*>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
 
     float minLogicalWidth() const;
     float maxLogicalWidth() const;
@@ -181,10 +181,10 @@ public:
     RenderInline* inlineWrapperForDisplayContents();
     void setInlineWrapperForDisplayContents(RenderInline*);
 
-    static RenderText* findByDisplayContentsInlineWrapperCandidate(RenderElement&);
-
     template <typename MeasureTextCallback>
     static float measureTextConsideringPossibleTrailingSpace(bool currentCharacterIsSpace, unsigned startIndex, unsigned wordLength, WordTrailingSpace&, HashSet<const Font*>& fallbackFonts, MeasureTextCallback&&);
+
+    static std::optional<bool> emphasisMarkExistsAndIsAbove(const RenderText&, const RenderStyle&);
 
 protected:
     virtual void computePreferredLogicalWidths(float leadWidth);
@@ -198,7 +198,7 @@ protected:
 private:
     RenderText(Node&, const String&);
 
-    const char* renderName() const override;
+    ASCIILiteral renderName() const override;
 
     bool canHaveChildren() const final { return false; }
 

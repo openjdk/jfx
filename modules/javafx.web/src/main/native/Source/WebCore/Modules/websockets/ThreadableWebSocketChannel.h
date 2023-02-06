@@ -49,6 +49,7 @@ class ResourceResponse;
 class ScriptExecutionContext;
 class SocketProvider;
 class WebSocketChannel;
+class WebSocketChannelInspector;
 class WebSocketChannelClient;
 
 using WebSocketChannelIdentifier = ObjectIdentifier<WebSocketChannel>;
@@ -71,19 +72,20 @@ public:
     virtual String extensions() = 0; // Will be available after didConnect() callback is invoked.
 
     enum SendResult { SendSuccess, SendFail };
-    virtual SendResult send(const String& message) = 0;
+    virtual SendResult send(CString&&) = 0;
     virtual SendResult send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) = 0;
     virtual SendResult send(Blob&) = 0;
 
     virtual unsigned bufferedAmount() const = 0;
     virtual void close(int code, const String& reason) = 0;
     // Log the reason text and close the connection. Will call didClose().
-    virtual void fail(const String& reason) = 0;
+    virtual void fail(String&& reason) = 0;
     virtual void disconnect() = 0; // Will suppress didClose().
 
     virtual void suspend() = 0;
     virtual void resume() = 0;
 
+    virtual const WebSocketChannelInspector* channelInspector() const { return nullptr; };
     virtual WebSocketChannelIdentifier progressIdentifier() const = 0;
     virtual bool hasCreatedHandshake() const = 0;
     virtual bool isConnected() const = 0;

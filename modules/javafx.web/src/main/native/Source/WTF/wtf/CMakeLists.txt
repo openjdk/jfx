@@ -35,6 +35,8 @@ set(WTF_PUBLIC_HEADERS
     ClockType.h
     CommaPrinter.h
     CompactPointerTuple.h
+    CompactPtr.h
+    CompactRefPtr.h
     CompactRefPtrTuple.h
     CompactUniquePtrTuple.h
     CompilationThread.h
@@ -65,6 +67,7 @@ set(WTF_PUBLIC_HEADERS
     EmbeddedFixedVector.h
     EnumClassOperatorOverloads.h
     EnumTraits.h
+    EnumeratedArray.h
     Expected.h
     ExperimentalFeatureNames.h
     ExportMacros.h
@@ -82,6 +85,7 @@ set(WTF_PUBLIC_HEADERS
     Function.h
     FunctionDispatcher.h
     FunctionTraits.h
+    GenerateProfiles.h
     GenericHashKey.h
     GenericTimeMixin.h
     GetPtr.h
@@ -214,6 +218,7 @@ set(WTF_PUBLIC_HEADERS
     RandomNumberSeed.h
     Range.h
     RangeSet.h
+    RawHex.h
     RawPointer.h
     RawPtrTraits.h
     RawValueTraits.h
@@ -319,6 +324,7 @@ set(WTF_PUBLIC_HEADERS
     WTFConfig.h
     WTFSemaphore.h
     WallTime.h
+    WeakHashCountedSet.h
     WeakHashMap.h
     WeakHashSet.h
     WeakPtr.h
@@ -355,6 +361,7 @@ set(WTF_PUBLIC_HEADERS
     text/CString.h
     text/CodePointIterator.h
     text/ConversionMode.h
+    text/EscapedFormsForJSON.h
     text/ExternalStringImpl.h
     text/IntegerToStringConversion.h
     text/LChar.h
@@ -471,6 +478,7 @@ set(WTF_SOURCES
     SixCharacterHash.cpp
     SmallSet.cpp
     StackBounds.cpp
+    StackCheck.cpp
     StackPointer.cpp
     StackStats.cpp
     StackTrace.cpp
@@ -520,6 +528,7 @@ set(WTF_SOURCES
     text/StringBuffer.cpp
     text/StringBuilder.cpp
     text/StringBuilderJSON.cpp
+    text/StringCommon.cpp
     text/StringImpl.cpp
     text/StringView.cpp
     text/SymbolImpl.cpp

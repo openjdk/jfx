@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -283,13 +283,19 @@ public:
 
 void WTFReportBacktraceWithPrefix(const char* prefix)
 {
+    CrashLogPrintStream out;
+    WTFReportBacktraceWithPrefixAndPrintStream(out, prefix);
+}
+
+void WTFReportBacktraceWithPrefixAndPrintStream(PrintStream& out, const char* prefix)
+{
     static constexpr int framesToShow = 31;
     static constexpr int framesToSkip = 2;
     void* samples[framesToShow + framesToSkip];
     int frames = framesToShow + framesToSkip;
 
     WTFGetBacktrace(samples, &frames);
-    WTFPrintBacktraceWithPrefix(samples + framesToSkip, frames - framesToSkip, prefix);
+    WTFPrintBacktraceWithPrefixAndPrintStream(out, samples + framesToSkip, frames - framesToSkip, prefix);
 }
 
 void WTFReportBacktrace()
@@ -303,16 +309,16 @@ void WTFReportBacktrace()
     WTFPrintBacktrace(samples + framesToSkip, frames - framesToSkip);
 }
 
-void WTFPrintBacktraceWithPrefix(void** stack, int size, const char* prefix)
+void WTFPrintBacktraceWithPrefixAndPrintStream(PrintStream& out, void** stack, int size, const char* prefix)
 {
-    CrashLogPrintStream out;
     StackTrace stackTrace(stack, size, prefix);
     out.print(stackTrace);
 }
 
 void WTFPrintBacktrace(void** stack, int size)
 {
-    WTFPrintBacktraceWithPrefix(stack, size, "");
+    CrashLogPrintStream out;
+    WTFPrintBacktraceWithPrefixAndPrintStream(out, stack, size, "");
 }
 
 #if !defined(NDEBUG) || !(OS(DARWIN) || PLATFORM(PLAYSTATION))
@@ -473,7 +479,7 @@ static void WTFLogVaList(WTFLogChannel* channel, const char* format, va_list arg
     ALLOW_NONLITERAL_FORMAT_END
 
     if (!loggingString.endsWith('\n'))
-        loggingString.append('\n');
+        loggingString = makeString(loggingString, '\n');
 
     loggingAccumulator().accumulate(loggingString);
 
@@ -555,9 +561,13 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
     }
 #endif
 
-    for (auto& logLevelComponent : String(logLevel).split(',')) {
-        Vector<String> componentInfo = logLevelComponent.split('=');
-        String component = componentInfo[0].stripWhiteSpace();
+    for (auto logLevelComponent : StringView::fromLatin1(logLevel).split(',')) {
+        auto componentInfo = logLevelComponent.split('=');
+        auto it = componentInfo.begin();
+        if (it == componentInfo.end())
+            continue;
+
+        auto component = (*it).stripWhiteSpace();
 
         WTFLogChannelState logChannelState = WTFLogChannelState::On;
         if (component.startsWith('-')) {
@@ -565,21 +575,21 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
             component = component.substring(1);
         }
 
-        if (equalLettersIgnoringASCIICase(component, "all")) {
+        if (equalLettersIgnoringASCIICase(component, "all"_s)) {
             setStateOfAllChannels(channels, count, logChannelState);
             continue;
         }
 
         WTFLogLevel logChannelLevel = WTFLogLevel::Error;
-        if (componentInfo.size() > 1) {
-            String level = componentInfo[1].stripWhiteSpace();
-            if (equalLettersIgnoringASCIICase(level, "error"))
+        if (++it != componentInfo.end()) {
+            auto level = (*it).stripWhiteSpace();
+            if (equalLettersIgnoringASCIICase(level, "error"_s))
                 logChannelLevel = WTFLogLevel::Error;
-            else if (equalLettersIgnoringASCIICase(level, "warning"))
+            else if (equalLettersIgnoringASCIICase(level, "warning"_s))
                 logChannelLevel = WTFLogLevel::Warning;
-            else if (equalLettersIgnoringASCIICase(level, "info"))
+            else if (equalLettersIgnoringASCIICase(level, "info"_s))
                 logChannelLevel = WTFLogLevel::Info;
-            else if (equalLettersIgnoringASCIICase(level, "debug"))
+            else if (equalLettersIgnoringASCIICase(level, "debug"_s))
                 logChannelLevel = WTFLogLevel::Debug;
             else
                 WTFLogAlways("Unknown logging level: %s", level.utf8().data());

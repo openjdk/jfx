@@ -58,16 +58,17 @@ void SVGFETileElement::parseAttribute(const QualifiedName& name, const AtomStrin
 
 void SVGFETileElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::inAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::inAttr);
         InstanceInvalidationGuard guard(*this);
-        invalidate();
+        updateSVGRendererForElementChange();
         return;
     }
 
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFETileElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
+RefPtr<FilterEffect> SVGFETileElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     return FETile::create();
 }

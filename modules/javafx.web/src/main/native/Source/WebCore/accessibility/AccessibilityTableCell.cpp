@@ -65,7 +65,7 @@ bool AccessibilityTableCell::computeAccessibilityIsIgnored() const
 
     // Ignore anonymous table cells as long as they're not in a table (ie. when display:table is used).
     RenderObject* renderTable = is<RenderTableCell>(renderer()) ? downcast<RenderTableCell>(*m_renderer).table() : nullptr;
-    bool inTable = renderTable && renderTable->node() && (renderTable->node()->hasTagName(tableTag) || nodeHasRole(renderTable->node(), "grid"));
+    bool inTable = renderTable && renderTable->node() && (renderTable->node()->hasTagName(tableTag) || nodeHasRole(renderTable->node(), "grid"_s));
     if (!node() && !inTable)
         return true;
 
@@ -149,9 +149,9 @@ bool AccessibilityTableCell::isTableHeaderCell() const
 bool AccessibilityTableCell::isColumnHeaderCell() const
 {
     const AtomString& scope = getAttribute(scopeAttr);
-    if (scope == "col" || scope == "colgroup")
+    if (scope == "col"_s || scope == "colgroup"_s)
         return true;
-    if (scope == "row" || scope == "rowgroup")
+    if (scope == "row"_s || scope == "rowgroup"_s)
         return false;
     if (!isTableHeaderCell())
         return false;
@@ -177,9 +177,9 @@ bool AccessibilityTableCell::isColumnHeaderCell() const
 bool AccessibilityTableCell::isRowHeaderCell() const
 {
     const AtomString& scope = getAttribute(scopeAttr);
-    if (scope == "row" || scope == "rowgroup")
+    if (scope == "row"_s || scope == "rowgroup"_s)
         return true;
-    if (scope == "col" || scope == "colgroup")
+    if (scope == "col"_s || scope == "colgroup"_s)
         return false;
     if (!isTableHeaderCell())
         return false;
@@ -239,13 +239,12 @@ bool AccessibilityTableCell::supportsExpandedTextValue() const
 
 AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::columnHeaders()
 {
-    AccessibilityChildrenVector headers;
-    AccessibilityTable* parent = parentTable();
+    auto* parent = parentTable();
     if (!parent)
-        return headers;
+        return { };
 
     // Choose columnHeaders as the place where the "headers" attribute is reported.
-    ariaElementsFromAttribute(headers, headersAttr);
+    auto headers = relatedObjects(AXRelationType::Headers);
     // If the headers attribute returned valid values, then do not further search for column headers.
     if (!headers.isEmpty())
         return headers;
@@ -260,7 +259,7 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::columnHeaders(
 
         ASSERT(is<AccessibilityObject>(tableCell));
         const AtomString& scope = downcast<AccessibilityObject>(tableCell)->getAttribute(scopeAttr);
-        if (scope == "colgroup" && isTableCellInSameColGroup(tableCell))
+        if (scope == "colgroup"_s && isTableCellInSameColGroup(tableCell))
             headers.append(tableCell);
         else if (tableCell->isColumnHeaderCell())
             headers.append(tableCell);
@@ -285,7 +284,7 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::rowHeaders()
             continue;
 
         const AtomString& scope = downcast<AccessibilityObject>(tableCell)->getAttribute(scopeAttr);
-        if (scope == "rowgroup" && isTableCellInSameRowGroup(tableCell))
+        if (scope == "rowgroup"_s && isTableCellInSameRowGroup(tableCell))
             headers.append(tableCell);
         else if (tableCell->isRowHeaderCell())
             headers.append(tableCell);
@@ -296,15 +295,13 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::rowHeaders()
 
 AccessibilityTableRow* AccessibilityTableCell::ariaOwnedByParent() const
 {
-    AccessibilityChildrenVector ariaOwnedBy;
-    ariaOwnsReferencingElements(ariaOwnedBy);
-    if (ariaOwnedBy.size() == 1 && ariaOwnedBy[0]->isTableRow())
-        return downcast<AccessibilityTableRow>(ariaOwnedBy[0].get());
-
+    auto owners = this->owners();
+    if (owners.size() == 1 && owners[0]->isTableRow())
+        return downcast<AccessibilityTableRow>(owners[0].get());
     return nullptr;
 }
 
-AXCoreObject* AccessibilityTableCell::parentObjectUnignored() const
+AccessibilityObject* AccessibilityTableCell::parentObjectUnignored() const
 {
     if (auto ownerParent = ariaOwnedByParent())
         return ownerParent;
@@ -452,7 +449,7 @@ int AccessibilityTableCell::axRowSpan() const
 
     // ARIA 1.1: Authors must set the value of aria-rowspan to an integer greater than or equal to 0.
     // Setting the value to 0 indicates that the cell or gridcell is to span all the remaining rows in the row group.
-    if (getAttribute(aria_rowspanAttr) == "0")
+    if (getAttribute(aria_rowspanAttr) == "0"_s)
         return 0;
     if (int value = getIntegralAttribute(aria_rowspanAttr); value >= 1)
         return value;

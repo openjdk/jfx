@@ -71,11 +71,11 @@ void SVGFEBlendElement::parseAttribute(const QualifiedName& name, const AtomStri
     SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
 }
 
-bool SVGFEBlendElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
+bool SVGFEBlendElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
 {
-    FEBlend* blend = static_cast<FEBlend*>(effect);
+    auto& feBlend = downcast<FEBlend>(effect);
     if (attrName == SVGNames::modeAttr)
-        return blend->setBlendMode(mode());
+        return feBlend.setBlendMode(mode());
 
     ASSERT_NOT_REACHED();
     return false;
@@ -83,22 +83,21 @@ bool SVGFEBlendElement::setFilterEffectAttribute(FilterEffect* effect, const Qua
 
 void SVGFEBlendElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::modeAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        primitiveAttributeChanged(attrName);
-        return;
-    }
-
-    if (attrName == SVGNames::inAttr || attrName == SVGNames::in2Attr) {
-        InstanceInvalidationGuard guard(*this);
-        invalidate();
+        if (attrName == SVGNames::modeAttr)
+            primitiveAttributeChanged(attrName);
+        else {
+            ASSERT(attrName == SVGNames::inAttr || attrName == SVGNames::in2Attr);
+            updateSVGRendererForElementChange();
+        }
         return;
     }
 
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFEBlendElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
+RefPtr<FilterEffect> SVGFEBlendElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     return FEBlend::create(mode());
 }

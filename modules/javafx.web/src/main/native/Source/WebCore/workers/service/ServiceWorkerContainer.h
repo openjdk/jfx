@@ -91,6 +91,9 @@ public:
     void unsubscribeFromPushService(ServiceWorkerRegistrationIdentifier, PushSubscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
     void getPushSubscription(ServiceWorkerRegistration&, DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&);
     void getPushPermissionState(ServiceWorkerRegistrationIdentifier, DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&);
+#if ENABLE(NOTIFICATIONS)
+    void getNotifications(const URL&, const String&, DOMPromiseDeferred<IDLSequence<IDLInterface<Notification>>>&&);
+#endif
 
     ServiceWorkerJob* job(ServiceWorkerJobIdentifier);
 
@@ -118,7 +121,7 @@ private:
     void jobResolvedWithRegistration(ServiceWorkerJob&, ServiceWorkerRegistrationData&&, ShouldNotifyWhenResolved) final;
     void jobResolvedWithUnregistrationResult(ServiceWorkerJob&, bool unregistrationResult) final;
     void startScriptFetchForJob(ServiceWorkerJob&, FetchOptions::Cache) final;
-    void jobFinishedLoadingScript(ServiceWorkerJob&, const WorkerFetchResult&) final;
+    void jobFinishedLoadingScript(ServiceWorkerJob&, WorkerFetchResult&&) final;
     void jobFailedLoadingScript(ServiceWorkerJob&, const ResourceError&, Exception&&) final;
 
     void notifyFailedFetchingScript(ServiceWorkerJob&, const ResourceError&);
@@ -126,6 +129,7 @@ private:
     void willSettleRegistrationPromise(bool success);
 
     ServiceWorkerOrClientIdentifier contextIdentifier() final;
+    ScriptExecutionContext* context() final { return scriptExecutionContext(); }
 
     SWClientConnection& ensureSWClientConnection();
 

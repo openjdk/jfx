@@ -39,6 +39,7 @@
 #include "Element.h"
 #include "EventLoop.h"
 #include "EventNames.h"
+#include "HTMLNames.h"
 #include "InspectorInstrumentation.h"
 #include "JSWebAnimation.h"
 #include "KeyframeEffect.h"
@@ -644,11 +645,11 @@ auto WebAnimation::playState() const -> PlayState
     // The play state of animation, animation, at a given moment is the state corresponding to the
     // first matching condition from the following:
 
-    // The current time of animation is unresolved, and animation does not have either a pending
-    // play task or a pending pause task,
+    // The current time of animation is unresolved, and the start time of animation is unresolved, and
+    // animation does not have either a pending play task or a pending pause task,
     // → idle
     auto animationCurrentTime = currentTime();
-    if (!animationCurrentTime && !pending())
+    if (!animationCurrentTime && !m_startTime && !pending())
         return PlayState::Idle;
 
     // Animation has a pending pause task, or both the start time of animation is unresolved and it does not
@@ -1348,27 +1349,39 @@ void WebAnimation::updateRelevance()
 
 bool WebAnimation::computeRelevance()
 {
-    // To be listed in getAnimations() an animation needs a target effect which is current or in effect.
+    // An animation is relevant if:
+    // - its associated effect is current or in effect, and
     if (!m_effect)
         return false;
 
+    // - its replace state is not removed.
     if (m_replaceState == ReplaceState::Removed)
         return false;
 
     auto timing = m_effect->getBasicTiming();
 
-    // An animation effect is in effect if its active time is not unresolved.
-    if (timing.activeTime)
-        return true;
-
-    // An animation effect is current if either of the following conditions is true:
-    // - the animation effect is in the before phase, or
-    // - the animation effect is in play.
-
     // An animation effect is in play if all of the following conditions are met:
     // - the animation effect is in the active phase, and
     // - the animation effect is associated with an animation that is not finished.
-    return timing.phase == AnimationEffectPhase::Before || (timing.phase == AnimationEffectPhase::Active && playState() != PlayState::Finished);
+    if (timing.phase == AnimationEffectPhase::Active && playState() != PlayState::Finished)
+        return true;
+
+    // An animation effect is current if any of the following conditions are true:
+    // - the animation effect is in play, or
+    // - the animation effect is associated with an animation with a playback rate > 0 and the animation effect is in the before phase, or
+    if (m_playbackRate > 0 && timing.phase == AnimationEffectPhase::Before)
+        return true;
+
+    // - the animation effect is associated with an animation with a playback rate < 0 and the animation effect is in the after phase.
+    if (m_playbackRate < 0 && timing.phase == AnimationEffectPhase::After)
+        return true;
+
+    // An animation effect is in effect if its active time, as calculated according to the procedure in
+    // § 4.8.3.1 Calculating the active time, is not unresolved.
+    if (timing.activeTime)
+        return true;
+
+    return false;
 }
 
 bool WebAnimation::isReplaceable() const
@@ -1462,12 +1475,18 @@ ExceptionOr<void> WebAnimation::commitStyles()
 
     auto computedStyleExtractor = ComputedStyleExtractor(&styledElement);
     auto inlineStyle = styledElement.document().createCSSStyleDeclaration();
-    inlineStyle->setCssText(styledElement.getAttribute("style"));
+    inlineStyle->setCssText(styledElement.getAttribute(HTMLNames::styleAttr));
 
     auto& keyframeStack = styledElement.ensureKeyframeEffectStack(PseudoId::None);
 
-    // 2.5 For each property, property, in targeted properties:
-    for (auto property : effect->animatedProperties()) {
+    auto effectAnimatesProperty = [](KeyframeEffect& effect, std::variant<CSSPropertyID, AtomString> property) {
+        return WTF::switchOn(property,
+            [&] (CSSPropertyID propertyId) { return effect.animatedProperties().contains(propertyId); },
+            [&] (AtomString customProperty) { return effect.animatedCustomProperties().contains(customProperty); }
+        );
+    };
+
+    auto commitProperty = [&](std::variant<CSSPropertyID, AtomString> property) {
         // 1. Let partialEffectStack be a copy of the effect stack for property on target.
         // 2. If animation's replace state is removed, add all animation effects associated with animation whose effect target is target and which include
         // property as a target property to partialEffectStack.
@@ -1483,18 +1502,37 @@ ExceptionOr<void> WebAnimation::commitStyles()
         for (const auto& effectInStack : keyframeStack.sortedEffects()) {
             if (effectInStack->animation() != this && !compareAnimationsByCompositeOrder(*effectInStack->animation(), *this))
                 break;
-            if (effectInStack->animatedProperties().contains(property))
+            if (effectAnimatesProperty(*effectInStack, property))
                 effectInStack->animation()->resolve(*animatedStyle, { nullptr });
             if (effectInStack->animation() == this)
                 break;
         }
         if (m_replaceState == ReplaceState::Removed)
             effect->animation()->resolve(*animatedStyle, { nullptr });
-        if (auto cssValue = computedStyleExtractor.valueForPropertyInStyle(*animatedStyle, property, renderer))
-            inlineStyle->setPropertyInternal(property, cssValue->cssText(), false);
-    }
+        WTF::switchOn(property,
+            [&] (CSSPropertyID propertyId) {
+                if (auto cssValue = computedStyleExtractor.valueForPropertyInStyle(*animatedStyle, propertyId, renderer))
+                    inlineStyle->setPropertyInternal(propertyId, cssValue->cssText(), false);
+            },
+            [&] (AtomString customProperty) {
+                if (auto cssValue = computedStyleExtractor.customPropertyValue(customProperty))
+                    inlineStyle->setProperty(customProperty, cssValue->cssText(), emptyString());
+            }
+        );
+    };
 
-    styledElement.setAttribute("style", inlineStyle->cssText());
+    // During iteration resolve() could clear the underlying properties so we use a copy
+    auto properties = effect->animatedProperties();
+    // 2.5 For each property, property, in targeted properties:
+    for (auto property : properties) {
+        if (property != CSSPropertyCustom)
+            commitProperty(property);
+    }
+    auto customProperties = effect->animatedCustomProperties();
+    for (auto customProperty : customProperties)
+        commitProperty(customProperty);
+
+    styledElement.setAttribute(HTMLNames::styleAttr, AtomString { inlineStyle->cssText() });
 
     return { };
 }

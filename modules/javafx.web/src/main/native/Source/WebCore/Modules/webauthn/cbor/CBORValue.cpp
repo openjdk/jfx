@@ -108,7 +108,12 @@ CBORValue::CBORValue(const WebCore::BufferSource& bufferSource)
 }
 
 CBORValue::CBORValue(const char* inString)
-    : CBORValue(String(inString))
+    : CBORValue(String::fromLatin1(inString))
+{
+}
+
+CBORValue::CBORValue(ASCIILiteral inString)
+    : CBORValue(String { inString })
 {
 }
 

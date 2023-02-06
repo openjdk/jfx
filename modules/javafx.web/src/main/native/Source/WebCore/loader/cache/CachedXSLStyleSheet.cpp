@@ -38,7 +38,7 @@ namespace WebCore {
 
 CachedXSLStyleSheet::CachedXSLStyleSheet(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), Type::XSLStyleSheet, sessionID, cookieJar)
-    , m_decoder(TextResourceDecoder::create("text/xsl"))
+    , m_decoder(TextResourceDecoder::create("text/xsl"_s))
 {
 }
 
@@ -48,7 +48,7 @@ void CachedXSLStyleSheet::didAddClient(CachedResourceClient& client)
 {
     ASSERT(client.resourceClientType() == CachedStyleSheetClient::expectedType());
     if (!isLoading())
-        static_cast<CachedStyleSheetClient&>(client).setXSLStyleSheet(m_resourceRequest.url().string(), m_response.url(), m_sheet);
+        downcast<CachedStyleSheetClient>(client).setXSLStyleSheet(m_resourceRequest.url().string(), m_response.url(), m_sheet);
 }
 
 void CachedXSLStyleSheet::setEncoding(const String& chs)
@@ -58,7 +58,7 @@ void CachedXSLStyleSheet::setEncoding(const String& chs)
 
 String CachedXSLStyleSheet::encoding() const
 {
-    return m_decoder->encoding().name();
+    return String::fromLatin1(m_decoder->encoding().name());
 }
 
 void CachedXSLStyleSheet::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
@@ -81,8 +81,8 @@ void CachedXSLStyleSheet::checkNotify(const NetworkLoadMetrics&)
     if (isLoading())
         return;
 
-    CachedResourceClientWalker<CachedStyleSheetClient> w(m_clients);
-    while (CachedStyleSheetClient* c = w.next())
+    CachedResourceClientWalker<CachedStyleSheetClient> walker(*this);
+    while (CachedStyleSheetClient* c = walker.next())
         c->setXSLStyleSheet(m_resourceRequest.url().string(), m_response.url(), m_sheet);
 }
 

@@ -36,10 +36,13 @@
 #include <wtf/SharedTask.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-namespace JSC { namespace Wasm {
+namespace JSC {
+
+class VM;
+
+namespace Wasm {
 
 class LLIntPlan;
-struct Context;
 struct ModuleInformation;
 
 class Module : public ThreadSafeRefCounted<Module> {
@@ -48,19 +51,19 @@ public:
     typedef void CallbackType(ValidationResult&&);
     using AsyncValidationCallback = RefPtr<SharedTask<CallbackType>>;
 
-    static ValidationResult validateSync(Context*, Vector<uint8_t>&& source);
-    static void validateAsync(Context*, Vector<uint8_t>&& source, Module::AsyncValidationCallback&&);
+    static ValidationResult validateSync(VM&, Vector<uint8_t>&& source);
+    static void validateAsync(VM&, Vector<uint8_t>&& source, Module::AsyncValidationCallback&&);
 
     static Ref<Module> create(LLIntPlan& plan)
     {
         return adoptRef(*new Module(plan));
     }
 
-    Wasm::SignatureIndex signatureIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const;
+    Wasm::TypeIndex typeIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const;
     const Wasm::ModuleInformation& moduleInformation() const { return m_moduleInformation.get(); }
 
-    Ref<CalleeGroup> compileSync(Context*, MemoryMode);
-    void compileAsync(Context*, MemoryMode, CalleeGroup::AsyncCompilationCallback&&);
+    Ref<CalleeGroup> compileSync(VM&, MemoryMode);
+    void compileAsync(VM&, MemoryMode, CalleeGroup::AsyncCompilationCallback&&);
 
     JS_EXPORT_PRIVATE ~Module();
 
@@ -69,7 +72,7 @@ public:
     void copyInitialCalleeGroupToAllMemoryModes(MemoryMode);
 
 private:
-    Ref<CalleeGroup> getOrCreateCalleeGroup(Context*, MemoryMode);
+    Ref<CalleeGroup> getOrCreateCalleeGroup(VM&, MemoryMode);
 
     Module(LLIntPlan&);
     Ref<ModuleInformation> m_moduleInformation;

@@ -52,7 +52,7 @@ void UPluralRulesDeleter::operator()(UPluralRules* pluralRules)
         uplrules_close(pluralRules);
 }
 
-const ClassInfo IntlPluralRules::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlPluralRules) };
+const ClassInfo IntlPluralRules::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlPluralRules) };
 
 using UEnumerationDeleter = ICUDeleter<uenum_close>;
 
@@ -76,7 +76,7 @@ IntlPluralRules::IntlPluralRules(VM& vm, Structure* structure)
 void IntlPluralRules::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>
@@ -230,7 +230,7 @@ JSObject* IntlPluralRules::resolvedOptions(JSGlobalObject* globalObject) const
         categories->putDirectIndex(globalObject, index++, jsNontrivialString(vm, String(result, resultLength)));
         RETURN_IF_EXCEPTION(scope, { });
     }
-    options->putDirect(vm, Identifier::fromString(vm, "pluralCategories"), categories);
+    options->putDirect(vm, Identifier::fromString(vm, "pluralCategories"_s), categories);
     options->putDirect(vm, vm.propertyNames->roundingMode, jsNontrivialString(vm, IntlNumberFormat::roundingPriorityString(m_roundingType)));
 
     return options;
@@ -281,12 +281,6 @@ JSValue IntlPluralRules::selectRange(JSGlobalObject* globalObject, double start,
 
     if (std::isnan(start) || std::isnan(end))
         return throwRangeError(globalObject, scope, "Passed numbers are out of range"_s);
-
-    if (end < start)
-        return throwRangeError(globalObject, scope, "start is larger than end"_s);
-
-    if (isNegativeZero(end) && start >= 0)
-        return throwRangeError(globalObject, scope, "start is larger than end"_s);
 
     UErrorCode status = U_ZERO_ERROR;
     auto range = std::unique_ptr<UFormattedNumberRange, ICUDeleter<unumrf_closeResult>>(unumrf_openResult(&status));

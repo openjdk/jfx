@@ -208,17 +208,17 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
                            && pname[pnameLength-1] == ']') {
                         // Primitive array type names.
                         if (methodParamLength == 2) {
-                          const char *prim;
+                          ASCIILiteral prim;
                           switch (methodParam[1]) {
-                          case 'I': prim = "int[]"; break;
-                          case 'J': prim = "long[]"; break;
-                          case 'B': prim = "byte[]"; break;
-                          case 'S': prim = "short[]"; break;
-                          case 'F': prim = "float[]"; break;
-                          case 'D': prim = "double[]"; break;
-                          case 'C': prim = "char[]"; break;
-                          case 'Z': prim = "boolean[]"; break;
-                          default: prim = nullptr;
+                          case 'I': prim = "int[]"_s; break;
+                          case 'J': prim = "long[]"_s; break;
+                          case 'B': prim = "byte[]"_s; break;
+                          case 'S': prim = "short[]"_s; break;
+                          case 'F': prim = "float[]"_s; break;
+                          case 'D': prim = "double[]"_s; break;
+                          case 'C': prim = "char[]"_s; break;
+                          case 'Z': prim = "boolean[]"_s; break;
+                          default: prim = { };
                           }
                           if (pname == prim) {
                               methodParamLength = 0;
@@ -240,7 +240,7 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
                         }
                     }
                     if (methodParamLength == pnameLength + 10
-                        && methodParam.find("java.lang.", 0) == 0) {
+                        && methodParam.find("java.lang."_s, 0) == 0) {
                         methodParam = methodParam.substringSharingImpl(10, pnameLength);
                         methodParamLength = pnameLength;
                     }

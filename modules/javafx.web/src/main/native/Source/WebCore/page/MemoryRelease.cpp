@@ -70,11 +70,9 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
 {
     RenderTheme::singleton().purgeCaches();
 
-    // FIXME: Clear these font caches in workers too?
-    FontCache::forCurrentThread().purgeInactiveFontData();
-    FontCache::forCurrentThread().clearWidthCaches();
+    FontCache::releaseNoncriticalMemoryInAllFontCaches();
 
-    TextPainter::clearGlyphDisplayLists();
+    GlyphDisplayListCache::singleton().clear();
 
     for (auto* document : Document::allDocuments()) {
         document->clearSelectorQueryCache();

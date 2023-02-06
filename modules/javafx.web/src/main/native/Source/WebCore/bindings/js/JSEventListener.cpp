@@ -143,31 +143,31 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     // "If this throws an exception, report the exception." It should not propagate the
     // exception.
 
-    JSObject* jsFunction = ensureJSFunction(scriptExecutionContext);
+    auto* jsFunction = ensureJSFunction(scriptExecutionContext);
     if (!jsFunction)
         return;
 
-    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(scriptExecutionContext, m_isolatedWorld);
+    auto* globalObject = toJSDOMGlobalObject(scriptExecutionContext, m_isolatedWorld);
     if (!globalObject)
         return;
 
     if (scriptExecutionContext.isDocument()) {
-        JSDOMWindow* window = jsCast<JSDOMWindow*>(globalObject);
+        auto* window = jsCast<JSDOMWindow*>(globalObject);
         if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
         if (wasCreatedFromMarkup()) {
-            Element* element = event.target()->isNode() && !downcast<Node>(*event.target()).isDocumentNode() ? dynamicDowncast<Element>(*event.target()) : nullptr;
+            auto* element = dynamicDowncast<Element>(*event.target());
             if (!scriptExecutionContext.contentSecurityPolicy()->allowInlineEventHandlers(sourceURL().string(), sourcePosition().m_line, code(), element))
                 return;
         }
         // FIXME: Is this check needed for other contexts?
-        ScriptController& script = window->wrapped().frame()->script();
+        auto& script = window->wrapped().frame()->script();
         if (!script.canExecuteScripts(AboutToExecuteScript) || script.isPaused())
             return;
     }
 
     RefPtr<Event> savedEvent;
-    auto* jsFunctionWindow = jsDynamicCast<JSDOMWindow*>(vm, jsFunction->globalObject(vm));
+    auto* jsFunctionWindow = jsDynamicCast<JSDOMWindow*>(jsFunction->globalObject());
     if (jsFunctionWindow) {
         savedEvent = jsFunctionWindow->currentEvent();
 
@@ -185,7 +185,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
 
     JSValue handleEventFunction = jsFunction;
 
-    auto callData = getCallData(vm, handleEventFunction);
+    auto callData = JSC::getCallData(handleEventFunction);
 
     // If jsFunction is not actually a function and this is an EventListener, see if it implements callback interface.
     if (callData.type == CallData::Type::None) {
@@ -200,7 +200,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
             reportException(lexicalGlobalObject, exception);
             return;
         }
-        callData = getCallData(vm, handleEventFunction);
+        callData = JSC::getCallData(handleEventFunction);
         if (callData.type == CallData::Type::None) {
             event.target()->uncaughtExceptionInEventHandler();
             reportException(lexicalGlobalObject, createTypeError(lexicalGlobalObject, "'handleEvent' property of event listener should be callable"_s));
@@ -283,7 +283,7 @@ String JSEventListener::functionName() const
     auto& vm = isolatedWorld().vm();
     JSC::JSLockHolder lock(vm);
 
-    auto* handlerFunction = JSC::jsDynamicCast<JSC::JSFunction*>(vm, m_jsFunction.get());
+    auto* handlerFunction = JSC::jsDynamicCast<JSC::JSFunction*>(m_jsFunction.get());
     if (!handlerFunction)
         return { };
 

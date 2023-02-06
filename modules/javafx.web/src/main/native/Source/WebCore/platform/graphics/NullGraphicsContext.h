@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,8 @@ public:
         DetectingContentfulPaint
     };
 
+    NullGraphicsContext() = default;
+
     NullGraphicsContext(PaintInvalidationReasons reasons)
         : m_paintInvalidationReasons(reasons)
     {
@@ -55,13 +57,15 @@ private:
     bool invalidatingImagesWithAsyncDecodes() const final { return m_paintInvalidationReasons == PaintInvalidationReasons::InvalidatingImagesWithAsyncDecodes; }
     bool detectingContentfulPaint() const final { return m_paintInvalidationReasons == PaintInvalidationReasons::DetectingContentfulPaint; }
 
-    void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) final { }
+    void didUpdateState(GraphicsContextState&) final { }
 
 #if USE(CG)
     void setIsAcceleratedContext(bool) final { }
 #endif
 
     void drawNativeImage(NativeImage&, const FloatSize&, const FloatRect&, const FloatRect&, const ImagePaintingOptions&) final { }
+
+    void drawSystemImage(SystemImage&, const FloatRect&) final { };
 
     void drawPattern(NativeImage&, const FloatRect&, const FloatRect&, const AffineTransform&, const FloatPoint&, const FloatSize&, const ImagePaintingOptions&) final { }
 
@@ -107,6 +111,7 @@ private:
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned = 0, std::optional<unsigned> = std::nullopt) final { return { }; }
 
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned, const FloatPoint&, FontSmoothingMode) final { }
+    void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final { }
 
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString&, const FloatPoint&, unsigned = 0, std::optional<unsigned> = std::nullopt) final { }
     void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady) final { }

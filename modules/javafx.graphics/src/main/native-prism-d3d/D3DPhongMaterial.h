@@ -51,10 +51,11 @@ public:
     IDirect3DBaseTexture9 * getMap(int type);
 
 private:
-    D3DContext *context;
-    float diffuseColor[4], specularColor[4];
-    IDirect3DBaseTexture9 *map[4];
-    bool specularColorSet;
+    D3DContext *context = NULL;
+    float diffuseColor[4] = {0};
+    float specularColor[4] = {1, 1, 1, 32};
+    IDirect3DBaseTexture9 *map[4] = {NULL};
+    bool specularColorSet = false;
 };
 
 #endif  /* D3DPHONGMATERIAL_H */

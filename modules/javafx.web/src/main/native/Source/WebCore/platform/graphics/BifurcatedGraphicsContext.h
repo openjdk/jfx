@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,6 +99,7 @@ public:
     void setMiterLimit(float) final;
 
     void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
+    void drawSystemImage(SystemImage&, const FloatRect&) final;
     void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
     ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::FromImage }) final;
     ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
@@ -129,6 +130,7 @@ public:
 
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode) final;
+    void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
     void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady) final;
 
@@ -143,13 +145,17 @@ public:
 
     bool supportsInternalLinks() const final;
 
-    void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) final;
+    void didUpdateState(GraphicsContextState&) final;
 
 #if OS(WINDOWS) && !USE(CAIRO)
     GraphicsContextPlatformPrivate* deprecatedPrivateContext() const final;
 #endif
 
 private:
+    void verifyStateSynchronization();
+
+    bool m_hasLoggedAboutDesynchronizedState { false };
+
     GraphicsContext& m_primaryContext;
     GraphicsContext& m_secondaryContext;
 };

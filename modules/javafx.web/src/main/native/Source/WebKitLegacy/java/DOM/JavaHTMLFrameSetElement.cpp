@@ -55,7 +55,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameSetElementImpl_getCol
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFrameSetElementImpl_setColsImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::colsAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::colsAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameSetElementImpl_getRowsImpl(JNIEnv* env, jclass, jlong peer)
@@ -67,7 +67,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameSetElementImpl_getRow
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFrameSetElementImpl_setRowsImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::rowsAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::rowsAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFrameSetElementImpl_getOnblurImpl(JNIEnv* env, jclass, jlong peer)
