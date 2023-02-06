@@ -2604,14 +2604,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // thumb can be appropriately sized
         if (recreate && (lengthBar.isVisible() || Properties.IS_TOUCH_SUPPORTED)) {
             final int cellCount = getCellCount();
-            float numCellsVisibleOnScreen = 0;
+            int numCellsVisibleOnScreen = 0;
             for (int i = 0, max = cells.size(); i < max; i++) {
                 T cell = cells.get(i);
                 if (cell != null && !cell.isEmpty()) {
-                    double lengthToAdd = (isVertical ? cell.getHeight() : cell.getWidth());
-                    sumCellLength += lengthToAdd;
+                    sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
                     if (sumCellLength > flowLength) {
-                        numCellsVisibleOnScreen += ( 1 - (sumCellLength - flowLength )/ lengthToAdd);
                         break;
                     }
 
@@ -2620,7 +2618,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
 
             lengthBar.setMax(1);
-            lengthBar.setVisibleAmount( numCellsVisibleOnScreen / (float) cellCount);
+            if (numCellsVisibleOnScreen == 0 && cellCount == 1) {
+                // special case to help resolve RT-17701 and the case where we have
+                // only a single row and it is bigger than the viewport
+                lengthBar.setVisibleAmount(flowLength / sumCellLength);
+            } else {
+                lengthBar.setVisibleAmount(viewportLength / estimatedSize);
+            }
         }
 
         if (lengthBar.isVisible()) {
