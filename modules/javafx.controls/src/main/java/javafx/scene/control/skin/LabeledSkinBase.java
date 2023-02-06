@@ -316,6 +316,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Get the preferred width of the text
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
+        final ContentDisplay contentDisplay = labeled.getContentDisplay();
         String cleanText = getCleanText();
         boolean emptyText = cleanText == null || cleanText.isEmpty();
         double widthPadding = leftInset + rightInset;
@@ -324,26 +325,27 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             widthPadding += leftLabelPadding() + rightLabelPadding();
         }
 
-        double textWidth = 0.0;
-        if (!emptyText) {
-            textWidth = Utils.computeTextWidth(font, cleanText, 0);
-        }
+        double textWidth = emptyText ? 0.0 : Utils.computeTextWidth(font, cleanText, 0);
 
-        // Fix for RT-39889
-        double graphicWidth = graphic == null ? 0.0 :
-                Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1));
-
-        // Now add on the graphic, gap, and padding as appropriate
-        if (isIgnoreGraphic()) {
-            return textWidth + widthPadding;
-        } else if (isIgnoreText()) {
-            return graphicWidth + widthPadding;
-        } else if (labeled.getContentDisplay() == ContentDisplay.LEFT
-                || labeled.getContentDisplay() == ContentDisplay.RIGHT) {
-            return textWidth + labeled.getGraphicTextGap() + graphicWidth + widthPadding;
+        double width;
+        if(isIgnoreGraphic()) {
+            width = textWidth;
         } else {
-            return Math.max(textWidth, graphicWidth) + widthPadding;
+            // Fix for RT-39889
+            double graphicWidth = graphic == null ? 0.0 :
+                    Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1));
+
+            if (isIgnoreText()) {
+                width = graphicWidth;
+            } else if (contentDisplay == ContentDisplay.LEFT
+                    || contentDisplay == ContentDisplay.RIGHT) {
+                width = textWidth + labeled.getGraphicTextGap() + graphicWidth;
+            } else {
+                width = Math.max(textWidth, graphicWidth);
+            }
         }
+
+        return width + widthPadding;
     }
 
     /** {@inheritDoc} */
@@ -354,9 +356,10 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final double gap = labeled.getGraphicTextGap();
 
         width -= leftInset + rightInset;
-
+        double padding = topInset + bottomInset;
         if (!isIgnoreText()) {
             width -= leftLabelPadding() + rightLabelPadding();
+            padding += topLabelPadding() + bottomLabelPadding();
         }
 
         String cleanText = getCleanText();
@@ -376,27 +379,22 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 labeled.isWrapText() ? textWidth : 0,
                 labeled.getLineSpacing(), text.getBoundsType());
 
-        // Calculate the graphic height and use based on contentDisplay value
-        double graphicHeight = graphic == null ? 0.0 :
-                Utils.boundedSize(graphic.prefHeight(width), graphic.minHeight(width), graphic.maxHeight(width));
-
-        // Now add on the graphic, gap, and padding as appropriate
-        final Node graphic = labeled.getGraphic();
         double height;
         if (isIgnoreGraphic()) {
             height = textHeight;
-        } else if (isIgnoreText()) {
-            height = graphicHeight;
-        } else if (contentDisplay == TOP || contentDisplay == BOTTOM){
-            height = graphicHeight + gap + textHeight;
         } else {
-            height = Math.max(textHeight, graphicHeight);
-        }
+            // Calculate the graphic height and use based on contentDisplay value
+            double graphicHeight = graphic == null ? 0.0 :
+                Utils.boundedSize(graphic.prefHeight(width), graphic.minHeight(width), graphic.maxHeight(width));
 
-        double padding = topInset + bottomInset;
-
-        if (!isIgnoreText()) {
-            padding += topLabelPadding() + bottomLabelPadding();
+            // Add the graphic, gap, and padding as appropriate
+            if (isIgnoreText()) {
+                height = graphicHeight;
+            } else if (contentDisplay == TOP || contentDisplay == BOTTOM){
+                height = graphicHeight + gap + textHeight;
+            } else {
+                height = Math.max(textHeight, graphicHeight);
+            }
         }
 
         return  height + padding;
