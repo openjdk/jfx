@@ -102,7 +102,7 @@ public abstract class AbstractPrimaryTimer {
     // case, instead of advancing time based on the system time (nanos etc) we instead
     // increment each animation by a fixed length of time for each pulse. This is
     // handy while debugging.
-    private final long fixedPulseLength = Boolean.getBoolean(FIXED_PULSE_LENGTH_PROP) ? PULSE_DURATION_NS : 0;
+    private final long fixedPulseLength = Settings.getBoolean(FIXED_PULSE_LENGTH_PROP) ? PULSE_DURATION_NS : 0;
     private long debugNanos = 0;
 
     private final MainLoop theMainLoop = new MainLoop();
