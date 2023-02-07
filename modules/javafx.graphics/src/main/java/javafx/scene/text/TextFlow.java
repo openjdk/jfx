@@ -78,7 +78,7 @@ import javafx.css.StyleableProperty;
  * the location of the node is determined by the parent. Likewise, the wrapping
  * width in the {@code Text} node is ignored since the width used for wrapping
  * is the {@code TextFlow}'s width. The value of the {@code pickOnBounds} property
- * of a {@code Text} is set to {@code false} when it is laid out by the
+ * of a {@code Text} node is set to {@code false} when it is laid out by the
  * {@code TextFlow}. This happens because the content of a single {@code Text} node can be
  * divided and placed in different locations in the {@code TextFlow} (usually due to
  * line breaking and bidi reordering).
