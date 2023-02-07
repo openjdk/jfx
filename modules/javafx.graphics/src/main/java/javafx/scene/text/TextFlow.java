@@ -59,7 +59,7 @@ import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
 
 /**
- * A special layout designed to lay out rich text.
+ * A specialized layout for rich text.
  * It can be used to lay out several {@link Text} nodes in a single text flow.
  * {@code TextFlow} uses the text and the font of each {@code Text} node inside of it,
  * plus its own width and text alignment to determine the location for each child.
