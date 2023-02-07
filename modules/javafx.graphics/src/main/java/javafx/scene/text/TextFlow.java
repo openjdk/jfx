@@ -80,7 +80,7 @@ import javafx.css.StyleableProperty;
  * is the {@code TextFlow}'s width. The value of the {@code pickOnBounds} property
  * of a {@code Text} node is set to {@code false} when it is laid out by the
  * {@code TextFlow}. This happens because the content of a single {@code Text} node can be
- * divided and placed in different locations in the {@code TextFlow} (usually due to
+ * split and placed in different locations in the {@code TextFlow} (usually due to
  * line breaking and bidi reordering).
  *
  * <p>
