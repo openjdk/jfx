@@ -958,8 +958,6 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     if (oldParent != null) {
                         clearParentsFocusWithin(oldParent);
-                        oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
-                        oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -969,8 +967,6 @@ public abstract class Node implements EventTarget, Styleable {
                     computeDerivedDepthTest();
                     final Parent newParent = get();
                     if (newParent != null) {
-                        newParent.disabledProperty().addListener(parentDisabledChangedListener);
-                        newParent.treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -1008,10 +1004,6 @@ public abstract class Node implements EventTarget, Styleable {
         }
         return parent;
     }
-
-    private final InvalidationListener parentDisabledChangedListener = valueModel -> updateDisabled();
-
-    private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
     private SubScene subScene = null;
 
@@ -1918,6 +1910,10 @@ public abstract class Node implements EventTarget, Styleable {
                     pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, get());
                     updateCanReceiveFocus();
                     focusSetDirty(getScene());
+
+                    if (Node.this instanceof Parent parent) {
+                        parent.getChildren().forEach(Node::updateDisabled);
+                    }
                 }
 
                 @Override
@@ -2597,16 +2593,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Creates a new instance of Node.
      */
-    protected Node() {
-        //if (PerformanceTracker.isLoggingEnabled()) {
-        //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
-        //}
-        updateTreeVisible(false);
-        //if (PerformanceTracker.isLoggingEnabled()) {
-        //    PerformanceTracker.logEvent("Node.postinit " +
-        //                                "for [{this}, id=\"{id}\"] finished");
-        //}
-    }
+    protected Node() {}
 
     /* *************************************************************************
      *                                                                         *
@@ -8563,7 +8550,7 @@ public abstract class Node implements EventTarget, Styleable {
         setTreeVisible(isTreeVisible);
     }
 
-    private boolean treeVisible;
+    private boolean treeVisible = true;
     private TreeVisiblePropertyReadOnly treeVisibleRO;
 
     final void setTreeVisible(boolean value) {
@@ -8578,8 +8565,12 @@ public abstract class Node implements EventTarget, Styleable {
                 addToSceneDirtyList();
             }
             ((TreeVisiblePropertyReadOnly) treeVisibleProperty()).invalidate();
-            if (Node.this instanceof SubScene) {
-                Node subSceneRoot = ((SubScene)Node.this).getRoot();
+            if (Node.this instanceof Parent parent) {
+                for (Node child : parent.getChildren()) {
+                    child.updateTreeVisible(true);
+                }
+            } else if (Node.this instanceof SubScene subScene) {
+                Node subSceneRoot = subScene.getRoot();
                 if (subSceneRoot != null) {
                     // SubScene.getRoot() is only null if it's constructor
                     // has not finished.
