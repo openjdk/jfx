@@ -328,7 +328,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         double textWidth = emptyText ? 0.0 : Utils.computeTextWidth(font, cleanText, 0);
 
         double width;
-        if(isIgnoreGraphic()) {
+        if (isIgnoreGraphic()) {
             width = textWidth;
         } else {
             // Fix for RT-39889
@@ -390,7 +390,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // Add the graphic, gap, and padding as appropriate
             if (isIgnoreText()) {
                 height = graphicHeight;
-            } else if (contentDisplay == TOP || contentDisplay == BOTTOM){
+            } else if (contentDisplay == TOP || contentDisplay == BOTTOM) {
                 height = graphicHeight + gap + textHeight;
             } else {
                 height = Math.max(textHeight, graphicHeight);
