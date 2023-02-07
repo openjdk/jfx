@@ -130,7 +130,7 @@ import javafx.css.StyleableProperty;
  * <td>left/right insets plus the width of the text content</td>
  * <td>top/bottom insets plus the height of the text content</td></tr>
  * <tr><th scope="row">maximum</th>
- * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
+ * <td>{@code Double.MAX_VALUE}</td><td>{@code Double.MAX_VALUE}</td></tr>
  * </table>
  * <p>
  * A {@code TextFlow}'s unbounded maximum width and height are an indication to the parent that
