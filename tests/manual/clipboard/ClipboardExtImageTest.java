@@ -153,9 +153,7 @@ public class ClipboardExtImageTest extends Application {
         Button openTmpButton = new Button("Open TMP dir");
         openTmpButton.setOnAction((ActionEvent) -> {
             try {
-                if (isWindows()) {
-                    Runtime.getRuntime().exec(new String[]{"explorer.exe", new File(System.getProperty("java.io.tmpdir")).getAbsolutePath()});
-                }
+                Runtime.getRuntime().exec(new String[]{"explorer.exe", new File(System.getProperty("java.io.tmpdir")).getAbsolutePath()});
             } catch (Exception e) {
                 Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("Failed to open TMP dir");
@@ -163,10 +161,6 @@ public class ClipboardExtImageTest extends Application {
                 alert.show();
             }
         });
-
-        if (!isWindows()) {
-            openTmpButton.setDisable(true);
-        }
 
         clipboardImageView.setPickOnBounds(true);
         clipboardImageView.setPreserveRatio(true);
@@ -190,10 +184,10 @@ public class ClipboardExtImageTest extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         try {
-            /*if (!isWindows()) {
+            if (!isWindows()) {
                 System.out.println("This test refers to Windows-only issue and won't work on other platforms. Exiting.");
                 Platform.exit();
-            }*/
+            }
 
             primaryStage.setScene(createScene());
             primaryStage.show();
