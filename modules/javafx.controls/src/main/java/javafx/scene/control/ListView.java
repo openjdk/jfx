@@ -464,7 +464,7 @@ public class ListView<T> extends Control {
 
     /**
      * The {@code Node} to show to the user when the {@code ListView} has no content to show.
-     * This happens when the table model has no data or when a filter has been applied to the list model, resulting in
+     * This happens when the list model has no data or when a filter has been applied to the list model, resulting in
      * there being nothing to show the user.
      *
      * @since JavaFX 8.0
