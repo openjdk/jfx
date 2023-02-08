@@ -319,9 +319,10 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
         String cleanText = getCleanText();
         boolean emptyText = cleanText == null || cleanText.isEmpty();
+        boolean isIgnoreText = isIgnoreText();
         double widthPadding = leftInset + rightInset;
 
-        if (!isIgnoreText()) {
+        if (!isIgnoreText) {
             widthPadding += leftLabelPadding() + rightLabelPadding();
         }
 
@@ -335,7 +336,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             double graphicWidth = graphic == null ? 0.0 :
                     Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1));
 
-            if (isIgnoreText()) {
+            if (isIgnoreText) {
                 width = graphicWidth;
             } else if (contentDisplay == ContentDisplay.LEFT
                     || contentDisplay == ContentDisplay.RIGHT) {
@@ -354,10 +355,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final Font font = text.getFont();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
         final double gap = labeled.getGraphicTextGap();
+        boolean isIgnoreText = isIgnoreText();
+        boolean isIgnoreGraphic = isIgnoreGraphic();
 
         width -= leftInset + rightInset;
         double padding = topInset + bottomInset;
-        if (!isIgnoreText()) {
+        if (!isIgnoreText) {
             width -= leftLabelPadding() + rightLabelPadding();
             padding += topLabelPadding() + bottomLabelPadding();
         }
@@ -369,7 +372,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         }
 
         double textWidth = width;
-        if (!isIgnoreGraphic() &&
+        if (!isIgnoreGraphic &&
                 (contentDisplay == LEFT || contentDisplay == RIGHT)) {
             textWidth -= (graphic.prefWidth(-1) + gap);
         }
@@ -380,7 +383,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 labeled.getLineSpacing(), text.getBoundsType());
 
         double height;
-        if (isIgnoreGraphic()) {
+        if (isIgnoreGraphic) {
             height = textHeight;
         } else {
             // Calculate the graphic height and use based on contentDisplay value
@@ -388,7 +391,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 Utils.boundedSize(graphic.prefHeight(width), graphic.minHeight(width), graphic.maxHeight(width));
 
             // Add the graphic, gap, and padding as appropriate
-            if (isIgnoreText()) {
+            if (isIgnoreText) {
                 height = graphicHeight;
             } else if (contentDisplay == TOP || contentDisplay == BOTTOM) {
                 height = graphicHeight + gap + textHeight;
