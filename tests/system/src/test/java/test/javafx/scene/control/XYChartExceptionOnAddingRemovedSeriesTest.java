@@ -56,7 +56,7 @@ import org.junit.Test;
 
 import test.util.Util;
 
-public class LineChartExceptionOnAddingRemovedSeriesTest {
+public class XYChartExceptionOnAddingRemovedSeriesTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch lineSeriesLatch = new CountDownLatch(1);
     static CountDownLatch areaChartLatch = new CountDownLatch(1);
