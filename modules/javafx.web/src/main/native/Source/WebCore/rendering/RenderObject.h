@@ -29,7 +29,9 @@
 #include "Element.h"
 #include "FloatQuad.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLNames.h"
+#include "InspectorInstrumentationPublic.h"
 #include "LayoutRect.h"
 #include "Page.h"
 #include "RenderObjectEnums.h"
@@ -78,7 +80,7 @@ class VisiblePosition;
 class SelectionGeometry;
 #endif
 
-struct InlineRunAndOffset;
+struct InlineBoxAndOffset;
 struct PaintInfo;
 struct SimpleRange;
 
@@ -95,7 +97,7 @@ class PseudoElementRequest;
 }
 
 // Base class for all rendering tree objects.
-class RenderObject : public CachedImageClient, public CanMakeWeakPtr<RenderObject> {
+class RenderObject : public CachedImageClient {
     WTF_MAKE_ISO_ALLOCATED(RenderObject);
     friend class RenderBlock;
     friend class RenderBlockFlow;
@@ -110,7 +112,7 @@ public:
 
     RenderTheme& theme() const;
 
-    virtual const char* renderName() const = 0;
+    virtual ASCIILiteral renderName() const = 0;
 
     RenderElement* parent() const { return m_parent; }
     bool isDescendantOf(const RenderObject*) const;
@@ -135,6 +137,8 @@ public:
     RenderObject* firstLeafChild() const;
     RenderObject* lastLeafChild() const;
 
+    RenderElement* firstNonAnonymousAncestor() const;
+
 #if ENABLE(TEXT_AUTOSIZING)
     // Minimal distance between the block with fixed height and overflowing content and the text block to apply text autosizing.
     // The greater this constant is the more potential places we have where autosizing is turned off.
@@ -153,9 +157,6 @@ public:
 
     WEBCORE_EXPORT RenderLayer* enclosingLayer() const;
 
-    // Scrolling is a RenderBox concept, however some code just cares about recursively scrolling our enclosing ScrollableArea(s).
-    WEBCORE_EXPORT bool scrollRectToVisible(const LayoutRect& absoluteRect, bool insideFixed, const ScrollRectToVisibleOptions&);
-
     WEBCORE_EXPORT RenderBox& enclosingBox() const;
     RenderBoxModelObject& enclosingBoxModelObject() const;
     RenderBox* enclosingScrollableContainerForSnapping() const;
@@ -173,9 +174,6 @@ public:
 
     // Creates a scope where this object will assert on calls to setNeedsLayout().
     class SetLayoutNeededForbiddenScope;
-
-    // Obtains the nearest enclosing block (including this block) that contributes a first-line style to our inline children.
-    virtual RenderBlock* firstLineBlock() const;
 
     // RenderObject tree manipulation
     //////////////////////////////////////////
@@ -240,7 +238,6 @@ public:
     virtual bool isRubyText() const { return false; }
 
     virtual bool isSlider() const { return false; }
-    virtual bool isSliderThumb() const { return false; }
     virtual bool isTable() const { return false; }
     virtual bool isTableCell() const { return false; }
     virtual bool isRenderTableCol() const { return false; }
@@ -331,9 +328,12 @@ public:
     virtual bool isSVGContainer() const { return false; }
     virtual bool isLegacySVGContainer() const { return false; }
     virtual bool isSVGTransformableContainer() const { return false; }
+    virtual bool isLegacySVGTransformableContainer() const { return false; }
     virtual bool isSVGViewportContainer() const { return false; }
+    virtual bool isLegacySVGViewportContainer() const { return false; }
     virtual bool isSVGGradientStop() const { return false; }
     virtual bool isSVGHiddenContainer() const { return false; }
+    virtual bool isLegacySVGPath() const { return false; }
     virtual bool isSVGPath() const { return false; }
     virtual bool isSVGShape() const { return false; }
     virtual bool isLegacySVGShape() const { return false; }
@@ -350,6 +350,7 @@ public:
     virtual bool isSVGResourceFilterPrimitive() const { return false; }
     bool isSVGRootOrLegacySVGRoot() const { return isSVGRoot() || isLegacySVGRoot(); }
     bool isSVGShapeOrLegacySVGShape() const { return isSVGShape() || isLegacySVGShape(); }
+    bool isSVGPathOrLegacySVGPath() const { return isSVGPath() || isLegacySVGPath(); }
     bool isRenderOrLegacyRenderSVGModelObject() const { return isRenderSVGModelObject() || isLegacyRenderSVGModelObject(); }
     bool isSVGLayerAwareRenderer() const { return isSVGRoot() || isRenderSVGModelObject() || isSVGText() || isSVGInline() || isSVGForeignObject(); }
 
@@ -368,6 +369,19 @@ public:
     // The name objectBoundingBox is taken from the SVG 1.1 spec.
     virtual FloatRect objectBoundingBox() const;
     virtual FloatRect strokeBoundingBox() const;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // The objectBoundingBox of a SVG container is affected by the transformations applied on its children -- the container
+    // bounding box is a union of all child bounding boxes, mapped through their transformation matrices.
+    //
+    // This method ignores all transformations and computes the objectBoundingBox, without mapping through the child
+    // transformation matrices. The SVG render tree is constructed in such a way, that it can be mapped to CSS equivalents:
+    // The SVG render tree underneath the outermost <svg> behaves as a set of absolutely positioned, possibly nested, boxes.
+    // They are laid out in such a way that transformations do NOT affect layout, as in HTML/CSS world, but take affect during
+    // painting, hit-testing etc. This allows to minimize the amount of re-layouts when animating transformations in SVG
+    // (not using CSS Animations/Transitions / Web Animations, but e.g. SMIL <animateTransform>, JS, ...).
+    virtual FloatRect objectBoundingBoxWithoutTransformations() const { return objectBoundingBox(); }
+#endif
 
     // Returns the smallest rectangle enclosing all of the painted content
     // respecting clipping, masking, filters, opacity, stroke-width and markers
@@ -389,6 +403,7 @@ public:
     bool hasIntrinsicAspectRatio() const { return isReplacedOrInlineBlock() && (isImage() || isVideo() || isCanvas()); }
     bool isAnonymous() const { return m_bitfields.isAnonymous(); }
     bool isAnonymousBlock() const;
+    bool isBlockContainer() const;
 
     bool isFloating() const { return m_bitfields.floating(); }
 
@@ -416,6 +431,12 @@ public:
     bool isRenderFragmentedFlow() const { return m_bitfields.hasRareData() && rareData().isRenderFragmentedFlow(); }
     bool hasOutlineAutoAncestor() const { return m_bitfields.hasRareData() && rareData().hasOutlineAutoAncestor(); }
     bool paintContainmentApplies() const { return m_bitfields.hasRareData() && rareData().paintContainmentApplies(); }
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    bool hasSVGTransform() const { return m_bitfields.hasRareData() && rareData().hasSVGTransform(); }
+#else
+    bool hasSVGTransform() const { return false; }
+#endif
 
     bool isExcludedFromNormalLayout() const { return m_bitfields.isExcludedFromNormalLayout(); }
     void setIsExcludedFromNormalLayout(bool excluded) { m_bitfields.setIsExcludedFromNormalLayout(excluded); }
@@ -451,7 +472,8 @@ public:
     bool hasPotentiallyScrollableOverflow() const;
 
     bool hasTransformRelatedProperty() const { return m_bitfields.hasTransformRelatedProperty(); } // Transform, perspective or transform-style: preserve-3d.
-    bool hasTransform() const { return hasTransformRelatedProperty() && (style().hasTransform() || style().translate() || style().scale() || style().rotate() || style().offsetPath()); }
+    bool hasTransform() const { return hasTransformRelatedProperty() && (style().hasTransform() || style().translate() || style().scale() || style().rotate() || hasSVGTransform()); }
+    bool hasTransformOrPerspective() const { return hasTransformRelatedProperty() && (hasTransform() || style().hasPerspective()); }
 
     inline bool preservesNewline() const;
 
@@ -515,6 +537,9 @@ public:
     void setIsRenderFragmentedFlow(bool = true);
     void setHasOutlineAutoAncestor(bool = true);
     void setPaintContainmentApplies(bool = true);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    void setHasSVGTransform(bool = true);
+#endif
 
     // Hook so that RenderTextControl can return the line height of its inner renderer.
     // For other renderers, the value is the same as lineHeight(false).
@@ -605,7 +630,11 @@ public:
 
     // Return the RenderLayerModelObject in the container chain which is responsible for painting this object, or nullptr
     // if painting is root-relative. This is the container that should be passed to the 'forRepaint' functions.
-    RenderLayerModelObject* containerForRepaint() const;
+    struct RepaintContainerStatus {
+        bool fullRepaintIsScheduled { false }; // Either the repaint container or a layer in-between has aleady been scheduled for full repaint.
+        const RenderLayerModelObject* renderer { nullptr };
+    };
+    RepaintContainerStatus containerForRepaint() const;
     // Actually do the repaint of rect r for this object which has been computed in the coordinate space
     // of repaintContainer. If repaintContainer is nullptr, repaint via the view.
     void repaintUsingContainer(const RenderLayerModelObject* repaintContainer, const LayoutRect&, bool shouldClipToLayer = true) const;
@@ -756,8 +785,6 @@ protected:
     void addPDFURLRect(PaintInfo&, const LayoutPoint&);
     Node& nodeForNonAnonymous() const { ASSERT(!isAnonymous()); return m_node; }
 
-    RenderElement* firstNonAnonymousAncestor() const;
-
     void adjustRectForOutlineAndShadow(LayoutRect&) const;
 
     virtual void willBeDestroyed();
@@ -776,6 +803,10 @@ protected:
     static VisibleRectContext visibleRectContextForSpatialNavigation();
 
     bool isSetNeedsLayoutForbidden() const;
+
+    enum class ClipRepaintToLayer : uint8_t { No, Yes };
+    enum class ForceRepaint : uint8_t { No, Yes };
+    void issueRepaint(std::optional<LayoutRect> partialRepaintRect = std::nullopt, ClipRepaintToLayer = ClipRepaintToLayer::No, ForceRepaint = ForceRepaint::No) const;
 
 private:
     void addAbsoluteRectForLayer(LayoutRect& result);
@@ -944,14 +975,16 @@ private:
         ADD_BOOLEAN_BITFIELD(isRenderFragmentedFlow, IsRenderFragmentedFlow);
         ADD_BOOLEAN_BITFIELD(hasOutlineAutoAncestor, HasOutlineAutoAncestor);
         ADD_BOOLEAN_BITFIELD(paintContainmentApplies, PaintContainmentApplies);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        ADD_BOOLEAN_BITFIELD(hasSVGTransform, HasSVGTransform);
+#endif
 
         // From RenderElement
-        std::unique_ptr<RenderStyle> cachedFirstLineStyle;
         std::unique_ptr<ReferencedSVGResources> referencedSVGResources;
         WeakPtr<RenderBlockFlow> backdropRenderer;
     };
 
-    const RenderObject::RenderObjectRareData& rareData() const;
+    WEBCORE_EXPORT const RenderObject::RenderObjectRareData& rareData() const;
     RenderObjectRareData& ensureRareData();
     void removeRareData();
 
@@ -1172,6 +1205,9 @@ inline RenderObject::SetLayoutNeededForbiddenScope::SetLayoutNeededForbiddenScop
 inline void Node::setRenderer(RenderObject* renderer)
 {
     m_rendererWithStyleFlags.setPointer(renderer);
+
+    if (UNLIKELY(InspectorInstrumentationPublic::hasFrontends()))
+        notifyInspectorOfRendererChange();
 }
 
 inline RenderObject* RenderObject::previousInFlowSibling() const
@@ -1205,16 +1241,11 @@ inline bool RenderObject::hasPotentiallyScrollableOverflow() const
 WTF::TextStream& operator<<(WTF::TextStream&, const RenderObject&);
 
 #if ENABLE(TREE_DEBUGGING)
+void printPaintOrderTreeForLiveDocuments();
 void printRenderTreeForLiveDocuments();
 void printLayerTreeForLiveDocuments();
 void printGraphicsLayerTreeForLiveDocuments();
 #endif
-
-bool shouldApplyLayoutContainment(const RenderObject&);
-bool shouldApplySizeContainment(const RenderObject&);
-bool shouldApplyStyleContainment(const RenderObject&);
-bool shouldApplyPaintContainment(const RenderObject&);
-bool shouldApplyAnyContainment(const RenderObject&);
 
 } // namespace WebCore
 

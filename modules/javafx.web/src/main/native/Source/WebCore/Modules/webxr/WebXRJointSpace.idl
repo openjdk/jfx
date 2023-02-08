@@ -24,8 +24,9 @@
  */
 
 [
-    EnabledBySetting=WebXREnabled&WebXRHandInputModuleEnabled,
     Conditional=WEBXR_HANDS,
+    EnabledBySetting=WebXREnabled&WebXRHandInputModuleEnabled,
+    JSGenerateToJSObject,
     JSGenerateToNativeObject,
     SecureContext,
     Exposed=Window,

@@ -80,10 +80,14 @@ static size_t sizeOfItemInBytes(ItemType type)
         return sizeof(DrawFilteredImageBuffer);
     case ItemType::DrawGlyphs:
         return sizeof(DrawGlyphs);
+    case ItemType::DrawDecomposedGlyphs:
+        return sizeof(DrawDecomposedGlyphs);
     case ItemType::DrawImageBuffer:
         return sizeof(DrawImageBuffer);
     case ItemType::DrawNativeImage:
         return sizeof(DrawNativeImage);
+    case ItemType::DrawSystemImage:
+        return sizeof(DrawSystemImage);
     case ItemType::DrawPattern:
         return sizeof(DrawPattern);
     case ItemType::DrawRect:
@@ -128,8 +132,6 @@ static size_t sizeOfItemInBytes(ItemType type)
         return sizeof(FillPath);
     case ItemType::FillEllipse:
         return sizeof(FillEllipse);
-    case ItemType::FlushContext:
-        return sizeof(FlushContext);
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
         return sizeof(PaintFrameForMedia);
@@ -187,7 +189,6 @@ bool isDrawingItem(ItemType type)
     case ItemType::ClipOutToPath:
     case ItemType::ClipPath:
     case ItemType::ConcatenateCTM:
-    case ItemType::FlushContext:
     case ItemType::Restore:
     case ItemType::Rotate:
     case ItemType::Save:
@@ -211,10 +212,12 @@ bool isDrawingItem(ItemType type)
     case ItemType::DrawFocusRingPath:
     case ItemType::DrawFocusRingRects:
     case ItemType::DrawGlyphs:
+    case ItemType::DrawDecomposedGlyphs:
     case ItemType::DrawImageBuffer:
     case ItemType::DrawLine:
     case ItemType::DrawLinesForText:
     case ItemType::DrawNativeImage:
+    case ItemType::DrawSystemImage:
     case ItemType::DrawPattern:
     case ItemType::DrawPath:
     case ItemType::DrawRect:
@@ -294,6 +297,7 @@ bool isInlineItem(ItemType type)
     case ItemType::SetLineDash:
     case ItemType::SetState:
     case ItemType::StrokePath:
+    case ItemType::DrawSystemImage:
         return false;
     case ItemType::ApplyDeviceScaleFactor:
 #if USE(CG)
@@ -310,6 +314,7 @@ bool isInlineItem(ItemType type)
     case ItemType::DrawDotsForDocumentMarker:
     case ItemType::DrawEllipse:
     case ItemType::DrawFilteredImageBuffer:
+    case ItemType::DrawDecomposedGlyphs:
     case ItemType::DrawImageBuffer:
     case ItemType::DrawNativeImage:
     case ItemType::DrawPattern:
@@ -324,7 +329,6 @@ bool isInlineItem(ItemType type)
     case ItemType::FillBezierCurve:
 #endif
     case ItemType::FillRect:
-    case ItemType::FlushContext:
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
 #endif

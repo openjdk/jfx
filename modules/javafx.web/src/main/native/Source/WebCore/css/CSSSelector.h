@@ -176,16 +176,13 @@ namespace WebCore {
             PseudoClassMuted,
             PseudoClassVolumeLocked,
 #endif
-#if ENABLE(CSS_SELECTORS_LEVEL4)
             PseudoClassDir,
-            PseudoClassRole,
-#endif
             PseudoClassHost,
             PseudoClassDefined,
 #if ENABLE(ATTACHMENT_ELEMENT)
             PseudoClassHasAttachment,
 #endif
-            PseudoClassModalDialog,
+            PseudoClassModal,
         };
 
         enum PseudoElementType {

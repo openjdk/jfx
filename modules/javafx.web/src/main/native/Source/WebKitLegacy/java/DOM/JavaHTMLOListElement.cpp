@@ -89,7 +89,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_getTypeIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_setTypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, AtomString{String(env, value)});
 }
 
 }

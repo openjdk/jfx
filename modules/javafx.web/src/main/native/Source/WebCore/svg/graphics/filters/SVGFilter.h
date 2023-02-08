@@ -31,13 +31,16 @@
 namespace WebCore {
 
 class FilterImage;
-class SVGFilterBuilder;
+class GraphicsContext;
 class SVGFilterElement;
 
 class SVGFilter final : public Filter {
 public:
-    static RefPtr<SVGFilter> create(SVGFilterElement&, SVGFilterBuilder&, RenderingMode, const FloatSize& filterScale, ClipOperation, const FloatRect& filterRegion, const FloatRect& targetBoundingBox);
+    static RefPtr<SVGFilter> create(SVGFilterElement&, RenderingMode, const FloatSize& filterScale, ClipOperation, const FloatRect& filterRegion, const FloatRect& targetBoundingBox, const GraphicsContext& destinationContext);
     WEBCORE_EXPORT static RefPtr<SVGFilter> create(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits, SVGFilterExpression&&);
+
+    static bool isIdentity(SVGFilterElement&);
+    static IntOutsets calculateOutsets(SVGFilterElement&, const FloatRect& targetBoundingBox);
 
     FloatRect targetBoundingBox() const { return m_targetBoundingBox; }
     SVGUnitTypes::SVGUnitType primitiveUnits() const { return m_primitiveUnits; }
@@ -48,22 +51,23 @@ public:
 
     RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) final;
 
+    static FloatSize calculateResolvedSize(const FloatSize&, const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits);
+
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const final;
 
 private:
     SVGFilter(RenderingMode, const FloatSize& filterScale, ClipOperation, const FloatRect& filterRegion, const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits);
     SVGFilter(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits, SVGFilterExpression&&);
 
+    static std::optional<SVGFilterExpression> buildExpression(SVGFilterElement&, const SVGFilter&, const GraphicsContext& destinationContext);
     void setExpression(SVGFilterExpression&& expression) { m_expression = WTFMove(expression); }
 
     FloatSize resolvedSize(const FloatSize&) const final;
+    FloatPoint3D resolvedPoint3D(const FloatPoint3D&) const final;
 
     bool supportsAcceleratedRendering() const final;
 
     RefPtr<FilterImage> apply(const Filter&, FilterImage& sourceImage, FilterResults&) final;
-
-    IntOutsets outsets(const Filter&) const final { return outsets(); }
-    IntOutsets outsets() const final;
 
     FloatRect m_targetBoundingBox;
     SVGUnitTypes::SVGUnitType m_primitiveUnits;

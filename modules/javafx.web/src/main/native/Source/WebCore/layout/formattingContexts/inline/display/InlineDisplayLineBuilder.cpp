@@ -30,6 +30,7 @@
 
 #include "InlineDisplayContentBuilder.h"
 #include "LayoutBoxGeometry.h"
+#include "TextUtil.h"
 
 namespace WebCore {
 namespace Layout {
@@ -43,7 +44,10 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
 {
     auto& rootInlineBox = lineBox.rootInlineBox();
     auto scrollableOverflowRect = lineBoxRect;
-    auto enclosingTopAndBottom = InlineDisplay::Line::EnclosingTopAndBottom { lineBoxRect.top() + rootInlineBox.logicalTop(), lineBoxRect.top() + rootInlineBox.logicalBottom() };
+    auto enclosingTopAndBottom = InlineDisplay::Line::EnclosingTopAndBottom {
+        lineBoxRect.top() + rootInlineBox.logicalTop() - rootInlineBox.annotationAbove().value_or(0.f),
+        lineBoxRect.top() + rootInlineBox.logicalBottom() + rootInlineBox.annotationUnder().value_or(0.f)
+    };
 
     for (auto& inlineLevelBox : lineBox.nonRootInlineLevelBoxes()) {
         if (!inlineLevelBox.isAtomicInlineLevelBox() && !inlineLevelBox.isInlineBox())
@@ -71,13 +75,13 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
         } else
             ASSERT_NOT_REACHED();
 
-        enclosingTopAndBottom.top = std::min(enclosingTopAndBottom.top, borderBox.top());
-        enclosingTopAndBottom.bottom = std::max(enclosingTopAndBottom.bottom, borderBox.bottom());
+        enclosingTopAndBottom.top = std::min(enclosingTopAndBottom.top, borderBox.top() - inlineLevelBox.annotationAbove().value_or(0.f));
+        enclosingTopAndBottom.bottom = std::max(enclosingTopAndBottom.bottom, borderBox.bottom() + inlineLevelBox.annotationUnder().value_or(0.f));
     }
     return { enclosingTopAndBottom, scrollableOverflowRect };
 }
 
-InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineContent& lineContent, const LineBox& lineBox, InlineLayoutUnit lineBoxLogicalHeight) const
+InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineContent& lineContent, const LineBox& lineBox) const
 {
     auto& rootInlineBox = lineBox.rootInlineBox();
     auto& rootGeometry = layoutState().geometryForBox(root());
@@ -86,12 +90,12 @@ InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineConte
 
     auto lineBoxVisualLeft = isLeftToRightDirection
         ? rootGeometry.contentBoxLeft() + lineOffsetFromContentBox
-        : InlineLayoutUnit { rootGeometry.borderEnd() } + rootGeometry.paddingEnd().value_or(0_lu);
+        : InlineLayoutUnit { rootGeometry.borderEnd() } + rootGeometry.horizontalSpaceForScrollbar() + rootGeometry.paddingEnd().value_or(0_lu);
     auto contentVisualLeft = isLeftToRightDirection
         ? lineBox.rootInlineBoxAlignmentOffset()
         : rootGeometry.contentBoxWidth() - lineOffsetFromContentBox -  lineBox.rootInlineBoxAlignmentOffset() - lineContent.contentLogicalRight;
 
-    auto lineBoxRect = InlineRect { lineContent.lineLogicalTopLeft.y(), lineBoxVisualLeft, lineContent.lineLogicalWidth, lineBoxLogicalHeight };
+    auto lineBoxRect = InlineRect { lineContent.lineLogicalTopLeft.y(), lineBoxVisualLeft, lineBox.hasContent() ? lineContent.lineLogicalWidth : 0.f, lineBox.logicalRect().height() };
     auto enclosingLineGeometry = collectEnclosingLineGeometry(lineBox, lineBoxRect);
 
     // FIXME: Figure out if properties like enclosingLineGeometry top and bottom needs to be flipped as well.

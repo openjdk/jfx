@@ -23,6 +23,7 @@
 #include "FontMetrics.h"
 #include "Frame.h"
 #include "HitTestResult.h"
+#include "LegacyEllipsisBox.h"
 #include "LegacyInlineFlowBox.h"
 #include "LegacyRootInlineBox.h"
 #include "RenderBlockFlow.h"
@@ -52,7 +53,7 @@ struct SameSizeAsLegacyInlineBox {
 #endif
 };
 
-COMPILE_ASSERT(sizeof(LegacyInlineBox) == sizeof(SameSizeAsLegacyInlineBox), LegacyInlineBox_size_guard);
+static_assert(sizeof(LegacyInlineBox) == sizeof(SameSizeAsLegacyInlineBox), "LegacyInlineBox size guard");
 
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
 

@@ -29,7 +29,6 @@
 namespace WebCore {
 
 class CachedSVGDocument;
-class SVGGElement;
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference, private CachedSVGDocumentClient {
     WTF_MAKE_ISO_ALLOCATED(SVGUseElement);
@@ -74,7 +73,7 @@ private:
     Document* externalDocument() const;
     void updateExternalDocument();
 
-    SVGElement* findTarget(String* targetID = nullptr) const;
+    SVGElement* findTarget(AtomString* targetID = nullptr) const;
 
     void cloneTarget(ContainerNode&, SVGElement& target) const;
     RefPtr<SVGElement> targetClone() const;

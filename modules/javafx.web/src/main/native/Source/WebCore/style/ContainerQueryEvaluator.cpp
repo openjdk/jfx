@@ -33,110 +33,161 @@
 #include "MediaFeatureNames.h"
 #include "MediaList.h"
 #include "MediaQuery.h"
+#include "NodeRenderStyle.h"
 #include "RenderView.h"
 #include "StyleRule.h"
+#include "StyleScope.h"
 
 namespace WebCore::Style {
 
-struct ContainerQueryEvaluator::ResolvedContainer {
+struct ContainerQueryEvaluator::SelectedContainer {
     const RenderBox* renderer { nullptr };
     CSSToLengthConversionData conversionData;
 };
 
-ContainerQueryEvaluator::ContainerQueryEvaluator(const Element& element, PseudoId pseudoId, SelectorMatchingState* selectorMatchingState)
+ContainerQueryEvaluator::ContainerQueryEvaluator(const Element& element, SelectionMode selectionMode, ScopeOrdinal scopeOrdinal, SelectorMatchingState* selectorMatchingState)
     : m_element(element)
-    , m_pseudoId(pseudoId)
+    , m_selectionMode(selectionMode)
+    , m_scopeOrdinal(scopeOrdinal)
     , m_selectorMatchingState(selectorMatchingState)
 {
 }
 
-bool ContainerQueryEvaluator::evaluate(const FilteredContainerQuery& filteredContainerQuery) const
+bool ContainerQueryEvaluator::evaluate(const CQ::ContainerQuery& containerQuery) const
 {
-    auto container = resolveContainer(filteredContainerQuery);
+    auto container = selectContainer(containerQuery);
     if (!container)
         return false;
 
-    return evaluateQuery(filteredContainerQuery.query, *container) == EvaluationResult::True;
+    return evaluateCondition(containerQuery.condition, *container) == EvaluationResult::True;
 }
 
-auto ContainerQueryEvaluator::resolveContainer(const FilteredContainerQuery& filteredContainerQuery) const -> std::optional<ResolvedContainer>
+auto ContainerQueryEvaluator::selectContainer(const CQ::ContainerQuery& containerQuery) const -> std::optional<SelectedContainer>
 {
-    auto makeResolvedContainer = [](const Element& element) -> ResolvedContainer {
+    // "For each element, the query container to be queried is selected from among the element’s
+    // ancestor query containers that have a valid container-type for all the container features
+    // in the <container-condition>. The optional <container-name> filters the set of query containers
+    // considered to just those with a matching query container name."
+    // https://drafts.csswg.org/css-contain-3/#container-rule
+
+    auto makeSelectedContainer = [](const Element& element) -> SelectedContainer {
         auto* renderer = dynamicDowncast<RenderBox>(element.renderer());
         if (!renderer)
             return { };
-        auto& view = renderer->view();
-        return ResolvedContainer {
+        return {
             renderer,
-            CSSToLengthConversionData { &renderer->style(), &view.style(), nullptr, &view, 1 }
+            CSSToLengthConversionData { renderer->style(), element.document().documentElement()->renderStyle(), nullptr, &renderer->view() }
         };
+    };
+
+    auto* cachedQueryContainers = m_selectorMatchingState ? &m_selectorMatchingState->queryContainers : nullptr;
+
+    auto* container = selectContainer(containerQuery.axisFilter, containerQuery.name, m_element.get(), m_selectionMode, m_scopeOrdinal, cachedQueryContainers);
+    if (!container)
+        return { };
+
+    return makeSelectedContainer(*container);
+}
+
+const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> axes, const String& name, const Element& element, SelectionMode selectionMode, ScopeOrdinal scopeOrdinal, const CachedQueryContainers* cachedQueryContainers)
+{
+    // "For each element, the query container to be queried is selected from among the element’s
+    // ancestor query containers that have a valid container-type for all the container features
+    // in the <container-condition>. The optional <container-name> filters the set of query containers
+    // considered to just those with a matching query container name."
+    // https://drafts.csswg.org/css-contain-3/#container-rule
+
+    auto isValidContainerForRequiredAxes = [&](ContainerType containerType, const RenderElement* principalBox) {
+        switch (containerType) {
+        case ContainerType::Size:
+            return true;
+        case ContainerType::InlineSize:
+            // Without a principal box the container matches but the query against it will evaluate to Unknown.
+            if (!principalBox)
+                return true;
+            if (axes.contains(CQ::Axis::Block))
+                return false;
+            return !axes.contains(principalBox->isHorizontalWritingMode() ? CQ::Axis::Height : CQ::Axis::Width);
+        case ContainerType::Normal:
+            return false;
+        }
+        RELEASE_ASSERT_NOT_REACHED();
     };
 
     auto isContainerForQuery = [&](const Element& element) {
         auto* style = element.existingComputedStyle();
         if (!style)
             return false;
-        if (style->containerType() == ContainerType::None)
+        if (!isValidContainerForRequiredAxes(style->containerType(), element.renderer()))
             return false;
-        if (filteredContainerQuery.nameFilter.isEmpty())
+        if (name.isEmpty())
             return true;
-        return style->containerNames().contains(filteredContainerQuery.nameFilter);
+        return style->containerNames().contains(name);
     };
 
-    if (m_selectorMatchingState) {
-        for (auto& container : makeReversedRange(m_selectorMatchingState->queryContainers)) {
+    auto findOriginatingElement = [&]() -> const Element* {
+        // ::part() selectors can query its originating host, but not internal query containers inside the shadow tree.
+        if (scopeOrdinal <= ScopeOrdinal::ContainingHost)
+            return hostForScopeOrdinal(element, scopeOrdinal);
+        // ::slotted() selectors can query containers inside the shadow tree, including the slot itself.
+        if (scopeOrdinal >= ScopeOrdinal::FirstSlot && scopeOrdinal <= ScopeOrdinal::SlotLimit)
+            return assignedSlotForScopeOrdinal(element, scopeOrdinal);
+        return nullptr;
+    };
+
+    if (auto* originatingElement = findOriginatingElement()) {
+        // For selectors with pseudo elements, query containers can be established by the shadow-including inclusive ancestors of the ultimate originating element.
+        for (auto* ancestor = originatingElement; ancestor; ancestor = ancestor->parentOrShadowHostElement()) {
+            if (isContainerForQuery(*ancestor))
+                return ancestor;
+        }
+        return nullptr;
+    }
+
+    if (selectionMode == SelectionMode::PseudoElement) {
+        if (isContainerForQuery(element))
+            return &element;
+    }
+
+    if (cachedQueryContainers) {
+        for (auto& container : makeReversedRange(*cachedQueryContainers)) {
             if (isContainerForQuery(container))
-                return makeResolvedContainer(container);
+                return container.ptr();
         }
         return { };
     }
 
-    if (m_pseudoId != PseudoId::None) {
-        if (isContainerForQuery(m_element))
-            return makeResolvedContainer(m_element);
-    }
-
-    for (auto& ancestor : composedTreeAncestors(const_cast<Element&>(m_element.get()))) {
-        if (isContainerForQuery(ancestor))
-            return makeResolvedContainer(ancestor);
+    for (auto* ancestor = element.parentOrShadowHostElement(); ancestor; ancestor = ancestor->parentOrShadowHostElement()) {
+        if (isContainerForQuery(*ancestor))
+            return ancestor;
     }
     return { };
 }
 
-
-auto ContainerQueryEvaluator::evaluateQuery(const CQ::ContainerQuery& containerQuery, const ResolvedContainer& container) const -> EvaluationResult
+auto ContainerQueryEvaluator::evaluateQueryInParens(const CQ::QueryInParens& queryInParens, const SelectedContainer& container) const -> EvaluationResult
 {
-    return WTF::switchOn(containerQuery, [&](const CQ::ContainerCondition& containerCondition) {
+    return WTF::switchOn(queryInParens, [&](const CQ::ContainerCondition& containerCondition) {
         return evaluateCondition(containerCondition, container);
-    }, [&](const CQ::SizeQuery& sizeQuery) {
-        return evaluateQuery(sizeQuery, container);
+    }, [&](const CQ::SizeFeature& sizeFeature) {
+        return evaluateSizeFeature(sizeFeature, container);
     }, [&](const CQ::UnknownQuery&) {
         return EvaluationResult::Unknown;
     });
 }
 
-auto ContainerQueryEvaluator::evaluateQuery(const CQ::SizeQuery& sizeQuery, const ResolvedContainer& container) const -> EvaluationResult
-{
-    return WTF::switchOn(sizeQuery, [&](const CQ::SizeCondition& sizeCondition) {
-        return evaluateCondition(sizeCondition, container);
-    }, [&](const CQ::SizeFeature& sizeFeature) {
-        return evaluateSizeFeature(sizeFeature, container);
-    });
-}
-
 template<typename ConditionType>
-auto ContainerQueryEvaluator::evaluateCondition(const ConditionType& condition, const ResolvedContainer& container) const -> EvaluationResult
+auto ContainerQueryEvaluator::evaluateCondition(const ConditionType& condition, const SelectedContainer& container) const -> EvaluationResult
 {
     if (condition.queries.isEmpty())
         return EvaluationResult::Unknown;
 
     switch (condition.logicalOperator) {
     case CQ::LogicalOperator::Not:
-        return !evaluateQuery(condition.queries.first(), container);
+        return !evaluateQueryInParens(condition.queries.first(), container);
     case CQ::LogicalOperator::And: {
         auto result = EvaluationResult::True;
         for (auto query : condition.queries) {
-            auto queryResult = evaluateQuery(query, container);
+            auto queryResult = evaluateQueryInParens(query, container);
             if (queryResult == EvaluationResult::False)
                 return EvaluationResult::False;
             if (queryResult == EvaluationResult::Unknown)
@@ -147,7 +198,7 @@ auto ContainerQueryEvaluator::evaluateCondition(const ConditionType& condition, 
     case CQ::LogicalOperator::Or: {
         auto result = EvaluationResult::False;
         for (auto query : condition.queries) {
-            auto queryResult = evaluateQuery(query, container);
+            auto queryResult = evaluateQueryInParens(query, container);
             if (queryResult == EvaluationResult::True)
                 return EvaluationResult::True;
             if (queryResult == EvaluationResult::Unknown)
@@ -176,14 +227,33 @@ static std::optional<LayoutUnit> computeSize(const CSSValue* value, const CSSToL
     return primitiveValue.computeLength<LayoutUnit>(conversionData);
 }
 
-auto ContainerQueryEvaluator::evaluateSizeFeature(const CQ::SizeFeature& sizeFeature, const ResolvedContainer& container) const -> EvaluationResult
+auto ContainerQueryEvaluator::evaluateSizeFeature(const CQ::SizeFeature& sizeFeature, const SelectedContainer& container) const -> EvaluationResult
 {
-    // "If the query container does not have a principal box ... then the result of evaluating the size feature is unknown."
+    // "If the query container does not have a principal box, or the principal box is not a layout containment box,
+    // or the query container does not support container size queries on the relevant axes, then the result of
+    // evaluating the size feature is unknown."
     // https://drafts.csswg.org/css-contain-3/#size-container
     if (!container.renderer)
         return EvaluationResult::Unknown;
 
     auto& renderer = *container.renderer;
+
+    auto hasEligibleContainment = [&] {
+        if (!renderer.shouldApplyLayoutContainment())
+            return false;
+        switch (renderer.style().containerType()) {
+        case ContainerType::InlineSize:
+            return renderer.shouldApplyInlineSizeContainment();
+        case ContainerType::Size:
+            return renderer.shouldApplySizeContainment();
+        case ContainerType::Normal:
+            return true;
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+    };
+
+    if (!hasEligibleContainment())
+        return EvaluationResult::Unknown;
 
     auto compare = [](CQ::ComparisonOperator op, auto left, auto right) {
         switch (op) {
@@ -249,55 +319,19 @@ auto ContainerQueryEvaluator::evaluateSizeFeature(const CQ::SizeFeature& sizeFea
         return toEvaluationResult(compare(comparison->op, left, right));
     };
 
-    enum class Axis : uint8_t { Both, Block, Inline, Width, Height };
-    auto containerSupportsRequiredAxis = [&](Axis axis) {
-        switch (renderer.style().containerType()) {
-        case ContainerType::Size:
-            return true;
-        case ContainerType::InlineSize:
-            if (axis == Axis::Width)
-                return renderer.isHorizontalWritingMode();
-            if (axis == Axis::Height)
-                return !renderer.isHorizontalWritingMode();
-            return axis == Axis::Inline;
-        case ContainerType::None:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-        RELEASE_ASSERT_NOT_REACHED();
-    };
-
-    if (sizeFeature.name == CQ::FeatureNames::width()) {
-        if (!containerSupportsRequiredAxis(Axis::Width))
-            return EvaluationResult::Unknown;
-
+    if (sizeFeature.name == CQ::FeatureNames::width())
         return evaluateSize(renderer.contentWidth());
-    }
 
-    if (sizeFeature.name == CQ::FeatureNames::height()) {
-        if (!containerSupportsRequiredAxis(Axis::Height))
-            return EvaluationResult::Unknown;
-
+    if (sizeFeature.name == CQ::FeatureNames::height())
         return evaluateSize(renderer.contentHeight());
-    }
 
-    if (sizeFeature.name == CQ::FeatureNames::inlineSize()) {
-        if (!containerSupportsRequiredAxis(Axis::Inline))
-            return EvaluationResult::Unknown;
-
+    if (sizeFeature.name == CQ::FeatureNames::inlineSize())
         return evaluateSize(renderer.contentLogicalWidth());
-    }
 
-    if (sizeFeature.name == CQ::FeatureNames::blockSize()) {
-        if (!containerSupportsRequiredAxis(Axis::Block))
-            return EvaluationResult::Unknown;
-
+    if (sizeFeature.name == CQ::FeatureNames::blockSize())
         return evaluateSize(renderer.contentLogicalHeight());
-    }
 
     if (sizeFeature.name == CQ::FeatureNames::aspectRatio()) {
-        if (!containerSupportsRequiredAxis(Axis::Both))
-            return EvaluationResult::Unknown;
-
         auto boxRatio = renderer.contentWidth().toDouble() / renderer.contentHeight().toDouble();
 
         if (!sizeFeature.leftComparison && !sizeFeature.rightComparison)
@@ -310,9 +344,6 @@ auto ContainerQueryEvaluator::evaluateSizeFeature(const CQ::SizeFeature& sizeFea
     }
 
     if (sizeFeature.name == CQ::FeatureNames::orientation()) {
-        if (!containerSupportsRequiredAxis(Axis::Both))
-            return EvaluationResult::Unknown;
-
         if (!sizeFeature.rightComparison)
             return EvaluationResult::Unknown;
 

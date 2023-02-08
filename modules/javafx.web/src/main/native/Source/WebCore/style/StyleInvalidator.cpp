@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2014, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,10 @@
 #include "CSSSelectorList.h"
 #include "Document.h"
 #include "ElementIterator.h"
+#include "ElementRareData.h"
 #include "ElementRuleCollector.h"
 #include "HTMLSlotElement.h"
 #include "RuleSetBuilder.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SelectorMatchingState.h"
 #include "ShadowRoot.h"
 #include "StyleResolver.h"
@@ -49,8 +49,7 @@ static bool shouldDirtyAllStyle(const Vector<RefPtr<StyleRuleBase>>& rules)
 {
     for (auto& rule : rules) {
         if (is<StyleRuleMedia>(*rule)) {
-            const auto* childRules = downcast<StyleRuleMedia>(*rule).childRulesWithoutDeferredParsing();
-            if (childRules && shouldDirtyAllStyle(*childRules))
+            if (shouldDirtyAllStyle(downcast<StyleRuleMedia>(*rule).childRules()))
                 return true;
             continue;
         }
@@ -346,7 +345,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     }
-    case MatchElement::HasNonSubject: {
+    case MatchElement::HasNonSubjectOrScopeBreaking: {
         SelectorMatchingState selectorMatchingState;
         invalidateStyleForDescendants(*element.document().documentElement(), &selectorMatchingState);
         break;
@@ -417,7 +416,7 @@ void Invalidator::addToMatchElementRuleSets(Invalidator::MatchElementRuleSets& m
 
 void Invalidator::invalidateWithMatchElementRuleSets(Element& element, const MatchElementRuleSets& matchElementRuleSets)
 {
-    SetForScope<bool> isInvalidating(element.styleResolver().ruleSets().isInvalidatingStyleWithRuleSets(), true);
+    SetForScope isInvalidating(element.styleResolver().ruleSets().isInvalidatingStyleWithRuleSets(), true);
 
     for (auto& matchElementAndRuleSet : matchElementRuleSets) {
         Invalidator invalidator(matchElementAndRuleSet.value);
@@ -442,22 +441,10 @@ void Invalidator::invalidateHostAndSlottedStyleIfNeeded(ShadowRoot& shadowRoot)
     auto& host = *shadowRoot.host();
     auto* resolver = shadowRoot.styleScope().resolverIfExists();
 
-    auto shouldInvalidateHost = [&] {
-        if (!resolver)
-            return true;
-        return !resolver->ruleSets().authorStyle().hostPseudoClassRules().isEmpty();
-    }();
-
-    if (shouldInvalidateHost)
+    if (!resolver || resolver->ruleSets().hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.hostPseudoClassRules().isEmpty(); }))
         host.invalidateStyleInternal();
 
-    auto shouldInvalidateHostChildren = [&] {
-        if (!resolver)
-            return true;
-        return !resolver->ruleSets().authorStyle().slottedPseudoElementRules().isEmpty();
-    }();
-
-    if (shouldInvalidateHostChildren) {
+    if (!resolver || resolver->ruleSets().hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.slottedPseudoElementRules().isEmpty(); })) {
         for (auto& shadowChild : childrenOfType<Element>(host))
             shadowChild.invalidateStyleInternal();
     }

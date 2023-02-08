@@ -70,12 +70,12 @@ Ref<HTMLOptionElement> HTMLOptionElement::create(const QualifiedName& tagName, D
     return adoptRef(*new HTMLOptionElement(tagName, document));
 }
 
-ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForLegacyFactoryFunction(Document& document, const String& text, const String& value, bool defaultSelected, bool selected)
+ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForLegacyFactoryFunction(Document& document, String&& text, const AtomString& value, bool defaultSelected, bool selected)
 {
     auto element = create(document);
 
     if (!text.isEmpty()) {
-        auto appendResult = element->appendChild(Text::create(document, text));
+        auto appendResult = element->appendChild(Text::create(document, WTFMove(text)));
         if (appendResult.hasException())
             return appendResult.releaseException();
     }
@@ -112,7 +112,7 @@ String HTMLOptionElement::text() const
     return stripLeadingAndTrailingHTMLSpaces(document().displayStringModifiedByEncoding(text)).simplifyWhiteSpace(isHTMLSpace);
 }
 
-void HTMLOptionElement::setText(const String &text)
+void HTMLOptionElement::setText(String&& text)
 {
     Ref protectedThis { *this };
 
@@ -126,10 +126,10 @@ void HTMLOptionElement::setText(const String &text)
     // Handle the common special case where there's exactly 1 child node, and it's a text node.
     RefPtr child = firstChild();
     if (is<Text>(child) && !child->nextSibling())
-        downcast<Text>(*child).setData(text);
+        downcast<Text>(*child).setData(WTFMove(text));
     else {
         removeChildren();
-        appendChild(Text::create(document(), text));
+        appendChild(Text::create(document(), WTFMove(text)));
     }
 
     if (selectIsMenuList && select->selectedIndex() != oldSelectedIndex)
@@ -205,7 +205,7 @@ String HTMLOptionElement::value() const
     return stripLeadingAndTrailingHTMLSpaces(collectOptionInnerText()).simplifyWhiteSpace(isHTMLSpace);
 }
 
-void HTMLOptionElement::setValue(const String& value)
+void HTMLOptionElement::setValue(const AtomString& value)
 {
     setAttributeWithoutSynchronization(valueAttr, value);
 }
@@ -283,7 +283,7 @@ String HTMLOptionElement::displayLabel() const
     return label();
 }
 
-void HTMLOptionElement::setLabel(const String& label)
+void HTMLOptionElement::setLabel(const AtomString& label)
 {
     setAttributeWithoutSynchronization(labelAttr, label);
 }

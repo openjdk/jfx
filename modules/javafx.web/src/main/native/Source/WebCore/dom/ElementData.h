@@ -85,7 +85,7 @@ public:
 
     static const unsigned attributeNotFound = static_cast<unsigned>(-1);
 
-    void setClassNames(const SpaceSplitString& classNames) const { m_classNames = classNames; }
+    void setClassNames(SpaceSplitString&& classNames) const { m_classNames = WTFMove(classNames); }
     const SpaceSplitString& classNames() const { return m_classNames; }
     static ptrdiff_t classNamesMemoryOffset() { return OBJECT_OFFSETOF(ElementData, m_classNames); }
 
@@ -132,6 +132,7 @@ private:
     static const uint32_t s_flagStyleAttributeIsDirty = 1 << 3;
     static const uint32_t s_flagAnimatedSVGAttributesAreDirty = 1 << 4;
     static const uint32_t s_flagsMask = (1 << s_flagCount) - 1;
+    // FIXME: could the SVG specific flags go to some SVG class?
 
     inline void updateFlag(uint32_t flag, bool set) const
     {

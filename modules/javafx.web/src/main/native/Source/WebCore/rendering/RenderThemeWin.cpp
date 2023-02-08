@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Kenneth Rohde Christiansen
  *
  * This library is free software; you can redistribute it and/or
@@ -308,63 +308,6 @@ Color RenderThemeWin::platformInactiveSelectionForegroundColor(OptionSet<StyleCo
     return platformActiveSelectionForegroundColor(options);
 }
 
-static void fillFontDescription(FontCascadeDescription& fontDescription, LOGFONT& logFont, float fontSize)
-{
-    fontDescription.setIsAbsoluteSize(true);
-    fontDescription.setOneFamily(logFont.lfFaceName);
-    fontDescription.setSpecifiedSize(fontSize);
-    fontDescription.setWeight(logFont.lfWeight >= 700 ? boldWeightValue() : normalWeightValue()); // FIXME: Use real weight.
-    fontDescription.setIsItalic(logFont.lfItalic);
-}
-
-void RenderThemeWin::updateCachedSystemFontDescription(CSSValueID valueID, FontCascadeDescription& fontDescription) const
-{
-    static bool initialized;
-    static NONCLIENTMETRICS ncm;
-
-    if (!initialized) {
-        initialized = true;
-        ncm.cbSize = sizeof(NONCLIENTMETRICS);
-        ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0);
-    }
-
-    LOGFONT logFont;
-    bool shouldUseDefaultControlFontPixelSize = false;
-    switch (valueID) {
-    case CSSValueIcon:
-        ::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(logFont), &logFont, 0);
-        break;
-    case CSSValueMenu:
-        logFont = ncm.lfMenuFont;
-        break;
-    case CSSValueMessageBox:
-        logFont = ncm.lfMessageFont;
-        break;
-    case CSSValueStatusBar:
-        logFont = ncm.lfStatusFont;
-        break;
-    case CSSValueCaption:
-        logFont = ncm.lfCaptionFont;
-        break;
-    case CSSValueSmallCaption:
-        logFont = ncm.lfSmCaptionFont;
-        break;
-    case CSSValueWebkitSmallControl:
-    case CSSValueWebkitMiniControl: // Just map to small.
-    case CSSValueWebkitControl: // Just map to small.
-        shouldUseDefaultControlFontPixelSize = true;
-        FALLTHROUGH;
-    default: { // Everything else uses the stock GUI font.
-        HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
-        if (!hGDI)
-            return;
-        if (::GetObject(hGDI, sizeof(logFont), &logFont) <= 0)
-            return;
-    }
-    }
-    fillFontDescription(fontDescription, logFont, shouldUseDefaultControlFontPixelSize ? defaultControlFontPixelSize : abs(logFont.lfHeight));
-}
-
 bool RenderThemeWin::supportsFocus(ControlPart appearance) const
 {
     switch (appearance) {
@@ -443,10 +386,10 @@ unsigned RenderThemeWin::determineState(const RenderObject& o)
         result = TS_FOCUSED;
     else if (isHovered(o))
         result = TS_HOVER;
-    if (isChecked(o))
-        result += 4; // 4 unchecked states, 4 checked states.
-    else if (isIndeterminate(o) && appearance == CheckboxPart)
+    if (isIndeterminate(o) && appearance == CheckboxPart)
         result += 8;
+    else if (isChecked(o))
+        result += 4; // 4 unchecked states, 4 checked states.
     return result;
 }
 
@@ -746,6 +689,7 @@ bool RenderThemeWin::paintMenuList(const RenderObject& renderer, const PaintInfo
 
 void RenderThemeWin::adjustMenuListStyle(RenderStyle& style, const Element* e) const
 {
+    RenderTheme::adjustMenuListStyle(style, e);
     style.resetBorder();
     adjustMenuListButtonStyle(style, e);
 }

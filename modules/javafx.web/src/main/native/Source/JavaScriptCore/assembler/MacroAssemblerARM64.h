@@ -42,6 +42,8 @@ public:
     static constexpr unsigned numGPRs = 32;
     static constexpr unsigned numFPRs = 32;
 
+    static constexpr size_t nearJumpRange = 128 * MB;
+
     static constexpr RegisterID dataTempRegister = ARM64Registers::ip0;
     static constexpr RegisterID memoryTempRegister = ARM64Registers::ip1;
 
@@ -349,6 +351,13 @@ public:
     {
         load64(src.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.add<64>(dest, dest, dataTempRegister);
+    }
+
+    void add8(TrustedImm32 imm, Address address)
+    {
+        load8(address, getCachedMemoryTempRegisterIDAndInvalidate());
+        add32(imm, memoryTempRegister, getCachedDataTempRegisterIDAndInvalidate());
+        store8(dataTempRegister, address);
     }
 
     void and32(RegisterID src, RegisterID dest)
@@ -1520,6 +1529,7 @@ public:
         case Extend::None:
             return Assembler::UXTX;
         }
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
     void load64(Address address, RegisterID dest)
@@ -1949,6 +1959,17 @@ public:
         store64(dataTempRegister, address);
     }
 
+    void store64(TrustedImmPtr imm, Address address)
+    {
+        if (!imm.m_value) {
+            store64(ARM64Registers::zr, address);
+            return;
+        }
+
+        moveToCachedReg(imm, dataMemoryTempRegister());
+        store64(dataTempRegister, address);
+    }
+
     void store64(TrustedImm64 imm, BaseIndex address)
     {
         if (!imm.m_value) {
@@ -1958,6 +1979,17 @@ public:
 
         moveToCachedReg(imm, dataMemoryTempRegister());
         store64(dataTempRegister, address);
+    }
+
+    void transfer64(Address src, Address dest)
+    {
+        load64(src, getCachedDataTempRegisterIDAndInvalidate());
+        store64(getCachedDataTempRegisterIDAndInvalidate(), dest);
+    }
+
+    void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
     }
 
     DataLabel32 store64WithAddressOffsetPatch(RegisterID src, Address address)
@@ -3344,6 +3376,19 @@ public:
         return branch64(cond, memoryTempRegister, right);
     }
 
+    Jump branch64(RelationalCondition cond, Address left, Address right)
+    {
+        // load64 clobbers memoryTempRegister, thus we should first use dataTempRegister here.
+        load64(left, getCachedDataTempRegisterIDAndInvalidate());
+        // And branch64 will use memoryTempRegister to load right to a register.
+        return branch64(cond, dataTempRegister, right);
+    }
+
+    Jump branchPtr(RelationalCondition cond, Address left, Address right)
+    {
+        return branch64(cond, left, right);
+    }
+
     Jump branchPtr(RelationalCondition cond, BaseIndex left, RegisterID right)
     {
         return branch64(cond, left, right);
@@ -3892,7 +3937,7 @@ public:
     {
         invalidateAllTempRegisters();
         m_assembler.blr(target);
-        return Call(m_assembler.label(), Call::None);
+        return Call(m_assembler.labelIgnoringWatchpoints(), Call::None);
     }
 
     ALWAYS_INLINE Call call(Address address, PtrTag tag)
@@ -3958,7 +4003,7 @@ public:
     {
         invalidateAllTempRegisters();
         m_assembler.bl();
-        return Call(m_assembler.label(), Call::LinkableNear);
+        return Call(m_assembler.labelIgnoringWatchpoints(), Call::LinkableNear);
     }
 
     ALWAYS_INLINE Call nearTailCall()
@@ -3971,8 +4016,9 @@ public:
     ALWAYS_INLINE Call threadSafePatchableNearCall()
     {
         invalidateAllTempRegisters();
+        padBeforePatch();
         m_assembler.bl();
-        return Call(m_assembler.label(), Call::LinkableNear);
+        return Call(m_assembler.labelIgnoringWatchpoints(), Call::LinkableNear);
     }
 
     ALWAYS_INLINE void ret()
@@ -4687,8 +4733,10 @@ public:
 protected:
     ALWAYS_INLINE Jump makeBranch(Assembler::Condition cond)
     {
+        if (m_makeJumpPatchable)
+            padBeforePatch();
         m_assembler.b_cond(cond);
-        AssemblerLabel label = m_assembler.label();
+        AssemblerLabel label = m_assembler.labelIgnoringWatchpoints();
         m_assembler.nop();
         return Jump(label, m_makeJumpPatchable ? Assembler::JumpConditionFixedSize : Assembler::JumpCondition, cond);
     }
@@ -4699,24 +4747,28 @@ protected:
     template <int dataSize>
     ALWAYS_INLINE Jump makeCompareAndBranch(ZeroCondition cond, RegisterID reg)
     {
+        if (m_makeJumpPatchable)
+            padBeforePatch();
         if (cond == IsZero)
             m_assembler.cbz<dataSize>(reg);
         else
             m_assembler.cbnz<dataSize>(reg);
-        AssemblerLabel label = m_assembler.label();
+        AssemblerLabel label = m_assembler.labelIgnoringWatchpoints();
         m_assembler.nop();
         return Jump(label, m_makeJumpPatchable ? Assembler::JumpCompareAndBranchFixedSize : Assembler::JumpCompareAndBranch, static_cast<Assembler::Condition>(cond), dataSize == 64, reg);
     }
 
     ALWAYS_INLINE Jump makeTestBitAndBranch(RegisterID reg, unsigned bit, ZeroCondition cond)
     {
+        if (m_makeJumpPatchable)
+            padBeforePatch();
         ASSERT(bit < 64);
         bit &= 0x3f;
         if (cond == IsZero)
             m_assembler.tbz(reg, bit);
         else
             m_assembler.tbnz(reg, bit);
-        AssemblerLabel label = m_assembler.label();
+        AssemblerLabel label = m_assembler.labelIgnoringWatchpoints();
         m_assembler.nop();
         return Jump(label, m_makeJumpPatchable ? Assembler::JumpTestBitFixedSize : Assembler::JumpTestBit, static_cast<Assembler::Condition>(cond), bit, reg);
     }

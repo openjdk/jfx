@@ -100,6 +100,7 @@ namespace WebCore {
     M(Push) \
     M(RemoteInspector) \
     M(RequestAnimationFrame) \
+    M(ResizeObserver) \
     M(ResourceLoading) \
     M(ResourceLoadObserver) \
     M(ResourceLoadStatistics) \

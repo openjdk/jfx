@@ -39,7 +39,7 @@ public:
         return &inst;
     }
     NotificationClientJava() {}
-    bool show(Notification&) override { return false; }
+    bool show(Notification&,  CompletionHandler<void()>&&) override { return false; }
     void cancel(Notification&) override {}
     void notificationObjectDestroyed(Notification&) override {}
     void notificationControllerDestroyed() override {}

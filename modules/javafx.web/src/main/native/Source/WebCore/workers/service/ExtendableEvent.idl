@@ -25,12 +25,12 @@
 
 [
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=ServiceWorkerEnabled,
+    EnabledBySetting=ServiceWorkersEnabled,
     Exposed=ServiceWorker,
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToNativeObject,
 ] interface ExtendableEvent : Event {
-    constructor(DOMString type, optional ExtendableEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional ExtendableEventInit eventInitDict);
 
     undefined waitUntil(Promise<any> f);
 };

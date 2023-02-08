@@ -58,7 +58,7 @@ template<typename Predicate> String bestAvailableLocale(const String& locale, Pr
         if (pos >= 2 && candidate[pos - 2] == '-')
             pos -= 2;
 
-        candidate = candidate.substring(0, pos);
+        candidate = candidate.left(pos);
     }
 
     return String();
@@ -77,7 +77,7 @@ JSValue constructIntlInstanceWithWorkaroundForLegacyIntlConstructor(JSGlobalObje
 
     if (thisValue.isObject()) {
         JSObject* thisObject = asObject(thisValue);
-        ASSERT(!callee->template inherits<JSBoundFunction>(vm));
+        ASSERT(!callee->template inherits<JSBoundFunction>());
         JSValue prototype = callee->getDirect(vm, vm.propertyNames->prototype); // Passed constructors always have `prototype` which cannot be deleted.
         ASSERT(prototype);
         bool hasInstance = JSObject::defaultHasInstance(globalObject, thisObject, prototype);
@@ -85,7 +85,7 @@ JSValue constructIntlInstanceWithWorkaroundForLegacyIntlConstructor(JSGlobalObje
         if (hasInstance) {
             PropertyDescriptor descriptor(instance, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
             scope.release();
-            thisObject->methodTable(vm)->defineOwnProperty(thisObject, globalObject, vm.propertyNames->builtinNames().intlLegacyConstructedSymbol(), descriptor, true);
+            thisObject->methodTable()->defineOwnProperty(thisObject, globalObject, vm.propertyNames->builtinNames().intlLegacyConstructedSymbol(), descriptor, true);
             return thisObject;
         }
     }
@@ -98,15 +98,15 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue);
+    JSObject* thisObject = jsDynamicCast<JSObject*>(thisValue);
     if (UNLIKELY(!thisObject))
         return nullptr;
 
-    auto* instance = jsDynamicCast<InstanceType*>(vm, thisObject);
+    auto* instance = jsDynamicCast<InstanceType*>(thisObject);
     if (LIKELY(instance))
         return instance;
 
-    ASSERT(!constructor->template inherits<JSBoundFunction>(vm));
+    ASSERT(!constructor->template inherits<JSBoundFunction>());
     JSValue prototype = constructor->getDirect(vm, vm.propertyNames->prototype); // Passed constructors always have `prototype` which cannot be deleted.
     ASSERT(prototype);
     bool hasInstance = JSObject::defaultHasInstance(globalObject, thisObject, prototype);
@@ -116,7 +116,7 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
 
     JSValue value = thisObject->get(globalObject, vm.propertyNames->builtinNames().intlLegacyConstructedSymbol());
     RETURN_IF_EXCEPTION(scope, nullptr);
-    return jsDynamicCast<InstanceType*>(vm, value);
+    return jsDynamicCast<InstanceType*>(value);
 }
 
 template<typename ResultType>
@@ -152,7 +152,7 @@ ResultType intlOption(JSGlobalObject* globalObject, JSObject* options, PropertyN
 }
 
 template<typename ResultType>
-ResultType intlStringOrBooleanOption(JSGlobalObject* globalObject, JSObject* options, PropertyName property, ResultType trueValue, ResultType falsyValue, std::initializer_list<std::pair<ASCIILiteral, ResultType>> values, ASCIILiteral notFoundMessage, ResultType fallback)
+ResultType intlStringOrBooleanOption(JSGlobalObject* globalObject, JSObject* options, PropertyName property, ResultType trueValue, ResultType falsyValue, std::initializer_list<std::pair<ASCIILiteral, ResultType>> values, ResultType fallback)
 {
     // https://tc39.es/proposal-intl-numberformat-v3/out/negotiation/diff.html#sec-getstringorbooleanoption
 
@@ -167,25 +167,24 @@ ResultType intlStringOrBooleanOption(JSGlobalObject* globalObject, JSObject* opt
     JSValue value = options->get(globalObject, property);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (!value.isUndefined()) {
-        if (value.isBoolean() && value.asBoolean())
-            return trueValue;
+    if (value.isUndefined())
+        return fallback;
 
-        bool valueBoolean = value.toBoolean(globalObject);
-        RETURN_IF_EXCEPTION(scope, { });
+    if (value.isBoolean() && value.asBoolean())
+        return trueValue;
 
-        if (!valueBoolean)
-            return falsyValue;
+    bool valueBoolean = value.toBoolean(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
-        String stringValue = value.toWTFString(globalObject);
-        RETURN_IF_EXCEPTION(scope, { });
+    if (!valueBoolean)
+        return falsyValue;
 
-        for (const auto& entry : values) {
-            if (entry.first == stringValue)
-                return entry.second;
-        }
-        throwException(globalObject, scope, createRangeError(globalObject, notFoundMessage));
-        return { };
+    String stringValue = value.toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    for (const auto& entry : values) {
+        if (entry.first == stringValue)
+            return entry.second;
     }
 
     return fallback;

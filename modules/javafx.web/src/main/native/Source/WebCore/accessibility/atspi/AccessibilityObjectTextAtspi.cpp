@@ -783,12 +783,12 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
         addAttributeIfNeeded("family-name"_s, style.fontCascade().firstFamily());
         addAttributeIfNeeded("size"_s, makeString(std::round(style.computedFontPixelSize() * 72 / WebCore::screenDPI()), "pt"));
         addAttributeIfNeeded("weight"_s, makeString(static_cast<float>(style.fontCascade().weight())));
-        addAttributeIfNeeded("style"_s, style.fontCascade().italic() ? "italic" : "normal");
-        addAttributeIfNeeded("strikethrough"_s, style.textDecoration() & TextDecorationLine::LineThrough ? "true" : "false");
-        addAttributeIfNeeded("underline"_s, style.textDecoration() & TextDecorationLine::Underline ? "single" : "none");
-        addAttributeIfNeeded("invisible"_s, style.visibility() == Visibility::Hidden ? "true" : "false");
-        addAttributeIfNeeded("editable"_s, m_coreObject->canSetValueAttribute() ? "true" : "false");
-        addAttributeIfNeeded("direction"_s, style.direction() == TextDirection::LTR ? "ltr" : "rtl");
+        addAttributeIfNeeded("style"_s, style.fontCascade().italic() ? "italic"_s : "normal"_s);
+        addAttributeIfNeeded("strikethrough"_s, style.textDecorationLine() & TextDecorationLine::LineThrough ? "true"_s : "false"_s);
+        addAttributeIfNeeded("underline"_s, style.textDecorationLine() & TextDecorationLine::Underline ? "single"_s : "none"_s);
+        addAttributeIfNeeded("invisible"_s, style.visibility() == Visibility::Hidden ? "true"_s : "false"_s);
+        addAttributeIfNeeded("editable"_s, m_coreObject->canSetValueAttribute() ? "true"_s : "false"_s);
+        addAttributeIfNeeded("direction"_s, style.direction() == TextDirection::LTR ? "ltr"_s : "rtl"_s);
 
         if (!style.textIndent().isUndefined())
             addAttributeIfNeeded("indent"_s, makeString(valueForLength(style.textIndent(), m_coreObject->size().width()).toInt()));
@@ -799,23 +799,23 @@ AccessibilityObjectAtspi::TextAttributes AccessibilityObjectAtspi::textAttribute
             break;
         case TextAlignMode::Left:
         case TextAlignMode::WebKitLeft:
-            addAttributeIfNeeded("justification"_s, "left");
+            addAttributeIfNeeded("justification"_s, "left"_s);
             break;
         case TextAlignMode::Right:
         case TextAlignMode::WebKitRight:
-            addAttributeIfNeeded("justification"_s, "right");
+            addAttributeIfNeeded("justification"_s, "right"_s);
             break;
         case TextAlignMode::Center:
         case TextAlignMode::WebKitCenter:
-            addAttributeIfNeeded("justification"_s, "center");
+            addAttributeIfNeeded("justification"_s, "center"_s);
             break;
         case TextAlignMode::Justify:
-            addAttributeIfNeeded("justification"_s, "fill");
+            addAttributeIfNeeded("justification"_s, "fill"_s);
             break;
         }
 
         String invalidStatus = m_coreObject->invalidStatus();
-        if (invalidStatus != "false")
+        if (invalidStatus != "false"_s)
             addAttributeIfNeeded("invalid"_s, invalidStatus);
 
         String language = m_coreObject->language();
@@ -993,7 +993,7 @@ bool AccessibilityObjectAtspi::scrollToMakeVisible(int startOffset, int endOffse
         break;
     }
 
-    m_coreObject->renderer()->scrollRectToVisible(rect, false, { SelectionRevealMode::Reveal, alignX, alignY, ShouldAllowCrossOriginScrolling::Yes });
+    FrameView::scrollRectToVisible(rect, *m_coreObject->renderer(), false, { SelectionRevealMode::Reveal, alignX, alignY, ShouldAllowCrossOriginScrolling::Yes });
     return true;
 }
 

@@ -28,35 +28,24 @@
 #include "psConstants.h"
 #include "vs2ps.h"
 
-#ifndef Spec
-    #define Spec 0
-#endif
 
-#ifndef Bump
-    #define Bump 0
-#endif
-
-#ifndef IllumMap
-    #define IllumMap 0
-#endif
-
-
-static const bool bump = Bump;
-static const int nSpecular = Spec;
-static const bool isIlluminated = IllumMap;
-
+// needed for pixel lighting
+//float3 getLocalVector(float3 global, float3 N[3]) {
+//    return float3(dot(global, N[1]), dot(global, N[2]), dot(global, N[0]));
+//}
 
 float NTSC_Gray(float3 color) {
     return dot(color, float3(0.299, 0.587, 0.114));
 }
 
-float3 getBumpNormal(float3 bumpMap, float3 N[3]) {
-    return bumpMap.z*N[0]+bumpMap.x*N[1]+bumpMap.y*N[2];
-}
+//float3 getBumpNormal(float3 bumpMap, float3 N[3]) {
+//    return bumpMap.z * N[0] + bumpMap.x * N[1] + bumpMap.y * N[2];
+//}
 
-float4 retNormal(float3 n) { return float4( n*0.5+0.5,1); }
+//float4 retNormal(float3 n) { return float4(n * 0.5 + 0.5, 1); }
 
-float4 retr(float x) { return float4(x.xxx,1); }
+//float4 retr(float x) { return float4(x.xxx, 1); }
+
 
 // Because pow(0, 0) is undefined (https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-pow),
 // we need special treatment for falloff == 0 cases
@@ -102,18 +91,23 @@ float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float d
     return cutoff >= 0 ? 1 : 0;
 }
 
-void computeLight(float i, float3 n, float3 refl, float specPower, float3 L, float3 lightDir, in out float3 d, in out float3 s) {
+/*
+ * Computes the light's contribution by using the Phong shading model. A contribution consists of a diffuse component and a
+ * specular component. The computation is done in world space.
+ */
+void computeLight(float i, float3 normal, float3 refl, float specPower, float3 toLight, float3 lightDir, in out float3 diff, in out float3 spec) {
     // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
     if (gLightAttenuation[i].w < 0.5) {
-        d += saturate(dot(n, -lightDir)) * gLightColor[i].xyz;
-        s += pow(saturate(dot(-refl, -lightDir)), specPower) * gLightColor[i].xyz;
+        diff += saturate(dot(normal, -lightDir)) * gLightColor[i].rgb;
+        spec += pow(saturate(dot(-refl, -lightDir)), specPower) * gLightColor[i].rgb;
         return;
     }
-    float dist = length(L);
+
+    float dist = length(toLight);
     if (dist > gLightRange[i].x) {
         return;
     }
-    float3 l = normalize(L);
+    float3 l = normalize(toLight);
 
     float cosOuter = gSpotLightFactors[i].x;
     float denom = gSpotLightFactors[i].y;
@@ -125,15 +119,7 @@ void computeLight(float i, float3 n, float3 refl, float specPower, float3 L, flo
     float qa = gLightAttenuation[i].z;
     float invAttnFactor = ca + la * dist + qa * dist * dist;
 
-    float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
-    d += saturate(dot(n, l)) * attenuatedColor;
-    s += pow(saturate(dot(-refl, l)), specPower) * attenuatedColor;
-}
-
-void phong(float3 n, float3 e, float specPower, in float4 L[LocalBump::nLights], in float4 lightDirs[LocalBump::nLights],
-        in out float3 d, in out float3 s, int _s, int _e) {
-    float3 refl = reflect(e, n);
-    for (int i = _s; i < _e; i++) {
-        computeLight(i, n, refl, specPower, L[i].xyz, lightDirs[i].xyz, d, s);
-    }
+    float3 attenuatedColor = gLightColor[i].rgb * spotlightFactor / invAttnFactor;
+    diff += saturate(dot(normal, l)) * attenuatedColor;
+    spec += pow(saturate(dot(-refl, l)), specPower) * attenuatedColor;
 }

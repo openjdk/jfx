@@ -1169,6 +1169,17 @@ TransformationMatrix TransformationMatrix::rectToRect(const FloatRect& from, con
                                 to.y() - from.y());
 }
 
+TransformationMatrix& TransformationMatrix::zoom(double zoomFactor)
+{
+    m_matrix[0][3] /= zoomFactor;
+    m_matrix[1][3] /= zoomFactor;
+    m_matrix[2][3] /= zoomFactor;
+    m_matrix[3][0] *= zoomFactor;
+    m_matrix[3][1] *= zoomFactor;
+    m_matrix[3][2] *= zoomFactor;
+    return *this;
+}
+
 // this = mat * this.
 TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix& mat)
 {
@@ -1543,6 +1554,17 @@ TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix&
     memcpy(&m_matrix[0][0], &tmp[0][0], sizeof(Matrix4));
 #endif
     return *this;
+}
+
+TransformationMatrix& TransformationMatrix::multiplyAffineTransform(const AffineTransform& matrix)
+{
+    if (matrix.isIdentity())
+        return *this;
+
+    if (matrix.isIdentityOrTranslation())
+        return translate(matrix.e(), matrix.f());
+
+    return multiply(matrix.toTransformationMatrix());
 }
 
 void TransformationMatrix::multVecMatrix(double x, double y, double& resultX, double& resultY) const

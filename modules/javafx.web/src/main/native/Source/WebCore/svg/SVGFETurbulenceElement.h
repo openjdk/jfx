@@ -53,9 +53,9 @@ struct SVGPropertyTraits<SVGStitchOptions> {
 
     static SVGStitchOptions fromString(const String& value)
     {
-        if (value == "stitch")
+        if (value == "stitch"_s)
             return SVG_STITCHTYPE_STITCH;
-        if (value == "noStitch")
+        if (value == "noStitch"_s)
             return SVG_STITCHTYPE_NOSTITCH;
         return SVG_STITCHTYPE_UNKNOWN;
     }
@@ -82,9 +82,9 @@ struct SVGPropertyTraits<TurbulenceType> {
 
     static TurbulenceType fromString(const String& value)
     {
-        if (value == "fractalNoise")
+        if (value == "fractalNoise"_s)
             return TurbulenceType::FractalNoise;
-        if (value == "turbulence")
+        if (value == "turbulence"_s)
             return TurbulenceType::Turbulence;
         return TurbulenceType::Unknown;
     }
@@ -118,8 +118,8 @@ private:
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
-    bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
-    RefPtr<FilterEffect> filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const override;
+    bool setFilterEffectAttribute(FilterEffect&, const QualifiedName& attrName) override;
+    RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
     PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedNumber> m_baseFrequencyX { SVGAnimatedNumber::create(this) };

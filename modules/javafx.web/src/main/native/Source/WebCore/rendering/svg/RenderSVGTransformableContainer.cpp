@@ -2,6 +2,7 @@
  * Copyright (C) 2004, 2005 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
  * Copyright (C) 2009 Google, Inc.
+ * Copyright (c) 2020, 2021, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,6 +23,9 @@
 #include "config.h"
 #include "RenderSVGTransformableContainer.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+#include "RenderSVGModelObjectInlines.h"
+#include "SVGContainerLayout.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
 #include "SVGGraphicsElement.h"
@@ -33,49 +37,67 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGTransformableContainer);
 
 RenderSVGTransformableContainer::RenderSVGTransformableContainer(SVGGraphicsElement& element, RenderStyle&& style)
-    : LegacyRenderSVGContainer(element, WTFMove(style))
-    , m_needsTransformUpdate(true)
-    , m_didTransformToRootUpdate(false)
+    : RenderSVGContainer(element, WTFMove(style))
 {
 }
 
-bool RenderSVGTransformableContainer::calculateLocalTransform()
+SVGGraphicsElement& RenderSVGTransformableContainer::graphicsElement() const
 {
-    SVGGraphicsElement& element = graphicsElement();
+    return downcast<SVGGraphicsElement>(RenderSVGContainer::element());
+}
 
+inline SVGUseElement* associatedUseElement(SVGGraphicsElement& element)
+{
     // If we're either the renderer for a <use> element, or for any <g> element inside the shadow
     // tree, that was created during the use/symbol/svg expansion in SVGUseElement. These containers
     // need to respect the translations induced by their corresponding use elements x/y attributes.
-    SVGUseElement* useElement = nullptr;
     if (is<SVGUseElement>(element))
-        useElement = &downcast<SVGUseElement>(element);
-    else if (element.isInShadowTree() && is<SVGGElement>(element)) {
+        return &downcast<SVGUseElement>(element);
+
+    if (element.isInShadowTree() && is<SVGGElement>(element)) {
         SVGElement* correspondingElement = element.correspondingElement();
         if (is<SVGUseElement>(correspondingElement))
-            useElement = downcast<SVGUseElement>(correspondingElement);
+            return downcast<SVGUseElement>(correspondingElement);
     }
 
-    if (useElement) {
-        SVGLengthContext lengthContext(useElement);
-        FloatSize translation(useElement->x().value(lengthContext), useElement->y().value(lengthContext));
-        if (translation != m_lastTranslation)
-            m_needsTransformUpdate = true;
-        m_lastTranslation = translation;
-    }
-
-    m_didTransformToRootUpdate = m_needsTransformUpdate || SVGRenderSupport::transformToRootChanged(parent());
-    if (!m_needsTransformUpdate)
-        return false;
-
-    m_localTransform = element.animatedLocalTransform();
-    m_localTransform.translate(m_lastTranslation);
-    m_needsTransformUpdate = false;
-    return true;
+    return nullptr;
 }
 
-SVGGraphicsElement& RenderSVGTransformableContainer::graphicsElement()
+FloatSize RenderSVGTransformableContainer::additionalContainerTranslation() const
 {
-    return downcast<SVGGraphicsElement>(LegacyRenderSVGContainer::element());
+    if (auto* useElement = associatedUseElement(graphicsElement())) {
+        SVGLengthContext lengthContext(useElement);
+        return { useElement->x().value(lengthContext), useElement->y().value(lengthContext) };
+    }
+
+    return { };
+}
+
+void RenderSVGTransformableContainer::updateFromStyle()
+{
+    RenderSVGContainer::updateFromStyle();
+
+    if (associatedUseElement(graphicsElement())) {
+        setHasTransformRelatedProperty();
+        setHasSVGTransform();
+    }
+}
+
+void RenderSVGTransformableContainer::updateLayerTransform()
+{
+    // First update the supplemental layer transform...
+    m_supplementalLayerTransform = AffineTransform::makeTranslation(additionalContainerTranslation());
+
+    // ... before being able to use it in RenderLayerModelObject::updateLayerTransform().
+    RenderSVGContainer::updateLayerTransform();
+}
+
+void RenderSVGTransformableContainer::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+{
+    auto postTransform = m_supplementalLayerTransform.isIdentity() ? std::nullopt : std::make_optional(m_supplementalLayerTransform);
+    applySVGTransform(transform, graphicsElement(), style, boundingBox, std::nullopt, postTransform, options);
 }
 
 }
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

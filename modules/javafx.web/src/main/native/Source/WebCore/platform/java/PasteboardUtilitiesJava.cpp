@@ -34,9 +34,7 @@ namespace WebCore {
 #if OS(WINDOWS)
 void replaceNewlinesWithWindowsStyleNewlines(String& str)
 {
-    static const UChar Newline = '\n';
-    static const char* const WindowsNewline("\r\n");
-    str.replace(Newline, WindowsNewline);
+    str = makeStringByReplacingAll(str, "\n"_s, "\r\n"_s);
 }
 #endif
 
@@ -44,7 +42,7 @@ void replaceNBSPWithSpace(String& str)
 {
     static const UChar NonBreakingSpaceCharacter = 0xA0;
     static const UChar SpaceCharacter = ' ';
-    str.replace(NonBreakingSpaceCharacter, SpaceCharacter);
+    str = makeStringByReplacingAll(str, NonBreakingSpaceCharacter, SpaceCharacter);
 }
 
 } // namespace WebCore

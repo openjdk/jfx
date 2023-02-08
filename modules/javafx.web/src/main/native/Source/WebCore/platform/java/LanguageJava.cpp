@@ -36,7 +36,7 @@ static String platformLanguage()
 {
     static NeverDestroyed<String> computedDefaultLanguage;
     if (computedDefaultLanguage.get().isEmpty())
-        computedDefaultLanguage.get().append(ChromiumBridge::computedDefaultLanguage());
+        return ChromiumBridge::computedDefaultLanguage();
     return computedDefaultLanguage;
 }
 

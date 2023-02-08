@@ -50,6 +50,9 @@ class TextFieldInputType : public InputType, protected SpinButtonElement::SpinBu
     , private DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
 #endif
 {
+public:
+    bool valueMissing(const String&) const final;
+
 protected:
     explicit TextFieldInputType(Type, HTMLInputElement&);
     virtual ~TextFieldInputType();
@@ -78,10 +81,9 @@ protected:
     bool supportsReadOnly() const final;
     void handleFocusEvent(Node* oldFocusedNode, FocusDirection) final;
     void handleBlurEvent() final;
-    void setValue(const String&, bool valueChanged, TextFieldEventBehavior) override;
+    void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) override;
     void updateInnerTextValue() final;
     String sanitizeValue(const String&) const override;
-    bool valueMissing(const String&) const final;
 
     virtual String convertFromVisibleValue(const String&) const;
     virtual void didSetValueByUserEdit();
@@ -106,8 +108,8 @@ private:
 
     // SpinButtonElement::SpinButtonOwner functions.
     void focusAndSelectSpinButtonOwner() final;
-    bool shouldSpinButtonRespondToMouseEvents() final;
-    bool shouldSpinButtonRespondToWheelEvents() final;
+    bool shouldSpinButtonRespondToMouseEvents() const final;
+    bool shouldSpinButtonRespondToWheelEvents() const final;
     void spinButtonStepDown() final;
     void spinButtonStepUp() final;
 

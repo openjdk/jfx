@@ -51,8 +51,7 @@ static String localeInfo(LCTYPE localeType, const String& fallback)
     if (localeName.isEmpty())
         return fallback;
 
-    localeName.truncate(localeName.length() - 1);
-    return localeName;
+    return localeName.left(localeName.length() - 1);
 }
 
 static String platformLanguage()
@@ -63,7 +62,7 @@ static String platformLanguage()
     if (!computedDefaultLanguage.isEmpty())
         return computedDefaultLanguage.isolatedCopy();
 
-    String languageName = localeInfo(LOCALE_SISO639LANGNAME, "en");
+    String languageName = localeInfo(LOCALE_SISO639LANGNAME, "en"_s);
     String countryName = localeInfo(LOCALE_SISO3166CTRYNAME, String());
 
     if (countryName.isEmpty())

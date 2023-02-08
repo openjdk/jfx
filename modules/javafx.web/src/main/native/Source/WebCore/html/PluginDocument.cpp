@@ -34,6 +34,7 @@
 #include "HTMLEmbedElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
+#include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
 #include <wtf/IsoMallocInlines.h>
@@ -81,28 +82,28 @@ void PluginDocumentParser::createDocumentStructure()
 #endif
 
     auto body = HTMLBodyElement::create(document);
-    body->setAttributeWithoutSynchronization(marginwidthAttr, AtomString("0", AtomString::ConstructFromLiteral));
-    body->setAttributeWithoutSynchronization(marginheightAttr, AtomString("0", AtomString::ConstructFromLiteral));
+    body->setAttributeWithoutSynchronization(marginwidthAttr, "0"_s);
+    body->setAttributeWithoutSynchronization(marginheightAttr, "0"_s);
 #if PLATFORM(IOS_FAMILY)
-    body->setAttribute(styleAttr, AtomString("background-color: rgb(217,224,233)", AtomString::ConstructFromLiteral));
+    body->setAttribute(styleAttr, "background-color: rgb(217,224,233)"_s);
 #else
-    body->setAttribute(styleAttr, AtomString("background-color: rgb(38,38,38)", AtomString::ConstructFromLiteral));
+    body->setAttribute(styleAttr, "background-color: rgb(38,38,38)"_s);
 #endif
 
     rootElement->appendChild(body);
 
     auto embedElement = HTMLEmbedElement::create(document);
 
-    m_embedElement = embedElement.get();
-    embedElement->setAttributeWithoutSynchronization(widthAttr, "100%");
-    embedElement->setAttributeWithoutSynchronization(heightAttr, "100%");
+    m_embedElement = embedElement.ptr();
+    embedElement->setAttributeWithoutSynchronization(widthAttr, "100%"_s);
+    embedElement->setAttributeWithoutSynchronization(heightAttr, "100%"_s);
 
-    embedElement->setAttributeWithoutSynchronization(nameAttr, AtomString("plugin", AtomString::ConstructFromLiteral));
-    embedElement->setAttributeWithoutSynchronization(srcAttr, document.url().string());
+    embedElement->setAttributeWithoutSynchronization(nameAttr, "plugin"_s);
+    embedElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });
 
     ASSERT(document.loader());
     if (RefPtr loader = document.loader())
-        m_embedElement->setAttributeWithoutSynchronization(typeAttr, loader->writer().mimeType());
+        m_embedElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->writer().mimeType() });
 
     document.setPluginElement(*m_embedElement);
 
@@ -155,14 +156,14 @@ Ref<DocumentParser> PluginDocument::createParser()
     return PluginDocumentParser::create(*this);
 }
 
-Widget* PluginDocument::pluginWidget()
+PluginViewBase* PluginDocument::pluginWidget()
 {
     if (!m_pluginElement)
         return nullptr;
-    auto* renderer = m_pluginElement->renderer();
+    auto* renderer = dynamicDowncast<RenderEmbeddedObject>(m_pluginElement->renderer());
     if (!renderer)
         return nullptr;
-    return downcast<RenderEmbeddedObject>(*m_pluginElement->renderer()).widget();
+    return dynamicDowncast<PluginViewBase>(renderer->widget());
 }
 
 void PluginDocument::setPluginElement(HTMLPlugInElement& element)

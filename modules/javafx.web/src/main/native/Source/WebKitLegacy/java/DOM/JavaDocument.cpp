@@ -120,7 +120,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getXmlVersionImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_setXmlVersionImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setXMLVersion(String(env, value));
+    IMPL->setXMLVersion(AtomString{String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getXmlStandaloneImpl(JNIEnv*, jclass, jlong peer)
@@ -144,7 +144,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getDocumentURIImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_setDocumentURIImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setDocumentURI(String(env, value));
+    IMPL->setDocumentURI(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getDefaultViewImpl(JNIEnv* env, jclass, jlong peer)
@@ -204,7 +204,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCookieImpl(JNI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_setCookieImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setCookie(String(env, value));
+    IMPL->setCookie(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getBodyImpl(JNIEnv* env, jclass, jlong peer)
@@ -291,7 +291,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getReadyStateImpl
     default:
         ASSERT_NOT_REACHED();
     }
-    return JavaReturn<String>(env, String(readyStateStr));
+    return JavaReturn<String>(env, String::fromLatin1(readyStateStr));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCharacterSetImpl(JNIEnv* env, jclass, jlong peer)
@@ -367,7 +367,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStat
         visibility = "visible";
         break;
     }
-    return JavaReturn<String>(env, String(visibility));
+    return JavaReturn<String>(env, String::fromLatin1(visibility));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getHiddenImpl(JNIEnv*, jclass, jlong peer)
@@ -1207,7 +1207,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createElementImpl(J
     , jstring tagName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createElementForBindings(String(env, tagName)))));
+    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createElementForBindings(AtomString {String(env, tagName)}))));
 }
 
 
@@ -1256,7 +1256,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createAttributeImpl
     , jstring name)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Attr>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createAttribute(String(env, name)))));
+    return JavaReturn<Attr>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createAttribute(AtomString {String(env, name)}))));
 }
 
 
@@ -1271,7 +1271,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getElementsByTagNam
     , jstring tagname)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeList>(env, WTF::getPtr(IMPL->getElementsByTagName(String(env, tagname))));
+    return JavaReturn<NodeList>(env, WTF::getPtr(IMPL->getElementsByTagName(AtomString {String(env, tagname)})));
 }
 
 
@@ -1295,8 +1295,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createElementNSImpl
     , jstring qualifiedName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createElementNS(String(env, namespaceURI)
-            , String(env, qualifiedName)))));
+    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createElementNS(AtomString {String(env, namespaceURI)}
+            , AtomString {String(env, qualifiedName)}))));
 }
 
 
@@ -1305,8 +1305,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createAttributeNSIm
     , jstring qualifiedName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Attr>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createAttributeNS(String(env, namespaceURI)
-            , String(env, qualifiedName)))));
+    return JavaReturn<Attr>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createAttributeNS(AtomString {String(env, namespaceURI)}
+            , AtomString {String(env, qualifiedName)}))));
 }
 
 
@@ -1315,8 +1315,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getElementsByTagNam
     , jstring localName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeList>(env, WTF::getPtr(IMPL->getElementsByTagNameNS(String(env, namespaceURI)
-            , String(env, localName))));
+    return JavaReturn<NodeList>(env, WTF::getPtr(IMPL->getElementsByTagNameNS(AtomString {String(env, namespaceURI)}
+            , AtomString {String(env, localName)})));
 }
 
 
@@ -1337,7 +1337,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createEventImpl(JNI
     , jstring eventType)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Event>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createEvent(String(env, eventType)))));
+    return JavaReturn<Event>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createEvent(AtomString {String(env, eventType)}))));
 }
 
 
@@ -1397,7 +1397,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getOverrideStyleImp
 #if 0
     WebCore::JSMainThreadNullState state;
     return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->getOverrideStyle(static_cast<Element*>(jlong_to_ptr(element))
-            , String(env, pseudoElement))));
+            , AtomString {String(env, pseudoElement)})));
 #endif
     return 0L;
 }
@@ -1408,7 +1408,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createExpressionImp
     , jlong resolver)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathExpression>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createExpression(String(env, expression)
+    return JavaReturn<XPathExpression>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createExpression(AtomString {String(env, expression)}
             , static_cast<XPathNSResolver*>(jlong_to_ptr(resolver))))));
 }
 
@@ -1437,7 +1437,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_evaluateImpl(JNIEnv
     , jlong inResult)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(String(env, expression)
+    return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(AtomString {String(env, expression)}
             , *static_cast<Node*>(jlong_to_ptr(contextNode))
             , static_cast<XPathNSResolver*>(jlong_to_ptr(resolver))
             , type
@@ -1451,9 +1451,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_execCommandImpl(
     , jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->execCommand(String(env, command)
+    return IMPL->execCommand(AtomString {String(env, command)}
             , userInterface
-            , String(env, value)).returnValue();
+            , AtomString {String(env, value)}).returnValue();
 }
 
 
@@ -1461,7 +1461,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandEnab
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandEnabled(String(env, command)).returnValue();
+    return IMPL->queryCommandEnabled(AtomString {String(env, command)}).returnValue();
 }
 
 
@@ -1469,7 +1469,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandInde
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandIndeterm(String(env, command)).returnValue();
+    return IMPL->queryCommandIndeterm(AtomString {String(env, command)}).returnValue();
 }
 
 
@@ -1477,7 +1477,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandStat
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandState(String(env, command)).returnValue();
+    return IMPL->queryCommandState(AtomString {String(env, command)}).returnValue();
 }
 
 
@@ -1485,7 +1485,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandSupp
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandSupported(String(env, command)).returnValue();
+    return IMPL->queryCommandSupported(AtomString {String(env, command)}).returnValue();
 }
 
 
@@ -1493,7 +1493,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandValue
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->queryCommandValue(String(env, command)).returnValue());
+    return JavaReturn<String>(env, IMPL->queryCommandValue(AtomString {String(env, command)}).returnValue());
 }
 
 
@@ -1501,7 +1501,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getElementsByNameIm
     , jstring elementName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeList>(env, WTF::getPtr(IMPL->getElementsByName(String(env, elementName))));
+    return JavaReturn<NodeList>(env, WTF::getPtr(IMPL->getElementsByName(AtomString {String(env, elementName)})));
 }
 
 
@@ -1536,7 +1536,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getElementsByClassN
     , jstring classNames)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->getElementsByClassName(String(env, classNames))));
+    return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->getElementsByClassName(AtomString {String(env, classNames)})));
 }
 
 
@@ -1565,7 +1565,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getElementByIdImpl(
     , jstring elementId)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->getElementById(String(env, elementId))));
+    return JavaReturn<Element>(env, WTF::getPtr(IMPL->getElementById(AtomString {String(env, elementId)})));
 }
 
 
@@ -1573,7 +1573,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_querySelectorImpl(J
     , jstring selectors)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelector(String(env, selectors)))));
+    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelector(AtomString {String(env, selectors)}))));
 }
 
 
@@ -1581,7 +1581,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_querySelectorAllImp
     , jstring selectors)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeList>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelectorAll(String(env, selectors)))));
+    return JavaReturn<NodeList>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelectorAll(AtomString {String(env, selectors)}))));
 }
 
 

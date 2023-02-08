@@ -32,12 +32,12 @@
 
 namespace JSC {
 
-const ClassInfo StringIteratorPrototype::s_info = { "String Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(StringIteratorPrototype) };
+const ClassInfo StringIteratorPrototype::s_info = { "String Iterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(StringIteratorPrototype) };
 
 void StringIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->next, stringIteratorPrototypeNextCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }

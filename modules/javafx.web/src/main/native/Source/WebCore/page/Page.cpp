@@ -37,6 +37,7 @@
 #include "CachedResourceLoader.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "CommonAtomStrings.h"
 #include "ConstantPropertyMap.h"
 #include "ContextMenuClient.h"
 #include "ContextMenuController.h"
@@ -46,6 +47,7 @@
 #include "DatabaseProvider.h"
 #include "DebugOverlayRegions.h"
 #include "DebugPageOverlays.h"
+#include "DeprecatedGlobalSettings.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "DisplayRefreshMonitorManager.h"
@@ -64,6 +66,7 @@
 #include "EventNames.h"
 #include "ExtensionStyleSheets.h"
 #include "FocusController.h"
+#include "FontCache.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameSelection.h"
@@ -87,7 +90,6 @@
 #include "InspectorInstrumentation.h"
 #include "LayoutDisallowedScope.h"
 #include "LegacySchemeRegistry.h"
-#include "LibWebRTCProvider.h"
 #include "LoaderStrategy.h"
 #include "LogInitialization.h"
 #include "Logging.h"
@@ -126,7 +128,6 @@
 #include "RenderingUpdateScheduler.h"
 #include "ResizeObserver.h"
 #include "ResourceUsageOverlay.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGImage.h"
 #include "ScriptController.h"
@@ -162,7 +163,7 @@
 #include "VisitedLinkStore.h"
 #include "VoidCallback.h"
 #include "WebCoreJSClientData.h"
-#include "WebLockRegistry.h"
+#include "WebRTCProvider.h"
 #include "WheelEventDeltaFilter.h"
 #include "WheelEventTestMonitor.h"
 #include "Widget.h"
@@ -291,7 +292,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #endif
     , m_speechRecognitionProvider((WTFMove(pageConfiguration.speechRecognitionProvider)))
     , m_mediaRecorderProvider((WTFMove(pageConfiguration.mediaRecorderProvider)))
-    , m_libWebRTCProvider(WTFMove(pageConfiguration.libWebRTCProvider))
+    , m_webRTCProvider(WTFMove(pageConfiguration.webRTCProvider))
     , m_domTimerAlignmentInterval(DOMTimer::defaultAlignmentInterval())
     , m_domTimerAlignmentIntervalIncreaseTimer(*this, &Page::domTimerAlignmentIntervalIncreaseTimerFired)
     , m_activityState(pageInitialActivityState())
@@ -310,7 +311,6 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_userContentProvider(WTFMove(pageConfiguration.userContentProvider))
     , m_visitedLinkStore(*WTFMove(pageConfiguration.visitedLinkStore))
     , m_broadcastChannelRegistry(WTFMove(pageConfiguration.broadcastChannelRegistry))
-    , m_webLockRegistry(WTFMove(pageConfiguration.webLockRegistry))
     , m_sessionID(pageConfiguration.sessionID)
 #if ENABLE(VIDEO)
     , m_playbackControlsManagerUpdateTimer(*this, &Page::playbackControlsManagerUpdateTimerFired)
@@ -337,6 +337,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_deviceOrientationUpdateProvider(WTFMove(pageConfiguration.deviceOrientationUpdateProvider))
 #endif
     , m_corsDisablingPatterns(WTFMove(pageConfiguration.corsDisablingPatterns))
+    , m_maskedURLSchemes(WTFMove(pageConfiguration.maskedURLSchemes))
     , m_allowedNetworkHosts(WTFMove(pageConfiguration.allowedNetworkHosts))
     , m_loadsSubresources(pageConfiguration.loadsSubresources)
     , m_shouldRelaxThirdPartyCookieBlocking(pageConfiguration.shouldRelaxThirdPartyCookieBlocking)
@@ -347,6 +348,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #if ENABLE(ATTACHMENT_ELEMENT)
     , m_attachmentElementClient(WTFMove(pageConfiguration.attachmentElementClient))
 #endif
+    , m_contentSecurityPolicyModeForExtension(WTFMove(pageConfiguration.contentSecurityPolicyModeForExtension))
 {
     updateTimerThrottlingState();
 
@@ -354,10 +356,10 @@ Page::Page(PageConfiguration&& pageConfiguration)
     m_userContentProvider->addPage(*this);
     m_visitedLinkStore->addPage(*this);
 
-    static bool addedListener;
-    if (!addedListener) {
-        platformStrategies()->loaderStrategy()->addOnlineStateChangeListener(&networkStateChanged);
-        addedListener = true;
+    static bool firstTimeInitializationRan = false;
+    if (!firstTimeInitializationRan) {
+        firstTimeInitialization();
+        firstTimeInitializationRan = true;
     }
 
     ASSERT(!allPages().contains(this));
@@ -429,6 +431,15 @@ Page::~Page()
     m_pluginInfoProvider->removePage(*this);
     m_userContentProvider->removePage(*this);
     m_visitedLinkStore->removePage(*this);
+}
+
+void Page::firstTimeInitialization()
+{
+    platformStrategies()->loaderStrategy()->addOnlineStateChangeListener(&networkStateChanged);
+
+    FontCache::registerFontCacheInvalidationCallback([] {
+        updateStyleForAllPagesAfterGlobalChangeInEnvironment();
+    });
 }
 
 void Page::clearPreviousItemFromAllPages(HistoryItem* item)
@@ -537,7 +548,7 @@ Ref<DOMRectList> Page::nonFastScrollableRectsForTesting()
     return DOMRectList::create(quads);
 }
 
-Ref<DOMRectList> Page::touchEventRectsForEventForTesting(const String& eventName)
+Ref<DOMRectList> Page::touchEventRectsForEventForTesting(EventTrackingRegions::EventType eventType)
 {
     if (Document* document = m_mainFrame->document()) {
         document->updateLayout();
@@ -549,7 +560,7 @@ Ref<DOMRectList> Page::touchEventRectsForEventForTesting(const String& eventName
     Vector<IntRect> rects;
     if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator()) {
         const EventTrackingRegions& eventTrackingRegions = scrollingCoordinator->absoluteEventTrackingRegions();
-        const auto& region = eventTrackingRegions.eventSpecificSynchronousDispatchRegions.get(eventName);
+        const auto& region = eventTrackingRegions.eventSpecificSynchronousDispatchRegions.get(eventType);
         rects.appendVector(region.rects());
     }
 
@@ -583,9 +594,20 @@ Ref<DOMRectList> Page::passiveTouchEventListenerRectsForTesting()
 void Page::settingsDidChange()
 {
 #if USE(LIBWEBRTC)
-    m_libWebRTCProvider->setH265Support(settings().webRTCH265CodecEnabled());
-    m_libWebRTCProvider->setVP9Support(settings().webRTCVP9Profile0CodecEnabled(), settings().webRTCVP9Profile2CodecEnabled());
+    m_webRTCProvider->setH265Support(settings().webRTCH265CodecEnabled());
+    m_webRTCProvider->setVP9Support(settings().webRTCVP9Profile0CodecEnabled(), settings().webRTCVP9Profile2CodecEnabled());
 #endif
+}
+
+std::optional<AXTreeData> Page::accessibilityTreeData() const
+{
+    auto* document = mainFrame().document();
+    if (!document)
+        return std::nullopt;
+
+    if (auto* cache = document->existingAXObjectCache())
+        return { cache->treeData() };
+    return std::nullopt;
 }
 
 void Page::progressEstimateChanged(Frame& frameWithProgressUpdate) const
@@ -785,6 +807,16 @@ bool Page::findString(const String& target, FindOptions options, DidWrap* didWra
 
     return false;
 }
+
+#if ENABLE(IMAGE_ANALYSIS)
+void Page::analyzeImagesForFindInPage()
+{
+    if (settings().imageAnalysisDuringFindInPageEnabled()) {
+        if (RefPtr mainDocument = m_mainFrame->document(); mainDocument && !m_imageAnalysisQueue)
+            imageAnalysisQueue().enqueueAllImages(*mainDocument, { }, { });
+    }
+}
+#endif
 
 auto Page::findTextMatches(const String& target, FindOptions options, unsigned limit, bool markMatches) -> MatchingRanges
 {
@@ -1069,6 +1101,13 @@ Vector<Ref<Element>> Page::editableElementsInRect(const FloatRect& searchRectInR
     return WTF::map(rootEditableElements, [](const auto& element) { return element.copyRef(); });
 }
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+bool Page::shouldBuildInteractionRegions() const
+{
+    return m_settings->interactionRegionsEnabled();
+}
+#endif
+
 const VisibleSelection& Page::selection() const
 {
     return CheckedRef(focusController())->focusedOrMainFrame().selection().selection();
@@ -1169,6 +1208,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStable
         if (view && !delegatesScaling()) {
             view->setNeedsLayoutAfterViewConfigurationChange();
             view->setNeedsCompositingGeometryUpdate();
+            view->setDescendantsNeedUpdateBackingAndHierarchyTraversal();
 
             document->resolveStyle(Document::ResolveStyleType::Rebuild);
 
@@ -1641,12 +1681,12 @@ void Page::updateRendering()
 
     layoutIfNeeded();
 
-    runProcessingStep(RenderingUpdateStep::IntersectionObservations, [] (Document& document) {
-        document.updateIntersectionObservations();
-    });
-
     runProcessingStep(RenderingUpdateStep::ResizeObservations, [&] (Document& document) {
         document.updateResizeObservations(*this);
+    });
+
+    runProcessingStep(RenderingUpdateStep::IntersectionObservations, [] (Document& document) {
+        document.updateIntersectionObservations();
     });
 
     runProcessingStep(RenderingUpdateStep::Images, [] (Document& document) {
@@ -1689,7 +1729,7 @@ void Page::doAfterUpdateRendering()
     // layout to be up-to-date. It should not run script, trigger layout, or dirty layout.
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled()) {
+    if (DeprecatedGlobalSettings::layoutFormattingContextEnabled()) {
         forEachDocument([] (Document& document) {
             if (auto* frameView = document.view())
                 frameView->displayView().prepareForDisplay();
@@ -1709,6 +1749,10 @@ void Page::doAfterUpdateRendering()
 
     forEachDocument([] (Document& document) {
         document.enqueuePaintTimingEntryIfNeeded();
+    });
+
+    forEachDocument([] (Document& document) {
+        document.selection().updateAppearanceAfterLayout();
     });
 
     forEachDocument([] (Document& document) {
@@ -1758,6 +1802,8 @@ void Page::doAfterUpdateRendering()
     });
 
     DebugPageOverlays::doAfterUpdateRendering(*this);
+
+    m_renderingUpdateRemainingSteps.last().remove(RenderingUpdateStep::PrepareCanvasesForDisplay);
 
     forEachDocument([] (Document& document) {
         document.prepareCanvasesForDisplayIfNeeded();
@@ -1985,7 +2031,7 @@ void Page::userStyleSheetLocationChanged()
     URL url = m_settings->userStyleSheetLocation();
 
     // Allow any local file URL scheme to be loaded.
-    if (LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol().toStringWithoutCopying()))
+    if (LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
         m_userStyleSheetPath = url.fileSystemPath();
     else
         m_userStyleSheetPath = String();
@@ -1996,10 +2042,10 @@ void Page::userStyleSheetLocationChanged()
 
     // Data URLs with base64-encoded UTF-8 style sheets are common. We can process them
     // synchronously and avoid using a loader.
-    if (url.protocolIsData() && url.string().startsWith("data:text/css;charset=utf-8;base64,")) {
+    if (url.protocolIsData() && url.string().startsWith("data:text/css;charset=utf-8;base64,"_s)) {
         m_didLoadUserStyleSheet = true;
 
-        if (auto styleSheetAsUTF8 = base64Decode(PAL::decodeURLEscapeSequences(url.string().substring(35)), Base64DecodeOptions::IgnoreSpacesAndNewLines))
+        if (auto styleSheetAsUTF8 = base64Decode(PAL::decodeURLEscapeSequences(StringView(url.string()).substring(35)), Base64DecodeOptions::IgnoreSpacesAndNewLines))
             m_userStyleSheet = String::fromUTF8(styleSheetAsUTF8->data(), styleSheetAsUTF8->size());
     }
 
@@ -2042,7 +2088,7 @@ const String& Page::userStyleSheet() const
     if (!data)
         return m_userStyleSheet;
 
-    m_userStyleSheet = TextResourceDecoder::create("text/css")->decodeAndFlush(data->data(), data->size());
+    m_userStyleSheet = TextResourceDecoder::create(cssContentTypeAtom())->decodeAndFlush(data->data(), data->size());
 
     return m_userStyleSheet;
 }
@@ -2245,31 +2291,11 @@ void Page::dnsPrefetchingStateChanged()
     });
 }
 
-Vector<Ref<PluginViewBase>> Page::pluginViews()
-{
-    Vector<Ref<PluginViewBase>> views;
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        auto* view = frame->view();
-        if (!view)
-            break;
-        for (auto& widget : view->children()) {
-            if (is<PluginViewBase>(widget))
-                views.append(downcast<PluginViewBase>(widget.get()));
-        }
-    }
-    return views;
-}
-
 void Page::storageBlockingStateChanged()
 {
     forEachDocument([] (Document& document) {
         document.storageBlockingStateDidChange();
     });
-
-    // Collect the PluginViews in to a vector to ensure that action the plug-in takes
-    // from below storageBlockingStateChanged does not affect their lifetime.
-    for (auto& view : pluginViews())
-        view->storageBlockingStateChanged();
 }
 
 void Page::updateIsPlayingMedia()
@@ -2668,6 +2694,11 @@ void Page::whenUnnested(Function<void()>&& callback)
     ASSERT(!m_unnestCallback);
 
     m_unnestCallback = WTFMove(callback);
+}
+
+void Page::setCurrentKeyboardScrollingAnimator(KeyboardScrollingAnimator* animator)
+{
+    m_currentKeyboardScrollingAnimator = animator;
 }
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -3368,7 +3399,7 @@ bool Page::useDarkAppearance() const
 {
 #if ENABLE(DARK_MODE_CSS)
     FrameView* view = mainFrame().view();
-    if (!view || !equalLettersIgnoringASCIICase(view->mediaType(), "screen"))
+    if (!view || !equalLettersIgnoringASCIICase(view->mediaType(), "screen"_s))
         return false;
     if (m_useDarkAppearanceOverride)
         return m_useDarkAppearanceOverride.value();
@@ -3508,9 +3539,9 @@ bool Page::allowsLoadFromURL(const URL& url, MainFrameMainResource mainFrameMain
         return false;
     if (!m_allowedNetworkHosts)
         return true;
-    if (!url.protocolIsInHTTPFamily() && !url.protocolIs("ws") && !url.protocolIs("wss"))
+    if (!url.protocolIsInHTTPFamily() && !url.protocolIs("ws"_s) && !url.protocolIs("wss"_s))
         return true;
-    return m_allowedNetworkHosts->contains(url.host().toStringWithoutCopying());
+    return m_allowedNetworkHosts->contains<StringViewHashTranslator>(url.host());
 }
 
 void Page::applicationWillResignActive()
@@ -3524,12 +3555,12 @@ void Page::applicationWillResignActive()
 
 void Page::applicationDidEnterBackground()
 {
-    m_libWebRTCProvider->setActive(false);
+    m_webRTCProvider->setActive(false);
 }
 
 void Page::applicationWillEnterForeground()
 {
-    m_libWebRTCProvider->setActive(true);
+    m_webRTCProvider->setActive(true);
 }
 
 void Page::applicationDidBecomeActive()
@@ -3556,26 +3587,34 @@ ScrollLatchingController* Page::scrollLatchingControllerIfExists()
 }
 #endif // ENABLE(WHEEL_EVENT_LATCHING)
 
-static void dispatchPrintEvent(Frame& mainFrame, const AtomString& eventType)
+enum class DispatchedOnDocumentEventLoop : bool { No, Yes };
+static void dispatchPrintEvent(Frame& mainFrame, const AtomString& eventType, DispatchedOnDocumentEventLoop dispatchedOnDocumentEventLoop)
 {
     Vector<Ref<Frame>> frames;
     for (auto* frame = &mainFrame; frame; frame = frame->tree().traverseNext())
         frames.append(*frame);
 
     for (auto& frame : frames) {
-        if (auto* window = frame->window())
-            window->dispatchEvent(Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No), window->document());
+        if (RefPtr window = frame->window()) {
+            auto dispatchEvent = [window = WTFMove(window), eventType] {
+                window->dispatchEvent(Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No), window->document());
+            };
+            if (dispatchedOnDocumentEventLoop == DispatchedOnDocumentEventLoop::No)
+                return dispatchEvent();
+            if (auto* document = frame->document())
+                document->eventLoop().queueTask(TaskSource::DOMManipulation, WTFMove(dispatchEvent));
+        }
     }
 }
 
 void Page::dispatchBeforePrintEvent()
 {
-    dispatchPrintEvent(m_mainFrame, eventNames().beforeprintEvent);
+    dispatchPrintEvent(m_mainFrame, eventNames().beforeprintEvent, DispatchedOnDocumentEventLoop::No);
 }
 
 void Page::dispatchAfterPrintEvent()
 {
-    dispatchPrintEvent(m_mainFrame, eventNames().afterprintEvent);
+    dispatchPrintEvent(m_mainFrame, eventNames().afterprintEvent, DispatchedOnDocumentEventLoop::Yes);
 }
 
 #if ENABLE(APPLE_PAY)
@@ -3655,7 +3694,7 @@ void Page::configureLoggingChannel(const String& channelName, WTFLogChannelState
 
 #if USE(LIBWEBRTC)
         if (channel == &LogWebRTC && m_mainFrame->document() && !sessionID().isEphemeral())
-            libWebRTCProvider().setLoggingLevel(LogWebRTC.level);
+            webRTCProvider().setLoggingLevel(LogWebRTC.level);
 #endif
     }
 
@@ -3814,6 +3853,7 @@ WTF::TextStream& operator<<(WTF::TextStream& ts, RenderingUpdateStep step)
     case RenderingUpdateStep::ScrollingTreeUpdate: ts << "ScrollingTreeUpdate"; break;
 #endif
     case RenderingUpdateStep::VideoFrameCallbacks: ts << "VideoFrameCallbacks"; break;
+    case RenderingUpdateStep::PrepareCanvasesForDisplay: ts << "PrepareCanvasesForDisplay"; break;
     }
     return ts;
 }
@@ -3823,6 +3863,12 @@ ImageOverlayController& Page::imageOverlayController()
     if (!m_imageOverlayController)
         m_imageOverlayController = makeUnique<ImageOverlayController>(*this);
     return *m_imageOverlayController;
+}
+
+Page* Page::serviceWorkerPage(ScriptExecutionContextIdentifier serviceWorkerPageIdentifier)
+{
+    auto* serviceWorkerPageDocument = Document::allDocumentsMap().get(serviceWorkerPageIdentifier);
+    return serviceWorkerPageDocument ? serviceWorkerPageDocument->page() : nullptr;
 }
 
 #if ENABLE(IMAGE_ANALYSIS)
@@ -3948,21 +3994,33 @@ void Page::setupForRemoteWorker(const URL& scriptURL, const SecurityOriginData& 
     mainFrame().loader().initForSynthesizedDocument({ });
     auto document = Document::createNonRenderedPlaceholder(mainFrame(), scriptURL);
     document->createDOMWindow();
-
     document->storageBlockingStateDidChange();
 
     auto origin = topOrigin.securityOrigin();
-    origin->setStorageBlockingPolicy(settings().storageBlockingPolicy());
-
     auto originAsURL = origin->toURL();
     document->setSiteForCookies(originAsURL);
     document->setFirstPartyForCookies(originAsURL);
-    document->setDomainForCachePartition(origin->domainForCachePartition());
+
+    if (document->settings().storageBlockingPolicy() != StorageBlockingPolicy::BlockThirdParty)
+        document->setDomainForCachePartition(String { emptyString() });
+    else
+        document->setDomainForCachePartition(origin->domainForCachePartition());
 
     if (auto policy = parseReferrerPolicy(referrerPolicy, ReferrerPolicySource::HTTPHeader))
         document->setReferrerPolicy(*policy);
 
     mainFrame().setDocument(WTFMove(document));
+}
+
+void Page::forceRepaintAllFrames()
+{
+    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        FrameView* frameView = frame->view();
+        if (!frameView || !frameView->renderView())
+            continue;
+
+        frameView->renderView()->repaintViewAndCompositedLayers();
+    }
 }
 
 } // namespace WebCore

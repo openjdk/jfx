@@ -36,6 +36,7 @@
 #include "CSSImportRule.h"
 #include "CSSStyleRule.h"
 #include "CachedImage.h"
+#include "CommonAtomStrings.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "Frame.h"
@@ -77,7 +78,7 @@ static bool isCharsetSpecifyingNode(const Node& node)
     if (element.hasAttributes()) {
         for (const Attribute& attribute : element.attributesIterator()) {
             // FIXME: We should deal appropriately with the attribute if they have a namespace.
-            attributes.append(std::make_pair(attribute.name().toString(), attribute.value().string()));
+            attributes.append({ attribute.name().toAtomString(), attribute.value() });
         }
     }
     return HTMLMetaCharsetParser::encodingFromMetaAttributes(attributes).isValid();
@@ -152,7 +153,7 @@ void PageSerializer::SerializerMarkupAccumulator::appendCustomAttributes(StringB
 
     // We need to give a fake location to blank frames so they can be referenced by the serialized frame.
     url = m_serializer.urlForBlankFrame(frame);
-    appendAttribute(out, element, Attribute(frameOwnerURLAttributeName(frameOwner), url.string()), namespaces);
+    appendAttribute(out, element, Attribute(frameOwnerURLAttributeName(frameOwner), AtomString { url.string() }), namespaces);
 }
 
 void PageSerializer::SerializerMarkupAccumulator::appendEndTag(StringBuilder& out, const Element& element)
@@ -260,7 +261,7 @@ void PageSerializer::serializeCSSStyleSheet(CSSStyleSheet* styleSheet, const URL
         // FIXME: We should check whether a charset has been specified and if none was found add one.
         PAL::TextEncoding textEncoding(styleSheet->contents().charset());
         ASSERT(textEncoding.isValid());
-        m_resources.append({ url, "text/css"_s, SharedBuffer::create(textEncoding.encode(cssText.toString(), PAL::UnencodableHandling::Entities)) });
+        m_resources.append({ url, cssContentTypeAtom(), SharedBuffer::create(textEncoding.encode(cssText.toString(), PAL::UnencodableHandling::Entities)) });
         m_resourceURLs.add(url);
     }
 }
@@ -318,7 +319,7 @@ URL PageSerializer::urlForBlankFrame(Frame* frame)
     auto iterator = m_blankFrameURLs.find(frame);
     if (iterator != m_blankFrameURLs.end())
         return iterator->value;
-    URL fakeURL { { }, makeString("wyciwyg://frame/", m_blankFrameCounter++) };
+    URL fakeURL { makeString("wyciwyg://frame/", m_blankFrameCounter++) };
     m_blankFrameURLs.add(frame, fakeURL);
     return fakeURL;
 }

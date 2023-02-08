@@ -27,7 +27,7 @@
 #include "FEBlend.h"
 
 #if !PLATFORM(JAVA) || HAVE(ARM_NEON_INTRINSICS)
-#include "FEBlendNEON.h"
+#include "FEBlendNeonApplier.h"
 #endif
 #include "FEBlendSoftwareApplier.h"
 #include "ImageBuffer.h"
@@ -56,7 +56,11 @@ bool FEBlend::setBlendMode(BlendMode mode)
 
 std::unique_ptr<FilterEffectApplier> FEBlend::createSoftwareApplier() const
 {
+#if HAVE(ARM_NEON_INTRINSICS)
+    return FilterEffectApplier::create<FEBlendNeonApplier>(*this);
+#else
     return FilterEffectApplier::create<FEBlendSoftwareApplier>(*this);
+#endif
 }
 
 TextStream& FEBlend::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
@@ -64,7 +68,7 @@ TextStream& FEBlend::externalRepresentation(TextStream& ts, FilterRepresentation
     ts << indent << "[feBlend";
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " mode=\"" << (m_mode == BlendMode::Normal ? "normal" : compositeOperatorName(CompositeOperator::SourceOver, m_mode));
+    ts << " mode=\"" << (m_mode == BlendMode::Normal ? "normal"_s : compositeOperatorName(CompositeOperator::SourceOver, m_mode));
 
     ts << "\"]\n";
     return ts;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,9 @@
 package javafx.stage;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -85,12 +85,14 @@ import com.sun.javafx.tk.Toolkit;
  * @since JavaFX 2.0
  */
 public final class FileChooser {
+
     /**
      * Defines an extension filter, used for filtering which files can be chosen
      * in a FileDialog based on the file name extensions.
      * @since JavaFX 2.0
      */
     public static final class ExtensionFilter {
+
         private final String description;
         private final List<String> extensions;
 
@@ -108,13 +110,8 @@ public final class FileChooser {
          * @throws IllegalArgumentException if the description or the extensions
          *      are empty
          */
-        public ExtensionFilter(final String description,
-                               final String... extensions) {
-            validateArgs(description, extensions);
-
-            this.description = description;
-            this.extensions = Collections.unmodifiableList(
-                                      Arrays.asList(extensions.clone()));
+        public ExtensionFilter(final String description, final String... extensions) {
+            this(description, List.of(extensions));
         }
 
         /**
@@ -131,17 +128,12 @@ public final class FileChooser {
          * @throws IllegalArgumentException if the description or the extensions
          *      are empty
          */
-        public ExtensionFilter(final String description,
-                               final List<String> extensions) {
-            final String[] extensionsArray =
-                    (extensions != null) ? extensions.toArray(
-                                               new String[extensions.size()])
-                                         : null;
-            validateArgs(description, extensionsArray);
+        public ExtensionFilter(final String description, final List<String> extensions) {
+            var extensionsList = List.copyOf(extensions);
+            validateArgs(description, extensionsList);
 
             this.description = description;
-            this.extensions = Collections.unmodifiableList(
-                                      Arrays.asList(extensionsArray));
+            this.extensions = extensionsList;
         }
 
         /**
@@ -165,35 +157,20 @@ public final class FileChooser {
             return extensions;
         }
 
-        private static void validateArgs(final String description,
-                                         final String[] extensions) {
-            if (description == null) {
-                throw new NullPointerException("Description must not be null");
-            }
+        private static void validateArgs(final String description, final List<String> extensions) {
+            Objects.requireNonNull(description, "Description must not be null");
 
             if (description.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Description must not be empty");
+                throw new IllegalArgumentException("Description must not be empty");
             }
 
-            if (extensions == null) {
-                throw new NullPointerException("Extensions must not be null");
-            }
-
-            if (extensions.length == 0) {
-                throw new IllegalArgumentException(
-                        "At least one extension must be defined");
+            if (extensions.isEmpty()) {
+                throw new IllegalArgumentException("At least one extension must be defined");
             }
 
             for (String extension : extensions) {
-                if (extension == null) {
-                    throw new NullPointerException(
-                            "Extension must not be null");
-                }
-
                 if (extension.isEmpty()) {
-                    throw new IllegalArgumentException(
-                            "Extension must not be empty");
+                    throw new IllegalArgumentException("Extension must not be empty");
                 }
             }
         }

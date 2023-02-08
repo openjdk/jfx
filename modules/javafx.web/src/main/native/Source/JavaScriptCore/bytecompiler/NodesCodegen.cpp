@@ -86,7 +86,7 @@ void ExpressionNode::emitBytecodeInConditionContext(BytecodeGenerator& generator
 
 // ------------------------------ ThrowableExpressionData --------------------------------
 
-RegisterID* ThrowableExpressionData::emitThrowReferenceError(BytecodeGenerator& generator, const String& message, RegisterID* dst)
+RegisterID* ThrowableExpressionData::emitThrowReferenceError(BytecodeGenerator& generator, ASCIILiteral message, RegisterID* dst)
 {
     generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
     generator.emitThrowReferenceError(message);
@@ -896,7 +896,7 @@ void PropertyListNode::emitSaveComputedFieldName(BytecodeGenerator& generator, P
         Ref<Label> validPropertyNameLabel = generator.newLabel();
         RefPtr<RegisterID> prototypeString = generator.emitLoad(nullptr, JSValue(generator.addStringConstant(generator.propertyNames().prototype)));
         generator.emitJumpIfFalse(generator.emitBinaryOp<OpStricteq>(generator.newTemporary(), prototypeString.get(), propertyName.get(), OperandTypes(ResultType::stringType(), ResultType::stringType())), validPropertyNameLabel.get());
-        generator.emitThrowTypeError("Cannot declare a static field named 'prototype'");
+        generator.emitThrowTypeError("Cannot declare a static field named 'prototype'"_s);
         generator.emitLabel(validPropertyNameLabel.get());
     }
 
@@ -1015,7 +1015,7 @@ RegisterID* BaseDotNode::emitGetPropertyValue(BytecodeGenerator& generator, Regi
             ASSERT(scope); // Private names are always captured.
             RefPtr<RegisterID> privateBrandSymbol = generator.emitGetPrivateBrand(generator.newTemporary(), scope.get(), privateTraits.isStatic());
             generator.emitCheckPrivateBrand(base, privateBrandSymbol.get(), privateTraits.isStatic());
-            generator.emitThrowTypeError("Trying to access an undefined private getter");
+            generator.emitThrowTypeError("Trying to access an undefined private getter"_s);
             return dst;
         }
 
@@ -1074,7 +1074,7 @@ RegisterID* BaseDotNode::emitPutProperty(BytecodeGenerator& generator, RegisterI
             RefPtr<RegisterID> privateBrandSymbol = generator.emitGetPrivateBrand(generator.newTemporary(), scope.get(), privateTraits.isStatic());
             generator.emitCheckPrivateBrand(base, privateBrandSymbol.get(), privateTraits.isStatic());
 
-            generator.emitThrowTypeError("Trying to access an undefined private setter");
+            generator.emitThrowTypeError("Trying to access an undefined private setter"_s);
             return value;
         }
 
@@ -2244,7 +2244,7 @@ RegisterID* ApplyFunctionCallDotNode::emitBytecode(BytecodeGenerator& generator,
     generator.emitExpressionInfo(subexpressionDivot(), subexpressionStart(), subexpressionEnd());
     if (emitCallCheck) {
         makeFunction();
-        ASSERT(!m_base->isResolveNode() || static_cast<ResolveNode*>(m_base)->identifier() != "Reflect");
+        ASSERT(!m_base->isResolveNode() || static_cast<ResolveNode*>(m_base)->identifier() != "Reflect"_s);
         generator.emitJumpIfNotFunctionApply(function.get(), realCall.get());
     }
     if (mayBeCall) {
@@ -2454,7 +2454,7 @@ RegisterID* PostfixNode::emitDot(BytecodeGenerator& generator, RegisterID* dst)
             generator.emitCheckPrivateBrand(base.get(), privateBrandSymbol.get(), privateTraits.isStatic());
 
             generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
-            generator.emitThrowTypeError("Trying to access an undefined private setter");
+            generator.emitThrowTypeError("Trying to access an undefined private setter"_s);
             return generator.tempDestination(dst);
         }
 
@@ -2472,7 +2472,7 @@ RegisterID* PostfixNode::emitDot(BytecodeGenerator& generator, RegisterID* dst)
             generator.move(args.thisRegister(), base.get());
             value = generator.emitCall(generator.newTemporary(), getterFunction.get(), NoExpectedFunction, args, m_position, m_position, m_position, DebuggableCall::Yes);
         } else {
-            generator.emitThrowTypeError("Trying to access an undefined private getter");
+            generator.emitThrowTypeError("Trying to access an undefined private getter"_s);
             return generator.tempDestination(dst);
         }
 
@@ -2490,7 +2490,7 @@ RegisterID* PostfixNode::emitDot(BytecodeGenerator& generator, RegisterID* dst)
             return generator.move(dst, oldValue.get());
         }
 
-        generator.emitThrowTypeError("Trying to access an undefined private getter");
+        generator.emitThrowTypeError("Trying to access an undefined private getter"_s);
         return generator.move(dst, oldValue.get());
     }
 
@@ -2558,7 +2558,7 @@ RegisterID* DeleteBracketNode::emitBytecode(BytecodeGenerator& generator, Regist
     RefPtr<RegisterID> r1 = generator.emitNode(m_subscript);
     generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
     if (m_base->isSuperNode())
-        return emitThrowReferenceError(generator, "Cannot delete a super property", dst);
+        return emitThrowReferenceError(generator, "Cannot delete a super property"_s, dst);
     return generator.emitDeleteByVal(finalDest.get(), r0.get(), r1.get());
 }
 
@@ -2574,7 +2574,7 @@ RegisterID* DeleteDotNode::emitBytecode(BytecodeGenerator& generator, RegisterID
 
     generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
     if (m_base->isSuperNode())
-        return emitThrowReferenceError(generator, "Cannot delete a super property", dst);
+        return emitThrowReferenceError(generator, "Cannot delete a super property"_s, dst);
     return generator.emitDeleteById(finalDest.get(), r0.get(), m_ident);
 }
 
@@ -2743,7 +2743,7 @@ RegisterID* PrefixNode::emitDot(BytecodeGenerator& generator, RegisterID* dst)
             generator.emitCheckPrivateBrand(base.get(), privateBrandSymbol.get(), privateTraits.isStatic());
 
             generator.emitExpressionInfo(divot(), divotStart(), divotEnd());
-            generator.emitThrowTypeError("Trying to access an undefined private setter");
+            generator.emitThrowTypeError("Trying to access an undefined private setter"_s);
             return generator.move(dst, propDst.get());
         }
 
@@ -2760,7 +2760,7 @@ RegisterID* PrefixNode::emitDot(BytecodeGenerator& generator, RegisterID* dst)
             generator.move(args.thisRegister(), base.get());
             value = generator.emitCall(propDst.get(), getterFunction.get(), NoExpectedFunction, args, m_position, m_position, m_position, DebuggableCall::Yes);
         } else {
-            generator.emitThrowTypeError("Trying to access an undefined private getter");
+            generator.emitThrowTypeError("Trying to access an undefined private getter"_s);
             return generator.move(dst, propDst.get());
         }
 
@@ -2778,7 +2778,7 @@ RegisterID* PrefixNode::emitDot(BytecodeGenerator& generator, RegisterID* dst)
             return generator.move(dst, propDst.get());
         }
 
-        generator.emitThrowTypeError("Trying to access an undefined private getter");
+        generator.emitThrowTypeError("Trying to access an undefined private getter"_s);
         return generator.move(dst, propDst.get());
     }
 
@@ -3208,7 +3208,7 @@ RegisterID* InstanceOfNode::emitBytecode(BytecodeGenerator& generator, RegisterI
     generator.emitJump(done.get());
 
     generator.emitLabel(typeError.get());
-    generator.emitThrowTypeError("Right hand side of instanceof is not an object");
+    generator.emitThrowTypeError("Right hand side of instanceof is not an object"_s);
 
     generator.emitLabel(custom.get());
 
@@ -4460,7 +4460,7 @@ static void processClauseList(ClauseListNode* list, Vector<ExpressionNode*, 8>& 
                 typeForTable = SwitchNeither;
                 break;
             }
-            const String& value = static_cast<StringNode*>(clauseExpression)->value().string();
+            auto& value = static_cast<StringNode*>(clauseExpression)->value().string();
             if (singleCharacterSwitch &= value.length() == 1) {
                 int32_t intVal = value[0];
                 if (intVal < min_num)

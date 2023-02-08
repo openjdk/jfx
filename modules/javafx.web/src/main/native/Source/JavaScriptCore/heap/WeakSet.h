@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,13 @@ namespace JSC {
 class Heap;
 class WeakImpl;
 
+namespace Integrity {
+class Analyzer;
+}
+
 class WeakSet : public BasicRawSentinelNode<WeakSet> {
     friend class LLIntOffsetsExtractor;
+    friend class Integrity::Analyzer;
 
 public:
     static WeakImpl* allocate(JSValue, WeakHandleOwner* = nullptr, void* context = nullptr);
@@ -71,7 +76,7 @@ private:
     DoublyLinkedList<WeakBlock> m_blocks;
     // m_vm must be a pointer (instead of a reference) because the JSCLLIntOffsetsExtractor
     // cannot handle it being a reference.
-    VM* m_vm;
+    VM* const m_vm;
 };
 
 inline WeakSet::WeakSet(VM& vm)

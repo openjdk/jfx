@@ -222,11 +222,26 @@ private:
     Map m_map;
 };
 
+#if PLATFORM(JAVA)
+inline bool check_equal(const UChar* a, const UChar* b, unsigned length)
+{
+    for (unsigned i = 0; i < length; ++i) {
+        if (a[i] != b[i])
+            return false;
+    }
+    return true;
+}
+#endif
+
 inline bool operator==(const WidthCache::SmallStringKey& a, const WidthCache::SmallStringKey& b)
 {
     if (a.length() != b.length())
         return false;
+#if PLATFORM(JAVA)
+    return check_equal(a.characters(), b.characters(), a.length());
+#else
     return equal(a.characters(), b.characters(), a.length());
+#endif
 }
 
 } // namespace WebCore

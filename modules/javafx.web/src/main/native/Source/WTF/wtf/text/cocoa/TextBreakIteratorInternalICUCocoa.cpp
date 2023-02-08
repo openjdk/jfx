@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -37,9 +37,11 @@ static std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBa
     case TextBreakIterator::Mode::Line:
         return TextBreakIteratorICU(string, TextBreakIteratorICU::Mode::Line, locale.string().utf8().data());
     case TextBreakIterator::Mode::Caret:
-        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::Caret);
+        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::ComposedCharacter);
     case TextBreakIterator::Mode::Delete:
-        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::Delete);
+        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::BackwardDeletion);
+    case TextBreakIterator::Mode::Character:
+        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::ComposedCharacter);
     }
 }
 

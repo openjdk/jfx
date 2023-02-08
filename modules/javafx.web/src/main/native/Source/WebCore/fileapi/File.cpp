@@ -126,11 +126,17 @@ void File::computeNameAndContentType(const String& path, const String& nameOverr
         return;
     }
 #endif
+
+#if !PLATFORM(JAVA)
     effectiveName = nameOverride.isEmpty() ? FileSystem::pathFileName(path) : nameOverride;
+#else
+    // Use simple path not from std::FileSystem
+    effectiveName = nameOverride.isEmpty() ? path : nameOverride;
+#endif
     size_t index = effectiveName.reverseFind('.');
     if (index != notFound) {
         callOnMainThreadAndWait([&effectiveContentType, &effectiveName, index] {
-            effectiveContentType = MIMETypeRegistry::mimeTypeForExtension(effectiveName.substring(index + 1)).isolatedCopy();
+            effectiveContentType = MIMETypeRegistry::mimeTypeForExtension(StringView(effectiveName).substring(index + 1)).isolatedCopy();
         });
     }
 }

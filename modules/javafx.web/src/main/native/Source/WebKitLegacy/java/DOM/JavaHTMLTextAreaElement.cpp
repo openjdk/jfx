@@ -68,7 +68,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getDir
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setDirNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::dirnameAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::dirnameAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getDisabledImpl(JNIEnv*, jclass, jlong peer)
@@ -110,7 +110,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getNam
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getPlaceholderImpl(JNIEnv* env, jclass, jlong peer)
@@ -122,7 +122,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getPla
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setPlaceholderImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::placeholderAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::placeholderAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getReadOnlyImpl(JNIEnv*, jclass, jlong peer)
@@ -182,7 +182,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getWra
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setWrapImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::wrapAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::wrapAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
@@ -212,7 +212,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getVal
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setValue(String(env, value));
+    IMPL->setValue(AtomString{String(env, value)});
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getTextLengthImpl(JNIEnv*, jclass, jlong peer)
@@ -272,7 +272,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getSel
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setSelectionDirectionImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setSelectionDirection(String(env, value));
+    IMPL->setSelectionDirection(AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAccessKeyImpl(JNIEnv* env, jclass, jlong peer)
@@ -284,7 +284,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAcc
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAutocompleteImpl(JNIEnv* env, jclass, jlong peer)
@@ -296,7 +296,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_getAut
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(String(env, value));
+    IMPL->setAutocomplete(AtomString{String(env, value)});
 }
 
 
@@ -312,7 +312,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setCustom
     , jstring error)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setCustomValidity(String(env, error));
+    IMPL->setCustomValidity(AtomString{String(env, error)});
 }
 
 
@@ -327,7 +327,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setRangeT
     , jstring replacement)
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setRangeText(String(env, replacement)));
+    raiseOnDOMError(env, IMPL->setRangeText(AtomString{String(env, replacement)}));
 }
 
 
@@ -341,7 +341,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setRangeT
     raiseOnDOMError(env, IMPL->setRangeText(String(env, replacement)
             , start
             , end
-            , String(env, selectionMode)));
+            , AtomString{String(env, selectionMode)}));
 }
 
 
@@ -353,7 +353,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTextAreaElementImpl_setSelect
     WebCore::JSMainThreadNullState state;
     IMPL->setSelectionRange(start
             , end
-            , String(env, direction));
+            , AtomString{String(env, direction)});
 }
 
 

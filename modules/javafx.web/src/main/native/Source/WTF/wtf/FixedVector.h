@@ -33,10 +33,17 @@ template<typename T>
 class FixedVector {
 public:
     using Storage = EmbeddedFixedVector<T>;
-    using iterator = T*;
-    using const_iterator = const T*;
-    using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using value_type = typename Storage::value_type;
+    using pointer = typename Storage::pointer;
+    using reference = typename Storage::reference;
+    using const_reference = typename Storage::const_reference;
+    using const_pointer = typename Storage::const_pointer;
+    using size_type = typename Storage::size_type;
+    using difference_type = typename Storage::difference_type;
+    using iterator = typename Storage::iterator;
+    using const_iterator = typename Storage::const_iterator;
+    using reverse_iterator = typename Storage::reverse_iterator;
+    using const_reverse_iterator = typename Storage::const_reverse_iterator;
 
     FixedVector() = default;
     FixedVector(const FixedVector& other)
@@ -97,6 +104,18 @@ public:
         Vector<T, inlineCapacity, OverflowHandler> target = WTFMove(other);
         m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
         return *this;
+    }
+
+private:
+    FixedVector(std::unique_ptr<Storage>&& storage)
+        :  m_storage { WTFMove(storage) }
+    { }
+
+public:
+    template<typename... Args>
+    static FixedVector createWithSizeAndConstructorArguments(size_t size, Args&&... args)
+    {
+        return FixedVector<T> { size ? Storage::createWithSizeAndConstructorArguments(size, std::forward<Args>(args)...).moveToUniquePtr() : std::unique_ptr<Storage> { nullptr } };
     }
 
     size_t size() const { return m_storage ? m_storage->size() : 0; }

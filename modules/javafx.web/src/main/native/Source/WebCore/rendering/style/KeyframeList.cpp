@@ -77,8 +77,11 @@ void KeyframeList::insert(KeyframeValue&& keyframe)
     if (!inserted)
         m_keyframes.append(WTFMove(keyframe));
 
-    for (auto& property : m_keyframes[i].properties())
+    auto& insertedKeyframe = m_keyframes[i];
+    for (auto& property : insertedKeyframe.properties())
         m_properties.add(property);
+    for (auto& customProperty : insertedKeyframe.customProperties())
+        m_customProperties.add(customProperty);
 }
 
 bool KeyframeList::hasImplicitKeyframes() const
@@ -92,6 +95,8 @@ void KeyframeList::copyKeyframes(KeyframeList& other)
         KeyframeValue keyframeValue(keyframe.key(), RenderStyle::clonePtr(*keyframe.style()));
         for (auto propertyId : keyframe.properties())
             keyframeValue.addProperty(propertyId);
+        for (auto& customProperty : keyframe.customProperties())
+            keyframeValue.addCustomProperty(customProperty);
         keyframeValue.setTimingFunction(keyframe.timingFunction());
         keyframeValue.setCompositeOperation(keyframe.compositeOperation());
         insert(WTFMove(keyframeValue));
@@ -168,11 +173,6 @@ void KeyframeList::fillImplicitKeyframes(const KeyframeEffect& effect, const Ren
                 zeroKeyframeImplicitProperties.remove(cssPropertyId);
             if (!implicitZeroKeyframe && isSuitableKeyframeForImplicitValues(keyframe))
                 implicitZeroKeyframe = &keyframe;
-        } else if (keyframe.key() == 1) {
-            for (auto cssPropertyId : keyframe.properties())
-                oneKeyframeImplicitProperties.remove(cssPropertyId);
-            if (!implicitOneKeyframe && isSuitableKeyframeForImplicitValues(keyframe))
-                implicitOneKeyframe = &keyframe;
         }
     }
 
@@ -194,25 +194,45 @@ void KeyframeList::fillImplicitKeyframes(const KeyframeEffect& effect, const Ren
         keyframeValue.setStyle(styleResolver.styleForKeyframe(element, underlyingStyle, { nullptr }, keyframeRule, keyframeValue));
         for (auto cssPropertyId : implicitProperties)
             keyframeValue.addProperty(cssPropertyId);
-        if (!key)
-            m_keyframes.insert(0, WTFMove(keyframeValue));
-        else
-            m_keyframes.append(WTFMove(keyframeValue));
+        insert(WTFMove(keyframeValue));
     };
 
     if (!zeroKeyframeImplicitProperties.isEmpty())
         addImplicitKeyframe(0, zeroKeyframeImplicitProperties, zeroPercentKeyframe(), implicitZeroKeyframe);
+
+    for (auto& keyframe : m_keyframes) {
+        if (keyframe.key() == 1) {
+            for (auto cssPropertyId : keyframe.properties())
+                oneKeyframeImplicitProperties.remove(cssPropertyId);
+            if (!implicitOneKeyframe && isSuitableKeyframeForImplicitValues(keyframe))
+                implicitOneKeyframe = &keyframe;
+        }
+    }
+
     if (!oneKeyframeImplicitProperties.isEmpty())
         addImplicitKeyframe(1, oneKeyframeImplicitProperties, hundredPercentKeyframe(), implicitOneKeyframe);
 }
 
 bool KeyframeList::containsAnimatableProperty() const
 {
+    if (!m_customProperties.isEmpty())
+        return true;
+
     for (auto cssPropertyId : m_properties) {
         if (CSSPropertyAnimation::isPropertyAnimatable(cssPropertyId))
             return true;
     }
     return false;
 }
+
+bool KeyframeList::usesContainerUnits() const
+{
+    for (auto& keyframe : m_keyframes) {
+        if (keyframe.style()->usesContainerUnits())
+            return true;
+    }
+    return false;
+}
+
 
 } // namespace WebCore

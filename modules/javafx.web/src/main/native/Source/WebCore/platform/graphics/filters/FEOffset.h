@@ -31,10 +31,12 @@ public:
     WEBCORE_EXPORT static Ref<FEOffset> create(float dx, float dy);
 
     float dx() const { return m_dx; }
-    void setDx(float);
+    bool setDx(float);
 
     float dy() const { return m_dy; }
-    void setDy(float);
+    bool setDy(float);
+
+    static IntOutsets calculateOutsets(const FloatSize& offset);
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<Ref<FEOffset>> decode(Decoder&);
@@ -43,8 +45,6 @@ private:
     FEOffset(float dx, float dy);
 
     FloatRect calculateImageRect(const Filter&, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const override;
-
-    IntOutsets outsets(const Filter&) const override;
 
     bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
 

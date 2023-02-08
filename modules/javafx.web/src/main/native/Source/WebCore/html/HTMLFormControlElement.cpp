@@ -90,7 +90,7 @@ String HTMLFormControlElement::formEnctype() const
     return FormSubmission::Attributes::parseEncodingType(formEnctypeAttr);
 }
 
-void HTMLFormControlElement::setFormEnctype(const String& value)
+void HTMLFormControlElement::setFormEnctype(const AtomString& value)
 {
     setAttributeWithoutSynchronization(formenctypeAttr, value);
 }
@@ -104,7 +104,7 @@ String HTMLFormControlElement::formMethod() const
     return FormSubmission::Attributes::methodString(FormSubmission::Attributes::parseMethodType(formMethodAttr, dialogElementEnabled), dialogElementEnabled);
 }
 
-void HTMLFormControlElement::setFormMethod(const String& value)
+void HTMLFormControlElement::setFormMethod(const AtomString& value)
 {
     setAttributeWithoutSynchronization(formmethodAttr, value);
 }
@@ -167,15 +167,19 @@ void HTMLFormControlElement::parseAttribute(const QualifiedName& name, const Ato
             }
         }
     } else if (name == readonlyAttr) {
-        bool wasReadOnly = m_isReadOnly;
-        m_isReadOnly = !value.isNull();
-        if (wasReadOnly != m_isReadOnly)
+        bool newReadOnly = !value.isNull();
+        if (m_isReadOnly != newReadOnly) {
+            Style::PseudoClassChangeInvalidation readOnlyInvalidation(*this, { { CSSSelector::PseudoClassReadOnly, newReadOnly }, { CSSSelector::PseudoClassReadWrite, !newReadOnly } });
+            m_isReadOnly = newReadOnly;
             readOnlyStateChanged();
+        }
     } else if (name == requiredAttr) {
-        bool wasRequired = m_isRequired;
-        m_isRequired = !value.isNull();
-        if (wasRequired != m_isRequired)
+        bool newRequired = !value.isNull();
+        if (m_isRequired != newRequired) {
+            Style::PseudoClassChangeInvalidation requiredInvalidation(*this, { { CSSSelector::PseudoClassRequired, newRequired }, { CSSSelector::PseudoClassOptional, !newRequired } });
+            m_isRequired = newRequired;
             requiredStateChanged();
+        }
     } else
         HTMLElement::parseAttribute(name, value);
 }
@@ -195,15 +199,15 @@ void HTMLFormControlElement::disabledStateChanged()
 void HTMLFormControlElement::readOnlyStateChanged()
 {
     updateWillValidateAndValidity();
+
+    // Some input pseudo classes like :in-range/out-of-range change based on the readonly state.
+    // FIXME: Use PseudoClassChangeInvalidation instead for :has() support and more efficiency.
     invalidateStyleForSubtree();
 }
 
 void HTMLFormControlElement::requiredStateChanged()
 {
     updateValidity();
-    // Style recalculation is needed because style selectors may include
-    // :required and :optional pseudo-classes.
-    invalidateStyleForSubtree();
 }
 
 void HTMLFormControlElement::didAttachRenderers()
@@ -425,7 +429,7 @@ void HTMLFormControlElement::updateVisibleValidationMessage()
     if (renderer() && willValidate())
         message = validationMessage().stripWhiteSpace();
     if (!m_validationMessage)
-        m_validationMessage = makeUnique<ValidationMessage>(this);
+        m_validationMessage = makeUnique<ValidationMessage>(*this);
     m_validationMessage->updateValidationMessage(message);
 }
 
@@ -488,7 +492,7 @@ bool HTMLFormControlElement::reportValidity()
 
 void HTMLFormControlElement::focusAndShowValidationMessage()
 {
-    SetForScope<bool> isFocusingWithValidationMessageScope(m_isFocusingWithValidationMessage, true);
+    SetForScope isFocusingWithValidationMessageScope(m_isFocusingWithValidationMessage, true);
 
     // Calling focus() will scroll the element into view.
     focus();
@@ -585,7 +589,7 @@ bool HTMLFormControlElement::shouldAutocorrect() const
 {
     const AtomString& autocorrectValue = attributeWithoutSynchronization(autocorrectAttr);
     if (!autocorrectValue.isEmpty())
-        return !equalLettersIgnoringASCIICase(autocorrectValue, "off");
+        return !equalLettersIgnoringASCIICase(autocorrectValue, "off"_s);
     if (RefPtr<HTMLFormElement> form = this->form())
         return form->shouldAutocorrect();
     return true;
@@ -612,7 +616,7 @@ String HTMLFormControlElement::autocomplete() const
     return autofillData().idlExposedValue;
 }
 
-void HTMLFormControlElement::setAutocomplete(const String& value)
+void HTMLFormControlElement::setAutocomplete(const AtomString& value)
 {
     setAttributeWithoutSynchronization(autocompleteAttr, value);
 }

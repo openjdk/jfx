@@ -82,7 +82,7 @@ public:
 
     bool mayAffectLayout() const;
 
-    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment(*this) || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
+    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
 
 protected:
     void willBeDestroyed() override;
@@ -93,7 +93,7 @@ protected:
     void updateFromStyle() override;
 
 private:
-    const char* renderName() const override;
+    ASCIILiteral renderName() const override;
 
     bool canHaveChildren() const final { return true; }
 
@@ -114,6 +114,7 @@ private:
     LayoutUnit offsetHeight() const final { return linesBoundingBox().height(); }
     LayoutPoint firstInlineBoxTopLeft() const;
 
+protected:
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
     LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const final;
 
@@ -123,6 +124,7 @@ private:
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
+private:
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
 
     LayoutRect frameRectForStickyPositioning() const final { return linesBoundingBox(); }

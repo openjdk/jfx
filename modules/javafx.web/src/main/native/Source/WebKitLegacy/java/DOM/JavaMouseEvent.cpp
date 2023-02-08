@@ -163,7 +163,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MouseEventImpl_initMouseEventImpl
     , jlong relatedTarget)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->initMouseEvent(String(env, type)
+    IMPL->initMouseEvent(AtomString {String(env, type)}
             , canBubble
             , cancelable
             , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))

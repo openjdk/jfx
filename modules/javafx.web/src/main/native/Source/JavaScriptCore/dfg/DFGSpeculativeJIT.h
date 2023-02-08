@@ -122,7 +122,7 @@ public:
         explicit TrustedImmPtr(T* value)
             : m_value(value)
         {
-            static_assert(!std::is_base_of<JSCell, T>::value, "To use a GC pointer, the graph must be aware of it. Use SpeculativeJIT::TrustedImmPtr::weakPointer instead.");
+            static_assert(!std::is_base_of<JSCell, T>::value, "To use a GC pointer, the graph must be aware of it. Use SpeculativeJIT::JITCompiler::LinkableConstant instead.");
         }
 
         explicit TrustedImmPtr(RegisteredStructure structure)
@@ -144,12 +144,6 @@ public:
         {
         }
 
-        static TrustedImmPtr weakPointer(Graph& graph, JSCell* cell)
-        {
-            graph.m_plan.weakReferences().addLazily(cell);
-            return TrustedImmPtr(bitwise_cast<size_t>(cell));
-        }
-
         operator MacroAssembler::TrustedImmPtr() const { return m_value; }
         operator MacroAssembler::TrustedImm() const { return m_value; }
 
@@ -166,13 +160,14 @@ public:
 
     void createOSREntries();
     void linkOSREntries(LinkBuffer&);
+    Vector<VariableEvent> finalizeEventStream() { return m_stream.finalize(); }
 
     BasicBlock* nextBlock()
     {
         for (BlockIndex resultIndex = m_block->index + 1; ; resultIndex++) {
-            if (resultIndex >= m_jit.graph().numBlocks())
+            if (resultIndex >= m_graph.numBlocks())
                 return nullptr;
-            if (BasicBlock* result = m_jit.graph().block(resultIndex))
+            if (BasicBlock* result = m_graph.block(resultIndex))
                 return result;
         }
     }
@@ -303,7 +298,7 @@ public:
 
         // use() returns true when the value becomes dead, and any
         // associated resources may be freed.
-        if (!info.use(*m_stream))
+        if (!info.use(m_stream))
             return;
 
         // Release the associated machine registers.
@@ -332,7 +327,7 @@ public:
 
     bool masqueradesAsUndefinedWatchpointIsStillValid(const CodeOrigin& codeOrigin)
     {
-        return m_jit.graph().masqueradesAsUndefinedWatchpointIsStillValid(codeOrigin);
+        return m_graph.masqueradesAsUndefinedWatchpointIsStillValid(codeOrigin);
     }
     bool masqueradesAsUndefinedWatchpointIsStillValid()
     {
@@ -502,7 +497,7 @@ public:
         // Check the GenerationInfo to see if this value need writing
         // to the JSStack - if not, mark it as spilled & return.
         if (!info.needsSpill()) {
-            info.setSpilled(*m_stream, spillMe);
+            info.setSpilled(m_stream, spillMe);
             return;
         }
 
@@ -512,27 +507,27 @@ public:
             // This is special, since it's not a JS value - as in it's not visible to JS
             // code.
             m_jit.storePtr(info.gpr(), JITCompiler::addressFor(spillMe));
-            info.spill(*m_stream, spillMe, DataFormatStorage);
+            info.spill(m_stream, spillMe, DataFormatStorage);
             return;
         }
 
         case DataFormatInt32: {
             m_jit.store32(info.gpr(), JITCompiler::payloadFor(spillMe));
-            info.spill(*m_stream, spillMe, DataFormatInt32);
+            info.spill(m_stream, spillMe, DataFormatInt32);
             return;
         }
 
 #if USE(JSVALUE64)
         case DataFormatDouble: {
             m_jit.storeDouble(info.fpr(), JITCompiler::addressFor(spillMe));
-            info.spill(*m_stream, spillMe, DataFormatDouble);
+            info.spill(m_stream, spillMe, DataFormatDouble);
             return;
         }
 
         case DataFormatInt52:
         case DataFormatStrictInt52: {
             m_jit.store64(info.gpr(), JITCompiler::addressFor(spillMe));
-            info.spill(*m_stream, spillMe, spillFormat);
+            info.spill(m_stream, spillMe, spillFormat);
             return;
         }
 
@@ -548,20 +543,20 @@ public:
 
             // Spill the value, and record it as spilled in its boxed form.
             m_jit.store64(reg, JITCompiler::addressFor(spillMe));
-            info.spill(*m_stream, spillMe, (DataFormat)(spillFormat | DataFormatJS));
+            info.spill(m_stream, spillMe, (DataFormat)(spillFormat | DataFormatJS));
             return;
 #elif USE(JSVALUE32_64)
         case DataFormatCell:
         case DataFormatBoolean: {
             m_jit.store32(info.gpr(), JITCompiler::payloadFor(spillMe));
-            info.spill(*m_stream, spillMe, spillFormat);
+            info.spill(m_stream, spillMe, spillFormat);
             return;
         }
 
         case DataFormatDouble: {
             // On JSVALUE32_64 boxing a double is a no-op.
             m_jit.storeDouble(info.fpr(), JITCompiler::addressFor(spillMe));
-            info.spill(*m_stream, spillMe, DataFormatDouble);
+            info.spill(m_stream, spillMe, DataFormatDouble);
             return;
         }
 
@@ -570,7 +565,7 @@ public:
             RELEASE_ASSERT(spillFormat & DataFormatJS);
             m_jit.store32(info.tagGPR(), JITCompiler::tagFor(spillMe));
             m_jit.store32(info.payloadGPR(), JITCompiler::payloadFor(spillMe));
-            info.spill(*m_stream, spillMe, spillFormat);
+            info.spill(m_stream, spillMe, spillFormat);
             return;
 #endif
         }
@@ -588,7 +583,7 @@ public:
 
     UniquedStringImpl* identifierUID(unsigned index)
     {
-        return m_jit.graph().identifiers()[index];
+        return m_graph.identifiers()[index];
     }
 
     // Spill all VirtualRegisters back to the JSStack.
@@ -723,16 +718,16 @@ public:
 
     void compileCheckDetached(Node*);
 
-    void cachedGetById(CodeOrigin, JSValueRegs base, JSValueRegs result, GPRReg stubInfoGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
-    void cachedPutById(CodeOrigin, GPRReg baseGPR, JSValueRegs valueRegs, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, PutKind, ECMAMode, JITCompiler::Jump slowPathTarget = JITCompiler::Jump(), SpillRegistersMode = NeedToSpill);
+    void cachedGetById(CodeOrigin, JSValueRegs base, JSValueRegs result, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
+    void cachedPutById(CodeOrigin, GPRReg baseGPR, JSValueRegs valueRegs, GPRReg stubInfoGPR, GPRReg scratchGPR, GPRReg scratch2GPR, CacheableIdentifier, PutKind, ECMAMode, JITCompiler::Jump slowPathTarget = JITCompiler::Jump(), SpillRegistersMode = NeedToSpill);
     void cachedGetByVal(CodeOrigin, JSValueRegs base, JSValueRegs property, JSValueRegs result, JITCompiler::Jump slowPathTarget);
 
 #if USE(JSVALUE64)
-    void cachedGetById(CodeOrigin, GPRReg baseGPR, GPRReg resultGPR, GPRReg stubInfoGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
-    void cachedGetByIdWithThis(CodeOrigin, GPRReg baseGPR, GPRReg thisGPR, GPRReg resultGPR, GPRReg stubInfoGPR, CacheableIdentifier, const JITCompiler::JumpList& slowPathTarget = JITCompiler::JumpList());
+    void cachedGetById(CodeOrigin, GPRReg baseGPR, GPRReg resultGPR, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
+    void cachedGetByIdWithThis(CodeOrigin, GPRReg baseGPR, GPRReg thisGPR, GPRReg resultGPR, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, const JITCompiler::JumpList& slowPathTarget = JITCompiler::JumpList());
 #elif USE(JSVALUE32_64)
-    void cachedGetById(CodeOrigin, GPRReg baseTagGPROrNone, GPRReg basePayloadGPR, GPRReg resultTagGPR, GPRReg resultPayloadGPR, GPRReg stubInfoGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
-    void cachedGetByIdWithThis(CodeOrigin, GPRReg baseTagGPROrNone, GPRReg basePayloadGPR, GPRReg thisTagGPROrNone, GPRReg thisPayloadGPR, GPRReg resultTagGPR, GPRReg resultPayloadGPR, GPRReg stubInfoGPR, CacheableIdentifier, const JITCompiler::JumpList& slowPathTarget = JITCompiler::JumpList());
+    void cachedGetById(CodeOrigin, GPRReg baseTagGPROrNone, GPRReg basePayloadGPR, GPRReg resultTagGPR, GPRReg resultPayloadGPR, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
+    void cachedGetByIdWithThis(CodeOrigin, GPRReg baseTagGPROrNone, GPRReg basePayloadGPR, GPRReg thisTagGPROrNone, GPRReg thisPayloadGPR, GPRReg resultTagGPR, GPRReg resultPayloadGPR, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, const JITCompiler::JumpList& slowPathTarget = JITCompiler::JumpList());
 #endif
 
     void compileDeleteById(Node*);
@@ -756,7 +751,7 @@ public:
     void genericJSValueNonPeepholeStrictEq(Node*, bool invert = false);
     bool genericJSValueStrictEq(Node*, bool invert = false);
 
-    void compileInstanceOfForCells(Node*, JSValueRegs valueGPR, JSValueRegs prototypeGPR, GPRReg resultGPT, GPRReg stubInfoGPR, GPRReg scratchGPR, GPRReg scratch2GPR, JITCompiler::Jump slowCase = JITCompiler::Jump());
+    void compileInstanceOfForCells(Node*, JSValueRegs valueGPR, JSValueRegs prototypeGPR, GPRReg resultGPT, GPRReg stubInfoGPR, JITCompiler::Jump slowCase = JITCompiler::Jump());
     void compileInstanceOf(Node*);
     void compileInstanceOfCustom(Node*);
     void compileOverridesHasInstance(Node*);
@@ -974,16 +969,15 @@ public:
         appendCall(CCallHelpers::Address(GPRInfo::nonArgGPR0, address.offset));
     }
 
-    JITCompiler::Call callOperationWithCallFrameRollbackOnException(V_JITOperation_Cb operation, CodeBlock* codeBlock)
+    JITCompiler::Call callOperationWithCallFrameRollbackOnException(V_JITOperation_Cb operation, GPRReg codeBlockGPR)
     {
-        // Do not register CodeBlock* as a weak-pointer.
-        m_jit.setupArguments<V_JITOperation_Cb>(TrustedImmPtr(static_cast<void*>(codeBlock)));
+        m_jit.setupArguments<V_JITOperation_Cb>(codeBlockGPR);
         return appendCallWithCallFrameRollbackOnException(operation);
     }
 
-    JITCompiler::Call callOperationWithCallFrameRollbackOnException(Z_JITOperation_G operation, GPRReg result, JSGlobalObject* globalObject)
+    JITCompiler::Call callOperationWithCallFrameRollbackOnException(Z_JITOperation_G operation, GPRReg result, GPRReg globalObjectGPR)
     {
-        m_jit.setupArguments<Z_JITOperation_G>(TrustedImmPtr::weakPointer(m_graph, globalObject));
+        m_jit.setupArguments<Z_JITOperation_G>(globalObjectGPR);
         return appendCallWithCallFrameRollbackOnExceptionSetResult(operation, result);
     }
 
@@ -1088,15 +1082,6 @@ public:
 #endif
     }
 
-#if CPU(ARM_THUMB2) && !CPU(ARM_HARDFP)
-    JITCompiler::Call appendCallSetResult(const FunctionPtr<CFunctionPtrTag> function, FPRReg result)
-    {
-        JITCompiler::Call call = appendCall(function);
-        if (result != InvalidFPRReg)
-            m_jit.assembler().vmov(result, GPRInfo::returnValueGPR, GPRInfo::returnValueGPR2);
-        return call;
-    }
-#else // CPU(X86_64) || (CPU(ARM_THUMB2) && CPU(ARM_HARDFP)) || CPU(ARM64) || CPU(MIPS)
     JITCompiler::Call appendCallSetResult(const FunctionPtr<CFunctionPtrTag> function, FPRReg result)
     {
         JITCompiler::Call call = appendCall(function);
@@ -1104,7 +1089,6 @@ public:
             m_jit.moveDouble(FPRInfo::returnValueFPR, result);
         return call;
     }
-#endif
 
     void branchDouble(JITCompiler::DoubleCondition cond, FPRReg left, FPRReg right, BasicBlock* destination)
     {
@@ -1157,6 +1141,12 @@ public:
     void branchPtr(JITCompiler::RelationalCondition cond, T left, U right, BasicBlock* destination)
     {
         return addBranch(m_jit.branchPtr(cond, left, right), destination);
+    }
+
+    template<typename T, typename U>
+    void branchLinkableConstant(JITCompiler::RelationalCondition cond, T left, U right, BasicBlock* destination)
+    {
+        return addBranch(m_jit.branchLinkableConstant(cond, left, right), destination);
     }
 
     template<typename T, typename U>
@@ -1438,6 +1428,7 @@ public:
     void compileArithMinMax(Node*);
     void compileConstantStoragePointer(Node*);
     void compileGetIndexedPropertyStorage(Node*);
+    void compileResolveRope(Node*);
     JITCompiler::Jump jumpForTypedArrayOutOfBounds(Node*, GPRReg baseGPR, GPRReg indexGPR, GPRReg scratchGPR);
     JITCompiler::Jump jumpForTypedArrayIsDetachedIfOutOfBounds(Node*, GPRReg baseGPR, JITCompiler::Jump outOfBounds);
     void emitTypedArrayBoundsCheck(Node*, GPRReg baseGPR, GPRReg indexGPR, GPRReg scratchGPR);
@@ -1673,7 +1664,7 @@ public:
     void speculationCheck(ExitKind, JSValueSource, Node*, MacroAssembler::Jump jumpToFail, const SpeculationRecovery&);
     void speculationCheck(ExitKind, JSValueSource, Edge, MacroAssembler::Jump jumpToFail, const SpeculationRecovery&);
 
-    void emitInvalidationPoint(Node*);
+    void compileInvalidationPoint(Node*);
 
     void unreachable(Node*);
 
@@ -1781,7 +1772,7 @@ public:
         Operand bytecodeReg, VirtualRegister machineReg, DataFormat format)
     {
         ASSERT(!bytecodeReg.isArgument() || bytecodeReg.virtualRegister().toArgument() >= 0);
-        m_stream->appendAndLog(VariableEvent::setLocal(bytecodeReg, machineReg, format));
+        m_stream.appendAndLog(VariableEvent::setLocal(bytecodeReg, machineReg, format));
     }
 
     void recordSetLocal(DataFormat format)
@@ -1845,7 +1836,7 @@ public:
     InPlaceAbstractState m_state;
     AbstractInterpreter<InPlaceAbstractState> m_interpreter;
 
-    VariableEventStream* m_stream;
+    VariableEventStreamBuilder m_stream;
     MinifiedGraph* m_minifiedGraph;
 
     Vector<std::unique_ptr<SlowPathGenerator>, 8> m_slowPathGenerators;

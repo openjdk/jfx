@@ -125,7 +125,7 @@ Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::setDOMStorageItem(Ref<JS
         return makeUnexpected(errorString);
 
     bool quotaException = false;
-    storageArea->setItem(frame, key, value, quotaException);
+    storageArea->setItem(*frame, key, value, quotaException);
     if (quotaException)
         return makeUnexpected(DOMException::name(QuotaExceededError));
 
@@ -141,7 +141,7 @@ Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::removeDOMStorageItem(Ref
     if (!storageArea)
         return makeUnexpected(errorString);
 
-    storageArea->removeItem(frame, key);
+    storageArea->removeItem(*frame, key);
 
     return { };
 }
@@ -155,7 +155,7 @@ Protocol::ErrorStringOr<void> InspectorDOMStorageAgent::clearDOMStorageItems(Ref
     if (!storageArea)
         return makeUnexpected(errorString);
 
-    storageArea->clear(frame);
+    storageArea->clear(*frame);
 
     return { };
 }
@@ -197,13 +197,13 @@ RefPtr<StorageArea> InspectorDOMStorageAgent::findStorageArea(Protocol::ErrorStr
 {
     auto securityOrigin = storageId->getString(Protocol::DOMStorage::StorageId::securityOriginKey);
     if (!securityOrigin) {
-        errorString = "Missing securityOrigin in given storageId";
+        errorString = "Missing securityOrigin in given storageId"_s;
         return nullptr;
     }
 
     auto isLocalStorage = storageId->getBoolean(Protocol::DOMStorage::StorageId::isLocalStorageKey);
     if (!isLocalStorage) {
-        errorString = "Missing isLocalStorage in given storageId";
+        errorString = "Missing isLocalStorage in given storageId"_s;
         return nullptr;
     }
 

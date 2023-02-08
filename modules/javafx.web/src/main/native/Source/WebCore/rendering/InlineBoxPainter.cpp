@@ -26,7 +26,7 @@
 #include "InlineBoxPainter.h"
 
 #include "GraphicsContext.h"
-#include "InlineIteratorLine.h"
+#include "InlineIteratorLineBox.h"
 #include "LegacyInlineFlowBox.h"
 #include "PaintInfo.h"
 #include "RenderBlockFlow.h"
@@ -53,7 +53,7 @@ InlineBoxPainter::InlineBoxPainter(const InlineIterator::InlineBox& inlineBox, P
     , m_paintInfo(paintInfo)
     , m_paintOffset(paintOffset)
     , m_renderer(m_inlineBox.renderer())
-    , m_isFirstLine(m_inlineBox.line()->isFirst())
+    , m_isFirstLineBox(m_inlineBox.lineBox()->isFirst())
     , m_isRootInlineBox(m_inlineBox.isRootInlineBox())
     , m_isHorizontal(m_inlineBox.isHorizontal())
 {
@@ -141,8 +141,7 @@ void InlineBoxPainter::paintMask()
         return;
 
     // Move x/y to our coordinates.
-    LayoutRect localRect(m_inlineBox.rect());
-    m_inlineBox.line()->containingBlock().flipForWritingMode(localRect);
+    auto localRect = LayoutRect { m_inlineBox.visualRect() };
     LayoutPoint adjustedPaintOffset = m_paintOffset + localRect.location();
 
     const NinePieceImage& maskNinePieceImage = renderer().style().maskBoxImage();
@@ -214,13 +213,11 @@ void InlineBoxPainter::paintDecorations()
     auto& style = this->style();
     // You can use p::first-line to specify a background. If so, the root inline boxes for
     // a line may actually have to paint a background.
-    if (m_isRootInlineBox && (!m_isFirstLine || &style == &renderer().style()))
+    if (m_isRootInlineBox && (!m_isFirstLineBox || &style == &renderer().style()))
         return;
 
     // Move x/y to our coordinates.
-    LayoutRect localRect(m_inlineBox.rect());
-    m_inlineBox.line()->containingBlock().flipForWritingMode(localRect);
-
+    auto localRect = LayoutRect { m_inlineBox.visualRect() };
     LayoutPoint adjustedPaintoffset = m_paintOffset + localRect.location();
     GraphicsContext& context = m_paintInfo.context();
     LayoutRect paintRect = LayoutRect(adjustedPaintoffset, localRect.size());
@@ -305,7 +302,7 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
 #if ENABLE(CSS_BOX_DECORATION_BREAK)
     if (renderer().style().boxDecorationBreak() == BoxDecorationBreak::Clone) {
         GraphicsContextStateSaver stateSaver(m_paintInfo.context());
-        m_paintInfo.context().clip({ rect.x(), rect.y(), LayoutUnit(m_inlineBox.rect().width()), LayoutUnit(m_inlineBox.rect().height()) });
+        m_paintInfo.context().clip({ rect.location(), m_inlineBox.visualRectIgnoringBlockDirection().size() });
         renderer().paintFillLayerExtended(m_paintInfo, color, fillLayer, rect, BackgroundBleedNone, m_inlineBox, { }, op);
         return;
     }
@@ -335,8 +332,8 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
     LayoutRect backgroundImageStrip {
         rect.x() - (isHorizontal() ? logicalOffsetOnLine : 0_lu),
         rect.y() - (isHorizontal() ? 0_lu : logicalOffsetOnLine),
-        isHorizontal() ? totalLogicalWidth : LayoutUnit(m_inlineBox.rect().width()),
-        isHorizontal() ? LayoutUnit(m_inlineBox.rect().height()) : totalLogicalWidth
+        isHorizontal() ? totalLogicalWidth : LayoutUnit(m_inlineBox.visualRectIgnoringBlockDirection().width()),
+        isHorizontal() ? LayoutUnit(m_inlineBox.visualRectIgnoringBlockDirection().height()) : totalLogicalWidth
     };
 
     GraphicsContextStateSaver stateSaver(m_paintInfo.context());
@@ -360,7 +357,7 @@ void InlineBoxPainter::paintBoxShadow(ShadowStyle shadowStyle, const LayoutRect&
 
 const RenderStyle& InlineBoxPainter::style() const
 {
-    return m_isFirstLine ? renderer().firstLineStyle() : renderer().style();
+    return m_isFirstLineBox ? renderer().firstLineStyle() : renderer().style();
 }
 
 }
