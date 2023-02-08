@@ -470,15 +470,18 @@ public class ListView<T> extends Control {
      * @since JavaFX 8.0
      */
     private ObjectProperty<Node> placeholder;
+
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
             placeholder = new SimpleObjectProperty<>(this, "placeholder");
         }
         return placeholder;
     }
+
     public final void setPlaceholder(Node value) {
         placeholderProperty().set(value);
     }
+
     public final Node getPlaceholder() {
         return placeholder == null ? null : placeholder.get();
     }

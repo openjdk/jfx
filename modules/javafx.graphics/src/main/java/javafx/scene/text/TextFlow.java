@@ -87,7 +87,8 @@ import javafx.css.StyleableProperty;
  * The wrapping width of the layout is determined by the region's current width.
  * It can be specified by the application by setting the {@code TextFlow}'s preferred
  * width. If no wrapping is desired, the application can either set the preferred
- * with to {@code Double.MAX_VALUE} or {@code Region.USE_COMPUTED_SIZE}.
+ * with to {@code Double.MAX_VALUE} or
+ * {@link javafx.scene.layout.Region#USE_COMPUTED_SIZE Region.USE_COMPUTED_SIZE}.
  *
  * <p>
  * Paragraphs are separated by {@code '\n'} present in any {@code Text} child.
