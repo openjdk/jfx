@@ -64,6 +64,7 @@ public:
     const char* redirectionDestinationForURL(const char*);
     void clearAllApplicationCaches();
     void clearAllDatabases();
+    void clearNotificationPermissionState();
     void clearApplicationCacheForOrigin(JSStringRef name);
     void clearBackForwardList();
     void clearPersistentUserStyleSheet();
@@ -95,6 +96,7 @@ public:
     void queueLoadingScript(JSStringRef script);
     void queueNonLoadingScript(JSStringRef script);
     void queueReload();
+    void removeAllCookies();
     void removeAllVisitedLinks();
     void setAcceptsEditing(bool);
     void setAppCacheMaximumSize(unsigned long long quota);
@@ -384,6 +386,8 @@ public:
 
     bool didCancelClientRedirect() const { return m_didCancelClientRedirect; }
     void setDidCancelClientRedirect(bool value) { m_didCancelClientRedirect = value; }
+
+    bool isSecureEventInputEnabled() const;
 
 private:
     TestRunner(const std::string& testURL, const std::string& expectedPixelHash);

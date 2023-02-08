@@ -137,6 +137,8 @@ void generateToAir(Procedure& procedure)
     }
 
     lowerToAir(procedure);
+    if (shouldDumpIR(procedure, B3Mode))
+        procedure.setShouldDumpIR();
     procedure.freeUnneededB3ValuesAfterLowering();
 }
 

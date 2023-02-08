@@ -45,8 +45,8 @@ using namespace MathMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLFenced);
 
-static const char* gOpeningBraceChar = "(";
-static const char* gClosingBraceChar = ")";
+static constexpr auto gOpeningBraceChar = "("_s;
+static constexpr auto gClosingBraceChar = ")"_s;
 
 RenderMathMLFenced::RenderMathMLFenced(MathMLRowElement& element, RenderStyle&& style)
     : RenderMathMLRow(element, WTFMove(style))
@@ -75,7 +75,7 @@ void RenderMathMLFenced::updateFromElement()
         m_separators = !characters.length() ? 0 : characters.toString().impl();
     } else {
         // The separator defaults to a single comma.
-        m_separators = StringImpl::create(",");
+        m_separators = StringImpl::create(","_s);
     }
 
     if (firstChild()) {

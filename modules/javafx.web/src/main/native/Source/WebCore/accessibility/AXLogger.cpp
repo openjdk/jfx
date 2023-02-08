@@ -27,8 +27,6 @@
  */
 
 #include "config.h"
-
-#if !LOG_DISABLED
 #include "AXLogger.h"
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
@@ -46,16 +44,18 @@ namespace WebCore {
 static bool shouldLog()
 {
     // Modify the initializer list below to choose what thread you want to log messages from.
-    static OptionSet<AXLoggingOptions> loggingOptions { AXLoggingOptions::MainThread, AXLoggingOptions::OffMainThread };
+    static constexpr OptionSet<AXLoggingOptions> loggingOptions { AXLoggingOptions::MainThread, AXLoggingOptions::OffMainThread };
 
     return (isMainThread() && loggingOptions & AXLoggingOptions::MainThread)
         || (!isMainThread() && loggingOptions & AXLoggingOptions::OffMainThread);
 }
 
+#if !LOG_DISABLED
+
 AXLogger::AXLogger(const String& methodName)
     : m_methodName(methodName)
 {
-    if (auto* channel = getLogChannel("Accessibility"))
+    if (auto* channel = getLogChannel("Accessibility"_s))
         channel->level = WTFLogLevel::Debug;
 
     if (shouldLog()) {
@@ -76,6 +76,12 @@ void AXLogger::log(const String& message)
 {
     if (shouldLog())
         LOG(Accessibility, "%s", message.utf8().data());
+}
+
+void AXLogger::log(const char* message)
+{
+    if (shouldLog())
+        LOG(Accessibility, "%s", message);
 }
 
 void AXLogger::log(RefPtr<AXCoreObject> object)
@@ -107,23 +113,6 @@ void AXLogger::log(const Vector<RefPtr<AXCoreObject>>& objects)
         stream << "]";
 
         LOG(Accessibility, "%s", stream.release().utf8().data());
-    }
-}
-
-void AXLogger::add(TextStream& stream, const RefPtr<AXCoreObject>& object, bool recursive)
-{
-    if (shouldLog()) {
-        if (!object)
-            return;
-
-        stream.increaseIndent();
-        stream << *object;
-
-        if (recursive) {
-            for (auto& child : object->children(false))
-                add(stream, child, true);
-        }
-        stream.decreaseIndent();
     }
 }
 
@@ -173,6 +162,8 @@ void AXLogger::log(AXObjectCache& axObjectCache)
         LOG(Accessibility, "%s", stream.release().utf8().data());
     }
 }
+
+#endif // !LOG_DISABLED
 
 TextStream& operator<<(TextStream& stream, AccessibilityRole role)
 {
@@ -328,15 +319,15 @@ TextStream& operator<<(TextStream& stream, AccessibilitySearchKey searchKey)
 TextStream& operator<<(TextStream& stream, const AccessibilitySearchCriteria& criteria)
 {
     TextStream::GroupScope groupScope(stream);
-    auto streamCriteriaObject = [&stream] (String objectLabel, auto* axObject) {
+    auto streamCriteriaObject = [&stream] (ASCIILiteral objectLabel, auto* axObject) {
         stream.startGroup();
-        stream << objectLabel << " " << axObject << ", ID " << (axObject ? axObject->objectID() : AXID());
+        stream << objectLabel.characters() << " " << axObject << ", ID " << (axObject ? axObject->objectID() : AXID());
         stream.endGroup();
     };
 
     stream << "SearchCriteria " << &criteria;
-    streamCriteriaObject("anchorObject", criteria.anchorObject);
-    streamCriteriaObject("startObject", criteria.startObject);
+    streamCriteriaObject("anchorObject"_s, criteria.anchorObject);
+    streamCriteriaObject("startObject"_s, criteria.startObject);
     stream.dumpProperty("searchDirection", criteria.searchDirection);
 
     stream.nextLine();
@@ -382,11 +373,23 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXAutocorrectionOccured:
         stream << "AXAutocorrectionOccured";
         break;
+    case AXObjectCache::AXNotification::AXAutofillTypeChanged:
+        stream << "AXAutofillTypeChanged";
+        break;
     case AXObjectCache::AXNotification::AXCheckedStateChanged:
         stream << "AXCheckedStateChanged";
         break;
     case AXObjectCache::AXNotification::AXChildrenChanged:
         stream << "AXChildrenChanged";
+        break;
+    case AXObjectCache::AXNotification::AXColumnCountChanged:
+        stream << "AXColumnCountChanged";
+        break;
+    case AXObjectCache::AXNotification::AXColumnIndexChanged:
+        stream << "AXColumnIndexChanged";
+        break;
+    case AXObjectCache::AXNotification::AXColumnSpanChanged:
+        stream << "AXColumnSpanChanged";
         break;
     case AXObjectCache::AXNotification::AXCurrentStateChanged:
         stream << "AXCurrentStateChanged";
@@ -394,11 +397,23 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXDisabledStateChanged:
         stream << "AXDisabledStateChanged";
         break;
+    case AXObjectCache::AXNotification::AXDescribedByChanged:
+        stream << "AXDescribedByChanged";
+        break;
+    case AXObjectCache::AXNotification::AXDropEffectChanged:
+        stream << "AXDropEffectChanged";
+        break;
     case AXObjectCache::AXNotification::AXFocusedUIElementChanged:
         stream << "AXFocusedUIElementChanged";
         break;
     case AXObjectCache::AXNotification::AXFrameLoadComplete:
         stream << "AXFrameLoadComplete";
+        break;
+    case AXObjectCache::AXNotification::AXGrabbedStateChanged:
+        stream << "AXGrabbedStateChanged";
+        break;
+    case AXObjectCache::AXNotification::AXHasPopupChanged:
+        stream << "AXHasPopupChanged";
         break;
     case AXObjectCache::AXNotification::AXIdAttributeChanged:
         stream << "AXIdAttributeChanged";
@@ -406,20 +421,50 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
     case AXObjectCache::AXNotification::AXImageOverlayChanged:
         stream << "AXImageOverlayChanged";
         break;
+    case AXObjectCache::AXNotification::AXIsAtomicChanged:
+        stream << "AXIsAtomicChanged";
+        break;
     case AXObjectCache::AXNotification::AXLanguageChanged:
         stream << "AXLanguageChanged";
         break;
     case AXObjectCache::AXNotification::AXLayoutComplete:
         stream << "AXLayoutComplete";
         break;
+    case AXObjectCache::AXNotification::AXLevelChanged:
+        stream << "AXLevelChanged";
+        break;
     case AXObjectCache::AXNotification::AXLoadComplete:
         stream << "AXLoadComplete";
+        break;
+    case AXObjectCache::AXNotification::AXPlaceholderChanged:
+        stream << "AXPlaceholderChanged";
+        break;
+    case AXObjectCache::AXNotification::AXMaximumValueChanged:
+        stream << "AXMaximumValueChanged";
+        break;
+    case AXObjectCache::AXNotification::AXMinimumValueChanged:
+        stream << "AXMinimumValueChanged";
+        break;
+    case AXObjectCache::AXNotification::AXMultiSelectableStateChanged:
+        stream << "AXMultiSelectableStateChanged";
         break;
     case AXObjectCache::AXNotification::AXNewDocumentLoadComplete:
         stream << "AXNewDocumentLoadComplete";
         break;
+    case AXObjectCache::AXNotification::AXOrientationChanged:
+        stream << "AXOrientationChanged";
+        break;
     case AXObjectCache::AXNotification::AXPageScrolled:
         stream << "AXPageScrolled";
+        break;
+    case AXObjectCache::AXNotification::AXPositionInSetChanged:
+        stream << "AXPositionInSetChanged";
+        break;
+    case AXObjectCache::AXNotification::AXRowIndexChanged:
+        stream << "AXRowIndexChanged";
+        break;
+    case AXObjectCache::AXNotification::AXRowSpanChanged:
+        stream << "AXRowSpanChanged";
         break;
     case AXObjectCache::AXNotification::AXSelectedChildrenChanged:
         stream << "AXSelectedChildrenChanged";
@@ -429,6 +474,9 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXSelectedTextChanged:
         stream << "AXSelectedTextChanged";
+        break;
+    case AXObjectCache::AXNotification::AXSetSizeChanged:
+        stream << "AXSetSizeChanged";
         break;
     case AXObjectCache::AXNotification::AXValueChanged:
         stream << "AXValueChanged";
@@ -441,6 +489,12 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
         break;
     case AXObjectCache::AXNotification::AXLiveRegionChanged:
         stream << "AXLiveRegionChanged";
+        break;
+    case AXObjectCache::AXNotification::AXLiveRegionRelevantChanged:
+        stream << "AXLiveRegionRelevantChanged";
+        break;
+    case AXObjectCache::AXNotification::AXLiveRegionStatusChanged:
+        stream << "AXLiveRegionStatusChanged";
         break;
     case AXObjectCache::AXNotification::AXMenuListItemSelected:
         stream << "AXMenuListItemSelected";
@@ -515,38 +569,45 @@ TextStream& operator<<(TextStream& stream, AXObjectCache::AXNotification notific
 
 TextStream& operator<<(TextStream& stream, const AXCoreObject& object)
 {
-    TextStream::GroupScope groupScope(stream);
-    stream << "objectID " << object.objectID();
-    auto role = object.roleValue();
-    stream.dumpProperty("roleValue", role);
-
-    auto* parent = object.parentObjectUnignored();
-    stream.dumpProperty("parentObject", parent ? parent->objectID() : AXID());
-
-    stream.dumpProperty("identifierAttribute", object.identifierAttribute());
-
-    auto* objectWithInterestingHTML = role == AccessibilityRole::Button ? // Add here other roles of interest.
-        &object : nullptr;
-    if (role == AccessibilityRole::StaticText && parent)
-        objectWithInterestingHTML = parent;
-    if (objectWithInterestingHTML)
-        stream.dumpProperty("outerHTML", objectWithInterestingHTML->outerHTML());
-
-    stream.dumpProperty("address", &object);
-    stream.dumpProperty("wrapper", object.wrapper());
-
+    constexpr OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::Role, AXStreamOptions::ParentID, AXStreamOptions::IdentifierAttribute, AXStreamOptions::OuterHTML, AXStreamOptions::DisplayContents, AXStreamOptions::Address };
+    streamAXCoreObject(stream, object, options);
     return stream;
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 TextStream& operator<<(TextStream& stream, AXIsolatedTree& tree)
 {
+    ASSERT(!isMainThread());
     TextStream::GroupScope groupScope(stream);
     stream << "treeID " << tree.treeID();
     stream.dumpProperty("rootNodeID", tree.rootNode()->objectID());
     stream.dumpProperty("focusedNodeID", tree.m_focusedNodeID);
-    AXLogger::add(stream, tree.rootNode(), true);
+    constexpr OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::Role, AXStreamOptions::ParentID, AXStreamOptions::IdentifierAttribute, AXStreamOptions::OuterHTML, AXStreamOptions::DisplayContents, AXStreamOptions::Address };
+    streamSubtree(stream, tree.rootNode(), options);
     return stream;
+}
+
+void streamIsolatedSubtreeOnMainThread(TextStream& stream, const AXIsolatedTree& tree, AXID objectID, const OptionSet<AXStreamOptions>& options)
+{
+    ASSERT(isMainThread());
+
+    if (!shouldLog())
+        return;
+
+    stream.increaseIndent();
+    TextStream::GroupScope groupScope(stream);
+
+    if (options & AXStreamOptions::ObjectID)
+        stream << "objectID " << objectID;
+
+    auto ids = tree.m_nodeMap.get(objectID);
+    if (options & AXStreamOptions::ParentID)
+        stream.dumpProperty("parentObject", ids.parentID);
+
+    for (auto& childID : ids.childrenIDs)
+        streamIsolatedSubtreeOnMainThread(stream, tree, childID, options);
+
+    stream.decreaseIndent();
 }
 #endif
 
@@ -555,14 +616,68 @@ TextStream& operator<<(TextStream& stream, AXObjectCache& axObjectCache)
     TextStream::GroupScope groupScope(stream);
     stream << "AXObjectCache " << &axObjectCache;
 
-    if (auto* root = axObjectCache.get(axObjectCache.document().view()))
-        AXLogger::add(stream, root, true);
-    else
+    if (auto* root = axObjectCache.get(axObjectCache.document().view())) {
+        constexpr OptionSet<AXStreamOptions> options = { AXStreamOptions::ObjectID, AXStreamOptions::Role, AXStreamOptions::ParentID, AXStreamOptions::IdentifierAttribute, AXStreamOptions::OuterHTML, AXStreamOptions::DisplayContents, AXStreamOptions::Address };
+        streamSubtree(stream, root, options);
+    } else
         stream << "No root!";
 
     return stream;
 }
 
-} // namespace WebCore
+void streamAXCoreObject(TextStream& stream, const AXCoreObject& object, const OptionSet<AXStreamOptions>& options)
+{
+    if (options & AXStreamOptions::ObjectID)
+        stream << "objectID " << object.objectID();
 
-#endif // !LOG_DISABLED
+    if (options & AXStreamOptions::Role)
+        stream.dumpProperty("role", object.roleValue());
+
+    if (options & AXStreamOptions::ParentID) {
+        auto* parent = object.parentObjectUnignored();
+        stream.dumpProperty("parentObject", parent ? parent->objectID() : AXID());
+    }
+
+    if (options & AXStreamOptions::IdentifierAttribute)
+        stream.dumpProperty("identifierAttribute", object.identifierAttribute());
+
+    if (options & AXStreamOptions::OuterHTML) {
+        auto role = object.roleValue();
+        auto* objectWithInterestingHTML = role == AccessibilityRole::Button ? // Add here other roles of interest.
+            &object : nullptr;
+
+        auto* parent = object.parentObjectUnignored();
+        if (role == AccessibilityRole::StaticText && parent)
+            objectWithInterestingHTML = parent;
+
+        if (objectWithInterestingHTML)
+            stream.dumpProperty("outerHTML", objectWithInterestingHTML->outerHTML().left(150));
+    }
+
+    if (options & AXStreamOptions::DisplayContents) {
+        if (auto* axObject = dynamicDowncast<AccessibilityObject>(&object); axObject && axObject->hasDisplayContents())
+            stream.dumpProperty("hasDisplayContents", true);
+    }
+
+    if (options & AXStreamOptions::Address) {
+        stream.dumpProperty("address", &object);
+        stream.dumpProperty("wrapper", object.wrapper());
+    }
+}
+
+void streamSubtree(TextStream& stream, const RefPtr<AXCoreObject>& object, const OptionSet<AXStreamOptions>& options)
+{
+    if (!object || !shouldLog())
+        return;
+
+    stream.increaseIndent();
+
+    TextStream::GroupScope groupScope(stream);
+    streamAXCoreObject(stream, *object, options);
+    for (auto& child : object->children(false))
+        streamSubtree(stream, child, options);
+
+    stream.decreaseIndent();
+}
+
+} // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,10 +50,10 @@ class FallbackResource implements CompositeFontResource {
     private int aaMode;
     private CompositeGlyphMapper mapper;
 
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
-       new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
+    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
 
 
+    @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
         return strikeMap;
     }
@@ -84,6 +84,7 @@ class FallbackResource implements CompositeFontResource {
         return font;
     }
 
+    @Override
     public int getDefaultAAMode() {
         return aaMode;  // for now, has to be same as main font.
     }
@@ -97,64 +98,79 @@ class FallbackResource implements CompositeFontResource {
          throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public String getFullName() {
         return throwException();
     }
 
+    @Override
     public String getPSName() {
         return throwException();
     }
 
+    @Override
     public String getFamilyName() {
         return throwException();
     }
 
+    @Override
     public String getStyleName() {
         return throwException();
     }
 
+    @Override
     public String getLocaleFullName() {
         return throwException();
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return throwException();
     }
 
+    @Override
     public String getLocaleStyleName() {
         return throwException();
     }
 
 
+    @Override
     public boolean isBold() {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public boolean isItalic() {
         throw new UnsupportedOperationException("Not supported");
 
     }
 
+    @Override
     public int getFeatures() {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public String getFileName() {
         return throwException();
     }
 
+    @Override
     public Object getPeer() {
         return null;
     }
 
+    @Override
     public void setPeer(Object peer) {
         throwException();
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return false;
     }
 
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         if (mapper == null) {
             mapper = new CompositeGlyphMapper(this);
@@ -162,6 +178,7 @@ class FallbackResource implements CompositeFontResource {
         return mapper;
     }
 
+    @Override
     public int getSlotForFont(String fontName) {
         getLinkedFonts();
         int i = 0;
@@ -241,6 +258,7 @@ class FallbackResource implements CompositeFontResource {
         }
     }
 
+    @Override
     public int getNumSlots() {
         getLinkedFonts();
         int num = linkedFontFiles.size();
@@ -250,6 +268,7 @@ class FallbackResource implements CompositeFontResource {
         return num;
     }
 
+    @Override
     public float[] getGlyphBoundingBox(int glyphCode,
                                 float size, float[] retArr) {
         int slot = (glyphCode >>> 24);
@@ -258,6 +277,7 @@ class FallbackResource implements CompositeFontResource {
         return slotResource.getGlyphBoundingBox(slotglyphCode, size, retArr);
     }
 
+    @Override
     public float getAdvance(int glyphCode, float size) {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
@@ -265,6 +285,7 @@ class FallbackResource implements CompositeFontResource {
         return slotResource.getAdvance(slotglyphCode, size);
     }
 
+    @Override
     public synchronized FontResource getSlotResource(int slot) {
         getLinkedFonts();
         if (slot >= fallbacks.length) {
@@ -284,10 +305,12 @@ class FallbackResource implements CompositeFontResource {
         return fallbacks[slot];
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
 
@@ -303,7 +326,7 @@ class FallbackResource implements CompositeFontResource {
             if (strike.disposer != null) {
                 ref = Disposer.addRecord(strike, strike.disposer);
             } else {
-                ref = new WeakReference<FontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }

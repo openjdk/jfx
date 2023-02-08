@@ -29,30 +29,49 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 
+struct WGPUTextureViewImpl {
+};
+
 namespace WebGPU {
 
-class TextureView : public RefCounted<TextureView> {
+class Device;
+class Texture;
+
+// https://gpuweb.github.io/gpuweb/#gputextureview
+class TextureView : public WGPUTextureViewImpl, public RefCounted<TextureView> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<TextureView> create(id <MTLTexture> texture)
+    static Ref<TextureView> create(id<MTLTexture> texture, const WGPUTextureViewDescriptor& descriptor, const std::optional<WGPUExtent3D>& renderExtent, Device& device)
     {
-        return adoptRef(*new TextureView(texture));
+        return adoptRef(*new TextureView(texture, descriptor, renderExtent, device));
+    }
+    static Ref<TextureView> createInvalid(Device& device)
+    {
+        return adoptRef(*new TextureView(device));
     }
 
     ~TextureView();
 
-    void setLabel(const char*);
+    void setLabel(String&&);
 
-    id <MTLTexture> texture() const { return m_texture; }
+    bool isValid() const { return m_texture; }
+
+    id<MTLTexture> texture() const { return m_texture; }
+    const WGPUTextureViewDescriptor& descriptor() const { return m_descriptor; }
+    const std::optional<WGPUExtent3D>& renderExtent() const { return m_renderExtent; }
+
+    Device& device() const { return m_device; }
 
 private:
-    TextureView(id <MTLTexture>);
+    TextureView(id<MTLTexture>, const WGPUTextureViewDescriptor&, const std::optional<WGPUExtent3D>&, Device&);
+    TextureView(Device&);
 
-    id <MTLTexture> m_texture { nil };
+    const id<MTLTexture> m_texture { nil };
+
+    const WGPUTextureViewDescriptor m_descriptor;
+    const std::optional<WGPUExtent3D> m_renderExtent;
+
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-struct WGPUTextureViewImpl {
-    Ref<WebGPU::TextureView> textureView;
-};

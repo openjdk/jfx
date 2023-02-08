@@ -122,7 +122,7 @@ public:
     // and encapsulate any access in the algorithm class.
     Grid& mutableGrid() const { return m_grid; }
 
-    const RenderGrid* renderGrid() { return m_renderGrid; };
+    const RenderGrid* renderGrid() const { return m_renderGrid; };
 
     LayoutUnit minContentSize() const { return m_minContentSize; };
     LayoutUnit maxContentSize() const { return m_maxContentSize; };
@@ -241,6 +241,7 @@ private:
 
     enum SizingState {
         ColumnSizingFirstIteration,
+        ColumnSizingExtraIterationForSizeContainment,
         RowSizingFirstIteration,
         RowSizingExtraIterationForSizeContainment,
         ColumnSizingSecondIteration,
@@ -281,6 +282,7 @@ public:
     virtual bool recomputeUsedFlexFractionIfNeeded(double& flexFraction, LayoutUnit& totalGrowth) const = 0;
     virtual LayoutUnit freeSpaceForStretchAutoTracksStep() const = 0;
     virtual bool isComputingSizeContainment() const = 0;
+    virtual bool isComputingInlineSizeContainment() const = 0;
 
 protected:
     GridTrackSizingAlgorithmStrategy(GridTrackSizingAlgorithm& algorithm)

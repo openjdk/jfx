@@ -43,11 +43,11 @@ static JSC_DECLARE_HOST_FUNCTION(jsFileSystemDirectoryHandleIterator_onPromiseRe
 JSC_ANNOTATE_HOST_FUNCTION(JSFileSystemDirectoryHandleIteratorPrototypeNext, JSFileSystemDirectoryHandleIteratorPrototype::next);
 
 template<>
-const JSC::ClassInfo JSFileSystemDirectoryHandleIteratorBase::s_info = { "Directory Handle Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFileSystemDirectoryHandleIteratorBase) };
-const JSC::ClassInfo JSFileSystemDirectoryHandleIterator::s_info = { "Directory Handle Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFileSystemDirectoryHandleIterator) };
+const JSC::ClassInfo JSFileSystemDirectoryHandleIteratorBase::s_info = { "Directory Handle Iterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFileSystemDirectoryHandleIteratorBase) };
+const JSC::ClassInfo JSFileSystemDirectoryHandleIterator::s_info = { "Directory Handle Iterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFileSystemDirectoryHandleIterator) };
 
 template<>
-const JSC::ClassInfo JSFileSystemDirectoryHandleIteratorPrototype::s_info = { "Directory Handle Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFileSystemDirectoryHandleIteratorPrototype) };
+const JSC::ClassInfo JSFileSystemDirectoryHandleIteratorPrototype::s_info = { "Directory Handle Iterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFileSystemDirectoryHandleIteratorPrototype) };
 
 GCClient::IsoSubspace* JSFileSystemDirectoryHandleIterator::subspaceForImpl(VM& vm)
 {
@@ -73,7 +73,7 @@ JSC_DEFINE_HOST_FUNCTION(jsFileSystemDirectoryHandleIterator_onPromiseSettled, (
 JSBoundFunction* JSFileSystemDirectoryHandleIterator::createOnSettledFunction(JSC::JSGlobalObject* globalObject)
 {
     JSC::VM& vm = globalObject->vm();
-    auto onSettled = JSC::JSFunction::create(vm, globalObject, 0, String(), jsFileSystemDirectoryHandleIterator_onPromiseSettled);
+    auto onSettled = JSC::JSFunction::create(vm, globalObject, 0, String(), jsFileSystemDirectoryHandleIterator_onPromiseSettled, ImplementationVisibility::Public);
     return JSC::JSBoundFunction::create(vm, globalObject, onSettled, this, nullptr, 1, nullptr);
 }
 
@@ -90,7 +90,7 @@ JSC_DEFINE_HOST_FUNCTION(jsFileSystemDirectoryHandleIterator_onPromiseFulfilled,
 JSBoundFunction* JSFileSystemDirectoryHandleIterator::createOnFulfilledFunction(JSC::JSGlobalObject* globalObject)
 {
     JSC::VM& vm = globalObject->vm();
-    auto onFulfilled = JSC::JSFunction::create(vm, globalObject, 1, String(), jsFileSystemDirectoryHandleIterator_onPromiseFulfilled);
+    auto onFulfilled = JSC::JSFunction::create(vm, globalObject, 1, String(), jsFileSystemDirectoryHandleIterator_onPromiseFulfilled, ImplementationVisibility::Public);
     return JSC::JSBoundFunction::create(vm, globalObject, onFulfilled, this, nullptr, 1, nullptr);
 }
 
@@ -107,7 +107,7 @@ JSC_DEFINE_HOST_FUNCTION(jsFileSystemDirectoryHandleIterator_onPromiseRejected, 
 JSBoundFunction* JSFileSystemDirectoryHandleIterator::createOnRejectedFunction(JSC::JSGlobalObject* globalObject)
 {
     JSC::VM& vm = globalObject->vm();
-    auto onSettled = JSC::JSFunction::create(vm, globalObject, 0, String(), jsFileSystemDirectoryHandleIterator_onPromiseRejected);
+    auto onSettled = JSC::JSFunction::create(vm, globalObject, 0, String(), jsFileSystemDirectoryHandleIterator_onPromiseRejected, ImplementationVisibility::Public);
     return JSC::JSBoundFunction::create(vm, globalObject, onSettled, this, nullptr, 1, nullptr);
 }
 

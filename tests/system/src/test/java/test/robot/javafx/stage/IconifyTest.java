@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,19 +57,25 @@ public class IconifyTest extends VisualTestBase {
     private Stage topStage;
 
     public void canIconifyStage(StageStyle stageStyle, boolean resizable) throws Exception {
-        final CountDownLatch shownLatch = new CountDownLatch(2);
+        final CountDownLatch bottomShownLatch = new CountDownLatch(1);
+        final CountDownLatch topShownLatch = new CountDownLatch(1);
 
         runAndWait(() -> {
             // Bottom stage, should be visible after top stage is iconified
-            bottomStage = getStage(true);
+            bottomStage = getStage(false);
             Scene bottomScene = new Scene(new Pane(), WIDTH, HEIGHT);
             bottomScene.setFill(BOTTOM_COLOR);
             bottomStage.setScene(bottomScene);
             bottomStage.setX(0);
             bottomStage.setY(0);
-            bottomStage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+            bottomStage.setOnShown(e -> Platform.runLater(bottomShownLatch::countDown));
             bottomStage.show();
+        });
 
+        assertTrue("Timeout waiting for bottom stage to be shown",
+            bottomShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+
+        runAndWait(() -> {
             // Top stage, will be inconified
             topStage = getStage(true);
             topStage.initStyle(stageStyle);
@@ -79,18 +85,14 @@ public class IconifyTest extends VisualTestBase {
             topStage.setScene(topScene);
             topStage.setX(0);
             topStage.setY(0);
-            topStage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+            topStage.setOnShown(e -> Platform.runLater(topShownLatch::countDown));
             topStage.show();
         });
 
-        assertTrue("Timeout waiting for stages to be shown",
-            shownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue("Timeout waiting for top stage to be shown",
+            topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
 
-        runAndWait(() -> {
-            topStage.toFront();
-        });
-
-        sleep(500);
+        sleep(1000);
         runAndWait(() -> {
             assertFalse(topStage.isIconified());
             Color color = getColor(100, 100);
@@ -101,7 +103,7 @@ public class IconifyTest extends VisualTestBase {
             topStage.setIconified(true);
         });
 
-        sleep(500);
+        sleep(1000);
         runAndWait(() -> {
             assertTrue(topStage.isIconified());
             Color color = getColor(100, 100);
@@ -112,7 +114,7 @@ public class IconifyTest extends VisualTestBase {
             topStage.setIconified(false);
         });
 
-        sleep(500);
+        sleep(1000);
         runAndWait(() -> {
             assertFalse(topStage.isIconified());
             Color color = getColor(100, 100);

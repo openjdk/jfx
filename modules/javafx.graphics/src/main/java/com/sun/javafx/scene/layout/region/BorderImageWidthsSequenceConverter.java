@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.layout.region;
 
 import javafx.css.ParsedValue;
-import javafx.css.Size;
 import javafx.css.StyleConverter;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.text.Font;

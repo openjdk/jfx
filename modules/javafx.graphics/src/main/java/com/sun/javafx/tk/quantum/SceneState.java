@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,6 +92,7 @@ class SceneState extends PresentableState {
      * May only be called from the event thread. Must be called
      * under the render lock.
      */
+    @Override
     public void update() {
         // When the state is created, the platform view has not yet been
         // created (it is null).  Update the view each time the we ask

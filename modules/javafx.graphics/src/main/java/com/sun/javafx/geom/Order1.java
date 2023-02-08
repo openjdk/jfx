@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,50 +51,62 @@ final class Order1 extends Curve {
         }
     }
 
+    @Override
     public int getOrder() {
         return 1;
     }
 
+    @Override
     public double getXTop() {
         return x0;
     }
 
+    @Override
     public double getYTop() {
         return y0;
     }
 
+    @Override
     public double getXBot() {
         return x1;
     }
 
+    @Override
     public double getYBot() {
         return y1;
     }
 
+    @Override
     public double getXMin() {
         return xmin;
     }
 
+    @Override
     public double getXMax() {
         return xmax;
     }
 
+    @Override
     public double getX0() {
         return (direction == INCREASING) ? x0 : x1;
     }
 
+    @Override
     public double getY0() {
         return (direction == INCREASING) ? y0 : y1;
     }
 
+    @Override
     public double getX1() {
         return (direction == DECREASING) ? x0 : x1;
     }
 
+    @Override
     public double getY1() {
         return (direction == DECREASING) ? y0 : y1;
     }
 
+    @Override
     public double XforY(double y) {
         if (x0 == x1 || y <= y0) {
             return x0;
@@ -106,6 +118,7 @@ final class Order1 extends Curve {
         return (x0 + (y - y0) * (x1 - x0) / (y1 - y0));
     }
 
+    @Override
     public double TforY(double y) {
         if (y <= y0) {
             return 0;
@@ -116,14 +129,17 @@ final class Order1 extends Curve {
         return (y - y0) / (y1 - y0);
     }
 
+    @Override
     public double XforT(double t) {
         return x0 + t * (x1 - x0);
     }
 
+    @Override
     public double YforT(double t) {
         return y0 + t * (y1 - y0);
     }
 
+    @Override
     public double dXforT(double t, int deriv) {
         switch (deriv) {
         case 0:
@@ -135,6 +151,7 @@ final class Order1 extends Curve {
         }
     }
 
+    @Override
     public double dYforT(double t, int deriv) {
         switch (deriv) {
         case 0:
@@ -146,6 +163,7 @@ final class Order1 extends Curve {
         }
     }
 
+    @Override
     public double nextVertical(double t0, double t1) {
         return t1;
     }
@@ -190,11 +208,13 @@ final class Order1 extends Curve {
         return false;
     }
 
+    @Override
     public void enlarge(RectBounds r) {
         r.add((float) x0, (float) y0);
         r.add((float) x1, (float) y1);
     }
 
+    @Override
     public Curve getSubCurve(double ystart, double yend, int dir) {
         if (ystart == y0 && yend == y1) {
             return getWithDirection(dir);
@@ -209,6 +229,7 @@ final class Order1 extends Curve {
         return new Order1(xstart, ystart, xend, yend, dir);
     }
 
+    @Override
     public Curve getReversedCurve() {
         return new Order1(x0, y0, x1, y1, -direction);
     }
@@ -297,6 +318,7 @@ final class Order1 extends Curve {
         return orderof(XforY(y), c1.XforY(y));
     }
 
+    @Override
     public int getSegment(float coords[]) {
         if (direction == INCREASING) {
             coords[0] = (float) x1;

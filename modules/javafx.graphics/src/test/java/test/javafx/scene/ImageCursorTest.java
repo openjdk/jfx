@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import test.javafx.scene.image.TestImages;
@@ -235,11 +234,11 @@ public final class ImageCursorTest {
         final ImageCursor testCursor = new ImageCursor(testImage, 16, 16);
 
         final PropertyInvalidationCounter<Number> hotspotXInvalidationCounter =
-                new PropertyInvalidationCounter<Number>();
+                new PropertyInvalidationCounter<>();
         final PropertyInvalidationCounter<Number> hotspotYInvalidationCounter =
-                new PropertyInvalidationCounter<Number>();
+                new PropertyInvalidationCounter<>();
         final PropertyInvalidationCounter<Object> imageInvalidationCounter =
-                new PropertyInvalidationCounter<Object>();
+                new PropertyInvalidationCounter<>();
 
         testCursor.hotspotXProperty().addListener(hotspotXInvalidationCounter);
         testCursor.hotspotYProperty().addListener(hotspotYInvalidationCounter);

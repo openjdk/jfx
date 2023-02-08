@@ -53,6 +53,15 @@ typedef struct pas_deferred_decommit_log pas_deferred_decommit_log;
 typedef struct pas_segregated_heap pas_segregated_heap;
 typedef struct pas_segregated_page pas_segregated_page;
 
+typedef struct PAS_ALIGNED(sizeof(uintptr_t) * 2) pas_segregated_page_emptiness {
+    uintptr_t use_epoch;
+    uintptr_t num_non_empty_words;
+} pas_segregated_page_emptiness;
+#if PAS_COMPILER(CLANG)
+_Static_assert(sizeof(pas_segregated_page_emptiness) == sizeof(pas_pair), "pas_segregated_page_emptiness should be able to be used as pas_pair");
+_Static_assert(PAS_ALIGNOF(pas_segregated_page_emptiness) == PAS_ALIGNOF(pas_pair), "pas_segregated_page_emptiness should be able to be used as pas_pair");
+#endif
+
 /* This struct lives somewhere in the small page. Where it lives, and how big the page is, are
    controlled by the pas_segregated_page_config. */
 struct pas_segregated_page {
@@ -74,7 +83,7 @@ struct pas_segregated_page {
 
     pas_lock* lock_ptr;
 
-    uintptr_t use_epoch;
+    pas_segregated_page_emptiness emptiness;
 
     /* Can be one of:
 
@@ -103,7 +112,6 @@ struct pas_segregated_page {
        this doesn't get cleared until we mark the page as being in_use_for_allocation. */
     pas_segregated_view owner;
 
-    uint16_t num_non_empty_words;
     pas_allocator_index view_cache_index;
 
     unsigned alloc_bits[1];
@@ -296,7 +304,7 @@ pas_segregated_page_bytes_dirtied_per_object(unsigned object_size,
 PAS_API void pas_segregated_page_construct(pas_segregated_page* page,
                                            pas_segregated_view owner,
                                            bool was_stolen,
-                                           pas_segregated_page_config* page_config);
+                                           const pas_segregated_page_config* page_config);
 
 static PAS_ALWAYS_INLINE pas_page_granule_use_count*
 pas_segregated_page_get_granule_use_counts(pas_segregated_page* page,
@@ -318,7 +326,7 @@ pas_segregated_page_qualifies_for_decommit(
 
     PAS_ASSERT(page_config.base.is_enabled);
 
-    if (!page->num_non_empty_words)
+    if (!page->emptiness.num_non_empty_words)
         return true;
 
     if (page_config.base.page_size == page_config.base.granule_size)
@@ -413,7 +421,12 @@ pas_segregated_page_is_allocated(uintptr_t begin,
     return result;
 }
 
-PAS_API void pas_segregated_page_note_emptiness(pas_segregated_page* page);
+typedef enum {
+    pas_note_emptiness_clear_num_non_empty_words,
+    pas_note_emptiness_keep_num_non_empty_words,
+} pas_note_emptiness_action;
+
+PAS_API void pas_segregated_page_note_emptiness(pas_segregated_page* page, pas_note_emptiness_action);
 
 typedef enum {
     pas_commit_fully_holding_page_lock,
@@ -443,7 +456,7 @@ PAS_API bool pas_segregated_page_take_physically(
 PAS_API size_t pas_segregated_page_get_num_empty_granules(pas_segregated_page* page);
 PAS_API size_t pas_segregated_page_get_num_committed_granules(pas_segregated_page* page);
 
-PAS_API pas_segregated_page_config* pas_segregated_page_get_config(pas_segregated_page* page);
+PAS_API const pas_segregated_page_config* pas_segregated_page_get_config(pas_segregated_page* page);
 
 PAS_API void pas_segregated_page_add_commit_range(pas_segregated_page* page,
                                                   pas_heap_summary* result,
@@ -451,10 +464,10 @@ PAS_API void pas_segregated_page_add_commit_range(pas_segregated_page* page,
 
 PAS_API pas_segregated_page_and_config
 pas_segregated_page_and_config_for_address_and_heap_config(uintptr_t begin,
-                                                           pas_heap_config* config);
+                                                           const pas_heap_config* config);
 
 static inline pas_segregated_page*
-pas_segregated_page_for_address_and_heap_config(uintptr_t begin, pas_heap_config* config)
+pas_segregated_page_for_address_and_heap_config(uintptr_t begin, const pas_heap_config* config)
 {
     return pas_segregated_page_and_config_for_address_and_heap_config(begin, config).page;
 }

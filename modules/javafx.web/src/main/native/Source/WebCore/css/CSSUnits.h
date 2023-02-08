@@ -84,6 +84,13 @@ enum class CSSUnitType : uint8_t {
     FirstViewportCSSUnitType = CSS_VW,
     LastViewporCSSUnitType = CSS_DVI,
 
+    CSS_CQW,
+    CSS_CQH,
+    CSS_CQI,
+    CSS_CQB,
+    CSS_CQMIN,
+    CSS_CQMAX,
+
     CSS_DPPX,
     CSS_X,
     CSS_DPI,
@@ -139,7 +146,6 @@ enum class CSSUnitCategory : uint8_t {
 
 CSSUnitCategory unitCategory(CSSUnitType);
 CSSUnitType canonicalUnitTypeForCategory(CSSUnitCategory);
-CSSUnitType canonicalUnitType(CSSUnitType);
 
 WTF::TextStream& operator<<(WTF::TextStream&, CSSUnitCategory);
 WTF::TextStream& operator<<(WTF::TextStream&, CSSUnitType);

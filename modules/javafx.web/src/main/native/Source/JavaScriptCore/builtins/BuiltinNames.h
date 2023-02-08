@@ -73,10 +73,10 @@ namespace JSC {
     macro(Map) \
     macro(throwTypeErrorFunction) \
     macro(typedArrayLength) \
+    macro(typedArrayClone) \
     macro(typedArrayContentType) \
     macro(typedArraySort) \
     macro(typedArrayGetOriginalConstructor) \
-    macro(typedArraySubarrayCreate) \
     macro(BuiltinLog) \
     macro(BuiltinDescribe) \
     macro(homeObject) \
@@ -92,6 +92,9 @@ namespace JSC {
     macro(values) \
     macro(get) \
     macro(set) \
+    macro(clear) \
+    macro(delete) \
+    macro(size) \
     macro(shift) \
     macro(Int8Array) \
     macro(Int16Array) \
@@ -127,6 +130,7 @@ namespace JSC {
     macro(isSharedTypedArrayView) \
     macro(isDetached) \
     macro(typedArrayDefaultComparator) \
+    macro(typedArrayFromFast) \
     macro(isBoundFunction) \
     macro(hasInstanceBoundFunction) \
     macro(instanceOf) \
@@ -191,6 +195,18 @@ namespace JSC {
     macro(sentinelString) \
     macro(createRemoteFunction) \
     macro(isRemoteFunction) \
+    macro(arraySort) \
+    macro(jsonParse) \
+    macro(jsonStringify) \
+    macro(String) \
+    macro(substr) \
+    macro(endsWith) \
+    macro(getOwnPropertyDescriptor) \
+    macro(getOwnPropertyNames) \
+    macro(getOwnPropertySymbols) \
+    macro(hasOwn) \
+    macro(indexOf) \
+    macro(pop) \
 
 
 namespace Symbols {

@@ -536,6 +536,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
         blkFlags     = blkFlags_ref.initial;
     }
 
+    @Override
     public Renderer init(final int pix_boundsX, final int pix_boundsY,
                   final int pix_boundsWidth, final int pix_boundsHeight,
                   final int windingRule)
@@ -591,6 +592,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
     /**
      * Disposes this renderer and recycle it clean up before reusing this instance
      */
+    @Override
     public void dispose() {
         if (DO_STATS) {
             rdrCtx.stats.stat_rdr_activeEdges.add(activeEdgeMaxUsed);
@@ -1531,6 +1533,7 @@ public final class Renderer implements MarlinRenderer, MarlinConst {
 
     private int bbox_spminX, bbox_spmaxX, bbox_spminY, bbox_spmaxY;
 
+    @Override
     public void produceAlphas(final MarlinAlphaConsumer ac) {
         ac.setMaxAlpha(MAX_AA_ALPHA);
 

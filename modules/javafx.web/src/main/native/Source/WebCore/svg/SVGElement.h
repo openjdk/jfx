@@ -27,6 +27,7 @@
 #include "SVGNames.h"
 #include "SVGParsingError.h"
 #include "SVGPropertyOwnerRegistry.h"
+#include "SVGRenderStyleDefs.h"
 #include "StyledElement.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -51,6 +52,7 @@ void mapAttributeToCSSProperty(HashMap<AtomStringImpl*, CSSPropertyID>* property
 class SVGElement : public StyledElement, public SVGPropertyOwner {
     WTF_MAKE_ISO_ALLOCATED(SVGElement);
 public:
+    bool isInnerSVGSVGElement() const;
     bool isOutermostSVGSVGElement() const;
 
     SVGSVGElement* ownerSVGElement() const;
@@ -82,8 +84,9 @@ public:
 
     virtual AffineTransform* supplementalTransform() { return nullptr; }
 
-    inline void invalidateSVGAttributes();
-    inline void invalidateSVGPresentationalHintStyle();
+    inline void setAnimatedSVGAttributesAreDirty();
+    inline void setPresentationalHintStyleIsDirty();
+    void updateSVGRendererForElementChange();
 
     // The instances of an element are clones made in shadow trees to implement <use>.
     const WeakHashSet<SVGElement>& instances() const;
@@ -149,8 +152,10 @@ public:
 
     const RenderStyle* computedStyle(PseudoId = PseudoId::None) final;
 
+    ColorInterpolation colorInterpolation() const;
+
     // These are needed for the RenderTree, animation and DOM.
-    String className() const { return m_className->currentValue(); }
+    AtomString className() const { return AtomString { m_className->currentValue() }; }
     SVGAnimatedString& classNameAnimated() { return m_className; }
 
 protected:

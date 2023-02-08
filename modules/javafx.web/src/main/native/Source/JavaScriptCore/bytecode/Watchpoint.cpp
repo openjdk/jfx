@@ -33,6 +33,7 @@
 #include "FunctionRareData.h"
 #include "HeapInlines.h"
 #include "LLIntPrototypeLoadAdaptiveStructureWatchpoint.h"
+#include "ObjectAdaptiveStructureWatchpoint.h"
 #include "StructureRareDataInlines.h"
 #include "StructureStubClearingWatchpoint.h"
 #include "VM.h"
@@ -138,8 +139,8 @@ void WatchpointSet::fireAllWatchpoints(VM& vm, const FireDetail& detail)
     DeferGCForAWhile deferGC(vm);
 
     while (!m_set.isEmpty()) {
-        Watchpoint* watchpoint = m_set.begin();
-        ASSERT(watchpoint->isOnList());
+        Watchpoint& watchpoint = *m_set.begin();
+        ASSERT(watchpoint.isOnList());
 
         // Removing the Watchpoint before firing it makes it possible to implement watchpoints
         // that add themselves to a different set when they fire. This kind of "adaptive"
@@ -150,11 +151,11 @@ void WatchpointSet::fireAllWatchpoints(VM& vm, const FireDetail& detail)
         // So, before the watchpoint decides to invalidate any code, it can check if it is
         // possible to add itself to the transition watchpoint set of the singleton object's new
         // Structure.
-        watchpoint->remove();
-        ASSERT(m_set.begin() != watchpoint);
-        ASSERT(!watchpoint->isOnList());
+        watchpoint.remove();
+        ASSERT(&*m_set.begin() != &watchpoint);
+        ASSERT(!watchpoint.isOnList());
 
-        watchpoint->fire(vm, detail);
+        watchpoint.fire(vm, detail);
         // After we fire the watchpoint, the watchpoint pointer may be a dangling pointer. That's
         // fine, because we have no use for the pointer anymore.
     }

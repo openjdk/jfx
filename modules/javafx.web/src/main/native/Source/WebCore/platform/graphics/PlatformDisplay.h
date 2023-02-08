@@ -86,6 +86,13 @@ public:
 #if USE(EGL)
     EGLDisplay eglDisplay() const;
     bool eglCheckVersion(int major, int minor) const;
+
+    struct EGLExtensions {
+        bool KHR_image_base { false };
+        bool EXT_image_dma_buf_import { false };
+        bool EXT_image_dma_buf_import_modifiers { false };
+    };
+    const EGLExtensions& eglExtensions() const { return m_eglExtensions; }
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
@@ -97,8 +104,7 @@ public:
     virtual cmsHPROFILE colorProfile() const;
 #endif
 
-#if USE(ATSPI) || USE(ATK)
-    void setAccessibilityBusAddress(String&& address) { m_accessibilityBusAddress = WTFMove(address); }
+#if USE(ATSPI)
     const String& accessibilityBusAddress() const;
 #endif
 
@@ -130,7 +136,7 @@ protected:
     mutable LCMSProfilePtr m_iccProfile;
 #endif
 
-#if USE(ATSPI) || USE(ATK)
+#if USE(ATSPI)
     virtual String plartformAccessibilityBusAddress() const { return { }; }
 
     mutable std::optional<String> m_accessibilityBusAddress;
@@ -145,6 +151,7 @@ private:
     bool m_eglDisplayInitialized { false };
     int m_eglMajorVersion { 0 };
     int m_eglMinorVersion { 0 };
+    EGLExtensions m_eglExtensions;
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)

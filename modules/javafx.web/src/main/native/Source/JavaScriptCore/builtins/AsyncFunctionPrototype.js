@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@globalPrivate
+@linkTimeConstant
 function asyncFunctionResume(generator, promise, sentValue, resumeMode)
 {
     "use strict";
@@ -48,7 +48,7 @@ function asyncFunctionResume(generator, promise, sentValue, resumeMode)
 
     var capturedGenerator = generator;
     var capturedPromise = promise;
-    @resolveWithoutPromise(value,
+    @resolveWithoutPromiseForAsyncAwait(value,
         function(value) { @asyncFunctionResume(capturedGenerator, capturedPromise, value, @GeneratorResumeModeNormal); },
         function(error) { @asyncFunctionResume(capturedGenerator, capturedPromise, error, @GeneratorResumeModeThrow); });
 

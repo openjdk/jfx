@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public class GlowTest extends EffectsTestBase {
         effect.setLevel(1);
         assertEquals(1.0f, (float) effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(1.0f, (float) ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test
@@ -58,7 +58,7 @@ public class GlowTest extends EffectsTestBase {
         assertEquals(0.3f, (float) effect.getLevel(), 1e-100);
         assertEquals(0.3f, (float) effect.levelProperty().get(), 1e-100);
         pulse();
-        assertEquals(0.3f, (float) ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
+        assertEquals(0.3f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test
@@ -69,7 +69,7 @@ public class GlowTest extends EffectsTestBase {
         effect.setLevel(-0.1f);
         assertEquals(-0.1f, (float) effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(0.0f, (float) ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
+        assertEquals(0.0f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
   }
 
     @Test
@@ -80,7 +80,7 @@ public class GlowTest extends EffectsTestBase {
         effect.setLevel(1.1f);
         assertEquals(1.1f, (float) effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(1.0f, (float) ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test

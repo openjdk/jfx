@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,18 +53,22 @@ public class PrismMetrics implements Metrics {
         this.size = size;
     }
 
+    @Override
     public float getAscent() {
         return ascent;
     }
 
+    @Override
     public float getDescent() {
         return descent;
     }
 
+    @Override
     public float getLineGap() {
         return linegap;
     }
 
+    @Override
     public float getLineHeight() {
         return -ascent + descent + linegap;
     }
@@ -75,51 +79,61 @@ public class PrismMetrics implements Metrics {
         }
     }
 
+    @Override
     public float getTypoAscent() {
         checkStyleMetrics();
         return styleMetrics[TYPO_ASCENT];
     }
 
+    @Override
     public float getTypoDescent() {
         checkStyleMetrics();
         return styleMetrics[TYPO_DESCENT];
     }
 
+    @Override
     public float getTypoLineGap() {
         checkStyleMetrics();
         return styleMetrics[TYPO_LINEGAP];
     }
 
+    @Override
     public float getCapHeight() {
         checkStyleMetrics();
         return styleMetrics[CAPHEIGHT];
     }
 
+    @Override
     public float getXHeight() {
         checkStyleMetrics();
         return styleMetrics[XHEIGHT];
     }
 
+    @Override
     public float getStrikethroughOffset() {
         checkStyleMetrics();
         return styleMetrics[STRIKETHROUGH_OFFSET];
     }
 
+    @Override
     public float getStrikethroughThickness() {
         checkStyleMetrics();
         return styleMetrics[STRIKETHROUGH_THICKNESS];
     }
 
+    @Override
     public float getUnderLineOffset() {
         checkStyleMetrics();
         return styleMetrics[UNDERLINE_OFFSET];
     }
 
+    @Override
     public float getUnderLineThickness() {
         checkStyleMetrics();
         return styleMetrics[UNDERLINE_THICKESS];
     }
 
+    @Override
     public String toString() {
         return
             "ascent = " + getAscent() +

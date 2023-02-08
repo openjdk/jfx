@@ -22,6 +22,8 @@
 #include "config.h"
 #include "InputTypeNames.h"
 
+#include "CommonAtomStrings.h"
+#include "HTMLNames.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -33,133 +35,125 @@ namespace InputTypeNames {
 
 const AtomString& button()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("button", AtomString::ConstructFromLiteral);
-    return name;
+    return HTMLNames::buttonTag->localName();
 }
 
 const AtomString& checkbox()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("checkbox", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("checkbox"_s);
     return name;
 }
 
 const AtomString& color()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("color", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("color"_s);
     return name;
 }
 
 const AtomString& date()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("date", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("date"_s);
     return name;
 }
 
 const AtomString& datetimelocal()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("datetime-local", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("datetime-local"_s);
     return name;
 }
 
 const AtomString& email()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("email", AtomString::ConstructFromLiteral);
-    return name;
+    return emailAtom();
 }
 
 const AtomString& file()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("file", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("file"_s);
     return name;
 }
 
 const AtomString& hidden()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("hidden", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("hidden"_s);
     return name;
 }
 
 const AtomString& image()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("image", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("image"_s);
     return name;
 }
 
 const AtomString& month()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("month", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("month"_s);
     return name;
 }
 
 const AtomString& number()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("number", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("number"_s);
     return name;
 }
 
 const AtomString& password()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("password", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("password"_s);
     return name;
 }
 
 const AtomString& radio()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("radio", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("radio"_s);
     return name;
 }
 
 const AtomString& range()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("range", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("range"_s);
     return name;
 }
 
 const AtomString& reset()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("reset", AtomString::ConstructFromLiteral);
-    return name;
+    return resetAtom();
 }
 
 const AtomString& search()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("search", AtomString::ConstructFromLiteral);
-    return name;
+    return searchAtom();
 }
 
 const AtomString& submit()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("submit", AtomString::ConstructFromLiteral);
-    return name;
+    return submitAtom();
 }
 
 const AtomString& telephone()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("tel", AtomString::ConstructFromLiteral);
-    return name;
+    return telAtom();
 }
 
 const AtomString& text()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("text", AtomString::ConstructFromLiteral);
-    return name;
+    return textAtom();
 }
 
 const AtomString& time()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("time", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("time"_s);
     return name;
 }
 
 const AtomString& url()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("url", AtomString::ConstructFromLiteral);
-    return name;
+    return urlAtom();
 }
 
 const AtomString& week()
 {
-    static MainThreadNeverDestroyed<const AtomString> name("week", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> name("week"_s);
     return name;
 }
 

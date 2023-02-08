@@ -435,7 +435,7 @@ HRESULT PopImage(
     IStoragePtr spStorage;
     OLE_HRT( ::StgCreateDocfile(
         NULL,
-        STGM_READWRITE | STGM_SHARE_EXCLUSIVE | STGM_DIRECT | STGM_CREATE,
+        STGM_READWRITE | STGM_SHARE_EXCLUSIVE | STGM_DIRECT | STGM_CREATE | STGM_DELETEONRELEASE,
         NULL,
         &spStorage))
 

@@ -156,15 +156,15 @@ function filter(callback /*, thisArg */)
     return result;
 }
 
-function groupBy(callback /*, thisArg */)
+function group(callback /*, thisArg */)
 {
     "use strict";
 
-    var array = @toObject(this, "Array.prototype.groupBy requires that |this| not be null or undefined");
+    var array = @toObject(this, "Array.prototype.group requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
     if (!@isCallable(callback))
-        @throwTypeError("Array.prototype.groupBy callback must be a function");
+        @throwTypeError("Array.prototype.group callback must be a function");
 
     var thisArg = @argument(1);
 
@@ -182,15 +182,15 @@ function groupBy(callback /*, thisArg */)
     return groups;
 }
 
-function groupByToMap(callback /*, thisArg */)
+function groupToMap(callback /*, thisArg */)
 {
     "use strict";
 
-    var array = @toObject(this, "Array.prototype.groupByToMap requires that |this| not be null or undefined");
+    var array = @toObject(this, "Array.prototype.groupToMap requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
     if (!@isCallable(callback))
-        @throwTypeError("Array.prototype.groupByToMap callback must be a function");
+        @throwTypeError("Array.prototype.groupToMap callback must be a function");
 
     var thisArg = @argument(1);
 
@@ -395,7 +395,7 @@ function includes(searchElement /*, fromIndex*/)
     return false;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortStringComparator(a, b)
 {
     "use strict";
@@ -409,7 +409,7 @@ function sortStringComparator(a, b)
     return aString > bString ? 1 : -1;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortCompact(receiver, receiverLength, compacted, isStringSort)
 {
     "use strict";
@@ -433,7 +433,7 @@ function sortCompact(receiver, receiverLength, compacted, isStringSort)
     return undefinedCount;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortCommit(receiver, receiverLength, sorted, undefinedCount)
 {
     "use strict";
@@ -460,7 +460,7 @@ function sortCommit(receiver, receiverLength, sorted, undefinedCount)
         delete receiver[i];
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortMerge(dst, src, srcIndex, srcEnd, width, comparator)
 {
     "use strict";
@@ -493,7 +493,7 @@ function sortMerge(dst, src, srcIndex, srcEnd, width, comparator)
     }
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortMergeSort(array, comparator)
 {
     "use strict";
@@ -515,7 +515,7 @@ function sortMergeSort(array, comparator)
     return src;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortBucketSort(array, dst, bucket, depth)
 {
     "use strict";
@@ -589,7 +589,7 @@ function sort(comparator)
     return receiver;
 }
 
-@globalPrivate
+@linkTimeConstant
 function concatSlowPath()
 {
     "use strict";
@@ -648,7 +648,7 @@ function concat(first)
     return @tailCallForwardArguments(@concatSlowPath, this);
 }
 
-@globalPrivate
+@linkTimeConstant
 function maxWithPositives(a, b)
 {
     "use strict";
@@ -656,7 +656,7 @@ function maxWithPositives(a, b)
     return (a < b) ? b : a;
 }
 
-@globalPrivate
+@linkTimeConstant
 function minWithMaybeNegativeZeroAndPositive(maybeNegativeZero, positive)
 {
     "use strict";
@@ -705,7 +705,7 @@ function copyWithin(target, start /*, end */)
     return array;
 }
 
-@globalPrivate
+@linkTimeConstant
 function flatIntoArray(target, source, sourceLength, targetIndex, depth)
 {
     "use strict";
@@ -744,7 +744,7 @@ function flat()
     return result;
 }
 
-@globalPrivate
+@linkTimeConstant
 function flatIntoArrayWithCallback(target, source, sourceLength, targetIndex, callback, thisArg)
 {
     "use strict";
@@ -794,4 +794,160 @@ function at(index)
         k += length;
 
     return (k >= 0 && k < length) ? array[k] : @undefined;
+}
+
+function toReversed()
+{
+    "use strict";
+
+    // Step 1.
+    var array = @toObject(this, "Array.prototype.toReversed requires that |this| not be null or undefined");
+
+    // Step 2.
+    var length = @toLength(array.length);
+
+    // Step 3.
+    var result = @newArrayWithSize(length);
+
+    // Step 4-5.
+    for (var k = 0; k < length; k++) {
+        var fromValue = array[length - k - 1];
+        @putByValDirect(result, k, fromValue);
+    }
+
+    return result;
+}
+
+function toSorted(comparator)
+{
+    "use strict";
+
+    // Step 1.
+    if (comparator !== @undefined && !@isCallable(comparator))
+        @throwTypeError("Array.prototype.toSorted requires the comparator argument to be a function or undefined");
+
+    // Step 2.
+    var array = @toObject(this, "Array.prototype.toSorted requires that |this| not be null or undefined");
+
+    // Step 3.
+    var length = @toLength(array.length);
+
+    // Step 4.
+    var result = @newArrayWithSize(length);
+
+    // Step 8.
+    for (var k = 0; k < length; k++)
+        @putByValDirect(result, k, array[k]);
+
+    // Step 6.
+    @arraySort.@call(result, comparator);
+
+    return result;
+}
+
+function toSpliced(start, deleteCount /*, ...items */)
+{
+    "use strict"
+
+    // Step 1.
+    var array = @toObject(this, "Array.prototype.toSpliced requires that |this| not be null or undefined");
+
+    // Step 2.
+    var length = @toLength(array.length);
+
+    // Step 3.
+    var relativeStart = @toIntegerOrInfinity(start);
+
+    var actualStart;
+    // Step 4-6.
+    if (relativeStart === -@Infinity)
+        actualStart = 0;
+    else if (relativeStart < 0)
+        actualStart = length + relativeStart > 0 ? length + relativeStart : 0;
+    else
+        actualStart = @min(relativeStart, length);
+
+    // Step 7.
+    var insertCount = 0;
+    var actualDeleteCount;
+
+    // Step 8-10.
+    if (arguments.length === 0)
+        actualDeleteCount = 0;
+    else if (arguments.length === 1)
+        actualDeleteCount = length - actualStart;
+    else {
+        insertCount = arguments.length - 2;
+        var tempDeleteCount = @toIntegerOrInfinity(deleteCount);
+        tempDeleteCount = tempDeleteCount > 0 ? tempDeleteCount : 0;
+        actualDeleteCount = @min(tempDeleteCount, length - actualStart);
+    }
+
+    // Step 11.
+    var newLen = length + insertCount - actualDeleteCount;
+
+    // Step 12.
+    if (newLen >= @MAX_SAFE_INTEGER)
+        @throwTypeError("Array length exceeds 2**53 - 1");
+
+    // Step 13.
+    var result = @newArrayWithSize(newLen);
+
+    // Step 14.
+    var k = 0;
+
+    // Step 16.
+    for (; k < actualStart; k++)
+        @putByValDirect(result, k, array[k]);
+
+    // Step 17.
+    for (var i = 0; i < insertCount; i++, k++)
+        @putByValDirect(result, k, arguments[i + 2]);
+
+    // Step 18.
+    for (; k < newLen; k++) {
+        var from = k + actualDeleteCount - insertCount;
+        @putByValDirect(result, k, array[from]);
+    }
+
+    return result;
+
+}
+
+function with(index, value)
+{
+    "use strict";
+
+    // Step 1.
+    var array = @toObject(this, "Array.prototype.with requires that |this| not be null or undefined");
+
+    // Step 2.
+    var length = @toLength(array.length);
+
+    // Step 3.
+    var relativeIndex = @toIntegerOrInfinity(index);
+
+    // Step 4-5.
+    var actualIndex;
+    if (relativeIndex >= 0)
+        actualIndex = relativeIndex;
+    else
+        actualIndex = length + relativeIndex;
+
+    // Step 6.
+    if (actualIndex >= length || actualIndex < 0)
+        @throwRangeError("Array index out of Range");
+
+    // Step 7.
+    var result = @newArrayWithSize(length);
+
+    // Step 8-9
+    for (var k = 0; k < length; k++) {
+        if (k === actualIndex)
+            @putByValDirect(result, k, value);
+        else
+            @putByValDirect(result, k, array[k]);
+    }
+
+    return result;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.lang.annotation.Native;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public abstract class Window {
 
@@ -84,7 +83,7 @@ public abstract class Window {
     private volatile long delegatePtr = 0L;
 
     // window list
-    static private final LinkedList<Window> visibleWindows = new LinkedList<Window>();
+    static private final LinkedList<Window> visibleWindows = new LinkedList<>();
      // Return a list of all visible windows.  Note that on platforms without a native window manager,
      // this list will be sorted in proper z-order
     static public synchronized List<Window> getWindows() {
@@ -197,6 +196,7 @@ public abstract class Window {
     private final Window owner;
     private final int styleMask;
     private final boolean isDecorated;
+    private final boolean isPopup;
     private boolean shouldStartUndecoratedMove = false;
 
     protected View view = null;
@@ -268,6 +268,7 @@ public abstract class Window {
         this.owner = owner;
         this.styleMask = styleMask;
         this.isDecorated = (this.styleMask & Window.TITLED) != 0;
+        this.isPopup = (this.styleMask & Window.POPUP) != 0;
 
         this.screen = screen != null ? screen : Screen.getMainScreen();
         if (PrismSettings.allowHiDPIScaling) {
@@ -419,6 +420,11 @@ public abstract class Window {
     public boolean isDecorated() {
         Application.checkEventThread();
         return this.isDecorated;
+    }
+
+    public boolean isPopup() {
+        Application.checkEventThread();
+        return this.isPopup;
     }
 
     public boolean isMinimized() {

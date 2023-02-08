@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ public class OpenTypeGlyphMapper extends CharToGlyphMapper {
         missingGlyph = 0; /* standard for TrueType fonts */
     }
 
+    @Override
     public int getGlyphCode(int charCode) {
         try {
             return cmap.getGlyph(charCode);

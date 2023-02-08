@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,31 +65,31 @@ public final class SwipeEvent extends GestureEvent {
      * Common supertype for all swipe event types.
      */
     public static final EventType<SwipeEvent> ANY =
-            new EventType<SwipeEvent>(GestureEvent.ANY, "ANY_SWIPE");
+            new EventType<>(GestureEvent.ANY, "ANY_SWIPE");
 
     /**
      * This event occurs when user performs leftward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_LEFT =
-            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_LEFT");
+            new EventType<>(SwipeEvent.ANY, "SWIPE_LEFT");
 
     /**
      * This event occurs when user performs rightward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_RIGHT =
-            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_RIGHT");
+            new EventType<>(SwipeEvent.ANY, "SWIPE_RIGHT");
 
     /**
      * This event occurs when user performs upward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_UP =
-            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_UP");
+            new EventType<>(SwipeEvent.ANY, "SWIPE_UP");
 
     /**
      * This event occurs when user performs downward swipe gesture.
      */
     public static final EventType<SwipeEvent> SWIPE_DOWN =
-            new EventType<SwipeEvent>(SwipeEvent.ANY, "SWIPE_DOWN");
+            new EventType<>(SwipeEvent.ANY, "SWIPE_DOWN");
 
     /**
      * Constructs new SwipeEvent event.

@@ -37,8 +37,10 @@ class PropertyCondition {
 public:
     enum Kind : uint8_t {
         Presence,
+        Replacement, // This implies the property is Present but cannot be watched for replacement.
         Absence,
         AbsenceOfSetEffect,
+        AbsenceOfIndexedProperties,
         Equivalence, // An adaptive watchpoint on this will be a pair of watchpoints, and when the structure transitions, we will set the replacement watchpoint on the new structure.
         HasStaticProperty, // Custom value or accessor.
         HasPrototype
@@ -73,6 +75,21 @@ public:
         return presenceWithoutBarrier(uid, offset, attributes);
     }
 
+    static PropertyCondition replacementWithoutBarrier(UniquedStringImpl* uid, PropertyOffset offset, unsigned attributes)
+    {
+        ASSERT(!(attributes & PropertyAttribute::ReadOnly));
+        PropertyCondition result;
+        result.m_header = Header(uid, Replacement);
+        result.u.presence.offset = offset;
+        result.u.presence.attributes = attributes;
+        return result;
+    }
+
+    static PropertyCondition replacement(VM&, JSCell*, UniquedStringImpl* uid, PropertyOffset offset, unsigned attributes)
+    {
+        return replacementWithoutBarrier(uid, offset, attributes);
+    }
+
     // NOTE: The prototype is the storedPrototype not the prototypeForLookup.
     static PropertyCondition absenceWithoutBarrier(UniquedStringImpl* uid, JSObject* prototype)
     {
@@ -105,6 +122,21 @@ public:
         if (owner)
             vm.writeBarrier(owner);
         return absenceOfSetEffectWithoutBarrier(uid, prototype);
+    }
+
+    static PropertyCondition absenceOfIndexedPropertiesWithoutBarrier(JSObject* prototype)
+    {
+        PropertyCondition result;
+        result.m_header = Header(nullptr, AbsenceOfIndexedProperties);
+        result.u.prototype.prototype = prototype;
+        return result;
+    }
+
+    static PropertyCondition absenceOfIndexedProperties(VM& vm, JSCell* owner, JSObject* prototype)
+    {
+        if (owner)
+            vm.writeBarrier(owner);
+        return absenceOfIndexedPropertiesWithoutBarrier(prototype);
     }
 
     static PropertyCondition equivalenceWithoutBarrier(
@@ -151,13 +183,13 @@ public:
     Kind kind() const { return m_header.type(); }
     UniquedStringImpl* uid() const { return m_header.pointer(); }
 
-    bool hasOffset() const { return !!*this && m_header.type() == Presence; };
+    bool hasOffset() const { return !!*this && (kind() == Presence || kind() == Replacement); };
     PropertyOffset offset() const
     {
         ASSERT(hasOffset());
         return u.presence.offset;
     }
-    bool hasAttributes() const { return !!*this && m_header.type() == Presence; };
+    bool hasAttributes() const { return !!*this && (kind() == Presence || kind() == Replacement); };
     unsigned attributes() const
     {
         ASSERT(hasAttributes());
@@ -167,7 +199,7 @@ public:
     bool hasPrototype() const
     {
         return !!*this
-            && (m_header.type() == Absence || m_header.type() == AbsenceOfSetEffect || m_header.type() == HasPrototype);
+            && (m_header.type() == Absence || m_header.type() == AbsenceOfSetEffect || m_header.type() == AbsenceOfIndexedProperties || m_header.type() == HasPrototype);
     }
     JSObject* prototype() const
     {
@@ -190,11 +222,13 @@ public:
         unsigned result = WTF::PtrHash<UniquedStringImpl*>::hash(m_header.pointer()) + static_cast<unsigned>(m_header.type());
         switch (m_header.type()) {
         case Presence:
+        case Replacement:
             result ^= u.presence.offset;
             result ^= u.presence.attributes;
             break;
         case Absence:
         case AbsenceOfSetEffect:
+        case AbsenceOfIndexedProperties:
         case HasPrototype:
             result ^= WTF::PtrHash<JSObject*>::hash(u.prototype.prototype);
             break;
@@ -215,10 +249,12 @@ public:
             return false;
         switch (m_header.type()) {
         case Presence:
+        case Replacement:
             return u.presence.offset == other.u.presence.offset
                 && u.presence.attributes == other.u.presence.attributes;
         case Absence:
         case AbsenceOfSetEffect:
+        case AbsenceOfIndexedProperties:
         case HasPrototype:
             return u.prototype.prototype == other.u.prototype.prototype;
         case Equivalence:
@@ -249,7 +285,7 @@ public:
     }
 
     // Checks if the object's structure claims that the property won't be intercepted.
-    bool isStillValidAssumingImpurePropertyWatchpoint(Structure*, JSObject* base = nullptr) const;
+    bool isStillValidAssumingImpurePropertyWatchpoint(Concurrency, Structure*, JSObject* base = nullptr) const;
 
     // Returns true if we need an impure property watchpoint to ensure validity even if
     // isStillValidAccordingToStructure() returned true.
@@ -262,7 +298,7 @@ public:
     // an object has the given structure guarantees the condition still holds. If an object is
     // supplied, then you may need to use some other watchpoints on the object to guarantee the
     // condition in addition to the structure check.
-    bool isStillValid(Structure*, JSObject* base = nullptr) const;
+    bool isStillValid(Concurrency, Structure*, JSObject* base = nullptr) const;
 
     // In some cases, the condition is not watchable, but could be made watchable by enabling the
     // appropriate watchpoint. For example, replacement watchpoints are enabled only when some
@@ -291,12 +327,12 @@ public:
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure and possibly an impure property watchpoint.
     bool isWatchableAssumingImpurePropertyWatchpoint(
-        Structure*, JSObject* base, WatchabilityEffort = MakeNoChanges) const;
+        Structure*, JSObject* base, WatchabilityEffort) const;
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure.
     bool isWatchable(
-        Structure*, JSObject*, WatchabilityEffort = MakeNoChanges) const;
+        Structure*, JSObject*, WatchabilityEffort) const;
 
     bool watchingRequiresStructureTransitionWatchpoint() const
     {
@@ -320,11 +356,12 @@ public:
 
     void validateReferences(const TrackedReferences&) const;
 
-    static bool isValidValueForAttributes(VM&, JSValue, unsigned attributes);
+    static bool isValidValueForAttributes(JSValue, unsigned attributes);
 
-    bool isValidValueForPresence(VM&, JSValue) const;
+    bool isValidValueForPresence(JSValue) const;
 
-    PropertyCondition attemptToMakeEquivalenceWithoutBarrier(VM&, JSObject* base) const;
+    PropertyCondition attemptToMakeEquivalenceWithoutBarrier(JSObject* base) const;
+    PropertyCondition attemptToMakeReplacementWithoutBarrier(JSObject* base) const;
 
 private:
     bool isWatchableWhenValid(Structure*, WatchabilityEffort) const;

@@ -282,8 +282,8 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
 
         char* startOfLastCell = static_cast<char*>(cellAlign(block.atoms() + m_endAtom - 1));
         char* payloadEnd = startOfLastCell + cellSize;
-        RELEASE_ASSERT(payloadEnd - MarkedBlock::blockSize <= bitwise_cast<char*>(&block));
         char* payloadBegin = bitwise_cast<char*>(block.atoms());
+        RELEASE_ASSERT(payloadEnd - MarkedBlock::blockSize <= bitwise_cast<char*>(&block), payloadBegin, payloadEnd, &block, cellSize, m_endAtom);
 
         if (sweepMode == SweepToFreeList)
             setIsFreeListed();
@@ -308,8 +308,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
     // order of the free list.
     FreeCell* head = nullptr;
     size_t count = 0;
-    uintptr_t secret;
-    cryptographicallyRandomValues(&secret, sizeof(uintptr_t));
+    uintptr_t secret = static_cast<uintptr_t>(vm.heapRandom().getUint64());
     bool isEmpty = true;
     Vector<size_t> deadCells;
     auto handleDeadCell = [&] (size_t i) {

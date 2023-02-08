@@ -33,7 +33,6 @@ import com.sun.marlin.ArrayCacheConst.CacheStats;
 import com.sun.marlin.TransformingPathConsumer2D.CurveBasicMonotonizer;
 import com.sun.marlin.TransformingPathConsumer2D.CurveClipSplitter;
 import com.sun.util.reentrant.ReentrantContext;
-import com.sun.marlin.ArrayCacheIntClean;
 
 /**
  * This class is a renderer context dedicated to a single thread
@@ -197,7 +196,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
             p2d = new Path2D(WIND_NON_ZERO, INITIAL_EDGES_COUNT); // 32K
 
             // update weak reference:
-            refPath2D = new WeakReference<Path2D>(p2d);
+            refPath2D = new WeakReference<>(p2d);
         }
         // reset the path anyway:
         p2d.reset();

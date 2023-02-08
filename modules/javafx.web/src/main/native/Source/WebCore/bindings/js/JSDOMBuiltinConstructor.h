@@ -70,7 +70,7 @@ template<typename JSClass> inline JSC::Structure* JSDOMBuiltinConstructor<JSClas
 template<typename JSClass> inline void JSDOMBuiltinConstructor<JSClass>::finishCreation(JSC::VM& vm, JSDOMGlobalObject& globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     setInitializeFunction(vm, *JSC::JSFunction::create(vm, initializeExecutable(vm), &globalObject));
     initializeProperties(vm, globalObject);
 }
@@ -98,7 +98,7 @@ template<typename JSClass> inline JSC::EncodedJSValue JSC_HOST_CALL_ATTRIBUTES J
         return { };
 
     auto* jsObject = JSClass::create(structure, castedThis->globalObject());
-    JSC::call(lexicalGlobalObject, castedThis->initializeFunction(), jsObject, JSC::ArgList(callFrame), "This error should never occur: initialize function is guaranteed to be callable.");
+    JSC::call(lexicalGlobalObject, castedThis->initializeFunction(), jsObject, JSC::ArgList(callFrame), "This error should never occur: initialize function is guaranteed to be callable."_s);
     return JSC::JSValue::encode(jsObject);
 }
 

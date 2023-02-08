@@ -196,6 +196,8 @@ public:
         return NoIntrinsic;
     }
 
+    ImplementationVisibility implementationVisibility() const;
+
     void dump(PrintStream&) const;
 
 protected:

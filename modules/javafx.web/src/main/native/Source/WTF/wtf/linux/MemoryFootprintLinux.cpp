@@ -69,8 +69,8 @@ static size_t computeMemoryFootprint()
                 return;
             }
             if (scannedCount == 7) {
-                StringView pathString(path);
-                isAnonymous = pathString == "[heap]" || pathString.startsWith("[stack");
+                auto pathString = StringView::fromLatin1(path);
+                isAnonymous = pathString == "[heap]"_s || pathString.startsWith("[stack"_s);
                 return;
             }
         }

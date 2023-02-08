@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_getVersion
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_setVersionImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::versionAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::versionAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_getManifestImpl(JNIEnv* env, jclass, jlong peer)
@@ -65,7 +65,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_getManifes
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHtmlElementImpl_setManifestImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::manifestAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::manifestAttr, AtomString {String(env, value)});
 }
 
 }

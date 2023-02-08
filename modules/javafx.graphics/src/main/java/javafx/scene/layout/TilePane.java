@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1011,8 +1011,8 @@ public class TilePane extends Pane {
      private static class StyleableProperties {
 
          private static final CssMetaData<TilePane,Pos> ALIGNMENT =
-             new CssMetaData<TilePane,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class),
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class),
                  Pos.TOP_LEFT) {
 
             @Override
@@ -1027,7 +1027,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> PREF_COLUMNS =
-             new CssMetaData<TilePane,Number>("-fx-pref-columns",
+             new CssMetaData<>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -1043,7 +1043,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> HGAP =
-             new CssMetaData<TilePane,Number>("-fx-hgap",
+             new CssMetaData<>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -1059,7 +1059,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> PREF_ROWS =
-             new CssMetaData<TilePane,Number>("-fx-pref-rows",
+             new CssMetaData<>("-fx-pref-rows",
                  SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -1075,8 +1075,8 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Pos> TILE_ALIGNMENT =
-             new CssMetaData<TilePane,Pos>("-fx-tile-alignment",
-                 new EnumConverter<Pos>(Pos.class),
+             new CssMetaData<>("-fx-tile-alignment",
+                 new EnumConverter<>(Pos.class),
                  Pos.CENTER) {
 
             @Override
@@ -1092,7 +1092,7 @@ public class TilePane extends Pane {
          };
 
          private static final CssMetaData<TilePane,Number> PREF_TILE_WIDTH =
-             new CssMetaData<TilePane,Number>("-fx-pref-tile-width",
+             new CssMetaData<>("-fx-pref-tile-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
             @Override
@@ -1108,7 +1108,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> PREF_TILE_HEIGHT =
-             new CssMetaData<TilePane,Number>("-fx-pref-tile-height",
+             new CssMetaData<>("-fx-pref-tile-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
             @Override
@@ -1124,8 +1124,8 @@ public class TilePane extends Pane {
          };
 
          private static final CssMetaData<TilePane,Orientation> ORIENTATION =
-             new CssMetaData<TilePane,Orientation>("-fx-orientation",
-                 new EnumConverter<Orientation>(Orientation.class),
+             new CssMetaData<>("-fx-orientation",
+                 new EnumConverter<>(Orientation.class),
                  Orientation.HORIZONTAL) {
 
                 @Override
@@ -1147,7 +1147,7 @@ public class TilePane extends Pane {
          };
 
          private static final CssMetaData<TilePane,Number> VGAP =
-             new CssMetaData<TilePane,Number>("-fx-vgap",
+             new CssMetaData<>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -1165,7 +1165,7 @@ public class TilePane extends Pane {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(HGAP);
             styleables.add(ORIENTATION);

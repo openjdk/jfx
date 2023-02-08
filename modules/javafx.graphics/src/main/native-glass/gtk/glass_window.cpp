@@ -133,9 +133,6 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
-    if (!event->in && WindowContextBase::sm_mouse_drag_window == this) {
-        ungrab_mouse_drag_focus();
-    }
     if (!event->in && WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
@@ -303,15 +300,8 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
         }
     }
 
-    // Upper layers expects from us Windows behavior:
-    // all mouse events should be delivered to window where drag begins
-    // and no exit/enter event should be reported during this drag.
-    // We can grab mouse pointer for these needs.
-    if (press) {
-        grab_mouse_drag_focus();
-    } else {
-        if ((event->state & MOUSE_BUTTONS_MASK)
-            && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
+    if (!press) {
+        if ((event->state & MOUSE_BUTTONS_MASK) && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
             ungrab_mouse_drag_focus();
         } else if (event->button == 8 || event->button == 9) {
             // GDK X backend interprets button press events for buttons 4-7 as
@@ -354,6 +344,14 @@ void WindowContextBase::process_mouse_motion(GdkEventMotion* event) {
             com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK |
             com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD);
     jint button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
+
+    if (isDrag && WindowContextBase::sm_mouse_drag_window == NULL) {
+        // Upper layers expects from us Windows behavior:
+        // all mouse events should be delivered to window where drag begins
+        // and no exit/enter event should be reported during this drag.
+        // We can grab mouse pointer for these needs.
+        grab_mouse_drag_focus();
+    }
 
     if (glass_modifier & com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY) {
         button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;

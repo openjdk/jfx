@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -287,7 +287,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         ES2RTTextureData texData =
             new ES2RTTextureData(context, nativeTexID, nativeFBOID,
                                  texWidth, texHeight, size);
-        ES2TextureResource<ES2RTTextureData> texRes = new ES2TextureResource<ES2RTTextureData>(texData);
+        ES2TextureResource<ES2RTTextureData> texRes = new ES2TextureResource<>(texData);
 
         ES2RTTexture es2RTT = new ES2RTTexture(context, texRes, wrapMode,
                                 texWidth, texHeight,

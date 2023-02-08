@@ -26,18 +26,19 @@
 #pragma once
 
 #include "Filter.h"
-#include "IntRectExtent.h"
+#include "LengthBox.h"
 
 namespace WebCore {
 
 class FilterOperations;
+class GraphicsContext;
 class RenderElement;
 class SourceGraphic;
 
 class CSSFilter final : public Filter {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static RefPtr<CSSFilter> create(RenderElement&, const FilterOperations&, RenderingMode, const FloatSize& filterScale, ClipOperation, const FloatRect& targetBoundingBox);
+    static RefPtr<CSSFilter> create(RenderElement&, const FilterOperations&, RenderingMode, const FloatSize& filterScale, ClipOperation, const FloatRect& targetBoundingBox, const GraphicsContext& destinationContext);
     WEBCORE_EXPORT static RefPtr<CSSFilter> create(Vector<Ref<FilterFunction>>&&);
 
     const Vector<Ref<FilterFunction>>& functions() const { return m_functions; }
@@ -49,15 +50,16 @@ public:
 
     FilterEffectVector effectsOfType(FilterFunction::Type) const final;
 
-    IntOutsets outsets() const final;
-
     RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) final;
+
+    static bool isIdentity(RenderElement&, const FilterOperations&);
+    static IntOutsets calculateOutsets(RenderElement&, const FilterOperations&, const FloatRect& targetBoundingBox);
 
 private:
     CSSFilter(RenderingMode, const FloatSize& filterScale, ClipOperation, bool hasFilterThatMovesPixels, bool hasFilterThatShouldBeRestrictedBySecurityOrigin);
     CSSFilter(Vector<Ref<FilterFunction>>&&);
 
-    bool buildFilterFunctions(RenderElement&, const FilterOperations&, const FloatRect& targetBoundingBox);
+    bool buildFilterFunctions(RenderElement&, const FilterOperations&, const FloatRect& targetBoundingBox, const GraphicsContext& destinationContext);
 
     bool supportsAcceleratedRendering() const final;
 
@@ -67,8 +69,6 @@ private:
     bool m_hasFilterThatShouldBeRestrictedBySecurityOrigin { false };
 
     Vector<Ref<FilterFunction>> m_functions;
-
-    mutable IntOutsets m_outsets;
 };
 
 } // namespace WebCore

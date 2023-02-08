@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -219,6 +219,7 @@ abstract class CMap {
             }
         }
 
+        @Override
         char getGlyph(int charCode) {
 
             int index = 0;
@@ -289,6 +290,7 @@ abstract class CMap {
             buffer.get(offset+6, cmap, 0, len-6);
         }
 
+        @Override
         char getGlyph(int charCode) {
             if (charCode < 256) {
                 if (charCode < 0x0010) {
@@ -358,6 +360,7 @@ abstract class CMap {
             }
         }
 
+        @Override
         char getGlyph(int charCode) {
             int controlGlyph = getControlCodeGlyph(charCode, true);
             if (controlGlyph >= 0) {
@@ -429,7 +432,8 @@ abstract class CMap {
              }
          }
 
-         char getGlyph(int charCode) {
+         @Override
+        char getGlyph(int charCode) {
              int controlGlyph = getControlCodeGlyph(charCode, true);
              if (controlGlyph >= 0) {
                  return (char)controlGlyph;
@@ -453,6 +457,7 @@ abstract class CMap {
          CMapFormat8(Buffer buffer, int offset) {
          }
 
+        @Override
         char getGlyph(int charCode) {
             return 0;
         }
@@ -485,7 +490,8 @@ abstract class CMap {
              }
          }
 
-         char getGlyph(int charCode) {
+         @Override
+        char getGlyph(int charCode) {
 
              int code = (int)(charCode - startCharCode);
              if (code < 0 || code >= numChars) {
@@ -560,6 +566,7 @@ abstract class CMap {
             extra = numGroups - power;
         }
 
+        @Override
         char getGlyph(int charCode) {
             int controlGlyph = getControlCodeGlyph(charCode, false);
             if (controlGlyph >= 0) {
@@ -594,6 +601,7 @@ abstract class CMap {
     /* Used to substitute for bad Cmaps. */
     static class NullCMapClass extends CMap {
 
+        @Override
         char getGlyph(int charCode) {
             return 0;
         }

@@ -44,7 +44,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(SymbolConstructor);
 
-const ClassInfo SymbolConstructor::s_info = { "Function", &Base::s_info, &symbolConstructorTable, nullptr, CREATE_METHOD_TABLE(SymbolConstructor) };
+const ClassInfo SymbolConstructor::s_info = { "Function"_s, &Base::s_info, &symbolConstructorTable, nullptr, CREATE_METHOD_TABLE(SymbolConstructor) };
 
 /* Source for SymbolConstructor.lut.h
 @begin symbolConstructorTable
@@ -62,7 +62,7 @@ SymbolConstructor::SymbolConstructor(VM& vm, Structure* structure)
 }
 
 #define INITIALIZE_WELL_KNOWN_SYMBOLS(name) \
-putDirectWithoutTransition(vm, Identifier::fromString(vm, #name), Symbol::create(vm, static_cast<SymbolImpl&>(*vm.propertyNames->name##Symbol.impl())), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+putDirectWithoutTransition(vm, Identifier::fromString(vm, #name ""_s), Symbol::create(vm, static_cast<SymbolImpl&>(*vm.propertyNames->name##Symbol.impl())), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
 void SymbolConstructor::finishCreation(VM& vm, SymbolPrototype* prototype)
 {
@@ -105,7 +105,7 @@ JSC_DEFINE_HOST_FUNCTION(symbolConstructorFor, (JSGlobalObject* globalObject, Ca
     String string = stringKey->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    return JSValue::encode(Symbol::create(vm, vm.symbolRegistry().symbolForKey(string)));
+    return JSValue::encode(Symbol::create(vm, vm.symbolRegistry().symbolForKey(WTFMove(string))));
 }
 
 const ASCIILiteral SymbolKeyForTypeError { "Symbol.keyFor requires that the first argument be a symbol"_s };
@@ -125,7 +125,7 @@ JSC_DEFINE_HOST_FUNCTION(symbolConstructorKeyFor, (JSGlobalObject* globalObject,
         return JSValue::encode(jsUndefined());
 
     ASSERT(uid.symbolRegistry() == &vm.symbolRegistry());
-    return JSValue::encode(jsString(vm, &uid));
+    return JSValue::encode(jsString(vm, String { uid }));
 }
 
 } // namespace JSC

@@ -31,11 +31,11 @@
 
 #if ENABLE(WEBGL) && USE(OPENGL_ES)
 
+#include "ByteArrayPixelBuffer.h"
 #include "ExtensionsGLOpenGLES.h"
 #include "IntRect.h"
 #include "IntSize.h"
 #include "NotImplemented.h"
-#include "PixelBuffer.h"
 
 #include <ANGLE/ShaderLang.h>
 
@@ -64,12 +64,12 @@ void GraphicsContextGLOpenGL::readnPixels(GCGLint x, GCGLint y, GCGLsizei width,
         ::glBindFramebuffer(GL_FRAMEBUFFER, m_multisampleFBO);
 }
 
-std::optional<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
+RefPtr<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
 {
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
-    auto pixelBuffer = PixelBuffer::tryCreate(format, getInternalFramebufferSize());
+    auto pixelBuffer = ByteArrayPixelBuffer::tryCreate(format, getInternalFramebufferSize());
     if (!pixelBuffer)
-        return std::nullopt;
+        return nullptr;
 
     GLint packAlignment = 4;
     bool mustRestorePackAlignment = false;
@@ -79,7 +79,7 @@ std::optional<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
         mustRestorePackAlignment = true;
     }
 
-    ::glReadPixels(0, 0, pixelBuffer->size().width(), pixelBuffer->size().height(), GL_RGBA, GL_UNSIGNED_BYTE, pixelBuffer->data().data());
+    ::glReadPixels(0, 0, pixelBuffer->size().width(), pixelBuffer->size().height(), GL_RGBA, GL_UNSIGNED_BYTE, pixelBuffer->bytes());
 
     if (mustRestorePackAlignment)
         ::glPixelStorei(GL_PACK_ALIGNMENT, packAlignment);
@@ -104,7 +104,7 @@ bool GraphicsContextGLOpenGL::reshapeFBOs(const IntSize& size)
 
     // We don't allow the logic where stencil is required and depth is not.
     // See GraphicsContextGLOpenGL::validateAttributes.
-    bool supportPackedDepthStencilBuffer = (attributes.stencil || attributes.depth) && supportsExtension("GL_OES_packed_depth_stencil");
+    bool supportPackedDepthStencilBuffer = (attributes.stencil || attributes.depth) && supportsExtension("GL_OES_packed_depth_stencil"_s);
 
     // Resize regular FBO.
     bool mustRestoreFBO = false;
@@ -240,11 +240,11 @@ void GraphicsContextGLOpenGL::texImage2D(GCGLenum target, GCGLint level, GCGLenu
 
 void GraphicsContextGLOpenGL::validateAttributes()
 {
-    validateDepthStencil("GL_OES_packed_depth_stencil");
+    validateDepthStencil("GL_OES_packed_depth_stencil"_s);
 
     auto attributes = contextAttributes();
 
-    if (attributes.antialias && !supportsExtension("GL_IMG_multisampled_render_to_texture")) {
+    if (attributes.antialias && !supportsExtension("GL_IMG_multisampled_render_to_texture"_s)) {
         attributes.antialias = false;
         setContextAttributes(attributes);
     }

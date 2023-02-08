@@ -52,9 +52,10 @@
 #include "RenderBox.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGElement.h"
+#include "SVGGraphicsElement.h"
 #include "SVGNames.h"
+#include "SVGSVGElement.h"
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -211,21 +212,18 @@ static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& st
 
 void Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
 {
-    auto regionTypes = computeEventListenerRegionTypes(document, { });
+    auto regionTypes = computeEventListenerRegionTypes(document, rootStyle, document, { });
     if (auto* window = document.domWindow())
-        regionTypes.add(computeEventListenerRegionTypes(*window, { }));
+        regionTypes.add(computeEventListenerRegionTypes(document, rootStyle, *window, { }));
 
     rootStyle.setEventListenerRegionTypes(regionTypes);
 }
 
-OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
+OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const Document& document, const RenderStyle& style, const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
 {
-#if ENABLE(WHEEL_EVENT_REGIONS)
-    if (!eventTarget.hasEventListeners())
-        return parentTypes;
-
     auto types = parentTypes;
 
+#if ENABLE(WHEEL_EVENT_REGIONS)
     auto findListeners = [&](auto& eventName, auto type, auto nonPassiveType) {
         auto* eventListenerVector = eventTarget.eventTargetData()->eventListenerMap.find(eventName);
         if (!eventListenerVector)
@@ -245,15 +243,28 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
             types.add(nonPassiveType);
     };
 
-    findListeners(eventNames().wheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
-    findListeners(eventNames().mousewheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+    if (eventTarget.hasEventListeners()) {
+        findListeners(eventNames().wheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+        findListeners(eventNames().mousewheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+    }
+#endif
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    if (document.page() && document.page()->shouldBuildInteractionRegions() && eventTarget.isNode()) {
+        const auto& node = downcast<Node>(eventTarget);
+        if (node.willRespondToMouseClickEventsWithEditability(node.computeEditabilityForMouseClickEvents(&style)))
+            types.add(EventListenerRegionType::MouseClick);
+    }
+#else
+    UNUSED_PARAM(document);
+    UNUSED_PARAM(style);
+#endif
+
+#if !ENABLE(WHEEL_EVENT_REGIONS) && !ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    UNUSED_PARAM(eventTarget);
+#endif
 
     return types;
-#else
-    UNUSED_PARAM(eventTarget);
-    UNUSED_PARAM(parentTypes);
-    return { };
-#endif
 }
 
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
@@ -304,13 +315,6 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
                 style.setFloating(Float::None);
             }
 
-            // User agents are expected to have a rule in their user agent stylesheet that matches th elements that have a parent
-            // node whose computed value for the 'text-align' property is its initial value, whose declaration block consists of
-            // just a single declaration that sets the 'text-align' property to the value 'center'.
-            // https://html.spec.whatwg.org/multipage/rendering.html#rendering
-            if (m_element->hasTagName(thTag) && !style.hasExplicitlySetTextAlign() && m_parentStyle.textAlign() == RenderStyle::initialTextAlign())
-                style.setTextAlign(TextAlignMode::Center);
-
             if (m_element->hasTagName(legendTag))
                 style.setEffectiveDisplay(DisplayType::Block);
         }
@@ -358,11 +362,53 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         }
     }
 
-    // Make sure our z-index value is only applied if the object is positioned.
-    if (style.hasAutoSpecifiedZIndex() || (style.position() == PositionType::Static && !m_parentBoxStyle.isDisplayFlexibleOrGridBox()))
+    auto hasAutoZIndex = [](const RenderStyle& style, const RenderStyle& parentBoxStyle, const Element* element) {
+        if (style.hasAutoSpecifiedZIndex())
+            return true;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        // SVG2: Contrary to the rules in CSS 2.1, the z-index property applies to all SVG elements regardless
+        // of the value of the position property, with one exception: as for boxes in CSS 2.1, outer ‘svg’ elements
+        // must be positioned for z-index to apply to them.
+        if (element && element->document().settings().layerBasedSVGEngineEnabled()) {
+            if (auto* svgElement = dynamicDowncast<SVGElement>(element); svgElement && svgElement->isOutermostSVGSVGElement())
+                return element->renderer() && element->renderer()->style().position() == PositionType::Static;
+
+            return false;
+        }
+#else
+        UNUSED_PARAM(element);
+#endif
+
+        // Make sure our z-index value is only applied if the object is positioned.
+        return style.position() == PositionType::Static && !parentBoxStyle.isDisplayFlexibleOrGridBox();
+    };
+
+    if (hasAutoZIndex(style, m_parentBoxStyle, m_element))
         style.setHasAutoUsedZIndex();
     else
         style.setUsedZIndex(style.specifiedZIndex());
+
+    // For SVG compatibility purposes we have to consider the 'animatedLocalTransform' besides the RenderStyle to query
+    // if an element has a transform. SVG transforms are not stored on the RenderStyle, and thus we need a special case here.
+    // Same for the additional translation component present in RenderSVGTransformableContainer (that stems from <use> x/y
+    // properties, that are transferred to the internal RenderSVGTransformableContainer), or for the viewBox-induced transformation
+    // in RenderSVGViewportContainer. They all need to return true for 'hasTransformRelatedProperty'.
+    auto hasTransformRelatedProperty = [](const RenderStyle& style, const Element* element) {
+        if (style.hasTransformRelatedProperty())
+            return true;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (element && element->document().settings().layerBasedSVGEngineEnabled()) {
+            if (auto* graphicsElement = dynamicDowncast<SVGGraphicsElement>(element); graphicsElement && graphicsElement->hasTransformRelatedAttributes())
+                return true;
+        }
+#else
+        UNUSED_PARAM(element);
+#endif
+
+        return false;
+    };
 
     // Auto z-index becomes 0 for the root element and transparent objects. This prevents
     // cases where objects that should be blended as a single unit end up with a non-transparent
@@ -370,7 +416,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.hasAutoUsedZIndex()) {
         if ((m_element && m_document.documentElement() == m_element)
             || style.hasOpacity()
-            || style.hasTransformRelatedProperty()
+            || hasTransformRelatedProperty(style, m_element)
             || style.hasMask()
             || style.clipPath()
             || style.boxReflect()
@@ -419,9 +465,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     }
 
     if (shouldInheritTextDecorationsInEffect(style, m_element))
-        style.addToTextDecorationsInEffect(style.textDecoration());
+        style.addToTextDecorationsInEffect(style.textDecorationLine());
     else
-        style.setTextDecorationsInEffect(style.textDecoration());
+        style.setTextDecorationsInEffect(style.textDecorationLine());
 
     auto overflowReplacement = [] (Overflow overflow, Overflow overflowInOtherDimension) -> std::optional<Overflow> {
         if (overflow != Overflow::Visible && overflow != Overflow::Clip) {
@@ -457,12 +503,6 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setOverflowX(Overflow::Visible);
         if (style.overflowY() != Overflow::Visible && style.overflowY() != Overflow::Hidden)
             style.setOverflowY(Overflow::Visible);
-    }
-
-    // Menulists should have visible overflow
-    if (style.effectiveAppearance() == MenulistPart) {
-        style.setOverflowX(Overflow::Visible);
-        style.setOverflowY(Overflow::Visible);
     }
 
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
@@ -528,7 +568,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
     // Counterparts in Element::addToTopLayer/removeFromTopLayer & SharingResolver::canShareStyleWithElement need to match!
     auto hasInertAttribute = [this] (const Element* element) -> bool {
-        return m_document.settings().inertAttributeEnabled() && is<HTMLElement>(element) && element->hasAttribute(HTMLNames::inertAttr);
+        return m_document.settings().inertAttributeEnabled() && is<HTMLElement>(element) && element->hasAttributeWithoutSynchronization(HTMLNames::inertAttr);
     };
     auto isInertSubtreeRoot = [this, hasInertAttribute] (const Element* element) -> bool {
         if (m_document.activeModalDialog() && element == m_document.documentElement())
@@ -540,19 +580,18 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (isInertSubtreeRoot(m_element))
         style.setEffectiveInert(true);
 
-    // Make sure the active dialog is interactable when the whole document is blocked by the modal dialog
-    if (m_element == m_document.activeModalDialog() && !hasInertAttribute(m_element))
-        style.setEffectiveInert(false);
+    if (m_element) {
+        // Make sure the active dialog is interactable when the whole document is blocked by the modal dialog
+        if (m_element == m_document.activeModalDialog() && !hasInertAttribute(m_element))
+            style.setEffectiveInert(false);
 
-    if (m_element)
-        style.setEventListenerRegionTypes(computeEventListenerRegionTypes(*m_element, m_parentStyle.eventListenerRegionTypes()));
+        style.setEventListenerRegionTypes(computeEventListenerRegionTypes(m_document, style, *m_element, m_parentStyle.eventListenerRegionTypes()));
 
 #if ENABLE(TEXT_AUTOSIZING)
-    if (m_element && m_document.settings().textAutosizingUsesIdempotentMode())
-        adjustForTextAutosizing(style, *m_element);
+        if (m_document.settings().textAutosizingUsesIdempotentMode())
+            adjustForTextAutosizing(style, *m_element);
 #endif
 
-    if (m_element) {
         if (auto observer = m_element->document().modalContainerObserverIfExists()) {
             if (observer->shouldHide(*m_element))
                 style.setDisplay(DisplayType::None);
@@ -628,8 +667,7 @@ void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
 void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgElement)
 {
     // Only the root <svg> element in an SVG document fragment tree honors css position
-    auto isPositioningAllowed = svgElement.hasTagName(SVGNames::svgTag) && svgElement.parentNode() && !svgElement.parentNode()->isSVGElement() && !svgElement.correspondingElement();
-    if (!isPositioningAllowed)
+    if (!svgElement.isOutermostSVGSVGElement())
         style.setPosition(RenderStyle::initialPosition());
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
@@ -651,11 +689,6 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
         ASSERT(!style.hasClip());
         ASSERT(!style.clipPath());
         ASSERT(!style.hasFilter());
-        ASSERT(!svgElement.isOutermostSVGSVGElement());
-
-        auto isInnerSVGElement = [] (const SVGElement& svgElement) -> bool {
-            return svgElement.hasTagName(SVGNames::svgTag) && svgElement.parentNode() && is<SVGElement>(svgElement.parentNode());
-        };
 
         if (svgElement.hasTagName(SVGNames::foreignObjectTag)
             || svgElement.hasTagName(SVGNames::imageTag)
@@ -664,7 +697,7 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
             || svgElement.hasTagName(SVGNames::patternTag)
             || svgElement.hasTagName(SVGNames::symbolTag)
             || svgElement.hasTagName(SVGNames::useTag)
-            || (isInnerSVGElement(svgElement) && (style.overflowX() != Overflow::Visible || style.overflowY() != Overflow::Visible))
+            || (svgElement.isInnerSVGSVGElement() && (style.overflowX() != Overflow::Visible || style.overflowY() != Overflow::Visible))
             || style.hasPositionedMask())
         style.setUsedZIndex(0);
     }
@@ -702,19 +735,19 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
 
     if (m_document.quirks().needsGMailOverflowScrollQuirk()) {
         // This turns sidebar scrollable without mouse move event.
-        static MainThreadNeverDestroyed<const AtomString> roleValue("navigation", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> roleValue("navigation"_s);
         if (style.overflowY() == Overflow::Hidden && m_element->attributeWithoutSynchronization(roleAttr) == roleValue)
             style.setOverflowY(Overflow::Auto);
     }
     if (m_document.quirks().needsYouTubeOverflowScrollQuirk()) {
         // This turns sidebar scrollable without hover.
-        static MainThreadNeverDestroyed<const AtomString> idValue("guide-inner-content", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> idValue("guide-inner-content"_s);
         if (style.overflowY() == Overflow::Hidden && m_element->idForStyleResolution() == idValue)
             style.setOverflowY(Overflow::Auto);
     }
     if (m_document.quirks().needsWeChatScrollingQuirk()) {
-        static MainThreadNeverDestroyed<const AtomString> class1("tree-select", AtomString::ConstructFromLiteral);
-        static MainThreadNeverDestroyed<const AtomString> class2("v-tree-select", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> class1("tree-select"_s);
+        static MainThreadNeverDestroyed<const AtomString> class2("v-tree-select"_s);
         const auto& flexBasis = style.flexBasis();
         if (style.minHeight().isAuto()
             && style.display() == DisplayType::Flex
@@ -729,8 +762,8 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
 #if ENABLE(VIDEO)
     if (m_document.quirks().needsFullscreenDisplayNoneQuirk()) {
         if (is<HTMLDivElement>(m_element) && style.display() == DisplayType::None) {
-            static MainThreadNeverDestroyed<const AtomString> instreamNativeVideoDivClass("instream-native-video--mobile", AtomString::ConstructFromLiteral);
-            static MainThreadNeverDestroyed<const AtomString> videoElementID("vjs_video_3_html5_api", AtomString::ConstructFromLiteral);
+            static MainThreadNeverDestroyed<const AtomString> instreamNativeVideoDivClass("instream-native-video--mobile"_s);
+            static MainThreadNeverDestroyed<const AtomString> videoElementID("vjs_video_3_html5_api"_s);
 
             auto& div = downcast<HTMLDivElement>(*m_element);
             if (div.hasClass() && div.classNames().contains(instreamNativeVideoDivClass)) {

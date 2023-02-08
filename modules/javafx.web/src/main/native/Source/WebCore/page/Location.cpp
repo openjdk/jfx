@@ -198,9 +198,9 @@ ExceptionOr<void> Location::setHash(DOMWindow& incumbentWindow, DOMWindow& first
     ASSERT(frame->document());
     auto url = frame->document()->url();
     auto oldFragmentIdentifier = url.fragmentIdentifier();
-    auto newFragmentIdentifier = hash;
-    if (hash[0] == '#')
-        newFragmentIdentifier = hash.substring(1);
+    StringView newFragmentIdentifier { hash };
+    if (hash.startsWith('#'))
+        newFragmentIdentifier = newFragmentIdentifier.substring(1);
     url.setFragmentIdentifier(newFragmentIdentifier);
     // Note that by parsing the URL and *then* comparing fragments, we are
     // comparing fragments post-canonicalization, and so this handles the
@@ -232,6 +232,9 @@ ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWin
     URL completedURL = firstFrame->document()->completeURL(urlString);
     if (!completedURL.isValid())
         return Exception { SyntaxError };
+
+    if (!activeWindow.document()->canNavigate(frame, completedURL))
+        return Exception { SecurityError };
 
     // We call DOMWindow::setLocation directly here because replace() always operates on the current frame.
     frame->document()->domWindow()->setLocation(activeWindow, completedURL, LockHistoryAndBackForwardList);

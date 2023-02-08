@@ -260,6 +260,8 @@ public:
 
     // this = mat * this.
     WEBCORE_EXPORT TransformationMatrix& multiply(const TransformationMatrix&);
+    // Identical to multiply(TransformationMatrix&), but saving a AffineTransform -> TransformationMatrix roundtrip for identity or translation matrices.
+    TransformationMatrix& multiplyAffineTransform(const AffineTransform&);
 
     WEBCORE_EXPORT TransformationMatrix& scale(double);
     WEBCORE_EXPORT TransformationMatrix& scaleNonUniform(double sx, double sy);
@@ -291,6 +293,16 @@ public:
 
     // Returns a transformation that maps a rect to a rect.
     WEBCORE_EXPORT static TransformationMatrix rectToRect(const FloatRect&, const FloatRect&);
+
+    // Changes the transform to:
+    //
+    //     scale3d(z, z, z) * mat * scale3d(1/z, 1/z, 1/z)
+    //
+    // Useful for mapping zoomed points to their zoomed transformed result:
+    //
+    //     new_mat * (scale3d(z, z, z) * x) == scale3d(z, z, z) * (mat * x)
+    //
+    TransformationMatrix& zoom(double zoomFactor);
 
     WEBCORE_EXPORT bool isInvertible() const;
     WEBCORE_EXPORT std::optional<TransformationMatrix> inverse() const;

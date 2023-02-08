@@ -38,14 +38,11 @@ class MediaControls extends LayoutNode
         this.layoutTraits = layoutTraits;
 
         this.playPauseButton = new PlayPauseButton(this);
-        this.airplayButton = new AirplayButton(this);
         this.pipButton = new PiPButton(this);
         this.fullscreenButton = new FullscreenButton(this);
         this.muteButton = new MuteButton(this);
         this.tracksButton = new TracksButton(this);
         this.overflowButton = new OverflowButton(this);
-        this.volumeButton = new VolumeButton(this);
-        this.brightnessButton = new BrightnessButton(this);
 
         this.statusLabel = new StatusLabel(this);
         this.timeControl = new TimeControl(this);
@@ -57,9 +54,21 @@ class MediaControls extends LayoutNode
         this.autoHideController.hasSecondaryUIAttached = false;
 
         this._placard = null;
-        this.airplayPlacard = new AirplayPlacard(this);
         this.invalidPlacard = new InvalidPlacard(this);
-        this.pipPlacard = new PiPPlacard(this);
+
+        // FIXME: Adwaita layout doesn't have an icon for pip-placard.
+        if (this.layoutTraits.supportsPiP())
+            this.pipPlacard = new PiPPlacard(this);
+        else
+            this.pipPlacard = null;
+
+        if (this.layoutTraits.supportsAirPlay()) {
+            this.airplayButton = new AirplayButton(this);
+            this.airplayPlacard = new AirplayPlacard(this);
+        } else {
+            this.airplayButton = null;
+            this.airplayPlacard = null;
+        }
 
         this.element.addEventListener("focusin", this);
         window.addEventListener("dragstart", this, true);
@@ -121,7 +130,6 @@ class MediaControls extends LayoutNode
         this.element.classList.toggle("uses-ltr-user-interface-layout-direction", flag);
 
         this.muteButton.usesLTRUserInterfaceLayoutDirection = this.usesLTRUserInterfaceLayoutDirection;
-        this.volumeButton.usesLTRUserInterfaceLayoutDirection = this.usesLTRUserInterfaceLayoutDirection
     }
 
     get scaleFactor()
@@ -236,10 +244,5 @@ class MediaControls extends LayoutNode
             this.element.classList.toggle("faded", this.faded);
         else
             super.commitProperty(propertyName);
-    }
-
-    get usesSingleMuteAndVolumeButton()
-    {
-        return false;
     }
 }

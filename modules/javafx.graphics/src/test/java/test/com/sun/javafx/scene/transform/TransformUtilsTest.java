@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -194,9 +194,9 @@ public class TransformUtilsTest {
                             + "transform #" + outer + " and #" + inner +
                             " reusing #" + orig +
                             " of TransformOperationsTest",
-                            (TransformShim.ImmutableTransformShim) conc,
-                                TransformShim.getImmutableState3d(conc),
-                                TransformShim.getImmutableState2d(conc));
+                            conc,
+                            TransformShim.getImmutableState3d(conc),
+                            TransformShim.getImmutableState2d(conc));
                     TransformHelper.assertMatrix(
                             "Checking state of concatenation of "
                             + "transform #" + outer + " and #" + inner +
@@ -220,7 +220,7 @@ public class TransformUtilsTest {
                         "Checking state of concatenation of "
                         + "transform #" + outer + " and #" + inner +
                         " of TransformOperationsTest",
-                        (TransformShim.ImmutableTransformShim) conc2,
+                        conc2,
                         TransformShim.getImmutableState3d(conc2),
                         TransformShim.getImmutableState2d(conc2));
                 TransformHelper.assertMatrix(
