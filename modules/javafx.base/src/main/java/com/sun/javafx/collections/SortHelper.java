@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Objects;
 
 /**
  * Helper class that contains algorithms taken from JDK that additionally
@@ -42,15 +41,7 @@ public class SortHelper {
 
     private static final int INSERTIONSORT_THRESHOLD = 7;
 
-    /**
-     * Sorts the given list in its natural order.
-     *
-     * @param <T> the element type
-     * @param list a list to sort, cannot be {@code null}
-     * @return an array with the permutations performed, never {@code null}
-     */
     public <T extends Comparable<? super T>> int[] sort(List<T> list) {
-        @SuppressWarnings("unchecked")
         T[] a = (T[]) Array.newInstance(Comparable.class, list.size());
         try {
             a = list.toArray(a);
@@ -67,19 +58,10 @@ public class SortHelper {
         return result;
     }
 
-    /**
-     * Sorts the given list according to the given comparator.
-     *
-     * @param <T> the element type
-     * @param list a list to sort, cannot be {@code null}
-     * @param c a comparator to use, cannot be {@code null}
-     * @return an array with the permutations performed, never {@code null}
-     */
     public <T> int[] sort(List<T> list, Comparator<? super T> c) {
-        @SuppressWarnings("unchecked")
-        T[] a = (T[]) list.toArray();
-        int[] result = sort(a, c);
-        ListIterator<T> i = list.listIterator();
+        Object[] a = list.toArray();
+        int[] result = sort(a, (Comparator)c);
+        ListIterator i = list.listIterator();
         for (int j=0; j<a.length; j++) {
             i.next();
             i.set(a[j]);
@@ -87,40 +69,36 @@ public class SortHelper {
         return result;
     }
 
-    /**
-     * Sorts the given array according to the given comparator.
-     *
-     * @param <T> the element type
-     * @param a an array, cannot be {@code null}
-     * @param fromIndex index of first element to sort, cannot be negative or larger than {@code toIndex}
-     * @param toIndex index of last element to sort (exclusive), cannot be larger than the length of the array
-     * @param c a comparator to use, cannot be {@code null}
-     * @return an array with the permutations performed, never {@code null}
-     * @throws IllegalArgumentException if {@code fromIndex > toIndex}
-     * @throws ArrayIndexOutOfBoundsException
-     *     if {@code fromIndex < 0} or {@code toIndex > a.length}
-     */
-    public <T> int[] sort(T[] a, int fromIndex, int toIndex, Comparator<? super T> c) {
+    public <T extends Comparable<? super T>> int[] sort(T[] a) {
+        return sort(a, null);
+    }
+
+    public <T> int[] sort(T[] a, Comparator<? super T> c) {
+        T[] aux = a.clone();
+        int[] result = initPermutation(a.length);
+        if (c==null)
+            mergeSort(aux, a, 0, a.length, 0);
+        else
+            mergeSort(aux, a, 0, a.length, 0, c);
+        reversePermutation = null;
+        permutation = null;
+        return result;
+    }
+
+    public <T> int[] sort(T[] a, int fromIndex, int toIndex,
+                Comparator<? super T> c) {
         rangeCheck(a.length, fromIndex, toIndex);
         T[] aux = copyOfRange(a, fromIndex, toIndex);
         int[] result = initPermutation(a.length);
-        mergeSort(aux, a, fromIndex, toIndex, -fromIndex, Objects.requireNonNull(c, "c"));
+        if (c==null)
+            mergeSort(aux, a, fromIndex, toIndex, -fromIndex);
+        else
+            mergeSort(aux, a, fromIndex, toIndex, -fromIndex, c);
         reversePermutation = null;
         permutation = null;
         return Arrays.copyOfRange(result, fromIndex, toIndex);
     }
 
-    /**
-     * Sorts the given integers.
-     *
-     * @param a an int array, cannot be {@code null}
-     * @param fromIndex index of first element to sort, cannot be negative or larger than {@code toIndex}
-     * @param toIndex index of last element to sort (exclusive), cannot be larger than the length of the array
-     * @return an array with the permutations performed, never {@code null}
-     * @throws IllegalArgumentException if {@code fromIndex > toIndex}
-     * @throws ArrayIndexOutOfBoundsException
-     *     if {@code fromIndex < 0} or {@code toIndex > a.length}
-     */
     public int[] sort(int[] a, int fromIndex, int toIndex) {
         rangeCheck(a.length, fromIndex, toIndex);
         int[] aux = copyOfRange(a, fromIndex, toIndex);
@@ -129,19 +107,6 @@ public class SortHelper {
         reversePermutation = null;
         permutation = null;
         return Arrays.copyOfRange(result, fromIndex, toIndex);
-    }
-
-    private <T extends Comparable<? super T>> int[] sort(T[] a) {
-        return sort(a, Comparator.naturalOrder());
-    }
-
-    private <T> int[] sort(T[] a, Comparator<? super T> c) {
-        T[] aux = a.clone();
-        int[] result = initPermutation(a.length);
-        mergeSort(aux, a, 0, a.length, 0, Objects.requireNonNull(c));
-        reversePermutation = null;
-        permutation = null;
-        return result;
     }
 
     private static void rangeCheck(int arrayLen, int fromIndex, int toIndex) {
@@ -173,8 +138,6 @@ public class SortHelper {
         int newLength = to - from;
         if (newLength < 0)
             throw new IllegalArgumentException(from + " > " + to);
-
-        @SuppressWarnings("unchecked")
         T[] copy = ((Object)newType == (Object)Object[].class)
             ? (T[]) new Object[newLength]
             : (T[]) Array.newInstance(newType.getComponentType(), newLength);
@@ -195,8 +158,9 @@ public class SortHelper {
 
         // Insertion sort on smallest arrays
         if (length < INSERTIONSORT_THRESHOLD) {
-            for (int i = low; i < high; i++)
-                for (int j = i; j > low && Integer.compare(dest[j - 1], dest[j]) > 0; j--)
+            for (int i=low; i<high; i++)
+                for (int j=i; j>low &&
+                     ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
                     swap(dest, j, j-1);
             return;
         }
@@ -212,14 +176,14 @@ public class SortHelper {
 
         // If list is already sorted, just copy from src to dest.  This is an
         // optimization that results in faster sorts for nearly ordered lists.
-        if (Integer.compare(src[mid - 1], src[mid]) <= 0) {
+        if (((Comparable)src[mid-1]).compareTo(src[mid]) <= 0) {
             System.arraycopy(src, low, dest, destLow, length);
             return;
         }
 
         // Merge sorted halves (now in src) into dest
         for(int i = destLow, p = low, q = mid; i < destHigh; i++) {
-            if (q >= high || p < mid && Integer.compare(src[p], src[q]) <= 0) {
+            if (q >= high || p < mid && ((Comparable)src[p]).compareTo(src[q])<=0) {
                 dest[i] = src[p];
                 permutation[reversePermutation[p++]] = i;
             } else {
@@ -236,17 +200,65 @@ public class SortHelper {
     /**
      * Merge sort from Oracle JDK 6
      */
-    private <T> void mergeSort(T[] src,
-                  T[] dest,
-                  int low, int high, int off,
-                  Comparator<? super T> c) {
+    private void mergeSort(Object[] src,
+                  Object[] dest,
+                  int low,
+                  int high,
+                  int off) {
         int length = high - low;
 
         // Insertion sort on smallest arrays
         if (length < INSERTIONSORT_THRESHOLD) {
             for (int i=low; i<high; i++)
-                for (int j=i; j>low && c.compare(dest[j-1], dest[j])>0; j--)
+                for (int j=i; j>low &&
+                     ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
                     swap(dest, j, j-1);
+            return;
+        }
+
+        // Recursively sort halves of dest into src
+        int destLow  = low;
+        int destHigh = high;
+        low  += off;
+        high += off;
+        int mid = (low + high) >>> 1;
+        mergeSort(dest, src, low, mid, -off);
+        mergeSort(dest, src, mid, high, -off);
+
+        // If list is already sorted, just copy from src to dest.  This is an
+        // optimization that results in faster sorts for nearly ordered lists.
+        if (((Comparable)src[mid-1]).compareTo(src[mid]) <= 0) {
+            System.arraycopy(src, low, dest, destLow, length);
+            return;
+        }
+
+        // Merge sorted halves (now in src) into dest
+        for(int i = destLow, p = low, q = mid; i < destHigh; i++) {
+            if (q >= high || p < mid && ((Comparable)src[p]).compareTo(src[q])<=0) {
+                dest[i] = src[p];
+                permutation[reversePermutation[p++]] = i;
+            } else {
+                dest[i] = src[q];
+                permutation[reversePermutation[q++]] = i;
+            }
+        }
+
+        for (int i = destLow; i < destHigh; ++i) {
+            reversePermutation[permutation[i]] = i;
+        }
+    }
+
+    private void mergeSort(Object[] src,
+                  Object[] dest,
+                  int low, int high, int off,
+                  Comparator c) {
+        int length = high - low;
+
+        // Insertion sort on smallest arrays
+        if (length < INSERTIONSORT_THRESHOLD) {
+            for (int i=low; i<high; i++)
+            for (int j=i; j>low && c.compare(dest[j-1], dest[j])>0; j--)
+                swap(dest, j, j-1);
             return;
         }
 
