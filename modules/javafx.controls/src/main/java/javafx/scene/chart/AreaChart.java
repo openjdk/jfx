@@ -69,7 +69,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS ------------------------------------------
 
-    /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
+    /** A multiplier for the Y values that we store for each series, it is used to animate in a new series */
     private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
     private Timeline timeline;
 
@@ -560,6 +560,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         if (timeline != null) {
             timeline.setOnFinished(null);
             timeline.stop();
+            timeline = null;
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);

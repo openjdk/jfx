@@ -728,6 +728,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         if (timeline != null) {
             timeline.setOnFinished(null);
             timeline.stop();
+            timeline = null;
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);

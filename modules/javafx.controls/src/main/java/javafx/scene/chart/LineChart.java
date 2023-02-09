@@ -492,6 +492,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         if (seriesRemoveTimeline != null) {
             seriesRemoveTimeline.setOnFinished(null);
             seriesRemoveTimeline.stop();
+            seriesRemoveTimeline = null;
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);

@@ -91,18 +91,13 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
 
     @Test
     public void testLineChartExceptionOnAddingRemovedSeries() throws Throwable {
-        Thread.sleep(1000); // Wait for stage to layout
+        Util.waitForLatch(startupLatch, 5, "Timeout waiting for stage to layout.");
 
         Assert.assertEquals(1, lineChart.getData().size());
 
         lineSeriesLatch.countDown();
         addRemovedSeriesLineChart();
         Util.waitForLatch(lineSeriesLatch, 5, "Timeout waiting for series to be added.");
-
-        if (exception != null) {
-            exception.printStackTrace();
-            throw exception;
-        }
 
         Assert.assertEquals(1, lineChart.getData().size());
     }
@@ -126,11 +121,6 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
         addRemovedSeriesAreaChart();
         Util.waitForLatch(areaChartLatch, 5, "Timeout waiting for series to be added.");
 
-        if (exception != null) {
-            exception.printStackTrace();
-            throw exception;
-        }
-
         Assert.assertEquals(1, areaChart.getData().size());
     }
 
@@ -151,11 +141,6 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
         bubbleChartLatch.countDown();
         addRemovedSeriesBubbleChart();
         Util.waitForLatch(bubbleChartLatch, 5, "Timeout waiting for series to be added.");
-
-        if (exception != null) {
-            exception.printStackTrace();
-            throw exception;
-        }
 
         Assert.assertEquals(1, bubbleChart.getData().size());
     }
@@ -178,11 +163,6 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
         addRemovedSeriesScatterChart();
         Util.waitForLatch(scatterChartLatch, 5, "Timeout waiting for series to be added.");
 
-        if (exception != null) {
-            exception.printStackTrace();
-            throw exception;
-        }
-
         Assert.assertEquals(1, scatterChart.getData().size());
     }
 
@@ -203,11 +183,6 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
         stackedAreaChartLatch.countDown();
         addRemovedSeriesStackedAreaChart();
         Util.waitForLatch(stackedAreaChartLatch, 5, "Timeout waiting for series to be added.");
-
-        if (exception != null) {
-            exception.printStackTrace();
-            throw exception;
-        }
 
         Assert.assertEquals(1, stackedAreaChart.getData().size());
     }
@@ -230,11 +205,6 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
         addRemovedSeriesStackedBarChart();
         Util.waitForLatch(stackedBarChartLatch, 5, "Timeout waiting for series to be added.");
 
-        if (exception != null) {
-            exception.printStackTrace();
-            throw exception;
-        }
-
         Assert.assertEquals(1, stackedBarChart.getData().size());
     }
 
@@ -251,10 +221,22 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
     @BeforeClass
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
+        Util.runAndWait(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+                if (throwable instanceof RuntimeException) {
+                    throw (RuntimeException)throwable;
+                } else {
+                    Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+                }
+            });
+        });
     }
 
     @AfterClass
     public static void exit() {
+        Util.runAndWait(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler(null);
+        });
         Util.shutdown(stage);
     }
 
@@ -311,10 +293,6 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
             stage.setAlwaysOnTop(true);
             stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
             stage.show();
-
-            Thread.currentThread().setUncaughtExceptionHandler((t2, e) -> {
-                exception = e;
-            });
         }
     }
 }

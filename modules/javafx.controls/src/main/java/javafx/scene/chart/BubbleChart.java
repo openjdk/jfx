@@ -228,6 +228,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
         if (parallelTransition != null) {
             parallelTransition.setOnFinished(null);
             parallelTransition.stop();
+            parallelTransition = null;
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);
