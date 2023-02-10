@@ -49,8 +49,10 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -221,6 +223,15 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
     @BeforeClass
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void exit() {
+        Util.shutdown(stage);
+    }
+
+    @Before
+    public void setup() {
         Util.runAndWait(() -> {
             Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
                 if (throwable instanceof RuntimeException) {
@@ -232,12 +243,11 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
         });
     }
 
-    @AfterClass
-    public static void exit() {
+    @After
+    public void cleanup() {
         Util.runAndWait(() -> {
             Thread.currentThread().setUncaughtExceptionHandler(null);
         });
-        Util.shutdown(stage);
     }
 
     public static class TestApp extends Application {
