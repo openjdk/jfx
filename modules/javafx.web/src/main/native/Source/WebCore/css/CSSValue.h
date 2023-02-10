@@ -35,6 +35,7 @@ class CSSCustomPropertyValue;
 class CSSStyleDeclaration;
 class CachedResource;
 class DeprecatedCSSOMValue;
+class Document;
 class StyleSheetContents;
 
 enum CSSPropertyID : uint16_t;
@@ -77,7 +78,7 @@ public:
     }
 
     Type cssValueType() const;
-    String cssText() const;
+    String cssText(Document* = nullptr) const;
     ASCIILiteral separatorCSSText() const;
 
     bool isPrimitiveValue() const { return m_classType == PrimitiveClass; }
@@ -89,6 +90,7 @@ public:
 
     bool isAspectRatioValue() const { return m_classType == AspectRatioClass; }
     bool isBorderImageSliceValue() const { return m_classType == BorderImageSliceClass; }
+    bool isBorderImageWidthValue() const { return m_classType == BorderImageWidthClass; }
     bool isCanvasValue() const { return m_classType == CanvasClass; }
     bool isCrossfadeValue() const { return m_classType == CrossfadeClass; }
     bool isCursorImageValue() const { return m_classType == CursorImageClass; }
@@ -191,6 +193,7 @@ protected:
         // Other class types.
         AspectRatioClass,
         BorderImageSliceClass,
+        BorderImageWidthClass,
         FontFeatureClass,
         FontVariationClass,
         FontClass,
@@ -246,6 +249,7 @@ protected:
         , m_hasCachedCSSText(false)
         , m_valueSeparator(SpaceSeparator)
         , m_isImplicit(false)
+        , m_cachedCSSTextUsesLegacyPrecision(false)
         , m_classType(classType)
     {
     }
@@ -273,6 +277,7 @@ protected:
 
     unsigned m_valueSeparator : ValueSeparatorBits;
     unsigned m_isImplicit : 1;
+    mutable unsigned m_cachedCSSTextUsesLegacyPrecision : 1;
 
 private:
     unsigned m_classType : ClassTypeBits; // ClassType

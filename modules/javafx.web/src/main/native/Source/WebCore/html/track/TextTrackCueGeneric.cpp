@@ -122,10 +122,10 @@ void TextTrackCueGenericBoxElement::applyCSSProperties(const IntSize& videoSize)
         maxSize = 100.0 - textPosition;
 
     if (cue->getWritingDirection() == VTTCue::Horizontal) {
-        setInlineStyleProperty(CSSPropertyMinWidth, "min-content");
+        setInlineStyleProperty(CSSPropertyMinWidth, "min-content"_s);
         setInlineStyleProperty(CSSPropertyMaxWidth, maxSize, CSSUnitType::CSS_PERCENTAGE);
     } else {
-        setInlineStyleProperty(CSSPropertyMinHeight, "min-content");
+        setInlineStyleProperty(CSSPropertyMinHeight, "min-content"_s);
         setInlineStyleProperty(CSSPropertyMaxHeight, maxSize, CSSUnitType::CSS_PERCENTAGE);
     }
 
@@ -171,9 +171,11 @@ TextTrackCueGeneric::TextTrackCueGeneric(Document& document, const MediaTime& st
 {
 }
 
-Ref<VTTCueBox> TextTrackCueGeneric::createDisplayTree()
+RefPtr<VTTCueBox> TextTrackCueGeneric::createDisplayTree()
 {
-    return TextTrackCueGenericBoxElement::create(ownerDocument(), *this);
+    if (auto* document = this->document())
+        return TextTrackCueGenericBoxElement::create(*document, *this);
+    return nullptr;
 }
 
 ExceptionOr<void> TextTrackCueGeneric::setLine(const LineAndPositionSetting& line)
@@ -205,7 +207,8 @@ void TextTrackCueGeneric::setFontSize(int fontSize, const IntSize& videoSize, bo
     double size = videoSize.height() * baseFontSizeRelativeToVideoHeight() / 100;
     if (fontSizeMultiplier())
         size *= fontSizeMultiplier() / 100;
-    displayTreeInternal().setInlineStyleProperty(CSSPropertyFontSize, lround(size), CSSUnitType::CSS_PX);
+    if (auto* displayTree = displayTreeInternal())
+        displayTree->setInlineStyleProperty(CSSPropertyFontSize, lround(size), CSSUnitType::CSS_PX);
 }
 
 bool TextTrackCueGeneric::cueContentsMatch(const TextTrackCue& otherTextTrackCue) const
@@ -251,6 +254,8 @@ bool TextTrackCueGeneric::isPositionedAbove(const TextTrackCue* that) const
 
 void TextTrackCueGeneric::toJSON(JSON::Object& object) const
 {
+    VTTCue::toJSON(object);
+
     if (m_foregroundColor.isValid())
         object.setString("foregroundColor"_s, serializationForHTML(m_foregroundColor));
     if (m_backgroundColor.isValid())

@@ -48,7 +48,7 @@ MediaRecorder::CreatorFunction MediaRecorder::m_customCreator = nullptr;
 
 bool MediaRecorder::isTypeSupported(Document& document, const String& value)
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(GSTREAMER_TRANSCODER)
     auto* page = document.page();
     return page && page->mediaRecorderProvider().isSupported(value);
 #else
@@ -66,7 +66,7 @@ ExceptionOr<Ref<MediaRecorder>> MediaRecorder::create(Document& document, Ref<Me
         return Exception { InvalidStateError };
 
     if (!isTypeSupported(document, options.mimeType))
-        return Exception { NotSupportedError, "mimeType is not supported" };
+        return Exception { NotSupportedError, "mimeType is not supported"_s };
 
     auto recorder = adoptRef(*new MediaRecorder(document, WTFMove(stream), WTFMove(options)));
     recorder->suspendIfNeeded();
@@ -87,7 +87,7 @@ ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> MediaRecorder::createMediaRec
     if (m_customCreator)
         return m_customCreator(stream, options);
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(GSTREAMER_TRANSCODER)
     auto result = page->mediaRecorderProvider().createMediaRecorderPrivate(stream, options);
 #else
     std::unique_ptr<MediaRecorderPrivate> result;
@@ -105,9 +105,7 @@ MediaRecorder::MediaRecorder(Document& document, Ref<MediaStream>&& stream, Opti
 {
     computeInitialBitRates();
 
-    m_tracks = WTF::map(m_stream->getTracks(), [] (auto&& track) -> Ref<MediaStreamTrackPrivate> {
-        return track->privateTrack();
-    });
+    m_tracks = m_stream->privateStream().tracks();
     m_stream->privateStream().addObserver(*this);
 }
 

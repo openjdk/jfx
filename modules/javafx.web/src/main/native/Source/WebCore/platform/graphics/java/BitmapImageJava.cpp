@@ -62,7 +62,7 @@ Ref<Image> BitmapImage::createFromName(const char* name)
     env->CallVoidMethod(
         static_cast<ImageDecoderJava*>(img->m_source->m_decoder.get())->nativeDecoder(),
         midLoadFromResource,
-        (jstring)String(name).toJavaString(env));
+        (jstring)String::fromLatin1(name).toJavaString(env));
     WTF::CheckAndClearException(env);
 
     // we have to make this call in order to initialize
@@ -83,7 +83,7 @@ Ref<Image> BitmapImage::createFromName(const char* name)
 
     SharedBufferBuilder bufferBuilder;
     //RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
-    JLString resourceName(String(name).toJavaString(env));
+    JLString resourceName(String::fromLatin1(name).toJavaString(env));
     ASSERT(resourceName);
 
     env->CallVoidMethod(

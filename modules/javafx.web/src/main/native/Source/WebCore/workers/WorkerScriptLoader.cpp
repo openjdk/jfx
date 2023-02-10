@@ -28,6 +28,7 @@
 #include "WorkerScriptLoader.h"
 
 #include "ContentSecurityPolicy.h"
+#include "Document.h"
 #include "Exception.h"
 #include "FetchIdioms.h"
 #include "MIMETypeRegistry.h"
@@ -36,6 +37,7 @@
 #include "ServiceWorker.h"
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerGlobalScope.h"
+#include "ServiceWorkerProvider.h"
 #include "TextResourceDecoder.h"
 #include "WorkerFetchResult.h"
 #include "WorkerGlobalScope.h"
@@ -45,12 +47,30 @@
 
 namespace WebCore {
 
+static HashMap<ScriptExecutionContextIdentifier, WorkerScriptLoader*>& scriptExecutionContextIdentifierToWorkerScriptLoaderMap()
+{
+    static MainThreadNeverDestroyed<HashMap<ScriptExecutionContextIdentifier, WorkerScriptLoader*>> map;
+    return map.get();
+}
+
 WorkerScriptLoader::WorkerScriptLoader()
     : m_script(ScriptBuffer::empty())
 {
 }
 
-WorkerScriptLoader::~WorkerScriptLoader() = default;
+WorkerScriptLoader::~WorkerScriptLoader()
+{
+    if (!m_clientIdentifier)
+        return;
+
+    scriptExecutionContextIdentifierToWorkerScriptLoaderMap().remove(m_clientIdentifier);
+#if ENABLE(SERVICE_WORKER)
+    if (m_activeServiceWorkerData) {
+        if (auto* serviceWorkerConnection = ServiceWorkerProvider::singleton().existingServiceWorkerConnection())
+            serviceWorkerConnection->unregisterServiceWorkerClient(m_clientIdentifier);
+    }
+#endif
+}
 
 std::optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionContext* scriptExecutionContext, const URL& url, Source source, FetchOptions::Mode mode, FetchOptions::Cache cachePolicy, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, const String& initiatorIdentifier)
 {
@@ -64,15 +84,17 @@ std::optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionCo
     m_isCOEPEnabled = scriptExecutionContext->settingsValues().crossOriginEmbedderPolicyEnabled;
 
 #if ENABLE(SERVICE_WORKER)
-    bool isServiceWorkerGlobalScope = is<ServiceWorkerGlobalScope>(workerGlobalScope);
-
-    if (isServiceWorkerGlobalScope) {
-        if (auto* scriptResource = downcast<ServiceWorkerGlobalScope>(workerGlobalScope).scriptResource(url)) {
+    auto* serviceWorkerGlobalScope = dynamicDowncast<ServiceWorkerGlobalScope>(workerGlobalScope);
+    if (serviceWorkerGlobalScope) {
+        if (auto* scriptResource = serviceWorkerGlobalScope->scriptResource(url)) {
             m_script = scriptResource->script;
             m_responseURL = scriptResource->responseURL;
             m_responseMIMEType = scriptResource->mimeType;
             return std::nullopt;
         }
+        auto state = serviceWorkerGlobalScope->serviceWorker().state();
+        if (state != ServiceWorkerState::Parsed && state != ServiceWorkerState::Installing)
+            return Exception { NetworkError, "Importing a script from a service worker that is past installing state"_s };
     }
 #endif
 
@@ -93,11 +115,7 @@ std::optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionCo
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.contentSecurityPolicyEnforcement = contentSecurityPolicyEnforcement;
     options.destination = m_destination;
-#if ENABLE(SERVICE_WORKER)
-    options.serviceWorkersMode = isServiceWorkerGlobalScope ? ServiceWorkersMode::None : ServiceWorkersMode::All;
-    if (auto* activeServiceWorker = workerGlobalScope.activeServiceWorker())
-        options.serviceWorkerRegistrationIdentifier = activeServiceWorker->registrationIdentifier();
-#endif
+
     WorkerThreadableLoader::loadResourceSynchronously(workerGlobalScope, WTFMove(*request), *this, options);
 
     // If the fetching attempt failed, throw a NetworkError exception and abort all these steps.
@@ -105,17 +123,17 @@ std::optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionCo
         return Exception { NetworkError, m_error.sanitizedDescription() };
 
 #if ENABLE(SERVICE_WORKER)
-    if (isServiceWorkerGlobalScope) {
+    if (serviceWorkerGlobalScope) {
         if (!MIMETypeRegistry::isSupportedJavaScriptMIMEType(responseMIMEType()))
             return Exception { NetworkError, "mime type is not a supported JavaScript mime type"_s };
 
-        downcast<ServiceWorkerGlobalScope>(workerGlobalScope).setScriptResource(url, ServiceWorkerContextData::ImportedScript { script(), m_responseURL, m_responseMIMEType });
+        serviceWorkerGlobalScope->setScriptResource(url, ServiceWorkerContextData::ImportedScript { script(), m_responseURL, m_responseMIMEType });
     }
 #endif
     return std::nullopt;
 }
 
-void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecutionContext, ResourceRequest&& scriptRequest, Source source, FetchOptions&& fetchOptions, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, ServiceWorkersMode serviceWorkerMode, WorkerScriptLoaderClient& client, String&& taskMode)
+void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecutionContext, ResourceRequest&& scriptRequest, Source source, FetchOptions&& fetchOptions, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, ServiceWorkersMode serviceWorkerMode, WorkerScriptLoaderClient& client, String&& taskMode, ScriptExecutionContextIdentifier clientIdentifier)
 {
     m_client = &client;
     m_url = scriptRequest.url();
@@ -124,7 +142,7 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
     m_destination = fetchOptions.destination;
     m_isCOEPEnabled = scriptExecutionContext.settingsValues().crossOriginEmbedderPolicyEnabled;
 
-    ASSERT(scriptRequest.httpMethod() == "GET");
+    ASSERT(scriptRequest.httpMethod() == "GET"_s);
 
     auto request = makeUnique<ResourceRequest>(WTFMove(scriptRequest));
     if (!request)
@@ -142,9 +160,20 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
     // A service worker job can be executed from a worker context or a document context.
     options.serviceWorkersMode = serviceWorkerMode;
 #if ENABLE(SERVICE_WORKER)
-    if (auto* activeServiceWorker = scriptExecutionContext.activeServiceWorker())
+    if ((m_destination == FetchOptions::Destination::Worker || m_destination == FetchOptions::Destination::Sharedworker) && is<Document>(scriptExecutionContext)) {
+        ASSERT(clientIdentifier);
+        options.clientIdentifier = m_clientIdentifier = clientIdentifier;
+        // In case of blob URLs, we reuse the document controlling service worker.
+        if (request->url().protocolIsBlob() && scriptExecutionContext.activeServiceWorker())
+            setControllingServiceWorker(ServiceWorkerData { scriptExecutionContext.activeServiceWorker()->data() });
+        else
+            scriptExecutionContextIdentifierToWorkerScriptLoaderMap().add(m_clientIdentifier, this);
+    } else if (auto* activeServiceWorker = scriptExecutionContext.activeServiceWorker())
         options.serviceWorkerRegistrationIdentifier = activeServiceWorker->registrationIdentifier();
 #endif
+
+    if (m_destination == FetchOptions::Destination::Sharedworker)
+        m_userAgentForSharedWorker = scriptExecutionContext.userAgent(scriptRequest.url());
 
     // During create, callbacks may happen which remove the last reference to this object.
     Ref<WorkerScriptLoader> protectedThis(*this);
@@ -220,6 +249,7 @@ void WorkerScriptLoader::didReceiveResponse(ResourceLoaderIdentifier identifier,
     m_certificateInfo = response.certificateInfo() ? *response.certificateInfo() : CertificateInfo();
     m_responseMIMEType = response.mimeType();
     m_responseSource = response.source();
+    m_responseTainting = response.tainting();
     m_isRedirected = response.isRedirected();
     m_contentSecurityPolicy = ContentSecurityPolicyResponseHeaders { response };
     if (m_isCOEPEnabled)
@@ -233,6 +263,13 @@ void WorkerScriptLoader::didReceiveData(const SharedBuffer& buffer)
 {
     if (m_failed)
         return;
+
+#if ENABLE(WEBASSEMBLY)
+    if (MIMETypeRegistry::isSupportedWebAssemblyMIMEType(m_responseMIMEType)) {
+        m_script.append(buffer);
+        return;
+    }
+#endif
 
     if (!m_decoder)
         m_decoder = TextResourceDecoder::create("text/javascript"_s, "UTF-8");
@@ -267,7 +304,7 @@ void WorkerScriptLoader::notifyError()
 {
     m_failed = true;
     if (m_error.isNull())
-        m_error = { errorDomainWebKitInternal, 0, url(), "Failed to load script", ResourceError::Type::General };
+        m_error = { errorDomainWebKitInternal, 0, url(), "Failed to load script"_s, ResourceError::Type::General };
     notifyFinished();
 }
 
@@ -297,5 +334,21 @@ WorkerFetchResult WorkerScriptLoader::fetchResult() const
         return workerFetchError(error());
     return { script(), lastRequestURL(), certificateInfo(), contentSecurityPolicy(), crossOriginEmbedderPolicy(), referrerPolicy(), { } };
 }
+
+WorkerScriptLoader* WorkerScriptLoader::fromScriptExecutionContextIdentifier(ScriptExecutionContextIdentifier identifier)
+{
+    return scriptExecutionContextIdentifierToWorkerScriptLoaderMap().get(identifier);
+}
+
+#if ENABLE(SERVICE_WORKER)
+bool WorkerScriptLoader::setControllingServiceWorker(ServiceWorkerData&& activeServiceWorkerData)
+{
+    if (!m_client)
+        return false;
+
+    m_activeServiceWorkerData = WTFMove(activeServiceWorkerData);
+    return true;
+}
+#endif
 
 } // namespace WebCore

@@ -37,6 +37,7 @@
 #include "MIMETypeRegistry.h"
 #include "Page.h"
 #include "PluginData.h"
+#include "PluginReplacement.h"
 #include "PluginViewBase.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderLayer.h"
@@ -48,6 +49,10 @@
 #include "SubframeLoader.h"
 #include "Widget.h"
 #include <wtf/IsoMallocInlines.h>
+
+#if PLATFORM(COCOA)
+#include "YouTubePluginReplacement.h"
+#endif
 
 namespace WebCore {
 
@@ -67,7 +72,7 @@ HTMLPlugInElement::~HTMLPlugInElement()
     ASSERT(!m_instance); // cleared in detach()
 }
 
-bool HTMLPlugInElement::willRespondToMouseClickEvents()
+bool HTMLPlugInElement::willRespondToMouseClickEventsWithEditability(Editability) const
 {
     if (isDisabledFormControl())
         return false;
@@ -107,13 +112,13 @@ JSC::Bindings::Instance* HTMLPlugInElement::bindingsInstance()
     return m_instance.get();
 }
 
-Widget* HTMLPlugInElement::pluginWidget(PluginLoadingPolicy loadPolicy) const
+PluginViewBase* HTMLPlugInElement::pluginWidget(PluginLoadingPolicy loadPolicy) const
 {
     RenderWidget* renderWidget = loadPolicy == PluginLoadingPolicy::Load ? renderWidgetLoadingPlugin() : this->renderWidget();
     if (!renderWidget)
         return nullptr;
 
-    return renderWidget->widget();
+    return dynamicDowncast<PluginViewBase>(renderWidget->widget());
 }
 
 RenderWidget* HTMLPlugInElement::renderWidgetLoadingPlugin() const
@@ -182,37 +187,12 @@ void HTMLPlugInElement::defaultEventHandler(Event& event)
 
 bool HTMLPlugInElement::isKeyboardFocusable(KeyboardEvent*) const
 {
-    // FIXME: Why is this check needed?
-    if (!document().page())
-        return false;
-
-    RefPtr<Widget> widget = pluginWidget();
-    if (!is<PluginViewBase>(widget))
-        return false;
-
-    return downcast<PluginViewBase>(*widget).supportsKeyboardFocus();
+    return false;
 }
 
 bool HTMLPlugInElement::isPluginElement() const
 {
     return true;
-}
-
-bool HTMLPlugInElement::isUserObservable() const
-{
-    // No widget - can't be anything to see or hear here.
-    RefPtr<Widget> widget = pluginWidget(PluginLoadingPolicy::DoNotLoad);
-    if (!is<PluginViewBase>(widget))
-        return false;
-
-    PluginViewBase& pluginView = downcast<PluginViewBase>(*widget);
-
-    // If audio is playing (or might be) then the plugin is detectable.
-    if (pluginView.audioHardwareActivity() != AudioHardwareActivityType::IsInactive)
-        return true;
-
-    // If the plugin is visible and not vanishingly small in either dimension it is detectable.
-    return pluginView.isVisible() && pluginView.width() > 2 && pluginView.height() > 2;
 }
 
 bool HTMLPlugInElement::supportsFocus() const
@@ -225,8 +205,11 @@ bool HTMLPlugInElement::supportsFocus() const
     return !downcast<RenderEmbeddedObject>(*renderer()).isPluginUnavailable();
 }
 
-RenderPtr<RenderElement> HTMLPlugInElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
+RenderPtr<RenderElement> HTMLPlugInElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
+    if (m_pluginReplacement && m_pluginReplacement->willCreateRenderer())
+        return m_pluginReplacement->createElementRenderer(*this, WTFMove(style), insertionPosition);
+
     return createRenderer<RenderEmbeddedObject>(*this, WTFMove(style));
 }
 
@@ -254,22 +237,104 @@ void HTMLPlugInElement::setDisplayState(DisplayState state)
         m_swapRendererTimer.startOneShot(0_s);
 }
 
-void HTMLPlugInElement::didAddUserAgentShadowRoot(ShadowRoot&)
+void HTMLPlugInElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
+    if (!m_pluginReplacement || !document().page() || displayState() != PreparingPluginReplacement)
+        return;
+
+    root.setResetStyleInheritance(true);
+
+    m_pluginReplacement->installReplacement(root);
+
+    setDisplayState(DisplayingPluginReplacement);
+    invalidateStyleAndRenderersForSubtree();
 }
 
-bool HTMLPlugInElement::requestObject(const String&, const String&, const Vector<String>&, const Vector<String>&)
+#if PLATFORM(COCOA)
+static void registrar(const ReplacementPlugin&);
+#endif
+
+static Vector<ReplacementPlugin*>& registeredPluginReplacements()
 {
-    return false;
+    static NeverDestroyed<Vector<ReplacementPlugin*>> registeredReplacements;
+    static bool enginesQueried = false;
+
+    if (enginesQueried)
+        return registeredReplacements;
+    enginesQueried = true;
+
+#if PLATFORM(COCOA)
+    YouTubePluginReplacement::registerPluginReplacement(registrar);
+#endif
+
+    return registeredReplacements;
 }
 
-bool HTMLPlugInElement::isBelowSizeThreshold() const
+#if PLATFORM(COCOA)
+static void registrar(const ReplacementPlugin& replacement)
 {
-    auto* renderObject = renderer();
-    if (!is<RenderEmbeddedObject>(renderObject))
+    registeredPluginReplacements().append(new ReplacementPlugin(replacement));
+}
+#endif
+
+static ReplacementPlugin* pluginReplacementForType(const URL& url, const String& mimeType)
+{
+    Vector<ReplacementPlugin*>& replacements = registeredPluginReplacements();
+    if (replacements.isEmpty())
+        return nullptr;
+
+    StringView extension;
+    auto lastPathComponent = url.lastPathComponent();
+    size_t dotOffset = lastPathComponent.reverseFind('.');
+    if (dotOffset != notFound)
+        extension = lastPathComponent.substring(dotOffset + 1);
+
+    String type = mimeType;
+    if (type.isEmpty() && url.protocolIsData())
+        type = mimeTypeFromDataURL(url.string());
+
+    if (type.isEmpty() && !extension.isEmpty()) {
+        for (auto* replacement : replacements) {
+            if (replacement->supportsFileExtension(extension) && replacement->supportsURL(url))
+                return replacement;
+        }
+    }
+
+    if (type.isEmpty()) {
+        if (extension.isEmpty())
+            return nullptr;
+        type = MIMETypeRegistry::mediaMIMETypeForExtension(extension);
+    }
+
+    if (type.isEmpty())
+        return nullptr;
+
+    for (auto* replacement : replacements) {
+        if (replacement->supportsType(type) && replacement->supportsURL(url))
+            return replacement;
+    }
+
+    return nullptr;
+}
+
+bool HTMLPlugInElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
+{
+    if (m_pluginReplacement)
         return true;
-    auto& renderEmbeddedObject = downcast<RenderEmbeddedObject>(*renderObject);
-    return renderEmbeddedObject.isPluginUnavailable() && renderEmbeddedObject.pluginUnavailabilityReason() == RenderEmbeddedObject::PluginTooSmall;
+
+    URL completedURL;
+    if (!relativeURL.isEmpty())
+        completedURL = document().completeURL(relativeURL);
+
+    ReplacementPlugin* replacement = pluginReplacementForType(completedURL, mimeType);
+    if (!replacement || !replacement->isEnabledBySettings(document().settings()))
+        return false;
+
+    LOG(Plugins, "%p - Found plug-in replacement for %s.", this, completedURL.string().utf8().data());
+
+    m_pluginReplacement = replacement->create(*this, paramNames, paramValues);
+    setDisplayState(PreparingPluginReplacement);
+    return true;
 }
 
 bool HTMLPlugInElement::setReplacement(RenderEmbeddedObject::PluginUnavailabilityReason reason, const String& unavailabilityDescription)

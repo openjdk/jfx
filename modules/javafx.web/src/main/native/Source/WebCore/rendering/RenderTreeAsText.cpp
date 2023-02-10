@@ -63,10 +63,9 @@
 #include "RenderSVGGradientStop.h"
 #include "RenderSVGImage.h"
 #include "RenderSVGInlineText.h"
-#include "RenderSVGPath.h"
 #include "RenderSVGResourceContainer.h"
 #include "RenderSVGRoot.h"
-#include "RenderSVGShape.h"
+#include "RenderSVGShapeInlines.h"
 #include "RenderSVGText.h"
 #include "RenderTableCell.h"
 #include "RenderView.h"
@@ -130,9 +129,9 @@ static void printBorderStyle(TextStream& ts, const BorderStyle borderStyle)
 static String getTagName(Node* n)
 {
     if (n->isDocumentNode())
-        return "";
+        return ""_s;
     if (n->nodeType() == Node::COMMENT_NODE)
-        return "COMMENT";
+        return "COMMENT"_s;
     return n->nodeName();
 }
 
@@ -142,7 +141,7 @@ static bool isEmptyOrUnstyledAppleStyleSpan(const Node* node)
         return false;
 
     const HTMLElement& element = downcast<HTMLSpanElement>(*node);
-    if (element.getAttribute(classAttr) != "Apple-style-span")
+    if (element.getAttribute(classAttr) != "Apple-style-span"_s)
         return false;
 
     if (!node->hasChildNodes())
@@ -214,7 +213,7 @@ static inline bool hasNonEmptySibling(const RenderInline& inlineRenderer)
 
 void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> behavior)
 {
-    ts << o.renderName();
+    ts << o.renderName().characters();
 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
         ts << " " << &o;
@@ -284,6 +283,12 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         r = LayoutRect(cell.x(), cell.y() + cell.intrinsicPaddingBefore(), cell.width(), cell.height() - cell.intrinsicPaddingBefore() - cell.intrinsicPaddingAfter());
     } else if (is<RenderBox>(o))
         r = downcast<RenderBox>(o).frameRect();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    else if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(o)) {
+        r = svgModelObject->frameRectEquivalent();
+        ASSERT(r.location() == svgModelObject->currentSVGLayoutLocation());
+    }
+#endif
 
     // FIXME: Temporary in order to ensure compatibility with existing layout test results.
     if (adjustForTableCells)
@@ -291,7 +296,20 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
 
     // FIXME: Convert layout test results to report sub-pixel values, in the meantime using enclosingIntRect
     // for consistency with old results.
+    // FIXME: [LBSE] Enable sub-pixel dumps for SVG
     ts << " " << enclosingIntRect(r);
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (is<RenderSVGModelObject>(o)) {
+        writeSVGPaintingFeatures(ts, downcast<RenderSVGModelObject>(o), behavior);
+
+        if (is<RenderSVGShape>(o))
+            writeSVGGraphicsElement(ts, downcast<RenderSVGShape>(o).graphicsElement());
+
+        writeDebugInfo(ts, o, behavior);
+        return;
+    }
+#endif
 
     if (!is<RenderText>(o)) {
         if (is<RenderFileUploadControl>(o))
@@ -330,6 +348,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         LayoutUnit borderRight = box.borderRight();
         LayoutUnit borderBottom = box.borderBottom();
         LayoutUnit borderLeft = box.borderLeft();
+        bool overridden = o.style().borderImage().overridesBorderWidths();
         if (box.isFieldset()) {
             const auto& block = downcast<RenderBlock>(box);
             if (o.style().writingMode() == WritingMode::TopToBottom)
@@ -357,7 +376,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
                 ts << serializationForRenderTreeAsText(color) << ")";
             }
 
-            if (o.style().borderRight() != prevBorder) {
+            if (o.style().borderRight() != prevBorder || (overridden && borderRight != borderTop)) {
                 prevBorder = o.style().borderRight();
                 if (!borderRight)
                     ts << " none";
@@ -371,7 +390,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
                 }
             }
 
-            if (o.style().borderBottom() != prevBorder) {
+            if (o.style().borderBottom() != prevBorder || (overridden && borderBottom != borderRight)) {
                 prevBorder = box.style().borderBottom();
                 if (!borderBottom)
                     ts << " none";
@@ -385,7 +404,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
                 }
             }
 
-            if (o.style().borderLeft() != prevBorder) {
+            if (o.style().borderLeft() != prevBorder || (overridden && borderLeft != borderBottom)) {
                 prevBorder = o.style().borderLeft();
                 if (!borderLeft)
                     ts << " none";
@@ -451,13 +470,13 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             else {
                 switch (text[0]) {
                     case bullet:
-                        text = "bullet";
+                        text = "bullet"_s;
                         break;
                     case blackSquare:
-                        text = "black square";
+                        text = "black square"_s;
                         break;
                     case whiteBullet:
-                        text = "white bullet";
+                        text = "white bullet"_s;
                         break;
                     default:
                         text = quoteAndEscapeNonPrintables(text);
@@ -524,17 +543,29 @@ void writeDebugInfo(TextStream& ts, const RenderObject& object, OptionSet<Render
             ts << ")";
     }
 
-    if (behavior.contains(RenderAsTextFlag::ShowOverflow) && is<RenderBox>(object)) {
-        const auto& box = downcast<RenderBox>(object);
-        if (box.hasRenderOverflow()) {
-            LayoutRect layoutOverflow = box.layoutOverflowRect();
-            ts << " (layout overflow " << layoutOverflow.x().toInt() << "," << layoutOverflow.y().toInt() << " " << layoutOverflow.width().toInt() << "x" << layoutOverflow.height().toInt() << ")";
+    if (behavior.contains(RenderAsTextFlag::ShowOverflow)) {
+        if (is<RenderBox>(object)) {
+            const auto& box = downcast<RenderBox>(object);
+            if (box.hasRenderOverflow()) {
+                LayoutRect layoutOverflow = box.layoutOverflowRect();
+                ts << " (layout overflow " << layoutOverflow.x().toInt() << "," << layoutOverflow.y().toInt() << " " << layoutOverflow.width().toInt() << "x" << layoutOverflow.height().toInt() << ")";
 
-            if (box.hasVisualOverflow()) {
-                LayoutRect visualOverflow = box.visualOverflowRect();
-                ts << " (visual overflow " << visualOverflow.x().toInt() << "," << visualOverflow.y().toInt() << " " << visualOverflow.width().toInt() << "x" << visualOverflow.height().toInt() << ")";
+                if (box.hasVisualOverflow()) {
+                    LayoutRect visualOverflow = box.visualOverflowRect();
+                    ts << " (visual overflow " << visualOverflow.x().toInt() << "," << visualOverflow.y().toInt() << " " << visualOverflow.width().toInt() << "x" << visualOverflow.height().toInt() << ")";
+                }
             }
         }
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (is<RenderSVGModelObject>(object)) {
+            if (const auto& renderSVGModelObject = downcast<RenderSVGModelObject>(object); renderSVGModelObject.hasVisualOverflow()) {
+                auto visualOverflow = renderSVGModelObject.visualOverflowRectEquivalent();
+                ts << " (visual overflow " << visualOverflow.x() << "," << visualOverflow.y() << " " << visualOverflow.width() << "x" << visualOverflow.height() << ")";
+            }
+        }
+#endif
+
     }
 }
 
@@ -542,7 +573,7 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
 {
     auto writeTextRun = [&](auto& textRenderer, auto& textRun)
     {
-        auto rect = textRun.rect();
+        auto rect = textRun.visualRectIgnoringBlockDirection();
         int x = rect.x();
         int y = rect.y();
         // FIXME: Use non-logical width. webkit.org/b/206809.
@@ -561,12 +592,7 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         ts << "\n";
     };
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (is<RenderSVGShape>(o)) {
-        write(ts, downcast<RenderSVGShape>(o), behavior);
-        return;
-    }
-#endif
+
     if (is<LegacyRenderSVGShape>(o)) {
         write(ts, downcast<LegacyRenderSVGShape>(o), behavior);
         return;
@@ -579,22 +605,10 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         writeSVGResourceContainer(ts, downcast<RenderSVGResourceContainer>(o), behavior);
         return;
     }
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (is<RenderSVGContainer>(o)) {
-        writeSVGContainer(ts, downcast<RenderSVGContainer>(o), behavior);
-        return;
-    }
-#endif
     if (is<LegacyRenderSVGContainer>(o)) {
         writeSVGContainer(ts, downcast<LegacyRenderSVGContainer>(o), behavior);
         return;
     }
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-    if (is<RenderSVGRoot>(o)) {
-        write(ts, downcast<RenderSVGRoot>(o), behavior);
-        return;
-    }
-#endif
     if (is<LegacyRenderSVGRoot>(o)) {
         write(ts, downcast<LegacyRenderSVGRoot>(o), behavior);
         return;
@@ -645,6 +659,11 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
             }
         }
     }
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if  (is<RenderSVGModelObject>(o) || is<RenderSVGRoot>(o))
+        writeResources(ts, o, behavior);
+#endif
 }
 
 enum LayerPaintPhase {
@@ -784,7 +803,7 @@ static void writeLayers(TextStream& ts, const RenderLayer& rootLayer, RenderLaye
 
         if (behavior.contains(RenderAsTextFlag::ShowLayerFragments)) {
             LayerFragments layerFragments;
-            layer.collectFragments(layerFragments, &rootLayer, paintDirtyRect, RenderLayer::PaginationInclusionMode::ExcludeCompositedPaginatedLayers, TemporaryClipRects, IgnoreOverlayScrollbarSize, RespectOverflowClip, offsetFromRoot);
+            layer.collectFragments(layerFragments, &rootLayer, paintDirtyRect, RenderLayer::PaginationInclusionMode::ExcludeCompositedPaginatedLayers, TemporaryClipRects, { RenderLayer::ClipRectsOption::RespectOverflowClip }, offsetFromRoot);
 
             if (layerFragments.size() > 1) {
                 TextStream::IndentScope indentScope(ts, 2);

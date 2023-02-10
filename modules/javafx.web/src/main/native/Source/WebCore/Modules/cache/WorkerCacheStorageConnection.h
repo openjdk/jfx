@@ -37,7 +37,7 @@ class WorkerLoaderProxy;
 
 class WorkerCacheStorageConnection final : public CacheStorageConnection {
 public:
-    static Ref<WorkerCacheStorageConnection> create(WorkerGlobalScope&);
+    static Ref<WorkerCacheStorageConnection> create(WorkerGlobalScope& scope) { return adoptRef(*new WorkerCacheStorageConnection(scope)); }
     ~WorkerCacheStorageConnection();
 
     void clearPendingRequests();
@@ -50,7 +50,7 @@ private:
     void remove(uint64_t cacheIdentifier, DOMCacheEngine::CacheIdentifierCallback&&) final;
     void retrieveCaches(const ClientOrigin&, uint64_t updateCounter, DOMCacheEngine::CacheInfosCallback&&) final;
 
-    void retrieveRecords(uint64_t cacheIdentifier, const RetrieveRecordsOptions&, DOMCacheEngine::RecordsCallback&&) final;
+    void retrieveRecords(uint64_t cacheIdentifier, RetrieveRecordsOptions&&, DOMCacheEngine::RecordsCallback&&) final;
     void batchDeleteOperation(uint64_t cacheIdentifier, const ResourceRequest&, CacheQueryOptions&&, DOMCacheEngine::RecordIdentifiersCallback&&) final;
     void batchPutOperation(uint64_t cacheIdentifier, Vector<DOMCacheEngine::Record>&&, DOMCacheEngine::RecordIdentifiersCallback&&) final;
 
@@ -72,7 +72,7 @@ private:
 
     WorkerGlobalScope& m_scope;
 
-    RefPtr<CacheStorageConnection> m_mainThreadConnection;
+    Ref<CacheStorageConnection> m_mainThreadConnection;
 
     HashMap<uint64_t, DOMCacheEngine::CacheIdentifierCallback> m_openAndRemoveCachePendingRequests;
     HashMap<uint64_t, DOMCacheEngine::CacheInfosCallback> m_retrieveCachesPendingRequests;

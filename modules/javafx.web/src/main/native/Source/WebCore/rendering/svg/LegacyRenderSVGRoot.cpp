@@ -71,7 +71,7 @@ SVGSVGElement& LegacyRenderSVGRoot::svgSVGElement() const
 
 void LegacyRenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const
 {
-    ASSERT(!shouldApplySizeContainment(*this));
+    ASSERT(!shouldApplySizeContainment());
 
     // Spec: http://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
     // SVG needs to specify how to calculate some intrinsic sizing properties to enable inclusion within other languages.
@@ -154,7 +154,7 @@ LayoutUnit LegacyRenderSVGRoot::computeReplacedLogicalHeight(std::optional<Layou
 
 void LegacyRenderSVGRoot::layout()
 {
-    SetForScope<bool> change(m_inLayout, true);
+    SetForScope change(m_inLayout, true);
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
@@ -178,7 +178,7 @@ void LegacyRenderSVGRoot::layout()
         // Invalidate resource clients, which may mark some nodes for layout.
         for (auto& resource :  m_resourcesNeedingToInvalidateClients) {
             resource->removeAllClientsFromCache();
-            SVGResourcesCache::clientStyleChanged(*resource, StyleDifference::Layout, resource->style());
+            SVGResourcesCache::clientStyleChanged(*resource, StyleDifference::Layout, nullptr, resource->style());
         }
 
         m_isLayoutSizeChanged = false;
@@ -274,7 +274,7 @@ void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint&
     // Convert from container offsets (html renderers) to a relative transform (svg renderers).
     // Transform from our paint container's coordinate system to our local coords.
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset);
-    childPaintInfo.applyTransform(AffineTransform::translation(adjustedPaintOffset.x(), adjustedPaintOffset.y()) * localToBorderBoxTransform());
+    childPaintInfo.applyTransform(AffineTransform::makeTranslation(toFloatSize(adjustedPaintOffset)) * localToBorderBoxTransform());
 
     // SVGRenderingContext must be destroyed before we restore the childPaintInfo.context(), because a filter may have
     // changed the context and it is only reverted when the SVGRenderingContext destructor finishes applying the filter.
@@ -326,7 +326,7 @@ void LegacyRenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle
         m_hasBoxDecorations = hasVisibleBoxDecorationStyle();
 
     RenderReplaced::styleDidChange(diff, oldStyle);
-    SVGResourcesCache::clientStyleChanged(*this, diff, style());
+    SVGResourcesCache::clientStyleChanged(*this, diff, oldStyle, style());
 }
 
 // RenderBox methods will expect coordinates w/o any transforms in coordinates
@@ -344,7 +344,7 @@ void LegacyRenderSVGRoot::buildLocalToBorderBoxTransform()
 
 const AffineTransform& LegacyRenderSVGRoot::localToParentTransform() const
 {
-    // Slightly optimized version of m_localToParentTransform = AffineTransform::translation(x(), y()) * m_localToBorderBoxTransform;
+    // Slightly optimized version of m_localToParentTransform = AffineTransform::makeTranslation(x(), y()) * m_localToBorderBoxTransform;
     m_localToParentTransform = m_localToBorderBoxTransform;
     if (x())
         m_localToParentTransform.setE(m_localToParentTransform.e() + roundToInt(x()));

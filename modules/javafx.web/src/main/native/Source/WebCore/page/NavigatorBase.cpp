@@ -29,9 +29,9 @@
 
 #include "Document.h"
 #include "GPU.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ServiceWorkerContainer.h"
 #include "StorageManager.h"
+#include "WebCoreOpaqueRoot.h"
 #include "WebLockManager.h"
 #include <mutex>
 #include <wtf/Language.h>
@@ -93,7 +93,7 @@ String NavigatorBase::platform() const
     static std::once_flag onceKey;
     std::call_once(onceKey, [] {
         struct utsname osname;
-        platformName.construct(uname(&osname) >= 0 ? String(osname.sysname) + " "_str + String(osname.machine) : String(""_s));
+        platformName.construct(uname(&osname) >= 0 ? makeString(osname.sysname, " ", osname.machine) : emptyString());
     });
     return platformName->isolatedCopy();
 #elif PLATFORM(IOS_FAMILY)
@@ -162,7 +162,7 @@ WebLockManager& NavigatorBase::locks()
 #if ENABLE(SERVICE_WORKER)
 ServiceWorkerContainer& NavigatorBase::serviceWorker()
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().serviceWorkerEnabled());
+    ASSERT(!scriptExecutionContext() || scriptExecutionContext()->settingsValues().serviceWorkersEnabled);
     if (!m_serviceWorkerContainer)
         m_serviceWorkerContainer = ServiceWorkerContainer::create(scriptExecutionContext(), *this).moveToUniquePtr();
     return *m_serviceWorkerContainer;
@@ -171,7 +171,7 @@ ServiceWorkerContainer& NavigatorBase::serviceWorker()
 ExceptionOr<ServiceWorkerContainer&> NavigatorBase::serviceWorker(ScriptExecutionContext& context)
 {
     if (is<Document>(context) && downcast<Document>(context).isSandboxed(SandboxOrigin))
-        return Exception { SecurityError, "Service Worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag" };
+        return Exception { SecurityError, "Service Worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
     return serviceWorker();
 }
 #endif
@@ -194,6 +194,11 @@ int NavigatorBase::hardwareConcurrency()
     });
 
     return numberOfCores;
+}
+
+WebCoreOpaqueRoot root(NavigatorBase* navigator)
+{
+    return WebCoreOpaqueRoot { navigator };
 }
 
 } // namespace WebCore

@@ -97,10 +97,8 @@ enum class Flip : bool { No, Yes };
 
 static void truncateWithEllipsis(String& string, size_t length)
 {
-    if (string.length() > length) {
-        string.truncate(length);
-        string.append(ellipsis);
-    }
+    if (string.length() > length)
+        string = makeString(StringView(string).left(length), ellipsis);
 }
 
 static FloatPoint localPointToRootPoint(const FrameView* view, const FloatPoint& point)
@@ -613,7 +611,7 @@ ErrorStringOr<void> InspectorOverlay::setGridOverlayForNode(Node& node, const In
 {
     RenderObject* renderer = node.renderer();
     if (!is<RenderGrid>(renderer))
-        return makeUnexpected("Node does not initiate a grid context");
+        return makeUnexpected("Node does not initiate a grid context"_s);
 
     removeGridOverlayForNode(node);
 
@@ -627,7 +625,7 @@ ErrorStringOr<void> InspectorOverlay::setGridOverlayForNode(Node& node, const In
 ErrorStringOr<void> InspectorOverlay::clearGridOverlayForNode(Node& node)
 {
     if (!removeGridOverlayForNode(node))
-        return makeUnexpected("No grid overlay exists for the node, so cannot clear.");
+        return makeUnexpected("No grid overlay exists for the node, so cannot clear."_s);
 
     update();
 
@@ -652,7 +650,7 @@ bool InspectorOverlay::removeFlexOverlayForNode(Node& node)
 ErrorStringOr<void> InspectorOverlay::setFlexOverlayForNode(Node& node, const InspectorOverlay::Flex::Config& flexOverlayConfig)
 {
     if (!is<RenderFlexibleBox>(node.renderer()))
-        return makeUnexpected("Node does not initiate a flex context");
+        return makeUnexpected("Node does not initiate a flex context"_s);
 
     removeFlexOverlayForNode(node);
 
@@ -666,7 +664,7 @@ ErrorStringOr<void> InspectorOverlay::setFlexOverlayForNode(Node& node, const In
 ErrorStringOr<void> InspectorOverlay::clearFlexOverlayForNode(Node& node)
 {
     if (!removeFlexOverlayForNode(node))
-        return makeUnexpected("No flex overlay exists for the node, so cannot clear.");
+        return makeUnexpected("No flex overlay exists for the node, so cannot clear."_s);
 
     update();
 
@@ -875,7 +873,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
     // Draw lines.
     {
         FontCascadeDescription fontDescription;
-        fontDescription.setOneFamily(m_page.settings().sansSerifFontFamily());
+        fontDescription.setOneFamily(AtomString { m_page.settings().sansSerifFontFamily() });
         fontDescription.setComputedSize(10);
 
         FontCascade font(WTFMove(fontDescription), 0, 0);
@@ -965,7 +963,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
     // Draw viewport size.
     {
         FontCascadeDescription fontDescription;
-        fontDescription.setOneFamily(m_page.settings().sansSerifFontFamily());
+        fontDescription.setOneFamily(AtomString { m_page.settings().sansSerifFontFamily() });
         fontDescription.setComputedSize(12);
 
         FontCascade font(WTFMove(fontDescription), 0, 0);
@@ -1753,6 +1751,9 @@ void InspectorOverlay::drawFlexOverlay(GraphicsContext& context, const Inspector
     constexpr auto spaceBetweenItemsAndCrossAxisSpaceStipplingDensity = 6;
     for (const auto& crossAxisSpaceBetweenItemAndGap : flexHighlightOverlay.spaceBetweenItemsAndCrossAxisSpace)
         drawLayoutStippling(context, crossAxisSpaceBetweenItemAndGap, spaceBetweenItemsAndCrossAxisSpaceStipplingDensity);
+
+    for (auto label : flexHighlightOverlay.labels)
+        label.draw(context);
 }
 
 std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverlay::buildFlexOverlay(const InspectorOverlay::Flex& flexOverlay)
@@ -1878,18 +1879,60 @@ std::optional<InspectorOverlay::Highlight::FlexHighlightOverlay> InspectorOverla
     float currentLineCrossAxisTrailingEdge = isCrossAxisDirectionReversed ? std::numeric_limits<float>::max() : 0.0f;
     float previousLineCrossAxisTrailingEdge = correctedCrossAxisLeadingEdge(containerRect);
 
-    size_t currentChildIndex = 0;
+    Vector<RenderBox*> renderChildrenInFlexOrder;
+    Vector<RenderObject*> renderChildrenInDOMOrder;
+    bool hasCustomOrder = false;
+
     auto childOrderIterator = renderFlex.orderIterator();
     for (RenderBox* renderChild = childOrderIterator.first(); renderChild; renderChild = childOrderIterator.next()) {
         if (childOrderIterator.shouldSkipChild(*renderChild))
             continue;
+        renderChildrenInFlexOrder.append(renderChild);
+    }
 
+    if (flexOverlay.config.showOrderNumbers) {
+        for (auto* child = node->firstChild(); child; child = child->nextSibling()) {
+            if (auto* renderer = child->renderer()) {
+                if (!renderChildrenInFlexOrder.contains(renderer))
+                    continue;
+
+                renderChildrenInDOMOrder.append(renderer);
+
+                if (renderer->style().order())
+                    hasCustomOrder = true;
+            }
+        }
+    }
+
+    size_t currentChildIndex = 0;
+    for (auto* renderChild : renderChildrenInFlexOrder) {
         // Build bounds for each child and collect children on the same logical line.
         {
             auto childRect = renderChild->frameRect();
             renderFlex.flipForWritingMode(childRect);
             childRect.expand(renderChild->marginBox());
-            flexHighlightOverlay.itemBounds.append(childQuadToRootQuad({ childRect }));
+
+            auto itemBounds = childQuadToRootQuad({ childRect });
+            flexHighlightOverlay.itemBounds.append(itemBounds);
+
+            if (flexOverlay.config.showOrderNumbers) {
+                StringBuilder orderNumbers;
+
+                if (auto index = renderChildrenInDOMOrder.find(renderChild); index != notFound) {
+                    orderNumbers.append("Item #");
+                    orderNumbers.append(index + 1);
+                }
+
+                if (auto order = renderChild->style().order(); order || hasCustomOrder) {
+                    if (!orderNumbers.isEmpty())
+                        orderNumbers.append('\n');
+                    orderNumbers.append("order: ");
+                    orderNumbers.append(order);
+                }
+
+                if (!orderNumbers.isEmpty())
+                    flexHighlightOverlay.labels.append({ orderNumbers.toString(), itemBounds.center(), Color::white.colorWithAlphaByte(230), { InspectorOverlayLabel::Arrow::Direction::None, InspectorOverlayLabel::Arrow::Alignment::None } });
+            }
 
             currentLineCrossAxisLeadingEdge = correctedCrossAxisMin(currentLineCrossAxisLeadingEdge, correctedCrossAxisLeadingEdge(childRect));
             currentLineCrossAxisTrailingEdge = correctedCrossAxisMax(currentLineCrossAxisTrailingEdge, correctedCrossAxisTrailingEdge(childRect));

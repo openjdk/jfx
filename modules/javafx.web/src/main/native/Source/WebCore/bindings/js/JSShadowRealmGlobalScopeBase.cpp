@@ -41,7 +41,7 @@ namespace WebCore {
 
 using namespace JSC;
 
-const ClassInfo JSShadowRealmGlobalScopeBase::s_info = { "ShadowRealmGlobalScope", &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSShadowRealmGlobalScopeBase) };
+const ClassInfo JSShadowRealmGlobalScopeBase::s_info = { "ShadowRealmGlobalScope"_s, &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSShadowRealmGlobalScopeBase) };
 
 const GlobalObjectMethodTable JSShadowRealmGlobalScopeBase::s_globalObjectMethodTable = {
     &supportsRichSourceInfo,
@@ -81,7 +81,7 @@ void JSShadowRealmGlobalScopeBase::finishCreation(VM& vm, JSProxy* proxy)
     m_proxy.set(vm, this, proxy);
     m_wrapped->m_wrapper = JSC::Weak(this);
     Base::finishCreation(vm, m_proxy.get());
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>

@@ -40,9 +40,9 @@ class RenderImageResource;
 template<typename T> class EventSender;
 using ImageEventSender = EventSender<ImageLoader>;
 
-enum class RelevantMutation : bool { Yes, No };
+enum class RelevantMutation : bool { No, Yes };
 
-class ImageLoader : public CachedImageClient, public CanMakeWeakPtr<ImageLoader> {
+class ImageLoader : public CachedImageClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~ImageLoader();
@@ -98,6 +98,7 @@ private:
     virtual String sourceURI(const AtomString&) const = 0;
 
     void updatedHasPendingEvent();
+    void didUpdateCachedImage(RelevantMutation, CachedResourceHandle<CachedImage>&&);
 
     void dispatchPendingBeforeLoadEvent();
     void dispatchPendingLoadEvent();
@@ -111,7 +112,7 @@ private:
 
     bool hasPendingDecodePromises() const { return !m_decodingPromises.isEmpty(); }
     void resolveDecodePromises();
-    void rejectDecodePromises(const char* message);
+    void rejectDecodePromises(ASCIILiteral message);
     void decode();
 
     void timerFired();

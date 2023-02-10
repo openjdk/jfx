@@ -126,6 +126,9 @@ void SVGFELightElement::parseAttribute(const QualifiedName& name, const AtomStri
 void SVGFELightElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::azimuthAttr || attrName == SVGNames::elevationAttr || attrName == SVGNames::xAttr || attrName == SVGNames::yAttr
+            || attrName == SVGNames::zAttr || attrName == SVGNames::pointsAtXAttr || attrName == SVGNames::pointsAtYAttr || attrName == SVGNames::pointsAtZAttr
+            || attrName == SVGNames::specularExponentAttr || attrName == SVGNames::limitingConeAngleAttr);
         RefPtr parent = parentElement();
         if (!parent)
             return;
@@ -154,12 +157,8 @@ void SVGFELightElement::childrenChanged(const ChildChange& change)
 
     if (change.source == ChildChange::Source::Parser)
         return;
-    RefPtr parent = parentNode();
-    if (!parent)
-        return;
-    RenderElement* renderer = parent->renderer();
-    if (renderer && renderer->isSVGResourceFilterPrimitive())
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+
+    SVGFilterPrimitiveStandardAttributes::invalidateFilterPrimitiveParent(this);
 }
 
 }

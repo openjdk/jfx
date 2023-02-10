@@ -24,6 +24,8 @@
 
 #pragma once
 
+#if ENABLE(PDFJS)
+
 #include "HTMLDocument.h"
 
 namespace WebCore {
@@ -41,7 +43,7 @@ public:
 
     void updateDuringParsing();
     void finishedParsing();
-    void injectContentScript();
+    void injectStyleAndContentScript();
 
     void sendPDFArrayBuffer();
     bool isFinishedParsing() const { return m_isFinishedParsing; }
@@ -65,3 +67,5 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PDFDocument)
     static bool isType(const WebCore::Document& document) { return document.isPDFDocument(); }
     static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
 SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ENABLE(PDFJS)

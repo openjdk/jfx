@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 
 #include "DateInstance.h"
 #include "DirectArguments.h"
+#include "Integrity.h"
 #include "JSArray.h"
 #include "JSBigInt.h"
 #include "JSBoundFunction.h"
@@ -38,6 +39,7 @@
 #include "JSCellInlines.h"
 #include "JSDataView.h"
 #include "JSFunction.h"
+#include "JSGenericTypedArrayView.h"
 #include "JSMap.h"
 #include "JSSet.h"
 #include "JSWeakMap.h"
@@ -521,8 +523,13 @@ SpeculatedType speculationFromClassInfoInheritance(const ClassInfo* classInfo)
     if (classInfo->isSubClassOf(JSPromise::info()))
         return SpecPromiseObject;
 
-    if (isTypedView(classInfo->typedArrayStorageType))
-        return speculationFromTypedArrayType(classInfo->typedArrayStorageType);
+#define JSC_TYPED_ARRAY_CHECK(type) do { \
+        static_assert(std::is_final<JS ## type ## Array>::value); \
+        if (classInfo == JS ## type ## Array::info()) \
+            return Spec ## type ## Array; \
+    } while (0);
+    FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(JSC_TYPED_ARRAY_CHECK)
+#undef JSC_TYPED_ARRAY_CHECK
 
     if (classInfo->isSubClassOf(JSObject::info()))
         return SpecObjectOther;
@@ -557,37 +564,24 @@ SpeculatedType speculationFromStructure(Structure* structure)
         filteredResult = SpecObjectOther;
         break;
     default:
-        return speculationFromClassInfoInheritance(structure->classInfo());
+        return speculationFromClassInfoInheritance(structure->classInfoForCells());
     }
     ASSERT(filteredResult);
-    ASSERT(isSubtypeSpeculation(filteredResult, speculationFromClassInfoInheritance(structure->classInfo())));
+    ASSERT(isSubtypeSpeculation(filteredResult, speculationFromClassInfoInheritance(structure->classInfoForCells())));
     return filteredResult;
-}
-
-ALWAYS_INLINE static bool isSanePointer(const void* pointer)
-{
-    // FIXME: rdar://69036888: remove this when no longer needed.
-#if CPU(ADDRESS64)
-    uintptr_t pointerAsInt = bitwise_cast<uintptr_t>(pointer);
-    uintptr_t canonicalPointerBits = pointerAsInt << (64 - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH));
-    uintptr_t nonCanonicalPointerBits = pointerAsInt >> OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
-    return !nonCanonicalPointerBits && canonicalPointerBits;
-#else
-    UNUSED_PARAM(pointer);
-    return true;
-#endif
 }
 
 SpeculatedType speculationFromCell(JSCell* cell)
 {
-    if (UNLIKELY(!isSanePointer(cell))) {
+    // FIXME: rdar://69036888: remove isSanePointer checks when no longer needed.
+    if (UNLIKELY(!Integrity::isSanePointer(cell))) {
         ASSERT_NOT_REACHED();
         return SpecNone;
     }
     if (cell->isString()) {
         JSString* string = jsCast<JSString*>(cell);
         if (const StringImpl* impl = string->tryGetValueImpl()) {
-            if (UNLIKELY(!isSanePointer(impl))) {
+            if (UNLIKELY(!Integrity::isSanePointer(impl))) {
                 ASSERT_NOT_REACHED();
                 return SpecNone;
             }
@@ -596,7 +590,13 @@ SpeculatedType speculationFromCell(JSCell* cell)
         }
         return SpecString;
     }
-    return speculationFromStructure(cell->structure());
+    // FIXME: rdar://69036888: undo this when no longer needed.
+    auto* structure = cell->structureID().tryDecode();
+    if (UNLIKELY(!Integrity::isSanePointer(structure))) {
+        ASSERT_NOT_REACHED();
+        return SpecNone;
+    }
+    return speculationFromStructure(structure);
 }
 
 SpeculatedType speculationFromValue(JSValue value)

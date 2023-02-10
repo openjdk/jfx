@@ -49,7 +49,7 @@ private:
     explicit MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&&);
 
     // MediaRecorderPrivate
-    void videoSampleAvailable(MediaSample&, VideoSampleMetadata) final;
+    void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final;
     void fetchData(FetchDataCallback&&) final;
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
     void startRecording(StartRecordingCallback&&) final;
@@ -60,8 +60,7 @@ private:
     void resumeRecording(CompletionHandler<void()>&&) final;
 
     Ref<MediaRecorderPrivateWriter> m_writer;
-    RetainPtr<CVPixelBufferRef> m_blackFrame;
-    RetainPtr<CMFormatDescriptionRef> m_blackFrameDescription;
+    RefPtr<VideoFrame> m_blackFrame;
     CAAudioStreamDescription m_description;
     std::unique_ptr<WebAudioBufferList> m_audioBuffer;
 };

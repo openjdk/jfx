@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "DecodingOptions.h"
 #include "FormNamedItem.h"
 #include "GraphicsLayer.h"
@@ -45,7 +46,7 @@ struct ImageCandidate;
 enum class ReferrerPolicy : uint8_t;
 enum class RelevantMutation : bool;
 
-class HTMLImageElement : public HTMLElement, public FormNamedItem {
+class HTMLImageElement : public HTMLElement, public FormNamedItem, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLImageElement);
     friend class HTMLFormElement;
 public:
@@ -80,7 +81,7 @@ public:
     WEBCORE_EXPORT void setHeight(unsigned);
 
     URL src() const;
-    void setSrc(const String&);
+    void setSrc(const AtomString&);
 
     WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
@@ -92,7 +93,7 @@ public:
 
     WEBCORE_EXPORT bool complete() const;
 
-    void setDecoding(String&&);
+    void setDecoding(AtomString&&);
     String decoding() const;
 
     DecodingMode decodingMode() const;
@@ -100,7 +101,10 @@ public:
     WEBCORE_EXPORT void decode(Ref<DeferredPromise>&&);
 
 #if PLATFORM(IOS_FAMILY)
-    bool willRespondToMouseClickEvents() override;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const override;
+
+    enum class IgnoreTouchCallout { No, Yes };
+    bool willRespondToMouseClickEventsWithEditability(Editability, IgnoreTouchCallout) const;
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -109,7 +113,6 @@ public:
     const String& attachmentIdentifier() const;
 #endif
 
-    bool hasPendingActivity() const;
     WEBCORE_EXPORT size_t pendingDecodePromisesCountForTesting() const;
 
     bool canContainRangeEndPoint() const override { return false; }
@@ -117,7 +120,8 @@ public:
     const AtomString& imageSourceURL() const override;
 
 #if ENABLE(SERVICE_CONTROLS)
-    bool imageMenuEnabled() const { return m_imageMenuEnabled; }
+    bool isImageMenuEnabled() const { return m_isImageMenuEnabled; }
+    void setImageMenuEnabled(bool value) { m_isImageMenuEnabled = value; }
 #endif
 
     HTMLPictureElement* pictureElement() const;
@@ -128,6 +132,9 @@ public:
 #endif
 
     void loadDeferredImage();
+
+    AtomString srcsetForBindings() const;
+    void setSrcsetForBindings(const AtomString&);
 
     const AtomString& loadingForBindings() const;
     void setLoadingForBindings(const AtomString&);
@@ -148,10 +155,6 @@ public:
 
     bool allowsOrientationOverride() const;
 
-#if ENABLE(SERVICE_CONTROLS)
-    WEBCORE_EXPORT bool hasImageControls() const;
-#endif
-
 protected:
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
 
@@ -165,6 +168,12 @@ private:
     void collectExtraStyleForPresentationalHints(MutableStyleProperties&) override;
     void invalidateAttributeMapping();
 
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) final;
+
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
+
     void didAttachRenderers() override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     void setBestFitURLAndDPRFromImageCandidate(const ImageCandidate&);
@@ -173,7 +182,7 @@ private:
 
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
-    String completeURLsInAttributeValue(const URL& base, const Attribute&) const override;
+    String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
 
@@ -198,9 +207,6 @@ private:
     float effectiveImageDevicePixelRatio() const;
 
 #if ENABLE(SERVICE_CONTROLS)
-    void updateImageControls();
-    void tryCreateImageControls();
-    void destroyImageControls();
     bool childShouldCreateRenderer(const Node&) const override;
 #endif
 
@@ -217,7 +223,7 @@ private:
     AtomString m_parsedUsemap;
     float m_imageDevicePixelRatio;
 #if ENABLE(SERVICE_CONTROLS)
-    bool m_imageMenuEnabled { false };
+    bool m_isImageMenuEnabled { false };
 #endif
     bool m_hadNameBeforeAttributeChanged { false }; // FIXME: We only need this because parseAttribute() can't see the old value.
     bool m_isDroppedImagePlaceholder { false };

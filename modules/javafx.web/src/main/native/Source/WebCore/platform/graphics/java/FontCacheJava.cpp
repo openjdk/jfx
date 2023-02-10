@@ -39,7 +39,7 @@ void FontCache::platformInit()
 {
 }
 
-RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, const Font*, IsForPlatformFont, PreferColoredFont, const UChar*, unsigned)
+RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, const Font&, IsForPlatformFont, PreferColoredFont, const UChar*, unsigned)
 {
     return nullptr;
 }
@@ -53,7 +53,7 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
 {
     // We want to return a fallback font here, otherwise the logic preventing FontConfig
     // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
-    static AtomString timesStr("serif");
+    static AtomString timesStr("serif"_s);
     return *fontForFamily(fontDescription, timesStr);
 }
 
@@ -74,6 +74,11 @@ std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&
 {
     notImplemented();
     return { };
+}
+
+void FontCache::platformInvalidate()
+{
+  // not implemented
 }
 
 Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts)

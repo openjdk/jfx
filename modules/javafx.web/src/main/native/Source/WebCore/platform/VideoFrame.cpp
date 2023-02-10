@@ -28,109 +28,38 @@
 
 #if ENABLE(VIDEO)
 
+#if USE(GSTREAMER)
+#include "VideoFrameGStreamer.h"
+#endif
+
 namespace WebCore {
 
-VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, VideoRotation rotation)
+VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation rotation)
     : m_presentationTime(presentationTime)
     , m_isMirrored(isMirrored)
     , m_rotation(rotation)
 {
 }
 
-VideoFrame::~VideoFrame() = default;
-
-MediaTime VideoFrame::presentationTime() const
+void VideoFrame::initializeCharacteristics(MediaTime presentationTime, bool isMirrored, Rotation rotation)
 {
-    return m_presentationTime;
+    const_cast<MediaTime&>(m_presentationTime) = presentationTime;
+    const_cast<bool&>(m_isMirrored) = isMirrored;
+    const_cast<Rotation&>(m_rotation) = rotation;
 }
 
-MediaSample::VideoRotation VideoFrame::videoRotation() const
+#if !PLATFORM(COCOA)
+RefPtr<JSC::Uint8ClampedArray> VideoFrame::getRGBAImageData() const
 {
-    return m_rotation;
-}
-
-bool VideoFrame::videoMirrored() const
-{
-    return m_isMirrored;
-}
-
-WebCore::PlatformSample VideoFrame::platformSample() const
-{
-    return { WebCore::PlatformSample::VideoFrameType, { } };
-}
-
-PlatformSample::Type VideoFrame::platformSampleType() const
-{
-    return WebCore::PlatformSample::VideoFrameType;
-}
-
-MediaTime VideoFrame::decodeTime() const
-{
-    ASSERT_NOT_REACHED();
-    return { };
-}
-
-MediaTime VideoFrame::duration() const
-{
-    ASSERT_NOT_REACHED();
-    return { };
-}
-
-AtomString VideoFrame::trackID() const
-{
-    ASSERT_NOT_REACHED();
-    return { };
-}
-
-size_t VideoFrame::sizeInBytes() const
-{
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
-void VideoFrame::offsetTimestampsBy(const MediaTime&)
-{
-    ASSERT_NOT_REACHED();
-}
-
-void VideoFrame::setTimestamps(const MediaTime&, const MediaTime&)
-{
-    ASSERT_NOT_REACHED();
-}
-
-bool VideoFrame::isDivisable() const
-{
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
-std::pair<RefPtr<WebCore::MediaSample>, RefPtr<WebCore::MediaSample>> VideoFrame::divide(const MediaTime&, UseEndTime)
-{
-    ASSERT_NOT_REACHED();
-    return { nullptr, nullptr };
-}
-
-Ref<WebCore::MediaSample> VideoFrame::createNonDisplayingCopy() const
-{
-    CRASH();
-}
-
-MediaSample::SampleFlags VideoFrame::flags() const
-{
-    return MediaSample::SampleFlags::None;
-}
-
-std::optional<MediaSample::ByteRange> VideoFrame::byteRange() const
-{
-    // FIXME: Remove from the base class.
-    ASSERT_NOT_REACHED();
-    return std::nullopt;
-}
-
-void VideoFrame::dump(PrintStream&) const
-{
-}
-
-}
-
+#if USE(GSTREAMER)
+    if (isGStreamer())
+        return static_cast<const VideoFrameGStreamer*>(this)->computeRGBAImageData();
 #endif
+    // FIXME: Add support.
+    return nullptr;
+}
+#endif
+
+}
+
+#endif // ENABLE(VIDEO)

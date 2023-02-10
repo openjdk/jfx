@@ -78,7 +78,7 @@ bool ThreadedScrollingTree::handleWheelEventAfterMainThread(const PlatformWheelE
         processingSteps = { WheelEventProcessingSteps::ScrollingThread, WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch };
     }
 
-    SetForScope<bool> disallowLatchingScope(m_allowLatching, allowLatching);
+    SetForScope disallowLatchingScope(m_allowLatching, allowLatching);
     RefPtr<ScrollingTreeNode> targetNode = nodeForID(targetNodeID);
     auto result = handleWheelEventWithNode(wheelEvent, processingSteps, targetNode.get(), EventTargeting::NodeOnly);
     return result.wasHandled;
@@ -338,6 +338,16 @@ void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, s
     });
 }
 #endif
+
+void ThreadedScrollingTree::lockLayersForHitTesting()
+{
+    m_layerHitTestMutex.lock();
+}
+
+void ThreadedScrollingTree::unlockLayersForHitTesting()
+{
+    m_layerHitTestMutex.unlock();
+}
 
 bool ThreadedScrollingTree::scrollingThreadIsActive()
 {

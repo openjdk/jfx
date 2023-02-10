@@ -89,20 +89,6 @@ static bool isAccessibilitySettingsDependent(const AtomString& mediaFeature)
         || mediaFeature == MediaFeatureNames::prefersContrast;
 }
 
-static bool isViewportDependent(const AtomString& mediaFeature)
-{
-    return mediaFeature == MediaFeatureNames::width
-        || mediaFeature == MediaFeatureNames::height
-        || mediaFeature == MediaFeatureNames::minWidth
-        || mediaFeature == MediaFeatureNames::minHeight
-        || mediaFeature == MediaFeatureNames::maxWidth
-        || mediaFeature == MediaFeatureNames::maxHeight
-        || mediaFeature == MediaFeatureNames::orientation
-        || mediaFeature == MediaFeatureNames::aspectRatio
-        || mediaFeature == MediaFeatureNames::minAspectRatio
-        || mediaFeature == MediaFeatureNames::maxAspectRatio;
-}
-
 static bool isAppearanceDependent(const AtomString& mediaFeature)
 {
     return mediaFeature == MediaFeatureNames::prefersDarkInterface
@@ -139,16 +125,16 @@ MediaQueryEvaluator::MediaQueryEvaluator(const String& acceptedMediaType, const 
 bool MediaQueryEvaluator::mediaTypeMatch(const String& mediaTypeToMatch) const
 {
     return mediaTypeToMatch.isEmpty()
-        || equalLettersIgnoringASCIICase(mediaTypeToMatch, "all")
+        || equalLettersIgnoringASCIICase(mediaTypeToMatch, "all"_s)
         || equalIgnoringASCIICase(mediaTypeToMatch, m_mediaType);
 }
 
-bool MediaQueryEvaluator::mediaTypeMatchSpecific(const char* mediaTypeToMatch) const
+bool MediaQueryEvaluator::mediaTypeMatchSpecific(ASCIILiteral mediaTypeToMatch) const
 {
     // Like mediaTypeMatch, but without the special cases for "" and "all".
-    ASSERT(mediaTypeToMatch);
-    ASSERT(mediaTypeToMatch[0] != '\0');
-    ASSERT(!equalLettersIgnoringASCIICase(StringView(mediaTypeToMatch), "all"));
+    ASSERT(!mediaTypeToMatch.isNull());
+    ASSERT(mediaTypeToMatch.characterAt(0) != '\0');
+    ASSERT(!equalLettersIgnoringASCIICase(mediaTypeToMatch, "all"_s));
     return equalIgnoringASCIICase(m_mediaType, mediaTypeToMatch);
 }
 
@@ -183,7 +169,7 @@ bool MediaQueryEvaluator::evaluate(const MediaQuerySet& querySet, MediaQueryDyna
             for (; j < expressions.size(); ++j) {
                 bool expressionResult = evaluate(expressions[j]);
                 if (dynamicResults) {
-                    if (isViewportDependent(expressions[j].mediaFeature())) {
+                    if (expressions[j].isViewportDependent()) {
                         isDynamic = true;
                         dynamicResults->viewport.append({ expressions[j], expressionResult });
                     }
@@ -419,9 +405,9 @@ static bool evaluateResolution(CSSValue* value, Frame& frame, MediaFeaturePrefix
     // in the query. Thus, if if the document's media type is "print", the
     // media type of the query will either be "print" or "all".
     String mediaType = view->mediaType();
-    if (equalLettersIgnoringASCIICase(mediaType, "screen"))
+    if (equalLettersIgnoringASCIICase(mediaType, "screen"_s))
         deviceScaleFactor = frame.page() ? frame.page()->deviceScaleFactor() : 1;
-    else if (equalLettersIgnoringASCIICase(mediaType, "print")) {
+    else if (equalLettersIgnoringASCIICase(mediaType, "print"_s)) {
         // The resolution of images while printing should not depend on the dpi
         // of the screen. Until we support proper ways of querying this info
         // we use 300px which is considered minimum for current printers.
@@ -448,7 +434,7 @@ static bool devicePixelRatioEvaluate(CSSValue* value, const CSSToLengthConversio
 
 static bool resolutionEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix op)
 {
-    if (!frame.settings().resolutionMediaFeatureEnabled())
+    if (!frame.settings().resolutionMediaFeatureEnabled() || frame.document()->quirks().shouldDisableResolutionMediaQuery())
         return false;
 
     return (!value || (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).isResolution())) && evaluateResolution(value, frame, op);
@@ -479,6 +465,28 @@ static bool dynamicRangeEvaluate(CSSValue* value, const CSSToLengthConversionDat
     default:
         return false; // Any unknown value should not be considered a match.
     }
+}
+
+static bool scanEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
+{
+    RefPtr view = frame.view();
+    if (!view)
+        return false;
+
+    /* With Media Queries Level 4, the "tv" media type is deprecated
+     * and the "scan" feature applies to all media types.
+     * We are currently supporting Media Queries Level 3,
+     * thus the check against "tv".
+     */
+    if (!equalLettersIgnoringASCIICase(view->mediaType(), "tv"_s))
+        return false;
+
+    auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value);
+    if (!primitiveValue)
+        return false;
+
+    // All known implementations (Blink, Gecko) assume and match "progressive".
+    return primitiveValue->valueID() == CSSValueProgressive;
 }
 
 static bool gridEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame&, MediaFeaturePrefix op)
@@ -946,14 +954,14 @@ bool MediaQueryEvaluator::evaluate(const MediaQueryExpression& expression) const
     defaultStyle.fontCascade().update();
 
     // Pass `nullptr` for `parentStyle` because we are in the context of a media query.
-    return function(expression.value(), { m_style, &defaultStyle, nullptr, document.renderView(), 1, std::nullopt }, *frame, NoPrefix);
+    return function(expression.value(), { *m_style, &defaultStyle, nullptr, document.renderView() }, *frame, NoPrefix);
 }
 
 bool MediaQueryEvaluator::mediaAttributeMatches(Document& document, const String& attributeValue)
 {
     ASSERT(document.renderView());
     auto mediaQueries = MediaQuerySet::create(attributeValue, MediaQueryParserContext(document));
-    return MediaQueryEvaluator { "screen", document, &document.renderView()->style() }.evaluate(mediaQueries.get());
+    return MediaQueryEvaluator { "screen"_s, document, &document.renderView()->style() }.evaluate(mediaQueries.get());
 }
 
 } // WebCore

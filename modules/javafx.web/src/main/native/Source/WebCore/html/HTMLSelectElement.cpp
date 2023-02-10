@@ -100,8 +100,8 @@ void HTMLSelectElement::didRecalcStyle(Style::Change styleChange)
 
 const AtomString& HTMLSelectElement::formControlType() const
 {
-    static MainThreadNeverDestroyed<const AtomString> selectMultiple("select-multiple", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> selectOne("select-one", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> selectMultiple("select-multiple"_s);
+    static MainThreadNeverDestroyed<const AtomString> selectOne("select-one"_s);
     return m_multiple ? selectMultiple : selectOne;
 }
 
@@ -531,12 +531,13 @@ bool HTMLSelectElement::isRequiredFormControl() const
     return isRequired();
 }
 
-bool HTMLSelectElement::willRespondToMouseClickEvents()
+bool HTMLSelectElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
 #if PLATFORM(IOS_FAMILY)
+    UNUSED_PARAM(editability);
     return !isDisabledFormControl();
 #else
-    return HTMLFormControlElementWithState::willRespondToMouseClickEvents();
+    return HTMLFormControlElementWithState::willRespondToMouseClickEventsWithEditability(editability);
 #endif
 }
 
@@ -634,9 +635,9 @@ void HTMLSelectElement::saveLastSelection()
         return;
     }
 
-    m_lastOnChangeSelection.clear();
-    for (auto& element : listItems())
-        m_lastOnChangeSelection.append(is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected());
+    m_lastOnChangeSelection = listItems().map([](auto& element) {
+        return is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected();
+    });
 }
 
 void HTMLSelectElement::setActiveSelectionAnchorIndex(int index)
@@ -645,10 +646,9 @@ void HTMLSelectElement::setActiveSelectionAnchorIndex(int index)
 
     // Cache the selection state so we can restore the old selection as the new
     // selection pivots around this anchor index.
-    m_cachedStateForActiveSelection.clear();
-
-    for (auto& element : listItems())
-        m_cachedStateForActiveSelection.append(is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected());
+    m_cachedStateForActiveSelection = listItems().map([](auto& element) {
+        return is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected();
+    });
 }
 
 void HTMLSelectElement::setActiveSelectionEndIndex(int index)
@@ -950,13 +950,13 @@ int HTMLSelectElement::listToOptionIndex(int listIndex) const
     return optionIndex;
 }
 
-void HTMLSelectElement::dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection direction)
+void HTMLSelectElement::dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, const FocusOptions& options)
 {
     // Save the selection so it can be compared to the new selection when
     // dispatching change events during blur event dispatch.
     if (usesMenuList())
         saveLastSelection();
-    HTMLFormControlElementWithState::dispatchFocusEvent(WTFMove(oldFocusedElement), direction);
+    HTMLFormControlElementWithState::dispatchFocusEvent(WTFMove(oldFocusedElement), options);
 }
 
 void HTMLSelectElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
@@ -1114,7 +1114,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
         return false;
 
     if (!isSpatialNavigationEnabled(document().frame())) {
-        if (event->keyIdentifier() == "Down" || event->keyIdentifier() == "Up") {
+        if (event->keyIdentifier() == "Down"_s || event->keyIdentifier() == "Up"_s) {
             focus();
             document().updateStyleIfNeeded();
             // Calling focus() may cause us to lose our renderer. Return true so
@@ -1145,7 +1145,8 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
     ASSERT(renderer());
     ASSERT(renderer()->isMenuList());
 
-    if (event.type() == eventNames().keydownEvent) {
+    auto& eventNames = WebCore::eventNames();
+    if (event.type() == eventNames.keydownEvent) {
         if (!is<KeyboardEvent>(event))
             return;
 
@@ -1169,21 +1170,21 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         // When using caret browsing, we want to be able to move the focus
         // out of the select element when user hits a left or right arrow key.
         if (document().settings().caretBrowsingEnabled()) {
-            if (keyIdentifier == "Left" || keyIdentifier == "Right")
+            if (keyIdentifier == "Left"_s || keyIdentifier == "Right"_s)
                 return;
         }
 
-        if (keyIdentifier == "Down" || keyIdentifier == "Right")
+        if (keyIdentifier == "Down"_s || keyIdentifier == "Right"_s)
             listIndex = nextValidIndex(listIndex, SkipForwards, 1);
-        else if (keyIdentifier == "Up" || keyIdentifier == "Left")
+        else if (keyIdentifier == "Up"_s || keyIdentifier == "Left"_s)
             listIndex = nextValidIndex(listIndex, SkipBackwards, 1);
-        else if (keyIdentifier == "PageDown")
+        else if (keyIdentifier == "PageDown"_s)
             listIndex = nextValidIndex(listIndex, SkipForwards, 3);
-        else if (keyIdentifier == "PageUp")
+        else if (keyIdentifier == "PageUp"_s)
             listIndex = nextValidIndex(listIndex, SkipBackwards, 3);
-        else if (keyIdentifier == "Home")
+        else if (keyIdentifier == "Home"_s)
             listIndex = nextValidIndex(-1, SkipForwards, 1);
-        else if (keyIdentifier == "End")
+        else if (keyIdentifier == "End"_s)
             listIndex = nextValidIndex(listItems.size(), SkipBackwards, 1);
         else
             handled = false;
@@ -1197,7 +1198,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
 
     // Use key press event here since sending simulated mouse events
     // on key down blocks the proper sending of the key press event.
-    if (event.type() == eventNames().keypressEvent) {
+    if (event.type() == eventNames.keypressEvent) {
         if (!is<KeyboardEvent>(event))
             return;
 
@@ -1259,7 +1260,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
             keyboardEvent.setDefaultHandled();
     }
 
-    if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
+    if (event.type() == eventNames.mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
         focus();
 #if !PLATFORM(IOS_FAMILY)
         document().updateStyleIfNeeded();
@@ -1281,7 +1282,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
     }
 
 #if !PLATFORM(IOS_FAMILY)
-    if (event.type() == eventNames().blurEvent && !focused()) {
+    if (event.type() == eventNames.blurEvent && !focused()) {
         auto& menuList = downcast<RenderMenuList>(*renderer());
         if (menuList.popupIsVisible())
             menuList.hidePopup();
@@ -1346,7 +1347,8 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
 {
     auto& listItems = this->listItems();
 
-    if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
+    auto& eventNames = WebCore::eventNames();
+    if (event.type() == eventNames.mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
         focus();
         document().updateStyleIfNeeded();
 
@@ -1373,7 +1375,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
 
             mouseEvent.setDefaultHandled();
         }
-    } else if (event.type() == eventNames().mousemoveEvent && is<MouseEvent>(event) && !downcast<RenderListBox>(*renderer()).canBeScrolledAndHasScrollableArea()) {
+    } else if (event.type() == eventNames.mousemoveEvent && is<MouseEvent>(event) && !downcast<RenderListBox>(*renderer()).canBeScrolledAndHasScrollableArea()) {
         MouseEvent& mouseEvent = downcast<MouseEvent>(event);
         if (mouseEvent.button() != LeftButton || !mouseEvent.buttonDown())
             return;
@@ -1398,7 +1400,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             }
             mouseEvent.setDefaultHandled();
         }
-    } else if (event.type() == eventNames().mouseupEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton && document().frame()->eventHandler().autoscrollRenderer() != renderer()) {
+    } else if (event.type() == eventNames.mouseupEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton && document().frame()->eventHandler().autoscrollRenderer() != renderer()) {
         // This click or drag event was not over any of the options.
         if (m_lastOnChangeSelection.isEmpty())
             return;
@@ -1406,7 +1408,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
         // click. For drag selection, onChange will fire when the autoscroll
         // timer stops.
         listBoxOnChange();
-    } else if (event.type() == eventNames().keydownEvent) {
+    } else if (event.type() == eventNames.keydownEvent) {
         if (!is<KeyboardEvent>(event))
             return;
 
@@ -1417,48 +1419,48 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
         int endIndex = 0;
         if (m_activeSelectionEndIndex < 0) {
             // Initialize the end index
-            if (keyIdentifier == "Down" || keyIdentifier == "PageDown") {
+            if (keyIdentifier == "Down"_s || keyIdentifier == "PageDown"_s) {
                 int startIndex = lastSelectedListIndex();
                 handled = true;
-                if (keyIdentifier == "Down")
+                if (keyIdentifier == "Down"_s)
                     endIndex = nextSelectableListIndex(startIndex);
                 else
                     endIndex = nextSelectableListIndexPageAway(startIndex, SkipForwards);
-            } else if (keyIdentifier == "Up" || keyIdentifier == "PageUp") {
+            } else if (keyIdentifier == "Up"_s || keyIdentifier == "PageUp"_s) {
                 int startIndex = optionToListIndex(selectedIndex());
                 handled = true;
-                if (keyIdentifier == "Up")
+                if (keyIdentifier == "Up"_s)
                     endIndex = previousSelectableListIndex(startIndex);
                 else
                     endIndex = nextSelectableListIndexPageAway(startIndex, SkipBackwards);
             }
         } else {
             // Set the end index based on the current end index.
-            if (keyIdentifier == "Down") {
+            if (keyIdentifier == "Down"_s) {
                 endIndex = nextSelectableListIndex(m_activeSelectionEndIndex);
                 handled = true;
-            } else if (keyIdentifier == "Up") {
+            } else if (keyIdentifier == "Up"_s) {
                 endIndex = previousSelectableListIndex(m_activeSelectionEndIndex);
                 handled = true;
-            } else if (keyIdentifier == "PageDown") {
+            } else if (keyIdentifier == "PageDown"_s) {
                 endIndex = nextSelectableListIndexPageAway(m_activeSelectionEndIndex, SkipForwards);
                 handled = true;
-            } else if (keyIdentifier == "PageUp") {
+            } else if (keyIdentifier == "PageUp"_s) {
                 endIndex = nextSelectableListIndexPageAway(m_activeSelectionEndIndex, SkipBackwards);
                 handled = true;
             }
         }
-        if (keyIdentifier == "Home") {
+        if (keyIdentifier == "Home"_s) {
             endIndex = firstSelectableListIndex();
             handled = true;
-        } else if (keyIdentifier == "End") {
+        } else if (keyIdentifier == "End"_s) {
             endIndex = lastSelectableListIndex();
             handled = true;
         }
 
         if (isSpatialNavigationEnabled(document().frame()))
             // Check if the selection moves to the boundary.
-            if (keyIdentifier == "Left" || keyIdentifier == "Right" || ((keyIdentifier == "Down" || keyIdentifier == "Up") && endIndex == m_activeSelectionEndIndex))
+            if (keyIdentifier == "Left"_s || keyIdentifier == "Right"_s || ((keyIdentifier == "Down"_s || keyIdentifier == "Up"_s) && endIndex == m_activeSelectionEndIndex))
                 return;
 
         if (endIndex >= 0 && handled) {
@@ -1497,7 +1499,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
 
             keyboardEvent.setDefaultHandled();
         }
-    } else if (event.type() == eventNames().keypressEvent) {
+    } else if (event.type() == eventNames.keypressEvent) {
         if (!is<KeyboardEvent>(event))
             return;
         KeyboardEvent& keyboardEvent = downcast<KeyboardEvent>(event);

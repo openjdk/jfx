@@ -71,6 +71,7 @@ if (APPLE)
         cocoa/WorkQueueCocoa.cpp
         text/cf/StringCF.cpp
         text/cf/StringImplCF.cpp
+	text/cocoa/ASCIILiteralCocoa.mm
         text/cocoa/StringImplCocoa.mm
     )
 

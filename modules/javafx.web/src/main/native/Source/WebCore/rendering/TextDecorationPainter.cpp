@@ -28,6 +28,7 @@
 #include "GraphicsContext.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLFontElement.h"
+#include "InlineIteratorLineBox.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderBlock.h"
 #include "RenderStyle.h"
@@ -190,11 +191,16 @@ bool TextDecorationPainter::Styles::operator==(const Styles& other) const
         && underlineStyle == other.underlineStyle && overlineStyle == other.overlineStyle && linethroughStyle == other.linethroughStyle;
 }
 
-TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, OptionSet<TextDecorationLine> decorations, const RenderText& renderer, bool isFirstLine, const FontCascade& font, std::optional<Styles> styles)
+TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, OptionSet<TextDecorationLine> decorations, const RenderText& renderer, bool isFirstLine, const FontCascade& font, InlineIterator::TextBoxIterator textBox, float width, const ShadowData* shadow, const FilterOperations* colorFilter, std::optional<Styles> styles)
     : m_context { context }
     , m_decorations { decorations }
     , m_wavyOffset { wavyOffsetFromDecoration() }
+    , m_width(width)
     , m_isPrinting { renderer.document().printing() }
+    , m_isHorizontal(textBox->isHorizontal())
+    , m_shadow(shadow)
+    , m_shadowColorFilter(colorFilter)
+    , m_textBox(textBox)
     , m_font { font }
     , m_styles { styles ? *WTFMove(styles) : stylesForRenderer(renderer, decorations, isFirstLine, PseudoId::None) }
     , m_lineStyle { isFirstLine ? renderer.firstLineStyle() : renderer.style() }
@@ -277,9 +283,7 @@ void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, c
 
         // These decorations should match the visual overflows computed in visualOverflowForDecorations().
         if (m_decorations.contains(TextDecorationLine::Underline)) {
-            float textDecorationBaseFontSize = 16;
-            auto defaultGap = m_lineStyle.computedFontSize() / textDecorationBaseFontSize;
-            float offset = computeUnderlineOffset(m_lineStyle.textUnderlinePosition(), m_lineStyle.textUnderlineOffset(), m_lineStyle.metricsOfPrimaryFont(), m_textBox, defaultGap);
+            auto offset = underlineOffsetForTextBoxPainting(m_lineStyle, m_textBox);
             float wavyOffset = m_styles.underlineStyle == TextDecorationStyle::Wavy ? m_wavyOffset : 0;
             FloatRect rect(localOrigin, FloatSize(m_width, textDecorationThickness));
             rect.move(0, offset + wavyOffset);
@@ -336,6 +340,9 @@ void TextDecorationPainter::paintLineThrough(const Color& color, float thickness
 static void collectStylesForRenderer(TextDecorationPainter::Styles& result, const RenderObject& renderer, OptionSet<TextDecorationLine> remainingDecorations, bool firstLineStyle, PseudoId pseudoId)
 {
     auto extractDecorations = [&] (const RenderStyle& style, OptionSet<TextDecorationLine> decorations) {
+        if (decorations.isEmpty())
+            return;
+
         auto color = TextDecorationPainter::decorationColor(style);
         auto decorationStyle = style.textDecorationStyle();
 
@@ -354,7 +361,6 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
             result.linethroughColor = color;
             result.linethroughStyle = decorationStyle;
         }
-
     };
 
     auto styleForRenderer = [&] (const RenderObject& renderer) -> const RenderStyle& {
@@ -369,7 +375,7 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
     auto* current = &renderer;
     do {
         const auto& style = styleForRenderer(*current);
-        extractDecorations(style, style.textDecoration());
+        extractDecorations(style, style.textDecorationLine());
 
         if (current->isRubyText())
             return;
@@ -407,6 +413,9 @@ OptionSet<TextDecorationLine> TextDecorationPainter::textDecorationsInEffectForS
 
 auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, OptionSet<TextDecorationLine> requestedDecorations, bool firstLineStyle, PseudoId pseudoId) -> Styles
 {
+    if (requestedDecorations.isEmpty())
+        return { };
+
     Styles result;
     collectStylesForRenderer(result, renderer, requestedDecorations, false, pseudoId);
     if (firstLineStyle)

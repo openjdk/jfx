@@ -150,11 +150,10 @@ AXCoreObject* AccessibilityTableRow::headerObject()
 void AccessibilityTableRow::addChildren()
 {
     // If the element specifies its cells through aria-owns, return that first.
-    AccessibilityChildrenVector ariaOwnedElements;
-    ariaOwnsElements(ariaOwnedElements);
-    if (ariaOwnedElements.size()) {
-        for (auto& ariaOwnedElement : ariaOwnedElements)
-            addChild(ariaOwnedElement.get(), DescendIfIgnored::No);
+    auto ownedObjects = this->ownedObjects();
+    if (ownedObjects.size()) {
+        for (auto& object : ownedObjects)
+            addChild(object.get(), DescendIfIgnored::No);
     }
     else
         AccessibilityRenderObject::addChildren();

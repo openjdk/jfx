@@ -37,8 +37,8 @@
 #include "WasmCalleeGroup.h"
 #include "WasmCalleeRegistry.h"
 #include "WasmIRGeneratorHelpers.h"
-#include "WasmSignatureInlines.h"
 #include "WasmTierUpCount.h"
+#include "WasmTypeDefinitionInlines.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
 #include <wtf/StdLibExtras.h>
@@ -49,14 +49,27 @@ namespace WasmBBQPlanInternal {
 static constexpr bool verbose = false;
 }
 
-BBQPlan::BBQPlan(Context* context, Ref<ModuleInformation> moduleInformation, uint32_t functionIndex, CalleeGroup* calleeGroup, CompletionTask&& completionTask)
-    : EntryPlan(context, WTFMove(moduleInformation), CompilerMode::FullCompile, WTFMove(completionTask))
+BBQPlan::BBQPlan(VM& vm, Ref<ModuleInformation> moduleInformation, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, CalleeGroup* calleeGroup, CompletionTask&& completionTask)
+    : EntryPlan(vm, WTFMove(moduleInformation), CompilerMode::FullCompile, WTFMove(completionTask))
     , m_calleeGroup(calleeGroup)
     , m_functionIndex(functionIndex)
+    , m_hasExceptionHandlers(hasExceptionHandlers)
 {
     ASSERT(Options::useBBQJIT());
     setMode(m_calleeGroup->mode());
     dataLogLnIf(WasmBBQPlanInternal::verbose, "Starting BBQ plan for ", functionIndex);
+}
+
+bool BBQPlan::planGeneratesLoopOSREntrypoints(const ModuleInformation& moduleInformation)
+{
+    // FIXME: Some webpages use very large Wasm module, and it exhausts all executable memory in ARM64 devices since the size of executable memory region is only limited to 128MB.
+    // The long term solution should be to introduce a Wasm interpreter. But as a short term solution, we introduce heuristics to switch back to BBQ B3 at the sacrifice of start-up time,
+    // as BBQ Air bloats such lengthy Wasm code and will consume a large amount of executable memory.
+    if (Options::webAssemblyBBQAirModeThreshold() && moduleInformation.codeSectionSize >= Options::webAssemblyBBQAirModeThreshold())
+        return false;
+    if (!Options::wasmBBQUsesAir())
+        return false;
+    return true;
 }
 
 bool BBQPlan::prepareImpl()
@@ -123,8 +136,8 @@ void BBQPlan::work(CompilationEffort effort)
     computePCToCodeOriginMap(context, linkBuffer);
 
     size_t functionIndexSpace = m_functionIndex + m_moduleInformation->importFunctionCount();
-    SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[m_functionIndex];
-    const Signature& signature = SignatureInformation::get(signatureIndex);
+    TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[m_functionIndex];
+    const TypeDefinition& signature = TypeInformation::get(typeIndex);
     function->entrypoint.compilation = makeUnique<Compilation>(
         FINALIZE_WASM_CODE_FOR_MODE(CompilationMode::BBQMode, linkBuffer, JITCompilationPtrTag, "WebAssembly BBQ function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
         WTFMove(context.wasmEntrypointByproducts));
@@ -192,8 +205,8 @@ void BBQPlan::compileFunction(uint32_t functionIndex)
 
     if (m_exportedFunctionIndices.contains(functionIndex) || m_moduleInformation->referencedFunctions().contains(functionIndex)) {
         Locker locker { m_lock };
-        SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
-        const Signature& signature = SignatureInformation::get(signatureIndex);
+        TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
+        const TypeDefinition& signature = TypeInformation::get(typeIndex);
 
         m_compilationContexts[functionIndex].embedderEntrypointJIT = makeUnique<CCallHelpers>();
         auto embedderToWasmInternalFunction = createJSToWasmWrapper(*m_compilationContexts[functionIndex].embedderEntrypointJIT, signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), m_mode, functionIndex);
@@ -207,25 +220,16 @@ void BBQPlan::compileFunction(uint32_t functionIndex)
 std::unique_ptr<InternalFunction> BBQPlan::compileFunction(uint32_t functionIndex, CompilationContext& context, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, TierUpCount* tierUp)
 {
     const auto& function = m_moduleInformation->functions[functionIndex];
-    SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
-    const Signature& signature = SignatureInformation::get(signatureIndex);
+    TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
+    const TypeDefinition& signature = TypeInformation::get(typeIndex);
     unsigned functionIndexSpace = m_moduleInformation->importFunctionCount() + functionIndex;
-    ASSERT_UNUSED(functionIndexSpace, m_moduleInformation->signatureIndexFromFunctionIndexSpace(functionIndexSpace) == signatureIndex);
+    ASSERT_UNUSED(functionIndexSpace, m_moduleInformation->typeIndexFromFunctionIndexSpace(functionIndexSpace) == typeIndex);
     Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileResult;
 
-    // FIXME: Some webpages use very large Wasm module, and it exhausts all executable memory in ARM64 devices since the size of executable memory region is only limited to 128MB.
-    // The long term solution should be to introduce a Wasm interpreter. But as a short term solution, we introduce heuristics to switch back to BBQ B3 at the sacrifice of start-up time,
-    // as BBQ Air bloats such lengthy Wasm code and will consume a large amount of executable memory.
-    bool forceUsingB3 = false;
-    if (Options::webAssemblyBBQAirModeThreshold() && m_moduleInformation->codeSectionSize >= Options::webAssemblyBBQAirModeThreshold())
-        forceUsingB3 = true;
-    else if (!Options::wasmBBQUsesAir())
-        forceUsingB3 = true;
-
-    if (forceUsingB3)
-        parseAndCompileResult = parseAndCompileB3(context, function, signature, unlinkedWasmToWasmCalls, m_moduleInformation.get(), m_mode, CompilationMode::BBQMode, functionIndex, UINT32_MAX, tierUp);
+    if (!planGeneratesLoopOSREntrypoints(m_moduleInformation.get()))
+        parseAndCompileResult = parseAndCompileB3(context, function, signature, unlinkedWasmToWasmCalls, m_moduleInformation.get(), m_mode, CompilationMode::BBQMode, functionIndex, m_hasExceptionHandlers, UINT32_MAX, tierUp);
     else
-        parseAndCompileResult = parseAndCompileAir(context, function, signature, unlinkedWasmToWasmCalls, m_moduleInformation.get(), m_mode, functionIndex, tierUp);
+        parseAndCompileResult = parseAndCompileAir(context, function, signature, unlinkedWasmToWasmCalls, m_moduleInformation.get(), m_mode, functionIndex, m_hasExceptionHandlers, tierUp);
 
     if (UNLIKELY(!parseAndCompileResult)) {
         Locker locker { m_lock };
@@ -244,8 +248,8 @@ void BBQPlan::didCompleteCompilation()
 {
     for (uint32_t functionIndex = 0; functionIndex < m_moduleInformation->functions.size(); functionIndex++) {
         CompilationContext& context = m_compilationContexts[functionIndex];
-        SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
-        const Signature& signature = SignatureInformation::get(signatureIndex);
+        TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
+        const TypeDefinition& signature = TypeInformation::get(typeIndex);
         const uint32_t functionIndexSpace = functionIndex + m_moduleInformation->importFunctionCount();
         ASSERT(functionIndexSpace < m_moduleInformation->functionIndexSpaceSize());
         {
@@ -273,15 +277,15 @@ void BBQPlan::didCompleteCompilation()
                 const auto& embedderToWasmInternalFunction = iter->value.second;
 
                 if (linkBuffer.didFailToAllocate()) {
-                Base::fail(makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
-                return;
-            }
+                    Base::fail(makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
+                    return;
+                }
 
-            embedderToWasmInternalFunction->entrypoint.compilation = makeUnique<Compilation>(
-                FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s name %s", functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
-                nullptr);
+                embedderToWasmInternalFunction->entrypoint.compilation = makeUnique<Compilation>(
+                    FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s name %s", functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+                    nullptr);
+            }
         }
-    }
     }
 
     for (auto& unlinked : m_unlinkedWasmToWasmCalls) {
@@ -307,7 +311,7 @@ void BBQPlan::initializeCallees(const CalleeInitializer& callback)
             auto iter = m_embedderToWasmInternalFunctions.find(internalFunctionIndex);
             if (iter != m_embedderToWasmInternalFunctions.end()) {
                 const auto& embedderToWasmFunction = iter->value.second;
-            embedderEntrypointCallee = EmbedderEntrypointCallee::create(WTFMove(embedderToWasmFunction->entrypoint));
+                embedderEntrypointCallee = EmbedderEntrypointCallee::create(WTFMove(embedderToWasmFunction->entrypoint));
                 for (auto& moveLocation : embedderToWasmFunction->calleeMoveLocations)
                     MacroAssembler::repatchPointer(moveLocation, CalleeBits::boxWasm(embedderEntrypointCallee.get()));
             }

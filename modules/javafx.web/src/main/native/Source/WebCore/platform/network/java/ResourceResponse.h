@@ -73,7 +73,7 @@ private:
 
     String platformSuggestedFilename() const
     {
-        return filenameFromHTTPContentDisposition(httpHeaderField(HTTPHeaderName::ContentDisposition));
+        return filenameFromHTTPContentDisposition(httpHeaderField(HTTPHeaderName::ContentDisposition)).toString();
     }
 };
 

@@ -29,6 +29,8 @@
 #include "CrossOriginEmbedderPolicy.h"
 #include "FetchRequestCredentials.h"
 #include "NotificationPermission.h"
+#include "ScriptExecutionContextIdentifier.h"
+#include "ServiceWorkerRegistrationData.h"
 #include "WorkerOrWorkletThread.h"
 #include "WorkerRunLoop.h"
 #include "WorkerType.h"
@@ -62,6 +64,7 @@ struct WorkerThreadStartupData;
 struct WorkerParameters {
 public:
     URL scriptURL;
+    URL ownerURL;
     String name;
     String inspectorIdentifier;
     String userAgent;
@@ -75,7 +78,11 @@ public:
     FetchRequestCredentials credentials;
     Settings::Values settingsValues;
     WorkerThreadMode workerThreadMode { WorkerThreadMode::CreateNewThread };
-    std::optional<PAL::SessionID> sessionID { std::nullopt };
+    PAL::SessionID sessionID;
+#if ENABLE(SERVICE_WORKER)
+    std::optional<ServiceWorkerData> serviceWorkerData;
+#endif
+    ScriptExecutionContextIdentifier clientIdentifier;
 
     WorkerParameters isolatedCopy() const;
 };

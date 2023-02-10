@@ -62,13 +62,10 @@ private:
     SampleFlags flags() const override;
     PlatformSample platformSample() const override;
     PlatformSample::Type platformSampleType() const override { return PlatformSample::MockSampleBoxType; }
-    std::optional<ByteRange> byteRange() const override { return std::nullopt; }
     FloatSize presentationSize() const override { return FloatSize(); }
     void dump(PrintStream&) const override;
     void offsetTimestampsBy(const MediaTime& offset) override { m_box.offsetTimestampsBy(offset); }
     void setTimestamps(const MediaTime& presentationTimestamp, const MediaTime& decodeTimestamp) override { m_box.setTimestamps(presentationTimestamp, decodeTimestamp); }
-    bool isDivisable() const override { return false; }
-    std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime&, UseEndTime) override { return {nullptr, nullptr}; }
     Ref<MediaSample> createNonDisplayingCopy() const override;
 
     unsigned generation() const { return m_box.generation(); }
@@ -196,7 +193,7 @@ void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitiali
         }
     }
 
-    SourceBufferPrivate::didReceiveInitializationSegment(WTFMove(segment), []() { });
+    SourceBufferPrivate::didReceiveInitializationSegment(WTFMove(segment), [](SourceBufferPrivateClient::ReceiveResult) { });
 }
 
 void MockSourceBufferPrivate::didReceiveSample(const MockSampleBox& sampleBox)

@@ -31,8 +31,10 @@
 
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "ElementInlines.h"
+#include "ElementRareData.h"
 #include "ElementTraversal.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -960,7 +962,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
             return selector.matchNth(count);
         }
         case CSSSelector::PseudoClassTarget:
-            if (&element == element.document().cssTarget())
+            if (&element == element.document().cssTarget() || InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassTarget))
                 return true;
             break;
         case CSSSelector::PseudoClassAutofill:
@@ -989,7 +991,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassFocusVisible:
             return matchesFocusVisiblePseudoClass(element);
         case CSSSelector::PseudoClassFocusWithin:
-            return element.hasFocusWithin();
+            return matchesFocusWithinPseudoClass(element);
         case CSSSelector::PseudoClassHover:
             if (m_strictParsing || element.isLink() || canMatchHoverOrActiveInQuirksMode(context)) {
                 // See the comment in generateElementIsHovered() in SelectorCompiler.
@@ -1115,23 +1117,16 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassCornerPresent:
             return false;
 
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-        // FIXME: Implement :dir() selector.
         case CSSSelector::PseudoClassDir:
-            return false;
-
-        // FIXME: Implement :role() selector.
-        case CSSSelector::PseudoClassRole:
-            return false;
-#endif
+            return matchesDirPseudoClass(element, selector.argument());
 
 #if ENABLE(ATTACHMENT_ELEMENT)
         case CSSSelector::PseudoClassHasAttachment:
             return hasAttachment(element);
 #endif
 
-        case CSSSelector::PseudoClassModalDialog:
-            return matchesModalDialogPseudoClass(element);
+        case CSSSelector::PseudoClassModal:
+            return matchesModalPseudoClass(element);
 
         case CSSSelector::PseudoClassUnknown:
             ASSERT_NOT_REACHED();

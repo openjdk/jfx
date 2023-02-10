@@ -40,7 +40,7 @@ static JSC_DECLARE_HOST_FUNCTION(dateNow);
 
 namespace JSC {
 
-const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_info, &dateConstructorTable, nullptr, CREATE_METHOD_TABLE(DateConstructor) };
+const ClassInfo DateConstructor::s_info = { "Function"_s, &InternalFunction::s_info, &dateConstructorTable, nullptr, CREATE_METHOD_TABLE(DateConstructor) };
 
 /* Source for DateConstructor.lut.h
 @begin dateConstructorTable
@@ -71,6 +71,37 @@ static double millisecondsFromComponents(JSGlobalObject* globalObject, const Arg
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    auto toIntegerOrInfinity = [](double d) {
+        return trunc(std::isnan(d) ? 0.0 : d + 0.0);
+    };
+
+    // https://tc39.es/ecma262/#sec-maketime
+    auto makeTime = [](double hour, double min, double sec, double ms) {
+        return ((hour * msPerHour + min * msPerMinute) + sec * msPerSecond) + ms;
+    };
+
+    // https://tc39.es/ecma262/#sec-makeday
+    auto makeDay = [](double year, double month, double date) {
+        double additionalYears = std::floor(month / 12);
+        double ym = year + additionalYears;
+        if (!std::isfinite(ym))
+            return PNaN;
+        double mm = month - additionalYears * 12;
+        int32_t yearInt32 = toInt32(ym);
+        int32_t monthInt32 = toInt32(mm);
+        if (yearInt32 != ym || monthInt32 != mm)
+            return PNaN;
+        double days = dateToDaysFrom1970(yearInt32, monthInt32, 1);
+        return days + date - 1;
+    };
+
+    // https://tc39.es/ecma262/#sec-makedate
+    auto makeDate = [](double day, double time) {
+        if (!std::isfinite(day) || !std::isfinite(time))
+            return PNaN;
+        return day * msPerDay + time;
+    };
+
     // Initialize doubleArguments with default values.
     double doubleArguments[7] {
         0, 0, 1, 0, 0, 0, 0
@@ -81,20 +112,18 @@ static double millisecondsFromComponents(JSGlobalObject* globalObject, const Arg
         RETURN_IF_EXCEPTION(scope, 0);
     }
     for (unsigned i = 0; i < numberOfUsedArguments; ++i) {
-        if (!std::isfinite(doubleArguments[i]) || (doubleArguments[i] > INT_MAX) || (doubleArguments[i] < INT_MIN))
+        if (!std::isfinite(doubleArguments[i]))
             return PNaN;
+        doubleArguments[i] = toIntegerOrInfinity(doubleArguments[i]);
     }
 
-    GregorianDateTime t;
-    int year = JSC::toInt32(doubleArguments[0]);
-    t.setYear((year >= 0 && year <= 99) ? (year + 1900) : year);
-    t.setMonth(JSC::toInt32(doubleArguments[1]));
-    t.setMonthDay(JSC::toInt32(doubleArguments[2]));
-    t.setHour(JSC::toInt32(doubleArguments[3]));
-    t.setMinute(JSC::toInt32(doubleArguments[4]));
-    t.setSecond(JSC::toInt32(doubleArguments[5]));
-    t.setIsDST(-1);
-    return vm.dateCache.gregorianDateTimeToMS(t, doubleArguments[6], timeType);
+    if (0 <= doubleArguments[0] && doubleArguments[0] <= 99)
+        doubleArguments[0] += 1900;
+
+    double time = makeDate(makeDay(doubleArguments[0], doubleArguments[1], doubleArguments[2]), makeTime(doubleArguments[3], doubleArguments[4], doubleArguments[5], doubleArguments[6]));
+    if (!std::isfinite(time))
+        return PNaN;
+    return timeClip(vm.dateCache.localTimeToMS(time, timeType));
 }
 
 // ECMA 15.9.3
@@ -110,7 +139,7 @@ JSObject* constructDate(JSGlobalObject* globalObject, JSValue newTarget, const A
         value = jsCurrentTime();
     else if (numArgs == 1) {
         JSValue arg0 = args.at(0);
-        if (auto* dateInstance = jsDynamicCast<DateInstance*>(vm, arg0))
+        if (auto* dateInstance = jsDynamicCast<DateInstance*>(arg0))
             value = dateInstance->internalNumber();
         else {
             JSValue primitive = arg0.toPrimitive(globalObject);
@@ -120,12 +149,15 @@ JSObject* constructDate(JSGlobalObject* globalObject, JSValue newTarget, const A
                 RETURN_IF_EXCEPTION(scope, nullptr);
                 value = vm.dateCache.parseDate(globalObject, vm, primitiveString);
                 RETURN_IF_EXCEPTION(scope, nullptr);
-            } else
+            } else {
                 value = primitive.toNumber(globalObject);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+            }
         }
-    } else
+    } else {
         value = millisecondsFromComponents(globalObject, args, WTF::LocalTime);
-    RETURN_IF_EXCEPTION(scope, nullptr);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+    }
 
     Structure* dateStructure = nullptr;
     if (!newTarget)
@@ -150,7 +182,7 @@ JSC_DEFINE_HOST_FUNCTION(callDate, (JSGlobalObject* globalObject, CallFrame*))
     VM& vm = globalObject->vm();
     GregorianDateTime ts;
     vm.dateCache.msToGregorianDateTime(WallTime::now().secondsSinceEpoch().milliseconds(), WTF::LocalTime, ts);
-    return JSValue::encode(jsNontrivialString(vm, formatDateTime(ts, DateTimeFormatDateAndTime, false)));
+    return JSValue::encode(jsNontrivialString(vm, formatDateTime(ts, DateTimeFormatDateAndTime, false, vm.dateCache)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(dateParse, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -159,7 +191,7 @@ JSC_DEFINE_HOST_FUNCTION(dateParse, (JSGlobalObject* globalObject, CallFrame* ca
     auto scope = DECLARE_THROW_SCOPE(vm);
     String dateStr = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(vm.dateCache.parseDate(globalObject, vm, dateStr))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(timeClip(vm.dateCache.parseDate(globalObject, vm, dateStr)))));
 }
 
 JSValue dateNowImpl()
@@ -175,7 +207,7 @@ JSC_DEFINE_HOST_FUNCTION(dateNow, (JSGlobalObject*, CallFrame*))
 JSC_DEFINE_HOST_FUNCTION(dateUTC, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     double ms = millisecondsFromComponents(globalObject, ArgList(callFrame), WTF::UTCTime);
-    return JSValue::encode(jsNumber(timeClip(ms)));
+    return JSValue::encode(jsNumber(ms));
 }
 
 } // namespace JSC

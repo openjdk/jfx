@@ -236,7 +236,7 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
     }
 
     if (type() == Type::LinkPrefetch)
-        m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::Purpose, "prefetch");
+        m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::Purpose, "prefetch"_s);
     m_resourceRequest.setPriority(loadPriority());
 
     // Navigation algorithm is setting up the request before sending it to CachedResourceLoader?CachedResource.
@@ -331,7 +331,7 @@ void CachedResource::checkNotify(const NetworkLoadMetrics& metrics)
     if (isLoading() || stillNeedsLoad())
         return;
 
-    CachedResourceClientWalker<CachedResourceClient> walker(m_clients);
+    CachedResourceClientWalker<CachedResourceClient> walker(*this);
     while (CachedResourceClient* client = walker.next())
         client->notifyFinished(*this, metrics);
 }
@@ -418,14 +418,14 @@ bool CachedResource::isExpired() const
 static inline bool shouldCacheSchemeIndefinitely(StringView scheme)
 {
 #if PLATFORM(COCOA)
-    if (equalLettersIgnoringASCIICase(scheme, "applewebdata"))
+    if (equalLettersIgnoringASCIICase(scheme, "applewebdata"_s))
         return true;
 #endif
 #if USE(SOUP)
-    if (equalLettersIgnoringASCIICase(scheme, "resource"))
+    if (equalLettersIgnoringASCIICase(scheme, "resource"_s))
         return true;
 #endif
-    return equalLettersIgnoringASCIICase(scheme, "data");
+    return equalLettersIgnoringASCIICase(scheme, "data"_s);
 }
 
 Seconds CachedResource::freshnessLifetime(const ResourceResponse& response) const
@@ -436,7 +436,7 @@ Seconds CachedResource::freshnessLifetime(const ResourceResponse& response) cons
             // Don't cache non-HTTP main resources since we can't check for freshness.
             // FIXME: We should not cache subresources either, but when we tried this
             // it caused performance and flakiness issues in our test infrastructure.
-            if (m_type == Type::MainResource || LegacySchemeRegistry::shouldAlwaysRevalidateURLScheme(protocol.toStringWithoutCopying()))
+            if (m_type == Type::MainResource || LegacySchemeRegistry::shouldAlwaysRevalidateURLScheme(protocol))
                 return 0_us;
         }
 
@@ -477,7 +477,7 @@ void CachedResource::setResponse(const ResourceResponse& response)
     }
 #endif
     m_response.setRedirected(m_redirectChainCacheStatus.status != RedirectChainCacheStatus::Status::NoRedirection);
-    if (m_response.tainting() == ResourceResponse::Tainting::Basic || m_response.tainting() == ResourceResponse::Tainting::Cors)
+    if ((m_response.tainting() == ResourceResponse::Tainting::Basic || m_response.tainting() == ResourceResponse::Tainting::Cors) && !m_response.url().protocolIsData())
         m_response.setTainting(m_responseTainting);
 }
 
@@ -511,8 +511,12 @@ void CachedResource::didAddClient(CachedResourceClient& client)
     if (m_decodedDataDeletionTimer.isActive())
         m_decodedDataDeletionTimer.stop();
 
-    if (m_clientsAwaitingCallback.remove(&client))
-        m_clients.add(&client);
+    if (m_clientsAwaitingCallback.remove(client)) {
+        m_clients.add(client);
+#if ASSERT_ENABLED
+        client.addAssociatedResource(*this);
+#endif
+    }
 
     // FIXME: Make calls to notifyFinished async
     if (!isLoading() && !stillNeedsLoad())
@@ -537,25 +541,32 @@ bool CachedResource::addClientToSet(CachedResourceClient& client)
         // synchronously (e.g., scripts may not have set all the state they need to handle the load).
         // Therefore, rather than immediately sending callbacks on a cache hit like other CachedResources,
         // we schedule the callbacks and ensure we never finish synchronously.
-        ASSERT(!m_clientsAwaitingCallback.contains(&client));
-        m_clientsAwaitingCallback.add(&client, makeUnique<Callback>(*this, client));
+        ASSERT(!m_clientsAwaitingCallback.contains(client));
+        m_clientsAwaitingCallback.add(client, makeUnique<Callback>(*this, client));
         return false;
     }
 
-    m_clients.add(&client);
+    m_clients.add(client);
+#if ASSERT_ENABLED
+    client.addAssociatedResource(*this);
+#endif
     return true;
 }
 
 void CachedResource::removeClient(CachedResourceClient& client)
 {
-    auto callback = m_clientsAwaitingCallback.take(&client);
+    auto callback = m_clientsAwaitingCallback.take(client);
     if (callback) {
-        ASSERT(!m_clients.contains(&client));
+        ASSERT(!m_clients.contains(client));
         callback->cancel();
         callback = nullptr;
     } else {
-        ASSERT(m_clients.contains(&client));
-        m_clients.remove(&client);
+        ASSERT(m_clients.contains(client));
+        m_clients.remove(client);
+#if ASSERT_ENABLED
+        if (!m_clients.contains(client))
+            client.removeAssociatedResource(*this);
+#endif
         didRemoveClient(client);
     }
 
@@ -768,9 +779,9 @@ void CachedResource::switchClientsToRevalidatedResource()
     ASSERT(!m_handleCount);
     m_handlesToRevalidate.clear();
 
-    Vector<CachedResourceClient*> clientsToMove;
-    for (auto& entry : m_clients) {
-        CachedResourceClient* client = entry.key;
+    Vector<WeakPtr<CachedResourceClient>> clientsToMove;
+    for (auto entry : m_clients) {
+        auto& client = entry.key;
         unsigned count = entry.value;
         while (count) {
             clientsToMove.append(client);
@@ -778,18 +789,22 @@ void CachedResource::switchClientsToRevalidatedResource()
         }
     }
 
-    for (auto& client : clientsToMove)
-        removeClient(*client);
-    ASSERT(m_clients.isEmpty());
+    for (auto& client : clientsToMove) {
+        if (client)
+            removeClient(*client);
+    }
+    ASSERT(!m_clients.computeSize());
 
-    for (auto& client : clientsToMove)
-        m_resourceToRevalidate->addClientToSet(*client);
+    for (auto& client : clientsToMove) {
+        if (client)
+            m_resourceToRevalidate->addClientToSet(*client);
+    }
     for (auto& client : clientsToMove) {
         // Calling didAddClient may do anything, including trying to cancel revalidation.
         // Assert that it didn't succeed.
         ASSERT(m_resourceToRevalidate);
         // Calling didAddClient for a client may end up removing another client. In that case it won't be in the set anymore.
-        if (m_resourceToRevalidate->m_clients.contains(client))
+        if (client && m_resourceToRevalidate->m_clients.contains(*client))
             m_resourceToRevalidate->didAddClient(*client);
     }
     m_switchingClientsToRevalidatedResource = false;
@@ -844,7 +859,7 @@ CachedResource::RevalidationDecision CachedResource::makeRevalidationDecision(Ca
         return RevalidationDecision::YesDueToCachePolicy;
 
     case CachePolicy::Revalidate:
-        if (m_response.cacheControlContainsImmutable() && m_response.url().protocolIs("https")) {
+        if (m_response.cacheControlContainsImmutable() && m_response.url().protocolIs("https"_s)) {
             if (isExpired())
                 return RevalidationDecision::YesDueToExpired;
             return RevalidationDecision::No;

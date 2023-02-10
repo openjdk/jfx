@@ -22,7 +22,9 @@
 #include "JSDOMWindowCustom.h"
 
 #include "DOMWindowWebDatabase.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLDocument.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTTPParsers.h"
@@ -43,10 +45,10 @@
 #include "JSWindowProxy.h"
 #include "JSWorker.h"
 #include "Location.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScheduledAction.h"
 #include "Settings.h"
 #include "WebCoreJSClientData.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/HeapAnalyzer.h>
 #include <JavaScriptCore/InternalFunction.h>
@@ -74,7 +76,7 @@ static JSC_DECLARE_CUSTOM_GETTER(jsDOMWindow_webkit);
 template<typename Visitor>
 void JSDOMWindow::visitAdditionalChildren(Visitor& visitor)
 {
-    visitor.addOpaqueRoot(&wrapped());
+    addWebCoreOpaqueRoot(visitor, wrapped());
 
     // Normally JSEventTargetCustom.cpp's JSEventTarget::visitAdditionalChildren() would call this. But
     // even though DOMWindow is an EventTarget, JSDOMWindow does not subclass JSEventTarget, so we need
@@ -100,7 +102,7 @@ static ALWAYS_INLINE bool allowsLegacyExpandoIndexedProperties()
 #if PLATFORM(COCOA)
     // Given that WindowProxy is the default |this| value for sloppy mode functions, it's hard to prove
     // that older iOS and macOS apps don't accidentally depend on this behavior, so we keep it for them.
-    static bool requiresQuirk = !linkedOnOrAfter(SDKVersion::FirstWithoutExpandoIndexedPropertiesOnWindow);
+    static bool requiresQuirk = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoExpandoIndexedPropertiesOnWindow);
     return requiresQuirk;
 #else
     return false;
@@ -472,7 +474,7 @@ inline void DialogHandler::dialogCreated(DOMWindow& dialog)
     //        world if dialogArguments comes from an isolated world.
     JSDOMWindow* globalObject = toJSDOMWindow(m_frame.get(), normalWorld(vm));
     if (JSValue dialogArguments = m_callFrame.argument(1))
-        globalObject->putDirect(vm, Identifier::fromString(vm, "dialogArguments"), dialogArguments);
+        globalObject->putDirect(vm, Identifier::fromString(vm, "dialogArguments"_s), dialogArguments);
 }
 
 inline JSValue DialogHandler::returnValue() const
@@ -481,7 +483,7 @@ inline JSValue DialogHandler::returnValue() const
     JSDOMWindow* globalObject = toJSDOMWindow(m_frame.get(), normalWorld(vm));
     if (!globalObject)
         return jsUndefined();
-    Identifier identifier = Identifier::fromString(vm, "returnValue");
+    Identifier identifier = Identifier::fromString(vm, "returnValue"_s);
     PropertySlot slot(globalObject, PropertySlot::InternalMethodType::Get);
     if (!JSGlobalObject::getOwnPropertySlot(globalObject, &m_globalObject, identifier, slot))
         return jsUndefined();
@@ -499,9 +501,12 @@ JSC_DEFINE_CUSTOM_GETTER(showModalDialogGetter, (JSGlobalObject* lexicalGlobalOb
     if (UNLIKELY(!thisObject))
         return throwVMDOMAttributeGetterTypeError(lexicalGlobalObject, scope, JSDOMWindow::info(), propertyName);
 
+    if (auto* document = thisObject->wrapped().document())
+        document->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Window 'showModalDialog' function is deprecated and will be removed soon."_s);
+
     if (auto* frame = thisObject->wrapped().frame()) {
-        if (DOMWindow::canShowModalDialog(*frame)) {
-            auto* jsFunction = JSFunction::create(vm, lexicalGlobalObject, 1, "showModalDialog"_s, showModalDialog);
+        if (frame->settings().showModalDialogEnabled() && DOMWindow::canShowModalDialog(*frame)) {
+            auto* jsFunction = JSFunction::create(vm, lexicalGlobalObject, 1, "showModalDialog"_s, showModalDialog, ImplementationVisibility::Public);
             thisObject->putDirect(vm, propertyName, jsFunction);
             return JSValue::encode(jsFunction);
         }
@@ -553,7 +558,7 @@ JSValue JSDOMWindow::queueMicrotask(JSGlobalObject& lexicalGlobalObject, CallFra
         return throwException(&lexicalGlobalObject, scope, createNotEnoughArgumentsError(&lexicalGlobalObject));
 
     JSValue functionValue = callFrame.uncheckedArgument(0);
-    if (UNLIKELY(!functionValue.isCallable(vm)))
+    if (UNLIKELY(!functionValue.isCallable()))
         return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback", "Window", "queueMicrotask"));
 
     scope.release();
@@ -561,15 +566,15 @@ JSValue JSDOMWindow::queueMicrotask(JSGlobalObject& lexicalGlobalObject, CallFra
     return jsUndefined();
 }
 
-DOMWindow* JSDOMWindow::toWrapped(VM& vm, JSValue value)
+DOMWindow* JSDOMWindow::toWrapped(VM&, JSValue value)
 {
     if (!value.isObject())
         return nullptr;
     JSObject* object = asObject(value);
-    if (object->inherits<JSDOMWindow>(vm))
+    if (object->inherits<JSDOMWindow>())
         return &jsCast<JSDOMWindow*>(object)->wrapped();
-    if (object->inherits<JSWindowProxy>(vm)) {
-        if (auto* jsDOMWindow = jsDynamicCast<JSDOMWindow*>(vm, jsCast<JSWindowProxy*>(object)->window()))
+    if (object->inherits<JSWindowProxy>()) {
+        if (auto* jsDOMWindow = jsDynamicCast<JSDOMWindow*>(jsCast<JSWindowProxy*>(object)->window()))
             return &jsDOMWindow->wrapped();
     }
     return nullptr;
@@ -623,13 +628,13 @@ static inline JSC::EncodedJSValue jsDOMWindowInstanceFunction_openDatabaseBody(J
     auto estimatedSize = convert<IDLUnsignedLong>(*lexicalGlobalObject, callFrame->uncheckedArgument(3));
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    if (!RuntimeEnabledFeatures::sharedFeatures().webSQLEnabled()) {
-        if (name != "null" || version != "null" || displayName != "null" || estimatedSize)
+    if (!DeprecatedGlobalSettings::webSQLEnabled()) {
+        if (name != "null"_s || version != "null"_s || displayName != "null"_s || estimatedSize)
             propagateException(*lexicalGlobalObject, throwScope, Exception(UnknownError, "Web SQL is deprecated"_s));
         return JSValue::encode(constructEmptyObject(lexicalGlobalObject, castedThis->globalObject()->objectPrototype()));
     }
 
-    auto creationCallback = convert<IDLNullable<IDLCallbackFunction<JSDatabaseCallback>>>(*lexicalGlobalObject, callFrame->argument(4), [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) {
+    auto creationCallback = convert<IDLNullable<IDLCallbackFunction<JSDatabaseCallback>>>(*lexicalGlobalObject, callFrame->argument(4), *castedThis->globalObject(), [](JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope) {
         throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 4, "creationCallback", "Window", "openDatabase");
     });
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -647,8 +652,8 @@ JSValue JSDOMWindow::openDatabase(JSC::JSGlobalObject& lexicalGlobalObject) cons
 {
     VM& vm = lexicalGlobalObject.vm();
     StringImpl* name = PropertyName(builtinNames(vm).openDatabasePublicName()).publicName();
-    if (RuntimeEnabledFeatures::sharedFeatures().webSQLEnabled())
-        return JSFunction::create(vm, &lexicalGlobalObject, 4, name, jsDOMWindowInstanceFunction_openDatabase, NoIntrinsic);
+    if (DeprecatedGlobalSettings::webSQLEnabled())
+        return JSFunction::create(vm, &lexicalGlobalObject, 4, name, jsDOMWindowInstanceFunction_openDatabase, ImplementationVisibility::Public);
 
     return InternalFunction::createFunctionThatMasqueradesAsUndefined(vm, &lexicalGlobalObject, 4, name, jsDOMWindowInstanceFunction_openDatabase);
 }

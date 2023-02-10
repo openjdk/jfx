@@ -100,8 +100,8 @@ public:
     void stopTrack(StopMode = StopMode::Silently);
 
     bool isCaptureTrack() const { return m_isCaptureTrack; }
-    bool hasVideo() const { return m_private->hasVideo(); }
-    bool hasAudio() const { return m_private->hasAudio(); }
+    bool isVideo() const { return m_private->isVideo(); }
+    bool isAudio() const { return m_private->isAudio(); }
 
     struct TrackSettings {
         std::optional<int> width;
@@ -136,10 +136,12 @@ public:
     TrackCapabilities getCapabilities() const;
 
     const MediaTrackConstraints& getConstraints() const { return m_constraints; }
+    void setConstraints(MediaTrackConstraints&& constraints) { m_constraints = WTFMove(constraints); }
     void applyConstraints(const std::optional<MediaTrackConstraints>&, DOMPromiseDeferred<void>&&);
 
     RealtimeMediaSource& source() const { return m_private->source(); }
     MediaStreamTrackPrivate& privateTrack() { return m_private.get(); }
+    const MediaStreamTrackPrivate& privateTrack() const { return m_private.get(); }
 
     RefPtr<WebAudioSourceProvider> createAudioSourceProvider();
 
@@ -211,7 +213,7 @@ private:
     bool m_isInterrupted { false };
 };
 
-typedef Vector<RefPtr<MediaStreamTrack>> MediaStreamTrackVector;
+typedef Vector<Ref<MediaStreamTrack>> MediaStreamTrackVector;
 
 } // namespace WebCore
 

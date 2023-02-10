@@ -36,23 +36,26 @@
 #include "ExceptionEventLocation.h"
 #include "FunctionHasExecutedCache.h"
 #include "Heap.h"
+#include "ImplementationVisibility.h"
+#include "IndexingType.h"
 #include "Integrity.h"
+#include "Interpreter.h"
 #include "Intrinsic.h"
 #include "JSCJSValue.h"
 #include "JSDateMath.h"
 #include "JSLock.h"
 #include "JSONAtomStringCache.h"
-#include "MacroAssemblerCodeRef.h"
 #include "Microtask.h"
 #include "NativeFunction.h"
 #include "NumericStrings.h"
 #include "SmallStrings.h"
 #include "Strong.h"
-#include "StructureCache.h"
 #include "SubspaceAccess.h"
 #include "ThunkGenerator.h"
 #include "VMTraps.h"
 #include "WasmContext.h"
+#include "WeakGCMap.h"
+#include <variant>
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Deque.h>
@@ -60,14 +63,14 @@
 #include <wtf/Forward.h>
 #include <wtf/Gigacage.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackPointer.h>
 #include <wtf/Stopwatch.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueArray.h>
+#include <wtf/text/SymbolImpl.h>
 #include <wtf/text/SymbolRegistry.h>
-#include <wtf/text/WTFString.h>
+
 #if ENABLE(REGEXP_TRACING)
 #include <wtf/ListHashSet.h>
 #endif
@@ -110,7 +113,6 @@ class FuzzerAgent;
 class HasOwnPropertyCache;
 class HeapAnalyzer;
 class HeapProfiler;
-class Interpreter;
 class IntlCache;
 class JSDestructibleObjectHeapCellType;
 class JSGlobalObject;
@@ -131,6 +133,7 @@ class ShadowChicken;
 class SharedJITStubSet;
 class SourceProvider;
 class SourceProviderCache;
+class StackFrame;
 class Structure;
 class Symbol;
 class TypedArrayController;
@@ -161,7 +164,6 @@ class Signature;
 }
 
 struct EntryFrame;
-struct Instruction;
 
 class QueuedTask {
     WTF_MAKE_NONCOPYABLE(QueuedTask);
@@ -246,6 +248,8 @@ public:
 
     struct ClientData {
         JS_EXPORT_PRIVATE virtual ~ClientData() = 0;
+
+        JS_EXPORT_PRIVATE virtual String overrideSourceURL(const StackFrame&, const String& originalSourceURL) const = 0;
     };
 
     bool isSharedInstance() { return vmType == APIShared; }
@@ -286,6 +290,7 @@ public:
     JS_EXPORT_PRIVATE JSGlobalObject* deprecatedVMEntryGlobalObject(JSGlobalObject*) const;
 
     WeakRandom& random() { return m_random; }
+    WeakRandom& heapRandom() { return m_heapRandom; }
     Integrity::Random& integrityRandom() { return m_integrityRandom; }
 
     bool terminationInProgress() const { return m_terminationInProgress; }
@@ -333,6 +338,7 @@ private:
     Ref<WTF::RunLoop> m_runLoop;
 
     WeakRandom m_random;
+    WeakRandom m_heapRandom;
     Integrity::Random m_integrityRandom;
 #if PLATFORM(JAVA)
     bool existingWindowProxy = true;
@@ -341,6 +347,8 @@ private:
 public:
     Heap heap;
     GCClient::Heap clientHeap;
+
+    bool isInService() const { return m_isInService; }
 
     const HeapCellType& cellHeapCellType() { return heap.cellHeapCellType; }
     const JSDestructibleObjectHeapCellType& destructibleObjectHeapCellType() { return heap.destructibleObjectHeapCellType; };
@@ -372,9 +380,6 @@ public:
 
     FOR_EACH_JSC_DYNAMIC_ISO_SUBSPACE(DEFINE_DYNAMIC_ISO_SUBSPACE_ACCESSOR_IMPL)
 
-    ALWAYS_INLINE IsoCellSet& executableToCodeBlockEdgesWithConstraints() { return heap.executableToCodeBlockEdgesWithConstraints; }
-    ALWAYS_INLINE IsoCellSet& executableToCodeBlockEdgesWithFinalizers() { return heap.executableToCodeBlockEdgesWithFinalizers; }
-
     ALWAYS_INLINE GCClient::IsoSubspace& codeBlockSpace() { return clientHeap.codeBlockSpace; }
 
     DEFINE_DYNAMIC_ISO_SUBSPACE_ACCESSOR(evalExecutableSpace)
@@ -388,7 +393,7 @@ public:
     ALWAYS_INLINE GCClient::IsoSubspace& unlinkedFunctionExecutableSpace() { return clientHeap.unlinkedFunctionExecutableSpace; }
 
     VMType vmType;
-    ClientData* clientData;
+    ClientData* clientData { nullptr };
     EntryFrame* topEntryFrame { nullptr };
     // NOTE: When throwing an exception while rolling back the call frame, this may be equal to
     // topEntryFrame.
@@ -440,7 +445,6 @@ public:
     Strong<Structure> hashMapBucketSetStructure;
     Strong<Structure> hashMapBucketMapStructure;
     Strong<Structure> bigIntStructure;
-    Strong<Structure> executableToCodeBlockEdgeStructure;
 
     Strong<JSPropertyNameEnumerator> m_emptyPropertyNameEnumerator;
 
@@ -457,13 +461,13 @@ public:
 
     Ref<DeferredWorkTimer> deferredWorkTimer;
 
-    JSCell* currentlyDestructingCallbackObject;
+    JSCell* currentlyDestructingCallbackObject { nullptr };
     const ClassInfo* currentlyDestructingCallbackObjectClassInfo { nullptr };
 
     AtomStringTable* m_atomStringTable;
     WTF::SymbolRegistry m_symbolRegistry;
-    WTF::SymbolRegistry m_privateSymbolRegistry;
-    CommonIdentifiers* propertyNames;
+    WTF::SymbolRegistry m_privateSymbolRegistry { WTF::SymbolRegistry::Type::PrivateSymbol };
+    CommonIdentifiers* propertyNames { nullptr };
     const ArgList* emptyList;
     SmallStrings smallStrings;
     NumericStrings numericStrings;
@@ -550,23 +554,19 @@ public:
     SourceProviderCache* addSourceProviderCache(SourceProvider*);
     void clearSourceProviderCaches();
 
-    StructureCache structureCache;
-
     typedef HashMap<RefPtr<SourceProvider>, RefPtr<SourceProviderCache>> SourceProviderCacheMap;
     SourceProviderCacheMap sourceProviderCacheMap;
-    Interpreter* interpreter;
 #if ENABLE(JIT)
     std::unique_ptr<JITThunks> jitStubs;
     MacroAssemblerCodeRef<JITThunkPtrTag> getCTIStub(ThunkGenerator);
     std::unique_ptr<SharedJITStubSet> m_sharedJITStubs;
-
-#endif // ENABLE(JIT)
+#endif
 #if ENABLE(FTL_JIT)
     std::unique_ptr<FTL::Thunks> ftlThunks;
 #endif
 
-    NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor, const String& name);
-    NativeExecutable* getHostFunction(NativeFunction, Intrinsic, NativeFunction constructor, const DOMJIT::Signature*, const String& name);
+    NativeExecutable* getHostFunction(NativeFunction, ImplementationVisibility, NativeFunction constructor, const String& name);
+    NativeExecutable* getHostFunction(NativeFunction, ImplementationVisibility, Intrinsic, NativeFunction constructor, const DOMJIT::Signature*, const String& name);
 
     NativeExecutable* getBoundFunction(bool isJSFunction, bool canConstruct);
     NativeExecutable* getRemoteFunction(bool isJSFunction);
@@ -610,8 +610,6 @@ public:
     {
         return OBJECT_OFFSETOF(VM, heap) + OBJECT_OFFSETOF(Heap, m_mutatorShouldBeFenced);
     }
-
-    void restorePreviousException(Exception* exception) { setException(exception); }
 
     void clearLastException() { m_lastException = nullptr; }
 
@@ -664,19 +662,19 @@ public:
 
     void firePrimitiveGigacageEnabledIfNecessary()
     {
-        if (m_needToFirePrimitiveGigacageEnabled) {
+        if (UNLIKELY(m_needToFirePrimitiveGigacageEnabled)) {
             m_needToFirePrimitiveGigacageEnabled = false;
             m_primitiveGigacageEnabled.fireAll(*this, "Primitive gigacage disabled asynchronously");
         }
     }
 
     EncodedJSValue encodedHostCallReturnValue { };
-    unsigned varargsLength;
     CallFrame* newCallFrameReturnValue;
-    CallFrame* callFrameForCatch;
+    CallFrame* callFrameForCatch { nullptr };
     CalleeBits calleeForWasmCatch;
     void* targetMachinePCForThrow;
-    const Instruction* targetInterpreterPCForThrow;
+    JSOrWasmInstruction targetInterpreterPCForThrow;
+    unsigned varargsLength;
     uint32_t osrExitIndex;
     void* osrExitJumpDestination;
     RegExp* m_executingRegExp { nullptr };
@@ -687,6 +685,7 @@ public:
     // - You can only write to entries in the ScratchBuffer from the main thread.
     ScratchBuffer* scratchBufferForSize(size_t size);
     void clearScratchBuffers();
+    bool isScratchBuffer(void*);
 
     EncodedJSValue* exceptionFuzzingBuffer(size_t size)
     {
@@ -705,8 +704,9 @@ public:
     bool hasCheckpointOSRSideState() const { return m_checkpointSideState.size(); }
     void scanSideState(ConservativeRoots&) const;
 
+    Interpreter interpreter;
     unsigned disallowVMEntryCount { 0 };
-    VMEntryScope* entryScope;
+    VMEntryScope* entryScope { nullptr };
 
     JSObject* stringRecursionCheckFirstObject { nullptr };
     HashSet<JSObject*> stringRecursionCheckVisitedObjects;
@@ -721,8 +721,8 @@ public:
 
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
     static constexpr size_t patternContextBufferSize = 8192; // Space allocated to save nested parenthesis context
-    UniqueArray<char> m_regExpPatternContexBuffer;
     Lock m_regExpPatternContextLock;
+    UniqueArray<char> m_regExpPatternContexBuffer;
     char* acquireRegExpPatternContexBuffer() WTF_ACQUIRES_LOCK(m_regExpPatternContextLock);
     void releaseRegExpPatternContexBuffer() WTF_RELEASES_LOCK(m_regExpPatternContextLock);
 #else
@@ -736,17 +736,14 @@ public:
     HasOwnPropertyCache* ensureHasOwnPropertyCache();
 
 #if ENABLE(REGEXP_TRACING)
-    typedef ListHashSet<RegExp*> RTTraceList;
-    RTTraceList* m_rtTraceList;
+    ListHashSet<RegExp*> m_rtTraceList;
+    void addRegExpToTrace(RegExp*);
+    JS_EXPORT_PRIVATE void dumpRegExpTrace();
 #endif
 
-    void resetDateCache() { dateCache.reset(); }
+    void resetDateCacheIfNecessary() { dateCache.resetIfNecessary(); }
 
     RegExpCache* regExpCache() { return m_regExpCache; }
-#if ENABLE(REGEXP_TRACING)
-    void addRegExpToTrace(RegExp*);
-#endif
-    JS_EXPORT_PRIVATE void dumpRegExpTrace();
 
     bool isCollectorBusyOnCurrentThread() { return heap.currentThreadIsDoingGCWork(); }
 
@@ -837,34 +834,9 @@ public:
 
     static void setCrashOnVMCreation(bool);
 
-    class DeferExceptionScope {
-    public:
-        DeferExceptionScope(VM& vm)
-            : m_vm(vm)
-            , m_exceptionWasSet(vm.m_exception)
-            , m_savedException(vm.m_exception, nullptr)
-            , m_savedLastException(vm.m_lastException, nullptr)
-        {
-            if (m_exceptionWasSet)
-                m_vm.traps().clearTrapBit(VMTraps::NeedExceptionHandling);
-        }
-
-        ~DeferExceptionScope()
-        {
-            if (m_exceptionWasSet)
-                m_vm.traps().setTrapBit(VMTraps::NeedExceptionHandling);
-        }
-
-    private:
-        VM& m_vm;
-        bool m_exceptionWasSet;
-        SetForScope<Exception*> m_savedException;
-        SetForScope<Exception*> m_savedLastException;
-    };
-
-    void addLoopHintExecutionCounter(const Instruction*);
-    uintptr_t* getLoopHintExecutionCounter(const Instruction*);
-    void removeLoopHintExecutionCounter(const Instruction*);
+    void addLoopHintExecutionCounter(const JSInstruction*);
+    uintptr_t* getLoopHintExecutionCounter(const JSInstruction*);
+    void removeLoopHintExecutionCounter(const JSInstruction*);
 
     ALWAYS_INLINE void writeBarrier(const JSCell* from) { heap.writeBarrier(from); }
     ALWAYS_INLINE void writeBarrier(const JSCell* from, JSValue to) { heap.writeBarrier(from, to); }
@@ -886,8 +858,6 @@ public:
 #endif
 
 private:
-    friend class LLIntOffsetsExtractor;
-
     VM(VMType, HeapType, WTF::RunLoop* = nullptr, bool* success = nullptr);
     static VM*& sharedInstanceInternal();
     void createNativeThunk();
@@ -935,10 +905,10 @@ private:
     void didExhaustMicrotaskQueue();
 
 #if ENABLE(GC_VALIDATION)
-    const ClassInfo* m_initializingObjectClass;
+    const ClassInfo* m_initializingObjectClass { nullptr };
 #endif
 
-    void* m_stackPointerAtVMEntry;
+    void* m_stackPointerAtVMEntry { nullptr };
     size_t m_currentSoftReservedZoneSize;
     void* m_stackLimit { nullptr };
     void* m_softStackLimit { nullptr };
@@ -974,16 +944,17 @@ private:
     HashMap<RefPtr<UniquedStringImpl>, RefPtr<WatchpointSet>> m_impurePropertyWatchpointSets;
     std::unique_ptr<TypeProfiler> m_typeProfiler;
     std::unique_ptr<TypeProfilerLog> m_typeProfilerLog;
-    unsigned m_typeProfilerEnabledCount;
+    unsigned m_typeProfilerEnabledCount { 0 };
     bool m_needToFirePrimitiveGigacageEnabled { false };
+    bool m_isInService { false };
     Lock m_scratchBufferLock;
     Vector<ScratchBuffer*> m_scratchBuffers;
     size_t m_sizeOfLastScratchBuffer { 0 };
     Vector<std::unique_ptr<CheckpointOSRExitSideState>, expectedMaxActiveSideStateCount> m_checkpointSideState;
-    InlineWatchpointSet m_primitiveGigacageEnabled;
+    InlineWatchpointSet m_primitiveGigacageEnabled { IsWatched };
     FunctionHasExecutedCache m_functionHasExecutedCache;
     std::unique_ptr<ControlFlowProfiler> m_controlFlowProfiler;
-    unsigned m_controlFlowProfilerEnabledCount;
+    unsigned m_controlFlowProfilerEnabledCount { 0 };
     Deque<std::unique_ptr<QueuedTask>> m_microtaskQueue;
     MallocPtr<EncodedJSValue, VMMalloc> m_exceptionFuzzBuffer;
     VMTraps m_traps;
@@ -1007,7 +978,7 @@ private:
     bool m_executionForbiddenOnTermination { false };
 
     Lock m_loopHintExecutionCountLock;
-    HashMap<const Instruction*, std::pair<unsigned, std::unique_ptr<uintptr_t>>> m_loopHintExecutionCounts;
+    HashMap<const JSInstruction*, std::pair<unsigned, std::unique_ptr<uintptr_t>>> m_loopHintExecutionCounts;
 
 #if ENABLE(DFG_DOES_GC_VALIDATION)
     DoesGCCheck m_doesGC;
@@ -1016,12 +987,13 @@ private:
     VM* m_prev; // Required by DoublyLinkedListNode.
     VM* m_next; // Required by DoublyLinkedListNode.
 
-    // Friends for exception checking purpose only.
     friend class Heap;
-    friend class CatchScope;
-    friend class ExceptionScope;
+    friend class CatchScope; // Friend for exception checking purpose only.
+    friend class ExceptionScope; // Friend for exception checking purpose only.
     friend class JSDollarVMHelper;
-    friend class ThrowScope;
+    friend class LLIntOffsetsExtractor;
+    friend class SuspendExceptionScope;
+    friend class ThrowScope; // Friend for exception checking purpose only.
     friend class VMTraps;
     friend class WTF::DoublyLinkedListNode<VM>;
 };

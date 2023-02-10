@@ -98,7 +98,7 @@ public:
     static Ref<DataTransfer> createForDrop(const Document&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
     static Ref<DataTransfer> createForUpdatingDropTarget(const Document&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
 
-    bool dropEffectIsUninitialized() const { return m_dropEffect == "uninitialized"; }
+    bool dropEffectIsUninitialized() const { return m_dropEffect == "uninitialized"_s; }
 
     OptionSet<DragOperation> sourceOperationMask() const;
     OptionSet<DragOperation> destinationOperationMask() const;
@@ -112,6 +112,8 @@ public:
 
     void moveDragState(Ref<DataTransfer>&&);
     bool hasDragImage() const;
+
+    IntPoint dragLocation() const { return m_dragLocation; }
 #endif
 
     void didAddFileToItemList();
@@ -125,6 +127,11 @@ public:
 private:
     enum class Type { CopyAndPaste, DragAndDropData, DragAndDropFiles, InputEvent };
     DataTransfer(StoreMode, std::unique_ptr<Pasteboard>, Type = Type::CopyAndPaste, String&& effectAllowed = "uninitialized"_s);
+
+    bool allowsFileAccess() const
+    {
+        return !forDrag() || forFileDrag();
+    }
 
 #if ENABLE(DRAG_SUPPORT)
     bool forDrag() const { return m_type == Type::DragAndDropData || m_type == Type::DragAndDropFiles; }

@@ -51,9 +51,9 @@ public:
     HTMLFormElement* form() const final { return FormAssociatedElement::form(); }
 
     WEBCORE_EXPORT String formEnctype() const;
-    WEBCORE_EXPORT void setFormEnctype(const String&);
+    WEBCORE_EXPORT void setFormEnctype(const AtomString&);
     WEBCORE_EXPORT String formMethod() const;
-    WEBCORE_EXPORT void setFormMethod(const String&);
+    WEBCORE_EXPORT void setFormMethod(const AtomString&);
     bool formNoValidate() const;
     WEBCORE_EXPORT String formAction() const;
     WEBCORE_EXPORT void setFormAction(const AtomString&);
@@ -117,7 +117,7 @@ public:
     bool isDisabledOrReadOnly() const { return isDisabledFormControl() || m_isReadOnly; }
 
     WEBCORE_EXPORT String autocomplete() const;
-    WEBCORE_EXPORT void setAutocomplete(const String&);
+    WEBCORE_EXPORT void setAutocomplete(const AtomString&);
 
     AutofillMantle autofillMantle() const;
 
@@ -181,8 +181,10 @@ private:
     void startDelayingUpdateValidity() { ++m_delayedUpdateValidityCount; }
     void endDelayingUpdateValidity();
 
+    // These functions can be called concurrently for ValidityState.
     HTMLElement& asHTMLElement() final { return *this; }
     const HTMLFormControlElement& asHTMLElement() const final { return *this; }
+
     FormNamedItem* asFormNamedItem() final { return this; }
     FormAssociatedElement* asFormAssociatedElement() final { return this; }
 

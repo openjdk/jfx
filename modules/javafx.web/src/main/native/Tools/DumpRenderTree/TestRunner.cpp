@@ -266,6 +266,13 @@ static JSValueRef removeAllVisitedLinksCallback(JSContextRef context, JSObjectRe
     return JSValueMakeUndefined(context);
 }
 
+static JSValueRef removeAllCookiesCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    //controller->removeAllCookies(); // need to be looked again
+    return JSValueMakeUndefined(context);
+}
+
 static JSValueRef repaintSweepHorizontallyCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
@@ -300,7 +307,7 @@ static JSValueRef setAudioResultCallback(JSContextRef context, JSObjectRef funct
     JSC::VM& vm = toJS(context)->vm();
     JSC::JSLockHolder lock(vm);
 
-    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(vm, toJS(toJS(context), arguments[0]));
+    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(toJS(toJS(context), arguments[0]));
     ASSERT(jsBufferView);
     RefPtr<JSC::ArrayBufferView> bufferView = jsBufferView->unsharedImpl();
     auto buffer = static_cast<const uint8_t*>(bufferView->baseAddress());
@@ -1636,7 +1643,7 @@ static JSValueRef getWebHistoryItemCountCallback(JSContextRef context, JSObjectR
 static JSValueRef getSecureEventInputIsEnabledCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
 #if PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
-    return JSValueMakeBoolean(context, IsSecureEventInputEnabled());
+    return JSValueMakeBoolean(context, static_cast<TestRunner*>(JSObjectGetPrivate(thisObject))->isSecureEventInputEnabled());
 #else
     return JSValueMakeBoolean(context, false);
 #endif
@@ -2027,6 +2034,7 @@ const JSStaticFunction* TestRunner::staticFunctions()
         { "queueLoadingScript", queueLoadingScriptCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "queueNonLoadingScript", queueNonLoadingScriptCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "queueReload", queueReloadCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "removeAllCookies", removeAllCookiesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "removeAllVisitedLinks", removeAllVisitedLinksCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "removeOriginAccessAllowListEntry", removeOriginAccessAllowListEntryCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "repaintSweepHorizontally", repaintSweepHorizontallyCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2220,7 +2228,7 @@ void TestRunner::setAccummulateLogsForChannel(JSStringRef channel)
     auto buffer = makeUniqueArray<char>(maxLength + 1);
     JSStringGetUTF8CString(channel, buffer.get(), maxLength + 1);
 
-    WebCoreTestSupport::setLogChannelToAccumulate({ buffer.get() });
+    WebCoreTestSupport::setLogChannelToAccumulate(String::fromLatin1(buffer.get()));
 }
 
 using CallbackMap = WTF::HashMap<unsigned, JSObjectRef>;
@@ -2350,7 +2358,7 @@ void TestRunner::setOpenPanelFilesMediaIcon(JSContextRef context, JSValueRef med
     JSC::VM& vm = toJS(context)->vm();
     JSC::JSLockHolder lock(vm);
 
-    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(vm, toJS(toJS(context), mediaIcon));
+    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(toJS(toJS(context), mediaIcon));
     ASSERT(jsBufferView);
     RefPtr<JSC::ArrayBufferView> bufferView = jsBufferView->unsharedImpl();
     auto buffer = static_cast<const uint8_t*>(bufferView->baseAddress());
@@ -2374,3 +2382,12 @@ void TestRunner::willNavigate()
         m_shouldSwapToDefaultSessionOnNextNavigation = false;
     }
 }
+
+#if !PLATFORM(MAC)
+
+bool TestRunner::isSecureEventInputEnabled() const
+{
+    return false;
+}
+
+#endif

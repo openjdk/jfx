@@ -87,6 +87,15 @@ public:
     FillSize size() const { return FillSize(static_cast<FillSizeType>(m_sizeType), m_sizeLength); }
     MaskMode maskMode() const { return static_cast<MaskMode>(m_maskMode); }
 
+    // https://drafts.fxtf.org/css-masking/#the-mask-composite
+    // If there is no further mask layer, the compositing operator must be ignored.
+    CompositeOperator compositeForPainting() const
+    {
+        if (type() == FillLayerType::Mask && !next())
+            return CompositeOperator::SourceOver;
+        return composite();
+    }
+
     const FillLayer* next() const { return m_next.get(); }
     FillLayer* next() { return m_next.get(); }
 
@@ -149,7 +158,7 @@ public:
     bool containsImage(StyleImage&) const;
     bool imagesAreLoaded() const;
     bool hasImage() const { return m_next ? hasImageInAnyLayer() : m_image; }
-    bool hasFixedImage() const;
+    bool hasImageWithAttachment(FillAttachment) const;
     bool hasOpaqueImage(const RenderElement&) const;
     bool hasRepeatXY() const;
     bool clipOccludesNextLayers(bool firstLayer) const;

@@ -93,8 +93,8 @@ AccessibilityObjectAtspi::CollectionMatchRule::CollectionMatchRule(GVariant* rul
         while ((endPos = value.find(':', currentPos)) != notFound) {
             if (currentPos != endPos) {
                 if (startPos != endPos && ((endPos && value[endPos - 1] != '\\') || (endPos > 1 && value[endPos - 2] == '\\'))) {
-                    auto unescapedValue = value.substring(startPos, endPos - startPos).replace("\\:"_s, ":"_s);
-                    addResult.iterator->value.append(unescapedValue.replace("\\\\"_s, "\\"_s));
+                    auto unescapedValue = makeStringByReplacingAll(value.substring(startPos, endPos - startPos), "\\:"_s, ":"_s);
+                    addResult.iterator->value.append(makeStringByReplacingAll(unescapedValue, "\\\\"_s, "\\"_s));
                     startPos = endPos + 1;
                 }
             }
@@ -103,8 +103,8 @@ AccessibilityObjectAtspi::CollectionMatchRule::CollectionMatchRule(GVariant* rul
                 startPos++;
         }
         if (startPos != value.length()) {
-            auto unescapedValue = value.substring(startPos).replace("\\:"_s, ":"_s);
-            addResult.iterator->value.append(unescapedValue.replace("\\\\"_s, "\\"_s));
+            auto unescapedValue = makeStringByReplacingAll(value.substring(startPos), "\\:"_s, ":"_s);
+            addResult.iterator->value.append(makeStringByReplacingAll(unescapedValue, "\\\\"_s, "\\"_s));
         }
     }
     attributes.type = attributesMatchType;
