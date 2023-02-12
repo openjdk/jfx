@@ -53,7 +53,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
     private int size;
 
     private SortHelper helper;
-    private static final Predicate<?> ALWAYS_TRUE = t -> true;
 
     /**
      * Constructs a new FilteredList wrapper around the source list.
@@ -125,12 +124,11 @@ public final class FilteredList<E> extends TransformationList<E, E>{
         predicateProperty().set(predicate);
     }
 
-    @SuppressWarnings("unchecked")
     private Predicate<? super E> getPredicateImpl() {
         if (getPredicate() != null) {
             return getPredicate();
         }
-        return (Predicate<E>) ALWAYS_TRUE;
+        return t -> true;
     }
 
     @Override

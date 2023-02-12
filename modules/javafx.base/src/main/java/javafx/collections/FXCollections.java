@@ -232,7 +232,7 @@ public class FXCollections {
         return new SynchronizedObservableMap<>(map);
     }
 
-    private static ObservableMap<?, ?> EMPTY_OBSERVABLE_MAP = new EmptyObservableMap<>();
+    private static final ObservableMap<?, ?> EMPTY_OBSERVABLE_MAP = new EmptyObservableMap<>();
 
     /**
      * Creates an empty unmodifiable observable map.
@@ -434,8 +434,7 @@ public class FXCollections {
         return new SynchronizedObservableList<>(list);
     }
 
-    private static ObservableList<?> EMPTY_OBSERVABLE_LIST = new EmptyObservableList<>();
-
+    private static final ObservableList<?> EMPTY_OBSERVABLE_LIST = new EmptyObservableList<>();
 
     /**
      * Creates an empty unmodifiable observable list.
@@ -505,7 +504,7 @@ public class FXCollections {
         return new SynchronizedObservableSet<>(set);
     }
 
-    private static ObservableSet<?> EMPTY_OBSERVABLE_SET = new EmptyObservableSet<>();
+    private static final ObservableSet<?> EMPTY_OBSERVABLE_SET = new EmptyObservableSet<>();
 
     /**
      * Creates an empty unmodifiable observable set.
@@ -705,7 +704,7 @@ public class FXCollections {
 
     private static class EmptyObservableList<E> extends AbstractList<E> implements ObservableList<E> {
 
-        private static final ListIterator<Object> iterator = new ListIterator<>() {
+        private final ListIterator<E> iterator = new ListIterator<>() {
 
             @Override
             public boolean hasNext() {
@@ -713,7 +712,7 @@ public class FXCollections {
             }
 
             @Override
-            public Object next() {
+            public E next() {
                 throw new NoSuchElementException();
             }
 
@@ -728,7 +727,7 @@ public class FXCollections {
             }
 
             @Override
-            public Object previous() {
+            public E previous() {
                 throw new NoSuchElementException();
             }
 
@@ -764,7 +763,6 @@ public class FXCollections {
         public final void removeListener(InvalidationListener listener) {
         }
 
-
         @Override
         public void addListener(ListChangeListener<? super E> o) {
         }
@@ -784,9 +782,8 @@ public class FXCollections {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public Iterator<E> iterator() {
-            return (Iterator<E>) iterator;
+            return iterator;
         }
 
         @Override
@@ -810,18 +807,16 @@ public class FXCollections {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public ListIterator<E> listIterator() {
-            return (ListIterator<E>) iterator;
+            return iterator;
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public ListIterator<E> listIterator(int index) {
             if (index != 0) {
                 throw new IndexOutOfBoundsException();
             }
-            return (ListIterator<E>) iterator;
+            return iterator;
         }
 
         @Override
@@ -1583,6 +1578,23 @@ public class FXCollections {
 
     private static class EmptyObservableSet<E> extends AbstractSet<E> implements ObservableSet<E> {
 
+        private final Iterator<E> iterator = new Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public E next() {
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
+
         public EmptyObservableSet() {
         }
 
@@ -1636,25 +1648,8 @@ public class FXCollections {
 
         @Override
         public Iterator<E> iterator() {
-            return new Iterator<>() {
-
-                @Override
-                public boolean hasNext() {
-                    return false;
-                }
-
-                @Override
-                public E next() {
-                    throw new NoSuchElementException();
-                }
-
-                @Override
-                public void remove() {
-                    throw new UnsupportedOperationException();
-                }
-            };
+            return iterator;
         }
-
     }
 
     private static class UnmodifiableObservableSet<E> extends AbstractSet<E> implements ObservableSet<E> {
