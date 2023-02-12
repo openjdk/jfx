@@ -2123,6 +2123,10 @@ public class Scene implements EventTarget {
         if (windowFocused && accessible != null) {
             accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
         }
+
+        if (!windowFocused) {
+            getInternalEventDispatcher().getKeyboardShortcutsHandler().setMnemonicsDisplayEnabled(false);
+        }
     }
 
     /**
