@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -389,6 +389,18 @@ public final class Platform {
      */
     public static boolean isNestedLoopRunning() {
         return Toolkit.getToolkit().isNestedLoopRunning();
+    }
+
+    /**
+     * Indicates whether a nested event loop can be started from the current thread in the current state.
+     * Note that a nested event loop is not allowed outside an event handler.
+     *
+     * @return true if a nested event loop can be started, and false otherwise.
+     *
+     * @since 21
+     */
+    public static boolean canStartNestedEventLoop() {
+        return Toolkit.getToolkit().canStartNestedEventLoop();
     }
 
     private static ReadOnlyBooleanWrapper accessibilityActiveProperty;
