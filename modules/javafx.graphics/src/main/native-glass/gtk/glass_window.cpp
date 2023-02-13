@@ -1009,7 +1009,8 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         geometry.final_height.type = BOUNDSTYPE_CONTENT;
     }
 
-    if (jwindow) {
+    // Do not report if iconified, because Java side would set the state to NORMAL
+    if (jwindow && !is_iconified) {
         int ww = event->width + geometry.extents.left + geometry.extents.right;
         int wh = event->height + geometry.extents.top + geometry.extents.bottom;
 
