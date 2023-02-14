@@ -52,7 +52,7 @@ public interface ChangeListener<T> {
      * being notified of this latest change after the initial change
      * notification (with the original old and values) has completed.
      * The listeners that still needed to be notified may see a new value that
-     * differs from a call to {@link ObservableValue#get}. All listeners are
+     * differs from a call to {@link ObservableValue#getValue}. All listeners are
      * then notified again with an old value equal to the initial new value,
      * and a new value with the latest value.
      *
