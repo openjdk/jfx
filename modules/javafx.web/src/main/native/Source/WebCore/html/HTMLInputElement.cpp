@@ -44,6 +44,7 @@
 #include "Editor.h"
 #include "ElementInlines.h"
 #include "EventNames.h"
+#include "FileChooser.h"
 #include "FileInputType.h"
 #include "FileList.h"
 #include "FormController.h"
@@ -206,11 +207,6 @@ HTMLElement* HTMLInputElement::innerBlockElement() const
 HTMLElement* HTMLInputElement::innerSpinButtonElement() const
 {
     return m_inputType->innerSpinButtonElement();
-}
-
-HTMLElement* HTMLInputElement::capsLockIndicatorElement() const
-{
-    return m_inputType->capsLockIndicatorElement();
 }
 
 HTMLElement* HTMLInputElement::autoFillButtonElement() const
@@ -543,6 +539,10 @@ void HTMLInputElement::updateType()
     removeFromRadioButtonGroup();
     resignStrongPasswordAppearance();
 
+    bool didSupportReadOnly = m_inputType->supportsReadOnly();
+    bool willSupportReadOnly = newType->supportsReadOnly();
+    std::optional<Style::PseudoClassChangeInvalidation> readWriteInvalidation;
+
     bool didStoreValue = m_inputType->storesValueSeparateFromAttribute();
     bool willStoreValue = newType->storesValueSeparateFromAttribute();
     bool neededSuspensionCallback = needsSuspensionCallback();
@@ -561,6 +561,11 @@ void HTMLInputElement::updateType()
 
     m_inputType = WTFMove(newType);
     m_inputType->createShadowSubtreeIfNeeded();
+
+    if (UNLIKELY(didSupportReadOnly != willSupportReadOnly && hasAttributeWithoutSynchronization(readonlyAttr))) {
+        emplace(readWriteInvalidation, *this, { { CSSSelector::PseudoClassReadWrite, !willSupportReadOnly }, { CSSSelector::PseudoClassReadOnly, willSupportReadOnly } });
+        readOnlyStateChanged();
+    }
 
     updateWillValidateAndValidity();
 
@@ -831,6 +836,11 @@ void HTMLInputElement::readOnlyStateChanged()
 {
     HTMLTextFormControlElement::readOnlyStateChanged();
     m_inputType->readOnlyStateChanged();
+}
+
+bool HTMLInputElement::supportsReadOnly() const
+{
+    return m_inputType->supportsReadOnly();
 }
 
 void HTMLInputElement::parserDidSetAttributes()
@@ -1276,7 +1286,7 @@ ExceptionOr<void> HTMLInputElement::showPicker()
     if (!frame)
         return { };
 
-    if (isDisabledOrReadOnly())
+    if (!isMutable())
         return Exception { InvalidStateError, "Input showPicker() cannot be used on immutable controls."_s };
 
     // In cross-origin iframes it should throw a "SecurityError" DOMException except on file and color. In same-origin iframes it should work fine.
@@ -1355,11 +1365,6 @@ Vector<String> HTMLInputElement::acceptMIMETypes() const
 Vector<String> HTMLInputElement::acceptFileExtensions() const
 {
     return parseAcceptAttribute(attributeWithoutSynchronization(acceptAttr), isValidFileExtension);
-}
-
-String HTMLInputElement::accept() const
-{
-    return attributeWithoutSynchronization(acceptAttr);
 }
 
 String HTMLInputElement::alt() const
@@ -1535,7 +1540,7 @@ bool HTMLInputElement::isRequiredFormControl() const
 
 bool HTMLInputElement::matchesReadWritePseudoClass() const
 {
-    return m_inputType->supportsReadOnly() && !isDisabledOrReadOnly();
+    return supportsReadOnly() && isMutable();
 }
 
 void HTMLInputElement::addSearchResult()
@@ -1736,7 +1741,8 @@ void HTMLInputElement::resetListAttributeTargetObserver()
 
 void HTMLInputElement::dataListMayHaveChanged()
 {
-    m_inputType->dataListMayHaveChanged();
+    auto protectedInputType = m_inputType;
+    protectedInputType->dataListMayHaveChanged();
 }
 
 bool HTMLInputElement::isFocusingWithDataListDropdown() const
@@ -1952,26 +1958,18 @@ bool HTMLInputElement::shouldAppearIndeterminate() const
 MediaCaptureType HTMLInputElement::mediaCaptureType() const
 {
     if (!isFileUpload())
-        return MediaCaptureTypeNone;
+        return MediaCaptureType::MediaCaptureTypeNone;
 
     auto& captureAttribute = attributeWithoutSynchronization(captureAttr);
     if (captureAttribute.isNull())
-        return MediaCaptureTypeNone;
+        return MediaCaptureType::MediaCaptureTypeNone;
 
     if (equalLettersIgnoringASCIICase(captureAttribute, "user"_s))
-        return MediaCaptureTypeUser;
+        return MediaCaptureType::MediaCaptureTypeUser;
 
-    return MediaCaptureTypeEnvironment;
+    return MediaCaptureType::MediaCaptureTypeEnvironment;
 }
 #endif
-
-bool HTMLInputElement::isInRequiredRadioButtonGroup()
-{
-    ASSERT(isRadioButton());
-    if (auto* buttons = radioButtonGroups())
-        return buttons->isInRequiredGroup(*this);
-    return false;
-}
 
 Vector<Ref<HTMLInputElement>> HTMLInputElement::radioButtonGroup() const
 {
@@ -2061,19 +2059,14 @@ ListAttributeTargetObserver::ListAttributeTargetObserver(const AtomString& id, H
 
 void ListAttributeTargetObserver::idTargetChanged()
 {
-    m_element->dataListMayHaveChanged();
+    m_element->document().eventLoop().queueTask(TaskSource::DOMManipulation, [element = m_element] {
+        if (element)
+            element->dataListMayHaveChanged();
+    });
 }
 #endif
 
-ExceptionOr<void> HTMLInputElement::setRangeText(const String& replacement)
-{
-    if (!m_inputType->supportsSelectionAPI())
-        return Exception { InvalidStateError };
-
-    return HTMLTextFormControlElement::setRangeText(replacement);
-}
-
-ExceptionOr<void> HTMLInputElement::setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode)
+ExceptionOr<void> HTMLInputElement::setRangeText(StringView replacement, unsigned start, unsigned end, const String& selectionMode)
 {
     if (!m_inputType->supportsSelectionAPI())
         return Exception { InvalidStateError };
@@ -2185,7 +2178,7 @@ RenderStyle HTMLInputElement::createInnerTextStyle(const RenderStyle& style)
 
     textBlockStyle.setDisplay(DisplayType::Block);
 
-    if (hasAutoFillStrongPasswordButton() && !isDisabledOrReadOnly()) {
+    if (hasAutoFillStrongPasswordButton() && isMutable()) {
         textBlockStyle.setDisplay(DisplayType::InlineBlock);
         textBlockStyle.setMaxWidth(Length { 100, LengthType::Percent });
         textBlockStyle.setColor(Color::black.colorWithAlphaByte(153));
