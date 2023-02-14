@@ -26,6 +26,8 @@
 package test.javafx.scene.control;
 
 import javafx.beans.value.ChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.scene.Scene;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
@@ -39,6 +41,9 @@ import test.util.memory.JMemoryBuddy;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import org.junit.Test;
+
+import java.lang.ref.WeakReference;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -156,6 +161,69 @@ public class ControlAcceleratorSupportTest {
         ChangeListener thirdChangeListener =
                 ExpressionHelperUtility.getChangeListeners(menuItem.acceleratorProperty()).get(0);
         assertNotEquals(secondChangeListener,thirdChangeListener);
+        sl1.dispose();
+        sl2.dispose();
+    }
+
+    @Test
+    public void testMenuButtonSceneChangeDoesntLeakScene() {
+        // JDK-8283551
+        // The scene was leaked in a ListChangeListener added by ControlAcceleratorSupport
+        MenuItem menuItem = new MenuItem("Menu Item");
+        MenuButton menuButton = new MenuButton("Menu Button", null, menuItem);
+        StackPane root = new StackPane(menuButton);
+        StackPane root2 = new StackPane();
+        StageLoader sl1 = new StageLoader(root);
+        StageLoader sl2 = new StageLoader(root2);
+        WeakReference<Scene> scene1 = new WeakReference<>(sl1.getStage().getScene());
+        root2.getChildren().add(menuButton);
+        sl1.dispose();
+        JMemoryBuddy.assertCollectable(scene1);
+        sl2.dispose();
+    }
+
+    @Test
+    public void testMenuButtonSceneChangeDoesntAddExtraListChangeListeners() {
+        // JDK-8283551
+        MenuItem menuItem = new MenuItem("Menu Item");
+        Menu subMenu = new Menu("Sub Menu", null);
+        MenuButton menuButton = new MenuButton("Menu Button", null, menuItem, subMenu);
+
+        StackPane root = new StackPane(menuButton);
+        StackPane root2 = new StackPane();
+        StageLoader sl1 = new StageLoader(root);
+        StageLoader sl2 = new StageLoader(root2);
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(menuButton.getItems()).size());
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(subMenu.getItems()).size());
+
+        ListChangeListener originalMenuButtonListChangeListener =
+                ExpressionHelperUtility.getListChangeListeners(menuButton.getItems()).get(1);
+        ListChangeListener originalSubMenuListChangeListener =
+                ExpressionHelperUtility.getListChangeListeners(subMenu.getItems()).get(1);
+
+        // move the menu to another scene and check that the listeners got removed and recreated
+        root2.getChildren().add(menuButton);
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(menuButton.getItems()).size());
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(subMenu.getItems()).size());
+
+        ListChangeListener newMenuButtonListChangeListener =
+                ExpressionHelperUtility.getListChangeListeners(menuButton.getItems()).get(1);
+        ListChangeListener newSubMenuListChangeListener =
+                ExpressionHelperUtility.getListChangeListeners(subMenu.getItems()).get(1);
+
+        assertNotEquals(originalMenuButtonListChangeListener, newMenuButtonListChangeListener);
+        assertNotEquals(originalSubMenuListChangeListener, newSubMenuListChangeListener);
+
+        // Change to weak references and check that there are no remaining references
+        WeakReference<ListChangeListener> wOriginalMenuButtonListChangeListener =
+                new WeakReference<>(originalMenuButtonListChangeListener);
+        WeakReference<ListChangeListener> wOriginalSubMenuListChangeListener =
+                new WeakReference<>(originalSubMenuListChangeListener);
+        originalMenuButtonListChangeListener = null;
+        originalSubMenuListChangeListener = null;
+        JMemoryBuddy.assertCollectable(wOriginalMenuButtonListChangeListener);
+        JMemoryBuddy.assertCollectable(wOriginalSubMenuListChangeListener);
+
         sl1.dispose();
         sl2.dispose();
     }

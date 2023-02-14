@@ -132,11 +132,15 @@ public class ControlAcceleratorSupport {
         return sceneChangeListener;
     }
 
+    /* It's okay to have the value Weak, because we only remember it to remove the listener later on */
+    private static Map<ObservableList<MenuItem>, WeakReference<ListChangeListener<MenuItem>>>
+            menuListChangeListenerMap = new WeakHashMap<>();
+
     private static void doAcceleratorInstall(final ObservableList<MenuItem> items, final Scene scene) {
         // we're given an observable list of menu items, which we will add an observer to
         // so that when menu items are added or removed we can properly handle
         // the addition or removal of accelerators into the scene.
-        items.addListener((ListChangeListener<MenuItem>) c -> {
+        ListChangeListener<MenuItem> listChangeListener = (ListChangeListener<MenuItem>) c -> {
             while (c.next()) {
                 if (c.wasRemoved()) {
                     // remove accelerators from the scene
@@ -147,8 +151,9 @@ public class ControlAcceleratorSupport {
                     ControlAcceleratorSupport.doAcceleratorInstall(c.getAddedSubList(), scene);
                 }
             }
-        });
-
+        };
+        menuListChangeListenerMap.put(items, new WeakReference<>(listChangeListener));
+        items.addListener(listChangeListener);
         doAcceleratorInstall((List<MenuItem>)items, scene);
     }
 
@@ -261,7 +266,18 @@ public class ControlAcceleratorSupport {
         removeAcceleratorsFromScene(items, scene);
     }
 
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Scene scene) {
+    public static void removeAcceleratorsFromScene(ObservableList<? extends MenuItem> items, Scene scene) {
+        WeakReference<ListChangeListener<MenuItem>> listenerW = menuListChangeListenerMap.get(items);
+        if (listenerW != null) {
+            ListChangeListener<MenuItem> listChangeListener = listenerW.get();
+            if (listChangeListener != null) {
+                items.removeListener(listChangeListener);
+            }
+        }
+        removeAcceleratorsFromScene((List<MenuItem>)items, scene);
+    }
+
+    private static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Scene scene) {
         if (scene == null) {
             return;
         }
