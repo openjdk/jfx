@@ -68,6 +68,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
+    private ParallelTransition parallelTransition;
     // RT-23125 handling data removal when a category is removed.
     private ListChangeListener<String> categoriesListener = new ListChangeListener<>() {
         @Override public void onChanged(ListChangeListener.Change<? extends String> c) {
@@ -303,8 +304,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     @Override protected void seriesRemoved(final Series<X, Y> series) {
         // remove all symbol nodes
         if (shouldAnimate()) {
-            ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(event -> {
+            parallelTransition = new ParallelTransition();
+            parallelTransition.setOnFinished(event -> {
                 removeSeriesFromDisplay(series);
                 requestChartLayout();
             });
@@ -313,7 +314,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                 // Animate series deletion
                 if (getSeriesSize() > 1) {
                     Timeline t = createDataRemoveTimeline(d, bar, series);
-                    pt.getChildren().add(t);
+                    parallelTransition.getChildren().add(t);
                 } else {
                     // fade out last series
                     FadeTransition ft = new FadeTransition(Duration.millis(700), bar);
@@ -323,10 +324,10 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                         processDataRemove(series, d);
                         bar.setOpacity(1.0);
                     });
-                    pt.getChildren().add(ft);
+                    parallelTransition.getChildren().add(ft);
                 }
             }
-            pt.play();
+            parallelTransition.play();
         } else {
             for (Data<X, Y> d : series.getData()) {
                 processDataRemove(series, d);
@@ -499,7 +500,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private Timeline createDataRemoveTimeline(Data<X, Y> item, final Node bar, final Series<X, Y> series) {
         Timeline t = new Timeline();
         if (orientation == Orientation.VERTICAL) {
-            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
             t.getKeyFrames().addAll(
                     new KeyFrame(Duration.ZERO, new KeyValue(
                             currentDisplayedYValueProperty(item),
@@ -543,6 +543,18 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         Map<String, List<Data<X, Y>>> catmap = seriesCategoryMap.get(series);
         return catmap != null ? catmap.get(category) != null ?
             catmap.get(category) : new ArrayList<>() : new ArrayList<>();
+    }
+
+    /** {@inheritDoc} */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (parallelTransition != null) {
+            parallelTransition.setOnFinished(null);
+            parallelTransition.stop();
+            parallelTransition = null;
+            getPlotChildren().remove(series.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
     }
 
 // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
