@@ -90,8 +90,8 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> {
             return true;
         }
         List<?> currentSource = source;
-        while(currentSource instanceof TransformationList) {
-            currentSource = ((TransformationList)currentSource).source;
+        while (currentSource instanceof TransformationList<?, ?> transformationList) {
+            currentSource = transformationList.source;
             if (currentSource == list) {
                 return true;
             }
@@ -139,8 +139,7 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> {
         }
         List<?> currentSource = source;
         int idx = getSourceIndex(index);
-        while(currentSource != list && currentSource instanceof TransformationList) {
-            final TransformationList tSource = (TransformationList)currentSource;
+        while (currentSource != list && currentSource instanceof TransformationList<?, ?> tSource) {
             idx = tSource.getSourceIndex(idx);
             currentSource = tSource.source;
         }

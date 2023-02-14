@@ -134,7 +134,7 @@ public interface ObservableList<E> extends List<E>, Observable {
      * @since JavaFX 8.0
      */
     public default SortedList<E> sorted() {
-        Comparator naturalOrder = new Comparator<E>() {
+        Comparator<E> naturalOrder = new Comparator<>() {
 
             @Override
             public int compare(E o1, E o2) {
@@ -149,7 +149,10 @@ public interface ObservableList<E> extends List<E>, Observable {
                 }
 
                 if (o1 instanceof Comparable) {
-                    return ((Comparable) o1).compareTo(o2);
+                    @SuppressWarnings("unchecked")
+                    Comparable<E> casted = (Comparable<E>) o1;  // cast is not safe, assumes the comparable interface implemented is Comparable<E> but it might be anything
+
+                    return casted.compareTo(o2);
                 }
 
                 return Collator.getInstance().compare(o1.toString(), o2.toString());
