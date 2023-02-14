@@ -55,8 +55,6 @@ import java.util.ListIterator;
  */
 public abstract class ListExpression<E> implements ObservableListValue<E> {
 
-    private static final ObservableList EMPTY_LIST = FXCollections.emptyObservableList();
-
     /**
      * Creates a default {@code ListExpression}.
      */
@@ -216,188 +214,152 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
 
     @Override
     public int size() {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.size() : list.size();
+        return getNonNull().size();
     }
 
     @Override
     public boolean isEmpty() {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.isEmpty() : list.isEmpty();
+        return getNonNull().isEmpty();
     }
 
     @Override
     public boolean contains(Object obj) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.contains(obj) : list.contains(obj);
+        return getNonNull().contains(obj);
     }
 
     @Override
     public Iterator<E> iterator() {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.iterator() : list.iterator();
+        return getNonNull().iterator();
     }
 
     @Override
     public Object[] toArray() {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.toArray() : list.toArray();
+        return getNonNull().toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] array) {
-        final ObservableList<E> list = get();
-        return (list == null)? (T[]) EMPTY_LIST.toArray(array) : list.toArray(array);
+        return getNonNull().toArray(array);
      }
 
     @Override
     public boolean add(E element) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.add(element) : list.add(element);
+        return getNonNull().add(element);
     }
 
     @Override
     public boolean remove(Object obj) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.remove(obj) : list.remove(obj);
+        return getNonNull().remove(obj);
     }
 
     @Override
     public boolean containsAll(Collection<?> objects) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.contains(objects) : list.containsAll(objects);
+        return getNonNull().containsAll(objects);
     }
 
     @Override
     public boolean addAll(Collection<? extends E> elements) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.addAll(elements) : list.addAll(elements);
+        return getNonNull().addAll(elements);
     }
 
     @Override
     public boolean addAll(int i, Collection<? extends E> elements) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.addAll(i, elements) : list.addAll(i, elements);
+        return getNonNull().addAll(i, elements);
     }
 
     @Override
     public boolean removeAll(Collection<?> objects) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.removeAll(objects) : list.removeAll(objects);
+        return getNonNull().removeAll(objects);
     }
 
     @Override
     public boolean retainAll(Collection<?> objects) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.retainAll(objects) : list.retainAll(objects);
+        return getNonNull().retainAll(objects);
     }
 
     @Override
     public void clear() {
-        final ObservableList<E> list = get();
-        if (list == null) {
-            EMPTY_LIST.clear();
-        } else {
-            list.clear();
-        }
+        getNonNull().clear();
     }
 
     @Override
     public E get(int i) {
-        final ObservableList<E> list = get();
-        return (list == null)? (E) EMPTY_LIST.get(i) : list.get(i);
+        return getNonNull().get(i);
     }
 
     @Override
     public E set(int i, E element) {
-        final ObservableList<E> list = get();
-        return (list == null)? (E) EMPTY_LIST.set(i, element) : list.set(i, element);
+        return getNonNull().set(i, element);
     }
 
     @Override
     public void add(int i, E element) {
-        final ObservableList<E> list = get();
-        if (list == null) {
-            EMPTY_LIST.add(i, element);
-        } else {
-            list.add(i, element);
-        }
+        getNonNull().add(i, element);
     }
 
     @Override
     public E remove(int i) {
-        final ObservableList<E> list = get();
-        return (list == null)? (E) EMPTY_LIST.remove(i) : list.remove(i);
+        return getNonNull().remove(i);
     }
 
     @Override
     public int indexOf(Object obj) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.indexOf(obj) : list.indexOf(obj);
+        return getNonNull().indexOf(obj);
     }
 
     @Override
     public int lastIndexOf(Object obj) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.lastIndexOf(obj) : list.lastIndexOf(obj);
+        return getNonNull().lastIndexOf(obj);
     }
 
     @Override
     public ListIterator<E> listIterator() {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.listIterator() : list.listIterator();
+        return getNonNull().listIterator();
     }
 
     @Override
     public ListIterator<E> listIterator(int i) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.listIterator(i) : list.listIterator(i);
+        return getNonNull().listIterator(i);
     }
 
     @Override
     public List<E> subList(int from, int to) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.subList(from, to) : list.subList(from, to);
+        return getNonNull().subList(from, to);
     }
 
     @Override
     public boolean addAll(E... elements) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.addAll(elements) : list.addAll(elements);
+        return getNonNull().addAll(elements);
     }
 
     @Override
     public boolean setAll(E... elements) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.setAll(elements) : list.setAll(elements);
+        return getNonNull().setAll(elements);
     }
 
     @Override
     public boolean setAll(Collection<? extends E> elements) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.setAll(elements) : list.setAll(elements);
+        return getNonNull().setAll(elements);
     }
 
     @Override
     public boolean removeAll(E... elements) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.removeAll(elements) : list.removeAll(elements);
+        return getNonNull().removeAll(elements);
     }
 
     @Override
     public boolean retainAll(E... elements) {
-        final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.retainAll(elements) : list.retainAll(elements);
+        return getNonNull().retainAll(elements);
     }
 
     @Override
     public void remove(int from, int to) {
-        final ObservableList<E> list = get();
-        if (list == null) {
-            EMPTY_LIST.remove(from, to);
-        } else {
-            list.remove(from, to);
-        }
+        getNonNull().remove(from, to);
     }
 
+    private ObservableList<E> getNonNull() {
+        ObservableList<E> list = get();
+
+        return list == null ? FXCollections.emptyObservableList() : list;
+    }
 }

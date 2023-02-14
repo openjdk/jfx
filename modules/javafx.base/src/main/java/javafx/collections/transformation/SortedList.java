@@ -92,7 +92,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
      * @see #SortedList(javafx.collections.ObservableList, java.util.Comparator)
      */
     public SortedList(@NamedArg("source") ObservableList<? extends E> source) {
-        this(source, (Comparator)null);
+        this(source, null);
     }
 
     @Override
@@ -240,7 +240,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
     private void updateUnsorted(Change<? extends E> c) {
         while (c.next()) {
             if (c.wasPermutated()) {
-                Element[] sortedTmp = new Element[sorted.length];
+                Element<E>[] sortedTmp = new Element[sorted.length];
                 for (int i = 0; i < size; ++i) {
                     if (i >= c.getFrom() && i < c.getTo()) {
                         int p = c.getPermutation(i);
@@ -353,7 +353,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
         for (int i = 0; i < to; ++i) {
             sorted[i] = new Element<>(list.get(i), i);
         }
-        int[] perm = helper.sort(sorted, 0, size, elementComparator);
+        int[] perm = helper.sort(sorted, 0, size, elementComparator);  // elementComparator is never null here
         System.arraycopy(perm, 0, this.perm, 0, size);
         nextAdd(0, size);
     }
@@ -370,7 +370,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
     }
 
     private void removeAllFromMapping() {
-        List<E> removed = new ArrayList(this);
+        List<E> removed = new ArrayList<>(this);
         for (int i = 0; i < size; ++i) {
             sorted[i] = null;
         }
@@ -379,7 +379,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
     }
 
     private void update(Change<? extends E> c) {
-        int[] perm = helper.sort(sorted, 0, size, elementComparator);
+        int[] perm = helper.sort(sorted, 0, size, elementComparator);  // elementComparator is never null here
         for (int i = 0; i < size; i++) {
             this.perm[sorted[i].index] = i;
         }
