@@ -100,8 +100,8 @@ public class WebColorFieldSkin extends InputFieldSkin {
     @Override
     protected void updateValue() {
         Color value = ((WebColorField) control).getValue();
-        String text = getTextField().getText() == null ? "" : getTextField().getText().trim().toUpperCase(Locale.ROOT);
-        if (text.matches("#[A-F0-9]{6}") || text.matches("[A-F0-9]{6}")) {
+        String text = getTextField().getText() == null ? "" : getTextField().getText().trim();
+        if (text.matches("#[a-fA-F0-9]{6}") || text.matches("[a-fA-F0-9]{6}")) {
             try {
                 Color newValue = (text.charAt(0) == '#')? Color.web(text) : Color.web("#"+text);
                 if (!newValue.equals(value)) {
