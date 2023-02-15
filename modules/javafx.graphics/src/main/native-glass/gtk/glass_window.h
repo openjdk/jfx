@@ -67,7 +67,8 @@ enum BoundsType {
 
 struct WindowGeometry {
     WindowGeometry(): final_width(), final_height(),
-    size_assigned(false), x(), y(), gravity_x(), gravity_y(), extents() {}
+    size_assigned(false), x_set(false), y_set(false),
+    x(), y(), gravity_x(), gravity_y(), extents() {}
     // estimate of the final width the window will get after all pending
     // configure requests are processed by the window manager
     struct {
@@ -82,6 +83,8 @@ struct WindowGeometry {
 
     bool size_assigned;
 
+    bool x_set;
+    bool y_set;
     int x;
     int y;
     float gravity_x;
@@ -330,7 +333,6 @@ private:
     bool effective_on_top();
     void notify_window_move();
     void notify_window_resize();
-    void ensure_window_size();
     WindowContextTop(WindowContextTop&);
     WindowContextTop& operator= (const WindowContextTop&);
 };

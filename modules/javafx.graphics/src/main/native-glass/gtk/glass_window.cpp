@@ -119,9 +119,10 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
             stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
         } else {
             stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
-            if ((gdk_windowManagerFunctions & GDK_FUNC_MINIMIZE) == 0) {
+            if ((gdk_windowManagerFunctions & GDK_FUNC_MINIMIZE) == 0
+                || (gdk_windowManagerFunctions & GDK_FUNC_MAXIMIZE) == 0) {
                 // in this case - the window manager will not support the programatic
-                // request to iconify - so we need to restore it now.
+                // request to iconify / maximize - so we need to restore it now.
                 gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
             }
         }
@@ -148,7 +149,8 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     if (jwindow) {
         if (!event->in || isEnabled()) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
-                    event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED : com_sun_glass_events_WindowEvent_FOCUS_LOST);
+                    event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
+                              : com_sun_glass_events_WindowEvent_FOCUS_LOST);
             CHECK_JNI_EXCEPTION(mainEnv)
         } else {
             // when the user tries to activate a disabled window, send FOCUS_DISABLED
@@ -513,17 +515,15 @@ void WindowContextBase::process_key(GdkEventKey* event) {
 }
 
 void WindowContextBase::paint(void* data, jint width, jint height) {
-    fprintf(stderr, "paint -> %d, %d\n", width, height);
-    fflush(stderr);
 #ifdef GLASS_GTK3
-    cairo_region_t *region = gdk_window_get_clip_region(gdk_window);
+    cairo_rectangle_int_t rect = {0, 0, width, height};
+    cairo_region_t *region = cairo_region_create_rectangle(&rect);
     gdk_window_begin_paint_region(gdk_window, region);
 #endif
-    cairo_t* context;
-    context = gdk_cairo_create(gdk_window);
+    cairo_t* context = gdk_cairo_create(gdk_window);
 
-    cairo_surface_t* cairo_surface;
-    cairo_surface = cairo_image_surface_create_for_data(
+    cairo_surface_t* cairo_surface =
+        cairo_image_surface_create_for_data(
             (unsigned char*)data,
             CAIRO_FORMAT_ARGB32,
             width, height, width * 4);
@@ -531,8 +531,9 @@ void WindowContextBase::paint(void* data, jint width, jint height) {
     applyShapeMask(data, width, height);
 
     cairo_set_source_surface(context, cairo_surface, 0, 0);
-    cairo_set_operator (context, CAIRO_OPERATOR_SOURCE);
+    cairo_set_operator(context, CAIRO_OPERATOR_SOURCE);
     cairo_paint(context);
+
 #ifdef GLASS_GTK3
     gdk_window_end_paint(gdk_window);
     cairo_region_destroy(region);
@@ -730,7 +731,7 @@ static int geometry_get_content_height(WindowGeometry *windowGeometry) {
 
 static GdkAtom get_net_frame_extents_atom() {
     static const char * extents_str = "_NET_FRAME_EXTENTS";
-    return gdk_atom_intern(extents_str, TRUE);
+    return gdk_atom_intern(extents_str, FALSE);
 }
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
@@ -817,7 +818,7 @@ void WindowContextTop::detach_from_java() {
 
 void WindowContextTop::request_frame_extents() {
     Display *display = GDK_DISPLAY_XDISPLAY(gdk_window_get_display(gdk_window));
-    static Atom rfeAtom = XInternAtom(display, "_NET_REQUEST_FRAME_EXTENTS", True);
+    static Atom rfeAtom = XInternAtom(display, "_NET_REQUEST_FRAME_EXTENTS", False);
 
     if (rfeAtom != None) {
         XClientMessageEvent clientMessage;
@@ -846,7 +847,6 @@ void WindowContextTop::update_frame_extents() {
                             || geometry.extents.bottom != bottom
                             || geometry.extents.right != right;
 
-
             if (changed) {
                 geometry.extents.top = top;
                 geometry.extents.left = left;
@@ -856,36 +856,16 @@ void WindowContextTop::update_frame_extents() {
                 set_cached_extents(geometry.extents);
 
                 // correct position using gravity
-                if (geometry.x || geometry.y) {
+                if (geometry.x_set) {
                     geometry.x -= geometry.gravity_x * (left + right);
-                    geometry.y -= geometry.gravity_y * (top + bottom);
-                    gtk_window_move(GTK_WINDOW(gtk_widget), geometry.x, geometry.y);
                 }
 
-                update_window_constraints();
-                ensure_window_size();
-            }
+                if (geometry.y_set) {
+                    geometry.y -= geometry.gravity_y * (top + bottom);
+                }
+           }
         }
     }
-}
-
-void WindowContextTop::ensure_window_size() {
-    // set bounds again to set to correct window size that must
-    // be the total width and height accounting extents
-    int w = geometry_get_window_width(&geometry);
-    int h = geometry_get_window_height(&geometry);
-    int cw = geometry_get_content_width(&geometry);
-    int ch = geometry_get_content_height(&geometry);
-
-    set_bounds(-1, -1, false, false, w, h, cw, ch);
-
-    // set_bounds will only notify for content size - this is needed in case
-    // of window oriented size
-    notify_window_resize();
-
-    // Window didn't actually move, but view X, Y might change or
-    // may have gravity envolved
-    notify_window_move();
 }
 
 void WindowContextTop::set_cached_extents(WindowFrameExtents ex) {
@@ -1095,9 +1075,7 @@ void WindowContextTop::set_visible(bool visible) {
 }
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
-    fprintf(stderr, "set_bounds -> x = %d, y = %d, w = %d, h = %d, cw = %d, ch = %d\n", x, y, w, h, cw, ch);
-    fflush(stderr);
-
+    // fprintf(stderr, "set_bounds -> x = %d, y = %d, w = %d, h = %d, cw = %d, ch = %d\n", x, y, w, h, cw, ch);
     // newW / newH are view/content sizes
     int newW = 0;
     int newH = 0;
@@ -1123,24 +1101,21 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
     }
 
     if (newW > 0 || newH > 0) {
-        if (gtk_widget_get_visible(gtk_widget)) {
-            // call update_window_constraints() to let gtk_window_resize succeed, because it's bound to geometry constraints
-            update_window_constraints();
-            gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
-        } else {
-            gtk_window_set_default_size(GTK_WINDOW(gtk_widget), newW, newH);
-        }
-
+        // call update_window_constraints() to let gtk_window_resize succeed, because it's bound to geometry constraints
+        update_window_constraints();
+        gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
         geometry.size_assigned = true;
         notify_window_resize();
     }
 
     if (xSet || ySet) {
         if (xSet) {
+            geometry.x_set = (geometry.x_set || true);
             geometry.x = x;
         }
 
         if (ySet) {
+            geometry.y_set = (geometry.y_set || true);
             geometry.y = y;
         }
 
@@ -1151,6 +1126,17 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
 void WindowContextTop::process_map() {
     map_received = true;
+
+    if (frame_type == TITLED) {
+        // set bounds again to correct window size
+        // accounting decorations
+        int w = geometry_get_window_width(&geometry);
+        int h = geometry_get_window_height(&geometry);
+        int cw = geometry_get_content_width(&geometry);
+        int ch = geometry_get_content_height(&geometry);
+
+        set_bounds(geometry.x, geometry.y, geometry.x_set, geometry.y_set, w, h, cw, ch);
+    }
 
     if (!is_iconified) {
         request_focus();
@@ -1275,7 +1261,6 @@ WindowFrameExtents WindowContextTop::get_frame_extents() {
 }
 
 void WindowContextTop::set_gravity(float x, float y) {
-    g_print("set gravity: %f, %f\n", x, y);
     geometry.gravity_x = x;
     geometry.gravity_y = y;
 }
@@ -1352,15 +1337,9 @@ void WindowContextTop::notify_window_resize() {
                  com_sun_glass_events_WindowEvent_RESIZE, w, h);
     CHECK_JNI_EXCEPTION(mainEnv)
 
-    fprintf(stderr, "notify window size -> w = %d, h = %d\n", w, h);
-    fflush(stderr);
-
     if (jview) {
         int cw = geometry_get_content_width(&geometry);
         int ch = geometry_get_content_height(&geometry);
-
-        fprintf(stderr, "notify view size -> cw = %d, ch = %d\n", cw, ch);
-        fflush(stderr);
 
         mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
         CHECK_JNI_EXCEPTION(mainEnv)
