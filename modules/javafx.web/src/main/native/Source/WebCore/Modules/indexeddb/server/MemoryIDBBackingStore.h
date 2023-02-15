@@ -46,7 +46,9 @@ public:
     IDBError getOrEstablishDatabaseInfo(IDBDatabaseInfo&) final;
     uint64_t databaseVersion() final;
     void setDatabaseInfo(const IDBDatabaseInfo&);
+    bool hasObjectStore(uint64_t objectStoreIdentifier) { return !!infoForObjectStore(objectStoreIdentifier); }
 
+    void renameObjectStoreForVersionChangeAbort(MemoryObjectStore&, const String& oldName);
     void removeObjectStoreForVersionChangeAbort(MemoryObjectStore&);
     void restoreObjectStoreForVersionChangeAbort(Ref<MemoryObjectStore>&&);
     void handleLowMemoryWarning() final { };

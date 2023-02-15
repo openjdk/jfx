@@ -321,7 +321,7 @@ std::optional<Style::ElementStyle> SearchFieldCancelButtonElement::resolveCustom
 void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
 {
     RefPtr<HTMLInputElement> input(downcast<HTMLInputElement>(shadowHost()));
-    if (!input || input->isDisabledOrReadOnly()) {
+    if (!input || !input->isMutable()) {
         if (!event.defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
         return;
@@ -334,7 +334,7 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
     }
 
     if (event.type() == eventNames().clickEvent) {
-        input->setValueForUser(emptyString());
+        input->setValue(emptyString(), DispatchChangeEvent);
         input->onSearch();
         event.setDefaultHandled();
     }
@@ -347,7 +347,7 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
 bool SearchFieldCancelButtonElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
     const RefPtr<HTMLInputElement> input = downcast<HTMLInputElement>(shadowHost());
-    if (input && !input->isDisabledOrReadOnly())
+    if (input && input->isMutable())
         return true;
 
     return HTMLDivElement::willRespondToMouseClickEventsWithEditability(editability);
