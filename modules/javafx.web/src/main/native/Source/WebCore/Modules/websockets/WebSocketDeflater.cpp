@@ -82,7 +82,7 @@ bool WebSocketDeflater::addBytes(const uint8_t* data, size_t length)
     size_t maxLength = deflateBound(m_stream.get(), length);
     size_t writePosition = m_buffer.size();
     CheckedSize bufferSize = maxLength;
-    bufferSize += writePosition; 
+    bufferSize += writePosition;
     if (bufferSize.hasOverflowed())
         return false;
 
@@ -101,7 +101,7 @@ bool WebSocketDeflater::finish()
     while (true) {
         size_t writePosition = m_buffer.size();
         CheckedSize bufferSize = writePosition;
-        bufferSize += bufferIncrementUnit; 
+        bufferSize += bufferIncrementUnit;
         if (bufferSize.hasOverflowed())
             return false;
 
@@ -159,7 +159,7 @@ bool WebSocketInflater::addBytes(const uint8_t* data, size_t length)
     while (consumedSoFar < length) {
         size_t writePosition = m_buffer.size();
         CheckedSize bufferSize = writePosition;
-        bufferSize += bufferIncrementUnit; 
+        bufferSize += bufferIncrementUnit;
         if (bufferSize.hasOverflowed())
             return false;
 
@@ -196,7 +196,7 @@ bool WebSocketInflater::finish()
     while (consumedSoFar < strippedLength) {
         size_t writePosition = m_buffer.size();
         CheckedSize bufferSize = writePosition;
-        bufferSize += bufferIncrementUnit; 
+        bufferSize += bufferIncrementUnit;
         if (bufferSize.hasOverflowed())
             return false;
 

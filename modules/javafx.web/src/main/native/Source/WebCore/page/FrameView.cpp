@@ -5373,7 +5373,7 @@ void FrameView::addScrollableAreaForAnimatedScroll(ScrollableArea* scrollableAre
 {
     if (!m_scrollableAreasForAnimatedScroll)
         m_scrollableAreasForAnimatedScroll = makeUnique<ScrollableAreaSet>();
-    
+
     m_scrollableAreasForAnimatedScroll->add(scrollableArea);
 }
 

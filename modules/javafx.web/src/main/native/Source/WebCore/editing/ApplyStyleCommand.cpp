@@ -1261,7 +1261,7 @@ bool ApplyStyleCommand::shouldSplitTextElement(Element* element, EditingStyle& s
 bool ApplyStyleCommand::isValidCaretPositionInTextNode(const Position& position)
 {
     ASSERT(position.isNotNull());
-    
+
     Node* node = position.containerNode();
     if (position.anchorType() != Position::PositionIsOffsetInAnchor || !is<Text>(node))
         return false;
