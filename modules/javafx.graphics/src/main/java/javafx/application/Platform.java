@@ -394,8 +394,12 @@ public final class Platform {
     /**
      * Indicates whether a nested event loop can be started from the current thread in the current state.
      * Note that a nested event loop is not allowed outside an event handler.
+     * This method must be called on the JavaFX Application thread.
      *
      * @return true if a nested event loop can be started, and false otherwise.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
      *
      * @since 21
      */

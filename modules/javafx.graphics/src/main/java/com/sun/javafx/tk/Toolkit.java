@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -306,11 +306,14 @@ public abstract class Toolkit {
     public abstract boolean init();
 
     /**
-     * Indicates whether or not a nested event loop can be started
-     * from the current thread in the current state. Note that a nested
-     * event loop is not allowed outside of an event handler.
+     * Indicates whether a nested event loop can be started from the current thread in the current state.
+     * Note that a nested event loop is not allowed outside an event handler.
+     * This method must be called on the JavaFX Application thread.
      *
-     * @return flag indicating whether a nested event loop can be started.
+     * @return true if a nested event loop can be started, and false otherwise.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
      */
     public abstract boolean canStartNestedEventLoop();
 
