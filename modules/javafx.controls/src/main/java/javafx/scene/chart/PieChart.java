@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,14 @@
 
 package javafx.scene.chart;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -1007,7 +1009,10 @@ public class PieChart extends Chart {
             textNode.accessibleTextProperty().bind( new StringBinding() {
                 {bind(nameProperty(), currentPieValueProperty());}
                 @Override protected String computeValue() {
-                    return getName() + " represents " + getCurrentPieValue() + " percent";
+                    String format = ControlResources.getString("PieChart.data.accessibleText");
+                    MessageFormat mf = new MessageFormat(format);
+                    Object[] args = {getName(), getCurrentPieValue()};
+                    return mf.format(args);
                 }
             });
         }

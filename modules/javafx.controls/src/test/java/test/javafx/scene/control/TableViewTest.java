@@ -6002,4 +6002,19 @@ public class TableViewTest {
 
         assertNull(result);
     }
+
+    // See JDK-8138842
+    @Test
+    public void testFirstRowSelectionWithEmptyArrayAsParameter() {
+        table.getItems().addAll("1", "2", "3");
+
+        table.getSelectionModel().selectIndices(0, new int[0]);
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+
+        table.getSelectionModel().selectIndices(1, new int[0]);
+        assertEquals(1, table.getSelectionModel().getSelectedIndex());
+
+        table.getSelectionModel().selectIndices(1, new int[]{1, 2});
+        assertEquals(2, table.getSelectionModel().getSelectedIndex());
+    }
 }
