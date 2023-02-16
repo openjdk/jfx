@@ -28,13 +28,11 @@ package test.javafx.scene.control;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Scene;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 
+import org.junit.Ignore;
 import test.com.sun.javafx.binding.ExpressionHelperUtility;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.util.memory.JMemoryBuddy;
@@ -46,7 +44,7 @@ import java.lang.ref.WeakReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-
+import static org.junit.Assert.assertFalse;
 public class ControlAcceleratorSupportTest {
 
     @Test
@@ -211,8 +209,9 @@ public class ControlAcceleratorSupportTest {
         ListChangeListener newSubMenuListChangeListener =
                 ExpressionHelperUtility.getListChangeListeners(subMenu.getItems()).get(1);
 
-        assertNotEquals(originalMenuButtonListChangeListener, newMenuButtonListChangeListener);
-        assertNotEquals(originalSubMenuListChangeListener, newSubMenuListChangeListener);
+        // use == instead of .equals because the list change listeners override equals to compare the observable list
+        assertFalse(originalMenuButtonListChangeListener == newMenuButtonListChangeListener);
+        assertFalse(originalSubMenuListChangeListener == newSubMenuListChangeListener);
 
         // Change to weak references and check that there are no remaining references
         WeakReference<ListChangeListener> wOriginalMenuButtonListChangeListener =
@@ -226,5 +225,165 @@ public class ControlAcceleratorSupportTest {
 
         sl1.dispose();
         sl2.dispose();
+    }
+
+    private void setActionMenuItem(Tab tab, MenuItem menuItem) {
+        menuItem.setOnAction(e -> tab.setText("Tab Renamed"));
+    }
+
+    @Ignore("JDK-8283449")
+    @Test
+    public void testTabWithContextMenuReferencingTabDoesntCauseMemoryLeak() {
+        // JDK-8283449 Tab with context menu that references tab gets leaked
+        Tab tab = new Tab("Tab");
+        TabPane tabPane = new TabPane(tab);
+
+        MenuItem menuItemWithReferenceToTab = new MenuItem("RenameTabMenuItem");
+        // method call so that we can set tab to null later without dealing with
+        // "variable used in lambda expression should be final or effectively final"
+        setActionMenuItem(tab, menuItemWithReferenceToTab);
+        ContextMenu contextMenu = new ContextMenu(menuItemWithReferenceToTab);
+        tab.setContextMenu(contextMenu);
+
+        StackPane root = new StackPane(tabPane);
+        StageLoader sl = new StageLoader(root);
+
+        WeakReference<Tab> wTab = new WeakReference<>(tab);
+        tab = null;
+        JMemoryBuddy.assertNotCollectable(wTab);
+        tabPane.getTabs().remove(0);
+        JMemoryBuddy.assertCollectable(wTab);
+        sl.dispose();
+    }
+
+    @Test
+    public void testSingleTabContextMenuGetsNewListChangeListenersWhenSceneChange() {
+        // JDK-8283551
+        // Test moving a tab pane from one scene to another removes and re-adds the appropriate ListChangeListeners
+        Tab t = new Tab();
+        TabPane tabPane = new TabPane(t);
+
+        ContextMenu contextMenu1 = new ContextMenu();
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        StackPane root = new StackPane(tabPane);
+        t.setContextMenu(contextMenu1); // set before in scene
+        StageLoader sl1 = new StageLoader(root);
+
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        // removing and re-adding removes and re-adds listeners
+        root.getChildren().clear();
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        root.getChildren().add(tabPane);
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        ListChangeListener<? super MenuItem> originalListener1 =
+                ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).get(1);
+
+        StageLoader sl2 = new StageLoader(root); // change the scene
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        root.getChildren().clear();
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        root.getChildren().add(tabPane);
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+
+        // the listeners are new
+        for (ListChangeListener l : ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems())) {
+            // can't use contains because the equals method for one of these listeners will return true
+            assertFalse(l == originalListener1);
+        }
+        sl1.dispose();
+        sl2.dispose();
+    }
+
+    @Ignore
+    @Test
+    public void testMultipleTabContextMenuGetsNewListChangeListenersWhenSceneChange() {
+        // JDK-8283551
+        // Test moving a tab pane from one scene to another removes and re-adds the appropriate ListChangeListeners
+        Tab t = new Tab();
+        Tab t2 = new Tab();
+        TabPane tabPane = new TabPane(t,t2);
+
+        ContextMenu contextMenu1 = new ContextMenu();
+        ContextMenu contextMenu2 = new ContextMenu();
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        StackPane root = new StackPane(tabPane);
+        t.setContextMenu(contextMenu1); // set before in scene
+        t2.setContextMenu(contextMenu2);
+        StageLoader sl1 = new StageLoader(root);
+
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        // removing and re-adding removes and re-adds listeners
+        root.getChildren().clear();
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        root.getChildren().add(tabPane);
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        ListChangeListener<? super MenuItem> originalListener1 =
+                ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).get(1);
+        ListChangeListener<? super MenuItem> originalListener2 =
+                ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).get(1);
+
+        StageLoader sl2 = new StageLoader(root); // change the scene
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        root.getChildren().clear();
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        root.getChildren().add(tabPane);
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+
+        // the listeners are new
+        for (ListChangeListener l : ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems())) {
+            // can't use contains because the equals method for one of these listeners will return true
+            assertFalse(l == originalListener1);
+        }
+        for (ListChangeListener l : ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems())) {
+            // can't use contains because the equals method for one of these listeners will return true
+            assertFalse(l == originalListener2);
+        }
+        sl1.dispose();
+        sl2.dispose();
+    }
+
+    @Test
+    public void testTabContextMenuSceneChangeDoesntLeakScene() {
+        // JDK-8283551
+        // The scene was leaked in a ListChangeListener added by ControlAcceleratorSupport
+        // For tab context menus, either the ListChangeListener is removed when the TabPane changes scenes
+        // or when a new context menu is set. Both removals are tested here.
+
+        Tab t = new Tab();
+        TabPane tabPane = new TabPane(t);
+
+        ContextMenu contextMenu1 = new ContextMenu();
+        ContextMenu contextMenu2 = new ContextMenu();
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        StackPane root = new StackPane(tabPane);
+        StageLoader sl1 = new StageLoader(root);
+        t.setContextMenu(contextMenu1);
+
+        // adding the context menu to the tab adds a list change listener
+        assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+
+        // swapping the context menu removes the previously added list change listener
+        t.setContextMenu(contextMenu2);
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+
+        // This assert fails because right now each anchor has one scene change listener only
+        // There needs to be a scene change listener per ObservableList
+        //assertEquals(2, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+
+        // Both context menus shouldn't have a list change listener that references the scene after its removed
+        WeakReference<Scene> scene1 = new WeakReference<>(sl1.getStage().getScene());
+        sl1.dispose();
+
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
+        JMemoryBuddy.assertCollectable(scene1);
     }
 }
