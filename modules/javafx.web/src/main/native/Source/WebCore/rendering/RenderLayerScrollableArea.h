@@ -105,7 +105,7 @@ public:
     void setHasVerticalScrollbar(bool);
 
     bool needsAnimatedScroll() const final { return m_isRegisteredForAnimatedScroll; }
-
+    
     OverscrollBehavior horizontalOverscrollBehavior() const final;
     OverscrollBehavior verticalOverscrollBehavior() const final;
 

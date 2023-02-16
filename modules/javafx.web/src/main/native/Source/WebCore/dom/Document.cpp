@@ -6745,7 +6745,7 @@ void Document::postTask(Task&& task)
     callOnMainThread([documentID = identifier(), task = WTFMove(task)]() mutable {
         ASSERT(isMainThread());
 
-        auto* document = allDocumentsMap().get(documentID);
+        RefPtr document = allDocumentsMap().get(documentID);
         if (!document)
             return;
 
@@ -6759,7 +6759,8 @@ void Document::postTask(Task&& task)
 
 void Document::pendingTasksTimerFired()
 {
-    Vector<Task> pendingTasks = WTFMove(m_pendingTasks);
+    Ref protectedThis { *this };
+    auto pendingTasks = std::exchange(m_pendingTasks, Vector<Task> { });
     for (auto& task : pendingTasks)
         task.performTask(*this);
 }

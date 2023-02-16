@@ -170,7 +170,7 @@ public:
         size_t size();
 
         size_t backingStorageSize() { return bitwise_cast<uintptr_t>(end()) - bitwise_cast<uintptr_t>(pageStart()); }
-
+        
         bool isAllocated();
 
         bool isLive(HeapVersion markingVersion, HeapVersion newlyAllocatedVersion, bool isMarking, const HeapCell*);

@@ -546,7 +546,7 @@ void RegistrationDatabase::importRecords(CompletionHandler<void(String)>&& compl
         CompletionHandler<void(String)> m_completionHandler;
         String m_error;
     };
-
+    
     auto aggregator = CallbackAggregatorWithErrorString::create(WTFMove(completionHandler));
 
     int result = sql->step();

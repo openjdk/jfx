@@ -161,7 +161,7 @@ public:
     bool needsVideoShouldMaintainAspectRatioQuirk() const;
 
     bool shouldDisableLazyImageLoadingQuirk() const;
-
+    
 private:
     bool needsQuirks() const;
 
