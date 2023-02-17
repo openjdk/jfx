@@ -863,6 +863,15 @@ void WindowContextTop::update_frame_extents() {
                 if (geometry.y_set) {
                     geometry.y -= geometry.gravity_y * (top + bottom);
                 }
+
+                // set bounds again to correct window size
+                // accounting decorations
+                int w = geometry_get_window_width(&geometry);
+                int h = geometry_get_window_height(&geometry);
+                int cw = geometry_get_content_width(&geometry);
+                int ch = geometry_get_content_height(&geometry);
+
+                set_bounds(geometry.x, geometry.y, geometry.x_set, geometry.y_set, w, h, cw, ch);
            }
         }
     }
@@ -1126,17 +1135,6 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
 void WindowContextTop::process_map() {
     map_received = true;
-
-    if (frame_type == TITLED) {
-        // set bounds again to correct window size
-        // accounting decorations
-        int w = geometry_get_window_width(&geometry);
-        int h = geometry_get_window_height(&geometry);
-        int cw = geometry_get_content_width(&geometry);
-        int ch = geometry_get_content_height(&geometry);
-
-        set_bounds(geometry.x, geometry.y, geometry.x_set, geometry.y_set, w, h, cw, ch);
-    }
 
     if (!is_iconified) {
         request_focus();

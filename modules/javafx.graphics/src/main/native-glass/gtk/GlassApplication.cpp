@@ -440,8 +440,9 @@ static void process_events(GdkEvent* event, gpointer data)
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:
-                    ctx->process_property_notify(&event->property);
+                    // let gtk handle it first to prevent a glitch
                     gtk_main_do_event(event);
+                    ctx->process_property_notify(&event->property);
                     break;
                 case GDK_CONFIGURE:
                     ctx->process_configure(&event->configure);
