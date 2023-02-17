@@ -138,4 +138,14 @@ public class ContextMenuContentShim {
         return null;
     }
 
+    public static boolean isContextMenuUpArrowVisible(ContextMenu menu) {
+        ContextMenuContent content = getMenuContent(menu);
+        return content.isUpArrowVisible();
+    }
+
+    public static boolean isContextMenuDownArrowVisible(ContextMenu menu) {
+        ContextMenuContent content = getMenuContent(menu);
+        return content.isDownArrowVisible();
+    }
+
 }
