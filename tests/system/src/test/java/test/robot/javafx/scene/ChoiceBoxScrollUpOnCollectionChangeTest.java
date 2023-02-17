@@ -66,6 +66,7 @@ import test.util.Util;
  * 6. Verify that ChoiceBox items are displayed and no scroll
  *    arrows are displayed.
  */
+
 public class ChoiceBoxScrollUpOnCollectionChangeTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch scrollLatch = new CountDownLatch(1);
