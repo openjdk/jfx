@@ -1,12 +1,12 @@
-JAVAFX SAMPLES README
+## JAVAFX SAMPLES README
 
-Contents:
+**Contents**:
 
-What's in the samples zip file?
-What do I need to set up my environment?
-How do I run the prebuilt samples?
-How do I run the sample projects in NetBeans IDE?
-Sample Descriptions
+- What's in the samples zip file?
+- What do I need to set up my environment?
+- How do I run the prebuilt samples?
+- How do I run the sample projects in NetBeans IDE?
+- Sample Descriptions
 
 
 ===============================
@@ -18,6 +18,7 @@ project files for each sample.
 
 Extracting the zip file produces the following directory structure:
 
+```
 --src  (Contains a NetBeans project for each sample)
     --<Sample1>
 	--nbproject
@@ -29,7 +30,7 @@ Extracting the zip file produces the following directory structure:
 <sample1>.jar	(Runs the sample as a standalone application)
 <sample2>.jar
  ...
-
+```
 
 ========================================
 What do I need to set up my environment?
@@ -77,13 +78,13 @@ To run the sample projects:
 
 
 ===================
-Sample Descriptions
+### Sample Descriptions
 ===================
 
 The following samples are included in the zip file.
 
 ---------
-Ensemble8
+### Ensemble8
 
 A gallery of sample applications that demonstrate a large variety of JavaFX 
 features, including animation, charts, and controls. For each sample, you 
@@ -99,7 +100,7 @@ You can do the following for each sample on desktop platforms only:
 Ensemble8 also runs with JavaFX for ARM.
 
 -------------
-MandelbrotSet
+### MandelbrotSet
 
 A sample application that demonstrates advantages of parallel execution done 
 using Java Parallel API. The application renders an image using Mandelbrot set 
@@ -107,7 +108,7 @@ algorithm and provides intuitive navigation within the range of input parameters
 More information is available in index.html file inside the MandelbrotSet folder.
 
 ------
-Modena
+### Modena
 
 A sample application that demonstrates the look and feel of UI components using 
 the Modena theme. It gives you the option to contrast Modena and Caspian themes, 
@@ -115,7 +116,7 @@ and explore various aspects of these themes.
 
 
 ------------
-3DViewer
+### 3DViewer
 
 3DViewer is a sample application that allows the user to navigate and examine a 
 3D scene with a mouse or a trackpad. 3DViewer has importers for a subset of the 
