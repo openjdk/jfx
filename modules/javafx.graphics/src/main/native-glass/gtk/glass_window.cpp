@@ -862,22 +862,18 @@ void WindowContextTop::update_frame_extents() {
                 int cw = geometry_get_content_width(&geometry);
                 int ch = geometry_get_content_height(&geometry);
 
-                // correct position using gravity
+                int x = geometry.x;
+                int y = geometry.y;
+
                 if (geometry.gravity_x != 0) {
-                    geometry.x -= geometry.gravity_x * (left + right);
+                    x -= geometry.gravity_x * (float) (left + right);
                 }
 
                 if (geometry.gravity_y != 0) {
-                    geometry.y -= geometry.gravity_y * (top + bottom);
+                    y -= geometry.gravity_y * (float) (top + bottom);
                 }
 
-                set_bounds(-1, -1, false, false, w, h, cw, ch, 0, 0);
-
-                g_print("techno %d, %d\n", geometry.x, geometry.y);
-                // This move is because the WM adjusts the position to account
-                // top decorations - it will adjust back
-                gtk_window_move(GTK_WINDOW(gtk_widget), geometry.x, geometry.y);
-                notify_window_move();
+                set_bounds(x, y, true, true, w, h, cw, ch, 0, 0);
            }
         }
     }
@@ -988,15 +984,6 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
 }
 
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
-    // This will prevent sending window sizes before java is done configuring the window
-    // Without it, some content size oriented window gets the size before finishing the layout
-    if (!map_received && !is_fullscreen && !is_maximized) {
-        return;
-    }
-
-    int x, y;
-    gdk_window_get_position(gdk_window, &x, &y);
-
     if (!is_maximized && !is_fullscreen) {
         geometry.final_width.value = event->width;
         geometry.final_width.type = BOUNDSTYPE_CONTENT;
@@ -1022,16 +1009,22 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         }
     }
 
-    bool moved = (geometry.x != x || geometry.y != y);
+    int x, y;
 
-    if (moved) {
-        geometry.x = x;
-        geometry.y = y;
-
-        notify_window_move();
+    if (frame_type == TITLED) {
+        GdkRectangle rect;
+        gdk_window_get_frame_extents(gdk_window, &rect);
+        x = rect.x;
+        y = rect.y;
+    } else {
+        gdk_window_get_origin(gdk_window, &x, &y);
     }
 
-    glong to_screen = getScreenPtrForLocation(x, y);
+    geometry.x = x;
+    geometry.y = y;
+    notify_window_move();
+
+    glong to_screen = getScreenPtrForLocation(geometry.x, geometry.y);
     if (to_screen != -1) {
         if (to_screen != screen) {
             if (jwindow) {
@@ -1091,8 +1084,8 @@ void WindowContextTop::set_visible(bool visible) {
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch,
                                   float gravity_x, float gravity_y) {
-    fprintf(stderr, "set_bounds -> x = %d, y = %d, xset = %d, yset = %d, w = %d, h = %d, cw = %d, ch = %d, gx = %f, gy = %f\n",
-            x, y, xSet, ySet, w, h, cw, ch, gravity_x, gravity_y);
+    // fprintf(stderr, "set_bounds -> x = %d, y = %d, xset = %d, yset = %d, w = %d, h = %d, cw = %d, ch = %d, gx = %f, gy = %f\n",
+    //        x, y, xSet, ySet, w, h, cw, ch, gravity_x, gravity_y);
     // newW / newH are view/content sizes
     int newW = 0;
     int newH = 0;
@@ -1339,16 +1332,12 @@ void WindowContextTop::notify_window_resize() {
                  com_sun_glass_events_WindowEvent_RESIZE, w, h);
     CHECK_JNI_EXCEPTION(mainEnv)
 
-    g_print("jWindowNotifyResize: %d, %d\n", w, h);
-
     if (jview) {
         int cw = geometry_get_content_width(&geometry);
         int ch = geometry_get_content_height(&geometry);
 
         mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
         CHECK_JNI_EXCEPTION(mainEnv)
-
-        g_print("jViewNotifyResize: %d, %d\n", cw, ch);
     }
 }
 
@@ -1357,8 +1346,6 @@ void WindowContextTop::notify_window_move() {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyMove,
                                  geometry.x, geometry.y);
         CHECK_JNI_EXCEPTION(mainEnv)
-
-        g_print("move %d, %d\n", geometry.x, geometry.y);
 
         if (jview) {
             mainEnv->CallVoidMethod(jview, jViewNotifyView,
