@@ -855,15 +855,6 @@ void WindowContextTop::update_frame_extents() {
 
                 set_cached_extents(geometry.extents);
 
-                // correct position using gravity
-                if (geometry.x_set) {
-                    geometry.x -= geometry.gravity_x * (left + right);
-                }
-
-                if (geometry.y_set) {
-                    geometry.y -= geometry.gravity_y * (top + bottom);
-                }
-
                 // set bounds again to correct window size
                 // accounting decorations
                 int w = geometry_get_window_width(&geometry);
@@ -871,7 +862,22 @@ void WindowContextTop::update_frame_extents() {
                 int cw = geometry_get_content_width(&geometry);
                 int ch = geometry_get_content_height(&geometry);
 
-                set_bounds(geometry.x, geometry.y, geometry.x_set, geometry.y_set, w, h, cw, ch);
+                // correct position using gravity
+                if (geometry.gravity_x != 0) {
+                    geometry.x -= geometry.gravity_x * (left + right);
+                }
+
+                if (geometry.gravity_y != 0) {
+                    geometry.y -= geometry.gravity_y * (top + bottom);
+                }
+
+                set_bounds(-1, -1, false, false, w, h, cw, ch, 0, 0);
+
+                g_print("techno %d, %d\n", geometry.x, geometry.y);
+                // This move is because the WM adjusts the position to account
+                // top decorations - it will adjust back
+                gtk_window_move(GTK_WINDOW(gtk_widget), geometry.x, geometry.y);
+                notify_window_move();
            }
         }
     }
@@ -1079,15 +1085,20 @@ void WindowContextTop::set_visible(bool visible) {
     WindowContextBase::set_visible(visible);
 
     if (visible && !geometry.size_assigned) {
-        set_bounds(0, 0, false, false, 320, 200, -1, -1);
+        set_bounds(0, 0, false, false, 320, 200, -1, -1, 0, 0);
     }
 }
 
-void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
-    // fprintf(stderr, "set_bounds -> x = %d, y = %d, w = %d, h = %d, cw = %d, ch = %d\n", x, y, w, h, cw, ch);
+void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch,
+                                  float gravity_x, float gravity_y) {
+    fprintf(stderr, "set_bounds -> x = %d, y = %d, xset = %d, yset = %d, w = %d, h = %d, cw = %d, ch = %d, gx = %f, gy = %f\n",
+            x, y, xSet, ySet, w, h, cw, ch, gravity_x, gravity_y);
     // newW / newH are view/content sizes
     int newW = 0;
     int newH = 0;
+
+    geometry.gravity_x = gravity_x;
+    geometry.gravity_y = gravity_y;
 
     if (w > 0) {
         geometry.final_width.type = BOUNDSTYPE_WINDOW;
@@ -1119,12 +1130,10 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
     if (xSet || ySet) {
         if (xSet) {
-            geometry.x_set = (geometry.x_set || true);
             geometry.x = x;
         }
 
         if (ySet) {
-            geometry.y_set = (geometry.y_set || true);
             geometry.y = y;
         }
 
@@ -1258,11 +1267,6 @@ WindowFrameExtents WindowContextTop::get_frame_extents() {
     return geometry.extents;
 }
 
-void WindowContextTop::set_gravity(float x, float y) {
-    geometry.gravity_x = x;
-    geometry.gravity_y = y;
-}
-
 void WindowContextTop::update_ontop_tree(bool on_top) {
     bool effective_on_top = on_top || this->on_top;
     gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), effective_on_top ? TRUE : FALSE);
@@ -1335,12 +1339,16 @@ void WindowContextTop::notify_window_resize() {
                  com_sun_glass_events_WindowEvent_RESIZE, w, h);
     CHECK_JNI_EXCEPTION(mainEnv)
 
+    g_print("jWindowNotifyResize: %d, %d\n", w, h);
+
     if (jview) {
         int cw = geometry_get_content_width(&geometry);
         int ch = geometry_get_content_height(&geometry);
 
         mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
         CHECK_JNI_EXCEPTION(mainEnv)
+
+        g_print("jViewNotifyResize: %d, %d\n", cw, ch);
     }
 }
 
@@ -1349,6 +1357,8 @@ void WindowContextTop::notify_window_move() {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyMove,
                                  geometry.x, geometry.y);
         CHECK_JNI_EXCEPTION(mainEnv)
+
+        g_print("move %d, %d\n", geometry.x, geometry.y);
 
         if (jview) {
             mainEnv->CallVoidMethod(jview, jViewNotifyView,

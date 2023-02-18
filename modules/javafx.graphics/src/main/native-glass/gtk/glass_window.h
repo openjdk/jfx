@@ -67,8 +67,7 @@ enum BoundsType {
 
 struct WindowGeometry {
     WindowGeometry(): final_width(), final_height(),
-    size_assigned(false), x_set(false), y_set(false),
-    x(), y(), gravity_x(), gravity_y(), extents() {}
+    size_assigned(false), x(), y(), gravity_x(), gravity_y(), extents() {}
     // estimate of the final width the window will get after all pending
     // configure requests are processed by the window manager
     struct {
@@ -83,8 +82,6 @@ struct WindowGeometry {
 
     bool size_assigned;
 
-    bool x_set;
-    bool y_set;
     int x;
     int y;
     float gravity_x;
@@ -110,7 +107,7 @@ public:
     virtual void show_or_hide_children(bool) = 0;
     virtual void set_visible(bool) = 0;
     virtual bool is_visible() = 0;
-    virtual void set_bounds(int, int, bool, bool, int, int, int, int) = 0;
+    virtual void set_bounds(int, int, bool, bool, int, int, int, int, float, float) = 0;
     virtual void set_resizable(bool) = 0;
     virtual void request_focus() = 0;
     virtual void set_focusable(bool)= 0;
@@ -130,7 +127,6 @@ public:
     virtual void to_back() = 0;
     virtual void set_cursor(GdkCursor*) = 0;
     virtual void set_modal(bool, WindowContext* parent = NULL) = 0;
-    virtual void set_gravity(float, float) = 0;
     virtual void set_level(int) = 0;
     virtual void set_background(float, float, float) = 0;
 
@@ -294,7 +290,7 @@ public:
 
     void set_minimized(bool);
     void set_maximized(bool);
-    void set_bounds(int, int, bool, bool, int, int, int, int);
+    void set_bounds(int, int, bool, bool, int, int, int, int, float, float);
     void set_resizable(bool);
     void request_focus();
     void set_focusable(bool);
@@ -307,7 +303,6 @@ public:
     void to_front();
     void to_back();
     void set_modal(bool, WindowContext* parent = NULL);
-    void set_gravity(float, float);
     void set_level(int);
     void set_visible(bool);
     void notify_on_top(bool);
