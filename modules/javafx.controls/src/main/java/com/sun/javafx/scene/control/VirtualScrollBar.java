@@ -136,14 +136,13 @@ public class VirtualScrollBar extends ScrollBar {
              */
             IndexedCell firstVisibleCell = flow.getFirstVisibleCell();
             IndexedCell lastVisibleCell = flow.getLastVisibleCell();
-            if (firstVisibleCell == lastVisibleCell) {
+            if (firstVisibleCell != null && firstVisibleCell == lastVisibleCell) {
                 int index = firstVisibleCell.getIndex();
                 if (newValue < oldValue) {
                     flow.scrollTo(index - 1);
                 } else {
                     flow.scrollTo(index + 1);
                 }
-
             } else {
                 if (newValue < oldValue) {
                     IndexedCell cell = firstVisibleCell;

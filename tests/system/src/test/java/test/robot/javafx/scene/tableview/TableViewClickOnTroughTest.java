@@ -25,6 +25,8 @@
 
 package test.robot.javafx.scene.tableview;
 
+import static org.junit.Assert.assertNotNull;
+
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.AfterClass;
@@ -67,10 +69,9 @@ public class TableViewClickOnTroughTest {
     static volatile Scene scene;
     static final int SCENE_WIDTH = 800;
     static final int SCENE_HEIGHT = 250;
-    static CountDownLatch startupLatch = new CountDownLatch(1);
+    final static CountDownLatch startupLatch = new CountDownLatch(1);
 
     private static TableView<TableEntry> table;
-    public static TableRow<TableEntry> tableRow;
 
     public static void main(String[] args) {
         TableViewClickOnTroughTest test = new TableViewClickOnTroughTest();
@@ -80,8 +81,10 @@ public class TableViewClickOnTroughTest {
     @Test
     public void moveTroughTest() {
         ScrollBar verticalBar = (ScrollBar) table.lookup(".scroll-bar:vertical");
+        assertNotNull(verticalBar);
         StackPane thumb = (StackPane) verticalBar.getChildrenUnmodifiable().stream()
                 .filter(c -> c.getStyleClass().contains("thumb")).findFirst().orElse(null);
+        assertNotNull(thumb);
         Bounds verticalBarBoundsInScreen = verticalBar.localToScreen(verticalBar.getBoundsInLocal());
         Bounds thumbBoundsInScreen = thumb.localToScreen(thumb.getBoundsInLocal());
         double posX = verticalBarBoundsInScreen.getCenterX();
@@ -98,7 +101,7 @@ public class TableViewClickOnTroughTest {
         });
         Util.sleep(1000); // Delay for table moving Scrollbar
         double newPosition = verticalBar.getValue();
-        Assert.assertTrue("moveTroughTest failed", oldPosition != newPosition);
+        Assert.assertNotEquals(oldPosition, newPosition, 0.1);
     }
 
     @BeforeClass
@@ -173,7 +176,6 @@ public class TableViewClickOnTroughTest {
                 return;
             }
             setText(item);
-            TableViewClickOnTroughTest.tableRow = this.getTableRow();
         }
 
         public static Callback<TableColumn<TableEntry, String>, TableCell<TableEntry, String>> forTableColumn() {
