@@ -139,13 +139,13 @@ HTMLElement* SearchInputType::cancelButtonElement() const
 auto SearchInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
 {
     ASSERT(element());
-    if (element()->isDisabledOrReadOnly())
+    if (!element()->isMutable())
         return TextFieldInputType::handleKeydownEvent(event);
 
     const String& key = event.keyIdentifier();
     if (key == "U+001B"_s) {
         Ref<HTMLInputElement> protectedInputElement(*element());
-        protectedInputElement->setValueForUser(emptyString());
+        protectedInputElement->setValue(emptyString(), DispatchChangeEvent);
         protectedInputElement->onSearch();
         event.setDefaultHandled();
         return ShouldCallBaseEventHandler::Yes;

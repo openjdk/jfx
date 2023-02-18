@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Event.h"
+#include <optional>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -60,10 +61,8 @@ public:
     bool needsAutoplayPlayPauseEvents() const;
     bool needsSeekingSupportDisabled() const;
     bool needsPerDocumentAutoplayBehavior() const;
-    bool shouldAutoplayForArbitraryUserGesture() const;
     bool shouldAutoplayWebAudioForArbitraryUserGesture() const;
     bool hasBrokenEncryptedMediaAPISupportQuirk() const;
-    bool shouldStripQuotationMarkInFontFaceSetFamily() const;
 #if ENABLE(TOUCH_EVENTS)
     bool shouldDispatchSimulatedMouseEvents(const EventTarget*) const;
     bool shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTarget*) const;
@@ -81,7 +80,6 @@ public:
     bool shouldDisableContentChangeObserverTouchEventAdjustment() const;
     bool shouldTooltipPreventFromProceedingWithClick(const Element&) const;
     bool shouldHideSearchFieldResultsButton() const;
-    bool shouldDisableResolutionMediaQuery() const;
     bool shouldExposeShowModalDialog() const;
 
     bool needsMillisecondResolutionForHighResTimeStamp() const;
@@ -133,10 +131,7 @@ public:
     bool needsVP9FullRangeFlagQuirk() const;
     bool needsHDRPixelDepthQuirk() const;
 
-    bool needsAkamaiMediaPlayerQuirk(const HTMLVideoElement&) const;
     bool needsFlightAwareSerializationQuirk() const;
-
-    bool needsBlackFullscreenBackgroundQuirk() const;
 
     bool requiresUserGestureToPauseInPictureInPicture() const;
     bool requiresUserGestureToLoadInPictureInPicture() const;
@@ -164,6 +159,8 @@ public:
     bool hasBrokenPermissionsAPISupportQuirk() const;
     bool shouldEnableApplicationCacheQuirk() const;
     bool needsVideoShouldMaintainAspectRatioQuirk() const;
+
+    bool shouldDisableLazyImageLoadingQuirk() const;
 
 private:
     bool needsQuirks() const;
@@ -219,6 +216,7 @@ private:
 #endif
     mutable std::optional<bool> m_needsVideoShouldMaintainAspectRatioQuirk;
     mutable std::optional<bool> m_shouldExposeShowModalDialog;
+    mutable std::optional<bool> m_shouldDisableLazyImageLoadingQuirk;
 };
 
 } // namespace WebCore

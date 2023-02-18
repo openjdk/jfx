@@ -3576,7 +3576,12 @@ void FrameView::performPostLayoutTasks()
     // FIXME: We should not run any JavaScript code in this function.
     LOG(Layout, "FrameView %p performPostLayoutTasks", this);
     updateHasReachedSignificantRenderedTextThreshold();
-    frame().selection().updateAppearanceAfterLayout();
+
+    if (auto& selection = frame().selection(); selection.isFocusedAndActive()) {
+        // FIXME (247041): We should be able to remove this appearance update altogether,
+        // and instead defer updates until the next rendering update.
+        selection.updateAppearanceAfterLayout();
+    }
 
     flushPostLayoutTasksQueue();
 
@@ -5362,6 +5367,20 @@ String FrameView::trackedRepaintRectsAsText() const
         ts << ")\n";
     }
     return ts.release();
+}
+
+void FrameView::addScrollableAreaForAnimatedScroll(ScrollableArea* scrollableArea)
+{
+    if (!m_scrollableAreasForAnimatedScroll)
+        m_scrollableAreasForAnimatedScroll = makeUnique<ScrollableAreaSet>();
+
+    m_scrollableAreasForAnimatedScroll->add(scrollableArea);
+}
+
+void FrameView::removeScrollableAreaForAnimatedScroll(ScrollableArea* scrollableArea)
+{
+    if (m_scrollableAreasForAnimatedScroll)
+        m_scrollableAreasForAnimatedScroll->remove(scrollableArea);
 }
 
 bool FrameView::addScrollableArea(ScrollableArea* scrollableArea)
