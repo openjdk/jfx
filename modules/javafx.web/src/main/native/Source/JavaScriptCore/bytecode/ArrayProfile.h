@@ -41,9 +41,9 @@ typedef unsigned ArrayModes;
 
 // The possible IndexingTypes are limited within (0 - 16, 21, 23, 25).
 // This is because CoW types only appear for JSArrays.
-static_assert(CopyOnWriteArrayWithInt32 == 21, "");
-static_assert(CopyOnWriteArrayWithDouble == 23, "");
-static_assert(CopyOnWriteArrayWithContiguous == 25, "");
+static_assert(CopyOnWriteArrayWithInt32 == 21);
+static_assert(CopyOnWriteArrayWithDouble == 23);
+static_assert(CopyOnWriteArrayWithContiguous == 25);
 const ArrayModes CopyOnWriteArrayWithInt32ArrayMode = 1 << CopyOnWriteArrayWithInt32;
 const ArrayModes CopyOnWriteArrayWithDoubleArrayMode = 1 << CopyOnWriteArrayWithDouble;
 const ArrayModes CopyOnWriteArrayWithContiguousArrayMode = 1 << CopyOnWriteArrayWithContiguous;
@@ -199,12 +199,13 @@ class ArrayProfile {
     friend class UnlinkedArrayProfile;
 
 public:
-    explicit ArrayProfile()
-        : m_mayInterceptIndexedAccesses(false)
-        , m_usesOriginalArrayStructures(true)
-        , m_didPerformFirstRunPruning(false)
-    {
-    }
+    explicit ArrayProfile() : m_mayInterceptIndexedAccesses(false),
+                              m_usesOriginalArrayStructures(true),
+                              m_didPerformFirstRunPruning(false)
+{
+}
+
+
 
 #if USE(LARGE_TYPED_ARRAYS)
     static constexpr uint64_t s_smallTypedArrayMaxLength = std::numeric_limits<int32_t>::max();
@@ -231,7 +232,7 @@ public:
     void computeUpdatedPrediction(const ConcurrentJSLocker&, CodeBlock*, Structure* lastSeenStructure);
 
     void observeArrayMode(ArrayModes mode) { m_observedArrayModes |= mode; }
-    void observeIndexedRead(VM&, JSCell*, unsigned index);
+    void observeIndexedRead(JSCell*, unsigned index);
 
     ArrayModes observedArrayModes(const ConcurrentJSLocker&) const { return m_observedArrayModes; }
     bool mayInterceptIndexedAccesses(const ConcurrentJSLocker&) const { return m_mayInterceptIndexedAccesses; }
@@ -255,9 +256,9 @@ private:
 #if USE(LARGE_TYPED_ARRAYS)
     bool m_mayBeLargeTypedArray { false };
 #endif
-    bool m_mayInterceptIndexedAccesses : 1;
-    bool m_usesOriginalArrayStructures : 1;
-    bool m_didPerformFirstRunPruning : 1;
+    bool m_mayInterceptIndexedAccesses : 1 ;
+    bool m_usesOriginalArrayStructures : 1 ;
+    bool m_didPerformFirstRunPruning : 1 ;
     ArrayModes m_observedArrayModes { 0 };
 };
 static_assert(sizeof(ArrayProfile) == 12);

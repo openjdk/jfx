@@ -82,7 +82,7 @@ String formatLocalizedString(const char* format, ...)
     return String::fromUTF8(result.get());
 #else
     notImplemented();
-    return format;
+    return String::fromUTF8(format);
 #endif
 }
 #endif
@@ -302,7 +302,7 @@ String contextMenuItemTagLookUpInDictionary(const String& selectedString)
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("Look Up “%s”", "Look Up context menu item with selected word", truncatedStringForMenuItem(selectedString).utf8().data());
 #else
-    return WEB_UI_STRING("Look Up “<selection>”", "Look Up context menu item with selected word").replace("<selection>", truncatedStringForMenuItem(selectedString));
+    return makeStringByReplacingAll(WEB_UI_STRING("Look Up “<selection>”", "Look Up context menu item with selected word"), "<selection>"_s, truncatedStringForMenuItem(selectedString));
 #endif
 }
 
@@ -487,6 +487,28 @@ String contextMenuItemTagInspectElement()
     return WEB_UI_STRING_WITH_MNEMONIC("Inspect Element", "Inspect _Element", "Inspect Element context menu item");
 }
 
+#if ENABLE(PDFJS)
+String contextMenuItemPDFSinglePage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page", "_Single Page", "Single Page context menu item");
+}
+
+String contextMenuItemPDFSinglePageContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page Continuous", "_Single Page Continuous", "Single Page Continuous context menu item");
+}
+
+String contextMenuItemPDFTwoPages()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages", "_Two Pages", "Two Pages context menu item");
+}
+
+String contextMenuItemPDFTwoPagesContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
+}
+#endif
+
 #if !PLATFORM(COCOA)
 String contextMenuItemTagSearchWeb()
 {
@@ -580,6 +602,11 @@ String AXFooterRoleDescriptionText()
     return WEB_UI_STRING("footer", "accessibility role description for a footer");
 }
 
+String AXSuggestionRoleDescriptionText()
+{
+    return WEB_UI_STRING("suggestion", "accessibility role description for a suggestion element");
+}
+
 String AXFileUploadButtonText()
 {
     return WEB_UI_STRING("file upload button", "accessibility role description for a file upload button");
@@ -655,49 +682,49 @@ String AXWeekFieldText()
     return WEB_UI_STRING("week and year field", "accessibility role description for a time field.");
 }
 
-String AXARIAContentGroupText(const String& ariaType)
+String AXARIAContentGroupText(StringView ariaType)
 {
-    if (ariaType == "ARIAApplicationAlert")
+    if (ariaType == "ARIAApplicationAlert"_s)
         return WEB_UI_STRING("alert", "An ARIA accessibility group that acts as an alert.");
-    if (ariaType == "ARIAApplicationAlertDialog")
+    if (ariaType == "ARIAApplicationAlertDialog"_s)
         return WEB_UI_STRING("web alert dialog", "An ARIA accessibility group that acts as an alert dialog.");
-    if (ariaType == "ARIAApplicationDialog")
+    if (ariaType == "ARIAApplicationDialog"_s)
         return WEB_UI_STRING("web dialog", "An ARIA accessibility group that acts as an dialog.");
-    if (ariaType == "ARIAApplicationLog")
+    if (ariaType == "ARIAApplicationLog"_s)
         return WEB_UI_STRING("log", "An ARIA accessibility group that acts as a console log.");
-    if (ariaType == "ARIAApplicationMarquee")
+    if (ariaType == "ARIAApplicationMarquee"_s)
         return WEB_UI_STRING("marquee", "An ARIA accessibility group that acts as a marquee.");
-    if (ariaType == "ARIAApplicationStatus")
+    if (ariaType == "ARIAApplicationStatus"_s)
         return WEB_UI_STRING("application status", "An ARIA accessibility group that acts as a status update.");
-    if (ariaType == "ARIAApplicationTimer")
+    if (ariaType == "ARIAApplicationTimer"_s)
         return WEB_UI_STRING("timer", "An ARIA accessibility group that acts as an updating timer.");
-    if (ariaType == "ARIADocument")
+    if (ariaType == "ARIADocument"_s)
         return WEB_UI_STRING("document", "An ARIA accessibility group that acts as a document.");
-    if (ariaType == "ARIADocumentArticle")
+    if (ariaType == "ARIADocumentArticle"_s)
         return WEB_UI_STRING("article", "An ARIA accessibility group that acts as an article.");
-    if (ariaType == "ARIADocumentNote")
+    if (ariaType == "ARIADocumentNote"_s)
         return WEB_UI_STRING("note", "An ARIA accessibility group that acts as a note in a document.");
-    if (ariaType == "ARIAWebApplication")
+    if (ariaType == "ARIAWebApplication"_s)
         return WEB_UI_STRING("web application", "An ARIA accessibility group that acts as an application.");
-    if (ariaType == "ARIALandmarkBanner")
+    if (ariaType == "ARIALandmarkBanner"_s)
         return WEB_UI_STRING("banner", "An ARIA accessibility group that acts as a banner.");
-    if (ariaType == "ARIALandmarkComplementary")
+    if (ariaType == "ARIALandmarkComplementary"_s)
         return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
-    if (ariaType == "ARIALandmarkContentInfo")
+    if (ariaType == "ARIALandmarkContentInfo"_s)
         return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
-    if (ariaType == "ARIALandmarkMain")
+    if (ariaType == "ARIALandmarkMain"_s)
         return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
-    if (ariaType == "ARIALandmarkNavigation")
+    if (ariaType == "ARIALandmarkNavigation"_s)
         return WEB_UI_STRING("navigation", "An ARIA accessibility group that contains the main navigation elements of a website.");
-    if (ariaType == "ARIALandmarkRegion")
+    if (ariaType == "ARIALandmarkRegion"_s)
         return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
-    if (ariaType == "ARIALandmarkSearch")
+    if (ariaType == "ARIALandmarkSearch"_s)
         return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
-    if (ariaType == "ARIAUserInterfaceTooltip")
+    if (ariaType == "ARIAUserInterfaceTooltip"_s)
         return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
-    if (ariaType == "ARIATabPanel")
+    if (ariaType == "ARIATabPanel"_s)
         return WEB_UI_STRING("tab panel", "An ARIA accessibility group that contains the content of a tab.");
-    if (ariaType == "ARIADocumentMath")
+    if (ariaType == "ARIADocumentMath"_s)
         return WEB_UI_STRING("math", "An ARIA accessibility group that contains mathematical symbols.");
     return String();
 }
@@ -745,19 +772,19 @@ String AXLinkActionVerb()
 String AXMenuListPopupActionVerb()
 {
     notImplemented();
-    return "select";
+    return "select"_s;
 }
 
 String AXMenuListActionVerb()
 {
     notImplemented();
-    return "select";
+    return "select"_s;
 }
 
 String AXListItemActionVerb()
 {
     notImplemented();
-    return "select";
+    return "select"_s;
 }
 
 #if ENABLE(APPLE_PAY)
@@ -852,6 +879,11 @@ String AXAutoFillCreditCardLabel()
     return WEB_UI_STRING("credit card AutoFill", "Label for the credit card AutoFill button inside a text field.");
 }
 
+String AXAutoFillLoadingLabel()
+{
+    return WEB_UI_STRING("loading AutoFill", "Label for the loading AutoFill button inside a text field.");
+}
+
 String autoFillStrongPasswordLabel()
 {
     return WEB_UI_STRING("Strong Password", "Label for strong password.");
@@ -915,7 +947,7 @@ String imageTitle(const String& filename, const IntSize& size)
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.utf8().data(), size.width(), size.height());
 #else
-    return WEB_UI_FORMAT_STRING("<filename> %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", size.width(), size.height()).replace("<filename>", filename);
+    return makeStringByReplacingAll(WEB_UI_FORMAT_STRING("<filename> %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", size.width(), size.height()), "<filename>"_s, filename);
 #endif
 }
 
@@ -931,47 +963,47 @@ String mediaElementLiveBroadcastStateText()
 
 String localizedMediaControlElementString(const String& name)
 {
-    if (name == "AudioElement")
+    if (name == "AudioElement"_s)
         return WEB_UI_STRING("audio playback", "accessibility label for audio element controller");
-    if (name == "VideoElement")
+    if (name == "VideoElement"_s)
         return WEB_UI_STRING("video playback", "accessibility label for video element controller");
-    if (name == "MuteButton")
+    if (name == "MuteButton"_s)
         return WEB_UI_STRING("mute", "accessibility label for mute button");
-    if (name == "UnMuteButton")
+    if (name == "UnMuteButton"_s)
         return WEB_UI_STRING("unmute", "accessibility label for turn mute off button");
-    if (name == "PlayButton")
+    if (name == "PlayButton"_s)
         return WEB_UI_STRING("play", "accessibility label for play button");
-    if (name == "PauseButton")
+    if (name == "PauseButton"_s)
         return WEB_UI_STRING("pause", "accessibility label for pause button");
-    if (name == "Slider")
+    if (name == "Slider"_s)
         return WEB_UI_STRING("movie time", "accessibility label for timeline slider");
-    if (name == "SliderThumb")
+    if (name == "SliderThumb"_s)
         return WEB_UI_STRING("timeline slider thumb", "accessibility label for timeline thumb");
-    if (name == "RewindButton")
+    if (name == "RewindButton"_s)
         return WEB_UI_STRING("back 30 seconds", "accessibility label for seek back 30 seconds button");
-    if (name == "ReturnToRealtimeButton")
+    if (name == "ReturnToRealtimeButton"_s)
         return WEB_UI_STRING("return to real time", "accessibility label for return to real time button");
-    if (name == "CurrentTimeDisplay")
+    if (name == "CurrentTimeDisplay"_s)
         return WEB_UI_STRING("elapsed time", "accessibility label for elapsed time display");
-    if (name == "TimeRemainingDisplay")
+    if (name == "TimeRemainingDisplay"_s)
         return WEB_UI_STRING("remaining time", "accessibility label for time remaining display");
-    if (name == "StatusDisplay")
+    if (name == "StatusDisplay"_s)
         return WEB_UI_STRING("status", "accessibility label for movie status");
-    if (name == "EnterFullscreenButton")
+    if (name == "EnterFullscreenButton"_s)
         return WEB_UI_STRING("enter full screen", "accessibility label for enter full screen button");
-    if (name == "ExitFullscreenButton")
+    if (name == "ExitFullscreenButton"_s)
         return WEB_UI_STRING("exit full screen", "accessibility label for exit full screen button");
-    if (name == "SeekForwardButton")
+    if (name == "SeekForwardButton"_s)
         return WEB_UI_STRING("fast forward", "accessibility label for fast forward button");
-    if (name == "SeekBackButton")
+    if (name == "SeekBackButton"_s)
         return WEB_UI_STRING("fast reverse", "accessibility label for fast reverse button");
-    if (name == "ShowClosedCaptionsButton")
+    if (name == "ShowClosedCaptionsButton"_s)
         return WEB_UI_STRING("show closed captions", "accessibility label for show closed captions button");
-    if (name == "HideClosedCaptionsButton")
+    if (name == "HideClosedCaptionsButton"_s)
         return WEB_UI_STRING("hide closed captions", "accessibility label for hide closed captions button");
 
     // FIXME: the ControlsPanel container should never be visible in the accessibility hierarchy.
-    if (name == "ControlsPanel")
+    if (name == "ControlsPanel"_s)
         return String();
 
     ASSERT_NOT_REACHED();
@@ -980,45 +1012,45 @@ String localizedMediaControlElementString(const String& name)
 
 String localizedMediaControlElementHelpText(const String& name)
 {
-    if (name == "AudioElement")
+    if (name == "AudioElement"_s)
         return WEB_UI_STRING("audio element playback controls and status display", "accessibility help text for audio element controller");
-    if (name == "VideoElement")
+    if (name == "VideoElement"_s)
         return WEB_UI_STRING("video element playback controls and status display", "accessibility help text for video element controller");
-    if (name == "MuteButton")
+    if (name == "MuteButton"_s)
         return WEB_UI_STRING("mute audio tracks", "accessibility help text for mute button");
-    if (name == "UnMuteButton")
+    if (name == "UnMuteButton"_s)
         return WEB_UI_STRING("unmute audio tracks", "accessibility help text for un mute button");
-    if (name == "PlayButton")
+    if (name == "PlayButton"_s)
         return WEB_UI_STRING("begin playback", "accessibility help text for play button");
-    if (name == "PauseButton")
+    if (name == "PauseButton"_s)
         return WEB_UI_STRING("pause playback", "accessibility help text for pause button");
-    if (name == "Slider")
+    if (name == "Slider"_s)
         return WEB_UI_STRING("movie time scrubber", "accessibility help text for timeline slider");
-    if (name == "SliderThumb")
+    if (name == "SliderThumb"_s)
         return WEB_UI_STRING("movie time scrubber thumb", "accessibility help text for timeline slider thumb");
-    if (name == "RewindButton")
+    if (name == "RewindButton"_s)
         return WEB_UI_STRING("seek movie back 30 seconds", "accessibility help text for jump back 30 seconds button");
-    if (name == "ReturnToRealtimeButton")
+    if (name == "ReturnToRealtimeButton"_s)
         return WEB_UI_STRING("resume real time streaming", "accessibility help text for return streaming movie to real time button");
-    if (name == "CurrentTimeDisplay")
+    if (name == "CurrentTimeDisplay"_s)
         return WEB_UI_STRING("current movie time in seconds", "accessibility help text for elapsed time display");
-    if (name == "TimeRemainingDisplay")
+    if (name == "TimeRemainingDisplay"_s)
         return WEB_UI_STRING("number of seconds of movie remaining", "accessibility help text for remaining time display");
-    if (name == "StatusDisplay")
+    if (name == "StatusDisplay"_s)
         return WEB_UI_STRING("current movie status", "accessibility help text for movie status display");
-    if (name == "SeekBackButton")
+    if (name == "SeekBackButton"_s)
         return WEB_UI_STRING("seek quickly back", "accessibility help text for fast rewind button");
-    if (name == "SeekForwardButton")
+    if (name == "SeekForwardButton"_s)
         return WEB_UI_STRING("seek quickly forward", "accessibility help text for fast forward button");
-    if (name == "FullscreenButton")
+    if (name == "FullscreenButton"_s)
         return WEB_UI_STRING("Play movie in full screen mode", "accessibility help text for enter full screen button");
-    if (name == "ShowClosedCaptionsButton")
+    if (name == "ShowClosedCaptionsButton"_s)
         return WEB_UI_STRING("start displaying closed captions", "accessibility help text for show closed captions button");
-    if (name == "HideClosedCaptionsButton")
+    if (name == "HideClosedCaptionsButton"_s)
         return WEB_UI_STRING("stop displaying closed captions", "accessibility help text for hide closed captions button");
 
     // The description of this button is descriptive enough that it doesn't require help text.
-    if (name == "EnterFullscreenButton")
+    if (name == "EnterFullscreenButton"_s)
         return String();
 
     ASSERT_NOT_REACHED();
@@ -1325,7 +1357,7 @@ String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 #elif USE(GLIB)
     return WEB_UI_FORMAT_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.utf8().data());
 #else
-    return WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
+    return makeStringByReplacingAll(WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), "<application>"_s, localizedApplicationName);
 #endif
 }
 

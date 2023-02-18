@@ -27,6 +27,7 @@
 #include "WebCoreJSClientData.h"
 
 #include "DOMGCOutputConstraint.h"
+#include "DocumentInlines.h"
 #include "ExtendedDOMClientIsoSubspaces.h"
 #include "ExtendedDOMIsoSubspaces.h"
 #include "JSAudioWorkletGlobalScope.h"
@@ -180,6 +181,25 @@ void JSVMClientData::initNormalWorld(VM* vm, WorkerThreadType type)
 
     clientData->m_normalWorld = DOMWrapperWorld::create(*vm, DOMWrapperWorld::Type::Normal);
     vm->m_typedArrayController = adoptRef(new WebCoreTypedArrayController(type == WorkerThreadType::DedicatedWorker || type == WorkerThreadType::Worklet));
+}
+
+String JSVMClientData::overrideSourceURL(const JSC::StackFrame& frame, const String& originalSourceURL) const
+{
+    if (originalSourceURL.isEmpty())
+        return nullString();
+
+    auto* codeBlock = frame.codeBlock();
+    RELEASE_ASSERT(codeBlock);
+
+    auto* globalObject = codeBlock->globalObject();
+    if (!globalObject->inherits<JSDOMWindowBase>())
+        return nullString();
+
+    auto* document = jsCast<const JSDOMWindowBase*>(globalObject)->wrapped().document();
+    if (!document)
+        return nullString();
+
+    return document->maskedURLForBindingsIfNeeded(URL(originalSourceURL)).string();
 }
 
 } // namespace WebCore

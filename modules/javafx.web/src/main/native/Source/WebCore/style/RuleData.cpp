@@ -33,6 +33,7 @@
 #include "CSSKeyframesRule.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
+#include "CommonAtomStrings.h"
 #include "HTMLNames.h"
 #include "MediaQueryEvaluator.h"
 #include "SecurityOrigin.h"
@@ -56,7 +57,7 @@ struct SameSizeAsRuleData {
     unsigned d[4];
 };
 
-COMPILE_ASSERT(sizeof(RuleData) == sizeof(SameSizeAsRuleData), RuleData_should_stay_small);
+static_assert(sizeof(RuleData) == sizeof(SameSizeAsRuleData), "RuleData should stay small");
 
 static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector& selector)
 {
@@ -79,6 +80,8 @@ static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector
         return MatchBasedOnRuleHash::ClassA;
     if (selector.match() == CSSSelector::Class)
         return MatchBasedOnRuleHash::ClassB;
+    // FIXME: Valueless [attribute] case can be handled here too.
+
     return MatchBasedOnRuleHash::None;
 }
 

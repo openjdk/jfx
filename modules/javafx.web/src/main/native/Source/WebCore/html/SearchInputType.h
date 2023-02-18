@@ -59,6 +59,7 @@ private:
     void didSetValueByUserEdit() final;
     bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const final;
     float decorationWidth() const final;
+    void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
 
     void searchEventTimerFired();
     bool searchEventsShouldBeDispatched() const;
@@ -71,4 +72,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(SearchInputType, isSearchField())
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(SearchInputType, Type::Search)

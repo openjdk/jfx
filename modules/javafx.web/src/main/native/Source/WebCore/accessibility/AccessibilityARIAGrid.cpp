@@ -53,7 +53,7 @@ Ref<AccessibilityARIAGrid> AccessibilityARIAGrid::create(RenderObject* renderer)
 
 bool AccessibilityARIAGrid::addTableCellChild(AXCoreObject* child, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
 {
-    if (!child || (!is<AccessibilityTableRow>(*child) && !is<AccessibilityARIAGridRow>(*child)))
+    if (!child || (!is<AccessibilityTableRow>(*child) && !child->isARIATreeGridRow()))
         return false;
 
     auto& row = downcast<AccessibilityTableRow>(*child);
@@ -75,7 +75,7 @@ bool AccessibilityARIAGrid::addTableCellChild(AXCoreObject* child, HashSet<Acces
 bool AccessibilityARIAGrid::isMultiSelectable() const
 {
     const AtomString& ariaMultiSelectable = getAttribute(HTMLNames::aria_multiselectableAttr);
-    return !equalLettersIgnoringASCIICase(ariaMultiSelectable, "false");
+    return !equalLettersIgnoringASCIICase(ariaMultiSelectable, "false"_s);
 }
 
 void AccessibilityARIAGrid::addRowDescendant(AXCoreObject* rowChild, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)

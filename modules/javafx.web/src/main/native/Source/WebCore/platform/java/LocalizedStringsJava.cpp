@@ -61,52 +61,57 @@ String contextMenuItemTagInspectElement()
 
 String inputElementAltText()
 {
-    return getLocalizedProperty("inputElementAltText");
+    return getLocalizedProperty("inputElementAltText"_s);
 }
 
 String resetButtonDefaultLabel()
 {
-    return getLocalizedProperty("resetButtonDefaultLabel");
+    return getLocalizedProperty("resetButtonDefaultLabel"_s);
 }
 
 String searchableIndexIntroduction()
 {
-    return getLocalizedProperty("searchableIndexIntroduction");
+    return getLocalizedProperty("searchableIndexIntroduction"_s);
 }
 
 String submitButtonDefaultLabel()
 {
-    return getLocalizedProperty("submitButtonDefaultLabel");
+    return getLocalizedProperty("submitButtonDefaultLabel"_s);
 }
 
 String fileButtonChooseFileLabel()
 {
-    return getLocalizedProperty("fileButtonChooseFileLabel");
+    return getLocalizedProperty("fileButtonChooseFileLabel"_s);
 }
 
 String fileButtonNoFilesSelectedLabel()
 {
-    return getLocalizedProperty("fileButtonNoFilesSelectedLabel");
+    return getLocalizedProperty("fileButtonNoFilesSelectedLabel"_s);
 }
 
 String fileButtonNoFileSelectedLabel()
 {
-    return getLocalizedProperty("fileButtonNoFileSelectedLabel");
+    return getLocalizedProperty("fileButtonNoFileSelectedLabel"_s);
+}
+
+String AXAutoFillLoadingLabel()
+{
+    return String(); // UNSUPPORTED
 }
 
 String fileButtonChooseMultipleFilesLabel()
 {
-    return getLocalizedProperty("fileButtonChooseMultipleFilesLabel");
+    return getLocalizedProperty("fileButtonChooseMultipleFilesLabel"_s);
 }
 
 String multipleFileUploadText(unsigned numberOfFiles)
 {
-    return String::number(numberOfFiles) + " " + getLocalizedProperty("multipleFileUploadText");
+    return String::number(numberOfFiles) + " " + getLocalizedProperty("multipleFileUploadText"_s);
 }
 
 String contextMenuItemTagOpenLinkInNewWindow()
 {
-    return getLocalizedProperty("contextMenuItemTagOpenLinkInNewWindow");
+    return getLocalizedProperty("contextMenuItemTagOpenLinkInNewWindow"_s);
 }
 
 String contextMenuItemTagDownloadLinkToDisk()
@@ -116,12 +121,12 @@ String contextMenuItemTagDownloadLinkToDisk()
 
 String contextMenuItemTagCopyLinkToClipboard()
 {
-    return getLocalizedProperty("contextMenuItemTagCopyLinkToClipboard");
+    return getLocalizedProperty("contextMenuItemTagCopyLinkToClipboard"_s);
 }
 
 String contextMenuItemTagOpenImageInNewWindow()
 {
-    return getLocalizedProperty("contextMenuItemTagOpenImageInNewWindow");
+    return getLocalizedProperty("contextMenuItemTagOpenImageInNewWindow"_s);
 }
 
 String contextMenuItemTagDownloadImageToDisk()
@@ -141,47 +146,47 @@ String contextMenuItemTagDownloadVideoToDisk()
 
 String contextMenuItemTagCopyImageToClipboard()
 {
-    return getLocalizedProperty("contextMenuItemTagCopyImageToClipboard");
+    return getLocalizedProperty("contextMenuItemTagCopyImageToClipboard"_s);
 }
 
 String contextMenuItemTagOpenFrameInNewWindow()
 {
-    return getLocalizedProperty("contextMenuItemTagOpenFrameInNewWindow");
+    return getLocalizedProperty("contextMenuItemTagOpenFrameInNewWindow"_s);
 }
 
 String contextMenuItemTagCopy()
 {
-    return getLocalizedProperty("contextMenuItemTagCopy");
+    return getLocalizedProperty("contextMenuItemTagCopy"_s);
 }
 
 String contextMenuItemTagGoBack()
 {
-    return getLocalizedProperty("contextMenuItemTagGoBack");
+    return getLocalizedProperty("contextMenuItemTagGoBack"_s);
 }
 
 String contextMenuItemTagGoForward()
 {
-    return getLocalizedProperty("contextMenuItemTagGoForward");
+    return getLocalizedProperty("contextMenuItemTagGoForward"_s);
 }
 
 String contextMenuItemTagStop()
 {
-    return getLocalizedProperty("contextMenuItemTagStop");
+    return getLocalizedProperty("contextMenuItemTagStop"_s);
 }
 
 String contextMenuItemTagReload()
 {
-    return getLocalizedProperty("contextMenuItemTagReload");
+    return getLocalizedProperty("contextMenuItemTagReload"_s);
 }
 
 String contextMenuItemTagCut()
 {
-    return getLocalizedProperty("contextMenuItemTagCut");
+    return getLocalizedProperty("contextMenuItemTagCut"_s);
 }
 
 String contextMenuItemTagPaste()
 {
-    return getLocalizedProperty("contextMenuItemTagPaste");
+    return getLocalizedProperty("contextMenuItemTagPaste"_s);
 }
 
 String contextMenuItemTagNoGuessesFound()
@@ -211,7 +216,7 @@ String contextMenuItemTagLookUpInDictionary()
 
 String contextMenuItemTagOpenLink()
 {
-    return getLocalizedProperty("contextMenuItemTagOpenLink");
+    return getLocalizedProperty("contextMenuItemTagOpenLink"_s);
 }
 
 String contextMenuItemTagIgnoreGrammar()
@@ -298,57 +303,57 @@ String contextMenuItemTagTextDirectionMenu()
 
 String searchMenuNoRecentSearchesText()
 {
-    return getLocalizedProperty("searchMenuNoRecentSearchesText");
+    return getLocalizedProperty("searchMenuNoRecentSearchesText"_s);
 }
 
 String searchMenuRecentSearchesText()
 {
-    return getLocalizedProperty("searchMenuRecentSearchesText");
+    return getLocalizedProperty("searchMenuRecentSearchesText"_s);
 }
 
 String searchMenuClearRecentSearchesText()
 {
-    return getLocalizedProperty("searchMenuClearRecentSearchesText");
+    return getLocalizedProperty("searchMenuClearRecentSearchesText"_s);
 }
 
 String unknownFileSizeText()
 {
-    return getLocalizedProperty("unknownFileSizeText");
+    return getLocalizedProperty("unknownFileSizeText"_s);
 }
 
 String crashedPluginText()
 {
-    return getLocalizedProperty("crashedPluginText");
+    return getLocalizedProperty("crashedPluginText"_s);
 }
 
 String blockedPluginByContentSecurityPolicyText()
 {
-    return getLocalizedProperty("blockedPluginByContentSecurityPolicyText");
+    return getLocalizedProperty("blockedPluginByContentSecurityPolicyText"_s);
 }
 
 String inactivePluginText()
 {
-    return getLocalizedProperty("inactivePluginText");
+    return getLocalizedProperty("inactivePluginText"_s);
 }
 
 String snapshottedPlugInLabelSubtitle()
 {
-    return getLocalizedProperty("snapshottedPlugInLabelSubtitle");
+    return getLocalizedProperty("snapshottedPlugInLabelSubtitle"_s);
 }
 
 String snapshottedPlugInLabelTitle()
 {
-    return getLocalizedProperty("snapshottedPlugInLabelTitle");
+    return getLocalizedProperty("snapshottedPlugInLabelTitle"_s);
 }
 
 String missingPluginText()
 {
-    return getLocalizedProperty("missingPluginText");
+    return getLocalizedProperty("missingPluginText"_s);
 }
 
 String insecurePluginVersionText()
 {
-    return getLocalizedProperty("insecurePluginVersionText");
+    return getLocalizedProperty("insecurePluginVersionText"_s);
 }
 
 
@@ -439,28 +444,28 @@ String contextMenuItemTagToggleMediaLoop()
 
 String mediaElementLoadingStateText()
 {
-    return getLocalizedProperty("mediaElementLoadingStateText");
+    return getLocalizedProperty("mediaElementLoadingStateText"_s);
 }
 
 String mediaElementLiveBroadcastStateText()
 {
-    return getLocalizedProperty("mediaElementLiveBroadcastStateText");
+    return getLocalizedProperty("mediaElementLiveBroadcastStateText"_s);
 }
 
 String localizedMediaControlElementString(const String& s)
 {
-    return getLocalizedProperty(String("localizedMediaControlElementString") + s);
+    return getLocalizedProperty(String("localizedMediaControlElementString"_s) + s);
 }
 
 String localizedMediaControlElementHelpText(const String& s)
 {
-    return getLocalizedProperty(String("localizedMediaControlElementHelpText") + s);
+    return getLocalizedProperty(String("localizedMediaControlElementHelpText"_s) + s);
 }
 
 String localizedMediaTimeDescription(float time)
 {
     if (!std::isfinite(time))
-        return getLocalizedProperty("localizedMediaTimeDescriptionIndefinite");
+        return getLocalizedProperty("localizedMediaTimeDescriptionIndefinite"_s);
 
     int seconds = (int)fabsf(time);
     int days = seconds / (60 * 60 * 24);
@@ -470,39 +475,42 @@ String localizedMediaTimeDescription(float time)
 
     String result;
     if (days) {
-        String s = getLocalizedProperty("localizedMediaTimeDescriptionDays");
-        result.append(String::number(days) + " " + s + "  ");
+        String s = getLocalizedProperty("localizedMediaTimeDescriptionDays"_s);
+        //result.append(String::number(days) + " " + s + "  ");
+        result = makeString(result, String::number(days), " ", s, "  ");
     }
     if (days || hours) {
-        String s = getLocalizedProperty("localizedMediaTimeDescriptionHours");
-        result.append(String::number(hours) + " " + s + "  ");
+        String s = getLocalizedProperty("localizedMediaTimeDescriptionHours"_s);
+        //result.append(String::number(hours) + " " + s + "  ");
+        result = makeString(result, String::number(hours), " ", s, "  ");
     }
     if (days || hours || minutes) {
-        String s = getLocalizedProperty("localizedMediaTimeDescriptionMinutes");
-        result.append(String::number(minutes) + " " + s + "  ");
+        String s = getLocalizedProperty("localizedMediaTimeDescriptionMinutes"_s);
+        //result.append(String::number(minutes) + " " + s + "  ");
+        result = makeString(result, String::number(minutes), " ", s, "  ");
     }
-    String s = getLocalizedProperty("localizedMediaTimeDescriptionSeconds");
+    String s = getLocalizedProperty("localizedMediaTimeDescriptionSeconds"_s);
     return result + String::number(days) + " " + s;
 }
 
 String AXWebAreaText()
 {
-    return getLocalizedProperty("AXWebAreaText");
+    return getLocalizedProperty("AXWebAreaText"_s);
 }
 
 String AXAutoFillCreditCardLabel()
 {
-    return getLocalizedProperty("AXAutoFillCreditCardLabel");
+    return getLocalizedProperty("AXAutoFillCreditCardLabel"_s);
 }
 
 String AXLinkText()
 {
-    return getLocalizedProperty("AXLinkText");
+    return getLocalizedProperty("AXLinkText"_s);
 }
 
 String AXListMarkerText()
 {
-    return getLocalizedProperty("AXListMarkerText");
+    return getLocalizedProperty("AXListMarkerText"_s);
 }
 
 String AXAttachmentRoleText()
@@ -513,72 +521,72 @@ String AXAttachmentRoleText()
 
 String AXImageMapText()
 {
-    return getLocalizedProperty("AXImageMapText");
+    return getLocalizedProperty("AXImageMapText"_s);
 }
 
 String AXHeadingText()
 {
-    return getLocalizedProperty("AXHeadingText");
+    return getLocalizedProperty("AXHeadingText"_s);
 }
 
 String AXDefinitionListTermText()
 {
-    return getLocalizedProperty("AXDefinitionListTermText");
+    return getLocalizedProperty("AXDefinitionListTermText"_s);
 }
 
 String AXDefinitionListDefinitionText()
 {
-    return getLocalizedProperty("AXDefinitionListDefinitionText");
+    return getLocalizedProperty("AXDefinitionListDefinitionText"_s);
 }
 
 String AXFigureText()
 {
-    return getLocalizedProperty("AXFigureText");
+    return getLocalizedProperty("AXFigureText"_s);
 }
 
 String AXARIAContentGroupText(const String& ariaType)
 {
-    return getLocalizedProperty(String("AXARIAContentGroupText") + ariaType);
+    return getLocalizedProperty(String("AXARIAContentGroupText"_s) + ariaType);
 }
 
 String AXButtonActionVerb()
 {
-    return getLocalizedProperty("AXButtonActionVerb");
+    return getLocalizedProperty("AXButtonActionVerb"_s);
 }
 
 String AXRadioButtonActionVerb()
 {
-    return getLocalizedProperty("AXRadioButtonActionVerb");
+    return getLocalizedProperty("AXRadioButtonActionVerb"_s);
 }
 
 String AXTextFieldActionVerb()
 {
-    return getLocalizedProperty("AXTextFieldActionVerb");
+    return getLocalizedProperty("AXTextFieldActionVerb"_s);
 }
 
 String AXCheckedCheckBoxActionVerb()
 {
-    return getLocalizedProperty("AXCheckedCheckBoxActionVerb");
+    return getLocalizedProperty("AXCheckedCheckBoxActionVerb"_s);
 }
 
 String AXUncheckedCheckBoxActionVerb()
 {
-    return getLocalizedProperty("AXUncheckedCheckBoxActionVerb");
+    return getLocalizedProperty("AXUncheckedCheckBoxActionVerb"_s);
 }
 
 String AXLinkActionVerb()
 {
-    return getLocalizedProperty("AXLinkActionVerb");
+    return getLocalizedProperty("AXLinkActionVerb"_s);
 }
 
 String AXMenuListPopupActionVerb()
 {
-    return getLocalizedProperty("AXMenuListPopupActionVerb");
+    return getLocalizedProperty("AXMenuListPopupActionVerb"_s);
 }
 
 String AXMenuListActionVerb()
 {
-    return getLocalizedProperty("AXMenuListActionVerb");
+    return getLocalizedProperty("AXMenuListActionVerb"_s);
 }
 
 String AXSearchFieldCancelButtonText() {
@@ -588,35 +596,35 @@ String AXSearchFieldCancelButtonText() {
 
 String AXAutoFillStrongPasswordLabel()
 {
-    // return WEB_UI_STRING("strong password auto fill", "Label for the strong password auto fill button inside a text field.");
-    return getLocalizedProperty("AXAutoFillStrongPasswordLabel");
+    // return WEB_UI_STRING("strong password auto fill", "Label for the strong password auto fill button inside a text field."_s);
+    return getLocalizedProperty("AXAutoFillStrongPasswordLabel"_s);
 }
 
 String AXAutoFillStrongConfirmationPasswordLabel()
 {
-    // return WEB_UI_STRING("strong confirmation password auto fill", "Label for the strong confirmation password auto fill button inside a text field.");
-    return getLocalizedProperty("AXAutoFillStrongConfirmationPasswordLabel");
+    // return WEB_UI_STRING("strong confirmation password auto fill", "Label for the strong confirmation password auto fill button inside a text field."_s);
+    return getLocalizedProperty("AXAutoFillStrongConfirmationPasswordLabel"_s);
 }
 
 String autoFillStrongPasswordLabel()
 {
-    // return WEB_UI_STRING("strong password", "Label for strong password.");
-    return getLocalizedProperty("autoFillStrongPasswordLabel");
+    // return WEB_UI_STRING("strong password", "Label for strong password."_s);
+    return getLocalizedProperty("autoFillStrongPasswordLabel"_s);
 }
 
 String validationMessageValueMissingText()
 {
-    return getLocalizedProperty("validationMessageValueMissingText");
+    return getLocalizedProperty("validationMessageValueMissingText"_s);
 }
 
 String validationMessageTypeMismatchText()
 {
-    return getLocalizedProperty("validationMessageTypeMismatchText");
+    return getLocalizedProperty("validationMessageTypeMismatchText"_s);
 }
 
 String validationMessagePatternMismatchText()
 {
-    return getLocalizedProperty("validationMessagePatternMismatchText");
+    return getLocalizedProperty("validationMessagePatternMismatchText"_s);
 }
 
 String validationMessageTooShortText(int, int)
@@ -627,22 +635,22 @@ String validationMessageTooShortText(int, int)
 
 String validationMessageTooLongText(int, int)
 {
-    return getLocalizedProperty("validationMessageTooLongText");
+    return getLocalizedProperty("validationMessageTooLongText"_s);
 }
 
 String validationMessageRangeUnderflowText(const String&)
 {
-    return getLocalizedProperty("validationMessageRangeUnderflowText");
+    return getLocalizedProperty("validationMessageRangeUnderflowText"_s);
 }
 
 String validationMessageRangeOverflowText(const String&)
 {
-    return getLocalizedProperty("validationMessageRangeOverflowText");
+    return getLocalizedProperty("validationMessageRangeOverflowText"_s);
 }
 
 String validationMessageStepMismatchText(const String&, const String&)
 {
-    return getLocalizedProperty("validationMessageStepMismatchText");
+    return getLocalizedProperty("validationMessageStepMismatchText"_s);
 }
 
 String validationMessageTypeMismatchForEmailText()
@@ -695,7 +703,7 @@ String validationMessageValueMissingForSelectText()
 
 String validationMessageBadInputForNumberText()
 {
-    return getLocalizedProperty("validationMessageBadInputForNumberText");
+    return getLocalizedProperty("validationMessageBadInputForNumberText"_s);
 }
 
 #if ENABLE(INPUT_TYPE_WEEK)
@@ -703,14 +711,14 @@ String validationMessageBadInputForNumberText()
 // technical standard 35, Locale Data Markup Language, e.g. "'Week' ww, yyyy"
 String weekFormatInLDML()
 {
-    return getLocalizedProperty("weekFormatInLDML");
+    return getLocalizedProperty("weekFormatInLDML"_s);
 }
 #endif
 
 
 String defaultDetailsSummaryText()
 {
-    return getLocalizedProperty("defaultDetailsSummaryText");
+    return getLocalizedProperty("defaultDetailsSummaryText"_s);
 }
 
 String AXAutoFillCredentialsLabel()

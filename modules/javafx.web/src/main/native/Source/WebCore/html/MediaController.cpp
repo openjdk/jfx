@@ -47,7 +47,8 @@ Ref<MediaController> MediaController::create(ScriptExecutionContext& context)
 }
 
 MediaController::MediaController(ScriptExecutionContext& context)
-    : m_paused(false)
+    : ContextDestructionObserver(&context)
+    , m_paused(false)
     , m_defaultPlaybackRate(1)
     , m_volume(1)
     , m_position(MediaPlayer::invalidTime())
@@ -58,7 +59,6 @@ MediaController::MediaController(ScriptExecutionContext& context)
     , m_clearPositionTimer(*this, &MediaController::clearPositionTimerFired)
     , m_closedCaptionsVisible(false)
     , m_clock(PAL::Clock::create())
-    , m_scriptExecutionContext(context)
     , m_timeupdateTimer(*this, &MediaController::scheduleTimeupdateEvent)
 {
 }
@@ -289,19 +289,19 @@ void MediaController::setMuted(bool flag)
 
 static const AtomString& playbackStateWaiting()
 {
-    static MainThreadNeverDestroyed<const AtomString> waiting("waiting", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> waiting("waiting"_s);
     return waiting;
 }
 
 static const AtomString& playbackStatePlaying()
 {
-    static MainThreadNeverDestroyed<const AtomString> playing("playing", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> playing("playing"_s);
     return playing;
 }
 
 static const AtomString& playbackStateEnded()
 {
-    static MainThreadNeverDestroyed<const AtomString> ended("ended", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> ended("ended"_s);
     return ended;
 }
 

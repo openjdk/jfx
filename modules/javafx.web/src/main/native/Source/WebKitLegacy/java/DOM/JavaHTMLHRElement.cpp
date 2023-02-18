@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_getAlignImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_setAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_getNoShadeImpl(JNIEnv*, jclass, jlong peer)
@@ -77,7 +77,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_getSizeImpl(
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_setSizeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::sizeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::sizeAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_getWidthImpl(JNIEnv* env, jclass, jlong peer)
@@ -89,7 +89,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_getWidthImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_setWidthImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::widthAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::widthAttr, AtomString {String(env, value)});
 }
 
 }

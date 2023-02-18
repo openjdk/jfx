@@ -30,10 +30,24 @@
 #include "FragmentScriptingPermission.h"
 #include "HTMLElementStack.h"
 #include "HTMLFormattingElementList.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/SetForScope.h>
 #include <wtf/Vector.h>
+
+namespace WebCore {
+
+struct AtomStringWithCode {
+    AtomString string;
+    uint64_t code { 0 };
+};
+
+}
+
+namespace WTF {
+template<> struct VectorTraits<WebCore::AtomStringWithCode> : SimpleClassVectorTraits { };
+}
 
 namespace WebCore {
 
@@ -127,7 +141,7 @@ public:
     void insertAlreadyParsedChild(HTMLStackItem& newParent, HTMLElementStack::ElementRecord& child);
     void takeAllChildrenAndReparent(HTMLStackItem& newParent, HTMLElementStack::ElementRecord& oldParent);
 
-    Ref<HTMLStackItem> createElementFromSavedToken(HTMLStackItem&);
+    HTMLStackItem createElementFromSavedToken(const HTMLStackItem&);
 
     bool shouldFosterParent() const;
     void fosterParent(Ref<Node>&&);
@@ -150,8 +164,8 @@ public:
     HTMLFormattingElementList& activeFormattingElements() const { return m_activeFormattingElements; }
     bool currentIsRootNode() { return &m_openElements.topNode() == &m_openElements.rootNode(); }
 
-    Element& head() const { return m_head->element(); }
-    HTMLStackItem* headStackItem() const { return m_head.get(); }
+    Element& head() const { return m_head.element(); }
+    HTMLStackItem& headStackItem() { return m_head; }
 
     void setForm(HTMLFormElement*);
     HTMLFormElement* form() const { return m_form.get(); }
@@ -188,8 +202,8 @@ private:
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
-    RefPtr<Element> createHTMLElementOrFindCustomElementInterface(AtomHTMLToken&, JSCustomElementInterface**);
-    Ref<Element> createHTMLElement(AtomHTMLToken&);
+    RefPtr<HTMLElement> createHTMLElementOrFindCustomElementInterface(AtomHTMLToken&, JSCustomElementInterface**);
+    Ref<HTMLElement> createHTMLElement(AtomHTMLToken&);
     Ref<Element> createElement(AtomHTMLToken&, const AtomString& namespaceURI);
 
     void mergeAttributesFromTokenIntoElement(AtomHTMLToken&&, Element&);
@@ -202,7 +216,7 @@ private:
     // and a Document in all other cases.
     ContainerNode& m_attachmentRoot;
 
-    RefPtr<HTMLStackItem> m_head;
+    HTMLStackItem m_head;
     RefPtr<HTMLFormElement> m_form;
     mutable HTMLElementStack m_openElements;
     mutable HTMLFormattingElementList m_activeFormattingElements;
@@ -228,7 +242,10 @@ private:
 class WhitespaceCache {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WhitespaceCache() = default;
+    WhitespaceCache()
+        : m_atoms(maximumCachedStringLength)
+    {
+    }
 
     AtomString lookup(const String&, WhitespaceMode);
 
@@ -238,14 +255,7 @@ private:
     constexpr static uint64_t overflowWhitespaceCode = static_cast<uint64_t>(-1);
     constexpr static size_t maximumCachedStringLength = 128;
 
-    // Parallel arrays storing a 64 bit code and an index into m_atoms for the
-    // most recently atomized whitespace-only string of a given length. The
-    // indices into these two arrays are the string length minus 1, so the code
-    // for a whitespace-only string of length 2 is stored at m_codes[1], etc.
-    uint64_t m_codes[maximumCachedStringLength] { 0 };
-    uint8_t m_indexes[maximumCachedStringLength] { 0 };
-
-    Vector<AtomString, maximumCachedStringLength> m_atoms;
+    FixedVector<AtomStringWithCode> m_atoms;
 };
 
 } // namespace WebCore

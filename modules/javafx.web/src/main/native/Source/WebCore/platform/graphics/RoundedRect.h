@@ -71,6 +71,8 @@ public:
 
         Radii transposedRadii() const { return Radii(m_topLeft.transposedSize(), m_topRight.transposedSize(), m_bottomLeft.transposedSize(), m_bottomRight.transposedSize()); }
 
+        LayoutUnit minimumRadius() const { return std::min({ m_topLeft.minDimension(), m_topRight.minDimension(), m_bottomLeft.minDimension(), m_bottomRight.minDimension() }); }
+
     private:
         LayoutSize m_topLeft;
         LayoutSize m_topRight;
@@ -126,6 +128,8 @@ inline bool operator==(const RoundedRect& a, const RoundedRect& b)
 {
     return a.rect() == b.rect() && a.radii() == b.radii();
 }
+
+WTF::TextStream& operator<<(WTF::TextStream&, const RoundedRect&);
 
 // Snip away rectangles from corners, roughly one per step length of arc.
 WEBCORE_EXPORT Region approximateAsRegion(const RoundedRect&, unsigned stepLength = 20);

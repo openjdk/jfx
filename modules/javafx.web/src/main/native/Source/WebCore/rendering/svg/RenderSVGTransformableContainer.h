@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009 Google, Inc.
+ * Copyright (c) 2020, 2021, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,35 +21,36 @@
 
 #pragma once
 
-#include "LegacyRenderSVGContainer.h"
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+#include "RenderSVGContainer.h"
 
 namespace WebCore {
 
 class SVGGraphicsElement;
 
-class RenderSVGTransformableContainer final : public LegacyRenderSVGContainer {
+class RenderSVGTransformableContainer final : public RenderSVGContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGTransformableContainer);
 public:
     RenderSVGTransformableContainer(SVGGraphicsElement&, RenderStyle&&);
 
-    bool isSVGTransformableContainer() const override { return true; }
-    const AffineTransform& localToParentTransform() const override { return m_localTransform; }
-    void setNeedsTransformUpdate() override { m_needsTransformUpdate = true; }
-    bool didTransformToRootUpdate() override { return m_didTransformToRootUpdate; }
+    bool isSVGTransformableContainer() const final { return true; }
 
 private:
-    SVGGraphicsElement& graphicsElement();
+    ASCIILiteral renderName() const final { return "RenderSVGTransformableContainer"_s; }
 
     void element() const = delete;
-    bool calculateLocalTransform() override;
-    AffineTransform localTransform() const override { return m_localTransform; }
+    SVGGraphicsElement& graphicsElement() const;
 
-    bool m_needsTransformUpdate : 1;
-    bool m_didTransformToRootUpdate : 1;
-    AffineTransform m_localTransform;
-    FloatSize m_lastTranslation;
+    FloatSize additionalContainerTranslation() const;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const final;
+    void updateLayerTransform() final;
+    void updateFromStyle() final;
+
+    AffineTransform m_supplementalLayerTransform;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGTransformableContainer, isSVGTransformableContainer())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

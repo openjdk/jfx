@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package com.sun.javafx.iio.common;
 
 import com.sun.javafx.iio.ImageFormatDescription;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class ImageDescriptor implements ImageFormatDescription {
@@ -38,12 +36,9 @@ public class ImageDescriptor implements ImageFormatDescription {
 
     public ImageDescriptor(String formatName, String[] extensions, Signature[] signatures, String[] mimeSubtypes) {
         this.formatName = formatName;
-        this.extensions = Collections.unmodifiableList(
-                                          Arrays.asList(extensions));
-        this.signatures = Collections.unmodifiableList(
-                                          Arrays.asList(signatures));
-        this.mimeSubtypes = Collections.unmodifiableList(
-                                          Arrays.asList(mimeSubtypes));
+        this.extensions = List.of(extensions);
+        this.signatures = List.of(signatures);
+        this.mimeSubtypes = List.of(mimeSubtypes);
     }
 
     @Override

@@ -80,14 +80,14 @@ void StorageTracker::internalInitialize()
     storageTracker->importOriginIdentifiers();
 
     m_thread->dispatch([this] {
-        FileSystem::deleteFile(FileSystem::pathByAppendingComponent(m_storageDirectoryPath, "StorageTracker.db"));
+        FileSystem::deleteFile(FileSystem::pathByAppendingComponent(m_storageDirectoryPath, "StorageTracker.db"_s));
     });
 }
 
 StorageTracker& StorageTracker::tracker()
 {
     if (!storageTracker)
-        storageTracker = new StorageTracker("");
+        storageTracker = new StorageTracker(emptyString());
     if (storageTracker->m_needsInitialization)
         storageTracker->internalInitialize();
 
@@ -107,7 +107,7 @@ StorageTracker::StorageTracker(const String& storagePath)
 String StorageTracker::trackerDatabasePath()
 {
     ASSERT(!m_databaseMutex.tryLock());
-    return FileSystem::pathByAppendingComponent(m_storageDirectoryPath, "LegacyStorageTracker.db");
+    return FileSystem::pathByAppendingComponent(m_storageDirectoryPath, "LegacyStorageTracker.db"_s);
 }
 
 static bool ensureDatabaseFileExists(const String& fileName, bool createIfDoesNotExist)
@@ -145,7 +145,7 @@ void StorageTracker::openTrackerDatabase(bool createIfDoesNotExist)
 
     m_database.disableThreadingChecks();
 
-    if (!m_database.tableExists("Origins")) {
+    if (!m_database.tableExists("Origins"_s)) {
         if (!m_database.executeCommand("CREATE TABLE Origins (origin TEXT UNIQUE ON CONFLICT REPLACE, path TEXT);"_s))
             LOG_ERROR("Failed to create Origins table.");
     }
@@ -260,7 +260,7 @@ void StorageTracker::syncFileSystemAndTrackerDatabase()
             continue;
 
         auto filePath = FileSystem::pathByAppendingComponent(m_storageDirectoryPath, fileName);
-        String originIdentifier = fileName.substring(0, fileName.length() - fileExtension.length());
+        String originIdentifier = fileName.left(fileName.length() - fileExtension.length());
         if (!originSetCopy.contains(originIdentifier))
             syncSetOriginDetails(originIdentifier, filePath);
 
@@ -490,7 +490,7 @@ void StorageTracker::deleteOrigin(const SecurityOriginData& origin)
         m_originSet.remove(originId);
     }
 
-    m_thread->dispatch([this, originId = originId.isolatedCopy()] {
+    m_thread->dispatch([this, originId = WTFMove(originId).isolatedCopy()] {
         syncDeleteOrigin(originId);
     });
 }
@@ -641,6 +641,7 @@ uint64_t StorageTracker::diskUsageForOrigin(SecurityOrigin* origin)
         return 0;
 
     return FileSystem::fileSize(path).value_or(0);
+    return 0;
 }
 
 } // namespace WebCore

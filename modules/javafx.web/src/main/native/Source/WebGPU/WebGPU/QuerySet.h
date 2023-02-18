@@ -29,31 +29,44 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 
+struct WGPUQuerySetImpl {
+};
+
 namespace WebGPU {
 
-class QuerySet : public RefCounted<QuerySet> {
+class Device;
+
+// https://gpuweb.github.io/gpuweb/#gpuqueryset
+class QuerySet : public WGPUQuerySetImpl, public RefCounted<QuerySet> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<QuerySet> create(id <MTLCounterSampleBuffer> counterSampleBuffer)
+    static Ref<QuerySet> create(id<MTLCounterSampleBuffer> counterSampleBuffer, Device& device)
     {
-        return adoptRef(*new QuerySet(counterSampleBuffer));
+        return adoptRef(*new QuerySet(counterSampleBuffer, device));
+    }
+    static Ref<QuerySet> createInvalid(Device& device)
+    {
+        return adoptRef(*new QuerySet(device));
     }
 
     ~QuerySet();
 
     void destroy();
-    void setLabel(const char*);
+    void setLabel(String&&);
 
-    id <MTLCounterSampleBuffer> counterSampleBuffer() const { return m_counterSampleBuffer; }
+    bool isValid() const { return m_counterSampleBuffer; }
+
+    id<MTLCounterSampleBuffer> counterSampleBuffer() const { return m_counterSampleBuffer; }
+
+    Device& device() const { return m_device; }
 
 private:
-    QuerySet(id <MTLCounterSampleBuffer>);
+    QuerySet(id<MTLCounterSampleBuffer>, Device&);
+    QuerySet(Device&);
 
-    id <MTLCounterSampleBuffer> m_counterSampleBuffer { nil };
+    id<MTLCounterSampleBuffer> m_counterSampleBuffer { nil };
+
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-struct WGPUQuerySetImpl {
-    Ref<WebGPU::QuerySet> querySet;
-};

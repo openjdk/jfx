@@ -37,6 +37,10 @@
 #include <wtf/MachSendRight.h>
 #endif
 
+namespace WebCore {
+struct SecurityOriginData;
+}
+
 namespace PlatformXR {
 
 enum class SessionMode : uint8_t {
@@ -84,10 +88,86 @@ enum class XRTargetRayMode {
     Screen,
 };
 
+// https://immersive-web.github.io/webxr/#feature-descriptor
+enum class SessionFeature {
+    ReferenceSpaceTypeViewer,
+    ReferenceSpaceTypeLocal,
+    ReferenceSpaceTypeLocalFloor,
+    ReferenceSpaceTypeBoundedFloor,
+    ReferenceSpaceTypeUnbounded,
+#if ENABLE(WEBXR_HANDS)
+    HandTracking,
+#endif
+};
+
+inline SessionFeature sessionFeatureFromReferenceSpaceType(ReferenceSpaceType referenceSpaceType)
+{
+    switch (referenceSpaceType) {
+    case ReferenceSpaceType::Viewer:
+        return SessionFeature::ReferenceSpaceTypeViewer;
+    case ReferenceSpaceType::Local:
+        return SessionFeature::ReferenceSpaceTypeLocal;
+    case ReferenceSpaceType::LocalFloor:
+        return SessionFeature::ReferenceSpaceTypeLocalFloor;
+    case ReferenceSpaceType::BoundedFloor:
+        return SessionFeature::ReferenceSpaceTypeBoundedFloor;
+    case ReferenceSpaceType::Unbounded:
+        return SessionFeature::ReferenceSpaceTypeUnbounded;
+    }
+
+    ASSERT_NOT_REACHED();
+    return SessionFeature::ReferenceSpaceTypeViewer;
+}
+
+inline std::optional<SessionFeature> parseSessionFeatureDescriptor(StringView string)
+{
+    auto feature = string.stripWhiteSpace().convertToASCIILowercase();
+
+    if (feature == "viewer"_s)
+        return SessionFeature::ReferenceSpaceTypeViewer;
+    if (feature == "local"_s)
+        return SessionFeature::ReferenceSpaceTypeLocal;
+    if (feature == "local-floor"_s)
+        return SessionFeature::ReferenceSpaceTypeLocalFloor;
+    if (feature == "bounded-floor"_s)
+        return SessionFeature::ReferenceSpaceTypeBoundedFloor;
+    if (feature == "unbounded"_s)
+        return SessionFeature::ReferenceSpaceTypeUnbounded;
+#if ENABLE(WEBXR_HANDS)
+    if (feature == "hand-tracking"_s)
+        return SessionFeature::HandTracking;
+#endif
+
+    return std::nullopt;
+}
+
+inline String sessionFeatureDescriptor(SessionFeature sessionFeature)
+{
+    switch (sessionFeature) {
+    case SessionFeature::ReferenceSpaceTypeViewer:
+        return "viewer"_s;
+    case SessionFeature::ReferenceSpaceTypeLocal:
+        return "local"_s;
+    case SessionFeature::ReferenceSpaceTypeLocalFloor:
+        return "local-floor"_s;
+    case SessionFeature::ReferenceSpaceTypeBoundedFloor:
+        return "bounded-floor"_s;
+    case SessionFeature::ReferenceSpaceTypeUnbounded:
+        return "unbounded"_s;
+#if ENABLE(WEBXR_HANDS)
+    case SessionFeature::HandTracking:
+        return "hand-tracking"_s;
+#endif
+    default:
+        ASSERT_NOT_REACHED();
+        return ""_s;
+    }
+}
+
 #if ENABLE(WEBXR_HANDS)
 
 enum class HandJoint : unsigned {
-    Wrist,
+    Wrist = 0,
     ThumbMetacarpal,
     ThumbPhalanxProximal,
     ThumbPhalanxDistal,
@@ -111,7 +191,8 @@ enum class HandJoint : unsigned {
     PinkyFingerPhalanxProximal,
     PinkyFingerPhalanxIntermediate,
     PinkyFingerPhalanxDistal,
-    PinkyFingerTip
+    PinkyFingerTip,
+    Count
 };
 
 #endif
@@ -124,10 +205,10 @@ class Device : public ThreadSafeRefCounted<Device>, public CanMakeWeakPtr<Device
 public:
     virtual ~Device() = default;
 
-    using FeatureList = Vector<ReferenceSpaceType>;
-    bool supports(SessionMode mode) const { return m_enabledFeaturesMap.contains(mode); }
-    void setSupportedFeatures(SessionMode mode, const FeatureList& features) { m_enabledFeaturesMap.set(mode, features); }
-    FeatureList supportedFeatures(SessionMode mode) const { return m_enabledFeaturesMap.get(mode); }
+    using FeatureList = Vector<SessionFeature>;
+    bool supports(SessionMode mode) const { return m_supportedFeaturesMap.contains(mode); }
+    void setSupportedFeatures(SessionMode mode, const FeatureList& features) { m_supportedFeaturesMap.set(mode, features); }
+    FeatureList supportedFeatures(SessionMode mode) const { return m_supportedFeaturesMap.get(mode); }
     void setEnabledFeatures(SessionMode mode, const FeatureList& features) { m_enabledFeaturesMap.set(mode, features); }
     FeatureList enabledFeatures(SessionMode mode) const { return m_enabledFeaturesMap.get(mode); }
 
@@ -145,7 +226,7 @@ public:
     virtual double maxFramebufferScalingFactor() const { return nativeFramebufferScalingFactor(); }
 
 
-    virtual void initializeTrackingAndRendering(SessionMode) = 0;
+    virtual void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, SessionMode, const FeatureList&) = 0;
     virtual void shutDownTrackingAndRendering() = 0;
     TrackingAndRenderingClient* trackingAndRenderingClient() const { return m_trackingAndRenderingClient.get(); }
     void setTrackingAndRenderingClient(WeakPtr<TrackingAndRenderingClient>&& client) { m_trackingAndRenderingClient = WTFMove(client); }
@@ -237,6 +318,18 @@ public:
             template<class Decoder> static std::optional<InputSourcePose> decode(Decoder&);
         };
 
+#if ENABLE(WEBXR_HANDS)
+        struct InputSourceHandJoint {
+            InputSourcePose pose;
+            float radius { 0 };
+
+            template<class Encoder> void encode(Encoder&) const;
+            template<class Decoder> static std::optional<InputSourceHandJoint> decode(Decoder&);
+        };
+
+        using HandJointsVector = Vector<std::optional<InputSourceHandJoint>>;
+#endif
+
         struct InputSource {
             InputSourceHandle handle { 0 };
             XRHandedness handeness { XRHandedness::None };
@@ -247,8 +340,7 @@ public:
             Vector<InputSourceButton> buttons;
             Vector<float> axes;
 #if ENABLE(WEBXR_HANDS)
-            // FIXME: Actually hold some hand data.
-            bool simulateHand { false };
+            std::optional<HandJointsVector> handJoints;
 #endif
 
             template<class Encoder> void encode(Encoder&) const;
@@ -548,6 +640,29 @@ std::optional<Device::FrameData::InputSourcePose> Device::FrameData::InputSource
     return inputSourcePose;
 }
 
+#if ENABLE(WEBXR_HANDS)
+template<class Encoder>
+void Device::FrameData::InputSourceHandJoint::encode(Encoder& encoder) const
+{
+    encoder << pose;
+    encoder << radius;
+}
+
+template<class Decoder>
+std::optional<Device::FrameData::InputSourceHandJoint> Device::FrameData::InputSourceHandJoint::decode(Decoder& decoder)
+{
+    std::optional<InputSourcePose> pose;
+    decoder >> pose;
+    if (!pose)
+        return std::nullopt;
+    std::optional<float> radius;
+    decoder >> radius;
+    if (!radius)
+        return std::nullopt;
+    return { { WTFMove(*pose), *radius } };
+}
+#endif
+
 template<class Encoder>
 void Device::FrameData::InputSource::encode(Encoder& encoder) const
 {
@@ -559,6 +674,9 @@ void Device::FrameData::InputSource::encode(Encoder& encoder) const
     encoder << gripOrigin;
     encoder << buttons;
     encoder << axes;
+#if ENABLE(WEBXR_HANDS)
+    encoder << handJoints;
+#endif
 }
 
 template<class Decoder>
@@ -581,6 +699,10 @@ std::optional<Device::FrameData::InputSource> Device::FrameData::InputSource::de
         return std::nullopt;
     if (!decoder.decode(source.axes))
         return std::nullopt;
+#if ENABLE(WEBXR_HANDS)
+    if (!decoder.decode(source.handJoints))
+        return std::nullopt;
+#endif
     return source;
 }
 
@@ -700,6 +822,20 @@ template<> struct EnumTraits<PlatformXR::XRTargetRayMode> {
         PlatformXR::XRTargetRayMode::Gaze,
         PlatformXR::XRTargetRayMode::TrackedPointer,
         PlatformXR::XRTargetRayMode::Screen
+    >;
+};
+
+template<> struct EnumTraits<PlatformXR::SessionFeature> {
+    using values = EnumValues<
+        PlatformXR::SessionFeature,
+        PlatformXR::SessionFeature::ReferenceSpaceTypeViewer,
+        PlatformXR::SessionFeature::ReferenceSpaceTypeLocal,
+        PlatformXR::SessionFeature::ReferenceSpaceTypeLocalFloor,
+        PlatformXR::SessionFeature::ReferenceSpaceTypeBoundedFloor,
+        PlatformXR::SessionFeature::ReferenceSpaceTypeUnbounded
+#if ENABLE(WEBXR_HANDS)
+        , PlatformXR::SessionFeature::HandTracking
+#endif
     >;
 };
 

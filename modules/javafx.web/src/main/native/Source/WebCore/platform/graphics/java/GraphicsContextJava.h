@@ -147,7 +147,7 @@ public:
 
     PlatformGraphicsContext* m_platformContext;
 
-    void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) override;
+    void didUpdateState(GraphicsContextState&) override;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) override;
     void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect,
                             const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;

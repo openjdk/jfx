@@ -26,8 +26,8 @@
 #include "config.h"
 #include "ServerTimingParser.h"
 
+#include "DeprecatedGlobalSettings.h"
 #include "HeaderFieldTokenizer.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ServerTiming.h"
 
 #include <wtf/text/CString.h>
@@ -38,7 +38,7 @@ namespace ServerTimingParser {
 
 Vector<ServerTiming> parseServerTiming(const String& headerValue)
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().serverTimingEnabled());
+    ASSERT(DeprecatedGlobalSettings::serverTimingEnabled());
     auto entries = Vector<ServerTiming>();
     if (headerValue.isNull())
         return entries;
@@ -58,7 +58,7 @@ Vector<ServerTiming> parseServerTiming(const String& headerValue)
             if (parameterName.isNull())
                 break;
 
-            String value = "";
+            String value = emptyString();
             if (tokenizer.consume('=')) {
                 value = tokenizer.consumeTokenOrQuotedString();
                 tokenizer.consumeBeforeAnyCharMatch({',', ';'});

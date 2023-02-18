@@ -91,8 +91,6 @@ public:
     LayoutUnit baselinePosition(FontBaseline) const final;
     LayoutUnit lineHeight() const final;
 
-    std::optional<bool> emphasisMarkExistsAndIsAbove(const RenderStyle&) const;
-
     LayoutRect logicalOverflowRect() const;
     void setLogicalOverflowRect(const LayoutRect&);
     LayoutUnit logicalTopVisualOverflow() const { return logicalOverflowRect().y(); }
@@ -150,7 +148,6 @@ public:
 
 private:
     friend class InlineIterator::BoxLegacyPath;
-    friend class TextBoxPainter;
 
     const RenderCombineText* combinedText() const;
     const FontCascade& lineFont() const;
@@ -169,7 +166,7 @@ private:
     std::optional<unsigned short> m_truncation;
 
     unsigned m_start { 0 };
-    unsigned short m_len { 0 };
+    unsigned m_len { 0 };
 };
 
 LayoutRect snappedSelectionRect(const LayoutRect&, float logicalRight, float selectionTop, float selectionHeight, bool isHorizontal);

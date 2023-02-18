@@ -113,7 +113,7 @@ static std::optional<MimeType> parseMIMEType(const String& contentType)
     if (slashIndex == notFound)
         return std::nullopt;
 
-    String type = input.substring(0, slashIndex);
+    String type = input.left(slashIndex);
     if (!type.length() || !isValidHTTPToken(type))
         return std::nullopt;
 
@@ -140,31 +140,31 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
 
         String header = String::fromUTF8(headerBegin, headerLength);
 
-        const char* contentDispositionCharacters = "Content-Disposition:";
+        constexpr auto contentDispositionCharacters = "Content-Disposition:"_s;
         size_t contentDispositionBegin = header.find(contentDispositionCharacters);
         if (contentDispositionBegin == notFound)
             return false;
-        size_t contentDispositionEnd = header.find("\r\n", contentDispositionBegin);
-        size_t contentDispositionParametersBegin = header.find(';', contentDispositionBegin + strlen(contentDispositionCharacters));
+        size_t contentDispositionEnd = header.find("\r\n"_s, contentDispositionBegin);
+        size_t contentDispositionParametersBegin = header.find(';', contentDispositionBegin + contentDispositionCharacters.length());
         if (contentDispositionParametersBegin != notFound)
             contentDispositionParametersBegin++;
 
         auto parameters = parseParameters(StringView(header).substring(contentDispositionParametersBegin, contentDispositionEnd - contentDispositionParametersBegin), 0);
-        String name = parameters.get("name");
+        String name = parameters.get<HashTranslatorASCIILiteral>("name"_s);
         if (!name)
             return false;
-        String filename = parameters.get("filename");
+        String filename = parameters.get<HashTranslatorASCIILiteral>("filename"_s);
         if (!filename)
             form.append(name, String::fromUTF8(bodyBegin, bodyLength));
         else {
             String contentType = "text/plain"_s;
 
-            const char* contentTypeCharacters = "Content-Type:";
-            size_t contentTypePrefixLength = strlen(contentTypeCharacters);
+            constexpr auto contentTypeCharacters = "Content-Type:"_s;
+            size_t contentTypePrefixLength = contentTypeCharacters.length();
             size_t contentTypeBegin = header.find(contentTypeCharacters);
             if (contentTypeBegin != notFound) {
-                size_t contentTypeEnd = header.find("\r\n", contentTypeBegin);
-                contentType = stripLeadingAndTrailingHTTPSpaces(header.substring(contentTypeBegin + contentTypePrefixLength, contentTypeEnd - contentTypeBegin - contentTypePrefixLength));
+                size_t contentTypeEnd = header.find("\r\n"_s, contentTypeBegin);
+                contentType = StringView(header).substring(contentTypeBegin + contentTypePrefixLength, contentTypeEnd - contentTypeBegin - contentTypePrefixLength).stripLeadingAndTrailingMatchedCharacters(isHTTPSpace).toString();
             }
 
             form.append(name, File::create(context, Blob::create(context, Vector { bodyBegin, bodyLength }, Blob::normalizedContentType(contentType)).get(), filename).get(), filename);
@@ -175,8 +175,8 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
     auto parseMultipartBoundary = [] (const std::optional<MimeType>& mimeType) -> std::optional<String> {
         if (!mimeType)
             return std::nullopt;
-        if (equalIgnoringASCIICase(mimeType->type, "multipart") && equalIgnoringASCIICase(mimeType->subtype, "form-data")) {
-            auto iterator = mimeType->parameters.find("boundary"_s);
+        if (equalLettersIgnoringASCIICase(mimeType->type, "multipart"_s) && equalLettersIgnoringASCIICase(mimeType->subtype, "form-data"_s)) {
+            auto iterator = mimeType->parameters.find<HashTranslatorASCIILiteral>("boundary"_s);
             if (iterator != mimeType->parameters.end())
                 return iterator->value;
         }
@@ -194,14 +194,12 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         if (!currentBoundary)
             return nullptr;
         const uint8_t* nextBoundary = static_cast<const uint8_t*>(memmem(currentBoundary + boundaryLength, length - (currentBoundary + boundaryLength - data), boundary.data(), boundaryLength));
-        if (!nextBoundary)
-            return nullptr;
         while (nextBoundary) {
             parseMultipartPart(currentBoundary + boundaryLength, nextBoundary - currentBoundary - boundaryLength - strlen("\r\n"), form.get());
             currentBoundary = nextBoundary;
             nextBoundary = static_cast<const uint8_t*>(memmem(nextBoundary + boundaryLength, length - (nextBoundary + boundaryLength - data), boundary.data(), boundaryLength));
         }
-    } else if (mimeType && equalIgnoringASCIICase(mimeType->type, "application") && equalIgnoringASCIICase(mimeType->subtype, "x-www-form-urlencoded")) {
+    } else if (mimeType && equalLettersIgnoringASCIICase(mimeType->type, "application"_s) && equalLettersIgnoringASCIICase(mimeType->subtype, "x-www-form-urlencoded"_s)) {
         auto dataString = String::fromUTF8(data, length);
         for (auto& pair : WTF::URLParser::parseURLEncodedForm(dataString))
             form->append(pair.key, pair.value);

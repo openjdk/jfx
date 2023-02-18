@@ -30,18 +30,19 @@ class TextBreakIteratorCF {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Mode {
-        Caret,
-        Delete
+        ComposedCharacter,
+        BackwardDeletion
     };
 
     TextBreakIteratorCF(StringView string, Mode mode)
-        : m_string(string.createCFStringWithoutCopying())
     {
+        setText(string);
+
         switch (mode) {
-        case Mode::Caret:
+        case Mode::ComposedCharacter:
             m_type = kCFStringComposedCharacterCluster;
             break;
-        case Mode::Delete:
+        case Mode::BackwardDeletion:
             m_type = kCFStringBackwardDeletionCluster;
             break;
         }
@@ -56,22 +57,22 @@ public:
     void setText(StringView string)
     {
         m_string = string.createCFStringWithoutCopying();
+        m_stringLength = static_cast<unsigned long>(CFStringGetLength(m_string.get()));
     }
 
     std::optional<unsigned> preceding(unsigned location) const
     {
         if (!location)
             return { };
-        auto length = static_cast<unsigned long>(CFStringGetLength(m_string.get()));
-        if (location > length)
-            return length;
+        if (location > m_stringLength)
+            return m_stringLength;
         auto range = CFStringGetRangeOfCharacterClusterAtIndex(m_string.get(), location - 1, m_type);
         return range.location;
     }
 
     std::optional<unsigned> following(unsigned location) const
     {
-        if (location >= static_cast<unsigned long>(CFStringGetLength(m_string.get())))
+        if (location >= m_stringLength)
             return { };
         auto range = CFStringGetRangeOfCharacterClusterAtIndex(m_string.get(), location, m_type);
         return range.location + range.length;
@@ -79,7 +80,7 @@ public:
 
     bool isBoundary(unsigned location) const
     {
-        if (location == static_cast<unsigned long>(CFStringGetLength(m_string.get())))
+        if (location == m_stringLength)
             return true;
         auto range = CFStringGetRangeOfCharacterClusterAtIndex(m_string.get(), location, m_type);
         return static_cast<unsigned long>(range.location) == location;
@@ -88,6 +89,7 @@ public:
 private:
     RetainPtr<CFStringRef> m_string;
     CFStringCharacterClusterType m_type;
+    unsigned long m_stringLength { 0 };
 };
 
 }

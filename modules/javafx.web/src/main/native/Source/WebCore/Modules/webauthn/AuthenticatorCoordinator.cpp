@@ -35,6 +35,7 @@
 #include "AuthenticatorResponseData.h"
 #include "Document.h"
 #include "FeaturePolicy.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSBasicCredential.h"
 #include "JSCredentialRequestOptions.h"
 #include "JSDOMPromiseDeferred.h"
@@ -58,7 +59,7 @@ static bool needsAppIdQuirks(const String& host, const String& appId)
     // existing device registrations that authenticate 'google.com' against 'gstatic.com'. Firefox and other browsers
     // have agreed to grant an exception to the AppId rules for a limited time period (5 years from January, 2018) to
     // allow existing Google users to seamlessly transition to proper WebAuthN behavior.
-    if (equalLettersIgnoringASCIICase(host, "google.com") || host.endsWithIgnoringASCIICase(".google.com"))
+    if (equalLettersIgnoringASCIICase(host, "google.com"_s) || host.endsWithIgnoringASCIICase(".google.com"_s))
         return (appId == "https://www.gstatic.com/securitykey/origins.json"_s) || (appId == "https://www.gstatic.com/securitykey/a/google.com/origins.json"_s);
     return false;
 }
@@ -78,7 +79,7 @@ static String processAppIdExtension(const SecurityOrigin& facetId, const String&
         return facetId.toString();
 
     // Step 3. Relax the comparison to same site.
-    URL appIdURL(URL(), appId);
+    URL appIdURL { appId };
     if (!appIdURL.isValid() || facetId.protocol() != appIdURL.protocol() || (RegistrableDomain(appIdURL) != RegistrableDomain::uncheckedCreateFromHost(facetId.host()) && !needsAppIdQuirks(facetId.host(), appId)))
         return String();
     return appId;
@@ -113,7 +114,7 @@ void AuthenticatorCoordinator::create(const Document& document, const PublicKeyC
     const auto& callerOrigin = document.securityOrigin();
     auto* frame = document.frame();
     ASSERT(frame);
-    // The following implements https://www.w3.org/TR/webauthn/#createCredential as of 5 December 2017.
+    // The following implements https://www.w3.org/TR/webauthn-2/#createCredential as of 28 June 2022.
     // Step 1, 3, 16 are handled by the caller.
     // Step 2.
     if (scope != WebAuthn::Scope::SameOrigin) {
@@ -121,39 +122,53 @@ void AuthenticatorCoordinator::create(const Document& document, const PublicKeyC
         return;
     }
 
-    // Step 5. Skipped since SecurityOrigin doesn't have the concept of "opaque origin".
-    // Step 6. The effective domain may be represented in various manners, such as a domain or an ip address.
+    // Step 5.
+    if (options.user.id.length() < 1 || options.user.id.length() > 64) {
+        promise.reject(Exception { TypeError, "The length options.user.id must be between 1-64 bytes."_s });
+        return;
+    }
+
+    // Step 6. Skipped since SecurityOrigin doesn't have the concept of "opaque origin".
+    // Step 7. The effective domain may be represented in various manners, such as a domain or an ip address.
     // Only the domain format of host is permitted in WebAuthN.
     if (URL::hostIsIPAddress(callerOrigin.domain())) {
         promise.reject(Exception { SecurityError, "The effective domain of the document is not a valid domain."_s });
         return;
     }
 
-    // Step 7.
-    if (!options.rp.id.isEmpty() && !callerOrigin.isMatchingRegistrableDomainSuffix(options.rp.id)) {
+    // Step 8.
+    if (!options.rp.id)
+        options.rp.id = callerOrigin.domain();
+    else if (!callerOrigin.isMatchingRegistrableDomainSuffix(*options.rp.id)) {
         promise.reject(Exception { SecurityError, "The provided RP ID is not a registrable domain suffix of the effective domain of the document."_s });
         return;
     }
-    if (options.rp.id.isEmpty())
-        options.rp.id = callerOrigin.domain();
 
-    // Step 8-10.
-    // Most of the jobs are done by bindings. However, we can't know if the JSValue of options.pubKeyCredParams
-    // is empty or not. Return NotSupportedError as long as it is empty.
+    // Step 9-11.
+    // Most of the jobs are done by bindings.
     if (options.pubKeyCredParams.isEmpty()) {
-        promise.reject(Exception { NotSupportedError, "No desired properties of the to be created credential are provided."_s });
-        return;
+        options.pubKeyCredParams.append({ PublicKeyCredentialType::PublicKey, COSE::ES256 });
+        options.pubKeyCredParams.append({ PublicKeyCredentialType::PublicKey, COSE::RS256 });
+    } else {
+        if (notFound != options.pubKeyCredParams.findIf([] (auto& pubKeyCredParam) {
+            return pubKeyCredParam.type != PublicKeyCredentialType::PublicKey;
+        })) {
+
+            promise.reject(Exception { NotSupportedError, "options.pubKeyCredParams contains unsupported PublicKeyCredentialType value."_s });
+            return;
+        }
     }
 
-    // Step 11-12.
+    // Step 12-13.
     // Only Google Legacy AppID Support Extension is supported.
-    options.extensions = AuthenticationExtensionsClientInputs { String(), processGoogleLegacyAppIdSupportExtension(options.extensions, options.rp.id) };
+    ASSERT(options.rp.id);
+    options.extensions = AuthenticationExtensionsClientInputs { String(), processGoogleLegacyAppIdSupportExtension(options.extensions, *options.rp.id), options.extensions && options.extensions->credProps };
 
-    // Step 13-15.
+    // Step 14-16.
     auto clientDataJson = buildClientDataJson(ClientDataType::Create, options.challenge, callerOrigin, scope);
     auto clientDataJsonHash = buildClientDataJsonHash(clientDataJson);
 
-    // Step 4, 17-21.
+    // Step 4, 18-22.
     if (!m_client) {
         promise.reject(Exception { UnknownError, "Unknown internal error."_s });
         return;
@@ -177,7 +192,7 @@ void AuthenticatorCoordinator::create(const Document& document, const PublicKeyC
     m_client->makeCredential(*frame, callerOrigin, clientDataJsonHash, options, WTFMove(callback));
 }
 
-void AuthenticatorCoordinator::discoverFromExternalSource(const Document& document, CredentialRequestOptions&& requestOptions, WebAuthn::Scope scope, CredentialPromise&& promise) const
+void AuthenticatorCoordinator::discoverFromExternalSource(const Document& document, CredentialRequestOptions&& requestOptions, const ScopeAndCrossOriginParent& scopeAndCrossOriginParent, CredentialPromise&& promise) const
 {
     using namespace AuthenticatorCoordinatorInternal;
 
@@ -188,8 +203,8 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
     // The following implements https://www.w3.org/TR/webauthn/#createCredential as of 5 December 2017.
     // Step 1, 3, 13 are handled by the caller.
     // Step 2.
-    // This implements https://www.w3.org/TR/webauthn-2/#sctn-permissions-policy except only same-site, cross-origin is permitted.
-    if (scope != WebAuthn::Scope::SameOrigin && !(scope == WebAuthn::Scope::SameSite && isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::PublickeyCredentialsGetRule, document, LogFeaturePolicyFailure::No))) {
+    // This implements https://www.w3.org/TR/webauthn-2/#sctn-permissions-policy
+    if (scopeAndCrossOriginParent.first != WebAuthn::Scope::SameOrigin && !isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::PublickeyCredentialsGetRule, document, LogFeaturePolicyFailure::No)) {
         promise.reject(Exception { NotAllowedError, "The origin of the document is not the same as its ancestors."_s });
         return;
     }
@@ -223,7 +238,7 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
     }
 
     // Step 10-12.
-    auto clientDataJson = buildClientDataJson(ClientDataType::Get, options.challenge, callerOrigin, scope);
+    auto clientDataJson = buildClientDataJson(ClientDataType::Get, options.challenge, callerOrigin, scopeAndCrossOriginParent.first);
     auto clientDataJsonHash = buildClientDataJsonHash(clientDataJson);
 
     // Step 4, 14-19.
@@ -247,7 +262,7 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
         promise.reject(exception.toException());
     };
     // Async operations are dispatched and handled in the messenger.
-    m_client->getAssertion(*frame, callerOrigin, clientDataJsonHash, options, requestOptions.mediation, WTFMove(callback));
+    m_client->getAssertion(*frame, callerOrigin, clientDataJsonHash, options, requestOptions.mediation, scopeAndCrossOriginParent, WTFMove(callback));
 }
 
 void AuthenticatorCoordinator::isUserVerifyingPlatformAuthenticatorAvailable(DOMPromiseDeferred<IDLBoolean>&& promise) const

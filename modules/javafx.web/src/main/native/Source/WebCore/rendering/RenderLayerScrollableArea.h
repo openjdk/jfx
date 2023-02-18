@@ -139,6 +139,8 @@ public:
     bool horizontalScrollbarHiddenByStyle() const final;
     bool verticalScrollbarHiddenByStyle() const final;
 
+    bool canShowNonOverlayScrollbars() const final;
+
     ScrollPosition scrollPosition() const final { return m_scrollPosition; }
 
     Scrollbar* horizontalScrollbar() const final { return m_hBar.get(); }
@@ -193,6 +195,7 @@ public:
     bool isRubberBandInProgress() const final;
     bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const final;
     bool isScrollSnapInProgress() const final;
+    bool scrollAnimatorEnabled() const final;
     bool mockScrollbarsControllerEnabled() const final;
     void logMockScrollbarsControllerMessage(const String&) const final;
 
@@ -237,6 +240,9 @@ public:
     IntSize scrollbarOffset(const Scrollbar&) const;
 
     std::optional<LayoutRect> updateScrollPosition(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
+    bool isVisibleToHitTesting() const final;
+    LayoutRect scrollRectToVisible(const LayoutRect& absoluteRect, const ScrollRectToVisibleOptions&);
+    std::optional<LayoutRect> updateScrollPositionForScrollIntoView(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
 
 private:
     bool hasHorizontalOverflow() const;
@@ -263,6 +269,7 @@ private:
     void clearResizer();
 
     void updateScrollbarPresenceAndState(std::optional<bool> hasHorizontalOverflow = std::nullopt, std::optional<bool> hasVerticalOverflow = std::nullopt);
+    void registerScrollableArea();
 
 private:
     bool m_scrollDimensionsDirty { true };

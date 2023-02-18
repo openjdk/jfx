@@ -130,19 +130,19 @@ static inline void processOriginItem(Document& document, FeaturePolicy::AllowRul
 
     item = item.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
     // FIXME: Support 'src'.
-    if (item == "'src'")
+    if (item == "'src'"_s)
         return;
 
-    if (item == "*") {
+    if (item == "*"_s) {
         rule.type = FeaturePolicy::AllowRule::Type::All;
         return;
     }
 
-    if (item == "'self'") {
+    if (item == "'self'"_s) {
         rule.allowedList.add(document.securityOrigin().data());
         return;
     }
-    if (item == "'none'") {
+    if (item == "'none'"_s) {
         rule.type = FeaturePolicy::AllowRule::Type::None;
         return;
     }
@@ -166,7 +166,7 @@ static inline void updateList(Document& document, FeaturePolicy::AllowRule& rule
             return;
         }
 
-        processOriginItem(document, rule, value.substring(0, position));
+        processOriginItem(document, rule, value.left(position));
         value = value.substring(position + 1).stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
     }
 }
@@ -196,77 +196,77 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
 #endif
     for (auto allowItem : allowAttributeValue.split(';')) {
         auto item = allowItem.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
-        if (item.startsWith("camera")) {
+        if (item.startsWith("camera"_s)) {
             isCameraInitialized = true;
             updateList(document, policy.m_cameraRule, item.substring(7));
             continue;
         }
-        if (item.startsWith("microphone")) {
+        if (item.startsWith("microphone"_s)) {
             isMicrophoneInitialized = true;
             updateList(document, policy.m_microphoneRule, item.substring(11));
             continue;
         }
-        if (item.startsWith("speaker-selection")) {
+        if (item.startsWith("speaker-selection"_s)) {
             isSpeakerSelectionInitialized = true;
             updateList(document, policy.m_speakerSelectionRule, item.substring(18));
             continue;
         }
-        if (item.startsWith("display-capture")) {
+        if (item.startsWith("display-capture"_s)) {
             isDisplayCaptureInitialized = true;
             updateList(document, policy.m_displayCaptureRule, item.substring(16));
             continue;
         }
-        if (item.startsWith("geolocation")) {
+        if (item.startsWith("geolocation"_s)) {
             isGeolocationInitialized = true;
             updateList(document, policy.m_geolocationRule, item.substring(12));
             continue;
         }
-        if (item.startsWith("payment")) {
+        if (item.startsWith("payment"_s)) {
             isPaymentInitialized = true;
             updateList(document, policy.m_paymentRule, item.substring(8));
             continue;
         }
-        if (item.startsWith("sync-xhr")) {
+        if (item.startsWith("sync-xhr"_s)) {
             isSyncXHRInitialized = true;
             updateList(document, policy.m_syncXHRRule, item.substring(9));
             continue;
         }
-        if (item.startsWith("fullscreen")) {
+        if (item.startsWith("fullscreen"_s)) {
             isFullscreenInitialized = true;
             updateList(document, policy.m_fullscreenRule, item.substring(11));
             continue;
         }
-        if (item.startsWith("web-share")) {
+        if (item.startsWith("web-share"_s)) {
             isWebShareInitialized = true;
             updateList(document, policy.m_webShareRule, item.substring(10));
             continue;
         }
 #if ENABLE(DEVICE_ORIENTATION)
-        if (item.startsWith("gyroscope")) {
+        if (item.startsWith("gyroscope"_s)) {
             isGyroscopeInitialized = true;
             updateList(document, policy.m_gyroscopeRule, item.substring(10));
             continue;
         }
-        if (item.startsWith("accelerometer")) {
+        if (item.startsWith("accelerometer"_s)) {
             isAccelerometerInitialized = true;
             updateList(document, policy.m_accelerometerRule, item.substring(14));
             continue;
         }
-        if (item.startsWith("magnetometer")) {
+        if (item.startsWith("magnetometer"_s)) {
             isMagnetometerInitialized = true;
             updateList(document, policy.m_magnetometerRule, item.substring(13));
             continue;
         }
 #endif
 #if ENABLE(WEB_AUTHN)
-        if (item.startsWith("publickey-credentials-get")) {
+        if (item.startsWith("publickey-credentials-get"_s)) {
             isPublickeyCredentialsGetInitialized = true;
             updateList(document, policy.m_publickeyCredentialsGetRule, item.substring(26));
             continue;
         }
 #endif
 #if ENABLE(WEBXR)
-        if (item.startsWith("xr-spatial-tracking")) {
+        if (item.startsWith("xr-spatial-tracking"_s)) {
             isXRSpatialTrackingInitialized = true;
             updateList(document, policy.m_xrSpatialTrackingRule, item.substring(19));
             continue;
@@ -288,7 +288,7 @@ FeaturePolicy FeaturePolicy::parse(Document& document, const HTMLIFrameElement& 
     if (!isPaymentInitialized)
         policy.m_paymentRule.allowedList.add(document.securityOrigin().data());
     if (!isWebShareInitialized)
-        policy.m_webShareRule.allowedList.add(document.securityOrigin().data());
+        policy.m_webShareRule.type = FeaturePolicy::AllowRule::Type::All;
 #if ENABLE(DEVICE_ORIENTATION)
     if (!isGyroscopeInitialized)
         policy.m_gyroscopeRule.allowedList.add(document.securityOrigin().data());

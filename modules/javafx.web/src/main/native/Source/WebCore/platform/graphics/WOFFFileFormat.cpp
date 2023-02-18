@@ -25,7 +25,9 @@
 
 #include "config.h"
 #include "WOFFFileFormat.h"
+#if !PLATFORM(JAVA)
 #include <zlib.h>
+#endif
 
 #include "SharedBuffer.h"
 #include <wtf/ByteOrder.h>
@@ -129,6 +131,10 @@ private:
 bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
 {
     ASSERT_ARG(sfnt, sfnt.isEmpty());
+#if PLATFORM(JAVA)
+    UNUSED_PARAM(woff);
+    return false;
+#else
 
     size_t offset = 0;
 
@@ -269,8 +275,10 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
                 return false;
             Bytef* dest = reinterpret_cast<Bytef*>(sfnt.end());
             sfnt.grow(sfnt.size() + tableOrigLength);
+//#if PLATFORM(COCOA) && !PLATFORM(JAVA)
             if (uncompress(dest, &destLen, reinterpret_cast<const Bytef*>(woff.data() + tableOffset), tableCompLength) != Z_OK)
                 return false;
+//#endif
             if (destLen != tableOrigLength)
                 return false;
         }
@@ -281,11 +289,12 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
     }
 
     return sfnt.size() == totalSfntSize;
+#endif
 }
 
 bool convertWOFFToSfntIfNecessary(RefPtr<SharedBuffer>& buffer)
 {
-#if PLATFORM(COCOA)
+#if (PLATFORM(COCOA) || PLATFORM(WIN)) && PLATFORM(JAVA)
     UNUSED_PARAM(buffer);
     return false;
 #else

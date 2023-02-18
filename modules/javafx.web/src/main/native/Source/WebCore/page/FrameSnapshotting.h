@@ -29,8 +29,10 @@
 
 #pragma once
 
+#include "Color.h"
 #include "DestinationColorSpace.h"
 #include "PixelFormat.h"
+#include "SimpleRange.h"
 #include <memory>
 #include <wtf/OptionSet.h>
 
@@ -50,6 +52,7 @@ enum class SnapshotFlags : uint8_t {
     PaintSelectionAndBackgroundsOnly = 1 << 4,
     PaintEverythingExcludingSelection = 1 << 5,
     PaintWithIntegralScaleFactor = 1 << 6,
+    Shareable = 1 << 7,
 };
 
 struct SnapshotOptions {
@@ -62,5 +65,7 @@ WEBCORE_EXPORT RefPtr<ImageBuffer> snapshotFrameRect(Frame&, const IntRect&, Sna
 RefPtr<ImageBuffer> snapshotFrameRectWithClip(Frame&, const IntRect&, const Vector<FloatRect>& clipRects, SnapshotOptions&&);
 RefPtr<ImageBuffer> snapshotNode(Frame&, Node&, SnapshotOptions&&);
 WEBCORE_EXPORT RefPtr<ImageBuffer> snapshotSelection(Frame&, SnapshotOptions&&);
+
+Color estimatedBackgroundColorForRange(const SimpleRange&, const Frame&);
 
 } // namespace WebCore

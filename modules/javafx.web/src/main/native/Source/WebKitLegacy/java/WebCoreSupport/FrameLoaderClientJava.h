@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-class FrameLoaderClientJava final : public FrameLoaderClient {
+class FrameLoaderClientJava : public FrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
     ~FrameLoaderClientJava();
@@ -108,9 +108,9 @@ public:
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-    RefPtr<Frame> createFrame(const String& name, HTMLFrameOwnerElement& ownerElement) override;
+    RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
+    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually);
     void redirectDataToPlugin(Widget&) override;
     String overrideMediaType() const override;
 
@@ -157,8 +157,8 @@ public:
     bool canHandleRequest(const ResourceRequest&) const override;
     bool canShowMIMEType(const String&) const override;
     bool canShowMIMETypeAsHTML(const String& MIMEType) const override;
-    bool representationExistsForURLScheme(const String&) const override;
-    String generatedMIMETypeForURLScheme(const String&) const override;
+    bool representationExistsForURLScheme(StringView URLScheme) const override;
+    String generatedMIMETypeForURLScheme(StringView URLScheme) const override;
 
     void frameLoadCompleted() override;
     void saveViewStateToItem(HistoryItem&) override;

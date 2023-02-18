@@ -47,19 +47,28 @@ FEGaussianBlur::FEGaussianBlur(float x, float y, EdgeModeType edgeMode)
 {
 }
 
-void FEGaussianBlur::setStdDeviationX(float x)
+bool FEGaussianBlur::setStdDeviationX(float stdX)
 {
-    m_stdX = x;
+    if (m_stdX == stdX)
+        return false;
+    m_stdX = stdX;
+    return true;
 }
 
-void FEGaussianBlur::setStdDeviationY(float y)
+bool FEGaussianBlur::setStdDeviationY(float stdY)
 {
-    m_stdY = y;
+    if (m_stdY == stdY)
+        return false;
+    m_stdY = stdY;
+    return true;
 }
 
-void FEGaussianBlur::setEdgeMode(EdgeModeType edgeMode)
+bool FEGaussianBlur::setEdgeMode(EdgeModeType edgeMode)
 {
+    if (m_edgeMode == edgeMode)
+        return false;
     m_edgeMode = edgeMode;
+    return true;
 }
 
 static inline float gaussianKernelFactor()
@@ -122,9 +131,9 @@ FloatRect FEGaussianBlur::calculateImageRect(const Filter& filter, const FilterI
     return filter.clipToMaxEffectRect(imageRect, primitiveSubregion);
 }
 
-IntOutsets FEGaussianBlur::outsets(const Filter& filter) const
+IntOutsets FEGaussianBlur::calculateOutsets(const FloatSize& stdDeviation)
 {
-    IntSize outsetSize = calculateOutsetSize(filter.resolvedSize({ m_stdX, m_stdY }));
+    IntSize outsetSize = calculateOutsetSize(stdDeviation);
     return { outsetSize.height(), outsetSize.width(), outsetSize.height(), outsetSize.width() };
 }
 

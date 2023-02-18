@@ -67,7 +67,7 @@ void MediaRecorderPrivateMock::resumeRecording(CompletionHandler<void()>&& compl
     completionHandler();
 }
 
-void MediaRecorderPrivateMock::videoSampleAvailable(MediaSample&, VideoSampleMetadata)
+void MediaRecorderPrivateMock::videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata)
 {
     Locker locker { m_bufferLock };
     m_buffer.append("Video Track ID: ");

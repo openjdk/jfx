@@ -29,30 +29,43 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 
+struct WGPURenderBundleImpl {
+};
+
 namespace WebGPU {
 
-class RenderBundle : public RefCounted<RenderBundle> {
+class Device;
+
+// https://gpuweb.github.io/gpuweb/#gpurenderbundle
+class RenderBundle : public WGPURenderBundleImpl, public RefCounted<RenderBundle> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RenderBundle> create(id <MTLIndirectCommandBuffer> indirectCommandBuffer)
+    static Ref<RenderBundle> create(id<MTLIndirectCommandBuffer> indirectCommandBuffer, Device& device)
     {
-        return adoptRef(*new RenderBundle(indirectCommandBuffer));
+        return adoptRef(*new RenderBundle(indirectCommandBuffer, device));
+    }
+    static Ref<RenderBundle> createInvalid(Device& device)
+    {
+        return adoptRef(*new RenderBundle(device));
     }
 
     ~RenderBundle();
 
-    void setLabel(const char*);
+    void setLabel(String&&);
 
-    id <MTLIndirectCommandBuffer> indirectCommandBuffer() const { return m_indirectCommandBuffer; }
+    bool isValid() const { return m_indirectCommandBuffer; }
+
+    id<MTLIndirectCommandBuffer> indirectCommandBuffer() const { return m_indirectCommandBuffer; }
+
+    Device& device() const { return m_device; }
 
 private:
-    RenderBundle(id <MTLIndirectCommandBuffer>);
+    RenderBundle(id<MTLIndirectCommandBuffer>, Device&);
+    RenderBundle(Device&);
 
-    id <MTLIndirectCommandBuffer> m_indirectCommandBuffer { nil };
+    const id<MTLIndirectCommandBuffer> m_indirectCommandBuffer { nil };
+
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-struct WGPURenderBundleImpl {
-    Ref<WebGPU::RenderBundle> renderBundle;
-};

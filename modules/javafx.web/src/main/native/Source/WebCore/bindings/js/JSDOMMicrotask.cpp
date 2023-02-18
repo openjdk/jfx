@@ -57,20 +57,18 @@ Ref<Microtask> createJSDOMMicrotask(VM& vm, JSObject* job)
 
 void JSDOMMicrotask::run(JSGlobalObject* globalObject)
 {
-    auto& vm = globalObject->vm();
-
     JSObject* job = m_job.get();
 
-    auto* lexicalGlobalObject = job->globalObject(vm);
+    auto* lexicalGlobalObject = job->globalObject();
     auto* context = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject)->scriptExecutionContext();
     if (!context || context->activeDOMObjectsAreSuspended() || context->activeDOMObjectsAreStopped())
         return;
 
-    auto callData = getCallData(vm, job);
+    auto callData = JSC::getCallData(job);
     ASSERT(callData.type != CallData::Type::None);
 
     if (UNLIKELY(globalObject->hasDebugger()))
-        globalObject->debugger()->willRunMicrotask();
+        globalObject->debugger()->willRunMicrotask(globalObject, *this);
 
     NakedPtr<JSC::Exception> returnedException = nullptr;
     JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Microtask, job, callData, jsUndefined(), ArgList(), returnedException);
@@ -78,7 +76,7 @@ void JSDOMMicrotask::run(JSGlobalObject* globalObject)
         reportException(lexicalGlobalObject, returnedException);
 
     if (UNLIKELY(globalObject->hasDebugger()))
-        globalObject->debugger()->didRunMicrotask();
+        globalObject->debugger()->didRunMicrotask(globalObject, *this);
 }
 
 } // namespace WebCore

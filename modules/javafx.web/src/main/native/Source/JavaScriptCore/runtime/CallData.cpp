@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,17 +33,17 @@
 
 namespace JSC {
 
-JSValue call(JSGlobalObject* globalObject, JSValue functionObject, const ArgList& args, const char* errorMessage)
+JSValue call(JSGlobalObject* globalObject, JSValue functionObject, const ArgList& args, ASCIILiteral errorMessage)
 {
     return call(globalObject, functionObject, functionObject, args, errorMessage);
 }
 
-JSValue call(JSGlobalObject* globalObject, JSValue functionObject, JSValue thisValue, const ArgList& args, const char* errorMessage)
+JSValue call(JSGlobalObject* globalObject, JSValue functionObject, JSValue thisValue, const ArgList& args, ASCIILiteral errorMessage)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto callData = getCallData(vm, functionObject);
+    auto callData = JSC::getCallData(functionObject);
     if (callData.type == CallData::Type::None)
         return throwTypeError(globalObject, scope, errorMessage);
 
@@ -54,7 +54,7 @@ JSValue call(JSGlobalObject* globalObject, JSValue functionObject, const CallDat
 {
     VM& vm = globalObject->vm();
     ASSERT(callData.type == CallData::Type::JS || callData.type == CallData::Type::Native);
-    return vm.interpreter->executeCall(globalObject, asObject(functionObject), callData, thisValue, args);
+    return vm.interpreter.executeCall(globalObject, asObject(functionObject), callData, thisValue, args);
 }
 
 JSValue call(JSGlobalObject* globalObject, JSValue functionObject, const CallData& callData, JSValue thisValue, const ArgList& args, NakedPtr<Exception>& returnedException)

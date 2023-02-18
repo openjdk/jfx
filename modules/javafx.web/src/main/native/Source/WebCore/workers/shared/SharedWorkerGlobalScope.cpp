@@ -55,23 +55,15 @@ SharedWorkerThread& SharedWorkerGlobalScope::thread()
     return static_cast<SharedWorkerThread&>(WorkerGlobalScope::thread());
 }
 
-void SharedWorkerGlobalScope::close()
-{
-    SCOPE_RELEASE_LOG("close:");
-    thread().stop(nullptr);
-}
-
 // https://html.spec.whatwg.org/multipage/workers.html#dom-sharedworker step 11.5
 void SharedWorkerGlobalScope::postConnectEvent(TransferredMessagePort&& transferredPort, const String& sourceOrigin)
 {
     SCOPE_RELEASE_LOG("postConnectEvent:");
-    auto value = SerializedScriptValue::create(emptyString());
-    ASSERT(value);
     auto ports = MessagePort::entanglePorts(*this, { WTFMove(transferredPort) });
     ASSERT(ports.size() == 1);
     auto port = ports[0];
     ASSERT(port);
-    auto event = MessageEvent::create(WTFMove(ports), value.releaseNonNull(), sourceOrigin, { }, port);
+    auto event = MessageEvent::create(emptyString(), sourceOrigin, { }, port, WTFMove(ports));
     event->initEvent(eventNames().connectEvent, false, false);
 
     dispatchEvent(WTFMove(event));

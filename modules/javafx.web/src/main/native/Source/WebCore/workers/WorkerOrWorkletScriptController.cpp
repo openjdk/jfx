@@ -47,6 +47,7 @@
 #include "WorkerOrWorkletThread.h"
 #include "WorkerRunLoop.h"
 #include "WorkerScriptFetcher.h"
+#include <JavaScriptCore/AbstractModuleRecord.h>
 #include <JavaScriptCore/Completion.h>
 #include <JavaScriptCore/DeferTermination.h>
 #include <JavaScriptCore/DeferredWorkTimer.h>
@@ -55,7 +56,6 @@
 #include <JavaScriptCore/GCActivityCallback.h>
 #include <JavaScriptCore/JSInternalPromise.h>
 #include <JavaScriptCore/JSLock.h>
-#include <JavaScriptCore/JSModuleRecord.h>
 #include <JavaScriptCore/JSNativeStdFunction.h>
 #include <JavaScriptCore/JSScriptFetchParameters.h>
 #include <JavaScriptCore/JSScriptFetcher.h>
@@ -262,7 +262,7 @@ static Identifier jsValueToModuleKey(JSGlobalObject* lexicalGlobalObject, JSValu
     return asString(value)->toIdentifier(lexicalGlobalObject);
 }
 
-JSC::JSValue WorkerOrWorkletScriptController::evaluateModule(JSC::JSModuleRecord& moduleRecord, JSC::JSValue awaitedValue, JSC::JSValue resumeMode)
+JSC::JSValue WorkerOrWorkletScriptController::evaluateModule(JSC::AbstractModuleRecord& moduleRecord, JSC::JSValue awaitedValue, JSC::JSValue resumeMode)
 {
     auto& globalObject = *m_globalScopeWrapper.get();
     VM& vm = globalObject.vm();
@@ -364,9 +364,13 @@ bool WorkerOrWorkletScriptController::loadModuleSynchronously(WorkerScriptFetche
     // task is queued in WorkerRunLoop before start running module scripts. This task should not be discarded
     // in the following driving of the RunLoop which mainly attempt to collect initial load of module scripts.
     String taskMode = WorkerModuleScriptLoader::taskMode();
+
+    // Allow tasks scheduled from the WorkerEventLoop.
+    constexpr bool allowEventLoopTasks = true;
+
     bool success = true;
     while ((!protector->isLoaded() && !protector->wasCanceled()) && success) {
-        success = runLoop.runInMode(m_globalScope, taskMode);
+        success = runLoop.runInMode(m_globalScope, taskMode, allowEventLoopTasks);
         if (success)
             m_globalScope->eventLoop().performMicrotaskCheckpoint();
     }
@@ -490,7 +494,7 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
                     }
                     return JSValue::encode(jsUndefined());
                 }
-                if (object->inherits<ErrorInstance>(vm)) {
+                if (object->inherits<ErrorInstance>()) {
                     auto* error = jsCast<ErrorInstance*>(object);
                     switch (error->errorType()) {
                     case ErrorType::TypeError: {
@@ -541,17 +545,17 @@ void WorkerOrWorkletScriptController::initScriptWithSubclass()
     m_globalScopeWrapper.set(*m_vm, JSGlobalScope::create(*m_vm, structure, static_cast<GlobalScope&>(*m_globalScope), proxy));
     contextPrototypeStructure->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
     ASSERT(structure->globalObject() == m_globalScopeWrapper);
-    ASSERT(m_globalScopeWrapper->structure(*m_vm)->globalObject() == m_globalScopeWrapper);
-    contextPrototype->structure(*m_vm)->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
+    ASSERT(m_globalScopeWrapper->structure()->globalObject() == m_globalScopeWrapper);
+    contextPrototype->structure()->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
     auto* globalScopePrototype = JSGlobalScope::prototype(*m_vm, *m_globalScopeWrapper.get());
     globalScopePrototype->didBecomePrototype();
-    contextPrototype->structure(*m_vm)->setPrototypeWithoutTransition(*m_vm, globalScopePrototype);
+    contextPrototype->structure()->setPrototypeWithoutTransition(*m_vm, globalScopePrototype);
 
     proxy->setTarget(*m_vm, m_globalScopeWrapper.get());
-    proxy->structure(*m_vm)->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
+    proxy->structure()->setGlobalObject(*m_vm, m_globalScopeWrapper.get());
 
     ASSERT(m_globalScopeWrapper->globalObject() == m_globalScopeWrapper);
-    ASSERT(asObject(m_globalScopeWrapper->getPrototypeDirect(*m_vm))->globalObject() == m_globalScopeWrapper);
+    ASSERT(asObject(m_globalScopeWrapper->getPrototypeDirect())->globalObject() == m_globalScopeWrapper);
 
     m_consoleClient = makeUnique<WorkerConsoleClient>(*m_globalScope);
     m_globalScopeWrapper->setConsoleClient(*m_consoleClient);

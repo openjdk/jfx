@@ -48,7 +48,8 @@ platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET
 
 FEATURE_AND_PLATFORM_DEFINES := $(shell $(call platform_h_compiler_command,-E -P -dM) | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
 
-PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)/usr/local/include)
+PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH))
+
 PLATFORM_HEADER_DEPENDENCIES := $(filter $(PLATFORM_HEADER_DIR)/%,$(realpath $(shell $(call platform_h_compiler_command,-M) | $(PERL) -e "local \$$/; my (\$$target, \$$deps) = split(/:/, <>); print split(/\\\\/, \$$deps);")))
 FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = DerivedSources.make $(PLATFORM_HEADER_DEPENDENCIES)
 
@@ -68,8 +69,6 @@ JavaScriptCore_SCRIPTS_DIR = $(JavaScriptCore)/Scripts
 
 .PHONY : all
 all : \
-    InjectedScriptSource.h \
-    JSCBuiltins.h \
     Lexer.lut.h \
     KeywordLookup.h \
     RegExpJitTables.h \
@@ -80,6 +79,10 @@ all : \
 #
 
 # JavaScript builtins.
+
+JSC_BUILTINS_FILES = JSCBuiltins.h JSCBuiltins.cpp
+
+all : $(JSC_BUILTINS_FILES)
 
 BUILTINS_GENERATOR_SCRIPTS = \
     $(JavaScriptCore_SCRIPTS_DIR)/wkbuiltins/__init__.py \
@@ -135,6 +138,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/TypedArrayConstructor.js \
     $(JavaScriptCore)/builtins/TypedArrayPrototype.js \
     $(JavaScriptCore)/builtins/WebAssembly.js \
+    $(JavaScriptCore)/inspector/InjectedScriptSource.js \
 #
 
 # The combined output file depends on the contents of builtins and generator scripts, so
@@ -143,7 +147,9 @@ JavaScriptCore_BUILTINS_SOURCES = \
 JavaScriptCore_BUILTINS_DEPENDENCIES_LIST : $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py DerivedSources.make
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py '$(JavaScriptCore_BUILTINS_SOURCES) $(BUILTINS_GENERATOR_SCRIPTS)' $@
 
-JSCBuiltins.h: $(BUILTINS_GENERATOR_SCRIPTS) $(JavaScriptCore_BUILTINS_SOURCES) JavaScriptCore_BUILTINS_DEPENDENCIES_LIST
+JSC_BUILTINS_FILES_PATTERNS = $(subst .,%,$(JSC_BUILTINS_FILES))
+
+$(JSC_BUILTINS_FILES_PATTERNS) : $(BUILTINS_GENERATOR_SCRIPTS) $(JavaScriptCore_BUILTINS_SOURCES) JavaScriptCore_BUILTINS_DEPENDENCIES_LIST
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-js-builtins.py --combined --output-directory . --framework JavaScriptCore $(JavaScriptCore_BUILTINS_SOURCES)
 
 # Perfect hash lookup tables for JavaScript classes.
@@ -187,13 +193,11 @@ OBJECT_LUT_HEADERS = \
     JSPromiseConstructor.lut.h \
     JSPromisePrototype.lut.h \
     JSWebAssembly.lut.h \
-    MapPrototype.lut.h \
     NumberConstructor.lut.h \
     NumberPrototype.lut.h \
     ObjectConstructor.lut.h \
     ReflectObject.lut.h \
     RegExpConstructor.lut.h \
-    SetPrototype.lut.h \
     ShadowRealmPrototype.lut.h \
     StringConstructor.lut.h \
     StringPrototype.lut.h \
@@ -323,7 +327,6 @@ INSPECTOR_GENERATOR_SCRIPTS = \
 	$(JavaScriptCore)/inspector/scripts/codegen/generator_templates.py \
 	$(JavaScriptCore)/inspector/scripts/codegen/generator.py \
 	$(JavaScriptCore)/inspector/scripts/codegen/models.py \
-	$(JavaScriptCore)/inspector/scripts/codegen/preprocess.pl \
 	$(JavaScriptCore)/inspector/scripts/generate-inspector-protocol-bindings.py \
 	$(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py \
 #
@@ -332,6 +335,7 @@ INSPECTOR_GENERATOR_SCRIPTS = \
 # generate-inspector-protocol-bindings.py and ./CombinedDomains.json?
 INSPECTOR_DISPATCHER_FILES = \
     inspector/InspectorAlternateBackendDispatchers.h \
+    inspector/InspectorBackendCommands.js \
     inspector/InspectorBackendDispatchers.cpp \
     inspector/InspectorBackendDispatchers.h \
     inspector/InspectorFrontendDispatchers.cpp \
@@ -341,7 +345,7 @@ INSPECTOR_DISPATCHER_FILES = \
 #
 INSPECTOR_DISPATCHER_FILES_PATTERNS = $(subst .,%,$(INSPECTOR_DISPATCHER_FILES))
 
-all : $(INSPECTOR_DISPATCHER_FILES) inspector/InspectorBackendCommands.js
+all : $(INSPECTOR_DISPATCHER_FILES)
 
 # The combined JSON file depends on the actual set of domains and their file contents, so that
 # adding, modifying, or removing domains will trigger regeneration of inspector files.
@@ -351,23 +355,11 @@ EnabledInspectorDomains : $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py force
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/UpdateContents.py '$(INSPECTOR_DOMAINS)' $@
 
 CombinedDomains.json : $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) EnabledInspectorDomains
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) > ./CombinedDomains.json
+	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/generate-combined-inspector-json.py $(INSPECTOR_DOMAINS) "$(FEATURE_AND_PLATFORM_DEFINES)" > ./CombinedDomains.json
 
 # Inspector Backend Dispatchers, Frontend Dispatchers, Type Builders
 $(INSPECTOR_DISPATCHER_FILES_PATTERNS) : CombinedDomains.json $(INSPECTOR_GENERATOR_SCRIPTS)
 	$(PYTHON) $(JavaScriptCore)/inspector/scripts/generate-inspector-protocol-bindings.py --framework JavaScriptCore --outputDir inspector ./CombinedDomains.json
-
-inspector/InspectorBackendCommands.js : CombinedDomains.json $(INSPECTOR_GENERATOR_SCRIPTS) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
-	$(PYTHON) $(JavaScriptCore)/inspector/scripts/generate-inspector-protocol-bindings.py --framework WebInspectorUI --outputDir inspector ./CombinedDomains.json
-	@echo Pre-processing InspectorBackendCommands...
-	$(PERL) $(JavaScriptCore)/inspector/scripts/codegen/preprocess.pl --input inspector/InspectorBackendCommands.js.in --defines "$(FEATURE_AND_PLATFORM_DEFINES)" --output inspector/InspectorBackendCommands.js
-	$(DELETE) inspector/InspectorBackendCommands.js.in
-
-InjectedScriptSource.h : inspector/InjectedScriptSource.js $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl
-	echo "//# sourceURL=__InjectedScript_InjectedScriptSource.js" > ./InjectedScriptSource.min.js
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py < $(JavaScriptCore)/inspector/InjectedScriptSource.js >> ./InjectedScriptSource.min.js
-	$(PERL) $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl InjectedScriptSource_js ./InjectedScriptSource.min.js InjectedScriptSource.h
-	$(DELETE) InjectedScriptSource.min.js
 
 AIR_OPCODE_FILES = \
     AirOpcode.h \
