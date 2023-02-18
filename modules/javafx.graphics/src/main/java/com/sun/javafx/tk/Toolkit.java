@@ -308,7 +308,7 @@ public abstract class Toolkit {
     /**
      * Indicates whether a nested event loop can be started from the current thread in the current state.
      * A nested event loop can be started from an event handler or from a {@code Runnable} passed to
-     * {@code Platform.runLater(Runnable}.
+     * {@code Platform.runLater(Runnable)}.
      * This method must be called on the JavaFX Application thread.
      *
      * @return {@code true} if a nested event loop can be started, and {@code false} otherwise.
