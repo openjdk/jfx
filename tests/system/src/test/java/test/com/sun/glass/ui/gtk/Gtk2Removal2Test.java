@@ -26,35 +26,36 @@
 package test.com.sun.glass.ui.gtk;
 
 import com.sun.javafx.PlatformUtil;
-import java.io.ByteArrayOutputStream;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class Gtk2Deprecation1Test extends Gtk2DeprecationCommon {
 
-    @BeforeClass
+public class Gtk2Removal2Test extends Gtk2RemovalCommon {
+
+    @BeforeAll
     public static void setup() throws Exception {
-        doSetup(true);
+        doSetup(false);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         doTeardown();
     }
 
     @Test
-    public void testDeprecationMessage() throws Exception {
+    public void testNoDeprecationMessage() throws Exception {
         assumeTrue(PlatformUtil.isLinux());
 
         final String output = out.toString();
         System.err.println(output);
-        assertTrue("Missing warning message", output.contains("WARNING"));
-        assertTrue("Missing warning message", output.contains("removed"));
+        assertFalse(output.contains("WARNING"), "Unexpected warning message");
+        assertFalse(output.contains("deprecated"), "Unexpected warning message");
+        assertFalse(output.contains("removed"), "Unexpected warning message");
     }
 
 }

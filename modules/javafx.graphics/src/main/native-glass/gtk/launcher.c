@@ -70,6 +70,14 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 // our library combinations defined
 // "version" "libgtk", "libdgdk", "libpixbuf"
 // note that currently only the first char of the version is used
+static char * gtk2_versioned[] = {
+   "2", "libgtk-x11-2.0.so.0"
+};
+
+static char * gtk2_not_versioned[] = {
+   "2", "libgtk-x11-2.0.so"
+};
+
 static char * gtk3_versioned[] = {
    "3", "libgtk-3.so.0"
 };
@@ -81,6 +89,11 @@ static char * gtk3_not_versioned[] = {
 // our library set orders defined, null terminated
 static char ** gtk3_lib_options[] = {
     gtk3_versioned, gtk3_not_versioned,
+    0
+};
+
+static char ** gtk2_lib_options[] = {
+    gtk2_versioned, gtk2_not_versioned,
     0
 };
 
@@ -125,8 +138,20 @@ static int sniffLibs(int wantVersion) {
         }
      }
 
-     if (!found) {
-         if (wantVersion != 0 && wantVersion != 3) {
+    if (!found) {
+        char *** bad_use_chain = gtk2_lib_options;
+        for (i = 0; bad_use_chain[i] && !found; i++) {
+            found = try_libraries_noload(bad_use_chain[i]);
+            if (found && gtk_versionDebug) {
+                printf("found already loaded unsupported GTK library %s\n", bad_use_chain[i][1]);
+            }
+        }
+
+        if (found) {
+           return -1;
+        }
+
+        if (wantVersion != 0 && wantVersion != 3) {
              // Note, this should never happen, java should be protecting us
              if (gtk_versionDebug) {
                  printf("bad GTK version specified, assuming 3\n");

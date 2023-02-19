@@ -59,7 +59,7 @@ final class GtkApplication extends Application implements
         "WARNING: A command line option tried to enable the GTK 2 library";
 
     private static final String GTK2_REMOVED_WARNING =
-        "WARNING: The JavaFX GTK 2 library was removed.";
+        "WARNING: The JavaFX GTK 2 library was removed. The option will be ignored.";
 
     static  {
         String gtkVersion = System.getProperty("org.eclipse.swt.internal.gtk.version");
@@ -70,9 +70,7 @@ final class GtkApplication extends Application implements
             int ver = Integer.parseInt(vers[0]);
 
             if (ver != 3) {
-                logger.warning("SWT-GTK uses unsupported major GTK version "
-                        + ver + ". GTK3 will be used as default.");
-                ver = 3;
+                throw new UnsupportedOperationException("SWT-GTK uses unsupported major GTK version " + ver + " .");
             }
 
             forcedGtkVersion = ver;
@@ -170,7 +168,7 @@ final class GtkApplication extends Application implements
                 }
                 NativeLibLoader.loadLibrary("glassgtk3");
             } else {
-                throw new UnsupportedOperationException("Internal Error");
+                throw new UnsupportedOperationException("Unable to load glass GTK library.");
             }
             return null;
         });

@@ -31,11 +31,10 @@ import java.io.PrintStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
-import test.util.Util;
 
 import static org.junit.Assert.fail;
 
-public class Gtk2DeprecationCommon {
+public class Gtk2RemovalCommon {
 
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
     private static final PrintStream defaultErrorStream = System.err;
