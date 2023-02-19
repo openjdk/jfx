@@ -194,7 +194,6 @@ final class GtkApplication extends Application implements
     @Native private static final int QUERY_ERROR = -2;
     @Native private static final int QUERY_NO_DISPLAY = -1;
     @Native private static final int QUERY_USE_CURRENT = 1;
-    @Native private static final int QUERY_LOAD_GTK2 = 2;
     @Native private static final int QUERY_LOAD_GTK3 = 3;
     /*
      * check the system and return an indication of which library to load
