@@ -1,8 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Modena.jar" type="JarApplication">
-    <option name="JAR_PATH" value="$PROJECT_DIR$/apps/samples/Modena/dist/Modena.jar" />
-    <option name="VM_PARAMETERS" value="@build/run.args" />
-    <option name="ALTERNATIVE_JRE_PATH" />
-    <method v="2" />
-  </configuration>
-</component>
