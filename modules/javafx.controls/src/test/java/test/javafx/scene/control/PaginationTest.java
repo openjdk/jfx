@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -323,5 +323,24 @@ public class PaginationTest {
             box.getChildren().add(l);
         }
         return box;
+    }
+
+    /** JDK-8301797 */
+    @Test
+    public void testInitialPreferredSize() {
+        pagination.setPageCount(150);
+        pagination.setCurrentPageIndex(0);
+        pagination.setMaxPageIndicatorCount(50);
+        Label label = new Label();
+        pagination.setPageFactory(index -> {
+            label.setText("" + (index + 1));
+            return label;
+        });
+
+        root.getChildren().add(pagination);
+        show();
+
+        tk.firePulse();
+        assertTrue("pagination prefWidth() is incorrect", (pagination.prefWidth(-1) > 200));
     }
 }

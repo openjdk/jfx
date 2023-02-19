@@ -66,7 +66,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getCharset
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setCharsetImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charsetAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charsetAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getHrefImpl(JNIEnv* env, jclass, jlong peer)
@@ -78,7 +78,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getHrefImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setHrefImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::hrefAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::hrefAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getHreflangImpl(JNIEnv* env, jclass, jlong peer)
@@ -90,7 +90,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getHreflan
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setHreflangImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::hreflangAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::hreflangAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getMediaImpl(JNIEnv* env, jclass, jlong peer)
@@ -102,7 +102,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getMediaIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setMediaImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::mediaAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::mediaAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getRelImpl(JNIEnv* env, jclass, jlong peer)
@@ -114,7 +114,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getRelImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setRelImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::relAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::relAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getRevImpl(JNIEnv* env, jclass, jlong peer)
@@ -126,7 +126,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getRevImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setRevImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::revAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::revAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getTargetImpl(JNIEnv* env, jclass, jlong peer)
@@ -138,7 +138,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getTargetI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setTargetImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::targetAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::targetAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
@@ -150,7 +150,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getTypeImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_setTypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLLinkElementImpl_getSheetImpl(JNIEnv* env, jclass, jlong peer)

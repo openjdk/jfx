@@ -35,8 +35,9 @@ class Instance;
 
 namespace WebCore {
 
+class PluginReplacement;
+class PluginViewBase;
 class RenderWidget;
-class Widget;
 
 class HTMLPlugInElement : public HTMLFrameOwnerElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLPlugInElement);
@@ -48,7 +49,7 @@ public:
     JSC::Bindings::Instance* bindingsInstance();
 
     enum class PluginLoadingPolicy { DoNotLoad, Load };
-    WEBCORE_EXPORT Widget* pluginWidget(PluginLoadingPolicy = PluginLoadingPolicy::Load) const;
+    WEBCORE_EXPORT PluginViewBase* pluginWidget(PluginLoadingPolicy = PluginLoadingPolicy::Load) const;
 
     enum DisplayState {
         Playing,
@@ -62,15 +63,11 @@ public:
     void setIsCapturingMouseEvents(bool capturing) { m_isCapturingMouseEvents = capturing; }
 
 #if PLATFORM(IOS_FAMILY)
-    bool willRespondToMouseMoveEvents() final { return false; }
+    bool willRespondToMouseMoveEvents() const final { return false; }
 #endif
-    bool willRespondToMouseClickEvents() final;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     virtual bool isPlugInImageElement() const = 0;
-
-    bool isUserObservable() const;
-
-    WEBCORE_EXPORT bool isBelowSizeThreshold() const;
 
     // Return whether or not the replacement content for blocked plugins is accessible to the user.
     WEBCORE_EXPORT bool setReplacement(RenderEmbeddedObject::PluginUnavailabilityReason, const String& unavailabilityDescription);
@@ -89,7 +86,7 @@ protected:
 
     void defaultEventHandler(Event&) final;
 
-    virtual bool requestObject(const String& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues);
+    virtual bool requestObject(const String& url, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
@@ -108,6 +105,7 @@ private:
 
     RefPtr<JSC::Bindings::Instance> m_instance;
     Timer m_swapRendererTimer;
+    RefPtr<PluginReplacement> m_pluginReplacement;
     bool m_isCapturingMouseEvents { false };
     DisplayState m_displayState { Playing };
 };

@@ -86,12 +86,12 @@ public:
     void markAsProcessed();
     bool processed() const { return m_processed; }
 
-    String type() const override { return "text/xml"; }
+    String type() const override { return "text/xml"_s; }
     bool disabled() const override { return m_isDisabled; }
     void setDisabled(bool b) override { m_isDisabled = b; }
     Node* ownerNode() const override { return m_ownerNode.get(); }
     String href() const override { return m_originalURL; }
-    String title() const override { return emptyString(); }
+    String title() const override { return { }; }
 
     void clearOwnerNode() override { m_ownerNode = nullptr; }
     URL baseURL() const override { return m_finalURL; }

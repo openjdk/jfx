@@ -58,12 +58,12 @@ endif ()
 list(APPEND WebCoreTestSupport_LIBRARIES ${SQLite3_LIBRARIES})
 
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.css
     ${WEBCORE_DIR}/css/themeAdwaita.css
+    ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
 )
 
 set(WebCore_USER_AGENT_SCRIPTS
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.js
+    ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
 )
 
 add_definitions(-DMAX_DOM_TREE_DEPTH=2000)

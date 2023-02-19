@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTTPParsers.h"
 #include "Navigator.h"
 #include "Page.h"
@@ -145,8 +146,10 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
         request.setHTTPBody(fetchBody.bodyAsFormData());
         if (!mimeType.isEmpty()) {
             request.setHTTPContentType(mimeType);
-            if (!isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, mimeType))
+            if (!isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, mimeType)) {
                 options.mode = FetchOptions::Mode::Cors;
+                options.httpHeadersToKeep.add(HTTPHeadersToKeepFromCleaning::ContentType);
+            }
         }
     }
 

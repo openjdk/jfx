@@ -907,15 +907,15 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             contentWidth -= flow.getVbar().getWidth();
         }
 
-        if (contentWidth <= 0) {
-            // Fix for RT-14855 when there is no content in the TableView.
+        if ((contentWidth <= 0) || (TableSkinUtils.getItemCount(this) == 0)) {
+            // when there is no content in the TableView.
             Control c = getSkinnable();
             contentWidth = c.getWidth() - (snappedLeftInset() + snappedRightInset());
         }
 
         contentWidth = Math.max(0.0, contentWidth);
 
-        // FIXME this isn't perfect, but it prevents RT-14885, which results in
+        // this isn't perfect, but it prevents RT-14885/JDK-8089280, which results in
         // undesired horizontal scrollbars when in constrained resize mode
         getSkinnable().getProperties().put("TableView.contentWidth", Math.floor(contentWidth));
     }

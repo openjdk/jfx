@@ -425,41 +425,49 @@ public:
 #if !CPU(ARM_THUMB2) && !CPU(ARM64)
     PatchableJump patchableBranchPtr(RelationalCondition cond, Address left, TrustedImmPtr right = TrustedImmPtr(nullptr))
     {
+        padBeforePatch();
         return PatchableJump(branchPtr(cond, left, right));
     }
 
     PatchableJump patchableBranchPtrWithPatch(RelationalCondition cond, Address left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(nullptr))
     {
+        padBeforePatch();
         return PatchableJump(branchPtrWithPatch(cond, left, dataLabel, initialRightValue));
     }
 
     PatchableJump patchableBranch32WithPatch(RelationalCondition cond, Address left, DataLabel32& dataLabel, TrustedImm32 initialRightValue = TrustedImm32(0))
     {
+        padBeforePatch();
         return PatchableJump(branch32WithPatch(cond, left, dataLabel, initialRightValue));
     }
 
     PatchableJump patchableJump()
     {
+        padBeforePatch();
         return PatchableJump(jump());
     }
 
     PatchableJump patchableBranchTest32(ResultCondition cond, RegisterID reg, TrustedImm32 mask = TrustedImm32(-1))
     {
+        padBeforePatch();
         return PatchableJump(branchTest32(cond, reg, mask));
     }
 
     PatchableJump patchableBranch32(RelationalCondition cond, RegisterID reg, TrustedImm32 imm)
     {
+        padBeforePatch();
         return PatchableJump(branch32(cond, reg, imm));
     }
 
     PatchableJump patchableBranch8(RelationalCondition cond, Address address, TrustedImm32 imm)
     {
+        padBeforePatch();
         return PatchableJump(branch8(cond, address, imm));
     }
 
     PatchableJump patchableBranch32(RelationalCondition cond, Address address, TrustedImm32 imm)
     {
+        padBeforePatch();
         return PatchableJump(branch32(cond, address, imm));
     }
 #endif
@@ -675,9 +683,19 @@ public:
         sub32(src, dest);
     }
 
+    void subPtr(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        sub32(left, right, dest);
+    }
+
     void subPtr(TrustedImm32 imm, RegisterID dest)
     {
         sub32(imm, dest);
+    }
+
+    void subPtr(RegisterID left, TrustedImm32 right, RegisterID dest)
+    {
+        sub32(left, right, dest);
     }
 
     void subPtr(TrustedImmPtr imm, RegisterID dest)
@@ -1008,9 +1026,19 @@ public:
         sub64(src, dest);
     }
 
+    void subPtr(RegisterID left, RegisterID right, RegisterID dest)
+    {
+        sub64(left, right, dest);
+    }
+
     void subPtr(TrustedImm32 imm, RegisterID dest)
     {
         sub64(imm, dest);
+    }
+
+    void subPtr(RegisterID left, TrustedImm32 right, RegisterID dest)
+    {
+        sub64(left, right, dest);
     }
 
     void subPtr(TrustedImmPtr imm, RegisterID dest)

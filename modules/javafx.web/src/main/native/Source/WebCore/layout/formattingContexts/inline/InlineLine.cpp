@@ -92,7 +92,7 @@ void Line::resetTrailingContent()
 
 void Line::applyRunExpansion(InlineLayoutUnit horizontalAvailableSpace)
 {
-    ASSERT(formattingContext().root().style().textAlign() == TextAlignMode::Justify);
+    ASSERT(formattingContext().root().style().textAlign() == TextAlignMode::Justify || formattingContext().root().style().textAlignLast() == TextAlignLast::Justify);
     // Text is justified according to the method specified by the text-justify property,
     // in order to exactly fill the line box. Unless otherwise specified by text-align-last,
     // the last line before a forced break or the end of the block is start-aligned.
@@ -115,15 +115,16 @@ void Line::applyRunExpansion(InlineLayoutUnit horizontalAvailableSpace)
     auto hangingTrailingContentLength = m_hangingTrailingContent.length();
     for (size_t runIndex = 0; runIndex < m_runs.size(); ++runIndex) {
         auto& run = m_runs[runIndex];
-        int expansionBehavior = DefaultExpansion;
+        auto expansionBehavior = ExpansionBehavior::defaultBehavior();
         size_t expansionOpportunitiesInRun = 0;
 
         // FIXME: Check why we don't apply expansion when whitespace is preserved.
         if (run.isText() && (!TextUtil::shouldPreserveSpacesAndTabs(run.layoutBox()) || hangingTrailingContentLength)) {
             if (run.hasTextCombine())
-                expansionBehavior = ForbidLeftExpansion | ForbidRightExpansion;
+                expansionBehavior = ExpansionBehavior::forbidAll();
             else {
-                expansionBehavior = (runIsAfterExpansion ? ForbidLeftExpansion : AllowLeftExpansion) | AllowRightExpansion;
+                expansionBehavior.left = runIsAfterExpansion ? ExpansionBehavior::Behavior::Forbid : ExpansionBehavior::Behavior::Allow;
+                expansionBehavior.right = ExpansionBehavior::Behavior::Allow;
                 auto& textContent = *run.textContent();
                 // Trailing hanging whitespace sequence is ignored when computing the expansion opportunities.
                 auto hangingTrailingContentInCurrentRun = std::min(textContent.length, hangingTrailingContentLength);
@@ -141,11 +142,9 @@ void Line::applyRunExpansion(InlineLayoutUnit horizontalAvailableSpace)
         if (run.isText() || run.isBox())
             lastRunIndexWithContent = runIndex;
     }
-    // Need to fix up the last run's trailing expansion.
+    // Forbid right expansion in the last run to prevent trailing expansion at the end of the line.
     if (lastRunIndexWithContent && runsExpansionOpportunities[*lastRunIndexWithContent]) {
-        // Turn off the trailing bits first and add the forbid trailing expansion.
-        auto leadingExpansion = runsExpansionBehaviors[*lastRunIndexWithContent] & LeftExpansionMask;
-        runsExpansionBehaviors[*lastRunIndexWithContent] = leadingExpansion | ForbidRightExpansion;
+        runsExpansionBehaviors[*lastRunIndexWithContent].right = ExpansionBehavior::Behavior::Forbid;
         if (runIsAfterExpansion) {
             // When the last run has an after expansion (e.g. CJK ideograph) we need to remove this trailing expansion opportunity.
             // Note that this is not about trailing collapsible whitespace as at this point we trimmed them all.
@@ -294,6 +293,10 @@ void Line::appendInlineBoxEnd(const InlineItem& inlineItem, const RenderStyle& s
 void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
 {
     auto willCollapseCompletely = [&] {
+        if (m_runs.isEmpty() && inlineTextItem.isEmpty()) {
+            // Some generated content initiates empty text items. They are truly collapsible.
+            return true;
+        }
         if (!inlineTextItem.isWhitespace()) {
             auto isLeadingCollapsibleNonBreakingSpace = [&] {
                 // Let's check for leading non-breaking space collapsing to match legacy line layout quirk.
@@ -318,7 +321,7 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
             // provided both spaces are within the same inline formatting context—is collapsed to have zero advance width.
             if (run.isText())
                 return run.hasCollapsibleTrailingWhitespace();
-            ASSERT(run.isLineSpanningInlineBoxStart() || run.isInlineBoxStart() || run.isInlineBoxEnd() || run.isWordBreakOpportunity());
+            ASSERT(run.isListMarker() || run.isLineSpanningInlineBoxStart() || run.isInlineBoxStart() || run.isInlineBoxEnd() || run.isWordBreakOpportunity());
         }
         // Leading whitespace.
         return true;
@@ -571,15 +574,15 @@ void Line::HangingTrailingContent::add(const InlineTextItem& trailingWhitespace,
     m_length += trailingWhitespace.length();
 }
 
-inline static Line::Run::Type toLineRunType(InlineItem::Type inlineItemType)
+inline static Line::Run::Type toLineRunType(const InlineItem& inlineItem)
 {
-    switch (inlineItemType) {
+    switch (inlineItem.type()) {
     case InlineItem::Type::HardLineBreak:
         return Line::Run::Type::HardLineBreak;
     case InlineItem::Type::WordBreakOpportunity:
         return Line::Run::Type::WordBreakOpportunity;
     case InlineItem::Type::Box:
-        return Line::Run::Type::AtomicBox;
+        return inlineItem.layoutBox().isListMarkerBox() ? Line::Run::Type::ListMarker : Line::Run::Type::GenericInlineLevelBox;
     case InlineItem::Type::InlineBoxStart:
         return Line::Run::Type::InlineBoxStart;
     case InlineItem::Type::InlineBoxEnd:
@@ -602,7 +605,7 @@ std::optional<Line::Run::TrailingWhitespace::Type> Line::Run::trailingWhitespace
 }
 
 Line::Run::Run(const InlineItem& inlineItem, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth)
-    : m_type(toLineRunType(inlineItem.type()))
+    : m_type(toLineRunType(inlineItem))
     , m_layoutBox(&inlineItem.layoutBox())
     , m_style(style)
     , m_logicalLeft(logicalLeft)
@@ -612,7 +615,7 @@ Line::Run::Run(const InlineItem& inlineItem, const RenderStyle& style, InlineLay
 }
 
 Line::Run::Run(const InlineItem& zeroWidhtInlineItem, const RenderStyle& style, InlineLayoutUnit logicalLeft)
-    : m_type(toLineRunType(zeroWidhtInlineItem.type()))
+    : m_type(toLineRunType(zeroWidhtInlineItem))
     , m_layoutBox(&zeroWidhtInlineItem.layoutBox())
     , m_style(style)
     , m_logicalLeft(logicalLeft)

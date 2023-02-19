@@ -155,7 +155,9 @@ public:
     using HTMLElement::weakPtrFactory;
 
     RefPtr<MediaPlayer> player() const { return m_player; }
-    bool supportsAcceleratedRendering() const { return m_cachedSupportsAcceleratedRendering; }
+    WEBCORE_EXPORT std::optional<MediaPlayerIdentifier> playerIdentifier() const;
+
+    bool supportsAcceleratedRendering() const { return m_player && m_player->supportsAcceleratedRendering(); }
 
     virtual bool isVideo() const { return false; }
     bool hasVideo() const override { return false; }
@@ -202,6 +204,7 @@ public:
     void resolvePendingPlayPromises(PlayPromiseVector&&);
     void scheduleNotifyAboutPlaying();
     void notifyAboutPlaying(PlayPromiseVector&&);
+    void durationChanged();
 
     MediaPlayer::MovieLoadType movieLoadType() const;
 
@@ -226,7 +229,7 @@ public:
     WEBCORE_EXPORT NetworkState networkState() const;
 
     WEBCORE_EXPORT String preload() const;
-    WEBCORE_EXPORT void setPreload(const String&);
+    WEBCORE_EXPORT void setPreload(const AtomString&);
 
     Ref<TimeRanges> buffered() const override;
     WEBCORE_EXPORT void load();
@@ -294,8 +297,6 @@ public:
     WEBCORE_EXPORT bool webkitClosedCaptionsVisible() const;
     WEBCORE_EXPORT void setWebkitClosedCaptionsVisible(bool);
 
-    bool elementIsHidden() const { return m_elementIsHidden; }
-
 #if ENABLE(MEDIA_STATISTICS)
 // Statistics
     unsigned webkitAudioDecodedByteCount() const;
@@ -349,7 +350,7 @@ public:
 
     bool shouldForceControlsDisplay() const;
 
-    ExceptionOr<TextTrack&> addTextTrack(const String& kind, const String& label, const String& language);
+    ExceptionOr<TextTrack&> addTextTrack(const AtomString& kind, const AtomString& label, const AtomString& language);
 
     AudioTrackList& ensureAudioTracks();
     TextTrackList& ensureTextTracks();
@@ -424,8 +425,8 @@ public:
     void textTrackReadyStateChanged(TextTrack*);
     void updateTextTrackRepresentationImageIfNeeded();
 
-    bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
-    bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) override;
+    WEBCORE_EXPORT bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
+    WEBCORE_EXPORT bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) override;
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     void webkitShowPlaybackTargetPicker();
@@ -604,10 +605,18 @@ public:
 
     WEBCORE_EXPORT bool mediaPlayerRenderingCanBeAccelerated() final;
 
+#if USE(AUDIO_SESSION)
+    WEBCORE_EXPORT AudioSessionCategory categoryAtMostRecentPlayback() const { return m_categoryAtMostRecentPlayback; }
+#endif
+
+    void updateMediaPlayer(IntSize, bool);
+    WEBCORE_EXPORT bool elementIsHidden() const;
+
 protected:
     HTMLMediaElement(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLMediaElement();
 
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void finishParsingChildren() override;
     bool isURLAttribute(const Attribute&) const override;
@@ -640,8 +649,8 @@ protected:
     void setChangingVideoFullscreenMode(bool value) { m_changingVideoFullscreenMode = value; }
     bool isChangingVideoFullscreenMode() const { return m_changingVideoFullscreenMode; }
 
-protected:
     void mediaPlayerEngineUpdated() override;
+    void visibilityStateChanged() final;
 
 private:
     friend class Internals;
@@ -672,8 +681,6 @@ private:
 
     void stopWithoutDestroyingMediaPlayer();
     void contextDestroyed() override;
-
-    void visibilityStateChanged() final;
 
     void setReadyState(MediaPlayer::ReadyState);
     void setNetworkState(MediaPlayer::NetworkState);
@@ -719,7 +726,7 @@ private:
 
     // CDMClient
     void cdmClientAttemptToResumePlaybackIfNecessary() final;
-    void cdmClientUnrequestedInitializationDataReceived(const String&, Ref<FragmentedSharedBuffer>&&) final;
+    void cdmClientUnrequestedInitializationDataReceived(const String&, Ref<SharedBuffer>&&) final;
 #endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
@@ -777,6 +784,7 @@ private:
     const std::optional<Vector<FourCC>>& allowedMediaCaptionFormatTypes() const final;
 
     void mediaPlayerBufferedTimeRangesChanged() final;
+    bool mediaPlayerPrefersSandboxedParsing() const final;
 
 #if USE(GSTREAMER)
     void requestInstallMissingPlugins(const String& details, const String& description, MediaPlayerRequestInstallMissingPluginsCallback&) final;
@@ -949,7 +957,6 @@ private:
     void updateShouldAutoplay();
 
     void pauseAfterDetachedTask();
-    void updatePlaybackControlsManager();
     void schedulePlaybackControlsManagerUpdate();
     void playbackControlsManagerBehaviorRestrictionsTimerFired();
 
@@ -957,7 +964,7 @@ private:
 
     void updatePageScaleFactorJSProperty();
     void updateUsesLTRUserInterfaceLayoutDirectionJSProperty();
-    void setControllerJSProperty(const char*, JSC::JSValue);
+    void setControllerJSProperty(ASCIILiteral, JSC::JSValue);
 
     void addBehaviorRestrictionsOnEndIfNecessary();
     void handleSeekToPlaybackPosition(double);
@@ -982,6 +989,7 @@ private:
     Timer m_playbackControlsManagerBehaviorRestrictionsTimer;
     Timer m_seekToPlaybackPositionEndedTimer;
     TaskCancellationGroup m_configureTextTracksTaskCancellationGroup;
+    TaskCancellationGroup m_updateTextTracksTaskCancellationGroup;
     TaskCancellationGroup m_checkPlaybackTargetCompatibilityTaskCancellationGroup;
     TaskCancellationGroup m_updateMediaStateTaskCancellationGroup;
     TaskCancellationGroup m_mediaEngineUpdatedTaskCancellationGroup;
@@ -1061,7 +1069,6 @@ private:
 #endif
 
     RefPtr<MediaPlayer> m_player;
-    bool m_cachedSupportsAcceleratedRendering { false };
 
     MediaPlayer::Preload m_preload { Preload::Auto };
 
@@ -1187,7 +1194,7 @@ private:
     RefPtr<Blob> m_blob;
     URL m_blobURLForReading;
     MediaProvider m_mediaProvider;
-    WTF::Observer<void*()> m_opaqueRootProvider;
+    WTF::Observer<WebCoreOpaqueRoot()> m_opaqueRootProvider;
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     bool m_hasNeedkeyListener { false };
@@ -1237,6 +1244,11 @@ private:
     String m_audioOutputHashedDeviceId;
 #endif
     String m_id;
+
+#if USE(AUDIO_SESSION)
+    AudioSessionCategory m_categoryAtMostRecentPlayback;
+#endif
+    bool m_wasInterruptedForInvisibleAutoplay { false };
 };
 
 String convertEnumerationToString(HTMLMediaElement::AutoplayEventPlaybackState);

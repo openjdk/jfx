@@ -122,7 +122,6 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
     pageMutedStateDidChange();
 
     document.addAudioProducer(*this);
-    document.registerForVisibilityStateChangedCallbacks(*this);
 
     // Unlike OfflineAudioContext, AudioContext does not require calling resume() to start rendering.
     // Lazy initialization starts rendering so we schedule a task here to make sure lazy initialization
@@ -148,10 +147,8 @@ void AudioContext::constructCommon()
 
 AudioContext::~AudioContext()
 {
-    if (!isOfflineContext() && scriptExecutionContext()) {
-        document()->removeAudioProducer(*this);
-        document()->unregisterForVisibilityStateChangedCallbacks(*this);
-    }
+    if (auto* document = this->document())
+        document->removeAudioProducer(*this);
 }
 
 void AudioContext::uninitialize()
@@ -193,7 +190,7 @@ AudioTimestamp AudioContext::getOutputTimestamp()
 
 void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 {
-    if (isOfflineContext() || isStopped()) {
+    if (isStopped()) {
         promise.reject(InvalidStateError);
         return;
     }
@@ -216,11 +213,6 @@ void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 
 void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 {
-    if (isOfflineContext()) {
-        promise.reject(Exception { InvalidStateError, "Cannot call suspend() on an OfflineAudioContext"_s });
-        return;
-    }
-
     if (isStopped() || state() == State::Closed) {
         promise.reject(Exception { InvalidStateError, "Context is closed"_s });
         return;
@@ -247,11 +239,6 @@ void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 
 void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
 {
-    if (isOfflineContext()) {
-        promise.reject(Exception { InvalidStateError, "Cannot call resume() on an OfflineAudioContext"_s });
-        return;
-    }
-
     if (isStopped() || state() == State::Closed) {
         promise.reject(Exception { InvalidStateError, "Context is closed"_s });
         return;
@@ -416,25 +403,6 @@ bool AudioContext::willBeginPlayback()
     return willBegin;
 }
 
-void AudioContext::visibilityStateChanged()
-{
-    // Do not suspend if audio is audible.
-    if (!document() || mediaState() == MediaProducerMediaState::IsPlayingAudio || isStopped())
-        return;
-
-    if (document()->hidden()) {
-        if (state() == State::Running) {
-            ALWAYS_LOG(LOGIDENTIFIER, "Suspending playback after going to the background");
-            m_mediaSession->beginInterruption(PlatformMediaSession::EnteringBackground);
-        }
-    } else {
-        if (state() == State::Interrupted) {
-            ALWAYS_LOG(LOGIDENTIFIER, "Resuming playback after entering foreground");
-            m_mediaSession->endInterruption(PlatformMediaSession::MayResumePlaying);
-        }
-    }
-}
-
 void AudioContext::suspend(ReasonForSuspension)
 {
     if (isClosed() || m_wasSuspendedByScript)
@@ -515,6 +483,25 @@ void AudioContext::isPlayingAudioDidChange()
         if (auto* document = protectedThis->document())
             document->updateIsPlayingMedia();
     });
+}
+
+bool AudioContext::shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType interruption) const
+{
+    return m_canOverrideBackgroundPlaybackRestriction && interruption == PlatformMediaSession::InterruptionType::EnteringBackground && !destination().isConnected();
+}
+
+void AudioContext::defaultDestinationWillBecomeConnected()
+{
+    // We might need to interrupt if we previously overrode a background interruption.
+    if (!PlatformMediaSessionManager::sharedManager().isApplicationInBackground() || m_mediaSession->state() == PlatformMediaSession::Interrupted)
+        return;
+
+    // We end the overriden interruption (if any) to get the right count of interruptions and start a new interruption.
+    m_mediaSession->endInterruption(PlatformMediaSession::EndInterruptionFlags::NoFlags);
+
+    m_canOverrideBackgroundPlaybackRestriction = false;
+    m_mediaSession->beginInterruption(PlatformMediaSession::EnteringBackground);
+    m_canOverrideBackgroundPlaybackRestriction = true;
 }
 
 #if !RELEASE_LOG_DISABLED

@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc.
+ *  Copyright (C) 2003-2022 Apple Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -23,6 +23,7 @@
 #include "config.h"
 #include "Completion.h"
 
+#include "BuiltinNames.h"
 #include "BytecodeCacheError.h"
 #include "CatchScope.h"
 #include "CodeCache.h"
@@ -43,7 +44,7 @@ namespace JSC {
 static inline bool checkSyntaxInternal(VM& vm, const SourceCode& source, ParserError& error)
 {
     return !!parse<ProgramNode>(
-        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin,
+        vm, source, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
         JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded, error);
 }
 
@@ -75,12 +76,12 @@ bool checkModuleSyntax(JSGlobalObject* globalObject, const SourceCode& source, P
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::current().atomStringTable());
     std::unique_ptr<ModuleProgramNode> moduleProgramNode = parse<ModuleProgramNode>(
-        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin,
+        vm, source, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
         JSParserStrictMode::Strict, JSParserScriptMode::Module, SourceParseMode::ModuleAnalyzeMode, SuperBinding::NotNeeded, error);
     if (!moduleProgramNode)
         return false;
 
-    PrivateName privateName(PrivateName::Description, "EntryPointModule");
+    PrivateName privateName(PrivateName::Description, "EntryPointModule"_s);
     ModuleAnalyzer moduleAnalyzer(globalObject, Identifier::fromUid(privateName), source, moduleProgramNode->varDeclarations(), moduleProgramNode->lexicalVariables());
     moduleAnalyzer.analyze(*moduleProgramNode);
     return true;
@@ -134,7 +135,7 @@ JSValue evaluate(JSGlobalObject* globalObject, const SourceCode& source, JSValue
     if (!thisValue || thisValue.isUndefinedOrNull())
         thisValue = globalObject;
     JSObject* thisObj = jsCast<JSObject*>(thisValue.toThis(globalObject, ECMAMode::sloppy()));
-    JSValue result = vm.interpreter->executeProgram(source, globalObject, thisObj);
+    JSValue result = vm.interpreter.executeProgram(source, globalObject, thisObj);
 
     if (scope.exception()) {
         returnedException = scope.exception();
@@ -172,7 +173,7 @@ JSValue evaluateWithScopeExtension(JSGlobalObject* globalObject, const SourceCod
 static Symbol* createSymbolForEntryPointModule(VM& vm)
 {
     // Generate the unique key for the source-provided module.
-    PrivateName privateName(PrivateName::Description, "EntryPointModule");
+    PrivateName privateName(PrivateName::Description, "EntryPointModule"_s);
     return Symbol::create(vm, privateName.uid());
 }
 

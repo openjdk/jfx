@@ -30,7 +30,7 @@
 
 namespace JSC {
 
-ALWAYS_INLINE uint32_t jsWeakMapHash(JSObject* key)
+ALWAYS_INLINE uint32_t jsWeakMapHash(JSCell* key)
 {
     return wangsInt64Hash(JSValue::encode(key));
 }
@@ -42,15 +42,25 @@ ALWAYS_INLINE uint32_t nextCapacityAfterBatchRemoval(uint32_t capacity, uint32_t
     return capacity;
 }
 
+static ALWAYS_INLINE bool canBeHeldWeakly(JSValue value)
+{
+    // https://tc39.es/proposal-symbols-as-weakmap-keys/#sec-canbeheldweakly-abstract-operation
+    if (value.isObject())
+        return true;
+    if (!value.isSymbol())
+        return false;
+    return !asSymbol(value)->uid().isRegistered();
+}
+
 template <typename WeakMapBucket>
-ALWAYS_INLINE void WeakMapImpl<WeakMapBucket>::add(VM& vm, JSObject* key, JSValue value)
+ALWAYS_INLINE void WeakMapImpl<WeakMapBucket>::add(VM& vm, JSCell* key, JSValue value)
 {
     DisallowGC disallowGC;
     add(vm, key, value, jsWeakMapHash(key));
 }
 
 template <typename WeakMapBucket>
-ALWAYS_INLINE void WeakMapImpl<WeakMapBucket>::add(VM& vm, JSObject* key, JSValue value, uint32_t hash)
+ALWAYS_INLINE void WeakMapImpl<WeakMapBucket>::add(VM& vm, JSCell* key, JSValue value, uint32_t hash)
 {
     DisallowGC disallowGC;
     ASSERT_WITH_MESSAGE(jsWeakMapHash(key) == hash, "We expect hash value is what we expect.");
@@ -90,10 +100,6 @@ void WeakMapImpl<WeakMapBucket>::rehash(RehashMode mode)
     // function must not touch any GC related features. This is why we do not allocate WeakMapBuffer
     // in auxiliary buffer.
 
-    // This rehash modifies m_buffer which is not GC-managed buffer. But m_buffer can be touched in
-    // visitOutputConstraints. Thus, we should guard it with cellLock.
-    Locker locker { cellLock() };
-
     uint32_t oldCapacity = m_capacity;
     MallocPtr<WeakMapBufferType, JSValueMalloc> oldBuffer = WTFMove(m_buffer);
 
@@ -103,7 +109,7 @@ void WeakMapImpl<WeakMapBucket>::rehash(RehashMode mode)
         capacity = nextCapacityAfterBatchRemoval(capacity, m_keyCount);
     } else
         capacity = nextCapacity(capacity, m_keyCount);
-    makeAndSetNewBuffer(locker, capacity);
+    makeAndSetNewBuffer(capacity);
 
     auto* buffer = this->buffer();
     const uint32_t mask = m_capacity - 1;

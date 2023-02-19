@@ -32,6 +32,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "BytecodeIndex.h"
+#include "CodeOrigin.h"
 #include "GPRInfo.h"
 #include "Operands.h"
 #include "TagRegistersMode.h"
@@ -42,76 +43,78 @@ class UnaryArithProfile;
 class BinaryArithProfile;
 class CCallHelpers;
 class CodeBlock;
-class LazyOperandValueProfileKey;
 struct ValueProfile;
 
 class MethodOfGettingAValueProfile {
 public:
     MethodOfGettingAValueProfile()
-        : m_kind(None)
+        : m_rawOperand(0)
+        , m_kind(Kind::None)
     {
     }
 
-    MethodOfGettingAValueProfile(ValueProfile* profile)
+    static MethodOfGettingAValueProfile unaryArithProfile(CodeOrigin codeOrigin)
     {
-        if (profile) {
-            m_kind = Ready;
-            u.profile = profile;
-        } else
-            m_kind = None;
+        MethodOfGettingAValueProfile result;
+        result.m_kind = Kind::UnaryArithProfile;
+        result.m_codeOrigin = codeOrigin;
+        return result;
     }
 
-    MethodOfGettingAValueProfile(UnaryArithProfile* profile)
+    static MethodOfGettingAValueProfile binaryArithProfile(CodeOrigin codeOrigin)
     {
-        if (profile) {
-            m_kind = UnaryArithProfileReady;
-            u.unaryArithProfile = profile;
-        } else
-            m_kind = None;
+        MethodOfGettingAValueProfile result;
+        result.m_kind = Kind::BinaryArithProfile;
+        result.m_codeOrigin = codeOrigin;
+        return result;
     }
 
-    MethodOfGettingAValueProfile(BinaryArithProfile* profile)
+    static MethodOfGettingAValueProfile argumentValueProfile(CodeOrigin codeOrigin, Operand operand)
     {
-        if (profile) {
-            m_kind = BinaryArithProfileReady;
-            u.binaryArithProfile = profile;
-        } else
-            m_kind = None;
+        MethodOfGettingAValueProfile result;
+        result.m_kind = Kind::ArgumentValueProfile;
+        result.m_codeOrigin = codeOrigin;
+        result.m_rawOperand = operand.asBits();
+        return result;
     }
 
-    static MethodOfGettingAValueProfile fromLazyOperand(
-        CodeBlock*, const LazyOperandValueProfileKey&);
+    static MethodOfGettingAValueProfile bytecodeValueProfile(CodeOrigin codeOrigin)
+    {
+        MethodOfGettingAValueProfile result;
+        result.m_kind = Kind::BytecodeValueProfile;
+        result.m_codeOrigin = codeOrigin;
+        return result;
+    }
 
-    explicit operator bool() const { return m_kind != None; }
+    static MethodOfGettingAValueProfile lazyOperandValueProfile(CodeOrigin codeOrigin, Operand operand)
+    {
+        MethodOfGettingAValueProfile result;
+        result.m_kind = Kind::LazyOperandValueProfile;
+        result.m_codeOrigin = codeOrigin;
+        result.m_rawOperand = operand.asBits();
+        return result;
+    }
+
+    explicit operator bool() const { return m_kind != Kind::None; }
 
     // The temporary register is only needed on 64-bits builds (for testing BigInt32).
-    void emitReportValue(CCallHelpers&, JSValueRegs, GPRReg tempGPR, TagRegistersMode = HaveTagRegisters) const;
-    void reportValue(JSValue);
+    void emitReportValue(CCallHelpers&, CodeBlock* optimizedCodeBlock, JSValueRegs, GPRReg tempGPR, TagRegistersMode = HaveTagRegisters) const;
 
 private:
-    enum Kind {
+    enum class Kind : uint8_t {
         None,
-        Ready,
-        UnaryArithProfileReady,
-        BinaryArithProfileReady,
-        LazyOperand
+        UnaryArithProfile,
+        BinaryArithProfile,
+        BytecodeValueProfile,
+        ArgumentValueProfile,
+        LazyOperandValueProfile,
     };
+    static constexpr unsigned bitsOfKind = 3;
+    static_assert(static_cast<unsigned>(Kind::LazyOperandValueProfile) <= ((1U << bitsOfKind) - 1));
 
-    Kind m_kind;
-    union Data {
-        Data()
-            : profile(nullptr)
-        { }
-
-        ValueProfile* profile;
-        UnaryArithProfile* unaryArithProfile;
-        BinaryArithProfile* binaryArithProfile;
-        struct {
-            CodeBlock* codeBlock;
-            BytecodeIndex bytecodeOffset;
-            Operand operand;
-        } lazyOperand;
-    } u;
+    CodeOrigin m_codeOrigin;
+    uint64_t m_rawOperand : Operand::maxBits;
+    Kind m_kind : bitsOfKind;
 };
 
 } // namespace JSC

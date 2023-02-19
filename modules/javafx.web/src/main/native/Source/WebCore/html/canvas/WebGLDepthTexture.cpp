@@ -26,7 +26,6 @@
 #include "config.h"
 
 #if ENABLE(WEBGL)
-
 #include "WebGLDepthTexture.h"
 
 #include <wtf/IsoMallocInlines.h>
@@ -38,9 +37,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLDepthTexture);
 WebGLDepthTexture::WebGLDepthTexture(WebGLRenderingContextBase& context)
     : WebGLExtension(context)
 {
-    auto* gcgl = context.graphicsContextGL();
-    gcgl->ensureExtensionEnabled("GL_OES_depth_texture");
-    gcgl->ensureExtensionEnabled("GL_ARB_depth_texture");
+    context.graphicsContextGL()->ensureExtensionEnabled("GL_OES_depth_texture"_s);
 }
 
 WebGLDepthTexture::~WebGLDepthTexture() = default;
@@ -52,8 +49,8 @@ WebGLExtension::ExtensionName WebGLDepthTexture::getName() const
 
 bool WebGLDepthTexture::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_depth_texture")
-        || context.supportsExtension("GL_ARB_depth_texture");
+    return context.supportsExtension("GL_OES_depth_texture"_s)
+        || context.supportsExtension("GL_ARB_depth_texture"_s);
 }
 
 } // namespace WebCore

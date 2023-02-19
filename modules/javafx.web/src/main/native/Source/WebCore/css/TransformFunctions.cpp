@@ -102,6 +102,7 @@ Length convertToFloatLength(const CSSPrimitiveValue* primitiveValue, const CSSTo
     return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | CalculatedConversion>(conversionData) : Length(LengthType::Undefined);
 }
 
+// FIXME: This should return std::optional<TransformOperations>
 bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& conversionData, TransformOperations& outOperations)
 {
     ASSERT(!outOperations.size());
@@ -314,10 +315,11 @@ bool transformsForValue(const CSSValue& value, const CSSToLengthConversionData& 
                 downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(9)).doubleValue(),
                 downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(10)).doubleValue(),
                 downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(11)).doubleValue(),
-                conversionData.zoom() * downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(12)).doubleValue(),
-                conversionData.zoom() * downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(13)).doubleValue(),
+                downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(12)).doubleValue(),
+                downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(13)).doubleValue(),
                 downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(14)).doubleValue(),
                 downcast<CSSPrimitiveValue>(*transformValue.itemWithoutBoundsCheck(15)).doubleValue());
+            matrix.zoom(conversionData.zoom());
             operations.append(Matrix3DTransformOperation::create(matrix));
             break;
         }

@@ -49,7 +49,6 @@
 #include "RegistrableDomain.h"
 #include "ResourceLoadObserver.h"
 #include "RuntimeApplicationChecks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGPathElement.h"
 #include "SVGSVGElement.h"
@@ -77,18 +76,13 @@ static inline OptionSet<AutoplayQuirk> allowedAutoplayQuirks(Document& document)
     return loader->allowedAutoplayQuirks();
 }
 
-#if ENABLE(PUBLIC_SUFFIX_LIST)
+#if PLATFORM(IOS_FAMILY)
 static inline bool isYahooMail(Document& document)
 {
     auto host = document.topDocument().url().host();
-    return startsWithLettersIgnoringASCIICase(host, "mail.") && topPrivatelyControlledDomain(host.toString()).startsWith("yahoo.");
+    return startsWithLettersIgnoringASCIICase(host, "mail."_s) && topPrivatelyControlledDomain(host.toString()).startsWith("yahoo."_s);
 }
 #endif
-
-static bool isTwitterDocument(Document& document)
-{
-    return RegistrableDomain(document.url()).string() == "twitter.com";
-}
 
 Quirks::Quirks(Document& document)
     : m_document(document)
@@ -114,7 +108,7 @@ bool Quirks::needsFormControlToBeMouseFocusable() const
         return false;
 
     auto host = m_document->url().host();
-    return equalLettersIgnoringASCIICase(host, "ceac.state.gov") || host.endsWithIgnoringASCIICase(".ceac.state.gov");
+    return equalLettersIgnoringASCIICase(host, "ceac.state.gov"_s) || host.endsWithIgnoringASCIICase(".ceac.state.gov"_s);
 #else
     return false;
 #endif
@@ -137,7 +131,7 @@ bool Quirks::needsSeekingSupportDisabled() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "netflix.com") || host.endsWithIgnoringASCIICase(".netflix.com");
+    return equalLettersIgnoringASCIICase(host, "netflix.com"_s) || host.endsWithIgnoringASCIICase(".netflix.com"_s);
 }
 
 bool Quirks::needsPerDocumentAutoplayBehavior() const
@@ -150,7 +144,7 @@ bool Quirks::needsPerDocumentAutoplayBehavior() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "netflix.com") || host.endsWithIgnoringASCIICase(".netflix.com");
+    return equalLettersIgnoringASCIICase(host, "netflix.com"_s) || host.endsWithIgnoringASCIICase(".netflix.com"_s);
 #endif
 }
 
@@ -173,11 +167,15 @@ bool Quirks::shouldAutoplayWebAudioForArbitraryUserGesture() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "www.bing.com") || host.endsWithIgnoringASCIICase(".zoom.us");
+    return equalLettersIgnoringASCIICase(host, "www.bing.com"_s) || host.endsWithIgnoringASCIICase(".zoom.us"_s);
 }
 
 bool Quirks::hasBrokenEncryptedMediaAPISupportQuirk() const
 {
+#if ENABLE(THUNDER)
+    return false;
+#endif
+
     if (!needsQuirks())
         return false;
 
@@ -201,7 +199,7 @@ bool Quirks::shouldDisableContentChangeObserverTouchEventAdjustment() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return host.endsWith(".youtube.com") || host == "youtube.com";
+    return host.endsWith(".youtube.com"_s) || host == "youtube.com"_s;
 }
 
 bool Quirks::shouldTooltipPreventFromProceedingWithClick(const Element& element) const
@@ -209,9 +207,9 @@ bool Quirks::shouldTooltipPreventFromProceedingWithClick(const Element& element)
     if (!needsQuirks())
         return false;
 
-    if (!equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "covid.cdc.gov"))
+    if (!equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "covid.cdc.gov"_s))
         return false;
-    return element.hasClass() && element.classNames().contains("tooltip");
+    return element.hasClass() && element.classNames().contains("tooltip"_s);
 }
 
 // FIXME: Remove after the site is fixed, <rdar://problem/75792913>
@@ -221,10 +219,18 @@ bool Quirks::shouldHideSearchFieldResultsButton() const
     if (!needsQuirks())
         return false;
 
-    if (topPrivatelyControlledDomain(m_document->topDocument().url().host().toString()).startsWith("google."))
+    if (topPrivatelyControlledDomain(m_document->topDocument().url().host().toString()).startsWith("google."_s))
         return true;
 #endif
     return false;
+}
+
+bool Quirks::shouldDisableResolutionMediaQuery() const
+{
+    if (!needsQuirks())
+        return false;
+    auto host = m_document->url().host();
+    return equalLettersIgnoringASCIICase(host, "www.hotels.com"_s);
 }
 
 bool Quirks::needsMillisecondResolutionForHighResTimeStamp() const
@@ -233,7 +239,7 @@ bool Quirks::needsMillisecondResolutionForHighResTimeStamp() const
         return false;
     // webkit.org/b/210527
     auto host = m_document->url().host();
-    return equalLettersIgnoringASCIICase(host, "www.icourse163.org");
+    return equalLettersIgnoringASCIICase(host, "www.icourse163.org"_s);
 }
 
 bool Quirks::shouldStripQuotationMarkInFontFaceSetFamily() const
@@ -242,7 +248,7 @@ bool Quirks::shouldStripQuotationMarkInFontFaceSetFamily() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "docs.google.com");
+    return equalLettersIgnoringASCIICase(host, "docs.google.com"_s);
 }
 
 bool Quirks::isTouchBarUpdateSupressedForHiddenContentEditable() const
@@ -252,7 +258,7 @@ bool Quirks::isTouchBarUpdateSupressedForHiddenContentEditable() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "docs.google.com");
+    return equalLettersIgnoringASCIICase(host, "docs.google.com"_s);
 #else
     return false;
 #endif
@@ -267,18 +273,18 @@ bool Quirks::isNeverRichlyEditableForTouchBar() const
     auto& url = m_document->topDocument().url();
     auto host = url.host();
 
-    if (equalLettersIgnoringASCIICase(host, "twitter.com"))
+    if (equalLettersIgnoringASCIICase(host, "twitter.com"_s))
         return true;
 
-    if (equalLettersIgnoringASCIICase(host, "onedrive.live.com"))
+    if (equalLettersIgnoringASCIICase(host, "onedrive.live.com"_s))
         return true;
 
-    if (equalLettersIgnoringASCIICase(host, "trix-editor.org"))
+    if (equalLettersIgnoringASCIICase(host, "trix-editor.org"_s))
         return true;
 
-    if (equalLettersIgnoringASCIICase(host, "www.icloud.com")) {
+    if (equalLettersIgnoringASCIICase(host, "www.icloud.com"_s)) {
         auto path = url.path();
-        if (path.contains("notes") || url.fragmentIdentifier().contains("notes"))
+        if (path.contains("notes"_s) || url.fragmentIdentifier().contains("notes"_s))
             return true;
     }
 #endif
@@ -289,7 +295,7 @@ bool Quirks::isNeverRichlyEditableForTouchBar() const
 static bool shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreasForHost(StringView host)
 {
 #if PLATFORM(IOS_FAMILY)
-    return equalLettersIgnoringASCIICase(host, "docs.google.com");
+    return equalLettersIgnoringASCIICase(host, "docs.google.com"_s);
 #else
     UNUSED_PARAM(host);
     return false;
@@ -305,10 +311,10 @@ bool Quirks::shouldDispatchSyntheticMouseEventsWhenModifyingSelection() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    if (equalLettersIgnoringASCIICase(host, "medium.com") || host.endsWithIgnoringASCIICase(".medium.com"))
+    if (equalLettersIgnoringASCIICase(host, "medium.com"_s) || host.endsWithIgnoringASCIICase(".medium.com"_s))
         return true;
 
-    if (equalLettersIgnoringASCIICase(host, "weebly.com") || host.endsWithIgnoringASCIICase(".weebly.com"))
+    if (equalLettersIgnoringASCIICase(host, "weebly.com"_s) || host.endsWithIgnoringASCIICase(".weebly.com"_s))
         return true;
 
     return false;
@@ -323,7 +329,7 @@ bool Quirks::needsYouTubeMouseOutQuirk() const
     if (!needsQuirks())
         return false;
 
-    return equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com");
+    return equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com"_s);
 #else
     return false;
 #endif
@@ -336,7 +342,7 @@ bool Quirks::shouldAvoidUsingIOS13ForGmail() const
         return false;
 
     auto& url = m_document->topDocument().url();
-    return equalLettersIgnoringASCIICase(url.host(), "mail.google.com");
+    return equalLettersIgnoringASCIICase(url.host(), "mail.google.com"_s);
 #else
     return false;
 #endif
@@ -353,18 +359,18 @@ bool Quirks::shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAr
 #if ENABLE(TOUCH_EVENTS)
 bool Quirks::isAmazon() const
 {
-    return topPrivatelyControlledDomain(m_document->topDocument().url().host().toString()).startsWith("amazon.");
+    return topPrivatelyControlledDomain(m_document->topDocument().url().host().toString()).startsWith("amazon."_s);
 }
 
 bool Quirks::isGoogleMaps() const
 {
     auto& url = m_document->topDocument().url();
-    return topPrivatelyControlledDomain(url.host().toString()).startsWith("google.") && url.path().startsWithIgnoringASCIICase("/maps/");
+    return topPrivatelyControlledDomain(url.host().toString()).startsWith("google."_s) && startsWithLettersIgnoringASCIICase(url.path(), "/maps/"_s);
 }
 
-bool Quirks::shouldDispatchSimulatedMouseEvents(EventTarget* target) const
+bool Quirks::shouldDispatchSimulatedMouseEvents(const EventTarget* target) const
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().mouseEventsSimulationEnabled())
+    if (DeprecatedGlobalSettings::mouseEventsSimulationEnabled())
         return true;
 
     if (!needsQuirks())
@@ -383,47 +389,45 @@ bool Quirks::shouldDispatchSimulatedMouseEvents(EventTarget* target) const
         auto& url = m_document->topDocument().url();
         auto host = url.host().convertToASCIILowercase();
 
-        if (host == "wix.com" || host.endsWith(".wix.com")) {
+        if (host == "wix.com"_s || host.endsWith(".wix.com"_s)) {
             // Disable simulated mouse dispatching for template selection.
-            return url.path().startsWithIgnoringASCIICase("/website/templates/") ? ShouldDispatchSimulatedMouseEvents::No : ShouldDispatchSimulatedMouseEvents::Yes;
+            return startsWithLettersIgnoringASCIICase(url.path(), "/website/templates/"_s) ? ShouldDispatchSimulatedMouseEvents::No : ShouldDispatchSimulatedMouseEvents::Yes;
         }
 
-        if ((host == "desmos.com" || host.endsWith(".desmos.com")) && url.path().startsWithIgnoringASCIICase("/calculator/"))
+        if ((host == "desmos.com"_s || host.endsWith(".desmos.com"_s)) && startsWithLettersIgnoringASCIICase(url.path(), "/calculator/"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "figma.com" || host.endsWith(".figma.com"))
+        if (host == "trello.com"_s || host.endsWith(".trello.com"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "trello.com" || host.endsWith(".trello.com"))
+        if (host == "airtable.com"_s || host.endsWith(".airtable.com"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "airtable.com" || host.endsWith(".airtable.com"))
+        if (host == "msn.com"_s || host.endsWith(".msn.com"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "msn.com" || host.endsWith(".msn.com"))
+        if (host == "flipkart.com"_s || host.endsWith(".flipkart.com"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "flipkart.com" || host.endsWith(".flipkart.com"))
+        if (host == "iqiyi.com"_s || host.endsWith(".iqiyi.com"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "iqiyi.com" || host.endsWith(".iqiyi.com"))
+        if (host == "trailers.apple.com"_s)
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "trailers.apple.com")
+        if (host == "soundcloud.com"_s)
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "soundcloud.com")
+        if (host == "naver.com"_s)
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "naver.com")
+        if (host == "nba.com"_s || host.endsWith(".nba.com"_s))
             return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host == "nba.com" || host.endsWith(".nba.com"))
-            return ShouldDispatchSimulatedMouseEvents::Yes;
-        if (host.endsWith(".naver.com")) {
+        if (host.endsWith(".naver.com"_s)) {
             // Disable the quirk for tv.naver.com subdomain to be able to simulate hover on videos.
-            if (host == "tv.naver.com")
+            if (host == "tv.naver.com"_s)
                 return ShouldDispatchSimulatedMouseEvents::No;
             // Disable the quirk for mail.naver.com subdomain to be able to tap on mail subjects.
-            if (host == "mail.naver.com")
+            if (host == "mail.naver.com"_s)
                 return ShouldDispatchSimulatedMouseEvents::No;
             // Disable the quirk on the mobile site.
             // FIXME: Maybe this quirk should be disabled for "m." subdomains on all sites? These are generally mobile sites that don't need mouse events.
-            if (host == "m.naver.com")
+            if (host == "m.naver.com"_s)
                 return ShouldDispatchSimulatedMouseEvents::No;
             return ShouldDispatchSimulatedMouseEvents::Yes;
         }
-        if (host == "mybinder.org" || host.endsWith(".mybinder.org"))
+        if (host == "mybinder.org"_s || host.endsWith(".mybinder.org"_s))
             return ShouldDispatchSimulatedMouseEvents::DependingOnTargetFor_mybinder_org;
         return ShouldDispatchSimulatedMouseEvents::No;
     };
@@ -441,8 +445,8 @@ bool Quirks::shouldDispatchSimulatedMouseEvents(EventTarget* target) const
 
     case ShouldDispatchSimulatedMouseEvents::DependingOnTargetFor_mybinder_org:
         if (is<Node>(target)) {
-            for (auto* node = downcast<Node>(target); node; node = node->parentNode()) {
-                if (is<Element>(node) && downcast<Element>(*node).classList().contains("lm-DockPanel-tabBar"))
+            for (const auto* node = downcast<Node>(target); node; node = node->parentNode()) {
+                if (is<Element>(node) && const_cast<Element&>(downcast<Element>(*node)).classList().contains("lm-DockPanel-tabBar"_s))
                     return true;
             }
         }
@@ -465,14 +469,14 @@ bool Quirks::shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTar
         // When panning on an Amazon product image, we're either touching on the #magnifierLens element
         // or its previous sibling.
         auto& element = downcast<Element>(*target);
-        if (element.getIdAttribute() == "magnifierLens")
+        if (element.getIdAttribute() == "magnifierLens"_s)
             return true;
         if (auto* sibling = element.nextElementSibling())
-            return sibling->getIdAttribute() == "magnifierLens";
+            return sibling->getIdAttribute() == "magnifierLens"_s;
     }
 
-    if (equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "soundcloud.com") && is<Element>(target))
-        return downcast<Element>(*target).classList().contains("sceneLayer");
+    if (equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "soundcloud.com"_s) && is<Element>(target))
+        return downcast<Element>(*target).classList().contains("sceneLayer"_s);
 
     return false;
 }
@@ -484,20 +488,20 @@ std::optional<Event::IsCancelable> Quirks::simulatedMouseEventTypeForTarget(Even
 
     // On Google Maps, we want to limit simulated mouse events to dragging the little man that allows entering into Street View.
     if (isGoogleMaps()) {
-        if (is<Element>(target) && downcast<Element>(target)->getAttribute("class") == "widget-expand-button-pegman-icon")
+        if (is<Element>(target) && downcast<Element>(target)->getAttribute(HTMLNames::classAttr) == "widget-expand-button-pegman-icon"_s)
             return Event::IsCancelable::Yes;
         return { };
     }
 
     auto host = m_document->topDocument().url().host();
-    if (equalLettersIgnoringASCIICase(host, "desmos.com") || host.endsWithIgnoringASCIICase(".desmos.com"))
+    if (equalLettersIgnoringASCIICase(host, "desmos.com"_s) || host.endsWithIgnoringASCIICase(".desmos.com"_s))
         return Event::IsCancelable::No;
 
-    if (equalLettersIgnoringASCIICase(host, "airtable.com") || host.endsWithIgnoringASCIICase(".airtable.com")) {
+    if (equalLettersIgnoringASCIICase(host, "airtable.com"_s) || host.endsWithIgnoringASCIICase(".airtable.com"_s)) {
         // We want to limit simulated mouse events to elements under <div id="paneContainer"> to allow for column re-ordering and multiple cell selection.
         if (is<Node>(target)) {
             auto* node = downcast<Node>(target);
-            if (auto* paneContainer = node->treeScope().getElementById(AtomString("paneContainer"))) {
+            if (auto* paneContainer = node->treeScope().getElementById(AtomString("paneContainer"_s))) {
                 if (paneContainer->contains(node))
                     return Event::IsCancelable::Yes;
             }
@@ -515,11 +519,11 @@ bool Quirks::shouldMakeTouchEventNonCancelableForTarget(EventTarget* target) con
 
     auto host = m_document->topDocument().url().host();
 
-    if (equalLettersIgnoringASCIICase(host, "www.youtube.com")) {
+    if (equalLettersIgnoringASCIICase(host, "www.youtube.com"_s)) {
         if (is<Element>(target)) {
             unsigned depth = 3;
             for (auto* element = downcast<Element>(target); element && depth; element = element->parentElement(), --depth) {
-                if (element->localName() == "paper-item" && element->classList().contains("yt-dropdown-menu"))
+                if (element->localName() == "paper-item"_s && element->classList().contains("yt-dropdown-menu"_s))
                     return true;
             }
         }
@@ -534,7 +538,7 @@ bool Quirks::shouldPreventPointerMediaQueryFromEvaluatingToCoarse() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "shutterstock.com") || host.endsWithIgnoringASCIICase(".shutterstock.com");
+    return equalLettersIgnoringASCIICase(host, "shutterstock.com"_s) || host.endsWithIgnoringASCIICase(".shutterstock.com"_s);
 }
 
 bool Quirks::shouldPreventDispatchOfTouchEvent(const AtomString& touchEventType, EventTarget* target) const
@@ -542,9 +546,9 @@ bool Quirks::shouldPreventDispatchOfTouchEvent(const AtomString& touchEventType,
     if (!needsQuirks())
         return false;
 
-    if (is<Element>(target) && touchEventType == eventNames().touchendEvent && equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "sites.google.com")) {
+    if (is<Element>(target) && touchEventType == eventNames().touchendEvent && equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "sites.google.com"_s)) {
         auto& classList = downcast<Element>(*target).classList();
-        return classList.contains("DPvwYc") && classList.contains("sm8sCf");
+        return classList.contains("DPvwYc"_s) && classList.contains("sm8sCf"_s);
     }
 
     return false;
@@ -572,16 +576,16 @@ bool Quirks::shouldAvoidResizingWhenInputViewBoundsChange() const
     auto& url = m_document->topDocument().url();
     auto host = url.host();
 
-    if (equalLettersIgnoringASCIICase(host, "live.com") || host.endsWithIgnoringASCIICase(".live.com"))
+    if (equalLettersIgnoringASCIICase(host, "live.com"_s) || host.endsWithIgnoringASCIICase(".live.com"_s))
         return true;
 
-    if (equalLettersIgnoringASCIICase(host, "twitter.com") || host.endsWithIgnoringASCIICase(".twitter.com"))
+    if (equalLettersIgnoringASCIICase(host, "twitter.com"_s) || host.endsWithIgnoringASCIICase(".twitter.com"_s))
         return true;
 
-    if ((equalLettersIgnoringASCIICase(host, "google.com") || host.endsWithIgnoringASCIICase(".google.com")) && url.path().startsWithIgnoringASCIICase("/maps/"))
+    if ((equalLettersIgnoringASCIICase(host, "google.com"_s) || host.endsWithIgnoringASCIICase(".google.com"_s)) && url.path().startsWithIgnoringASCIICase("/maps/"_s))
         return true;
 
-    if (host.endsWithIgnoringASCIICase(".sharepoint.com"))
+    if (host.endsWithIgnoringASCIICase(".sharepoint.com"_s))
         return true;
 
     return false;
@@ -595,7 +599,7 @@ bool Quirks::shouldDisablePointerEventsQuirk() const
 
     auto& url = m_document->topDocument().url();
     auto host = url.host();
-    if (equalLettersIgnoringASCIICase(host, "mailchimp.com") || host.endsWithIgnoringASCIICase(".mailchimp.com"))
+    if (equalLettersIgnoringASCIICase(host, "mailchimp.com"_s) || host.endsWithIgnoringASCIICase(".mailchimp.com"_s))
         return true;
 #endif
     return false;
@@ -611,7 +615,7 @@ bool Quirks::needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommand() const
         return false;
 
     auto& url = m_document->topDocument().url();
-    return equalLettersIgnoringASCIICase(url.host(), "docs.google.com") && url.path().startsWithIgnoringASCIICase("/spreadsheets/");
+    return equalLettersIgnoringASCIICase(url.host(), "docs.google.com"_s) && startsWithLettersIgnoringASCIICase(url.path(), "/spreadsheets/"_s);
 #else
     return false;
 #endif
@@ -625,12 +629,12 @@ bool Quirks::needsInputModeNoneImplicitly(const HTMLElement& element) const
         return false;
 
     if (element.hasTagName(HTMLNames::inputTag)) {
-        if (!equalLettersIgnoringASCIICase(m_document->url().host(), "calendar.google.com"))
+        if (!equalLettersIgnoringASCIICase(m_document->url().host(), "calendar.google.com"_s))
             return false;
-        static NeverDestroyed<QualifiedName> dataInitialValueAttr(nullAtom(), "data-initial-value", nullAtom());
-        static NeverDestroyed<QualifiedName> dataPreviousValueAttr(nullAtom(), "data-previous-value", nullAtom());
+        static NeverDestroyed<QualifiedName> dataInitialValueAttr(nullAtom(), "data-initial-value"_s, nullAtom());
+        static NeverDestroyed<QualifiedName> dataPreviousValueAttr(nullAtom(), "data-previous-value"_s, nullAtom());
 
-        return equalLettersIgnoringASCIICase(element.attributeWithoutSynchronization(HTMLNames::autocompleteAttr), "off")
+        return equalLettersIgnoringASCIICase(element.attributeWithoutSynchronization(HTMLNames::autocompleteAttr), "off"_s)
             && element.hasAttributeWithoutSynchronization(dataInitialValueAttr)
             && element.hasAttributeWithoutSynchronization(dataPreviousValueAttr);
     }
@@ -640,10 +644,10 @@ bool Quirks::needsInputModeNoneImplicitly(const HTMLElement& element) const
 
     auto& url = m_document->url();
     auto host = url.host();
-    if (!host.endsWithIgnoringASCIICase(".desmos.com"))
+    if (!host.endsWithIgnoringASCIICase(".desmos.com"_s))
         return false;
 
-    return element.parentElement() && element.parentElement()->classNames().contains("dcg-mq-textarea");
+    return element.parentElement() && element.parentElement()->classNames().contains("dcg-mq-textarea"_s);
 #else
     UNUSED_PARAM(element);
     return false;
@@ -658,7 +662,7 @@ bool Quirks::needsGMailOverflowScrollQuirk() const
         return false;
 
     if (!m_needsGMailOverflowScrollQuirk)
-        m_needsGMailOverflowScrollQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "mail.google.com");
+        m_needsGMailOverflowScrollQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "mail.google.com"_s);
 
     return *m_needsGMailOverflowScrollQuirk;
 #else
@@ -674,7 +678,7 @@ bool Quirks::needsYouTubeOverflowScrollQuirk() const
         return false;
 
     if (!m_needsYouTubeOverflowScrollQuirk)
-        m_needsYouTubeOverflowScrollQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com");
+        m_needsYouTubeOverflowScrollQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com"_s);
 
     return *m_needsYouTubeOverflowScrollQuirk;
 #else
@@ -690,7 +694,7 @@ bool Quirks::needsFullscreenDisplayNoneQuirk() const
 
     if (!m_needsFullscreenDisplayNoneQuirk) {
         auto host = m_document->topDocument().url().host();
-        m_needsFullscreenDisplayNoneQuirk = equalLettersIgnoringASCIICase(host, "gizmodo.com") || host.endsWithIgnoringASCIICase(".gizmodo.com");
+        m_needsFullscreenDisplayNoneQuirk = equalLettersIgnoringASCIICase(host, "gizmodo.com"_s) || host.endsWithIgnoringASCIICase(".gizmodo.com"_s);
     }
 
     return *m_needsFullscreenDisplayNoneQuirk;
@@ -703,7 +707,7 @@ bool Quirks::needsFullscreenDisplayNoneQuirk() const
 bool Quirks::needsWeChatScrollingQuirk() const
 {
 #if PLATFORM(IOS)
-    return needsQuirks() && !linkedOnOrAfter(SDKVersion::FirstWithoutWeChatScrollingQuirk) && IOSApplication::isWechat();
+    return needsQuirks() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoWeChatScrollingQuirk) && IOSApplication::isWechat();
 #else
     return false;
 #endif
@@ -712,7 +716,7 @@ bool Quirks::needsWeChatScrollingQuirk() const
 bool Quirks::shouldOmitHTMLDocumentSupportedPropertyNames()
 {
 #if PLATFORM(COCOA)
-    static bool shouldOmitHTMLDocumentSupportedPropertyNames = !linkedOnOrAfter(SDKVersion::FirstWithHTMLDocumentSupportedPropertyNames);
+    static bool shouldOmitHTMLDocumentSupportedPropertyNames = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::HTMLDocumentSupportedPropertyNames);
     return shouldOmitHTMLDocumentSupportedPropertyNames;
 #else
     return false;
@@ -733,8 +737,8 @@ bool Quirks::shouldSilenceWindowResizeEvents() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "nytimes.com") || host.endsWithIgnoringASCIICase(".nytimes.com")
-        || equalLettersIgnoringASCIICase(host, "twitter.com") || host.endsWithIgnoringASCIICase(".twitter.com");
+    return equalLettersIgnoringASCIICase(host, "nytimes.com"_s) || host.endsWithIgnoringASCIICase(".nytimes.com"_s)
+        || equalLettersIgnoringASCIICase(host, "twitter.com"_s) || host.endsWithIgnoringASCIICase(".twitter.com"_s);
 #else
     return false;
 #endif
@@ -753,7 +757,7 @@ bool Quirks::shouldSilenceMediaQueryListChangeEvents() const
         return false;
 
     auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "twitter.com") || host.endsWithIgnoringASCIICase(".twitter.com");
+    return equalLettersIgnoringASCIICase(host, "twitter.com"_s) || host.endsWithIgnoringASCIICase(".twitter.com"_s);
 #else
     return false;
 #endif
@@ -764,7 +768,7 @@ bool Quirks::shouldAvoidScrollingWhenFocusedContentIsVisible() const
     if (!needsQuirks())
         return false;
 
-    return equalLettersIgnoringASCIICase(m_document->url().host(), "www.zillow.com");
+    return equalLettersIgnoringASCIICase(m_document->url().host(), "www.zillow.com"_s);
 }
 
 bool Quirks::shouldUseLegacySelectPopoverDismissalBehaviorInDataActivation() const
@@ -773,7 +777,7 @@ bool Quirks::shouldUseLegacySelectPopoverDismissalBehaviorInDataActivation() con
         return false;
 
     auto host = m_document->url().host();
-    return equalLettersIgnoringASCIICase(host, "att.com") || host.endsWithIgnoringASCIICase(".att.com");
+    return equalLettersIgnoringASCIICase(host, "att.com"_s) || host.endsWithIgnoringASCIICase(".att.com"_s);
 }
 
 bool Quirks::shouldIgnoreAriaForFastPathContentObservationCheck() const
@@ -783,7 +787,7 @@ bool Quirks::shouldIgnoreAriaForFastPathContentObservationCheck() const
         return false;
 
     auto host = m_document->url().host();
-    return equalLettersIgnoringASCIICase(host, "www.ralphlauren.com");
+    return equalLettersIgnoringASCIICase(host, "www.ralphlauren.com"_s);
 #endif
     return false;
 }
@@ -795,17 +799,17 @@ bool Quirks::shouldOpenAsAboutBlank(const String& stringToOpen) const
         return false;
 
     auto openerURL = m_document->url();
-    if (!equalLettersIgnoringASCIICase(openerURL.host(), "docs.google.com"))
+    if (!equalLettersIgnoringASCIICase(openerURL.host(), "docs.google.com"_s))
         return false;
 
-    if (!m_document->frame() || !m_document->frame()->loader().userAgent(openerURL).contains("Macintosh"))
+    if (!m_document->frame() || !m_document->frame()->loader().userAgent(openerURL).contains("Macintosh"_s))
         return false;
 
     URL urlToOpen { URL { }, stringToOpen };
     if (!urlToOpen.protocolIsAbout())
         return false;
 
-    return !equalLettersIgnoringASCIICase(urlToOpen.host(), "blank") && !equalLettersIgnoringASCIICase(urlToOpen.host(), "srcdoc");
+    return !equalLettersIgnoringASCIICase(urlToOpen.host(), "blank"_s) && !equalLettersIgnoringASCIICase(urlToOpen.host(), "srcdoc"_s);
 #else
     UNUSED_PARAM(stringToOpen);
     return false;
@@ -842,7 +846,7 @@ bool Quirks::shouldBypassBackForwardCache() const
     // We started caching such content in r250437 but the vimeo.com content unfortunately is not currently compatible
     // because it changes the opacity of its body to 0 when navigating away and fails to restore the original opacity
     // when coming back from the back/forward cache (e.g. in 'pageshow' event handler). See <rdar://problem/56996057>.
-    if (topURL.protocolIs("https") && equalLettersIgnoringASCIICase(host, "vimeo.com")) {
+    if (topURL.protocolIs("https"_s) && equalLettersIgnoringASCIICase(host, "vimeo.com"_s)) {
         if (auto* documentLoader = m_document->frame() ? m_document->frame()->loader().documentLoader() : nullptr)
             return documentLoader->response().cacheControlContainsNoStore();
     }
@@ -852,7 +856,7 @@ bool Quirks::shouldBypassBackForwardCache() const
     // because it puts an overlay (with class "docs-homescreen-freeze-el-full") over the page when navigating away and fails
     // to remove it when coming back from the back/forward cache (e.g. in 'pageshow' event handler). See <rdar://problem/57670064>.
     // Note that this does not check for docs.google.com host because of hosted G Suite apps.
-    static MainThreadNeverDestroyed<const AtomString> googleDocsOverlayDivClass("docs-homescreen-freeze-el-full", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> googleDocsOverlayDivClass("docs-homescreen-freeze-el-full"_s);
     auto* firstChildInBody = m_document->body() ? m_document->body()->firstChild() : nullptr;
     if (is<HTMLDivElement>(firstChildInBody)) {
         auto& div = downcast<HTMLDivElement>(*firstChildInBody);
@@ -871,7 +875,7 @@ bool Quirks::shouldBypassAsyncScriptDeferring() const
     if (!m_shouldBypassAsyncScriptDeferring) {
         auto domain = RegistrableDomain { m_document->topDocument().url() };
         // Deferring 'mapbox-gl.js' script on bungalow.com causes the script to get in a bad state (rdar://problem/61658940).
-        m_shouldBypassAsyncScriptDeferring = (domain == "bungalow.com");
+        m_shouldBypassAsyncScriptDeferring = (domain == "bungalow.com"_s);
     }
     return *m_shouldBypassAsyncScriptDeferring;
 }
@@ -921,7 +925,7 @@ bool Quirks::shouldMakeEventListenerPassive(const EventTarget& eventTarget, cons
                 return false;
 
             auto& jsEventListener = downcast<JSEventListener>(eventListener);
-            if (jsEventListener.functionName() == "ssc_wheel")
+            if (jsEventListener.functionName() == "ssc_wheel"_s)
                 return true;
         }
 
@@ -939,7 +943,7 @@ bool Quirks::shouldEnableLegacyGetUserMediaQuirk() const
 
     if (!m_shouldEnableLegacyGetUserMediaQuirk) {
         auto host = m_document->securityOrigin().host();
-        m_shouldEnableLegacyGetUserMediaQuirk = host == "www.baidu.com" || host == "www.warbyparker.com";
+        m_shouldEnableLegacyGetUserMediaQuirk = host == "www.baidu.com"_s || host == "www.warbyparker.com"_s;
     }
     return m_shouldEnableLegacyGetUserMediaQuirk.value();
 }
@@ -956,7 +960,7 @@ bool Quirks::shouldDisableElementFullscreenQuirk() const
 
     auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
 
-    m_shouldDisableElementFullscreenQuirk = domain == "nfl.com" || domain.endsWith(".nfl.com");
+    m_shouldDisableElementFullscreenQuirk = domain == "nfl.com"_s || domain.endsWith(".nfl.com"_s);
 
     return m_shouldDisableElementFullscreenQuirk.value();
 #else
@@ -974,7 +978,7 @@ bool Quirks::needsCanPlayAfterSeekedQuirk() const
 
     auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
 
-    m_needsCanPlayAfterSeekedQuirk = domain == "hulu.com" || domain.endsWith(".hulu.com");
+    m_needsCanPlayAfterSeekedQuirk = domain == "hulu.com"_s || domain.endsWith(".hulu.com"_s);
 
     return m_needsCanPlayAfterSeekedQuirk.value();
 }
@@ -986,7 +990,7 @@ bool Quirks::shouldLayOutAtMinimumWindowWidthWhenIgnoringScalingConstraints() co
 
     // FIXME: We should consider replacing this with a heuristic to determine whether
     // or not the edges of the page mostly lack content after shrinking to fit.
-    return m_document->url().host().endsWithIgnoringASCIICase(".wikipedia.org");
+    return m_document->url().host().endsWithIgnoringASCIICase(".wikipedia.org"_s);
 }
 
 bool Quirks::shouldIgnoreContentObservationForSyntheticClick(bool isFirstSyntheticClickOnPage) const
@@ -995,7 +999,7 @@ bool Quirks::shouldIgnoreContentObservationForSyntheticClick(bool isFirstSynthet
         return false;
 
     auto host = m_document->url().host();
-    return isFirstSyntheticClickOnPage && (equalLettersIgnoringASCIICase(host, "shutterstock.com") || host.endsWithIgnoringASCIICase(".shutterstock.com"));
+    return isFirstSyntheticClickOnPage && (equalLettersIgnoringASCIICase(host, "shutterstock.com"_s) || host.endsWithIgnoringASCIICase(".shutterstock.com"_s));
 }
 
 bool Quirks::shouldAvoidPastingImagesAsWebContent() const
@@ -1019,10 +1023,10 @@ static bool isKinjaLoginAvatarElement(const Element& element)
     // span with these class names, or the svg, or the svg's path.
     if (element.hasClass()) {
         auto& classNames = element.classNames();
-        if (classNames.contains("js_switch-to-burner-login")
-            || classNames.contains("js_header-userbutton")
-            || classNames.contains("sc-1il3uru-3") || classNames.contains("cIhKfd")
-            || classNames.contains("iyvn34-0") || classNames.contains("bYIjtl"))
+        if (classNames.contains("js_switch-to-burner-login"_s)
+            || classNames.contains("js_header-userbutton"_s)
+            || classNames.contains("sc-1il3uru-3"_s) || classNames.contains("cIhKfd"_s)
+            || classNames.contains("iyvn34-0"_s) || classNames.contains("bYIjtl"_s))
             return true;
     }
 
@@ -1033,8 +1037,8 @@ static bool isKinjaLoginAvatarElement(const Element& element)
         svgElement = element.parentElement();
 
     if (svgElement && svgElement->hasAttributes()) {
-        auto ariaLabelAttr = svgElement->attributes().getNamedItem("aria-label");
-        if (ariaLabelAttr && ariaLabelAttr->value() == "UserFilled icon")
+        auto ariaLabelAttr = svgElement->attributes().getNamedItem("aria-label"_s);
+        if (ariaLabelAttr && ariaLabelAttr->value() == "UserFilled icon"_s)
             return true;
     }
 
@@ -1043,7 +1047,7 @@ static bool isKinjaLoginAvatarElement(const Element& element)
 
 bool Quirks::isMicrosoftTeamsRedirectURL(const URL& url)
 {
-    return url.host() == "teams.microsoft.com"_s && url.query().toString().contains("Retried+3+times+without+success");
+    return url.host() == "teams.microsoft.com"_s && url.query().toString().contains("Retried+3+times+without+success"_s);
 }
 
 static bool isStorageAccessQuirkDomainAndElement(const URL& url, const Element& element)
@@ -1052,24 +1056,24 @@ static bool isStorageAccessQuirkDomainAndElement(const URL& url, const Element& 
     // FIXME(218779): Remove this quirk once microsoft.com completes their login flow redesign.
     if (url.host() == "www.microsoft.com"_s) {
         return element.hasClass()
-        && (element.classNames().contains("glyph_signIn_circle")
-        || element.classNames().contains("mectrl_headertext")
-        || element.classNames().contains("mectrl_header"));
+        && (element.classNames().contains("glyph_signIn_circle"_s)
+        || element.classNames().contains("mectrl_headertext"_s)
+        || element.classNames().contains("mectrl_header"_s));
     }
     // Skype case.
     // FIXME(220105): Remove this quirk once Skype under outlook.live.com completes their login flow redesign.
     if (url.host() == "outlook.live.com"_s) {
         return element.hasClass()
-        && (element.classNames().contains("_3ioEp2RGR5vb0gqRDsaFPa")
-        || element.classNames().contains("_2Am2jvTaBz17UJ8XnfxFOy"));
+        && (element.classNames().contains("_3ioEp2RGR5vb0gqRDsaFPa"_s)
+        || element.classNames().contains("_2Am2jvTaBz17UJ8XnfxFOy"_s));
     }
     // Sony Network Entertainment login case.
     // FIXME(218760): Remove this quirk once playstation.com completes their login flow redesign.
     if (url.host() == "www.playstation.com"_s || url.host() == "my.playstation.com"_s) {
         return element.hasClass()
-        && (element.classNames().contains("web-toolbar__signin-button")
-        || element.classNames().contains("web-toolbar__signin-button-label")
-        || element.classNames().contains("sb-signin-button"));
+        && (element.classNames().contains("web-toolbar__signin-button"_s)
+        || element.classNames().contains("web-toolbar__signin-button-label"_s)
+        || element.classNames().contains("sb-signin-button"_s));
     }
 
     return false;
@@ -1098,7 +1102,7 @@ const String& Quirks::staticRadioPlayerURLString()
 
 static bool isBBCDomain(const RegistrableDomain& domain)
 {
-    static NeverDestroyed<RegistrableDomain> BBCDomain = RegistrableDomain(URL(URL(), Quirks::BBCRadioPlayerURLString()));
+    static NeverDestroyed<RegistrableDomain> BBCDomain = RegistrableDomain(URL { Quirks::BBCRadioPlayerURLString() });
     return domain == BBCDomain;
 }
 
@@ -1108,7 +1112,7 @@ static bool isBBCPopUpPlayerElement(const Element& element)
     if (!element.parentElement() || !element.parentElement()->hasClass() || !parentElement->parentElement() || !parentElement->parentElement()->hasClass())
         return false;
 
-    return element.parentElement()->classNames().contains("p_audioButton_buttonInner") && parentElement->parentElement()->classNames().contains("hidden");
+    return element.parentElement()->classNames().contains("p_audioButton_buttonInner"_s) && parentElement->parentElement()->classNames().contains("hidden"_s);
 }
 
 Quirks::StorageAccessResult Quirks::requestStorageAccessAndHandleClick(CompletionHandler<void(ShouldDispatchClick)>&& completionHandler) const
@@ -1172,23 +1176,23 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
         set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("theinventory.com"_s));
         return set;
     }();
-    static NeverDestroyed<URL> kinjaURL = URL(URL(), "https://kinja.com");
+    static NeverDestroyed kinjaURL = URL { "https://kinja.com"_str };
     static NeverDestroyed<RegistrableDomain> kinjaDomain { kinjaURL };
 
     static NeverDestroyed<RegistrableDomain> youTubeDomain = RegistrableDomain::uncheckedCreateFromRegistrableDomainString("youtube.com"_s);
 
     static NeverDestroyed<String> loginPopupWindowFeatureString = "toolbar=no,location=yes,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,copyhistory=no,width=599,height=600,top=420,left=980.5"_s;
 
-    static NeverDestroyed<UserScript> kinjaLoginUserScript { "function triggerLoginForm() { let elements = document.getElementsByClassName('js_header-userbutton'); if (elements && elements[0]) { elements[0].click(); clearInterval(interval); } } let interval = setInterval(triggerLoginForm, 200);", URL(aboutBlankURL()), Vector<String>(), Vector<String>(), UserScriptInjectionTime::DocumentEnd, UserContentInjectedFrames::InjectInTopFrameOnly, WaitForNotificationBeforeInjecting::Yes };
+    static NeverDestroyed<UserScript> kinjaLoginUserScript { "function triggerLoginForm() { let elements = document.getElementsByClassName('js_header-userbutton'); if (elements && elements[0]) { elements[0].click(); clearInterval(interval); } } let interval = setInterval(triggerLoginForm, 200);"_s, URL(aboutBlankURL()), Vector<String>(), Vector<String>(), UserScriptInjectionTime::DocumentEnd, UserContentInjectedFrames::InjectInTopFrameOnly, WaitForNotificationBeforeInjecting::Yes };
 
-    if (eventType == "click") {
+    if (eventType == eventNames().clickEvent) {
         if (!m_document)
             return Quirks::StorageAccessResult::ShouldNotCancelEvent;
 
         // Embedded YouTube case.
         if (element.hasClass() && domain == youTubeDomain && !m_document->isTopDocument() && ResourceLoadObserver::shared().hasHadUserInteraction(youTubeDomain)) {
             auto& classNames = element.classNames();
-            if (classNames.contains("ytp-watch-later-icon") || classNames.contains("ytp-watch-later-icon")) {
+            if (classNames.contains("ytp-watch-later-icon"_s) || classNames.contains("ytp-watch-later-icon"_s)) {
                 if (ResourceLoadObserver::shared().hasHadUserInteraction(youTubeDomain)) {
                     DocumentStorageAccess::requestStorageAccessForDocumentQuirk(*m_document, [](StorageAccessWasGranted) { });
                     return Quirks::StorageAccessResult::ShouldNotCancelEvent;
@@ -1208,7 +1212,7 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
             if (!domWindow)
                 return Quirks::StorageAccessResult::ShouldNotCancelEvent;
 
-            ExceptionOr<RefPtr<WindowProxy>> proxyOrException =  domWindow->open(*domWindow, *domWindow, kinjaURL->string(), emptyString(), loginPopupWindowFeatureString);
+            ExceptionOr<RefPtr<WindowProxy>> proxyOrException =  domWindow->open(*domWindow, *domWindow, kinjaURL->string(), emptyAtom(), loginPopupWindowFeatureString);
             if (proxyOrException.hasException())
                 return Quirks::StorageAccessResult::ShouldNotCancelEvent;
             auto proxy = proxyOrException.releaseReturnValue();
@@ -1216,7 +1220,7 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
             auto* abstractFrame = proxy->frame();
             if (abstractFrame && is<Frame>(*abstractFrame)) {
                 auto& frame = downcast<Frame>(*abstractFrame);
-                auto world = ScriptController::createWorld("kinjaComQuirkWorld", ScriptController::WorldType::User);
+                auto world = ScriptController::createWorld("kinjaComQuirkWorld"_s, ScriptController::WorldType::User);
                 frame.addUserScriptAwaitingNotification(world.get(), kinjaLoginUserScript);
                 return Quirks::StorageAccessResult::ShouldCancelEvent;
             }
@@ -1235,7 +1239,7 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
         }
 
         static NeverDestroyed<String> BBCRadioPlayerPopUpWindowFeatureString = "featurestring width=400,height=730"_s;
-        static NeverDestroyed<UserScript> BBCUserScript { "function triggerRedirect() { document.location.href = \"https://www.bbc.co.uk/sounds/player/bbc_world_service\"; } window.addEventListener('load', function () { triggerRedirect(); })", URL(aboutBlankURL()), Vector<String>(), Vector<String>(), UserScriptInjectionTime::DocumentEnd, UserContentInjectedFrames::InjectInTopFrameOnly, WaitForNotificationBeforeInjecting::Yes };
+        static NeverDestroyed<UserScript> BBCUserScript { "function triggerRedirect() { document.location.href = \"https://www.bbc.co.uk/sounds/player/bbc_world_service\"; } window.addEventListener('load', function () { triggerRedirect(); })"_s, URL(aboutBlankURL()), Vector<String>(), Vector<String>(), UserScriptInjectionTime::DocumentEnd, UserContentInjectedFrames::InjectInTopFrameOnly, WaitForNotificationBeforeInjecting::Yes };
 
         // BBC RadioPlayer case.
         if (isBBCDomain(domain) && isBBCPopUpPlayerElement(element)) {
@@ -1245,14 +1249,14 @@ Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& e
 
                 auto domWindow = document->domWindow();
                 if (domWindow) {
-                    ExceptionOr<RefPtr<WindowProxy>> proxyOrException = domWindow->open(*domWindow, *domWindow, staticRadioPlayerURLString(), emptyString(), BBCRadioPlayerPopUpWindowFeatureString);
+                    ExceptionOr<RefPtr<WindowProxy>> proxyOrException = domWindow->open(*domWindow, *domWindow, staticRadioPlayerURLString(), emptyAtom(), BBCRadioPlayerPopUpWindowFeatureString);
                     if (proxyOrException.hasException())
                         return;
                     auto proxy = proxyOrException.releaseReturnValue();
                     auto* abstractFrame = proxy->frame();
                     if (is<Frame>(abstractFrame)) {
                         auto* frame = downcast<Frame>(abstractFrame);
-                        auto world = ScriptController::createWorld("bbcRadioPlayerWorld", ScriptController::WorldType::User);
+                        auto world = ScriptController::createWorld("bbcRadioPlayerWorld"_s, ScriptController::WorldType::User);
                         frame->addUserScriptAwaitingNotification(world.get(), BBCUserScript);
                         return;
                     }
@@ -1276,7 +1280,7 @@ bool Quirks::needsVP9FullRangeFlagQuirk() const
         return false;
 
     if (!m_needsVP9FullRangeFlagQuirk)
-        m_needsVP9FullRangeFlagQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com");
+        m_needsVP9FullRangeFlagQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com"_s);
 
     return *m_needsVP9FullRangeFlagQuirk;
 }
@@ -1287,7 +1291,7 @@ bool Quirks::needsHDRPixelDepthQuirk() const
         return false;
 
     if (!m_needsHDRPixelDepthQuirk)
-        m_needsHDRPixelDepthQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com");
+        m_needsHDRPixelDepthQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com"_s);
 
     return *m_needsHDRPixelDepthQuirk;
 }
@@ -1320,6 +1324,18 @@ bool Quirks::needsAkamaiMediaPlayerQuirk(const HTMLVideoElement& element) const
 #endif
 }
 
+// FIXME: remove this once rdar://92531240 has been fixed.
+bool Quirks::needsFlightAwareSerializationQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!m_needsFlightAwareSerializationQuirk)
+        m_needsFlightAwareSerializationQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "flightaware.com"_s);
+
+    return *m_needsFlightAwareSerializationQuirk;
+}
+
 bool Quirks::needsBlackFullscreenBackgroundQuirk() const
 {
     // MLB.com sets a black background-color on the :backdrop pseudo element, which WebKit does not yet support. This
@@ -1329,7 +1345,7 @@ bool Quirks::needsBlackFullscreenBackgroundQuirk() const
 
     if (!m_needsBlackFullscreenBackgroundQuirk) {
         auto host = m_document->topDocument().url().host();
-        m_needsBlackFullscreenBackgroundQuirk = equalLettersIgnoringASCIICase(host, "mlb.com") || host.endsWithIgnoringASCIICase(".mlb.com");
+        m_needsBlackFullscreenBackgroundQuirk = equalLettersIgnoringASCIICase(host, "mlb.com"_s) || host.endsWithIgnoringASCIICase(".mlb.com"_s);
     }
 
     return *m_needsBlackFullscreenBackgroundQuirk;
@@ -1364,8 +1380,10 @@ bool Quirks::requiresUserGestureToLoadInPictureInPicture() const
     if (!needsQuirks())
         return false;
 
-    if (!m_requiresUserGestureToLoadInPictureInPicture)
-        m_requiresUserGestureToLoadInPictureInPicture = isTwitterDocument(m_document->topDocument());
+    if (!m_requiresUserGestureToLoadInPictureInPicture) {
+        auto domain = RegistrableDomain(m_document->topDocument().url());
+        m_requiresUserGestureToLoadInPictureInPicture = domain.string() == "twitter.com"_s;
+    }
 
     return *m_requiresUserGestureToLoadInPictureInPicture;
 #else
@@ -1399,7 +1417,7 @@ bool Quirks::shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFull
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     // This quirk disables the "webkitendfullscreen" event when a video enters picture-in-picture
     // from fullscreen for the sites which cannot handle the event properly in that case.
-    // We should remove the quirk once rdar://problem/73261957 has been fixed.
+    // We should remove the quirk once <rdar://problem/73261957> and <rdar://problem/90393832> have been fixed.
     if (!needsQuirks())
         return false;
 
@@ -1407,7 +1425,7 @@ bool Quirks::shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFull
         auto host = m_document->topDocument().url().host();
         auto domain = RegistrableDomain(m_document->topDocument().url());
 
-        m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk = equalLettersIgnoringASCIICase(host, "trailers.apple.com") || domain == "espn.com"_s;
+        m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk = equalLettersIgnoringASCIICase(host, "trailers.apple.com"_s) || domain == "espn.com"_s || domain == "vimeo.com"_s;
     }
 
     return *m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk;
@@ -1418,7 +1436,7 @@ bool Quirks::shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFull
 
 bool Quirks::shouldAllowNavigationToCustomProtocolWithoutUserGesture(StringView protocol, const SecurityOriginData& requesterOrigin)
 {
-    return protocol == "msteams" && requesterOrigin.host == "teams.live.com";
+    return protocol == "msteams"_s && (requesterOrigin.host == "teams.live.com"_s || requesterOrigin.host == "teams.microsoft.com"_s);
 }
 
 #if ENABLE(IMAGE_ANALYSIS)
@@ -1429,11 +1447,11 @@ bool Quirks::needsToForceUserSelectAndUserDragWhenInstallingImageOverlay() const
         return false;
 
     auto& url = m_document->topDocument().url();
-    if (topPrivatelyControlledDomain(url.host().toString()).startsWith("google.") && url.path() == "/search")
+    if (topPrivatelyControlledDomain(url.host().toString()).startsWith("google."_s) && url.path() == "/search"_s)
         return true;
 
     auto host = url.host();
-    if (equalLettersIgnoringASCIICase(host, "youtube.com") || host.endsWithIgnoringASCIICase(".youtube.com"))
+    if (equalLettersIgnoringASCIICase(host, "youtube.com"_s) || host.endsWithIgnoringASCIICase(".youtube.com"_s))
         return true;
 
     return false;
@@ -1441,15 +1459,79 @@ bool Quirks::needsToForceUserSelectAndUserDragWhenInstallingImageOverlay() const
 
 #endif // ENABLE(IMAGE_ANALYSIS)
 
-bool Quirks::shouldDisableWebSharePolicy() const
+#if PLATFORM(IOS)
+bool Quirks::allowLayeredFullscreenVideos() const
 {
     if (!needsQuirks())
         return false;
 
-    if (!m_shouldDisableWebSharePolicy)
-        m_shouldDisableWebSharePolicy = isTwitterDocument(*m_document);
+    if (!m_allowLayeredFullscreenVideos) {
+        auto domain = RegistrableDomain(m_document->topDocument().url());
 
-    return *m_shouldDisableWebSharePolicy;
+        m_allowLayeredFullscreenVideos = domain == "espn.com"_s;
+    }
+
+    return *m_allowLayeredFullscreenVideos;
+}
+#endif
+
+bool Quirks::hasBrokenPermissionsAPISupportQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!m_hasBrokenPermissionsAPISupportQuirk) {
+        auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
+        m_hasBrokenPermissionsAPISupportQuirk = domain.endsWith(".nfl.com"_s);
+    }
+
+    return m_hasBrokenPermissionsAPISupportQuirk.value();
+}
+
+bool Quirks::shouldEnableApplicationCacheQuirk() const
+{
+    bool shouldEnableBySetting = m_document && m_document->settings().offlineWebApplicationCacheEnabled();
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return shouldEnableBySetting;
+
+    if (!m_shouldEnableApplicationCacheQuirk) {
+        auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
+        if (domain.endsWith("mail.google.com"_s))
+            m_shouldEnableApplicationCacheQuirk = true;
+        else
+            m_shouldEnableApplicationCacheQuirk = shouldEnableBySetting;
+    }
+
+    return m_shouldEnableApplicationCacheQuirk.value();
+#else
+    return shouldEnableBySetting;
+#endif
+}
+
+bool Quirks::needsVideoShouldMaintainAspectRatioQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (m_needsVideoShouldMaintainAspectRatioQuirk)
+        return m_needsVideoShouldMaintainAspectRatioQuirk.value();
+
+    auto domain = RegistrableDomain(m_document->url()).string();
+    m_needsVideoShouldMaintainAspectRatioQuirk = domain == "hulu.com"_s;
+
+    return m_needsVideoShouldMaintainAspectRatioQuirk.value();
+}
+
+bool Quirks::shouldExposeShowModalDialog() const
+{
+    if (!needsQuirks())
+        return false;
+    if (!m_shouldExposeShowModalDialog) {
+        auto domain = RegistrableDomain(m_document->url()).string();
+        m_shouldExposeShowModalDialog = domain == "pandora.com"_s;
+    }
+    return *m_shouldExposeShowModalDialog;
 }
 
 }

@@ -44,12 +44,15 @@
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Ref.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
 class SharedBuffer;
+class TrackBuffer;
 class TimeRanges;
 
 enum class SourceBufferAppendMode : uint8_t {
@@ -99,7 +102,7 @@ public:
     WEBCORE_EXPORT virtual void seekToTime(const MediaTime&);
     WEBCORE_EXPORT virtual void updateTrackIds(Vector<std::pair<AtomString, AtomString>>&& trackIdPairs);
 
-    void setClient(SourceBufferPrivateClient* client) { m_client = client; }
+    WEBCORE_EXPORT void setClient(SourceBufferPrivateClient*);
     void setIsAttached(bool flag) { m_isAttached = flag; }
 
     const TimeRanges* buffered() const { return m_buffered.get(); }
@@ -113,30 +116,6 @@ public:
     MediaTime timestampOffset() const { return m_timestampOffset; }
 
     virtual size_t platformMaximumBufferSize() const { return 0; }
-
-    struct TrackBuffer {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
-        MediaTime lastDecodeTimestamp;
-        MediaTime greatestFrameDuration;
-        MediaTime lastFrameDuration;
-        MediaTime highestPresentationTimestamp;
-        MediaTime highestEnqueuedPresentationTime;
-        MediaTime minimumEnqueuedPresentationTime;
-        DecodeOrderSampleMap::KeyType lastEnqueuedDecodeKey;
-        MediaTime enqueueDiscontinuityBoundary { MediaTime::zeroTime() };
-        MediaTime roundedTimestampOffset;
-        uint32_t lastFrameTimescale { 0 };
-        bool needRandomAccessFlag { true };
-        bool enabled { false };
-        bool needsReenqueueing { false };
-        bool needsMinimumUpcomingPresentationTimeUpdating { false };
-        SampleMap samples;
-        DecodeOrderSampleMap::MapType decodeQueue;
-        RefPtr<MediaDescription> description;
-        PlatformTimeRanges buffered;
-
-        TrackBuffer();
-    };
 
     // Internals Utility methods
     WEBCORE_EXPORT virtual void bufferedSamplesForTrackId(const AtomString&, CompletionHandler<void(Vector<String>&&)>&&);
@@ -170,12 +149,12 @@ protected:
 
     void appendCompleted(bool parsingSucceeded, bool isEnded);
     void reenqueSamples(const AtomString& trackID);
-    WEBCORE_EXPORT void didReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&&, CompletionHandler<void()>&&);
+    WEBCORE_EXPORT void didReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&&, CompletionHandler<void(SourceBufferPrivateClient::ReceiveResult)>&&);
     WEBCORE_EXPORT void didReceiveSample(Ref<MediaSample>&&);
     WEBCORE_EXPORT void setBufferedRanges(const PlatformTimeRanges&);
     void provideMediaData(const AtomString& trackID);
 
-    SourceBufferPrivateClient* m_client { nullptr };
+    WeakPtr<SourceBufferPrivateClient> m_client;
 
 private:
     void updateHighestPresentationTimestamp();
@@ -190,7 +169,7 @@ private:
     bool m_hasAudio { false };
     bool m_hasVideo { false };
 
-    HashMap<AtomString, UniqueRef<TrackBuffer>> m_trackBufferMap;
+    MemoryCompactRobinHoodHashMap<AtomString, UniqueRef<TrackBuffer>> m_trackBufferMap;
 
     SourceBufferAppendMode m_appendMode { SourceBufferAppendMode::Segments };
 

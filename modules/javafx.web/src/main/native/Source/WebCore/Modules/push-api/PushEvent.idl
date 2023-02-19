@@ -25,12 +25,12 @@
 
 [
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=PushAPIEnabled,
+    EnabledBySetting=PushAPIEnabled,
     ExportMacro=WEBCORE_EXPORT,
     Exposed=ServiceWorker,
     JSGenerateToNativeObject,
     SecureContext
 ] interface PushEvent : ExtendableEvent {
-    constructor(DOMString type, optional PushEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional PushEventInit eventInitDict);
     readonly attribute PushMessageData? data;
 };

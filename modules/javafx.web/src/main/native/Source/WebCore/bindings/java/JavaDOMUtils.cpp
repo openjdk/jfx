@@ -57,7 +57,7 @@ static void raiseDOMErrorException(JNIEnv* env, WebCore::ExceptionCode ec)
     } else {
         message = "Unknown Exception";
     }
-    env->Throw(JLocalRef<jthrowable>((jthrowable)env->NewObject(exceptionClass, midCtor, jshort(description.legacyCode), (jstring)String(message).toJavaString(env))));
+    env->Throw(JLocalRef<jthrowable>((jthrowable)env->NewObject(exceptionClass, midCtor, jshort(description.legacyCode), (jstring)String::fromLatin1(message).toJavaString(env))));
 }
 
 void raiseTypeErrorException(JNIEnv* env)

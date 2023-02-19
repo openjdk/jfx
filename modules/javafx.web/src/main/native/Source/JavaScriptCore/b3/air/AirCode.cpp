@@ -61,8 +61,11 @@ Code::Code(Procedure& proc)
     , m_defaultPrologueGenerator(createSharedTask<PrologueGeneratorFunction>(&defaultPrologueGenerator))
 {
     // Come up with initial orderings of registers. The user may replace this with something else.
+    std::optional<WeakRandom> weakRandom;
+    if (Options::airRandomizeRegs())
+        weakRandom.emplace();
     forEachBank(
-        [&] (Bank bank) {
+        [&](Bank bank) {
             Vector<Reg> volatileRegs;
             Vector<Reg> calleeSaveRegs;
             RegisterSet all = bank == GP ? RegisterSet::allGPRs() : RegisterSet::allFPRs();
@@ -80,7 +83,7 @@ Code::Code(Procedure& proc)
                         calleeSaveRegs.append(reg);
                 });
             if (Options::airRandomizeRegs()) {
-                WeakRandom random(Options::airRandomizeRegsSeed() ? Options::airRandomizeRegsSeed() : m_weakRandom.getUint32());
+                WeakRandom random(Options::airRandomizeRegsSeed() ? Options::airRandomizeRegsSeed() : weakRandom->getUint32());
                 shuffleVector(volatileRegs, [&] (unsigned limit) { return random.getUint32(limit); });
                 shuffleVector(calleeSaveRegs, [&] (unsigned limit) { return random.getUint32(limit); });
             }
@@ -89,9 +92,6 @@ Code::Code(Procedure& proc)
             result.appendVector(calleeSaveRegs);
             setRegsInPriorityOrder(bank, result);
         });
-
-    if (auto reg = pinnedExtendedOffsetAddrRegister())
-        pinRegister(*reg);
 
     m_pinnedRegs.set(MacroAssembler::framePointerRegister);
 }
@@ -226,14 +226,8 @@ void Code::setCalleeSaveRegisterAtOffsetList(RegisterAtOffsetList&& registerAtOf
 RegisterAtOffsetList Code::calleeSaveRegisterAtOffsetList() const
 {
     RegisterAtOffsetList result = m_uncorrectedCalleeSaveRegisterAtOffsetList;
-    if (StackSlot* slot = m_calleeSaveStackSlot) {
-        ptrdiff_t offset = slot->byteSize() + slot->offsetFromFP();
-        for (size_t i = result.size(); i--;) {
-            result.at(i) = RegisterAtOffset(
-                result.at(i).reg(),
-                result.at(i).offset() + offset);
-        }
-    }
+    if (StackSlot* slot = m_calleeSaveStackSlot)
+        result.adjustOffsets(slot->byteSize() + slot->offsetFromFP());
     return result;
 }
 
@@ -274,7 +268,7 @@ void Code::dump(PrintStream& out) const
     if (m_callArgAreaSize)
         out.print(tierName, "Call arg area size: ", m_callArgAreaSize, "\n");
     RegisterAtOffsetList calleeSaveRegisters = this->calleeSaveRegisterAtOffsetList();
-    if (calleeSaveRegisters.size())
+    if (calleeSaveRegisters.registerCount())
         out.print(tierName, "Callee saves: ", calleeSaveRegisters, "\n");
 }
 

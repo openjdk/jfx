@@ -43,6 +43,8 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     : opacity(RenderStyle::initialOpacity())
     , aspectRatioWidth(RenderStyle::initialAspectRatioWidth())
     , aspectRatioHeight(RenderStyle::initialAspectRatioHeight())
+    , containIntrinsicWidth(RenderStyle::initialContainIntrinsicWidth())
+    , containIntrinsicHeight(RenderStyle::initialContainIntrinsicHeight())
     , contain(RenderStyle::initialContainment())
     , perspective(RenderStyle::initialPerspective())
     , perspectiveOriginX(RenderStyle::initialPerspectiveOriginX())
@@ -71,6 +73,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , shapeImageThreshold(RenderStyle::initialShapeImageThreshold())
     , order(RenderStyle::initialOrder())
     , clipPath(RenderStyle::initialClipPath())
+    , textDecorationColor(RenderStyle::initialTextDecorationColor())
     , visitedLinkBackgroundColor(RenderStyle::initialBackgroundColor())
     , alignContent(RenderStyle::initialContentAlignment())
     , alignItems(RenderStyle::initialDefaultAlignment())
@@ -111,7 +114,10 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , inputSecurity(static_cast<unsigned>(RenderStyle::initialInputSecurity()))
     , hasAttrContent(false)
     , isNotFinal(false)
+    , containIntrinsicWidthType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicWidthType()))
+    , containIntrinsicHeightType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicHeightType()))
     , containerType(static_cast<unsigned>(RenderStyle::initialContainerType()))
+    , overflowAnchor(static_cast<unsigned>(RenderStyle::initialOverflowAnchor()))
     , columnGap(RenderStyle::initialColumnGap())
     , rowGap(RenderStyle::initialRowGap())
     , offsetDistance(RenderStyle::initialOffsetDistance())
@@ -126,6 +132,8 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , opacity(o.opacity)
     , aspectRatioWidth(o.aspectRatioWidth)
     , aspectRatioHeight(o.aspectRatioHeight)
+    , containIntrinsicWidth(o.containIntrinsicWidth)
+    , containIntrinsicHeight(o.containIntrinsicHeight)
     , contain(o.contain)
     , perspective(o.perspective)
     , perspectiveOriginX(o.perspectiveOriginX)
@@ -182,7 +190,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , justifyItems(o.justifyItems)
     , justifySelf(o.justifySelf)
     , customProperties(o.customProperties)
-    , customPaintWatchedProperties(o.customPaintWatchedProperties ? makeUnique<HashSet<String>>(*o.customPaintWatchedProperties) : nullptr)
+    , customPaintWatchedProperties(o.customPaintWatchedProperties)
     , rotate(o.rotate)
     , scale(o.scale)
     , translate(o.translate)
@@ -215,7 +223,10 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , inputSecurity(o.inputSecurity)
     , hasAttrContent(o.hasAttrContent)
     , isNotFinal(o.isNotFinal)
+    , containIntrinsicWidthType(o.containIntrinsicWidthType)
+    , containIntrinsicHeightType(o.containIntrinsicHeightType)
     , containerType(o.containerType)
+    , overflowAnchor(o.overflowAnchor)
     , containerNames(o.containerNames)
     , columnGap(o.columnGap)
     , rowGap(o.rowGap)
@@ -238,6 +249,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
     return opacity == o.opacity
         && aspectRatioWidth == o.aspectRatioWidth
         && aspectRatioHeight == o.aspectRatioHeight
+        && containIntrinsicWidth == o.containIntrinsicWidth
+        && containIntrinsicHeight == o.containIntrinsicHeight
         && contain == o.contain
         && perspective == o.perspective
         && perspectiveOriginX == o.perspectiveOriginX
@@ -294,8 +307,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && justifyItems == o.justifyItems
         && justifySelf == o.justifySelf
         && customProperties == o.customProperties
-        && ((customPaintWatchedProperties && o.customPaintWatchedProperties && *customPaintWatchedProperties == *o.customPaintWatchedProperties)
-            || (!customPaintWatchedProperties && !o.customPaintWatchedProperties))
+        && customPaintWatchedProperties == o.customPaintWatchedProperties
         && pageSizeType == o.pageSizeType
         && transformStyle3D == o.transformStyle3D
         && transformStyleForcedToFlat == o.transformStyleForcedToFlat
@@ -328,6 +340,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && inputSecurity == o.inputSecurity
         && hasAttrContent == o.hasAttrContent
         && isNotFinal == o.isNotFinal
+        && containIntrinsicWidthType == o.containIntrinsicWidthType
+        && containIntrinsicHeightType == o.containIntrinsicHeightType
         && containerType == o.containerType
         && containerNames == o.containerNames
         && columnGap == o.columnGap
@@ -335,7 +349,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && offsetDistance == o.offsetDistance
         && offsetPosition == o.offsetPosition
         && offsetAnchor == o.offsetAnchor
-        && offsetRotate == o.offsetRotate;
+        && offsetRotate == o.offsetRotate
+        && overflowAnchor == o.overflowAnchor;
 }
 
 bool StyleRareNonInheritedData::contentDataEquivalent(const StyleRareNonInheritedData& other) const
@@ -352,6 +367,24 @@ bool StyleRareNonInheritedData::contentDataEquivalent(const StyleRareNonInherite
 bool StyleRareNonInheritedData::hasFilters() const
 {
     return !filter->operations.isEmpty();
+}
+
+OptionSet<Containment> StyleRareNonInheritedData::effectiveContainment() const
+{
+    auto containment = contain;
+
+    switch (static_cast<ContainerType>(containerType)) {
+    case ContainerType::Normal:
+        break;
+    case ContainerType::Size:
+        containment.add({ Containment::Layout, Containment::Style, Containment::Size });
+        break;
+    case ContainerType::InlineSize:
+        containment.add({ Containment::Layout, Containment::Style, Containment::InlineSize });
+        break;
+    };
+
+    return containment;
 }
 
 #if ENABLE(FILTERS_LEVEL_2)

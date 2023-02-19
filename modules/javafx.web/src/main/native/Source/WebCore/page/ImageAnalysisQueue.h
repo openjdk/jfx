@@ -29,7 +29,8 @@
 
 #include <wtf/FastMalloc.h>
 #include <wtf/PriorityQueue.h>
-#include <wtf/WeakHashSet.h>
+#include <wtf/URL.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -45,7 +46,7 @@ public:
     ImageAnalysisQueue(Page&);
     ~ImageAnalysisQueue();
 
-    WEBCORE_EXPORT void enqueueAllImages(Document&, const String& identifier);
+    WEBCORE_EXPORT void enqueueAllImages(Document&, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier);
     void clear();
 
     void enqueueIfNeeded(HTMLImageElement&);
@@ -53,6 +54,8 @@ public:
 private:
     void resumeProcessingSoon();
     void resumeProcessing();
+
+    void enqueueAllImagesRecursive(Document&);
 
     enum class Priority : bool { Low, High };
     struct Task {
@@ -64,10 +67,12 @@ private:
     static bool firstIsHigherPriority(const Task&, const Task&);
     unsigned nextTaskNumber() { return ++m_currentTaskNumber; }
 
-    String m_identifier;
+    // FIXME: Refactor the source and target LIDs into either a std::pair<> of strings, or its own named struct.
+    String m_sourceLanguageIdentifier;
+    String m_targetLanguageIdentifier;
     WeakPtr<Page> m_page;
     Timer m_resumeProcessingTimer;
-    WeakHashSet<HTMLImageElement> m_queuedElements;
+    WeakHashMap<HTMLImageElement, URL> m_queuedElements;
     PriorityQueue<Task, firstIsHigherPriority> m_queue;
     unsigned m_pendingRequestCount { 0 };
     unsigned m_currentTaskNumber { 0 };

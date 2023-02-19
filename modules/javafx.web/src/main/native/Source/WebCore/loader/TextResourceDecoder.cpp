@@ -285,9 +285,9 @@ breakBreak:
 
 TextResourceDecoder::ContentType TextResourceDecoder::determineContentType(const String& mimeType)
 {
-    if (equalLettersIgnoringASCIICase(mimeType, "text/css"))
+    if (equalLettersIgnoringASCIICase(mimeType, "text/css"_s))
         return CSS;
-    if (equalLettersIgnoringASCIICase(mimeType, "text/html"))
+    if (equalLettersIgnoringASCIICase(mimeType, "text/html"_s))
         return HTML;
     if (MIMETypeRegistry::isXMLMIMEType(mimeType))
         return XML;
@@ -329,7 +329,7 @@ static inline bool shouldPrependBOM(const unsigned char* data, unsigned length)
 // https://encoding.spec.whatwg.org/#utf-8-decode
 String TextResourceDecoder::textFromUTF8(const unsigned char* data, unsigned length)
 {
-    auto decoder = TextResourceDecoder::create("text/plain", "UTF-8");
+    auto decoder = TextResourceDecoder::create("text/plain"_s, "UTF-8");
     if (shouldPrependBOM(data, length))
         decoder->decode("\xef\xbb\xbf", 3);
     return decoder->decodeAndFlush(data, length);
@@ -337,13 +337,16 @@ String TextResourceDecoder::textFromUTF8(const unsigned char* data, unsigned len
 
 void TextResourceDecoder::setEncoding(const PAL::TextEncoding& encoding, EncodingSource source)
 {
+    if (m_alwaysUseUTF8)
+        return;
+
     // In case the encoding didn't exist, we keep the old one (helps some sites specifying invalid encodings).
     if (!encoding.isValid())
         return;
 
     // When encoding comes from meta tag (i.e. it cannot be XML files sent via XHR),
     // treat x-user-defined as windows-1252 (bug 18270)
-    if (source == EncodingFromMetaTag && equalLettersIgnoringASCIICase(encoding.name(), "x-user-defined"))
+    if (source == EncodingFromMetaTag && equalLettersIgnoringASCIICase(encoding.name(), "x-user-defined"_s))
         m_encoding = "windows-1252";
     else if (source == EncodingFromMetaTag || source == EncodingFromXMLHeader || source == EncodingFromCSSCharset)
         m_encoding = encoding.closestByteBasedEquivalent();
@@ -420,18 +423,20 @@ size_t TextResourceDecoder::checkForBOM(const char* data, size_t len)
     unsigned char c3 = buf1Len ? (static_cast<void>(--buf1Len), *buf1++) : buf2Len ? (static_cast<void>(--buf2Len), *buf2++) : 0;
 
     // Check for the BOM.
-    if (c1 == 0xFF && c2 == 0xFE) {
-        ASSERT(PAL::UTF16LittleEndianEncoding().isValid());
-        setEncoding(PAL::UTF16LittleEndianEncoding(), AutoDetectedEncoding);
-        lengthOfBOM = 2;
-    } else if (c1 == 0xFE && c2 == 0xFF) {
-        ASSERT(PAL::UTF16BigEndianEncoding().isValid());
-        setEncoding(PAL::UTF16BigEndianEncoding(), AutoDetectedEncoding);
-        lengthOfBOM = 2;
-    } else if (c1 == 0xEF && c2 == 0xBB && c3 == 0xBF) {
+    if (c1 == 0xEF && c2 == 0xBB && c3 == 0xBF) {
         ASSERT(PAL::UTF8Encoding().isValid());
         setEncoding(PAL::UTF8Encoding(), AutoDetectedEncoding);
         lengthOfBOM = 3;
+    } else if (!m_alwaysUseUTF8) {
+        if (c1 == 0xFF && c2 == 0xFE) {
+            ASSERT(PAL::UTF16LittleEndianEncoding().isValid());
+            setEncoding(PAL::UTF16LittleEndianEncoding(), AutoDetectedEncoding);
+            lengthOfBOM = 2;
+        } else if (c1 == 0xFE && c2 == 0xFF) {
+            ASSERT(PAL::UTF16BigEndianEncoding().isValid());
+            setEncoding(PAL::UTF16BigEndianEncoding(), AutoDetectedEncoding);
+            lengthOfBOM = 2;
+        }
     }
 
     if (lengthOfBOM || bufferLength + len >= maximumBOMLength)

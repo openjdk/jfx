@@ -52,7 +52,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_XPathNSResolverImpl_lookupName
     , jstring prefix)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->lookupNamespaceURI(String(env, prefix)));
+    return JavaReturn<String>(env, IMPL->lookupNamespaceURI(AtomString{String(env, prefix)}));
 }
 
 

@@ -48,14 +48,37 @@
 #include "RTCSctpTransportBackend.h"
 #include "RTCSessionDescriptionInit.h"
 #include "RTCTrackEvent.h"
-#include "RuntimeEnabledFeatures.h"
+#include "WebRTCProvider.h"
 #include <wtf/UUID.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
+#if USE(GSTREAMER_WEBRTC)
+#include "GStreamerWebRTCUtils.h"
+#endif
+
 namespace WebCore {
 
-#if !USE(LIBWEBRTC)
+#if USE(LIBWEBRTC) || USE(GSTREAMER_WEBRTC)
+
+std::optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptExecutionContext& context, const String& kind)
+{
+    auto* page = downcast<Document>(context).page();
+    if (!page)
+        return { };
+    return page->webRTCProvider().receiverCapabilities(kind);
+}
+
+std::optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(ScriptExecutionContext& context, const String& kind)
+{
+    auto* page = downcast<Document>(context).page();
+    if (!page)
+        return { };
+    return page->webRTCProvider().senderCapabilities(kind);
+}
+
+#else
+
 static std::unique_ptr<PeerConnectionBackend> createNoPeerConnectionBackend(RTCPeerConnection&)
 {
     return nullptr;
@@ -74,7 +97,7 @@ std::optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(Scri
     ASSERT_NOT_REACHED();
     return { };
 }
-#endif
+#endif // USE(LIBWEBRTC) || USE(GSTREAMER_WEBRTC)
 
 PeerConnectionBackend::PeerConnectionBackend(RTCPeerConnection& peerConnection)
     : m_peerConnection(peerConnection)
@@ -86,7 +109,7 @@ PeerConnectionBackend::PeerConnectionBackend(RTCPeerConnection& peerConnection)
 #if USE(LIBWEBRTC)
     auto* document = peerConnection.document();
     if (auto* page = document ? document->page() : nullptr)
-        m_shouldFilterICECandidates = page->libWebRTCProvider().isSupportingMDNS();
+        m_shouldFilterICECandidates = page->webRTCProvider().isSupportingMDNS();
 #endif
 }
 
@@ -217,18 +240,8 @@ void PeerConnectionBackend::setRemoteDescriptionSucceeded(std::optional<Descript
         if (descriptionStates)
             m_peerConnection.updateDescriptions(WTFMove(*descriptionStates));
 
-        for (auto& event : events) {
-            auto& track = event.track.get();
-
-            m_peerConnection.dispatchEvent(RTCTrackEvent::create(eventNames().trackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(event.receiver), WTFMove(event.track), WTFMove(event.streams), WTFMove(event.transceiver)));
-            ALWAYS_LOG(LOGIDENTIFIER, "Dispatched if feasible track of type ", track.source().type());
-
-            if (m_peerConnection.isClosed())
-                return;
-
-            // FIXME: As per spec, we should set muted to 'false' when starting to receive the content from network.
-            track.source().setMuted(false);
-        }
+        for (auto& event : events)
+            dispatchTrackEvent(event);
 
         if (m_peerConnection.isClosed())
             return;
@@ -238,6 +251,20 @@ void PeerConnectionBackend::setRemoteDescriptionSucceeded(std::optional<Descript
         m_peerConnection.processIceTransportChanges();
         callback({ });
     });
+}
+
+void PeerConnectionBackend::dispatchTrackEvent(PendingTrackEvent& event)
+{
+    auto& track = event.track.get();
+
+    m_peerConnection.dispatchEvent(RTCTrackEvent::create(eventNames().trackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(event.receiver), WTFMove(event.track), WTFMove(event.streams), WTFMove(event.transceiver)));
+    ALWAYS_LOG(LOGIDENTIFIER, "Dispatched if feasible track of type ", track.source().type());
+
+    if (m_peerConnection.isClosed())
+        return;
+
+    // FIXME: As per spec, we should set muted to 'false' when starting to receive the content from network.
+    track.source().setMuted(false);
 }
 
 void PeerConnectionBackend::setRemoteDescriptionFailed(Exception&& exception)
@@ -290,7 +317,7 @@ static inline bool shouldIgnoreIceCandidate(const RTCIceCandidate& iceCandidate)
     if (!address.endsWithIgnoringASCIICase(".local"_s))
         return false;
 
-    if (!WTF::isVersion4UUID(StringView { address }.substring(0, address.length() - 6))) {
+    if (!WTF::isVersion4UUID(StringView { address }.left(address.length() - 6))) {
         RELEASE_LOG_ERROR(WebRTC, "mDNS candidate is not a Version 4 UUID");
         return true;
     }
@@ -349,7 +376,7 @@ void PeerConnectionBackend::validateSDP(const String& sdp) const
     if (!m_shouldFilterICECandidates)
         return;
     sdp.split('\n', [](auto line) {
-        ASSERT(!line.startsWith("a=candidate") || line.contains(".local"));
+        ASSERT(!line.startsWith("a=candidate"_s) || line.contains(".local"_s));
     });
 #else
     UNUSED_PARAM(sdp);
@@ -372,7 +399,7 @@ void PeerConnectionBackend::newICECandidate(String&& sdp, String&& mid, unsigned
         ALWAYS_LOG(logSiteIdentifier, "Gathered ice candidate:", sdp);
         m_finishedGatheringCandidates = false;
 
-        ASSERT(!m_shouldFilterICECandidates || sdp.contains(".local") || sdp.contains(" srflx "));
+        ASSERT(!m_shouldFilterICECandidates || sdp.contains(".local"_s) || sdp.contains(" srflx "_s));
         auto candidate = RTCIceCandidate::create(WTFMove(sdp), WTFMove(mid), sdpMLineIndex);
         m_peerConnection.dispatchEvent(RTCPeerConnectionIceEvent::create(Event::CanBubble::No, Event::IsCancelable::No, WTFMove(candidate), WTFMove(serverURL)));
     });
@@ -437,13 +464,20 @@ void PeerConnectionBackend::generateCertificate(Document& document, const Certif
         promise.reject(InvalidStateError);
         return;
     }
-    LibWebRTCCertificateGenerator::generateCertificate(document.securityOrigin(), page->libWebRTCProvider(), info, [promise = WTFMove(promise)](auto&& result) mutable {
+
+    auto& webRTCProvider = static_cast<LibWebRTCProvider&>(page->webRTCProvider());
+    LibWebRTCCertificateGenerator::generateCertificate(document.securityOrigin(), webRTCProvider, info, [promise = WTFMove(promise)](auto&& result) mutable {
         promise.settle(WTFMove(result));
     });
+#elif USE(GSTREAMER_WEBRTC)
+    auto certificate = ::WebCore::generateCertificate(document.securityOrigin(), info);
+    if (certificate.has_value())
+        promise.resolve(*certificate);
+    else
+        promise.reject(NotSupportedError);
 #else
     UNUSED_PARAM(document);
-    UNUSED_PARAM(expires);
-    UNUSED_PARAM(type);
+    UNUSED_PARAM(info);
     promise.reject(NotSupportedError);
 #endif
 }
