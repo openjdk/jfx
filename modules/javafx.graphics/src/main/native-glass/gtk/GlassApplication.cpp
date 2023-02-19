@@ -112,7 +112,20 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
-    return JNI_TRUE;
+    // Major version is checked before loading
+    if (version == 3) {
+        if(gtk_check_version(3, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
+            if (verbose) {
+                printf("ERROR: Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.\n",
+                    version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
+                    gtk_major_version, gtk_minor_version, gtk_micro_version);
+            }
+
+            return com_sun_glass_ui_gtk_GtkApplication_INIT_VERSION_INCOMPATIBLE;
+        }
+    }
+
+    return com_sun_glass_ui_gtk_GtkApplication_INIT_VERSION_OK;
 }
 
 /*

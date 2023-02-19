@@ -173,10 +173,10 @@ final class GtkApplication extends Application implements
             return null;
         });
 
-        int version = _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
+        int check = _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
 
-        if (version == -1) {
-            throw new RuntimeException("Error loading GTK libraries");
+        if (check == INIT_VERSION_INCOMPATIBLE) {
+            throw new UnsupportedOperationException("Incompatible GTK %d version.".formatted(gtkVersion));
         }
 
         // Embedded in SWT, with shared event thread
@@ -200,6 +200,9 @@ final class GtkApplication extends Application implements
      *  return values are the QUERY_ constants
      */
     private static native int _queryLibrary(int version, boolean verbose);
+
+    @Native private static final int INIT_VERSION_INCOMPATIBLE = -1;
+    @Native private static final int INIT_VERSION_OK = 1;
 
     private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
 
