@@ -43,6 +43,37 @@ import java.util.Arrays;
  */
 public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
+    /**
+     * Event emission states.
+     *
+     * <h3>Allowed Transitions:</h3>
+     *
+     * <table rules="all" cellpadding=4px>
+     * <tr><th>Current</th><th>Next</th></tr>
+     * <tr><td>{@code IDLE}</td><td>{@code REQUESTED}</td></tr>
+     * <tr><td>{@code REQUESTED}</td><td>{@code RUNNING}</td></tr>
+     * <tr><td>{@code RUNNING}</td><td>{@code REQUESTED} or {@code IDLE}</td></tr>
+     * </table>
+     */
+    private enum Emission {
+
+        /**
+         * No event emission is running.
+         */
+        IDLE,
+
+        /**
+         * An event emission is in progress.
+         */
+        RUNNING,
+
+        /**
+         * An event emission is requested; if one is running, it will
+         * run immediately after the current one finishes.
+         */
+        REQUESTED
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Static methods
 
@@ -192,8 +223,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         private ChangeListener<? super T>[] changeListeners;
         private int invalidationSize;
         private int changeSize;
-        private boolean locked;
-        private boolean nestedEmission;
+        private Emission emission = Emission.IDLE;
         private T currentValue;
 
         private Generic(ObservableValue<T> observable, InvalidationListener listener0, InvalidationListener listener1) {
@@ -225,7 +255,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                 invalidationSize = 1;
             } else {
                 final int oldCapacity = invalidationListeners.length;
-                if (locked) {
+                if (emission != Emission.IDLE) {
                     final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
                 } else if (invalidationSize == oldCapacity) {
@@ -256,7 +286,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                         } else {
                             final int numMoved = invalidationSize - index - 1;
                             final InvalidationListener[] oldListeners = invalidationListeners;
-                            if (locked) {
+                            if (emission != Emission.IDLE) {
                                 invalidationListeners = new InvalidationListener[invalidationListeners.length];
                                 System.arraycopy(oldListeners, 0, invalidationListeners, 0, index);
                             }
@@ -264,7 +294,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                                 System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
                             }
                             invalidationSize--;
-                            if (!locked) {
+                            if (emission == Emission.IDLE) {
                                 invalidationListeners[invalidationSize] = null; // Let gc do its work
                             }
                         }
@@ -282,7 +312,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                 changeSize = 1;
             } else {
                 final int oldCapacity = changeListeners.length;
-                if (locked) {
+                if (emission != Emission.IDLE) {
                     final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     changeListeners = Arrays.copyOf(changeListeners, newCapacity);
                 } else if (changeSize == oldCapacity) {
@@ -316,7 +346,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                         } else {
                             final int numMoved = changeSize - index - 1;
                             final ChangeListener<? super T>[] oldListeners = changeListeners;
-                            if (locked) {
+                            if (emission != Emission.IDLE) {
                                 changeListeners = new ChangeListener[changeListeners.length];
                                 System.arraycopy(oldListeners, 0, changeListeners, 0, index);
                             }
@@ -324,7 +354,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                                 System.arraycopy(oldListeners, index+1, changeListeners, index, numMoved);
                             }
                             changeSize--;
-                            if (!locked) {
+                            if (emission == Emission.IDLE) {
                                 changeListeners[changeSize] = null; // Let gc do its work
                             }
                         }
@@ -337,9 +367,11 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent() {
-            nestedEmission = true;
+            boolean idle = emission == Emission.IDLE;
 
-            if (locked) {
+            emission = Emission.REQUESTED;
+
+            if (!idle) {
                 return;
             }
 
@@ -349,11 +381,10 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             final int curChangeSize = changeSize;
 
             try {
-                locked = true;
                 T oldValue = currentValue;
 
-                while (nestedEmission) {
-                    nestedEmission = false;
+                while (emission == Emission.REQUESTED) {
+                    emission = Emission.RUNNING;
 
                     for (int i = 0; i < curInvalidationSize; i++) {
                         try {
@@ -382,7 +413,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                     }
                 }
             } finally {
-                locked = false;
+                emission = Emission.IDLE;
             }
         }
     }
