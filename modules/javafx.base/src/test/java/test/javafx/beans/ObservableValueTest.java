@@ -163,7 +163,8 @@ public class ObservableValueTest {
     }
 
     /*
-     * Tests if the embedded ObservableValue sends sensible change events when a nested change occurs.
+     * Tests if the embedded ObservableValue sends sensible change events when a nested change occurs,
+     * and that the change listeners are not called recursively (always enter->exit->enter->exit, not enter->enter->exit->exit).
      */
     @ParameterizedTest
     @MethodSource("inputs")
@@ -174,14 +175,15 @@ public class ObservableValueTest {
          * Create three listeners, with the "middle" one modifying the value back to value1.
          */
 
-        action.addListener((obs, old, current) -> records.add("Change of 0 from " + old + " to " + current));
+        action.addListener((obs, old, current) -> records.add("A: " + old + " -> " + current));
         action.addListener((obs, old, current) -> {
-            records.add("Change of 1 from " + old + " to " + current);
+            records.add("B enter: " + old + " -> " + current);
             if(current.equals(value2)) {
                 valueSetter.accept(value1);
             }
+            records.add("B exit: " + old + " -> " + current);
         });
-        action.addListener((obs, old, current) -> records.add("Change of 2 from " + old + " to " + current));
+        action.addListener((obs, old, current) -> records.add("C: " + old + " -> " + current));
 
         /*
          * Start test:
@@ -196,12 +198,58 @@ public class ObservableValueTest {
 
         assertEquals(
             List.of(
-                "Change of 0 from " + value1 + " to " + value2,
-                "Change of 1 from " + value1 + " to " + value2,
-                "Change of 2 from " + value1 + " to " + value2,
-                "Change of 0 from " + value2 + " to " + value1,
-                "Change of 1 from " + value2 + " to " + value1,
-                "Change of 2 from " + value2 + " to " + value1
+                "A: " + value1 + " -> " + value2,
+                "B enter: " + value1 + " -> " + value2,
+                "B exit: " + value1 + " -> " + value2,
+                "C: " + value1 + " -> " + value2,
+                "A: " + value2 + " -> " + value1,
+                "B enter: " + value2 + " -> " + value1,
+                "B exit: " + value2 + " -> " + value1,
+                "C: " + value2 + " -> " + value1
+            ),
+            records
+        );
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible change events when a nested change occurs
+     * when there is only one listener, and that the change listeners are not called recursively
+     * (always enter->exit->enter->exit, not enter->enter->exit->exit).
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWithOneListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<String> records = new ArrayList<>();
+
+        /*
+         * Create one listener, which modifies the value back to value1.
+         */
+
+        action.addListener((obs, old, current) -> {
+            records.add("B enter: " + old + " -> " + current);
+            if(current.equals(value2)) {
+                valueSetter.accept(value1);
+            }
+            records.add("B exit: " + old + " -> " + current);
+        });
+
+        /*
+         * Start test:
+         */
+
+        valueSetter.accept(value2);
+
+        /*
+         * Verify the current implementation specific result (there are more combinations that could be considered
+         * correct, but the test case simplifies this for now):
+         */
+
+        assertEquals(
+            List.of(
+                "B enter: " + value1 + " -> " + value2,
+                "B exit: " + value1 + " -> " + value2,
+                "B enter: " + value2 + " -> " + value1,
+                "B exit: " + value2 + " -> " + value1
             ),
             records
         );

@@ -175,6 +175,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         private final ChangeListener<? super T> listener;
         private T currentValue;
+        private Emission emission = Emission.IDLE;
 
         private SingleChange(ObservableValue<T> observable, ChangeListener<? super T> listener) {
             super(observable);
@@ -204,15 +205,32 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent() {
-            final T oldValue = currentValue;
-            currentValue = observable.getValue();
-            final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
-            if (changed) {
-                try {
-                    listener.changed(observable, oldValue, currentValue);
-                } catch (Exception e) {
-                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            boolean idle = emission == Emission.IDLE;
+
+            emission = Emission.REQUESTED;
+
+            if (!idle) {
+                return;
+            }
+
+            try {
+                while (emission == Emission.REQUESTED) {
+                    emission = Emission.RUNNING;
+
+                    final T oldValue = currentValue;
+                    currentValue = observable.getValue();
+                    final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
+                    if (changed) {
+                        try {
+                            listener.changed(observable, oldValue, currentValue);
+                        } catch (Exception e) {
+                            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                        }
+                    }
                 }
+            }
+            finally {
+                emission = Emission.IDLE;
             }
         }
     }
