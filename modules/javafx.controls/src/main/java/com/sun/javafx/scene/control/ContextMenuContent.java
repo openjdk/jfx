@@ -824,7 +824,7 @@ public class ContextMenuContent extends Region {
     }
 
     boolean isDownArrowVisible() {
-        return upArrow.isVisible();
+        return downArrow.isVisible();
     }
 
     private void createSubmenu() {

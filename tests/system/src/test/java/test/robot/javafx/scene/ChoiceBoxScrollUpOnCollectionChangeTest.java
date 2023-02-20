@@ -120,8 +120,11 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
         Util.waitForLatch(startupLatch, 5, "Timeout waiting for stage to load.");
         ContextMenu popup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) choiceBox.getSkin());
 
-        addChoiceBoxItems(50);
+        addChoiceBoxItems(100);
         showChoiceBox();
+
+        Assert.assertFalse(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
+        Assert.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
         scrollChoiceBox(50);
 
         Util.waitForLatch(choiceBoxHiddenLatch, 5, "Timeout waiting for choicebox to be hidden.");
