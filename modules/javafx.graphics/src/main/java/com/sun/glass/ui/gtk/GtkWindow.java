@@ -46,6 +46,10 @@ class GtkWindow extends Window {
     @Override
     protected native boolean _setView(long ptr, View view);
 
+    // empty - not needed by this implementation
+    @Override
+    protected void _updateViewSize(long ptr) {}
+
     @Override
     protected boolean _setMenubar(long ptr, long menubarPtr) {
         //TODO is it needed?
