@@ -503,9 +503,6 @@ public class ExpressionHelperTest {
         observable.set(3);
         ExpressionHelper.fireValueChangedEvent(helper);
 
-        System.out.println(recording1);
-        System.out.println(recording3);
-        System.out.println(recording2);
         assertEquals("2 -> 3", recording1.get(0));
         assertEquals("2 -> 3", recording2.get(0));
         assertEquals("3 -> 4", recording1.get(1));
