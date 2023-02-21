@@ -25,11 +25,13 @@
 
 package com.sun.javafx.binding;
 
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Deque;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-
-import java.util.Arrays;
 
 /**
  * A convenience class for creating implementations of {@link javafx.beans.value.ObservableValue}.
@@ -43,36 +45,7 @@ import java.util.Arrays;
  */
 public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
-    /**
-     * Event emission states.
-     *
-     * <h3>Allowed Transitions:</h3>
-     *
-     * <table rules="all" cellpadding=4px>
-     * <tr><th>Current</th><th>Next</th></tr>
-     * <tr><td>{@code IDLE}</td><td>{@code REQUESTED}</td></tr>
-     * <tr><td>{@code REQUESTED}</td><td>{@code RUNNING}</td></tr>
-     * <tr><td>{@code RUNNING}</td><td>{@code REQUESTED} or {@code IDLE}</td></tr>
-     * </table>
-     */
-    private enum Emission {
-
-        /**
-         * No event emission is running.
-         */
-        IDLE,
-
-        /**
-         * An event emission is in progress.
-         */
-        RUNNING,
-
-        /**
-         * An event emission is requested; if one is running, it will
-         * run immediately after the current one finishes.
-         */
-        REQUESTED
-    }
+    private static record NestedChange<T>(T value) {}
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Static methods
@@ -166,7 +139,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             try {
                 listener.invalidated(observable);
             } catch (Exception e) {
-                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                forwardToUncaughtExceptionHandler(e);
             }
         }
     }
@@ -175,7 +148,18 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         private final ChangeListener<? super T> listener;
         private T currentValue;
-        private Emission emission = Emission.IDLE;
+
+        /**
+         * {@code true} when an emission is currently in progress. When
+         * an emission is in progress, nested changes must be queued.
+         */
+        private boolean emissionInProgress;
+
+        /**
+         * When not {@code null}, contains nested changes that will be
+         * emitted in order once the current emission finishes.
+         */
+        private Deque<NestedChange<T>> nestedChanges;
 
         private SingleChange(ObservableValue<T> observable, ChangeListener<? super T> listener) {
             super(observable);
@@ -203,35 +187,51 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             return (listener.equals(this.listener))? null : this;
         }
 
+        private void addNotifyValue() {
+            if (nestedChanges == null) {
+                nestedChanges = new ArrayDeque<>();
+            }
+
+            nestedChanges.add(new NestedChange<>(observable.getValue()));
+        }
+
+        private T nextNotifyValue() {
+            T value = nestedChanges == null ? observable.getValue() : nestedChanges.removeFirst().value;
+
+            if (nestedChanges != null && nestedChanges.isEmpty()) {
+                nestedChanges = null;
+            }
+
+            return value;
+        }
+
         @Override
         protected void fireValueChangedEvent() {
-            boolean idle = emission == Emission.IDLE;
+            if (emissionInProgress) {
+                addNotifyValue();
 
-            emission = Emission.REQUESTED;
-
-            if (!idle) {
                 return;
             }
 
-            try {
-                while (emission == Emission.REQUESTED) {
-                    emission = Emission.RUNNING;
+            emissionInProgress = true;
 
-                    final T oldValue = currentValue;
-                    currentValue = observable.getValue();
-                    final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
-                    if (changed) {
-                        try {
-                            listener.changed(observable, oldValue, currentValue);
-                        } catch (Exception e) {
-                            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                        }
+            do {
+                T oldValue = currentValue;
+
+                currentValue = nextNotifyValue();
+
+                boolean changed = (currentValue == null) ? (oldValue != null) : !currentValue.equals(oldValue);
+
+                if (changed) {
+                    try {
+                        listener.changed(observable, oldValue, currentValue);
+                    } catch (Exception e) {
+                        forwardToUncaughtExceptionHandler(e);
                     }
                 }
-            }
-            finally {
-                emission = Emission.IDLE;
-            }
+            } while (nestedChanges != null);
+
+            emissionInProgress = false;
         }
     }
 
@@ -241,8 +241,19 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         private ChangeListener<? super T>[] changeListeners;
         private int invalidationSize;
         private int changeSize;
-        private Emission emission = Emission.IDLE;
         private T currentValue;
+
+        /**
+         * {@code true} when an emission is currently in progress. When
+         * an emission is in progress, nested changes must be queued.
+         */
+        private boolean locked;
+
+        /**
+         * When not {@code null}, contains nested changes that will be
+         * emitted in order once the current emission finishes.
+         */
+        private Deque<NestedChange<T>> nestedChanges;
 
         private Generic(ObservableValue<T> observable, InvalidationListener listener0, InvalidationListener listener1) {
             super(observable);
@@ -273,7 +284,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                 invalidationSize = 1;
             } else {
                 final int oldCapacity = invalidationListeners.length;
-                if (emission != Emission.IDLE) {
+                if (locked) {
                     final int newCapacity = (invalidationSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     invalidationListeners = Arrays.copyOf(invalidationListeners, newCapacity);
                 } else if (invalidationSize == oldCapacity) {
@@ -304,7 +315,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                         } else {
                             final int numMoved = invalidationSize - index - 1;
                             final InvalidationListener[] oldListeners = invalidationListeners;
-                            if (emission != Emission.IDLE) {
+                            if (locked) {
                                 invalidationListeners = new InvalidationListener[invalidationListeners.length];
                                 System.arraycopy(oldListeners, 0, invalidationListeners, 0, index);
                             }
@@ -312,7 +323,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                                 System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
                             }
                             invalidationSize--;
-                            if (emission == Emission.IDLE) {
+                            if (!locked) {
                                 invalidationListeners[invalidationSize] = null; // Let gc do its work
                             }
                         }
@@ -330,7 +341,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                 changeSize = 1;
             } else {
                 final int oldCapacity = changeListeners.length;
-                if (emission != Emission.IDLE) {
+                if (locked) {
                     final int newCapacity = (changeSize < oldCapacity)? oldCapacity : (oldCapacity * 3)/2 + 1;
                     changeListeners = Arrays.copyOf(changeListeners, newCapacity);
                 } else if (changeSize == oldCapacity) {
@@ -364,7 +375,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                         } else {
                             final int numMoved = changeSize - index - 1;
                             final ChangeListener<? super T>[] oldListeners = changeListeners;
-                            if (emission != Emission.IDLE) {
+                            if (locked) {
                                 changeListeners = new ChangeListener[changeListeners.length];
                                 System.arraycopy(oldListeners, 0, changeListeners, 0, index);
                             }
@@ -372,7 +383,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                                 System.arraycopy(oldListeners, index+1, changeListeners, index, numMoved);
                             }
                             changeSize--;
-                            if (emission == Emission.IDLE) {
+                            if (!locked) {
                                 changeListeners[changeSize] = null; // Let gc do its work
                             }
                         }
@@ -383,57 +394,90 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             return this;
         }
 
+        private void addNotifyValue() {
+            if (nestedChanges == null) {
+                nestedChanges = new ArrayDeque<>();
+            }
+
+            nestedChanges.add(new NestedChange<>(observable.getValue()));
+        }
+
+        private T nextNotifyValue() {
+            T value = nestedChanges == null ? observable.getValue() : nestedChanges.removeFirst().value;
+
+            if (nestedChanges != null && nestedChanges.isEmpty()) {
+                nestedChanges = null;
+            }
+
+            return value;
+        }
+
         @Override
         protected void fireValueChangedEvent() {
-            boolean idle = emission == Emission.IDLE;
+            if (locked) {
+                if (changeSize > 0) {
+                    addNotifyValue();
+                }
 
-            emission = Emission.REQUESTED;
-
-            if (!idle) {
                 return;
             }
+
+            locked = true;
 
             final InvalidationListener[] curInvalidationList = invalidationListeners;
             final int curInvalidationSize = invalidationSize;
             final ChangeListener<? super T>[] curChangeList = changeListeners;
             final int curChangeSize = changeSize;
 
-            try {
+            do {
                 T oldValue = currentValue;
 
-                while (emission == Emission.REQUESTED) {
-                    emission = Emission.RUNNING;
-
-                    for (int i = 0; i < curInvalidationSize; i++) {
-                        try {
-                            curInvalidationList[i].invalidated(observable);
-                        } catch (Exception e) {
-                            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                        }
-                    }
-                    if (curChangeSize > 0) {
-                        currentValue = observable.getValue();
-
-                        T newValue = currentValue;
-                        boolean changed = (newValue == null) ? (oldValue != null) : !newValue.equals(oldValue);
-
-                        if (changed) {
-                            for (int i = 0; i < curChangeSize; i++) {
-                                try {
-                                    curChangeList[i].changed(observable, oldValue, newValue);
-                                } catch (Exception e) {
-                                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                                }
-                            }
-                        }
-
-                        oldValue = newValue;
+                for (int i = 0; i < curInvalidationSize; i++) {
+                    try {
+                        curInvalidationList[i].invalidated(observable);
+                    } catch (Exception e) {
+                        forwardToUncaughtExceptionHandler(e);
                     }
                 }
-            } finally {
-                emission = Emission.IDLE;
-            }
+                if (curChangeSize > 0) {
+                    currentValue = nextNotifyValue();
+
+                    boolean changed = (currentValue == null) ? (oldValue != null) : !currentValue.equals(oldValue);
+
+                    if (changed) {
+                        for (int i = 0; i < curChangeSize; i++) {
+                            try {
+                                curChangeList[i].changed(observable, oldValue, currentValue);
+                            } catch (Exception e) {
+                                forwardToUncaughtExceptionHandler(e);
+                            }
+                        }
+                    }
+                }
+            } while(nestedChanges != null);
+
+            locked = false;
         }
     }
 
+    private static void forwardToUncaughtExceptionHandler(Exception e) {
+        try {
+            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+        }
+        catch (Exception ignored) {
+
+            /*
+             * Very bad practice to throw an exception from the uncaught exception handler.
+             * When the JVM calls it, the exception is ignored, however when called directly
+             * this is not the case. To ensure that this class performs its logic correctly,
+             * and doesn't send out partial emissions or gets into an undefined state,
+             * this exception is only logged.
+             */
+
+            System.err.println(
+                "The uncaught exception handler: " + Thread.currentThread().getUncaughtExceptionHandler()
+                    + " threw an exception: " + ignored + " while handling the exception: " + e
+            );
+        }
+    }
 }
