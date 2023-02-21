@@ -33,6 +33,7 @@
 #include "LibWebRTCMacros.h"
 #include "MediaStreamTrackPrivate.h"
 #include <Timer.h>
+#include <wtf/Lock.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
@@ -41,7 +42,6 @@ ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_UNUSED_PARAMETERS_END
 
 #include <wtf/LoggerHelper.h>
-#include <wtf/Optional.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -50,7 +50,7 @@ class RealtimeOutgoingVideoSource
     : public ThreadSafeRefCounted<RealtimeOutgoingVideoSource, WTF::DestructionThread::Main>
     , public webrtc::VideoTrackSourceInterface
     , private MediaStreamTrackPrivate::Observer
-    , private RealtimeMediaSource::VideoSampleObserver
+    , private RealtimeMediaSource::VideoFrameObserver
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
@@ -134,15 +134,15 @@ private:
     void trackSettingsChanged(MediaStreamTrackPrivate&) final { initializeFromSource(); }
     void trackEnded(MediaStreamTrackPrivate&) final { }
 
-    // RealtimeMediaSource::VideoSampleObserver API
-    void videoSampleAvailable(MediaSample&) override { }
+    // RealtimeMediaSource::VideoFrameObserver API
+    void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) override { }
 
     Ref<MediaStreamTrackPrivate> m_videoSource;
     Timer m_blackFrameTimer;
     rtc::scoped_refptr<webrtc::VideoFrameBuffer> m_blackFrame;
 
-    mutable RecursiveLock m_sinksLock;
-    HashSet<rtc::VideoSinkInterface<webrtc::VideoFrame>*> m_sinks;
+    mutable Lock m_sinksLock;
+    HashSet<rtc::VideoSinkInterface<webrtc::VideoFrame>*> m_sinks WTF_GUARDED_BY_LOCK(m_sinksLock);
     bool m_areSinksAskingToApplyRotation { false };
 
     bool m_enabled { true };

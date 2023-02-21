@@ -36,9 +36,11 @@ typedef struct _GSignalInvocationHint    GSignalInvocationHint;
  *
  * This is the signature of marshaller functions, required to marshall
  * arrays of parameter values to signal emissions into C language callback
- * invocations. It is merely an alias to #GClosureMarshal since the #GClosure
- * mechanism takes over responsibility of actual function invocation for the
- * signal system.
+ * invocations.
+ *
+ * It is merely an alias to #GClosureMarshal since the #GClosure mechanism
+ * takes over responsibility of actual function invocation for the signal
+ * system.
  */
 typedef GClosureMarshal          GSignalCMarshaller;
 /**
@@ -58,11 +60,12 @@ typedef GVaClosureMarshal        GSignalCVaMarshaller;
  *  the signal was emitted, followed by the parameters of the emission.
  * @data: user data associated with the hook.
  *
- * A simple function pointer to get invoked when the signal is emitted. This
- * allows you to tie a hook to the signal type, so that it will trap all
- * emissions of that signal, from any object.
+ * A simple function pointer to get invoked when the signal is emitted.
  *
- * You may not attach these to signals created with the #G_SIGNAL_NO_HOOKS flag.
+ * Emission hooks allow you to tie a hook to the signal type, so that it will
+ * trap all emissions of that signal, from any object.
+ *
+ * You may not attach these to signals created with the %G_SIGNAL_NO_HOOKS flag.
  *
  * Returns: whether it wants to stay connected. If it returns %FALSE, the signal
  *  hook is disconnected (and destroyed).
@@ -81,14 +84,19 @@ typedef gboolean (*GSignalEmissionHook) (GSignalInvocationHint *ihint,
  *
  * The signal accumulator is a special callback function that can be used
  * to collect return values of the various callbacks that are called
- * during a signal emission. The signal accumulator is specified at signal
- * creation time, if it is left %NULL, no accumulation of callback return
- * values is performed. The return value of signal emissions is then the
- * value returned by the last callback.
+ * during a signal emission.
+ *
+ * The signal accumulator is specified at signal creation time, if it is
+ * left %NULL, no accumulation of callback return values is performed.
+ * The return value of signal emissions is then the value returned by the
+ * last callback.
  *
  * Returns: The accumulator function returns whether the signal emission
- *  should be aborted. Returning %FALSE means to abort the
- *  current emission and %TRUE is returned for continuation.
+ *  should be aborted. Returning %TRUE will continue with
+ *  the signal emission. Returning %FALSE will abort the current emission.
+ *  Since 2.62, returning %FALSE will skip to the CLEANUP stage. In this case,
+ *  emission will occur as normal in the CLEANUP stage and the handler's
+ *  return value will be accumulated.
  */
 typedef gboolean (*GSignalAccumulator)  (GSignalInvocationHint *ihint,
                      GValue            *return_accu,
@@ -119,10 +127,11 @@ typedef gboolean (*GSignalAccumulator)  (GSignalInvocationHint *ihint,
  * @G_SIGNAL_DEPRECATED: The signal is deprecated and will be removed
  *   in a future version. A warning will be generated if it is connected while
  *   running with G_ENABLE_DIAGNOSTIC=1.  Since 2.32.
+ * @G_SIGNAL_ACCUMULATOR_FIRST_RUN: Only used in #GSignalAccumulator accumulator
+ *   functions for the #GSignalInvocationHint::run_type field to mark the first
+ *   call to the accumulator function for a signal emission.  Since 2.68.
  *
- * The signal flags are used to specify a signal's behaviour, the overall
- * signal description outlines how especially the RUN flags control the
- * stages of a signal emission.
+ * The signal flags are used to specify a signal's behaviour.
  */
 typedef enum
 {
@@ -134,7 +143,9 @@ typedef enum
   G_SIGNAL_ACTION   = 1 << 5,
   G_SIGNAL_NO_HOOKS = 1 << 6,
   G_SIGNAL_MUST_COLLECT = 1 << 7,
-  G_SIGNAL_DEPRECATED   = 1 << 8
+  G_SIGNAL_DEPRECATED   = 1 << 8,
+  /* normal signal flags until 1 << 16 */
+  G_SIGNAL_ACCUMULATOR_FIRST_RUN    = 1 << 17,
 } GSignalFlags;
 /**
  * G_SIGNAL_FLAGS_MASK:
@@ -215,7 +226,9 @@ typedef enum
  * @detail: The detail passed on for this emission
  * @run_type: The stage the signal emission is currently in, this
  *  field will contain one of %G_SIGNAL_RUN_FIRST,
- *  %G_SIGNAL_RUN_LAST or %G_SIGNAL_RUN_CLEANUP.
+ *  %G_SIGNAL_RUN_LAST or %G_SIGNAL_RUN_CLEANUP and %G_SIGNAL_ACCUMULATOR_FIRST_RUN.
+ *  %G_SIGNAL_ACCUMULATOR_FIRST_RUN is only set for the first run of the accumulator
+ *  function for a signal emission.
  *
  * The #GSignalInvocationHint structure is used to pass on additional information
  * to callbacks during a signal emission.
@@ -243,8 +256,9 @@ struct _GSignalInvocationHint
  *  gpointer     data2);
  *  ]|
  *
- * A structure holding in-depth information for a specific signal. It is
- * filled in by the g_signal_query() function.
+ * A structure holding in-depth information for a specific signal.
+ *
+ * See also: g_signal_query()
  */
 struct _GSignalQuery
 {
@@ -444,13 +458,14 @@ void     g_clear_signal_handler           (gulong            *handler_id_ptr,
 
 #define  g_clear_signal_handler(handler_id_ptr, instance)           \
   G_STMT_START {                                                    \
-    G_STATIC_ASSERT (sizeof *(handler_id_ptr) == sizeof (gulong));  \
-    gulong _handler_id = *(handler_id_ptr);                         \
+    gpointer const _instance      = (instance);                     \
+    gulong *const _handler_id_ptr = (handler_id_ptr);               \
+    const gulong _handler_id      = *_handler_id_ptr;               \
                                                                     \
     if (_handler_id > 0)                                            \
       {                                                             \
-        g_signal_handler_disconnect ((instance), _handler_id);      \
-        *(handler_id_ptr) = 0;                                      \
+        *_handler_id_ptr = 0;                                       \
+        g_signal_handler_disconnect (_instance, _handler_id);       \
       }                                                             \
   } G_STMT_END                                                      \
   GLIB_AVAILABLE_MACRO_IN_2_62
@@ -482,7 +497,7 @@ void   g_signal_chain_from_overridden_handler (gpointer           instance,
  *
  * Connects a #GCallback function to a signal for a particular object.
  *
- * The handler will be called before the default handler of the signal.
+ * The handler will be called synchronously, before the default handler of the signal. g_signal_emit() will not return control until all handlers are called.
  *
  * See [memory management of signal handlers][signal-memory-management] for
  * details on how to handle the return value and memory management of @data.
@@ -500,7 +515,7 @@ void   g_signal_chain_from_overridden_handler (gpointer           instance,
  *
  * Connects a #GCallback function to a signal for a particular object.
  *
- * The handler will be called after the default handler of the signal.
+ * The handler will be called synchronously, after the default handler of the signal.
  *
  * Returns: the handler ID, of type #gulong (always greater than 0 for successful connections)
  */

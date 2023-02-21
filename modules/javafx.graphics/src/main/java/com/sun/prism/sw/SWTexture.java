@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,23 +81,28 @@ abstract class SWTexture implements Texture {
     }
 
     private int lockcount;
+    @Override
     public void lock() {
         lockcount++;
     }
 
+    @Override
     public void unlock() {
         assertLocked();
         lockcount--;
     }
 
+    @Override
     public boolean isLocked() {
         return (lockcount > 0);
     }
 
+    @Override
     public int getLockCount() {
         return lockcount;
     }
 
+    @Override
     public void assertLocked() {
         if (lockcount <= 0) {
             throw new IllegalStateException("texture not locked");
@@ -105,16 +110,19 @@ abstract class SWTexture implements Texture {
     }
 
     boolean permanent;
+    @Override
     public void makePermanent() {
         permanent = true;
     }
 
     int employcount;
+    @Override
     public void contentsUseful() {
         assertLocked();
         employcount++;
     }
 
+    @Override
     public void contentsNotUseful() {
         if (employcount <= 0) {
             throw new IllegalStateException("Resource obsoleted too many times");
@@ -122,6 +130,7 @@ abstract class SWTexture implements Texture {
         employcount--;
     }
 
+    @Override
     public boolean isSurfaceLost() {
         return false;
     }
@@ -185,10 +194,12 @@ abstract class SWTexture implements Texture {
         return getPhysicalHeight();
     }
 
+    @Override
     public int getLastImageSerial() {
         return lastImageSerial;
     }
 
+    @Override
     public void setLastImageSerial(int serial) {
         lastImageSerial = serial;
     }
@@ -229,6 +240,7 @@ abstract class SWTexture implements Texture {
         return false;
     }
 
+    @Override
     public Texture getSharedTexture(WrapMode altMode) {
         assertLocked();
         if (wrapMode == altMode) {

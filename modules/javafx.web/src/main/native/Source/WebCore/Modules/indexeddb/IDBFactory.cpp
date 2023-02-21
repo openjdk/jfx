@@ -26,9 +26,8 @@
 #include "config.h"
 #include "IDBFactory.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "Document.h"
+#include "FrameDestructionObserverInlines.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBDatabaseIdentifier.h"
@@ -38,10 +37,12 @@
 #include "Logging.h"
 #include "Page.h"
 #include "ScriptExecutionContext.h"
-
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBFactory);
 
 static bool shouldThrowSecurityException(ScriptExecutionContext& context)
 {
@@ -54,10 +55,7 @@ static bool shouldThrowSecurityException(ScriptExecutionContext& context)
             return true;
     }
 
-    if (!context.securityOrigin()->canAccessDatabase(nullptr))
-        return true;
-
-    return false;
+    return context.canAccessResource(ScriptExecutionContext::ResourceType::IndexedDB) == ScriptExecutionContext::HasResourceAccess::No;
 }
 
 Ref<IDBFactory> IDBFactory::create(IDBClient::IDBConnectionProxy& connectionProxy)
@@ -72,14 +70,14 @@ IDBFactory::IDBFactory(IDBClient::IDBConnectionProxy& connectionProxy)
 
 IDBFactory::~IDBFactory() = default;
 
-ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::open(ScriptExecutionContext& context, const String& name, Optional<uint64_t> version)
+ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::open(ScriptExecutionContext& context, const String& name, std::optional<uint64_t> version)
 {
     LOG(IndexedDB, "IDBFactory::open");
 
     if (version && !version.value())
         return Exception { TypeError, "IDBFactory.open() called with a version of 0"_s };
 
-    return openInternal(context, name, version.valueOr(0));
+    return openInternal(context, name, version.value_or(0));
 }
 
 ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::openInternal(ScriptExecutionContext& context, const String& name, uint64_t version)
@@ -91,7 +89,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::openInternal(ScriptExecutionConte
         return Exception { SecurityError, "IDBFactory.open() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    bool isTransient = !context.securityOrigin()->canAccessDatabase(&context.topOrigin());
+    bool isTransient = (context.canAccessResource(ScriptExecutionContext::ResourceType::IndexedDB) == ScriptExecutionContext::HasResourceAccess::DefaultForThirdParty);
     IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() }, isTransient);
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.open() called with an invalid security origin"_s };
@@ -112,7 +110,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::deleteDatabase(ScriptExecutionCon
         return Exception { SecurityError, "IDBFactory.deleteDatabase() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    bool isTransient = !context.securityOrigin()->canAccessDatabase(&context.topOrigin());
+    bool isTransient = (context.canAccessResource(ScriptExecutionContext::ResourceType::IndexedDB) == ScriptExecutionContext::HasResourceAccess::DefaultForThirdParty);
     IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() }, isTransient);
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.deleteDatabase() called with an invalid security origin"_s };
@@ -173,5 +171,3 @@ void IDBFactory::getAllDatabaseNames(ScriptExecutionContext& context, Function<v
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

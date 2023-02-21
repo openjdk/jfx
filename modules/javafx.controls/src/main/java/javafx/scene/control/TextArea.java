@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -87,7 +86,7 @@ public class TextArea extends TextInputControl {
     // Text area content model
     private static final class TextAreaContent implements Content {
         private ExpressionHelper<String> helper = null;
-        private ArrayList<StringBuilder> paragraphs = new ArrayList<StringBuilder>();
+        private ArrayList<StringBuilder> paragraphs = new ArrayList<>();
         private int contentLength = 0;
         private ParagraphList paragraphList = new ParagraphList();
         private ListListenerHelper<CharSequence> listenerHelper;
@@ -154,7 +153,7 @@ public class TextArea extends TextInputControl {
             int length = text.length();
             if (length > 0) {
                 // Split the text into lines
-                ArrayList<StringBuilder> lines = new ArrayList<StringBuilder>();
+                ArrayList<StringBuilder> lines = new ArrayList<>();
 
                 StringBuilder line = new StringBuilder(DEFAULT_PARAGRAPH_CAPACITY);
                 for (int i = 0; i < length; i++) {
@@ -281,7 +280,7 @@ public class TextArea extends TextInputControl {
                         Collections.singletonList((CharSequence)trailingParagraph));
 
                     if (trailingParagraphIndex - leadingParagraphIndex > 0) {
-                        List<CharSequence> removed = new ArrayList<CharSequence>(paragraphs.subList(leadingParagraphIndex,
+                        List<CharSequence> removed = new ArrayList<>(paragraphs.subList(leadingParagraphIndex,
                             trailingParagraphIndex));
                         paragraphs.subList(leadingParagraphIndex,
                             trailingParagraphIndex).clear();
@@ -429,7 +428,7 @@ public class TextArea extends TextInputControl {
         protected int[] getPermutation() {
             return new int[0];
         }
-    };
+    }
 
     /**
      * The default value for {@link #prefColumnCountProperty() prefColumnCount}.
@@ -633,7 +632,7 @@ public class TextArea extends TextInputControl {
 
     private static class StyleableProperties {
         private static final CssMetaData<TextArea,Number> PREF_COLUMN_COUNT =
-            new CssMetaData<TextArea,Number>("-fx-pref-column-count",
+            new CssMetaData<>("-fx-pref-column-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
 
             @Override
@@ -643,12 +642,12 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)n.prefColumnCountProperty();
             }
         };
 
         private static final CssMetaData<TextArea,Number> PREF_ROW_COUNT =
-            new CssMetaData<TextArea,Number>("-fx-pref-row-count",
+            new CssMetaData<>("-fx-pref-row-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_ROW_COUNT) {
 
             @Override
@@ -658,12 +657,12 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefRowCountProperty();
+                return (StyleableProperty<Number>)n.prefRowCountProperty();
             }
         };
 
         private static final CssMetaData<TextArea,Boolean> WRAP_TEXT =
-            new CssMetaData<TextArea,Boolean>("-fx-wrap-text",
+            new CssMetaData<>("-fx-wrap-text",
                 StyleConverter.getBooleanConverter(), false) {
 
             @Override
@@ -673,14 +672,14 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.wrapTextProperty();
+                return (StyleableProperty<Boolean>)n.wrapTextProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(TextInputControl.getClassCssMetaData());
+                new ArrayList<>(TextInputControl.getClassCssMetaData());
             styleables.add(PREF_COLUMN_COUNT);
             styleables.add(PREF_ROW_COUNT);
             styleables.add(WRAP_TEXT);

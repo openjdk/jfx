@@ -26,11 +26,10 @@
 #include "config.h"
 #include "JSIDBCursor.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
 #include "JSDOMBinding.h"
 #include "JSIDBCursorWithValue.h"
+#include "WebCoreOpaqueRoot.h"
 
 
 namespace WebCore {
@@ -55,7 +54,7 @@ void JSIDBCursor::visitAdditionalChildren(Visitor& visitor)
 {
     auto& cursor = wrapped();
     if (auto* request = cursor.request())
-        visitor.addOpaqueRoot(request);
+        addWebCoreOpaqueRoot(visitor, *request);
     cursor.keyWrapper().visit(visitor);
     cursor.primaryKeyWrapper().visit(visitor);
 }
@@ -75,5 +74,3 @@ JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* global
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

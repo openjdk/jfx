@@ -27,28 +27,38 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "EpochTimeStamp.h"
 #include "IDLTypes.h"
+#include "JSDOMPromiseDeferred.h"
 #include "ServiceWorkerIdentifier.h"
+#include <JavaScriptCore/Forward.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 class FetchEvent;
 class FetchResponse;
+class PushSubscription;
 class ScriptExecutionContext;
+class ServiceWorkerGlobalScope;
+class ServiceWorkerClient;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
-class WEBCORE_TESTSUPPORT_EXPORT ServiceWorkerInternals : public RefCounted<ServiceWorkerInternals> {
+class WEBCORE_TESTSUPPORT_EXPORT ServiceWorkerInternals : public RefCounted<ServiceWorkerInternals>, public CanMakeWeakPtr<ServiceWorkerInternals> {
 public:
-    static Ref<ServiceWorkerInternals> create(ServiceWorkerIdentifier identifier) { return adoptRef(*new ServiceWorkerInternals { identifier }); }
+    static Ref<ServiceWorkerInternals> create(ServiceWorkerGlobalScope& globalScope, ServiceWorkerIdentifier identifier) { return adoptRef(*new ServiceWorkerInternals { globalScope, identifier }); }
     ~ServiceWorkerInternals();
 
     void setOnline(bool isOnline);
+    void terminate();
+
     void waitForFetchEventToFinish(FetchEvent&, DOMPromiseDeferred<IDLInterface<FetchResponse>>&&);
     Ref<FetchEvent> createBeingDispatchedFetchEvent(ScriptExecutionContext&);
     Ref<FetchResponse> createOpaqueWithBlobBodyResponse(ScriptExecutionContext&);
 
+    void schedulePushEvent(const String&, RefPtr<DeferredPromise>&&);
+    void schedulePushSubscriptionChangeEvent(PushSubscription* newSubscription, PushSubscription* oldSubscription);
     Vector<String> fetchResponseHeaderList(FetchResponse&);
 
     String processName() const;
@@ -57,10 +67,22 @@ public:
 
     int processIdentifier() const;
 
+    void lastNavigationWasAppInitiated(Ref<DeferredPromise>&&);
+
+    RefPtr<PushSubscription> createPushSubscription(const String& endpoint, std::optional<EpochTimeStamp> expirationTime, const ArrayBuffer& serverVAPIDPublicKey, const ArrayBuffer& clientECDHPublicKey, const ArrayBuffer& auth);
+
+    bool fetchEventIsSameSite(FetchEvent&);
+
+    String serviceWorkerClientInternalIdentifier(const ServiceWorkerClient&);
+    void setAsInspected(bool);
+
 private:
-    explicit ServiceWorkerInternals(ServiceWorkerIdentifier);
+    ServiceWorkerInternals(ServiceWorkerGlobalScope&, ServiceWorkerIdentifier);
 
     ServiceWorkerIdentifier m_identifier;
+    RefPtr<DeferredPromise> m_lastNavigationWasAppInitiatedPromise;
+    HashMap<uint64_t, RefPtr<DeferredPromise>> m_pushEventPromises;
+    uint64_t m_pushEventCounter { 0 };
 };
 
 } // namespace WebCore

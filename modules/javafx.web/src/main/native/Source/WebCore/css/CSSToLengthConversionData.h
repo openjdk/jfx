@@ -31,43 +31,30 @@
 #pragma once
 
 #include "CSSPropertyNames.h"
+#include "Element.h"
+#include <optional>
 #include <wtf/Assertions.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
+class Element;
+class FloatSize;
+class FontCascade;
 class RenderStyle;
 class RenderView;
 
+namespace Style {
+struct BuilderContext;
+};
+
 class CSSToLengthConversionData {
 public:
-    CSSToLengthConversionData(const RenderStyle* style, const RenderStyle* rootStyle, const RenderStyle* parentStyle, const RenderView* renderView, float zoom, Optional<CSSPropertyID> propertyToCompute = WTF::nullopt)
-        : m_style(style)
-        , m_rootStyle(rootStyle)
-        , m_parentStyle(parentStyle)
-        , m_renderView(renderView)
-        , m_zoom(zoom)
-        , m_useEffectiveZoom(false)
-        , m_propertyToCompute(propertyToCompute)
-    {
-        ASSERT(zoom > 0);
-    }
+    // This is used during style building. The 'zoom' property is taken into account.
+    CSSToLengthConversionData(const RenderStyle&, const Style::BuilderContext&);
+    // This constructor ignores the `zoom` property.
+    CSSToLengthConversionData(const RenderStyle&, const RenderStyle* rootStyle, const RenderStyle* parentStyle, const RenderView*, const Element* elementForContainerUnitResolution = nullptr);
 
-    CSSToLengthConversionData(const RenderStyle* style, const RenderStyle* rootStyle, const RenderStyle* parentStyle, const RenderView* renderView, Optional<CSSPropertyID> propertyToCompute = WTF::nullopt)
-        : m_style(style)
-        , m_rootStyle(rootStyle)
-        , m_parentStyle(parentStyle)
-        , m_renderView(renderView)
-        , m_zoom(1)
-        , m_useEffectiveZoom(true)
-        , m_propertyToCompute(propertyToCompute)
-    {
-    }
-
-    CSSToLengthConversionData()
-        : CSSToLengthConversionData(nullptr, nullptr, nullptr, nullptr)
-    {
-    }
+    CSSToLengthConversionData() = default;
 
     const RenderStyle* style() const { return m_style; }
     const RenderStyle* rootStyle() const { return m_rootStyle; }
@@ -75,30 +62,53 @@ public:
     float zoom() const;
     bool computingFontSize() const { return m_propertyToCompute == CSSPropertyFontSize; }
     bool computingLineHeight() const { return m_propertyToCompute == CSSPropertyLineHeight; }
+    CSSPropertyID propertyToCompute() const { return m_propertyToCompute.value_or(CSSPropertyInvalid); }
+    const RenderView* renderView() const { return m_renderView; }
+    const Element* elementForContainerUnitResolution() const { return m_elementForContainerUnitResolution.get(); }
 
-    double viewportWidthFactor() const;
-    double viewportHeightFactor() const;
-    double viewportMinFactor() const;
-    double viewportMaxFactor() const;
+    const FontCascade& fontCascadeForFontUnits() const;
+    int computedLineHeightForFontUnits() const;
 
-    CSSToLengthConversionData copyWithAdjustedZoom(float newZoom) const
+    FloatSize defaultViewportFactor() const;
+    FloatSize smallViewportFactor() const;
+    FloatSize largeViewportFactor() const;
+    FloatSize dynamicViewportFactor() const;
+
+    CSSToLengthConversionData copyForFontSize() const
     {
-        return CSSToLengthConversionData(m_style, m_rootStyle, m_parentStyle, m_renderView, newZoom, m_propertyToCompute);
+        CSSToLengthConversionData copy(*this);
+        copy.m_zoom = 1.f;
+        copy.m_propertyToCompute = CSSPropertyFontSize;
+        return copy;
+    };
+
+    CSSToLengthConversionData copyWithAdjustedZoom(float zoom) const
+    {
+        CSSToLengthConversionData copy(*this);
+        copy.m_zoom = zoom;
+        return copy;
     }
 
-    CSSToLengthConversionData copyWithAdjustedZoomAndPropertyToCompute(float zoom, Optional<CSSPropertyID> propertyToCompute) const
+    CSSToLengthConversionData copyForLineHeight(float zoom) const
     {
-        return CSSToLengthConversionData(m_style, m_rootStyle, m_parentStyle, m_renderView, zoom, propertyToCompute);
+        CSSToLengthConversionData copy(*this);
+        copy.m_zoom = zoom;
+        copy.m_propertyToCompute = CSSPropertyLineHeight;
+        return copy;
     }
+
+    void setUsesContainerUnits() const;
 
 private:
-    const RenderStyle* m_style;
-    const RenderStyle* m_rootStyle;
-    const RenderStyle* m_parentStyle;
-    const RenderView* m_renderView;
-    float m_zoom;
-    bool m_useEffectiveZoom;
-    Optional<CSSPropertyID> m_propertyToCompute;
+    const RenderStyle* m_style { nullptr };
+    const RenderStyle* m_rootStyle { nullptr };
+    const RenderStyle* m_parentStyle { nullptr };
+    const RenderView* m_renderView { nullptr };
+    RefPtr<const Element> m_elementForContainerUnitResolution;
+    std::optional<float> m_zoom;
+    std::optional<CSSPropertyID> m_propertyToCompute;
+    // FIXME: Remove this hack.
+    RenderStyle* m_viewportDependencyDetectionStyle { nullptr };
 };
 
 } // namespace WebCore

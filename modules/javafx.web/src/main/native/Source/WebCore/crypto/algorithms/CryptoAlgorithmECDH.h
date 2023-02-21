@@ -35,12 +35,12 @@ class CryptoKeyEC;
 
 class CryptoAlgorithmECDH final : public CryptoAlgorithm {
 public:
-    static constexpr const char* s_name = "ECDH";
+    static constexpr ASCIILiteral s_name = "ECDH"_s;
     static constexpr CryptoAlgorithmIdentifier s_identifier = CryptoAlgorithmIdentifier::ECDH;
     static Ref<CryptoAlgorithm> create();
 
     // Operations can be performed directly.
-    WEBCORE_EXPORT static Optional<Vector<uint8_t>> platformDeriveBits(const CryptoKeyEC&, const CryptoKeyEC&);
+    WEBCORE_EXPORT static std::optional<Vector<uint8_t>> platformDeriveBits(const CryptoKeyEC&, const CryptoKeyEC&);
 
 private:
     CryptoAlgorithmECDH() = default;

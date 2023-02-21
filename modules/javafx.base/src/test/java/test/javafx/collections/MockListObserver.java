@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,13 +57,13 @@ public class MockListObserver<E> implements ListChangeListener<E> {
         }
     }
 
-    List<Call<E>> calls = new LinkedList<Call<E>>();
+    List<Call<E>> calls = new LinkedList<>();
 
     @Override
     public void onChanged(Change<? extends E> change) {
         if (calls.isEmpty()) {
             while (change.next()) {
-                Call<E> call = new Call<E>();
+                Call<E> call = new Call<>();
                 call.list = change.getList();
                 call.removed = change.getRemoved();
                 call.from = change.getFrom();

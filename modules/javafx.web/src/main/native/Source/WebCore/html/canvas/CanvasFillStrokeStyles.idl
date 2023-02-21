@@ -26,7 +26,7 @@
 // FIXME: This should include SVGImageElement.
 typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap
 #if defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
-    or TypedOMCSSImageValue
+    or CSSStyleImageValue
 #endif
 #if defined(ENABLE_OFFSCREEN_CANVAS) && ENABLE_OFFSCREEN_CANVAS
     or OffscreenCanvas
@@ -42,8 +42,8 @@ interface mixin CanvasFillStrokeStyles {
     attribute (DOMString or CanvasGradient or CanvasPattern) strokeStyle; // (default black)
     attribute (DOMString or CanvasGradient or CanvasPattern) fillStyle; // (default black)
 
-    // FIXME: All the float parameters below should be doubles.
-    [MayThrowException] CanvasGradient createLinearGradient(float x0, float y0, float x1, float y1);
-    [MayThrowException] CanvasGradient createRadialGradient(float x0, float y0, float r0, float x1, float y1, float r1);
-    [MayThrowException] CanvasPattern? createPattern(CanvasImageSource image, [LegacyNullToEmptyString] DOMString repetition);
+    CanvasGradient createLinearGradient(double x0, double y0, double x1, double y1);
+    CanvasGradient createRadialGradient(double x0, double y0, double r0, double x1, double y1, double r1);
+    CanvasGradient createConicGradient(double angle, double x, double y);
+    CanvasPattern? createPattern(CanvasImageSource image, [LegacyNullToEmptyString] DOMString repetition);
 };

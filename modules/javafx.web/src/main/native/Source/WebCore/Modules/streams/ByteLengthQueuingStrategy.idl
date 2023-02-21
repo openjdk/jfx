@@ -29,9 +29,10 @@
 
 [
     JSBuiltin,
-    Exposed=(Window,Worker),
+    Exposed=*,
 ] interface ByteLengthQueuingStrategy {
-    constructor();
+    constructor(object init);
 
+    readonly attribute unrestricted double highWaterMark;
     double size();
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageLoaderFactory;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 public class GIFImageLoaderFactory implements ImageLoaderFactory {
 
@@ -44,10 +42,12 @@ public class GIFImageLoaderFactory implements ImageLoaderFactory {
         return theInstance;
     }
 
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return GIFDescriptor.getInstance();
     }
 
+    @Override
     public ImageLoader createImageLoader(InputStream input) throws IOException {
         return new GIFImageLoader2(input);
     }

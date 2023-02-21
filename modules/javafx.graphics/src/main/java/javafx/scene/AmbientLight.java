@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,18 @@
 package javafx.scene;
 
 import com.sun.javafx.scene.AmbientLightHelper;
-import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGAmbientLight;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.paint.Color;
 
 /**
- * Defines an ambient light source object. Ambient light is a light source
- * that seems to come from all directions.
+ * A light that illuminates an object from all directions equally regardless of its position and orientation. An
+ * {@code AmbientLight} adds a constant term to the amount of light reflected by each point on the surface of an object,
+ * thereby increasing the brightness of the object uniformly.
+ * <p>
+ * {@code AmbientLight}s are often used to represent the base amount of illumination in a scene. In the real world,
+ * light gets reflected off of surfaces, causing areas that are not in direct line-of-sight of the light to be lit (more
+ * dimly). Using a dark colored (weak) {@code AmbientLight} can achieve the effect of the lighting of those areas.
  *
  * @since JavaFX 8.0
  */
@@ -49,7 +52,7 @@ public class AmbientLight extends LightBase {
     }
 
     {
-        // To initialize the class helper at the begining each constructor of this class
+        // To initialize the class helper at the beginning each constructor of this class
         AmbientLightHelper.initHelper(this);
     }
 

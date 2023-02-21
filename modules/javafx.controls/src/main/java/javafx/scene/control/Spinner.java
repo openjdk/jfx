@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,6 @@ import java.time.temporal.TemporalUnit;
 import javafx.css.CssMetaData;
 import javafx.css.converter.DurationConverter;
 import javafx.css.Styleable;
-import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.SimpleStyleableObjectProperty;
 
@@ -352,7 +351,7 @@ public class Spinner<T> extends Control {
      * @param items A list of items that will be stepped through in the Spinner.
      */
     public Spinner(@NamedArg("items") ObservableList<T> items) {
-        this(new SpinnerValueFactory.ListSpinnerValueFactory<T>(items));
+        this(new SpinnerValueFactory.ListSpinnerValueFactory<>(items));
     }
 
     /**
@@ -506,7 +505,7 @@ public class Spinner<T> extends Control {
      * spinner.getValueFactory().setValue(newValue);
      * }</pre>
      */
-    private ReadOnlyObjectWrapper<T> value = new ReadOnlyObjectWrapper<T>(this, "value");
+    private ReadOnlyObjectWrapper<T> value = new ReadOnlyObjectWrapper<>(this, "value");
     public final T getValue() {
         return value.get();
     }
@@ -533,7 +532,7 @@ public class Spinner<T> extends Control {
      * </ul>
      */
     private ObjectProperty<SpinnerValueFactory<T>> valueFactory =
-            new SimpleObjectProperty<SpinnerValueFactory<T>>(this, "valueFactory") {
+            new SimpleObjectProperty<>(this, "valueFactory") {
                 @Override protected void invalidated() {
                     value.unbind();
 
@@ -680,7 +679,7 @@ public class Spinner<T> extends Control {
      **************************************************************************/
 
     private static final CssMetaData<Spinner<?>,Duration> INITIAL_DELAY =
-                                    new CssMetaData<Spinner<?>,Duration>("-fx-initial-delay",
+                                    new CssMetaData<>("-fx-initial-delay",
                                         DurationConverter.getInstance(), new Duration(300)) {
 
         @Override
@@ -695,7 +694,7 @@ public class Spinner<T> extends Control {
     };
 
     private static final CssMetaData<Spinner<?>,Duration> REPEAT_DELAY =
-                                   new CssMetaData<Spinner<?>,Duration>("-fx-repeat-delay",
+                                   new CssMetaData<>("-fx-repeat-delay",
                                         DurationConverter.getInstance(), new Duration(60)) {
 
         @Override

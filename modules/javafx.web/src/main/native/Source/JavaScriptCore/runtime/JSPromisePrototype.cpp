@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSPromisePrototype);
 
 namespace JSC {
 
-const ClassInfo JSPromisePrototype::s_info = { "Promise", &Base::s_info, &promisePrototypeTable, nullptr, CREATE_METHOD_TABLE(JSPromisePrototype) };
+const ClassInfo JSPromisePrototype::s_info = { "Promise"_s, &Base::s_info, &promisePrototypeTable, nullptr, CREATE_METHOD_TABLE(JSPromisePrototype) };
 
 /* Source for JSPromisePrototype.lut.h
 @begin promisePrototypeTable
@@ -50,7 +50,7 @@ const ClassInfo JSPromisePrototype::s_info = { "Promise", &Base::s_info, &promis
 
 JSPromisePrototype* JSPromisePrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    JSPromisePrototype* object = new (NotNull, allocateCell<JSPromisePrototype>(vm.heap)) JSPromisePrototype(vm, structure);
+    JSPromisePrototype* object = new (NotNull, allocateCell<JSPromisePrototype>(vm)) JSPromisePrototype(vm, structure);
     object->finishCreation(vm, globalObject);
     object->addOwnInternalSlots(vm, globalObject);
     return object;

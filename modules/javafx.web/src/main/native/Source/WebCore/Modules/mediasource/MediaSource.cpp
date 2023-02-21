@@ -36,6 +36,8 @@
 
 #include "AudioTrackList.h"
 #include "ContentType.h"
+#include "ContentTypeUtilities.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
@@ -43,13 +45,13 @@
 #include "MediaSourcePrivate.h"
 #include "MediaSourceRegistry.h"
 #include "Quirks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "SourceBuffer.h"
 #include "SourceBufferList.h"
 #include "SourceBufferPrivate.h"
 #include "TextTrackList.h"
 #include "TimeRanges.h"
+#include "VideoTrack.h"
 #include "VideoTrackList.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -104,13 +106,13 @@ MediaSource::MediaSource(ScriptExecutionContext& context)
     : ActiveDOMObject(&context)
     , m_duration(MediaTime::invalidTime())
     , m_pendingSeekTime(MediaTime::invalidTime())
-    , m_asyncEventQueue(MainThreadGenericEventQueue::create(*this))
 #if !RELEASE_LOG_DISABLED
     , m_logger(downcast<Document>(context).logger())
 #endif
 {
     m_sourceBuffers = SourceBufferList::create(scriptExecutionContext());
     m_activeSourceBuffers = SourceBufferList::create(scriptExecutionContext());
+    m_buffered = makeUnique<PlatformTimeRanges>();
 }
 
 MediaSource::~MediaSource()
@@ -154,13 +156,14 @@ void MediaSource::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate
 void MediaSource::addedToRegistry()
 {
     DEBUG_LOG(LOGIDENTIFIER);
-    setPendingActivity(*this);
+    ++m_associatedRegistryCount;
 }
 
 void MediaSource::removedFromRegistry()
 {
     DEBUG_LOG(LOGIDENTIFIER);
-    unsetPendingActivity(*this);
+    ASSERT(m_associatedRegistryCount);
+    --m_associatedRegistryCount;
 }
 
 MediaTime MediaSource::duration() const
@@ -175,50 +178,6 @@ MediaTime MediaSource::currentTime() const
 
 std::unique_ptr<PlatformTimeRanges> MediaSource::buffered() const
 {
-    if (m_buffered && m_activeSourceBuffers->length() && std::all_of(m_activeSourceBuffers->begin(), m_activeSourceBuffers->end(), [](auto& buffer) { return !buffer->isBufferedDirty(); }))
-        return makeUnique<PlatformTimeRanges>(*m_buffered);
-
-    m_buffered = makeUnique<PlatformTimeRanges>();
-    for (auto& sourceBuffer : *m_activeSourceBuffers)
-        sourceBuffer->setBufferedDirty(false);
-
-    // Implements MediaSource algorithm for HTMLMediaElement.buffered.
-    // https://dvcs.w3.org/hg/html-media/raw-file/default/media-source/media-source.html#htmlmediaelement-extensions
-    Vector<PlatformTimeRanges> activeRanges = this->activeRanges();
-
-    // 1. If activeSourceBuffers.length equals 0 then return an empty TimeRanges object and abort these steps.
-    if (activeRanges.isEmpty())
-        return makeUnique<PlatformTimeRanges>(*m_buffered);
-
-    // 2. Let active ranges be the ranges returned by buffered for each SourceBuffer object in activeSourceBuffers.
-    // 3. Let highest end time be the largest range end time in the active ranges.
-    MediaTime highestEndTime = MediaTime::zeroTime();
-    for (auto& ranges : activeRanges) {
-        unsigned length = ranges.length();
-        if (length)
-            highestEndTime = std::max(highestEndTime, ranges.end(length - 1));
-    }
-
-    // Return an empty range if all ranges are empty.
-    if (!highestEndTime)
-        return makeUnique<PlatformTimeRanges>(*m_buffered);
-
-    // 4. Let intersection ranges equal a TimeRange object containing a single range from 0 to highest end time.
-    m_buffered->add(MediaTime::zeroTime(), highestEndTime);
-
-    // 5. For each SourceBuffer object in activeSourceBuffers run the following steps:
-    bool ended = readyState() == ReadyState::Ended;
-    for (auto& sourceRanges : activeRanges) {
-        // 5.1 Let source ranges equal the ranges returned by the buffered attribute on the current SourceBuffer.
-        // 5.2 If readyState is "ended", then set the end time on the last range in source ranges to highest end time.
-        if (ended && sourceRanges.length())
-            sourceRanges.add(sourceRanges.start(sourceRanges.length() - 1), highestEndTime);
-
-        // 5.3 Let new intersection ranges equal the intersection between the intersection ranges and the source ranges.
-        // 5.4 Replace the ranges in intersection ranges with the new intersection ranges.
-        m_buffered->intersectWith(sourceRanges);
-    }
-
     return makeUnique<PlatformTimeRanges>(*m_buffered);
 }
 
@@ -372,7 +331,7 @@ const MediaTime& MediaSource::currentTimeFudgeFactor()
 
 bool MediaSource::contentTypeShouldGenerateTimestamps(const ContentType& contentType)
 {
-    return contentType.containerType() == "audio/aac" || contentType.containerType() == "audio/mpeg";
+    return contentType.containerType() == "audio/aac"_s || contentType.containerType() == "audio/mpeg"_s;
 }
 
 bool MediaSource::hasBufferedTime(const MediaTime& time)
@@ -574,7 +533,7 @@ void MediaSource::setReadyState(ReadyState state)
     onReadyStateChange(oldState, state);
 }
 
-ExceptionOr<void> MediaSource::endOfStream(Optional<EndOfStreamError> error)
+ExceptionOr<void> MediaSource::endOfStream(std::optional<EndOfStreamError> error)
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
@@ -595,7 +554,7 @@ ExceptionOr<void> MediaSource::endOfStream(Optional<EndOfStreamError> error)
     return { };
 }
 
-void MediaSource::streamEndedWithError(Optional<EndOfStreamError> error)
+void MediaSource::streamEndedWithError(std::optional<EndOfStreamError> error)
 {
 #if !RELEASE_LOG_DISABLED
     if (error)
@@ -682,7 +641,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
     };
 
     for (auto codec : type.codecs()) {
-        if (!codec.startsWith("vp09") || countPeriods(codec) != 7)
+        if (!codec.startsWith("vp09"_s) || countPeriods(codec) != 7)
             continue;
 
         auto rawType = type.raw();
@@ -691,8 +650,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
         if (position == notFound)
             continue;
 
-        rawType.insert(".00", position + codec.length());
-        return ContentType(rawType);
+        return ContentType(makeStringByInserting(rawType, ".00"_s, position + codec.length()));
     }
     return type;
 }
@@ -936,7 +894,7 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
     if (context.isDocument() && downcast<Document>(context).quirks().needsVP9FullRangeFlagQuirk())
         contentType = addVP9FullRangeVideoFlagToContentType(contentType);
 
-    String codecs = contentType.parameter("codecs");
+    String codecs = contentType.parameter("codecs"_s);
 
     // 2. If type does not contain a valid MIME type string, then return false.
     if (contentType.containerType().isEmpty())
@@ -950,6 +908,17 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
     parameters.type = contentType;
     parameters.isMediaSource = true;
     parameters.contentTypesRequiringHardwareSupport = WTFMove(contentTypesRequiringHardwareSupport);
+
+    if (context.isDocument()) {
+        auto& settings = downcast<Document>(context).settings();
+        if (!contentTypeMeetsContainerAndCodecTypeRequirements(contentType, settings.allowedMediaContainerTypes(), settings.allowedMediaCodecTypes()))
+            return false;
+
+        parameters.allowedMediaContainerTypes = settings.allowedMediaContainerTypes();
+        parameters.allowedMediaVideoCodecIDs = settings.allowedMediaVideoCodecIDs();
+        parameters.allowedMediaAudioCodecIDs = settings.allowedMediaAudioCodecIDs();
+        parameters.allowedMediaCaptionFormatTypes = settings.allowedMediaCaptionFormatTypes();
+    }
 
     MediaPlayer::SupportsType supported = MediaPlayer::supportsType(parameters);
 
@@ -1009,6 +978,11 @@ void MediaSource::sourceBufferDidChangeActiveState(SourceBuffer&, bool)
     regenerateActiveSourceBuffers();
 }
 
+void MediaSource::sourceBufferDidChangeBufferedDirty(SourceBuffer&, bool)
+{
+    updateBufferedIfNeeded();
+}
+
 bool MediaSource::attachToElement(HTMLMediaElement& element)
 {
     if (m_mediaElement)
@@ -1016,7 +990,7 @@ bool MediaSource::attachToElement(HTMLMediaElement& element)
 
     ASSERT(isClosed());
 
-    m_mediaElement = makeWeakPtr(&element);
+    m_mediaElement = element;
     return true;
 }
 
@@ -1035,7 +1009,7 @@ void MediaSource::openIfInEndedState()
 
 bool MediaSource::virtualHasPendingActivity() const
 {
-    return m_private || m_asyncEventQueue->hasPendingActivity();
+    return m_private || m_associatedRegistryCount;
 }
 
 void MediaSource::stop()
@@ -1076,10 +1050,9 @@ void MediaSource::onReadyStateChange(ReadyState oldState, ReadyState newState)
 
 Vector<PlatformTimeRanges> MediaSource::activeRanges() const
 {
-    Vector<PlatformTimeRanges> activeRanges;
-    for (auto& sourceBuffer : *m_activeSourceBuffers)
-        activeRanges.append(sourceBuffer->bufferedInternal().ranges());
-    return activeRanges;
+    return WTF::map(*m_activeSourceBuffers, [](auto& sourceBuffer) {
+        return sourceBuffer->bufferedInternal().ranges();
+    });
 }
 
 ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(const ContentType& incomingType)
@@ -1091,7 +1064,7 @@ ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(con
         type = addVP9FullRangeVideoFlagToContentType(incomingType);
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (m_private->addSourceBuffer(type, RuntimeEnabledFeatures::sharedFeatures().webMParserEnabled(), sourceBufferPrivate)) {
+    switch (m_private->addSourceBuffer(type, DeprecatedGlobalSettings::webMParserEnabled(), sourceBufferPrivate)) {
     case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
     case MediaSourcePrivate::AddStatus::NotSupported:
@@ -1115,10 +1088,7 @@ void MediaSource::scheduleEvent(const AtomString& eventName)
 {
     DEBUG_LOG(LOGIDENTIFIER, "scheduling '", eventName, "'");
 
-    auto event = Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::No);
-    event->setTarget(this);
-
-    m_asyncEventQueue->enqueueEvent(WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::MediaElement, Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 ScriptExecutionContext* MediaSource::scriptExecutionContext() const
@@ -1146,6 +1116,58 @@ void MediaSource::regenerateActiveSourceBuffers()
     m_activeSourceBuffers->swap(newList);
     for (auto& sourceBuffer : *m_activeSourceBuffers)
         sourceBuffer->setBufferedDirty(true);
+
+    updateBufferedIfNeeded();
+}
+
+void MediaSource::updateBufferedIfNeeded()
+{
+    if (m_buffered && m_activeSourceBuffers->length() && std::all_of(m_activeSourceBuffers->begin(), m_activeSourceBuffers->end(), [](auto& buffer) { return !buffer->isBufferedDirty(); }))
+        return;
+
+    m_buffered = makeUnique<PlatformTimeRanges>();
+    for (auto& sourceBuffer : *m_activeSourceBuffers)
+        sourceBuffer->setBufferedDirty(false);
+
+    // Implements MediaSource algorithm for HTMLMediaElement.buffered.
+    // https://dvcs.w3.org/hg/html-media/raw-file/default/media-source/media-source.html#htmlmediaelement-extensions
+    Vector<PlatformTimeRanges> activeRanges = this->activeRanges();
+
+    // 1. If activeSourceBuffers.length equals 0 then return an empty TimeRanges object and abort these steps.
+    if (activeRanges.isEmpty())
+        return;
+
+    // 2. Let active ranges be the ranges returned by buffered for each SourceBuffer object in activeSourceBuffers.
+    // 3. Let highest end time be the largest range end time in the active ranges.
+    MediaTime highestEndTime = MediaTime::zeroTime();
+    for (auto& ranges : activeRanges) {
+        unsigned length = ranges.length();
+        if (length)
+            highestEndTime = std::max(highestEndTime, ranges.end(length - 1));
+    }
+
+    // Return an empty range if all ranges are empty.
+    if (!highestEndTime)
+        return;
+
+    // 4. Let intersection ranges equal a TimeRange object containing a single range from 0 to highest end time.
+    m_buffered->add(MediaTime::zeroTime(), highestEndTime);
+
+    // 5. For each SourceBuffer object in activeSourceBuffers run the following steps:
+    bool ended = readyState() == ReadyState::Ended;
+    for (auto& sourceRanges : activeRanges) {
+        // 5.1 Let source ranges equal the ranges returned by the buffered attribute on the current SourceBuffer.
+        // 5.2 If readyState is "ended", then set the end time on the last range in source ranges to highest end time.
+        if (ended && sourceRanges.length())
+            sourceRanges.add(sourceRanges.start(sourceRanges.length() - 1), highestEndTime);
+
+        // 5.3 Let new intersection ranges equal the intersection between the intersection ranges and the source ranges.
+        // 5.4 Replace the ranges in intersection ranges with the new intersection ranges.
+        m_buffered->intersectWith(sourceRanges);
+    }
+
+    if (m_private)
+        m_private->bufferedChanged(*m_buffered);
 }
 
 #if !RELEASE_LOG_DISABLED

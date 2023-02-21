@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,37 +22,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://gpuweb.github.io/gpuweb
 
-typedef unsigned long u32;
-
-[
-    ImplementedAs=GPUAddressMode
-] enum GPUAddressMode {
-    "clamp-to-edge",
-    "repeat",
-    "mirror-repeat"
-};
+// https://gpuweb.github.io/gpuweb/#dictdef-gpusamplerdescriptor
 
 [
-    ImplementedAs=GPUFilterMode
-] enum GPUFilterMode {
-    "nearest",
-    "linear"
-};
-
-[
-    Conditional=WEBGPU,
-    EnabledAtRuntime=WebGPU
-] dictionary GPUSamplerDescriptor {
-    GPUAddressMode addressModeU = "clampToEdge";
-    GPUAddressMode addressModeV = "clampToEdge";
-    GPUAddressMode addressModeW = "clampToEdge";
+    EnabledBySetting=WebGPU
+]
+dictionary GPUSamplerDescriptor : GPUObjectDescriptorBase {
+    GPUAddressMode addressModeU = "clamp-to-edge";
+    GPUAddressMode addressModeV = "clamp-to-edge";
+    GPUAddressMode addressModeW = "clamp-to-edge";
     GPUFilterMode magFilter = "nearest";
     GPUFilterMode minFilter = "nearest";
     GPUFilterMode mipmapFilter = "nearest";
     float lodMinClamp = 0;
-    float lodMaxClamp = 0xffffffff; // TODO: What should this be? Was Number.MAX_VALUE.
-    u32 maxAnisotropy = 1;
-    GPUCompareFunction compareFunction = "never";
+    float lodMaxClamp = 32;
+    GPUCompareFunction compare;
+    [Clamp] unsigned short maxAnisotropy = 1;
 };

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WorkerNetworkAgent.h"
 
+#include "SharedBuffer.h"
 #include "WorkerDebuggerProxy.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerThread.h"
@@ -53,7 +54,7 @@ Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
     return { };
 }
 
-Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets(const LockHolder&)
+Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets()
 {
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display worker's WebSockets
     return { };
@@ -65,9 +66,23 @@ void WorkerNetworkAgent::setResourceCachingDisabledInternal(bool disabled)
         workerDebuggerProxy->setResourceCachingDisabledByWebInspector(disabled);
 }
 
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
+bool WorkerNetworkAgent::setEmulatedConditionsInternal(std::optional<int>&& /* bytesPerSecondLimit */)
+{
+    return false;
+}
+
+#endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
 ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Protocol::ErrorString&, const Protocol::Network::FrameId&)
 {
     return &m_globalScope;
+}
+
+void WorkerNetworkAgent::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
+{
+    m_globalScope.addConsoleMessage(WTFMove(message));
 }
 
 } // namespace WebCore

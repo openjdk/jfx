@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,6 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import com.sun.media.jfxmedia.events.MetadataListener;
-import com.sun.media.jfxmedia.track.VideoResolution;
 
 /**
  * The <code>Media</code> class represents a media resource. It is instantiated
@@ -106,7 +105,7 @@ public final class Media {
 
     private ReadOnlyObjectWrapper<MediaException> errorPropertyImpl() {
         if (error == null) {
-            error = new ReadOnlyObjectWrapper<MediaException>() {
+            error = new ReadOnlyObjectWrapper<>() {
 
                 @Override
                 protected void invalidated() {
@@ -153,7 +152,7 @@ public final class Media {
 
     public ObjectProperty<Runnable> onErrorProperty() {
         if (onError == null) {
-            onError = new ObjectPropertyBase<Runnable>() {
+            onError = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -292,7 +291,7 @@ public final class Media {
 
     private ReadOnlyObjectWrapper<Duration> durationPropertyImpl() {
         if (duration == null) {
-            duration = new ReadOnlyObjectWrapper<Duration>(this, "duration");
+            duration = new ReadOnlyObjectWrapper<>(this, "duration");
         }
         return duration;
     }
@@ -465,7 +464,7 @@ public final class Media {
                     long trackID = trackElement.getTrackID();
                     if (getTrackWithID(trackID) == null) {
                         Track newTrack = null;
-                        Map<String,Object> trackMetadata = new HashMap<String,Object>();
+                        Map<String,Object> trackMetadata = new HashMap<>();
                         if (null != trackElement.getName()) {
                             // FIXME: need constants for metadata keys (globally)
                             trackMetadata.put("name", trackElement.getName());

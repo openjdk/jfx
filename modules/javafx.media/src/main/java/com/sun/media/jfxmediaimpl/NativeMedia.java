@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,7 @@ public abstract class NativeMedia extends Media {
 
     // --- Markers ---
 
+    @Override
     public void addMarker(String markerName, double presentationTime){
         if (markerName == null) {
             throw new IllegalArgumentException("markerName == null!");
@@ -78,8 +79,8 @@ public abstract class NativeMedia extends Media {
         markerLock.lock();
         try {
             if(markersByName == null) {
-                markersByName = new HashMap<String,Double>();
-                markersByTime = new TreeMap<Double,String>();
+                markersByName = new HashMap<>();
+                markersByTime = new TreeMap<>();
             }
             markersByName.put(markerName, presentationTime);
             markersByTime.put(presentationTime, markerName);
@@ -90,6 +91,7 @@ public abstract class NativeMedia extends Media {
         fireMarkerStateEvent(true);
     }
 
+    @Override
     public Map<String, Double> getMarkers() {
         Map<String, Double> markers = null;
         markerLock.lock();
@@ -103,6 +105,7 @@ public abstract class NativeMedia extends Media {
         return markers;
     }
 
+    @Override
     public double removeMarker(String markerName) {
         if (markerName == null) {
             throw new IllegalArgumentException("markerName == null!");
@@ -128,6 +131,7 @@ public abstract class NativeMedia extends Media {
         return time;
     }
 
+    @Override
     public void removeAllMarkers() {
         markerLock.lock();
         try {
@@ -164,7 +168,7 @@ public abstract class NativeMedia extends Media {
             listenerLock.lock();
             try {
                 if (markerListeners == null) {
-                    markerListeners = new WeakHashMap<MarkerStateListener,Boolean>();
+                    markerListeners = new WeakHashMap<>();
                 }
                 markerListeners.put(listener, Boolean.TRUE);
             } finally {

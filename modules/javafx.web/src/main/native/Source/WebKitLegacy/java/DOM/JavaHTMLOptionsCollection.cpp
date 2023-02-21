@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/URL.h>
-#include <wtf/Variant.h>
+#include <variant>
 
 #include <WebCore/JavaDOMUtils.h>
 #include <wtf/java/JavaEnv.h>
@@ -80,7 +80,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_namedI
     , jstring name)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(String(env, name))));
+    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(AtomString{String(env, name)})));
 }
 
 
@@ -93,7 +93,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptionsCollectionImpl_addImpl
         raiseTypeErrorException(env);
         return;
     }
-    raiseOnDOMError(env, IMPL->add(static_cast<HTMLOptionElement*>(jlong_to_ptr(option)), Optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
+    raiseOnDOMError(env, IMPL->add(static_cast<HTMLOptionElement*>(jlong_to_ptr(option)), std::optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
 }
 
 

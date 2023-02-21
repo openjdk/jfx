@@ -127,10 +127,8 @@ g_hmac_new (GChecksumType  digest_type,
   hmac->digesti = checksum;
   hmac->digesto = g_checksum_new (digest_type);
 
-  buffer = g_alloca (block_size);
+  buffer = g_alloca0 (block_size);
   pad = g_alloca (block_size);
-
-  memset (buffer, 0, block_size);
 
   /* If the key is too long, hash it */
   if (key_len > block_size)

@@ -33,32 +33,55 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "ActiveDOMObject.h"
+#include "EventTarget.h"
 #include "RTCIceGatheringState.h"
+#include "RTCIceTransportBackend.h"
 #include "RTCIceTransportState.h"
-#include "ScriptWrappable.h"
+#include "RTCPeerConnection.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class RTCIceTransport final : public RefCounted<RTCIceTransport>, public ScriptWrappable {
+class RTCPeerConnection;
+
+class RTCIceTransport : public RefCounted<RTCIceTransport>, public ActiveDOMObject, public EventTargetWithInlineData, public RTCIceTransportBackend::Client {
     WTF_MAKE_ISO_ALLOCATED(RTCIceTransport);
 public:
-    static Ref<RTCIceTransport> create()
-    {
-        return adoptRef(*new RTCIceTransport());
-    }
-    virtual ~RTCIceTransport() = default;
+    static Ref<RTCIceTransport> create(ScriptExecutionContext&, UniqueRef<RTCIceTransportBackend>&&, RTCPeerConnection&);
+    ~RTCIceTransport();
 
     RTCIceTransportState state() const { return m_transportState; }
-    void setState(RTCIceTransportState state) { m_transportState = state; }
-
     RTCIceGatheringState gatheringState() const { return m_gatheringState; }
-    void setGatheringState(RTCIceGatheringState state) { m_gatheringState = state; }
+
+    const RTCIceTransportBackend& backend() const { return m_backend.get(); }
+    RTCPeerConnection* connection() const { return m_connection.get(); }
+
+    using RefCounted<RTCIceTransport>::ref;
+    using RefCounted<RTCIceTransport>::deref;
 
 private:
-    RTCIceTransport() { };
+    RTCIceTransport(ScriptExecutionContext&, UniqueRef<RTCIceTransportBackend>&&, RTCPeerConnection&);
 
+    // EventTargetWithInlineData
+    EventTargetInterface eventTargetInterface() const final { return RTCIceTransportEventTargetInterfaceType; }
+    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
+
+    // ActiveDOMObject
+    void stop() final;
+    const char* activeDOMObjectName() const final { return "RTCIceTransport"; }
+    bool virtualHasPendingActivity() const final;
+
+    // RTCIceTransportBackend::Client
+    void onStateChanged(RTCIceTransportState) final;
+    void onGatheringStateChanged(RTCIceGatheringState) final;
+
+    bool m_isStopped { false };
+    UniqueRef<RTCIceTransportBackend> m_backend;
+    WeakPtr<RTCPeerConnection> m_connection;
     RTCIceTransportState m_transportState { RTCIceTransportState::New };
     RTCIceGatheringState m_gatheringState { RTCIceGatheringState::New };
 };

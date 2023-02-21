@@ -54,7 +54,7 @@ Vector<RefPtr<PerformanceEntry>> PerformanceObserverEntryList::getEntriesByName(
 
     // PerformanceObservers can only be registered for valid types.
     // So if the incoming entryType is an unknown type, there will be no matches.
-    Optional<PerformanceEntry::Type> type;
+    std::optional<PerformanceEntry::Type> type;
     if (!entryType.isNull()) {
         type = PerformanceEntry::parseEntryTypeString(entryType);
         if (!type)
@@ -64,7 +64,7 @@ Vector<RefPtr<PerformanceEntry>> PerformanceObserverEntryList::getEntriesByName(
     for (auto& entry : m_entries) {
         if (!name.isNull() && entry->name() != name)
             continue;
-        if (type && entry->type() != *type)
+        if (type && entry->performanceEntryType() != *type)
             continue;
         entries.append(entry.copyRef());
     }

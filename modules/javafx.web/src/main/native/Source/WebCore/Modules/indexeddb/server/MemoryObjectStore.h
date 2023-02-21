@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
 #include "IDBObjectStoreInfo.h"
 #include "IndexKey.h"
@@ -35,10 +33,6 @@
 #include "ThreadSafeDataBuffer.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
-
-namespace PAL {
-class SessionID;
-}
 
 namespace WebCore {
 
@@ -51,20 +45,19 @@ class IDBValue;
 struct IDBKeyRangeData;
 
 namespace IndexedDB {
-enum class GetAllType;
+enum class GetAllType : uint8_t;
 enum class IndexRecordType : bool;
 }
 
 namespace IDBServer {
 
-class IDBSerializationContext;
 class MemoryBackingStoreTransaction;
 
 typedef HashMap<IDBKeyData, ThreadSafeDataBuffer, IDBKeyDataHash, IDBKeyDataHashTraits> KeyValueMap;
 
 class MemoryObjectStore : public RefCounted<MemoryObjectStore> {
 public:
-    static Ref<MemoryObjectStore> create(PAL::SessionID, const IDBObjectStoreInfo&);
+    static Ref<MemoryObjectStore> create(const IDBObjectStoreInfo&);
 
     ~MemoryObjectStore();
 
@@ -95,7 +88,7 @@ public:
     IDBGetResult indexValueForKeyRange(uint64_t indexIdentifier, IndexedDB::IndexRecordType, const IDBKeyRangeData&) const;
     uint64_t countForKeyRange(uint64_t indexIdentifier, const IDBKeyRangeData&) const;
 
-    void getAllRecords(const IDBKeyRangeData&, Optional<uint32_t> count, IndexedDB::GetAllType, IDBGetAllResult&) const;
+    void getAllRecords(const IDBKeyRangeData&, std::optional<uint32_t> count, IndexedDB::GetAllType, IDBGetAllResult&) const;
 
     const IDBObjectStoreInfo& info() const { return m_info; }
 
@@ -111,7 +104,7 @@ public:
     void renameIndex(MemoryIndex&, const String& newName);
 
 private:
-    MemoryObjectStore(PAL::SessionID, const IDBObjectStoreInfo&);
+    MemoryObjectStore(const IDBObjectStoreInfo&);
 
     IDBKeyDataSet::iterator lowestIteratorInRange(const IDBKeyRangeData&, bool reverse) const;
 
@@ -135,11 +128,7 @@ private:
     HashMap<uint64_t, RefPtr<MemoryIndex>> m_indexesByIdentifier;
     HashMap<String, RefPtr<MemoryIndex>> m_indexesByName;
     HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryObjectStoreCursor>> m_cursors;
-
-    Ref<IDBSerializationContext> m_serializationContext;
 };
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

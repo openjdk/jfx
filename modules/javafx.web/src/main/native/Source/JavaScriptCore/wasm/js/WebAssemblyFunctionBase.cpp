@@ -30,15 +30,17 @@
 
 #include "HeapCellInlines.h"
 #include "HeapInlines.h"
+#include "JSCellInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "SlotVisitorInlines.h"
 
 namespace JSC {
 
-const ClassInfo WebAssemblyFunctionBase::s_info = { "WebAssemblyFunctionBase", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyFunctionBase) };
+const ClassInfo WebAssemblyFunctionBase::s_info = { "WebAssemblyFunctionBase"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyFunctionBase) };
 
-WebAssemblyFunctionBase::WebAssemblyFunctionBase(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure)
+WebAssemblyFunctionBase::WebAssemblyFunctionBase(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, WasmToWasmImportableFunction importableFunction)
     : Base(vm, executable, globalObject, structure)
+    , m_importableFunction(importableFunction)
 { }
 
 template<typename Visitor>
@@ -55,7 +57,7 @@ DEFINE_VISIT_CHILDREN(WebAssemblyFunctionBase);
 void WebAssemblyFunctionBase::finishCreation(VM& vm, NativeExecutable* executable, unsigned length, const String& name, JSWebAssemblyInstance* instance)
 {
     Base::finishCreation(vm, executable, length, name);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     m_instance.set(vm, this, instance);
 }
 

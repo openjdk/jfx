@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.GraphicsPipeline;
-import javafx.scene.Parent;
 
 class ViewScene extends GlassScene {
 
@@ -59,6 +58,7 @@ class ViewScene extends GlassScene {
         return painter != null && painter instanceof PresentingPainter;
     }
 
+    @Override
     protected View getPlatformView() {
         return this.platformView;
     }

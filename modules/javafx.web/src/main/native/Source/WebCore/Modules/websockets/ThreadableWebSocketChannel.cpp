@@ -32,11 +32,12 @@
 #include "ThreadableWebSocketChannel.h"
 
 #include "ContentRuleListResults.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "HTTPHeaderValues.h"
 #include "Page.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptExecutionContext.h"
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
@@ -52,19 +53,21 @@ namespace WebCore {
 
 Ref<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(Document& document, WebSocketChannelClient& client, SocketProvider& provider)
 {
-#if USE(SOUP)
-    auto channel = provider.createWebSocketChannel(document, client);
-    ASSERT(channel);
-    return channel.releaseNonNull();
+#if USE(CURL) || USE(SOUP)
+    bool enabled = true;
+#elif HAVE(NSURLSESSION_WEBSOCKET)
+    bool enabled = DeprecatedGlobalSettings::isNSURLSessionWebSocketEnabled();
 #else
-
-#if HAVE(NSURLSESSION_WEBSOCKET)
-    if (RuntimeEnabledFeatures::sharedFeatures().isNSURLSessionWebSocketEnabled()) {
+    bool enabled = false;
+#endif
+    if (enabled) {
         if (auto channel = provider.createWebSocketChannel(document, client))
             return channel.releaseNonNull();
     }
-#endif
 
+#if USE(SOUP)
+    RELEASE_ASSERT_NOT_REACHED();
+#else
     return WebSocketChannel::create(document, client, provider);
 #endif
 }
@@ -85,20 +88,20 @@ ThreadableWebSocketChannel::ThreadableWebSocketChannel()
 {
 }
 
-Optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::validateURL(Document& document, const URL& requestedURL)
+std::optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::validateURL(Document& document, const URL& requestedURL)
 {
     ValidatedURL validatedURL { requestedURL, true };
     if (auto* page = document.page()) {
-        if (!page->loadsFromNetwork())
+        if (!page->allowsLoadFromURL(requestedURL, MainFrameMainResource::No))
             return { };
 #if ENABLE(CONTENT_EXTENSIONS)
         if (auto* documentLoader = document.loader()) {
-            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::Raw, *documentLoader);
+            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, validatedURL.url, ContentExtensions::ResourceType::WebSocket, *documentLoader);
             if (results.summary.blockedLoad)
                 return { };
             if (results.summary.madeHTTPS) {
-                ASSERT(validatedURL.url.protocolIs("ws"));
-                validatedURL.url.setProtocol("wss");
+                ASSERT(validatedURL.url.protocolIs("ws"_s));
+                validatedURL.url.setProtocol("wss"_s);
             }
             validatedURL.areCookiesAllowed = !results.summary.blockedCookies;
         }
@@ -109,7 +112,7 @@ Optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::v
     return validatedURL;
 }
 
-Optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Document& document, const URL& url)
+std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Document& document, const URL& url)
 {
     auto validatedURL = validateURL(document, url);
     if (!validatedURL)
@@ -121,6 +124,10 @@ Optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Do
     request.setAllowCookies(validatedURL->areCookiesAllowed);
     request.setFirstPartyForCookies(document.firstPartyForCookies());
     request.setHTTPHeaderField(HTTPHeaderName::Origin, document.securityOrigin().toString());
+
+    if (auto* documentLoader = document.loader())
+        request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
+
     FrameLoader::addSameSiteInfoToRequestIfNeeded(request, &document);
 
     // Add no-cache headers to avoid compatibility issue.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,16 +43,6 @@ using namespace std;
 // Pluggable audio probes and signal handlers
 const int AUDIO_DECODER_HAS_SINK_PROBE   = 1 << 0;
 const int AUDIO_DECODER_HAS_SOURCE_PROBE = 1 << 1;
-
-#if TARGET_OS_WIN32
-enum CODEC_ID
-{
-    CODEC_ID_UNKNOWN = 0,
-    CODEC_ID_AAC,
-    CODEC_ID_H264, // HLS
-    CODEC_ID_AVC1, // MP4
-};
-#endif // TARGET_OS_WIN32
 
 #define DURATION_INDEFINITE -1
 #define DURATION_UNKNOWN -2
@@ -118,6 +108,7 @@ public:
 
     virtual bool IsCodecSupported(GstCaps *pCaps);
     virtual bool CheckCodecSupport();
+    virtual bool LoadDecoder(GstCaps *pCaps);
 
     virtual void CheckQueueSize(GstElement *element) {};
 

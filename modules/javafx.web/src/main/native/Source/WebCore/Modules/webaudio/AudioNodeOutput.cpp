@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010-2014 Google Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,14 +43,14 @@ AudioNodeOutput::AudioNodeOutput(AudioNode* node, unsigned numberOfChannels)
     , m_numberOfChannels(numberOfChannels)
     , m_desiredNumberOfChannels(numberOfChannels)
 {
-    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels());
+    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels);
 
     m_internalBus = AudioBus::create(numberOfChannels, AudioUtilities::renderQuantumSize);
 }
 
 void AudioNodeOutput::setNumberOfChannels(unsigned numberOfChannels)
 {
-    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels());
+    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels);
     ASSERT(context().isGraphOwner());
 
     m_desiredNumberOfChannels = numberOfChannels;
@@ -68,6 +69,9 @@ void AudioNodeOutput::updateInternalBus()
     if (numberOfChannels() == m_internalBus->numberOfChannels())
         return;
 
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
     m_internalBus = AudioBus::create(numberOfChannels(), AudioUtilities::renderQuantumSize);
 }
 
@@ -226,9 +230,9 @@ void AudioNodeOutput::disable()
     ASSERT(context().isGraphOwner());
 
     if (m_isEnabled) {
+        m_isEnabled = false;
         for (auto& input : m_inputs.keys())
             input->disable(this);
-        m_isEnabled = false;
     }
 }
 
@@ -237,9 +241,9 @@ void AudioNodeOutput::enable()
     ASSERT(context().isGraphOwner());
 
     if (!m_isEnabled) {
+        m_isEnabled = true;
         for (auto& input : m_inputs.keys())
             input->enable(this);
-        m_isEnabled = true;
     }
 }
 

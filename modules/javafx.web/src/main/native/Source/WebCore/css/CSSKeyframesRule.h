@@ -40,14 +40,9 @@ class StyleRuleKeyframe;
 class StyleRuleKeyframes final : public StyleRuleBase {
 public:
     static Ref<StyleRuleKeyframes> create(const AtomString& name);
-    static Ref<StyleRuleKeyframes> create(const AtomString& name, std::unique_ptr<DeferredStyleGroupRuleList>&&);
     ~StyleRuleKeyframes();
 
     const Vector<Ref<StyleRuleKeyframe>>& keyframes() const;
-    const Vector<Ref<StyleRuleKeyframe>>* keyframesWithoutDeferredParsing() const
-    {
-        return !m_deferredRules ? &m_keyframes : nullptr;
-    }
 
     void parserAppendKeyframe(RefPtr<StyleRuleKeyframe>&&);
     void wrapperAppendKeyframe(Ref<StyleRuleKeyframe>&&);
@@ -56,21 +51,18 @@ public:
     const AtomString& name() const { return m_name; }
     void setName(const AtomString& name) { m_name = name; }
 
-    Optional<size_t> findKeyframeIndex(const String& key) const;
+    std::optional<size_t> findKeyframeIndex(const String& key) const;
 
     Ref<StyleRuleKeyframes> copy() const { return adoptRef(*new StyleRuleKeyframes(*this)); }
 
+    void shrinkToFit();
+
 private:
     explicit StyleRuleKeyframes(const AtomString&);
-    StyleRuleKeyframes(const AtomString&, std::unique_ptr<DeferredStyleGroupRuleList>&&);
     StyleRuleKeyframes(const StyleRuleKeyframes&);
-
-    void parseDeferredRulesIfNeeded() const;
 
     mutable Vector<Ref<StyleRuleKeyframe>> m_keyframes;
     AtomString m_name;
-
-    mutable std::unique_ptr<DeferredStyleGroupRuleList> m_deferredRules;
 };
 
 class CSSKeyframesRule final : public CSSRule {
@@ -79,12 +71,12 @@ public:
 
     virtual ~CSSKeyframesRule();
 
-    CSSRule::Type type() const final { return KEYFRAMES_RULE; }
+    StyleRuleType styleRuleType() const final { return StyleRuleType::Keyframes; }
     String cssText() const final;
     void reattach(StyleRuleBase&) final;
 
-    String name() const { return m_keyframesRule->name(); }
-    void setName(const String&);
+    const AtomString& name() const { return m_keyframesRule->name(); }
+    void setName(const AtomString&);
 
     CSSRuleList& cssRules();
 
@@ -107,7 +99,7 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSKeyframesRule, CSSRule::KEYFRAMES_RULE)
+SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSKeyframesRule, StyleRuleType::Keyframes)
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleKeyframes)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isKeyframesRule(); }

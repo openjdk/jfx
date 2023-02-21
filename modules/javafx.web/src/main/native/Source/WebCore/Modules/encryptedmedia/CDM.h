@@ -27,14 +27,13 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
+#include "CDMPrivate.h"
 #include "ContextDestructionObserver.h"
 #include "MediaKeySessionType.h"
 #include "MediaKeySystemConfiguration.h"
 #include "MediaKeySystemMediaCapability.h"
 #include "MediaKeysRestrictions.h"
-#include "SharedBuffer.h"
 #include <wtf/Function.h>
-#include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
@@ -55,7 +54,7 @@ class Document;
 class ScriptExecutionContext;
 class SharedBuffer;
 
-class CDM : public RefCounted<CDM>, public CanMakeWeakPtr<CDM>, private ContextDestructionObserver {
+class CDM : public RefCounted<CDM>, public CanMakeWeakPtr<CDM>, public CDMPrivateClient, private ContextDestructionObserver {
 public:
     static bool supportsKeySystem(const String&);
     static bool isPersistentType(MediaKeySessionType);
@@ -63,7 +62,7 @@ public:
     static Ref<CDM> create(Document&, const String& keySystem);
     ~CDM();
 
-    using SupportedConfigurationCallback = WTF::Function<void(Optional<MediaKeySystemConfiguration>)>;
+    using SupportedConfigurationCallback = Function<void(std::optional<MediaKeySystemConfiguration>)>;
     void getSupportedConfiguration(MediaKeySystemConfiguration&& candidateConfiguration, SupportedConfigurationCallback&&);
 
     const String& keySystem() const { return m_keySystem; }
@@ -79,15 +78,20 @@ public:
 
     RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&);
 
-    Optional<String> sanitizeSessionId(const String& sessionId);
+    std::optional<String> sanitizeSessionId(const String& sessionId);
 
     String storageDirectory() const;
+
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger; }
+    const void* logIdentifier() const { return m_logIdentifier; }
+#endif
 
 private:
     CDM(Document&, const String& keySystem);
 
 #if !RELEASE_LOG_DISABLED
-    Ref<WTF::Logger> m_logger;
+    Ref<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif
     String m_keySystem;

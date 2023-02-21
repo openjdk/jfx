@@ -44,13 +44,13 @@ public:
     String closingBrace() const { return m_close; }
 
     RenderMathMLFencedOperator* closeFenceRenderer() const { return m_closeFenceRenderer.get(); }
-    void setCloseFenceRenderer(RenderMathMLFencedOperator& renderer) { m_closeFenceRenderer = makeWeakPtr(renderer); }
+    void setCloseFenceRenderer(RenderMathMLFencedOperator& renderer) { m_closeFenceRenderer = renderer; }
 
     void updateFromElement();
 
 private:
     bool isRenderMathMLFenced() const final { return true; }
-    const char* renderName() const final { return "RenderMathMLFenced"; }
+    ASCIILiteral renderName() const final { return "RenderMathMLFenced"_s; }
 
     String m_open;
     String m_close;

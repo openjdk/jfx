@@ -655,9 +655,11 @@ gst_tag_demux_chain_buffer (GstTagDemux * demux, GstBuffer * buf,
 
       /* Trim the buffer and adjust offset for typefinding */
       typefind_buf = demux->priv->collect;
-      gst_buffer_ref (typefind_buf);
-      if (!gst_tag_demux_trim_buffer (demux, &typefind_buf, &typefind_size))
-        return GST_FLOW_EOS;
+      if (typefind_buf) {
+        gst_buffer_ref (typefind_buf);
+        if (!gst_tag_demux_trim_buffer (demux, &typefind_buf, &typefind_size))
+          return GST_FLOW_EOS;
+      }
 
       if (typefind_buf == NULL)
         break;                  /* Still need more data */

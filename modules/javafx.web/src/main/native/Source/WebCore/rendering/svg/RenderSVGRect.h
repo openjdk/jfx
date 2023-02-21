@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 University of Szeged
  * Copyright (C) 2011 Renata Hodovan <reni@webkit.org>
+ * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,10 +28,12 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShape.h"
-#include "SVGRectElement.h"
 
 namespace WebCore {
+
+class SVGRectElement;
 
 class RenderSVGRect final : public RenderSVGShape {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGRect);
@@ -43,7 +46,7 @@ public:
 private:
     void graphicsElement() const = delete;
 
-    const char* renderName() const override { return "RenderSVGRect"; }
+    ASCIILiteral renderName() const override { return "RenderSVGRect"_s; }
 
     void updateShapeFromElement() override;
     bool isEmpty() const override { return m_usePathFallback ? RenderSVGShape::isEmpty() : m_fillBoundingBox.isEmpty(); }
@@ -60,3 +63,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

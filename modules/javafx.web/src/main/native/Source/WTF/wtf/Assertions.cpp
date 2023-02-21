@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -37,6 +37,7 @@
 #include <wtf/LoggingAccumulator.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StackTrace.h>
+#include <wtf/WTFConfig.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -61,7 +62,7 @@
 #include <unistd.h>
 #endif
 
-#if USE(JOURNALD)
+#if !RELEASE_LOG_DISABLED && !USE(OS_LOG)
 #include <wtf/StringPrintStream.h>
 #endif
 
@@ -71,7 +72,8 @@
 
 namespace WTF {
 
-WTF_ATTRIBUTE_PRINTF(1, 0) static String createWithFormatAndArguments(const char* format, va_list args)
+WTF_ATTRIBUTE_PRINTF(1, 0)
+static String createWithFormatAndArguments(const char* format, va_list args)
 {
     va_list argsCopy;
     va_copy(argsCopy, args);
@@ -117,7 +119,14 @@ WTF_ATTRIBUTE_PRINTF(1, 0) static String createWithFormatAndArguments(const char
     return StringImpl::create(reinterpret_cast<const LChar*>(buffer.data()), length);
 }
 
+#if PLATFORM(COCOA)
+void disableForwardingVPrintfStdErrToOSLog()
+{
+    g_wtfConfig.disableForwardingVPrintfStdErrToOSLog = true;
 }
+#endif
+
+} // namespace WTF
 
 extern "C" {
 
@@ -150,10 +159,12 @@ static void vprintf_stderr_common(const char* format, va_list args)
     }
 
 #if PLATFORM(COCOA)
-    va_list copyOfArgs;
-    va_copy(copyOfArgs, args);
-    os_log_with_args(OS_LOG_DEFAULT, OS_LOG_TYPE_DEFAULT, format, copyOfArgs, __builtin_return_address(0));
-    va_end(copyOfArgs);
+    if (!g_wtfConfig.disableForwardingVPrintfStdErrToOSLog) {
+        va_list copyOfArgs;
+        va_copy(copyOfArgs, args);
+        os_log_with_args(OS_LOG_DEFAULT, OS_LOG_TYPE_DEFAULT, format, copyOfArgs, __builtin_return_address(0));
+        va_end(copyOfArgs);
+    }
 #endif
 
     // Fall through to write to stderr in the same manner as other platforms.
@@ -175,8 +186,6 @@ static void vprintf_stderr_common(const char* format, va_list args)
     vfprintf(stderr, format, args);
 }
 
-ALLOW_NONLITERAL_FORMAT_BEGIN
-
 WTF_ATTRIBUTE_PRINTF(2, 0)
 static void vprintf_stderr_with_prefix(const char* prefix, const char* format, va_list args)
 {
@@ -187,7 +196,9 @@ static void vprintf_stderr_with_prefix(const char* prefix, const char* format, v
     memcpy(formatWithPrefix.data() + prefixLength, format, formatLength);
     formatWithPrefix[prefixLength + formatLength] = 0;
 
+    ALLOW_NONLITERAL_FORMAT_BEGIN
     vprintf_stderr_common(formatWithPrefix.data(), args);
+    ALLOW_NONLITERAL_FORMAT_END
 }
 
 WTF_ATTRIBUTE_PRINTF(1, 0)
@@ -204,10 +215,10 @@ static void vprintf_stderr_with_trailing_newline(const char* format, va_list arg
     formatWithNewline[formatLength] = '\n';
     formatWithNewline[formatLength + 1] = 0;
 
+    ALLOW_NONLITERAL_FORMAT_BEGIN
     vprintf_stderr_common(formatWithNewline.data(), args);
+    ALLOW_NONLITERAL_FORMAT_END
 }
-
-ALLOW_NONLITERAL_FORMAT_END
 
 WTF_ATTRIBUTE_PRINTF(1, 2)
 static void printf_stderr_common(const char* format, ...)
@@ -270,6 +281,23 @@ public:
     }
 };
 
+void WTFReportBacktraceWithPrefix(const char* prefix)
+{
+    CrashLogPrintStream out;
+    WTFReportBacktraceWithPrefixAndPrintStream(out, prefix);
+}
+
+void WTFReportBacktraceWithPrefixAndPrintStream(PrintStream& out, const char* prefix)
+{
+    static constexpr int framesToShow = 31;
+    static constexpr int framesToSkip = 2;
+    void* samples[framesToShow + framesToSkip];
+    int frames = framesToShow + framesToSkip;
+
+    WTFGetBacktrace(samples, &frames);
+    WTFPrintBacktraceWithPrefixAndPrintStream(out, samples + framesToSkip, frames - framesToSkip, prefix);
+}
+
 void WTFReportBacktrace()
 {
     static constexpr int framesToShow = 31;
@@ -281,11 +309,16 @@ void WTFReportBacktrace()
     WTFPrintBacktrace(samples + framesToSkip, frames - framesToSkip);
 }
 
+void WTFPrintBacktraceWithPrefixAndPrintStream(PrintStream& out, void** stack, int size, const char* prefix)
+{
+    StackTrace stackTrace(stack, size, prefix);
+    out.print(stackTrace);
+}
+
 void WTFPrintBacktrace(void** stack, int size)
 {
     CrashLogPrintStream out;
-    StackTrace stackTrace(stack, size);
-    out.print(stackTrace);
+    WTFPrintBacktraceWithPrefixAndPrintStream(out, stack, size, "");
 }
 
 #if !defined(NDEBUG) || !(OS(DARWIN) || PLATFORM(PLAYSTATION))
@@ -366,24 +399,24 @@ public:
 
 private:
     Lock accumulatorLock;
-    StringBuilder loggingAccumulator;
+    StringBuilder loggingAccumulator WTF_GUARDED_BY_LOCK(accumulatorLock);
 };
 
 void WTFLoggingAccumulator::accumulate(const String& log)
 {
-    Locker<Lock> locker(accumulatorLock);
+    Locker locker { accumulatorLock };
     loggingAccumulator.append(log);
 }
 
 void WTFLoggingAccumulator::resetAccumulatedLogs()
 {
-    Locker<Lock> locker(accumulatorLock);
+    Locker locker { accumulatorLock };
     loggingAccumulator.clear();
 }
 
 String WTFLoggingAccumulator::getAndResetAccumulatedLogs()
 {
-    Locker<Lock> locker(accumulatorLock);
+    Locker locker { accumulatorLock };
     String result = loggingAccumulator.toString();
     loggingAccumulator.clear();
     return result;
@@ -446,7 +479,7 @@ static void WTFLogVaList(WTFLogChannel* channel, const char* format, va_list arg
     ALLOW_NONLITERAL_FORMAT_END
 
     if (!loggingString.endsWith('\n'))
-        loggingString.append('\n');
+        loggingString = makeString(loggingString, '\n');
 
     loggingAccumulator().accumulate(loggingString);
 
@@ -528,9 +561,13 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
     }
 #endif
 
-    for (auto& logLevelComponent : String(logLevel).split(',')) {
-        Vector<String> componentInfo = logLevelComponent.split('=');
-        String component = componentInfo[0].stripWhiteSpace();
+    for (auto logLevelComponent : StringView::fromLatin1(logLevel).split(',')) {
+        auto componentInfo = logLevelComponent.split('=');
+        auto it = componentInfo.begin();
+        if (it == componentInfo.end())
+            continue;
+
+        auto component = (*it).stripWhiteSpace();
 
         WTFLogChannelState logChannelState = WTFLogChannelState::On;
         if (component.startsWith('-')) {
@@ -538,21 +575,21 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
             component = component.substring(1);
         }
 
-        if (equalLettersIgnoringASCIICase(component, "all")) {
+        if (equalLettersIgnoringASCIICase(component, "all"_s)) {
             setStateOfAllChannels(channels, count, logChannelState);
             continue;
         }
 
         WTFLogLevel logChannelLevel = WTFLogLevel::Error;
-        if (componentInfo.size() > 1) {
-            String level = componentInfo[1].stripWhiteSpace();
-            if (equalLettersIgnoringASCIICase(level, "error"))
+        if (++it != componentInfo.end()) {
+            auto level = (*it).stripWhiteSpace();
+            if (equalLettersIgnoringASCIICase(level, "error"_s))
                 logChannelLevel = WTFLogLevel::Error;
-            else if (equalLettersIgnoringASCIICase(level, "warning"))
+            else if (equalLettersIgnoringASCIICase(level, "warning"_s))
                 logChannelLevel = WTFLogLevel::Warning;
-            else if (equalLettersIgnoringASCIICase(level, "info"))
+            else if (equalLettersIgnoringASCIICase(level, "info"_s))
                 logChannelLevel = WTFLogLevel::Info;
-            else if (equalLettersIgnoringASCIICase(level, "debug"))
+            else if (equalLettersIgnoringASCIICase(level, "debug"_s))
                 logChannelLevel = WTFLogLevel::Debug;
             else
                 WTFLogAlways("Unknown logging level: %s", level.utf8().data());
@@ -582,7 +619,7 @@ void WTFReleaseLogStackTrace(WTFLogChannel* channel)
                 os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, demangled->mangledName());
             else
                 os_log(channel->osLogChannel, "%-3d %p", frameNumber, stackFrame);
-#elif USE(JOURNALD)
+#else
             StringPrintStream out;
             if (demangled && demangled->demangledName())
                 out.printf("%-3d %p %s", frameNumber, stackFrame, demangled->demangledName());
@@ -590,7 +627,11 @@ void WTFReleaseLogStackTrace(WTFLogChannel* channel)
                 out.printf("%-3d %p %s", frameNumber, stackFrame, demangled->mangledName());
             else
                 out.printf("%-3d %p", frameNumber, stackFrame);
+#if ENABLE(JOURNALD_LOG)
             sd_journal_send("WEBKIT_SUBSYSTEM=%s", channel->subsystem, "WEBKIT_CHANNEL=%s", channel->name, "MESSAGE=%s", out.toCString().data(), nullptr);
+#else
+            fprintf(stderr, "[%s:%s:-] %s\n", channel->subsystem, channel->name, out.toCString().data());
+#endif
 #endif
         }
     }
@@ -599,7 +640,7 @@ void WTFReleaseLogStackTrace(WTFLogChannel* channel)
 
 } // extern "C"
 
-#if OS(DARWIN) && (CPU(X86_64) || CPU(ARM64))
+#if (OS(DARWIN) || PLATFORM(PLAYSTATION)) && (CPU(X86_64) || CPU(ARM64))
 #if CPU(X86_64)
 
 #define CRASH_INST "int3"
@@ -710,7 +751,7 @@ void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t) { CRASH(); }
 void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t) { CRASH(); }
 
-#endif // OS(DARWIN) && (CPU(X64_64) || CPU(ARM64))
+#endif // (OS(DARWIN) || PLATFORM(PLAYSTATION)) && (CPU(X64_64) || CPU(ARM64))
 
 namespace WTF {
 

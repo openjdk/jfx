@@ -41,8 +41,8 @@
 #include <zircon/syscalls.h>
 #endif
 
-#define CHECK_DATASIZE_OF(datasize) ASSERT(datasize == 32 || datasize == 64)
-#define CHECK_MEMOPSIZE_OF(size) ASSERT(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
+#define CHECK_DATASIZE_OF(datasize) static_assert(datasize == 32 || datasize == 64)
+#define CHECK_MEMOPSIZE_OF(size) static_assert(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
 #define DATASIZE_OF(datasize) ((datasize == 64) ? Datasize_64 : Datasize_32)
 #define MEMOPSIZE_OF(datasize) ((datasize == 8 || datasize == 128) ? MemOpSize_8_or_128 : (datasize == 16) ? MemOpSize_16 : (datasize == 32) ? MemOpSize_32 : MemOpSize_64)
 #define CHECK_DATASIZE() CHECK_DATASIZE_OF(datasize)
@@ -55,14 +55,6 @@
 #define MEMPAIROPSIZE_FP(datasize) ((datasize == 128) ? MemPairOp_V128 : (datasize == 64) ? MemPairOp_V64 : MemPairOp_32)
 
 namespace JSC {
-
-template<size_t bits, typename Type>
-ALWAYS_INLINE constexpr bool isInt(Type t)
-{
-    constexpr size_t shift = sizeof(Type) * CHAR_BIT - bits;
-    static_assert(sizeof(Type) * CHAR_BIT > shift, "shift is larger than the size of the value");
-    return ((t << shift) >> shift) == t;
-}
 
 static ALWAYS_INLINE bool is4ByteAligned(const void* ptr)
 {
@@ -383,6 +375,9 @@ public:
             data.realTypes.m_bitNumber = bitNumber;
             data.realTypes.m_compareRegister = compareRegister;
         }
+        // We are defining a copy constructor and assignment operator
+        // because the ones provided by the compiler are not
+        // optimal. See https://bugs.webkit.org/show_bug.cgi?id=90930
         LinkRecord(const LinkRecord& other)
         {
             data.copyTypes = other.data.copyTypes;
@@ -434,7 +429,7 @@ public:
             struct CopyTypes {
                 uint64_t content[3];
             } copyTypes;
-            COMPILE_ASSERT(sizeof(RealTypes) == sizeof(CopyTypes), LinkRecordCopyStructSizeEqualsRealStruct);
+            static_assert(sizeof(RealTypes) == sizeof(CopyTypes), "LinkRecord's CopyStruct size equals to RealStruct");
         } data;
     };
 
@@ -827,6 +822,12 @@ public:
         offset >>= 2;
         ASSERT(offset == (offset << 13) >> 13);
         insn(conditionalBranchImmediate(offset, cond));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void bfc(RegisterID rd, int lsb, int width)
+    {
+        bfi<datasize>(rd, ARM64Registers::zr, lsb, width);
     }
 
     template<int datasize>
@@ -2874,15 +2875,15 @@ public:
         cacheFlush(from, sizeof(int));
     }
 
-    static void relinkJumpToNop(void* from)
-    {
-        relinkJump(from, static_cast<char*>(from) + 4);
-    }
-
     static void relinkCall(void* from, void* to)
     {
         relinkJumpOrCall<BranchType_CALL>(reinterpret_cast<int*>(from) - 1, reinterpret_cast<const int*>(from) - 1, to);
         cacheFlush(reinterpret_cast<int*>(from) - 1, sizeof(int));
+    }
+
+    static void relinkTailCall(void* from, void* to)
+    {
+        relinkJump(from, to);
     }
 
 #if ENABLE(JUMP_ISLANDS)
@@ -2903,30 +2904,6 @@ public:
         return prepareForAtomicRelinkJumpConcurrently(from, to);
     }
 #endif
-
-    static void repatchCompact(void* where, int32_t value)
-    {
-        ASSERT(!(value & ~0x3ff8));
-
-        MemOpSize size;
-        bool V;
-        MemOp opc;
-        int imm12;
-        RegisterID rn;
-        RegisterID rt;
-        bool expected = disassembleLoadStoreRegisterUnsignedImmediate(where, size, V, opc, imm12, rn, rt);
-        ASSERT_UNUSED(expected, expected && size >= MemOpSize_32 && !V && opc == MemOp_LOAD); // expect 32/64 bit load to GPR.
-
-        if (size == MemOpSize_32)
-            imm12 = encodePositiveImmediate<32>(value);
-        else
-            imm12 = encodePositiveImmediate<64>(value);
-        int insn = loadStoreRegisterUnsignedImmediate(size, V, opc, imm12, rn, rt);
-        RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(where) == where);
-        performJITMemcpy(where, &insn, sizeof(int));
-
-        cacheFlush(where, sizeof(int));
-    }
 
     unsigned debugOffset() { return m_buffer.debugOffset(); }
 
@@ -3119,7 +3096,7 @@ protected:
     template<BranchType type, CopyFunction copy = performJITMemcpy>
     static void linkJumpOrCall(int* from, const int* fromInstruction, void* to)
     {
-        static_assert(type == BranchType_JMP || type == BranchType_CALL, "");
+        static_assert(type == BranchType_JMP || type == BranchType_CALL);
 
         bool link;
         int imm26;
@@ -3236,7 +3213,7 @@ protected:
     template<BranchType type>
     static void relinkJumpOrCall(int* from, const int* fromInstruction, void* to)
     {
-        static_assert(type == BranchType_JMP || type == BranchType_CALL, "");
+        static_assert(type == BranchType_JMP || type == BranchType_CALL);
         if ((type == BranchType_JMP) && disassembleNop(from)) {
             unsigned op01;
             int imm19;
@@ -3853,6 +3830,7 @@ public:
 } // namespace JSC
 
 #undef CHECK_DATASIZE_OF
+#undef CHECK_MEMOPSIZE_OF
 #undef DATASIZE_OF
 #undef MEMOPSIZE_OF
 #undef CHECK_DATASIZE

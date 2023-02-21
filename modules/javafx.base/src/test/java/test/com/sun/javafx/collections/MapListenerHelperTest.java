@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,14 +65,14 @@ public class MapListenerHelperTest {
                 new InvalidationListenerMock()
         };
         changeListenerMock = new MockMapObserver[] {
-                new MockMapObserver<Object, Object>(),
-                new MockMapObserver<Object, Object>(),
-                new MockMapObserver<Object, Object>(),
-                new MockMapObserver<Object, Object>()
+                new MockMapObserver<>(),
+                new MockMapObserver<>(),
+                new MockMapObserver<>(),
+                new MockMapObserver<>()
         };
         helper = null;
         map = FXCollections.observableHashMap();
-        change = new MapExpressionHelper.SimpleChange<Object, Object>(map).setRemoved(new Object(), new Object());
+        change = new MapExpressionHelper.SimpleChange<>(map).setRemoved(new Object(), new Object());
     }
 
     private void resetAllListeners() {
@@ -251,7 +251,7 @@ public class MapListenerHelperTest {
 
     @Test
     public void testGeneric_AddInvalidationInPulse() {
-        final MapChangeListener<Object, Object> addListener = new MapChangeListener<Object, Object>() {
+        final MapChangeListener<Object, Object> addListener = new MapChangeListener<>() {
             int counter;
             @Override
             public void onChanged(Change<? extends Object, ? extends Object> change) {
@@ -362,7 +362,7 @@ public class MapListenerHelperTest {
 
     @Test
     public void testGeneric_RemoveInvalidationInPulse() {
-        final MapChangeListener<Object, Object> removeListener = new MapChangeListener<Object, Object>() {
+        final MapChangeListener<Object, Object> removeListener = new MapChangeListener<>() {
             int counter;
             @Override
             public void onChanged(Change<? extends Object, ? extends Object> change) {

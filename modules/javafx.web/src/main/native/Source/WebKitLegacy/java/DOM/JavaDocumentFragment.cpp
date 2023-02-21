@@ -77,7 +77,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getElementB
     , jstring elementId)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->getElementById(String(env, elementId))));
+    return JavaReturn<Element>(env, WTF::getPtr(IMPL->getElementById(AtomString {String(env, elementId)})));
 }
 
 
@@ -85,7 +85,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelect
     , jstring selectors)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelector(String(env, selectors)))));
+    return JavaReturn<Element>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelector(AtomString {String(env, selectors)}))));
 }
 
 
@@ -93,7 +93,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelect
     , jstring selectors)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NodeList>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelectorAll(String(env, selectors)))));
+    return JavaReturn<NodeList>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->querySelectorAll(AtomString {String(env, selectors)}))));
 }
 
 

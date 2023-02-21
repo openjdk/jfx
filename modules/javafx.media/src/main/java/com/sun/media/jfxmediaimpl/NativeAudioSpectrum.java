@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,7 +82,7 @@ final class NativeAudioSpectrum implements AudioSpectrum {
         if (bands > 1) {
             magnitudes = new float[bands];
             for (int i = 0; i < magnitudes.length; i++) {
-                magnitudes[i] = (float)DEFAULT_THRESHOLD;//Float.NEGATIVE_INFINITY;
+                magnitudes[i] = DEFAULT_THRESHOLD;//Float.NEGATIVE_INFINITY;
             }
 
             phases = new float[bands];

@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-const ClassInfo JSModuleNamespaceObject::s_info = { "ModuleNamespaceObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSModuleNamespaceObject) };
+const ClassInfo JSModuleNamespaceObject::s_info = { "ModuleNamespaceObject"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSModuleNamespaceObject) };
 
 JSModuleNamespaceObject::JSModuleNamespaceObject(VM& vm, Structure* structure)
     : Base(vm, structure)
@@ -45,12 +45,12 @@ void JSModuleNamespaceObject::finishCreation(JSGlobalObject* globalObject, Abstr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects
     // Quoted from the spec:
     //     A List containing the String values of the exported names exposed as own properties of this object.
-    //     The list is ordered as if an Array of those String values had been sorted using Array.prototype.sort using SortCompare as comparefn.
+    //     The list is ordered as if an Array of those String values had been sorted using Array.prototype.sort using SortCompare as comparator.
     //
     // Sort the exported names by the code point order.
     std::sort(resolutions.begin(), resolutions.end(), [] (const auto& lhs, const auto& rhs) {
@@ -58,14 +58,16 @@ void JSModuleNamespaceObject::finishCreation(JSGlobalObject* globalObject, Abstr
     });
 
     m_moduleRecord.set(vm, this, moduleRecord);
-    m_names.reserveCapacity(resolutions.size());
+    m_names = FixedVector<Identifier>(resolutions.size());
     {
-        auto locker = holdLock(cellLock());
+        Locker locker { cellLock() };
+        unsigned index = 0;
         for (const auto& pair : resolutions) {
-            m_names.append(pair.first);
+            m_names[index] = pair.first;
             auto addResult = m_exports.add(pair.first.impl(), ExportEntry());
             addResult.iterator->value.localName = pair.second.localName;
             addResult.iterator->value.moduleRecord.set(vm, this, pair.second.moduleRecord);
+            ++index;
         }
     }
 
@@ -75,8 +77,8 @@ void JSModuleNamespaceObject::finishCreation(JSGlobalObject* globalObject, Abstr
     // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-setprototypeof-v
     // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-isextensible
     // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-preventextensions
-    methodTable(vm)->preventExtensions(this, globalObject);
-    scope.assertNoException();
+    methodTable()->preventExtensions(this, globalObject);
+    scope.assertNoExceptionExceptTermination();
 }
 
 void JSModuleNamespaceObject::destroy(JSCell* cell)
@@ -93,7 +95,7 @@ void JSModuleNamespaceObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_moduleRecord);
     {
-        auto locker = holdLock(thisObject->cellLock());
+        Locker locker { thisObject->cellLock() };
         for (auto& pair : thisObject->m_exports)
             visitor.appendHidden(pair.value.moduleRecord);
     }
@@ -212,12 +214,19 @@ bool JSModuleNamespaceObject::putByIndex(JSCell*, JSGlobalObject* globalObject, 
 
 bool JSModuleNamespaceObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
-    // http://www.ecma-international.org/ecma-262/6.0/#sec-module-namespace-exotic-objects-delete-p
+    // https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-delete-p
     JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
     if (propertyName.isSymbol())
         return Base::deleteProperty(thisObject, globalObject, propertyName, slot);
 
     return !thisObject->m_exports.contains(propertyName.uid());
+}
+
+bool JSModuleNamespaceObject::deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName)
+{
+    VM& vm = globalObject->vm();
+    JSModuleNamespaceObject* thisObject = jsCast<JSModuleNamespaceObject*>(cell);
+    return !thisObject->m_exports.contains(Identifier::from(vm, propertyName).impl());
 }
 
 void JSModuleNamespaceObject::getOwnPropertyNames(JSObject* cell, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)

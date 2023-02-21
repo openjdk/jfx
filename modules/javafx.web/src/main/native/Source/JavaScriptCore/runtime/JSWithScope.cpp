@@ -30,13 +30,13 @@
 
 namespace JSC {
 
-const ClassInfo JSWithScope::s_info = { "WithScope", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWithScope) };
+const ClassInfo JSWithScope::s_info = { "WithScope"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWithScope) };
 
 JSWithScope* JSWithScope::create(
     VM& vm, JSGlobalObject* globalObject, JSScope* next, JSObject* object)
 {
     Structure* structure = globalObject->withScopeStructure();
-    JSWithScope* withScope = new (NotNull, allocateCell<JSWithScope>(vm.heap)) JSWithScope(vm, structure, object, next);
+    JSWithScope* withScope = new (NotNull, allocateCell<JSWithScope>(vm)) JSWithScope(vm, structure, object, next);
     withScope->finishCreation(vm);
     return withScope;
 }

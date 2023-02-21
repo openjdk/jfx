@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry combineaccessrules="false" kind="src" path="/swing">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/base">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="javafx.base/com.sun.javafx=ALL-UNNAMED:javafx.base/test.util.memory=ALL-UNNAMED"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/graphics">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="javafx.graphics/com.sun.glass.ui=ALL-UNNAMED:javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED:javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED:javafx.graphics/com.sun.prism.impl=ALL-UNNAMED:javafx.graphics/com.sun.javafx.image.impl=ALL-UNNAMED:javafx.graphics/com.sun.glass.events=ALL-UNNAMED:javafx.graphics/com.sun.javafx.application=ALL-UNNAMED:javafx.graphics/com.sun.javafx.css=ALL-UNNAMED:javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED:javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED:javafx.graphics/com.sun.glass.ui.mac=ALL-UNNAMED"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/controls">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="javafx.controls/test.com.sun.javafx.scene.control.infrastructure=ALL-UNNAMED:javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/fxml">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/web">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="javafx.web/com.sun.webkit=ALL-UNNAMED"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="java.desktop/sun.awt.datatransfer=ALL-UNNAMED"/>
+		</attributes>
+	</classpathentry>
+    <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
+        <attributes>
+            <attribute name="test" value="true"/>
+        </attributes>
+    </classpathentry>
+	<classpathentry kind="src" output="bin" path="java">
+	    <attributes>
+            <attribute name="gradle_scope" value="test"/>
+            <attribute name="gradle_used_by_scope" value="test"/>
+            <attribute name="test" value="true"/>
+        </attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin" path="resources">
+        <attributes>
+            <attribute name="gradle_scope" value="test"/>
+            <attribute name="gradle_used_by_scope" value="test"/>
+            <attribute name="test" value="true"/>
+        </attributes>
+    </classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import java.util.EnumSet;
 import java.util.Set;
 
 import javafx.beans.NamedArg;
-import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
@@ -209,7 +208,7 @@ public final class DragEvent extends InputEvent {
      * Common supertype for all drag event types.
      */
     public static final EventType<DragEvent> ANY =
-            new EventType<DragEvent>(InputEvent.ANY, "DRAG");
+            new EventType<>(InputEvent.ANY, "DRAG");
 
     /**
      * This event occurs when drag gesture enters a node. It's the
@@ -222,7 +221,7 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_ENTERED_TARGET =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_ENTERED_TARGET");
+            new EventType<>(DragEvent.ANY, "DRAG_ENTERED_TARGET");
 
     /**
      * This event occurs when drag gesture enters a node.
@@ -234,7 +233,7 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_ENTERED =
-            new EventType<DragEvent>(DragEvent.DRAG_ENTERED_TARGET, "DRAG_ENTERED");
+            new EventType<>(DragEvent.DRAG_ENTERED_TARGET, "DRAG_ENTERED");
 
     /**
      * This event occurs when drag gesture exits a node. It's the
@@ -247,7 +246,7 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_EXITED_TARGET =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_EXITED_TARGET");
+            new EventType<>(DragEvent.ANY, "DRAG_EXITED_TARGET");
 
     /**
      * This event occurs when drag gesture exits a node.
@@ -259,13 +258,13 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_EXITED =
-            new EventType<DragEvent>(DragEvent.DRAG_EXITED_TARGET, "DRAG_EXITED");
+            new EventType<>(DragEvent.DRAG_EXITED_TARGET, "DRAG_EXITED");
 
     /**
      * This event occurs when drag gesture progresses within this node.
      */
     public static final EventType<DragEvent> DRAG_OVER =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_OVER");
+            new EventType<>(DragEvent.ANY, "DRAG_OVER");
 
     // Do we want DRAG_TRANSFER_MODE_CHANGED event?
 //    /**
@@ -284,7 +283,7 @@ public final class DragEvent extends InputEvent {
      * in handler of this event.
      */
     public static final EventType<DragEvent> DRAG_DROPPED =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_DROPPED");
+            new EventType<>(DragEvent.ANY, "DRAG_DROPPED");
 
     /**
      * This event occurs on drag-and-drop gesture source after its data has
@@ -297,7 +296,7 @@ public final class DragEvent extends InputEvent {
      * indicates that no data was transferred during the drag and drop gesture.
      */
     public static final EventType<DragEvent> DRAG_DONE =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_DONE");
+            new EventType<>(DragEvent.ANY, "DRAG_DONE");
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
@@ -433,7 +432,7 @@ public final class DragEvent extends InputEvent {
      * @since JavaFX 8.0
      */
     public DragEvent copyFor(Object source, EventTarget target, EventType<DragEvent> type) {
-        DragEvent e = (DragEvent) copyFor(source, target);
+        DragEvent e = copyFor(source, target);
         e.eventType = type;
         return e;
     }

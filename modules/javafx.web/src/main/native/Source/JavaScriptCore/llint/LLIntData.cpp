@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,13 +58,14 @@ extern "C" void wasm_entry(void*, void*, void*);
 extern "C" void vmEntryToJavaScriptTrampoline(void);
 extern "C" void tailCallJSEntryTrampoline(void);
 extern "C" void tailCallJSEntrySlowPathTrampoline(void);
+extern "C" void tailCallWithoutUntagJSEntryTrampoline(void);
 extern "C" void exceptionHandlerTrampoline(void);
 extern "C" void returnFromLLIntTrampoline(void);
 #endif
 
 #if ENABLE(CSS_SELECTOR_JIT) && CPU(ARM64E)
 extern "C" void vmEntryToCSSJITAfter(void);
-JSC_ANNOTATE_JIT_OPERATION(_JITTarget_vmEntryToCSSJITAfter, vmEntryToCSSJITAfter);
+JSC_ANNOTATE_JIT_OPERATION_RETURN(vmEntryToCSSJITAfter);
 #endif
 
 void initialize()
@@ -82,7 +83,7 @@ void initialize()
 
     static_assert(llint_throw_from_slow_path_trampoline < UINT8_MAX);
     static_assert(wasm_throw_from_slow_path_trampoline < UINT8_MAX);
-    for (unsigned i = 0; i < maxOpcodeLength + 1; ++i) {
+    for (unsigned i = 0; i < maxBytecodeStructLength + 1; ++i) {
         g_jscConfig.llint.exceptionInstructions[i] = llint_throw_from_slow_path_trampoline;
         g_jscConfig.llint.wasmExceptionInstructions[i] = wasm_throw_from_slow_path_trampoline;
     }
@@ -153,7 +154,7 @@ void initialize()
     {
         static LazyNeverDestroyed<MacroAssemblerCodeRef<NativeToJITGatePtrTag>> codeRef;
         if (Options::useJIT())
-            codeRef.construct(createTailCallGate(JSEntryPtrTag));
+            codeRef.construct(createTailCallGate(JSEntryPtrTag, true));
         else
             codeRef.construct(MacroAssemblerCodeRef<NativeToJITGatePtrTag>::createSelfManagedCodeRef(MacroAssemblerCodePtr<NativeToJITGatePtrTag>::createFromExecutableAddress(retagCodePtr<void*, CFunctionPtrTag, NativeToJITGatePtrTag>(&tailCallJSEntryTrampoline))));
         g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::tailCallJSEntryPtrTag)]= codeRef.get().code().executableAddress();
@@ -161,10 +162,18 @@ void initialize()
     {
         static LazyNeverDestroyed<MacroAssemblerCodeRef<NativeToJITGatePtrTag>> codeRef;
         if (Options::useJIT())
-            codeRef.construct(createTailCallGate(JSEntrySlowPathPtrTag));
+            codeRef.construct(createTailCallGate(JSEntryPtrTag, true));
         else
             codeRef.construct(MacroAssemblerCodeRef<NativeToJITGatePtrTag>::createSelfManagedCodeRef(MacroAssemblerCodePtr<NativeToJITGatePtrTag>::createFromExecutableAddress(retagCodePtr<void*, CFunctionPtrTag, NativeToJITGatePtrTag>(&tailCallJSEntrySlowPathTrampoline))));
         g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::tailCallJSEntrySlowPathPtrTag)] = codeRef.get().code().executableAddress();
+    }
+    {
+        static LazyNeverDestroyed<MacroAssemblerCodeRef<NativeToJITGatePtrTag>> codeRef;
+        if (Options::useJIT())
+            codeRef.construct(createTailCallGate(JSEntryPtrTag, false));
+        else
+            codeRef.construct(MacroAssemblerCodeRef<NativeToJITGatePtrTag>::createSelfManagedCodeRef(MacroAssemblerCodePtr<NativeToJITGatePtrTag>::createFromExecutableAddress(retagCodePtr<void*, CFunctionPtrTag, NativeToJITGatePtrTag>(&tailCallWithoutUntagJSEntryTrampoline))));
+        g_jscConfig.llint.gateMap[static_cast<unsigned>(Gate::tailCallWithoutUntagJSEntryPtrTag)]= codeRef.get().code().executableAddress();
     }
     {
         static LazyNeverDestroyed<MacroAssemblerCodeRef<NativeToJITGatePtrTag>> codeRef;

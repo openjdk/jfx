@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,11 @@ const char* Worklist::priorityString(Priority priority)
     case Priority::Synchronous: return "Synchronous";
     }
     RELEASE_ASSERT_NOT_REACHED();
+}
+
+void Worklist::dump(PrintStream& out) const
+{
+    out.print("Queue Size = ", m_queue.size());
 }
 
 // The Thread class is designed to prevent threads from blocking when there is still work
@@ -107,14 +112,14 @@ private:
 
         ASSERT(!plan->hasWork() || plan->multiThreaded());
         if (plan->hasWork() && !wasMultiThreaded && plan->multiThreaded()) {
-            LockHolder locker(*worklist.m_lock);
+            Locker locker { *worklist.m_lock };
             element.setToNextPriority();
             worklist.m_queue.enqueue(WTFMove(element));
             worklist.m_planEnqueued->notifyAll(locker);
             return complete(locker);
         }
 
-        return complete(holdLock(*worklist.m_lock));
+        return complete(Locker { *worklist.m_lock });
     }
 
     const char* name() const final
@@ -145,7 +150,7 @@ void Worklist::QueueElement::setToNextPriority()
 
 void Worklist::enqueue(Ref<Plan> plan)
 {
-    LockHolder locker(*m_lock);
+    Locker locker { *m_lock };
 
     if (ASSERT_ENABLED) {
         for (const auto& element : m_queue)
@@ -164,7 +169,7 @@ void Worklist::enqueue(Ref<Plan> plan)
 void Worklist::completePlanSynchronously(Plan& plan)
 {
     {
-        LockHolder locker(*m_lock);
+        Locker locker { *m_lock };
         m_queue.decreaseKey([&] (QueueElement& element) {
             if (element.plan == &plan) {
                 element.priority = Priority::Synchronous;
@@ -182,13 +187,13 @@ void Worklist::completePlanSynchronously(Plan& plan)
     plan.waitForCompletion();
 }
 
-void Worklist::stopAllPlansForContext(Context& context)
+void Worklist::stopAllPlansForContext(VM& vm)
 {
-    LockHolder locker(*m_lock);
+    Locker locker { *m_lock };
     Vector<QueueElement> elements;
     while (!m_queue.isEmpty()) {
         QueueElement element = m_queue.dequeue();
-        bool didCancel = element.plan->tryRemoveContextAndCancelIfLast(context);
+        bool didCancel = element.plan->tryRemoveContextAndCancelIfLast(vm);
         if (!didCancel)
             elements.append(WTFMove(element));
     }
@@ -198,7 +203,7 @@ void Worklist::stopAllPlansForContext(Context& context)
 
     for (auto& thread : m_threads) {
         if (thread->element.plan) {
-            bool didCancel = thread->element.plan->tryRemoveContextAndCancelIfLast(context);
+            bool didCancel = thread->element.plan->tryRemoveContextAndCancelIfLast(vm);
             if (didCancel) {
                 // We don't have to worry about the deadlocking since the thread can't block without checking for a new plan and must hold the lock to do so.
                 thread->synchronize.wait(*m_lock);
@@ -212,16 +217,16 @@ Worklist::Worklist()
     , m_planEnqueued(AutomaticThreadCondition::create())
 {
     unsigned numberOfCompilationThreads = Options::useConcurrentJIT() ? kernTCSMAwareNumberOfProcessorCores() : 1;
-    m_threads.reserveCapacity(numberOfCompilationThreads);
-    LockHolder locker(*m_lock);
-    for (unsigned i = 0; i < numberOfCompilationThreads; i++)
+    m_threads.reserveInitialCapacity(numberOfCompilationThreads);
+    Locker locker { *m_lock };
+    for (unsigned i = 0; i < numberOfCompilationThreads; ++i)
         m_threads.uncheckedAppend(makeUnique<Worklist::Thread>(locker, *this));
 }
 
 Worklist::~Worklist()
 {
     {
-        LockHolder locker(*m_lock);
+        Locker locker { *m_lock };
         m_queue.enqueue({ Priority::Shutdown, nextTicket(), nullptr });
         m_planEnqueued->notifyAll(locker);
     }

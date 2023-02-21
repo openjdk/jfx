@@ -239,8 +239,6 @@ bool JIT::compileCallEval(const OpCallEval& bytecode)
 
     addSlowCase(branchIfEmpty(regT1));
 
-    sampleCodeBlock(m_codeBlock);
-
     emitPutCallResult(bytecode);
 
     return true;
@@ -260,11 +258,9 @@ void JIT::compileCallEvalSlowCase(const Instruction* instruction, Vector<SlowCas
     addPtr(TrustedImm32(registerOffset * sizeof(Register) + sizeof(CallerFrameAndPC)), callFrameRegister, stackPointerRegister);
 
     emitLoad(callee, regT1, regT0);
-    emitVirtualCall(vm(), m_codeBlock->globalObject(), info);
+    emitVirtualCall(*m_vm, m_codeBlock->globalObject(), info);
     addPtr(TrustedImm32(stackPointerOffsetFor(m_codeBlock) * sizeof(Register)), callFrameRegister, stackPointerRegister);
     checkStackPointerAlignment();
-
-    sampleCodeBlock(m_codeBlock);
 
     emitPutCallResult(bytecode);
 }
@@ -305,35 +301,32 @@ void JIT::compileOpCall(const Instruction* instruction, unsigned callLinkInfoInd
     if (compileCallEval(bytecode))
         return;
 
-    if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs)
-        emitRestoreCalleeSaves();
+    info->setUpCall(CallLinkInfo::callTypeFor(opcodeID), regT0);
+    ASSERT(m_callCompilationInfo.size() == callLinkInfoIndex);
+    m_callCompilationInfo.append(CallCompilationInfo());
+    m_callCompilationInfo[callLinkInfoIndex].callLinkInfo = info;
 
     addSlowCase(branchIfNotCell(regT1));
 
-    DataLabelPtr addressOfLinkedFunctionCheck;
-    Jump slowCase = branchPtrWithPatch(NotEqual, regT0, addressOfLinkedFunctionCheck, TrustedImmPtr(nullptr));
-
-    addSlowCase(slowCase);
-
-    ASSERT(m_callCompilationInfo.size() == callLinkInfoIndex);
-    info->setUpCall(CallLinkInfo::callTypeFor(opcodeID), regT0);
-    m_callCompilationInfo.append(CallCompilationInfo());
-    m_callCompilationInfo[callLinkInfoIndex].hotPathBegin = addressOfLinkedFunctionCheck;
-    m_callCompilationInfo[callLinkInfoIndex].callLinkInfo = info;
-
     checkStackPointerAlignment();
     if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs || opcodeID == op_tail_call_forward_arguments) {
-        prepareForTailCallSlow();
-        m_callCompilationInfo[callLinkInfoIndex].hotPathOther = emitNakedNearTailCall();
+        auto slowPaths = info->emitTailCallFastPath(*this, regT0, regT2, CallLinkInfo::UseDataIC::Yes, [&] {
+            emitRestoreCalleeSaves();
+            prepareForTailCallSlow(regT2);
+        });
+        addSlowCase(slowPaths);
+        auto doneLocation = label();
+        m_callCompilationInfo[callLinkInfoIndex].doneLocation = doneLocation;
         return;
     }
 
-    m_callCompilationInfo[callLinkInfoIndex].hotPathOther = emitNakedNearCall();
+    auto slowPaths = info->emitFastPath(*this, regT0, regT2, CallLinkInfo::UseDataIC::Yes);
+    addSlowCase(slowPaths);
+    m_callCompilationInfo[callLinkInfoIndex].doneLocation = label();
 
     addPtr(TrustedImm32(stackPointerOffsetFor(m_codeBlock) * sizeof(Register)), callFrameRegister, stackPointerRegister);
     checkStackPointerAlignment();
 
-    sampleCodeBlock(m_codeBlock);
     emitPutCallResult(bytecode);
 }
 
@@ -348,24 +341,21 @@ void JIT::compileOpCallSlowCase(const Instruction* instruction, Vector<SlowCaseE
     }
 
     linkAllSlowCases(iter);
-
-    move(TrustedImmPtr(m_codeBlock->globalObject()), regT3);
-    move(TrustedImmPtr(m_callCompilationInfo[callLinkInfoIndex].callLinkInfo), regT2);
+    m_callCompilationInfo[callLinkInfoIndex].slowPathStart = label();
 
     if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs || opcodeID == op_tail_call_forward_arguments)
         emitRestoreCalleeSaves();
 
-    m_callCompilationInfo[callLinkInfoIndex].callReturnLocation = emitNakedNearCall(m_vm->getCTIStub(linkCallThunkGenerator).retaggedCode<NoPtrTag>());
+    move(TrustedImmPtr(m_codeBlock->globalObject()), regT3);
+    m_callCompilationInfo[callLinkInfoIndex].callLinkInfo->emitSlowPath(*m_vm, *this);
 
-    if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs) {
+    if (opcodeID == op_tail_call || opcodeID == op_tail_call_varargs || opcodeID == op_tail_call_forward_arguments) {
         abortWithReason(JITDidReturnFromTailCall);
         return;
     }
 
     addPtr(TrustedImm32(stackPointerOffsetFor(m_codeBlock) * sizeof(Register)), callFrameRegister, stackPointerRegister);
     checkStackPointerAlignment();
-
-    sampleCodeBlock(m_codeBlock);
 
     auto bytecode = instruction->as<Op>();
     emitPutCallResult(bytecode);
@@ -406,12 +396,14 @@ void JIT::emit_op_iterator_open(const Instruction* instruction)
 
     JITGetByIdGenerator gen(
         m_codeBlock,
+        JITType::BaselineJIT,
         CodeOrigin(m_bytecodeIndex),
         CallSiteIndex(BytecodeIndex(m_bytecodeIndex.offset())),
         RegisterSet::stubUnavailableRegisters(),
         CacheableIdentifier::createFromImmortalIdentifier(ident->impl()),
         JSValueRegs(tagIteratorGPR, payloadIteratorGPR),
         nextRegs,
+        InvalidGPRReg,
         AccessType::GetById);
 
     gen.generateFastPath(*this);
@@ -515,12 +507,14 @@ void JIT::emit_op_iterator_next(const Instruction* instruction)
         preservedRegs.add(payloadValueGPR);
         JITGetByIdGenerator gen(
             m_codeBlock,
+            JITType::BaselineJIT,
             CodeOrigin(m_bytecodeIndex),
             CallSiteIndex(BytecodeIndex(m_bytecodeIndex.offset())),
             preservedRegs,
             CacheableIdentifier::createFromImmortalIdentifier(vm().propertyNames->done.impl()),
             JSValueRegs(tagIterResultGPR, payloadIterResultGPR),
             doneRegs,
+            InvalidGPRReg,
             AccessType::GetById);
         gen.generateFastPath(*this);
         addSlowCase(gen.slowPathJump());
@@ -543,12 +537,14 @@ void JIT::emit_op_iterator_next(const Instruction* instruction)
 
         JITGetByIdGenerator gen(
             m_codeBlock,
+            JITType::BaselineJIT,
             CodeOrigin(m_bytecodeIndex),
             CallSiteIndex(BytecodeIndex(m_bytecodeIndex.offset())),
             RegisterSet::stubUnavailableRegisters(),
             CacheableIdentifier::createFromImmortalIdentifier(vm().propertyNames->value.impl()),
             JSValueRegs(tagIterResultGPR, payloadIterResultGPR),
             resultRegs,
+            InvalidGPRReg,
             AccessType::GetById);
         gen.generateFastPath(*this);
         addSlowCase(gen.slowPathJump());

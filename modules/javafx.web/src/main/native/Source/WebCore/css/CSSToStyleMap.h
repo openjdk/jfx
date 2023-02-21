@@ -32,6 +32,7 @@ class CSSValue;
 class FillLayer;
 class LengthBox;
 class NinePieceImage;
+class Quad;
 class RenderStyle;
 class StyleImage;
 
@@ -57,7 +58,7 @@ public:
     void mapFillSize(CSSPropertyID, FillLayer&, const CSSValue&);
     void mapFillXPosition(CSSPropertyID, FillLayer&, const CSSValue&);
     void mapFillYPosition(CSSPropertyID, FillLayer&, const CSSValue&);
-    void mapFillMaskSourceType(CSSPropertyID, FillLayer&, const CSSValue&);
+    void mapFillMaskMode(CSSPropertyID, FillLayer&, const CSSValue&);
 
     void mapAnimationDelay(Animation&, const CSSValue&);
     void mapAnimationDirection(Animation&, const CSSValue&);
@@ -68,9 +69,11 @@ public:
     void mapAnimationPlayState(Animation&, const CSSValue&);
     void mapAnimationProperty(Animation&, const CSSValue&);
     void mapAnimationTimingFunction(Animation&, const CSSValue&);
+    void mapAnimationCompositeOperation(Animation&, const CSSValue&);
 
-    void mapNinePieceImage(CSSPropertyID, CSSValue*, NinePieceImage&);
+    void mapNinePieceImage(CSSValue*, NinePieceImage&);
     void mapNinePieceImageSlice(CSSValue&, NinePieceImage&);
+    void mapNinePieceImageWidth(CSSValue&, NinePieceImage&);
     LengthBox mapNinePieceImageQuad(CSSValue&);
     void mapNinePieceImageRepeat(CSSValue&, NinePieceImage&);
 
@@ -78,6 +81,7 @@ private:
     RenderStyle* style() const;
     bool useSVGZoomRules() const;
     RefPtr<StyleImage> styleImage(CSSValue&);
+    LengthBox mapNinePieceImageQuad(Quad*);
 
     // FIXME: This type can merge into BuilderState.
     Style::BuilderState& m_builderState;

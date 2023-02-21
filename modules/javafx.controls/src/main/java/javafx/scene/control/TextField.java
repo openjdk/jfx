@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -216,7 +216,7 @@ public class TextField extends TextInputControl {
      *
      * The action handler is normally called when the user types the ENTER key.
      */
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override
         protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
@@ -289,8 +289,8 @@ public class TextField extends TextInputControl {
 
     private static class StyleableProperties {
         private static final CssMetaData<TextField, Pos> ALIGNMENT =
-            new CssMetaData<TextField, Pos>("-fx-alignment",
-                new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
+            new CssMetaData<>("-fx-alignment",
+                new EnumConverter<>(Pos.class), Pos.CENTER_LEFT ) {
 
             @Override public boolean isSettable(TextField n) {
                 return (n.alignment == null || !n.alignment.isBound());
@@ -302,7 +302,7 @@ public class TextField extends TextInputControl {
         };
 
         private static final CssMetaData<TextField,Number> PREF_COLUMN_COUNT =
-            new CssMetaData<TextField,Number>("-fx-pref-column-count",
+            new CssMetaData<>("-fx-pref-column-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
 
             @Override
@@ -312,14 +312,14 @@ public class TextField extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextField n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)n.prefColumnCountProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(TextInputControl.getClassCssMetaData());
+                new ArrayList<>(TextInputControl.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(PREF_COLUMN_COUNT);
             STYLEABLES = Collections.unmodifiableList(styleables);

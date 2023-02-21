@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -163,7 +163,7 @@ void JSGlobalObjectInspectorController::appendAPIBacktrace(ScriptCallStack& call
     for (int i = 0; i < size; ++i) {
         auto demangled = StackTrace::demangle(stack[i]);
         if (demangled)
-            callStack.append(ScriptCallFrame(demangled->demangledName() ? demangled->demangledName() : demangled->mangledName(), "[native code]"_s, noSourceID, 0, 0));
+            callStack.append(ScriptCallFrame(String::fromLatin1(demangled->demangledName() ? demangled->demangledName() : demangled->mangledName()), "[native code]"_s, noSourceID, 0, 0));
         else
             callStack.append(ScriptCallFrame("?"_s, "[native code]"_s, noSourceID, 0, 0));
     }
@@ -172,7 +172,7 @@ void JSGlobalObjectInspectorController::appendAPIBacktrace(ScriptCallStack& call
 void JSGlobalObjectInspectorController::reportAPIException(JSGlobalObject* globalObject, Exception* exception)
 {
     VM& vm = globalObject->vm();
-    if (isTerminatedExecutionException(vm, exception))
+    if (vm.isTerminationException(exception))
         return;
 
     auto scope = DECLARE_CATCH_SCOPE(vm);
@@ -200,7 +200,7 @@ void JSGlobalObjectInspectorController::reportAPIException(JSGlobalObject* globa
 
 WeakPtr<ConsoleClient> JSGlobalObjectInspectorController::consoleClient() const
 {
-    return makeWeakPtr(m_consoleClient.get());
+    return WeakPtr<ConsoleClient>(m_consoleClient.get(), EnableWeakPtrThreadingAssertions::No);
 }
 
 bool JSGlobalObjectInspectorController::developerExtrasEnabled() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,8 @@
 #include "LLIntPCRanges.h"
 #include "MachineContext.h"
 #include "MacroAssemblerCodeRef.h"
-#include "VM.h"
+#include "VMEntryScope.h"
+#include "VMTrapsInlines.h"
 #include "Watchdog.h"
 #include <wtf/ProcessID.h>
 #include <wtf/ThreadMessage.h>
@@ -44,14 +45,9 @@
 
 namespace JSC {
 
-ALWAYS_INLINE VM& VMTraps::vm() const
-{
-    return *bitwise_cast<VM*>(bitwise_cast<uintptr_t>(this) - OBJECT_OFFSETOF(VM, m_traps));
-}
-
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
 
-struct SignalContext {
+struct VMTraps::SignalContext {
 private:
     SignalContext(PlatformRegisters& registers, MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> trapPC)
         : registers(registers)
@@ -61,11 +57,11 @@ private:
     { }
 
 public:
-    static Optional<SignalContext> tryCreate(PlatformRegisters& registers)
+    static std::optional<SignalContext> tryCreate(PlatformRegisters& registers)
     {
         auto instructionPointer = MachineContext::instructionPointer(registers);
         if (!instructionPointer)
-            return WTF::nullopt;
+            return std::nullopt;
         return SignalContext(registers, *instructionPointer);
     }
 
@@ -89,7 +85,7 @@ static bool isSaneFrame(CallFrame* frame, CallFrame* calleeFrame, EntryFrame* en
     return stackBounds.contains(frame);
 }
 
-void VMTraps::tryInstallTrapBreakpoints(SignalContext& context, StackBounds stackBounds)
+void VMTraps::tryInstallTrapBreakpoints(VMTraps::SignalContext& context, StackBounds stackBounds)
 {
     // This must be the initial signal to get the mutator thread's attention.
     // Let's get the thread to break at invalidation points if needed.
@@ -106,7 +102,16 @@ void VMTraps::tryInstallTrapBreakpoints(SignalContext& context, StackBounds stac
 
     CallFrame* callFrame = reinterpret_cast<CallFrame*>(context.framePointer);
 
-    auto codeBlockSetLocker = holdLock(vm.heap.codeBlockSet().getLock());
+    // Even though we know the mutator thread is not in C++ code and therefore, not holding
+    // this lock, the sampling profiler may have acquired this lock before acquiring
+    // ThreadSuspendLocker and suspending the mutator. Since VMTraps acquires the
+    // ThreadSuspendLocker first, we can deadlock with the Sampling Profiler thread, and
+    // leave the mutator in a suspended state, or forever blocked on the codeBlockSet lock.
+    Lock& codeBlockSetLock = vm.heap.codeBlockSet().getLock();
+    if (!codeBlockSetLock.tryLock())
+        return;
+
+    Locker codeBlockSetLocker { AdoptLock, codeBlockSetLock };
 
     CodeBlock* foundCodeBlock = nullptr;
     EntryFrame* entryFrame = vm.topEntryFrame;
@@ -140,17 +145,17 @@ void VMTraps::tryInstallTrapBreakpoints(SignalContext& context, StackBounds stac
         return;
     }
 
-    if (JITCode::isOptimizingJIT(foundCodeBlock->jitType())) {
-        auto locker = tryHoldLock(*m_lock);
-        if (!locker)
+    if (foundCodeBlock->canInstallVMTrapBreakpoints()) {
+        if (!m_lock->tryLock())
             return; // Let the SignalSender try again later.
 
-        if (!needTrapHandling()) {
+        Locker locker { AdoptLock, *m_lock };
+        if (!needHandling(VMTraps::AsyncEvents)) {
             // Too late. Someone else already handled the trap.
             return;
         }
 
-        if (!foundCodeBlock->hasInstalledVMTrapBreakpoints())
+        if (!foundCodeBlock->hasInstalledVMTrapsBreakpoints())
             foundCodeBlock->installVMTrapBreakpoints();
         return;
     }
@@ -163,7 +168,7 @@ void VMTraps::invalidateCodeBlocksOnStack()
 
 void VMTraps::invalidateCodeBlocksOnStack(CallFrame* topCallFrame)
 {
-    auto codeBlockSetLocker = holdLock(vm().heap.codeBlockSet().getLock());
+    Locker codeBlockSetLocker { vm().heap.codeBlockSet().getLock() };
     invalidateCodeBlocksOnStack(codeBlockSetLocker, topCallFrame);
 }
 
@@ -217,15 +222,27 @@ public:
                     // Either we trapped for some other reason, e.g. Wasm OOB, or we didn't properly monitor the PC. Regardless, we can't do much now...
                     return SignalAction::NotHandled;
                 }
-                ASSERT(currentCodeBlock->hasInstalledVMTrapBreakpoints());
+                ASSERT(currentCodeBlock->hasInstalledVMTrapsBreakpoints());
                 VM& vm = currentCodeBlock->vm();
 
-                // We are in JIT code so it's safe to acquire this lock.
-                auto codeBlockSetLocker = holdLock(vm.heap.codeBlockSet().getLock());
+                // This signal handler is triggered by the mutator thread due to the installed halt instructions
+                // in JIT code (which we already confirmed above). Hence, the current thread (the mutator)
+                // cannot be in C++ code, and therefore, cannot be already holding the codeBlockSet lock.
+                // The only time the codeBlockSet lock could be in contention is if the Sampling Profiler thread
+                // is holding it. In that case, we'll simply wait till the Sampling Profiler is done with it.
+                // There are no lock ordering issues w.r.t. the Sampling Profiler on this code path.
+                //
+                // Note that it is not ok to return SignalAction::NotHandled here if we see contention. Doing
+                // so will cause the fault to be handled by the default handler, which will crash. It is also not
+                // productive to return SignalAction::Handled on contention. Doing so will simply trigger this
+                // fault handler over and over again. We might as well wait for the Sampling Profiler to release
+                // the lock, which is what we do here.
+                Locker codeBlockSetLocker { vm.heap.codeBlockSet().getLock() };
+
                 bool sawCurrentCodeBlock = false;
                 vm.heap.forEachCodeBlockIgnoringJITPlans(codeBlockSetLocker, [&] (CodeBlock* codeBlock) {
                     // We want to jettison all code blocks that have vm traps breakpoints, otherwise we could hit them later.
-                    if (codeBlock->hasInstalledVMTrapBreakpoints()) {
+                    if (codeBlock->hasInstalledVMTrapsBreakpoints()) {
                         if (currentCodeBlock == codeBlock)
                             sawCurrentCodeBlock = true;
 
@@ -252,7 +269,7 @@ private:
         if (traps().m_isShuttingDown)
             return PollResult::Stop;
 
-        if (!traps().needTrapHandling())
+        if (!traps().needHandling(VMTraps::AsyncEvents))
             return PollResult::Wait;
 
         // We know that no trap could have been processed and re-added because we are holding the lock.
@@ -267,7 +284,8 @@ private:
 
         auto optionalOwnerThread = vm.ownerThread();
         if (optionalOwnerThread) {
-            sendMessage(*optionalOwnerThread.value().get(), [&] (PlatformRegisters& registers) -> void {
+            ThreadSuspendLocker locker;
+            sendMessage(locker, *optionalOwnerThread.value().get(), [&] (PlatformRegisters& registers) -> void {
                 auto signalContext = SignalContext::tryCreate(registers);
                 if (!signalContext)
                     return;
@@ -283,7 +301,7 @@ private:
         }
 
         {
-            auto locker = holdLock(*traps().m_lock);
+            Locker locker { *traps().m_lock };
             if (traps().m_isShuttingDown)
                 return WorkResult::Stop;
             traps().m_condition->waitFor(*traps().m_lock, 1_ms);
@@ -312,7 +330,7 @@ void VMTraps::willDestroyVM()
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
     if (m_signalSender) {
         {
-            auto locker = holdLock(*m_lock);
+            Locker locker { *m_lock };
             if (!m_signalSender->tryStop(locker))
                 m_condition->notifyAll(locker);
         }
@@ -322,13 +340,14 @@ void VMTraps::willDestroyVM()
 #endif
 }
 
-void VMTraps::fireTrap(VMTraps::EventType eventType)
+void VMTraps::fireTrap(VMTraps::Event event)
 {
     ASSERT(!vm().currentThreadIsHoldingAPILock());
+    ASSERT(onlyContainsAsyncEvents(event));
     {
-        auto locker = holdLock(*m_lock);
+        Locker locker { *m_lock };
         ASSERT(!m_isShuttingDown);
-        setTrapForEvent(locker, eventType);
+        setTrapBit(event);
         m_needToInvalidatedCodeBlocks = true;
     }
 
@@ -337,7 +356,7 @@ void VMTraps::fireTrap(VMTraps::EventType eventType)
         // sendSignal() can loop until it has confirmation that the mutator thread
         // has received the trap request. We'll call it from another thread so that
         // fireTrap() does not block.
-        auto locker = holdLock(*m_lock);
+        Locker locker { *m_lock };
         if (!m_signalSender)
             m_signalSender = adoptRef(new SignalSender(locker, vm()));
         m_condition->notifyAll(locker);
@@ -345,27 +364,32 @@ void VMTraps::fireTrap(VMTraps::EventType eventType)
 #endif
 }
 
-void VMTraps::handleTraps(JSGlobalObject* globalObject, CallFrame* callFrame, VMTraps::Mask mask)
+void VMTraps::handleTraps(VMTraps::BitField mask)
 {
     VM& vm = this->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+    ASSERT(onlyContainsAsyncEvents(mask));
+    ASSERT(needHandling(mask));
+    ASSERT(!hasTrapBit(DeferTrapHandling));
+
+    if (isDeferringTermination())
+        mask &= ~NeedTermination;
 
     {
-        auto codeBlockSetLocker = holdLock(vm.heap.codeBlockSet().getLock());
+        Locker codeBlockSetLocker { vm.heap.codeBlockSet().getLock() };
         vm.heap.forEachCodeBlockIgnoringJITPlans(codeBlockSetLocker, [&] (CodeBlock* codeBlock) {
             // We want to jettison all code blocks that have vm traps breakpoints, otherwise we could hit them later.
-            if (codeBlock->hasInstalledVMTrapBreakpoints())
+            if (codeBlock->hasInstalledVMTrapsBreakpoints())
                 codeBlock->jettison(Profiler::JettisonDueToVMTraps);
         });
     }
 
-    ASSERT(needTrapHandling(mask));
-    while (needTrapHandling(mask)) {
-        auto eventType = takeTopPriorityTrap(mask);
-        switch (eventType) {
+    while (needHandling(mask)) {
+        auto event = takeTopPriorityTrap(mask);
+        switch (event) {
         case NeedDebuggerBreak:
             dataLog("VM ", RawPointer(&vm), " on pid ", getCurrentProcessID(), " received NeedDebuggerBreak trap\n");
-            invalidateCodeBlocksOnStack(callFrame);
+            invalidateCodeBlocksOnStack(vm.topCallFrame);
             break;
 
         case NeedShellTimeoutCheck:
@@ -375,31 +399,65 @@ void VMTraps::handleTraps(JSGlobalObject* globalObject, CallFrame* callFrame, VM
 
         case NeedWatchdogCheck:
             ASSERT(vm.watchdog());
-            if (LIKELY(!vm.watchdog()->shouldTerminate(globalObject)))
+            if (LIKELY(!vm.watchdog()->isActive() || !vm.watchdog()->shouldTerminate(vm.entryScope->globalObject())))
                 continue;
+            vm.setTerminationInProgress(true);
             FALLTHROUGH;
 
         case NeedTermination:
-            throwException(globalObject, scope, createTerminatedExecutionException(&vm));
+            ASSERT(vm.terminationInProgress());
+            scope.release();
+            if (!isDeferringTermination())
+                vm.throwTerminationException();
             return;
 
+        case NeedExceptionHandling:
+        case DeferTrapHandling:
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
     }
 }
 
-auto VMTraps::takeTopPriorityTrap(VMTraps::Mask mask) -> EventType
+auto VMTraps::takeTopPriorityTrap(VMTraps::BitField mask) -> Event
 {
-    auto locker = holdLock(*m_lock);
-    for (int i = 0; i < NumberOfEventTypes; ++i) {
-        EventType eventType = static_cast<EventType>(i);
-        if (hasTrapForEvent(locker, eventType, mask)) {
-            clearTrapForEvent(locker, eventType);
-            return eventType;
+    Locker locker { *m_lock };
+
+    // Note: the EventBitShift is already sorted in highest to lowest priority
+    // i.e. a bit shift of 0 is highest priority, etc.
+    for (unsigned i = 0; i < NumberOfEvents; ++i) {
+        Event event = static_cast<Event>(1 << i);
+        if (hasTrapBit(event, mask)) {
+            clearTrapBit(event);
+            return event;
         }
     }
-    return Invalid;
+    return NoEvent;
+}
+
+void VMTraps::deferTerminationSlow(DeferAction)
+{
+    ASSERT(m_deferTerminationCount == 1);
+
+    VM& vm = this->vm();
+    if (vm.hasPendingTerminationException()) {
+        ASSERT(vm.terminationInProgress());
+        vm.clearException();
+        m_suspendedTerminationException = true;
+    }
+}
+
+void VMTraps::undoDeferTerminationSlow(DeferAction deferAction)
+{
+    ASSERT(m_deferTerminationCount == 0);
+
+    VM& vm = this->vm();
+    ASSERT(vm.terminationInProgress());
+    if (m_suspendedTerminationException || (deferAction == DeferAction::DeferUntilEndOfScope)) {
+        vm.throwTerminationException();
+        m_suspendedTerminationException = false;
+    } else if (deferAction == DeferAction::DeferForAWhile)
+        setTrapBit(NeedTermination); // Let the next trap check handle it.
 }
 
 VMTraps::VMTraps()

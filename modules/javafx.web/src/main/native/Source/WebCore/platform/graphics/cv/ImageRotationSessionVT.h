@@ -34,7 +34,7 @@ typedef struct __CVPixelBufferPool* CVPixelBufferPoolRef;
 
 namespace WebCore {
 
-class MediaSample;
+class VideoFrame;
 
 class ImageRotationSessionVT final {
     WTF_MAKE_FAST_ALLOCATED;
@@ -47,34 +47,33 @@ public:
         bool isIdentity() const { return !flipX && !flipY && !angle; }
     };
 
-    enum class IsCGImageCompatible {
-        No,
-        Yes,
-    };
+    enum class IsCGImageCompatible { No, Yes };
+    enum class ShouldUseIOSurface { No, Yes };
 
-    ImageRotationSessionVT(AffineTransform&&, FloatSize, OSType, IsCGImageCompatible);
-    ImageRotationSessionVT(const RotationProperties&, FloatSize, OSType, IsCGImageCompatible);
+    ImageRotationSessionVT(AffineTransform&&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
+    ImageRotationSessionVT(const RotationProperties&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
     ImageRotationSessionVT() = default;
 
-    const Optional<AffineTransform>& transform() const { return m_transform; }
+    const std::optional<AffineTransform>& transform() const { return m_transform; }
     const RotationProperties& rotationProperties() const { return m_rotationProperties; }
     const FloatSize& size() { return m_size; }
     const FloatSize& rotatedSize() { return m_rotatedSize; }
 
     RetainPtr<CVPixelBufferRef> rotate(CVPixelBufferRef);
-    WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> rotate(MediaSample&, const RotationProperties&, IsCGImageCompatible);
-
-    bool isMatching(MediaSample&, const RotationProperties&);
+    WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> rotate(VideoFrame&, const RotationProperties&, IsCGImageCompatible);
 
 private:
-    void initialize(const RotationProperties&, FloatSize, OSType pixelFormat, IsCGImageCompatible);
+    void initialize(const RotationProperties&, FloatSize, IsCGImageCompatible);
 
-    Optional<AffineTransform> m_transform;
     RotationProperties m_rotationProperties;
     FloatSize m_size;
+    std::optional<AffineTransform> m_transform;
+    OSType m_pixelFormat;
+    IsCGImageCompatible m_isCGImageCompatible;
     FloatSize m_rotatedSize;
     RetainPtr<VTImageRotationSessionRef> m_rotationSession;
     RetainPtr<CVPixelBufferPoolRef> m_rotationPool;
+    bool m_shouldUseIOSurface { true };
 };
 
 inline bool operator==(const ImageRotationSessionVT::RotationProperties& rotation1, const ImageRotationSessionVT::RotationProperties& rotation2)

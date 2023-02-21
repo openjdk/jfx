@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -161,7 +161,7 @@ public class SwingNodeInteropN {
     }
 
     public LightweightContentWrapper createSwingNodeContent(JComponent content, SwingNode node) {
-        return (LightweightContentWrapper)new SwingNodeContent(content, node);
+        return new SwingNodeContent(content, node);
     }
 
     public DisposerRecord createSwingNodeDisposer(Object frame) {
@@ -233,17 +233,19 @@ public class SwingNodeInteropN {
     }
 
     private static class SwingNodeDisposer implements DisposerRecord {
-         LightweightFrameWrapper lwFrame;
+        LightweightFrameWrapper lwFrame;
 
-         SwingNodeDisposer(LightweightFrameWrapper ref) {
-             this.lwFrame = ref;
-         }
-         public void dispose() {
-             if (lwFrame != null) {
-                 lwFrame.dispose();
-                 lwFrame = null;
-             }
-         }
+        SwingNodeDisposer(LightweightFrameWrapper ref) {
+            this.lwFrame = ref;
+        }
+
+        @Override
+        public void dispose() {
+            if (lwFrame != null) {
+                lwFrame.dispose();
+                lwFrame = null;
+            }
+        }
     }
 
     private static class SwingNodeContent extends LightweightContentWrapper {
@@ -253,7 +255,7 @@ public class SwingNodeInteropN {
 
         SwingNodeContent(JComponent comp, SwingNode swingNode) {
             this.comp = comp;
-            this.swingNodeRef = new WeakReference<SwingNode>(swingNode);
+            this.swingNodeRef = new WeakReference<>(swingNode);
         }
         @Override
         public JComponent getComponent() {

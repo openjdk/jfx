@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,13 @@
 
 package test.javafx.css;
 
-import test.javafx.css.TypeTest;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
 import javafx.geometry.Insets;
 import javafx.scene.text.Font;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import javafx.css.CssParser;
 import javafx.css.CssParser;
 import javafx.css.ParsedValue;
 import javafx.css.Stylesheet;

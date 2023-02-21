@@ -37,7 +37,6 @@
 #include "gconvert.h"
 #include "gfileutils.h"
 #include "gstrfuncs.h"
-#include "gstrfuncsprivate.h"
 #include "gtestutils.h"
 #include "glibintl.h"
 
@@ -67,7 +66,9 @@ struct _GDir
   DIR *dirp;
 #endif
 #ifdef G_OS_WIN32
-  gchar utf8_buf[FILENAME_MAX*4];
+  /* maximum encoding of FILENAME_MAX UTF-8 characters, plus a nul terminator
+   * (FILENAME_MAX is not guaranteed to include one) */
+  gchar utf8_buf[FILENAME_MAX*4 + 1];
 #endif
 };
 

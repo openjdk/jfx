@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,8 @@
 #include "B3ValueKeyInlines.h"
 #include "B3ValueInlines.h"
 #include <wtf/HashMap.h>
+#include <wtf/MathExtras.h>
+#include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace B3 {
 
@@ -386,6 +388,61 @@ public:
         }
     }
 
+    template<typename T>
+    IntRange sExt()
+    {
+        ASSERT(m_min >= INT32_MIN);
+        ASSERT(m_max <= INT32_MAX);
+        int64_t typeMin = std::numeric_limits<T>::min();
+        int64_t typeMax = std::numeric_limits<T>::max();
+        auto min = m_min;
+        auto max = m_max;
+
+        if (typeMin <= min && min <= typeMax
+            && typeMin <= max && max <= typeMax)
+            return IntRange(min, max);
+
+        // Given type T with N bits, signed extension will turn bit N-1 as
+        // a sign bit. If bits N-1 upwards are identical for both min and max,
+        // then we're guaranteed that even after the sign extension, min and
+        // max will still be in increasing order.
+        //
+        // For example, when T is int8_t, the space of numbers from highest to
+        // lowest are as follows (in binary bits):
+        //
+        //      highest     0 111 1111  ^
+        //                    ...       |
+        //            1     0 000 0001  |   top segment
+        //            0     0 000 0000  v
+        //
+        //           -1     1 111 1111  ^
+        //           -2     1 111 1110  |   bottom segment
+        //                    ...       |
+        //       lowest     1 000 0000  v
+        //
+        // Note that if we exclude the sign bit, the range is made up of 2 segments
+        // of contiguous increasing numbers. If min and max are both in the same
+        // segment before the sign extension, then min and max will continue to be
+        // in a contiguous segment after the sign extension. Only when min and max
+        // spans across more than 1 of these segments, will min and max no longer
+        // be guaranteed to be in a contiguous range after the sign extension.
+        //
+        // Hence, we can check if bits N-1 and up are identical for the range min
+        // and max. If so, then the new min and max can be be computed by simply
+        // applying sign extension to their original values.
+
+        constexpr unsigned numberOfBits = countOfBits<T>;
+        constexpr int64_t segmentMask = (1ll << (numberOfBits - 1)) - 1;
+        constexpr int64_t topBitsMask = ~segmentMask;
+        int64_t minTopBits = topBitsMask & min;
+        int64_t maxTopBits = topBitsMask & max;
+
+        if (minTopBits == maxTopBits)
+            return IntRange(static_cast<int64_t>(static_cast<T>(min)), static_cast<int64_t>(static_cast<T>(max)));
+
+        return top<T>();
+    }
+
     IntRange zExt32()
     {
         ASSERT(m_min >= INT32_MIN);
@@ -617,6 +674,33 @@ private:
             break;
 
         case Sub:
+            // Turn this: Sub(BitXor(BitAnd(value, mask1), mask2), mask2)
+            // Into this: SShr(Shl(value, amount), amount)
+            // Conditions:
+            // 1. mask1 = (1 << width) - 1
+            // 2. mask2 = 1 << (width - 1)
+            // 3. amount = datasize - width
+            // 4. 0 < width < datasize
+            if (m_value->child(0)->opcode() == BitXor
+                && m_value->child(0)->child(0)->opcode() == BitAnd
+                && m_value->child(0)->child(0)->child(1)->hasInt()
+                && m_value->child(0)->child(1)->hasInt()
+                && m_value->child(1)->hasInt()) {
+                uint64_t mask1 = m_value->child(0)->child(0)->child(1)->asInt();
+                uint64_t mask2 = m_value->child(0)->child(1)->asInt();
+                uint64_t mask3 = m_value->child(1)->asInt();
+                uint64_t width = WTF::bitCount(mask1);
+                uint64_t datasize = m_value->child(0)->child(0)->type() == Int64 ? 64 : 32;
+                bool isValidMask1 = mask1 && !(mask1 & (mask1 + 1)) && width < datasize;
+                bool isValidMask2 = mask2 == mask3 && ((mask2 << 1) - 1) == mask1;
+                if (isValidMask1 && isValidMask2) {
+                    Value* amount = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), datasize - width);
+                    Value* shlValue = m_insertionSet.insert<Value>(m_index, Shl, m_value->origin(), m_value->child(0)->child(0)->child(0), amount);
+                    replaceWithNew<Value>(SShr, m_value->origin(), shlValue, amount);
+                    break;
+                }
+            }
+
             // Turn this: Sub(constant1, constant2)
             // Into this: constant1 - constant2
             if (Value* constantSub = m_value->child(0)->subConstant(m_proc, m_value->child(1))) {
@@ -625,6 +709,18 @@ private:
             }
 
             if (m_value->isInteger()) {
+                // Turn this: Sub(Neg(value), 1)
+                // Into this: BitXor(value, -1)
+                if (m_value->child(0)->opcode() == Neg && m_value->child(1)->isInt(1)) {
+                    Value* minusOne;
+                    if (m_value->child(0)->child(0)->type() == Int32)
+                        minusOne = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), -1);
+                    else
+                        minusOne = m_insertionSet.insert<Const64Value>(m_index, m_value->origin(), -1);
+                    replaceWithNew<Value>(BitXor, m_value->origin(), m_value->child(0)->child(0), minusOne);
+                    break;
+                }
+
                 // Turn this: Sub(value, constant)
                 // Into this: Add(value, -constant)
                 if (Value* negatedConstant = m_value->child(1)->negConstant(m_proc)) {
@@ -933,7 +1029,7 @@ private:
 
         case Mod:
             // Turn this: Mod(constant1, constant2)
-            // Into this: constant1 / constant2
+            // Into this: constant1 % constant2
             // Note that this uses Mod<Chill> semantics.
             if (replaceWithNewValue(m_value->child(0)->modConstant(m_proc, m_value->child(1))))
                 break;
@@ -993,10 +1089,18 @@ private:
 
         case UMod:
             // Turn this: UMod(constant1, constant2)
-            // Into this: constant1 / constant2
+            // Into this: constant1 % constant2
             replaceWithNewValue(m_value->child(0)->uModConstant(m_proc, m_value->child(1)));
             // FIXME: We should do what we do for Mod since the same principle applies here.
             // https://bugs.webkit.org/show_bug.cgi?id=164809
+            break;
+
+        case FMax:
+            replaceWithNewValue(m_value->child(0)->fMaxConstant(m_proc, m_value->child(1)));
+            break;
+
+        case FMin:
+            replaceWithNewValue(m_value->child(0)->fMinConstant(m_proc, m_value->child(1)));
             break;
 
         case BitAnd:
@@ -1033,6 +1137,60 @@ private:
             if (m_value->child(1)->isInt(0)) {
                 replaceWithIdentity(m_value->child(1));
                 break;
+            }
+
+            // Turn this: BitAnd(ZShr(value, shiftAmount), mask)
+            // Conditions:
+            // 1. mask = (1 << width) - 1
+            // 2. 0 <= shiftAmount < datasize
+            // 3. 0 < width < datasize
+            // 4. shiftAmount + width >= datasize
+            // Into this: ZShr(value, shiftAmount)
+            if (m_value->child(0)->opcode() == ZShr
+                && m_value->child(0)->child(1)->hasInt()
+                && m_value->child(0)->child(1)->asInt() >= 0
+                && m_value->child(1)->hasInt()) {
+                uint64_t shiftAmount = m_value->child(0)->child(1)->asInt();
+                uint64_t mask = m_value->child(1)->asInt();
+                bool isValidMask = mask && !(mask & (mask + 1));
+                uint64_t datasize = m_value->child(0)->child(0)->type() == Int64 ? 64 : 32;
+                uint64_t width = WTF::bitCount(mask);
+                if (shiftAmount < datasize && isValidMask && shiftAmount + width >= datasize) {
+                    replaceWithIdentity(m_value->child(0));
+                    break;
+                }
+            }
+
+            // Turn this: BitAnd(Shl(value, shiftAmount), maskShift)
+            // Into this: Shl(BitAnd(value, mask), shiftAmount)
+            // Conditions:
+            // 1. maskShift = mask << shiftAmount
+            // 2. mask = (1 << width) - 1
+            // 3. 0 <= shiftAmount < datasize
+            // 4. 0 < width < datasize
+            // 5. shiftAmount + width <= datasize
+            if (m_value->child(0)->opcode() == Shl
+                && m_value->child(0)->child(1)->hasInt()
+                && m_value->child(0)->child(1)->asInt() >= 0
+                && m_value->child(1)->hasInt()) {
+                uint64_t shiftAmount = m_value->child(0)->child(1)->asInt();
+                uint64_t maskShift = m_value->child(1)->asInt();
+                uint64_t maskShiftAmount = WTF::countTrailingZeros(maskShift);
+                uint64_t mask = maskShift >> maskShiftAmount;
+                uint64_t width = WTF::bitCount(mask);
+                uint64_t datasize = m_value->child(0)->child(0)->type() == Int64 ? 64 : 32;
+                bool isValidShiftAmount = shiftAmount == maskShiftAmount && shiftAmount < datasize;
+                bool isValidMask = mask && !(mask & (mask + 1)) && width < datasize;
+                if (isValidShiftAmount && isValidMask && shiftAmount + width <= datasize) {
+                    Value* maskValue;
+                    if (datasize == 32)
+                        maskValue = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), mask);
+                    else
+                        maskValue = m_insertionSet.insert<Const64Value>(m_index, m_value->origin(), mask);
+                    Value* bitAnd = m_insertionSet.insert<Value>(m_index, BitAnd, m_value->origin(), m_value->child(0)->child(0), maskValue);
+                    replaceWithNew<Value>(Shl, m_value->origin(), bitAnd, m_value->child(0)->child(1));
+                    break;
+                }
             }
 
             // Turn this: BitAnd(value, all-ones)
@@ -1368,6 +1526,65 @@ private:
                 break;
             }
 
+            // Turn this: ZShr(Shl(value, amount)), amount)
+            // Into this: BitAnd(value, mask)
+            // Conditions:
+            // 1. 0 <= amount < datasize
+            // 2. width = datasize - amount
+            // 3. mask is !(mask & (mask + 1)) where bitCount(mask) == width
+            if (m_value->child(0)->opcode() == Shl
+                && m_value->child(0)->child(1)->hasInt()
+                && m_value->child(0)->child(1)->asInt() >= 0
+                && m_value->child(1)->hasInt()
+                && m_value->child(1)->asInt() >= 0) {
+                uint64_t amount1 = m_value->child(0)->child(1)->asInt();
+                uint64_t amount2 = m_value->child(1)->asInt();
+                uint64_t datasize = m_value->child(0)->child(0)->type() == Int64 ? 64 : 32;
+                if (amount1 == amount2 && amount1 < datasize) {
+                    uint64_t width = datasize - amount1;
+                    uint64_t mask = (1ULL << width) - 1ULL;
+                    Value* maskValue;
+                    if (datasize == 32)
+                        maskValue = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), mask);
+                    else
+                        maskValue = m_insertionSet.insert<Const64Value>(m_index, m_value->origin(), mask);
+                    replaceWithNew<Value>(BitAnd, m_value->origin(), m_value->child(0)->child(0), maskValue);
+                    break;
+                }
+            }
+
+            // Turn this: ZShr(BitAnd(value, maskShift), shiftAmount)
+            // Into this: BitAnd(ZShr(value, shiftAmount), mask)
+            // Conditions:
+            // 1. maskShift = mask << shiftAmount
+            // 2. mask = (1 << width) - 1
+            // 3. 0 <= shiftAmount < datasize
+            // 4. 0 < width < datasize
+            // 5. shiftAmount + width <= datasize
+            if (m_value->child(0)->opcode() == BitAnd
+                && m_value->child(0)->child(1)->hasInt()
+                && m_value->child(1)->hasInt()
+                && m_value->child(1)->asInt() >= 0) {
+                uint64_t shiftAmount = m_value->child(1)->asInt();
+                uint64_t maskShift = m_value->child(0)->child(1)->asInt();
+                uint64_t maskShiftAmount = WTF::countTrailingZeros(maskShift);
+                uint64_t mask = maskShift >> maskShiftAmount;
+                uint64_t width = WTF::bitCount(mask);
+                uint64_t datasize = m_value->child(0)->child(0)->type() == Int64 ? 64 : 32;
+                bool isValidShiftAmount = maskShiftAmount == shiftAmount && shiftAmount < datasize;
+                bool isValidMask = mask && !(mask & (mask + 1)) && width < datasize;
+                if (isValidShiftAmount && isValidMask && shiftAmount + width <= datasize) {
+                    Value* maskValue;
+                    if (datasize == 32)
+                        maskValue = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), mask);
+                    else
+                        maskValue = m_insertionSet.insert<Const64Value>(m_index, m_value->origin(), mask);
+                    Value* shiftValue = m_insertionSet.insert<Value>(m_index, ZShr, m_value->origin(), m_value->child(0)->child(0), m_value->child(1));
+                    replaceWithNew<Value>(BitAnd, m_value->origin(), shiftValue, maskValue);
+                    break;
+                }
+            }
+
             handleShiftAmount();
             break;
 
@@ -1688,6 +1905,10 @@ private:
             break;
 
         case FloatToDouble:
+            // We cannot convert some FloatToDouble(DoubleToFloat(value)) to value, because double-to-float will trancate some range of double values into one float.
+            // Example:
+            //     static_cast<double>(static_cast<float>(1.1)) != 1.1
+
             // Turn this: FloatToDouble(constant)
             // Into this: ConstDouble(constant)
             if (Value* constant = m_value->child(0)->floatToDoubleConstant(m_proc)) {
@@ -2599,9 +2820,11 @@ private:
                 rangeFor(value->child(1), timeToLive - 1), value->type());
 
         case SExt8:
+            return rangeFor(value->child(0), timeToLive - 1).sExt<int8_t>();
         case SExt16:
+            return rangeFor(value->child(0), timeToLive - 1).sExt<int16_t>();
         case SExt32:
-            return rangeFor(value->child(0), timeToLive - 1);
+            return rangeFor(value->child(0), timeToLive - 1).sExt<int32_t>();
 
         case ZExt32:
             return rangeFor(value->child(0), timeToLive - 1).zExt32();

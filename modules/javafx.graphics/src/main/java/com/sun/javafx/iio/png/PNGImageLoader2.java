@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,13 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         width = stream.readInt();
         height = stream.readInt();
 
-        if (width == 0 || height == 0) {
+        if (width <= 0) {
+            throw new IOException("Bad PNG image width, must be > 0!");
+        }
+        if (height <= 0) {
+            throw new IOException("Bad PNG image height, must be > 0!");
+        }
+        if (width >= (Integer.MAX_VALUE / height)) {
             throw new IOException("Bad PNG image size!");
         }
 
@@ -292,6 +298,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public void dispose() {
     }
 
@@ -583,8 +590,11 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         }
     }
 
-    private ImageFrame decodePalette(byte srcImage[], ImageMetadata metadata) {
+    private ImageFrame decodePalette(byte srcImage[], ImageMetadata metadata) throws IOException {
         int bpp = tRNS_present ? 4 : 3;
+        if (width >= (Integer.MAX_VALUE / height / bpp)) {
+            throw new IOException("Bad PNG image size!");
+        }
         byte newImage[] = new byte[width * height * bpp];
         int l = width * height;
 
@@ -626,6 +636,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         return bitDepth == 16 ? 2 : 1;
     }
 
+    @Override
     public ImageFrame load(int imageIndex, int rWidth, int rHeight,
             boolean preserveAspectRatio, boolean smooth) throws IOException {
 
@@ -640,6 +651,11 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
             return null;
         }
 
+        int bpp = bpp();
+        if (width >= (Integer.MAX_VALUE / height / bpp)) {
+            throw new IOException("Bad PNG image size!");
+        }
+
         int[] outWH = ImageTools.computeDimensions(width, height, rWidth, rHeight, preserveAspectRatio);
         rWidth = outWH[0];
         rHeight = outWH[1];
@@ -648,7 +664,6 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
                 null, null, null, null, null, rWidth, rHeight, null, null, null);
         updateImageMetadata(metaData);
 
-        int bpp = bpp();
         ByteBuffer bb = ByteBuffer.allocate(bpp * width * height);
 
         PNGIDATChunkInputStream iDat = new PNGIDATChunkInputStream(stream, dataSize);

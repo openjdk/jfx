@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import java.util.Collection;
 
 class GestureRecognizers implements GestureRecognizer {
 
-    private Collection<GestureRecognizer> recognizers = new Vector<GestureRecognizer>();
+    private Collection<GestureRecognizer> recognizers = new Vector<>();
     private GestureRecognizer workList[];
 
     void add(GestureRecognizer r) {
@@ -58,6 +58,7 @@ class GestureRecognizers implements GestureRecognizer {
         return workList;
     }
 
+    @Override
     public void notifyBeginTouchEvent(long time, int modifiers, boolean isDirect, int touchEventCount) {
         final GestureRecognizer[] wl = synchWorkList();
         for (int idx = 0; idx != wl.length; ++idx) {
@@ -65,6 +66,7 @@ class GestureRecognizers implements GestureRecognizer {
         }
     }
 
+    @Override
     public void notifyNextTouchEvent(long time, int type, long touchId,
                                      int x, int y, int xAbs, int yAbs)
     {
@@ -74,6 +76,7 @@ class GestureRecognizers implements GestureRecognizer {
         }
     }
 
+    @Override
     public void notifyEndTouchEvent(long time) {
         final GestureRecognizer[] wl = synchWorkList();
         for (int idx = 0; idx != wl.length; ++idx) {

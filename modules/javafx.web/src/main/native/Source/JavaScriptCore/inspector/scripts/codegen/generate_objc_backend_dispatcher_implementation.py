@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014-2018 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -36,7 +36,7 @@ try:
     from .models import PrimitiveType, EnumType, AliasedType, Frameworks
     from .objc_generator import ObjCTypeCategory, ObjCGenerator, join_type_and_name
     from .objc_generator_templates import ObjCGeneratorTemplates as ObjCTemplates
-except ValueError:
+except ImportError:
     from cpp_generator import CppGenerator
     from generator import Generator
     from models import PrimitiveType, EnumType, AliasedType, Frameworks
@@ -210,7 +210,7 @@ class ObjCBackendDispatcherImplementationGenerator(ObjCGenerator):
             objc_in_param_name = 'o_%s' % in_param_name
             objc_type = self.objc_type_for_param(domain, command.command_name, parameter, False)
             if isinstance(parameter.type, EnumType):
-                objc_type = 'Optional<%s>' % objc_type
+                objc_type = 'std::optional<%s>' % objc_type
             param_expression = in_param_expression(in_param_name, parameter)
             import_expression = self.objc_protocol_import_expression_for_parameter(param_expression, domain, command.command_name, parameter)
             if not parameter.is_optional:

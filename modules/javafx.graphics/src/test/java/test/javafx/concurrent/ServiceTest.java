@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.concurrent;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import test.javafx.concurrent.mocks.SimpleTask;
@@ -32,12 +33,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.concurrent.Service;
-import javafx.concurrent.Service;
 import javafx.concurrent.ServiceShim;
 import javafx.concurrent.Task;
-import javafx.concurrent.Task;
 import javafx.concurrent.TaskShim;
-import javafx.concurrent.Worker;
 import javafx.concurrent.Worker;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +44,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  */
@@ -55,7 +54,7 @@ public class ServiceTest {
     @Before public void setup() {
         // I don't use the AbstractService here because I don't want to
         // take advantage of the built in executor / threading stuff
-        service = new ServiceShim<String>() {
+        service = new ServiceShim<>() {
             @Override public Task<String> createTask() {
                 return new SimpleTask();
             }
@@ -96,7 +95,7 @@ public class ServiceTest {
      */
     @Test public void executorCanBeBound() {
         final Executor e = command -> { };
-        ObjectProperty<Executor> other = new SimpleObjectProperty<Executor>(e);
+        ObjectProperty<Executor> other = new SimpleObjectProperty<>(e);
         service.executorProperty().bind(other);
         assertSame(e, service.getExecutor());
         assertSame(e, service.executorProperty().get());
@@ -174,14 +173,18 @@ public class ServiceTest {
     // and several micro / milliseconds to get setup and execute. So 2 seconds should be more
     // than enough time.
     @Test(timeout = 2000) public void testManyServicesRunConcurrently() throws Exception {
+        if (PlatformUtil.isWindows()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8284552
+        }
+
         final CountDownLatch latch = new CountDownLatch(32);
         for (int i=0; i<32; i++) {
-            Service<Void> s = new ServiceShim<Void>() {
+            Service<Void> s = new ServiceShim<>() {
                 @Override public void checkThread() { }
                 @Override public void runLater(Runnable r) { r.run(); }
 
                 @Override protected Task<Void> createTask() {
-                    return new TaskShim<Void>() {
+                    return new TaskShim<>() {
                         @Override protected Void call() throws Exception {
                             Thread.sleep(1000);
                             latch.countDown();

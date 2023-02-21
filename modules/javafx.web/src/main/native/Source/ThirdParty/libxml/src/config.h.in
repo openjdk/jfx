@@ -21,7 +21,8 @@
 /* Define to 1 if you have the <ctype.h> header file. */
 #undef HAVE_CTYPE_H
 
-/* Define to 1 if you have the <dirent.h> header file. */
+/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
+   */
 #undef HAVE_DIRENT_H
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
@@ -60,17 +61,8 @@
 /* Define to 1 if you have the `isascii' function. */
 #undef HAVE_ISASCII
 
-/* Define if isinf is there */
-#undef HAVE_ISINF
-
-/* Define if isnan is there */
-#undef HAVE_ISNAN
-
 /* Define if history library is there (-lhistory) */
 #undef HAVE_LIBHISTORY
-
-/* Define if pthread library is there (-lpthread) */
-#undef HAVE_LIBPTHREAD
 
 /* Define if readline library is there (-lreadline) */
 #undef HAVE_LIBREADLINE
@@ -89,9 +81,6 @@
 
 /* Define to 1 if you have the <math.h> header file. */
 #undef HAVE_MATH_H
-
-/* Define to 1 if you have the <memory.h> header file. */
-#undef HAVE_MEMORY_H
 
 /* Define to 1 if you have the `mmap' function. */
 #undef HAVE_MMAP
@@ -163,6 +152,9 @@
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdio.h> header file. */
+#undef HAVE_STDIO_H
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
@@ -262,7 +254,9 @@
 /* Type cast for the send() function 2nd arg */
 #undef SEND_ARG2_CAST
 
-/* Define to 1 if you have the ANSI C header files. */
+/* Define to 1 if all of the C90 standard headers exist (not just the ones
+   required in a freestanding environment). This macro is provided for
+   backward compatibility; new code need not use it. */
 #undef STDC_HEADERS
 
 /* Support for IPv6 */

@@ -43,21 +43,27 @@ public:
     bool shouldDrawBorder() const;
 
     void invalidate();
+    bool hasShadowContent() const { return m_hasShadowControls; }
+    void setHasShadowControls(bool hasShadowControls) { m_hasShadowControls = hasShadowControls; }
+    bool canHaveGeneratedChildren() const override { return m_hasShadowControls; }
+    bool canHaveChildren() const override { return m_hasShadowControls; }
 
 private:
     void element() const = delete;
     bool isAttachment() const override { return true; }
-    const char* renderName() const override { return "RenderAttachment"; }
+    ASCIILiteral renderName() const override { return "RenderAttachment"_s; }
+    void layoutShadowContent(const LayoutSize&);
 
     bool shouldDrawSelectionTint() const override { return false; }
     void paintReplaced(PaintInfo&, const LayoutPoint& offset) final;
 
     void layout() override;
 
-    int baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const override;
+    LayoutUnit baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const override;
 
     LayoutUnit m_minimumIntrinsicWidth;
     bool m_shouldDrawBorder { true };
+    bool m_hasShadowControls { false };
 };
 
 inline RenderAttachment* HTMLAttachmentElement::renderer() const

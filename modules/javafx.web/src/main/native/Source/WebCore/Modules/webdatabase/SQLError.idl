@@ -27,8 +27,7 @@
  */
 
 [
-    ImplementationLacksVTable,
-    EnabledAtRuntime=WebSQL,
+    EnabledByDeprecatedGlobalSetting=WebSQLEnabled,
     Exposed=Window
 ] interface SQLError {
     readonly attribute unsigned long code;

@@ -30,10 +30,12 @@
 #include "config.h"
 #include "ModuleProgramCodeBlock.h"
 
+#include "JSCellInlines.h"
+
 namespace JSC {
 
 const ClassInfo ModuleProgramCodeBlock::s_info = {
-    "ModuleProgramCodeBlock", &Base::s_info, nullptr, nullptr,
+    "ModuleProgramCodeBlock"_s, &Base::s_info, nullptr, nullptr,
     CREATE_METHOD_TABLE(ModuleProgramCodeBlock)
 };
 

@@ -28,7 +28,6 @@
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryList.h"
-#include "MediaQueryListEvent.h"
 #include "MediaQueryParserContext.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
@@ -39,7 +38,7 @@
 namespace WebCore {
 
 MediaQueryMatcher::MediaQueryMatcher(Document& document)
-    : m_document(makeWeakPtr(document))
+    : m_document(document)
 {
 }
 
@@ -72,7 +71,7 @@ std::unique_ptr<RenderStyle> MediaQueryMatcher::documentElementUserAgentStyle() 
     if (!documentElement)
         return nullptr;
 
-    return m_document->styleScope().resolver().styleForElement(*documentElement, m_document->renderStyle(), nullptr, RuleMatchingBehavior::MatchOnlyUserAgentRules).renderStyle;
+    return m_document->styleScope().resolver().styleForElement(*documentElement, { m_document->renderStyle() }, RuleMatchingBehavior::MatchOnlyUserAgentRules).renderStyle;
 }
 
 bool MediaQueryMatcher::evaluate(const MediaQuerySet& media)
@@ -86,7 +85,7 @@ bool MediaQueryMatcher::evaluate(const MediaQuerySet& media)
 void MediaQueryMatcher::addMediaQueryList(MediaQueryList& list)
 {
     ASSERT(!m_mediaQueryLists.contains(&list));
-    m_mediaQueryLists.append(makeWeakPtr(&list));
+    m_mediaQueryLists.append(list);
 }
 
 void MediaQueryMatcher::removeMediaQueryList(MediaQueryList& list)
@@ -100,12 +99,11 @@ RefPtr<MediaQueryList> MediaQueryMatcher::matchMedia(const String& query)
         return nullptr;
 
     auto media = MediaQuerySet::create(query, MediaQueryParserContext(*m_document));
-    reportMediaQueryWarningIfNeeded(m_document.get(), media.ptr());
     bool matches = evaluate(media.get());
     return MediaQueryList::create(*m_document, *this, WTFMove(media), matches);
 }
 
-void MediaQueryMatcher::evaluateAll()
+void MediaQueryMatcher::evaluateAll(EventMode eventMode)
 {
     ASSERT(m_document);
 
@@ -121,16 +119,8 @@ void MediaQueryMatcher::evaluateAll()
 
     auto mediaQueryLists = m_mediaQueryLists;
     for (auto& list : mediaQueryLists) {
-        if (!list)
-            continue;
-        bool notify;
-        list->evaluate(evaluator, notify);
-        if (notify) {
-            if (m_document && m_document->quirks().shouldSilenceMediaQueryListChangeEvents())
-                continue;
-
-            list->dispatchEvent(MediaQueryListEvent::create(eventNames().changeEvent, list->media(), list->matches()));
-        }
+        if (RefPtr protectedList = list.get())
+            protectedList->evaluate(evaluator, eventMode);
     }
 }
 

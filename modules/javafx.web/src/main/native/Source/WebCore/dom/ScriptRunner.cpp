@@ -27,6 +27,7 @@
 #include "config.h"
 #include "ScriptRunner.h"
 
+#include "Document.h"
 #include "Element.h"
 #include "PendingScript.h"
 #include "ScriptElement.h"
@@ -140,4 +141,11 @@ void ScriptRunner::timerFired()
     }
 }
 
+void ScriptRunner::clearPendingScripts()
+{
+    m_scriptsToExecuteInOrder.clear();
+    m_scriptsToExecuteSoon.clear();
+    m_pendingAsyncScripts.clear();
 }
+
+} // namespace WebCore

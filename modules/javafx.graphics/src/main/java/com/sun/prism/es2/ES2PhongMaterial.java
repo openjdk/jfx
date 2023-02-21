@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import com.sun.javafx.logging.PlatformLogger;
 /**
  * TODO: 3D - Need documentation
  */
-class ES2PhongMaterial extends BasePhongMaterial implements PhongMaterial {
+class ES2PhongMaterial extends BasePhongMaterial {
 
     static int count = 0;
     private final ES2Context context;

@@ -111,7 +111,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getModifier
     , jstring keyIdentifierArg)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getModifierState(String(env, keyIdentifierArg));
+    return IMPL->getModifierState(AtomString {String(env, keyIdentifierArg)});
 }
 
 
@@ -129,11 +129,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_initKeyboardEve
     , jboolean altGraphKey)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->initKeyboardEvent(String(env, type)
+    IMPL->initKeyboardEvent(AtomString {String(env, type)}
             , canBubble
             , cancelable
             , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
-            , String(env, keyIdentifier)
+            , AtomString {String(env, keyIdentifier)}
             , location
             , ctrlKey
             , altKey
@@ -156,11 +156,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_initKeyboardEve
     , jboolean metaKey)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->initKeyboardEvent(String(env, type)
+    IMPL->initKeyboardEvent(AtomString {String(env, type)}
             , canBubble
             , cancelable
             , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
-            , String(env, keyIdentifier)
+            , AtomString{String(env, keyIdentifier)}
             , location
             , ctrlKey
             , altKey

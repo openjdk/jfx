@@ -30,12 +30,12 @@
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "LayoutRect.h"
 #include "RotateTransformOperation.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
@@ -77,29 +77,17 @@ bool GraphicsLayer::supportsLayerType(Type type)
 {
     switch (type) {
     case Type::Normal:
+    case Type::Structural:
     case Type::PageTiledBacking:
     case Type::ScrollContainer:
     case Type::ScrolledContents:
+    case Type::TiledBacking:
         return true;
     case Type::Shape:
         return false;
     }
     ASSERT_NOT_REACHED();
     return false;
-}
-
-bool GraphicsLayer::supportsRoundedClip()
-{
-    return false;
-}
-
-bool GraphicsLayer::supportsBackgroundColorContent()
-{
-#if USE(TEXTURE_MAPPER)
-    return true;
-#else
-    return false;
-#endif
 }
 
 bool GraphicsLayer::supportsSubpixelAntialiasedLayerText()
@@ -135,7 +123,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_beingDestroyed(false)
     , m_contentsOpaque(false)
     , m_supportsSubpixelAntialiasedText(false)
-    , m_preserves3D(false)
+    , m_preserves3D(type == Type::Structural)
     , m_backfaceVisibility(true)
     , m_masksToBounds(false)
     , m_drawsContent(false)
@@ -143,7 +131,9 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_contentsRectClipsDescendants(false)
     , m_acceleratesDrawing(false)
     , m_usesDisplayListDrawing(false)
+    , m_allowsTiling(true)
     , m_appliesPageScale(false)
+    , m_appliesDeviceScale(true)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
     , m_isMaskLayer(false)
@@ -151,7 +141,11 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_userInteractionEnabled(true)
     , m_canDetachBackingStore(true)
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
-    , m_separated(false)
+    , m_isSeparated(false)
+#if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
+    , m_isSeparatedPortal(false)
+    , m_isDescendentOfSeparatedPortal(false)
+#endif
 #endif
 {
 #ifndef NDEBUG
@@ -200,7 +194,7 @@ void GraphicsLayer::willBeDestroyed()
     }
 
     removeAllChildren();
-    removeFromParent();
+    removeFromParentInternal();
 }
 
 void GraphicsLayer::clearClient()
@@ -335,7 +329,7 @@ void GraphicsLayer::removeAllChildren()
     }
 }
 
-void GraphicsLayer::removeFromParent()
+void GraphicsLayer::removeFromParentInternal()
 {
     if (m_parent) {
         GraphicsLayer* parent = m_parent;
@@ -345,6 +339,24 @@ void GraphicsLayer::removeFromParent()
         });
         // |this| may be destroyed here.
     }
+}
+
+void GraphicsLayer::setPreserves3D(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, b);
+    m_preserves3D = b;
+}
+
+void GraphicsLayer::setMasksToBounds(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, false);
+    m_masksToBounds = b;
+}
+
+void GraphicsLayer::setDrawsContent(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, false);
+    m_drawsContent = b;
 }
 
 const TransformationMatrix& GraphicsLayer::transform() const
@@ -373,6 +385,26 @@ void GraphicsLayer::setChildrenTransform(const TransformationMatrix& matrix)
         m_childrenTransform = makeUnique<TransformationMatrix>(matrix);
 }
 
+bool GraphicsLayer::setFilters(const FilterOperations& filters)
+{
+    ASSERT(m_type != Type::Structural);
+    m_filters = filters;
+    return true;
+}
+
+void GraphicsLayer::setOpacity(float opacity)
+{
+    ASSERT(m_type != Type::Structural);
+    m_opacity = opacity;
+}
+
+void GraphicsLayer::removeFromParent()
+{
+    // removeFromParentInternal is nonvirtual, for use in willBeDestroyed,
+    // which is called from destructors.
+    removeFromParentInternal();
+}
+
 void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
 {
     if (layer == m_maskLayer)
@@ -388,11 +420,6 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
     }
 
     m_maskLayer = WTFMove(layer);
-}
-
-void GraphicsLayer::setMasksToBoundsRect(const FloatRoundedRect& roundedRect)
-{
-    m_masksToBoundsRect = roundedRect;
 }
 
 Path GraphicsLayer::shapeLayerPath() const
@@ -507,6 +534,7 @@ void GraphicsLayer::setSize(const FloatSize& size)
 
 void GraphicsLayer::setBackgroundColor(const Color& color)
 {
+    ASSERT(m_type != Type::Structural);
     m_backgroundColor = color;
 }
 
@@ -521,11 +549,13 @@ void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase
 
 void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
 {
-    FloatSize offset = offsetFromRenderer() - toFloatSize(scrollOffset());
-    context.translate(-offset);
+    auto offset = offsetFromRenderer() - toFloatSize(scrollOffset());
+    auto clipRect = clip;
 
-    FloatRect clipRect(clip);
-    clipRect.move(offset);
+    if (!offset.isZero()) {
+        context.translate(-offset);
+        clipRect.move(offset);
+    }
 
     client().paintContents(this, context, clipRect, layerPaintBehavior);
 }
@@ -591,11 +621,7 @@ FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverage
 String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
 {
     // | is not a valid identifier character in CSS, so this can never conflict with a keyframe identifier.
-    StringBuilder id;
-    id.appendLiteral("-|transition");
-    id.appendNumber(static_cast<int>(property));
-    id.append('-');
-    return id.toString();
+    return makeString("-|transition", static_cast<int>(property), '-');
 }
 
 void GraphicsLayer::suspendAnimations(MonotonicTime)
@@ -603,6 +629,10 @@ void GraphicsLayer::suspendAnimations(MonotonicTime)
 }
 
 void GraphicsLayer::resumeAnimations()
+{
+}
+
+void GraphicsLayer::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose)
 {
 }
 
@@ -657,30 +687,6 @@ void GraphicsLayer::setZPosition(float position)
     m_zPosition = position;
 }
 
-float GraphicsLayer::accumulatedOpacity() const
-{
-    if (!preserves3D())
-        return 1;
-
-    return m_opacity * (parent() ? parent()->accumulatedOpacity() : 1);
-}
-
-void GraphicsLayer::distributeOpacity(float accumulatedOpacity)
-{
-    // If this is a transform layer we need to distribute our opacity to all our children
-
-    // Incoming accumulatedOpacity is the contribution from our parent(s). We mutiply this by our own
-    // opacity to get the total contribution
-    accumulatedOpacity *= m_opacity;
-
-    setOpacityInternal(accumulatedOpacity);
-
-    if (preserves3D()) {
-        for (auto& layer : children())
-            layer->distributeOpacity(accumulatedOpacity);
-    }
-}
-
 static inline const FilterOperations& filterOperationsAt(const KeyframeValueList& valueList, size_t index)
 {
     return static_cast<const FilterAnimationValue&>(valueList.at(index)).value();
@@ -723,81 +729,6 @@ int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
     return firstIndex;
 }
 
-// An "invalid" list is one whose functions don't match, and therefore has to be animated as a Matrix
-// The hasBigRotation flag will always return false if isValid is false. Otherwise hasBigRotation is
-// true if the rotation between any two keyframes is >= 180 degrees.
-
-static inline const TransformOperations& operationsAt(const KeyframeValueList& valueList, size_t index)
-{
-    return static_cast<const TransformAnimationValue&>(valueList.at(index)).value();
-}
-
-int GraphicsLayer::validateTransformOperations(const KeyframeValueList& valueList, bool& hasBigRotation)
-{
-    ASSERT(animatedPropertyIsTransformOrRelated(valueList.property()));
-
-    hasBigRotation = false;
-
-    if (valueList.size() < 2)
-        return -1;
-
-    // Empty transforms match anything, so find the first non-empty entry as the reference.
-    size_t firstIndex = 0;
-    for ( ; firstIndex < valueList.size(); ++firstIndex) {
-        if (!operationsAt(valueList, firstIndex).operations().isEmpty())
-            break;
-    }
-
-    if (firstIndex >= valueList.size())
-        return -1;
-
-    const TransformOperations& firstVal = operationsAt(valueList, firstIndex);
-
-    // See if the keyframes are valid.
-    for (size_t i = firstIndex + 1; i < valueList.size(); ++i) {
-        const TransformOperations& val = operationsAt(valueList, i);
-
-        // An empty transform list matches anything.
-        if (val.operations().isEmpty())
-            continue;
-
-        if (!firstVal.operationsMatch(val))
-            return -1;
-    }
-
-    // Keyframes are valid, check for big rotations.
-    double lastRotationAngle = 0.0;
-    double maxRotationAngle = -1.0;
-
-    for (size_t j = 0; j < firstVal.operations().size(); ++j) {
-        TransformOperation::OperationType type = firstVal.operations().at(j)->type();
-
-        // if this is a rotation entry, we need to see if any angle differences are >= 180 deg
-        if (type == TransformOperation::ROTATE_X ||
-            type == TransformOperation::ROTATE_Y ||
-            type == TransformOperation::ROTATE_Z ||
-            type == TransformOperation::ROTATE_3D) {
-            lastRotationAngle = downcast<RotateTransformOperation>(*firstVal.operations().at(j)).angle();
-
-            if (maxRotationAngle < 0)
-                maxRotationAngle = fabs(lastRotationAngle);
-
-            for (size_t i = firstIndex + 1; i < valueList.size(); ++i) {
-                const TransformOperations& val = operationsAt(valueList, i);
-                double rotationAngle = val.operations().isEmpty() ? 0 : downcast<RotateTransformOperation>(*val.operations().at(j)).angle();
-                double diffAngle = fabs(rotationAngle - lastRotationAngle);
-                if (diffAngle > maxRotationAngle)
-                    maxRotationAngle = diffAngle;
-                lastRotationAngle = rotationAngle;
-            }
-        }
-    }
-
-    hasBigRotation = maxRotationAngle >= 180.0;
-
-    return firstIndex;
-}
-
 double GraphicsLayer::backingStoreMemoryEstimate() const
 {
     if (!drawsContent())
@@ -820,17 +751,15 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     FloatRect largestRepaintRect(FloatPoint(), m_size);
     largestRepaintRect.intersect(repaintRect);
     RepaintMap::iterator repaintIt = repaintRectMap().find(this);
-    if (repaintIt == repaintRectMap().end()) {
-        Vector<FloatRect> repaintRects;
-        repaintRects.append(largestRepaintRect);
-        repaintRectMap().set(this, repaintRects);
-    } else {
+    if (repaintIt == repaintRectMap().end())
+        repaintRectMap().set(this, Vector { WTFMove(largestRepaintRect) });
+    else {
         Vector<FloatRect>& repaintRects = repaintIt->value;
         repaintRects.append(largestRepaintRect);
     }
 }
 
-void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (GraphicsLayer&)>& traversalFunc)
+void GraphicsLayer::traverse(GraphicsLayer& layer, const Function<void(GraphicsLayer&)>& traversalFunc)
 {
     traversalFunc(layer);
 
@@ -844,36 +773,36 @@ void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (Gra
         traverse(*maskLayer, traversalFunc);
 }
 
-void GraphicsLayer::dumpLayer(TextStream& ts, LayerTreeAsTextBehavior behavior) const
+void GraphicsLayer::dumpLayer(TextStream& ts, OptionSet<LayerTreeAsTextOptions> options) const
 {
     ts << indent << "(" << "GraphicsLayer";
 
-    if (behavior & LayerTreeAsTextDebug) {
+    if (options & LayerTreeAsTextOptions::Debug) {
         ts << " " << static_cast<void*>(const_cast<GraphicsLayer*>(this));
         ts << " \"" << m_name << "\"";
     }
 
     ts << "\n";
-    dumpProperties(ts, behavior);
+    dumpProperties(ts, options);
     ts << indent << ")\n";
 }
 
-static void dumpChildren(TextStream& ts, const Vector<Ref<GraphicsLayer>>& children, unsigned& totalChildCount, LayerTreeAsTextBehavior behavior)
+static void dumpChildren(TextStream& ts, const Vector<Ref<GraphicsLayer>>& children, unsigned& totalChildCount, OptionSet<LayerTreeAsTextOptions> options)
 {
     totalChildCount += children.size();
     for (auto& child : children) {
-        if ((behavior & LayerTreeAsTextDebug) || !child->client().shouldSkipLayerInDump(child.ptr(), behavior)) {
+        if ((options & LayerTreeAsTextOptions::Debug) || !child->client().shouldSkipLayerInDump(child.ptr(), options)) {
             TextStream::IndentScope indentScope(ts);
-            child->dumpLayer(ts, behavior);
+            child->dumpLayer(ts, options);
             continue;
         }
 
         totalChildCount--;
-        dumpChildren(ts, child->children(), totalChildCount, behavior);
+        dumpChildren(ts, child->children(), totalChildCount, options);
     }
 }
 
-void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behavior) const
+void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOptions> options) const
 {
     TextStream::IndentScope indentScope(ts);
     if (!m_offsetFromRenderer.isZero())
@@ -919,13 +848,13 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
     if (m_supportsSubpixelAntialiasedText)
         ts << indent << "(supports subpixel antialiased text " << m_supportsSubpixelAntialiasedText << ")\n";
 
-    if (m_masksToBounds && behavior & LayerTreeAsTextIncludeClipping)
+    if (m_masksToBounds && options & LayerTreeAsTextOptions::IncludeClipping)
         ts << indent << "(clips " << m_masksToBounds << ")\n";
 
     if (m_preserves3D)
         ts << indent << "(preserves3D " << m_preserves3D << ")\n";
 
-    if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent", behavior))
+    if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent", options))
         ts << indent << "(drawsContent " << m_drawsContent << ")\n";
 
     if (!m_contentsVisible)
@@ -934,16 +863,16 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
     if (!m_backfaceVisibility)
         ts << indent << "(backfaceVisibility " << (m_backfaceVisibility ? "visible" : "hidden") << ")\n";
 
-    if (behavior & LayerTreeAsTextDebug)
+    if (options & LayerTreeAsTextOptions::Debug)
         ts << indent << "(primary-layer-id " << primaryLayerID() << ")\n";
 
-    if (m_backgroundColor.isValid() && client().shouldDumpPropertyForLayer(this, "backgroundColor", behavior))
+    if (m_backgroundColor.isValid() && client().shouldDumpPropertyForLayer(this, "backgroundColor", options))
         ts << indent << "(backgroundColor " << serializationForRenderTreeAsText(m_backgroundColor) << ")\n";
 
-    if (behavior & LayerTreeAsTextIncludeAcceleratesDrawing && m_acceleratesDrawing)
+    if (options & LayerTreeAsTextOptions::IncludeAcceleratesDrawing && m_acceleratesDrawing)
         ts << indent << "(acceleratesDrawing " << m_acceleratesDrawing << ")\n";
 
-    if (behavior & LayerTreeAsTextIncludeBackingStoreAttached)
+    if (options & LayerTreeAsTextOptions::IncludeBackingStoreAttached)
         ts << indent << "(backingStoreAttached " << backingStoreAttachedForTesting() << ")\n";
 
     if (m_transform && !m_transform->isIdentity()) {
@@ -966,32 +895,32 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
 
     if (m_maskLayer) {
         ts << indent << "(mask layer";
-        if (behavior & LayerTreeAsTextDebug)
-            ts << " " << m_maskLayer;
+        if (options & LayerTreeAsTextOptions::Debug)
+            ts << " " << m_maskLayer.get();
         ts << ")\n";
 
         TextStream::IndentScope indentScope(ts);
-        m_maskLayer->dumpLayer(ts, behavior);
+        m_maskLayer->dumpLayer(ts, options);
     }
 
     if (m_replicaLayer) {
         ts << indent << "(replica layer";
-        if (behavior & LayerTreeAsTextDebug)
-            ts << " " << m_replicaLayer;
+        if (options & LayerTreeAsTextOptions::Debug)
+            ts << " " << m_replicaLayer.get();
         ts << ")\n";
 
         TextStream::IndentScope indentScope(ts);
-        m_replicaLayer->dumpLayer(ts, behavior);
+        m_replicaLayer->dumpLayer(ts, options);
     }
 
     if (m_replicatedLayer) {
         ts << indent << "(replicated layer";
-        if (behavior & LayerTreeAsTextDebug)
+        if (options & LayerTreeAsTextOptions::Debug)
             ts << " " << m_replicatedLayer;
         ts << ")\n";
     }
 
-    if (behavior & LayerTreeAsTextIncludeRepaintRects && repaintRectMap().contains(this) && !repaintRectMap().get(this).isEmpty() && client().shouldDumpPropertyForLayer(this, "repaintRects", behavior)) {
+    if (options & LayerTreeAsTextOptions::IncludeRepaintRects && repaintRectMap().contains(this) && !repaintRectMap().get(this).isEmpty() && client().shouldDumpPropertyForLayer(this, "repaintRects", options)) {
         ts << indent << "(repaint rects\n";
         for (size_t i = 0; i < repaintRectMap().get(this).size(); ++i) {
             if (repaintRectMap().get(this)[i].isEmpty())
@@ -1008,27 +937,27 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
         ts << indent << ")\n";
     }
 
-    if (behavior & LayerTreeAsTextIncludeEventRegion && !m_eventRegion.isEmpty()) {
+    if (options & LayerTreeAsTextOptions::IncludeEventRegion && !m_eventRegion.isEmpty()) {
         ts << indent << "(event region" << m_eventRegion;
         ts << indent << ")\n";
     }
 
 #if ENABLE(SCROLLING_THREAD)
-    if ((behavior & LayerTreeAsTextDebug) && m_scrollingNodeID)
+    if ((options & LayerTreeAsTextOptions::Debug) && m_scrollingNodeID)
         ts << indent << "(scrolling node " << m_scrollingNodeID << ")\n";
 #endif
 
-    if (behavior & LayerTreeAsTextIncludePaintingPhases && paintingPhase())
+    if (options & LayerTreeAsTextOptions::IncludePaintingPhases && paintingPhase())
         ts << indent << "(paintingPhases " << paintingPhase() << ")\n";
 
-    dumpAdditionalProperties(ts, behavior);
+    dumpAdditionalProperties(ts, options);
 
     if (m_children.size()) {
         TextStream childrenStream;
 
         childrenStream.increaseIndent(ts.indent());
         unsigned totalChildCount = 0;
-        dumpChildren(childrenStream, m_children, totalChildCount, behavior);
+        dumpChildren(childrenStream, m_children, totalChildCount, options);
 
         if (totalChildCount) {
             ts << indent << "(children " << totalChildCount << "\n";
@@ -1070,17 +999,15 @@ TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& cu
     case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
     case GraphicsLayer::CustomAppearance::ScrollingOverhang: ts << "scrolling-overhang"; break;
     case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
-    case GraphicsLayer::CustomAppearance::LightBackdrop: ts << "light-backdrop"; break;
-    case GraphicsLayer::CustomAppearance::DarkBackdrop: ts << "dark-backdrop"; break;
     }
     return ts;
 }
 
-String GraphicsLayer::layerTreeAsText(LayerTreeAsTextBehavior behavior) const
+String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options) const
 {
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 
-    dumpLayer(ts, behavior);
+    dumpLayer(ts, options);
     return ts.release();
 }
 
@@ -1092,7 +1019,7 @@ void showGraphicsLayerTree(const WebCore::GraphicsLayer* layer)
     if (!layer)
         return;
 
-    String output = layer->layerTreeAsText(WebCore::LayerTreeAsTextShowAll);
+    String output = layer->layerTreeAsText(WebCore::AllLayerTreeAsTextOptions);
     WTFLogAlways("%s\n", output.utf8().data());
 }
 #endif

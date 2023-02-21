@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,21 +57,21 @@ auto DOMPromise::whenPromiseIsSettled(JSDOMGlobalObject* globalObject, JSC::JSOb
     const JSC::Identifier& privateName = vm.propertyNames->builtinNames().thenPrivateName();
     auto thenFunction = promise->get(&lexicalGlobalObject, privateName);
 
-    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException());
     if (scope.exception())
         return IsCallbackRegistered::No;
 
-    ASSERT(thenFunction.isCallable(vm));
+    ASSERT(thenFunction.isCallable());
 
     JSC::MarkedArgumentBuffer arguments;
     arguments.append(handler);
     arguments.append(handler);
 
-    auto callData = JSC::getCallData(vm, thenFunction);
+    auto callData = JSC::getCallData(thenFunction);
     ASSERT(callData.type != JSC::CallData::Type::None);
     call(&lexicalGlobalObject, thenFunction, callData, promise, arguments);
 
-    EXCEPTION_ASSERT(!scope.exception() || isTerminatedExecutionException(lexicalGlobalObject.vm(), scope.exception()));
+    EXCEPTION_ASSERT(!scope.exception() || vm.hasPendingTerminationException());
     return scope.exception() ? IsCallbackRegistered::No : IsCallbackRegistered::Yes;
 }
 

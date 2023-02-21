@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2003, 2006, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -33,6 +33,7 @@
 #include "StyleProperties.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -108,12 +109,7 @@ static bool parseFontSize(const CharacterType* characters, unsigned length, int&
         return false;
 
     // Step 8
-    int value;
-
-    if (digits.is8Bit())
-        value = charactersToIntStrict(digits.characters8(), digits.length());
-    else
-        value = charactersToIntStrict(digits.characters16(), digits.length());
+    int value = parseInteger<int>(digits).value_or(0);
 
     // Step 9
     if (mode == RelativePlus)
@@ -179,26 +175,26 @@ bool HTMLFontElement::cssValueFromFontSizeNumber(const String& s, CSSValueID& si
     return true;
 }
 
-bool HTMLFontElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLFontElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == sizeAttr || name == colorAttr || name == faceAttr)
         return true;
-    return HTMLElement::isPresentationAttribute(name);
+    return HTMLElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLFontElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLFontElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == sizeAttr) {
         CSSValueID size = CSSValueInvalid;
         if (cssValueFromFontSizeNumber(value, size))
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyFontSize, size);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyFontSize, size);
     } else if (name == colorAttr)
         addHTMLColorToStyle(style, CSSPropertyColor, value);
-    else if (name == faceAttr) {
+    else if (name == faceAttr && !value.isEmpty()) {
         if (auto fontFaceValue = CSSValuePool::singleton().createFontFaceValue(value))
             style.setProperty(CSSProperty(CSSPropertyFontFamily, WTFMove(fontFaceValue)));
     } else
-        HTMLElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 }

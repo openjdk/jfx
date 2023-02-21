@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple, Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,26 +40,26 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    static JSWeakObjectRef* create(VM& vm, Structure* structure, JSObject* target)
+    static JSWeakObjectRef* create(VM& vm, Structure* structure, JSCell* target)
     {
-        JSWeakObjectRef* instance = new (NotNull, allocateCell<JSWeakObjectRef>(vm.heap)) JSWeakObjectRef(vm, structure);
+        JSWeakObjectRef* instance = new (NotNull, allocateCell<JSWeakObjectRef>(vm)) JSWeakObjectRef(vm, structure);
         instance->finishCreation(vm, target);
         return instance;
     }
 
-    JSObject* deref(VM& vm)
+    JSCell* deref(VM& vm)
     {
         if (m_value && vm.currentWeakRefVersion() != m_lastAccessVersion) {
             m_lastAccessVersion = vm.currentWeakRefVersion();
             // Perform a GC barrier here so we rescan this object and keep the object alive if we wouldn't otherwise.
-            vm.heap.writeBarrier(this);
+            vm.writeBarrier(this);
         }
 
         return m_value.get();
     }
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.weakObjectRefSpace<mode>();
     }
@@ -73,10 +73,10 @@ private:
     {
     }
 
-    JS_EXPORT_PRIVATE void finishCreation(VM&, JSObject* value);
+    JS_EXPORT_PRIVATE void finishCreation(VM&, JSCell* value);
 
     uintptr_t m_lastAccessVersion;
-    WriteBarrier<JSObject> m_value;
+    WriteBarrier<JSCell> m_value;
 };
 
 } // namespace JSC

@@ -39,7 +39,7 @@ extern "C" {
 
 #define JPEG_LIB_VERSION        90    /* Compatibility version 9.0 */
 #define JPEG_LIB_VERSION_MAJOR  9
-#define JPEG_LIB_VERSION_MINOR  4
+#define JPEG_LIB_VERSION_MINOR  5
 
 
 /* Various constants determining the sizes of things.

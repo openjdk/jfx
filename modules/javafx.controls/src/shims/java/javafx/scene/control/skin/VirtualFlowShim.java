@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,13 @@
  */
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.VirtualScrollBar;
+import java.util.List;
+
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
+import javafx.scene.control.Skin;
 import javafx.scene.layout.StackPane;
 
 public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
@@ -54,6 +56,11 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
     @Override
     public double getCellPosition(T cell) {
         return super.getCellPosition(cell);
+    }
+
+    @Override
+    public void setCellDirty(int idx) {
+        super.setCellDirty(idx);
     }
 
     @Override
@@ -109,6 +116,36 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
     }
 
     //------------------- statics --------------------
+
+    /**
+     * Returns the VirtualFlow managed by the given skin.
+     */
+    public static <T extends IndexedCell<?>> VirtualFlow<T> getVirtualFlow(Skin<?> skin) {
+        return ((VirtualContainerBase<?, T>) skin).getVirtualFlow();
+    }
+
+    /**
+     * Returns the list of cells displayed in the viewport of the flow.
+     *
+     * @see VirtualFlow#getCells()
+     */
+    public static <T extends IndexedCell<?>> List<T> getCells(VirtualFlow<T> flow) {
+        return flow.getCells();
+    }
+
+    /**
+     * Returns the vertical scrollbar of the given flow.
+     */
+    public static ScrollBar getVBar(VirtualFlow<?> flow) {
+        return flow.getVbar();
+    }
+
+    /**
+     * Returns the horizontal scrollbar of the given flow.
+     */
+    public static ScrollBar getHBar(VirtualFlow<?> flow) {
+        return flow.getHbar();
+    }
 
     public static <T> T cells_getFirst(VirtualFlow.ArrayLinkedList<T> list) {
         return list.getFirst();

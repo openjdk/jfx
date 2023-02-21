@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Lars Knoll <lars@trolltech.com>
- * Copyright (C) 2007-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,8 +22,8 @@
 #pragma once
 
 #include <mutex>
+#include <variant>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Variant.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/icu/TextBreakIteratorICU.h>
 
@@ -49,7 +49,8 @@ public:
     enum class Mode {
         Line,
         Caret,
-        Delete
+        Delete,
+        Character
     };
 
     TextBreakIterator() = delete;
@@ -58,14 +59,14 @@ public:
     TextBreakIterator& operator=(const TextBreakIterator&) = delete;
     TextBreakIterator& operator=(TextBreakIterator&&) = default;
 
-    Optional<unsigned> preceding(unsigned location) const
+    std::optional<unsigned> preceding(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.preceding(location);
         });
     }
 
-    Optional<unsigned> following(unsigned location) const
+    std::optional<unsigned> following(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.following(location);
@@ -102,7 +103,7 @@ private:
         return m_locale;
     }
 
-    Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> m_backing;
+    std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform> m_backing;
     Mode m_mode;
     AtomString m_locale;
 };
@@ -173,12 +174,12 @@ public:
     CachedTextBreakIterator& operator=(const CachedTextBreakIterator&) = delete;
     CachedTextBreakIterator& operator=(CachedTextBreakIterator&&) = default;
 
-    Optional<unsigned> preceding(unsigned location) const
+    std::optional<unsigned> preceding(unsigned location) const
     {
         return m_backing.preceding(location);
     }
 
-    Optional<unsigned> following(unsigned location) const
+    std::optional<unsigned> following(unsigned location) const
     {
         return m_backing.following(location);
     }

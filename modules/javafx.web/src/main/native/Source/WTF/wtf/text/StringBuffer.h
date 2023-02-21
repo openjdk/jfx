@@ -46,7 +46,7 @@ class StringBuffer {
 public:
     explicit StringBuffer(unsigned length)
         : m_length(length)
-        , m_data(m_length ? static_cast<CharType*>(StringBufferMalloc::malloc((Checked<size_t>(m_length) * sizeof(CharType)).unsafeGet())) : nullptr)
+        , m_data(m_length ? static_cast<CharType*>(StringBufferMalloc::malloc(Checked<size_t>(m_length) * sizeof(CharType))) : nullptr)
     {
     }
 
@@ -63,11 +63,8 @@ public:
 
     void resize(unsigned newLength)
     {
-        if (newLength > m_length) {
-            if (newLength > std::numeric_limits<unsigned>::max() / sizeof(UChar))
-                CRASH();
-            m_data = static_cast<UChar*>(StringBufferMalloc::realloc(m_data, newLength * sizeof(UChar)));
-        }
+        if (newLength > m_length)
+            m_data = static_cast<CharType*>(StringBufferMalloc::realloc(m_data, Checked<size_t>(newLength) * sizeof(CharType)));
         m_length = newLength;
     }
 

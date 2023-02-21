@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package test.javafx.scene.control;
 import java.util.Arrays;
 import java.util.Collection;
 import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBoxTreeItem;
@@ -110,7 +109,7 @@ public class EventAnyTest {
     }
 
     private static Event listViewEditEvent() {
-        return new ListView.EditEvent<String>(new ListView<String>(),
+        return new ListView.EditEvent<>(new ListView<String>(),
                 ListView.<String>editCommitEvent(), "", 1);
     }
 
@@ -124,8 +123,8 @@ public class EventAnyTest {
     }
 
     private static Event tableColumnCellEditEvent() {
-        TableView<String> tw = new TableView<String>();
-        return new TableColumn.CellEditEvent<String, String>(
+        TableView<String> tw = new TableView<>();
+        return new TableColumn.CellEditEvent<>(
                 tw, new TablePosition<String, String>(tw, 1, null),
                 TableColumn.<String, String>editCommitEvent(), "");
 
@@ -138,22 +137,22 @@ public class EventAnyTest {
     }
 
     private static Event treeTableColumnCellEditEvent() {
-        TreeTableView<String> tw = new TreeTableView<String>();
-        return new TreeTableColumn.CellEditEvent<String, String>(
+        TreeTableView<String> tw = new TreeTableView<>();
+        return new TreeTableColumn.CellEditEvent<>(
                 tw, new TreeTablePosition<String, String>(tw, 1, null),
                 TreeTableColumn.<String, String>editCommitEvent(), "");
 
     }
 
     private static Event treeTableViewEditEvent() {
-        TreeTableView<String> tw = new TreeTableView<String>();
-        return new TreeTableView.EditEvent<String>(
+        TreeTableView<String> tw = new TreeTableView<>();
+        return new TreeTableView.EditEvent<>(
                 tw, TreeTableView.editCommitEvent(), null, "", "");
     }
 
     private static Event treeViewEditEvent() {
-        TreeView<String> tw = new TreeView<String>();
-        return new TreeView.EditEvent<String>(
+        TreeView<String> tw = new TreeView<>();
+        return new TreeView.EditEvent<>(
                 tw, TreeView.editCommitEvent(), null, "", "");
     }
 }

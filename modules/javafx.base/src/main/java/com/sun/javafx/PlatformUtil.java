@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Locale;
 import java.util.Properties;
 
 public class PlatformUtil {
@@ -63,7 +64,7 @@ public class PlatformUtil {
         embedded = bool1;
 
         @SuppressWarnings("removal")
-        String str2 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("embedded"));
+        String str2 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT));
         embeddedType = str2;
 
         @SuppressWarnings("removal")

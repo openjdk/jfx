@@ -45,9 +45,7 @@ DataFormat CallFrameShuffler::emitStore(CachedRecovery& location, MacroAssembler
         m_jit.store32(location.recovery().gpr(), address.withOffset(PayloadOffset));
         return DataFormatInt32;
     case UnboxedCellInGPR:
-        m_jit.store32(MacroAssembler::TrustedImm32(JSValue::CellTag),
-            address.withOffset(TagOffset));
-        m_jit.store32(location.recovery().gpr(), address.withOffset(PayloadOffset));
+        m_jit.storeCell(location.recovery().gpr(), address);
         return DataFormatCell;
     case Constant:
         m_jit.storeTrustedValue(location.recovery().constant(), address);
@@ -124,7 +122,10 @@ void CallFrameShuffler::emitLoad(CachedRecovery& location)
         if (resultGPR == InvalidGPRReg || m_registers[resultGPR] || m_lockedRegisters.get(resultGPR))
             resultGPR = getFreeGPR();
         ASSERT(resultGPR != InvalidGPRReg);
-        m_jit.loadPtr(address.withOffset(PayloadOffset), resultGPR);
+        if (location.recovery().technique() == Int32TagDisplacedInJSStack)
+            m_jit.loadPtr(address.withOffset(TagOffset), resultGPR);
+        else
+            m_jit.loadPtr(address.withOffset(PayloadOffset), resultGPR);
         updateRecovery(location,
             ValueRecovery::inGPR(resultGPR, location.recovery().dataFormat()));
         if (verbose)
@@ -182,41 +183,31 @@ void CallFrameShuffler::emitDisplace(CachedRecovery& location)
 {
     ASSERT(location.recovery().isInRegisters());
     JSValueRegs wantedJSValueRegs { location.wantedJSValueRegs() };
-    ASSERT(wantedJSValueRegs); // We don't support wanted FPRs on 32bit platforms
-
     GPRReg wantedTagGPR { wantedJSValueRegs.tagGPR() };
     GPRReg wantedPayloadGPR { wantedJSValueRegs.payloadGPR() };
+    FPRReg wantedFPR { location.wantedFPR() };
 
     if (wantedTagGPR != InvalidGPRReg) {
         ASSERT(!m_lockedRegisters.get(wantedTagGPR));
         if (CachedRecovery* currentTag { m_registers[wantedTagGPR] }) {
-            if (currentTag == &location) {
-                if (verbose)
-                    dataLog("   + ", wantedTagGPR, " is OK\n");
-            } else {
-                // This can never happen on 32bit platforms since we
-                // have at most one wanted JSValueRegs, for the
-                // callee, and no callee-save registers.
-                RELEASE_ASSERT_NOT_REACHED();
-            }
+            RELEASE_ASSERT(currentTag == &location);
+            if (verbose)
+                dataLog("   + ", wantedTagGPR, " is OK\n");
         }
     }
 
     if (wantedPayloadGPR != InvalidGPRReg) {
         ASSERT(!m_lockedRegisters.get(wantedPayloadGPR));
         if (CachedRecovery* currentPayload { m_registers[wantedPayloadGPR] }) {
-            if (currentPayload == &location) {
-                if (verbose)
-                    dataLog("   + ", wantedPayloadGPR, " is OK\n");
-            } else {
-                // See above
-                RELEASE_ASSERT_NOT_REACHED();
-            }
+            RELEASE_ASSERT(currentPayload == &location);
+            if (verbose)
+                dataLog("   + ", wantedPayloadGPR, " is OK\n");
         }
     }
 
     if (location.recovery().technique() == InPair
         || location.recovery().isInGPR()) {
+        ASSERT(wantedJSValueRegs); // We don't support wanted FPRs on 32bit platforms at the moment
         GPRReg payloadGPR;
         if (location.recovery().technique() == InPair)
             payloadGPR = location.recovery().payloadGPR();
@@ -282,22 +273,28 @@ void CallFrameShuffler::emitDisplace(CachedRecovery& location)
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
+        updateRecovery(location, ValueRecovery::inPair(wantedTagGPR, wantedPayloadGPR));
     } else {
         ASSERT(location.recovery().isInFPR());
-        if (wantedTagGPR == InvalidGPRReg) {
-            ASSERT(wantedPayloadGPR != InvalidGPRReg);
-            m_lockedRegisters.set(wantedPayloadGPR);
-            wantedTagGPR = getFreeGPR();
-            m_lockedRegisters.clear(wantedPayloadGPR);
+        if (wantedFPR != InvalidFPRReg) {
+            m_jit.moveDouble(location.recovery().fpr(), wantedFPR);
+            updateRecovery(location, ValueRecovery::inRegister(wantedFPR, DataFormatJS));
+        } else {
+            if (wantedTagGPR == InvalidGPRReg) {
+                ASSERT(wantedPayloadGPR != InvalidGPRReg);
+                m_lockedRegisters.set(wantedPayloadGPR);
+                wantedTagGPR = getFreeGPR();
+                m_lockedRegisters.clear(wantedPayloadGPR);
+            }
+            if (wantedPayloadGPR == InvalidGPRReg) {
+                m_lockedRegisters.set(wantedTagGPR);
+                wantedPayloadGPR = getFreeGPR();
+                m_lockedRegisters.clear(wantedTagGPR);
+            }
+            m_jit.moveDoubleToInts(location.recovery().fpr(), wantedPayloadGPR, wantedTagGPR);
+            updateRecovery(location, ValueRecovery::inPair(wantedTagGPR, wantedPayloadGPR));
         }
-        if (wantedPayloadGPR == InvalidGPRReg) {
-            m_lockedRegisters.set(wantedTagGPR);
-            wantedPayloadGPR = getFreeGPR();
-            m_lockedRegisters.clear(wantedTagGPR);
-        }
-        m_jit.boxDouble(location.recovery().fpr(), wantedTagGPR, wantedPayloadGPR);
     }
-    updateRecovery(location, ValueRecovery::inPair(wantedTagGPR, wantedPayloadGPR));
 }
 
 } // namespace JSC

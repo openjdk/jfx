@@ -38,6 +38,7 @@ namespace WebCore {
 
 class RegistrationStore;
 class SQLiteDatabase;
+class SWScriptStorage;
 struct ServiceWorkerContextData;
 
 WEBCORE_EXPORT String serviceWorkerRegistrationDatabaseFilename(const String& databaseDirectory);
@@ -45,6 +46,8 @@ WEBCORE_EXPORT String serviceWorkerRegistrationDatabaseFilename(const String& da
 class RegistrationDatabase : public ThreadSafeRefCounted<RegistrationDatabase, WTF::DestructionThread::Main> {
 WTF_MAKE_FAST_ALLOCATED;
 public:
+    static constexpr uint64_t schemaVersion = 8;
+
     static Ref<RegistrationDatabase> create(RegistrationStore& store, String&& databaseDirectory)
     {
         return adoptRef(*new RegistrationDatabase(store, WTFMove(databaseDirectory)));
@@ -52,7 +55,7 @@ public:
 
     ~RegistrationDatabase();
 
-    void pushChanges(const HashMap<ServiceWorkerRegistrationKey, Optional<ServiceWorkerContextData>>&, CompletionHandler<void()>&&);
+    void pushChanges(const HashMap<ServiceWorkerRegistrationKey, std::optional<ServiceWorkerContextData>>&, CompletionHandler<void()>&&);
     void clearAll(CompletionHandler<void()>&&);
     void close(CompletionHandler<void()>&&);
 
@@ -66,20 +69,24 @@ private:
     void postTaskToWorkQueue(Function<void()>&&);
 
     // Methods to be run on the work queue.
-    bool openSQLiteDatabase(const String& fullFilename);
+    void openSQLiteDatabase(const String& fullFilename, CompletionHandler<void(bool)>&&);
     String ensureValidRecordsTable();
-    String importRecords();
+    void importRecords(CompletionHandler<void(String)>&&);
     void importRecordsIfNecessary();
-    bool doPushChanges(const Vector<ServiceWorkerContextData>&, const Vector<ServiceWorkerRegistrationKey>&);
+    void doPushChanges(Vector<ServiceWorkerContextData>&&, Vector<ServiceWorkerRegistrationKey>&&, CompletionHandler<void(bool, Vector<ServiceWorkerContextData>&&, Vector<ServiceWorkerRegistrationKey>&&)>&&);
+    void doPushChangesWithOpenDatabase(Vector<ServiceWorkerContextData>&&, Vector<ServiceWorkerRegistrationKey>&&, CompletionHandler<void(bool, Vector<ServiceWorkerContextData>&&, Vector<ServiceWorkerRegistrationKey>&&)>&&);
     void doClearOrigin(const SecurityOrigin&);
+    SWScriptStorage& scriptStorage();
+    String scriptStorageDirectory() const;
 
     // Replies to the main thread.
-    void addRegistrationToStore(ServiceWorkerContextData&&);
+    void addRegistrationToStore(ServiceWorkerContextData&&, CompletionHandler<void()>&&);
     void databaseFailedToOpen();
     void databaseOpenedAndRecordsImported();
 
     Ref<WorkQueue> m_workQueue;
     WeakPtr<RegistrationStore> m_store;
+    std::unique_ptr<SWScriptStorage> m_scriptStorage;
     String m_databaseDirectory;
     String m_databaseFilePath;
     std::unique_ptr<SQLiteDatabase> m_database;

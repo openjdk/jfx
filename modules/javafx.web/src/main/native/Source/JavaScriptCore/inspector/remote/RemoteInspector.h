@@ -38,6 +38,7 @@
 
 #if PLATFORM(COCOA)
 #include "RemoteInspectorXPCConnection.h"
+#include <wtf/HashSet.h>
 #include <wtf/RetainPtr.h>
 
 OBJC_CLASS NSDictionary;
@@ -93,17 +94,18 @@ public:
             Vector<std::pair<String, String>> certificates;
             struct Proxy {
                 String type;
-                Optional<String> ftpURL;
-                Optional<String> httpURL;
-                Optional<String> httpsURL;
-                Optional<String> socksURL;
+                std::optional<String> autoconfigURL;
+                std::optional<String> ftpURL;
+                std::optional<String> httpURL;
+                std::optional<String> httpsURL;
+                std::optional<String> socksURL;
                 Vector<String> ignoreAddressList;
             };
-            Optional<Proxy> proxy;
+            std::optional<Proxy> proxy;
 #endif
 #if PLATFORM(COCOA)
-            Optional<bool> allowInsecureMediaCapture;
-            Optional<bool> suppressICECandidateFiltering;
+            std::optional<bool> allowInsecureMediaCapture;
+            std::optional<bool> suppressICECandidateFiltering;
 #endif
         };
 
@@ -121,6 +123,10 @@ public:
 #if PLATFORM(COCOA)
     static void setNeedMachSandboxExtension(bool needExtension) { needMachSandboxExtension = needExtension; }
 #endif
+#if USE(GLIB)
+    static void setInspectorServerAddress(CString&& address) { s_inspectorServerAddress = WTFMove(address); }
+    static const CString& inspectorServerAddress() { return s_inspectorServerAddress; }
+#endif
     static void startDisabled();
     static RemoteInspector& singleton();
     friend class LazyNeverDestroyed<RemoteInspector>;
@@ -133,7 +139,7 @@ public:
     RemoteInspector::Client* client() const { return m_client; }
     void setClient(RemoteInspector::Client*);
     void clientCapabilitiesDidChange();
-    Optional<RemoteInspector::Client::Capabilities> clientCapabilities() const { return m_clientCapabilities; }
+    std::optional<RemoteInspector::Client::Capabilities> clientCapabilities() const { return m_clientCapabilities; }
 
     void setupFailed(TargetID);
     void setupCompleted(TargetID);
@@ -178,9 +184,11 @@ private:
     TargetID nextAvailableTargetIdentifier();
 
     enum class StopSource { API, XPCMessage };
-    void stopInternal(StopSource);
+    void stopInternal(StopSource) WTF_REQUIRES_LOCK(m_mutex);
 
 #if PLATFORM(COCOA)
+    void initialize();
+    void setPendingMainThreadInitialization(bool pendingInitialization);
     void setupXPCConnectionIfNeeded();
 #endif
 #if USE(GLIB)
@@ -208,24 +216,24 @@ private:
     void updateHasActiveDebugSession();
     void updateClientCapabilities();
 
-    void sendAutomaticInspectionCandidateMessage();
+    void sendAutomaticInspectionCandidateMessage(TargetID) WTF_REQUIRES_LOCK(m_mutex);
 
 #if PLATFORM(COCOA)
     void xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInfo) final;
     void xpcConnectionFailed(RemoteInspectorXPCConnection*) final;
     void xpcConnectionUnhandledMessage(RemoteInspectorXPCConnection*, xpc_object_t) final;
 
-    void receivedSetupMessage(NSDictionary *userInfo);
-    void receivedDataMessage(NSDictionary *userInfo);
-    void receivedDidCloseMessage(NSDictionary *userInfo);
-    void receivedGetListingMessage(NSDictionary *userInfo);
-    void receivedWakeUpDebuggables(NSDictionary *userInfo);
-    void receivedIndicateMessage(NSDictionary *userInfo);
-    void receivedProxyApplicationSetupMessage(NSDictionary *userInfo);
-    void receivedConnectionDiedMessage(NSDictionary *userInfo);
-    void receivedAutomaticInspectionConfigurationMessage(NSDictionary *userInfo);
-    void receivedAutomaticInspectionRejectMessage(NSDictionary *userInfo);
-    void receivedAutomationSessionRequestMessage(NSDictionary *userInfo);
+    void receivedSetupMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedDataMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedDidCloseMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedGetListingMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedWakeUpDebuggables(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedIndicateMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedProxyApplicationSetupMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedConnectionDiedMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedAutomaticInspectionConfigurationMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedAutomaticInspectionRejectMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedAutomationSessionRequestMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
     HashMap<String, CallHandler>& dispatchMap() final;
@@ -247,6 +255,9 @@ private:
 #if PLATFORM(COCOA)
     static std::atomic<bool> needMachSandboxExtension;
 #endif
+#if USE(GLIB)
+    static CString s_inspectorServerAddress;
+#endif
 
     // Targets can be registered from any thread at any time.
     // Any target can send messages over the XPC connection.
@@ -260,6 +271,9 @@ private:
 
 #if PLATFORM(COCOA)
     RefPtr<RemoteInspectorXPCConnection> m_relayConnection;
+    bool m_shouldReconnectToRelayOnFailure { false };
+
+    bool m_pendingMainThreadInitialization WTF_GUARDED_BY_LOCK(m_mutex) { false };
 #endif
 #if USE(GLIB)
     RefPtr<SocketConnection> m_socketConnection;
@@ -268,14 +282,14 @@ private:
 
 #if USE(INSPECTOR_SOCKET_SERVER)
     // Connection from RemoteInspectorClient or WebDriver.
-    Optional<ConnectionID> m_clientConnection;
+    std::optional<ConnectionID> m_clientConnection;
     bool m_readyToPushListings { false };
 
     String m_backendCommandsPath;
 #endif
 
     RemoteInspector::Client* m_client { nullptr };
-    Optional<RemoteInspector::Client::Capabilities> m_clientCapabilities;
+    std::optional<RemoteInspector::Client::Capabilities> m_clientCapabilities;
 
 #if PLATFORM(COCOA)
     dispatch_queue_t m_xpcQueue;
@@ -289,11 +303,11 @@ private:
     ProcessID m_parentProcessIdentifier { 0 };
 #if PLATFORM(COCOA)
     RetainPtr<CFDataRef> m_parentProcessAuditData;
+    bool m_messageDataTypeChunkSupported { false };
 #endif
     bool m_shouldSendParentProcessInformation { false };
-    bool m_automaticInspectionEnabled { false };
-    bool m_automaticInspectionPaused { false };
-    TargetID m_automaticInspectionCandidateTargetIdentifier { 0 };
+    bool m_automaticInspectionEnabled WTF_GUARDED_BY_LOCK(m_mutex) { false };
+    HashSet<TargetID, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_pausedAutomaticInspectionCandidates WTF_GUARDED_BY_LOCK(m_mutex);
 };
 
 } // namespace Inspector

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -311,38 +311,47 @@ final class Order3 extends Curve {
         YforT1 = YforT2 = YforT3 = y0;
     }
 
+    @Override
     public int getOrder() {
         return 3;
     }
 
+    @Override
     public double getXTop() {
         return x0;
     }
 
+    @Override
     public double getYTop() {
         return y0;
     }
 
+    @Override
     public double getXBot() {
         return x1;
     }
 
+    @Override
     public double getYBot() {
         return y1;
     }
 
+    @Override
     public double getXMin() {
         return xmin;
     }
 
+    @Override
     public double getXMax() {
         return xmax;
     }
 
+    @Override
     public double getX0() {
         return (direction == INCREASING) ? x0 : x1;
     }
 
+    @Override
     public double getY0() {
         return (direction == INCREASING) ? y0 : y1;
     }
@@ -363,10 +372,12 @@ final class Order3 extends Curve {
         return (direction == DECREASING) ? cy0 : cy1;
     }
 
+    @Override
     public double getX1() {
         return (direction == DECREASING) ? x0 : x1;
     }
 
+    @Override
     public double getY1() {
         return (direction == DECREASING) ? y0 : y1;
     }
@@ -385,6 +396,7 @@ final class Order3 extends Curve {
      *     x^3 + (ycoeff2)x^2 + (ycoeff1)x + (ycoeff0) = y
      * @return the first valid root (in the range [0, 1])
      */
+    @Override
     public double TforY(double y) {
         if (y <= y0) return 0;
         if (y >= y1) return 1;
@@ -535,6 +547,7 @@ final class Order3 extends Curve {
         return (t > 1) ? -1 : t;
     }
 
+    @Override
     public double XforY(double y) {
         if (y <= y0) {
             return x0;
@@ -545,14 +558,17 @@ final class Order3 extends Curve {
         return XforT(TforY(y));
     }
 
+    @Override
     public double XforT(double t) {
         return (((xcoeff3 * t) + xcoeff2) * t + xcoeff1) * t + xcoeff0;
     }
 
+    @Override
     public double YforT(double t) {
         return (((ycoeff3 * t) + ycoeff2) * t + ycoeff1) * t + ycoeff0;
     }
 
+    @Override
     public double dXforT(double t, int deriv) {
         switch (deriv) {
         case 0:
@@ -568,6 +584,7 @@ final class Order3 extends Curve {
         }
     }
 
+    @Override
     public double dYforT(double t, int deriv) {
         switch (deriv) {
         case 0:
@@ -583,6 +600,7 @@ final class Order3 extends Curve {
         }
     }
 
+    @Override
     public double nextVertical(double t0, double t1) {
         double eqn[] = {xcoeff1, 2 * xcoeff2, 3 * xcoeff3};
         int numroots = solveQuadratic(eqn, eqn);
@@ -594,6 +612,7 @@ final class Order3 extends Curve {
         return t1;
     }
 
+    @Override
     public void enlarge(RectBounds r) {
         r.add((float) x0, (float) y0);
         double eqn[] = {xcoeff1, 2 * xcoeff2, 3 * xcoeff3};
@@ -607,6 +626,7 @@ final class Order3 extends Curve {
         r.add((float) x1, (float) y1);
     }
 
+    @Override
     public Curve getSubCurve(double ystart, double yend, int dir) {
         if (ystart <= y0 && yend >= y1) {
             return getWithDirection(dir);
@@ -659,10 +679,12 @@ final class Order3 extends Curve {
                           dir);
     }
 
+    @Override
     public Curve getReversedCurve() {
         return new Order3(x0, y0, cx0, cy0, cx1, cy1, x1, y1, -direction);
     }
 
+    @Override
     public int getSegment(float coords[]) {
         if (direction == INCREASING) {
             coords[0] = (float) cx0;

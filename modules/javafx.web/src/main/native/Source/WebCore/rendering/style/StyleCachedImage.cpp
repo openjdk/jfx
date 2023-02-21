@@ -57,16 +57,21 @@ bool StyleCachedImage::operator==(const StyleImage& other) const
         return true;
     if (m_scaleFactor != otherCached.m_scaleFactor)
         return false;
-    if (m_cssValue.ptr() == otherCached.m_cssValue.ptr())
+    if (m_cssValue.ptr() == otherCached.m_cssValue.ptr() || m_cssValue->equals(otherCached.m_cssValue.get()))
         return true;
     if (m_cachedImage && m_cachedImage == otherCached.m_cachedImage)
         return true;
     return false;
 }
 
-URL StyleCachedImage::imageURL()
+URL StyleCachedImage::imageURL() const
 {
-    return m_cssValue->url();
+    return m_cssValue->imageURL();
+}
+
+URL StyleCachedImage::reresolvedURL(const Document& document) const
+{
+    return m_cssValue->reresolvedURL(document);
 }
 
 void StyleCachedImage::load(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
@@ -172,6 +177,21 @@ void StyleCachedImage::removeClient(RenderElement& renderer)
     m_cachedImage->removeClient(renderer);
 }
 
+bool StyleCachedImage::hasClient(RenderElement& renderer) const
+{
+    ASSERT(!m_isPending);
+    if (!m_cachedImage)
+        return false;
+    return m_cachedImage->hasClient(renderer);
+}
+
+bool StyleCachedImage::hasImage() const
+{
+    if (!m_cachedImage)
+        return false;
+    return m_cachedImage->hasImage();
+}
+
 RefPtr<Image> StyleCachedImage::image(RenderElement* renderer, const FloatSize&) const
 {
     ASSERT(!m_isPending);
@@ -188,6 +208,11 @@ float StyleCachedImage::imageScaleFactor() const
 bool StyleCachedImage::knownToBeOpaque(const RenderElement& renderer) const
 {
     return m_cachedImage && m_cachedImage->currentFrameKnownToBeOpaque(&renderer);
+}
+
+bool StyleCachedImage::usesDataProtocol() const
+{
+    return m_cssValue->imageURL().protocolIsData();
 }
 
 }

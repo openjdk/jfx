@@ -36,10 +36,30 @@ struct wl_egl_window;
 struct wpe_renderer_backend_egl_offscreen_target;
 #endif
 
+typedef intptr_t EGLAttrib;
+typedef unsigned EGLBoolean;
+typedef void *EGLClientBuffer;
 typedef void *EGLConfig;
 typedef void *EGLContext;
 typedef void *EGLDisplay;
+typedef void *EGLImage;
+typedef void *EGLImageKHR;
 typedef void *EGLSurface;
+typedef unsigned EGLenum;
+typedef int32_t EGLint;
+
+#if !defined(PFNEGLCREATEIMAGEPROC)
+typedef EGLImage (*PFNEGLCREATEIMAGEPROC) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, const EGLAttrib*);
+#endif
+#if !defined(PFNEGLDESTROYIMAGEPROC)
+typedef EGLBoolean (*PFNEGLDESTROYIMAGEPROC) (EGLDisplay, EGLImage);
+#endif
+#if !defined(PFNEGLCREATEIMAGEKHRPROC)
+typedef EGLImageKHR (*PFNEGLCREATEIMAGEKHRPROC) (EGLDisplay, EGLContext, EGLenum target, EGLClientBuffer, const EGLint* attribList);
+#endif
+#if !defined(PFNEGLDESTROYIMAGEKHRPROC)
+typedef EGLBoolean (*PFNEGLDESTROYIMAGEKHRPROC) (EGLDisplay, EGLImageKHR);
+#endif
 
 namespace WebCore {
 
@@ -51,6 +71,10 @@ public:
 
     static const char* errorString(int statusCode);
     static const char* lastErrorString();
+
+    EGLConfig config() const { return m_config; }
+    EGLImage createImage(EGLenum target, EGLClientBuffer, const Vector<EGLAttrib>&) const;
+    bool destroyImage(EGLImage) const;
 
     virtual ~GLContextEGL();
 
@@ -65,22 +89,20 @@ private:
     void swapInterval(int) override;
     bool isEGLContext() const override { return true; }
 
-#if ENABLE(WEBGL)
-    PlatformGraphicsContextGL platformContext() override;
-#endif
+    GCGLContext platformContext() override;
 
     enum EGLSurfaceType { PbufferSurface, WindowSurface, PixmapSurface, Surfaceless };
 
-    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, EGLSurfaceType);
+    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, EGLSurfaceType);
 #if PLATFORM(X11)
-    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, XUniquePixmap&&);
+    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, XUniquePixmap&&);
 #endif
 #if PLATFORM(WAYLAND)
-    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, WlUniquePtr<struct wl_surface>&&, struct wl_egl_window*);
+    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, WlUniquePtr<struct wl_surface>&&, struct wl_egl_window*);
     void destroyWaylandWindow();
 #endif
 #if USE(WPE_RENDERER)
-    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, struct wpe_renderer_backend_egl_offscreen_target*);
+    GLContextEGL(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, struct wpe_renderer_backend_egl_offscreen_target*);
     void destroyWPETarget();
 #endif
 
@@ -104,7 +126,12 @@ private:
 
     EGLContext m_context { nullptr };
     EGLSurface m_surface { nullptr };
+    EGLConfig m_config { nullptr };
     EGLSurfaceType m_type;
+    PFNEGLCREATEIMAGEPROC m_eglCreateImage { nullptr };
+    PFNEGLDESTROYIMAGEPROC m_eglDestroyImage { nullptr };
+    PFNEGLCREATEIMAGEKHRPROC m_eglCreateImageKHR { nullptr };
+    PFNEGLDESTROYIMAGEKHRPROC m_eglDestroyImageKHR { nullptr };
 #if PLATFORM(X11)
     XUniquePixmap m_pixmap;
 #endif
@@ -118,5 +145,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_GLCONTEXT(GLContextEGL, isEGLContext());
 
 #endif // USE(EGL)

@@ -164,14 +164,14 @@ private:
             dataLog("   Found must-handle block: ", *block, "\n");
 
         // This merges snapshot of stack values while CFA phase want to have proven types and values. This is somewhat tricky.
-        // But this is OK as long as DFG OSR entry validates the inputs with *proven* AbstracValue values. And it turns out that this
+        // But this is OK as long as DFG OSR entry validates the inputs with *proven* AbstractValue values. And it turns out that this
         // type widening is critical to navier-stokes. Without it, navier-stokes has more strict constraint on OSR entry and
         // fails OSR entry repeatedly.
         bool changed = false;
-        const Operands<Optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
+        const Operands<std::optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
         for (size_t i = mustHandleValues.size(); i--;) {
             Operand operand = mustHandleValues.operandForIndex(i);
-            Optional<JSValue> value = mustHandleValues[i];
+            std::optional<JSValue> value = mustHandleValues[i];
             if (!value) {
                 if (m_verbose)
                     dataLog("   Not live in bytecode: ", operand, "\n");

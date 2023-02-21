@@ -27,7 +27,7 @@
 
 namespace JSC {
 
-const ClassInfo DateInstance::s_info = {"Date", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DateInstance)};
+const ClassInfo DateInstance::s_info = { "Date"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DateInstance) };
 
 DateInstance::DateInstance(VM& vm, Structure* structure)
     : Base(vm, structure)
@@ -37,19 +37,14 @@ DateInstance::DateInstance(VM& vm, Structure* structure)
 void DateInstance::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 void DateInstance::finishCreation(VM& vm, double time)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     m_internalNumber = timeClip(time);
-}
-
-String DateInstance::toStringName(const JSObject*, JSGlobalObject*)
-{
-    return "Date"_s;
 }
 
 const GregorianDateTime* DateInstance::calculateGregorianDateTime(DateCache& cache) const

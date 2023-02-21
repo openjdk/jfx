@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,7 +90,7 @@ public class ScrollBar extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // for StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
 
         // set pseudo-class state to horizontal
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -373,8 +373,8 @@ public class ScrollBar extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<ScrollBar,Orientation> ORIENTATION =
-            new CssMetaData<ScrollBar,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+            new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
@@ -395,7 +395,7 @@ public class ScrollBar extends Control {
         };
 
         private static final CssMetaData<ScrollBar,Number> UNIT_INCREMENT =
-            new CssMetaData<ScrollBar,Number>("-fx-unit-increment",
+            new CssMetaData<>("-fx-unit-increment",
                 SizeConverter.getInstance(), 1.0) {
 
             @Override
@@ -405,13 +405,13 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.unitIncrementProperty();
+                return (StyleableProperty<Number>)n.unitIncrementProperty();
             }
 
         };
 
         private static final CssMetaData<ScrollBar,Number> BLOCK_INCREMENT =
-            new CssMetaData<ScrollBar,Number>("-fx-block-increment",
+            new CssMetaData<>("-fx-block-increment",
                 SizeConverter.getInstance(), 10.0) {
 
             @Override
@@ -421,7 +421,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)n.blockIncrementProperty();
             }
 
         };
@@ -429,7 +429,7 @@ public class ScrollBar extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             styleables.add(UNIT_INCREMENT);
             styleables.add(BLOCK_INCREMENT);

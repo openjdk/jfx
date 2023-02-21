@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include <wtf/Assertions.h>
+#include <wtf/PrintStream.h>
 
 namespace JSC { namespace Wasm {
 
@@ -36,7 +37,9 @@ const char* makeString(MemoryMode mode)
 {
     switch (mode) {
     case MemoryMode::BoundsChecking: return "BoundsChecking";
+#if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     case MemoryMode::Signaling: return "Signaling";
+#endif
     }
     RELEASE_ASSERT_NOT_REACHED();
     return "";
@@ -53,5 +56,19 @@ const char* makeString(MemorySharingMode sharingMode)
 }
 
 } } // namespace JSC::Wasm
+
+namespace WTF {
+
+void printInternal(PrintStream& out, JSC::Wasm::MemoryMode mode)
+{
+    out.print(JSC::Wasm::makeString(mode));
+}
+
+void printInternal(PrintStream& out, JSC::Wasm::MemorySharingMode mode)
+{
+    out.print(JSC::Wasm::makeString(mode));
+}
+
+} // namespace WTF
 
 #endif // ENABLE(WEBASSEMBLY)

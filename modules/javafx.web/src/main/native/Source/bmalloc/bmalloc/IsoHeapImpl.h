@@ -32,6 +32,8 @@
 #include "Packed.h"
 #include "PhysicalPageMap.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class AllIsoHeaps;
@@ -43,15 +45,12 @@ class BEXPORT IsoHeapImplBase {
 public:
     static constexpr unsigned maxAllocationFromShared = 8;
     static constexpr unsigned maxAllocationFromSharedMask = (1U << maxAllocationFromShared) - 1U;
-    static_assert(maxAllocationFromShared <= bmalloc::alignment, "");
-    static_assert(isPowerOfTwo(maxAllocationFromShared), "");
+    static_assert(maxAllocationFromShared <= bmalloc::alignment);
+    static_assert(isPowerOfTwo(maxAllocationFromShared));
 
     virtual ~IsoHeapImplBase();
 
     virtual void scavenge(Vector<DeferredDecommit>&) = 0;
-#if BUSE(PARTIAL_SCAVENGE)
-    virtual void scavengeToHighWatermark(Vector<DeferredDecommit>&) = 0;
-#endif
 
     void scavengeNow();
     static void finishScavenging(Vector<DeferredDecommit>&);
@@ -94,7 +93,7 @@ protected:
     unsigned m_availableShared { maxAllocationFromSharedMask };
     AllocationMode m_allocationMode { AllocationMode::Init };
     bool m_isInlineDirectoryEligibleOrDecommitted { true };
-    static_assert(sizeof(m_availableShared) * 8 >= maxAllocationFromShared, "");
+    static_assert(sizeof(m_availableShared) * 8 >= maxAllocationFromShared);
 };
 
 template<typename Config>
@@ -112,9 +111,6 @@ public:
     void didBecomeEligibleOrDecommited(const LockHolder&, IsoDirectory<Config, IsoDirectoryPage<Config>::numPages>*);
 
     void scavenge(Vector<DeferredDecommit>&) override;
-#if BUSE(PARTIAL_SCAVENGE)
-    void scavengeToHighWatermark(Vector<DeferredDecommit>&) override;
-#endif
 
     unsigned allocatorOffset();
     unsigned deallocatorOffset();
@@ -148,4 +144,4 @@ private:
 
 } // namespace bmalloc
 
-
+#endif

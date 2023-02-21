@@ -125,7 +125,7 @@ g_poll (GPollFD *fds,
   return poll ((struct pollfd *)fds, nfds, timeout);
 }
 
-#else /* !HAVE_POLL */
+#else   /* !HAVE_POLL */
 
 #ifdef G_OS_WIN32
 
@@ -135,7 +135,7 @@ poll_rest (GPollFD *msg_fd,
            HANDLE  *handles,
            GPollFD *handle_to_fd[],
            gint     nhandles,
-           gint     timeout_ms)
+           DWORD    timeout_ms)
 {
   DWORD ready;
   GPollFD *f;
@@ -147,7 +147,7 @@ poll_rest (GPollFD *msg_fd,
        * -> Use MsgWaitForMultipleObjectsEx
        */
       if (_g_main_poll_debug)
-  g_print ("  MsgWaitForMultipleObjectsEx(%d, %d)\n", nhandles, timeout_ms);
+        g_print ("  MsgWaitForMultipleObjectsEx(%d, %lu)\n", nhandles, timeout_ms);
 
       ready = MsgWaitForMultipleObjectsEx (nhandles, handles, timeout_ms,
              QS_ALLINPUT, MWMO_ALERTABLE);
@@ -177,7 +177,7 @@ poll_rest (GPollFD *msg_fd,
        * -> Use WaitForMultipleObjectsEx
        */
       if (_g_main_poll_debug)
-  g_print ("  WaitForMultipleObjectsEx(%d, %d)\n", nhandles, timeout_ms);
+        g_print ("  WaitForMultipleObjectsEx(%d, %lu)\n", nhandles, timeout_ms);
 
       ready = WaitForMultipleObjectsEx (nhandles, handles, FALSE, timeout_ms, TRUE);
       if (ready == WAIT_FAILED)
@@ -216,7 +216,7 @@ poll_rest (GPollFD *msg_fd,
       recursed_result = poll_rest (NULL, stop_fd, handles, handle_to_fd, nhandles, 0);
       return (recursed_result == -1) ? -1 : 1 + recursed_result;
     }
-  else if (ready >= WAIT_OBJECT_0 && ready < WAIT_OBJECT_0 + nhandles)
+  else if (ready < WAIT_OBJECT_0 + nhandles)
     {
       int retval;
 
@@ -258,7 +258,7 @@ typedef struct
   GPollFD *msg_fd;
   GPollFD *stop_fd;
   gint nhandles;
-  gint timeout_ms;
+  DWORD    timeout_ms;
 } GWin32PollThreadData;
 
 static gint
@@ -295,7 +295,7 @@ poll_single_thread (GWin32PollThreadData *data)
 static void
 fill_poll_thread_data (GPollFD              *fds,
                        guint                 nfds,
-                       gint                  timeout_ms,
+                       DWORD                 timeout_ms,
                        GPollFD              *stop_fd,
                        GWin32PollThreadData *data)
 {
@@ -474,7 +474,7 @@ g_poll (GPollFD *fds,
   for (i = 0; i < nthreads; i++)
     {
       if (GetExitCodeThread (thread_handles[i], &thread_retval))
-        retval = retval == -1 ? -1 : thread_retval == -1 ? -1 : retval + thread_retval;
+        retval = (retval == -1) ? -1 : ((thread_retval == (DWORD) -1) ? -1 : (int) (retval + thread_retval));
 
       CloseHandle (thread_handles[i]);
     }

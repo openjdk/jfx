@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014, 2016 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -34,7 +34,7 @@ try:
     from .generator import Generator, ucfirst
     from .generator_templates import GeneratorTemplates as Templates
     from .models import EnumType
-except ValueError:
+except ImportError:
     from generator import Generator, ucfirst
     from generator_templates import GeneratorTemplates as Templates
     from models import EnumType
@@ -47,7 +47,7 @@ class JSBackendCommandsGenerator(Generator):
         Generator.__init__(self, *args, **kwargs)
 
     def output_filename(self):
-        return "InspectorBackendCommands.js.in"
+        return "InspectorBackendCommands.js"
 
     def should_generate_domain(self, domain):
         type_declarations = self.type_declarations_for_domain(domain)
@@ -62,6 +62,9 @@ class JSBackendCommandsGenerator(Generator):
         sections.append(self.generate_license())
         sections.extend(list(map(self.generate_domain, self.domains_to_generate())))
         return "\n\n".join(sections)
+
+    def needs_preprocess(self):
+        return True
 
     def generate_domain(self, domain):
         lines = []

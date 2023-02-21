@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,12 +30,11 @@
 #include "GPRInfo.h"
 #include "MacroAssembler.h"
 #include "Reg.h"
-#include "TempRegisterSet.h"
 #include <wtf/Bitmap.h>
 
 namespace JSC {
 
-typedef Bitmap<MacroAssembler::numGPRs + MacroAssembler::numFPRs + 1> RegisterBitmap;
+typedef Bitmap<MacroAssembler::numGPRs + MacroAssembler::numFPRs> RegisterBitmap;
 class RegisterAtOffsetList;
 
 class RegisterSet {
@@ -61,7 +60,7 @@ public:
 #if ENABLE(WEBASSEMBLY)
     static RegisterSet webAssemblyCalleeSaveRegisters(); // Registers saved and used by the WebAssembly JIT.
 #endif
-    static RegisterSet volatileRegistersForJSCall();
+    JS_EXPORT_PRIVATE static RegisterSet volatileRegistersForJSCall();
     static RegisterSet stubUnavailableRegisters(); // The union of callee saves and special registers.
     JS_EXPORT_PRIVATE static RegisterSet macroScratchRegisters();
     JS_EXPORT_PRIVATE static RegisterSet allGPRs();
@@ -133,30 +132,6 @@ public:
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
 
-    enum EmptyValueTag { EmptyValue };
-    enum DeletedValueTag { DeletedValue };
-
-    RegisterSet(EmptyValueTag)
-    {
-        m_bits.set(hashSpecialBitIndex);
-    }
-
-    RegisterSet(DeletedValueTag)
-    {
-        m_bits.set(hashSpecialBitIndex);
-        m_bits.set(deletedBitIndex);
-    }
-
-    bool isEmptyValue() const
-    {
-        return m_bits.get(hashSpecialBitIndex) && !m_bits.get(deletedBitIndex);
-    }
-
-    bool isDeletedValue() const
-    {
-        return m_bits.get(hashSpecialBitIndex) && m_bits.get(deletedBitIndex);
-    }
-
     bool operator==(const RegisterSet& other) const { return m_bits == other.m_bits; }
     bool operator!=(const RegisterSet& other) const { return m_bits != other.m_bits; }
 
@@ -190,12 +165,12 @@ public:
             return *this;
         }
 
-        bool operator==(const iterator& other)
+        bool operator==(const iterator& other) const
         {
             return m_iter == other.m_iter;
         }
 
-        bool operator!=(const iterator& other)
+        bool operator!=(const iterator& other) const
         {
             return !(*this == other);
         }
@@ -222,8 +197,6 @@ private:
     // These offsets mirror the logic in Reg.h.
     static constexpr unsigned gprOffset = 0;
     static constexpr unsigned fprOffset = gprOffset + MacroAssembler::numGPRs;
-    static constexpr unsigned hashSpecialBitIndex = fprOffset + MacroAssembler::numFPRs;
-    static constexpr unsigned deletedBitIndex = 0;
 
     RegisterBitmap m_bits;
 };
@@ -240,9 +213,6 @@ namespace WTF {
 
 template<typename T> struct DefaultHash;
 template<> struct DefaultHash<JSC::RegisterSet> : JSC::RegisterSetHash { };
-
-template<typename T> struct HashTraits;
-template<> struct HashTraits<JSC::RegisterSet> : public CustomHashTraits<JSC::RegisterSet> { };
 
 } // namespace WTF
 

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBResourceIdentifier.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionToClient.h"
 #include "IDBConnectionToServer.h"
 #include "IDBRequest.h"
@@ -86,16 +84,6 @@ IDBResourceIdentifier IDBResourceIdentifier::emptyValue()
     return IDBResourceIdentifier({ }, 0);
 }
 
-IDBResourceIdentifier IDBResourceIdentifier::deletedValue()
-{
-    return IDBResourceIdentifier(IDBConnectionIdentifier { WTF::HashTableDeletedValue }, std::numeric_limits<uint64_t>::max());
-}
-
-bool IDBResourceIdentifier::isHashTableDeletedValue() const
-{
-    return m_idbConnectionIdentifier.isHashTableDeletedValue() && m_resourceNumber == std::numeric_limits<uint64_t>::max();
-}
-
 #if !LOG_DISABLED
 
 String IDBResourceIdentifier::loggingString() const
@@ -106,5 +94,3 @@ String IDBResourceIdentifier::loggingString() const
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

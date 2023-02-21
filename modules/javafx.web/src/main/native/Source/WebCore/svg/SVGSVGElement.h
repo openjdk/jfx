@@ -84,7 +84,7 @@ public: // DOM
 public:
     static Ref<SVGSVGElement> create(const QualifiedName&, Document&);
     static Ref<SVGSVGElement> create(Document&);
-    bool scrollToFragment(const String& fragmentIdentifier);
+    bool scrollToFragment(StringView fragmentIdentifier);
     void resetScrollAnchor();
 
     using SVGGraphicsElement::ref;
@@ -104,6 +104,7 @@ public:
     FloatRect currentViewBoxRect() const;
 
     AffineTransform viewBoxToViewTransform(float viewWidth, float viewHeight) const;
+    bool hasTransformRelatedAttributes() const final;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
     const SVGLengthValue& y() const { return m_y->currentValue(); }
@@ -129,6 +130,7 @@ private:
     bool selfHasRelativeLengths() const override;
     bool isValid() const override;
 
+    void didAttachRenderers() final;
     bool rendererIsNeeded(const RenderStyle&) override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
@@ -141,9 +143,9 @@ private:
     RefPtr<Frame> frameForCurrentScale() const;
     Ref<NodeList> collectIntersectionOrEnclosureList(SVGRect&, SVGElement*, bool (*checkFunction)(SVGElement&, SVGRect&));
 
-    SVGViewElement* findViewAnchor(const String& fragmentIdentifier) const;
+    SVGViewElement* findViewAnchor(StringView fragmentIdentifier) const;
     SVGSVGElement* findRootAnchor(const SVGViewElement*) const;
-    SVGSVGElement* findRootAnchor(const String&) const;
+    SVGSVGElement* findRootAnchor(StringView) const;
 
     bool m_useCurrentView { false };
     Ref<SMILTimeContainer> m_timeContainer;

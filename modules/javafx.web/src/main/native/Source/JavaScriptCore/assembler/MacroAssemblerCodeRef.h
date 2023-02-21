@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include "ExecutableMemoryHandle.h"
 #include "JSCPtrTag.h"
 #include <wtf/DataLog.h>
-#include <wtf/MetaAllocatorHandle.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/CString.h>
@@ -54,7 +54,11 @@
 
 namespace JSC {
 
-typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
+namespace Wasm {
+enum class CompilationMode : uint8_t;
+} // namespace Wasm
+
+class CodeBlock;
 template<PtrTag> class MacroAssemblerCodePtr;
 
 enum OpcodeID : unsigned;
@@ -64,8 +68,8 @@ class CFunctionPtr {
 public:
     using Ptr = void(*)();
 
-    CFunctionPtr() { }
-    CFunctionPtr(std::nullptr_t) { }
+    constexpr CFunctionPtr() = default;
+    constexpr CFunctionPtr(std::nullptr_t) { }
 
     template<typename ReturnType, typename... Arguments>
     constexpr CFunctionPtr(ReturnType(&ptr)(Arguments...))
@@ -131,8 +135,8 @@ private:
 template<PtrTag tag = CFunctionPtrTag>
 class FunctionPtr {
 public:
-    FunctionPtr() { }
-    FunctionPtr(std::nullptr_t) { }
+    constexpr FunctionPtr() = default;
+    constexpr FunctionPtr(std::nullptr_t) { }
 
     template<typename ReturnType, typename... Arguments>
     FunctionPtr(ReturnType(*value)(Arguments...))
@@ -219,9 +223,9 @@ private:
     template<PtrTag> friend class FunctionPtr;
 };
 
-static_assert(sizeof(FunctionPtr<CFunctionPtrTag>) == sizeof(void*), "");
+static_assert(sizeof(FunctionPtr<CFunctionPtrTag>) == sizeof(void*));
 #if COMPILER_SUPPORTS(BUILTIN_IS_TRIVIALLY_COPYABLE)
-static_assert(__is_trivially_copyable(FunctionPtr<CFunctionPtrTag>), "");
+static_assert(__is_trivially_copyable(FunctionPtr<CFunctionPtrTag>));
 #endif
 
 // ReturnAddressPtr:
@@ -242,6 +246,11 @@ public:
 #endif
         m_value = returnAddress;
         ASSERT_VALID_CODE_POINTER(m_value);
+    }
+
+    static ReturnAddressPtr fromTaggedPC(const void* pc, const void* sp)
+    {
+        return ReturnAddressPtr(untagReturnPC(pc, sp));
     }
 
     const void* value() const
@@ -373,7 +382,10 @@ public:
 
     void dumpWithName(const char* name, PrintStream& out) const
     {
-        MacroAssemblerCodePtrBase::dumpWithName(executableAddress(), dataLocation(), name, out);
+        if (m_value)
+            MacroAssemblerCodePtrBase::dumpWithName(executableAddress(), dataLocation(), name, out);
+        else
+            MacroAssemblerCodePtrBase::dumpWithName(nullptr, nullptr, name, out);
     }
 
     void dump(PrintStream& out) const { dumpWithName("CodePtr", out); }
@@ -514,6 +526,8 @@ public:
         m_codePtr.dumpWithName("CodeRef", out);
     }
 
+    static ptrdiff_t offsetOfCodePtr() { return OBJECT_OFFSETOF(MacroAssemblerCodeRef, m_codePtr); }
+
 private:
     template<PtrTag otherTag>
     MacroAssemblerCodeRef(const MacroAssemblerCodeRef<otherTag>& otherCodeRef)
@@ -532,6 +546,9 @@ inline FunctionPtr<tag>::FunctionPtr(MacroAssemblerCodePtr<tag> ptr)
     : m_value(ptr.executableAddress())
 {
 }
+
+bool shouldDumpDisassemblyFor(CodeBlock*);
+bool shouldDumpDisassemblyFor(Wasm::CompilationMode);
 
 } // namespace JSC
 

@@ -26,11 +26,12 @@
 #include "config.h"
 #include "JSCustomGetterFunction.h"
 
+#include "IdentifierInlines.h"
 #include "JSCJSValueInlines.h"
 
 namespace JSC {
 
-const ClassInfo JSCustomGetterFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCustomGetterFunction) };
+const ClassInfo JSCustomGetterFunction::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCustomGetterFunction) };
 static JSC_DECLARE_HOST_FUNCTION(customGetterFunctionCall);
 
 JSC_DEFINE_HOST_FUNCTION(customGetterFunctionCall, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -40,36 +41,40 @@ JSC_DEFINE_HOST_FUNCTION(customGetterFunctionCall, (JSGlobalObject* globalObject
 
     JSCustomGetterFunction* customGetterFunction = jsCast<JSCustomGetterFunction*>(callFrame->jsCallee());
     JSValue thisValue = callFrame->thisValue();
-
-    GetValueFunc getter = customGetterFunction->getter();
-    ASSERT(getter);
+    auto getter = customGetterFunction->getter();
 
     if (auto domAttribute = customGetterFunction->domAttribute()) {
-        if (!thisValue.inherits(vm, domAttribute->classInfo))
+        if (!thisValue.inherits(domAttribute->classInfo))
             return throwVMDOMAttributeGetterTypeError(globalObject, scope, domAttribute->classInfo, customGetterFunction->propertyName());
     }
 
     RELEASE_AND_RETURN(scope, getter(globalObject, JSValue::encode(thisValue), customGetterFunction->propertyName()));
 }
 
-JSCustomGetterFunction::JSCustomGetterFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, const PropertyName& propertyName, GetValueFunc getter, Optional<DOMAttributeAnnotation> domAttribute)
+JSCustomGetterFunction::JSCustomGetterFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, const PropertyName& propertyName, CustomFunctionPointer getter, std::optional<DOMAttributeAnnotation> domAttribute)
     : Base(vm, executable, globalObject, structure)
-    , m_propertyName(propertyName)
+    , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
     , m_getter(getter)
     , m_domAttribute(domAttribute)
 {
 }
 
-JSCustomGetterFunction* JSCustomGetterFunction::create(VM& vm, JSGlobalObject* globalObject, const PropertyName& propertyName, GetValueFunc getter, Optional<DOMAttributeAnnotation> domAttribute)
+JSCustomGetterFunction* JSCustomGetterFunction::create(VM& vm, JSGlobalObject* globalObject, const PropertyName& propertyName, CustomFunctionPointer getter, std::optional<DOMAttributeAnnotation> domAttribute)
 {
-    NativeExecutable* executable = vm.getHostFunction(customGetterFunctionCall, callHostFunctionAsConstructor, String(propertyName.publicName()));
+    ASSERT(getter);
+    NativeExecutable* executable = vm.getHostFunction(customGetterFunctionCall, ImplementationVisibility::Public, callHostFunctionAsConstructor, String(propertyName.publicName()));
     Structure* structure = globalObject->customGetterFunctionStructure();
-    JSCustomGetterFunction* function = new (NotNull, allocateCell<JSCustomGetterFunction>(vm.heap)) JSCustomGetterFunction(vm, executable, globalObject, structure, propertyName, getter, domAttribute);
+    JSCustomGetterFunction* function = new (NotNull, allocateCell<JSCustomGetterFunction>(vm)) JSCustomGetterFunction(vm, executable, globalObject, structure, propertyName, getter, domAttribute);
 
     // Can't do this during initialization because getHostFunction might do a GC allocation.
-    String name = makeString("get ", String(propertyName.publicName()));
+    auto name = makeString("get ", propertyName.publicName());
     function->finishCreation(vm, executable, 0, name);
     return function;
+}
+
+void JSCustomGetterFunction::destroy(JSCell* cell)
+{
+    static_cast<JSCustomGetterFunction*>(cell)->~JSCustomGetterFunction();
 }
 
 } // namespace JSC

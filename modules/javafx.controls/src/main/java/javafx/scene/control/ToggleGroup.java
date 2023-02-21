@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,7 +68,7 @@ public class ToggleGroup {
         return toggles;
     }
 
-    private final ObservableList<Toggle> toggles = new VetoableListDecorator<Toggle>(new TrackableObservableList<Toggle>() {
+    private final ObservableList<Toggle> toggles = new VetoableListDecorator<>(new TrackableObservableList<Toggle>() {
         @Override protected void onChanged(Change<Toggle> c) {
             while (c.next()) {
                 final List<Toggle> addedToggles = c.getAddedSubList();
@@ -125,7 +125,7 @@ public class ToggleGroup {
         }
     };
 
-    private final ReadOnlyObjectWrapper<Toggle> selectedToggle = new ReadOnlyObjectWrapper<Toggle>() {
+    private final ReadOnlyObjectWrapper<Toggle> selectedToggle = new ReadOnlyObjectWrapper<>() {
         // Note: "set" is really what I want here. If the selectedToggle property
         // is bound, then this whole chunk of code is bypassed, which is exactly
         // what I want to do.
@@ -212,7 +212,7 @@ public class ToggleGroup {
       */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }

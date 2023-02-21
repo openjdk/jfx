@@ -30,10 +30,12 @@
 #include "config.h"
 #include "EvalCodeBlock.h"
 
+#include "JSCellInlines.h"
+
 namespace JSC {
 
 const ClassInfo EvalCodeBlock::s_info = {
-    "EvalCodeBlock", &Base::s_info, nullptr, nullptr,
+    "EvalCodeBlock"_s, &Base::s_info, nullptr, nullptr,
     CREATE_METHOD_TABLE(EvalCodeBlock)
 };
 

@@ -39,7 +39,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ChannelSplitterNode);
 
 ExceptionOr<Ref<ChannelSplitterNode>> ChannelSplitterNode::create(BaseAudioContext& context, const ChannelSplitterOptions& options)
 {
-    if (options.numberOfOutputs > AudioContext::maxNumberOfChannels() || !options.numberOfOutputs)
+    if (options.numberOfOutputs > AudioContext::maxNumberOfChannels || !options.numberOfOutputs)
         return Exception { IndexSizeError, "Number of outputs is not in the allowed range"_s };
 
     auto splitter = adoptRef(*new ChannelSplitterNode(context, options.numberOfOutputs));
@@ -89,7 +89,7 @@ void ChannelSplitterNode::process(size_t framesToProcess)
 ExceptionOr<void> ChannelSplitterNode::setChannelCount(unsigned channelCount)
 {
     if (channelCount != numberOfOutputs())
-        return Exception { IndexSizeError, "Channel count must be set to number of outputs."_s };
+        return Exception { InvalidStateError, "Channel count must be set to number of outputs."_s };
 
     return AudioNode::setChannelCount(channelCount);
 }

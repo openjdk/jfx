@@ -1209,15 +1209,15 @@ cleanup:
 
 dist-hook: cleanup libxml2.spec
 	-cp libxml2.spec $(distdir)
-	(cd $(srcdir) ; tar -cf - --exclude CVS --exclude .svn --exclude .git win32 macos os400 vms VxWorks bakefile test result) | (cd $(distdir); tar xf -)
+	(cd $(srcdir) ; tar -cf - --exclude .git win32 macos os400 vms VxWorks bakefile test result) | (cd $(distdir); tar xf -)
 
 dist-source: distdir
 	$(AMTAR) -chof - --exclude Tests --exclude test --exclude result $(distdir) | GZIP=$(GZIP_ENV) gzip -c >`echo "$(distdir)" | sed "s+libxml2+libxml2-sources+"`.tar.gz
 
 dist-test: distdir
 	(mkdir -p $(distdir))
-	(cd $(srcdir) ; tar -cf - --exclude CVS --exclude .svn --exclude .git xstc/Tests) | (cd $(distdir); tar xf -)
-	tar -cf - $(distdir)/test $(distdir)/result $(distdir)/xstc/Tests  $(distdir)/Makefile.tests $(distdir)/README $(distdir)/README.tests $(distdir)/AUTHORS $(distdir)/testapi.c $(distdir)/runtest.c $(distdir)/runsuite.c | GZIP=$(GZIP_ENV) gzip -c >`echo "$(distdir)" | sed "s+libxml2+libxml2-tests+"`.tar.gz
+	(cd $(srcdir) ; tar -cf - --exclude .git xstc/Tests) | (cd $(distdir); tar xf -)
+	tar -cf - $(distdir)/test $(distdir)/result $(distdir)/xstc/Tests  $(distdir)/Makefile.tests $(distdir)/README.md $(distdir)/README.tests $(distdir)/testapi.c $(distdir)/runtest.c $(distdir)/runsuite.c | GZIP=$(GZIP_ENV) gzip -c >`echo "$(distdir)" | sed "s+libxml2+libxml2-tests+"`.tar.gz
 	@(rm -rf $(distdir)/xstc/Test)
 
 cleantar:
@@ -1246,7 +1246,6 @@ DISTCLEANFILES = COPYING missing.lst
 
 confexecdir=$(libdir)
 confexec_DATA = xml2Conf.sh
-CVS_EXTRA_DIST=
 EXTRA_DIST = xml2-config.in xml2Conf.sh.in libxml.spec.in libxml2.spec \
              libxml.m4 Copyright check-xml-test-suite.py gentest.py \
 	     check-relaxng-test-suite.py check-relaxng-test-suite2.py \
@@ -1259,9 +1258,8 @@ EXTRA_DIST = xml2-config.in xml2Conf.sh.in libxml.spec.in libxml2.spec \
 	     enc.h save.h genUnicode.py TODO_SCHEMAS \
 	     dbgen.pl dbgenattr.pl regressions.py regressions.xml \
 	     README.tests Makefile.tests libxml2.syms timsort.h \
-	     README.zOS \
-	     CMakeLists.txt config.h.cmake.in libxml2-config.cmake.cmake.in \
-	     $(CVS_EXTRA_DIST)
+	     README.zOS README.md \
+	     CMakeLists.txt config.h.cmake.in libxml2-config.cmake.cmake.in
 
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -1273,27 +1271,27 @@ cmake_DATA = libxml2-config.cmake
 #
 # Install the tests program sources as examples 
 #
-BASE_DIR=$(datadir)/doc
-DOC_MODULE=libxml2-$(VERSION)
-EXAMPLES_DIR=$(BASE_DIR)/$(DOC_MODULE)/examples
+EXAMPLES_DIR=$(docdir)/examples
 
 install-data-local: 
-	$(MKDIR_P) $(DESTDIR)$(BASE_DIR)/$(DOC_MODULE)
-	-$(INSTALL) -m 0644 $(srcdir)/Copyright $(DESTDIR)$(BASE_DIR)/$(DOC_MODULE)
+	$(MKDIR_P) $(DESTDIR)$(docdir)
+	-$(INSTALL) -m 0644 $(srcdir)/Copyright $(DESTDIR)$(docdir)
 	$(MKDIR_P) $(DESTDIR)$(EXAMPLES_DIR)
 	-$(INSTALL) -m 0644 $(srcdir)/xmllint.c $(DESTDIR)$(EXAMPLES_DIR)
 	-$(INSTALL) -m 0644 $(srcdir)/testSAX.c $(DESTDIR)$(EXAMPLES_DIR)
 	-$(INSTALL) -m 0644 $(srcdir)/testHTML.c $(DESTDIR)$(EXAMPLES_DIR)
 	-$(INSTALL) -m 0644 $(srcdir)/testXPath.c $(DESTDIR)$(EXAMPLES_DIR)
+	@echo "If the documentation is installed, please also look at html/examples for more." > $(DESTDIR)$(EXAMPLES_DIR)/README
 
 uninstall-local:
+	rm -f $(DESTDIR)$(EXAMPLES_DIR)/README
 	rm -f $(DESTDIR)$(EXAMPLES_DIR)/testXPath.c
 	rm -f $(DESTDIR)$(EXAMPLES_DIR)/testHTML.c
 	rm -f $(DESTDIR)$(EXAMPLES_DIR)/testSAX.c
 	rm -f $(DESTDIR)$(EXAMPLES_DIR)/xmllint.c
 	rm -rf $(DESTDIR)$(EXAMPLES_DIR)
-	rm -f $(DESTDIR)$(BASE_DIR)/$(DOC_MODULE)/Copyright
-	rm -rf $(DESTDIR)$(BASE_DIR)/$(DOC_MODULE)
+	rm -f $(DESTDIR)$(docdir)/Copyright
+	rm -rf $(DESTDIR)$(docdir)
 
 tst: tst.c
 	$(CC) $(CFLAGS) -Iinclude -o tst tst.c .libs/libxml2.a -lpthread -lm -lz -llzma

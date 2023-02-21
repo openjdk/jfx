@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,10 +49,5 @@
 - (void)setInputMethodEnabled:(BOOL)enabled;
 
 - (void)notifyScaleFactorChanged:(CGFloat)scale;
-
-@optional
-
-- (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName;
-- (void)hostRemoteLayerId:(uint32_t)layerId;
 
 @end

@@ -26,6 +26,8 @@
 #pragma once
 
 #include "ModuleScriptLoader.h"
+#include "ResourceLoaderIdentifier.h"
+#include "ScriptBuffer.h"
 #include "WorkerScriptFetcher.h"
 #include "WorkerScriptLoaderClient.h"
 #include <wtf/Ref.h>
@@ -54,15 +56,28 @@ public:
 
     static String taskMode();
     ReferrerPolicy referrerPolicy();
+    bool failed() const { return m_failed; }
+    bool retrievedFromServiceWorkerCache() const { return m_retrievedFromServiceWorkerCache; }
+
+    const ScriptBuffer& script() { return m_script; }
+    const URL& responseURL() const { return m_responseURL; }
+    const String& responseMIMEType() const { return m_responseMIMEType; }
 
 private:
     WorkerModuleScriptLoader(ModuleScriptLoaderClient&, DeferredPromise&, WorkerScriptFetcher&, RefPtr<ModuleFetchParameters>&&);
 
-    void didReceiveResponse(unsigned long, const ResourceResponse&) final { }
+    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final { }
     void notifyFinished() final;
+
+    void notifyClientFinished();
 
     Ref<WorkerScriptLoader> m_scriptLoader;
     URL m_sourceURL;
+    ScriptBuffer m_script;
+    URL m_responseURL;
+    String m_responseMIMEType;
+    bool m_failed { false };
+    bool m_retrievedFromServiceWorkerCache { false };
 };
 
 } // namespace WebCore

@@ -26,6 +26,8 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "AnimationFrameRate.h"
+#include "AnimationFrameRatePreset.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
@@ -33,7 +35,6 @@
 #include "WebAnimationTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
-#include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
 #include <wtf/UniqueRef.h>
@@ -48,6 +49,10 @@ class Document;
 class RenderStyle;
 
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
+
+namespace Style {
+struct ResolutionContext;
+}
 
 class WebAnimation : public RefCounted<WebAnimation>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(WebAnimation);
@@ -72,10 +77,9 @@ public:
     AnimationTimeline* timeline() const { return m_timeline.get(); }
     virtual void setTimeline(RefPtr<AnimationTimeline>&&);
 
-    Optional<Seconds> currentTime(Optional<Seconds> = WTF::nullopt) const;
-    ExceptionOr<void> setCurrentTime(Optional<Seconds>);
+    std::optional<Seconds> currentTime(std::optional<Seconds> = std::nullopt) const;
+    ExceptionOr<void> setCurrentTime(std::optional<Seconds>);
 
-    enum class Silently : uint8_t { Yes, No };
     double playbackRate() const { return m_playbackRate + 0; }
     void setPlaybackRate(double);
 
@@ -94,7 +98,7 @@ public:
     using FinishedPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<WebAnimation>>;
     FinishedPromise& finished() { return m_finishedPromise.get(); }
 
-    virtual void cancel(Silently = Silently::No);
+    virtual void cancel();
     ExceptionOr<void> finish();
     ExceptionOr<void> play();
     void updatePlaybackRate(double);
@@ -104,12 +108,12 @@ public:
     void persist();
     ExceptionOr<void> commitStyles();
 
-    virtual Optional<double> bindingsStartTime() const;
-    virtual void setBindingsStartTime(Optional<double>);
-    Optional<Seconds> startTime() const { return m_startTime; }
-    void setStartTime(Optional<Seconds>);
-    virtual Optional<double> bindingsCurrentTime() const;
-    virtual ExceptionOr<void> setBindingsCurrentTime(Optional<double>);
+    virtual std::optional<double> bindingsStartTime() const;
+    virtual void setBindingsStartTime(std::optional<double>);
+    std::optional<Seconds> startTime() const { return m_startTime; }
+    void setStartTime(std::optional<Seconds>);
+    virtual std::optional<double> bindingsCurrentTime() const;
+    virtual ExceptionOr<void> setBindingsCurrentTime(std::optional<double>);
     virtual PlayState bindingsPlayState() const { return playState(); }
     virtual ReplaceState bindingsReplaceState() const { return replaceState(); }
     virtual bool bindingsPending() const { return pending(); }
@@ -118,15 +122,18 @@ public:
     virtual ExceptionOr<void> bindingsPlay() { return play(); }
     virtual ExceptionOr<void> bindingsPause() { return pause(); }
 
+    virtual std::variant<FramesPerSecond, AnimationFrameRatePreset> bindingsFrameRate() const { return m_bindingsFrameRate; }
+    virtual void setBindingsFrameRate(std::variant<FramesPerSecond, AnimationFrameRatePreset>&&);
+    std::optional<FramesPerSecond> frameRate() const { return m_effectiveFrameRate; }
+
     bool needsTick() const;
     virtual void tick();
     WEBCORE_EXPORT Seconds timeToNextTick() const;
-    virtual void resolve(RenderStyle& targetStyle, const RenderStyle* parentElementStyle, Optional<Seconds> = WTF::nullopt);
-    void effectTargetDidChange(const Optional<const Styleable>& previousTarget, const Optional<const Styleable>& newTarget);
+    virtual void resolve(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
+    void effectTargetDidChange(const std::optional<const Styleable>& previousTarget, const std::optional<const Styleable>& newTarget);
     void acceleratedStateDidChange();
     void willChangeRenderer();
 
-    bool isRunningAccelerated() const;
     bool isRelevant() const { return m_isRelevant; }
     void updateRelevance();
     void effectTimingDidChange();
@@ -136,7 +143,7 @@ public:
     bool isSuspended() const { return m_isSuspended; }
     bool isReplaceable() const;
     void remove();
-    void enqueueAnimationPlaybackEvent(const AtomString&, Optional<Seconds>, Optional<Seconds>);
+    void enqueueAnimationPlaybackEvent(const AtomString&, std::optional<Seconds>, std::optional<Seconds>);
 
     uint64_t globalPosition() const { return m_globalPosition; }
     void setGlobalPosition(uint64_t globalPosition) { m_globalPosition = globalPosition; }
@@ -153,11 +160,14 @@ public:
 protected:
     explicit WebAnimation(Document&);
 
+    void initialize();
     void enqueueAnimationEvent(Ref<AnimationEventBase>&&);
+    virtual void animationDidFinish() { };
 
 private:
     enum class DidSeek : uint8_t { Yes, No };
     enum class SynchronouslyNotify : uint8_t { Yes, No };
+    enum class Silently : uint8_t { Yes, No };
     enum class RespectHoldTime : uint8_t { Yes, No };
     enum class AutoRewind : uint8_t { Yes, No };
     enum class TimeToRunPendingTask : uint8_t { NotScheduled, ASAP, WhenReady };
@@ -167,15 +177,15 @@ private:
     Seconds effectEndTime() const;
     WebAnimation& readyPromiseResolve();
     WebAnimation& finishedPromiseResolve();
-    Optional<Seconds> currentTime(RespectHoldTime, Optional<Seconds> = WTF::nullopt) const;
-    ExceptionOr<void> silentlySetCurrentTime(Optional<Seconds>);
+    std::optional<Seconds> currentTime(RespectHoldTime, std::optional<Seconds> = std::nullopt) const;
+    ExceptionOr<void> silentlySetCurrentTime(std::optional<Seconds>);
     void finishNotificationSteps();
     bool hasPendingPauseTask() const { return m_timeToRunPendingPauseTask != TimeToRunPendingTask::NotScheduled; }
     bool hasPendingPlayTask() const { return m_timeToRunPendingPlayTask != TimeToRunPendingTask::NotScheduled; }
     ExceptionOr<void> play(AutoRewind);
     void runPendingPauseTask();
     void runPendingPlayTask();
-    void resetPendingTasks(Silently = Silently::No);
+    void resetPendingTasks();
     void setEffectInternal(RefPtr<AnimationEffect>&&, bool = false);
     void setTimelineInternal(RefPtr<AnimationTimeline>&&);
     bool isEffectInvalidationSuspended() { return m_suspendCount; }
@@ -183,6 +193,7 @@ private:
     void invalidateEffect();
     double effectivePlaybackRate() const;
     void applyPendingPlaybackRate();
+    void setEffectiveFrameRate(std::optional<FramesPerSecond>);
 
     RefPtr<AnimationEffect> m_effect;
     RefPtr<AnimationTimeline> m_timeline;
@@ -193,6 +204,8 @@ private:
     Markable<Seconds, Seconds::MarkableTraits> m_holdTime;
     MarkableDouble m_pendingPlaybackRate;
     double m_playbackRate { 1 };
+    std::variant<FramesPerSecond, AnimationFrameRatePreset> m_bindingsFrameRate { AnimationFrameRatePreset::Auto };
+    std::optional<FramesPerSecond> m_effectiveFrameRate;
     String m_id;
 
     int m_suspendCount { 0 };

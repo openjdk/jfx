@@ -23,6 +23,7 @@
 #endif
 
 #include <glib/gmem.h>
+#include <glib/glib-typeof.h>
 
 G_BEGIN_DECLS
 
@@ -71,18 +72,18 @@ gsize           g_atomic_rc_box_get_size        (gpointer        mem_block);
 #define g_atomic_rc_box_new0(type) \
   ((type *) g_atomic_rc_box_alloc0 (sizeof (type)))
 
-#ifdef g_has_typeof
+#if defined(glib_typeof)
 /* Type check to avoid assigning references to different types */
-# define g_rc_box_acquire(mem_block) \
-  ((__typeof__(mem_block)) (g_rc_box_acquire) (mem_block))
-# define g_atomic_rc_box_acquire(mem_block) \
-  ((__typeof__(mem_block)) (g_atomic_rc_box_acquire) (mem_block))
+#define g_rc_box_acquire(mem_block) \
+  ((glib_typeof (mem_block)) (g_rc_box_acquire) (mem_block))
+#define g_atomic_rc_box_acquire(mem_block) \
+  ((glib_typeof (mem_block)) (g_atomic_rc_box_acquire) (mem_block))
 
 /* Type check to avoid duplicating data to different types */
-# define g_rc_box_dup(block_size,mem_block) \
-  ((__typeof__(mem_block)) (g_rc_box_dup) (block_size,mem_block))
-# define g_atomic_rc_box_dup(block_size,mem_block) \
-  ((__typeof__(mem_block)) (g_atomic_rc_box_dup) (block_size,mem_block))
+#define g_rc_box_dup(block_size, mem_block) \
+  ((glib_typeof (mem_block)) (g_rc_box_dup) (block_size, mem_block))
+#define g_atomic_rc_box_dup(block_size, mem_block) \
+  ((glib_typeof (mem_block)) (g_atomic_rc_box_dup) (block_size, mem_block))
 #endif
 
 G_END_DECLS

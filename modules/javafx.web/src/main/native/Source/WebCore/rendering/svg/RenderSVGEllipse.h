@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google, Inc.
+ * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +27,7 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShape.h"
 
 namespace WebCore {
@@ -37,7 +39,7 @@ public:
     virtual ~RenderSVGEllipse();
 
 private:
-    const char* renderName() const override { return "RenderSVGEllipse"; }
+    ASCIILiteral renderName() const override { return "RenderSVGEllipse"_s; }
 
     void updateShapeFromElement() override;
     bool isEmpty() const override { return m_usePathFallback ? RenderSVGShape::isEmpty() : m_fillBoundingBox.isEmpty(); }
@@ -55,3 +57,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

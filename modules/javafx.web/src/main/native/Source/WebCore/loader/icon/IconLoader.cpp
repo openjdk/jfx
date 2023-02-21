@@ -33,6 +33,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "Logging.h"
@@ -114,9 +115,8 @@ void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetri
     if (status && (status < 200 || status > 299))
         data = nullptr;
 
-    static const char pdfMagicNumber[] = "%PDF";
-    static unsigned pdfMagicNumberLength = sizeof(pdfMagicNumber) - 1;
-    if (data && data->size() >= pdfMagicNumberLength && !memcmp(data->data(), pdfMagicNumber, pdfMagicNumberLength)) {
+    constexpr uint8_t pdfMagicNumber[] = { '%', 'P', 'D', 'F' };
+    if (data && data->startsWith(Span { pdfMagicNumber, std::size(pdfMagicNumber) })) {
         LOG(IconDatabase, "IconLoader::finishLoading() - Ignoring icon at %s because it appears to be a PDF", m_resource->url().string().ascii().data());
         data = nullptr;
     }

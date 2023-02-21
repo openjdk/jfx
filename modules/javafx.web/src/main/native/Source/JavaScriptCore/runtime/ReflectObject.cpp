@@ -50,7 +50,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ReflectObject);
 
-const ClassInfo ReflectObject::s_info = { "Reflect", &Base::s_info, &reflectObjectTable, nullptr, CREATE_METHOD_TABLE(ReflectObject) };
+const ClassInfo ReflectObject::s_info = { "Reflect"_s, &Base::s_info, &reflectObjectTable, nullptr, CREATE_METHOD_TABLE(ReflectObject) };
 
 /* Source for ReflectObject.lut.h
 @begin reflectObjectTable
@@ -78,7 +78,7 @@ ReflectObject::ReflectObject(VM& vm, Structure* structure)
 void ReflectObject::finishCreation(VM& vm, JSGlobalObject*)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -94,25 +94,25 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectConstruct, (JSGlobalObject* globalObject, 
     if (!target.isObject())
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.construct requires the first argument be a constructor"_s));
 
-    auto constructData = getConstructData(vm, target);
+    auto constructData = JSC::getConstructData(target);
     if (constructData.type == CallData::Type::None)
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.construct requires the first argument be a constructor"_s));
 
     JSValue newTarget = target;
     if (callFrame->argumentCount() >= 3) {
         newTarget = callFrame->argument(2);
-        if (!newTarget.isConstructor(vm))
+        if (!newTarget.isConstructor())
             return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.construct requires the third argument be a constructor if present"_s));
     }
 
     MarkedArgumentBuffer arguments;
-    JSObject* argumentsObject = jsDynamicCast<JSObject*>(vm, callFrame->argument(1));
+    JSObject* argumentsObject = jsDynamicCast<JSObject*>(callFrame->argument(1));
     if (!argumentsObject)
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.construct requires the second argument be an object"_s));
 
-    createListFromArrayLike(globalObject, argumentsObject, RuntimeTypeMaskAllTypes, "This error must not be raised"_s, "This error must not be raised"_s, [&] (JSValue value, RuntimeType) -> bool {
+    forEachInArrayLike(globalObject, argumentsObject, [&] (JSValue value) -> bool {
         arguments.append(value);
-        return false;
+        return true;
     });
     RETURN_IF_EXCEPTION(scope, (arguments.overflowCheckNotNeeded(), encodedJSValue()));
     if (UNLIKELY(arguments.hasOverflowed())) {
@@ -146,7 +146,7 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectDefineProperty, (JSGlobalObject* globalObj
     // Reflect.defineProperty should not throw an error when the defineOwnProperty operation fails.
     bool shouldThrow = false;
     JSObject* targetObject = asObject(target);
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(targetObject->methodTable(vm)->defineOwnProperty(targetObject, globalObject, propertyName, descriptor, shouldThrow))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(targetObject->methodTable()->defineOwnProperty(targetObject, globalObject, propertyName, descriptor, shouldThrow))));
 }
 
 // https://tc39.github.io/ecma262/#sec-reflect.get
@@ -222,7 +222,7 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectOwnKeys, (JSGlobalObject* globalObject, Ca
     JSValue target = callFrame->argument(0);
     if (!target.isObject())
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.ownKeys requires the first argument be an object"_s));
-    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, jsCast<JSObject*>(target), PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include, WTF::nullopt)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(globalObject, jsCast<JSObject*>(target), PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include, std::nullopt)));
 }
 
 // https://tc39.github.io/ecma262/#sec-reflect.preventextensions
@@ -235,7 +235,7 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectPreventExtensions, (JSGlobalObject* global
     if (!target.isObject())
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.preventExtensions requires the first argument be an object"_s));
     JSObject* object = asObject(target);
-    bool result = object->methodTable(vm)->preventExtensions(object, globalObject);
+    bool result = object->methodTable()->preventExtensions(object, globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     return JSValue::encode(jsBoolean(result));
 }
@@ -260,8 +260,8 @@ JSC_DEFINE_HOST_FUNCTION(reflectObjectSet, (JSGlobalObject* globalObject, CallFr
 
     // Do not raise any readonly errors that happen in strict mode.
     bool shouldThrowIfCantSet = false;
-    PutPropertySlot slot(receiver, shouldThrowIfCantSet);
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(targetObject->methodTable(vm)->put(targetObject, globalObject, propertyName, callFrame->argument(2), slot))));
+    PutPropertySlot slot(receiver, shouldThrowIfCantSet, PutPropertySlot::ReflectSet);
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(targetObject->methodTable()->put(targetObject, globalObject, propertyName, callFrame->argument(2), slot))));
 }
 
 // https://tc39.github.io/ecma262/#sec-reflect.setprototypeof

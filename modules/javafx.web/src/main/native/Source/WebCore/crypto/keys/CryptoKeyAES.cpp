@@ -84,30 +84,30 @@ RefPtr<CryptoKeyAES> CryptoKeyAES::importRaw(CryptoAlgorithmIdentifier algorithm
 
 RefPtr<CryptoKeyAES> CryptoKeyAES::importJwk(CryptoAlgorithmIdentifier algorithm, JsonWebKey&& keyData, bool extractable, CryptoKeyUsageBitmap usages, CheckAlgCallback&& callback)
 {
-    if (keyData.kty != "oct")
+    if (keyData.kty != "oct"_s)
         return nullptr;
     if (keyData.k.isNull())
         return nullptr;
-    Vector<uint8_t> octetSequence;
-    if (!base64URLDecode(keyData.k, octetSequence))
+    auto octetSequence = base64URLDecode(keyData.k);
+    if (!octetSequence)
         return nullptr;
-    if (!callback(octetSequence.size() * 8, keyData.alg))
+    if (!callback(octetSequence->size() * 8, keyData.alg))
         return nullptr;
-    if (usages && !keyData.use.isNull() && keyData.use != "enc")
+    if (usages && !keyData.use.isNull() && keyData.use != "enc"_s)
         return nullptr;
     if (keyData.key_ops && ((keyData.usages & usages) != usages))
         return nullptr;
     if (keyData.ext && !keyData.ext.value() && extractable)
         return nullptr;
 
-    return adoptRef(new CryptoKeyAES(algorithm, WTFMove(octetSequence), extractable, usages));
+    return adoptRef(new CryptoKeyAES(algorithm, WTFMove(*octetSequence), extractable, usages));
 }
 
 JsonWebKey CryptoKeyAES::exportJwk() const
 {
     JsonWebKey result;
-    result.kty = "oct";
-    result.k = base64URLEncode(m_key);
+    result.kty = "oct"_s;
+    result.k = base64URLEncodeToString(m_key);
     result.key_ops = usages();
     result.ext = extractable();
     return result;

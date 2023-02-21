@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import javafx.scene.SubScene;
 import javafx.scene.SubSceneShim;
 import javafx.scene.layout.Pane;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
@@ -129,6 +130,17 @@ public class SubSceneTest {
         assertNull(NodeShim.getSubScene(g));
         assertEquals(g2, subScene.getRoot());
         assertEquals(subScene, NodeShim.getSubScene(g2));
+    }
+
+    @Test
+    public void testRootStyleClassIsClearedWhenRootNodeIsRemovedFromSubScene() {
+        SubScene scene = new SubScene(new Group(), 10, 10);
+        Group g = new Group();
+        assertFalse(g.getStyleClass().contains("root"));
+        scene.setRoot(g);
+        assertTrue(g.getStyleClass().contains("root"));
+        scene.setRoot(new Group());
+        assertFalse(g.getStyleClass().contains("root"));
     }
 
     @Test

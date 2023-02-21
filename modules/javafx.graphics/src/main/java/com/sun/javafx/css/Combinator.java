@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,11 @@ package com.sun.javafx.css;
 public enum Combinator {
 
     CHILD {
+        @Override
         public String toString() { return ">"; }
     },
     DESCENDANT {
+        @Override
         public String toString() { return " "; }
     }
 }

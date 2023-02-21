@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "X86Assembler.h"
 #include "AbstractMacroAssembler.h"
 #include <array>
-#include <wtf/Optional.h>
 
 namespace JSC {
 
@@ -38,6 +37,8 @@ using Assembler = TARGET_ASSEMBLER;
 
 class MacroAssemblerX86Common : public AbstractMacroAssembler<Assembler> {
 public:
+    static constexpr size_t nearJumpRange = 2 * GB;
+
 #if CPU(X86_64)
     // Use this directly only if you're not generating code with it.
     static constexpr X86Registers::RegisterID s_scratchRegister = X86Registers::r11;
@@ -102,16 +103,16 @@ public:
         DoubleLessThanOrUnordered = X86Assembler::ConditionB,
         DoubleLessThanOrEqualOrUnordered = X86Assembler::ConditionBE,
     };
-    COMPILE_ASSERT(
+    static_assert(
         !((X86Assembler::ConditionE | X86Assembler::ConditionNE | X86Assembler::ConditionA | X86Assembler::ConditionAE | X86Assembler::ConditionB | X86Assembler::ConditionBE) & DoubleConditionBits),
-        DoubleConditionBits_should_not_interfere_with_X86Assembler_Condition_codes);
+        "DoubleConditionBits should not interfere with X86Assembler Condition codes");
 
     static constexpr RegisterID stackPointerRegister = X86Registers::esp;
     static constexpr RegisterID framePointerRegister = X86Registers::ebp;
 
-    static bool canBlind() { return true; }
-    static bool shouldBlindForSpecificArch(uint32_t value) { return value >= 0x00ffffff; }
-    static bool shouldBlindForSpecificArch(uint64_t value) { return value >= 0x00ffffff; }
+    static bool constexpr canBlind() { return true; }
+    static bool constexpr shouldBlindForSpecificArch(uint32_t value) { return value >= 0x00ffffff; }
+    static bool constexpr shouldBlindForSpecificArch(uint64_t value) { return value >= 0x00ffffff; }
 
     // Integer arithmetic operations:
     //
@@ -626,6 +627,12 @@ public:
         m_assembler.orb_rm(src, dest.offset, dest.base, dest.index, dest.scale);
     }
 
+    void or8(RegisterID src, AbsoluteAddress address)
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        or8(src, Address(scratchRegister()));
+    }
+
     void or32(Address src, RegisterID dest)
     {
         m_assembler.orl_mr(src.offset, src.base, dest);
@@ -664,6 +671,12 @@ public:
     void or8(TrustedImm32 imm, BaseIndex address)
     {
         m_assembler.orb_im(static_cast<int8_t>(imm.m_value), address.offset, address.base, address.index, address.scale);
+    }
+
+    void or8(TrustedImm32 imm, AbsoluteAddress address)
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        or8(imm, Address(scratchRegister()));
     }
 
     void or32(RegisterID op1, RegisterID op2, RegisterID dest)
@@ -822,6 +835,12 @@ public:
             add32(left, dest);
             return;
         }
+        move(left, dest);
+        sub32(right, dest);
+    }
+
+    void sub32(RegisterID left, TrustedImm32 right, RegisterID dest)
+    {
         move(left, dest);
         sub32(right, dest);
     }
@@ -1193,7 +1212,7 @@ public:
     // operand objects to loads and store will be implicitly constructed if a
     // register is passed.
 
-    void load32(ImplicitAddress address, RegisterID dest)
+    void load32(Address address, RegisterID dest)
     {
         m_assembler.movl_mr(address.offset, address.base, dest);
     }
@@ -1208,7 +1227,7 @@ public:
         load32(address, dest);
     }
 
-    void load16Unaligned(ImplicitAddress address, RegisterID dest)
+    void load16Unaligned(Address address, RegisterID dest)
     {
         load16(address, dest);
     }
@@ -1216,27 +1235,6 @@ public:
     void load16Unaligned(BaseIndex address, RegisterID dest)
     {
         load16(address, dest);
-    }
-
-    DataLabel32 load32WithAddressOffsetPatch(Address address, RegisterID dest)
-    {
-        padBeforePatch();
-        m_assembler.movl_mr_disp32(address.offset, address.base, dest);
-        return DataLabel32(this);
-    }
-
-    DataLabelCompact load32WithCompactAddressOffsetPatch(Address address, RegisterID dest)
-    {
-        padBeforePatch();
-        m_assembler.movl_mr_disp8(address.offset, address.base, dest);
-        return DataLabelCompact(this);
-    }
-
-    template<PtrTag tag>
-    static void repatchCompact(CodeLocationDataLabelCompact<tag> dataLabelCompact, int32_t value)
-    {
-        ASSERT(isCompactPtrAlignedAddressOffset(value));
-        AssemblerType_T::repatchCompact(dataLabelCompact.dataLocation(), value);
     }
 
     DataLabelCompact loadCompactWithAddressOffsetPatch(Address address, RegisterID dest)
@@ -1251,7 +1249,7 @@ public:
         m_assembler.movzbl_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
-    void load8(ImplicitAddress address, RegisterID dest)
+    void load8(Address address, RegisterID dest)
     {
         m_assembler.movzbl_mr(address.offset, address.base, dest);
     }
@@ -1261,7 +1259,7 @@ public:
         m_assembler.movsbl_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
-    void load8SignedExtendTo32(ImplicitAddress address, RegisterID dest)
+    void load8SignedExtendTo32(Address address, RegisterID dest)
     {
         m_assembler.movsbl_mr(address.offset, address.base, dest);
     }
@@ -1276,7 +1274,7 @@ public:
         m_assembler.movsbl_rr(src, dest);
     }
 
-    void load16(ImplicitAddress address, RegisterID dest)
+    void load16(Address address, RegisterID dest)
     {
         m_assembler.movzwl_mr(address.offset, address.base, dest);
     }
@@ -1284,11 +1282,6 @@ public:
     void load16(BaseIndex address, RegisterID dest)
     {
         m_assembler.movzwl_mr(address.offset, address.base, address.index, address.scale, dest);
-    }
-
-    void load16(Address address, RegisterID dest)
-    {
-        m_assembler.movzwl_mr(address.offset, address.base, dest);
     }
 
     void load16SignedExtendTo32(BaseIndex address, RegisterID dest)
@@ -1301,6 +1294,23 @@ public:
         m_assembler.movswl_mr(address.offset, address.base, dest);
     }
 
+    void loadPair32(RegisterID src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src, TrustedImm32(0), dest1, dest2);
+    }
+
+    void loadPair32(RegisterID src, TrustedImm32 offset, RegisterID dest1, RegisterID dest2)
+    {
+        ASSERT(dest1 != dest2); // If it is the same, ldp becomes illegal instruction.
+        if (src == dest1) {
+            load32(Address(src, offset.m_value + 4), dest2);
+            load32(Address(src, offset.m_value), dest1);
+        } else {
+            load32(Address(src, offset.m_value), dest1);
+            load32(Address(src, offset.m_value + 4), dest2);
+        }
+    }
+
     void zeroExtend16To32(RegisterID src, RegisterID dest)
     {
         m_assembler.movzwl_rr(src, dest);
@@ -1311,14 +1321,7 @@ public:
         m_assembler.movswl_rr(src, dest);
     }
 
-    DataLabel32 store32WithAddressOffsetPatch(RegisterID src, Address address)
-    {
-        padBeforePatch();
-        m_assembler.movl_rm_disp32(src, address.offset, address.base);
-        return DataLabel32(this);
-    }
-
-    void store32(RegisterID src, ImplicitAddress address)
+    void store32(RegisterID src, Address address)
     {
         m_assembler.movl_rm(src, address.offset, address.base);
     }
@@ -1328,7 +1331,7 @@ public:
         m_assembler.movl_rm(src, address.offset, address.base, address.index, address.scale);
     }
 
-    void store32(TrustedImm32 imm, ImplicitAddress address)
+    void store32(TrustedImm32 imm, Address address)
     {
         m_assembler.movl_i32m(imm.m_value, address.offset, address.base);
     }
@@ -1336,26 +1339,6 @@ public:
     void store32(TrustedImm32 imm, BaseIndex address)
     {
         m_assembler.movl_i32m(imm.m_value, address.offset, address.base, address.index, address.scale);
-    }
-
-    void storeZero32(ImplicitAddress address)
-    {
-        store32(TrustedImm32(0), address);
-    }
-
-    void storeZero32(BaseIndex address)
-    {
-        store32(TrustedImm32(0), address);
-    }
-
-    void storeZero16(ImplicitAddress address)
-    {
-        store16(TrustedImm32(0), address);
-    }
-
-    void storeZero16(BaseIndex address)
-    {
-        store16(TrustedImm32(0), address);
     }
 
     void store8(TrustedImm32 imm, Address address)
@@ -1368,6 +1351,17 @@ public:
     {
         TrustedImm32 imm8(static_cast<int8_t>(imm.m_value));
         m_assembler.movb_i8m(imm8.m_value, address.offset, address.base, address.index, address.scale);
+    }
+
+    void storePair32(RegisterID src1, RegisterID src2, RegisterID dest)
+    {
+        storePair32(src1, src2, dest, TrustedImm32(0));
+    }
+
+    void storePair32(RegisterID src1, RegisterID src2, RegisterID dest, TrustedImm32 offset)
+    {
+        store32(src1, Address(dest, offset.m_value));
+        store32(src2, Address(dest, offset.m_value + 4));
     }
 
     static ALWAYS_INLINE RegisterID getUnusedRegister(BaseIndex address)
@@ -1444,7 +1438,7 @@ public:
         m_assembler.movw_im(static_cast<int16_t>(imm.m_value), address.offset, address.base, address.index, address.scale);
     }
 
-    void store16(TrustedImm32 imm, ImplicitAddress address)
+    void store16(TrustedImm32 imm, Address address)
     {
         m_assembler.movw_im(static_cast<int16_t>(imm.m_value), address.offset, address.base);
     }
@@ -1463,11 +1457,11 @@ public:
         m_assembler.movsd_mr(address.asPtr(), dest);
 #else
         move(address, scratchRegister());
-        loadDouble(scratchRegister(), dest);
+        loadDouble(Address(scratchRegister()), dest);
 #endif
     }
 
-    void loadDouble(ImplicitAddress address, FPRegisterID dest)
+    void loadDouble(Address address, FPRegisterID dest)
     {
         m_assembler.movsd_mr(address.offset, address.base, dest);
     }
@@ -1483,11 +1477,11 @@ public:
         m_assembler.movss_mr(address.asPtr(), dest);
 #else
         move(address, scratchRegister());
-        loadFloat(scratchRegister(), dest);
+        loadFloat(Address(scratchRegister()), dest);
 #endif
     }
 
-    void loadFloat(ImplicitAddress address, FPRegisterID dest)
+    void loadFloat(Address address, FPRegisterID dest)
     {
         m_assembler.movss_mr(address.offset, address.base, dest);
     }
@@ -1497,7 +1491,7 @@ public:
         m_assembler.movss_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
-    void storeDouble(FPRegisterID src, ImplicitAddress address)
+    void storeDouble(FPRegisterID src, Address address)
     {
         m_assembler.movsd_rm(src, address.offset, address.base);
     }
@@ -1507,7 +1501,7 @@ public:
         m_assembler.movsd_rm(src, address.offset, address.base, address.index, address.scale);
     }
 
-    void storeFloat(FPRegisterID src, ImplicitAddress address)
+    void storeFloat(FPRegisterID src, Address address)
     {
         m_assembler.movss_rm(src, address.offset, address.base);
     }
@@ -2713,6 +2707,12 @@ public:
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
+    Jump branchTest32(ResultCondition cond, AbsoluteAddress address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        return branchTest32(cond, Address(scratchRegister()), mask);
+    }
+
     Jump branchTest8(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
     {
         TrustedImm32 mask8(static_cast<int8_t>(mask.m_value));
@@ -2730,6 +2730,26 @@ public:
             m_assembler.cmpb_im(0, address.offset, address.base, address.index, address.scale);
         else
             m_assembler.testb_im(mask8.m_value, address.offset, address.base, address.index, address.scale);
+        return Jump(m_assembler.jCC(x86Condition(cond)));
+    }
+
+    Jump branchTest16(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        TrustedImm32 mask16(static_cast<int16_t>(mask.m_value));
+        if (mask16.m_value == -1)
+            m_assembler.cmpw_im(0, address.offset, address.base);
+        else
+            m_assembler.testw_im(mask16.m_value, address.offset, address.base);
+        return Jump(m_assembler.jCC(x86Condition(cond)));
+    }
+
+    Jump branchTest16(ResultCondition cond, BaseIndex address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        TrustedImm32 mask16(static_cast<int16_t>(mask.m_value));
+        if (mask16.m_value == -1)
+            m_assembler.cmpw_im(0, address.offset, address.base, address.index, address.scale);
+        else
+            m_assembler.testw_im(mask16.m_value, address.offset, address.base, address.index, address.scale);
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
@@ -3102,7 +3122,7 @@ public:
         }
     }
 
-    static Optional<ResultCondition> commuteCompareToZeroIntoTest(RelationalCondition cond)
+    static std::optional<ResultCondition> commuteCompareToZeroIntoTest(RelationalCondition cond)
     {
         switch (cond) {
         case Equal:
@@ -3115,7 +3135,7 @@ public:
             return PositiveOrZero;
             break;
         default:
-            return WTF::nullopt;
+            return std::nullopt;
         }
     }
 

@@ -53,7 +53,10 @@ public:
     PropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
     PropertyToTransitionMap& runningTransitionsByProperty() { return m_runningTransitionsByProperty; }
     const RenderStyle* lastStyleChangeEventStyle() const { return m_lastStyleChangeEventStyle.get(); }
-    void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&& style) { m_lastStyleChangeEventStyle = WTFMove(style); }
+    void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&&);
+    void cssAnimationsDidUpdate() { m_hasPendingKeyframesUpdate = false; }
+    void keyframesRuleDidChange() { m_hasPendingKeyframesUpdate = true; }
+    bool hasPendingKeyframesUpdate() const { return m_hasPendingKeyframesUpdate; }
 
 private:
 
@@ -64,6 +67,7 @@ private:
     PropertyToTransitionMap m_completedTransitionsByProperty;
     PropertyToTransitionMap m_runningTransitionsByProperty;
     PseudoId m_pseudoId;
+    bool m_hasPendingKeyframesUpdate { false };
 };
 
 } // namespace WebCore

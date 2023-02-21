@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ public class BindingsMapTest {
 
     @Before
     public void setUp() {
-        property = new SimpleMapProperty<String, Object>();
+        property = new SimpleMapProperty<>();
         map1 = FXCollections.observableHashMap();
         map1.put(key1, data1);
         map1.put(key2, data2);
@@ -254,7 +254,7 @@ public class BindingsMapTest {
         final boolean defaultData = false;
         final boolean localData1 = false;
         final boolean localData2 = true;
-        final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<String, Boolean>();
+        final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Boolean> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -320,7 +320,7 @@ public class BindingsMapTest {
         final boolean defaultData = false;
         final boolean localData1 = false;
         final boolean localData2 = true;
-        final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<String, Boolean>();
+        final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Boolean> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -395,7 +395,7 @@ public class BindingsMapTest {
 
     @Test(expected = NullPointerException.class)
     public void testBooleanValueAt_Variable_Null_2() {
-        final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<String, Boolean>();
+        final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<>();
         Bindings.booleanValueAt(localProperty, (ObservableValue<String>)null);
     }
 
@@ -404,7 +404,7 @@ public class BindingsMapTest {
         final double defaultData = 0.0;
         final double localData1 = Math.PI;
         final double localData2 = -Math.E;
-        final MapProperty<String, Double> localProperty = new SimpleMapProperty<String, Double>();
+        final MapProperty<String, Double> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Double> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -470,7 +470,7 @@ public class BindingsMapTest {
         final double defaultData = 0.0;
         final double localData1 = -Math.PI;
         final double localData2 = Math.E;
-        final MapProperty<String, Double> localProperty = new SimpleMapProperty<String, Double>();
+        final MapProperty<String, Double> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Double> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -545,7 +545,7 @@ public class BindingsMapTest {
 
     @Test(expected = NullPointerException.class)
     public void testDoubleValueAt_Variable_Null_2() {
-        final MapProperty<String, Double> localProperty = new SimpleMapProperty<String, Double>();
+        final MapProperty<String, Double> localProperty = new SimpleMapProperty<>();
         Bindings.doubleValueAt(localProperty, (ObservableValue<String>)null);
     }
 
@@ -554,7 +554,7 @@ public class BindingsMapTest {
         final float defaultData = 0.0f;
         final float localData1 = (float)Math.PI;
         final float localData2 = (float)-Math.E;
-        final MapProperty<String, Float> localProperty = new SimpleMapProperty<String, Float>();
+        final MapProperty<String, Float> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Float> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -620,7 +620,7 @@ public class BindingsMapTest {
         final float defaultData = 0.0f;
         final float localData1 = (float)-Math.PI;
         final float localData2 = (float)Math.E;
-        final MapProperty<String, Float> localProperty = new SimpleMapProperty<String, Float>();
+        final MapProperty<String, Float> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Float> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -695,7 +695,7 @@ public class BindingsMapTest {
 
     @Test(expected = NullPointerException.class)
     public void testFloatValueAt_Variable_Null_2() {
-        final MapProperty<String, Float> localProperty = new SimpleMapProperty<String, Float>();
+        final MapProperty<String, Float> localProperty = new SimpleMapProperty<>();
         Bindings.floatValueAt(localProperty, (ObservableValue<String>)null);
     }
 
@@ -704,7 +704,7 @@ public class BindingsMapTest {
         final int defaultData = 0;
         final int localData1 = 42;
         final int localData2 = -7;
-        final MapProperty<String, Integer> localProperty = new SimpleMapProperty<String, Integer>();
+        final MapProperty<String, Integer> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Integer> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -770,7 +770,7 @@ public class BindingsMapTest {
         final int defaultData = 0;
         final int localData1 = 42;
         final int localData2 = -7;
-        final MapProperty<String, Integer> localProperty = new SimpleMapProperty<String, Integer>();
+        final MapProperty<String, Integer> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Integer> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -845,7 +845,7 @@ public class BindingsMapTest {
 
     @Test(expected = NullPointerException.class)
     public void testIntegerValueAt_Variable_Null_2() {
-        final MapProperty<String, Integer> localProperty = new SimpleMapProperty<String, Integer>();
+        final MapProperty<String, Integer> localProperty = new SimpleMapProperty<>();
         Bindings.integerValueAt(localProperty, (ObservableValue<String>)null);
     }
 
@@ -854,7 +854,7 @@ public class BindingsMapTest {
         final long defaultData = 0L;
         final long localData1 = 1234567890987654321L;
         final long localData2 = -987654321987654321L;
-        final MapProperty<String, Long> localProperty = new SimpleMapProperty<String, Long>();
+        final MapProperty<String, Long> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Long> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -920,7 +920,7 @@ public class BindingsMapTest {
         final long defaultData = 0;
         final long localData1 = 98765432123456789L;
         final long localData2 = -1234567890123456789L;
-        final MapProperty<String, Long> localProperty = new SimpleMapProperty<String, Long>();
+        final MapProperty<String, Long> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, Long> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -995,7 +995,7 @@ public class BindingsMapTest {
 
     @Test(expected = NullPointerException.class)
     public void testLongValueAt_Variable_Null_2() {
-        final MapProperty<String, Long> localProperty = new SimpleMapProperty<String, Long>();
+        final MapProperty<String, Long> localProperty = new SimpleMapProperty<>();
         Bindings.longValueAt(localProperty, (ObservableValue<String>)null);
     }
 
@@ -1004,7 +1004,7 @@ public class BindingsMapTest {
         final String defaultData = null;
         final String localData1 = "Hello World";
         final String localData2 = "Goodbye World";
-        final MapProperty<String, String> localProperty = new SimpleMapProperty<String, String>();
+        final MapProperty<String, String> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, String> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -1057,7 +1057,7 @@ public class BindingsMapTest {
         final String defaultData = null;
         final String localData1 = "Goodbye";
         final String localData2 = "Hello";
-        final MapProperty<String, String> localProperty = new SimpleMapProperty<String, String>();
+        final MapProperty<String, String> localProperty = new SimpleMapProperty<>();
         final ObservableMap<String, String> localMap1 = FXCollections.observableHashMap();
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
@@ -1120,7 +1120,7 @@ public class BindingsMapTest {
 
     @Test(expected = NullPointerException.class)
     public void testStringValueAt_Variable_Null_2() {
-        final MapProperty<String, String> localProperty = new SimpleMapProperty<String, String>();
+        final MapProperty<String, String> localProperty = new SimpleMapProperty<>();
         Bindings.stringValueAt(localProperty, (ObservableValue<String>)null);
     }
 

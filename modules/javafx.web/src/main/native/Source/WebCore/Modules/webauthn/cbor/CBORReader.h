@@ -72,7 +72,7 @@ namespace cbor {
 class CBORReader {
     WTF_MAKE_NONCOPYABLE(CBORReader);
 public:
-    using Bytes = Vector<uint8_t>;
+    using Bytes = Span<const uint8_t>;
 
     enum class DecoderError {
         CBORNoError = 0,
@@ -101,22 +101,22 @@ public:
     // CBOR data- then an empty optional is returned. Optional |errorCodeOut|
     // can be provided by the caller to obtain additional information about
     // decoding failures.
-    WEBCORE_EXPORT static Optional<CBORValue> read(const Bytes&, DecoderError* errorCodeOut = nullptr, int maxNestingLevel = kCBORMaxDepth);
+    WEBCORE_EXPORT static std::optional<CBORValue> read(const Bytes&, DecoderError* errorCodeOut = nullptr, int maxNestingLevel = kCBORMaxDepth);
 
     // Translates errors to human-readable error messages.
     static const char* errorCodeToString(DecoderError errorCode);
 
 private:
-    CBORReader(Bytes::const_iterator, const Bytes::const_iterator);
-    Optional<CBORValue> decodeCBOR(int maxNestingLevel);
-    Optional<CBORValue> decodeValueToNegative(uint64_t value);
-    Optional<CBORValue> decodeValueToUnsigned(uint64_t value);
-    Optional<CBORValue> readSimpleValue(uint8_t additionalInfo, uint64_t value);
+    CBORReader(Bytes::iterator, const Bytes::iterator);
+    std::optional<CBORValue> decodeCBOR(int maxNestingLevel);
+    std::optional<CBORValue> decodeValueToNegative(uint64_t value);
+    std::optional<CBORValue> decodeValueToUnsigned(uint64_t value);
+    std::optional<CBORValue> readSimpleValue(uint8_t additionalInfo, uint64_t value);
     bool readVariadicLengthInteger(uint8_t additionalInfo, uint64_t* value);
-    Optional<CBORValue> readBytes(uint64_t numBytes);
-    Optional<CBORValue> readString(uint64_t numBytes);
-    Optional<CBORValue> readCBORArray(uint64_t length, int maxNestingLevel);
-    Optional<CBORValue> readCBORMap(uint64_t length, int maxNestingLevel);
+    std::optional<CBORValue> readBytes(uint64_t numBytes);
+    std::optional<CBORValue> readString(uint64_t numBytes);
+    std::optional<CBORValue> readCBORArray(uint64_t length, int maxNestingLevel);
+    std::optional<CBORValue> readCBORMap(uint64_t length, int maxNestingLevel);
     bool canConsume(uint64_t bytes);
     void checkExtraneousData();
     bool checkDuplicateKey(const CBORValue& newKey, const CBORValue::MapValue&);
@@ -126,8 +126,8 @@ private:
 
     DecoderError getErrorCode();
 
-    Bytes::const_iterator m_it;
-    const Bytes::const_iterator m_end;
+    Bytes::iterator m_it;
+    const Bytes::iterator m_end;
     DecoderError m_errorCode;
 };
 

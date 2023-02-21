@@ -44,7 +44,7 @@ public:
     DOMPluginArray& plugins();
     DOMMimeTypeArray& mimeTypes();
     bool cookieEnabled() const;
-    bool javaEnabled() const;
+    bool javaEnabled() const { return false; }
     const String& userAgent() const final;
     String platform() const final;
     void userAgentChanged();
@@ -64,6 +64,8 @@ public:
     int maxTouchPoints() const { return 0; }
 #endif
 
+    GPU* gpu();
+
 private:
     void showShareData(ExceptionOr<ShareDataWithParsedURL&>, Ref<DeferredPromise>&&);
     explicit Navigator(ScriptExecutionContext*, DOMWindow&);
@@ -76,5 +78,6 @@ private:
     mutable RefPtr<DOMMimeTypeArray> m_mimeTypes;
     mutable String m_userAgent;
     mutable String m_platform;
+    RefPtr<GPU> m_gpuForWebGPU;
 };
 }

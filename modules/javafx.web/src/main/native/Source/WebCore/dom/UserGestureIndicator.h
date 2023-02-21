@@ -64,7 +64,7 @@ public:
     bool processingUserGestureForMedia() const { return m_state == ProcessingUserGesture || m_state == ProcessingPotentialUserGesture; }
     UserGestureType gestureType() const { return m_gestureType; }
 
-    void addDestructionObserver(WTF::Function<void (UserGestureToken&)>&& observer)
+    void addDestructionObserver(Function<void(UserGestureToken&)>&& observer)
     {
         m_destructionObservers.append(WTFMove(observer));
     }
@@ -108,7 +108,7 @@ private:
     UserGestureToken(ProcessingUserGestureState, UserGestureType, Document*);
 
     ProcessingUserGestureState m_state = NotProcessingUserGesture;
-    Vector<WTF::Function<void (UserGestureToken&)>> m_destructionObservers;
+    Vector<Function<void(UserGestureToken&)>> m_destructionObservers;
     UserGestureType m_gestureType;
     WeakHashSet<Document> m_documentsImpactedByUserGesture;
     DOMPasteAccessPolicy m_domPasteAccessPolicy { DOMPasteAccessPolicy::NotRequestedYet };
@@ -128,7 +128,7 @@ public:
 
     // If a document is provided, its last known user gesture timestamp is updated.
     enum class ProcessInteractionStyle { Immediate, Delayed };
-    WEBCORE_EXPORT explicit UserGestureIndicator(Optional<ProcessingUserGestureState>, Document* = nullptr, UserGestureType = UserGestureType::Other, ProcessInteractionStyle = ProcessInteractionStyle::Immediate);
+    WEBCORE_EXPORT explicit UserGestureIndicator(std::optional<ProcessingUserGestureState>, Document* = nullptr, UserGestureType = UserGestureType::Other, ProcessInteractionStyle = ProcessInteractionStyle::Immediate);
     WEBCORE_EXPORT explicit UserGestureIndicator(RefPtr<UserGestureToken>, UserGestureToken::GestureScope = UserGestureToken::GestureScope::All, UserGestureToken::IsPropagatedFromFetch = UserGestureToken::IsPropagatedFromFetch::No);
     WEBCORE_EXPORT ~UserGestureIndicator();
 

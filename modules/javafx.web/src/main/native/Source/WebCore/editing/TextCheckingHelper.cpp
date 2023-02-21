@@ -94,7 +94,6 @@ static void findMisspellings(TextCheckerClient& client, StringView text, Vector<
             TextCheckingResult misspelling;
             misspelling.type = TextCheckingType::Spelling;
             misspelling.range = CharacterRange(wordStart + misspellingLocation, misspellingLength);
-            misspelling.replacement = client.getAutoCorrectSuggestionForMisspelledWord(text.substring(misspelling.range.location, misspelling.range.length).toStringWithoutCopying());
             results.append(misspelling);
         }
 
@@ -119,7 +118,7 @@ TextCheckingParagraph::TextCheckingParagraph(const SimpleRange& range)
 {
 }
 
-TextCheckingParagraph::TextCheckingParagraph(const SimpleRange& checkingRange, const SimpleRange& replacementRange, const Optional<SimpleRange>& paragraphRange)
+TextCheckingParagraph::TextCheckingParagraph(const SimpleRange& checkingRange, const SimpleRange& replacementRange, const std::optional<SimpleRange>& paragraphRange)
     : m_checkingRange(checkingRange)
     , m_automaticReplacementRange(replacementRange)
     , m_paragraphRange(paragraphRange)
@@ -139,7 +138,7 @@ void TextCheckingParagraph::invalidateParagraphRangeValues()
     m_checkingStart.reset();
     m_automaticReplacementStart.reset();
     m_automaticReplacementLength.reset();
-    m_offsetAsRange = WTF::nullopt;
+    m_offsetAsRange = std::nullopt;
     m_text = String();
 }
 
@@ -228,9 +227,9 @@ TextCheckingHelper::TextCheckingHelper(EditorClient& client, const SimpleRange& 
 {
 }
 
-auto TextCheckingHelper::findMisspelledWords(Operation operation) const -> std::pair<MisspelledWord, Optional<SimpleRange>>
+auto TextCheckingHelper::findMisspelledWords(Operation operation) const -> std::pair<MisspelledWord, std::optional<SimpleRange>>
 {
-    std::pair<MisspelledWord, Optional<SimpleRange>> first;
+    std::pair<MisspelledWord, std::optional<SimpleRange>> first;
 
     uint64_t currentChunkOffset = 0;
 
@@ -285,7 +284,7 @@ auto TextCheckingHelper::findFirstMisspelledWord() const -> MisspelledWord
     return findMisspelledWords(Operation::FindFirst).first;
 }
 
-auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool checkGrammar) const -> Variant<MisspelledWord, UngrammaticalPhrase>
+auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool checkGrammar) const -> std::variant<MisspelledWord, UngrammaticalPhrase>
 {
     if (!unifiedTextCheckerEnabled())
         return { };
@@ -293,11 +292,11 @@ auto TextCheckingHelper::findFirstMisspelledWordOrUngrammaticalPhrase(bool check
     if (platformDrivenTextCheckerEnabled())
         return { };
 
-    Variant<MisspelledWord, UngrammaticalPhrase> firstFoundItem;
+    std::variant<MisspelledWord, UngrammaticalPhrase> firstFoundItem;
     GrammarDetail grammarDetail;
 
     String misspelledWord;
-    Optional<SimpleRange> misspelledWordRange;
+    std::optional<SimpleRange> misspelledWordRange;
     String badGrammarPhrase;
 
     // Expand the search range to encompass entire paragraphs, since text checking needs that much context.
@@ -551,7 +550,7 @@ TextCheckingGuesses TextCheckingHelper::guessesForMisspelledWordOrUngrammaticalP
     return { };
 }
 
-Optional<SimpleRange> TextCheckingHelper::markAllMisspelledWords() const
+std::optional<SimpleRange> TextCheckingHelper::markAllMisspelledWords() const
 {
     return findMisspelledWords(Operation::MarkAll).second;
 }
@@ -583,7 +582,7 @@ void checkTextOfParagraph(TextCheckerClient& client, StringView text, OptionSet<
         unsigned grammarCheckLength = text.length();
         for (auto& misspelling : misspellings)
             grammarCheckLength = std::min<unsigned>(grammarCheckLength, misspelling.range.location);
-        findGrammaticalErrors(client, text.substring(0, grammarCheckLength), grammaticalErrors);
+        findGrammaticalErrors(client, text.left(grammarCheckLength), grammaticalErrors);
     }
 
     results = WTFMove(grammaticalErrors);

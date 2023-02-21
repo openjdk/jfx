@@ -30,19 +30,24 @@
 namespace WebCore {
 using namespace JSC;
 
-// FIXME: This should get passed a global object rather than getting it out of the ExecState.
-JSValue jsDate(JSGlobalObject& lexicalGlobalObject, double value)
+JSValue jsDate(JSGlobalObject& lexicalGlobalObject, WallTime value)
 {
-    return DateInstance::create(lexicalGlobalObject.vm(), lexicalGlobalObject.dateStructure(), value);
+    return DateInstance::create(lexicalGlobalObject.vm(), lexicalGlobalObject.dateStructure(), value.secondsSinceEpoch().milliseconds());
 }
 
-double valueToDate(VM& vm, JSValue value)
+WallTime valueToDate(JSC::JSGlobalObject& lexicalGlobalObject, JSValue value)
 {
-    if (value.isNumber())
-        return value.asNumber();
-    if (!value.inherits<DateInstance>(vm))
-        return std::numeric_limits<double>::quiet_NaN();
-    return jsCast<DateInstance*>(value)->internalNumber();
+    double milliseconds = std::numeric_limits<double>::quiet_NaN();
+
+    auto& vm = lexicalGlobalObject.vm();
+    if (value.inherits<DateInstance>())
+        milliseconds = jsCast<DateInstance*>(value)->internalNumber();
+    else if (value.isNumber())
+        milliseconds = value.asNumber();
+    else if (value.isString())
+        milliseconds = vm.dateCache.parseDate(&lexicalGlobalObject, vm, value.getString(&lexicalGlobalObject));
+
+    return WallTime::fromRawSeconds(Seconds::fromMilliseconds(milliseconds).value());
 }
 
 } // namespace WebCore

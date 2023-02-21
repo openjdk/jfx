@@ -372,7 +372,7 @@ _g_win32_readlink_handle_raw (HANDLE      h,
 {
   DWORD error_code;
   DWORD returned_bytes = 0;
-  BYTE *data;
+  BYTE *data = NULL;
   gsize to_copy;
   /* This is 16k. It's impossible to make DeviceIoControl() tell us
    * the required size. NtFsControlFile() does have such a feature,
@@ -760,7 +760,7 @@ _g_win32_stat_utf8 (const gchar       *filename,
     len--;
 
   if (len <= 0 ||
-      (g_path_is_absolute (filename) && len <= g_path_skip_root (filename) - filename))
+      (g_path_is_absolute (filename) && len <= (gsize) (g_path_skip_root (filename) - filename)))
     len = strlen (filename);
 
   wfilename = g_utf8_to_utf16 (filename, len, NULL, NULL, NULL);
@@ -893,7 +893,7 @@ g_win32_readlink_utf8 (const gchar  *filename,
       return tmp_len;
     }
 
-  if (tmp_len > buf_size)
+  if ((gsize) tmp_len > buf_size)
     tmp_len = buf_size;
 
   memcpy (buf, tmp, tmp_len);

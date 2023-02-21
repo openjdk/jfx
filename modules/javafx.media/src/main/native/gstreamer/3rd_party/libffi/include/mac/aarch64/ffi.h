@@ -1,6 +1,7 @@
 /* -----------------------------------------------------------------*-C-*-
-   libffi 3.3 - Copyright (c) 2011, 2014, 2019 Anthony Green
-                    - Copyright (c) 1996-2003, 2007, 2008 Red Hat, Inc.
+   libffi 3.4.2
+     - Copyright (c) 2011, 2014, 2019, 2021 Anthony Green
+     - Copyright (c) 1996-2003, 2007, 2008 Red Hat, Inc.
 
    Permission is hereby granted, free of charge, to any person
    obtaining a copy of this software and associated documentation
@@ -217,7 +218,8 @@ FFI_EXTERN ffi_type ffi_type_complex_longdouble;
 typedef enum {
   FFI_OK = 0,
   FFI_BAD_TYPEDEF,
-  FFI_BAD_ABI
+  FFI_BAD_ABI,
+  FFI_BAD_ARGTYPE
 } ffi_status;
 
 typedef struct {
@@ -260,9 +262,9 @@ typedef union {
 typedef union {
   signed int    sint;
   unsigned int  uint;
-  float     flt;
-  char      data[FFI_SIZEOF_JAVA_RAW];
-  void*     ptr;
+  float         flt;
+  char          data[FFI_SIZEOF_JAVA_RAW];
+  void*         ptr;
 } ffi_java_raw;
 #else
 typedef ffi_raw ffi_java_raw;
@@ -310,7 +312,10 @@ typedef struct {
   void *trampoline_table;
   void *trampoline_table_entry;
 #else
-  char tramp[FFI_TRAMPOLINE_SIZE];
+  union {
+    char tramp[FFI_TRAMPOLINE_SIZE];
+    void *ftramp;
+  };
 #endif
   ffi_cif   *cif;
   void     (*fun)(ffi_cif*,void*,void**,void*);
@@ -329,6 +334,14 @@ typedef struct {
 
 FFI_API void *ffi_closure_alloc (size_t size, void **code);
 FFI_API void ffi_closure_free (void *);
+
+#if defined(PA_LINUX) || defined(PA_HPUX)
+#define FFI_CLOSURE_PTR(X) ((void *)((unsigned int)(X) | 2))
+#define FFI_RESTORE_PTR(X) ((void *)((unsigned int)(X) & ~3))
+#else
+#define FFI_CLOSURE_PTR(X) (X)
+#define FFI_RESTORE_PTR(X) (X)
+#endif
 
 FFI_API ffi_status
 ffi_prep_closure (ffi_closure*,

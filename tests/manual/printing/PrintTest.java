@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ public class PrintTest extends Application {
     }
 
     static final String instructions =
-            "This is regression test for 8150076 (see https://bugs.openjdk.java.net/browse/JDK-8150076 ).\n" +
+            "This is regression test for 8150076 (see https://bugs.openjdk.org/browse/JDK-8150076 ).\n" +
                     "Press print button, after this 2 pages must be printed. When all pages are printed you will " +
                     "see \"PASSED!\" message below, otherwise test is failed.";
 

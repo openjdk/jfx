@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ BOOL GlassView::Close()
 BOOL GlassView::EnterFullScreen(BOOL animate, BOOL keepRatio)
 {
     GlassWindow *pWindow = GlassWindow::FromHandle(GetHostHwnd());
-    if (pWindow && !pWindow->IsChild()) {
+    if (pWindow) {
         m_fullScreenWindow = pWindow;
     } else {
         // create new FullScreen window to handle "ownerless" views

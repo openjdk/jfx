@@ -46,6 +46,10 @@
 #define BCOMPILER_HAS_CLANG_DECLSPEC(x) 0
 #endif
 
+#if defined(__clang__)
+#define BCOMPILER_CLANG 1
+#endif
+
 /* BCOMPILER(GCC_COMPATIBLE) - GNU Compiler Collection or compatibles */
 
 #if defined(__GNUC__)
@@ -78,4 +82,14 @@
 
 #if !defined(BFALLTHROUGH)
 #define BFALLTHROUGH
+#endif
+
+/* BUNUSED_TYPE_ALIAS */
+
+#if !defined(BUNUSED_TYPE_ALIAS) && BCOMPILER(GCC_COMPATIBLE)
+#define BUNUSED_TYPE_ALIAS __attribute__((unused))
+#endif
+
+#if !defined(BUNUSED_TYPE_ALIAS)
+#define BUNUSED_TYPE_ALIAS
 #endif

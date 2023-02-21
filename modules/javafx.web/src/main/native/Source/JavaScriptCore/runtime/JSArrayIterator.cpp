@@ -31,12 +31,12 @@
 
 namespace JSC {
 
-const ClassInfo JSArrayIterator::s_info = { "ArrayIterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSArrayIterator) };
+const ClassInfo JSArrayIterator::s_info = { "ArrayIterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSArrayIterator) };
 
 JSArrayIterator* JSArrayIterator::create(VM& vm, Structure* structure, JSObject* iteratedObject, JSValue kind)
 {
     ASSERT(kind.asUInt32() <= static_cast<uint32_t>(IterationKind::Entries));
-    JSArrayIterator* iterator = new (NotNull, allocateCell<JSArrayIterator>(vm.heap)) JSArrayIterator(vm, structure);
+    JSArrayIterator* iterator = new (NotNull, allocateCell<JSArrayIterator>(vm)) JSArrayIterator(vm, structure);
     iterator->finishCreation(vm);
     iterator->internalField(Field::IteratedObject).set(vm, iterator, iteratedObject);
     iterator->internalField(Field::Kind).set(vm, iterator, kind);
@@ -45,7 +45,7 @@ JSArrayIterator* JSArrayIterator::create(VM& vm, Structure* structure, JSObject*
 
 JSArrayIterator* JSArrayIterator::createWithInitialValues(VM& vm, Structure* structure)
 {
-    JSArrayIterator* iterator = new (NotNull, allocateCell<JSArrayIterator>(vm.heap)) JSArrayIterator(vm, structure);
+    JSArrayIterator* iterator = new (NotNull, allocateCell<JSArrayIterator>(vm)) JSArrayIterator(vm, structure);
     iterator->finishCreation(vm);
     return iterator;
 }

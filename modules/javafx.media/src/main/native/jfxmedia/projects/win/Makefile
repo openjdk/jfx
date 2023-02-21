@@ -36,6 +36,7 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia-jni
 
 GSTREAMER_LITE_DIR = ../../../gstreamer/gstreamer-lite
 GLIB_LITE_DIR = ../../../gstreamer/3rd_party/glib
+PLUGINS_DIR = ../../../gstreamer/plugins
 
 DIRLIST = jni \
           PipelineManagement \
@@ -66,7 +67,8 @@ INCLUDES = $(BASE_INCLUDES) \
            -I$(GSTREAMER_LITE_DIR)/gstreamer \
            -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
            -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/win32/common \
-           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs
+           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
+           -I$(PLUGINS_DIR)
 
 CFLAGS = -DWIN32 \
          -D_WINDOWS \

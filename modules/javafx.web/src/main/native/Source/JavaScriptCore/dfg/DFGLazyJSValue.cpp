@@ -51,7 +51,7 @@ JSValue LazyJSValue::getValue(VM& vm) const
     case SingleCharacterString:
         return jsSingleCharacterString(vm, u.character);
     case KnownStringImpl:
-        return jsString(vm, u.stringImpl);
+        return jsString(vm, String { u.stringImpl });
     case NewStringImpl:
         return jsString(vm, AtomStringImpl::add(u.stringImpl));
     }
@@ -88,7 +88,7 @@ static TriState equalToStringImpl(JSValue value, StringImpl* stringImpl)
     return triState(WTF::equal(stringImpl, string));
 }
 
-const StringImpl* LazyJSValue::tryGetStringImpl(VM& vm) const
+const StringImpl* LazyJSValue::tryGetStringImpl() const
 {
     switch (m_kind) {
     case KnownStringImpl:
@@ -96,7 +96,7 @@ const StringImpl* LazyJSValue::tryGetStringImpl(VM& vm) const
         return u.stringImpl;
 
     case KnownValue:
-        if (JSString* string = value()->dynamicCast<JSString*>(vm))
+        if (JSString* string = value()->dynamicCast<JSString*>())
             return string->tryGetValueImpl();
         return nullptr;
 
@@ -106,6 +106,23 @@ const StringImpl* LazyJSValue::tryGetStringImpl(VM& vm) const
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
 }
+
+struct CrossThreadStringTranslator {
+    static unsigned hash(const StringImpl* impl)
+    {
+        return impl->concurrentHash();
+    }
+
+    static bool equal(const String& string, const StringImpl* impl)
+    {
+        return WTF::equal(string.impl(), impl);
+    }
+
+    static void translate(String& location, const StringImpl* impl, unsigned)
+    {
+        location = impl->isolatedCopy();
+    }
+};
 
 String LazyJSValue::tryGetString(Graph& graph) const
 {
@@ -118,15 +135,12 @@ String LazyJSValue::tryGetString(Graph& graph) const
 
     case KnownValue:
     case KnownStringImpl:
-        if (const StringImpl* string = tryGetStringImpl(graph.m_vm)) {
+        if (const StringImpl* string = tryGetStringImpl()) {
             unsigned ginormousStringLength = 10000;
             if (string->length() > ginormousStringLength)
                 return String();
 
-            auto result = graph.m_copiedStrings.add(string, String());
-            if (result.isNewEntry)
-                result.iterator->value = string->isolatedCopy();
-            return result.iterator->value;
+            return *graph.m_copiedStrings.add<CrossThreadStringTranslator>(string).iterator;
         }
 
         return String();
@@ -249,8 +263,9 @@ void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result) const
 
     CodeBlock* codeBlock = jit.codeBlock();
 
-    jit.addLinkTask(
-        [codeBlock, label, thisValue] (LinkBuffer& linkBuffer) {
+    jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+        auto patchLocation = linkBuffer.locationOf<JITCompilationPtrTag>(label);
+        linkBuffer.addMainThreadFinalizationTask([=] {
             JSValue realValue = thisValue.getValue(codeBlock->vm());
             RELEASE_ASSERT(realValue.isCell());
 
@@ -259,8 +274,9 @@ void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result) const
             if (thisValue.m_kind == NewStringImpl)
                 thisValue.u.stringImpl->deref();
 
-            linkBuffer.patch(label, realValue.asCell());
+            MacroAssembler::repatchPointer(patchLocation, realValue.asCell());
         });
+    });
 }
 
 void LazyJSValue::dumpInContext(PrintStream& out, DumpContext* context) const

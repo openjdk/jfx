@@ -463,9 +463,29 @@ gst_audio_format_get_info (GstAudioFormat format)
  * @length: the length to fill
  *
  * Fill @length bytes in @dest with silence samples for @info.
+ *
+ * Deprecated: 1.20: Use gst_audio_format_info_fill_silence() instead.
  */
 void
 gst_audio_format_fill_silence (const GstAudioFormatInfo * info,
+    gpointer dest, gsize length)
+{
+  gst_audio_format_info_fill_silence (info, dest, length);
+}
+
+/**
+ * gst_audio_format_info_fill_silence:
+ * @info: a #GstAudioFormatInfo
+ * @dest: (array length=length) (element-type guint8): a destination
+ *   to fill
+ * @length: the length to fill
+ *
+ * Fill @length bytes in @dest with silence samples for @info.
+ *
+ * Since: 1.20
+ */
+void
+gst_audio_format_info_fill_silence (const GstAudioFormatInfo * info,
     gpointer dest, gsize length)
 {
   guint8 *dptr = dest;
@@ -534,13 +554,15 @@ generate_raw_audio_formats (gpointer data)
   struct RawAudioFormats *all = g_new (struct RawAudioFormats, 1);
   gchar *tmp;
   guint i;
+  gboolean res G_GNUC_UNUSED;
 
   g_value_init (&list, GST_TYPE_LIST);
   /* Workaround a bug in our parser that would lead to segfaults
    * when deserializing container types using static strings,
    * see https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/446 */
   tmp = g_strdup (GST_AUDIO_FORMATS_ALL);
-  g_assert (gst_value_deserialize (&list, tmp));
+  res = gst_value_deserialize (&list, tmp);
+  g_assert (res);
   g_free (tmp);
 
   all->n = gst_value_list_get_size (&list);

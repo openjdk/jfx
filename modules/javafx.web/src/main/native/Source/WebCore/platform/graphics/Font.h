@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef Font_h
-#define Font_h
+#pragma once
 
 #include "FloatRect.h"
 #include "FontMetrics.h"
@@ -31,13 +30,9 @@
 #include "GlyphMetricsMap.h"
 #include "GlyphPage.h"
 #include "OpenTypeMathData.h"
-#if ENABLE(OPENTYPE_VERTICAL)
-#include "OpenTypeVerticalData.h"
-#endif
 #include "RenderingResourceIdentifier.h"
 #include <wtf/BitVector.h>
 #include <wtf/Hasher.h>
-#include <wtf/Optional.h>
 #include <wtf/text/StringHash.h>
 
 #if PLATFORM(COCOA)
@@ -46,25 +41,30 @@
 #include <wtf/RetainPtr.h>
 #endif
 
+#if ENABLE(OPENTYPE_VERTICAL)
+#include "OpenTypeVerticalData.h"
+#endif
+
 #if PLATFORM(WIN)
 #include <usp10.h>
 #endif
 
-#if USE(DIRECT2D)
-interface IDWriteFactory5;
-interface IDWriteGdiInterop;
-#endif
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
-class GlyphPage;
+class FontCache;
 class FontDescription;
-class SharedBuffer;
+class GlyphPage;
+class FragmentedSharedBuffer;
+
 struct GlyphData;
 
 enum FontVariant { AutoVariant, NormalVariant, SmallCapsVariant, EmphasisMarkVariant, BrokenIdeographVariant };
 enum Pitch { UnknownPitch, FixedPitch, VariablePitch };
-enum class IsForPlatformFont : uint8_t { No, Yes };
+enum class IsForPlatformFont : bool { No, Yes };
 
 #if USE(CORE_TEXT)
 bool fontHasTable(CTFontRef, unsigned tableTag);
@@ -76,27 +76,11 @@ class Font : public RefCounted<Font> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Font);
 public:
     // Used to create platform fonts.
-    enum class Origin : uint8_t {
-        Remote,
-        Local
-    };
-    enum class Interstitial : uint8_t {
-        Yes,
-        No
-    };
-    enum class Visibility : uint8_t {
-        Visible,
-        Invisible
-    };
-    enum class OrientationFallback : uint8_t {
-        Yes,
-        No
-    };
-    static Ref<Font> create(const FontPlatformData& platformData, Origin origin = Origin::Local, Interstitial interstitial = Interstitial::No,
-        Visibility visibility = Visibility::Visible, OrientationFallback orientationFallback = OrientationFallback::No, Optional<RenderingResourceIdentifier> identifier = WTF::nullopt)
-    {
-        return adoptRef(*new Font(platformData, origin, interstitial, visibility, orientationFallback, identifier));
-    }
+    enum class Origin : bool { Remote, Local };
+    enum class Interstitial : bool { No, Yes };
+    enum class Visibility : bool { Visible, Invisible };
+    enum class OrientationFallback : bool { No, Yes };
+    WEBCORE_EXPORT static Ref<Font> create(const FontPlatformData&, Origin = Origin::Local, Interstitial = Interstitial::No, Visibility = Visibility::Visible, OrientationFallback = OrientationFallback::No, std::optional<RenderingResourceIdentifier> = std::nullopt);
     WEBCORE_EXPORT static Ref<Font> create(Ref<SharedBuffer>&& fontFaceData, Font::Origin, float fontSize, bool syntheticBold, bool syntheticItalic);
 
     WEBCORE_EXPORT ~Font();
@@ -147,7 +131,6 @@ public:
     bool hasVerticalGlyphs() const { return m_hasVerticalGlyphs; }
     bool isTextOrientationFallback() const { return m_isTextOrientationFallback; }
 
-    FontMetrics& fontMetrics() { return m_fontMetrics; }
     const FontMetrics& fontMetrics() const { return m_fontMetrics; }
     float sizePerUnit() const { return platformData().size() / (fontMetrics().unitsPerEm() ? fontMetrics().unitsPerEm() : 1); }
 
@@ -158,36 +141,31 @@ public:
     void setAvgCharWidth(float avgCharWidth) { m_avgCharWidth = avgCharWidth; }
 
     FloatRect boundsForGlyph(Glyph) const;
-    float widthForGlyph(Glyph) const;
-    const Path& pathForGlyph(Glyph) const; // Don't store the result of this! The hash map is free to rehash at any point, leaving this reference dangling.
-    FloatRect platformBoundsForGlyph(Glyph) const;
-    float platformWidthForGlyph(Glyph) const;
-    Path platformPathForGlyph(Glyph) const;
 
-    float spaceWidth() const { return m_spaceWidth; }
-    float adjustedSpaceWidth() const { return m_adjustedSpaceWidth; }
-    void setSpaceWidths(float spaceWidth)
+    // Should the result of this function include the results of synthetic bold?
+    enum class SyntheticBoldInclusion {
+        Incorporate,
+        Exclude
+    };
+    float widthForGlyph(Glyph, SyntheticBoldInclusion = SyntheticBoldInclusion::Incorporate) const;
+
+    const Path& pathForGlyph(Glyph) const; // Don't store the result of this! The hash map is free to rehash at any point, leaving this reference dangling.
+
+    float spaceWidth(SyntheticBoldInclusion SyntheticBoldInclusion = SyntheticBoldInclusion::Incorporate) const
     {
-        m_spaceWidth = spaceWidth;
-        m_adjustedSpaceWidth = spaceWidth;
+        return m_spaceWidth + (SyntheticBoldInclusion == SyntheticBoldInclusion::Incorporate ? syntheticBoldOffset() : 0);
     }
 
-#if USE(CG) || USE(DIRECT2D) || USE(CAIRO) || PLATFORM(JAVA)
     float syntheticBoldOffset() const { return m_syntheticBoldOffset; }
-#endif
 
     Glyph spaceGlyph() const { return m_spaceGlyph; }
-    void setSpaceGlyph(Glyph spaceGlyph) { m_spaceGlyph = spaceGlyph; }
     Glyph zeroWidthSpaceGlyph() const { return m_zeroWidthSpaceGlyph; }
-    void setZeroWidthSpaceGlyph(Glyph spaceGlyph) { m_zeroWidthSpaceGlyph = spaceGlyph; }
     bool isZeroWidthSpaceGlyph(Glyph glyph) const { return glyph == m_zeroWidthSpaceGlyph && glyph; }
-    Glyph zeroGlyph() const { return m_zeroGlyph; }
-    void setZeroGlyph(Glyph zeroGlyph) { m_zeroGlyph = zeroGlyph; }
 
     GlyphData glyphDataForCharacter(UChar32) const;
     Glyph glyphForCharacter(UChar32) const;
     bool supportsCodePoint(UChar32) const;
-    bool platformSupportsCodePoint(UChar32, Optional<UChar32> variation = WTF::nullopt) const;
+    bool platformSupportsCodePoint(UChar32, std::optional<UChar32> variation = std::nullopt) const;
 
     RefPtr<Font> systemFallbackFontForCharacter(UChar32, const FontDescription&, IsForPlatformFont) const;
 
@@ -218,10 +196,12 @@ public:
 #endif
 
     bool canRenderCombiningCharacterSequence(const UChar*, size_t) const;
-    void applyTransforms(GlyphBuffer&, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection) const;
+    GlyphBufferAdvance applyTransforms(GlyphBuffer&, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection) const;
 
     // Returns nullopt if none of the glyphs are OT-SVG glyphs.
-    Optional<BitVector> findOTSVGGlyphs(const GlyphBufferGlyph*, unsigned count) const;
+    std::optional<BitVector> findOTSVGGlyphs(const GlyphBufferGlyph*, unsigned count) const;
+
+    bool hasAnyComplexColorFormatGlyphs(const GlyphBufferGlyph*, unsigned count) const;
 
 #if PLATFORM(WIN)
     SCRIPT_FONTPROPERTIES* scriptFontProperties() const;
@@ -231,8 +211,11 @@ public:
     static float ascentConsideringMacAscentHack(const WCHAR*, float ascent, float descent);
 #endif
 
+    void setIsUsedInSystemFallbackFontCache() { m_isUsedInSystemFallbackFontCache = true; }
+    bool isUsedInSystemFallbackFontCache() const { return m_isUsedInSystemFallbackFontCache; }
+
 private:
-    WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, Optional<RenderingResourceIdentifier>);
+    WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, std::optional<RenderingResourceIdentifier>);
 
     void platformInit();
     void platformGlyphInit();
@@ -245,8 +228,6 @@ private:
     RefPtr<Font> createScaledFont(const FontDescription&, float scaleFactor) const;
     RefPtr<Font> platformCreateScaledFont(const FontDescription&, float scaleFactor) const;
 
-    void removeFromSystemFallbackCache();
-
     struct DerivedFonts;
     DerivedFonts& ensureDerivedFontData() const;
 
@@ -255,6 +236,42 @@ private:
     void platformCommonDestroy();
     FloatRect boundsForGDIGlyph(Glyph) const;
     float widthForGDIGlyph(Glyph) const;
+#endif
+
+    FloatRect platformBoundsForGlyph(Glyph) const;
+    float platformWidthForGlyph(Glyph) const;
+    Path platformPathForGlyph(Glyph) const;
+
+#if PLATFORM(COCOA)
+    class ComplexColorFormatGlyphs {
+    public:
+        static ComplexColorFormatGlyphs createWithNoRelevantTables();
+        static ComplexColorFormatGlyphs createWithRelevantTablesAndGlyphCount(unsigned glyphCount);
+
+        bool hasValueFor(Glyph) const;
+        bool get(Glyph) const;
+        void set(Glyph, bool value);
+
+        bool hasRelevantTables() const { return m_hasRelevantTables; }
+
+    private:
+        static constexpr size_t bitForInitialized(Glyph glyphID) { return static_cast<size_t>(glyphID) * 2; }
+        static constexpr size_t bitForValue(Glyph glyphID) { return static_cast<size_t>(glyphID) * 2 + 1; }
+        static constexpr size_t bitsRequiredForGlyphCount(unsigned glyphCount) { return glyphCount * 2; }
+
+        ComplexColorFormatGlyphs(bool hasRelevantTables, unsigned glyphCount)
+            : m_hasRelevantTables(hasRelevantTables)
+            , m_bits(bitsRequiredForGlyphCount(glyphCount))
+        { }
+
+        bool m_hasRelevantTables;
+        BitVector m_bits; // pairs of (initialized, value) bits
+    };
+
+    const PAL::OTSVGTable& otSVGTable() const;
+    bool glyphHasComplexColorFormat(Glyph) const;
+    bool hasComplexColorFormatTables() const;
+    ComplexColorFormatGlyphs& glyphsWithComplexColorFormat() const;
 #endif
 
     FontMetrics m_fontMetrics;
@@ -267,7 +284,7 @@ private:
     mutable HashMap<unsigned, RefPtr<GlyphPage>> m_glyphPages;
     mutable std::unique_ptr<GlyphMetricsMap<FloatRect>> m_glyphToBoundsMap;
     mutable GlyphMetricsMap<float> m_glyphToWidthMap;
-    mutable GlyphMetricsMap<Optional<Path>> m_glyphPathMap;
+    mutable GlyphMetricsMap<std::optional<Path>> m_glyphPathMap;
     mutable BitVector m_codePointSupport;
 
     mutable RefPtr<OpenTypeMathData> m_mathData;
@@ -275,7 +292,7 @@ private:
     RefPtr<OpenTypeVerticalData> m_verticalData;
 #endif
 
-    mutable Optional<RenderingResourceIdentifier> m_renderingResourceIdentifier;
+    mutable std::optional<RenderingResourceIdentifier> m_renderingResourceIdentifier;
 
     struct DerivedFonts {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -293,11 +310,12 @@ private:
     mutable std::unique_ptr<DerivedFonts> m_derivedFontData;
 
 #if PLATFORM(COCOA)
-    mutable Optional<BitVector> m_glyphsSupportedBySmallCaps;
-    mutable Optional<BitVector> m_glyphsSupportedByAllSmallCaps;
-    mutable Optional<BitVector> m_glyphsSupportedByPetiteCaps;
-    mutable Optional<BitVector> m_glyphsSupportedByAllPetiteCaps;
-    mutable Optional<PAL::OTSVGTable> m_otSVGTable;
+    mutable std::optional<BitVector> m_glyphsSupportedBySmallCaps;
+    mutable std::optional<BitVector> m_glyphsSupportedByAllSmallCaps;
+    mutable std::optional<BitVector> m_glyphsSupportedByPetiteCaps;
+    mutable std::optional<BitVector> m_glyphsSupportedByAllPetiteCaps;
+    mutable std::optional<PAL::OTSVGTable> m_otSVGTable;
+    mutable std::optional<ComplexColorFormatGlyphs> m_glyphsWithComplexColorFormat; // SVG and sbix
 #endif
 
 #if PLATFORM(WIN)
@@ -306,18 +324,14 @@ private:
 #endif
 
     Glyph m_spaceGlyph { 0 };
-    Glyph m_zeroGlyph { 0 };
     Glyph m_zeroWidthSpaceGlyph { 0 };
 
     Origin m_origin; // Whether or not we are custom font loaded via @font-face
     Visibility m_visibility; // @font-face's internal timer can cause us to show fonts even when a font is being downloaded.
 
     float m_spaceWidth { 0 };
-    float m_adjustedSpaceWidth { 0 };
 
-#if USE(CG) || USE(DIRECT2D) || USE(CAIRO) || PLATFORM(JAVA)
     float m_syntheticBoldOffset { 0 };
-#endif
 
     unsigned m_treatAsFixedPitch : 1;
     unsigned m_isInterstitial : 1; // Whether or not this custom font is the last resort placeholder for a loading font
@@ -326,7 +340,7 @@ private:
     unsigned m_isBrokenIdeographFallback : 1;
     unsigned m_hasVerticalGlyphs : 1;
 
-    unsigned m_isUsedInSystemFallbackCache : 1;
+    unsigned m_isUsedInSystemFallbackFontCache : 1;
 
     unsigned m_allowsAntialiasing : 1;
 
@@ -360,7 +374,7 @@ ALWAYS_INLINE FloatRect Font::boundsForGlyph(Glyph glyph) const
     return bounds;
 }
 
-ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph) const
+ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph, SyntheticBoldInclusion SyntheticBoldInclusion) const
 {
     // The optimization of returning 0 for the zero-width-space glyph is incorrect for the LastResort font,
     // used in place of the actual font when isLoading() is true on both macOS and iOS.
@@ -371,24 +385,22 @@ ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph) const
 
     float width = m_glyphToWidthMap.metricsForGlyph(glyph);
     if (width != cGlyphSizeUnknown)
-        return width;
+        return width + (SyntheticBoldInclusion == SyntheticBoldInclusion::Incorporate ? syntheticBoldOffset() : 0);
 
 #if ENABLE(OPENTYPE_VERTICAL)
-    if (m_verticalData) {
-#if USE(CG) || USE(DIRECT2D) || USE(CAIRO)
-        width = m_verticalData->advanceHeight(this, glyph) + m_syntheticBoldOffset;
-#else
+    if (m_verticalData)
         width = m_verticalData->advanceHeight(this, glyph);
-#endif
-    } else
+    else
 #endif
         width = platformWidthForGlyph(glyph);
 
     m_glyphToWidthMap.setMetricsForGlyph(glyph, width);
-    return width;
+    return width + (SyntheticBoldInclusion == SyntheticBoldInclusion::Incorporate ? syntheticBoldOffset() : 0);
 }
 
-using FontRenderingResourceMap = HashMap<RenderingResourceIdentifier, Ref<Font>>;
+#if !LOG_DISABLED
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Font&);
+#endif
 
 } // namespace WebCore
 
@@ -424,5 +436,3 @@ template<> struct EnumTraits<WebCore::Font::OrientationFallback> {
 };
 
 }
-
-#endif // Font_h

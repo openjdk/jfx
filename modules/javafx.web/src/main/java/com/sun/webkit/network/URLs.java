@@ -98,7 +98,7 @@ public final class URLs {
 
             try {
                 // We should be able to specify one of our stream handlers for the URL
-                // when running as an applet or a web start app.
+                // when running with a security manager
                 @SuppressWarnings("removal")
                 URL result = AccessController.doPrivileged((PrivilegedAction<URL>) () -> {
                     try {

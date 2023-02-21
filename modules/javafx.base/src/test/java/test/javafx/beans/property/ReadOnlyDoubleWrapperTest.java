@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,8 +63,8 @@ public class ReadOnlyDoubleWrapperTest {
         readOnlyProperty = property.getReadOnlyProperty();
         internalInvalidationListener = new InvalidationListenerMock();
         publicInvalidationListener = new InvalidationListenerMock();
-        internalChangeListener = new ChangeListenerMock<Number>(UNDEFINED);
-        publicChangeListener = new ChangeListenerMock<Number>(UNDEFINED);
+        internalChangeListener = new ChangeListenerMock<>(UNDEFINED);
+        publicChangeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListeners() {
@@ -92,13 +92,13 @@ public class ReadOnlyDoubleWrapperTest {
     public void testConstructor_NoArguments() {
         final ReadOnlyDoubleWrapper p1 = new ReadOnlyDoubleWrapper();
         assertEquals(DEFAULT, p1.get(), EPSILON);
-        assertEquals((Double)DEFAULT, p1.getValue(), EPSILON);
+        assertEquals(DEFAULT, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(null, p1.getBean());
         assertEquals("", p1.getName());
         final ReadOnlyDoubleProperty r1 = p1.getReadOnlyProperty();
         assertEquals(DEFAULT, r1.get(), EPSILON);
-        assertEquals((Double)DEFAULT, r1.getValue(), EPSILON);
+        assertEquals(DEFAULT, r1.getValue(), EPSILON);
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
@@ -107,13 +107,13 @@ public class ReadOnlyDoubleWrapperTest {
     public void testConstructor_InitialValue() {
         final ReadOnlyDoubleWrapper p1 = new ReadOnlyDoubleWrapper(VALUE_1);
         assertEquals(VALUE_1, p1.get(), EPSILON);
-        assertEquals((Double)VALUE_1, p1.getValue(), EPSILON);
+        assertEquals(VALUE_1, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(null, p1.getBean());
         assertEquals("", p1.getName());
         final ReadOnlyDoubleProperty r1 = p1.getReadOnlyProperty();
         assertEquals(VALUE_1, r1.get(), EPSILON);
-        assertEquals((Double)VALUE_1, r1.getValue(), EPSILON);
+        assertEquals(VALUE_1, r1.getValue(), EPSILON);
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
@@ -124,13 +124,13 @@ public class ReadOnlyDoubleWrapperTest {
         final String name = "My name";
         final ReadOnlyDoubleWrapper p1 = new ReadOnlyDoubleWrapper(bean, name);
         assertEquals(DEFAULT, p1.get(), EPSILON);
-        assertEquals((Double)DEFAULT, p1.getValue(), EPSILON);
+        assertEquals(DEFAULT, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(bean, p1.getBean());
         assertEquals(name, p1.getName());
         final ReadOnlyDoubleProperty r1 = p1.getReadOnlyProperty();
         assertEquals(DEFAULT, r1.get(), EPSILON);
-        assertEquals((Double)DEFAULT, r1.getValue(), EPSILON);
+        assertEquals(DEFAULT, r1.getValue(), EPSILON);
         assertEquals(bean, r1.getBean());
         assertEquals(name, r1.getName());
     }
@@ -141,13 +141,13 @@ public class ReadOnlyDoubleWrapperTest {
         final String name = "My name";
         final ReadOnlyDoubleWrapper p1 = new ReadOnlyDoubleWrapper(bean, name, VALUE_1);
         assertEquals(VALUE_1, p1.get(), EPSILON);
-        assertEquals((Double)VALUE_1, p1.getValue(), EPSILON);
+        assertEquals(VALUE_1, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(bean, p1.getBean());
         assertEquals(name, p1.getName());
         final ReadOnlyDoubleProperty r1 = p1.getReadOnlyProperty();
         assertEquals(VALUE_1, r1.get(), EPSILON);
-        assertEquals((Double)VALUE_1, r1.getValue(), EPSILON);
+        assertEquals(VALUE_1, r1.getValue(), EPSILON);
         assertEquals(bean, r1.getBean());
         assertEquals(name, r1.getName());
     }
@@ -442,7 +442,7 @@ public class ReadOnlyDoubleWrapperTest {
     @Test
     public void testLazyBind_generic() {
         attachInvalidationListeners();
-        final ObservableObjectValueStub<Double> v = new ObservableObjectValueStub<Double>(VALUE_1);
+        final ObservableObjectValueStub<Double> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get(), EPSILON);
@@ -482,7 +482,7 @@ public class ReadOnlyDoubleWrapperTest {
     @Test
     public void testInternalEagerBind_generic() {
         attachInternalChangeListener();
-        final ObservableObjectValueStub<Double> v = new ObservableObjectValueStub<Double>(VALUE_1);
+        final ObservableObjectValueStub<Double> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get(), EPSILON);
@@ -518,7 +518,7 @@ public class ReadOnlyDoubleWrapperTest {
     @Test
     public void testPublicEagerBind_generic() {
         attachPublicChangeListener();
-        final ObservableObjectValueStub<Double> v = new ObservableObjectValueStub<Double>(VALUE_1);
+        final ObservableObjectValueStub<Double> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get(), EPSILON);

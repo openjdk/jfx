@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ public final class KeyCodeMap {
     private static final Map<Integer, KeyCode> charMap;
 
     static {
-        charMap = new HashMap<Integer, KeyCode>(KeyCode.values().length);
+        charMap = new HashMap<>(KeyCode.values().length);
 
         for (KeyCode c : KeyCode.values()) {
             charMap.put(c.getCode(), c);

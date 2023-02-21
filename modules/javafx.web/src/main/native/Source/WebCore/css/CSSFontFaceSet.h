@@ -26,9 +26,9 @@
 #pragma once
 
 #include "CSSFontFace.h"
+#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/Observer.h>
-#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/StringHash.h>
@@ -57,6 +57,9 @@ public:
     };
     void addFontEventClient(const FontEventClient&);
 
+    // Calling updateStyleIfNeeded() might delete |this|.
+    void updateStyleIfNeeded();
+
     bool hasFace(const CSSFontFace&) const;
     size_t faceCount() const { return m_faces.size(); }
     void add(CSSFontFace&);
@@ -77,11 +80,15 @@ public:
 
     bool hasActiveFontFaces() { return status() == Status::Loading; }
 
+    size_t facesPartitionIndex() const { return m_facesPartitionIndex; }
+
     ExceptionOr<Vector<std::reference_wrapper<CSSFontFace>>> matchingFacesExcludingPreinstalledFonts(const String& font, const String& text);
 
     // CSSFontFace::Client needs to be able to be held in a RefPtr.
     void ref() final { RefCounted::ref(); }
     void deref() final { RefCounted::deref(); }
+    // FIXME: Should this be implemented?
+    void updateStyleIfNeeded(CSSFontFace&) final { }
 
 private:
     CSSFontFaceSet(CSSFontSelector*);
@@ -99,7 +106,7 @@ private:
 
     static String familyNameFromPrimitive(const CSSPrimitiveValue&);
 
-    using FontSelectionKey = Optional<FontSelectionRequest>;
+    using FontSelectionKey = std::optional<FontSelectionRequest>;
     struct FontSelectionKeyHash {
         static unsigned hash(const FontSelectionKey& key) { return computeHash(key); }
         static bool equal(const FontSelectionKey& a, const FontSelectionKey& b) { return a == b; }
@@ -108,7 +115,7 @@ private:
     struct FontSelectionKeyHashTraits : SimpleClassHashTraits<FontSelectionKey> {
         static const bool emptyValueIsZero = false;
         static FontSelectionKey emptyValue() { return FontSelectionRequest { }; }
-        static void constructDeletedValue(FontSelectionKey& slot) { slot = WTF::nullopt; }
+        static void constructDeletedValue(FontSelectionKey& slot) { slot = std::nullopt; }
         static bool isDeletedValue(const FontSelectionKey& value) { return !value; }
     };
     using FontSelectionHashMap = HashMap<FontSelectionKey, RefPtr<CSSSegmentedFontFace>, FontSelectionKeyHash, FontSelectionKeyHashTraits>;

@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <wtf/Optional.h>
+#include <optional>
 #include <wtf/SystemFree.h>
 
 namespace WTF {
@@ -39,8 +39,9 @@ public:
     WTF_EXPORT_PRIVATE static std::unique_ptr<StackTrace> captureStackTrace(int maxFrames, int framesToSkip = 0);
 
     // Borrowed stack trace.
-    StackTrace(void** stack, int size)
-        : m_size(size)
+    StackTrace(void** stack, int size, const char* prefix = "")
+        : m_prefix(prefix)
+        , m_size(size)
         , m_capacity(0)
         , m_borrowedStack(stack)
     { }
@@ -70,7 +71,7 @@ public:
         std::unique_ptr<const char[], SystemFree<const char[]>> m_demangledName;
     };
 
-    WTF_EXPORT_PRIVATE static Optional<DemangleEntry> demangle(void*);
+    WTF_EXPORT_PRIVATE static std::optional<DemangleEntry> demangle(void*);
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&, const char* indentString = nullptr) const;
 
@@ -80,6 +81,8 @@ private:
     StackTrace()
         : m_size(0)
     { }
+
+    const char* m_prefix { nullptr };
 
     // We structure the top fields this way because the underlying stack capture
     // facility will capture from the top of the stack, and we'll need to skip the

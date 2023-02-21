@@ -38,8 +38,11 @@
 namespace WebCore {
 
 class DocumentLoader;
+class DocumentLoadTiming;
 class LoadTiming;
-struct DocumentTiming;
+class NetworkLoadMetrics;
+
+struct DocumentEventTiming;
 
 class PerformanceTiming : public RefCounted<PerformanceTiming>, public DOMWindowProperty {
 public:
@@ -70,11 +73,33 @@ public:
 private:
     explicit PerformanceTiming(DOMWindow*);
 
-    const DocumentTiming* documentTiming() const;
-    DocumentLoader* documentLoader() const;
-    LoadTiming* loadTiming() const;
-    unsigned long long resourceLoadTimeRelativeToFetchStart(Seconds) const;
+    const DocumentEventTiming* documentEventTiming() const;
+    const DocumentLoader* documentLoader() const;
+    const DocumentLoadTiming* documentLoadTiming() const;
+    const NetworkLoadMetrics* networkLoadMetrics() const;
     unsigned long long monotonicTimeToIntegerMilliseconds(MonotonicTime) const;
+
+    mutable unsigned long long m_navigationStart { 0 };
+    mutable unsigned long long m_unloadEventStart { 0 };
+    mutable unsigned long long m_unloadEventEnd { 0 };
+    mutable unsigned long long m_redirectStart { 0 };
+    mutable unsigned long long m_redirectEnd { 0 };
+    mutable unsigned long long m_fetchStart { 0 };
+    mutable unsigned long long m_domainLookupStart { 0 };
+    mutable unsigned long long m_domainLookupEnd { 0 };
+    mutable unsigned long long m_connectStart { 0 };
+    mutable unsigned long long m_connectEnd { 0 };
+    mutable unsigned long long m_secureConnectionStart { 0 };
+    mutable unsigned long long m_requestStart { 0 };
+    mutable unsigned long long m_responseStart { 0 };
+    mutable unsigned long long m_responseEnd { 0 };
+    mutable unsigned long long m_domLoading { 0 };
+    mutable unsigned long long m_domInteractive { 0 };
+    mutable unsigned long long m_domContentLoadedEventStart { 0 };
+    mutable unsigned long long m_domContentLoadedEventEnd { 0 };
+    mutable unsigned long long m_domComplete { 0 };
+    mutable unsigned long long m_loadEventStart { 0 };
+    mutable unsigned long long m_loadEventEnd { 0 };
 };
 
 } // namespace WebCore

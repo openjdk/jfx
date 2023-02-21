@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,21 @@
 
 #pragma once
 
-#include "AlignedMemoryAllocator.h"
+#include "IsoMemoryAllocatorBase.h"
+#include <wtf/BitVector.h>
 #include <wtf/DebugHeap.h>
-#include <wtf/FastBitVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
 
 namespace JSC {
 
-class IsoAlignedMemoryAllocator final : public AlignedMemoryAllocator {
+class IsoAlignedMemoryAllocator final : public IsoMemoryAllocatorBase {
 public:
+    using Base = IsoMemoryAllocatorBase;
+
     IsoAlignedMemoryAllocator(CString);
     ~IsoAlignedMemoryAllocator() final;
-
-    void* tryAllocateAlignedMemory(size_t alignment, size_t size) final;
-    void freeAlignedMemory(void*) final;
 
     void dump(PrintStream&) const final;
 
@@ -48,17 +47,11 @@ public:
     void freeMemory(void*) final;
     void* tryReallocateMemory(void*, size_t) final;
 
-private:
-#if ENABLE(MALLOC_HEAP_BREAKDOWN)
-    // If breakdown is enabled, we do not ensure Iso-feature. This is totally OK since breakdown is memory bloat debugging feature.
-    WTF::DebugHeap m_debugHeap;
-#else
-    Vector<void*> m_blocks;
-    HashMap<void*, unsigned> m_blockIndices;
-    FastBitVector m_committed;
-    unsigned m_firstUncommitted { 0 };
-    Lock m_lock;
-#endif
+protected:
+    void* tryMallocBlock() final;
+    void freeBlock(void* block) final;
+    void commitBlock(void* block) final;
+    void decommitBlock(void* block) final;
 };
 
 } // namespace JSC

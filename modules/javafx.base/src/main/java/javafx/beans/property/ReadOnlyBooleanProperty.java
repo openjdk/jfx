@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanExpression;
 
@@ -135,7 +134,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
      */
     @Override
     public ReadOnlyObjectProperty<Boolean> asObject() {
-        return new ReadOnlyObjectPropertyBase<Boolean>() {
+        return new ReadOnlyObjectPropertyBase<>() {
 
             private boolean valid = true;
             private final InvalidationListener listener = observable -> {
@@ -165,6 +164,6 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
                 return ReadOnlyBooleanProperty.this.getValue();
             }
         };
-    };
+    }
 
 }

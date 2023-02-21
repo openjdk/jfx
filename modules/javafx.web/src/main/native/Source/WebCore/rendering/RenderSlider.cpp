@@ -61,7 +61,7 @@ HTMLInputElement& RenderSlider::element() const
     return downcast<HTMLInputElement>(nodeForNonAnonymous());
 }
 
-int RenderSlider::baselinePosition(FontBaseline, bool /*firstLine*/, LineDirectionMode, LinePositionMode) const
+LayoutUnit RenderSlider::baselinePosition(FontBaseline, bool /*firstLine*/, LineDirectionMode, LinePositionMode) const
 {
     // FIXME: Patch this function for writing-mode.
     return height() + marginTop();
@@ -69,6 +69,8 @@ int RenderSlider::baselinePosition(FontBaseline, bool /*firstLine*/, LineDirecti
 
 void RenderSlider::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
+    if (shouldApplySizeContainment())
+        return;
     maxLogicalWidth = defaultTrackLength * style().effectiveZoom();
     if (!style().width().isPercentOrCalculated())
         minLogicalWidth = maxLogicalWidth;
@@ -87,18 +89,6 @@ void RenderSlider::computePreferredLogicalWidths()
     RenderBox::computePreferredLogicalWidths(style().minWidth(), style().maxWidth(), horizontalBorderAndPaddingExtent());
 
     setPreferredLogicalWidthsDirty(false);
-}
-
-void RenderSlider::layout()
-{
-    StackStats::LayoutCheckPoint layoutCheckPoint;
-
-    // FIXME: Find a way to cascade appearance. http://webkit.org/b/62535
-    RenderBox* thumbBox = element().sliderThumbElement()->renderBox();
-    if (thumbBox && thumbBox->isSliderThumb())
-        static_cast<RenderSliderThumb*>(thumbBox)->updateAppearance(&style());
-
-    RenderFlexibleBox::layout();
 }
 
 bool RenderSlider::inDragMode() const

@@ -114,6 +114,8 @@ GST_EXPORT GstFlowReturn
 gst_spectrum_transform_ip_api (GstBaseTransform * trans, GstBuffer * buffer);
 #endif // GSTREAMER_LITE and OSX
 
+GST_ELEMENT_REGISTER_DECLARE (spectrum);
+
 G_END_DECLS
 
 #endif /* __GST_SPECTRUM_H__ */

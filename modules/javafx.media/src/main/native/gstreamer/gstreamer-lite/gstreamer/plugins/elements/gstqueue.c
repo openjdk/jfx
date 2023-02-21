@@ -60,6 +60,7 @@
 
 #include <gst/gst.h>
 #include "gstqueue.h"
+#include "gstcoreelementselements.h"
 
 #include "../../gst/gst-i18n-lib.h"
 #include "../../gst/glib-compat-private.h"
@@ -187,6 +188,7 @@ enum
         "dataflow inside the queue element");
 #define gst_queue_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstQueue, gst_queue, GST_TYPE_ELEMENT, _do_init);
+GST_ELEMENT_REGISTER_DEFINE (queue, "queue", GST_RANK_NONE, GST_TYPE_QUEUE);
 
 static void gst_queue_finalize (GObject * object);
 static void gst_queue_set_property (GObject * object,

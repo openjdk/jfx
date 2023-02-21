@@ -23,17 +23,18 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://immersive-web.github.io/webxr/#xrinputsource
 [
-    EnabledAtRuntime=WebXR,
+    GenerateIsReachable=ImplWebXRSessionRoot,
     Conditional=WEBXR,
+    EnabledBySetting=WebXREnabled,
     SecureContext,
     Exposed=Window,
-    ImplementationLacksVTable,
     InterfaceName=XRInputSource
 ] interface WebXRInputSource {
     readonly attribute XRHandedness handedness;
     readonly attribute XRTargetRayMode targetRayMode ;
     [SameObject] readonly attribute WebXRSpace targetRaySpace;
     [SameObject] readonly attribute WebXRSpace? gripSpace ;
-    [SameObject] readonly attribute FrozenArray<DOMString> profiles;
+    [CachedAttribute, SameObject] readonly attribute FrozenArray<DOMString> profiles;
 };

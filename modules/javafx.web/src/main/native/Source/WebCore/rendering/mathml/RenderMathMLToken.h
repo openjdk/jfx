@@ -49,13 +49,13 @@ public:
 protected:
     void paint(PaintInfo&, const LayoutPoint&) override;
     void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) override;
-    Optional<int> firstLineBaseline() const override;
+    std::optional<LayoutUnit> firstLineBaseline() const override;
     void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
     void computePreferredLogicalWidths() override;
 
 private:
     bool isRenderMathMLToken() const final { return true; }
-    const char* renderName() const override { return "RenderMathMLToken"; }
+    ASCIILiteral renderName() const override { return "RenderMathMLToken"_s; }
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const final { return true; };
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
     void updateMathVariantGlyph();
@@ -64,7 +64,7 @@ private:
         m_mathVariantGlyphDirty = true;
         setNeedsLayoutAndPrefWidthsRecalc();
     }
-    Optional<UChar32> m_mathVariantCodePoint { WTF::nullopt };
+    std::optional<UChar32> m_mathVariantCodePoint { std::nullopt };
     bool m_mathVariantIsMirrored { false };
     bool m_mathVariantGlyphDirty { false };
 };

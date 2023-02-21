@@ -113,18 +113,19 @@ private:
     // ActiveDOMObject
     const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
+    void stop() final;
 
     // DisplayChangedObserver
     void displayChanged(PlatformDisplayID);
 
 #if !RELEASE_LOG_DISABLED
     // LoggerHelper
-    const WTF::Logger& logger() const { return m_logger; }
+    const Logger& logger() const { return m_logger; }
     const char* logClassName() const { return "MediaKeySession"; }
     WTFLogChannel& logChannel() const;
     const void* logIdentifier() const { return m_logIdentifier; }
 
-    Ref<WTF::Logger> m_logger;
+    Ref<Logger> m_logger;
     const void* m_logIdentifier;
 #endif
 

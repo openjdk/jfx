@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -117,21 +117,26 @@ final class SWGraphics implements ReadbackGraphics {
         this.setClipRect(null);
     }
 
+    @Override
     public RenderTarget getRenderTarget() {
         return target;
     }
 
+    @Override
     public SWResourceFactory getResourceFactory() {
         return target.getResourceFactory();
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return target.getAssociatedScreen();
     }
 
+    @Override
     public void sync() {
     }
 
+    @Override
     public BaseTransform getTransformNoClone() {
         if (PrismSettings.debug) {
             System.out.println("+ getTransformNoClone " + this + "; tr: " + tx);
@@ -139,6 +144,7 @@ final class SWGraphics implements ReadbackGraphics {
         return tx;
     }
 
+    @Override
     public void setTransform(BaseTransform xform) {
         if (xform == null) {
             xform = BaseTransform.IDENTITY_TRANSFORM;
@@ -149,6 +155,7 @@ final class SWGraphics implements ReadbackGraphics {
         tx.setTransform(xform);
     }
 
+    @Override
     public void setTransform(double m00, double m10,
                              double m01, double m11,
                              double m02, double m12) {
@@ -158,6 +165,7 @@ final class SWGraphics implements ReadbackGraphics {
         }
     }
 
+    @Override
     public void setTransform3D(double mxx, double mxy, double mxz, double mxt,
                                double myx, double myy, double myz, double myt,
                                double mzx, double mzy, double mzz, double mzt) {
@@ -169,6 +177,7 @@ final class SWGraphics implements ReadbackGraphics {
         setTransform(mxx, myx, mxy, myy, mxt, myt);
     }
 
+    @Override
     public void transform(BaseTransform xform) {
         if (PrismSettings.debug) {
             System.out.println("+ concatTransform " + this + "; tr: " + xform);
@@ -176,6 +185,7 @@ final class SWGraphics implements ReadbackGraphics {
         tx.deriveWithConcatenation(xform);
     }
 
+    @Override
     public void translate(float tx, float ty) {
         if (PrismSettings.debug) {
             System.out.println("+ concat translate " + this + "; tx: " + tx + "; ty: " + ty);
@@ -183,10 +193,12 @@ final class SWGraphics implements ReadbackGraphics {
         this.tx.deriveWithTranslation(tx, ty);
     }
 
+    @Override
     public void translate(float tx, float ty, float tz) {
         throw new UnsupportedOperationException("translate3D: unimp");
     }
 
+    @Override
     public void scale(float sx, float sy) {
         if (PrismSettings.debug) {
             System.out.println("+ concat scale " + this + "; sx: " + sx + "; sy: " + sy);
@@ -194,32 +206,41 @@ final class SWGraphics implements ReadbackGraphics {
         tx.deriveWithConcatenation(sx, 0, 0, sy, 0, 0);
     }
 
+    @Override
     public void scale(float sx, float sy, float sz) {
         throw new UnsupportedOperationException("scale3D: unimp");
     }
 
+    @Override
     public void setCamera(NGCamera camera) {
     }
 
+    @Override
     public void setPerspectiveTransform(GeneralTransform3D transform) {
     }
 
+    @Override
     public NGCamera getCameraNoClone() {
         throw new UnsupportedOperationException("getCameraNoClone: unimp");
     }
 
+    @Override
     public void setDepthTest(boolean depthTest) { }
 
+    @Override
     public boolean isDepthTest() {
         return false;
     }
 
+    @Override
     public void setDepthBuffer(boolean depthBuffer) { }
 
+    @Override
     public boolean isDepthBuffer() {
         return false;
     }
 
+    @Override
     public boolean isAlphaTestShader() {
         if (PrismSettings.verbose && PrismSettings.forceAlphaTestShader) {
             System.out.println("SW pipe doesn't support shader with alpha testing");
@@ -227,26 +248,32 @@ final class SWGraphics implements ReadbackGraphics {
         return false;
     }
 
+    @Override
     public void setAntialiasedShape(boolean aa) {
         antialiasedShape = aa;
     }
 
+    @Override
     public boolean isAntialiasedShape() {
         return antialiasedShape;
     }
 
+    @Override
     public Rectangle getClipRect() {
         return (clip == null) ? null : new Rectangle(clip);
     }
 
+    @Override
     public Rectangle getClipRectNoClone() {
         return clip;
     }
 
+    @Override
     public RectBounds getFinalClipNoClone() {
         return finalClip.toRectBounds();
     }
 
+    @Override
     public void setClipRect(Rectangle clipRect) {
         finalClip.setBounds(target.getDimensions());
         if (clipRect == null) {
@@ -264,18 +291,22 @@ final class SWGraphics implements ReadbackGraphics {
         pr.setClip(finalClip.x, finalClip.y, finalClip.width, finalClip.height);
     }
 
+    @Override
     public void setHasPreCullingBits(boolean hasBits) {
         this.hasPreCullingBits = hasBits;
     }
 
+    @Override
     public boolean hasPreCullingBits() {
         return this.hasPreCullingBits;
     }
 
+    @Override
     public int getClipRectIndex() {
         return clipRectIndex;
     }
 
+    @Override
     public void setClipRectIndex(int index) {
         if (PrismSettings.debug) {
             System.out.println("+ PR.setClipRectIndex: " + index);
@@ -283,10 +314,12 @@ final class SWGraphics implements ReadbackGraphics {
         clipRectIndex = index;
     }
 
+    @Override
     public float getExtraAlpha() {
         return swPaint.getCompositeAlpha();
     }
 
+    @Override
     public void setExtraAlpha(float extraAlpha) {
         if (PrismSettings.debug) {
             System.out.println("PR.setCompositeAlpha, value: " + extraAlpha);
@@ -294,28 +327,34 @@ final class SWGraphics implements ReadbackGraphics {
         swPaint.setCompositeAlpha(extraAlpha);
     }
 
+    @Override
     public Paint getPaint() {
         return paint;
     }
 
+    @Override
     public void setPaint(Paint paint) {
         this.paint = paint;
     }
 
 
 
+    @Override
     public BasicStroke getStroke() {
         return stroke;
     }
 
+    @Override
     public void setStroke(BasicStroke stroke) {
         this.stroke = stroke;
     }
 
+    @Override
     public CompositeMode getCompositeMode() {
         return compositeMode;
     }
 
+    @Override
     public void setCompositeMode(CompositeMode mode) {
         this.compositeMode = mode;
 
@@ -345,6 +384,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.pr.setCompositeRule(piscesComp);
     }
 
+    @Override
     public void setNodeBounds(RectBounds bounds) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.setNodeBounds: " + bounds);
@@ -352,6 +392,7 @@ final class SWGraphics implements ReadbackGraphics {
         nodeBounds = bounds;
     }
 
+    @Override
     public void clear() {
         this.clear(Color.TRANSPARENT);
     }
@@ -362,6 +403,7 @@ final class SWGraphics implements ReadbackGraphics {
      * if set.  To clear the entire surface, call {@code setClipRect(null)}
      * prior to calling {@code clear()}.
      */
+    @Override
     public void clear(Color color) {
         if (PrismSettings.debug) {
             System.out.println("+ PR.clear: " + color);
@@ -378,6 +420,7 @@ final class SWGraphics implements ReadbackGraphics {
      * user space).  Also note that unlike the {@code clear()} methods, this
      * method does not attempt to clear the depth buffer.
      */
+    @Override
     public void clearQuad(float x1, float y1, float x2, float y2) {
         final CompositeMode cm = this.compositeMode;
         final Paint p = this.paint;
@@ -388,6 +431,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.setPaint(p);
     }
 
+    @Override
     public void fill(Shape shape) {
         if (PrismSettings.debug) {
             System.out.println("+ fill(Shape)");
@@ -395,6 +439,7 @@ final class SWGraphics implements ReadbackGraphics {
         paintShape(shape, null, this.tx);
     }
 
+    @Override
     public void fillQuad(float x1, float y1, float x2, float y2) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.fillQuad");
@@ -402,6 +447,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.fillRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
     }
 
+    @Override
     public void fillRect(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.printf("+ SWG.fillRect, x: %f, y: %f, w: %f, h: %f\n", x, y, width, height);
@@ -463,6 +509,7 @@ final class SWGraphics implements ReadbackGraphics {
         }
     }
 
+    @Override
     public void fillRoundRect(float x, float y, float width, float height,
                               float arcw, float arch) {
         if (PrismSettings.debug) {
@@ -471,6 +518,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.paintRoundRect(x, y, width, height, arcw, arch, null);
     }
 
+    @Override
     public void fillEllipse(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.fillEllipse");
@@ -478,6 +526,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.paintEllipse(x, y, width, height, null);
     }
 
+    @Override
     public void draw(Shape shape) {
         if (PrismSettings.debug) {
             System.out.println("+ draw(Shape)");
@@ -535,6 +584,7 @@ final class SWGraphics implements ReadbackGraphics {
         paintShape(this.ellipse2d, st, this.tx);
     }
 
+    @Override
     public void drawLine(float x1, float y1, float x2, float y2) {
         if (PrismSettings.debug) {
             System.out.println("+ drawLine");
@@ -547,6 +597,7 @@ final class SWGraphics implements ReadbackGraphics {
         paintShape(this.line2d, this.stroke, this.tx);
     }
 
+    @Override
     public void drawRect(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.drawRect");
@@ -554,6 +605,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.drawRoundRect(x, y, width, height, 0, 0);
     }
 
+    @Override
     public void drawRoundRect(float x, float y, float width, float height,
                               float arcw, float arch) {
         if (PrismSettings.debug) {
@@ -562,6 +614,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.paintRoundRect(x, y, width, height, arcw, arch, stroke);
     }
 
+    @Override
     public void drawEllipse(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.drawEllipse");
@@ -569,6 +622,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.paintEllipse(x, y, width, height, stroke);
     }
 
+    @Override
     public void drawString(GlyphList gl, FontStrike strike, float x, float y,
                            Color selectColor, int selectStart, int selectEnd) {
 
@@ -665,6 +719,7 @@ final class SWGraphics implements ReadbackGraphics {
         }
     }
 
+    @Override
     public void drawTexture(Texture tex, float x, float y, float w, float h) {
         if (PrismSettings.debug) {
             System.out.printf("+ drawTexture1, x: %f, y: %f, w: %f, h: %f\n", x, y, w, h);
@@ -672,6 +727,7 @@ final class SWGraphics implements ReadbackGraphics {
         this.drawTexture(tex, x, y, x + w, y + h, 0, 0, w, h);
     }
 
+    @Override
     public void drawTexture(Texture tex,
                             float dx1, float dy1, float dx2, float dy2,
                             float sx1, float sy1, float sx2, float sy2)
@@ -827,6 +883,7 @@ final class SWGraphics implements ReadbackGraphics {
                 RendererBase.IMAGE_FRAC_EDGE_TRIM, RendererBase.IMAGE_FRAC_EDGE_KEEP);
     }
 
+    @Override
     public void drawTextureVO(Texture tex,
                               float topopacity, float botopacity,
                               float dx1, float dy1, float dx2, float dy2,
@@ -847,6 +904,7 @@ final class SWGraphics implements ReadbackGraphics {
                 RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP);
     }
 
+    @Override
     public void drawTextureRaw(Texture tex,
                                float dx1, float dy1, float dx2, float dy2,
                                float tx1, float ty1, float tx2, float ty2)
@@ -864,6 +922,7 @@ final class SWGraphics implements ReadbackGraphics {
         drawTexture(tex, dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
     }
 
+    @Override
     public void drawMappedTextureRaw(Texture tex,
                                      float dx1, float dy1, float dx2, float dy2,
                                      float tx11, float ty11, float tx21, float ty21,
@@ -900,10 +959,12 @@ final class SWGraphics implements ReadbackGraphics {
         tx.restoreTransform(_mxx, _myx, _mxy, _myy, _mxt, _myt);
     }
 
+    @Override
     public boolean canReadBack() {
         return true;
     }
 
+    @Override
     public RTTexture readBack(Rectangle view) {
         if (PrismSettings.debug) {
             System.out.println("+ readBack, rect: " + view + ", target.dims: " + target.getDimensions());
@@ -922,16 +983,20 @@ final class SWGraphics implements ReadbackGraphics {
         return rbb;
     }
 
+    @Override
     public void releaseReadBackBuffer(RTTexture view) {
     }
 
+    @Override
     public void setState3D(boolean flag) {
     }
 
+    @Override
     public boolean isState3D() {
         return false;
     }
 
+    @Override
     public void setup3DRendering() {
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,14 +77,17 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         loadAll(stream, width, height, preserveRatio, smooth);
     }
 
+    @Override
     public double getWidth() {
         return width;
     }
 
+    @Override
     public double getHeight() {
         return height;
     }
 
+    @Override
     public int getFrameCount() {
         if (images == null) {
             return 0;
@@ -92,6 +95,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         return images.length;
     }
 
+    @Override
     public PlatformImage getFrame(int index) {
         if (images == null) {
             return null;
@@ -99,6 +103,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         return images[index];
     }
 
+    @Override
     public int getFrameDelay(int index) {
         if (images == null) {
             return 0;
@@ -106,6 +111,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         return delayTimes[index];
     }
 
+    @Override
     public int getLoopCount() {
         if (images == null) {
             return 0;
@@ -113,6 +119,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         return loopCount;
     }
 
+    @Override
     public Exception getException() {
         return exception;
     }
@@ -124,7 +131,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         ImageLoadListener listener = new PrismLoadListener();
         try {
             ImageFrame[] imgFrames =
-                ImageStorage.loadAll(url, listener, w, h, preserveRatio, pixelScale, smooth);
+                ImageStorage.getInstance().loadAll(url, listener, w, h, preserveRatio, pixelScale, smooth);
             convertAll(imgFrames);
         } catch (ImageStorageException e) {
             handleException(e);
@@ -139,7 +146,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         ImageLoadListener listener = new PrismLoadListener();
         try {
             ImageFrame[] imgFrames =
-                ImageStorage.loadAll(stream, listener, w, h, preserveRatio, 1.0f, smooth);
+                ImageStorage.getInstance().loadAll(stream, listener, w, h, preserveRatio, 1.0f, smooth);
             convertAll(imgFrames);
         } catch (ImageStorageException e) {
             handleException(e);
@@ -202,10 +209,12 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
     }
 
     private class PrismLoadListener implements ImageLoadListener {
+        @Override
         public void imageLoadWarning(ImageLoader loader, String message) {
             getImageioLogger().warning(message);
         }
 
+        @Override
         public void imageLoadProgress(ImageLoader loader,
                                       float percentageComplete)
         {
@@ -217,6 +226,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
             // the built-in support for progress in the javafx-iio library...
         }
 
+        @Override
         public void imageLoadMetaData(ImageLoader loader, ImageMetadata metadata) {
             // We currently have no need to listen for ImageMetadata ready.
         }

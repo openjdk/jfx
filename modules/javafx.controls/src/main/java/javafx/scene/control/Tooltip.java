@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -215,7 +215,7 @@ public class Tooltip extends PopupControl {
         return textAlignmentProperty().getValue();
     }
     private final ObjectProperty<TextAlignment> textAlignment =
-            new SimpleStyleableObjectProperty<>(TEXT_ALIGNMENT, this, "textAlignment", TextAlignment.LEFT);;
+            new SimpleStyleableObjectProperty<>(TEXT_ALIGNMENT, this, "textAlignment", TextAlignment.LEFT);
 
     /**
      * Specifies the behavior to use if the text of the {@code Tooltip}
@@ -232,7 +232,7 @@ public class Tooltip extends PopupControl {
         return textOverrunProperty().getValue();
     }
     private final ObjectProperty<OverrunStyle> textOverrun =
-            new SimpleStyleableObjectProperty<OverrunStyle>(TEXT_OVERRUN, this, "textOverrun", OverrunStyle.ELLIPSIS);
+            new SimpleStyleableObjectProperty<>(TEXT_OVERRUN, this, "textOverrun", OverrunStyle.ELLIPSIS);
 
     /**
      * If a run of text exceeds the width of the Tooltip, then this variable
@@ -399,7 +399,7 @@ public class Tooltip extends PopupControl {
     public final Node getGraphic() {
         return graphicProperty().getValue();
     }
-    private final ObjectProperty<Node> graphic = new StyleableObjectProperty<Node>() {
+    private final ObjectProperty<Node> graphic = new StyleableObjectProperty<>() {
         // The graphic is styleable by css, but it is the
         // imageUrlProperty that handles the style value.
         @Override public CssMetaData getCssMetaData() {
@@ -581,7 +581,7 @@ public class Tooltip extends PopupControl {
 
 
     private static final CssMetaData<Tooltip.CSSBridge,Font> FONT =
-            new FontCssMetaData<Tooltip.CSSBridge>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
                 @Override
                 public boolean isSettable(Tooltip.CSSBridge cssBridge) {
@@ -595,8 +595,8 @@ public class Tooltip extends PopupControl {
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,TextAlignment> TEXT_ALIGNMENT =
-            new CssMetaData<Tooltip.CSSBridge,TextAlignment>("-fx-text-alignment",
-                    new EnumConverter<TextAlignment>(TextAlignment.class),
+            new CssMetaData<>("-fx-text-alignment",
+                    new EnumConverter<>(TextAlignment.class),
                     TextAlignment.LEFT) {
 
                 @Override
@@ -611,8 +611,8 @@ public class Tooltip extends PopupControl {
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,OverrunStyle> TEXT_OVERRUN =
-            new CssMetaData<Tooltip.CSSBridge,OverrunStyle>("-fx-text-overrun",
-                    new EnumConverter<OverrunStyle>(OverrunStyle.class),
+            new CssMetaData<>("-fx-text-overrun",
+                    new EnumConverter<>(OverrunStyle.class),
                     OverrunStyle.ELLIPSIS) {
 
                 @Override
@@ -627,7 +627,7 @@ public class Tooltip extends PopupControl {
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,Boolean> WRAP_TEXT =
-            new CssMetaData<Tooltip.CSSBridge,Boolean>("-fx-wrap-text",
+            new CssMetaData<>("-fx-wrap-text",
                     BooleanConverter.getInstance(), Boolean.FALSE) {
 
                 @Override
@@ -637,12 +637,12 @@ public class Tooltip extends PopupControl {
 
                 @Override
                 public StyleableProperty<Boolean> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
-                    return (StyleableProperty<Boolean>)(WritableValue<Boolean>)cssBridge.tooltip.wrapTextProperty();
+                    return (StyleableProperty<Boolean>)cssBridge.tooltip.wrapTextProperty();
                 }
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,String> GRAPHIC =
-            new CssMetaData<Tooltip.CSSBridge,String>("-fx-graphic",
+            new CssMetaData<>("-fx-graphic",
                     StringConverter.getInstance()) {
 
                 @Override
@@ -652,13 +652,13 @@ public class Tooltip extends PopupControl {
 
                 @Override
                 public StyleableProperty<String> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
-                    return (StyleableProperty<String>)cssBridge.tooltip.imageUrlProperty();
+                    return cssBridge.tooltip.imageUrlProperty();
                 }
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,ContentDisplay> CONTENT_DISPLAY =
-            new CssMetaData<Tooltip.CSSBridge,ContentDisplay>("-fx-content-display",
-                    new EnumConverter<ContentDisplay>(ContentDisplay.class),
+            new CssMetaData<>("-fx-content-display",
+                    new EnumConverter<>(ContentDisplay.class),
                     ContentDisplay.LEFT) {
 
                 @Override
@@ -673,7 +673,7 @@ public class Tooltip extends PopupControl {
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,Number> GRAPHIC_TEXT_GAP =
-            new CssMetaData<Tooltip.CSSBridge,Number>("-fx-graphic-text-gap",
+            new CssMetaData<>("-fx-graphic-text-gap",
                     SizeConverter.getInstance(), 4.0) {
 
                 @Override
@@ -683,12 +683,12 @@ public class Tooltip extends PopupControl {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
-                    return (StyleableProperty<Number>)(WritableValue<Number>)cssBridge.tooltip.graphicTextGapProperty();
+                    return (StyleableProperty<Number>)cssBridge.tooltip.graphicTextGapProperty();
                 }
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,Duration> SHOW_DELAY =
-            new CssMetaData<Tooltip.CSSBridge,Duration>("-fx-show-delay",
+            new CssMetaData<>("-fx-show-delay",
                     DurationConverter.getInstance(), new Duration(1000)) {
 
                 @Override
@@ -703,7 +703,7 @@ public class Tooltip extends PopupControl {
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,Duration> SHOW_DURATION =
-            new CssMetaData<Tooltip.CSSBridge,Duration>("-fx-show-duration",
+            new CssMetaData<>("-fx-show-duration",
                     DurationConverter.getInstance(), new Duration(5000)) {
 
                 @Override
@@ -718,7 +718,7 @@ public class Tooltip extends PopupControl {
             };
 
     private static final CssMetaData<Tooltip.CSSBridge,Duration> HIDE_DELAY =
-            new CssMetaData<Tooltip.CSSBridge,Duration>("-fx-hide-delay",
+            new CssMetaData<>("-fx-hide-delay",
                     DurationConverter.getInstance(), new Duration(200)) {
 
                 @Override
@@ -736,7 +736,7 @@ public class Tooltip extends PopupControl {
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
     static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(PopupControl.getClassCssMetaData());
+                new ArrayList<>(PopupControl.getClassCssMetaData());
         styleables.add(FONT);
         styleables.add(TEXT_ALIGNMENT);
         styleables.add(TEXT_OVERRUN);

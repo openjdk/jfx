@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -328,7 +328,7 @@ final public class StyleManager {
                 selectorPartitioning = null;
             }
 
-            this.parentUsers = new RefList<Parent>();
+            this.parentUsers = new RefList<>();
 
             this.checksum = checksum;
         }
@@ -369,7 +369,7 @@ final public class StyleManager {
     // package for testing
     static class RefList<K> {
 
-        final List<Reference<K>> list = new ArrayList<Reference<K>>();
+        final List<Reference<K>> list = new ArrayList<>();
 
         void add(K key) {
 
@@ -387,7 +387,7 @@ final public class StyleManager {
                 }
             }
             // not found, add it.
-            list.add(new WeakReference<K>(key));
+            list.add(new WeakReference<>(key));
         }
 
         void remove(K key) {
@@ -939,7 +939,7 @@ final public class StyleManager {
 
         } catch (IllegalArgumentException | NoSuchAlgorithmException | IOException | SecurityException e) {
             // IOException also covers MalformedURLException
-            // SecurityException means some untrusted applet
+            // SecurityException means some untrusted app
 
             // Fall through...
         }
@@ -1271,8 +1271,8 @@ final public class StyleManager {
                     if (fname == null || fname.isEmpty()) break;
 
                     StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-                    // assignment in this conditional is intentional!
-                    if(isSame = fname.equals(container.fname)) {
+                    isSame = fname.equals(container.fname);
+                    if (isSame) {
                         // don't use fname in calculateCheckSum since it is just the key to
                         // find the StylesheetContainer. Rather, use the URL of the
                         // stylesheet that was already loaded. For example, we could have
@@ -1580,7 +1580,7 @@ final public class StyleManager {
     private List<StylesheetContainer> processStylesheets(List<String> stylesheets, Parent parent) {
 
         synchronized (styleLock) {
-            final List<StylesheetContainer> list = new ArrayList<StylesheetContainer>();
+            final List<StylesheetContainer> list = new ArrayList<>();
             for (int n = 0, nMax = stylesheets.size(); n < nMax; n++) {
                 final String fname = stylesheets.get(n);
 
@@ -1964,14 +1964,14 @@ final public class StyleManager {
     static class CacheContainer {
 
         private Map<StyleCache.Key,StyleCache> getStyleCache() {
-            if (styleCache == null) styleCache = new HashMap<StyleCache.Key, StyleCache>();
+            if (styleCache == null) styleCache = new HashMap<>();
             return styleCache;
         }
 
         private Map<Key,Cache> getCacheMap(List<StylesheetContainer> parentStylesheets, String regionUserAgentStylesheet) {
 
             if (cacheMap == null) {
-                cacheMap = new HashMap<List<String>,Map<Key,Cache>>();
+                cacheMap = new HashMap<>();
             }
 
             synchronized (styleLock) {
@@ -1980,7 +1980,7 @@ final public class StyleManager {
 
                     Map<Key,Cache> cmap = cacheMap.get(null);
                     if (cmap == null) {
-                        cmap = new HashMap<Key,Cache>();
+                        cmap = new HashMap<>();
                         cacheMap.put(null, cmap);
                     }
                     return cmap;
@@ -1989,7 +1989,7 @@ final public class StyleManager {
 
                     final int nMax = parentStylesheets.size();
                     if (cacheMapKey == null) {
-                        cacheMapKey = new ArrayList<String>(nMax);
+                        cacheMapKey = new ArrayList<>(nMax);
                     }
                     for (int n=0; n<nMax; n++) {
                         StylesheetContainer sc = parentStylesheets.get(n);
@@ -2001,7 +2001,7 @@ final public class StyleManager {
                     }
                     Map<Key,Cache> cmap = cacheMap.get(cacheMapKey);
                     if (cmap == null) {
-                        cmap = new HashMap<Key,Cache>();
+                        cmap = new HashMap<>();
                         cacheMap.put(cacheMapKey, cmap);
                         // create a new cacheMapKey the next time this method is called
                         cacheMapKey = null;
@@ -2017,7 +2017,7 @@ final public class StyleManager {
         }
 
         private List<StyleMap> getStyleMapList() {
-            if (styleMapList == null) styleMapList = new ArrayList<StyleMap>();
+            if (styleMapList == null) styleMapList = new ArrayList<>();
             return styleMapList;
         }
 
@@ -2191,7 +2191,7 @@ final public class StyleManager {
 
         Cache(List<Selector> selectors) {
             this.selectors = selectors;
-            this.cache = new HashMap<Key, Integer>();
+            this.cache = new HashMap<>();
         }
 
         private StyleMap getStyleMap(CacheContainer cacheContainer, Node node, Set<PseudoClass>[] triggerStates, boolean hasInlineStyle) {

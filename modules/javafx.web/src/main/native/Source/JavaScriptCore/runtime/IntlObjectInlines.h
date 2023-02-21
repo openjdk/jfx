@@ -58,7 +58,7 @@ template<typename Predicate> String bestAvailableLocale(const String& locale, Pr
         if (pos >= 2 && candidate[pos - 2] == '-')
             pos -= 2;
 
-        candidate = candidate.substring(0, pos);
+        candidate = candidate.left(pos);
     }
 
     return String();
@@ -77,7 +77,7 @@ JSValue constructIntlInstanceWithWorkaroundForLegacyIntlConstructor(JSGlobalObje
 
     if (thisValue.isObject()) {
         JSObject* thisObject = asObject(thisValue);
-        ASSERT(!callee->template inherits<JSBoundFunction>(vm));
+        ASSERT(!callee->template inherits<JSBoundFunction>());
         JSValue prototype = callee->getDirect(vm, vm.propertyNames->prototype); // Passed constructors always have `prototype` which cannot be deleted.
         ASSERT(prototype);
         bool hasInstance = JSObject::defaultHasInstance(globalObject, thisObject, prototype);
@@ -85,7 +85,7 @@ JSValue constructIntlInstanceWithWorkaroundForLegacyIntlConstructor(JSGlobalObje
         if (hasInstance) {
             PropertyDescriptor descriptor(instance, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
             scope.release();
-            thisObject->methodTable(vm)->defineOwnProperty(thisObject, globalObject, vm.propertyNames->builtinNames().intlLegacyConstructedSymbol(), descriptor, true);
+            thisObject->methodTable()->defineOwnProperty(thisObject, globalObject, vm.propertyNames->builtinNames().intlLegacyConstructedSymbol(), descriptor, true);
             return thisObject;
         }
     }
@@ -98,15 +98,15 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue);
+    JSObject* thisObject = jsDynamicCast<JSObject*>(thisValue);
     if (UNLIKELY(!thisObject))
         return nullptr;
 
-    auto* instance = jsDynamicCast<InstanceType*>(vm, thisObject);
+    auto* instance = jsDynamicCast<InstanceType*>(thisObject);
     if (LIKELY(instance))
         return instance;
 
-    ASSERT(!constructor->template inherits<JSBoundFunction>(vm));
+    ASSERT(!constructor->template inherits<JSBoundFunction>());
     JSValue prototype = constructor->getDirect(vm, vm.propertyNames->prototype); // Passed constructors always have `prototype` which cannot be deleted.
     ASSERT(prototype);
     bool hasInstance = JSObject::defaultHasInstance(globalObject, thisObject, prototype);
@@ -116,11 +116,11 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
 
     JSValue value = thisObject->get(globalObject, vm.propertyNames->builtinNames().intlLegacyConstructedSymbol());
     RETURN_IF_EXCEPTION(scope, nullptr);
-    return jsDynamicCast<InstanceType*>(vm, value);
+    return jsDynamicCast<InstanceType*>(value);
 }
 
 template<typename ResultType>
-ResultType intlOption(JSGlobalObject* globalObject, Optional<JSObject&> options, PropertyName property, std::initializer_list<std::pair<ASCIILiteral, ResultType>> values, ASCIILiteral notFoundMessage, ResultType fallback)
+ResultType intlOption(JSGlobalObject* globalObject, JSObject* options, PropertyName property, std::initializer_list<std::pair<ASCIILiteral, ResultType>> values, ASCIILiteral notFoundMessage, ResultType fallback)
 {
     // GetOption (options, property, type="string", values, fallback)
     // https://tc39.github.io/ecma402/#sec-getoption
@@ -151,56 +151,152 @@ ResultType intlOption(JSGlobalObject* globalObject, Optional<JSObject&> options,
     return fallback;
 }
 
+template<typename ResultType>
+ResultType intlStringOrBooleanOption(JSGlobalObject* globalObject, JSObject* options, PropertyName property, ResultType trueValue, ResultType falsyValue, std::initializer_list<std::pair<ASCIILiteral, ResultType>> values, ResultType fallback)
+{
+    // https://tc39.es/proposal-intl-numberformat-v3/out/negotiation/diff.html#sec-getstringorbooleanoption
+
+    ASSERT(values.size() > 0);
+
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!options)
+        return fallback;
+
+    JSValue value = options->get(globalObject, property);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (value.isUndefined())
+        return fallback;
+
+    if (value.isBoolean() && value.asBoolean())
+        return trueValue;
+
+    bool valueBoolean = value.toBoolean(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (!valueBoolean)
+        return falsyValue;
+
+    String stringValue = value.toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    for (const auto& entry : values) {
+        if (entry.first == stringValue)
+            return entry.second;
+    }
+
+    return fallback;
+}
 
 ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(UChar character)
 {
-    return isASCII(character) && ducetWeights[character];
+    return isASCII(character) && ducetLevel1Weights[character];
+}
+
+template<typename CharacterType1, typename CharacterType2>
+UCollationResult compareASCIIWithUCADUCETLevel3(const CharacterType1* characters1, const CharacterType2* characters2, unsigned length)
+{
+    for (unsigned position = 0; position < length; ++position) {
+        auto lhs = characters1[position];
+        auto rhs = characters2[position];
+        uint8_t leftWeight = ducetLevel3Weights[lhs];
+        uint8_t rightWeight = ducetLevel3Weights[rhs];
+        if (leftWeight == rightWeight)
+            continue;
+        return leftWeight > rightWeight ? UCOL_GREATER : UCOL_LESS;
+    }
+    return UCOL_EQUAL;
 }
 
 template<typename CharacterType1, typename CharacterType2>
 inline UCollationResult compareASCIIWithUCADUCET(const CharacterType1* characters1, unsigned length1, const CharacterType2* characters2, unsigned length2)
 {
+    bool notSameCharacters = false;
     unsigned commonLength = std::min(length1, length2);
     for (unsigned position = 0; position < commonLength; ++position) {
         auto lhs = characters1[position];
         auto rhs = characters2[position];
         ASSERT(canUseASCIIUCADUCETComparison(lhs));
         ASSERT(canUseASCIIUCADUCETComparison(rhs));
-        uint8_t leftWeight = ducetWeights[lhs];
-        uint8_t rightWeight = ducetWeights[rhs];
+        if (lhs == rhs)
+            continue;
+        notSameCharacters = true;
+        uint8_t leftWeight = ducetLevel1Weights[lhs];
+        uint8_t rightWeight = ducetLevel1Weights[rhs];
         if (leftWeight == rightWeight)
             continue;
         return leftWeight > rightWeight ? UCOL_GREATER : UCOL_LESS;
     }
 
-    if (length1 == length2)
+    if (length1 == length2) {
+        if (notSameCharacters)
+            return compareASCIIWithUCADUCETLevel3(characters1, characters2, length1);
         return UCOL_EQUAL;
+    }
     return length1 > length2 ? UCOL_GREATER : UCOL_LESS;
 }
 
 // https://tc39.es/ecma402/#sec-getoptionsobject
-inline Optional<JSObject&> intlGetOptionsObject(JSGlobalObject* globalObject, JSValue options)
+inline JSObject* intlGetOptionsObject(JSGlobalObject* globalObject, JSValue options)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (options.isUndefined())
-        return WTF::nullopt;
+        return nullptr;
     if (LIKELY(options.isObject()))
-        return *asObject(options);
+        return asObject(options);
     throwTypeError(globalObject, scope, "options argument is not an object or undefined"_s);
-    return WTF::nullopt;
+    return nullptr;
 }
 
 // https://tc39.es/ecma402/#sec-coerceoptionstoobject
-inline Optional<JSObject&> intlCoerceOptionsToObject(JSGlobalObject* globalObject, JSValue optionsValue)
+inline JSObject* intlCoerceOptionsToObject(JSGlobalObject* globalObject, JSValue optionsValue)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (optionsValue.isUndefined())
-        return WTF::nullopt;
+        return nullptr;
     JSObject* options = optionsValue.toObject(globalObject);
-    RETURN_IF_EXCEPTION(scope, WTF::nullopt);
-    return *options;
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    return options;
+}
+
+template<typename Container>
+JSArray* createArrayFromStringVector(JSGlobalObject* globalObject, const Container& elements)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), elements.size());
+    if (!result) {
+        throwOutOfMemoryError(globalObject, scope);
+        return nullptr;
+    }
+    for (unsigned index = 0; index < elements.size(); ++index) {
+        result->putDirectIndex(globalObject, index, jsString(vm, elements[index]));
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+    return result;
+}
+
+template<typename Container>
+JSArray* createArrayFromIntVector(JSGlobalObject* globalObject, const Container& elements)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSArray* result = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), elements.size());
+    if (!result) {
+        throwOutOfMemoryError(globalObject, scope);
+        return nullptr;
+    }
+    for (unsigned index = 0; index < elements.size(); ++index) {
+        result->putDirectIndex(globalObject, index, jsNumber(elements[index]));
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+    return result;
 }
 
 } // namespace JSC

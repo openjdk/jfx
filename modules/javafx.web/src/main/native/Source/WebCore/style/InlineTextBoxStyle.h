@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc.  All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,13 @@
 #pragma once
 
 #include "FontCascade.h"
+#include "InlineIteratorBox.h"
+#include "InlineIteratorLineBox.h"
 #include "RenderStyleConstants.h"
 
 namespace WebCore {
 
-class InlineTextBox;
+class LegacyInlineTextBox;
 class RenderStyle;
 class TextUnderlineOffset;
 
@@ -51,7 +53,18 @@ struct WavyStrokeParameters {
     float step { 0 };
 };
 WavyStrokeParameters getWavyStrokeParameters(float fontSize);
-GlyphOverflow visualOverflowForDecorations(const RenderStyle& lineStyle, const InlineTextBox*);
-float computeUnderlineOffset(TextUnderlinePosition, TextUnderlineOffset, const FontMetrics&, const InlineTextBox*, float textDecorationThickness);
+
+struct TextUnderlinePositionUnder {
+    FontBaseline baselineType { AlphabeticBaseline };
+    float textRunLogicalHeight { 0 };
+    // This offset value is the distance between the current text run's logical bottom and the lowest position of all the text runs
+    // on line that belong to the same decoration box.
+    float textRunOffsetFromBottomMost { 0 };
+};
+GlyphOverflow visualOverflowForDecorations(const RenderStyle&);
+GlyphOverflow visualOverflowForDecorations(const RenderStyle&, TextUnderlinePositionUnder);
+GlyphOverflow visualOverflowForDecorations(const InlineIterator::LineBoxIterator&, const RenderText&, float textBoxLogicalTop, float textBoxLogicalBottom);
+
+float underlineOffsetForTextBoxPainting(const RenderStyle&, const InlineIterator::TextBoxIterator&);
 
 } // namespace WebCore

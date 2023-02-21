@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Element.h"
+#include "StyleScopeOrdinal.h"
 #if ENABLE(PICTURE_IN_PICTURE_API)
 #include "HTMLVideoElement.h"
 #endif
@@ -60,9 +61,10 @@ public:
 
     virtual ~ShadowRoot();
 
+    using TreeScope::getElementById;
     using TreeScope::rootNode;
 
-    Style::Scope& styleScope();
+    WEBCORE_EXPORT Style::Scope& styleScope();
     StyleSheetList& styleSheets();
 
     bool resetStyleInheritance() const { return m_resetStyleInheritance; }
@@ -139,7 +141,7 @@ private:
 
     std::unique_ptr<Style::Scope> m_styleScope;
     std::unique_ptr<SlotAssignment> m_slotAssignment;
-    mutable Optional<PartMappings> m_partMappings;
+    mutable std::optional<PartMappings> m_partMappings;
 };
 
 inline Element* ShadowRoot::activeElement() const
@@ -147,11 +149,9 @@ inline Element* ShadowRoot::activeElement() const
     return treeScope().focusedElementInScope();
 }
 
-inline ShadowRoot* Node::shadowRoot() const
+inline bool Node::isUserAgentShadowRoot() const
 {
-    if (!is<Element>(*this))
-        return nullptr;
-    return downcast<Element>(*this).shadowRoot();
+    return isShadowRoot() && downcast<ShadowRoot>(*this).mode() == ShadowRootMode::UserAgent;
 }
 
 inline ContainerNode* Node::parentOrShadowHostNode() const

@@ -29,13 +29,16 @@
 
 #include <windows.h>
 #include <wtf/Forward.h>
+#include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct BigEndianUShort;
-struct EOTPrefix;
 class SharedBuffer;
+struct EOTPrefix;
+class FontMemoryResource;
+class FragmentedSharedBuffer;
 
 struct EOTHeader {
     EOTHeader();
@@ -52,9 +55,8 @@ private:
     Vector<uint8_t, 512> m_buffer;
 };
 
-bool getEOTHeader(SharedBuffer* fontData, EOTHeader& eotHeader, size_t& overlayDst, size_t& overlaySrc, size_t& overlayLength);
-bool renameFont(const SharedBuffer&, const String&, Vector<char>&);
-HANDLE renameAndActivateFont(const SharedBuffer&, const String&);
+bool renameFont(const SharedBuffer&, const String&, Vector<uint8_t>&);
+RefPtr<FontMemoryResource> renameAndActivateFont(const SharedBuffer&, const String&);
 
 } // namespace WebCore
 

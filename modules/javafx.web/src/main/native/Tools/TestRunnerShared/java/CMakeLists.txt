@@ -30,6 +30,10 @@ set(TestRunnerShared_PRIVATE_INCLUDE_DIRECTORIES
     ${TestRunnerShared_DIR}/UIScriptContext
     ${TestRunnerShared_DIR}/config
     ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
+    ${JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
+    ${CMAKE_BINARY_DIR}/JavaScriptCore/Headers
+    ${CMAKE_BINARY_DIR}/WTF/Headers
+    ${CMAKE_BINARY_DIR}/bmalloc/Headers
     ${JAVA_INCLUDE_PATH}
     ${JAVA_INCLUDE_PATH2}
 )

@@ -31,6 +31,7 @@
 #include <string.h>
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
@@ -110,17 +111,18 @@ FunctionOverrides& FunctionOverrides::overrides()
 FunctionOverrides::FunctionOverrides(const char* overridesFileName)
 {
     FunctionOverridesAssertScope assertScope;
-    parseOverridesInFile(holdLock(m_lock), overridesFileName);
+    Locker locker { m_lock };
+    parseOverridesInFile(overridesFileName);
 }
 
 void FunctionOverrides::reinstallOverrides()
 {
     FunctionOverridesAssertScope assertScope;
     FunctionOverrides& overrides = FunctionOverrides::overrides();
-    auto locker = holdLock(overrides.m_lock);
+    Locker locker { overrides.m_lock };
     const char* overridesFileName = Options::functionOverrides();
-    overrides.clear(locker);
-    overrides.parseOverridesInFile(locker, overridesFileName);
+    overrides.clear();
+    overrides.parseOverridesInFile(overridesFileName);
 }
 
 static void initializeOverrideInfo(const SourceCode& origCode, const String& newBody, FunctionOverrides::OverrideInfo& info)
@@ -128,26 +130,24 @@ static void initializeOverrideInfo(const SourceCode& origCode, const String& new
     FunctionOverridesAssertScope assertScope;
     String origProviderStr = origCode.provider()->source().toString();
     unsigned origStart = origCode.startOffset();
-    unsigned origFunctionStart = origProviderStr.reverseFind("function", origStart);
-    unsigned origBraceStart = origProviderStr.find("{", origStart);
+    unsigned origFunctionStart = origProviderStr.reverseFind("function"_s, origStart);
+    unsigned origBraceStart = origProviderStr.find('{', origStart);
     unsigned headerLength = origBraceStart - origFunctionStart;
-    String origHeader = origProviderStr.substring(origFunctionStart, headerLength);
+    auto origHeaderView = StringView(origProviderStr).substring(origFunctionStart, headerLength);
 
-    String newProviderStr;
-    newProviderStr.append(origHeader);
-    newProviderStr.append(newBody);
+    String newProviderString = makeString(origHeaderView, newBody);
 
     auto overridden = "<overridden>"_s;
     URL url({ }, overridden);
-    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderStr, SourceOrigin { url }, overridden);
+    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderString, SourceOrigin { url }, overridden);
 
     info.firstLine = 1;
     info.lineCount = 1; // Faking it. This doesn't really matter for now.
     info.startColumn = 1;
     info.endColumn = 1; // Faking it. This doesn't really matter for now.
-    info.parametersStartOffset = newProviderStr.find("(");
-    info.typeProfilingStartOffset = newProviderStr.find("{");
-    info.typeProfilingEndOffset = newProviderStr.length() - 1;
+    info.parametersStartOffset = newProviderString.find('(');
+    info.typeProfilingStartOffset = newProviderString.find('{');
+    info.typeProfilingEndOffset = newProviderString.length() - 1;
 
     info.sourceCode =
         SourceCode(WTFMove(newProvider), info.parametersStartOffset, info.typeProfilingEndOffset + 1, 1, 1);
@@ -167,8 +167,8 @@ bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, Functi
 
     String newBody;
     {
-        auto locker = holdLock(overrides.m_lock);
-        auto it = overrides.m_entries.find(sourceBodyString.isolatedCopy());
+        Locker locker { overrides.m_lock };
+        auto it = overrides.m_entries.find(WTFMove(sourceBodyString).isolatedCopy());
         if (it == overrides.m_entries.end())
             return false;
         newBody = it->value.isolatedCopy();
@@ -223,11 +223,7 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
     if (hasDisallowedCharacters(delimiterStart, delimiterLength))
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Delimiter '", delimiter, "' cannot have '{', '}', or whitespace:\n", line, "\n"));
 
-    String terminatorString;
-    terminatorString.append('}');
-    terminatorString.append(delimiter);
-
-    CString terminatorCString = terminatorString.ascii();
+    CString terminatorCString = makeString('}', delimiter).ascii();
     const char* terminator = terminatorCString.data();
     line = delimiterEnd; // Start from the {.
 
@@ -248,7 +244,7 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
     FAIL_WITH_ERROR(SYNTAX_ERROR, ("'", keyword, "' clause end delimiter '", delimiter, "' not found:\n", builder.toString(), "\n", "Are you missing a '}' before the delimiter?\n"));
 }
 
-void FunctionOverrides::parseOverridesInFile(const AbstractLocker&, const char* fileName)
+void FunctionOverrides::parseOverridesInFile(const char* fileName)
 {
     FunctionOverridesAssertScope assertScope;
     if (!fileName)
@@ -282,7 +278,7 @@ void FunctionOverrides::parseOverridesInFile(const AbstractLocker&, const char* 
 
     int result = fclose(file);
     if (result)
-        dataLogF("Failed to close file %s: %s\n", fileName, strerror(errno));
+        dataLogF("Failed to close file %s: %s\n", fileName, safeStrerror(errno).data());
 }
 
 } // namespace JSC

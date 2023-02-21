@@ -28,7 +28,6 @@
 #if ENABLE(CONTENT_EXTENSIONS)
 
 #include "ContentExtensionsDebugging.h"
-#include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -167,7 +166,7 @@ private:
     const uint8_t IsKilled = 0x01;
 };
 
-COMPILE_ASSERT(sizeof(DFANode) <= 16, Keep the DFANodes small);
+static_assert(sizeof(DFANode) <= 16, "Keep the DFANodes small");
 
 } // namespace ContentExtensions
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,8 +81,8 @@ public:
     const T removeLast();
     bool refill();
 
-    size_t size();
-    bool isEmpty();
+    size_t size() const;
+    bool isEmpty() const;
 
     void fillVector(Vector<T>&);
     void clear();
@@ -127,12 +127,12 @@ public:
     T& operator*() { return get(); }
     T& operator->() { return get(); }
 
-    bool operator==(const GCSegmentedArrayIterator& other)
+    bool operator==(const GCSegmentedArrayIterator& other) const
     {
         return m_currentSegment == other.m_currentSegment && m_currentOffset == other.m_currentOffset;
     }
 
-    bool operator!=(const GCSegmentedArrayIterator& other)
+    bool operator!=(const GCSegmentedArrayIterator& other) const
     {
         return !(*this == other);
     }

@@ -253,7 +253,7 @@ audio_chain_get_samples (AudioChain * chain, gsize * avail)
 {
   gpointer *res;
 
-  while (!chain->samples)
+  if (!chain->samples)
     chain->make_func (chain, chain->make_func_data);
 
   res = chain->samples;
@@ -478,7 +478,7 @@ do_unpack (AudioChain * chain, gpointer user_data)
       }
     } else {
       for (i = 0; i < chain->blocks; i++) {
-        gst_audio_format_fill_silence (chain->finfo, tmp[i],
+        gst_audio_format_info_fill_silence (chain->finfo, tmp[i],
             num_samples * chain->inc);
       }
     }
@@ -582,7 +582,8 @@ do_quantize (AudioChain * chain, gpointer user_data)
   out = (chain->allow_ip ? in : audio_chain_alloc_samples (chain, num_samples));
   GST_LOG ("quantize %p, %p %" G_GSIZE_FORMAT, in, out, num_samples);
 
-  gst_audio_quantize_samples (convert->quant, in, out, num_samples);
+  if (in && out)
+    gst_audio_quantize_samples (convert->quant, in, out, num_samples);
 
   audio_chain_set_samples (chain, out, num_samples);
 
@@ -1102,7 +1103,7 @@ converter_passthrough (GstAudioConverter * convert,
     }
   } else {
     for (i = 0; i < chain->blocks; i++)
-      gst_audio_format_fill_silence (convert->in.finfo, out[i], samples);
+      gst_audio_format_info_fill_silence (convert->in.finfo, out[i], samples);
   }
   return TRUE;
 }
@@ -1248,7 +1249,7 @@ converter_endian (GstAudioConverter * convert,
       convert->swap_endian (out[i], in[i], samples);
   } else {
     for (i = 0; i < chain->blocks; i++)
-      gst_audio_format_fill_silence (convert->in.finfo, out[i], samples);
+      gst_audio_format_info_fill_silence (convert->in.finfo, out[i], samples);
   }
   return TRUE;
 }
@@ -1274,7 +1275,7 @@ converter_generic (GstAudioConverter * convert,
   /* get frames to pack */
   tmp = audio_chain_get_samples (chain, &produced);
 
-  if (!convert->out_default) {
+  if (!convert->out_default && tmp && out) {
     GST_LOG ("pack %p, %p %" G_GSIZE_FORMAT, tmp, out, produced);
     /* and pack if needed */
     for (i = 0; i < chain->blocks; i++)
@@ -1434,12 +1435,14 @@ gst_audio_converter_new (GstAudioConverterFlags flags, GstAudioInfo * in_info,
 unpositioned:
   {
     GST_WARNING ("unpositioned channels");
+    g_clear_pointer (&config, gst_structure_free);
     return NULL;
   }
 
 invalid_mix_matrix:
   {
     GST_WARNING ("Invalid mix matrix");
+    g_clear_pointer (&config, gst_structure_free);
     return NULL;
   }
 }

@@ -32,6 +32,7 @@
 #include "HTMLFormElement.h"
 #include "JSCustomElementInterface.h"
 #include "JSDOMConstructorBase.h"
+#include "JSHTMLElementWrapperFactory.h"
 #include "JSNodeCustom.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/InternalFunction.h>
@@ -55,7 +56,9 @@ EncodedJSValue constructJSHTMLElement(JSGlobalObject* lexicalGlobalObject, CallF
     ASSERT(context->isDocument());
 
     auto* newTarget = callFrame.newTarget().getObject();
-    auto* newTargetGlobalObject = jsCast<JSDOMGlobalObject*>(getFunctionRealm(vm, newTarget));
+    auto* functionGlobalObject = getFunctionRealm(lexicalGlobalObject, newTarget);
+    RETURN_IF_EXCEPTION(scope, { });
+    auto* newTargetGlobalObject = jsCast<JSDOMGlobalObject*>(functionGlobalObject);
     JSValue htmlElementConstructorValue = JSHTMLElement::getConstructor(vm, newTargetGlobalObject);
     if (newTarget == htmlElementConstructorValue)
         return throwVMTypeError(lexicalGlobalObject, scope, "new.target is not a valid custom element constructor"_s);
@@ -75,6 +78,9 @@ EncodedJSValue constructJSHTMLElement(JSGlobalObject* lexicalGlobalObject, CallF
         return throwVMTypeError(lexicalGlobalObject, scope, "new.target does not define a custom element"_s);
 
     if (!elementInterface->isUpgradingElement()) {
+        Ref<Document> protectedDocument(document);
+        Ref<JSCustomElementInterface> protectedElementInterface(*elementInterface);
+
         Structure* baseStructure = getDOMStructure<JSHTMLElement>(vm, *newTargetGlobalObject);
         auto* newElementStructure = InternalFunction::createSubclassStructure(lexicalGlobalObject, newTarget, baseStructure);
         RETURN_IF_EXCEPTION(scope, { });
@@ -126,6 +132,25 @@ JSScope* JSHTMLElement::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObjec
 
     // The element is on top, searched first.
     return JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(lexicalGlobalObject, globalObject(), element)));
+}
+
+JSValue toJS(JSGlobalObject*, JSDOMGlobalObject* globalObject, HTMLElement& element)
+{
+    if (auto* wrapper = getCachedWrapper(globalObject->world(), element))
+        return wrapper;
+    return createJSHTMLWrapper(globalObject, element);
+}
+
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<HTMLElement>&& element)
+{
+    if (element->isDefinedCustomElement()) {
+        JSValue result = getCachedWrapper(globalObject->world(), element);
+        if (result)
+            return result;
+        ASSERT(!globalObject->vm().exceptionForInspection());
+    }
+    ASSERT(!getCachedWrapper(globalObject->world(), element));
+    return createJSHTMLWrapper(globalObject, WTFMove(element));
 }
 
 } // namespace WebCore

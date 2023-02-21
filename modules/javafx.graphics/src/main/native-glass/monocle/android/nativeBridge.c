@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,11 +33,14 @@ JavaVM *jVM = NULL;
 
 static jclass jAndroidInputDeviceRegistryClass;
 static jclass jMonocleWindowManagerClass;
+static jclass jScreenClass;
 
 static jmethodID monocle_gotTouchEventFromNative;
 static jmethodID monocle_dispatchKeyEventFromNative;
+static jmethodID monocle_dispatchMenuEventFromNative;
 static jmethodID monocle_repaintAll;
 static jmethodID monocle_registerDevice;
+static jmethodID screen_init;
 
 ANativeWindow* androidWindow = NULL;
 jfloat androidDensity = 0.f;
@@ -51,16 +54,21 @@ void initializeFromJava (JNIEnv *env) {
                                                  (*env)->FindClass(env, "com/sun/glass/ui/monocle/MonocleWindowManager"));
     jAndroidInputDeviceRegistryClass = (*env)->NewGlobalRef(env,
                                                  (*env)->FindClass(env, "com/sun/glass/ui/monocle/AndroidInputDeviceRegistry"));
+    jScreenClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/Screen"));
     monocle_repaintAll = (*env)->GetStaticMethodID(
                                             env, jMonocleWindowManagerClass, "repaintFromNative",
-                                            "()V");
+                                            "(Lcom/sun/glass/ui/Screen;)V");
     monocle_gotTouchEventFromNative = (*env)->GetStaticMethodID(
                                             env, jAndroidInputDeviceRegistryClass, "gotTouchEventFromNative",
                                             "(I[I[I[I[II)V");
     monocle_dispatchKeyEventFromNative = (*env)->GetStaticMethodID(
                                             env, jAndroidInputDeviceRegistryClass, "dispatchKeyEventFromNative",
                                             "(II[CI)V");
+    monocle_dispatchMenuEventFromNative = (*env)->GetStaticMethodID(
+                                             env, jAndroidInputDeviceRegistryClass, "dispatchMenuEventFromNative",
+                                             "(IIIIZ)V");
     monocle_registerDevice = (*env)->GetStaticMethodID(env, jAndroidInputDeviceRegistryClass, "registerDevice","()V");
+    screen_init = (*env)->GetMethodID(env, jScreenClass,"<init>", "(JIIIIIIIIIIIIIIIFFFF)V");
     GLASS_LOG_FINE("Initializing native Android Bridge done");
 }
 
@@ -135,6 +143,21 @@ void androidJfx_gotKeyEvent (int action, int keyCode, jchar* chars, int count, i
                                      action, keyCode, jchars, mods);
 }
 
+void androidJfx_gotMenuEvent(int x, int y, int xAbs, int yAbs, bool isKeyboardTrigger) {
+    initializeFromNative();
+    if (javaEnv == NULL) {
+        GLASS_LOG_FINE("javaEnv still null, not ready to process menu events");
+        return;
+    }
+    if (deviceRegistered == 0) {
+        deviceRegistered = 1;
+        GLASS_LOG_FINE("This is the first time we have a menu event, register device now");
+        (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_registerDevice);
+    }
+    (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_dispatchMenuEventFromNative,
+                                     x, y, xAbs, yAbs, isKeyboardTrigger);
+}
+
 void androidJfx_requestGlassToRedraw() {
     GLASS_LOG_FINEST("Native code is notified that surface needs to be redrawn (repaintall)");
     if (jVM == NULL) {
@@ -153,7 +176,19 @@ void androidJfx_requestGlassToRedraw() {
         GLASS_LOG_WARNING("we can't do this yet, no monocle_repaintAll\n");
         return;
     }
-    (*javaEnv)->CallStaticVoidMethod(javaEnv, jMonocleWindowManagerClass, monocle_repaintAll);
+    if (androidWindow == NULL) {
+        GLASS_LOG_WARNING("we can't do this yet, no androidWindow\n");
+        return;
+    }
+    int32_t width = ANativeWindow_getWidth(androidWindow) / androidDensity;
+    int32_t height = ANativeWindow_getHeight(androidWindow) / androidDensity;
+    jobject screen = (*javaEnv)->NewObject(javaEnv, jScreenClass, screen_init,
+        (jlong) androidWindow, 24,
+        0, 0, (jint) width, (jint) height,
+        0, 0, (jint) width, (jint) height,
+        0, 0, (jint) width, (jint) height,
+        SCREEN_DPI, SCREEN_DPI, (jfloat) 1, (jfloat) 1, androidDensity, androidDensity);
+    (*javaEnv)->CallStaticVoidMethod(javaEnv, jMonocleWindowManagerClass, monocle_repaintAll, screen);
 }
 
 /* ===== called from Java ===== */

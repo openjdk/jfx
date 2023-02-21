@@ -37,7 +37,9 @@
 #include "CacheStorageConnection.h"
 #include "Document.h"
 #include "Frame.h"
+#include "Page.h"
 #include "Settings.h"
+#include "WebRTCProvider.h"
 #include "WorkletParameters.h"
 #include "WorkletPendingTasks.h"
 
@@ -47,19 +49,21 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
 {
     auto* document = worklet.document();
     auto jsRuntimeFlags = document->settings().javaScriptRuntimeFlags();
+    RELEASE_ASSERT(document->sessionID());
 
     return {
         document->url(),
         jsRuntimeFlags,
         worklet.audioContext() ? worklet.audioContext()->sampleRate() : 0.0f,
         worklet.identifier(),
+        *document->sessionID(),
         document->settingsValues(),
         worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false
     };
 }
 
 AudioWorkletMessagingProxy::AudioWorkletMessagingProxy(AudioWorklet& worklet)
-    : m_worklet(makeWeakPtr(worklet))
+    : m_worklet(worklet)
     , m_document(*worklet.document())
     , m_workletThread(AudioWorkletThread::create(*this, generateWorkletParameters(worklet)))
 {
@@ -85,19 +89,22 @@ RefPtr<CacheStorageConnection> AudioWorkletMessagingProxy::createCacheStorageCon
     return nullptr;
 }
 
+RefPtr<RTCDataChannelRemoteHandlerConnection> AudioWorkletMessagingProxy::createRTCDataChannelRemoteHandlerConnection()
+{
+    ASSERT(isMainThread());
+    if (!m_document->page())
+        return nullptr;
+    return m_document->page()->webRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+}
+
 void AudioWorkletMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
 {
     m_document->postTask(WTFMove(task));
 }
 
-bool AudioWorkletMessagingProxy::postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)
-{
-    return postTaskForModeToWorkletGlobalScope(WTFMove(task), mode);
-}
-
 void AudioWorkletMessagingProxy::postTaskToAudioWorklet(Function<void(AudioWorklet&)>&& task)
 {
-    m_document->postTask([this, protectedThis = makeRef(*this), task = WTFMove(task)](ScriptExecutionContext&) {
+    m_document->postTask([this, protectedThis = Ref { *this }, task = WTFMove(task)](ScriptExecutionContext&) {
         if (m_worklet)
             task(*m_worklet);
     });

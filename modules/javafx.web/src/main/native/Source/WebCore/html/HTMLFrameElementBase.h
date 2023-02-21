@@ -68,12 +68,13 @@ private:
     bool canContainRangeEndPoint() const final { return false; }
 
     bool supportsFocus() const final;
-    void setFocus(bool) final;
+    void setFocus(bool, FocusVisibility = FocusVisibility::Invisible) final;
 
     bool isURLAttribute(const Attribute&) const final;
     bool isHTMLContentAttribute(const Attribute&) const final;
 
     AtomString m_frameURL;
+    bool m_openingURLAfterInserting { false };
 };
 
 } // namespace WebCore

@@ -28,10 +28,9 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include <wtf/Function.h>
-#include <wtf/HashMap.h>
-#include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
@@ -47,11 +46,11 @@ public:
     friend class NeverDestroyed<InitDataRegistry>;
 
     RefPtr<SharedBuffer> sanitizeInitData(const AtomString& initDataType, const SharedBuffer&);
-    WEBCORE_EXPORT Optional<Vector<Ref<SharedBuffer>>> extractKeyIDs(const AtomString& initDataType, const SharedBuffer&);
+    WEBCORE_EXPORT std::optional<Vector<Ref<SharedBuffer>>> extractKeyIDs(const AtomString& initDataType, const SharedBuffer&);
 
     struct InitDataTypeCallbacks {
         using SanitizeInitDataCallback = Function<RefPtr<SharedBuffer>(const SharedBuffer&)>;
-        using ExtractKeyIDsCallback = Function<Optional<Vector<Ref<SharedBuffer>>>(const SharedBuffer&)>;
+        using ExtractKeyIDsCallback = Function<std::optional<Vector<Ref<SharedBuffer>>>(const SharedBuffer&)>;
 
         SanitizeInitDataCallback sanitizeInitData;
         ExtractKeyIDsCallback extractKeyIDs;
@@ -62,15 +61,15 @@ public:
     static const AtomString& keyidsName();
     static const AtomString& webmName();
 
-    static Optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> extractPsshBoxesFromCenc(const SharedBuffer&);
-    static Optional<Vector<Ref<SharedBuffer>>> extractKeyIDsCenc(const SharedBuffer&);
+    static std::optional<Vector<std::unique_ptr<ISOProtectionSystemSpecificHeaderBox>>> extractPsshBoxesFromCenc(const SharedBuffer&);
+    static std::optional<Vector<Ref<SharedBuffer>>> extractKeyIDsCenc(const SharedBuffer&);
     static RefPtr<SharedBuffer> sanitizeCenc(const SharedBuffer&);
 
 private:
     InitDataRegistry();
     ~InitDataRegistry();
 
-    HashMap<AtomString, InitDataTypeCallbacks> m_types;
+    MemoryCompactRobinHoodHashMap<AtomString, InitDataTypeCallbacks> m_types;
 };
 
 }

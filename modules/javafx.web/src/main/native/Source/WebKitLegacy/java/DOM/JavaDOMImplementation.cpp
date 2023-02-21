@@ -58,7 +58,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_hasFeat
     , jstring version)
 {
     WebCore::JSMainThreadNullState state;
-    return WebCore::SVGTests::hasFeatureForLegacyBindings(String(env, feature), String(env, version));
+    return WebCore::SVGTests::hasFeatureForLegacyBindings(AtomString{String(env, feature)}, AtomString{String(env, version)});
 }
 
 
@@ -68,9 +68,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createDocu
     , jstring systemId)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DocumentType>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createDocumentType(String(env, qualifiedName)
-            , String(env, publicId)
-            , String(env, systemId)))));
+    return JavaReturn<DocumentType>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createDocumentType(AtomString{String(env, qualifiedName)}
+            , AtomString{ String(env, publicId) }
+            , AtomString{ String(env, systemId)} ))));
 }
 
 
@@ -80,8 +80,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createDocu
     , jlong doctype)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Document>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createDocument(String(env, namespaceURI)
-            , String(env, qualifiedName)
+    return JavaReturn<Document>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createDocument(AtomString{String(env, namespaceURI)}
+            , AtomString{String(env, qualifiedName)}
             , static_cast<DocumentType*>(jlong_to_ptr(doctype))))));
 }
 
@@ -91,7 +91,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createCSSS
     , jstring media)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleSheet>(env, WTF::getPtr(IMPL->createCSSStyleSheet(String(env, title), String(env, media))));
+    return JavaReturn<CSSStyleSheet>(env, WTF::getPtr(IMPL->createCSSStyleSheet(AtomString{String(env, title)}, AtomString{String(env, media)})));
 }
 
 

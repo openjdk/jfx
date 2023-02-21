@@ -39,11 +39,16 @@ inline void traverseRuleFeaturesInShadowTree(Element& element, TraverseFunction&
 {
     if (!element.shadowRoot())
         return;
+
     auto& shadowRuleSets = element.shadowRoot()->styleScope().resolver().ruleSets();
-    auto& authorStyle = shadowRuleSets.authorStyle();
-    bool hasHostPseudoClassRulesMatchingInShadowTree = authorStyle.hasHostPseudoClassRulesMatchingInShadowTree();
-    if (authorStyle.hostPseudoClassRules().isEmpty() && !hasHostPseudoClassRulesMatchingInShadowTree)
+    bool hasHostPseudoClassRulesMatchingInShadowTree = false;
+    bool hasHostPseudoClassRule = shadowRuleSets.hasMatchingUserOrAuthorStyle([&] (auto& style) {
+        hasHostPseudoClassRulesMatchingInShadowTree = style.hasHostPseudoClassRulesMatchingInShadowTree();
+        return !style.hostPseudoClassRules().isEmpty();
+    });
+    if (!hasHostPseudoClassRule && !hasHostPseudoClassRulesMatchingInShadowTree)
         return;
+
     function(shadowRuleSets.features(), hasHostPseudoClassRulesMatchingInShadowTree);
 }
 
@@ -53,8 +58,9 @@ inline void traverseRuleFeaturesForSlotted(Element& element, TraverseFunction&& 
     auto assignedShadowRoots = assignedShadowRootsIfSlotted(element);
     for (auto& assignedShadowRoot : assignedShadowRoots) {
         auto& ruleSets = assignedShadowRoot->styleScope().resolver().ruleSets();
-        if (ruleSets.authorStyle().slottedPseudoElementRules().isEmpty())
+        if (!ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.slottedPseudoElementRules().isEmpty(); }))
             continue;
+
         function(ruleSets.features(), false);
     }
 }
@@ -65,9 +71,15 @@ inline void traverseRuleFeatures(Element& element, TraverseFunction&& function)
     auto& ruleSets = element.styleResolver().ruleSets();
 
     auto mayAffectShadowTree = [&] {
-        if (element.shadowRoot() && ruleSets.authorStyle().hasShadowPseudoElementRules())
-            return true;
-        if (is<HTMLSlotElement>(element) && !ruleSets.authorStyle().slottedPseudoElementRules().isEmpty())
+        if (element.shadowRoot() && element.shadowRoot()->isUserAgentShadowRoot()) {
+            if (ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return style.hasShadowPseudoElementRules(); }))
+                return true;
+#if ENABLE(VIDEO)
+            if (element.isMediaElement() && ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.cuePseudoRules().isEmpty(); }))
+                return true;
+#endif
+        }
+        if (is<HTMLSlotElement>(element) && ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.slottedPseudoElementRules().isEmpty(); }))
             return true;
         return false;
     };

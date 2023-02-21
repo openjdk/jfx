@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ public:
     static constexpr bool needsDestruction = true;
 
     template<typename CellType, JSC::SubspaceAccess mode>
-    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
     {
         return vm.injectedScriptHostSpace<mode>();
     }
@@ -52,7 +52,7 @@ public:
 
     static JSInjectedScriptHost* create(JSC::VM& vm, JSC::Structure* structure, Ref<InjectedScriptHost>&& impl)
     {
-        JSInjectedScriptHost* instance = new (NotNull, JSC::allocateCell<JSInjectedScriptHost>(vm.heap)) JSInjectedScriptHost(vm, structure, WTFMove(impl));
+        JSInjectedScriptHost* instance = new (NotNull, JSC::allocateCell<JSInjectedScriptHost>(vm)) JSInjectedScriptHost(vm, structure, WTFMove(impl));
         instance->finishCreation(vm);
         return instance;
     }
@@ -74,7 +74,7 @@ public:
     JSC::JSValue subtype(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue functionDetails(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue getInternalProperties(JSC::JSGlobalObject*, JSC::CallFrame*);
-    JSC::JSValue proxyTargetValue(JSC::VM&, JSC::CallFrame*);
+    JSC::JSValue proxyTargetValue(JSC::CallFrame*);
     JSC::JSValue weakMapSize(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue weakMapEntries(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue weakSetSize(JSC::JSGlobalObject*, JSC::CallFrame*);

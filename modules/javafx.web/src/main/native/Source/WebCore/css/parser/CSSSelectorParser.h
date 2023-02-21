@@ -52,11 +52,15 @@ public:
     static bool supportsComplexSelector(CSSParserTokenRange, const CSSParserContext&);
 
 private:
-    CSSSelectorList consumeComplexForgivingSelectorList(CSSParserTokenRange&);
+    template<typename ConsumeSelector> CSSSelectorList consumeForgivingSelectorList(CSSParserTokenRange&, ConsumeSelector&&);
+
+    CSSSelectorList consumeForgivingComplexSelectorList(CSSParserTokenRange&);
+    CSSSelectorList consumeForgivingRelativeSelectorList(CSSParserTokenRange&);
     CSSSelectorList consumeCompoundSelectorList(CSSParserTokenRange&);
 
     std::unique_ptr<CSSParserSelector> consumeComplexSelector(CSSParserTokenRange&);
     std::unique_ptr<CSSParserSelector> consumeCompoundSelector(CSSParserTokenRange&);
+    std::unique_ptr<CSSParserSelector> consumeRelativeSelector(CSSParserTokenRange&);
 
     // This doesn't include element names, since they're handled specially.
     std::unique_ptr<CSSParserSelector> consumeSimpleSelector(CSSParserTokenRange&);
@@ -85,12 +89,14 @@ private:
     const RefPtr<StyleSheetContents> m_styleSheet;
     bool m_failedParsing { false };
     bool m_disallowPseudoElements { false };
+    bool m_disallowHasPseudoClass { false };
     bool m_resistDefaultNamespace { false };
     bool m_ignoreDefaultNamespace { false };
+    std::optional<CSSSelector::PseudoElementType> m_precedingPseudoElement;
 };
 
 
 
-Optional<CSSSelectorList> parseCSSSelector(CSSParserTokenRange, const CSSParserContext&, StyleSheetContents*);
+std::optional<CSSSelectorList> parseCSSSelector(CSSParserTokenRange, const CSSParserContext&, StyleSheetContents*);
 
 } // namespace WebCore

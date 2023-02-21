@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,9 +59,10 @@ import java.lang.reflect.Method;
  * @param <T> the type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
+// TODO Update API: all public methods should have type <T> added instead of returning raw types
 public final class JavaBeanObjectPropertyBuilder<T> {
 
-    private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
+    private JavaBeanPropertyBuilderHelper<T> helper = new JavaBeanPropertyBuilderHelper<>();
 
     private JavaBeanObjectPropertyBuilder() {}
 
@@ -71,7 +72,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
      * @return the new {@code JavaBeanObjectPropertyBuilder}
      */
     public static JavaBeanObjectPropertyBuilder create() {
-        return new JavaBeanObjectPropertyBuilder();
+        return new JavaBeanObjectPropertyBuilder<>();
     }
 
     /**
@@ -82,8 +83,8 @@ public final class JavaBeanObjectPropertyBuilder<T> {
      * the getter and the setter of the Java Bean property
      */
     public JavaBeanObjectProperty<T> build() throws NoSuchMethodException {
-        final PropertyDescriptor descriptor = helper.getDescriptor();
-        return new JavaBeanObjectProperty<T>(descriptor, helper.getBean());
+        final PropertyDescriptor<T> descriptor = helper.getDescriptor();
+        return new JavaBeanObjectProperty<>(descriptor, helper.getBean());
     }
 
     /**

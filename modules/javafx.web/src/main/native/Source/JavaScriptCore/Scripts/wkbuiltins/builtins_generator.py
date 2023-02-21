@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014, 2015 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -140,6 +140,7 @@ class BuiltinsGenerator:
             'originalSource': text + "\n",
             'constructAbility': constructAbility,
             'constructorKind': constructorKind,
+            'visibility': function.visibility,
             'intrinsic': function.intrinsic
         }
 
@@ -147,6 +148,7 @@ class BuiltinsGenerator:
         lines = []
         lines.append("const JSC::ConstructAbility s_%(codeName)sConstructAbility = JSC::ConstructAbility::%(constructAbility)s;" % data);
         lines.append("const JSC::ConstructorKind s_%(codeName)sConstructorKind = JSC::ConstructorKind::%(constructorKind)s;" % data);
+        lines.append("const JSC::ImplementationVisibility s_%(codeName)sImplementationVisibility = JSC::ImplementationVisibility::%(visibility)s;" % data);
         lines.append("const int s_%(codeName)sLength = %(embeddedSourceLength)d;" % data);
         lines.append("static const JSC::Intrinsic s_%(codeName)sIntrinsic = JSC::%(intrinsic)s;" % data);
         lines.append("const char* const s_%(codeName)s =\n%(embeddedSource)s\n;" % data);

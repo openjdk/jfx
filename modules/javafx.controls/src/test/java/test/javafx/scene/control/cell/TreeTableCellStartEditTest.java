@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,8 +106,8 @@ public class TreeTableCellStartEditTest {
     public void testStartEditRespectsEditable() {
         treeTableCell.updateIndex(0);
 
-        treeTableCell.updateTreeTableColumn((TreeTableColumn) treeTableColumn);
-        treeTableCell.updateTreeTableRow(treeTableRow);
+        treeTableCell.updateTableColumn((TreeTableColumn) treeTableColumn);
+        treeTableCell.updateTableRow(treeTableRow);
         treeTableCell.updateTreeTableView(treeTable);
 
         for (boolean isTableEditable : EDITABLE_STATES) {
@@ -146,7 +146,7 @@ public class TreeTableCellStartEditTest {
 
         if (treeTableCell instanceof CheckBoxTreeTableCell) {
             assertNotNull(treeTableCell.getGraphic());
-            // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+            // Ignored until https://bugs.openjdk.org/browse/JDK-8270042 is resolved.
             // Check if the checkbox is disabled when not editable.
             // assertEquals(expectedEditingState, !treeTableCell.getGraphic().isDisabled());
         } else if (treeTableCell instanceof ProgressBarTreeTableCell) {

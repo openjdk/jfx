@@ -1,5 +1,5 @@
 // Copyright 2018 The Chromium Authors. All rights reserved.
-// Copyright (C) 2019 Apple Inc. All rights reserved.
+// Copyright (C) 2019-2022 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -39,7 +39,6 @@
 #include "UserVerificationRequirement.h"
 #include "WebAuthenticationConstants.h"
 #include "WebAuthenticationUtils.h"
-#include <wtf/Optional.h>
 
 namespace fido {
 using namespace WebCore;
@@ -62,17 +61,17 @@ static Vector<uint8_t> constructU2fRegisterCommand(const Vector<uint8_t>& applic
     return command.getEncodedCommand();
 }
 
-static Optional<Vector<uint8_t>> constructU2fSignCommand(const Vector<uint8_t>& applicationParameter, const Vector<uint8_t>& challengeParameter, const Vector<uint8_t>& keyHandle, bool checkOnly)
+static std::optional<Vector<uint8_t>> constructU2fSignCommand(const Vector<uint8_t>& applicationParameter, const Vector<uint8_t>& challengeParameter, const BufferSource& keyHandle, bool checkOnly)
 {
-    if (keyHandle.size() > kMaxKeyHandleLength)
-        return WTF::nullopt;
+    if (keyHandle.length() > kMaxKeyHandleLength)
+        return std::nullopt;
 
     Vector<uint8_t> data;
-    data.reserveInitialCapacity(kU2fChallengeParamLength + kU2fApplicationParamLength + 1 + keyHandle.size());
+    data.reserveInitialCapacity(kU2fChallengeParamLength + kU2fApplicationParamLength + 1 + keyHandle.length());
     data.appendVector(challengeParameter);
     data.appendVector(applicationParameter);
-    data.append(static_cast<uint8_t>(keyHandle.size()));
-    data.appendVector(keyHandle);
+    data.append(static_cast<uint8_t>(keyHandle.length()));
+    data.append(keyHandle.data(), keyHandle.length());
 
     apdu::ApduCommand command;
     command.setIns(static_cast<uint8_t>(U2fApduInstruction::kSign));
@@ -88,7 +87,7 @@ bool isConvertibleToU2fRegisterCommand(const PublicKeyCredentialCreationOptions&
 {
     if (request.authenticatorSelection && (request.authenticatorSelection->userVerification == UserVerificationRequirement::Required || request.authenticatorSelection->requireResidentKey))
         return false;
-    if (request.pubKeyCredParams.findMatching([](auto& item) { return item.alg == COSE::ES256; }) == notFound)
+    if (request.pubKeyCredParams.findIf([](auto& item) { return item.alg == COSE::ES256; }) == notFound)
         return false;
     return true;
 }
@@ -98,27 +97,29 @@ bool isConvertibleToU2fSignCommand(const PublicKeyCredentialRequestOptions& requ
     return (request.userVerification != UserVerificationRequirement::Required) && !request.allowCredentials.isEmpty();
 }
 
-Optional<Vector<uint8_t>> convertToU2fRegisterCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialCreationOptions& request)
+std::optional<Vector<uint8_t>> convertToU2fRegisterCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialCreationOptions& request)
 {
     if (!isConvertibleToU2fRegisterCommand(request))
-        return WTF::nullopt;
+        return std::nullopt;
 
     auto appId = processGoogleLegacyAppIdSupportExtension(request.extensions);
-    return constructU2fRegisterCommand(produceRpIdHash(!appId ? request.rp.id : appId), clientDataHash);
+    ASSERT(request.rp.id);
+    return constructU2fRegisterCommand(produceRpIdHash(!appId ? *request.rp.id : appId), clientDataHash);
 }
 
-Optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialCreationOptions& request, const PublicKeyCredentialDescriptor& keyHandle)
+std::optional<Vector<uint8_t>> convertToU2fCheckOnlySignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialCreationOptions& request, const PublicKeyCredentialDescriptor& keyHandle)
 {
     if (keyHandle.type != PublicKeyCredentialType::PublicKey)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    return constructU2fSignCommand(produceRpIdHash(request.rp.id), clientDataHash, keyHandle.idVector, true /* checkOnly */);
+    ASSERT(request.rp.id);
+    return constructU2fSignCommand(produceRpIdHash(*request.rp.id), clientDataHash, keyHandle.id, true /* checkOnly */);
 }
 
-Optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialRequestOptions& request, const Vector<uint8_t>& keyHandle, bool isAppId)
+std::optional<Vector<uint8_t>> convertToU2fSignCommand(const Vector<uint8_t>& clientDataHash, const PublicKeyCredentialRequestOptions& request, const WebCore::BufferSource& keyHandle, bool isAppId)
 {
     if (!isConvertibleToU2fSignCommand(request))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!isAppId)
         return constructU2fSignCommand(produceRpIdHash(request.rpId), clientDataHash, keyHandle, false);
@@ -131,7 +132,7 @@ Vector<uint8_t> constructBogusU2fRegistrationCommand()
     return constructU2fRegisterCommand(convertBytesToVector(kBogusAppParam, sizeof(kBogusAppParam)), convertBytesToVector(kBogusChallenge, sizeof(kBogusChallenge)));
 }
 
-String processGoogleLegacyAppIdSupportExtension(const Optional<AuthenticationExtensionsClientInputs>& extensions)
+String processGoogleLegacyAppIdSupportExtension(const std::optional<AuthenticationExtensionsClientInputs>& extensions)
 {
     if (!extensions) {
         // AuthenticatorCoordinator::create should always set it.

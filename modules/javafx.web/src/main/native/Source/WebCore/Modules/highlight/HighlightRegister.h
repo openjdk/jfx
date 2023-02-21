@@ -26,8 +26,10 @@
 #pragma once
 
 #include "Highlight.h"
+#include "HighlightVisibility.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
@@ -41,18 +43,24 @@ public:
     static Ref<HighlightRegister> create() { return adoptRef(*new HighlightRegister); }
 
     void initializeMapLike(DOMMapAdapter&);
-    void setFromMapLike(String&&, Ref<Highlight>&&);
+    void setFromMapLike(AtomString&&, Ref<Highlight>&&);
     void clear();
-    bool remove(const String&);
+    bool remove(const AtomString&);
+    bool isEmpty() const { return map().isEmpty(); }
+
+    HighlightVisibility highlightsVisibility() const { return m_highlightVisibility; }
 #if ENABLE(APP_HIGHLIGHTS)
-    WEBCORE_EXPORT void addAppHighlight(Ref<StaticRange>&&);
-    static ASCIILiteral appHighlightKey();
+    WEBCORE_EXPORT void setHighlightVisibility(HighlightVisibility);
 #endif
-    const HashMap<String, Ref<Highlight>>& map() const { return m_map; }
+
+    WEBCORE_EXPORT void addAnnotationHighlightWithRange(Ref<StaticRange>&&);
+    const HashMap<AtomString, Ref<Highlight>>& map() const { return m_map; }
 
 private:
     HighlightRegister() = default;
-    HashMap<String, Ref<Highlight>> m_map;
+    HashMap<AtomString, Ref<Highlight>> m_map;
+
+    HighlightVisibility m_highlightVisibility { HighlightVisibility::Hidden };
 };
 
 }

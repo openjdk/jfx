@@ -42,11 +42,25 @@ AdaptiveStructureWatchpoint::AdaptiveStructureWatchpoint(const ObjectPropertyCon
     RELEASE_ASSERT(!key.watchingRequiresReplacementWatchpoint());
 }
 
-void AdaptiveStructureWatchpoint::install(VM& vm)
+AdaptiveStructureWatchpoint::AdaptiveStructureWatchpoint()
+    : Watchpoint(Watchpoint::Type::AdaptiveStructure)
+    , m_codeBlock(nullptr)
 {
-    RELEASE_ASSERT(m_key.isWatchable());
+}
 
-    m_key.object()->structure(vm)->addTransitionWatchpoint(this);
+void AdaptiveStructureWatchpoint::initialize(const ObjectPropertyCondition& key, CodeBlock* codeBlock)
+{
+    m_codeBlock = codeBlock;
+    m_key = key;
+    RELEASE_ASSERT(key.watchingRequiresStructureTransitionWatchpoint());
+    RELEASE_ASSERT(!key.watchingRequiresReplacementWatchpoint());
+}
+
+void AdaptiveStructureWatchpoint::install(VM&)
+{
+    RELEASE_ASSERT(m_key.isWatchable(PropertyCondition::MakeNoChanges));
+
+    m_key.object()->structure()->addTransitionWatchpoint(this);
 }
 
 void AdaptiveStructureWatchpoint::fireInternal(VM& vm, const FireDetail& detail)

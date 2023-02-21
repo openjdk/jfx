@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,6 +64,9 @@ class DFontDecoder extends FontFileWriter {
                 throw new IOException("Unsupported Dfont");
             }
             int[] tags = DFontDecoder.getCTFontTags(fontRef);
+            if (tags == null) {
+                throw new IOException("Could not get tables for Dfont");
+            }
             short numTables = (short)tags.length;
             int size = TTCHEADERSIZE + (DIRECTORYENTRYSIZE * numTables);
             byte[][] tableData = new byte[numTables][];
