@@ -116,7 +116,7 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
     }
 
     @Test
-    public void testChoicBoxScrollOnCollectionChange() throws Exception {
+    public void testChoiceBoxScrollOnCollectionChange() throws Exception {
         Util.waitForLatch(startupLatch, 5, "Timeout waiting for stage to load.");
         ContextMenu popup = ChoiceBoxSkinNodesShim.getChoiceBoxPopup((ChoiceBoxSkin<?>) choiceBox.getSkin());
 
