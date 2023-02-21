@@ -43,9 +43,9 @@ void SpeechRecognitionCaptureSource::mute()
 
 #if ENABLE(MEDIA_STREAM)
 
-Optional<CaptureDevice> SpeechRecognitionCaptureSource::findCaptureDevice()
+std::optional<CaptureDevice> SpeechRecognitionCaptureSource::findCaptureDevice()
 {
-    Optional<CaptureDevice> captureDevice;
+    std::optional<CaptureDevice> captureDevice;
     auto devices = RealtimeMediaSourceCenter::singleton().audioCaptureFactory().audioCaptureDeviceManager().captureDevices();
     for (auto device : devices) {
         if (!device.enabled())
@@ -62,9 +62,9 @@ Optional<CaptureDevice> SpeechRecognitionCaptureSource::findCaptureDevice()
     return captureDevice;
 }
 
-CaptureSourceOrError SpeechRecognitionCaptureSource::createRealtimeMediaSource(const CaptureDevice& captureDevice)
+CaptureSourceOrError SpeechRecognitionCaptureSource::createRealtimeMediaSource(const CaptureDevice& captureDevice, PageIdentifier pageIdentifier)
 {
-    return RealtimeMediaSourceCenter::singleton().audioCaptureFactory().createAudioCaptureSource(captureDevice, "SpeechID"_s, { });
+    return RealtimeMediaSourceCenter::singleton().audioCaptureFactory().createAudioCaptureSource(captureDevice, "SpeechID"_s, { }, pageIdentifier);
 }
 
 SpeechRecognitionCaptureSource::SpeechRecognitionCaptureSource(SpeechRecognitionConnectionClientIdentifier clientIdentifier, DataCallback&& dataCallback, StateUpdateCallback&& stateUpdateCallback, Ref<RealtimeMediaSource>&& source)

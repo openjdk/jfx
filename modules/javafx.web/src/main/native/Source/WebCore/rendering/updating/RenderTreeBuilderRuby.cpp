@@ -105,18 +105,6 @@ static auto createAnonymousRubyInlineBlock(RenderObject& ruby)
     return newBlock;
 }
 
-static RenderRubyRun* lastRubyRun(const RenderElement* ruby)
-{
-    RenderObject* child = ruby->lastChild();
-    if (child && !is<RenderRubyRun>(*child))
-        child = child->previousSibling();
-    if (!is<RenderRubyRun>(child)) {
-        ASSERT(!child || child->isBeforeContent() || child == rubyBeforeBlock(ruby) || child->isRenderMultiColumnFlow() || child->isRenderMultiColumnSet());
-        return nullptr;
-    }
-    return downcast<RenderRubyRun>(child);
-}
-
 RenderTreeBuilder::Ruby::Ruby(RenderTreeBuilder& builder)
     : m_builder(builder)
 {
@@ -240,9 +228,14 @@ void RenderTreeBuilder::Ruby::attach(RenderRubyRun& parent, RenderPtr<RenderObje
         return;
     }
     // child is not a text -> insert it into the base
-    // (append it instead if beforeChild is the ruby text)
-    if (beforeChild && beforeChild->isRubyText())
+    if (beforeChild && beforeChild->isRubyText()) {
+        // Append it instead if beforeChild is the ruby text.
         beforeChild = nullptr;
+    }
+    if (!parent.hasRubyBase()) {
+        // Child is going to be attached to the newly constructed ruby base.
+        beforeChild = nullptr;
+    }
     m_builder.attach(rubyBaseSafe(parent), WTFMove(child), beforeChild);
 }
 
@@ -283,7 +276,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForChild(RenderRubyAsB
     if (child.isRubyRun())
         return parent;
 
-    if (beforeChild && !parent.isAfterContent(beforeChild)) {
+    if (beforeChild && !parent.isBeforeOrAfterContent(beforeChild)) {
         // insert child into run
         ASSERT(!beforeChild->isRubyRun());
         auto* run = beforeChild->parent();
@@ -298,7 +291,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForChild(RenderRubyAsB
     // If the new child would be appended, try to add the child to the previous run
     // if possible, or create a new run otherwise.
     // (The RenderRubyRun object will handle the details)
-    auto* lastRun = lastRubyRun(&parent);
+    auto* lastRun = childrenOfType<RenderRubyRun>(parent).last();
     if (!lastRun || lastRun->hasRubyText()) {
         auto newRun = RenderRubyRun::staticCreateRubyRun(&parent);
         lastRun = newRun.get();
@@ -345,7 +338,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForChild(RenderRubyAsI
     if (child.isRubyRun())
         return parent;
 
-    if (beforeChild && !parent.isAfterContent(beforeChild)) {
+    if (beforeChild && !parent.isBeforeOrAfterContent(beforeChild)) {
         // insert child into run
         ASSERT(!beforeChild->isRubyRun());
         auto* run = beforeChild->parent();
@@ -360,7 +353,7 @@ RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForChild(RenderRubyAsI
     // If the new child would be appended, try to add the child to the previous run
     // if possible, or create a new run otherwise.
     // (The RenderRubyRun object will handle the details)
-    auto* lastRun = lastRubyRun(&parent);
+    auto* lastRun = childrenOfType<RenderRubyRun>(parent).last();
     if (!lastRun || lastRun->hasRubyText()) {
         auto newRun = RenderRubyRun::staticCreateRubyRun(&parent);
         lastRun = newRun.get();

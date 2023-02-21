@@ -31,6 +31,8 @@
 
 namespace WebCore {
 
+struct BlendingContext;
+
 class TransformOperations {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -42,11 +44,13 @@ public:
         return !(*this == o);
     }
 
-    void apply(const FloatSize& sz, TransformationMatrix& t) const
+    void apply(const FloatSize& size, TransformationMatrix& matrix) const { apply(0, size, matrix); }
+    void apply(unsigned start, const FloatSize& size, TransformationMatrix& matrix) const
     {
-        for (unsigned i = 0; i < m_operations.size(); ++i)
-            m_operations[i]->apply(t, sz);
+        for (unsigned i = start; i < m_operations.size(); ++i)
+            m_operations[i]->apply(matrix, size);
     }
+
 
     // Return true if any of the operation types are 3D operation types (even if the
     // values describe affine transforms)
@@ -59,6 +63,13 @@ public:
         return false;
     }
 
+    bool hasMatrixOperation() const
+    {
+        return std::any_of(m_operations.begin(), m_operations.end(), [](auto operation) {
+            return operation->type() == WebCore::TransformOperation::MATRIX;
+        });
+    }
+
     bool isRepresentableIn2D() const
     {
         for (const auto& operation : m_operations) {
@@ -67,8 +78,6 @@ public:
         }
         return true;
     }
-
-    bool operationsMatch(const TransformOperations&) const;
 
     void clear()
     {
@@ -82,13 +91,38 @@ public:
 
     size_t size() const { return m_operations.size(); }
     const TransformOperation* at(size_t index) const { return index < m_operations.size() ? m_operations.at(index).get() : 0; }
+    bool isInvertible(const LayoutSize& size) const
+    {
+        TransformationMatrix transform;
+        apply(size, transform);
+        return transform.isInvertible();
+    }
 
-    TransformOperations blendByMatchingOperations(const TransformOperations& from, const double& progress) const;
-    TransformOperations blendByUsingMatrixInterpolation(const TransformOperations& from, double progress, const LayoutSize&) const;
-    TransformOperations blend(const TransformOperations& from, double progress, const LayoutSize&) const;
+    bool shouldFallBackToDiscreteAnimation(const TransformOperations&, const LayoutSize&) const;
+
+    RefPtr<TransformOperation> createBlendedMatrixOperationFromOperationsSuffix(const TransformOperations& from, unsigned start, const BlendingContext&, const LayoutSize& referenceBoxSize) const;
+    TransformOperations blend(const TransformOperations& from, const BlendingContext&, const LayoutSize&, std::optional<unsigned> prefixLength = std::nullopt) const;
 
 private:
     Vector<RefPtr<TransformOperation>> m_operations;
+};
+
+// SharedPrimitivesPrefix is used to find a shared prefix of transform function primitives (as
+// defined by CSS Transforms Level 1 & 2). Given a series of TransformOperations in the keyframes
+// of an animation. After update() is called with the TransformOperations of every keyframe,
+// primitive() will return the prefix of primitives that are shared by all keyframes passed
+// to update().
+class SharedPrimitivesPrefix {
+public:
+    SharedPrimitivesPrefix() = default;
+    virtual ~SharedPrimitivesPrefix() = default;
+    void update(const TransformOperations&);
+    bool hadIncompatibleTransformFunctions() { return m_indexOfFirstMismatch.has_value(); }
+    const Vector<TransformOperation::OperationType>& primitives() const { return m_primitives; }
+
+private:
+    std::optional<size_t> m_indexOfFirstMismatch;
+    Vector<TransformOperation::OperationType> m_primitives;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const TransformOperations&);

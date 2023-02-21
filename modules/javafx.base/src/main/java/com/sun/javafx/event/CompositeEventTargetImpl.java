@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ public class CompositeEventTargetImpl implements CompositeEventTarget {
 
     public CompositeEventTargetImpl(final EventTarget... eventTargets) {
         final Set<EventTarget> mutableSet =
-                new HashSet<EventTarget>(eventTargets.length);
+                new HashSet<>(eventTargets.length);
         mutableSet.addAll(Arrays.asList(eventTargets));
 
         this.eventTargets = Collections.unmodifiableSet(mutableSet);

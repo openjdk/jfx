@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Oleksandr Skachkov <gskachkov@gmail.com>.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +33,7 @@
 
 namespace JSC {
 
-const ClassInfo JSAsyncGeneratorFunction::s_info = { "JSAsyncGeneratorFunction",  &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSAsyncGeneratorFunction) };
+const ClassInfo JSAsyncGeneratorFunction::s_info = { "JSAsyncGeneratorFunction"_s,  &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSAsyncGeneratorFunction) };
 
 JSAsyncGeneratorFunction::JSAsyncGeneratorFunction(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
     : Base(vm, executable, scope, structure)
@@ -41,15 +42,15 @@ JSAsyncGeneratorFunction::JSAsyncGeneratorFunction(VM& vm, FunctionExecutable* e
 
 JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
 {
-    JSAsyncGeneratorFunction* asyncGenerator = new (NotNull, allocateCell<JSAsyncGeneratorFunction>(vm.heap)) JSAsyncGeneratorFunction(vm, executable, scope, structure);
-    ASSERT(asyncGenerator->structure(vm)->globalObject());
+    JSAsyncGeneratorFunction* asyncGenerator = new (NotNull, allocateCell<JSAsyncGeneratorFunction>(vm)) JSAsyncGeneratorFunction(vm, executable, scope, structure);
+    ASSERT(asyncGenerator->structure()->globalObject());
     asyncGenerator->finishCreation(vm);
     return asyncGenerator;
 }
 
 JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::create(VM& vm, FunctionExecutable* executable, JSScope* scope)
 {
-    JSAsyncGeneratorFunction* asyncGenerator = createImpl(vm, executable, scope, scope->globalObject(vm)->asyncGeneratorFunctionStructure());
+    JSAsyncGeneratorFunction* asyncGenerator = createImpl(vm, executable, scope, scope->globalObject()->asyncGeneratorFunctionStructure());
     executable->notifyCreation(vm, asyncGenerator, "Allocating an async generator");
     return asyncGenerator;
 }
@@ -63,7 +64,7 @@ JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::create(VM& vm, FunctionExecu
 
 JSAsyncGeneratorFunction* JSAsyncGeneratorFunction::createWithInvalidatedReallocationWatchpoint(VM& vm, FunctionExecutable* executable, JSScope* scope)
 {
-    return createImpl(vm, executable, scope, scope->globalObject(vm)->asyncGeneratorFunctionStructure());
+    return createImpl(vm, executable, scope, scope->globalObject()->asyncGeneratorFunctionStructure());
 }
 
 }

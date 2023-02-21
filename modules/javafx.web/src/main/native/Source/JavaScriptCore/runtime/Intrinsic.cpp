@@ -157,6 +157,8 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "RegExpTestFastIntrinsic";
     case RegExpMatchFastIntrinsic:
         return "RegExpMatchFastIntrinsic";
+    case ObjectAssignIntrinsic:
+        return "ObjectAssignIntrinsic";
     case ObjectCreateIntrinsic:
         return "ObjectCreateIntrinsic";
     case ObjectGetOwnPropertyNamesIntrinsic:
@@ -203,6 +205,8 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "IsTypedArrayViewIntrinsic";
     case BoundFunctionCallIntrinsic:
         return "BoundFunctionCallIntrinsic";
+    case RemoteFunctionCallIntrinsic:
+        return "RemoteFunctionCallIntrinsic";
     case JSMapGetIntrinsic:
         return "JSMapGetIntrinsic";
     case JSMapHasIntrinsic:
@@ -275,6 +279,8 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "AtomicsXorIntrinsic";
     case ParseIntIntrinsic:
         return "ParseIntIntrinsic";
+    case FunctionToStringIntrinsic:
+        return "FunctionToStringIntrinsic";
     case TypedArrayLengthIntrinsic:
         return "TypedArrayLengthIntrinsic";
     case TypedArrayByteLengthIntrinsic:
@@ -344,7 +350,7 @@ const char* intrinsicName(Intrinsic intrinsic)
     return nullptr;
 }
 
-Optional<IterationKind> interationKindForIntrinsic(Intrinsic intrinsic)
+std::optional<IterationKind> interationKindForIntrinsic(Intrinsic intrinsic)
 {
     switch (intrinsic) {
     case ArrayValuesIntrinsic:
@@ -357,7 +363,7 @@ Optional<IterationKind> interationKindForIntrinsic(Intrinsic intrinsic)
     case TypedArrayEntriesIntrinsic:
         return IterationKind::Entries;
     default:
-        return WTF::nullopt;
+        return std::nullopt;
     }
 }
 

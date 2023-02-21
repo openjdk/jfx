@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2015-2016 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-const ClassInfo Symbol::s_info = { "symbol", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(Symbol) };
+const ClassInfo Symbol::s_info = { "symbol"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(Symbol) };
 
 Symbol::Symbol(VM& vm)
     : Base(vm, vm.symbolStructure.get())
@@ -55,16 +55,9 @@ Symbol::Symbol(VM& vm, SymbolImpl& uid)
 void Symbol::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     vm.symbolImplToSymbolMap.set(&m_privateName.uid(), this);
-}
-
-inline SymbolObject* SymbolObject::create(VM& vm, JSGlobalObject* globalObject, Symbol* symbol)
-{
-    SymbolObject* object = new (NotNull, allocateCell<SymbolObject>(vm.heap)) SymbolObject(vm, globalObject->symbolObjectStructure());
-    object->finishCreation(vm, symbol);
-    return object;
 }
 
 JSValue Symbol::toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const
@@ -74,7 +67,7 @@ JSValue Symbol::toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const
 
 JSObject* Symbol::toObject(JSGlobalObject* globalObject) const
 {
-    return SymbolObject::create(globalObject->vm(), globalObject, const_cast<Symbol*>(this));
+    return SymbolObject::create(globalObject->vm(), globalObject->symbolObjectStructure(), const_cast<Symbol*>(this));
 }
 
 double Symbol::toNumber(JSGlobalObject* globalObject) const
@@ -103,14 +96,14 @@ String Symbol::description() const
 
 Symbol* Symbol::create(VM& vm)
 {
-    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm.heap)) Symbol(vm);
+    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm)) Symbol(vm);
     symbol->finishCreation(vm);
     return symbol;
 }
 
 Symbol* Symbol::createWithDescription(VM& vm, const String& description)
 {
-    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm.heap)) Symbol(vm, description);
+    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm)) Symbol(vm, description);
     symbol->finishCreation(vm);
     return symbol;
 }
@@ -120,7 +113,7 @@ Symbol* Symbol::create(VM& vm, SymbolImpl& uid)
     if (Symbol* symbol = vm.symbolImplToSymbolMap.get(&uid))
         return symbol;
 
-    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm.heap)) Symbol(vm, uid);
+    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm)) Symbol(vm, uid);
     symbol->finishCreation(vm);
     return symbol;
 }

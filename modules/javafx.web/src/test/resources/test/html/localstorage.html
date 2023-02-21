@@ -1,0 +1,27 @@
+<html>
+<body>
+
+<h2>The localStorage Property Test</h2>
+
+<p id="key"></p>
+
+<script>
+
+ // Test set and get Items API
+ function test_local_storage_set() {
+   // Set Item
+   localStorage.setItem("key", "1001");
+   // getItem
+   document.getElementById("key").innerHTML = localStorage.getItem("key");
+ }
+
+ // test clear() API
+ function delete_items() {
+  localStorage.clear();
+  document.getElementById("key").innerHTML = localStorage.getItem("key");
+ }
+
+</script>
+
+</body>
+</html>

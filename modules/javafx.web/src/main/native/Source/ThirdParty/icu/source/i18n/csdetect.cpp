@@ -270,6 +270,11 @@ const CharsetMatch * const *CharsetDetector::detectAll(int32_t &maxMatchesFound,
 
     maxMatchesFound = resultCount;
 
+    if (maxMatchesFound == 0) {
+        status = U_INVALID_CHAR_FOUND;
+        return NULL;
+    }
+
     return resultArray;
 }
 
@@ -385,7 +390,7 @@ enumNext(UEnumeration *en, int32_t *resultLength, UErrorCode * /*status*/) {
             // ucsdet_getDetectableCharsets
             UBool *enabledArray = ((Context *)en->context)->enabledRecognizers;
             if (enabledArray != NULL) {
-                // custome set
+                // custom set
                 while (currName == NULL && ((Context *)en->context)->currIndex < fCSRecognizers_size) {
                     if (enabledArray[((Context *)en->context)->currIndex]) {
                         currName = fCSRecognizers[((Context *)en->context)->currIndex]->recognizer->getName();

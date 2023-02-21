@@ -25,7 +25,9 @@
 
 #pragma once
 
-#if (defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC)
+#include <wtf/Platform.h>
+
+#if USE(SYSTEM_MALLOC) || !USE(ISO_MALLOC)
 
 #include <wtf/FastMalloc.h>
 

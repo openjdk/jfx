@@ -29,6 +29,7 @@
 #include "DOMRect.h"
 #include "DOMRectList.h"
 #include "DocumentFragment.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -37,6 +38,7 @@
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
+#include "JSNode.h"
 #include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "ProcessingInstruction.h"
@@ -471,9 +473,8 @@ static ExceptionOr<RefPtr<Node>> processContentsBetweenOffsets(Range::ActionType
                 result = WTFMove(processingInstruction);
         }
         if (action == Range::Extract || action == Range::Delete) {
-            String data { instruction.data() };
-            data.remove(startOffset, endOffset - startOffset);
-            instruction.setData(data);
+            auto data = makeStringByRemoving(instruction.data(), startOffset, endOffset - startOffset);
+            instruction.setData(WTFMove(data));
         }
         break;
     }
@@ -824,7 +825,7 @@ ExceptionOr<void> Range::surroundContents(Node& newParent)
 
     // Step 4: If newParent has children, replace all with null within newParent.
     if (newParent.hasChildNodes())
-        downcast<ContainerNode>(newParent).replaceAllChildren(nullptr);
+        downcast<ContainerNode>(newParent).replaceAll(nullptr);
 
     // Step 5: Insert newParent into context object.
     auto insertResult = insertNode(newParent);
@@ -1003,16 +1004,16 @@ ExceptionOr<void> Range::expand(const String& unit)
 {
     auto start = VisiblePosition { makeContainerOffsetPosition(&startContainer(), startOffset()) };
     auto end = VisiblePosition { makeContainerOffsetPosition(&endContainer(), endOffset()) };
-    if (unit == "word") {
+    if (unit == "word"_s) {
         start = startOfWord(start);
         end = endOfWord(end);
-    } else if (unit == "sentence") {
+    } else if (unit == "sentence"_s) {
         start = startOfSentence(start);
         end = endOfSentence(end);
-    } else if (unit == "block") {
+    } else if (unit == "block"_s) {
         start = startOfParagraph(start);
         end = endOfParagraph(end);
-    } else if (unit == "document") {
+    } else if (unit == "document"_s) {
         start = startOfDocument(start);
         end = endOfDocument(end);
     } else
@@ -1073,14 +1074,14 @@ SimpleRange makeSimpleRange(const Ref<Range>& range)
     return makeSimpleRange(range.get());
 }
 
-Optional<SimpleRange> makeSimpleRange(const Range* range)
+std::optional<SimpleRange> makeSimpleRange(const Range* range)
 {
     if (!range)
-        return WTF::nullopt;
+        return std::nullopt;
     return makeSimpleRange(*range);
 }
 
-Optional<SimpleRange> makeSimpleRange(const RefPtr<Range>& range)
+std::optional<SimpleRange> makeSimpleRange(const RefPtr<Range>& range)
 {
     return makeSimpleRange(range.get());
 }
@@ -1092,11 +1093,17 @@ Ref<Range> createLiveRange(const SimpleRange& range)
     return result;
 }
 
-RefPtr<Range> createLiveRange(const Optional<SimpleRange>& range)
+RefPtr<Range> createLiveRange(const std::optional<SimpleRange>& range)
 {
     if (!range)
         return nullptr;
     return createLiveRange(*range);
+}
+
+void Range::visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const
+{
+    addWebCoreOpaqueRoot(visitor, m_start.container());
+    addWebCoreOpaqueRoot(visitor, m_end.container());
 }
 
 } // namespace WebCore

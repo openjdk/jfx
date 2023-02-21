@@ -42,6 +42,7 @@
 #include <unistd.h>
 #include <wtf/Threading.h>
 #include <wtf/linux/CurrentProcessMemoryStatus.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -106,8 +107,8 @@ void ResourceUsageThread::platformSaveStateBeforeStarting()
 }
 
 struct ThreadInfo {
-    Optional<String> name;
-    Optional<float> cpuUsage;
+    std::optional<String> name;
+    std::optional<float> cpuUsage;
     unsigned long long previousUtime { 0 };
     unsigned long long previousStime { 0 };
 };
@@ -200,20 +201,15 @@ static void collectCPUUsage(float period)
 
     struct dirent* dp;
     while ((dp = readdir(dir))) {
-        String name = String::fromUTF8(dp->d_name);
-        if (name == "." || name == "..")
+        auto id = parseInteger<pid_t>(StringView::fromLatin1(dp->d_name));
+        if (!id)
             continue;
 
-        bool ok;
-        pid_t id = name.toIntStrict(&ok);
-        if (!ok)
-            continue;
+        auto& info = threadInfoMap().add(*id, ThreadInfo()).iterator->value;
+        if (!threadCPUUsage(*id, period, info))
+            threadInfoMap().remove(*id);
 
-        auto& info = threadInfoMap().add(id, ThreadInfo()).iterator->value;
-        if (!threadCPUUsage(id, period, info))
-            threadInfoMap().remove(id);
-
-        previousTasks.remove(id);
+        previousTasks.remove(*id);
     }
     closedir(dir);
 
@@ -237,8 +233,8 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
 
     HashSet<pid_t> knownWebKitThreads;
     {
-        auto locker = holdLock(Thread::allThreadsMutex());
-        for (auto* thread : Thread::allThreads(locker)) {
+        Locker locker { Thread::allThreadsLock() };
+        for (auto* thread : Thread::allThreads()) {
             if (auto id = thread->id())
                 knownWebKitThreads.add(id);
         }
@@ -246,14 +242,14 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
 
     HashMap<pid_t, String> knownWorkerThreads;
     {
-        auto locker = holdLock(WorkerOrWorkletThread::workerOrWorkletThreadsLock());
+        Locker locker { WorkerOrWorkletThread::workerOrWorkletThreadsLock() };
         for (auto* thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
             // Ignore worker threads that have not been fully started yet.
             if (!thread->thread())
                 continue;
 
             if (auto id = thread->thread()->id())
-                knownWorkerThreads.set(id, thread->identifier().isolatedCopy());
+                knownWorkerThreads.set(id, thread->inspectorIdentifier().isolatedCopy());
         }
     }
 
@@ -272,7 +268,7 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
             return true;
 
         // The bmalloc scavenger thread is below WTF. Detect it by its name.
-        if (name == "BMScavenger")
+        if (name == "BMScavenger"_s)
             return true;
 
         return false;
@@ -295,7 +291,7 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
         else {
             String threadIdentifier = knownWorkerThreads.get(id);
             bool isWorkerThread = !threadIdentifier.isEmpty();
-            String name = it.value.name.valueOr(emptyString());
+            String name = it.value.name.value_or(emptyString());
             ThreadCPUInfo::Type type = (isWorkerThread || isWebKitThread(id, name)) ? ThreadCPUInfo::Type::WebKit : ThreadCPUInfo::Type::Unknown;
             data.cpuThreads.append(ThreadCPUInfo { name, threadIdentifier, cpuUsage, type });
         }
@@ -316,11 +312,15 @@ void ResourceUsageThread::platformCollectMemoryData(JSC::VM* vm, ResourceUsageDa
     data.categories[MemoryCategory::GCHeap].dirtySize = currentGCHeapCapacity;
     data.categories[MemoryCategory::GCOwned].dirtySize = currentGCOwnedExtra - currentGCOwnedExternal;
     data.categories[MemoryCategory::GCOwned].externalSize = currentGCOwnedExternal;
+    size_t categoriesTotalSize = 0;
+    for (auto& category : data.categories)
+        categoriesTotalSize += category.totalSize();
+    data.categories[MemoryCategory::Other].dirtySize = data.totalDirtySize - categoriesTotalSize;
 
     data.totalExternalSize = currentGCOwnedExternal;
 
-    data.timeOfNextEdenCollection = data.timestamp + vm->heap.edenActivityCallback()->timeUntilFire().valueOr(Seconds(std::numeric_limits<double>::infinity()));
-    data.timeOfNextFullCollection = data.timestamp + vm->heap.fullActivityCallback()->timeUntilFire().valueOr(Seconds(std::numeric_limits<double>::infinity()));
+    data.timeOfNextEdenCollection = data.timestamp + vm->heap.edenActivityCallback()->timeUntilFire().value_or(Seconds(std::numeric_limits<double>::infinity()));
+    data.timeOfNextFullCollection = data.timestamp + vm->heap.fullActivityCallback()->timeUntilFire().value_or(Seconds(std::numeric_limits<double>::infinity()));
 }
 
 } // namespace WebCore

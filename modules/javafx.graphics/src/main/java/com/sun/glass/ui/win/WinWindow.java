@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,10 +150,19 @@ class WinWindow extends Window {
                                  int resizeMode,
                                  int iLft, int iTop, int iRgt, int iBot)
     {
-        if (screen == null || !screen.containsPlatformRect(x, y, w, h)) {
+        final Window owner = getOwner();
+        final Screen popupOwnerScreen = isPopup() && owner != null ? owner.getScreen() : null;
+        final boolean usePopupScreen = popupOwnerScreen != null;
+
+        if (usePopupScreen && screen == popupOwnerScreen) {
+            // Suppress screen switch
+            return null;
+        }
+
+        if (screen == null || usePopupScreen || !screen.containsPlatformRect(x, y, w, h)) {
             float bestPortion = (screen == null) ? 0.0f
                     : screen.portionIntersectsPlatformRect(x, y, w, h);
-            if (bestPortion < 0.5f) {
+            if (usePopupScreen || bestPortion < 0.5f) {
                 float relAnchorX = anchorX / platformScaleX;
                 float relAnchorY = anchorY / platformScaleY;
                 Screen bestScreen = screen;
@@ -183,7 +192,9 @@ class WinWindow extends Window {
                         }
                     }
                     float portion = scr.portionIntersectsPlatformRect(newx, newy, neww, newh);
-                    if (screen == null || portion > 0.6f && portion > bestPortion) {
+                    if (scr == popupOwnerScreen ||
+                            (screen == null || portion > 0.6f && portion > bestPortion) && !usePopupScreen) {
+
                         bestPortion = portion;
                         bestScreen = scr;
                         bestx = newx;

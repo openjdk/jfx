@@ -348,7 +348,7 @@ g_io_unix_create_watch (GIOChannel   *channel,
 
 
   source = g_source_new (&g_io_watch_funcs, sizeof (GIOUnixWatch));
-  g_source_set_name (source, "GIOChannel (Unix)");
+  g_source_set_static_name (source, "GIOChannel (Unix)");
   watch = (GIOUnixWatch *)source;
 
   watch->channel = channel;

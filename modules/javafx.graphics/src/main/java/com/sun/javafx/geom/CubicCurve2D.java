@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -163,6 +163,7 @@ public class CubicCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public RectBounds getBounds() {
         float left   = Math.min(Math.min(x1, x2),
                     Math.min(ctrlx1, ctrlx2));
@@ -811,6 +812,7 @@ public class CubicCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y) {
         if (!(x * 0f + y * 0f == 0f)) {
             /* Either x or y was infinite or NaN.
@@ -835,6 +837,7 @@ public class CubicCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(Point2D p) {
         return contains(p.x, p.y);
     }
@@ -945,6 +948,7 @@ public class CubicCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean intersects(float x, float y, float w, float h) {
         // Trivially reject non-existant rectangles
         if (w <= 0 || h <= 0) {
@@ -1153,6 +1157,7 @@ public class CubicCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y, float w, float h) {
         if (w <= 0 || h <= 0) {
             return false;
@@ -1187,6 +1192,7 @@ public class CubicCurve2D extends Shape {
      *          geometry of the outline of this <code>CubicCurve2D</code>, one
      *          segment at a time.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx) {
         return new CubicIterator(this, tx);
     }
@@ -1209,6 +1215,7 @@ public class CubicCurve2D extends Shape {
      * geometry of the outline of this <code>CubicCurve2D</code>,
      * one segment at a time.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);
     }

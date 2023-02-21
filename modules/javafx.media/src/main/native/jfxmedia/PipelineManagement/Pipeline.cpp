@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,9 +34,9 @@
 //********** class CPipeline
 //*************************************************************************************************
 CPipeline::CPipeline(CPipelineOptions* pOptions)
-:   m_PlayerState(Unknown),
+:   m_pEventDispatcher(NULL),
+    m_PlayerState(Unknown),
     m_PlayerPendingState(Unknown),
-    m_pEventDispatcher(NULL),
     m_pOptions(pOptions),
     m_bHasAudio(false),
     m_bHasVideo(false),

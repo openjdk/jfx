@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,6 +84,16 @@ import com.sun.javafx.scene.SceneHelper;
  * The JavaFX Application Thread is created as part of the startup process for
  * the JavaFX runtime. See the {@link javafx.application.Application} class and
  * the {@link Platform#startup(Runnable)} method for more information.
+ * </p>
+ * <p>
+ * Some {@code Window} properties are read-only, even though they have
+ * corresponding set methods, because they can be changed externally by the
+ * underlying platform, and therefore must not be bindable.
+ * Further, these properties might be ignored on some platforms, depending on
+ * whether or not there is a window manager and how it is configured.
+ * For example, a tiling window manager might ignore the {@code x} and {@code y}
+ * properties, or treat them as hints, placing the window in a location of its
+ * choosing.
  * </p>
  *
  * @since JavaFX 2.0
@@ -521,6 +531,7 @@ public class Window implements EventTarget {
     }
 
     private boolean xExplicit = false;
+
     /**
      * The horizontal location of this {@code Window} on the screen. Changing
      * this attribute will move the {@code Window} horizontally. If this
@@ -529,6 +540,11 @@ public class Window implements EventTarget {
      * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
+     * <p>
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
+     * </p>
      */
     private ReadOnlyDoubleWrapper x =
             new ReadOnlyDoubleWrapper(this, "x", Double.NaN);
@@ -546,6 +562,7 @@ public class Window implements EventTarget {
     }
 
     private boolean yExplicit = false;
+
     /**
      * The vertical location of this {@code Window} on the screen. Changing this
      * attribute will move the {@code Window} vertically. If this
@@ -554,6 +571,11 @@ public class Window implements EventTarget {
      * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
+     * <p>
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
+     * </p>
      */
     private ReadOnlyDoubleWrapper y =
             new ReadOnlyDoubleWrapper(this, "y", Double.NaN);
@@ -598,8 +620,9 @@ public class Window implements EventTarget {
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper width =
@@ -614,6 +637,7 @@ public class Window implements EventTarget {
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
 
     private boolean heightExplicit = false;
+
     /**
      * The height of this {@code Window}. Changing this attribute will shrink
      * or heighten the height of the {@code Window}. This value includes any and all
@@ -628,8 +652,9 @@ public class Window implements EventTarget {
      * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
+     * This property is read-only because it can be changed externally
+     * by the underlying platform.
+     * Further, setting this property might be ignored on some platforms.
      * </p>
      */
     private ReadOnlyDoubleWrapper height =
@@ -657,10 +682,6 @@ public class Window implements EventTarget {
 
     /**
      * Whether or not this {@code Window} has the keyboard or input focus.
-     * <p>
-     * The property is read only because it can be changed externally
-     * by the underlying platform and therefore must not be bindable.
-     * </p>
      */
     private ReadOnlyBooleanWrapper focused = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
@@ -712,7 +733,7 @@ public class Window implements EventTarget {
       */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }
@@ -931,7 +952,7 @@ public class Window implements EventTarget {
     public final ObjectProperty<EventHandler<WindowEvent>>
             onCloseRequestProperty() {
         if (onCloseRequest == null) {
-            onCloseRequest = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onCloseRequest = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, get());
                 }
@@ -960,7 +981,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShowingProperty() {
         if (onShowing == null) {
-            onShowing = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onShowing = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_SHOWING, get());
                 }
@@ -989,7 +1010,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShownProperty() {
         if (onShown == null) {
-            onShown = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onShown = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_SHOWN, get());
                 }
@@ -1018,7 +1039,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHidingProperty() {
         if (onHiding == null) {
-            onHiding = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onHiding = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_HIDING, get());
                 }
@@ -1050,7 +1071,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHiddenProperty() {
         if (onHidden == null) {
-            onHidden = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onHidden = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_HIDDEN, get());
                 }
@@ -1390,7 +1411,7 @@ public class Window implements EventTarget {
     private void initializeInternalEventDispatcher() {
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
-            eventDispatcher = new SimpleObjectProperty<EventDispatcher>(
+            eventDispatcher = new SimpleObjectProperty<>(
                                           this,
                                           "eventDispatcher",
                                           internalEventDispatcher);

@@ -134,8 +134,6 @@ public:
     void setIsSelected(bool);
 
     virtual bool isFrameView() const { return false; }
-    virtual bool isPluginView() const { return false; }
-    // FIXME: The Mac plug-in code should inherit from PluginView. When this happens PluginViewBase and PluginView can become one class.
     virtual bool isPluginViewBase() const { return false; }
     virtual bool isScrollbar() const { return false; }
     virtual bool isScrollView() const { return false; }
@@ -180,7 +178,11 @@ public:
     // the frame rects be the same no matter what transforms are applied.
     virtual bool transformsAffectFrameRect() { return true; }
 
+    virtual void willBeDestroyed() { }
+
 #if PLATFORM(COCOA)
+    virtual id accessibilityHitTest(const IntPoint&) const { return nil; }
+    virtual id accessibilityObject() const { return nil; }
     NSView* getOuterView() const;
 
     void removeFromSuperview();

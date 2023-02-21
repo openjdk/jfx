@@ -41,7 +41,7 @@ String convertHTMLTextToInterchangeFormat(const String& in, const Text* node)
         return in;
 
     const char convertedSpaceString[] = "<span class=\"" AppleConvertedSpace "\">\xA0</span>";
-    COMPILE_ASSERT((static_cast<unsigned char>('\xA0') == noBreakSpace), ConvertedSpaceStringSpaceIsNoBreakSpace);
+    static_assert((static_cast<unsigned char>('\xA0') == noBreakSpace), "ConvertedSpaceStringSpace is NoBreakSpace");
 
     StringBuilder s;
 
@@ -65,7 +65,7 @@ String convertHTMLTextToInterchangeFormat(const String& in, const Text* node)
                         break;
                     case 1:
                         if (i == 0 || i + 1 == in.length()) // at start or end of string
-                            s.appendLiteral(convertedSpaceString);
+                            s.append(convertedSpaceString);
                         else
                             s.append(' ');
                         break;

@@ -25,7 +25,9 @@
 
 #include "config.h"
 #include "WOFFFileFormat.h"
+#if !PLATFORM(JAVA)
 #include <zlib.h>
+#endif
 
 #include "SharedBuffer.h"
 #include <wtf/ByteOrder.h>
@@ -61,16 +63,16 @@ static bool readUInt16(SharedBuffer& buffer, size_t& offset, uint16_t& value)
     return true;
 }
 
-static bool writeUInt32(Vector<char>& vector, uint32_t value)
+static bool writeUInt32(Vector<uint8_t>& vector, uint32_t value)
 {
     uint32_t bigEndianValue = htonl(value);
-    return vector.tryAppend(reinterpret_cast_ptr<char*>(&bigEndianValue), sizeof(bigEndianValue));
+    return vector.tryAppend(reinterpret_cast_ptr<uint8_t*>(&bigEndianValue), sizeof(bigEndianValue));
 }
 
-static bool writeUInt16(Vector<char>& vector, uint16_t value)
+static bool writeUInt16(Vector<uint8_t>& vector, uint16_t value)
 {
     uint16_t bigEndianValue = htons(value);
-    return vector.tryAppend(reinterpret_cast_ptr<char*>(&bigEndianValue), sizeof(bigEndianValue));
+    return vector.tryAppend(reinterpret_cast_ptr<uint8_t*>(&bigEndianValue), sizeof(bigEndianValue));
 }
 
 static const uint32_t woffSignature = 0x774f4646; /* 'wOFF' */
@@ -93,7 +95,7 @@ bool isWOFF(SharedBuffer& buffer)
 #if USE(WOFF2)
 class WOFF2VectorOut : public woff2::WOFF2Out {
 public:
-    WOFF2VectorOut(Vector<char>& vector)
+    WOFF2VectorOut(Vector<uint8_t>& vector)
         : m_vector(vector)
     { }
 
@@ -101,7 +103,7 @@ public:
     {
         if (!m_vector.tryReserveCapacity(m_vector.size() + n))
             return false;
-        m_vector.append(static_cast<const char*>(data), n);
+        m_vector.append(static_cast<const uint8_t*>(data), n);
         return true;
     }
 
@@ -112,7 +114,7 @@ public:
         if (offset + n > m_vector.size())
             m_vector.grow(offset + n);
         m_vector.remove(offset, n);
-        m_vector.insert(offset, static_cast<const char*>(data), n);
+        m_vector.insert(offset, static_cast<const uint8_t*>(data), n);
         return true;
     }
 
@@ -122,13 +124,17 @@ public:
     }
 
 private:
-    Vector<char>& m_vector;
+    Vector<uint8_t>& m_vector;
 };
 #endif
 
-bool convertWOFFToSfnt(SharedBuffer& woff, Vector<char>& sfnt)
+bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
 {
     ASSERT_ARG(sfnt, sfnt.isEmpty());
+#if PLATFORM(JAVA)
+    UNUSED_PARAM(woff);
+    return false;
+#else
 
     size_t offset = 0;
 
@@ -141,7 +147,7 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<char>& sfnt)
 
 #if USE(WOFF2)
     if (signature == kWoff2Signature) {
-        const uint8_t* woffData = reinterpret_cast_ptr<const uint8_t*>(woff.data());
+        auto* woffData = woff.data();
         const size_t woffSize = woff.size();
         const size_t sfntSize = woff2::ComputeWOFF2FinalSize(woffData, woffSize);
 
@@ -269,8 +275,10 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<char>& sfnt)
                 return false;
             Bytef* dest = reinterpret_cast<Bytef*>(sfnt.end());
             sfnt.grow(sfnt.size() + tableOrigLength);
+//#if PLATFORM(COCOA) && !PLATFORM(JAVA)
             if (uncompress(dest, &destLen, reinterpret_cast<const Bytef*>(woff.data() + tableOffset), tableCompLength) != Z_OK)
                 return false;
+//#endif
             if (destLen != tableOrigLength)
                 return false;
         }
@@ -281,6 +289,26 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<char>& sfnt)
     }
 
     return sfnt.size() == totalSfntSize;
+#endif
+}
+
+bool convertWOFFToSfntIfNecessary(RefPtr<SharedBuffer>& buffer)
+{
+#if (PLATFORM(COCOA) || PLATFORM(WIN)) && PLATFORM(JAVA)
+    UNUSED_PARAM(buffer);
+    return false;
+#else
+    if (!buffer || !isWOFF(*buffer))
+        return false;
+
+    Vector<uint8_t> convertedFont;
+    if (convertWOFFToSfnt(*buffer, convertedFont))
+        buffer = SharedBuffer::create(WTFMove(convertedFont));
+    else
+        buffer = nullptr;
+
+    return true;
+#endif
 }
 
 } // namespace WebCore

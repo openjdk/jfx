@@ -26,9 +26,7 @@
 #pragma once
 
 #include "SecurityOriginHash.h"
-#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 
 namespace PAL {
@@ -52,7 +50,7 @@ public:
 
     Ref<StorageArea> localStorageArea(Document&);
 
-    WEBCORE_EXPORT void setSessionIDForTesting(const PAL::SessionID&);
+    WEBCORE_EXPORT void setSessionIDForTesting(PAL::SessionID);
 
 protected:
     StorageNamespace* optionalLocalStorageNamespace() { return m_localStorageNamespace.get(); }

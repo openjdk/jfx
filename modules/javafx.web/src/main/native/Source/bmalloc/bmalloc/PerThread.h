@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PerThread_h
-#define PerThread_h
+#pragma once
 
 #include "BInline.h"
 #include "BPlatform.h"
@@ -43,6 +42,8 @@
 #else
 #define HAVE_PTHREAD_MACHDEP_H 0
 #endif
+
+#if !BUSE(LIBPAS)
 
 namespace bmalloc {
 
@@ -75,11 +76,20 @@ template<> struct PerThreadStorage<PerHeapKind<Cache>> {
         return _pthread_getspecific_direct(key);
     }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
     static void init(void* object, void (*destructor)(void*))
     {
+#if BUSE(LIBPAS)
+        BUNUSED(object);
+        BUNUSED(destructor);
+        BCRASH();
+#else
         _pthread_setspecific_direct(key, object);
         pthread_key_init_np(key, destructor);
+#endif
     }
+#pragma clang diagnostic pop
 };
 
 #else
@@ -149,4 +159,4 @@ T* PerThread<T>::getSlowCase()
 
 } // namespace bmalloc
 
-#endif // PerThread_h
+#endif

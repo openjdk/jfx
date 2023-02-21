@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,22 +26,23 @@
 package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import test.util.Util;
 
 
 public class MouseLocationOnScreenTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
     private static int DELAY_TIME = 1;
 
@@ -56,24 +57,20 @@ public class MouseLocationOnScreenTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
+        Util.launch(startupLatch, TestApp.class);
+    }
 
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null))
-                .start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown();
     }
 
     @Test(timeout = 120000)
     public void testMouseLocation() throws Exception {
 
         Screen screen = Screen.getPrimary();
-        Rectangle2D bounds = screen.getBounds();
+        // using visual bounds prevents hitting the camera notch area on newer Macs
+        Rectangle2D bounds = screen.getVisualBounds();
         int x1 = (int) bounds.getMinX();
         int x2 = (int) (x1 + bounds.getWidth() - 1);
         int y1 = (int) bounds.getMinY();
@@ -115,11 +112,6 @@ public class MouseLocationOnScreenTest {
         Util.runAndWait(() -> {
             cross(robot, x1, y2, x2, y1); // cross left-top
         });
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.exit();
     }
 
     /**

@@ -29,7 +29,6 @@
 #include "LocalizedStrings.h"
 #include "Page.h"
 #include "PluginInfoProvider.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -50,7 +49,7 @@ const Vector<PluginInfo>& PluginData::webVisiblePlugins() const
     auto documentURL = m_page.mainFrame().document() ? m_page.mainFrame().document()->url() : URL { };
     if (!documentURL.isNull() && !protocolHostAndPortAreEqual(m_cachedVisiblePlugins.pageURL, documentURL)) {
         m_cachedVisiblePlugins.pageURL = WTFMove(documentURL);
-        m_cachedVisiblePlugins.pluginList = WTF::nullopt;
+        m_cachedVisiblePlugins.pluginList = std::nullopt;
     }
 
     if (!m_cachedVisiblePlugins.pluginList)
@@ -62,7 +61,7 @@ const Vector<PluginInfo>& PluginData::webVisiblePlugins() const
 #if PLATFORM(COCOA)
 static inline bool isBuiltInPDFPlugIn(const PluginInfo& plugin)
 {
-    return equalLettersIgnoringASCIICase(plugin.bundleIdentifier, "com.apple.webkit.builtinpdfplugin");
+    return equalLettersIgnoringASCIICase(plugin.bundleIdentifier, "com.apple.webkit.builtinpdfplugin"_s);
 }
 #else
 static inline bool isBuiltInPDFPlugIn(const PluginInfo&)
@@ -81,9 +80,9 @@ static bool shouldBePubliclyVisible(const PluginInfo& plugin)
     // are frequently accessed through the bad practice of iterating over the contents
     // of the navigator.plugins list. Luckily, these plug-ins happen to be the least
     // user-specific.
-    return plugin.name.containsIgnoringASCIICase("Shockwave")
-        || plugin.name.containsIgnoringASCIICase("QuickTime")
-        || plugin.name.containsIgnoringASCIICase("Java")
+    return plugin.name.containsIgnoringASCIICase("Shockwave"_s)
+        || plugin.name.containsIgnoringASCIICase("QuickTime"_s)
+        || plugin.name.containsIgnoringASCIICase("Java"_s)
         || isBuiltInPDFPlugIn(plugin);
 }
 

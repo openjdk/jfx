@@ -26,112 +26,138 @@
 #include "config.h"
 #include "ResourceLoadInfo.h"
 
-#include "ContentExtensionActions.h"
-#include "SecurityOrigin.h"
-
 #if ENABLE(CONTENT_EXTENSIONS)
 
-namespace WebCore {
-namespace ContentExtensions {
+#include "ContentExtensionActions.h"
+#include "RegistrableDomain.h"
+#include "SecurityOrigin.h"
 
-ResourceType toResourceType(CachedResource::Type type)
+namespace WebCore::ContentExtensions {
+
+static_assert(!(ResourceTypeMask & LoadTypeMask), "ResourceTypeMask and LoadTypeMask should be mutually exclusive because they are stored in the same uint32_t");
+static_assert(!(ResourceTypeMask & LoadContextMask), "ResourceTypeMask and LoadContextMask should be mutually exclusive because they are stored in the same uint32_t");
+static_assert(!(ResourceTypeMask & ActionConditionMask), "ResourceTypeMask and ActionConditionMask should be mutually exclusive because they are stored in the same uint32_t");
+static_assert(!(LoadContextMask & LoadTypeMask), "LoadContextMask and LoadTypeMask should be mutually exclusive because they are stored in the same uint32_t");
+static_assert(!(LoadContextMask & ActionConditionMask), "LoadContextMask and ActionConditionMask should be mutually exclusive because they are stored in the same uint32_t");
+static_assert(!(LoadTypeMask & ActionConditionMask), "LoadTypeMask and ActionConditionMask should be mutually exclusive because they are stored in the same uint32_t");
+static_assert(static_cast<uint64_t>(AllResourceFlags) << 32 == ActionFlagMask, "ActionFlagMask should cover all the action flags");
+
+OptionSet<ResourceType> toResourceType(CachedResource::Type type, ResourceRequestBase::Requester requester)
 {
     switch (type) {
     case CachedResource::Type::LinkPrefetch:
     case CachedResource::Type::MainResource:
-        return ResourceType::Document;
+        return { ResourceType::Document };
     case CachedResource::Type::SVGDocumentResource:
-        return ResourceType::SVGDocument;
+        return { ResourceType::SVGDocument };
     case CachedResource::Type::ImageResource:
-        return ResourceType::Image;
+        return { ResourceType::Image };
     case CachedResource::Type::CSSStyleSheet:
 #if ENABLE(XSLT)
     case CachedResource::Type::XSLStyleSheet:
 #endif
-        return ResourceType::StyleSheet;
+        return { ResourceType::StyleSheet };
 
     case CachedResource::Type::Script:
-        return ResourceType::Script;
+        return { ResourceType::Script };
 
     case CachedResource::Type::FontResource:
     case CachedResource::Type::SVGFontResource:
-        return ResourceType::Font;
+        return { ResourceType::Font };
 
     case CachedResource::Type::MediaResource:
-        return ResourceType::Media;
+        return { ResourceType::Media };
 
+    case CachedResource::Type::RawResource:
+        if (requester == ResourceRequestBase::Requester::XHR
+            || requester == ResourceRequestBase::Requester::Fetch)
+            return { ResourceType::Fetch };
+        FALLTHROUGH;
     case CachedResource::Type::Beacon:
     case CachedResource::Type::Ping:
     case CachedResource::Type::Icon:
-    case CachedResource::Type::RawResource:
 #if ENABLE(MODEL_ELEMENT)
     case CachedResource::Type::ModelResource:
 #endif
-        return ResourceType::Raw;
-
-    case CachedResource::Type::TextTrackResource:
-        return ResourceType::Media;
-
 #if ENABLE(APPLICATION_MANIFEST)
     case CachedResource::Type::ApplicationManifest:
-        return ResourceType::Raw;
 #endif
+        return { ResourceType::Other };
+
+    case CachedResource::Type::TextTrackResource:
+        return { ResourceType::Media };
+
     };
-    return ResourceType::Raw;
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
-uint16_t readResourceType(const String& name)
+std::optional<OptionSet<ResourceType>> readResourceType(StringView name)
 {
-    if (name == "document")
-        return static_cast<uint16_t>(ResourceType::Document);
-    if (name == "image")
-        return static_cast<uint16_t>(ResourceType::Image);
-    if (name == "style-sheet")
-        return static_cast<uint16_t>(ResourceType::StyleSheet);
-    if (name == "script")
-        return static_cast<uint16_t>(ResourceType::Script);
-    if (name == "font")
-        return static_cast<uint16_t>(ResourceType::Font);
-    if (name == "raw")
-        return static_cast<uint16_t>(ResourceType::Raw);
-    if (name == "svg-document")
-        return static_cast<uint16_t>(ResourceType::SVGDocument);
-    if (name == "media")
-        return static_cast<uint16_t>(ResourceType::Media);
-    if (name == "popup")
-        return static_cast<uint16_t>(ResourceType::Popup);
-    if (name == "ping")
-        return static_cast<uint16_t>(ResourceType::Ping);
-    return static_cast<uint16_t>(ResourceType::Invalid);
+    if (name == "document"_s)
+        return { ResourceType::Document };
+    if (name == "image"_s)
+        return { ResourceType::Image };
+    if (name == "style-sheet"_s)
+        return { ResourceType::StyleSheet };
+    if (name == "script"_s)
+        return { ResourceType::Script };
+    if (name == "font"_s)
+        return { ResourceType::Font };
+    if (name == "raw"_s)
+        return { { ResourceType::Fetch, ResourceType::WebSocket, ResourceType::Other, ResourceType::Ping } };
+    if (name == "websocket"_s)
+        return { ResourceType::WebSocket };
+    if (name == "fetch"_s)
+        return { ResourceType::Fetch };
+    if (name == "other"_s)
+        return { { ResourceType::Other, ResourceType::Ping, ResourceType::CSPReport } };
+    if (name == "svg-document"_s)
+        return { ResourceType::SVGDocument };
+    if (name == "media"_s)
+        return { ResourceType::Media };
+    if (name == "popup"_s)
+        return { ResourceType::Popup };
+    if (name == "ping"_s)
+        return { ResourceType::Ping };
+    if (name == "csp-report"_s)
+        return { ResourceType::CSPReport };
+    return std::nullopt;
 }
 
-uint16_t readLoadType(const String& name)
+std::optional<OptionSet<LoadType>> readLoadType(StringView name)
 {
-    if (name == "first-party")
-        return static_cast<uint16_t>(LoadType::FirstParty);
-    if (name == "third-party")
-        return static_cast<uint16_t>(LoadType::ThirdParty);
-    return static_cast<uint16_t>(LoadType::Invalid);
+    if (name == "first-party"_s)
+        return { LoadType::FirstParty };
+    if (name == "third-party"_s)
+        return { LoadType::ThirdParty };
+    return std::nullopt;
+}
+
+std::optional<OptionSet<LoadContext>> readLoadContext(StringView name)
+{
+    if (name == "top-frame"_s)
+        return { LoadContext::TopFrame };
+    if (name == "child-frame"_s)
+        return { LoadContext::ChildFrame };
+    return std::nullopt;
 }
 
 bool ResourceLoadInfo::isThirdParty() const
 {
-    Ref<SecurityOrigin> mainDocumentSecurityOrigin = SecurityOrigin::create(mainDocumentURL);
-    Ref<SecurityOrigin> resourceSecurityOrigin = SecurityOrigin::create(resourceURL);
-
-    return !mainDocumentSecurityOrigin->isSameOriginDomain(resourceSecurityOrigin.get());
+    return !RegistrableDomain(mainDocumentURL).matches(resourceURL);
 }
 
 ResourceFlags ResourceLoadInfo::getResourceFlags() const
 {
     ResourceFlags flags = 0;
-    ASSERT(type != ResourceType::Invalid);
+    ASSERT(!type.isEmpty());
     flags |= type.toRaw();
     flags |= isThirdParty() ? static_cast<ResourceFlags>(LoadType::ThirdParty) : static_cast<ResourceFlags>(LoadType::FirstParty);
+    flags |= mainFrameContext ? static_cast<ResourceFlags>(LoadContext::TopFrame) : static_cast<ResourceFlags>(LoadContext::ChildFrame);
     return flags;
 }
 
-} // namespace ContentExtensions
-} // namespace WebCore
+} // namespace WebCore::ContentExtensions
 
 #endif // ENABLE(CONTENT_EXTENSIONS)

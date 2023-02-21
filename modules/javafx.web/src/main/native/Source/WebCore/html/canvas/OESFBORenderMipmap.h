@@ -32,12 +32,12 @@ namespace WebCore {
 class OESFBORenderMipmap final : public WebGLExtension {
     WTF_MAKE_ISO_ALLOCATED(OESFBORenderMipmap);
 public:
-    OESFBORenderMipmap(WebGLRenderingContextBase&);
+    explicit OESFBORenderMipmap(WebGLRenderingContextBase&);
     virtual ~OESFBORenderMipmap();
 
     ExtensionName getName() const override;
 
-    static bool supported(const WebGLRenderingContextBase&);
+    static bool supported(GraphicsContextGL&);
 };
 
 } // namespace WebCore

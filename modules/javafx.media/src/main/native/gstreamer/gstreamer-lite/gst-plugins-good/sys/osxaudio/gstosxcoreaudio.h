@@ -63,8 +63,7 @@ G_BEGIN_DECLS
 #define GST_IS_CORE_AUDIO_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_CORE_AUDIO))
 
-/* TODO: Consider raising to 64 */
-#define GST_OSX_AUDIO_MAX_CHANNEL (9)
+#define GST_OSX_AUDIO_MAX_CHANNEL (64)
 
 #define CORE_AUDIO_FORMAT_IS_SPDIF(f) ((f).mFormat.mFormatID == 'IAC3' || (f).mFormat.mFormatID == 'iac3' || (f).mFormat.mFormatID == kAudioFormat60958AC3 || (f).mFormat.mFormatID == kAudioFormatAC3)
 

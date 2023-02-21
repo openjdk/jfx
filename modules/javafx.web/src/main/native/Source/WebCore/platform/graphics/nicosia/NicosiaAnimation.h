@@ -33,16 +33,16 @@ public:
     enum class AnimationState { Playing, Paused, Stopped };
 
     struct ApplicationResult {
-        Optional<WebCore::TransformationMatrix> transform;
-        Optional<double> opacity;
-        Optional<WebCore::FilterOperations> filters;
+        std::optional<WebCore::TransformationMatrix> transform;
+        std::optional<double> opacity;
+        std::optional<WebCore::FilterOperations> filters;
         bool hasRunningAnimations { false };
     };
 
     Animation()
         : m_keyframes(WebCore::AnimatedPropertyInvalid)
     { }
-    Animation(const String&, const WebCore::KeyframeValueList&, const WebCore::FloatSize&, const WebCore::Animation&, bool, MonotonicTime, Seconds, AnimationState);
+    Animation(const String&, const WebCore::KeyframeValueList&, const WebCore::FloatSize&, const WebCore::Animation&, MonotonicTime, Seconds, AnimationState);
 
     WEBCORE_EXPORT Animation(const Animation&);
     Animation& operator=(const Animation&);
@@ -71,7 +71,6 @@ private:
     double m_duration;
     WebCore::Animation::AnimationDirection m_direction;
     bool m_fillsForwards;
-    bool m_listsMatch;
     MonotonicTime m_startTime;
     Seconds m_pauseTime;
     Seconds m_totalRunningTime;

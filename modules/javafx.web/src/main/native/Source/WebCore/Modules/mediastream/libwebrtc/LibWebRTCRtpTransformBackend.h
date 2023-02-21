@@ -70,10 +70,10 @@ private:
     Side m_side;
 
     Lock m_inputCallbackLock;
-    Callback m_inputCallback;
+    Callback m_inputCallback WTF_GUARDED_BY_LOCK(m_inputCallbackLock);
 
     Lock m_outputCallbackLock;
-    rtc::scoped_refptr<webrtc::TransformedFrameCallback> m_outputCallback;
+    rtc::scoped_refptr<webrtc::TransformedFrameCallback> m_outputCallback WTF_GUARDED_BY_LOCK(m_outputCallbackLock);
 };
 
 inline LibWebRTCRtpTransformBackend::LibWebRTCRtpTransformBackend(MediaType mediaType, Side side)

@@ -231,6 +231,14 @@ void FloatRect::fitToPoints(const FloatPoint& p0, const FloatPoint& p1, const Fl
     setLocationAndSizeFromEdges(left, top, right, bottom);
 }
 
+FloatRect normalizeRect(const FloatRect& rect)
+{
+    return FloatRect(std::min(rect.x(), rect.maxX()),
+        std::min(rect.y(), rect.maxY()),
+        std::max(rect.width(), -rect.width()),
+        std::max(rect.height(), -rect.height()));
+}
+
 FloatRect encloseRectToDevicePixels(const FloatRect& rect, float deviceScaleFactor)
 {
     FloatPoint location = floorPointToDevicePixels(rect.minXMinYCorner(), deviceScaleFactor);
@@ -241,6 +249,18 @@ FloatRect encloseRectToDevicePixels(const FloatRect& rect, float deviceScaleFact
 IntRect enclosingIntRect(const FloatRect& rect)
 {
     FloatPoint location = flooredIntPoint(rect.minXMinYCorner());
+    FloatPoint maxPoint = ceiledIntPoint(rect.maxXMaxYCorner());
+    return IntRect(IntPoint(location), IntSize(maxPoint - location));
+}
+
+IntRect enclosingIntRectPreservingEmptyRects(const FloatRect& rect)
+{
+    // Empty rects with fractional x, y values turn into non-empty rects when converting to enclosing.
+    // We want to ensure that empty rects stay empty after the conversion, since some callers
+    // prefer this behavior.
+    FloatPoint location = flooredIntPoint(rect.minXMinYCorner());
+    if (rect.isEmpty())
+        return IntRect(IntPoint(location), { });
     FloatPoint maxPoint = ceiledIntPoint(rect.maxXMaxYCorner());
     return IntRect(IntPoint(location), IntSize(maxPoint - location));
 }

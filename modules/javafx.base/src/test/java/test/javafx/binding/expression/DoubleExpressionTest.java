@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,7 @@ public class DoubleExpressionTest {
 
     @Test
     public void testGetters() {
-        assertEquals((double)data, op1.doubleValue(), EPSILON);
+        assertEquals(data, op1.doubleValue(), EPSILON);
         assertEquals((float)data, op1.floatValue(), EPSILON);
         assertEquals((long)data, op1.longValue());
         assertEquals((int)data, op1.intValue());
@@ -195,7 +195,7 @@ public class DoubleExpressionTest {
 
     @Test
     public void testObjectToDouble() {
-        final ObservableValueStub<Double> valueModel = new ObservableValueStub<Double>();
+        final ObservableValueStub<Double> valueModel = new ObservableValueStub<>();
         final DoubleExpression exp = DoubleExpression.doubleExpression(valueModel);
 
         assertTrue(exp instanceof DoubleBinding);

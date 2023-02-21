@@ -25,9 +25,9 @@
 
 #include "config.h"
 
-#if ENABLE(MODEL_ELEMENT)
-
 #include "RenderModel.h"
+
+#if ENABLE(MODEL_ELEMENT)
 
 #include "HTMLModelElement.h"
 #include "RenderStyle.h"
@@ -50,11 +50,23 @@ HTMLModelElement& RenderModel::modelElement() const
     return downcast<HTMLModelElement>(nodeForNonAnonymous());
 }
 
+bool RenderModel::requiresLayer() const
+{
+    return true;
+}
+
 void RenderModel::updateFromElement()
 {
     RenderReplaced::updateFromElement();
+    update();
+}
 
-    // FIXME: Do something here.
+void RenderModel::update()
+{
+    if (renderTreeBeingDestroyed())
+        return;
+
+    contentChanged(ModelChanged);
 }
 
 }

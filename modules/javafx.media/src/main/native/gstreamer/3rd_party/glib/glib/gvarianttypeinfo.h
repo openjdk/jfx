@@ -40,18 +40,18 @@ typedef struct _GVariantTypeInfo GVariantTypeInfo;
  * corresponding to a given child of a tuple or dictionary entry in a
  * very short constant time.  It contains the typeinfo of the child,
  * along with 4 constants that allow the bounds of the child's
- * serialised data within the container's serialised data to be found
+ * serialized data within the container's serialized data to be found
  * very efficiently.
  *
- * Since dictionary entries are serialised as if they were tuples of 2
+ * Since dictionary entries are serialized as if they were tuples of 2
  * items, the term "tuple" will be used here in the general sense to
  * refer to tuples and dictionary entries.
  *
  * BACKGROUND:
- *   The serialised data for a tuple contains an array of "offsets" at
+ *   The serialized data for a tuple contains an array of "offsets" at
  *   the end.  There is one "offset" in this array for each
  *   variable-sized item in the tuple (except for the last one).  The
- *   offset points to the end point of that item's serialised data.  The
+ *   offset points to the end point of that item's serialized data.  The
  *   procedure for finding the start point is described below.  An
  *   offset is not needed for the last item because the end point of the
  *   last item is merely the end point of the container itself (after

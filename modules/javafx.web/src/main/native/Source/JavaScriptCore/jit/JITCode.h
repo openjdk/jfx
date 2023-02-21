@@ -30,10 +30,13 @@
 #include "CodeOrigin.h"
 #include "JSCJSValue.h"
 #include "MacroAssemblerCodeRef.h"
+#include "RegisterAtOffsetList.h"
 #include "RegisterSet.h"
-#include <wtf/Optional.h>
+
 
 namespace JSC {
+
+class PCToCodeOriginMap;
 
 namespace DFG {
 class CommonData;
@@ -52,20 +55,22 @@ class TrackedReferences;
 class VM;
 
 enum class JITType : uint8_t {
-    None,
-    HostCallThunk,
-    InterpreterThunk,
-    BaselineJIT,
-    DFGJIT,
-    FTLJIT
+    None = 0b000,
+    HostCallThunk = 0b001,
+    InterpreterThunk = 0b010,
+    BaselineJIT = 0b011,
+    DFGJIT = 0b100,
+    FTLJIT = 0b101,
 };
+static constexpr unsigned widthOfJITType = 3;
+static_assert(WTF::getMSBSetConstexpr(static_cast<std::underlying_type_t<JITType>>(JITType::FTLJIT)) + 1 == widthOfJITType);
 
 class JITCode : public ThreadSafeRefCounted<JITCode> {
 public:
     template<PtrTag tag> using CodePtr = MacroAssemblerCodePtr<tag>;
     template<PtrTag tag> using CodeRef = MacroAssemblerCodeRef<tag>;
 
-    static const char* typeName(JITType);
+    static ASCIILiteral typeName(JITType);
 
     static JITType bottomTierJIT()
     {
@@ -174,6 +179,8 @@ public:
         return m_jitType;
     }
 
+    bool isUnlinked() const;
+
     template<typename PointerType>
     static JITType jitTypeFor(PointerType jitCode)
     {
@@ -206,16 +213,22 @@ public:
 
 #if ENABLE(JIT)
     virtual RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex);
-    virtual Optional<CodeOrigin> findPC(CodeBlock*, void* pc) { UNUSED_PARAM(pc); return WTF::nullopt; }
+    virtual std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) { UNUSED_PARAM(pc); return std::nullopt; }
 #endif
 
     Intrinsic intrinsic() { return m_intrinsic; }
 
     bool isShared() const { return m_shareAttribute == ShareAttribute::Shared; }
 
+    virtual PCToCodeOriginMap* pcToCodeOriginMap() { return nullptr; }
+
+    const RegisterAtOffsetList* calleeSaveRegisters() const;
+
+    static ptrdiff_t offsetOfJITType() { return OBJECT_OFFSETOF(JITCode, m_jitType); }
+
 private:
-    JITType m_jitType;
-    ShareAttribute m_shareAttribute;
+    const JITType m_jitType;
+    const ShareAttribute m_shareAttribute;
 protected:
     Intrinsic m_intrinsic { NoIntrinsic }; // Effective only in NativeExecutable.
 };

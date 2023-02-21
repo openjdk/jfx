@@ -37,7 +37,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(AggregateErrorConstructor);
 
-const ClassInfo AggregateErrorConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AggregateErrorConstructor) };
+const ClassInfo AggregateErrorConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AggregateErrorConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(callAggregateErrorConstructor);
 static JSC_DECLARE_HOST_FUNCTION(constructAggregateErrorConstructor);
@@ -50,7 +50,7 @@ AggregateErrorConstructor::AggregateErrorConstructor(VM& vm, Structure* structur
 void AggregateErrorConstructor::finishCreation(VM& vm, AggregateErrorPrototype* prototype)
 {
     Base::finishCreation(vm, 2, errorTypeName(ErrorType::AggregateError), PropertyAdditionMode::WithoutStructureTransition);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
@@ -60,8 +60,9 @@ JSC_DEFINE_HOST_FUNCTION(callAggregateErrorConstructor, (JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     JSValue errors = callFrame->argument(0);
     JSValue message = callFrame->argument(1);
+    JSValue options = callFrame->argument(2);
     Structure* errorStructure = globalObject->errorStructure(ErrorType::AggregateError);
-    return JSValue::encode(AggregateError::create(globalObject, vm, errorStructure, errors, message, nullptr, TypeNothing, false));
+    return JSValue::encode(createAggregateError(globalObject, vm, errorStructure, errors, message, options, nullptr, TypeNothing, false));
 }
 
 JSC_DEFINE_HOST_FUNCTION(constructAggregateErrorConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -70,15 +71,14 @@ JSC_DEFINE_HOST_FUNCTION(constructAggregateErrorConstructor, (JSGlobalObject* gl
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue errors = callFrame->argument(0);
     JSValue message = callFrame->argument(1);
+    JSValue options = callFrame->argument(2);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* errorStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->errorStructure(ErrorType::AggregateError)
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->errorStructure(ErrorType::AggregateError));
+    Structure* errorStructure = JSC_GET_DERIVED_STRUCTURE(vm, errorStructureWithErrorType<ErrorType::AggregateError>, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
     ASSERT(errorStructure);
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(AggregateError::create(globalObject, vm, errorStructure, errors, message, nullptr, TypeNothing, false)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(createAggregateError(globalObject, vm, errorStructure, errors, message, options, nullptr, TypeNothing, false)));
 }
 
 } // namespace JSC

@@ -48,9 +48,11 @@
 /**
  * G_SHELL_ERROR:
  *
- * Error domain for shell functions. Errors in this domain will be from
- * the #GShellError enumeration. See #GError for information on error
- * domains.
+ * Error domain for shell functions.
+ *
+ * Errors in this domain will be from the #GShellError enumeration.
+ *
+ * See #GError for information on error domains.
  **/
 
 /**
@@ -191,13 +193,17 @@ unquote_string_inplace (gchar* str, gchar** end, GError** err)
  * @unquoted_string: (type filename): a literal string
  *
  * Quotes a string so that the shell (/bin/sh) will interpret the
- * quoted string to mean @unquoted_string. If you pass a filename to
- * the shell, for example, you should first quote it with this
- * function.  The return value must be freed with g_free(). The
- * quoting style used is undefined (single or double quotes may be
+ * quoted string to mean @unquoted_string.
+ *
+ * If you pass a filename to the shell, for example, you should first
+ * quote it with this function.
+ *
+ * The return value must be freed with g_free().
+ *
+ * The quoting style used is undefined (single or double quotes may be
  * used).
  *
- * Returns: (type filename): quoted string
+ * Returns: (type filename) (transfer full): quoted string
  **/
 gchar*
 g_shell_quote (const gchar *unquoted_string)
@@ -241,27 +247,33 @@ g_shell_quote (const gchar *unquoted_string)
  * @quoted_string: (type filename): shell-quoted string
  * @error: error return location or NULL
  *
- * Unquotes a string as the shell (/bin/sh) would. Only handles
- * quotes; if a string contains file globs, arithmetic operators,
- * variables, backticks, redirections, or other special-to-the-shell
- * features, the result will be different from the result a real shell
- * would produce (the variables, backticks, etc. will be passed
- * through literally instead of being expanded). This function is
- * guaranteed to succeed if applied to the result of
+ * Unquotes a string as the shell (/bin/sh) would.
+ *
+ * This function only handles quotes; if a string contains file globs,
+ * arithmetic operators, variables, backticks, redirections, or other
+ * special-to-the-shell features, the result will be different from the
+ * result a real shell would produce (the variables, backticks, etc.
+ * will be passed through literally instead of being expanded).
+ *
+ * This function is guaranteed to succeed if applied to the result of
  * g_shell_quote(). If it fails, it returns %NULL and sets the
- * error. The @quoted_string need not actually contain quoted or
- * escaped text; g_shell_unquote() simply goes through the string and
- * unquotes/unescapes anything that the shell would. Both single and
- * double quotes are handled, as are escapes including escaped
- * newlines. The return value must be freed with g_free(). Possible
- * errors are in the #G_SHELL_ERROR domain.
+ * error.
+ *
+ * The @quoted_string need not actually contain quoted or escaped text;
+ * g_shell_unquote() simply goes through the string and unquotes/unescapes
+ * anything that the shell would. Both single and double quotes are
+ * handled, as are escapes including escaped newlines.
+ *
+ * The return value must be freed with g_free().
+ *
+ * Possible errors are in the %G_SHELL_ERROR domain.
  *
  * Shell quoting rules are a bit strange. Single quotes preserve the
  * literal string exactly. escape sequences are not allowed; not even
- * \' - if you want a ' in the quoted text, you have to do something
- * like 'foo'\''bar'.  Double quotes allow $, `, ", \, and newline to
- * be escaped with backslash. Otherwise double quotes preserve things
- * literally.
+ * `\'` - if you want a `'` in the quoted text, you have to do something
+ * like `'foo'\''bar'`. Double quotes allow `$`, ```, `"`, `\`, and
+ * newline to be escaped with backslash. Otherwise double quotes
+ * preserve things literally.
  *
  * Returns: (type filename): an unquoted string
  **/
@@ -625,12 +637,21 @@ tokenize_command_line (const gchar *command_line,
  * Parses a command line into an argument vector, in much the same way
  * the shell would, but without many of the expansions the shell would
  * perform (variable expansion, globs, operators, filename expansion,
- * etc. are not supported). The results are defined to be the same as
- * those you would get from a UNIX98 /bin/sh, as long as the input
- * contains none of the unsupported shell expansions. If the input
- * does contain such expansions, they are passed through
- * literally. Possible errors are those from the #G_SHELL_ERROR
- * domain. Free the returned vector with g_strfreev().
+ * etc. are not supported).
+ *
+ * The results are defined to be the same as those you would get from
+ * a UNIX98 `/bin/sh`, as long as the input contains none of the
+ * unsupported shell expansions. If the input does contain such expansions,
+ * they are passed through literally.
+ *
+ * Possible errors are those from the %G_SHELL_ERROR domain.
+ *
+ * In particular, if @command_line is an empty string (or a string containing
+ * only whitespace), %G_SHELL_ERROR_EMPTY_STRING will be returned. It’s
+ * guaranteed that @argvp will be a non-empty array if this function returns
+ * successfully.
+ *
+ * Free the returned vector with g_strfreev().
  *
  * Returns: %TRUE on success, %FALSE if error set
  **/
@@ -686,6 +707,9 @@ g_shell_parse_argv (const gchar *command_line,
     }
 
   g_slist_free_full (tokens, g_free);
+
+  g_assert (argc > 0);
+  g_assert (argv != NULL && argv[0] != NULL);
 
   if (argcp)
     *argcp = argc;

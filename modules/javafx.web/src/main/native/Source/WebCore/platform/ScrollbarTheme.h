@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ScrollbarTheme_h
-#define ScrollbarTheme_h
+#pragma once
 
 #include "GraphicsContext.h"
 #include "IntRect.h"
@@ -33,10 +32,11 @@
 namespace WebCore {
 
 class PlatformMouseEvent;
+class ScrollableArea;
 class Scrollbar;
 class ScrollView;
 
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
 class GraphicsLayer;
 #endif
 
@@ -84,13 +84,13 @@ public:
 
     virtual void invalidatePart(Scrollbar&, ScrollbarPart) { }
 
-    virtual void paintScrollCorner(GraphicsContext& context, const IntRect& cornerRect) { defaultPaintScrollCorner(context, cornerRect); }
-    static void defaultPaintScrollCorner(GraphicsContext& context, const IntRect& cornerRect) { context.fillRect(cornerRect, Color::white); }
+    virtual void paintScrollCorner(ScrollableArea& area, GraphicsContext& context, const IntRect& cornerRect) { defaultPaintScrollCorner(area, context, cornerRect); }
+    static void defaultPaintScrollCorner(ScrollableArea&, GraphicsContext& context, const IntRect& cornerRect) { context.fillRect(cornerRect, Color::white); }
 
     virtual void paintTickmarks(GraphicsContext&, Scrollbar&, const IntRect&) { }
     virtual void paintOverhangAreas(ScrollView&, GraphicsContext&, const IntRect&, const IntRect&, const IntRect&) { }
 
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
     virtual void setUpOverhangAreasLayerContents(GraphicsLayer*, const Color&) { }
     virtual void setUpContentShadowLayer(GraphicsLayer*) { }
 #endif
@@ -120,4 +120,3 @@ private:
 };
 
 }
-#endif

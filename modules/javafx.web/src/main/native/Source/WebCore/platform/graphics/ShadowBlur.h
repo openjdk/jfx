@@ -38,7 +38,7 @@ namespace WebCore {
 
 class AffineTransform;
 class GraphicsContext;
-struct GraphicsContextState;
+struct DropShadow;
 class ImageBuffer;
 
 class ShadowBlur {
@@ -52,7 +52,7 @@ public:
 
     ShadowBlur();
     ShadowBlur(const FloatSize& radius, const FloatSize& offset, const Color&, bool shadowsIgnoreTransforms = false);
-    ShadowBlur(const GraphicsContextState&);
+    ShadowBlur(const DropShadow&, bool shadowsIgnoreTransforms = false);
 
     void setShadowValues(const FloatSize&, const FloatSize& , const Color&, bool ignoreTransforms = false);
 
@@ -62,11 +62,11 @@ public:
     void drawRectShadow(GraphicsContext&, const FloatRoundedRect&);
     void drawInsetShadow(GraphicsContext&, const FloatRect&, const FloatRoundedRect& holeRect);
 
-    using DrawBufferCallback = WTF::Function<void(ImageBuffer&, const FloatPoint&, const FloatSize&)>;
-    using DrawImageCallback = WTF::Function<void(ImageBuffer&, const FloatRect&, const FloatRect&)>;
-    using FillRectCallback = WTF::Function<void(const FloatRect&, const Color&)>;
-    using FillRectWithHoleCallback = WTF::Function<void(const FloatRect&, const FloatRect&, const Color&)>;
-    using DrawShadowCallback = WTF::Function<void(GraphicsContext&)>;
+    using DrawBufferCallback = Function<void(ImageBuffer&, const FloatPoint&, const FloatSize&)>;
+    using DrawImageCallback = Function<void(ImageBuffer&, const FloatRect&, const FloatRect&)>;
+    using FillRectCallback = Function<void(const FloatRect&, const Color&)>;
+    using FillRectWithHoleCallback = Function<void(const FloatRect&, const FloatRect&, const Color&)>;
+    using DrawShadowCallback = Function<void(GraphicsContext&)>;
 
     // DrawBufferCallback is for drawing shadow without tiling.
     // DrawImageCallback and FillRectCallback is for drawing shadow with tiling.
@@ -99,7 +99,7 @@ private:
         FloatSize layerContextTranslation; // Translation to apply to layerContext for the shadow to be correctly clipped.
     };
 
-    Optional<ShadowBlur::LayerImageProperties> calculateLayerBoundingRect(const AffineTransform&, const FloatRect& layerArea, const IntRect& clipRect);
+    std::optional<ShadowBlur::LayerImageProperties> calculateLayerBoundingRect(const AffineTransform&, const FloatRect& layerArea, const IntRect& clipRect);
     IntSize templateSize(const IntSize& blurredEdgeSize, const FloatRoundedRect::Radii&) const;
 
     void blurShadowBuffer(ImageBuffer& layerImage, const IntSize& templateSize);
@@ -107,9 +107,11 @@ private:
 
     void drawInsetShadowWithoutTiling(const AffineTransform&, const FloatRect& fullRect, const FloatRoundedRect& holeRect, const LayerImageProperties&, const DrawBufferCallback&);
     void drawInsetShadowWithTiling(const AffineTransform&, const FloatRect& fullRect, const FloatRoundedRect& holeRect, const IntSize& shadowTemplateSize, const IntSize& blurredEdgeSize, const DrawImageCallback&, const FillRectWithHoleCallback&);
+    void drawInsetShadowWithTilingWithLayerImageBuffer(ImageBuffer& layerImage, const AffineTransform&, const FloatRect& fullRect, const FloatRoundedRect& holeRect, const IntSize& shadowTemplateSize, const IntSize& blurredEdgeSize, const DrawImageCallback&, const FillRectWithHoleCallback&, const FloatRect& templateBounds, const FloatRect& templateHole, bool redrawNeeded = true);
 
     void drawRectShadowWithoutTiling(const AffineTransform&, const FloatRoundedRect& shadowedRect, const LayerImageProperties&, const DrawBufferCallback&);
     void drawRectShadowWithTiling(const AffineTransform&, const FloatRoundedRect& shadowedRect, const IntSize& shadowTemplateSize, const IntSize& blurredEdgeSize, const DrawImageCallback&, const FillRectCallback&, const LayerImageProperties&);
+    void drawRectShadowWithTilingWithLayerImageBuffer(ImageBuffer& layerImage, const AffineTransform&, const FloatRoundedRect& shadowedRect, const IntSize& templateSize, const IntSize& edgeSize, const DrawImageCallback&, const FillRectCallback&, const FloatRect& templateShadow, bool redrawNeeded = true);
 
     void drawLayerPiecesAndFillCenter(ImageBuffer& layerImage, const FloatRect& shadowBounds, const FloatRoundedRect::Radii&, const IntSize& roundedRadius, const IntSize& templateSize, const DrawImageCallback&, const FillRectCallback&);
     void drawLayerPieces(ImageBuffer& layerImage, const FloatRect& shadowBounds, const FloatRoundedRect::Radii&, const IntSize& roundedRadius, const IntSize& templateSize, const DrawImageCallback&);

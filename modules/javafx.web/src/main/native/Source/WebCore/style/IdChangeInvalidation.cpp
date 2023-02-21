@@ -27,7 +27,9 @@
 #include "IdChangeInvalidation.h"
 
 #include "ElementChildIterator.h"
+#include "ElementRareData.h"
 #include "StyleInvalidationFunctions.h"
+#include "StyleInvalidator.h"
 
 namespace WebCore {
 namespace Style {
@@ -66,6 +68,14 @@ void IdChangeInvalidation::invalidateStyle(const AtomString& changedId)
         m_element.invalidateStyleForSubtree();
     else
         m_element.invalidateStyle();
+
+    // Invalidation rulesets exist for :has().
+    if (auto* invalidationRuleSets = ruleSets.idInvalidationRuleSets(changedId)) {
+        Invalidator::MatchElementRuleSets matchElementRuleSets;
+        for (auto& invalidationRuleSet : *invalidationRuleSets)
+            Invalidator::addToMatchElementRuleSets(matchElementRuleSets, invalidationRuleSet);
+        Invalidator::invalidateWithMatchElementRuleSets(m_element, matchElementRuleSets);
+    }
 }
 
 }

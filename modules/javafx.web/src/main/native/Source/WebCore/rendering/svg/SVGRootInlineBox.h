@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "RootInlineBox.h"
+#include "LegacyRootInlineBox.h"
 #include "SVGTextLayoutEngine.h"
 
 namespace WebCore {
@@ -30,12 +30,10 @@ namespace WebCore {
 class RenderSVGText;
 class SVGInlineTextBox;
 
-class SVGRootInlineBox final : public RootInlineBox {
+class SVGRootInlineBox final : public LegacyRootInlineBox {
     WTF_MAKE_ISO_ALLOCATED(SVGRootInlineBox);
 public:
     explicit SVGRootInlineBox(RenderSVGText&);
-
-    RenderSVGText& renderSVGText();
 
     float virtualLogicalHeight() const override { return m_logicalHeight; }
     void setLogicalHeight(float height) { m_logicalHeight = height; }
@@ -44,15 +42,17 @@ public:
 
     void computePerCharacterLayoutInformation();
 
-    InlineBox* closestLeafChildForPosition(const LayoutPoint&);
+    LegacyInlineBox* closestLeafChildForPosition(const LayoutPoint&);
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) final;
 
 private:
+    RenderSVGText& renderSVGText() const;
+
     bool isSVGRootInlineBox() const override { return true; }
-    void reorderValueLists(Vector<SVGTextLayoutAttributes*>&);
-    void layoutCharactersInTextBoxes(InlineFlowBox*, SVGTextLayoutEngine&);
-    void layoutChildBoxes(InlineFlowBox*, FloatRect* = nullptr);
+    void reorderValueListsToLogicalOrder(Vector<SVGTextLayoutAttributes*>&);
+    void layoutCharactersInTextBoxes(LegacyInlineFlowBox*, SVGTextLayoutEngine&);
+    void layoutChildBoxes(LegacyInlineFlowBox*, FloatRect* = nullptr);
     void layoutRootBox(const FloatRect&);
 
     float m_logicalHeight;

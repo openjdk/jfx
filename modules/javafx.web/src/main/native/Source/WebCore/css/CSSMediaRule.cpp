@@ -49,7 +49,7 @@ MediaQuerySet& CSSMediaRule::mediaQueries() const
 String CSSMediaRule::cssText() const
 {
     StringBuilder result;
-    result.append("@media ", conditionText(), " { \n");
+    result.append("@media ", conditionText(), " {\n");
     appendCSSTextForItems(result);
     result.append('}');
     return result.toString();
@@ -58,11 +58,6 @@ String CSSMediaRule::cssText() const
 String CSSMediaRule::conditionText() const
 {
     return mediaQueries().mediaText();
-}
-
-void CSSMediaRule::setConditionText(const String& text)
-{
-    mediaQueries().set(text);
 }
 
 MediaList* CSSMediaRule::media() const

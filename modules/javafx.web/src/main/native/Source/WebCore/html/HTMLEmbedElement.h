@@ -36,7 +36,7 @@ private:
     HTMLEmbedElement(const QualifiedName&, Document&);
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
     bool rendererIsNeeded(const RenderStyle&) final;
 
@@ -51,7 +51,7 @@ private:
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
-    void parametersForPlugin(Vector<String>& paramNames, Vector<String>& paramValues);
+    void parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues);
 };
 
 } // namespace WebCore

@@ -33,6 +33,7 @@
 #if ENABLE(MHTML)
 #include "MHTMLParser.h"
 
+#include "CommonAtomStrings.h"
 #include "MHTMLArchive.h"
 #include "MIMEHeader.h"
 #include "MIMETypeRegistry.h"
@@ -51,7 +52,7 @@ static bool skipLinesUntilBoundaryFound(SharedBufferChunkReader& lineReader, con
     return false;
 }
 
-MHTMLParser::MHTMLParser(SharedBuffer* data)
+MHTMLParser::MHTMLParser(FragmentedSharedBuffer* data)
     : m_lineReader(data, "\r\n")
 {
 }
@@ -89,7 +90,7 @@ RefPtr<MHTMLArchive> MHTMLParser::parseArchiveWithHeader(MIMEHeader* header)
             LOG_ERROR("Failed to parse MHTML, invalid MIME header.");
             return nullptr;
         }
-        if (resourceHeader->contentType() == "multipart/alternative") {
+        if (resourceHeader->contentType() == "multipart/alternative"_s) {
             // Ignore IE nesting which makes little sense (IE seems to nest only some of the frames).
             RefPtr<MHTMLArchive> subframeArchive = parseArchiveWithHeader(resourceHeader.get());
             if (!subframeArchive) {
@@ -119,7 +120,7 @@ RefPtr<MHTMLArchive> MHTMLParser::parseArchiveWithHeader(MIMEHeader* header)
 void MHTMLParser::addResourceToArchive(ArchiveResource* resource, MHTMLArchive* archive)
 {
     const String& mimeType = resource->mimeType();
-    if (!MIMETypeRegistry::isSupportedNonImageMIMEType(mimeType) || MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType) || mimeType == "text/css") {
+    if (!MIMETypeRegistry::isSupportedNonImageMIMEType(mimeType) || MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType) || mimeType == cssContentTypeAtom()) {
         m_resources.append(resource);
         return;
     }
@@ -140,7 +141,7 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
 {
     ASSERT(endOfPartBoundary.isEmpty() == endOfDocumentBoundary.isEmpty());
 
-    auto content = SharedBuffer::create();
+    SharedBufferBuilder content;
     const bool checkBoundary = !endOfPartBoundary.isEmpty();
     bool endOfPartReached = false;
     if (mimeHeader.contentTransferEncoding() == MIMEHeader::Binary) {
@@ -149,14 +150,14 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
             return nullptr;
         }
         m_lineReader.setSeparator(endOfPartBoundary.utf8().data());
-        Vector<char> part;
+        Vector<uint8_t> part;
         if (!m_lineReader.nextChunk(part)) {
             LOG_ERROR("Binary contents requires end of part");
             return nullptr;
         }
-        content->append(WTFMove(part));
+        content.append(WTFMove(part));
         m_lineReader.setSeparator("\r\n");
-        Vector<char> nextChars;
+        Vector<uint8_t> nextChars;
         if (m_lineReader.peek(nextChars, 2) != 2) {
             LOG_ERROR("Invalid seperator.");
             return nullptr;
@@ -180,10 +181,10 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
                 break;
             }
             // Note that we use line.utf8() and not line.ascii() as ascii turns special characters (such as tab, line-feed...) into '?'.
-            content->append(line.utf8().data(), line.length());
+            content.append(line.utf8().data(), line.length());
             if (mimeHeader.contentTransferEncoding() == MIMEHeader::QuotedPrintable) {
                 // The line reader removes the \r\n, but we need them for the content in this case as the QuotedPrintable decoder expects CR-LF terminated lines.
-                content->append("\r\n", 2);
+                content.append("\r\n", 2);
             }
         }
     }
@@ -192,20 +193,24 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
         return nullptr;
     }
 
-    Vector<char> data;
+    Vector<uint8_t> data;
+    auto contiguousContent = content.takeAsContiguous();
     switch (mimeHeader.contentTransferEncoding()) {
-    case MIMEHeader::Base64:
-        if (!base64Decode(content->data(), content->size(), data)) {
+    case MIMEHeader::Base64: {
+        auto decodedData = base64Decode(contiguousContent->data(), contiguousContent->size());
+        if (!decodedData) {
             LOG_ERROR("Invalid base64 content for MHTML part.");
             return nullptr;
         }
+        data = WTFMove(*decodedData);
         break;
+    }
     case MIMEHeader::QuotedPrintable:
-        quotedPrintableDecode(content->data(), content->size(), data);
+        data = quotedPrintableDecode(contiguousContent->data(), contiguousContent->size());
         break;
     case MIMEHeader::SevenBit:
     case MIMEHeader::Binary:
-        data.append(content->data(), content->size());
+        data.append(contiguousContent->data(), contiguousContent->size());
         break;
     default:
         LOG_ERROR("Invalid encoding for MHTML part.");
@@ -215,7 +220,7 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
     // FIXME: the URL in the MIME header could be relative, we should resolve it if it is.
     // The specs mentions 5 ways to resolve a URL: http://tools.ietf.org/html/rfc2557#section-5
     // IE and Firefox (UNMht) seem to generate only absolute URLs.
-    URL location = URL(URL(), mimeHeader.contentLocation());
+    URL location { mimeHeader.contentLocation() };
     return ArchiveResource::create(WTFMove(contentBuffer), location, mimeHeader.contentType(), mimeHeader.charset(), String());
 }
 

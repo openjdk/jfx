@@ -32,11 +32,15 @@
 #include "config.h"
 #include "SearchInputType.h"
 
+#include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
+#include "NodeRenderStyle.h"
 #include "RenderSearchField.h"
+#include "ScriptDisallowedScope.h"
+#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "TextControlInnerElements.h"
 
@@ -48,6 +52,7 @@ SearchInputType::SearchInputType(HTMLInputElement& element)
     : BaseTextInputType(Type::Search, element)
     , m_searchEventTimer(*this, &SearchInputType::searchEventTimerFired)
 {
+    ASSERT(needsShadowSubtree());
 }
 
 void SearchInputType::addSearchResult()
@@ -64,15 +69,12 @@ void SearchInputType::addSearchResult()
 
 static void updateResultButtonPseudoType(SearchFieldResultsButtonElement& resultButton, int maxResults)
 {
-    static MainThreadNeverDestroyed<const AtomString> webkitSearchDecorationName("-webkit-search-decoration", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> webkitSearchResultsDecorationName("-webkit-search-results-decoration", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> webkitSearchResultsButtonName("-webkit-search-results-button", AtomString::ConstructFromLiteral);
     if (!maxResults)
-        resultButton.setPseudo(webkitSearchResultsDecorationName);
+        resultButton.setPseudo(ShadowPseudoIds::webkitSearchResultsDecoration());
     else if (maxResults < 0)
-        resultButton.setPseudo(webkitSearchDecorationName);
+        resultButton.setPseudo(ShadowPseudoIds::webkitSearchDecoration());
     else
-        resultButton.setPseudo(webkitSearchResultsButtonName);
+        resultButton.setPseudo(ShadowPseudoIds::webkitSearchResultsButton());
 }
 
 void SearchInputType::attributeChanged(const QualifiedName& name)
@@ -102,21 +104,23 @@ bool SearchInputType::needsContainer() const
     return true;
 }
 
-void SearchInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source source, bool isInnerTextElementEditable)
+void SearchInputType::createShadowSubtree()
 {
+    ASSERT(needsShadowSubtree());
     ASSERT(!m_resultsButton);
     ASSERT(!m_cancelButton);
 
-    TextFieldInputType::createShadowSubtreeAndUpdateInnerTextElementEditability(source, isInnerTextElementEditable);
+    TextFieldInputType::createShadowSubtree();
     RefPtr<HTMLElement> container = containerElement();
     RefPtr<HTMLElement> textWrapper = innerBlockElement();
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *container };
     ASSERT(container);
     ASSERT(textWrapper);
 
     ASSERT(element());
     m_resultsButton = SearchFieldResultsButtonElement::create(element()->document());
-    updateResultButtonPseudoType(*m_resultsButton, element()->maxResults());
     container->insertBefore(*m_resultsButton, textWrapper.get());
+    updateResultButtonPseudoType(*m_resultsButton, element()->maxResults());
 
     m_cancelButton = SearchFieldCancelButtonElement::create(element()->document());
     container->insertBefore(*m_cancelButton, textWrapper->nextSibling());
@@ -135,13 +139,13 @@ HTMLElement* SearchInputType::cancelButtonElement() const
 auto SearchInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
 {
     ASSERT(element());
-    if (element()->isDisabledOrReadOnly())
+    if (!element()->isMutable())
         return TextFieldInputType::handleKeydownEvent(event);
 
     const String& key = event.keyIdentifier();
-    if (key == "U+001B") {
+    if (key == "U+001B"_s) {
         Ref<HTMLInputElement> protectedInputElement(*element());
-        protectedInputElement->setValueForUser(emptyString());
+        protectedInputElement->setValue(emptyString(), DispatchChangeEvent);
         protectedInputElement->onSearch();
         event.setDefaultHandled();
         return ShouldCallBaseEventHandler::Yes;
@@ -216,6 +220,16 @@ float SearchInputType::decorationWidth() const
     if (m_cancelButton)
         width += m_cancelButton->computedStyle()->logicalWidth().value();
     return width;
+}
+
+void SearchInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
+{
+    bool emptinessChanged = valueChanged && sanitizedValue.isEmpty() != element()->value().isEmpty();
+
+    BaseTextInputType::setValue(sanitizedValue, valueChanged, eventBehavior, selection);
+
+    if (m_cancelButton && emptinessChanged)
+        m_cancelButton->invalidateStyleInternal();
 }
 
 } // namespace WebCore

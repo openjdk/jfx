@@ -36,7 +36,8 @@ struct GeneratorTraits {
     using OpcodeTraits = WasmOpcodeTraits;
     using OpcodeID = WasmOpcodeID;
     using OpNop = WasmNop;
-    using CodeBlock = std::unique_ptr<FunctionCodeBlock>;
+    using CodeBlock = std::unique_ptr<FunctionCodeBlockGenerator>;
+    using InstructionType = WasmInstruction;
     static constexpr OpcodeID opcodeForDisablingOptimizations = wasm_unreachable;
 };
 

@@ -24,10 +24,9 @@
  */
 
 [
-    EnabledBySetting=UndoManagerAPI,
-    ImplementationLacksVTable,
+    EnabledBySetting=UndoManagerAPIEnabled,
     GenerateIsReachable=ImplDocument,
     Exposed=Window
 ] interface UndoManager {
-    [MayThrowException] undefined addItem(UndoItem item);
+    undefined addItem(UndoItem item);
 };

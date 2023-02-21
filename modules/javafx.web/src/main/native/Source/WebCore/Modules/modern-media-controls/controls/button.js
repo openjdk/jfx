@@ -48,7 +48,7 @@ class Button extends LayoutItem
 
         this._enabled = true;
 
-        if (GestureRecognizer.SupportsTouches)
+        if (this.layoutTraits.supportsTouches())
             this._tapGestureRecognizer = new TapGestureRecognizer(this.element, this);
         else
             this.element.addEventListener("click", this);
@@ -157,7 +157,7 @@ class Button extends LayoutItem
     commitProperty(propertyName)
     {
         if (propertyName === "maskImage")
-            this.image.element.style.webkitMaskImage = `url(${this._imageSource.src})`;
+            this.image.element.style.maskImage = `url(${this._imageSource.src})`;
         else
             super.commitProperty(propertyName);
     }
@@ -229,5 +229,6 @@ Button.Styles = {
     Bar: "bar",
     Corner: "corner",
     Center: "center",
+    Rounded: "rounded",
     SmallCenter: "small-center"
 };

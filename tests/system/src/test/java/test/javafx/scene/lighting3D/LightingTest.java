@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package test.javafx.scene.lighting3D;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.AfterClass;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -38,6 +36,10 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.shape.Box;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
+import org.junit.AfterClass;
+
+import test.util.Util;
 
 // Since there appears to be a bug in snapshot with subscene, we are taking a snapshot of the scene and not
 // the box, so the center of the box will be at the top left, (0, 0), of the image, and the light is
@@ -93,9 +95,6 @@ public abstract class LightingTest {
 
     @AfterClass
     public static void teardown() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 }

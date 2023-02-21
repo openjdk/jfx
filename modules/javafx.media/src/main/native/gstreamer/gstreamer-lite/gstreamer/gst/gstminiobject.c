@@ -59,6 +59,8 @@
 #include "gst/gstinfo.h"
 #include <gobject/gvaluecollector.h>
 
+GType _gst_mini_object_type = 0;
+
 /* Mutex used for weak referencing */
 G_LOCK_DEFINE_STATIC (qdata_mutex);
 static GQuark weak_ref_quark;
@@ -71,6 +73,14 @@ static GQuark weak_ref_quark;
 #define FLAG_MASK (GST_LOCK_FLAG_LAST - 1)
 #define LOCK_MASK ((SHARE_ONE - 1) - FLAG_MASK)
 #define LOCK_FLAG_MASK (SHARE_ONE - 1)
+
+/**
+ * GST_TYPE_MINI_OBJECT:
+ *
+ * The #GType associated with #GstMiniObject.
+ *
+ * Since: 1.20
+ */
 
 /* For backwards compatibility reasons we use the
  * guint and gpointer in the GstMiniObject struct in
@@ -126,9 +136,12 @@ typedef struct
 #define QDATA_DATA(o,i)     (QDATA(o,i).data)
 #define QDATA_DESTROY(o,i)  (QDATA(o,i).destroy)
 
+GST_DEFINE_MINI_OBJECT_TYPE (GstMiniObject, gst_mini_object);
+
 void
 _priv_gst_mini_object_initialize (void)
 {
+  _gst_mini_object_type = gst_mini_object_get_type ();
   weak_ref_quark = g_quark_from_static_string ("GstMiniObjectWeakRefQuark");
 }
 

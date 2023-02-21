@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,10 @@ package test.javafx.scene.control;
 
 
 import javafx.css.ParsedValue;
-import javafx.css.CssMetaData;
 import javafx.css.CssParserShim;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
@@ -57,7 +55,10 @@ public class SliderTest {
     private Stage stage;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         slider = new Slider();
     }
 

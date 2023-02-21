@@ -192,9 +192,9 @@ Ref<Protocol::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectForLayer(Ren
         layerObject->setIsGeneratedContent(true);
         layerObject->setPseudoElementId(bindPseudoElement(downcast<PseudoElement>(renderer->node())));
         if (renderer->isBeforeContent())
-            layerObject->setPseudoElement("before");
+            layerObject->setPseudoElement("before"_s);
         else if (renderer->isAfterContent())
-            layerObject->setPseudoElement("after");
+            layerObject->setPseudoElement("after"_s);
     }
 
     // FIXME: RenderView is now really anonymous but don't tell about it to the frontend before making sure it can handle it.
@@ -202,9 +202,9 @@ Ref<Protocol::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectForLayer(Ren
         layerObject->setIsAnonymous(true);
         const RenderStyle& style = renderer->style();
         if (style.styleType() == PseudoId::FirstLetter)
-            layerObject->setPseudoElement("first-letter");
+            layerObject->setPseudoElement("first-letter"_s);
         else if (style.styleType() == PseudoId::FirstLine)
-            layerObject->setPseudoElement("first-line");
+            layerObject->setPseudoElement("first-line"_s);
     }
 
     return layerObject;
@@ -257,6 +257,8 @@ Protocol::ErrorStringOr<Ref<Protocol::LayerTree::CompositingReasons>> InspectorL
         compositingReasons->setPlugin(true);
     else if (reasons.contains(CompositingReason::IFrame))
         compositingReasons->setIFrame(true);
+    else if (reasons.contains(CompositingReason::Model))
+        compositingReasons->setModel(true);
 
     if (reasons.contains(CompositingReason::BackfaceVisibilityHidden))
         compositingReasons->setBackfaceVisibilityHidden(true);
@@ -349,7 +351,7 @@ String InspectorLayerTreeAgent::bindPseudoElement(PseudoElement* pseudoElement)
 {
     if (!pseudoElement)
         return emptyString();
-    return m_pseudoElementToIdMap.ensure(pseudoElement, [this, pseudoElement] {
+    return m_pseudoElementToIdMap.ensure(*pseudoElement, [this, pseudoElement] {
         auto identifier = IdentifiersFactory::createIdentifier();
         m_idToPseudoElement.set(identifier, pseudoElement);
         return identifier;
@@ -358,7 +360,9 @@ String InspectorLayerTreeAgent::bindPseudoElement(PseudoElement* pseudoElement)
 
 void InspectorLayerTreeAgent::unbindPseudoElement(PseudoElement* pseudoElement)
 {
-    auto identifier = m_pseudoElementToIdMap.take(pseudoElement);
+    if (!pseudoElement)
+        return;
+    auto identifier = m_pseudoElementToIdMap.take(*pseudoElement);
     if (identifier.isNull())
         return;
     m_idToPseudoElement.remove(identifier);

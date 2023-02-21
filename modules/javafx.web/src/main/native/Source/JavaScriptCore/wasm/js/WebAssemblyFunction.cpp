@@ -48,13 +48,13 @@
 #include "WasmMemory.h"
 #include "WasmMemoryInformation.h"
 #include "WasmModuleInformation.h"
-#include "WasmSignatureInlines.h"
+#include "WasmTypeDefinitionInlines.h"
 #include <wtf/StackPointer.h>
 #include <wtf/SystemTracing.h>
 
 namespace JSC {
 
-const ClassInfo WebAssemblyFunction::s_info = { "WebAssemblyFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyFunction) };
+const ClassInfo WebAssemblyFunction::s_info = { "WebAssemblyFunction"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyFunction) };
 
 static JSC_DECLARE_HOST_FUNCTION(callWebAssemblyFunction);
 
@@ -63,13 +63,13 @@ JSC_DEFINE_HOST_FUNCTION(callWebAssemblyFunction, (JSGlobalObject* globalObject,
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     WebAssemblyFunction* wasmFunction = jsCast<WebAssemblyFunction*>(callFrame->jsCallee());
-    Wasm::SignatureIndex signatureIndex = wasmFunction->signatureIndex();
-    const Wasm::Signature& signature = Wasm::SignatureInformation::get(signatureIndex);
+    Wasm::TypeIndex typeIndex = wasmFunction->typeIndex();
+    const Wasm::FunctionSignature& signature = Wasm::TypeInformation::getFunctionSignature(typeIndex);
 
     // Make sure that the memory we think we are going to run with matches the one we expect.
-    ASSERT(wasmFunction->instance()->instance().codeBlock()->isSafeToRun(wasmFunction->instance()->memory()->memory().mode()));
+    ASSERT(wasmFunction->instance()->instance().calleeGroup()->isSafeToRun(wasmFunction->instance()->memory()->memory().mode()));
 
-    Optional<TraceScope> traceScope;
+    std::optional<TraceScope> traceScope;
     if (Options::useTracePoints())
         traceScope.emplace(WebAssemblyExecuteStart, WebAssemblyExecuteEnd);
 
@@ -78,33 +78,9 @@ JSC_DEFINE_HOST_FUNCTION(callWebAssemblyFunction, (JSGlobalObject* globalObject,
     Wasm::Instance* wasmInstance = &instance->instance();
 
     for (unsigned argIndex = 0; argIndex < signature.argumentCount(); ++argIndex) {
-        JSValue arg = callFrame->argument(argIndex);
-        switch (signature.argument(argIndex)) {
-        case Wasm::I32:
-            arg = JSValue::decode(arg.toInt32(globalObject));
-            break;
-        case Wasm::Funcref: {
-            if (!isWebAssemblyHostFunction(vm, arg) && !arg.isNull())
-                return JSValue::encode(throwException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function")));
-            break;
-        }
-        case Wasm::Externref:
-            break;
-        case Wasm::I64:
-            arg = JSValue::decode(bitwise_cast<uint64_t>(arg.toBigInt64(globalObject)));
-            break;
-        case Wasm::F32:
-            arg = JSValue::decode(bitwise_cast<uint32_t>(arg.toFloat(globalObject)));
-            break;
-        case Wasm::F64:
-            arg = JSValue::decode(bitwise_cast<uint64_t>(arg.toNumber(globalObject)));
-            break;
-        case Wasm::Void:
-        case Wasm::Func:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
+        uint64_t value = fromJSValue(globalObject, signature.argumentType(argIndex), callFrame->argument(argIndex));
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        boxedArgs.append(arg);
+        boxedArgs.append(JSValue::decode(value));
     }
 
     // When we don't use fast TLS to store the context, the JS
@@ -134,10 +110,6 @@ JSC_DEFINE_HOST_FUNCTION(callWebAssemblyFunction, (JSGlobalObject* globalObject,
     ASSERT(wasmFunction->instance());
     ASSERT(&wasmFunction->instance()->instance() == vm.wasmContext.load());
     EncodedJSValue rawResult = vmEntryToWasm(wasmFunction->jsEntrypoint(MustCheckArity).executableAddress(), &vm, &protoCallFrame);
-    // We need to make sure this is in a register or on the stack since it's stored in Vector<JSValue>.
-    // This probably isn't strictly necessary, since the WebAssemblyFunction* should keep the instance
-    // alive. But it's good hygiene.
-    instance->use();
     if (prevWasmInstance != wasmInstance) {
         // This is just for some extra safety instead of leaving a cached
         // value in there. If we ever forget to set the value to be a real
@@ -150,19 +122,30 @@ JSC_DEFINE_HOST_FUNCTION(callWebAssemblyFunction, (JSGlobalObject* globalObject,
     vm.wasmContext.store(prevWasmInstance, vm.softStackLimit());
     RETURN_IF_EXCEPTION(scope, { });
 
+    // We need to make sure this is in a register or on the stack since it's stored in Vector<JSValue>.
+    // This probably isn't strictly necessary, since the WebAssemblyFunction* should keep the instance
+    // alive. But it's good hygiene.
+    instance->use();
+
     return rawResult;
 }
 
-bool WebAssemblyFunction::useTagRegisters() const
+bool WebAssemblyFunction::usesTagRegisters() const
 {
-    const auto& signature = Wasm::SignatureInformation::get(signatureIndex());
+    const auto& signature = Wasm::TypeInformation::getFunctionSignature(typeIndex());
     return signature.argumentCount() || !signature.returnsVoid();
 }
 
 RegisterSet WebAssemblyFunction::calleeSaves() const
 {
     // Pessimistically save callee saves in BoundsChecking mode since the LLInt always bounds checks
-    return Wasm::PinnedRegisterInfo::get().toSave(Wasm::MemoryMode::BoundsChecking);
+    RegisterSet result = Wasm::PinnedRegisterInfo::get().toSave(Wasm::MemoryMode::BoundsChecking);
+    if (usesTagRegisters()) {
+        RegisterSet tagCalleeSaves = RegisterSet::calleeSaveRegisters();
+        tagCalleeSaves.filter(RegisterSet::runtimeTagRegisters());
+        result.merge(tagCalleeSaves);
+    }
+    return result;
 }
 
 RegisterAtOffsetList WebAssemblyFunction::usedCalleeSaveRegisters() const
@@ -174,6 +157,9 @@ ptrdiff_t WebAssemblyFunction::previousInstanceOffset() const
 {
     ptrdiff_t result = calleeSaves().numberOfSetRegisters() * sizeof(CPURegister);
     result = -result - sizeof(CPURegister);
+#if USE(JSVALUE32_64)
+    ASSERT(!calleeSaves().numberOfSetFPRs()); // Because FPRs are wider than sizeof(CPURegister)
+#endif
 #if ASSERT_ENABLED
     ptrdiff_t minOffset = 1;
     for (const RegisterAtOffset& regAtOffset : usedCalleeSaveRegisters()) {
@@ -198,21 +184,20 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
     VM& vm = this->vm();
     CCallHelpers jit;
 
-    const auto& signature = Wasm::SignatureInformation::get(signatureIndex());
+    const auto& typeDefinition = Wasm::TypeInformation::get(typeIndex());
+    const auto& signature = *typeDefinition.as<Wasm::FunctionSignature>();
     const auto& pinnedRegs = Wasm::PinnedRegisterInfo::get();
     RegisterAtOffsetList registersToSpill = usedCalleeSaveRegisters();
 
-    auto& moduleInformation = instance()->instance().module().moduleInformation();
-
     const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
-    Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(signature);
-    Wasm::CallInformation jsCallInfo = Wasm::jsCallingConvention().callInformationFor(signature, Wasm::CallRole::Callee);
+    Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(typeDefinition);
+    Wasm::CallInformation jsCallInfo = Wasm::jsCallingConvention().callInformationFor(typeDefinition, Wasm::CallRole::Callee);
     RegisterAtOffsetList savedResultRegisters = wasmCallInfo.computeResultsOffsetList();
 
-    unsigned totalFrameSize = registersToSpill.size() * sizeof(CPURegister);
+    unsigned totalFrameSize = registersToSpill.sizeOfAreaInBytes();
     totalFrameSize += sizeof(CPURegister); // Slot for the VM's previous wasm instance.
     totalFrameSize += wasmCallInfo.headerAndArgumentStackSizeInBytes;
-    totalFrameSize += savedResultRegisters.size() * sizeof(CPURegister);
+    totalFrameSize += savedResultRegisters.sizeOfAreaInBytes();
 
     // FIXME: Optimize Wasm function call even if arguments include I64.
     // This requires I64 extraction from BigInt.
@@ -224,7 +209,7 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
 
     jit.emitFunctionPrologue();
     jit.subPtr(MacroAssembler::TrustedImm32(totalFrameSize), MacroAssembler::stackPointerRegister);
-    jit.store64(CCallHelpers::TrustedImm64(0), CCallHelpers::addressFor(CallFrameSlot::codeBlock));
+    jit.emitZeroToCallFrameHeader(CallFrameSlot::codeBlock);
 
     for (const RegisterAtOffset& regAtOffset : registersToSpill) {
         GPRReg reg = regAtOffset.reg().gpr();
@@ -232,9 +217,14 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
         jit.storePtr(reg, CCallHelpers::Address(GPRInfo::callFrameRegister, offset));
     }
 
-    GPRReg scratchGPR = Wasm::wasmCallingConvention().prologueScratchGPRs[1];
-    bool stackLimitGPRIsClobbered = false;
+    JSValueRegs scratchJSR {
+#if USE(JSVALUE32_64)
+        Wasm::wasmCallingConvention().prologueScratchGPRs[2],
+#endif
+        Wasm::wasmCallingConvention().prologueScratchGPRs[1]
+    };
     GPRReg stackLimitGPR = Wasm::wasmCallingConvention().prologueScratchGPRs[0];
+    bool stackLimitGPRIsClobbered = false;
     jit.loadPtr(vm.addressOfSoftStackLimit(), stackLimitGPR);
 
     CCallHelpers::JumpList slowPath;
@@ -249,88 +239,120 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
     slowPath.append(jit.branch32(CCallHelpers::Below,
         CCallHelpers::payloadFor(CallFrameSlot::argumentCountIncludingThis), CCallHelpers::TrustedImm32(signature.argumentCount() + 1)));
 
-    if (useTagRegisters())
+    if (usesTagRegisters())
         jit.emitMaterializeTagCheckRegisters();
 
     // Loop backwards so we can use the first floating point argument as a scratch.
-    FPRReg scratchFPR = Wasm::wasmCallingConvention().fprArgs[0].fpr();
+    FPRReg scratchFPR = Wasm::wasmCallingConvention().fprArgs[0];
     for (unsigned i = signature.argumentCount(); i--;) {
         CCallHelpers::Address calleeFrame = CCallHelpers::Address(MacroAssembler::stackPointerRegister, 0);
         CCallHelpers::Address jsParam(GPRInfo::callFrameRegister, jsCallInfo.params[i].offsetFromFP());
         bool isStack = wasmCallInfo.params[i].isStackArgument();
 
-        auto type = signature.argument(i);
-        switch (type) {
-        case Wasm::I32: {
-            jit.load64(jsParam, scratchGPR);
-            slowPath.append(jit.branchIfNotInt32(scratchGPR));
-            if (isStack)
-                jit.store32(scratchGPR, calleeFrame.withOffset(wasmCallInfo.params[i].offsetFromSP()));
-            else
-                jit.zeroExtend32ToWord(scratchGPR, wasmCallInfo.params[i].gpr());
-            break;
-        }
-        case Wasm::Funcref: {
-            // Ensure we have a WASM exported function.
-            jit.load64(jsParam, scratchGPR);
-            auto isNull = jit.branchIfNull(scratchGPR);
-            slowPath.append(jit.branchIfNotCell(scratchGPR));
-
-            stackLimitGPRIsClobbered = true;
-            jit.emitLoadStructure(vm, scratchGPR, scratchGPR, stackLimitGPR);
-            jit.loadPtr(CCallHelpers::Address(scratchGPR, Structure::classInfoOffset()), scratchGPR);
-
-            static_assert(std::is_final<WebAssemblyFunction>::value, "We do not check for subtypes below");
-            static_assert(std::is_final<WebAssemblyWrapperFunction>::value, "We do not check for subtypes below");
-
-            auto isWasmFunction = jit.branchPtr(CCallHelpers::Equal, scratchGPR, CCallHelpers::TrustedImmPtr(WebAssemblyFunction::info()));
-            slowPath.append(jit.branchPtr(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImmPtr(WebAssemblyWrapperFunction::info())));
-
-            isWasmFunction.link(&jit);
-            isNull.link(&jit);
-            FALLTHROUGH;
-        }
-        case Wasm::Externref: {
+        auto type = signature.argumentType(i);
+        switch (type.kind) {
+        case Wasm::TypeKind::I32: {
+            jit.loadValue(jsParam, scratchJSR);
+            slowPath.append(jit.branchIfNotInt32(scratchJSR));
             if (isStack) {
-                jit.load64(jsParam, scratchGPR);
-                jit.store64(scratchGPR, calleeFrame.withOffset(wasmCallInfo.params[i].offsetFromSP()));
-            } else
-                jit.load64(jsParam, wasmCallInfo.params[i].gpr());
+                CCallHelpers::Address addr { calleeFrame.withOffset(wasmCallInfo.params[i].offsetFromSP()) };
+                jit.store32(scratchJSR.payloadGPR(), addr.withOffset(PayloadOffset));
+#if USE(JSVALUE32_64)
+                jit.store32(CCallHelpers::TrustedImm32(0), addr.withOffset(TagOffset));
+#endif
+            } else {
+                jit.zeroExtend32ToWord(scratchJSR.payloadGPR(), wasmCallInfo.params[i].jsr().payloadGPR());
+#if USE(JSVALUE32_64)
+                jit.move(CCallHelpers::TrustedImm32(0), wasmCallInfo.params[i].jsr().tagGPR());
+#endif
+            }
             break;
         }
-        case Wasm::F32:
-        case Wasm::F64: {
+        case Wasm::TypeKind::Ref:
+        case Wasm::TypeKind::RefNull:
+        case Wasm::TypeKind::Funcref:
+        case Wasm::TypeKind::Externref: {
+            if (!Wasm::isExternref(type)) {
+                // Ensure we have a WASM exported function.
+                jit.loadValue(jsParam, scratchJSR);
+                auto isNull = jit.branchIfNull(scratchJSR);
+                if (!type.isNullable())
+                    slowPath.append(isNull);
+                slowPath.append(jit.branchIfNotCell(scratchJSR));
+
+                stackLimitGPRIsClobbered = true;
+                jit.emitLoadStructure(vm, scratchJSR.payloadGPR(), scratchJSR.payloadGPR());
+                jit.loadCompactPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), Structure::classInfoOffset()), scratchJSR.payloadGPR());
+
+                static_assert(std::is_final<WebAssemblyFunction>::value, "We do not check for subtypes below");
+                static_assert(std::is_final<WebAssemblyWrapperFunction>::value, "We do not check for subtypes below");
+
+                auto isWasmFunction = jit.branchPtr(CCallHelpers::Equal, scratchJSR.payloadGPR(), CCallHelpers::TrustedImmPtr(WebAssemblyFunction::info()));
+                slowPath.append(jit.branchPtr(CCallHelpers::NotEqual, scratchJSR.payloadGPR(), CCallHelpers::TrustedImmPtr(WebAssemblyWrapperFunction::info())));
+
+                isWasmFunction.link(&jit);
+                if (Wasm::isRefWithTypeIndex(type)) {
+                    jit.loadPtr(jsParam, scratchJSR.payloadGPR());
+                    jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), WebAssemblyFunctionBase::offsetOfSignatureIndex()), scratchJSR.payloadGPR());
+                    slowPath.append(jit.branchPtr(CCallHelpers::NotEqual, scratchJSR.payloadGPR(), CCallHelpers::TrustedImmPtr(type.index)));
+                }
+
+                if (type.isNullable())
+                    isNull.link(&jit);
+            }
+
+            if (isStack) {
+                jit.loadValue(jsParam, scratchJSR);
+                if (!type.isNullable())
+                    slowPath.append(jit.branchIfNull(scratchJSR));
+                jit.storeValue(scratchJSR, calleeFrame.withOffset(wasmCallInfo.params[i].offsetFromSP()));
+            } else {
+                auto externJSR = wasmCallInfo.params[i].jsr();
+                jit.loadValue(jsParam, externJSR);
+                if (!type.isNullable())
+                    slowPath.append(jit.branchIfNull(externJSR));
+            }
+            break;
+        }
+        case Wasm::TypeKind::F32:
+        case Wasm::TypeKind::F64: {
             if (!isStack)
                 scratchFPR = wasmCallInfo.params[i].fpr();
-            auto moveToDestination = [&] () {
-                if (isStack) {
-                    if (signature.argument(i) == Wasm::F32)
-                        jit.storeFloat(scratchFPR, calleeFrame.withOffset(wasmCallInfo.params[i].offsetFromSP()));
-                    else
-                        jit.storeDouble(scratchFPR, calleeFrame.withOffset(wasmCallInfo.params[i].offsetFromSP()));
-                }
-            };
 
-            jit.load64(jsParam, scratchGPR);
-            slowPath.append(jit.branchIfNotNumber(scratchGPR));
-            auto isInt32 = jit.branchIfInt32(scratchGPR);
-
-            jit.unboxDouble(scratchGPR, scratchGPR, scratchFPR);
-            if (signature.argument(i) == Wasm::F32)
+            jit.loadValue(jsParam, scratchJSR);
+#if USE(JSVALUE64)
+            slowPath.append(jit.branchIfNotNumber(scratchJSR, InvalidGPRReg));
+#elif USE(JSVALUE32_64)
+            stackLimitGPRIsClobbered = true;
+            slowPath.append(jit.branchIfNotNumber(scratchJSR, stackLimitGPR));
+#endif
+            auto isInt32 = jit.branchIfInt32(scratchJSR);
+#if USE(JSVALUE64)
+            jit.unboxDouble(scratchJSR.payloadGPR(), scratchJSR.payloadGPR(), scratchFPR);
+#elif USE(JSVALUE32_64)
+            jit.unboxDouble(scratchJSR, scratchFPR);
+#endif
+            if (signature.argumentType(i).isF32())
                 jit.convertDoubleToFloat(scratchFPR, scratchFPR);
-            moveToDestination();
             auto done = jit.jump();
 
             isInt32.link(&jit);
-            if (signature.argument(i) == Wasm::F32) {
-                jit.convertInt32ToFloat(scratchGPR, scratchFPR);
-                moveToDestination();
+            if (signature.argumentType(i).isF32()) {
+                jit.convertInt32ToFloat(scratchJSR.payloadGPR(), scratchFPR);
             } else {
-                jit.convertInt32ToDouble(scratchGPR, scratchFPR);
-                moveToDestination();
+                jit.convertInt32ToDouble(scratchJSR.payloadGPR(), scratchFPR);
             }
             done.link(&jit);
-
+            if (isStack) {
+                CCallHelpers::Address addr { calleeFrame.withOffset(wasmCallInfo.params[i].offsetFromSP()) };
+                if (signature.argumentType(i).isF32()) {
+                    jit.storeFloat(scratchFPR, addr.withOffset(PayloadOffset));
+#if USE(JSVALUE32_64)
+                    jit.store32(CCallHelpers::TrustedImm32(0), addr.withOffset(TagOffset));
+#endif
+                } else
+                    jit.storeDouble(scratchFPR, addr);
+            }
             break;
         }
         default:
@@ -341,40 +363,44 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
     // At this point, we're committed to doing a fast call.
 
     if (Wasm::Context::useFastTLS())
-        jit.loadWasmContextInstance(scratchGPR);
+        jit.loadWasmContextInstance(scratchJSR.payloadGPR());
     else
-        jit.loadPtr(vm.wasmContext.pointerToInstance(), scratchGPR);
+        jit.loadPtr(vm.wasmContext.pointerToInstance(), scratchJSR.payloadGPR());
     ptrdiff_t previousInstanceOffset = this->previousInstanceOffset();
-    jit.storePtr(scratchGPR, CCallHelpers::Address(GPRInfo::callFrameRegister, previousInstanceOffset));
+    jit.storePtr(scratchJSR.payloadGPR(), CCallHelpers::Address(GPRInfo::callFrameRegister, previousInstanceOffset));
 
-    jit.move(CCallHelpers::TrustedImmPtr(&instance()->instance()), scratchGPR);
+    jit.move(CCallHelpers::TrustedImmPtr(&instance()->instance()), scratchJSR.payloadGPR());
     if (Wasm::Context::useFastTLS())
-        jit.storeWasmContextInstance(scratchGPR);
+        jit.storeWasmContextInstance(scratchJSR.payloadGPR());
     else {
-        jit.move(scratchGPR, pinnedRegs.wasmContextInstancePointer);
-        jit.storePtr(scratchGPR, vm.wasmContext.pointerToInstance());
+        jit.move(scratchJSR.payloadGPR(), pinnedRegs.wasmContextInstancePointer);
+        jit.storePtr(scratchJSR.payloadGPR(), vm.wasmContext.pointerToInstance());
     }
     if (stackLimitGPRIsClobbered)
         jit.loadPtr(vm.addressOfSoftStackLimit(), stackLimitGPR);
-    jit.storePtr(stackLimitGPR, CCallHelpers::Address(scratchGPR, Wasm::Instance::offsetOfCachedStackLimit()));
+    jit.storePtr(stackLimitGPR, CCallHelpers::Address(scratchJSR.payloadGPR(), Wasm::Instance::offsetOfCachedStackLimit()));
 
-    if (!!moduleInformation.memory) {
+#if !CPU(ARM) // ARM has no pinned registers for Wasm Memory, so no need to set them up
+    if (!!instance()->instance().module().moduleInformation().memory) {
         GPRReg baseMemory = pinnedRegs.baseMemoryPointer;
-        GPRReg scratchOrBoundsCheckingSize = stackLimitGPR;
+        GPRReg scratchOrBoundsCheckingSize = InvalidGPRReg;
         auto mode = instance()->memoryMode();
 
         if (isARM64E()) {
-            if (mode != Wasm::MemoryMode::Signaling)
+            if (mode == Wasm::MemoryMode::BoundsChecking)
                 scratchOrBoundsCheckingSize = pinnedRegs.boundsCheckingSizeRegister;
-            jit.loadPtr(CCallHelpers::Address(scratchGPR, Wasm::Instance::offsetOfCachedBoundsCheckingSize()), scratchOrBoundsCheckingSize);
+            else
+                scratchOrBoundsCheckingSize = stackLimitGPR;
+            jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), Wasm::Instance::offsetOfCachedBoundsCheckingSize()), scratchOrBoundsCheckingSize);
         } else {
-            if (mode != Wasm::MemoryMode::Signaling)
-                jit.loadPtr(CCallHelpers::Address(scratchGPR, Wasm::Instance::offsetOfCachedBoundsCheckingSize()), pinnedRegs.boundsCheckingSizeRegister);
+            if (mode == Wasm::MemoryMode::BoundsChecking)
+                jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), Wasm::Instance::offsetOfCachedBoundsCheckingSize()), pinnedRegs.boundsCheckingSizeRegister);
         }
 
-        jit.loadPtr(CCallHelpers::Address(scratchGPR, Wasm::Instance::offsetOfCachedMemory()), baseMemory);
-        jit.cageConditionally(Gigacage::Primitive, baseMemory, scratchOrBoundsCheckingSize, scratchOrBoundsCheckingSize);
+        jit.loadPtr(CCallHelpers::Address(scratchJSR.payloadGPR(), Wasm::Instance::offsetOfCachedMemory()), baseMemory);
+        jit.cageConditionallyAndUntag(Gigacage::Primitive, baseMemory, scratchOrBoundsCheckingSize, scratchJSR.payloadGPR());
     }
+#endif
 
     // We use this callee to indicate how to unwind past these types of frames:
     // 1. We need to know where to get callee saves.
@@ -383,15 +409,13 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
         m_jsToWasmICCallee.set(vm, this, JSToWasmICCallee::create(vm, globalObject(), this));
     jit.storePtr(CCallHelpers::TrustedImmPtr(m_jsToWasmICCallee.get()), CCallHelpers::addressFor(CallFrameSlot::callee));
 
-    {
-        // FIXME: Currently we just do an indirect jump. But we should teach the Module
-        // how to repatch us:
-        // https://bugs.webkit.org/show_bug.cgi?id=196570
-        jit.loadPtr(entrypointLoadLocation(), scratchGPR);
-        jit.call(scratchGPR, WasmEntryPtrTag);
-    }
+    // FIXME: Currently we just do an indirect jump. But we should teach the Module
+    // how to repatch us:
+    // https://bugs.webkit.org/show_bug.cgi?id=196570
+    jit.loadPtr(entrypointLoadLocation(), scratchJSR.payloadGPR());
+    jit.call(scratchJSR.payloadGPR(), WasmEntryPtrTag);
 
-    marshallJSResult(jit, signature, wasmCallInfo, savedResultRegisters);
+    marshallJSResult(jit, typeDefinition, wasmCallInfo, savedResultRegisters);
 
     ASSERT(!RegisterSet::runtimeTagRegisters().contains(GPRInfo::nonPreservedNonReturnGPR));
     jit.loadPtr(CCallHelpers::Address(GPRInfo::callFrameRegister, previousInstanceOffset), GPRInfo::nonPreservedNonReturnGPR);
@@ -419,23 +443,23 @@ MacroAssemblerCodePtr<JSEntryPtrTag> WebAssemblyFunction::jsCallEntrypointSlow()
     jit.move(CCallHelpers::TrustedImmPtr(this), GPRInfo::regT0);
     jit.emitFunctionEpilogue();
 #if CPU(ARM64E)
-    jit.untagReturnAddress(scratchGPR);
+    jit.untagReturnAddress(scratchJSR.payloadGPR());
 #endif
     auto jumpToHostCallThunk = jit.jump();
 
-    LinkBuffer linkBuffer(jit, nullptr, JITCompilationCanFail);
+    LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
     if (UNLIKELY(linkBuffer.didFailToAllocate()))
         return nullptr;
 
-    linkBuffer.link(jumpToHostCallThunk, CodeLocationLabel<JSEntryPtrTag>(executable()->entrypointFor(CodeForCall, MustCheckArity).executableAddress()));
+    linkBuffer.link(jumpToHostCallThunk, CodeLocationLabel<JSEntryPtrTag>(executable()->entrypointFor(CodeForCall, MustCheckArity)));
     m_jsCallEntrypoint = FINALIZE_WASM_CODE(linkBuffer, WasmEntryPtrTag, "JS->Wasm IC");
     return m_jsCallEntrypoint.code();
 }
 
-WebAssemblyFunction* WebAssemblyFunction::create(VM& vm, JSGlobalObject* globalObject, Structure* structure, unsigned length, const String& name, JSWebAssemblyInstance* instance, Wasm::Callee& jsEntrypoint, Wasm::WasmToWasmImportableFunction::LoadLocation wasmToWasmEntrypointLoadLocation, Wasm::SignatureIndex signatureIndex)
+WebAssemblyFunction* WebAssemblyFunction::create(VM& vm, JSGlobalObject* globalObject, Structure* structure, unsigned length, const String& name, JSWebAssemblyInstance* instance, Wasm::Callee& jsEntrypoint, Wasm::WasmToWasmImportableFunction::LoadLocation wasmToWasmEntrypointLoadLocation, Wasm::TypeIndex typeIndex)
 {
-    NativeExecutable* executable = vm.getHostFunction(callWebAssemblyFunction, WasmFunctionIntrinsic, callHostFunctionAsConstructor, nullptr, name);
-    WebAssemblyFunction* function = new (NotNull, allocateCell<WebAssemblyFunction>(vm.heap)) WebAssemblyFunction(vm, executable, globalObject, structure, jsEntrypoint, wasmToWasmEntrypointLoadLocation, signatureIndex);
+    NativeExecutable* executable = vm.getHostFunction(callWebAssemblyFunction, ImplementationVisibility::Public, WasmFunctionIntrinsic, callHostFunctionAsConstructor, nullptr, name);
+    WebAssemblyFunction* function = new (NotNull, allocateCell<WebAssemblyFunction>(vm)) WebAssemblyFunction(vm, executable, globalObject, structure, jsEntrypoint, wasmToWasmEntrypointLoadLocation, typeIndex);
     function->finishCreation(vm, executable, length, name, instance);
     return function;
 }
@@ -446,10 +470,9 @@ Structure* WebAssemblyFunction::createStructure(VM& vm, JSGlobalObject* globalOb
     return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
 }
 
-WebAssemblyFunction::WebAssemblyFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, Wasm::Callee& jsEntrypoint, Wasm::WasmToWasmImportableFunction::LoadLocation wasmToWasmEntrypointLoadLocation, Wasm::SignatureIndex signatureIndex)
-    : Base { vm, executable, globalObject, structure }
+WebAssemblyFunction::WebAssemblyFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, Wasm::Callee& jsEntrypoint, Wasm::WasmToWasmImportableFunction::LoadLocation wasmToWasmEntrypointLoadLocation, Wasm::TypeIndex typeIndex)
+    : Base { vm, executable, globalObject, structure, Wasm::WasmToWasmImportableFunction { typeIndex, wasmToWasmEntrypointLoadLocation } }
     , m_jsEntrypoint { jsEntrypoint.entrypoint() }
-    , m_importableFunction { signatureIndex, wasmToWasmEntrypointLoadLocation }
 { }
 
 template<typename Visitor>

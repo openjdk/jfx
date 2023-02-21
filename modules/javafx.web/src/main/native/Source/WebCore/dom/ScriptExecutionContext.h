@@ -28,16 +28,21 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "CrossOriginMode.h"
 #include "DOMTimer.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "SecurityContext.h"
-#include "ServiceWorkerTypes.h"
+#include "ServiceWorkerIdentifier.h"
 #include "Settings.h"
+#include "StorageBlockingPolicy.h"
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/HandleTypes.h>
+#include <pal/SessionID.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -57,18 +62,29 @@ namespace WebCore {
 
 class EventLoop;
 class CachedScript;
+class CSSFontSelector;
+class CSSValuePool;
 class DatabaseContext;
 class EventQueue;
 class EventLoopTaskGroup;
 class EventTarget;
+class FontLoadRequest;
 class MessagePort;
+class NotificationClient;
+class PermissionController;
 class PublicURLManager;
 class RejectedPromiseTracker;
+class RTCDataChannelRemoteHandlerConnection;
 class ResourceRequest;
-class SecurityOrigin;
 class SocketProvider;
+class WebCoreOpaqueRoot;
+enum class LoadedFromOpaqueSource : uint8_t;
 enum class ReferrerPolicy : uint8_t;
 enum class TaskSource : uint8_t;
+
+#if ENABLE(NOTIFICATIONS)
+class NotificationClient;
+#endif
 
 #if ENABLE(SERVICE_WORKER)
 class ServiceWorker;
@@ -79,16 +95,14 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-enum ScriptExecutionContextIdentifierType { };
-using ScriptExecutionContextIdentifier = ObjectIdentifier<ScriptExecutionContextIdentifierType>;
-
-class ScriptExecutionContext : public SecurityContext {
+class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext> {
 public:
-    ScriptExecutionContext();
+    explicit ScriptExecutionContext(ScriptExecutionContextIdentifier = { });
     virtual ~ScriptExecutionContext();
 
     virtual bool isDocument() const { return false; }
     virtual bool isWorkerGlobalScope() const { return false; }
+    virtual bool isServiceWorkerGlobalScope() const { return false; }
     virtual bool isWorkletGlobalScope() const { return false; }
 
     virtual bool isContextThread() const { return true; }
@@ -106,18 +120,23 @@ public:
 
     virtual const Settings::Values& settingsValues() const = 0;
 
+    virtual NotificationClient* notificationClient() { return nullptr; }
+    virtual std::optional<PAL::SessionID> sessionID() const { return std::nullopt; }
+
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
 
-#if ENABLE(INDEXED_DATABASE)
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
-#endif
+    virtual RefPtr<PermissionController> permissionController();
+
     virtual SocketProvider* socketProvider() = 0;
+
+    virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection();
 
     virtual String resourceRequestIdentifier() const { return String(); };
 
-    bool canIncludeErrorDetails(CachedScript*, const String& sourceURL);
-    void reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, JSC::Exception*, RefPtr<Inspector::ScriptCallStack>&&, CachedScript* = nullptr);
+    bool canIncludeErrorDetails(CachedScript*, const String& sourceURL, bool = false);
+    void reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, JSC::Exception*, RefPtr<Inspector::ScriptCallStack>&&, CachedScript* = nullptr, bool = false);
     void reportUnhandledPromiseRejection(JSC::JSGlobalObject&, JSC::JSPromise&, RefPtr<Inspector::ScriptCallStack>&&);
 
     virtual void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) = 0;
@@ -160,6 +179,14 @@ public:
 
     virtual void didLoadResourceSynchronously(const URL&);
 
+    virtual CSSFontSelector* cssFontSelector() { return nullptr; }
+    virtual CSSValuePool& cssValuePool();
+    virtual std::unique_ptr<FontLoadRequest> fontLoadRequest(String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource);
+    virtual void beginLoadingFontSoon(FontLoadRequest&) { }
+
+    WEBCORE_EXPORT static void setCrossOriginMode(CrossOriginMode);
+    static CrossOriginMode crossOriginMode();
+
     void ref() { refScriptExecutionContext(); }
     void deref() { derefScriptExecutionContext(); }
 
@@ -168,20 +195,20 @@ public:
     public:
         enum CleanupTaskTag { CleanupTask };
 
-        template<typename T, typename = typename std::enable_if<!std::is_base_of<Task, T>::value && std::is_convertible<T, WTF::Function<void (ScriptExecutionContext&)>>::value>::type>
+        template<typename T, typename = typename std::enable_if<!std::is_base_of<Task, T>::value && std::is_convertible<T, Function<void(ScriptExecutionContext&)>>::value>::type>
         Task(T task)
             : m_task(WTFMove(task))
             , m_isCleanupTask(false)
         {
         }
 
-        Task(WTF::Function<void ()>&& task)
+        Task(Function<void()>&& task)
             : m_task([task = WTFMove(task)](ScriptExecutionContext&) { task(); })
             , m_isCleanupTask(false)
         {
         }
 
-        template<typename T, typename = typename std::enable_if<std::is_convertible<T, WTF::Function<void (ScriptExecutionContext&)>>::value>::type>
+        template<typename T, typename = typename std::enable_if<std::is_convertible<T, Function<void(ScriptExecutionContext&)>>::value>::type>
         Task(CleanupTaskTag, T task)
             : m_task(WTFMove(task))
             , m_isCleanupTask(true)
@@ -192,11 +219,10 @@ public:
         bool isCleanupTask() const { return m_isCleanupTask; }
 
     protected:
-        WTF::Function<void (ScriptExecutionContext&)> m_task;
+        Function<void(ScriptExecutionContext&)> m_task;
         bool m_isCleanupTask;
     };
 
-    void enqueueTaskForDispatcher(Function<void()>&& function) { postTask(WTFMove(function)); }
     virtual void postTask(Task&&) = 0; // Executes the task on context's thread asynchronously.
 
     template<typename... Arguments>
@@ -206,6 +232,8 @@ public:
             crossThreadTask.performTask();
         });
     }
+
+    void postTaskToResponsibleDocument(Function<void(Document&)>&&);
 
     // Gets the next id in a circular sequence from 1 to 2^31-1.
     int circularSequentialID();
@@ -238,10 +266,10 @@ public:
     int timerNestingLevel() const { return m_timerNestingLevel; }
     void setTimerNestingLevel(int timerNestingLevel) { m_timerNestingLevel = timerNestingLevel; }
 
-    RejectedPromiseTracker& ensureRejectedPromiseTracker()
+    RejectedPromiseTracker* ensureRejectedPromiseTracker()
     {
         if (m_rejectedPromiseTracker)
-            return *m_rejectedPromiseTracker.get();
+            return m_rejectedPromiseTracker.get();
         return ensureRejectedPromiseTrackerSlow();
     }
 
@@ -261,10 +289,37 @@ public:
 
     ServiceWorkerContainer* serviceWorkerContainer();
     ServiceWorkerContainer* ensureServiceWorkerContainer();
+    virtual void updateServiceWorkerClientData() { ASSERT_NOT_REACHED(); }
 #endif
     WEBCORE_EXPORT static bool postTaskTo(ScriptExecutionContextIdentifier, Task&&);
+    WEBCORE_EXPORT static bool postTaskForModeToWorkerOrWorklet(ScriptExecutionContextIdentifier, Task&&, const String&);
+    WEBCORE_EXPORT static bool ensureOnContextThread(ScriptExecutionContextIdentifier, Task&&);
 
-    ScriptExecutionContextIdentifier contextIdentifier() const;
+    ScriptExecutionContextIdentifier identifier() const { return m_identifier; }
+
+    bool hasLoggedAuthenticatedEncryptionWarning() const { return m_hasLoggedAuthenticatedEncryptionWarning; }
+    void setHasLoggedAuthenticatedEncryptionWarning(bool value) { m_hasLoggedAuthenticatedEncryptionWarning = value; }
+
+    void setStorageBlockingPolicy(StorageBlockingPolicy policy) { m_storageBlockingPolicy = policy; }
+    enum class ResourceType : uint8_t {
+        ApplicationCache,
+        Cookies,
+        Geolocation,
+        IndexedDB,
+        LocalStorage,
+        Plugin,
+        SessionStorage,
+        StorageManager,
+        WebSQL
+    };
+    enum class HasResourceAccess : uint8_t { No, Yes, DefaultForThirdParty };
+    WEBCORE_EXPORT HasResourceAccess canAccessResource(ResourceType) const;
+
+    enum NotificationCallbackIdentifierType { };
+    using NotificationCallbackIdentifier = ObjectIdentifier<NotificationCallbackIdentifierType>;
+
+    WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
+    WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
 
 protected:
     class AddConsoleMessageTask : public Task {
@@ -289,13 +344,15 @@ protected:
     bool hasPendingActivity() const;
     void removeFromContextsMap();
     void removeRejectedPromiseTracker();
+    void regenerateIdentifier();
 
 private:
     // The following addMessage function is deprecated.
     // Callers should try to create the ConsoleMessage themselves.
     virtual void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject* = nullptr, unsigned long requestIdentifier = 0) = 0;
     virtual void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, RefPtr<Inspector::ScriptCallStack>&&) = 0;
-    bool dispatchErrorEvent(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, JSC::Exception*, CachedScript*);
+
+    bool dispatchErrorEvent(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, JSC::Exception*, CachedScript*, bool);
 
     virtual void refScriptExecutionContext() = 0;
     virtual void derefScriptExecutionContext() = 0;
@@ -303,7 +360,7 @@ private:
     enum class ShouldContinue { No, Yes };
     void forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>&) const;
 
-    RejectedPromiseTracker& ensureRejectedPromiseTrackerSlow();
+    RejectedPromiseTracker* ensureRejectedPromiseTrackerSlow();
 
     void checkConsistency() const;
 
@@ -342,7 +399,14 @@ private:
 #endif
 
     String m_domainForCachePartition;
-    mutable ScriptExecutionContextIdentifier m_contextIdentifier;
+    mutable ScriptExecutionContextIdentifier m_identifier;
+
+    bool m_hasLoggedAuthenticatedEncryptionWarning { false };
+    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
+
+    HashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
 };
+
+WebCoreOpaqueRoot root(ScriptExecutionContext*);
 
 } // namespace WebCore

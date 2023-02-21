@@ -71,9 +71,7 @@ const String WebSocketExtensionDispatcher::createHeaderValue() const
 
 void WebSocketExtensionDispatcher::appendAcceptedExtension(const String& extensionToken, HashMap<String, String>& extensionParameters)
 {
-    if (!m_acceptedExtensionsBuilder.isEmpty())
-        m_acceptedExtensionsBuilder.appendLiteral(", ");
-    m_acceptedExtensionsBuilder.append(extensionToken);
+    m_acceptedExtensionsBuilder.append(m_acceptedExtensionsBuilder.isEmpty() ? "" : ", ", extensionToken);
     // FIXME: Should use ListHashSet to keep the order of the parameters.
     for (auto& parameter : extensionParameters) {
         m_acceptedExtensionsBuilder.append("; ", parameter.key);
@@ -95,7 +93,7 @@ bool WebSocketExtensionDispatcher::processHeaderValue(const String& headerValue)
 
     // If we don't send Sec-WebSocket-Extensions header, the server should not return the header.
     if (!m_processors.size()) {
-        fail("Received unexpected Sec-WebSocket-Extensions header");
+        fail("Received unexpected Sec-WebSocket-Extensions header"_s);
         return false;
     }
 
@@ -105,7 +103,7 @@ bool WebSocketExtensionDispatcher::processHeaderValue(const String& headerValue)
         String extensionToken;
         HashMap<String, String> extensionParameters;
         if (!parser.parseExtension(extensionToken, extensionParameters)) {
-            fail("Sec-WebSocket-Extensions header is invalid");
+            fail("Sec-WebSocket-Extensions header is invalid"_s);
             return false;
         }
 

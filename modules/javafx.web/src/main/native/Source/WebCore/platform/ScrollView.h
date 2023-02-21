@@ -58,6 +58,7 @@ OBJC_CLASS WAKView;
 namespace WebCore {
 
 class EventRegionContext;
+class FloatQuad;
 class HostWindow;
 class LegacyTileCache;
 class Scrollbar;
@@ -73,8 +74,6 @@ public:
     WEBCORE_EXPORT void setScrollOffset(const ScrollOffset&) final;
     bool isScrollCornerVisible() const final;
     void scrollbarStyleChanged(ScrollbarStyle, bool forceUpdate) override;
-
-    virtual void notifyPageThatContentAreaWillPaint() const;
 
     IntPoint locationOfContents() const;
 
@@ -299,6 +298,8 @@ public:
     WEBCORE_EXPORT IntRect contentsToRootView(const IntRect&) const;
     WEBCORE_EXPORT FloatRect rootViewToContents(const FloatRect&) const;
     WEBCORE_EXPORT FloatRect contentsToRootView(const FloatRect&) const;
+    WEBCORE_EXPORT FloatQuad rootViewToContents(const FloatQuad&) const;
+    WEBCORE_EXPORT FloatQuad contentsToRootView(const FloatQuad&) const;
 
     IntPoint viewToContents(const IntPoint&) const;
     IntPoint contentsToView(const IntPoint&) const;
@@ -350,6 +351,15 @@ public:
         IntPoint newPoint = point;
         if (!isScrollViewScrollbar(child))
             newPoint = point - toIntSize(scrollPosition());
+        newPoint.moveBy(child->location());
+        return newPoint;
+    }
+
+    FloatPoint convertChildToSelf(const Widget* child, const FloatPoint& point) const
+    {
+        FloatPoint newPoint = point;
+        if (!isScrollViewScrollbar(child))
+            newPoint -= toFloatSize(scrollPosition());
         newPoint.moveBy(child->location());
         return newPoint;
     }
@@ -524,8 +534,8 @@ private:
 
     RefPtr<Scrollbar> m_horizontalScrollbar;
     RefPtr<Scrollbar> m_verticalScrollbar;
-    ScrollbarMode m_horizontalScrollbarMode { ScrollbarAuto };
-    ScrollbarMode m_verticalScrollbarMode { ScrollbarAuto };
+    ScrollbarMode m_horizontalScrollbarMode { ScrollbarMode::Auto };
+    ScrollbarMode m_verticalScrollbarMode { ScrollbarMode::Auto };
 
 
     // FIXME: More things will move into here.
@@ -533,7 +543,7 @@ private:
         FloatSize unobscuredContentSize;
         FloatRect exposedContentRect;
     };
-    Optional<DelegatedScrollingGeometry> m_delegatedScrollingGeometry;
+    std::optional<DelegatedScrollingGeometry> m_delegatedScrollingGeometry;
 
 #if USE(COORDINATED_GRAPHICS)
     // FIXME: exposedContentRect is a very similar concept to fixedVisibleContentRect except it does not differentiate
@@ -545,8 +555,8 @@ private:
     IntSize m_fixedLayoutSize;
     IntSize m_contentsSize;
 
-    Optional<IntSize> m_deferredScrollDelta; // Needed for WebKit scrolling
-    Optional<std::pair<ScrollOffset, ScrollOffset>> m_deferredScrollOffsets; // Needed for platform widget scrolling
+    std::optional<IntSize> m_deferredScrollDelta; // Needed for WebKit scrolling
+    std::optional<std::pair<ScrollOffset, ScrollOffset>> m_deferredScrollOffsets; // Needed for platform widget scrolling
 
     IntPoint m_panScrollIconPoint;
 

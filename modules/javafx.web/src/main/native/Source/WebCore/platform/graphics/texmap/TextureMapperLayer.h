@@ -23,7 +23,7 @@
 #include "FloatRect.h"
 #include "NicosiaAnimation.h"
 #include "TextureMapper.h"
-#include "TextureMapperBackingStore.h"
+#include "TextureMapperSolidColorLayer.h"
 #include <wtf/WeakPtr.h>
 
 #if USE(COORDINATED_GRAPHICS)
@@ -32,7 +32,6 @@
 
 namespace WebCore {
 
-class GraphicsLayer;
 class Region;
 class TextureMapperPaintOptions;
 class TextureMapperPlatformLayer;
@@ -49,9 +48,6 @@ public:
 
     const Vector<TextureMapperLayer*>& children() const { return m_children; }
 
-#if !USE(COORDINATED_GRAPHICS)
-    void setChildren(const Vector<GraphicsLayer*>&);
-#endif
     void setChildren(const Vector<TextureMapperLayer*>&);
     void setMaskLayer(TextureMapperLayer*);
     void setReplicaLayer(TextureMapperLayer*);
@@ -77,9 +73,11 @@ public:
     void setBackfaceVisibility(bool);
     void setOpacity(float);
     void setSolidColor(const Color&);
+    void setBackgroundColor(const Color&);
     void setContentsTileSize(const FloatSize&);
     void setContentsTilePhase(const FloatSize&);
     void setContentsClippingRect(const FloatRoundedRect&);
+    void setContentsRectClipsDescendants(bool);
     void setFilters(const FilterOperations&);
 
     bool hasFilters() const
@@ -135,9 +133,12 @@ private:
     void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
 
     void paintRecursive(TextureMapperPaintOptions&);
+    void paintSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&);
     void paintUsingOverlapRegions(TextureMapperPaintOptions&);
     void paintIntoSurface(TextureMapperPaintOptions&);
     void paintWithIntermediateSurface(TextureMapperPaintOptions&, const IntRect&);
+    void paintSelfAndChildrenWithIntermediateSurface(TextureMapperPaintOptions&, const IntRect&);
+    void paintSelfChildrenFilterAndMask(TextureMapperPaintOptions&);
     void paintSelf(TextureMapperPaintOptions&);
     void paintSelfAndChildren(TextureMapperPaintOptions&);
     void paintSelfAndChildrenWithReplica(TextureMapperPaintOptions&);
@@ -178,6 +179,7 @@ private:
         WeakPtr<TextureMapperLayer> backdropLayer;
         FloatRoundedRect backdropFiltersRect;
         Color solidColor;
+        Color backgroundColor;
         FilterOperations filters;
         Color debugBorderColor;
         float debugBorderWidth;
@@ -188,6 +190,7 @@ private:
         bool drawsContent : 1;
         bool contentsVisible : 1;
         bool contentsOpaque : 1;
+        bool contentsRectClipsDescendants : 1;
         bool backfaceVisibility : 1;
         bool visible : 1;
         bool showDebugBorders : 1;
@@ -203,6 +206,7 @@ private:
             , drawsContent(false)
             , contentsVisible(true)
             , contentsOpaque(false)
+            , contentsRectClipsDescendants(false)
             , backfaceVisibility(true)
             , visible(true)
             , showDebugBorders(false)

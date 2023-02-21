@@ -26,27 +26,25 @@
 #include "config.h"
 #include "IndexKey.h"
 
-#if ENABLE(INDEXED_DATABASE)
+#include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
-IndexKey::IndexKey()
-{
-}
+IndexKey::IndexKey() = default;
 
 IndexKey::IndexKey(Vector<IDBKeyData>&& keys)
 {
     m_keys.swap(keys);
 }
 
-IndexKey IndexKey::isolatedCopy() const
+IndexKey IndexKey::isolatedCopy() const &
 {
-    Vector<IDBKeyData> keys;
-    keys.reserveInitialCapacity(m_keys.size());
-    for (auto& key : m_keys)
-        keys.uncheckedAppend(key.isolatedCopy());
+    return { crossThreadCopy(m_keys) };
+}
 
-    return { WTFMove(keys) };
+IndexKey IndexKey::isolatedCopy() &&
+{
+    return { crossThreadCopy(WTFMove(m_keys)) };
 }
 
 IDBKeyData IndexKey::asOneKey() const
@@ -85,5 +83,3 @@ Vector<IDBKeyData> IndexKey::multiEntry() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -25,9 +25,10 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "RenderWidget.h"
+#include "SVGDocument.h"
+#include "SVGElementTypeHelpers.h"
 #include "ScriptController.h"
 #include "ShadowRoot.h"
-#include "SVGDocument.h"
 #include "StyleTreeResolver.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
@@ -56,7 +57,7 @@ void HTMLFrameOwnerElement::setContentFrame(Frame& frame)
     ASSERT(!m_contentFrame || m_contentFrame->ownerElement() != this);
     // Disconnected frames should not be allowed to load.
     ASSERT(isConnected());
-    m_contentFrame = makeWeakPtr(frame);
+    m_contentFrame = frame;
 
     for (RefPtr<ContainerNode> node = this; node; node = node->parentOrShadowHostNode())
         node->incrementConnectedSubframeCount();
@@ -120,7 +121,7 @@ void HTMLFrameOwnerElement::scheduleInvalidateStyleAndLayerComposition()
 {
     if (Style::postResolutionCallbacksAreSuspended()) {
         RefPtr<HTMLFrameOwnerElement> element = this;
-        Style::queuePostResolutionCallback([element] {
+        Style::deprecatedQueuePostResolutionCallback([element] {
             element->invalidateStyleAndLayerComposition();
         });
     } else
@@ -132,7 +133,8 @@ bool HTMLFrameOwnerElement::isProhibitedSelfReference(const URL& completeURL) co
     // We allow one level of self-reference because some websites depend on that, but we don't allow more than one.
     bool foundOneSelfReference = false;
     for (auto* frame = document().frame(); frame; frame = frame->tree().parent()) {
-        if (equalIgnoringFragmentIdentifier(frame->document()->url(), completeURL)) {
+        // Use creationURL() because url() can be changed via History.replaceState() so it's not reliable.
+        if (equalIgnoringFragmentIdentifier(frame->document()->creationURL(), completeURL)) {
             if (foundOneSelfReference)
                 return true;
             foundOneSelfReference = true;

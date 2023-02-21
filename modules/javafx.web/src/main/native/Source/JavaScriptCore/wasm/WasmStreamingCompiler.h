@@ -29,6 +29,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "DeferredWorkTimer.h"
 #include "JSCJSValue.h"
 
 namespace JSC {
@@ -62,17 +63,17 @@ private:
 
     bool didReceiveFunctionData(unsigned, const FunctionData&) final;
     void didFinishParsing() final;
-    void didComplete(const AbstractLocker&);
-    void completeIfNecessary(const AbstractLocker&);
+    void didComplete() WTF_REQUIRES_LOCK(m_lock);
+    void completeIfNecessary() WTF_REQUIRES_LOCK(m_lock);
 
     VM& m_vm;
     CompilerMode m_compilerMode;
-    bool m_eagerFailed { false };
-    bool m_finalized { false };
+    bool m_eagerFailed WTF_GUARDED_BY_LOCK(m_lock) { false };
+    bool m_finalized WTF_GUARDED_BY_LOCK(m_lock) { false };
     bool m_threadedCompilationStarted { false };
     Lock m_lock;
     unsigned m_remainingCompilationRequests { 0 };
-    JSPromise* m_promise; // Raw pointer, but held by DeferredWorkTimer.
+    DeferredWorkTimer::Ticket m_ticket;
     Ref<Wasm::ModuleInformation> m_info;
     StreamingParser m_parser;
     RefPtr<LLIntPlan> m_plan;

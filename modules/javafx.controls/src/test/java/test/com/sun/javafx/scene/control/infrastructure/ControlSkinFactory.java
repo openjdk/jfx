@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package test.com.sun.javafx.scene.control.infrastructure;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -261,7 +260,6 @@ public class ControlSkinFactory {
     public static void attemptGC(WeakReference<?> weakRef) {
         for (int i = 0; i < 10; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;
@@ -283,7 +281,7 @@ public class ControlSkinFactory {
      * @return the list of the data converted to one-dimensional arrays
      */
     public static List<Object[]> asArrays(List<?> data) {
-        List<Object[]> result =  (List) data.stream()
+        List<Object[]> result =  data.stream()
                 .map(d -> new Object[] {d, })
                 .collect(toList());
         return result;

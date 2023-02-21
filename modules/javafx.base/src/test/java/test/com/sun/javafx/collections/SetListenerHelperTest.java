@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,14 +65,14 @@ public class SetListenerHelperTest {
                 new InvalidationListenerMock()
         };
         changeListenerMock = new MockSetObserver[] {
-                new MockSetObserver<Object>(),
-                new MockSetObserver<Object>(),
-                new MockSetObserver<Object>(),
-                new MockSetObserver<Object>()
+                new MockSetObserver<>(),
+                new MockSetObserver<>(),
+                new MockSetObserver<>(),
+                new MockSetObserver<>()
         };
         helper = null;
         set = FXCollections.observableSet();
-        change = new SetExpressionHelper.SimpleChange<Object>(set).setRemoved(new Object());
+        change = new SetExpressionHelper.SimpleChange<>(set).setRemoved(new Object());
     }
 
     private void resetAllListeners() {
@@ -251,7 +251,7 @@ public class SetListenerHelperTest {
 
     @Test
     public void testGeneric_AddInvalidationInPulse() {
-        final SetChangeListener<Object> addListener = new SetChangeListener<Object>() {
+        final SetChangeListener<Object> addListener = new SetChangeListener<>() {
             int counter;
             @Override
             public void onChanged(Change<? extends Object> change) {
@@ -362,7 +362,7 @@ public class SetListenerHelperTest {
 
     @Test
     public void testGeneric_RemoveInvalidationInPulse() {
-        final SetChangeListener<Object> removeListener = new SetChangeListener<Object>() {
+        final SetChangeListener<Object> removeListener = new SetChangeListener<>() {
             int counter;
             @Override
             public void onChanged(Change<? extends Object> change) {

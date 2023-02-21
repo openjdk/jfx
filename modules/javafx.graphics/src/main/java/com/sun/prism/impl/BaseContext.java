@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,9 +76,9 @@ public abstract class BaseContext {
     private final GeneralTransform3D perspectiveTransform = new GeneralTransform3D();
 
     private final Map<FontStrike, GlyphCache>
-        greyGlyphCaches = new HashMap<FontStrike, GlyphCache>();
+        greyGlyphCaches = new HashMap<>();
     private final Map<FontStrike, GlyphCache>
-        lcdGlyphCaches = new HashMap<FontStrike, GlyphCache>();
+        lcdGlyphCaches = new HashMap<>();
 
     protected BaseContext(Screen screen, ResourceFactory factory, int vbQuads) {
         this.screen = screen;

@@ -154,9 +154,9 @@ gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
 
   gst_element_class_add_static_pad_template (gstelement_class, &src_factory);
 
-  gst_element_class_set_static_metadata (gstelement_class, "Audio Source (OSX)",
-      "Source/Audio",
-      "Input from a sound card in OS X",
+  gst_element_class_set_static_metadata (gstelement_class,
+      "Audio Source (macOS)", "Source/Audio",
+      "Input from a sound card on macOS",
       "Zaheer Abbas Merali <zaheerabbas at merali dot org>");
 }
 

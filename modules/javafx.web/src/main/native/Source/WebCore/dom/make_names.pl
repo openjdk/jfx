@@ -10,13 +10,13 @@
 # are met:
 #
 # 1.  Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer. 
+#     notice, this list of conditions and the following disclaimer.
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution. 
+#     documentation and/or other materials provided with the distribution.
 # 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission. 
+#     from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -45,8 +45,8 @@ use InFilesParser;
 sub readTags($);
 sub readAttrs($);
 
-my $printFactory = 0; 
-my $printWrapperFactory = 0; 
+my $printFactory = 0;
+my $printWrapperFactory = 0;
 my $fontNamesIn = "";
 my $tagsFile = "";
 my $attrsFile = "";
@@ -72,7 +72,7 @@ if ($ENV{CC}) {
 }
 
 GetOptions(
-    'tags=s' => \$tagsFile, 
+    'tags=s' => \$tagsFile,
     'attrs=s' => \$attrsFile,
     'factory' => \$printFactory,
     'outputDir=s' => \$outputDir,
@@ -100,10 +100,29 @@ if (length($fontNamesIn)) {
     printLicenseHeader($F);
     printHeaderHead($F, "CSS", $familyNamesFileBase, <<END, "");
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashMap.h>
+#include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 END
 
-    printMacros($F, "extern MainThreadLazyNeverDestroyed<const WTF::AtomString>", "", \%parameters);
+    print F "enum class FamilyNamesIndex {\n";
+    for my $name (sort keys %parameters) {
+        print F "    ", ucfirst(${name}), ",\n";
+    }
+    print F "};\n\n";
+
+    print F "template<typename T, size_t inlineCapacity = 0>\n";
+    print F "class FamilyNamesList : public Vector<T, inlineCapacity> {\n";
+    print F "public:\n";
+    print F "    T& at(FamilyNamesIndex i)\n";
+    print F "    {\n";
+    print F "        return Vector<T, inlineCapacity>::at(static_cast<size_t>(i));\n";
+    print F "    }\n";
+    print F "};\n\n";
+    print F "extern LazyNeverDestroyed<FamilyNamesList<const StaticStringImpl*, ", scalar(keys %parameters), ">> familyNamesData;\n";
+    print F "extern MainThreadLazyNeverDestroyed<FamilyNamesList<AtomStringImpl*, ", scalar(keys %parameters), ">> familyNames;\n\n";
+    printMacros($F, "extern MainThreadLazyNeverDestroyed<const AtomString>", "", \%parameters);
+    print F "\n";
     print F "#endif\n\n";
 
     printInit($F, 1);
@@ -117,15 +136,30 @@ END
 
     print F StaticString::GenerateStrings(\%parameters);
 
-    printMacros($F, "MainThreadLazyNeverDestroyed<const WTF::AtomString>", "", \%parameters);
+    print F "LazyNeverDestroyed<FamilyNamesList<const StaticStringImpl*, ", scalar(keys %parameters), ">> familyNamesData;\n";
+    print F "MainThreadLazyNeverDestroyed<FamilyNamesList<AtomStringImpl*, ", scalar(keys %parameters), ">> familyNames;\n\n";
+
+    printMacros($F, "MainThreadLazyNeverDestroyed<const AtomString>", "", \%parameters);
 
     printInit($F, 0);
 
     print F "\n";
     print F StaticString::GenerateStringAsserts(\%parameters);
 
+    print F "    familyNamesData.construct();\n";
+    for my $name (sort keys %parameters) {
+        print F "    familyNamesData->uncheckedAppend(&${name}Data);\n";
+    }
+
+    print F "\n";
     for my $name (sort keys %parameters) {
         print F "    ${name}.construct(&${name}Data);\n";
+    }
+
+    print F "\n";
+    print F "    familyNames.construct();\n";
+    for my $name (sort keys %parameters) {
+        print F "    familyNames->uncheckedAppend(${name}->impl());\n";
     }
 
     print F "}\n}\n}\n";
@@ -185,7 +219,7 @@ sub defaultTagPropertyHash
         'wrapperOnlyIfMediaIsAvailable' => 0,
         'settingsConditional' => 0,
         'conditional' => 0,
-        'runtimeEnabled' => 0,
+        'deprecatedGlobalSettingsConditional' => 0,
         'customTypeHelper' => 0,
     );
 }
@@ -374,7 +408,7 @@ sub printConstructorSignature
     print F ")\n{\n";
 }
 
-# Helper method to dump the constructor interior and call the 
+# Helper method to dump the constructor interior and call the
 # Element constructor with the right arguments.
 # The variable names should be kept in sync with the previous method.
 sub printConstructorInterior
@@ -390,18 +424,18 @@ sub printConstructorInterior
         print F <<END
     if (!document.settings().mediaEnabled())
         return $parameters{fallbackInterfaceName}::create($constructorTagName, document);
-    
+
 END
 ;
     }
 
     my $runtimeCondition;
     my $settingsConditional = $allTags{$tagName}{settingsConditional};
-    my $runtimeEnabled = $allTags{$tagName}{runtimeEnabled};
+    my $deprecatedGlobalSettingsConditional = $allTags{$tagName}{deprecatedGlobalSettingsConditional};
     if ($settingsConditional) {
         $runtimeCondition = "document.settings().${settingsConditional}()";
-    } elsif ($runtimeEnabled) {
-        $runtimeCondition = "RuntimeEnabledFeatures::sharedFeatures().${runtimeEnabled}Enabled()";
+    } elsif ($deprecatedGlobalSettingsConditional) {
+        $runtimeCondition = "DeprecatedGlobalSettings::${deprecatedGlobalSettingsConditional}Enabled()";
     }
 
     if ($runtimeCondition) {
@@ -503,13 +537,13 @@ sub svgCapitalizationHacks
 sub upperCaseName
 {
     my $name = shift;
-    
+
     $name = svgCapitalizationHacks($name) if ($parameters{namespace} eq "SVG");
 
     while ($name =~ /^(.*?)_(.*)/) {
         $name = $1 . ucfirst $2;
     }
-    
+
     return ucfirst $name;
 }
 
@@ -568,8 +602,6 @@ print F "\nvoid init()
     initialized = true;
 
     // Use placement new to initialize the globals.
-
-    AtomString::init();
 ";
 }
 
@@ -638,7 +670,7 @@ public:
 private:
 END
        ;
-       if ($parameters{namespace} eq "HTML" && ($parsedTags{$name}{wrapperOnlyIfMediaIsAvailable} || $parsedTags{$name}{settingsConditional} || $parsedTags{$name}{runtimeEnabled})) {
+       if ($parameters{namespace} eq "HTML" && ($parsedTags{$name}{wrapperOnlyIfMediaIsAvailable} || $parsedTags{$name}{settingsConditional} || $parsedTags{$name}{deprecatedGlobalSettingsConditional})) {
            print F <<END
     static bool checkTagName(const WebCore::HTMLElement& element) { return !element.isHTMLUnknownElement() && element.hasTagName(WebCore::$parameters{namespace}Names::${name}Tag); }
     static bool checkTagName(const WebCore::Node& node) { return is<WebCore::HTMLElement>(node) && checkTagName(downcast<WebCore::HTMLElement>(node)); }
@@ -671,6 +703,10 @@ sub printTypeHelpersHeaderFile
     print F "#pragma once\n\n";
     print F "#include \"".$parameters{namespace}."Names.h\"\n\n";
 
+    # FIXME: Remove `if` condition below once HTMLElementTypeHeaders.h is made inline.
+    if ($parameters{namespace} eq "SVG") {
+        print F "#include \"".$parameters{namespace}."ElementInlines.h\"\n\n";
+    }
     printTypeHelpers($F, \%allTags);
 
     close F;
@@ -685,6 +721,7 @@ sub printNamesHeaderFile
     printLicenseHeader($F);
     printHeaderHead($F, "DOM", $parameters{namespace}, <<END, "class $parameters{namespace}QualifiedName : public QualifiedName { };\n\n");
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/text/AtomString.h>
 #include "QualifiedName.h"
 END
@@ -692,7 +729,7 @@ END
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
 
     print F "// Namespace\n";
-    print F "WEBCORE_EXPORT extern MainThreadLazyNeverDestroyed<const WTF::AtomString> ${lowercaseNamespacePrefix}NamespaceURI;\n\n";
+    print F "WEBCORE_EXPORT extern MainThreadLazyNeverDestroyed<const AtomString> ${lowercaseNamespacePrefix}NamespaceURI;\n\n";
 
     if (keys %allTags) {
         print F "// Tags\n";
@@ -708,6 +745,9 @@ END
     if (keys %allTags) {
         print F "const unsigned $parameters{namespace}TagsCount = ", scalar(keys %allTags), ";\n";
         print F "const WebCore::$parameters{namespace}QualifiedName* const* get$parameters{namespace}Tags();\n";
+        if ($parameters{namespace} eq "HTML") {
+            print F "AtomString find$parameters{namespace}Tag(Span<const UChar>);\n"
+        }
     }
 
     if (keys %allAttrs) {
@@ -719,15 +759,95 @@ END
     close F;
 }
 
+sub findMaxTagLength
+{
+    my $allTags = shift;
+
+    my $maxLength = 0;
+    foreach my $tagName (keys %{$allTags}) {
+        my $tagLength = length($tagName);
+        $maxLength = $tagLength if $tagLength > $maxLength;
+    }
+    return $maxLength;
+}
+
+sub tagsWithLength
+{
+    my $allAttrs = shift;
+    my $expectedLength = shift;
+
+    my @tags = ();
+    foreach my $tagName (sort keys %{$allAttrs}) {
+        push(@tags, $tagName) if length($tagName) == $expectedLength;
+    }
+    return @tags;
+}
+
+sub generateFindTagForLength
+{
+    my $indent = shift;
+    my $tagsRef = shift;
+    my $length = shift;
+    my $currentIndex = shift;
+
+    my @tags = @{$tagsRef};
+    my $tagCount = @tags;
+    if ($tagCount == 1) {
+        my $tag = $tags[0];
+        my $needsIfCheck = $currentIndex < $length;
+        if ($needsIfCheck) {
+            my $lengthToCompare = $length - $currentIndex;
+            if ($lengthToCompare == 1) {
+                my $letter = substr($tag, $currentIndex, 1);
+                print F "${indent}if (buffer[$currentIndex] == '$letter') {\n";
+            } else {
+                my $bufferStart = $currentIndex > 0 ? "buffer.data() + $currentIndex" : "buffer.data()";
+                print F "${indent}static constexpr UChar ${tag}Rest[] = { ";
+                for (my $index = $currentIndex; $index < $length; $index = $index + 1) {
+                    my $letter = substr($tag, $index, 1);
+                    print F "'$letter', ";
+                }
+                print F "};\n";
+                print F "${indent}if (!memcmp($bufferStart, ${tag}Rest, $lengthToCompare * sizeof(UChar))) {\n";
+            }
+            print F "$indent    return ${tag}Tag->localName();\n";
+            print F "$indent}\n";
+            print F "${indent}return { };\n";
+        } else {
+            print F "${indent}return ${tag}Tag->localName();\n";
+        }
+        return;
+    }
+    for (my $i = 0; $i < $tagCount;) {
+        my $tag = $tags[$i];
+        my $letterAtIndex = substr($tag, $currentIndex, 1);
+        print F "${indent}if (buffer[$currentIndex] == '$letterAtIndex') {\n";
+        my @tagsWithPrefix = ($tag);
+        for ($i = $i + 1; $i < $tagCount; $i = $i + 1) {
+            my $nextTag = $tags[$i];
+            if (substr($nextTag, $currentIndex, 1) eq $letterAtIndex) {
+                push(@tagsWithPrefix, $nextTag);
+            } else {
+                last;
+            }
+        }
+        generateFindTagForLength($indent . "    ", \@tagsWithPrefix, $length, $currentIndex + 1);
+        if (scalar @tagsWithPrefix > 1) {
+            print F "${indent}    return { };\n";
+        }
+        print F "$indent}\n";
+    }
+}
+
 sub printNamesCppFile
 {
     my $cppPath = shift;
     my $F;
     open F, ">$cppPath";
-    
+
     printLicenseHeader($F);
     printCppHead($F, "DOM", $parameters{namespace}, "WebCore");
-    
+
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
 
     print F "MainThreadLazyNeverDestroyed<const AtomString> ${lowercaseNamespacePrefix}NamespaceURI;\n\n";
@@ -739,7 +859,7 @@ sub printNamesCppFile
         for my $name (sort keys %allTags) {
             print F "WEBCORE_EXPORT LazyNeverDestroyed<const $parameters{namespace}QualifiedName> ${name}Tag;\n";
         }
-        
+
         print F "\n\nconst WebCore::$parameters{namespace}QualifiedName* const* get$parameters{namespace}Tags()\n";
         print F "{\n    static const WebCore::$parameters{namespace}QualifiedName* const $parameters{namespace}Tags[] = {\n";
         for my $name (sort keys %allTags) {
@@ -748,6 +868,25 @@ sub printNamesCppFile
         print F "    };\n";
         print F "    return $parameters{namespace}Tags;\n";
         print F "}\n";
+
+        if ($parameters{namespace} eq "HTML") {
+            print F "\nAtomString find$parameters{namespace}Tag(Span<const UChar> buffer)\n{\n";
+            my $maxTagLength = findMaxTagLength(\%allTags);
+            print F "    switch (buffer.size()) {\n";
+            for (my $length = 1; $length <= $maxTagLength; $length = $length + 1) {
+                my @tags = tagsWithLength(\%allTags, $length);
+                next unless scalar @tags > 0;
+                print F "    case $length: {\n";
+                generateFindTagForLength("        ", \@tags, $length, 0);
+                print F "        break;\n";
+                print F "    }\n";
+            }
+            print F "    default:\n";
+            print F "        break;\n";
+            print F "    };\n";
+            print F "    return { };\n";
+            print F "}\n";
+        }
     }
 
     if (keys %allAttrs) {
@@ -767,7 +906,7 @@ sub printNamesCppFile
 
     printInit($F, 0);
 
-    print(F "    AtomString ${lowercaseNamespacePrefix}NS(\"$parameters{namespaceURI}\", AtomString::ConstructFromLiteral);\n\n");
+    print(F "    AtomString ${lowercaseNamespacePrefix}NS(\"$parameters{namespaceURI}\"_s);\n\n");
 
     print(F "    // Namespace\n");
     print(F "    ${lowercaseNamespacePrefix}NamespaceURI.construct(${lowercaseNamespacePrefix}NS);\n");
@@ -869,7 +1008,7 @@ sub printDefinitions
 
     my $shortCamelType = ucfirst(substr(substr($type, 0, -1), 0, 4));
     my $capitalizedType = ucfirst($type);
-    
+
 print F <<END;
 
     struct ${capitalizedType}TableEntry {
@@ -929,10 +1068,10 @@ END
 
     print F <<END
 
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
-#include <wtf/HashMap.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -955,31 +1094,27 @@ END
 
     printConstructors($F, \%tagConstructorMap);
 
+    my $firstTag;
+    for my $tag (sort keys %tagConstructorMap) {
+        $firstTag = $tag;
+        last;
+    }
+
     print F <<END
 
 struct $parameters{namespace}ConstructorFunctionMapEntry {
-    $parameters{namespace}ConstructorFunctionMapEntry($parameters{namespace}ConstructorFunction function, const QualifiedName& name)
-        : function(function)
-        , qualifiedName(&name)
-    { }
-
-    $parameters{namespace}ConstructorFunctionMapEntry()
-        : function(nullptr)
-        , qualifiedName(nullptr)
-    { }
-
-    $parameters{namespace}ConstructorFunction function;
-    const QualifiedName* qualifiedName; // Use pointer instead of reference so that emptyValue() in HashMap is cheap to create.
+    $parameters{namespace}ConstructorFunction function { nullptr };
+    const QualifiedName* qualifiedName { nullptr }; // Use pointer instead of reference so that emptyValue() in HashMap is cheap to create.
 };
 
-static NEVER_INLINE HashMap<AtomStringImpl*, $parameters{namespace}ConstructorFunctionMapEntry> create$parameters{namespace}FactoryMap()
+static NEVER_INLINE MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, $parameters{namespace}ConstructorFunctionMapEntry> create$parameters{namespace}FactoryMap()
 {
     struct TableEntry {
-        const QualifiedName& name;
+        decltype($parameters{namespace}Names::${firstTag}Tag)& name;
         $parameters{namespace}ConstructorFunction function;
     };
 
-    static const TableEntry table[] = {
+    static constexpr TableEntry table[] = {
 END
     ;
 
@@ -988,16 +1123,16 @@ END
     print F <<END
     };
 
-    HashMap<AtomStringImpl*, $parameters{namespace}ConstructorFunctionMapEntry> map;
+    MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, $parameters{namespace}ConstructorFunctionMapEntry> map;
     for (auto& entry : table)
-        map.add(entry.name.localName().impl(), $parameters{namespace}ConstructorFunctionMapEntry(entry.function, entry.name));
+        map.add(entry.name.get().localName(), $parameters{namespace}ConstructorFunctionMapEntry { entry.function, &entry.name.get() });
     return map;
 }
 
 static $parameters{namespace}ConstructorFunctionMapEntry find$parameters{namespace}ElementConstructorFunction(const AtomString& localName)
 {
-    static const auto map = makeNeverDestroyed(create$parameters{namespace}FactoryMap());
-    return map.get().get(localName.impl());
+    static NeverDestroyed map = create$parameters{namespace}FactoryMap();
+    return map.get().get(localName);
 }
 
 RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createKnownElement(const AtomString& localName, Document& document$formElementArgumentForDefinition, bool createdByParser)
@@ -1150,8 +1285,8 @@ static JSDOMObject* create$allTags{$tagName}{interfaceName}Wrapper(JSDOMGlobalOb
 
 END
             ;
-        } elsif ($allTags{$tagName}{runtimeEnabled}) {
-            my $runtimeEnabled = $allTags{$tagName}{runtimeEnabled};
+        } elsif ($allTags{$tagName}{deprecatedGlobalSettingsConditional}) {
+            my $deprecatedGlobalSettingsConditional = $allTags{$tagName}{deprecatedGlobalSettingsConditional};
             print F <<END
 static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
@@ -1198,10 +1333,11 @@ sub printWrapperFactoryCppFile
     print F "\n#include \"$parameters{namespace}Names.h\"\n";
     print F <<END
 
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/StdLibExtras.h>
 END
 ;
@@ -1221,16 +1357,22 @@ END
 
     printWrapperFunctions($F);
 
+    my $firstTag;
+    for my $tag (sort keys %allTags) {
+        $firstTag = $tag;
+        last;
+    }
+
 print F <<END
 
-static NEVER_INLINE HashMap<AtomStringImpl*, Create$parameters{namespace}ElementWrapperFunction> create$parameters{namespace}WrapperMap()
+static NEVER_INLINE MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, Create$parameters{namespace}ElementWrapperFunction> create$parameters{namespace}WrapperMap()
 {
     struct TableEntry {
-        const QualifiedName& name;
+        decltype($parameters{namespace}Names::${firstTag}Tag)& name;
         Create$parameters{namespace}ElementWrapperFunction function;
     };
 
-    static const TableEntry table[] = {
+    static constexpr TableEntry table[] = {
 END
 ;
 
@@ -1261,16 +1403,16 @@ END
     print F <<END
     };
 
-    HashMap<AtomStringImpl*, Create$parameters{namespace}ElementWrapperFunction> map;
+    MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, Create$parameters{namespace}ElementWrapperFunction> map;
     for (auto& entry : table)
-        map.add(entry.name.localName().impl(), entry.function);
+        map.add(entry.name.get().localName(), entry.function);
     return map;
 }
 
 JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
-    static const auto functions = makeNeverDestroyed(create$parameters{namespace}WrapperMap());
-    if (auto function = functions.get().get(element->localName().impl()))
+    static NeverDestroyed functions = create$parameters{namespace}WrapperMap();
+    if (auto function = functions.get().get(element->localName()))
         return function(globalObject, WTFMove(element));
 END
 ;
@@ -1326,7 +1468,7 @@ namespace WebCore {
     JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject*, Ref<$parameters{namespace}Element>&&);
 
 }
- 
+
 END
     ;
 

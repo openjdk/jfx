@@ -26,8 +26,9 @@
 #include "config.h"
 #include "DeleteFromTextNodeCommand.h"
 
-#include "Editing.h"
+#include "CompositeEditCommand.h"
 #include "Document.h"
+#include "Editing.h"
 #include "Text.h"
 
 namespace WebCore {
@@ -63,7 +64,7 @@ void DeleteFromTextNodeCommand::doUnapply()
 }
 
 #ifndef NDEBUG
-void DeleteFromTextNodeCommand::getNodesInCommand(HashSet<Node*>& nodes)
+void DeleteFromTextNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
 {
     addNodeAndDescendants(m_node.ptr(), nodes);
 }

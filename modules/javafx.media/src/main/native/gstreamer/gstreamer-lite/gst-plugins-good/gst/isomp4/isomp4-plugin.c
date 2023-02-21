@@ -24,14 +24,8 @@
 #endif
 #include "gst/gst-i18n-plugin.h"
 
-#include "qtdemux.h"
-#ifndef GSTREAMER_LITE
-#include "gstrtpxqtdepay.h"
-#include "gstqtmux.h"
-#include "gstqtmoovrecover.h"
-#endif // GSTREAMER_LITE
+#include "gstisomp4elements.h"
 
-#include <gst/pbutils/pbutils.h>
 
 #ifdef GSTREAMER_LITE
 gboolean
@@ -41,38 +35,16 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-#ifdef ENABLE_NLS
-  bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
-  bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
-#endif /* ENABLE_NLS */
+  gboolean ret = FALSE;
 
-  gst_pb_utils_init ();
-
-  /* ensure private tag is registered */
-  gst_tag_register (GST_QT_DEMUX_PRIVATE_TAG, GST_TAG_FLAG_META,
-      GST_TYPE_SAMPLE, "QT atom", "unparsed QT tag atom",
-      gst_tag_merge_use_first);
-
-  gst_tag_register (GST_QT_DEMUX_CLASSIFICATION_TAG, GST_TAG_FLAG_META,
-      G_TYPE_STRING, GST_QT_DEMUX_CLASSIFICATION_TAG, "content classification",
-      gst_tag_merge_use_first);
-
-  if (!gst_element_register (plugin, "qtdemux",
-          GST_RANK_PRIMARY, GST_TYPE_QTDEMUX))
-    return FALSE;
-
+  ret |= GST_ELEMENT_REGISTER (qtdemux, plugin);
 #ifndef GSTREAMER_LITE
-  if (!gst_element_register (plugin, "rtpxqtdepay",
-          GST_RANK_MARGINAL, GST_TYPE_RTP_XQT_DEPAY))
-    return FALSE;
-
-  if (!gst_qt_mux_register (plugin))
-    return FALSE;
-  if (!gst_qt_moov_recover_register (plugin))
-    return FALSE;
+  ret |= GST_ELEMENT_REGISTER (rtpxqtdepay, plugin);
+  ret |= GST_ELEMENT_REGISTER (qtmux, plugin);
+  ret |= GST_ELEMENT_REGISTER (qtmoovrecover, plugin);
 #endif // GSTREAMER_LITE
 
-  return TRUE;
+  return ret;
 }
 
 #ifndef GSTREAMER_LITE

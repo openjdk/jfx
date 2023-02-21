@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,8 +92,11 @@ import javafx.beans.property.SimpleIntegerProperty;
  * <p>The RFC 2397 "data" scheme for URLs is supported in addition to
  * the protocol handlers that are registered for the application.
  * If a URL uses the "data" scheme, the data must be base64-encoded
- * and the MIME type must either be empty or a subtype of the
- * {@code image} type.
+ * and the MIME type must be a subtype of the {@code image} type.
+ * The MIME type must match the image format of the data contained in
+ * the URL. In case of a mismatch between MIME type and image format,
+ * the image will be loaded if the image format can be determined by
+ * JavaFX, and a warning will be logged.
  *
  * <p>Use {@link ImageView} for displaying images loaded with this
  * class. The same {@code Image} instance can be displayed by multiple
@@ -531,7 +534,7 @@ public class Image {
 
     private ReadOnlyObjectWrapper<Exception> exceptionPropertyImpl() {
         if (exception == null) {
-            exception = new ReadOnlyObjectWrapper<Exception>(this, "exception");
+            exception = new ReadOnlyObjectWrapper<>(this, "exception");
         }
         return exception;
     }
@@ -553,7 +556,7 @@ public class Image {
 
     private ObjectPropertyImpl<PlatformImage> platformImagePropertyImpl() {
         if (platformImage == null) {
-            platformImage = new ObjectPropertyImpl<PlatformImage>("platformImage");
+            platformImage = new ObjectPropertyImpl<>("platformImage");
         }
 
         return platformImage;
@@ -889,7 +892,7 @@ public class Image {
         };
 
         public Animation(final Image image, final ImageLoader loader) {
-            imageRef = new WeakReference<Image>(image);
+            imageRef = new WeakReference<>(image);
             timeline = new Timeline();
             int loopCount = loader.getLoopCount();
             timeline.setCycleCount(loopCount == 0 ? Timeline.INDEFINITE : loopCount);
@@ -1013,7 +1016,7 @@ public class Image {
     private static final int MAX_RUNNING_TASKS = 4;
     private static int runningTasks = 0;
     private static final Queue<ImageTask> pendingTasks =
-            new LinkedList<ImageTask>();
+            new LinkedList<>();
 
     private final class ImageTask
             implements AsyncOperationListener<ImageLoader> {

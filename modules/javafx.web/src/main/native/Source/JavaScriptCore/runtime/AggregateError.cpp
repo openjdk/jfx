@@ -33,30 +33,17 @@
 
 namespace JSC {
 
-const ClassInfo AggregateError::s_info = { "AggregateError", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AggregateError) };
-
-AggregateError::AggregateError(VM& vm, Structure* structure)
-    : Base(vm, structure, ErrorType::AggregateError)
-{
-}
-
-void AggregateError::finishCreation(VM& vm, JSGlobalObject* globalObject, const MarkedArgumentBuffer& errors, const String& message, SourceAppender appender, RuntimeType type, bool useCurrentFrame)
-{
-    Base::finishCreation(vm, globalObject, message, appender, type, useCurrentFrame);
-    ASSERT(inherits(vm, info()));
-
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    putDirect(vm, vm.propertyNames->errors, constructArray(globalObject, static_cast<ArrayAllocationProfile*>(nullptr), errors), static_cast<unsigned>(PropertyAttribute::DontEnum));
-    RETURN_IF_EXCEPTION(scope, void());
-}
-
-AggregateError* AggregateError::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, JSValue errors, JSValue message, SourceAppender appender, RuntimeType type, bool useCurrentFrame)
+ErrorInstance* createAggregateError(JSGlobalObject* globalObject, VM& vm, Structure* structure, JSValue errors, JSValue message, JSValue options, ErrorInstance::SourceAppender appender, RuntimeType type, bool useCurrentFrame)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    String messageString;
-    if (!message.isUndefined()) {
-        messageString = message.toWTFString(globalObject);
+    String messageString = message.isUndefined() ? String() : message.toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    JSValue cause;
+    if (options.isObject()) {
+        // Since `throw undefined;` is valid, we need to distinguish the case where `cause` is an explicit undefined.
+        cause = asObject(options)->getIfPropertyExists(globalObject, vm.propertyNames->cause);
         RETURN_IF_EXCEPTION(scope, nullptr);
     }
 
@@ -68,7 +55,12 @@ AggregateError* AggregateError::create(JSGlobalObject* globalObject, VM& vm, Str
     });
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    RELEASE_AND_RETURN(scope, create(globalObject, vm, structure, errorsList, messageString, appender, type, useCurrentFrame));
+    auto* array = constructArray(globalObject, static_cast<ArrayAllocationProfile*>(nullptr), errorsList);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    auto* error = ErrorInstance::create(globalObject, vm, structure, messageString, cause, appender, type, ErrorType::AggregateError, useCurrentFrame);
+    error->putDirect(vm, vm.propertyNames->errors, array, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    return error;
 }
 
 } // namespace JSC

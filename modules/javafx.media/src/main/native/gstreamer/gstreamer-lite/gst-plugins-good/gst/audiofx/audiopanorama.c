@@ -103,6 +103,8 @@ static GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE ("src",
     );
 
 G_DEFINE_TYPE (GstAudioPanorama, gst_audio_panorama, GST_TYPE_BASE_TRANSFORM);
+GST_ELEMENT_REGISTER_DEFINE (audiopanorama, "audiopanorama",
+    GST_RANK_NONE, GST_TYPE_AUDIO_PANORAMA);
 
 static void gst_audio_panorama_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);

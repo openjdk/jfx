@@ -39,7 +39,6 @@ namespace WebCore {
 BlobData::BlobData(const String& contentType)
     : m_contentType(contentType)
 {
-    ASSERT(Blob::isNormalizedContentType(contentType));
 }
 
 const long long BlobDataItem::toEndOfFile = -1;
@@ -76,6 +75,14 @@ void BlobData::appendFile(Ref<BlobDataFileReference>&& file)
 {
     file->startTrackingModifications();
     m_items.append(BlobDataItem(WTFMove(file)));
+}
+
+Ref<BlobData> BlobData::clone() const
+{
+    auto blobData = BlobData::create(m_contentType);
+    blobData->m_policyContainer = m_policyContainer;
+    blobData->m_items = m_items;
+    return blobData;
 }
 
 void BlobData::appendFile(BlobDataFileReference* file, long long offset, long long length)

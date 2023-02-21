@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,7 +144,7 @@ public class LabeledImpl extends Label {
             final List<CssMetaData<? extends Styleable, ?>> labeledStyleables = Labeled.getClassCssMetaData();
             final List<CssMetaData<? extends Styleable, ?>> parentStyleables = Region.getClassCssMetaData();
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(labeledStyleables);
+                new ArrayList<>(labeledStyleables);
             styleables.removeAll(parentStyleables);
             STYLEABLES_TO_MIRROR = Collections.unmodifiableList(styleables);
         }

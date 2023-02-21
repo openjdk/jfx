@@ -127,6 +127,7 @@ private:
     friend class SubtreeLayoutStateMaintainer;
     friend class PaginatedLayoutStateMaintainer;
 
+    void performLayout();
     bool canPerformLayout() const;
     bool layoutDisallowed() const { return m_layoutDisallowedCount; }
     bool isLayoutSchedulingEnabled() const { return m_layoutSchedulingIsEnabled; }
@@ -188,8 +189,8 @@ private:
     unsigned m_paintOffsetCacheDisableCount { 0 };
     LayoutStateStack m_layoutStateStack;
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    std::unique_ptr<Layout::LayoutState> m_layoutState;
     std::unique_ptr<Layout::LayoutTree> m_layoutTree;
+    std::unique_ptr<Layout::LayoutState> m_layoutState;
 #endif
 };
 

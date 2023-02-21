@@ -50,8 +50,9 @@ public:
     };
 
     static Factory createFactory(Client&);
+    static Factory createFactory(Client&, Ref<WebCore::TextureMapperPlatformLayerProxy>&&);
 
-    explicit ContentLayerTextureMapperImpl(Client&);
+    explicit ContentLayerTextureMapperImpl(Client&, Ref<WebCore::TextureMapperPlatformLayerProxy>&&);
     virtual ~ContentLayerTextureMapperImpl();
     bool isTextureMapperImpl() const override { return true; }
 

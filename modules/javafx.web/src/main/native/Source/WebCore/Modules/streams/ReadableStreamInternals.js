@@ -144,7 +144,7 @@ function readableStreamPipeToWritableStream(source, destination, preventClose, p
     @assert(@isWritableStream(destination));
     @assert(!@isReadableStreamLocked(source));
     @assert(!@isWritableStreamLocked(destination));
-    @assert(signal === @undefined || signal instanceof @AbortSignal);
+    @assert(signal === @undefined || @isAbortSignal(signal));
 
     if (@getByIdDirectPrivate(source, "underlyingByteSource") !== @undefined)
         return @Promise.@reject("Piping of readable by strean is not supported");
@@ -424,7 +424,8 @@ function readableStreamTee(stream, shouldClone)
         @readableStreamDefaultControllerError(branch1.@readableStreamController, e);
         @readableStreamDefaultControllerError(branch2.@readableStreamController, e);
         teeState.closedOrErrored = true;
-        teeState.cancelPromiseCapability.@resolve.@call();
+        if (!teeState.canceled1 || !teeState.canceled2)
+            teeState.cancelPromiseCapability.@resolve.@call();
     });
 
     // Additional fields compared to the spec, as they are needed within pull/cancel functions.
@@ -432,22 +433,6 @@ function readableStreamTee(stream, shouldClone)
     teeState.branch2 = branch2;
 
     return [branch1, branch2];
-}
-
-function doStructuredClone(object)
-{
-    "use strict";
-
-    // FIXME: We should implement http://w3c.github.io/html/infrastructure.html#ref-for-structured-clone-4
-    // Implementation is currently limited to ArrayBuffer/ArrayBufferView to meet Fetch API needs.
-
-    if (object instanceof @ArrayBuffer)
-        return @structuredCloneArrayBuffer(object);
-
-    if (@ArrayBuffer.@isView(object))
-        return @structuredCloneArrayBufferView(object);
-
-    @throwTypeError("structuredClone not implemented for: " + object);
 }
 
 function readableStreamTeePullFunction(teeState, reader, shouldClone)
@@ -464,14 +449,15 @@ function readableStreamTeePullFunction(teeState, reader, shouldClone)
                 if (!teeState.canceled2)
                     @readableStreamDefaultControllerClose(teeState.branch2.@readableStreamController);
                 teeState.closedOrErrored = true;
-                teeState.cancelPromiseCapability.@resolve.@call();
+                if (!teeState.canceled1 || !teeState.canceled2)
+                    teeState.cancelPromiseCapability.@resolve.@call();
             }
             if (teeState.closedOrErrored)
                 return;
             if (!teeState.canceled1)
                 @readableStreamDefaultControllerEnqueue(teeState.branch1.@readableStreamController, result.value);
             if (!teeState.canceled2)
-                @readableStreamDefaultControllerEnqueue(teeState.branch2.@readableStreamController, shouldClone ? @doStructuredClone(result.value) : result.value);
+                @readableStreamDefaultControllerEnqueue(teeState.branch2.@readableStreamController, shouldClone ? @structuredCloneForStream(result.value) : result.value);
         });
     }
 }

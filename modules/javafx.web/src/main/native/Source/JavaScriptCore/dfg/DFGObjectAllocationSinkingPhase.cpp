@@ -993,10 +993,10 @@ private:
                 target = handleInternalFieldClass<JSSetIterator>(node, writes);
                 break;
             case JSPromiseType:
-                if (node->structure()->classInfo() == JSInternalPromise::info())
+                if (node->structure()->classInfoForCells() == JSInternalPromise::info())
                     target = handleInternalFieldClass<JSInternalPromise>(node, writes);
                 else {
-                    ASSERT(node->structure()->classInfo() == JSPromise::info());
+                    ASSERT(node->structure()->classInfoForCells() == JSPromise::info());
                     target = handleInternalFieldClass<JSPromise>(node, writes);
                 }
                 break;
@@ -1258,8 +1258,8 @@ private:
 
         case FilterCallLinkStatus:
         case FilterGetByStatus:
-        case FilterPutByIdStatus:
-        case FilterInByIdStatus:
+        case FilterPutByStatus:
+        case FilterInByStatus:
         case FilterDeleteByStatus:
         case FilterCheckPrivateBrandStatus:
         case FilterSetPrivateBrandStatus:
@@ -2554,15 +2554,13 @@ private:
                         // nodes. Those nodes were guarded by the appropriate type checks. This means that
                         // at this point, we can simply trust that the incoming value has the right type
                         // for whatever structure we are using.
-                        data->variants.append(
-                            PutByIdVariant::replace(currentSet, currentOffset));
+                        data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
                         currentOffset = offset;
                         currentSet.clear();
                     }
                     currentSet.add(structure.get());
                 }
-                data->variants.append(
-                    PutByIdVariant::replace(currentSet, currentOffset));
+                data->variants.append(PutByVariant::replace(nullptr, currentSet, currentOffset));
             }
 
             return m_graph.addNode(
@@ -2615,8 +2613,8 @@ private:
                 switch (node->op()) {
                 case FilterCallLinkStatus:
                 case FilterGetByStatus:
-                case FilterPutByIdStatus:
-                case FilterInByIdStatus:
+                case FilterPutByStatus:
+                case FilterInByStatus:
                 case FilterDeleteByStatus:
                 case FilterCheckPrivateBrandStatus:
                 case FilterSetPrivateBrandStatus:

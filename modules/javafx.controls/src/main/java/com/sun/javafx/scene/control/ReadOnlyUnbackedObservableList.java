@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,17 +32,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-import javafx.beans.InvalidationListener;
-import com.sun.javafx.collections.ListListenerHelper;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableListBase;
-
-import java.util.Collections;
-import java.util.function.Consumer;
-
-import static com.sun.javafx.collections.ListListenerHelper.fireValueChangedEvent;
 
 /**
  * A read-only and unbacked ObservableList - the data is retrieved on demand by
@@ -113,7 +104,7 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
     @Override public int indexOf(Object o) {
         if (o == null) return -1;
 
-        for (int i = 0; i < size(); i++) {
+        for (int i = 0, max = size(); i < max; i++) {
             Object obj = get(i);
             if (o.equals(obj)) return i;
         }
@@ -150,16 +141,16 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
     }
 
     @Override public ListIterator<E> listIterator() {
-        return new SelectionListIterator<E>(this);
+        return new SelectionListIterator<>(this);
     }
 
     @Override public ListIterator<E> listIterator(int index) {
-        return new SelectionListIterator<E>(this, index);
+        return new SelectionListIterator<>(this, index);
     }
 
     @Override
     public Iterator<E> iterator() {
-        return new SelectionListIterator<E>(this);
+        return new SelectionListIterator<>(this);
     }
 
     /**
@@ -172,7 +163,7 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
         }
 
         final List<E> outer = this;
-        return new ReadOnlyUnbackedObservableList<E>() {
+        return new ReadOnlyUnbackedObservableList<>() {
             @Override public E get(int i) {
                 return outer.get(i + fromIndex);
             }
@@ -185,8 +176,9 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
 
     @Override
     public Object[] toArray() {
-        Object[] arr = new Object[size()];
-        for (int i = 0; i < size(); i++) {
+        int max = size();
+        Object[] arr = new Object[max];
+        for (int i = 0; i < max; i++) {
             arr[i] = get(i);
         }
         return arr;

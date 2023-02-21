@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,7 @@
 package test.javafx.beans.property;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import javafx.beans.InvalidationListener;
-import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.ReadOnlyLongProperty;
 import javafx.beans.property.ReadOnlyLongWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -86,7 +83,7 @@ public class ReadOnlyLongPropertyTest {
 
     @Test
     public void testObjectToLong() {
-        final ReadOnlyObjectWrapper<Long> valueModel = new ReadOnlyObjectWrapper<Long>();
+        final ReadOnlyObjectWrapper<Long> valueModel = new ReadOnlyObjectWrapper<>();
         final ReadOnlyLongProperty exp = ReadOnlyLongProperty.readOnlyLongProperty(valueModel.getReadOnlyProperty());
 
         assertEquals(0L, exp.longValue());

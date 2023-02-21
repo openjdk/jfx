@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
 namespace DataURLDecoder {
 
@@ -41,10 +41,10 @@ struct Result {
     String mimeType;
     String charset;
     String contentType;
-    Vector<char> data;
+    Vector<uint8_t> data;
 };
 
-using DecodeCompletionHandler = WTF::Function<void (Optional<Result>)>;
+using DecodeCompletionHandler = Function<void(std::optional<Result>)>;
 struct ScheduleContext {
 #if USE(COCOA_EVENT_LOOP)
     SchedulePairHashSet scheduledPairs;
@@ -53,7 +53,7 @@ struct ScheduleContext {
 
 enum class Mode { Legacy, ForgivingBase64 };
 void decode(const URL&, const ScheduleContext&, Mode, DecodeCompletionHandler&&);
-WEBCORE_EXPORT Optional<Result> decode(const URL&, Mode);
+WEBCORE_EXPORT std::optional<Result> decode(const URL&, Mode);
 
 }
 

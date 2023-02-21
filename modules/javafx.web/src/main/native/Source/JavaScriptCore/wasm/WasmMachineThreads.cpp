@@ -53,9 +53,10 @@ void startTrackingCurrentThread()
 
 void resetInstructionCacheOnAllThreads()
 {
-    auto locker = holdLock(wasmThreads().getLock());
+    Locker locker { wasmThreads().getLock() };
+    ThreadSuspendLocker threadSuspendLocker;
     for (auto& thread : wasmThreads().threads(locker)) {
-        sendMessage(thread.get(), [] (const PlatformRegisters&) {
+        sendMessage(threadSuspendLocker, thread.get(), [] (const PlatformRegisters&) {
             // It's likely that the signal handler will already reset the instruction cache but we might as well be sure.
             WTF::crossModifyingCodeFence();
         });

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AVFoundation/AVPlayerItemOutput.h>
+#import <AVFoundation/AVAssetResourceLoader.h>
 #import <CoreVideo/CoreVideo.h>
 
 #import "OSXPlayerProtocol.h"
@@ -35,14 +36,18 @@
 
 @class AVFAudioProcessor;
 
-@interface AVFMediaPlayer : NSObject<OSXPlayerProtocol,AVPlayerItemOutputPullDelegate>
+@interface AVFMediaPlayer : NSObject<OSXPlayerProtocol,
+                                     AVPlayerItemOutputPullDelegate,
+                                     AVAssetResourceLoaderDelegate>
 {
     CVDisplayLinkRef _displayLink;
     CMVideoFormatDescriptionRef _videoFormat;
 
     dispatch_queue_t playerQueue;
+    dispatch_queue_t playerLoaderQueue;
 
     CJavaPlayerEventDispatcher *eventHandler;
+    CLocatorStream *locatorStream;
 
     int requestedState; // 0 - stop, 1 - play, 2 - pause
     float requestedRate;
@@ -82,7 +87,7 @@
 @property (nonatomic,readonly) CAudioEqualizer *audioEqualizer;
 @property (nonatomic,readonly) CAudioSpectrum *audioSpectrum;
 
-- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr;
+- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr locatorStream:(CLocatorStream*)ls;
 - (void) setPlayerState:(int)newState;
 - (void) hlsBugReset;
 

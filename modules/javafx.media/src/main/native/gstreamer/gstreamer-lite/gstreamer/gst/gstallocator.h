@@ -172,6 +172,9 @@ void           gst_allocator_set_default     (GstAllocator * allocator);
 /* allocation parameters */
 
 GST_API
+GstAllocationParams * gst_allocation_params_new (void) G_GNUC_MALLOC;
+
+GST_API
 void           gst_allocation_params_init    (GstAllocationParams *params);
 
 GST_API

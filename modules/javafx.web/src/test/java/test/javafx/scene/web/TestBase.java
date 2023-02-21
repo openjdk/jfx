@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -168,7 +168,7 @@ public class TestBase implements ChangeListener, InvalidationListener {
      * Executes a job on FX thread, and waits until it is complete.
      */
     protected void submit(Runnable job) {
-        final FutureTask<Void> future = new FutureTask<Void>(job, null);
+        final FutureTask<Void> future = new FutureTask<>(job, null);
         Platform.runLater(future);
         try {
             // block until job is complete
@@ -192,7 +192,7 @@ public class TestBase implements ChangeListener, InvalidationListener {
      * Executes a job on FX thread, waits until completion, and returns its result.
      */
     protected <T> T submit(Callable<T> job) {
-        final FutureTask<T> future = new FutureTask<T>(job);
+        final FutureTask<T> future = new FutureTask<>(job);
         Platform.runLater(future);
         try {
             return future.get();

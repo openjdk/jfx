@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,7 +79,7 @@ class UnlinkedFunctionCodeBlock;
         TextPosition startPosition() const { return m_startPosition; }
         SourceProviderSourceType sourceType() const { return m_sourceType; }
 
-        intptr_t asID()
+        SourceID asID()
         {
             if (!m_id)
                 getID();
@@ -98,7 +98,7 @@ class UnlinkedFunctionCodeBlock;
         String m_sourceURLDirective;
         String m_sourceMappingURLDirective;
         TextPosition m_startPosition;
-        uintptr_t m_id { 0 };
+        SourceID m_id { 0 };
     };
 
     DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
@@ -132,7 +132,18 @@ class UnlinkedFunctionCodeBlock;
     };
 
 #if ENABLE(WEBASSEMBLY)
-    class WebAssemblySourceProvider final : public SourceProvider {
+    class BaseWebAssemblySourceProvider : public SourceProvider {
+    public:
+        virtual const uint8_t* data() = 0;
+        virtual size_t size() const = 0;
+        virtual void lockUnderlyingBuffer() { }
+        virtual void unlockUnderlyingBuffer() { }
+
+    protected:
+        JS_EXPORT_PRIVATE BaseWebAssemblySourceProvider(const SourceOrigin&, String&&);
+    };
+
+    class WebAssemblySourceProvider final : public BaseWebAssemblySourceProvider {
     public:
         static Ref<WebAssemblySourceProvider> create(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, String sourceURL)
         {
@@ -149,21 +160,51 @@ class UnlinkedFunctionCodeBlock;
             return m_source;
         }
 
-        const Vector<uint8_t>& data() const
+        const uint8_t* data() final
+        {
+            return m_data.data();
+        }
+
+        size_t size() const final
+        {
+            return m_data.size();
+        }
+
+        const Vector<uint8_t>& dataVector() const
         {
             return m_data;
         }
 
     private:
         WebAssemblySourceProvider(Vector<uint8_t>&& data, const SourceOrigin& sourceOrigin, String&& sourceURL)
-            : SourceProvider(sourceOrigin, WTFMove(sourceURL), TextPosition(), SourceProviderSourceType::WebAssembly)
-            , m_source("[WebAssembly source]")
+            : BaseWebAssemblySourceProvider(sourceOrigin, WTFMove(sourceURL))
+            , m_source("[WebAssembly source]"_s)
             , m_data(WTFMove(data))
         {
         }
 
         String m_source;
         Vector<uint8_t> m_data;
+    };
+
+    // RAII class for managing a Wasm source provider's underlying buffer.
+    class WebAssemblySourceProviderBufferGuard {
+    public:
+        explicit WebAssemblySourceProviderBufferGuard(BaseWebAssemblySourceProvider* sourceProvider)
+            : m_sourceProvider(sourceProvider)
+        {
+            if (m_sourceProvider)
+                m_sourceProvider->lockUnderlyingBuffer();
+        }
+
+        ~WebAssemblySourceProviderBufferGuard()
+        {
+            if (m_sourceProvider)
+                m_sourceProvider->unlockUnderlyingBuffer();
+        }
+
+    private:
+        RefPtr<BaseWebAssemblySourceProvider> m_sourceProvider;
     };
 #endif
 

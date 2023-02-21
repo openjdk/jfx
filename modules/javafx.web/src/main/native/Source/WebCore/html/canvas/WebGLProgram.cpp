@@ -30,6 +30,7 @@
 
 #include "InspectorInstrumentation.h"
 #include "ScriptExecutionContext.h"
+#include "WebCoreOpaqueRoot.h"
 #include "WebGLContextGroup.h"
 #include "WebGLRenderingContextBase.h"
 #include "WebGLShader.h"
@@ -45,16 +46,17 @@
 
 namespace WebCore {
 
-HashMap<WebGLProgram*, WebGLRenderingContextBase*>& WebGLProgram::instances(const LockHolder&)
+Lock WebGLProgram::s_instancesLock;
+
+HashMap<WebGLProgram*, WebGLRenderingContextBase*>& WebGLProgram::instances()
 {
     static NeverDestroyed<HashMap<WebGLProgram*, WebGLRenderingContextBase*>> instances;
     return instances;
 }
 
-Lock& WebGLProgram::instancesMutex()
+Lock& WebGLProgram::instancesLock()
 {
-    static Lock mutex;
-    return mutex;
+    return s_instancesLock;
 }
 
 Ref<WebGLProgram> WebGLProgram::create(WebGLRenderingContextBase& ctx)
@@ -69,8 +71,8 @@ WebGLProgram::WebGLProgram(WebGLRenderingContextBase& ctx)
     ASSERT(scriptExecutionContext());
 
     {
-        LockHolder lock(instancesMutex());
-        instances(lock).add(this, &ctx);
+        Locker locker { instancesLock() };
+        instances().add(this, &ctx);
     }
 
     setObject(ctx.graphicsContextGL()->createProgram());
@@ -81,9 +83,9 @@ WebGLProgram::~WebGLProgram()
     InspectorInstrumentation::willDestroyWebGLProgram(*this);
 
     {
-        LockHolder lock(instancesMutex());
-        ASSERT(instances(lock).contains(this));
-        instances(lock).remove(this);
+        Locker locker { instancesLock() };
+        ASSERT(instances().contains(this));
+        instances().remove(this);
     }
 
     if (!hasGroupOrContext())
@@ -208,8 +210,8 @@ bool WebGLProgram::detachShader(const AbstractLocker&, WebGLShader* shader)
 
 void WebGLProgram::addMembersToOpaqueRoots(const AbstractLocker&, JSC::AbstractSlotVisitor& visitor)
 {
-    visitor.addOpaqueRoot(m_vertexShader.get());
-    visitor.addOpaqueRoot(m_fragmentShader.get());
+    addWebCoreOpaqueRoot(visitor, m_vertexShader.get());
+    addWebCoreOpaqueRoot(visitor, m_fragmentShader.get());
 }
 
 void WebGLProgram::cacheActiveAttribLocations(GraphicsContextGL* context3d)

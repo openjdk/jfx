@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,14 +41,17 @@ class PrismFont implements PGFont {
         this.fontSize = size;
     }
 
+    @Override
     public String getFullName() {
         return fontResource.getFullName();
     }
 
+    @Override
     public String getFamilyName() {
         return fontResource.getFamilyName();
     }
 
+    @Override
     public String getStyleName() {
         return fontResource.getStyleName();
     }
@@ -61,23 +64,28 @@ class PrismFont implements PGFont {
         return features;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public float getSize() {
         return fontSize;
     }
 
+    @Override
     public FontStrike getStrike(BaseTransform transform) {
         return fontResource.getStrike(fontSize, transform);
     }
 
+    @Override
     public FontStrike getStrike(BaseTransform transform,
                                 int smoothingType) {
         return fontResource.getStrike(fontSize, transform, smoothingType);
     }
 
+    @Override
     public FontResource getFontResource() {
         return fontResource;
     }

@@ -35,7 +35,6 @@
 #include "MediaQueryBlockWatcher.h"
 #include "MediaQueryExpression.h"
 #include "MediaQueryParserContext.h"
-#include <wtf/Optional.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -59,7 +58,7 @@ private:
     MediaQueryParser(ParserType, MediaQueryParserContext);
     virtual ~MediaQueryParser();
 
-    RefPtr<MediaQuerySet> parseInternal(CSSParserTokenRange);
+    RefPtr<MediaQuerySet> parseInternal(CSSParserTokenRange&);
 
     void processToken(const CSSParserToken&, CSSParserTokenRange&);
 
@@ -91,11 +90,11 @@ private:
         void addExpression(CSSParserTokenRange&);
         bool lastExpressionValid();
         void removeLastExpression();
-        void setMediaType(const String& mediaType) { m_mediaType = mediaType; }
+        void setMediaType(String&& mediaType) { m_mediaType = WTFMove(mediaType); }
 
         MediaQuery::Restrictor restrictor() const { return m_restrictor; }
         Vector<MediaQueryExpression>& expressions() { return m_expressions; }
-        const Optional<String>& mediaType() const { return m_mediaType; }
+        const std::optional<String>& mediaType() const { return m_mediaType; }
 
         bool currentMediaQueryChanged() const
         {
@@ -111,7 +110,7 @@ private:
 
     private:
         MediaQuery::Restrictor m_restrictor { MediaQuery::None };
-        Optional<String> m_mediaType;
+        std::optional<String> m_mediaType;
         Vector<MediaQueryExpression> m_expressions;
         String m_mediaFeature;
         MediaQueryParserContext m_context;

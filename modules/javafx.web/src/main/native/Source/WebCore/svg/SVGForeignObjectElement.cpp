@@ -25,6 +25,7 @@
 #include "CSSPropertyNames.h"
 #include "RenderSVGForeignObject.h"
 #include "RenderSVGResource.h"
+#include "SVGElementInlines.h"
 #include "SVGLengthValue.h"
 #include "SVGNames.h"
 #include <wtf/Assertions.h>
@@ -73,15 +74,15 @@ void SVGForeignObjectElement::parseAttribute(const QualifiedName& name, const At
 
 void SVGForeignObjectElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr) {
-        invalidateSVGPresentationAttributeStyle();
-        return;
-    }
-
-    if (attrName == SVGNames::xAttr || attrName == SVGNames::yAttr) {
-        updateRelativeLengthsInformation();
-        if (auto renderer = this->renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        InstanceInvalidationGuard guard(*this);
+        if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr)
+            setPresentationalHintStyleIsDirty();
+        else {
+            ASSERT(attrName == SVGNames::xAttr || attrName == SVGNames::yAttr);
+            updateRelativeLengthsInformation();
+            updateSVGRendererForElementChange();
+        }
         return;
     }
 
@@ -111,7 +112,10 @@ bool SVGForeignObjectElement::rendererIsNeeded(const RenderStyle& style)
     // Note that we currently do not support foreignObject instantiation via <use>, hence it is safe
     // to use parentElement() here. If that changes, this method should be updated to use
     // parentOrShadowHostElement() instead.
-    auto ancestor = makeRefPtr(parentElement());
+    RefPtr ancestor = parentElement();
+    if (!ancestor)
+        return false;
+
     while (ancestor && ancestor->isSVGElement()) {
         if (ancestor->renderer() && ancestor->renderer()->isSVGHiddenContainer())
             return false;

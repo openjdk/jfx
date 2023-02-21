@@ -123,7 +123,7 @@ _gst_param_fraction_values_cmp (GParamSpec * pspec, const GValue * value1,
 GType
 gst_param_spec_fraction_get_type (void)
 {
-  static volatile GType gst_faction_type = 0;
+  static GType gst_faction_type = 0;
 
   /* register GST_TYPE_PARAM_FRACTION */
   if (g_once_init_enter (&gst_faction_type)) {
@@ -306,7 +306,7 @@ _gst_param_array_values_cmp (GParamSpec * pspec, const GValue * value1,
 GType
 gst_param_spec_array_get_type (void)
 {
-  static volatile GType gst_array_type = 0;
+  static GType gst_array_type = 0;
 
   /* register GST_TYPE_PARAM_FRACTION */
   if (g_once_init_enter (&gst_array_type)) {

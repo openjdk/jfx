@@ -16,47 +16,47 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/globals.h>
 
-void XMLCDECL xmlGenericErrorDefaultFunc    (void *ctx ATTRIBUTE_UNUSED,
-                 const char *msg,
-                 ...) LIBXML_ATTR_FORMAT(2,3);
+void XMLCDECL xmlGenericErrorDefaultFunc        (void *ctx ATTRIBUTE_UNUSED,
+                                 const char *msg,
+                                 ...) LIBXML_ATTR_FORMAT(2,3);
 
-#define XML_GET_VAR_STR(msg, str) {             \
-    int       size, prev_size = -1;             \
-    int       chars;                        \
-    char      *larger;                      \
-    va_list   ap;                       \
-                                \
-    str = (char *) xmlMalloc(150);              \
-    if (str != NULL) {                      \
-                                \
-    size = 150;                         \
-                                \
-    while (size < 64000) {                  \
-    va_start(ap, msg);                  \
-    chars = vsnprintf(str, size, msg, ap);          \
-    va_end(ap);                     \
-    if ((chars > -1) && (chars < size)) {           \
-        if (prev_size == chars) {               \
-        break;                      \
-        } else {                        \
-        prev_size = chars;              \
-        }                           \
-    }                           \
-    if (chars > -1)                     \
-        size += chars + 1;                  \
-    else                            \
-        size += 100;                    \
-    if ((larger = (char *) xmlRealloc(str, size)) == NULL) {\
-        break;                      \
-    }                           \
-    str = larger;                       \
-    }}                              \
+#define XML_GET_VAR_STR(msg, str) {                             \
+    int       size, prev_size = -1;                             \
+    int       chars;                                            \
+    char      *larger;                                          \
+    va_list   ap;                                               \
+                                                                \
+    str = (char *) xmlMalloc(150);                              \
+    if (str != NULL) {                                          \
+                                                                \
+    size = 150;                                                 \
+                                                                \
+    while (size < 64000) {                                      \
+        va_start(ap, msg);                                      \
+        chars = vsnprintf(str, size, msg, ap);                  \
+        va_end(ap);                                             \
+        if ((chars > -1) && (chars < size)) {                   \
+            if (prev_size == chars) {                           \
+                break;                                          \
+            } else {                                            \
+                prev_size = chars;                              \
+            }                                                   \
+        }                                                       \
+        if (chars > -1)                                         \
+            size += chars + 1;                                  \
+        else                                                    \
+            size += 100;                                        \
+        if ((larger = (char *) xmlRealloc(str, size)) == NULL) {\
+            break;                                              \
+        }                                                       \
+        str = larger;                                           \
+    }}                                                          \
 }
 
 /************************************************************************
- *                                  *
- *          Handling of out of context errors       *
- *                                  *
+ *                                                                      *
+ *                      Handling of out of context errors               *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -72,7 +72,7 @@ xmlGenericErrorDefaultFunc(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...) {
     va_list args;
 
     if (xmlGenericErrorContext == NULL)
-    xmlGenericErrorContext = (void *) stderr;
+        xmlGenericErrorContext = (void *) stderr;
 
     va_start(args, msg);
     vfprintf((FILE *)xmlGenericErrorContext, msg, args);
@@ -113,9 +113,9 @@ void
 xmlSetGenericErrorFunc(void *ctx, xmlGenericErrorFunc handler) {
     xmlGenericErrorContext = ctx;
     if (handler != NULL)
-    xmlGenericError = handler;
+        xmlGenericError = handler;
     else
-    xmlGenericError = xmlGenericErrorDefaultFunc;
+        xmlGenericError = xmlGenericErrorDefaultFunc;
 }
 
 /**
@@ -137,9 +137,9 @@ xmlSetStructuredErrorFunc(void *ctx, xmlStructuredErrorFunc handler) {
 }
 
 /************************************************************************
- *                                  *
- *          Handling of parsing errors          *
- *                                  *
+ *                                                                      *
+ *                      Handling of parsing errors                      *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -152,13 +152,13 @@ xmlSetStructuredErrorFunc(void *ctx, xmlStructuredErrorFunc handler) {
 void
 xmlParserPrintFileInfo(xmlParserInputPtr input) {
     if (input != NULL) {
-    if (input->filename)
-        xmlGenericError(xmlGenericErrorContext,
-            "%s:%d: ", input->filename,
-            input->line);
-    else
-        xmlGenericError(xmlGenericErrorContext,
-            "Entity: line %d: ", input->line);
+        if (input->filename)
+            xmlGenericError(xmlGenericErrorContext,
+                    "%s:%d: ", input->filename,
+                    input->line);
+        else
+            xmlGenericError(xmlGenericErrorContext,
+                    "Entity: line %d: ", input->line);
     }
 }
 
@@ -171,9 +171,9 @@ xmlParserPrintFileInfo(xmlParserInputPtr input) {
 
 static void
 xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
-        xmlGenericErrorFunc channel, void *data ) {
+                xmlGenericErrorFunc channel, void *data ) {
     const xmlChar *cur, *base;
-    unsigned int n, col;    /* GCC warns if signed, because compared with sizeof() */
+    unsigned int n, col;        /* GCC warns if signed, because compared with sizeof() */
     xmlChar  content[81]; /* space for 80 chars + line terminator */
     xmlChar *ctnt;
 
@@ -184,12 +184,12 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
     base = input->base;
     /* skip backwards over any end-of-lines */
     while ((cur > base) && ((*(cur) == '\n') || (*(cur) == '\r'))) {
-    cur--;
+        cur--;
     }
     n = 0;
     /* search backwards for beginning-of-line (to max buff size) */
     while ((n++ < (sizeof(content)-1)) && (cur > base) &&
-       (*(cur) != '\n') && (*(cur) != '\r'))
+           (*(cur) != '\n') && (*(cur) != '\r'))
         cur--;
     if ((*(cur) == '\n') || (*(cur) == '\r')) cur++;
     /* calculate the error position in terms of the current position */
@@ -199,9 +199,9 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
     ctnt = content;
     /* copy selected text to our buffer */
     while ((*cur != 0) && (*(cur) != '\n') &&
-       (*(cur) != '\r') && (n < sizeof(content)-1)) {
-        *ctnt++ = *cur++;
-    n++;
+           (*(cur) != '\r') && (n < sizeof(content)-1)) {
+                *ctnt++ = *cur++;
+        n++;
     }
     *ctnt = 0;
     /* print out the selected text */
@@ -211,9 +211,9 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
     ctnt = content;
     /* (leave buffer space for pointer + line terminator) */
     while ((n<col) && (n++ < sizeof(content)-2) && (*ctnt != 0)) {
-    if (*(ctnt) != '\t')
-        *(ctnt) = ' ';
-    ctnt++;
+        if (*(ctnt) != '\t')
+            *(ctnt) = ' ';
+        ctnt++;
     }
     *ctnt++ = '^';
     *ctnt = 0;
@@ -259,8 +259,8 @@ xmlReportError(xmlErrorPtr err, xmlParserCtxtPtr ctxt, const char *str,
         return;
 
     if (channel == NULL) {
-    channel = xmlGenericError;
-    data = xmlGenericErrorContext;
+        channel = xmlGenericError;
+        data = xmlGenericErrorContext;
     }
     file = err->file;
     line = err->line;
@@ -295,9 +295,9 @@ xmlReportError(xmlErrorPtr err, xmlParserCtxtPtr ctxt, const char *str,
         if (file != NULL)
             channel(data, "%s:%d: ", file, line);
         else if ((line != 0) &&
-             ((domain == XML_FROM_PARSER) || (domain == XML_FROM_SCHEMASV)||
-          (domain == XML_FROM_SCHEMASP)||(domain == XML_FROM_DTD) ||
-          (domain == XML_FROM_RELAXNGP)||(domain == XML_FROM_RELAXNGV)))
+                 ((domain == XML_FROM_PARSER) || (domain == XML_FROM_SCHEMASV)||
+                  (domain == XML_FROM_SCHEMASP)||(domain == XML_FROM_DTD) ||
+                  (domain == XML_FROM_RELAXNGP)||(domain == XML_FROM_RELAXNGV)))
             channel(data, "Entity: line %d: ", line);
     }
     if (name != NULL) {
@@ -393,11 +393,11 @@ xmlReportError(xmlErrorPtr err, xmlParserCtxtPtr ctxt, const char *str,
     }
     if (str != NULL) {
         int len;
-    len = xmlStrlen((const xmlChar *)str);
-    if ((len > 0) && (str[len - 1] != '\n'))
-        channel(data, "%s\n", str);
-    else
-        channel(data, "%s", str);
+        len = xmlStrlen((const xmlChar *)str);
+        if ((len > 0) && (str[len - 1] != '\n'))
+            channel(data, "%s\n", str);
+        else
+            channel(data, "%s", str);
     } else {
         channel(data, "%s\n", "out of memory error");
     }
@@ -414,16 +414,16 @@ xmlReportError(xmlErrorPtr err, xmlParserCtxtPtr ctxt, const char *str,
     }
     if ((domain == XML_FROM_XPATH) && (err->str1 != NULL) &&
         (err->int1 < 100) &&
-    (err->int1 < xmlStrlen((const xmlChar *)err->str1))) {
-    xmlChar buf[150];
-    int i;
+        (err->int1 < xmlStrlen((const xmlChar *)err->str1))) {
+        xmlChar buf[150];
+        int i;
 
-    channel(data, "%s\n", err->str1);
-    for (i=0;i < err->int1;i++)
-         buf[i] = ' ';
-    buf[i++] = '^';
-    buf[i] = 0;
-    channel(data, "%s\n", buf);
+        channel(data, "%s\n", err->str1);
+        for (i=0;i < err->int1;i++)
+             buf[i] = ' ';
+        buf[i++] = '^';
+        buf[i] = 0;
+        channel(data, "%s\n", buf);
     }
 }
 
@@ -457,7 +457,7 @@ __xmlRaiseError(xmlStructuredErrorFunc schannel,
               void *nod, int domain, int code, xmlErrorLevel level,
               const char *file, int line, const char *str1,
               const char *str2, const char *str3, int int1, int col,
-          const char *msg, ...)
+              const char *msg, ...)
 {
     xmlParserCtxtPtr ctxt = NULL;
     xmlNodePtr node = (xmlNodePtr) nod;
@@ -472,25 +472,25 @@ __xmlRaiseError(xmlStructuredErrorFunc schannel,
         return;
     if ((domain == XML_FROM_PARSER) || (domain == XML_FROM_HTML) ||
         (domain == XML_FROM_DTD) || (domain == XML_FROM_NAMESPACE) ||
-    (domain == XML_FROM_IO) || (domain == XML_FROM_VALID)) {
-    ctxt = (xmlParserCtxtPtr) ctx;
-    if ((schannel == NULL) && (ctxt != NULL) && (ctxt->sax != NULL) &&
-        (ctxt->sax->initialized == XML_SAX2_MAGIC) &&
-        (ctxt->sax->serror != NULL)) {
-        schannel = ctxt->sax->serror;
-        data = ctxt->userData;
-    }
+        (domain == XML_FROM_IO) || (domain == XML_FROM_VALID)) {
+        ctxt = (xmlParserCtxtPtr) ctx;
+        if ((schannel == NULL) && (ctxt != NULL) && (ctxt->sax != NULL) &&
+            (ctxt->sax->initialized == XML_SAX2_MAGIC) &&
+            (ctxt->sax->serror != NULL)) {
+            schannel = ctxt->sax->serror;
+            data = ctxt->userData;
+        }
     }
     /*
      * Check if structured error handler set
      */
     if (schannel == NULL) {
-    schannel = xmlStructuredError;
-    /*
-     * if user has defined handler, change data ptr to user's choice
-     */
-    if (schannel != NULL)
-        data = xmlStructuredErrorContext;
+        schannel = xmlStructuredError;
+        /*
+         * if user has defined handler, change data ptr to user's choice
+         */
+        if (schannel != NULL)
+            data = xmlStructuredErrorContext;
     }
     /*
      * Formatting the message
@@ -519,24 +519,24 @@ __xmlRaiseError(xmlStructuredErrorFunc schannel,
         }
         to = &ctxt->lastError;
     } else if ((node != NULL) && (file == NULL)) {
-    int i;
+        int i;
 
-    if ((node->doc != NULL) && (node->doc->URL != NULL)) {
-        baseptr = node;
-/*      file = (const char *) node->doc->URL; */
-    }
-    for (i = 0;
-         ((i < 10) && (node != NULL) && (node->type != XML_ELEMENT_NODE));
-         i++)
-         node = node->parent;
+        if ((node->doc != NULL) && (node->doc->URL != NULL)) {
+            baseptr = node;
+/*          file = (const char *) node->doc->URL; */
+        }
+        for (i = 0;
+             ((i < 10) && (node != NULL) && (node->type != XML_ELEMENT_NODE));
+             i++)
+             node = node->parent;
         if ((baseptr == NULL) && (node != NULL) &&
-        (node->doc != NULL) && (node->doc->URL != NULL))
-        baseptr = node;
+            (node->doc != NULL) && (node->doc->URL != NULL))
+            baseptr = node;
 
-    if ((node != NULL) && (node->type == XML_ELEMENT_NODE))
-        line = node->line;
-    if ((line == 0) || (line == 65535))
-        line = xmlGetLineNo(node);
+        if ((node != NULL) && (node->type == XML_ELEMENT_NODE))
+            line = node->line;
+        if ((line == 0) || (line == 65535))
+            line = xmlGetLineNo(node);
     }
 
     /*
@@ -551,39 +551,39 @@ __xmlRaiseError(xmlStructuredErrorFunc schannel,
         to->file = (char *) xmlStrdup((const xmlChar *) file);
     else if (baseptr != NULL) {
 #ifdef LIBXML_XINCLUDE_ENABLED
-    /*
-     * We check if the error is within an XInclude section and,
-     * if so, attempt to print out the href of the XInclude instead
-     * of the usual "base" (doc->URL) for the node (bug 152623).
-     */
+        /*
+         * We check if the error is within an XInclude section and,
+         * if so, attempt to print out the href of the XInclude instead
+         * of the usual "base" (doc->URL) for the node (bug 152623).
+         */
         xmlNodePtr prev = baseptr;
         char *href = NULL;
-    int inclcount = 0;
-    while (prev != NULL) {
-        if (prev->prev == NULL)
-            prev = prev->parent;
-        else {
-            prev = prev->prev;
-        if (prev->type == XML_XINCLUDE_START) {
-            if (inclcount > 0) {
+        int inclcount = 0;
+        while (prev != NULL) {
+            if (prev->prev == NULL)
+                prev = prev->parent;
+            else {
+                prev = prev->prev;
+                if (prev->type == XML_XINCLUDE_START) {
+                    if (inclcount > 0) {
                         --inclcount;
                     } else {
                         href = (char *) xmlGetProp(prev, BAD_CAST "href");
                         if (href != NULL)
-                    break;
+                            break;
                     }
-        } else if (prev->type == XML_XINCLUDE_END)
-            inclcount++;
+                } else if (prev->type == XML_XINCLUDE_END)
+                    inclcount++;
+            }
         }
-    }
         if (href != NULL)
             to->file = href;
-    else
+        else
 #endif
-        to->file = (char *) xmlStrdup(baseptr->doc->URL);
-    if ((to->file == NULL) && (node != NULL) && (node->doc != NULL)) {
-        to->file = (char *) xmlStrdup(node->doc->URL);
-    }
+            to->file = (char *) xmlStrdup(baseptr->doc->URL);
+        if ((to->file == NULL) && (node != NULL) && (node->doc != NULL)) {
+            to->file = (char *) xmlStrdup(node->doc->URL);
+        }
     }
     to->line = line;
     if (str1 != NULL)
@@ -601,8 +601,8 @@ __xmlRaiseError(xmlStructuredErrorFunc schannel,
         xmlCopyError(to,&xmlLastError);
 
     if (schannel != NULL) {
-    schannel(data, to);
-    return;
+        schannel(data, to);
+        return;
     }
 
     /*
@@ -611,31 +611,31 @@ __xmlRaiseError(xmlStructuredErrorFunc schannel,
     if ((ctxt != NULL) && (channel == NULL) &&
         (xmlStructuredError == NULL) && (ctxt->sax != NULL)) {
         if (level == XML_ERR_WARNING)
-        channel = ctxt->sax->warning;
+            channel = ctxt->sax->warning;
         else
-        channel = ctxt->sax->error;
-    data = ctxt->userData;
+            channel = ctxt->sax->error;
+        data = ctxt->userData;
     } else if (channel == NULL) {
-    channel = xmlGenericError;
-    if (ctxt != NULL) {
-        data = ctxt;
-    } else {
-        data = xmlGenericErrorContext;
-    }
+        channel = xmlGenericError;
+        if (ctxt != NULL) {
+            data = ctxt;
+        } else {
+            data = xmlGenericErrorContext;
+        }
     }
     if (channel == NULL)
         return;
 
     if ((channel == xmlParserError) ||
         (channel == xmlParserWarning) ||
-    (channel == xmlParserValidityError) ||
-    (channel == xmlParserValidityWarning))
-    xmlReportError(to, ctxt, str, NULL, NULL);
+        (channel == xmlParserValidityError) ||
+        (channel == xmlParserValidityWarning))
+        xmlReportError(to, ctxt, str, NULL, NULL);
     else if (((void(*)(void)) channel == (void(*)(void)) fprintf) ||
              (channel == xmlGenericErrorDefaultFunc))
-    xmlReportError(to, ctxt, str, channel, data);
+        xmlReportError(to, ctxt, str, channel, data);
     else
-    channel(data, "%s", str);
+        channel(data, "%s", str);
 }
 
 /**
@@ -653,19 +653,19 @@ __xmlSimpleError(int domain, int code, xmlNodePtr node,
 {
 
     if (code == XML_ERR_NO_MEMORY) {
-    if (extra)
-        __xmlRaiseError(NULL, NULL, NULL, NULL, node, domain,
-                XML_ERR_NO_MEMORY, XML_ERR_FATAL, NULL, 0, extra,
-                NULL, NULL, 0, 0,
-                "Memory allocation failed : %s\n", extra);
-    else
-        __xmlRaiseError(NULL, NULL, NULL, NULL, node, domain,
-                XML_ERR_NO_MEMORY, XML_ERR_FATAL, NULL, 0, NULL,
-                NULL, NULL, 0, 0, "Memory allocation failed\n");
+        if (extra)
+            __xmlRaiseError(NULL, NULL, NULL, NULL, node, domain,
+                            XML_ERR_NO_MEMORY, XML_ERR_FATAL, NULL, 0, extra,
+                            NULL, NULL, 0, 0,
+                            "Memory allocation failed : %s\n", extra);
+        else
+            __xmlRaiseError(NULL, NULL, NULL, NULL, node, domain,
+                            XML_ERR_NO_MEMORY, XML_ERR_FATAL, NULL, 0, NULL,
+                            NULL, NULL, 0, 0, "Memory allocation failed\n");
     } else {
-    __xmlRaiseError(NULL, NULL, NULL, NULL, node, domain,
-            code, XML_ERR_ERROR, NULL, 0, extra,
-            NULL, NULL, 0, 0, msg, extra);
+        __xmlRaiseError(NULL, NULL, NULL, NULL, node, domain,
+                        code, XML_ERR_ERROR, NULL, 0, extra,
+                        NULL, NULL, 0, 0, msg, extra);
     }
 }
 /**
@@ -686,28 +686,28 @@ xmlParserError(void *ctx, const char *msg, ...)
     char * str;
 
     if (ctxt != NULL) {
-    input = ctxt->input;
-    if ((input != NULL) && (input->filename == NULL) &&
-        (ctxt->inputNr > 1)) {
-        cur = input;
-        input = ctxt->inputTab[ctxt->inputNr - 2];
-    }
-    xmlParserPrintFileInfo(input);
+        input = ctxt->input;
+        if ((input != NULL) && (input->filename == NULL) &&
+            (ctxt->inputNr > 1)) {
+            cur = input;
+            input = ctxt->inputTab[ctxt->inputNr - 2];
+        }
+        xmlParserPrintFileInfo(input);
     }
 
     xmlGenericError(xmlGenericErrorContext, "error: ");
     XML_GET_VAR_STR(msg, str);
     xmlGenericError(xmlGenericErrorContext, "%s", str);
     if (str != NULL)
-    xmlFree(str);
+        xmlFree(str);
 
     if (ctxt != NULL) {
-    xmlParserPrintFileContext(input);
-    if (cur != NULL) {
-        xmlParserPrintFileInfo(cur);
-        xmlGenericError(xmlGenericErrorContext, "\n");
-        xmlParserPrintFileContext(cur);
-    }
+        xmlParserPrintFileContext(input);
+        if (cur != NULL) {
+            xmlParserPrintFileInfo(cur);
+            xmlGenericError(xmlGenericErrorContext, "\n");
+            xmlParserPrintFileContext(cur);
+        }
     }
 }
 
@@ -729,35 +729,35 @@ xmlParserWarning(void *ctx, const char *msg, ...)
     char * str;
 
     if (ctxt != NULL) {
-    input = ctxt->input;
-    if ((input != NULL) && (input->filename == NULL) &&
-        (ctxt->inputNr > 1)) {
-        cur = input;
-        input = ctxt->inputTab[ctxt->inputNr - 2];
-    }
-    xmlParserPrintFileInfo(input);
+        input = ctxt->input;
+        if ((input != NULL) && (input->filename == NULL) &&
+            (ctxt->inputNr > 1)) {
+            cur = input;
+            input = ctxt->inputTab[ctxt->inputNr - 2];
+        }
+        xmlParserPrintFileInfo(input);
     }
 
     xmlGenericError(xmlGenericErrorContext, "warning: ");
     XML_GET_VAR_STR(msg, str);
     xmlGenericError(xmlGenericErrorContext, "%s", str);
     if (str != NULL)
-    xmlFree(str);
+        xmlFree(str);
 
     if (ctxt != NULL) {
-    xmlParserPrintFileContext(input);
-    if (cur != NULL) {
-        xmlParserPrintFileInfo(cur);
-        xmlGenericError(xmlGenericErrorContext, "\n");
-        xmlParserPrintFileContext(cur);
-    }
+        xmlParserPrintFileContext(input);
+        if (cur != NULL) {
+            xmlParserPrintFileInfo(cur);
+            xmlGenericError(xmlGenericErrorContext, "\n");
+            xmlParserPrintFileContext(cur);
+        }
     }
 }
 
 /************************************************************************
- *                                  *
- *          Handling of validation errors           *
- *                                  *
+ *                                                                      *
+ *                      Handling of validation errors                   *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -779,28 +779,28 @@ xmlParserValidityError(void *ctx, const char *msg, ...)
     static int had_info = 0;
 
     if ((len > 1) && (msg[len - 2] != ':')) {
-    if (ctxt != NULL) {
-        input = ctxt->input;
-        if ((input->filename == NULL) && (ctxt->inputNr > 1))
-        input = ctxt->inputTab[ctxt->inputNr - 2];
+        if (ctxt != NULL) {
+            input = ctxt->input;
+            if ((input->filename == NULL) && (ctxt->inputNr > 1))
+                input = ctxt->inputTab[ctxt->inputNr - 2];
 
-        if (had_info == 0) {
-        xmlParserPrintFileInfo(input);
+            if (had_info == 0) {
+                xmlParserPrintFileInfo(input);
+            }
         }
-    }
-    xmlGenericError(xmlGenericErrorContext, "validity error: ");
-    had_info = 0;
+        xmlGenericError(xmlGenericErrorContext, "validity error: ");
+        had_info = 0;
     } else {
-    had_info = 1;
+        had_info = 1;
     }
 
     XML_GET_VAR_STR(msg, str);
     xmlGenericError(xmlGenericErrorContext, "%s", str);
     if (str != NULL)
-    xmlFree(str);
+        xmlFree(str);
 
     if ((ctxt != NULL) && (input != NULL)) {
-    xmlParserPrintFileContext(input);
+        xmlParserPrintFileContext(input);
     }
 }
 
@@ -822,29 +822,29 @@ xmlParserValidityWarning(void *ctx, const char *msg, ...)
     int len = xmlStrlen((const xmlChar *) msg);
 
     if ((ctxt != NULL) && (len != 0) && (msg[len - 1] != ':')) {
-    input = ctxt->input;
-    if ((input->filename == NULL) && (ctxt->inputNr > 1))
-        input = ctxt->inputTab[ctxt->inputNr - 2];
+        input = ctxt->input;
+        if ((input->filename == NULL) && (ctxt->inputNr > 1))
+            input = ctxt->inputTab[ctxt->inputNr - 2];
 
-    xmlParserPrintFileInfo(input);
+        xmlParserPrintFileInfo(input);
     }
 
     xmlGenericError(xmlGenericErrorContext, "validity warning: ");
     XML_GET_VAR_STR(msg, str);
     xmlGenericError(xmlGenericErrorContext, "%s", str);
     if (str != NULL)
-    xmlFree(str);
+        xmlFree(str);
 
     if (ctxt != NULL) {
-    xmlParserPrintFileContext(input);
+        xmlParserPrintFileContext(input);
     }
 }
 
 
 /************************************************************************
- *                                  *
- *          Extended Error Handling             *
- *                                  *
+ *                                                                      *
+ *                      Extended Error Handling                         *
+ *                                                                      *
  ************************************************************************/
 
 /**

@@ -211,6 +211,10 @@ setupTools("linux_freetype_tools",
 def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "${toolchainDir}gcc";
 def linker = IS_STATIC_BUILD ? "ar" : IS_COMPILE_PARFAIT ? "parfait-g++" : "${toolchainDir}g++";
 
+// Strip native .so shared libraries as a postprocess step when copying them
+LINUX.strip = "${toolchainDir}strip"
+LINUX.stripArgs = [ "-x" ]
+
 LINUX.glass = [:]
 LINUX.glass.variants = ["glass", "glassgtk2", "glassgtk3"]
 

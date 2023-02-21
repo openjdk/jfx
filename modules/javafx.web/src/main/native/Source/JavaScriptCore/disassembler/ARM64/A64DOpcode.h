@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,8 +73,10 @@ private:
 public:
     static void init();
 
-    A64DOpcode()
-        : m_opcode(0)
+    A64DOpcode(uint32_t* startPC = nullptr, uint32_t* endPC = nullptr)
+        : m_startPC(startPC)
+        , m_endPC(endPC)
+        , m_opcode(0)
         , m_bufferOffset(0)
     {
         init();
@@ -185,22 +187,22 @@ protected:
         bufferPrintf("#0x%" PRIx64, immediate);
     }
 
-    void appendPCRelativeOffset(uint32_t* pc, int32_t immediate)
-    {
-        bufferPrintf("0x%" PRIx64, reinterpret_cast<uint64_t>(pc + immediate));
-    }
+    void appendPCRelativeOffset(uint32_t* pc, int32_t immediate);
 
     void appendShiftAmount(unsigned amount)
     {
         bufferPrintf("lsl #%u", 16 * amount);
     }
 
-    static constexpr int bufferSize = 81;
+    static constexpr int bufferSize = 101;
 
     char m_formatBuffer[bufferSize];
+    uint32_t* m_startPC;
+    uint32_t* m_endPC;
     uint32_t* m_currentPC;
     uint32_t m_opcode;
     int m_bufferOffset;
+    uintptr_t m_builtConstant { 0 };
 
 private:
     static OpcodeGroup* opcodeTable[32];
@@ -263,7 +265,7 @@ public:
     bool isNeg() { return (op() && rn() == 31); }
     const char* negName() { return sBit() ? "negs" : "neg"; }
     unsigned shift() { return (m_opcode >> 22) & 0x3; }
-    int immediate6() { return (static_cast<int>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
+    int immediate6() { return (static_cast<uint32_t>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
 };
 
 class A64DOpcodeBitfield : public A64DOpcode {
@@ -857,7 +859,7 @@ public:
     bool isMov() { return ((opc() == 1) && (rn() == 31)); }
     unsigned opNumber() { return (opc() << 1) | nBit(); }
     unsigned shift() { return (m_opcode >> 22) & 0x3; }
-    int immediate6() { return (static_cast<int>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
+    int immediate6() { return (static_cast<uint32_t>((m_opcode >> 10) & 0x3f) << 26) >> 26; }
 };
 
 class A64DOpcodeMoveWide : public A64DOpcode {
@@ -871,11 +873,24 @@ public:
     DEFINE_STATIC_FORMAT(A64DOpcodeMoveWide, thisObj);
 
     const char* format();
+    bool isValid();
 
     const char* opName() { return s_opNames[opc()]; }
     unsigned opc() { return (m_opcode >> 29) & 0x3; }
     unsigned hw() { return (m_opcode >> 21) & 0x3; }
     unsigned immediate16() { return (m_opcode >> 5) & 0xffff; }
+
+private:
+    template<typename Trait> typename Trait::ResultType parse();
+    bool handlePotentialDataPointer(void*);
+    bool handlePotentialPtrTag(uintptr_t);
+
+    // These forwarding functions are needed for MoveWideFormatTrait only.
+    const char* baseFormat() { return A64DOpcode::format(); }
+    const char* formatBuffer() { return m_formatBuffer; }
+
+    friend class MoveWideFormatTrait;
+    friend class MoveWideIsValidTrait;
 };
 
 class A64DOpcodeTestAndBranchImmediate : public A64DOpcode {

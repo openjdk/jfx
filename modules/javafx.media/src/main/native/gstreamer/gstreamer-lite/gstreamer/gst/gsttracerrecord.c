@@ -159,6 +159,7 @@ gst_tracer_record_init (GstTracerRecord * self)
  *
  * Create a new tracer record. The record instance can be used to efficiently
  * log entries using gst_tracer_record_log().
+ * %NULL terminator required after the last argument.
  *
  * The @name without the ".class" suffix will be used for the log records.
  * There must be fields for each value that gets logged where the field name is

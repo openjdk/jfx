@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-const char* kBlobProtocol = "blob";
+static constexpr auto kBlobProtocol = "blob"_s;
 
 URL BlobURL::createPublicURL(SecurityOrigin* securityOrigin)
 {
@@ -51,7 +51,7 @@ URL BlobURL::createPublicURL(SecurityOrigin* securityOrigin)
 
 URL BlobURL::createInternalURL()
 {
-    return createBlobURL("blobinternal://");
+    return createBlobURL("blobinternal://"_s);
 }
 
 static const Document* blobOwner(const SecurityOrigin& blobOrigin)
@@ -89,11 +89,75 @@ bool BlobURL::isSecureBlobURL(const URL& url)
     return SecurityOrigin::isSecure(url);
 }
 
-URL BlobURL::createBlobURL(const String& originString)
+URL BlobURL::createBlobURL(StringView originString)
 {
     ASSERT(!originString.isEmpty());
-    String urlString = "blob:" + originString + '/' + createCanonicalUUIDString();
+    String urlString = makeString("blob:"_s, originString, '/', UUID::createVersion4());
     return URL({ }, urlString);
+}
+
+BlobURLHandle::BlobURLHandle(const BlobURLHandle& other)
+    : m_url(other.m_url.isolatedCopy())
+{
+    registerBlobURLHandleIfNecessary();
+}
+
+BlobURLHandle::BlobURLHandle(const URL& url)
+    : m_url(url.isolatedCopy())
+{
+    ASSERT(m_url.protocolIsBlob());
+    registerBlobURLHandleIfNecessary();
+}
+
+BlobURLHandle::~BlobURLHandle()
+{
+    unregisterBlobURLHandleIfNecessary();
+}
+
+void BlobURLHandle::registerBlobURLHandleIfNecessary()
+{
+    if (m_url.protocolIsBlob())
+        ThreadableBlobRegistry::registerBlobURLHandle(m_url);
+}
+
+void BlobURLHandle::unregisterBlobURLHandleIfNecessary()
+{
+    if (m_url.protocolIsBlob())
+        ThreadableBlobRegistry::unregisterBlobURLHandle(m_url);
+}
+
+BlobURLHandle& BlobURLHandle::operator=(const BlobURLHandle& other)
+{
+    if (this == &other)
+        return *this;
+
+    unregisterBlobURLHandleIfNecessary();
+    m_url = other.m_url.isolatedCopy();
+    registerBlobURLHandleIfNecessary();
+
+    return *this;
+}
+
+void BlobURLHandle::clear()
+{
+    unregisterBlobURLHandleIfNecessary();
+    m_url = { };
+}
+
+BlobURLHandle& BlobURLHandle::operator=(BlobURLHandle&& other)
+{
+    unregisterBlobURLHandleIfNecessary();
+    m_url = std::exchange(other.m_url, { });
+    return *this;
+}
+
+BlobURLHandle& BlobURLHandle::operator=(const URL& url)
+{
+    ASSERT(url.protocolIsBlob());
+    unregisterBlobURLHandleIfNecessary();
+    m_url = url.isolatedCopy();
+    registerBlobURLHandleIfNecessary();
+    return *this;
 }
 
 } // namespace WebCore

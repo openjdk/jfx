@@ -514,9 +514,6 @@ gboolean disableGrab = FALSE;
 static gboolean configure_transparent_window(GtkWidget *window);
 static void configure_opaque_window(GtkWidget *window);
 
-static void grab_mouse_device(GdkDevice *device, DeviceGrabContext *context);
-static void ungrab_mouse_device(GdkDevice *device);
-
 gint glass_gdk_visual_get_depth (GdkVisual * visual)
 {
     // gdk_visual_get_depth is GTK 2.2 +
@@ -535,28 +532,7 @@ GdkScreen * glass_gdk_window_get_screen(GdkWindow * gdkWindow)
 
 gboolean
 glass_gdk_mouse_devices_grab(GdkWindow *gdkWindow) {
-#ifdef GLASS_GTK3_DISABLED
-//this GTK 3 approach has synchronization issues covered in JDK-8176844
-// As the approach is also deprecated in GTK 3.20+, revert back to using GTK 2 mechanism
-
-        if (disableGrab) {
-            return TRUE;
-        }
-        DeviceGrabContext context;
-        GList *devices = gdk_device_manager_list_devices (
-                             gdk_display_get_device_manager(
-                                 gdk_display_get_default()),
-                                 GDK_DEVICE_TYPE_MASTER);
-
-        context.window = gdkWindow;
-        context.grabbed = FALSE;
-        g_list_foreach(devices, (GFunc) grab_mouse_device, &context);
-        g_list_free(devices);
-
-        return context.grabbed;
-#else
     return glass_gdk_mouse_devices_grab_with_cursor(gdkWindow, NULL, TRUE);
-#endif
 }
 
 gboolean
@@ -564,6 +540,7 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
     if (disableGrab) {
         return TRUE;
     }
+
     GdkGrabStatus status = gdk_pointer_grab(gdkWindow, owner_events, (GdkEventMask)
                                             (GDK_POINTER_MOTION_MASK
                                                 | GDK_POINTER_MOTION_HINT_MASK
@@ -580,18 +557,7 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
 
 void
 glass_gdk_mouse_devices_ungrab() {
-#ifdef GLASS_GTK3_DISABLED
-//this GTK 3 approach has synchronization issues covered in JDK-8176844
-// As the approach is also deprecated in GTK 3.20+, revert back to using GTK 2 mechanism
-        GList *devices = gdk_device_manager_list_devices(
-                             gdk_display_get_device_manager(
-                                 gdk_display_get_default()),
-                                 GDK_DEVICE_TYPE_MASTER);
-        g_list_foreach(devices, (GFunc) ungrab_mouse_device, NULL);
-        g_list_free(devices);
-#else
-        gdk_pointer_ungrab(GDK_CURRENT_TIME);
-#endif
+    gdk_pointer_ungrab(GDK_CURRENT_TIME);
 }
 
 void
@@ -624,6 +590,7 @@ glass_gdk_device_ungrab(GdkDevice *device) {
         gdk_pointer_ungrab(GDK_CURRENT_TIME);
 #endif
 }
+
 
 GdkWindow *
 glass_gdk_device_get_window_at_position(GdkDevice *device, gint *x, gint *y) {
@@ -731,49 +698,6 @@ glass_configure_window_transparency(GtkWidget *window, gboolean transparent) {
 
     configure_opaque_window(window);
     return FALSE;
-}
-
-static void
-grab_mouse_device(GdkDevice *device, DeviceGrabContext *context) {
-    GdkInputSource source = gdk_device_get_source(device);
-    if (source == GDK_SOURCE_MOUSE) {
-#ifdef GLASS_GTK3
-        GdkGrabStatus status = gdk_device_grab(device,
-                                               context->window,
-                                               GDK_OWNERSHIP_NONE,
-                                               TRUE,
-                                               GDK_FILTERED_EVENTS_MASK,
-                                               NULL,
-                                               GDK_CURRENT_TIME);
-#else
-        GdkGrabStatus status = GDK_GRAB_SUCCESS;
-/* FIXME reachable by 2?
-        GdkGrabStatus status = gdk_device_grab(device,
-                                               context->window,
-                                               GDK_OWNERSHIP_NONE,
-                                               TRUE,
-                                               GDK_FILTERED_EVENTS_MASK,
-                                               NULL,
-                                               GDK_CURRENT_TIME);
-                                       */
-#endif
-        if (status == GDK_GRAB_SUCCESS) {
-            context->grabbed = TRUE;
-        }
-    }
-}
-
-static void
-ungrab_mouse_device(GdkDevice *device) {
-#ifdef GLASS_GTK3
-    GdkInputSource source = gdk_device_get_source(device);
-    if (source == GDK_SOURCE_MOUSE) {
-        gdk_device_ungrab(device, GDK_CURRENT_TIME);
-    }
-#else
-    (void) device;
-    // not used on the GTK2 path
-#endif
 }
 
 GdkPixbuf *

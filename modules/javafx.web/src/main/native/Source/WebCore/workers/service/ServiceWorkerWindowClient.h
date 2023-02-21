@@ -42,11 +42,12 @@ public:
         return adoptRef(*new ServiceWorkerWindowClient(context, WTFMove(data)));
     }
 
-    VisibilityState visibilityState() const;
-    bool isFocused() const;
+    VisibilityState visibilityState() const { return data().isVisible ? VisibilityState::Visible : VisibilityState::Hidden; }
+    bool focused() const { return data().isFocused; }
+    const Vector<String>& ancestorOrigins() const { return data().ancestorOrigins; }
 
-    void focus(Ref<DeferredPromise>&&);
-    void navigate(const String& url, Ref<DeferredPromise>&&);
+    void focus(ScriptExecutionContext&, Ref<DeferredPromise>&&);
+    void navigate(ScriptExecutionContext&, const String& url, Ref<DeferredPromise>&&);
 
 private:
     ServiceWorkerWindowClient(ServiceWorkerGlobalScope&, ServiceWorkerClientData&&);

@@ -120,7 +120,7 @@ gst_video_meta_transform (GstBuffer * dest, GstMeta * meta,
 GType
 gst_video_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_MEMORY_STR,
     GST_META_TAG_VIDEO_COLORSPACE_STR,
@@ -577,7 +577,7 @@ gst_video_crop_meta_transform (GstBuffer * dest, GstMeta * meta,
 GType
 gst_video_crop_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_VIDEO_SIZE_STR,
     GST_META_TAG_VIDEO_ORIENTATION_STR, NULL
@@ -638,7 +638,7 @@ gst_video_meta_transform_scale_get_quark (void)
 GType
 gst_video_gl_texture_upload_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_MEMORY_STR, NULL };
 
@@ -806,7 +806,7 @@ gst_video_gl_texture_upload_meta_upload (GstVideoGLTextureUploadMeta * meta,
 GType
 gst_video_region_of_interest_meta_api_get_type (void)
 {
-  static volatile GType type;
+  static GType type;
   static const gchar *tags[] =
       { GST_META_TAG_VIDEO_STR, GST_META_TAG_VIDEO_ORIENTATION_STR,
     GST_META_TAG_VIDEO_SIZE_STR, NULL
@@ -1064,7 +1064,7 @@ gst_video_region_of_interest_meta_get_param (GstVideoRegionOfInterestMeta *
 GType
 gst_video_time_code_meta_api_get_type (void)
 {
-  static volatile GType type;
+  static GType type;
 
   if (g_once_init_enter (&type)) {
     static const gchar *tags[] = { NULL };

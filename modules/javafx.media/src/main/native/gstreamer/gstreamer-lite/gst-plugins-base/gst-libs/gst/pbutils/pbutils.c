@@ -61,6 +61,26 @@
 
 #include "gst/gst-i18n-plugin.h"
 
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT gst_pb_utils_ensure_debug_category()
+
+static GstDebugCategory *
+gst_pb_utils_ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    GstDebugCategory *cat = NULL;
+
+    GST_DEBUG_CATEGORY_INIT (cat, "pbutils", 0, "GStreamer Plugins Base utils");
+
+    g_once_init_leave (&cat_gonce, (gsize) cat);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#endif /* GST_DISABLE_GST_DEBUG */
+
 static gpointer
 _init_locale_text_domain (gpointer data)
 {

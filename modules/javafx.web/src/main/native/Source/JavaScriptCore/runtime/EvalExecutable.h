@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExecutableToCodeBlockEdge.h"
 #include "GlobalExecutable.h"
 #include "UnlinkedEvalCodeBlock.h"
 
@@ -39,9 +38,14 @@ public:
 
     static void destroy(JSCell*);
 
-    EvalCodeBlock* codeBlock()
+    EvalCodeBlock* codeBlock() const
     {
-        return bitwise_cast<EvalCodeBlock*>(ExecutableToCodeBlockEdge::unwrap(m_evalCodeBlock.get()));
+        return bitwise_cast<EvalCodeBlock*>(Base::codeBlock());
+    }
+
+    UnlinkedEvalCodeBlock* unlinkedCodeBlock() const
+    {
+        return bitwise_cast<UnlinkedEvalCodeBlock*>(Base::unlinkedCodeBlock());
     }
 
     Ref<JITCode> generatedJITCode()
@@ -55,19 +59,17 @@ public:
     }
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.evalExecutableSpace<mode>();
     }
 
     DECLARE_INFO;
 
-    ExecutableInfo executableInfo() const { return ExecutableInfo(usesEval(), false, PrivateBrandRequirement::None, false, ConstructorKind::None, JSParserScriptMode::Classic, SuperBinding::NotNeeded, SourceParseMode::ProgramMode, derivedContextType(), needsClassFieldInitializer(), isArrowFunctionContext(), false, evalContextType()); }
-
-    unsigned numVariables() { return m_unlinkedEvalCodeBlock->numVariables(); }
-    unsigned numFunctionHoistingCandidates() { return m_unlinkedEvalCodeBlock->numFunctionHoistingCandidates(); }
-    unsigned numTopLevelFunctionDecls() { return m_unlinkedEvalCodeBlock->numberOfFunctionDecls(); }
-    bool allowDirectEvalCache() const { return m_unlinkedEvalCodeBlock->allowDirectEvalCache(); }
+    unsigned numVariables() { return unlinkedCodeBlock()->numVariables(); }
+    unsigned numFunctionHoistingCandidates() { return unlinkedCodeBlock()->numFunctionHoistingCandidates(); }
+    unsigned numTopLevelFunctionDecls() { return unlinkedCodeBlock()->numberOfFunctionDecls(); }
+    bool allowDirectEvalCache() const { return unlinkedCodeBlock()->allowDirectEvalCache(); }
     NeedsClassFieldInitializer needsClassFieldInitializer() const { return static_cast<NeedsClassFieldInitializer>(m_needsClassFieldInitializer); }
     PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
@@ -84,8 +86,6 @@ protected:
     unsigned m_needsClassFieldInitializer : 1;
     unsigned m_privateBrandRequirement : 1;
 
-    WriteBarrier<ExecutableToCodeBlockEdge> m_evalCodeBlock;
-    WriteBarrier<UnlinkedEvalCodeBlock> m_unlinkedEvalCodeBlock;
     std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
 };
 

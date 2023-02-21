@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -113,14 +113,14 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Font> fontMirror = null;
     private StyleableProperty<Font> fontMirror() {
         if (fontMirror == null) {
-            fontMirror = new StyleablePropertyMirror<Font>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty<Font>)(WritableValue<Font>)labeled.fontProperty());
+            fontMirror = new StyleablePropertyMirror<>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty<Font>)(WritableValue<Font>)labeled.fontProperty());
             fontProperty().addListener(fontMirror);
         }
         return fontMirror;
     }
 
     private static final CssMetaData<LabeledText,Font> FONT =
-        new FontCssMetaData<LabeledText>("-fx-font", Font.getDefault()) {
+        new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
         @Override
         public boolean isSettable(LabeledText node) {
@@ -136,14 +136,14 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Paint> fillMirror;
     private StyleableProperty<Paint> fillMirror() {
         if (fillMirror == null) {
-            fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty<Paint>)(WritableValue<Paint>)labeled.textFillProperty());
+            fillMirror = new StyleablePropertyMirror<>(FILL, "fillMirror", Color.BLACK, (StyleableProperty<Paint>)(WritableValue<Paint>)labeled.textFillProperty());
             fillProperty().addListener(fillMirror);
         }
         return fillMirror;
     }
 
     private static final CssMetaData<LabeledText,Paint> FILL =
-        new CssMetaData<LabeledText,Paint>("-fx-fill",
+        new CssMetaData<>("-fx-fill",
             PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -160,15 +160,15 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<TextAlignment> textAlignmentMirror;
     private StyleableProperty<TextAlignment> textAlignmentMirror() {
         if (textAlignmentMirror == null) {
-            textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty<TextAlignment>)(WritableValue<TextAlignment>)labeled.textAlignmentProperty());
+            textAlignmentMirror = new StyleablePropertyMirror<>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty<TextAlignment>)(WritableValue<TextAlignment>)labeled.textAlignmentProperty());
             textAlignmentProperty().addListener(textAlignmentMirror);
         }
         return textAlignmentMirror;
     }
 
     private static final CssMetaData<LabeledText,TextAlignment> TEXT_ALIGNMENT =
-        new CssMetaData<LabeledText,TextAlignment>("-fx-text-alignment",
-        new EnumConverter<TextAlignment>(TextAlignment.class),
+        new CssMetaData<>("-fx-text-alignment",
+        new EnumConverter<>(TextAlignment.class),
         TextAlignment.LEFT) {
 
             @Override
@@ -185,14 +185,14 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Boolean> underlineMirror;
     private StyleableProperty<Boolean> underlineMirror() {
         if (underlineMirror == null) {
-            underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)(WritableValue<Boolean>)labeled.underlineProperty());
+            underlineMirror = new StyleablePropertyMirror<>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)labeled.underlineProperty());
             underlineProperty().addListener(underlineMirror);
         }
         return underlineMirror;
     }
 
     private static final CssMetaData<LabeledText,Boolean> UNDERLINE =
-            new CssMetaData<LabeledText,Boolean>("-fx-underline",
+            new CssMetaData<>("-fx-underline",
             BooleanConverter.getInstance(),
             Boolean.FALSE) {
 
@@ -210,14 +210,14 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Number> lineSpacingMirror;
     private StyleableProperty<Number> lineSpacingMirror() {
         if (lineSpacingMirror == null) {
-            lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)(WritableValue<Number>)labeled.lineSpacingProperty());
+            lineSpacingMirror = new StyleablePropertyMirror<>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)labeled.lineSpacingProperty());
             lineSpacingProperty().addListener(lineSpacingMirror);
         }
         return lineSpacingMirror;
     }
 
     private static final CssMetaData<LabeledText,Number> LINE_SPACING =
-        new CssMetaData<LabeledText,Number>("-fx-line-spacing",
+        new CssMetaData<>("-fx-line-spacing",
             SizeConverter.getInstance(),
                 0) {
 
@@ -236,7 +236,7 @@ public class LabeledText extends Text {
     static {
 
        final List<CssMetaData<? extends Styleable, ?>> styleables =
-           new ArrayList<CssMetaData<? extends Styleable, ?>>(Text.getClassCssMetaData());
+           new ArrayList<>(Text.getClassCssMetaData());
 
        for (int n=0,nMax=styleables.size(); n<nMax; n++) {
            final String prop = styleables.get(n).getProperty();

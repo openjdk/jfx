@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
-import javafx.scene.Node;
 
 public class StubScene implements TKScene {
 
@@ -48,38 +47,47 @@ public class StubScene implements TKScene {
         // ignore
     }
 
+    @Override
     public void waitForRenderingToComplete() {
         // ignore
     }
 
+    @Override
     public void waitForSynchronization() {
         //ignore
     }
 
+    @Override
     public void releaseSynchronization(boolean updateState) {
         // ignore
     }
 
+    @Override
     public void setTKSceneListener(TKSceneListener listener) {
         this.listener = listener;
     }
 
+    @Override
     public void setRoot(NGNode root) {
         // ignore
     }
 
+    @Override
     public void markDirty() {
         // ignore
     }
 
+    @Override
     public void setCamera(NGCamera ci) {
         camera = ci;
     }
 
+    @Override
     public void setFillPaint(Object fillPaint) {
         // ignore
     }
 
+    @Override
     public void setCursor(Object cursor) {
         this.cursor = cursor;
     }
@@ -88,6 +96,7 @@ public class StubScene implements TKScene {
         return cursor;
     }
 
+    @Override
     public void enableInputMethodEvents(boolean enable) {
         // ignore
     }
@@ -103,6 +112,7 @@ public class StubScene implements TKScene {
         inputMethodCompistionFinishedDelegate = r;
     }
 
+    @Override
     public void entireSceneNeedsRepaint() {
     }
 

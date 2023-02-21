@@ -55,8 +55,8 @@ public:
         bool isComposing;
 
         // Legacy.
-        String keyIdentifier;
-        Optional<unsigned> keyLocation;
+        AtomString keyIdentifier;
+        std::optional<unsigned> keyLocation;
         unsigned charCode;
         unsigned keyCode;
         unsigned which;
@@ -67,12 +67,12 @@ public:
     virtual ~KeyboardEvent();
 
     WEBCORE_EXPORT void initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&,
-        const String& keyIdentifier, unsigned location,
+        const AtomString& keyIdentifier, unsigned location,
         bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey = false);
 
     const String& key() const { return m_key; }
     const String& code() const { return m_code; }
-    const String& keyIdentifier() const { return m_keyIdentifier; }
+    const AtomString& keyIdentifier() const { return m_keyIdentifier; }
     unsigned location() const { return m_location; }
     bool repeat() const { return m_repeat; }
 
@@ -102,13 +102,13 @@ private:
     std::unique_ptr<PlatformKeyboardEvent> m_underlyingPlatformEvent;
     String m_key;
     String m_code;
-    String m_keyIdentifier;
+    AtomString m_keyIdentifier;
     unsigned m_location { DOM_KEY_LOCATION_STANDARD };
     bool m_repeat { false };
     bool m_isComposing { false };
-    Optional<unsigned> m_charCode;
-    Optional<unsigned> m_keyCode;
-    Optional<unsigned> m_which;
+    std::optional<unsigned> m_charCode;
+    std::optional<unsigned> m_keyCode;
+    std::optional<unsigned> m_which;
 
 #if PLATFORM(COCOA)
     // Commands that were sent by AppKit when interpreting the event. Doesn't include input method commands.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,14 +36,13 @@ public class D3DTextureData extends D3DResource.D3DRecord {
     static long estimateSize(int physicalWidth, int physicalHeight,
                              PixelFormat format)
     {
-        return ((long) physicalWidth) * ((long) physicalHeight) *
-               ((long) format.getBytesPerPixelUnit());
+        return (long) physicalWidth * physicalHeight * format.getBytesPerPixelUnit();
     }
 
     static long estimateRTSize(int physicalWidth, int physicalHeight,
                                boolean hasDepth)
     {
-        return ((long) physicalWidth) * ((long) physicalHeight) * 4L;
+        return 4L * physicalWidth * physicalHeight;
     }
 
     D3DTextureData(D3DContext context,

@@ -25,13 +25,16 @@
 
 #pragma once
 
+#include "AnimationFrameRate.h"
 #include "PlatformScreen.h"
-#include <wtf/Forward.h>
-#include <wtf/Optional.h>
+#include <optional>
 
 namespace WebCore {
 
 class DisplayRefreshMonitor;
+class DisplayRefreshMonitorFactory;
+
+struct DisplayUpdate;
 
 class DisplayRefreshMonitorClient {
 public:
@@ -41,20 +44,24 @@ public:
     // Always called on the main thread.
     virtual void displayRefreshFired() = 0;
 
-    virtual RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const = 0;
+    virtual DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const = 0;
 
     PlatformDisplayID displayID() const { return m_displayID.value(); }
     bool hasDisplayID() const { return !!m_displayID; }
     void setDisplayID(PlatformDisplayID displayID) { m_displayID = displayID; }
 
+    void setPreferredFramesPerSecond(FramesPerSecond);
+    FramesPerSecond preferredFramesPerSecond() const { return m_preferredFramesPerSecond; }
+
     void setIsScheduled(bool isScheduled) { m_scheduled = isScheduled; }
     bool isScheduled() const { return m_scheduled; }
 
-    void fireDisplayRefreshIfNeeded();
+    void fireDisplayRefreshIfNeeded(const DisplayUpdate&);
 
 private:
+    std::optional<PlatformDisplayID> m_displayID;
+    FramesPerSecond m_preferredFramesPerSecond { FullSpeedFramesPerSecond };
     bool m_scheduled { false };
-    Optional<PlatformDisplayID> m_displayID;
 };
 
 }

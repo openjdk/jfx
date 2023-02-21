@@ -66,6 +66,7 @@
 #include "gtypes.h"
 #include "gmain.h"
 #include "gprintfint.h"
+#include "gunicode.h"
 #include "gutils.h"
 
 #ifndef G_OS_WIN32
@@ -206,9 +207,20 @@ g_on_error_query (const gchar *prg_name)
   /* MessageBox is allowed on UWP apps only when building against
    * the debug CRT, which will set -D_DEBUG */
 #if defined(_DEBUG) || !defined(G_WINAPI_ONLY_APP)
-  MessageBox (NULL, "g_on_error_query called, program terminating",
-              (prg_name && *prg_name) ? prg_name : NULL,
-              MB_OK|MB_ICONERROR);
+  {
+    WCHAR *caption = NULL;
+
+    if (prg_name && *prg_name)
+      {
+        caption = g_utf8_to_utf16 (prg_name, -1, NULL, NULL, NULL);
+      }
+
+    MessageBoxW (NULL, L"g_on_error_query called, program terminating",
+                 caption,
+                 MB_OK|MB_ICONERROR);
+
+    g_free (caption);
+  }
 #else
   printf ("g_on_error_query called, program '%s' terminating\n",
       (prg_name && *prg_name) ? prg_name : "(null)");
@@ -318,7 +330,10 @@ stack_trace (const char * const *args)
   fd_set fdset;
   fd_set readset;
   struct timeval tv;
-  int sel, idx, state, line_idx;
+  int sel, idx, state;
+#ifdef USE_LLDB
+  int line_idx;
+#endif
   char buffer[BUFSIZE];
   char c;
 
@@ -337,7 +352,11 @@ stack_trace (const char * const *args)
       /* Save stderr for printing failure below */
       int old_err = dup (2);
       if (old_err != -1)
-        fcntl (old_err, F_SETFD, fcntl (old_err, F_GETFD) | FD_CLOEXEC);
+        {
+          int getfd = fcntl (old_err, F_GETFD);
+          if (getfd != -1)
+            (void) fcntl (old_err, F_SETFD, getfd | FD_CLOEXEC);
+        }
 
       close (0); dup (in_fd[0]);   /* set the stdin to the in pipe */
       close (1); dup (out_fd[1]);  /* set the stdout to the out pipe */
@@ -375,7 +394,9 @@ stack_trace (const char * const *args)
 #endif
 
   idx = 0;
+#ifdef USE_LLDB
   line_idx = 0;
+#endif
   state = 0;
 
   while (1)
@@ -392,7 +413,10 @@ stack_trace (const char * const *args)
         {
           if (read (out_fd[0], &c, 1))
             {
+#ifdef USE_LLDB
               line_idx += 1;
+#endif
+
               switch (state)
                 {
                 case 0:
@@ -416,7 +440,9 @@ stack_trace (const char * const *args)
                       _g_fprintf (stdout, "%s", buffer);
                       state = 0;
                       idx = 0;
+#ifdef USE_LLDB
                       line_idx = 0;
+#endif
                     }
                   break;
                 default:

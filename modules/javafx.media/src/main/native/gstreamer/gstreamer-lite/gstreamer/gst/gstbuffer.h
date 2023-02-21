@@ -51,7 +51,7 @@ typedef struct _GstBufferPool GstBufferPool;
  * GST_BUFFER_FLAGS:
  * @buf: a #GstBuffer.
  *
- * A flags word containing #GstBufferFlags flags set on this buffer.
+ * Returns a flags word containing #GstBufferFlags flags set on this buffer.
  */
 #define GST_BUFFER_FLAGS(buf)                   GST_MINI_OBJECT_FLAGS(buf)
 /**
@@ -84,25 +84,27 @@ typedef struct _GstBufferPool GstBufferPool;
  * GST_BUFFER_PTS:
  * @buf: a #GstBuffer.:
  *
- * The presentation timestamp (pts) in nanoseconds (as a #GstClockTime)
+ * Gets the presentation timestamp (pts) in nanoseconds (as a #GstClockTime)
  * of the data in the buffer. This is the timestamp when the media should be
  * presented to the user.
+ *
  * Value will be %GST_CLOCK_TIME_NONE if the pts is unknown.
  */
 #define GST_BUFFER_PTS(buf)                     (GST_BUFFER_CAST(buf)->pts)
 /**
  * GST_BUFFER_DTS:
- * @buf: a #GstBuffer.:
+ * @buf: a #GstBuffer.
  *
- * The decoding timestamp (dts) in nanoseconds (as a #GstClockTime)
+ * Gets the decoding timestamp (dts) in nanoseconds (as a #GstClockTime)
  * of the data in the buffer. This is the timestamp when the media should be
  * decoded or processed otherwise.
+ *
  * Value will be %GST_CLOCK_TIME_NONE if the dts is unknown.
  */
 #define GST_BUFFER_DTS(buf)                     (GST_BUFFER_CAST(buf)->dts)
 /**
  * GST_BUFFER_DTS_OR_PTS:
- * @buf: a #GstBuffer.:
+ * @buf: a #GstBuffer.
  *
  * Returns the buffer decoding timestamp (dts) if valid, else the buffer
  * presentation time (pts)
@@ -114,7 +116,8 @@ typedef struct _GstBufferPool GstBufferPool;
  * GST_BUFFER_DURATION:
  * @buf: a #GstBuffer.
  *
- * The duration in nanoseconds (as a #GstClockTime) of the data in the buffer.
+ * Gets the duration in nanoseconds (as a #GstClockTime) of the data in the buffer.
+ *
  * Value will be %GST_CLOCK_TIME_NONE if the duration is unknown.
  */
 #define GST_BUFFER_DURATION(buf)                (GST_BUFFER_CAST(buf)->duration)
@@ -122,14 +125,14 @@ typedef struct _GstBufferPool GstBufferPool;
  * GST_BUFFER_OFFSET:
  * @buf: a #GstBuffer.
  *
- * The offset in the source file of the beginning of this buffer.
+ * Gets the offset in the source file of the beginning of this buffer.
  */
 #define GST_BUFFER_OFFSET(buf)                  (GST_BUFFER_CAST(buf)->offset)
 /**
  * GST_BUFFER_OFFSET_END:
  * @buf: a #GstBuffer.
  *
- * The offset in the source file of the end of this buffer.
+ * Gets the offset in the source file of the end of this buffer.
  */
 #define GST_BUFFER_OFFSET_END(buf)              (GST_BUFFER_CAST(buf)->offset_end)
 
@@ -211,14 +214,6 @@ typedef struct _GstBufferPool GstBufferPool;
  * @GST_BUFFER_FLAG_DELTA_UNIT:    this unit cannot be decoded independently.
  * @GST_BUFFER_FLAG_TAG_MEMORY:    this flag is set when memory of the buffer
  *                                 is added/removed
- * @GST_BUFFER_FLAG_SYNC_AFTER:    Elements which write to disk or permanent
- *                                 storage should ensure the data is synced after
- *                                 writing the contents of this buffer. (Since: 1.6)
- * @GST_BUFFER_FLAG_NON_DROPPABLE: This buffer is important and should not be dropped.
- *                                 This can be used to mark important buffers, e.g. to flag
- *                                 RTP packets carrying keyframes or codec setup data for RTP
- *                                 Forward Error Correction purposes, or to prevent still video
- *                                 frames from being dropped by elements due to QoS. (Since: 1.14)
  * @GST_BUFFER_FLAG_LAST:          additional media specific flags can be added starting from
  *                                 this flag.
  *
@@ -236,7 +231,29 @@ typedef enum {
   GST_BUFFER_FLAG_DROPPABLE     = (GST_MINI_OBJECT_FLAG_LAST << 8),
   GST_BUFFER_FLAG_DELTA_UNIT    = (GST_MINI_OBJECT_FLAG_LAST << 9),
   GST_BUFFER_FLAG_TAG_MEMORY    = (GST_MINI_OBJECT_FLAG_LAST << 10),
+
+  /**
+   * GST_BUFFER_FLAG_SYNC_AFTER:
+   *
+   * Elements which write to disk or permanent storage should ensure the data
+   * is synced after writing the contents of this buffer.
+   *
+   * Since: 1.6
+   */
   GST_BUFFER_FLAG_SYNC_AFTER    = (GST_MINI_OBJECT_FLAG_LAST << 11),
+
+  /**
+   * GST_BUFFER_FLAG_NON_DROPPABLE:
+   *
+   * This buffer is important and should not be dropped.
+   *
+   * This can be used to mark important buffers, e.g. to flag RTP packets
+   * carrying keyframes or codec setup data for RTP Forward Error Correction
+   * purposes, or to prevent still video frames from being dropped by elements
+   * due to QoS.
+   *
+   * Since: 1.14
+   */
   GST_BUFFER_FLAG_NON_DROPPABLE = (GST_MINI_OBJECT_FLAG_LAST << 12),
 
   GST_BUFFER_FLAG_LAST          = (GST_MINI_OBJECT_FLAG_LAST << 16)
@@ -301,8 +318,12 @@ GstBuffer * gst_buffer_new_wrapped_full    (GstMemoryFlags flags, gpointer data,
                                             GDestroyNotify notify);
 GST_API
 GstBuffer * gst_buffer_new_wrapped         (gpointer data, gsize size);
+
 GST_API
 GstBuffer * gst_buffer_new_wrapped_bytes   (GBytes * bytes);
+
+GST_API
+GstBuffer * gst_buffer_new_memdup           (gconstpointer data, gsize size);
 
 /* memory blocks */
 
@@ -470,8 +491,6 @@ GstBuffer * gst_buffer_copy_deep (const GstBuffer * buf);
  *   merged
  * @GST_BUFFER_COPY_META: flag indicating that buffer meta should be
  *   copied
- * @GST_BUFFER_COPY_DEEP: flag indicating that memory should always be
- *   copied instead of reffed (Since: 1.2)
  *
  * A set of flags that can be provided to the gst_buffer_copy_into()
  * function to specify which items should be copied.
@@ -483,6 +502,14 @@ typedef enum {
   GST_BUFFER_COPY_META           = (1 << 2),
   GST_BUFFER_COPY_MEMORY         = (1 << 3),
   GST_BUFFER_COPY_MERGE          = (1 << 4),
+
+  /**
+   * GST_BUFFER_COPY_DEEP:
+   *
+   * flag indicating that memory should always be copied instead of reffed
+   *
+   * Since: 1.2
+   */
   GST_BUFFER_COPY_DEEP           = (1 << 5)
 } GstBufferCopyFlags;
 
@@ -621,6 +648,14 @@ gboolean        gst_buffer_foreach_meta         (GstBuffer *buffer,
                                                  GstBufferForeachMetaFunc func,
                                                  gpointer user_data);
 
+GST_API
+GstCustomMeta * gst_buffer_add_custom_meta      (GstBuffer *buffer,
+                                                 const gchar *name);
+
+GST_API
+GstCustomMeta * gst_buffer_get_custom_meta      (GstBuffer *buffer,
+                                                 const gchar *name);
+
 /**
  * gst_value_set_buffer:
  * @v: a #GValue to receive the data
@@ -686,7 +721,7 @@ GType gst_parent_buffer_meta_api_get_type (void);
  * gst_buffer_get_parent_buffer_meta:
  * @b: a #GstBuffer
  *
- * Find and return a #GstParentBufferMeta if one exists on the
+ * Finds and returns a #GstParentBufferMeta if one exists on the
  * buffer
  */
 #define gst_buffer_get_parent_buffer_meta(b) \
@@ -717,10 +752,10 @@ typedef struct _GstReferenceTimestampMeta GstReferenceTimestampMeta;
  * captured.
  *
  * The reference is stored as a #GstCaps in @reference. Examples of valid
- * references would be "timestamp/x-drivername-stream" for timestamps that are locally
- * generated by some driver named "drivername" when generating the stream,
- * e.g. based on a frame counter, or "timestamp/x-ntp, host=pool.ntp.org,
- * port=123" for timestamps based on a specific NTP server.
+ * references would be `timestamp/x-drivername-stream` for timestamps that are locally
+ * generated by some driver named `drivername` when generating the stream,
+ * e.g. based on a frame counter, or `timestamp/x-ntp, host=pool.ntp.org,
+ * port=123` for timestamps based on a specific NTP server.
  *
  * Since: 1.14
  */

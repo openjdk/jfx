@@ -29,7 +29,8 @@
     DoNotCheckConstants,
     GenerateIsReachable=ReachableFromDOMWindow,
     InterfaceName=ApplicationCache,
-    Exposed=Window
+    Exposed=Window,
+    EnabledByQuirk=shouldEnableApplicationCache
 ] interface DOMApplicationCache : EventTarget {
     // update status
     const unsigned short UNCACHED = 0;
@@ -40,8 +41,8 @@
     const unsigned short OBSOLETE = 5;
     readonly attribute unsigned short status;
 
-    [MayThrowException] undefined update();
-    [MayThrowException] undefined swapCache();
+    undefined update();
+    undefined swapCache();
     undefined abort();
 
     attribute EventHandler onchecking;

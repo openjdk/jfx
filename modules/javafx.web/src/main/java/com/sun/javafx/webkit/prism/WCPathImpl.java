@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,6 +64,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         hasCP = wcp.hasCP;
     }
 
+    @Override
     public void addRect(double x, double y, double w, double h) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).addRect({1},{2},{3},{4})",
@@ -74,6 +75,7 @@ final class WCPathImpl extends WCPath<Path2D> {
                 (float)x, (float)y, (float)w, (int)h, 0.0f, 0.0f), false);
     }
 
+    @Override
     public void addEllipse(double x, double y, double w, double h)
     {
         if (log.isLoggable(Level.FINE)) {
@@ -84,6 +86,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.append(new Ellipse2D((float)x, (float)y, (float)w, (float)h), false);
     }
 
+    @Override
     public void addArcTo(double x1, double y1, double x2, double y2, double r)
     {
         if (log.isLoggable(Level.FINE)) {
@@ -102,6 +105,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.append(arc, true);
     }
 
+    @Override
     public void addArc(double x, double y, double r, double sa,
                        double ea, boolean aclockwise)
     {
@@ -158,6 +162,7 @@ final class WCPathImpl extends WCPath<Path2D> {
                               (float) Math.toDegrees(startAngle - newEndAngle), Arc2D.OPEN), true);
     }
 
+    @Override
     public boolean contains(int rule, double x, double y) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).contains({1},{2},{3})",
@@ -177,6 +182,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         return new WCRectangle(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
     }
 
+    @Override
     public void clear() {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).clear()", getID());
@@ -185,6 +191,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.reset();
     }
 
+    @Override
     public void moveTo(double x, double y) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).moveTo({1},{2})",
@@ -194,6 +201,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.moveTo((float)x, (float)y);
     }
 
+    @Override
     public void addLineTo(double x, double y) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).addLineTo({1},{2})",
@@ -203,6 +211,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.lineTo((float)x, (float)y);
     }
 
+    @Override
     public void addQuadCurveTo(double x0, double y0, double x1, double y1) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).addQuadCurveTo({1},{2},{3},{4})",
@@ -212,6 +221,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.quadTo((float)x0, (float)y0, (float)x1, (float)y1);
     }
 
+    @Override
     public void addBezierCurveTo(double x0, double y0, double x1, double y1,
                                  double x2, double y2) {
         if (log.isLoggable(Level.FINE)) {
@@ -223,6 +233,7 @@ final class WCPathImpl extends WCPath<Path2D> {
                      (float)x2, (float)y2);
     }
 
+    @Override
     public void addPath(WCPath p) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).addPath({1})",
@@ -232,6 +243,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.append(((WCPathImpl)p).path, false);
     }
 
+    @Override
     public void closeSubpath() {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).closeSubpath()", getID());
@@ -239,18 +251,22 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.closePath();
     }
 
+    @Override
     public boolean isEmpty() {
         return !hasCP;
     }
 
+    @Override
     public int getWindingRule() {
         return 1 - this.path.getWindingRule(); // convert prism to webkit
     }
 
+    @Override
     public void setWindingRule(int rule) {
         this.path.setWindingRule(1 - rule); // convert webkit to prism
     }
 
+    @Override
     public Path2D getPlatformPath() {
         if (log.isLoggable(Level.FINE)) {
             log.fine("WCPathImpl({0}).getPath() BEGIN=====", getID());
@@ -286,6 +302,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         return path;
     }
 
+    @Override
     public WCPathIterator getPathIterator() {
         final PathIterator pi = path.getPathIterator(null);
         return new WCPathIterator() {
@@ -312,6 +329,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         };
     }
 
+    @Override
     public void translate(double x, double y)
     {
         if (log.isLoggable(Level.FINE)) {
@@ -321,6 +339,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.transform(BaseTransform.getTranslateInstance(x, y));
     }
 
+    @Override
     public void transform(double mxx, double myx,
                           double mxy, double myy,
                           double mxt, double myt)

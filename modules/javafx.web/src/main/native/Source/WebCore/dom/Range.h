@@ -115,6 +115,8 @@ public:
     String debugDescription() const;
 #endif
 
+    void visitNodesConcurrently(JSC::AbstractSlotVisitor&) const;
+
     enum ActionType : uint8_t { Delete, Extract, Clone };
 
 private:
@@ -134,11 +136,11 @@ private:
 
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const Range&);
 WEBCORE_EXPORT SimpleRange makeSimpleRange(const Ref<Range>&);
-WEBCORE_EXPORT Optional<SimpleRange> makeSimpleRange(const Range*);
-WEBCORE_EXPORT Optional<SimpleRange> makeSimpleRange(const RefPtr<Range>&);
+WEBCORE_EXPORT std::optional<SimpleRange> makeSimpleRange(const Range*);
+WEBCORE_EXPORT std::optional<SimpleRange> makeSimpleRange(const RefPtr<Range>&);
 
 WEBCORE_EXPORT Ref<Range> createLiveRange(const SimpleRange&);
-WEBCORE_EXPORT RefPtr<Range> createLiveRange(const Optional<SimpleRange>&);
+WEBCORE_EXPORT RefPtr<Range> createLiveRange(const std::optional<SimpleRange>&);
 
 } // namespace WebCore
 

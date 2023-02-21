@@ -3,6 +3,7 @@
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
+ * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,14 +30,10 @@ namespace WebCore {
 
 class SpotLightSource : public LightSource {
 public:
-    static Ref<SpotLightSource> create(const FloatPoint3D& position,
-        const FloatPoint3D& direction, float specularExponent, float limitingConeAngle)
-    {
-        return adoptRef(*new SpotLightSource(position, direction, specularExponent, limitingConeAngle));
-    }
+    WEBCORE_EXPORT static Ref<SpotLightSource> create(const FloatPoint3D& position, const FloatPoint3D& pointsAt, float specularExponent, float limitingConeAngle);
 
-    const FloatPoint3D& position() const { return m_userSpacePosition; }
-    const FloatPoint3D& direction() const { return m_userSpacePointsAt; }
+    const FloatPoint3D& position() const { return m_position; }
+    const FloatPoint3D& direction() const { return m_pointsAt; }
     float specularExponent() const { return m_specularExponent; }
     float limitingConeAngle() const { return m_limitingConeAngle; }
 
@@ -50,29 +47,60 @@ public:
     bool setSpecularExponent(float) override;
     bool setLimitingConeAngle(float) override;
 
-    void initPaintingData(const FilterEffect&, PaintingData&) override;
+    void initPaintingData(const Filter&, const FilterImage& result, PaintingData&) const override;
     ComputedLightingData computePixelLightingData(const PaintingData&, int x, int y, float z) const final;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&) const override;
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<Ref<SpotLightSource>> decode(Decoder&);
+
 private:
-    SpotLightSource(const FloatPoint3D& position, const FloatPoint3D& direction, float specularExponent, float limitingConeAngle)
-        : LightSource(LS_SPOT)
-        , m_userSpacePosition(position)
-        , m_userSpacePointsAt(direction)
-        , m_specularExponent(specularExponent)
-        , m_limitingConeAngle(limitingConeAngle)
-    {
-    }
+    SpotLightSource(const FloatPoint3D& position, const FloatPoint3D& direction, float specularExponent, float limitingConeAngle);
 
-    FloatPoint3D m_userSpacePosition;
-    FloatPoint3D m_userSpacePointsAt;
+    FloatPoint3D m_position;
+    FloatPoint3D m_pointsAt;
 
-    FloatPoint3D m_bufferPosition;
+    mutable FloatPoint3D m_bufferPosition;
 
     float m_specularExponent;
     float m_limitingConeAngle;
 };
+
+template<class Encoder>
+void SpotLightSource::encode(Encoder& encoder) const
+{
+    encoder << m_position;
+    encoder << m_pointsAt;
+    encoder << m_specularExponent;
+    encoder << m_limitingConeAngle;
+}
+
+template<class Decoder>
+std::optional<Ref<SpotLightSource>> SpotLightSource::decode(Decoder& decoder)
+{
+    std::optional<FloatPoint3D> userSpacePosition;
+    decoder >> userSpacePosition;
+    if (!userSpacePosition)
+        return std::nullopt;
+
+    std::optional<FloatPoint3D> userSpacePointsAt;
+    decoder >> userSpacePointsAt;
+    if (!userSpacePointsAt)
+        return std::nullopt;
+
+    std::optional<float> specularExponent;
+    decoder >> specularExponent;
+    if (!specularExponent)
+        return std::nullopt;
+
+    std::optional<float> limitingConeAngle;
+    decoder >> limitingConeAngle;
+    if (!limitingConeAngle)
+        return std::nullopt;
+
+    return SpotLightSource::create(*userSpacePosition, *userSpacePointsAt, *specularExponent, *limitingConeAngle);
+}
 
 } // namespace WebCore
 

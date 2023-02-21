@@ -26,13 +26,28 @@
 
 #pragma once
 
+#include "Document.h"
 #include "FragmentScriptingPermission.h"
 #include "HTMLElementStack.h"
 #include "HTMLFormattingElementList.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/SetForScope.h>
 #include <wtf/Vector.h>
+
+namespace WebCore {
+
+struct AtomStringWithCode {
+    AtomString string;
+    uint64_t code { 0 };
+};
+
+}
+
+namespace WTF {
+template<> struct VectorTraits<WebCore::AtomStringWithCode> : SimpleClassVectorTraits { };
+}
 
 namespace WebCore {
 
@@ -79,12 +94,13 @@ enum WhitespaceMode {
     WhitespaceUnknown
 };
 
-class AtomicHTMLToken;
+class AtomHTMLToken;
 struct CustomElementConstructionData;
 class Document;
 class Element;
 class HTMLFormElement;
 class JSCustomElementInterface;
+class WhitespaceCache;
 
 class HTMLConstructionSite {
     WTF_MAKE_NONCOPYABLE(HTMLConstructionSite);
@@ -98,25 +114,25 @@ public:
     void setDefaultCompatibilityMode();
     void finishedParsing();
 
-    void insertDoctype(AtomicHTMLToken&&);
-    void insertComment(AtomicHTMLToken&&);
-    void insertCommentOnDocument(AtomicHTMLToken&&);
-    void insertCommentOnHTMLHtmlElement(AtomicHTMLToken&&);
-    void insertHTMLElement(AtomicHTMLToken&&);
-    std::unique_ptr<CustomElementConstructionData> insertHTMLElementOrFindCustomElementInterface(AtomicHTMLToken&&);
+    void insertDoctype(AtomHTMLToken&&);
+    void insertComment(AtomHTMLToken&&);
+    void insertCommentOnDocument(AtomHTMLToken&&);
+    void insertCommentOnHTMLHtmlElement(AtomHTMLToken&&);
+    void insertHTMLElement(AtomHTMLToken&&);
+    std::unique_ptr<CustomElementConstructionData> insertHTMLElementOrFindCustomElementInterface(AtomHTMLToken&&);
     void insertCustomElement(Ref<Element>&&, const AtomString& localName, Vector<Attribute>&&);
-    void insertSelfClosingHTMLElement(AtomicHTMLToken&&);
-    void insertFormattingElement(AtomicHTMLToken&&);
-    void insertHTMLHeadElement(AtomicHTMLToken&&);
-    void insertHTMLBodyElement(AtomicHTMLToken&&);
-    void insertHTMLFormElement(AtomicHTMLToken&&, bool isDemoted = false);
-    void insertScriptElement(AtomicHTMLToken&&);
+    void insertSelfClosingHTMLElement(AtomHTMLToken&&);
+    void insertFormattingElement(AtomHTMLToken&&);
+    void insertHTMLHeadElement(AtomHTMLToken&&);
+    void insertHTMLBodyElement(AtomHTMLToken&&);
+    void insertHTMLFormElement(AtomHTMLToken&&, bool isDemoted = false);
+    void insertScriptElement(AtomHTMLToken&&);
     void insertTextNode(const String&, WhitespaceMode = WhitespaceUnknown);
-    void insertForeignElement(AtomicHTMLToken&&, const AtomString& namespaceURI);
+    void insertForeignElement(AtomHTMLToken&&, const AtomString& namespaceURI);
 
-    void insertHTMLHtmlStartTagBeforeHTML(AtomicHTMLToken&&);
-    void insertHTMLHtmlStartTagInBody(AtomicHTMLToken&&);
-    void insertHTMLBodyStartTagInBody(AtomicHTMLToken&&);
+    void insertHTMLHtmlStartTagBeforeHTML(AtomHTMLToken&&);
+    void insertHTMLHtmlStartTagInBody(AtomHTMLToken&&);
+    void insertHTMLBodyStartTagInBody(AtomHTMLToken&&);
 
     void reparent(HTMLElementStack::ElementRecord& newParent, HTMLElementStack::ElementRecord& child);
     // insertAlreadyParsedChild assumes that |child| has already been parsed (i.e., we're just
@@ -125,12 +141,12 @@ public:
     void insertAlreadyParsedChild(HTMLStackItem& newParent, HTMLElementStack::ElementRecord& child);
     void takeAllChildrenAndReparent(HTMLStackItem& newParent, HTMLElementStack::ElementRecord& oldParent);
 
-    Ref<HTMLStackItem> createElementFromSavedToken(HTMLStackItem&);
+    HTMLStackItem createElementFromSavedToken(const HTMLStackItem&);
 
     bool shouldFosterParent() const;
     void fosterParent(Ref<Node>&&);
 
-    Optional<unsigned> indexOfFirstUnopenFormattingElement() const;
+    std::optional<unsigned> indexOfFirstUnopenFormattingElement() const;
     void reconstructTheActiveFormattingElements();
 
     void generateImpliedEndTags();
@@ -148,8 +164,8 @@ public:
     HTMLFormattingElementList& activeFormattingElements() const { return m_activeFormattingElements; }
     bool currentIsRootNode() { return &m_openElements.topNode() == &m_openElements.rootNode(); }
 
-    Element& head() const { return m_head->element(); }
-    HTMLStackItem* headStackItem() const { return m_head.get(); }
+    Element& head() const { return m_head.element(); }
+    HTMLStackItem& headStackItem() { return m_head; }
 
     void setForm(HTMLFormElement*);
     HTMLFormElement* form() const { return m_form.get(); }
@@ -186,11 +202,11 @@ private:
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
-    RefPtr<Element> createHTMLElementOrFindCustomElementInterface(AtomicHTMLToken&, JSCustomElementInterface**);
-    Ref<Element> createHTMLElement(AtomicHTMLToken&);
-    Ref<Element> createElement(AtomicHTMLToken&, const AtomString& namespaceURI);
+    RefPtr<HTMLElement> createHTMLElementOrFindCustomElementInterface(AtomHTMLToken&, JSCustomElementInterface**);
+    Ref<HTMLElement> createHTMLElement(AtomHTMLToken&);
+    Ref<Element> createElement(AtomHTMLToken&, const AtomString& namespaceURI);
 
-    void mergeAttributesFromTokenIntoElement(AtomicHTMLToken&&, Element&);
+    void mergeAttributesFromTokenIntoElement(AtomHTMLToken&&, Element&);
     void dispatchDocumentElementAvailableIfNeeded();
 
     Document& m_document;
@@ -200,7 +216,7 @@ private:
     // and a Document in all other cases.
     ContainerNode& m_attachmentRoot;
 
-    RefPtr<HTMLStackItem> m_head;
+    HTMLStackItem m_head;
     RefPtr<HTMLFormElement> m_form;
     mutable HTMLElementStack m_openElements;
     mutable HTMLFormattingElementList m_activeFormattingElements;
@@ -219,6 +235,27 @@ private:
     unsigned m_maximumDOMTreeDepth;
 
     bool m_inQuirksMode;
+
+    WhitespaceCache& m_whitespaceCache;
+};
+
+class WhitespaceCache {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    WhitespaceCache()
+        : m_atoms(maximumCachedStringLength)
+    {
+    }
+
+    AtomString lookup(const String&, WhitespaceMode);
+
+private:
+    template<WhitespaceMode> uint64_t codeForString(const String&);
+
+    constexpr static uint64_t overflowWhitespaceCode = static_cast<uint64_t>(-1);
+    constexpr static size_t maximumCachedStringLength = 128;
+
+    FixedVector<AtomStringWithCode> m_atoms;
 };
 
 } // namespace WebCore

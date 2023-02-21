@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ public:
      */
     virtual int  ReadBlock(int64_t position, int size) = 0;
 
-    /* CopyBlock copies the datra from whatever internal buffer to the destination.*/
+    /* CopyBlock copies the data from whatever internal buffer to the destination.*/
     virtual void CopyBlock(void* destination, int size) = 0;
 
     /* Detects whether the source is seekable.*/
@@ -71,9 +71,6 @@ public:
 
     /* Get or set properties. Value parameter and return value depends on prop value. */
     virtual int Property(int prop, int value) = 0;
-
-    /* Get stream size. */
-    virtual int GetStreamSize() = 0;
 
     /* Virtual destructor */
     virtual ~CStreamCallbacks() {}

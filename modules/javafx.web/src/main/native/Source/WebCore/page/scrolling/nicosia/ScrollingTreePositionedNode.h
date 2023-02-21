@@ -45,7 +45,11 @@ public:
     static Ref<ScrollingTreePositionedNode> create(ScrollingTree&, ScrollingNodeID);
     virtual ~ScrollingTreePositionedNode();
 
+    Nicosia::CompositionLayer* layer() const { return m_layer.get(); }
+
     const Vector<ScrollingNodeID>& relatedOverflowScrollingNodes() const { return m_relatedOverflowScrollingNodes; }
+
+    FloatSize scrollDeltaSinceLastCommit() const;
 
 private:
     ScrollingTreePositionedNode(ScrollingTree&, ScrollingNodeID);
@@ -53,7 +57,7 @@ private:
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
     void applyLayerPositions() override;
 
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
     Vector<ScrollingNodeID> m_relatedOverflowScrollingNodes;
     AbsolutePositionConstraints m_constraints;

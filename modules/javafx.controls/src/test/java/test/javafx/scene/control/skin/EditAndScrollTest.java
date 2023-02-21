@@ -29,9 +29,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.javafx.tk.Toolkit;
-
-import static javafx.scene.control.skin.VirtualFlowShim.*;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.*;
 import static org.junit.Assert.*;
 
 import javafx.collections.FXCollections;
@@ -42,7 +40,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
@@ -57,14 +54,10 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
-import javafx.scene.control.skin.VirtualContainerBase;
-import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.converter.DefaultStringConverter;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 
 /**
  * Test scrolling while editing, mainly fix for JDK-8272118 - do not cancel edit on mouse click.
@@ -404,56 +397,6 @@ public class EditAndScrollTest {
                 control, scene.getFocusOwner());
     }
 
-
-//----------------- Utility methods (TODO: move into infrastructure)
-
-    /**
-     * Fires a mouse event onto the middle of the vertical scrollbar's track.
-     * @throws IllegalStateException if control's skin is not VirtualContainerBase
-     */
-    public static void fireMouseOnVerticalTrack(Control control) {
-        ScrollBar scrollBar = getVerticalScrollBar(control);
-        Region track = (Region) scrollBar.lookup(".track");
-        MouseEventFirer firer = new MouseEventFirer(track, true);
-        firer.fireMousePressAndRelease();
-        Toolkit.getToolkit().firePulse();
-    }
-
-    /**
-     * Fires a mouse event onto the middle of the horizontal scrollbar's track.
-     * @throws IllegalStateException if control's skin is not VirtualContainerBase
-     */
-    public static void fireMouseOnHorizontalTrack(Control control) {
-        ScrollBar scrollBar = getHorizontalScrollBar(control);
-        Region track = (Region) scrollBar.lookup(".track");
-        MouseEventFirer firer = new MouseEventFirer(track, true);
-        firer.fireMousePressAndRelease();
-        Toolkit.getToolkit().firePulse();
-    }
-
-    /**
-     * Returns a vertical ScrollBar of the control.
-     * @throws IllegalStateException if control's skin is not VirtualContainerBase
-     */
-    public static ScrollBar getVerticalScrollBar(Control control) {
-        if (control.getSkin() instanceof VirtualContainerBase) {
-            VirtualFlow<?> flow = getVirtualFlow((VirtualContainerBase<?, ?>) control.getSkin());
-            return getVBar(flow);
-        }
-        throw new IllegalStateException("control's skin must be of type VirtualContainerBase but was: " + control.getSkin());
-    }
-
-    /**
-     * Returns a vertical ScrollBar of the control.
-     * @throws IllegalStateException if control's skin is not VirtualContainerBase
-     */
-    public static ScrollBar getHorizontalScrollBar(Control control) {
-        if (control.getSkin() instanceof VirtualContainerBase) {
-            VirtualFlow<?> flow = getVirtualFlow((VirtualContainerBase<?, ?>) control.getSkin());
-            return getHBar(flow);
-        }
-        throw new IllegalStateException("control's skin must be of type VirtualContainerBase but was: " + control.getSkin());
-    }
 
 //----------------- setup
 

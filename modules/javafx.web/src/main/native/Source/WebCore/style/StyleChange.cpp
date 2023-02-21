@@ -39,7 +39,15 @@ Change determineChange(const RenderStyle& s1, const RenderStyle& s2)
         return Change::Renderer;
     // We just detach if a renderer acquires or loses a column-span, since spanning elements
     // typically won't contain much content.
-    if (s1.columnSpan() != s2.columnSpan())
+    auto columnSpanNeedsNewRenderer = [&] {
+        if (s1.columnSpan() != s2.columnSpan())
+            return true;
+        if (s1.columnSpan() != ColumnSpan::All)
+            return false;
+        // Spanning in ignored for floating and out-of-flow boxes.
+        return s1.isFloating() != s2.isFloating() || s1.hasOutOfFlowPosition() != s2.hasOutOfFlowPosition();
+    }();
+    if (columnSpanNeedsNewRenderer)
         return Change::Renderer;
     if (!s1.contentDataEquivalent(&s2))
         return Change::Renderer;
@@ -49,11 +57,18 @@ Change determineChange(const RenderStyle& s1, const RenderStyle& s2)
     if (s1.hasTextCombine() != s2.hasTextCombine())
         return Change::Renderer;
 
-    if (!s1.inheritedEqual(s2))
-        return Change::Inherited;
+    // Query container changes affect descendant style.
+    if (s1.containerType() != s2.containerType() || s1.containerNames() != s2.containerNames())
+        return Change::Descendants;
 
     if (!s1.descendantAffectingNonInheritedPropertiesEqual(s2))
         return Change::Inherited;
+
+    if (!s1.nonFastPathInheritedEqual(s2))
+        return Change::Inherited;
+
+    if (!s1.fastPathInheritedEqual(s2))
+        return Change::FastPathInherited;
 
     if (s1 != s2)
         return Change::NonInherited;

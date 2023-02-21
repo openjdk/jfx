@@ -45,6 +45,8 @@ ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
 
+class LibWebRTCAudioModule;
+
 class RealtimeIncomingAudioSource
     : public RealtimeMediaSource
     , private webrtc::AudioTrackSinkInterface
@@ -52,6 +54,9 @@ class RealtimeIncomingAudioSource
 {
 public:
     static Ref<RealtimeIncomingAudioSource> create(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
+
+    void setAudioModule(RefPtr<LibWebRTCAudioModule>&&);
+    LibWebRTCAudioModule* audioModule() { return m_audioModule.get(); }
 
 protected:
     RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
@@ -61,16 +66,16 @@ protected:
     const char* logClassName() const final { return "RealtimeIncomingAudioSource"; }
 #endif
 
+    // RealtimeMediaSource API
+    void startProducingData() override;
+    void stopProducingData()  override;
+
 private:
     // webrtc::AudioTrackSinkInterface API
-    virtual void OnData(const void* /* audioData */, int /* bitsPerSample */, int /* sampleRate */, size_t /* numberOfChannels */, size_t /* numberOfFrames */) { };
+    void OnData(const void* /* audioData */, int /* bitsPerSample */, int /* sampleRate */, size_t /* numberOfChannels */, size_t /* numberOfFrames */) override { };
 
     // webrtc::ObserverInterface API
     void OnChanged() final;
-
-    // RealtimeMediaSource API
-    void startProducingData() final;
-    void stopProducingData()  final;
 
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;
@@ -79,6 +84,7 @@ private:
 
     RealtimeMediaSourceSettings m_currentSettings;
     rtc::scoped_refptr<webrtc::AudioTrackInterface> m_audioTrack;
+    RefPtr<LibWebRTCAudioModule> m_audioModule;
 
 #if !RELEASE_LOG_DISABLED
     mutable RefPtr<const Logger> m_logger;

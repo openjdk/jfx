@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #include "Debugger.h"
 #include "JSGlobalObject.h"
-#include <wtf/Optional.h>
 
 namespace JSC {
 
@@ -82,9 +81,9 @@ private:
         return true;
     }
 
-    JSGlobalObject* m_globalObject { nullptr };
-    Optional<Seconds> m_startTime;
-    ProfilingReason m_reason;
+    JSGlobalObject* const m_globalObject { nullptr };
+    std::optional<Seconds> m_startTime;
+    const ProfilingReason m_reason;
 };
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -123,10 +123,11 @@ import java.lang.ref.WeakReference;
  * a different type is specified and the ComboBox is to be editable, it is
  * necessary to specify a custom {@link StringConverter}.
  *
- * <h2>A warning about inserting Nodes into the ComboBox items list</h2>
- * ComboBox allows for the items list to contain elements of any type, including
+ * <h2>Warning: Nodes should not be inserted directly into the ComboBox items list</h2>
+ * {@code ComboBox} allows for the items list to contain elements of any type, including
  * {@link Node} instances. Putting nodes into
- * the items list is <strong>strongly not recommended</strong>. This is because
+ * the items list is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results. This is because
  * the default {@link #cellFactoryProperty() cell factory} simply inserts Node
  * items directly into the cell, including in the ComboBox 'button' area too.
  * Because the scenegraph only allows for Nodes to be in one place at a time,
@@ -134,18 +135,16 @@ import java.lang.ref.WeakReference;
  * list, and becomes visible in the button area. When selection changes the
  * previously selected item returns to the list and the new selection is removed.
  *
- * <p>The recommended approach, rather than inserting Node instances into the
- * items list, is to put the relevant information into the ComboBox, and then
- * provide a custom {@link #cellFactoryProperty() cell factory}. For example,
- * rather than use the following code:
- *
- * <pre> {@code ComboBox<Rectangle> cmb = new ComboBox<>();
- * cmb.getItems().addAll(
- *     new Rectangle(10, 10, Color.RED),
- *     new Rectangle(10, 10, Color.GREEN),
- *     new Rectangle(10, 10, Color.BLUE));}}</pre>
- *
- * <p>You should do the following:</p>
+ *<p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code ComboBox} items list or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of
+ * a custom {@link #cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code ComboBox} containing {@code Node}s:
  *
  * <pre><code> ComboBox&lt;Color&gt; cmb = new ComboBox&lt;&gt;();
  * cmb.getItems().addAll(
@@ -173,6 +172,9 @@ import java.lang.ref.WeakReference;
  *         }
  *     };
  * });</code></pre>
+ * <p> This example has an anonymous custom {@code ListCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code ListCell} class and updated/used in its {@code updateItem} method.
  *
  * <img src="doc-files/ComboBox.png" alt="Image of the ComboBox control">
  *
@@ -196,7 +198,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      **************************************************************************/
 
     private static <T> StringConverter<T> defaultStringConverter() {
-        return new StringConverter<T>() {
+        return new StringConverter<>() {
             @Override public String toString(T t) {
                 return t == null ? null : t.toString();
             }
@@ -233,7 +235,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
-        setSelectionModel(new ComboBoxSelectionModel<T>(this));
+        setSelectionModel(new ComboBoxSelectionModel<>(this));
 
         // listen to the value property input by the user, and if the value is
         // set to something that exists in the items list, we should update the
@@ -306,7 +308,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * The list of items to show within the ComboBox popup.
      */
-    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<ObservableList<T>>(this, "items");
+    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<>(this, "items");
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
     public final ObservableList<T> getItems() {return items.get(); }
     public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
@@ -321,7 +323,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter", ComboBox.<T>defaultStringConverter());
+            new SimpleObjectProperty<>(this, "converter", ComboBox.<T>defaultStringConverter());
     public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
     public final StringConverter<T> getConverter() {return converterProperty().get(); }
 
@@ -333,7 +335,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * for more information on cell factories.
      */
     private ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactory =
-            new SimpleObjectProperty<Callback<ListView<T>, ListCell<T>>>(this, "cellFactory");
+            new SimpleObjectProperty<>(this, "cellFactory");
     public final void setCellFactory(Callback<ListView<T>, ListCell<T>> value) { cellFactoryProperty().set(value); }
     public final Callback<ListView<T>, ListCell<T>> getCellFactory() {return cellFactoryProperty().get(); }
     public ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
@@ -350,7 +352,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
     private ObjectProperty<ListCell<T>> buttonCell =
-            new SimpleObjectProperty<ListCell<T>>(this, "buttonCell");
+            new SimpleObjectProperty<>(this, "buttonCell");
     public final void setButtonCell(ListCell<T> value) { buttonCellProperty().set(value); }
     public final ListCell<T> getButtonCell() {return buttonCellProperty().get(); }
 
@@ -360,7 +362,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * The selection model for the ComboBox. A ComboBox only supports
      * single selection.
      */
-    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel") {
+    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<>(this, "selectionModel") {
         private SingleSelectionModel<T> oldSM = null;
         @Override protected void invalidated() {
             if (oldSM != null) {
@@ -423,7 +425,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
-            placeholder = new SimpleObjectProperty<Node>(this, "placeholder");
+            placeholder = new SimpleObjectProperty<>(this, "placeholder");
         }
         return placeholder;
     }
@@ -444,7 +446,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ComboBoxListViewSkin<T>(this);
+        return new ComboBoxListViewSkin<>(this);
     }
 
     /**
@@ -487,7 +489,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
     // Listen to changes in the selectedItem property of the SelectionModel.
     // When it changes, set the selectedItem in the value property.
-    private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
+    private ChangeListener<T> selectedItemListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
             if (wasSetAllCalled && t1 == null) {
                 // no-op: fix for RT-22572 where the developer was completely
@@ -585,7 +587,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         }
 
         // watching for changes to the items list content
-        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
+        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<>() {
             @Override public void onChanged(Change<? extends T> c) {
                 if (comboBox.getItems() == null || comboBox.getItems().isEmpty()) {
                     setSelectedIndex(-1);
@@ -632,7 +634,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         private final InvalidationListener itemsObserver;
 
         private WeakListChangeListener<T> weakItemsContentObserver =
-                new WeakListChangeListener<T>(itemsContentObserver);
+                new WeakListChangeListener<>(itemsContentObserver);
 
 
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {

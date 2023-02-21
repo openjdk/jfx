@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,9 +133,6 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
-    if (!event->in && WindowContextBase::sm_mouse_drag_window == this) {
-        ungrab_mouse_drag_focus();
-    }
     if (!event->in && WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
@@ -154,6 +151,7 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
                     event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED : com_sun_glass_events_WindowEvent_FOCUS_LOST);
             CHECK_JNI_EXCEPTION(mainEnv)
         } else {
+            // when the user tries to activate a disabled window, send FOCUS_DISABLED
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
@@ -302,15 +300,8 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
         }
     }
 
-    // Upper layers expects from us Windows behavior:
-    // all mouse events should be delivered to window where drag begins
-    // and no exit/enter event should be reported during this drag.
-    // We can grab mouse pointer for these needs.
-    if (press) {
-        grab_mouse_drag_focus();
-    } else {
-        if ((event->state & MOUSE_BUTTONS_MASK)
-            && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
+    if (!press) {
+        if ((event->state & MOUSE_BUTTONS_MASK) && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
             ungrab_mouse_drag_focus();
         } else if (event->button == 8 || event->button == 9) {
             // GDK X backend interprets button press events for buttons 4-7 as
@@ -353,6 +344,14 @@ void WindowContextBase::process_mouse_motion(GdkEventMotion* event) {
             com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK |
             com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD);
     jint button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
+
+    if (isDrag && WindowContextBase::sm_mouse_drag_window == NULL) {
+        // Upper layers expects from us Windows behavior:
+        // all mouse events should be delivered to window where drag begins
+        // and no exit/enter event should be reported during this drag.
+        // We can grab mouse pointer for these needs.
+        grab_mouse_drag_focus();
+    }
 
     if (glass_modifier & com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY) {
         button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
@@ -778,6 +777,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     if (frame_type == TITLED) {
         request_frame_extents();
     }
+
+    event_serial = GDK_CURRENT_TIME;
 }
 
 // Applied to a temporary full screen window to prevent sending events to Java
@@ -1301,6 +1302,16 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
     }
 }
 
+void WindowContextTop::process_key(GdkEventKey* event) {
+    WindowContextBase::process_key(event);
+    event_serial = event->time;
+}
+
+void WindowContextTop::process_mouse_button(GdkEventButton* event) {
+    WindowContextBase::process_mouse_button(event);
+    event_serial = event->time;
+}
+
 void WindowContextTop::applyShapeMask(void* data, uint width, uint height)
 {
     if (frame_type != TRANSPARENT) {
@@ -1374,7 +1385,11 @@ void WindowContextTop::request_focus() {
     //The WindowContextBase::set_visible will take care of showing the window.
     //The below code will only handle later request_focus.
     if (is_visible()) {
-        gtk_window_present(GTK_WINDOW(gtk_widget));
+        // event_serial holds an event serial that will help X11 determine which window should have the focus and
+        // prevents activeWindows on WindowStage.java to be out of order which may cause the FOCUS_DISABLED event
+        // to bring up the wrong window (it brings up the last which will not be the real "last" if out of order).
+        gtk_window_present_with_time(GTK_WINDOW(gtk_widget), event_serial);
+        event_serial = GDK_CURRENT_TIME;
     }
 }
 

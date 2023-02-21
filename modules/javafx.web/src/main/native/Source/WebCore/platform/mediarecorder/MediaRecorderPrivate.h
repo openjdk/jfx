@@ -30,7 +30,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_RECORDER)
 
 namespace WTF {
 class MediaTime;
@@ -43,13 +43,13 @@ class MediaSample;
 class MediaStreamPrivate;
 class MediaStreamTrackPrivate;
 class PlatformAudioData;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
 struct MediaRecorderPrivateOptions;
 
 class MediaRecorderPrivate
     : public RealtimeMediaSource::AudioSampleObserver
-    , public RealtimeMediaSource::VideoSampleObserver {
+    , public RealtimeMediaSource::VideoFrameObserver {
 public:
     ~MediaRecorderPrivate();
 
@@ -59,7 +59,7 @@ public:
     };
     WEBCORE_EXPORT static AudioVideoSelectedTracks selectTracks(MediaStreamPrivate&);
 
-    using FetchDataCallback = CompletionHandler<void(RefPtr<SharedBuffer>&&, const String& mimeType, double)>;
+    using FetchDataCallback = CompletionHandler<void(RefPtr<FragmentedSharedBuffer>&&, const String& mimeType, double)>;
     virtual void fetchData(FetchDataCallback&&) = 0;
     virtual const String& mimeType() const = 0;
 
@@ -73,7 +73,11 @@ public:
     void trackMutedChanged(MediaStreamTrackPrivate& track) { checkTrackState(track); }
     void trackEnabledChanged(MediaStreamTrackPrivate& track) { checkTrackState(track); }
 
-    static void updateOptions(MediaRecorderPrivateOptions&);
+    struct BitRates {
+        unsigned audio;
+        unsigned video;
+    };
+    static BitRates computeBitRates(const MediaRecorderPrivateOptions&, const MediaStreamPrivate* = nullptr);
 
 protected:
     void setAudioSource(RefPtr<RealtimeMediaSource>&&);
@@ -112,12 +116,12 @@ inline void MediaRecorderPrivate::setAudioSource(RefPtr<RealtimeMediaSource>&& a
 inline void MediaRecorderPrivate::setVideoSource(RefPtr<RealtimeMediaSource>&& videoSource)
 {
     if (m_videoSource)
-        m_videoSource->removeVideoSampleObserver(*this);
+        m_videoSource->removeVideoFrameObserver(*this);
 
     m_videoSource = WTFMove(videoSource);
 
     if (m_videoSource)
-        m_videoSource->addVideoSampleObserver(*this);
+        m_videoSource->addVideoFrameObserver(*this);
 }
 
 inline MediaRecorderPrivate::~MediaRecorderPrivate()
@@ -128,9 +132,9 @@ inline MediaRecorderPrivate::~MediaRecorderPrivate()
     if (m_audioSource)
         m_audioSource->removeAudioSampleObserver(*this);
     if (m_videoSource)
-        m_videoSource->removeVideoSampleObserver(*this);
+        m_videoSource->removeVideoFrameObserver(*this);
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_RECORDER)

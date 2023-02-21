@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,41 +26,25 @@
 #include "config.h"
 #include "GPUUncapturedErrorEvent.h"
 
-#if ENABLE(WEBGPU)
-
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(GPUUncapturedErrorEvent);
 
-Ref<GPUUncapturedErrorEvent> GPUUncapturedErrorEvent::create(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
+GPUError GPUUncapturedErrorEvent::error() const
 {
-    return adoptRef(*new GPUUncapturedErrorEvent(type, initializer, isTrusted));
+    if (!m_backing)
+        return m_uncapturedErrorEventInit.error;
+
+    return WTF::switchOn(PAL::WebGPU::Error(m_backing->error()), [] (Ref<PAL::WebGPU::OutOfMemoryError>&& outOfMemoryError) -> GPUError {
+        return RefPtr<GPUOutOfMemoryError>(GPUOutOfMemoryError::create(WTFMove(outOfMemoryError)));
+    }, [] (Ref<PAL::WebGPU::ValidationError>&& validationError) -> GPUError {
+        return RefPtr<GPUValidationError>(GPUValidationError::create(WTFMove(validationError)));
+    });
+
 }
 
-Ref<GPUUncapturedErrorEvent> GPUUncapturedErrorEvent::create(const AtomString& type, GPUError&& error)
-{
-    return adoptRef(*new GPUUncapturedErrorEvent(type, WTFMove(error)));
 }
 
-GPUUncapturedErrorEvent::GPUUncapturedErrorEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
-    , m_error(initializer.error)
-{
-}
 
-GPUUncapturedErrorEvent::GPUUncapturedErrorEvent(const AtomString& type, GPUError&& error)
-    : Event(type, CanBubble::No, IsCancelable::No)
-    , m_error(WTFMove(error))
-{
-}
-
-EventInterface GPUUncapturedErrorEvent::eventInterface() const
-{
-    return GPUUncapturedErrorEventInterfaceType;
-}
-
-} // namespace WebCore
-
-#endif // ENABLE(WEBGPU)

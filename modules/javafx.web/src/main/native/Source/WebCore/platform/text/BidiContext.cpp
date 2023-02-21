@@ -22,16 +22,18 @@
 #include "config.h"
 #include "BidiContext.h"
 
+#include <mutex>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-struct SameSizeAsBidiContext : public RefCounted<SameSizeAsBidiContext> {
+struct SameSizeAsBidiContext : public ThreadSafeRefCounted<SameSizeAsBidiContext> {
     uint32_t bitfields : 16;
     void* parent;
 };
 
-COMPILE_ASSERT(sizeof(BidiContext) == sizeof(SameSizeAsBidiContext), BidiContext_should_stay_small);
+static_assert(sizeof(BidiContext) == sizeof(SameSizeAsBidiContext), "BidiContext should stay small");
 
 inline BidiContext::BidiContext(unsigned char level, UCharDirection direction, bool override, BidiEmbeddingSource source, BidiContext* parent)
     : m_level(level)
@@ -57,21 +59,37 @@ Ref<BidiContext> BidiContext::create(unsigned char level, UCharDirection directi
     ASSERT(level <= 1);
     if (!level) {
         if (!override) {
-            static BidiContext& ltrContext = createUncached(0, U_LEFT_TO_RIGHT, false, FromStyleOrDOM, 0).leakRef();
-            return ltrContext;
+            static NeverDestroyed<RefPtr<BidiContext>> ltrContext;
+            static std::once_flag ltrContextOnceFlag;
+            std::call_once(ltrContextOnceFlag, [&]() {
+                ltrContext.get() = createUncached(0, U_LEFT_TO_RIGHT, false, FromStyleOrDOM, 0);
+            });
+            return *ltrContext.get();
         }
 
-        static BidiContext& ltrOverrideContext = createUncached(0, U_LEFT_TO_RIGHT, true, FromStyleOrDOM, 0).leakRef();
-        return ltrOverrideContext;
+        static NeverDestroyed<RefPtr<BidiContext>> ltrOverrideContext;
+        static std::once_flag ltrOverrideContextOnceFlag;
+        std::call_once(ltrOverrideContextOnceFlag, [&]() {
+            ltrOverrideContext.get() = createUncached(0, U_LEFT_TO_RIGHT, true, FromStyleOrDOM, 0);
+        });
+        return *ltrOverrideContext.get();
     }
 
     if (!override) {
-        static BidiContext& rtlContext = createUncached(1, U_RIGHT_TO_LEFT, false, FromStyleOrDOM, 0).leakRef();
-        return rtlContext;
+        static NeverDestroyed<RefPtr<BidiContext>> rtlContext;
+        static std::once_flag rtlContextOnceFlag;
+        std::call_once(rtlContextOnceFlag, [&]() {
+            rtlContext.get() = createUncached(1, U_RIGHT_TO_LEFT, false, FromStyleOrDOM, 0);
+        });
+        return *rtlContext.get();
     }
 
-    static BidiContext& rtlOverrideContext = createUncached(1, U_RIGHT_TO_LEFT, true, FromStyleOrDOM, 0).leakRef();
-    return rtlOverrideContext;
+    static NeverDestroyed<RefPtr<BidiContext>> rtlOverrideContext;
+    static std::once_flag rtlOverrideContextOnceFlag;
+    std::call_once(rtlOverrideContextOnceFlag, [&]() {
+        rtlOverrideContext.get() = createUncached(1, U_RIGHT_TO_LEFT, true, FromStyleOrDOM, 0);
+    });
+    return *rtlOverrideContext.get();
 }
 
 static inline Ref<BidiContext> copyContextAndRebaselineLevel(BidiContext& context, BidiContext* parent)

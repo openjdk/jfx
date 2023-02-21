@@ -49,7 +49,7 @@ static JSObject* getCustomElementCallback(JSGlobalObject& lexicalGlobalObject, J
     RETURN_IF_EXCEPTION(scope, nullptr);
     if (callback.isUndefined())
         return nullptr;
-    if (!callback.isCallable(vm)) {
+    if (!callback.isCallable()) {
         throwTypeError(&lexicalGlobalObject, scope, "A custom element callback must be a function"_s);
         return nullptr;
     }
@@ -95,7 +95,7 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     JSValue constructorValue = callFrame.uncheckedArgument(1);
-    if (!constructorValue.isConstructor(vm))
+    if (!constructorValue.isConstructor())
         return throwTypeError(&lexicalGlobalObject, scope, "The second argument must be a constructor"_s);
     JSObject* constructor = constructorValue.getObject();
 
@@ -108,7 +108,7 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
         throwNotSupportedError(lexicalGlobalObject, scope, "Cannot define a custom element while defining another custom element"_s);
         return jsUndefined();
     }
-    SetForScope<bool> change(registry.elementDefinitionIsRunning(), true);
+    SetForScope change(registry.elementDefinitionIsRunning(), true);
 
     if (registry.findInterface(localName)) {
         throwNotSupportedError(lexicalGlobalObject, scope, "Cannot define multiple custom elements with the same tag name"_s);
@@ -129,31 +129,40 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
     QualifiedName name(nullAtom(), localName, HTMLNames::xhtmlNamespaceURI);
     auto elementInterface = JSCustomElementInterface::create(name, constructor, globalObject());
 
-    auto* connectedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "connectedCallback"));
+    auto* connectedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "connectedCallback"_s));
     if (connectedCallback)
         elementInterface->setConnectedCallback(connectedCallback);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    auto* disconnectedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "disconnectedCallback"));
+    auto* disconnectedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "disconnectedCallback"_s));
     if (disconnectedCallback)
         elementInterface->setDisconnectedCallback(disconnectedCallback);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    auto* adoptedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "adoptedCallback"));
+    auto* adoptedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "adoptedCallback"_s));
     if (adoptedCallback)
         elementInterface->setAdoptedCallback(adoptedCallback);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    auto* attributeChangedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "attributeChangedCallback"));
+    auto* attributeChangedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "attributeChangedCallback"_s));
     RETURN_IF_EXCEPTION(scope, JSValue());
     if (attributeChangedCallback) {
-        auto observedAttributesValue = constructor->get(&lexicalGlobalObject, Identifier::fromString(vm, "observedAttributes"));
+        auto observedAttributesValue = constructor->get(&lexicalGlobalObject, Identifier::fromString(vm, "observedAttributes"_s));
         RETURN_IF_EXCEPTION(scope, JSValue());
         if (!observedAttributesValue.isUndefined()) {
-            auto observedAttributes = convert<IDLSequence<IDLDOMString>>(lexicalGlobalObject, observedAttributesValue);
+            auto observedAttributes = convert<IDLSequence<IDLAtomStringAdaptor<IDLDOMString>>>(lexicalGlobalObject, observedAttributesValue);
             RETURN_IF_EXCEPTION(scope, JSValue());
-            elementInterface->setAttributeChangedCallback(attributeChangedCallback, observedAttributes);
+            elementInterface->setAttributeChangedCallback(attributeChangedCallback, WTFMove(observedAttributes));
         }
+    }
+
+    auto disabledFeaturesValue = constructor->get(&lexicalGlobalObject, Identifier::fromString(vm, "disabledFeatures"_s));
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!disabledFeaturesValue.isUndefined()) {
+        auto disabledFeatures = convert<IDLSequence<IDLDOMString>>(lexicalGlobalObject, disabledFeaturesValue);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (disabledFeatures.contains("shadow"_s))
+            elementInterface->disableShadow();
     }
 
     auto addToGlobalObjectWithPrivateName = [&] (JSObject* objectToAdd) {

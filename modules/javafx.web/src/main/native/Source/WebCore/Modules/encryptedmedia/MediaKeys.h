@@ -89,8 +89,8 @@ protected:
     void unrequestedInitializationDataReceived(const String&, Ref<SharedBuffer>&&) final;
 
 #if !RELEASE_LOG_DISABLED
-    const WTF::Logger& logger() const { return m_logger; }
-    const void* logIdentifier() const { return m_logIdentifier; }
+    const Logger& logger() const final { return m_logger; }
+    const void* logIdentifier() const final { return m_logIdentifier; }
 #endif
 
     bool m_useDistinctiveIdentifier;
@@ -103,7 +103,7 @@ protected:
     WeakHashSet<CDMClient> m_cdmClients;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<WTF::Logger> m_logger;
+    Ref<Logger> m_logger;
     const void* m_logIdentifier;
     mutable uint64_t m_childIdentifierSeed { 0 };
 #endif

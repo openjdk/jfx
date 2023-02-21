@@ -52,6 +52,8 @@ public:
     bool containsContents() const;
     bool containsProperty(CSSPropertyID) const;
 
+    bool createsContainingBlockForAbsolutelyPositioned() const;
+    bool createsContainingBlockForOutOfFlowPositioned() const;
     bool canCreateStackingContext() const { return m_canCreateStackingContext; }
     bool canTriggerCompositing() const { return m_canTriggerCompositing; }
     bool canTriggerCompositingOnInline() const { return m_canTriggerCompositingOnInline; }
@@ -77,7 +79,7 @@ private:
 
     struct AnimatableFeature {
         static const int numCSSPropertyIDBits = 14;
-        COMPILE_ASSERT(numCSSProperties < (1 << numCSSPropertyIDBits), CSSPropertyID_should_fit_in_14_bits);
+        static_assert(numCSSProperties < (1 << numCSSPropertyIDBits), "CSSPropertyID should fit in 14_bits");
 
         unsigned m_feature : 2;
         unsigned m_cssPropertyID : numCSSPropertyIDBits;

@@ -43,15 +43,14 @@ BytecodeLivenessAnalysis::BytecodeLivenessAnalysis(CodeBlock* codeBlock)
         dumpResults(codeBlock);
 }
 
-void BytecodeLivenessAnalysis::computeFullLiveness(CodeBlock* codeBlock, FullBytecodeLiveness& result)
+std::unique_ptr<FullBytecodeLiveness> BytecodeLivenessAnalysis::computeFullLiveness(CodeBlock* codeBlock)
 {
     FastBitVector out;
 
     size_t size = codeBlock->instructions().size();
-    result.m_usesBefore.resize(size);
-    result.m_usesAfter.resize(size);
+    auto result = makeUnique<FullBytecodeLiveness>(size);
 
-    for (BytecodeBasicBlock& block : m_graph.basicBlocksInReverseOrder()) {
+    for (auto& block : m_graph.basicBlocksInReverseOrder()) {
         if (block.isEntryBlock() || block.isExitBlock())
             continue;
 
@@ -79,12 +78,14 @@ void BytecodeLivenessAnalysis::computeFullLiveness(CodeBlock* codeBlock, FullByt
 
                 stepOverBytecodeIndexDef(codeBlock, instructions, m_graph, bytecodeIndex, def);
                 stepOverBytecodeIndexUseInExceptionHandler(codeBlock, instructions, m_graph, bytecodeIndex, use);
-                result.m_usesAfter[result.toIndex(bytecodeIndex)] = out; // AfterUse point.
+                result->m_usesAfter[result->toIndex(bytecodeIndex)] = out; // AfterUse point.
                 stepOverBytecodeIndexUse(codeBlock, instructions, m_graph, bytecodeIndex, use);
-                result.m_usesBefore[result.toIndex(bytecodeIndex)] = out; // BeforeUse point.
+                result->m_usesBefore[result->toIndex(bytecodeIndex)] = out; // BeforeUse point.
             }
         }
     }
+
+    return result;
 }
 
 void BytecodeLivenessAnalysis::dumpResults(CodeBlock* codeBlock)
@@ -95,9 +96,9 @@ void BytecodeLivenessAnalysis::dumpResults(CodeBlock* codeBlock)
 
     unsigned numberOfBlocks = m_graph.size();
     Vector<FastBitVector> predecessors(numberOfBlocks);
-    for (BytecodeBasicBlock& block : m_graph)
+    for (auto& block : m_graph)
         predecessors[block.index()].resize(numberOfBlocks);
-    for (BytecodeBasicBlock& block : m_graph) {
+    for (auto& block : m_graph) {
         for (unsigned successorIndex : block.successors()) {
             unsigned blockIndex = block.index();
             predecessors[successorIndex][blockIndex] = true;
@@ -111,7 +112,7 @@ void BytecodeLivenessAnalysis::dumpResults(CodeBlock* codeBlock)
         }
     };
 
-    for (BytecodeBasicBlock& block : m_graph) {
+    for (auto& block : m_graph) {
         dataLogF("\nBytecode basic block %u: %p (offset: %u, length: %u)\n", i++, &block, block.leaderOffset(), block.totalLength());
 
         dataLogF("Predecessors:");

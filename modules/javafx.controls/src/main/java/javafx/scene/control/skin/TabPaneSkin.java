@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -94,7 +93,6 @@ import javafx.util.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import javafx.css.converter.EnumConverter;
@@ -610,7 +608,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                         // restore old selection, and old tab animation states.
                         int size = c.getTo() - c.getFrom();
                         Tab selTab = tabPane.getSelectionModel().getSelectedItem();
-                        List<Tab> permutatedTabs = new ArrayList<Tab>(size);
+                        List<Tab> permutatedTabs = new ArrayList<>(size);
                         getSkinnable().getSelectionModel().clearSelection();
 
                         // save and set tab animation to none - as it is not a good idea
@@ -756,8 +754,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
         private final static CssMetaData<TabPane,TabAnimation> OPEN_TAB_ANIMATION =
-                new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-open-tab-animation",
-                    new EnumConverter<TabAnimation>(TabAnimation.class), TabAnimation.GROW) {
+                new CssMetaData<>("-fx-open-tab-animation",
+                    new EnumConverter<>(TabAnimation.class), TabAnimation.GROW) {
 
             @Override public boolean isSettable(TabPane node) {
                 return true;
@@ -770,8 +768,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         };
 
         private final static CssMetaData<TabPane,TabAnimation> CLOSE_TAB_ANIMATION =
-                new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-close-tab-animation",
-                    new EnumConverter<TabAnimation>(TabAnimation.class), TabAnimation.GROW) {
+                new CssMetaData<>("-fx-close-tab-animation",
+                    new EnumConverter<>(TabAnimation.class), TabAnimation.GROW) {
 
             @Override public boolean isSettable(TabPane node) {
                 return true;
@@ -786,7 +784,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         static {
 
            final List<CssMetaData<? extends Styleable, ?>> styleables =
-               new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+               new ArrayList<>(SkinBase.getClassCssMetaData());
            styleables.add(OPEN_TAB_ANIMATION);
            styleables.add(CLOSE_TAB_ANIMATION);
            STYLEABLES = Collections.unmodifiableList(styleables);
@@ -1263,7 +1261,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
         private LambdaMultiplePropertyChangeListenerHandler listener = new LambdaMultiplePropertyChangeListenerHandler();
 
-        private final ListChangeListener<String> styleClassListener = new ListChangeListener<String>() {
+        private final ListChangeListener<String> styleClassListener = new ListChangeListener<>() {
             @Override
             public void onChanged(Change<? extends String> c) {
                 getStyleClass().setAll(tab.getStyleClass());
@@ -2027,6 +2025,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 completeHeaderReordering();
             });
         }
+        @Override
         protected void interpolate(double frac) {
             dropAnimHeader.setLayoutX(dropHeaderSourceX + dropHeaderTransitionX * frac);
         }
@@ -2043,6 +2042,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 resetDrag();
             });
         }
+        @Override
         protected void interpolate(double frac) {
             dragTabHeader.setLayoutX(dragHeaderSourceX + dragHeaderTransitionX * frac);
         }
@@ -2062,6 +2062,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     }
 
     private ListChangeListener childListener = new ListChangeListener<Node>() {
+        @Override
         public void onChanged(Change<? extends Node> change) {
             while (change.next()) {
                 if (change.wasAdded()) {
@@ -2102,14 +2103,12 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     private void handleHeaderMousePressed(MouseEvent event) {
         if (event.getButton().equals(MouseButton.PRIMARY)) {
-            ((StackPane) event.getSource()).setMouseTransparent(true);
             startDrag(event);
         }
     }
 
     private void handleHeaderMouseReleased(MouseEvent event) {
         if (event.getButton().equals(MouseButton.PRIMARY)) {
-            ((StackPane) event.getSource()).setMouseTransparent(false);
             stopDrag();
             event.consume();
         }

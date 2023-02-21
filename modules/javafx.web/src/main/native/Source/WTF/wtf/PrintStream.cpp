@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include <wtf/PrintStream.h>
 
+#include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
@@ -89,7 +90,7 @@ static void printExpectedCStringHelper(PrintStream& out, const char* type, Expec
     printInternal(out, expectedCString.value());
 }
 
-void printInternal(PrintStream& out, const StringView& string)
+void printInternal(PrintStream& out, StringView string)
 {
     printExpectedCStringHelper(out, "StringView", string.tryGetUtf8());
 }
@@ -102,6 +103,11 @@ void printInternal(PrintStream& out, const CString& string)
 void printInternal(PrintStream& out, const String& string)
 {
     printExpectedCStringHelper(out, "String", string.tryGetUtf8());
+}
+
+void printInternal(PrintStream& out, const AtomString& string)
+{
+    printExpectedCStringHelper(out, "String", string.string().tryGetUtf8());
 }
 
 void printInternal(PrintStream& out, const StringImpl* string)
@@ -178,9 +184,25 @@ void printInternal(PrintStream& out, double value)
     out.printf("%lf", value);
 }
 
+void printInternal(PrintStream& out, RawHex value)
+{
+#if !CPU(ADDRESS64)
+    if (value.is64Bit()) {
+        out.printf("0x%" PRIx64, value.u64());
+        return;
+    }
+#endif
+    out.printf("%p", value.ptr());
+}
+
 void printInternal(PrintStream& out, RawPointer value)
 {
     out.printf("%p", value.value());
+}
+
+void printInternal(PrintStream& out, FixedWidthDouble value)
+{
+    out.printf("%*.*lf", value.width(), value.precision(), value.value());
 }
 
 void dumpCharacter(PrintStream& out, char value)

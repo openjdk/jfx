@@ -79,6 +79,8 @@ enum class TimelineRecordType {
     FireAnimationFrame,
 
     ObserverCallback,
+
+    Screenshot,
 };
 
 class InspectorTimelineAgent final : public InspectorAgentBase , public Inspector::TimelineBackendDispatcherHandler , public JSC::Debugger::Observer {
@@ -95,7 +97,7 @@ public:
     // TimelineBackendDispatcherHandler
     Inspector::Protocol::ErrorStringOr<void> enable();
     Inspector::Protocol::ErrorStringOr<void> disable();
-    Inspector::Protocol::ErrorStringOr<void> start(Optional<int>&& maxCallStackDepth);
+    Inspector::Protocol::ErrorStringOr<void> start(std::optional<int>&& maxCallStackDepth);
     Inspector::Protocol::ErrorStringOr<void> stop();
     Inspector::Protocol::ErrorStringOr<void> setAutoCaptureEnabled(bool);
     Inspector::Protocol::ErrorStringOr<void> setInstruments(Ref<JSON::Array>&&);
@@ -155,6 +157,8 @@ private:
     void disableBreakpoints();
     void enableBreakpoints();
 
+    void captureScreenshot();
+
     friend class TimelineRecordStack;
 
     struct TimelineRecordEntry {
@@ -172,16 +176,16 @@ private:
         TimelineRecordType type;
     };
 
-    void internalStart(Optional<int>&& maxCallStackDepth);
+    void internalStart(std::optional<int>&& maxCallStackDepth);
     void internalStop();
     double timestamp();
 
     void sendEvent(Ref<JSON::Object>&&);
     void appendRecord(Ref<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
-    void pushCurrentRecord(Ref<JSON::Object>&&, TimelineRecordType, bool captureCallStack, Frame*);
+    void pushCurrentRecord(Ref<JSON::Object>&&, TimelineRecordType, bool captureCallStack, Frame*, std::optional<double> startTime = std::nullopt);
     void pushCurrentRecord(const TimelineRecordEntry& record) { m_recordStack.append(record); }
 
-    TimelineRecordEntry createRecordEntry(Ref<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*);
+    TimelineRecordEntry createRecordEntry(Ref<JSON::Object>&& data, TimelineRecordType, bool captureCallStack, Frame*, std::optional<double> startTime = std::nullopt);
 
     void setFrameIdentifier(JSON::Object* record, Frame*);
 
@@ -189,8 +193,6 @@ private:
     void didCompleteCurrentRecord(TimelineRecordType);
 
     void addRecordToTimeline(Ref<JSON::Object>&&, TimelineRecordType);
-
-    void localToPageQuad(const RenderObject&, const LayoutRect&, FloatQuad*);
 
     std::unique_ptr<Inspector::TimelineFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::TimelineBackendDispatcher> m_backendDispatcher;
@@ -218,6 +220,7 @@ private:
     std::unique_ptr<RunLoop::Observer> m_runLoopObserver;
 #endif
     bool m_startedComposite { false };
+    bool m_isCapturingScreenshot { false };
 };
 
 } // namespace WebCore

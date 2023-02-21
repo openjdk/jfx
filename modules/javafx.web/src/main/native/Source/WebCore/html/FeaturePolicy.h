@@ -43,12 +43,18 @@ public:
         Microphone,
         SpeakerSelection,
         DisplayCapture,
+        Geolocation,
+        Payment,
         SyncXHR,
         Fullscreen,
+        WebShare,
 #if ENABLE(DEVICE_ORIENTATION)
         Gyroscope,
         Accelerometer,
         Magnetometer,
+#endif
+#if ENABLE(WEB_AUTHN)
+        PublickeyCredentialsGetRule,
 #endif
 #if ENABLE(WEBXR)
         XRSpatialTracking,
@@ -67,12 +73,19 @@ private:
     AllowRule m_microphoneRule;
     AllowRule m_speakerSelectionRule;
     AllowRule m_displayCaptureRule;
+    AllowRule m_geolocationRule;
+    AllowRule m_paymentRule;
     AllowRule m_syncXHRRule;
     AllowRule m_fullscreenRule;
+    AllowRule m_webShareRule;
+
 #if ENABLE(DEVICE_ORIENTATION)
     AllowRule m_gyroscopeRule;
     AllowRule m_accelerometerRule;
     AllowRule m_magnetometerRule;
+#endif
+#if ENABLE(WEB_AUTHN)
+    AllowRule m_publickeyCredentialsGetRule;
 #endif
 #if ENABLE(WEBXR)
     AllowRule m_xrSpatialTrackingRule;

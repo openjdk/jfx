@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,10 +48,7 @@ bool MIMETypeCache::supportsContainerType(const String& containerType)
     if (isUnsupportedContainerType(containerType))
         return false;
 
-    if (staticContainerTypeList().contains(containerType))
-        return true;
-
-    return supportedTypes().contains(containerType);
+    return isStaticContainerType(containerType) || supportedTypes().contains(containerType);
 }
 
 MediaPlayerEnums::SupportsType MIMETypeCache::canDecodeType(const String& mimeType)
@@ -76,7 +73,7 @@ MediaPlayerEnums::SupportsType MIMETypeCache::canDecodeType(const String& mimeTy
             break;
 
         if (contentType.codecs().isEmpty()) {
-        result = MediaPlayerEnums::SupportsType::MayBeSupported;
+            result = MediaPlayerEnums::SupportsType::MayBeSupported;
             break;
         }
 
@@ -106,10 +103,9 @@ void MIMETypeCache::addSupportedTypes(const Vector<String>& newTypes)
         m_supportedTypes->add(type);
 }
 
-const HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeCache::staticContainerTypeList()
+bool MIMETypeCache::isStaticContainerType(StringView)
 {
-    static const auto cache = makeNeverDestroyed(HashSet<String, ASCIICaseInsensitiveHash> { });
-    return cache;
+    return false;
 }
 
 bool MIMETypeCache::isUnsupportedContainerType(const String&)
@@ -142,9 +138,9 @@ bool MIMETypeCache::shouldOverrideExtendedType(const ContentType& type)
 
     // Some sites (e.g. Modernizr) use 'audio/mpeg; codecs="mp3"' even though
     // it is not RFC 3003 compliant.
-    if (equalIgnoringASCIICase(type.containerType(), "audio/mpeg")) {
+    if (equalLettersIgnoringASCIICase(type.containerType(), "audio/mpeg"_s)) {
         auto codecs = type.codecs();
-        return (codecs.size() == 1 && codecs[0] == "mp3");
+        return codecs.size() == 1 && codecs[0] == "mp3"_s;
     }
 
     return false;

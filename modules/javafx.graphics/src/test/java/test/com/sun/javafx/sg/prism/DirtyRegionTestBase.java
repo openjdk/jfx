@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -201,7 +201,7 @@ public class DirtyRegionTestBase extends NGTestBase {
 
         // We will populate this list with the parameters with which we will test.
         // Each Object[] within the params is composed of a Creator and a Polluter.
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         // A standard list of polluters which applies to all tests
         List<Polluter> polluters = Arrays.asList(new Polluter[]{
                 polluteRotate,
@@ -222,7 +222,7 @@ public class DirtyRegionTestBase extends NGTestBase {
             }, polluter});
         }
         // Construct the Creator / Polluter pair for Rectangles
-        List<Polluter> rectanglePolluters = new ArrayList<Polluter>(polluters);
+        List<Polluter> rectanglePolluters = new ArrayList<>(polluters);
         rectanglePolluters.add(new Polluter() {
             @Override public void pollute(NGNode node) {
                 NGRectangle rect = (NGRectangle)node;
@@ -238,7 +238,7 @@ public class DirtyRegionTestBase extends NGTestBase {
             }, polluter});
         }
         // Construct the Creator / Polluter pair for Circles
-        List<Polluter> circlePolluters = new ArrayList<Polluter>(polluters);
+        List<Polluter> circlePolluters = new ArrayList<>(polluters);
         circlePolluters.add(new Polluter() {
             @Override public void pollute(NGNode node) {
                 NGCircle c = (NGCircle)node;
@@ -382,7 +382,7 @@ public class DirtyRegionTestBase extends NGTestBase {
      */
     protected void assertOnlyTheseNodesAreAskedToAccumulateDirtyRegions(NGNode... nodes) {
         accumulateDirtyRegions();
-        Set<NGNode> set = new HashSet<NGNode>(Arrays.asList(nodes));
+        Set<NGNode> set = new HashSet<>(Arrays.asList(nodes));
         assertOnlyTheseNodesWereAskedToAccumulateDirtyRegions(root, set);
     }
 
@@ -402,7 +402,7 @@ public class DirtyRegionTestBase extends NGTestBase {
      */
     protected void assertOnlyTheseNodesAreAskedToComputeDirtyRegions(NGNode... nodes) {
         accumulateDirtyRegions();
-        Set<NGNode> set = new HashSet<NGNode>(Arrays.asList(nodes));
+        Set<NGNode> set = new HashSet<>(Arrays.asList(nodes));
         assertOnlyTheseNodesWereAskedToComputeDirtyRegions(root, set);
     }
 

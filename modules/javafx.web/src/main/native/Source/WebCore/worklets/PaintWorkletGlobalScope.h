@@ -31,6 +31,7 @@
 #include "WorkletGlobalScope.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
+#include <wtf/Lock.h>
 
 namespace JSC {
 class JSObject;
@@ -45,23 +46,23 @@ class PaintWorkletGlobalScope final : public WorkletGlobalScope {
 public:
     static RefPtr<PaintWorkletGlobalScope> tryCreate(Document&, ScriptSourceCode&&);
 
-    ExceptionOr<void> registerPaint(JSC::JSGlobalObject&, const String& name, JSC::Strong<JSC::JSObject> paintConstructor);
+    ExceptionOr<void> registerPaint(JSC::JSGlobalObject&, const AtomString& name, JSC::Strong<JSC::JSObject> paintConstructor);
     double devicePixelRatio() const;
 
     // All paint definitions must be destroyed before the vm is destroyed, because otherwise they will point to freed memory.
     struct PaintDefinition : public CanMakeWeakPtr<PaintDefinition> {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
-        PaintDefinition(const AtomString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&&, Vector<String>&& inputProperties, Vector<String>&& inputArguments);
+        PaintDefinition(const AtomString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&&, Vector<AtomString>&& inputProperties, Vector<String>&& inputArguments);
 
         const AtomString name;
         const JSC::JSObject* const paintConstructor;
         const Ref<CSSPaintCallback> paintCallback;
-        const Vector<String> inputProperties;
+        const Vector<AtomString> inputProperties;
         const Vector<String> inputArguments;
     };
 
-    HashMap<String, std::unique_ptr<PaintDefinition>>& paintDefinitionMap() { ASSERT(m_paintDefinitionLock.isLocked()); return m_paintDefinitionMap; }
-    Lock& paintDefinitionLock() { return m_paintDefinitionLock; }
+    HashMap<String, std::unique_ptr<PaintDefinition>>& paintDefinitionMap() WTF_REQUIRES_LOCK(m_paintDefinitionLock);
+    Lock& paintDefinitionLock() WTF_RETURNS_LOCK(m_paintDefinitionLock) { return m_paintDefinitionLock; }
 
     void prepareForDestruction() final
     {
@@ -70,7 +71,7 @@ public:
         m_hasPreparedForDestruction = true;
 
         {
-            auto locker = holdLock(paintDefinitionLock());
+            Locker locker { paintDefinitionLock() };
             paintDefinitionMap().clear();
         }
         WorkletGlobalScope::prepareForDestruction();
@@ -84,17 +85,23 @@ private:
     ~PaintWorkletGlobalScope()
     {
 #if ASSERT_ENABLED
-        auto locker = holdLock(paintDefinitionLock());
+        Locker locker { paintDefinitionLock() };
         ASSERT(paintDefinitionMap().isEmpty());
 #endif
     }
 
     bool isPaintWorkletGlobalScope() const final { return true; }
 
-    HashMap<String, std::unique_ptr<PaintDefinition>> m_paintDefinitionMap;
+    HashMap<String, std::unique_ptr<PaintDefinition>> m_paintDefinitionMap WTF_GUARDED_BY_LOCK(m_paintDefinitionLock);
     Lock m_paintDefinitionLock;
     bool m_hasPreparedForDestruction { false };
 };
+
+inline auto PaintWorkletGlobalScope::paintDefinitionMap() -> HashMap<String, std::unique_ptr<PaintDefinition>>&
+{
+    ASSERT(m_paintDefinitionLock.isLocked());
+    return m_paintDefinitionMap;
+}
 
 } // namespace WebCore
 

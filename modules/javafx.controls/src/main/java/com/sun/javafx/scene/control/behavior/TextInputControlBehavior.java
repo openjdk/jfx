@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,7 +204,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
                 new MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged),
                 new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
-                new InputMap.Mapping<ContextMenuEvent>(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested) {
+                new InputMap.Mapping<>(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested) {
                     @Override public int getSpecificity(Event event) {
                         return 1;
                     }
@@ -639,7 +639,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
-    protected void cancelEdit(KeyEvent event) { };
+    protected void cancelEdit(KeyEvent event) { }
 
     protected void selectHome() {
         getNode().selectHome();

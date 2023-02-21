@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,24 +43,27 @@ VMEntryScope::VMEntryScope(VM& vm, JSGlobalObject* globalObject)
     if (!vm.entryScope) {
         vm.entryScope = this;
 
+        auto& thread = Thread::current();
+        if (UNLIKELY(!thread.isJSThread())) {
+            Thread::registerJSThread(thread);
+
 #if ENABLE(WEBASSEMBLY)
-        if (Wasm::isSupported())
-            Wasm::startTrackingCurrentThread();
+                if (Wasm::isSupported())
+                    Wasm::startTrackingCurrentThread();
 #endif
 
 #if HAVE(MACH_EXCEPTIONS)
-        registerThreadForMachExceptionHandling(Thread::current());
+                registerThreadForMachExceptionHandling(thread);
 #endif
+        }
 
         vm.firePrimitiveGigacageEnabledIfNecessary();
 
         // Reset the date cache between JS invocations to force the VM to
         // observe time zone changes.
-        // FIXME: We should clear it only when we know the timezone has been changed.
-        // https://bugs.webkit.org/show_bug.cgi?id=218365
-        vm.resetDateCache();
+        vm.resetDateCacheIfNecessary();
 
-        if (vm.watchdog())
+        if (UNLIKELY(vm.watchdog()))
             vm.watchdog()->enteredVM();
 
 #if ENABLE(SAMPLING_PROFILER)
@@ -89,10 +92,10 @@ VMEntryScope::~VMEntryScope()
 
     ASSERT_WITH_MESSAGE(!m_vm.hasCheckpointOSRSideState(), "Exitting the VM but pending checkpoint side state still available");
 
-    if (Options::useTracePoints())
+    if (UNLIKELY(Options::useTracePoints()))
         tracePoint(VMEntryScopeEnd);
 
-    if (m_vm.watchdog())
+    if (UNLIKELY(m_vm.watchdog()))
         m_vm.watchdog()->exitedVM();
 
     m_vm.entryScope = nullptr;
@@ -100,6 +103,19 @@ VMEntryScope::~VMEntryScope()
     for (auto& listener : m_didPopListeners)
         listener();
 
+    // If the trap bit is still set at this point, then it means that VMTraps::handleTraps()
+    // has not yet been called for this termination request. As a result, we've not thrown a
+    // TerminationException yet. Some client code relies on detecting the presence of the
+    // TerminationException in order to signal that a termination was requested. As a result,
+    // we want to stay in the TerminationInProgress state until VMTraps::handleTraps() (which
+    // clears the trap bit) gets called, and the TerminationException gets thrown.
+    //
+    // Note: perhaps there's a better way for the client to know that a termination was
+    // requested (after all, the request came from the client). However, this is how the
+    // client code currently works. Changing that will take some significant effort to hunt
+    // down all the places in client code that currently rely on this behavior.
+    if (!m_vm.traps().needHandling(VMTraps::NeedTermination))
+        m_vm.setTerminationInProgress(false);
     m_vm.clearScratchBuffers();
 }
 

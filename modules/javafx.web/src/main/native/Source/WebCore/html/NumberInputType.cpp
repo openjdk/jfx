@@ -33,6 +33,7 @@
 #include "NumberInputType.h"
 
 #include "Decimal.h"
+#include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -93,12 +94,12 @@ const AtomString& NumberInputType::formControlType() const
     return InputTypeNames::number();
 }
 
-void NumberInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior)
+void NumberInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
     ASSERT(element());
     if (!valueChanged && sanitizedValue.isEmpty() && !element()->innerTextValue().isEmpty())
         updateInnerTextValue();
-    TextFieldInputType::setValue(sanitizedValue, valueChanged, eventBehavior);
+    TextFieldInputType::setValue(sanitizedValue, valueChanged, eventBehavior, selection);
 }
 
 double NumberInputType::valueAsDouble() const
@@ -146,7 +147,10 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
     static NeverDestroyed<const StepRange::StepDescription> stepDescription(numberDefaultStep, numberDefaultStepBase, numberStepScaleFactor);
 
     ASSERT(element());
-    const Decimal stepBase = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(minAttr), numberDefaultStepBase);
+    Decimal stepBase = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(minAttr), Decimal::nan());
+    if (stepBase.isNaN())
+        stepBase = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(valueAttr), numberDefaultStepBase);
+
     // FIXME: We should use numeric_limits<double>::max for number input type.
     const Decimal floatMax = Decimal::fromDouble(std::numeric_limits<float>::max());
     const Element& element = *this->element();
@@ -174,7 +178,7 @@ bool NumberInputType::sizeShouldIncludeDecoration(int defaultSize, int& preferre
 
     ASSERT(element());
     auto& stepString = element()->attributeWithoutSynchronization(stepAttr);
-    if (equalLettersIgnoringASCIICase(stepString, "any"))
+    if (equalLettersIgnoringASCIICase(stepString, "any"_s))
         return false;
 
     const Decimal minimum = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(minAttr));

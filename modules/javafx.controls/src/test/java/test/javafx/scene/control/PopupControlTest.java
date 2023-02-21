@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -115,12 +115,6 @@ public class PopupControlTest {
         popup.getStyleClass().add("Hello");
         popup.getStyleClass().add("Goodbye");
         assertEquals("Hello Goodbye", popup.getStyleClass().toString());
-    }
-
-    @org.junit.Ignore("getStyle should not return null per Node#setStyle")
-    @Test public void styleSetNullGetNull() {
-        popup.setStyle(null);
-        assertNull(popup.getStyle());
     }
 
     // See Node#setStyle

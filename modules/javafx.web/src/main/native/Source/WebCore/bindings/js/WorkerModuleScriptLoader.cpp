@@ -36,6 +36,7 @@
 #include "ScriptController.h"
 #include "ScriptModuleLoader.h"
 #include "ScriptSourceCode.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "WorkerScriptFetcher.h"
 #include "WorkerScriptLoader.h"
 
@@ -61,6 +62,19 @@ bool WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
 {
     m_sourceURL = WTFMove(sourceURL);
 
+#if ENABLE(SERVICE_WORKER)
+    if (is<ServiceWorkerGlobalScope>(context)) {
+        if (auto* scriptResource = downcast<ServiceWorkerGlobalScope>(context).scriptResource(m_sourceURL)) {
+            m_script = scriptResource->script;
+            m_responseURL = scriptResource->responseURL;
+            m_responseMIMEType = scriptResource->mimeType;
+            m_retrievedFromServiceWorkerCache = true;
+            notifyClientFinished();
+            return true;
+        }
+    }
+#endif
+
     ResourceRequest request { m_sourceURL };
 
     FetchOptions fetchOptions;
@@ -70,7 +84,7 @@ bool WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
     fetchOptions.credentials = static_cast<WorkerScriptFetcher&>(scriptFetcher()).credentials();
     fetchOptions.destination = static_cast<WorkerScriptFetcher&>(scriptFetcher()).destination();
     fetchOptions.referrerPolicy = static_cast<WorkerScriptFetcher&>(scriptFetcher()).referrerPolicy();
-    auto contentSecurityPolicyEnforcement = context.shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceChildSrcDirective;
+    auto contentSecurityPolicyEnforcement = context.shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceWorkerSrcDirective;
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#fetch-a-single-module-script
     // If destination is "worker" or "sharedworker" and the top-level module fetch flag is set, then set request's mode to "same-origin".
@@ -79,7 +93,7 @@ bool WorkerModuleScriptLoader::load(ScriptExecutionContext& context, URL&& sourc
             fetchOptions.mode = FetchOptions::Mode::SameOrigin;
     }
 
-    m_scriptLoader->loadAsynchronously(context, WTFMove(request), WTFMove(fetchOptions), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, *this, taskMode());
+    m_scriptLoader->loadAsynchronously(context, WTFMove(request), WorkerScriptLoader::Source::ModuleScript, WTFMove(fetchOptions), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, *this, taskMode());
     return true;
 }
 
@@ -94,7 +108,21 @@ void WorkerModuleScriptLoader::notifyFinished()
 {
     ASSERT(m_promise);
 
-    auto protectedThis = makeRef(*this);
+    if (m_scriptLoader->failed())
+        m_failed = true;
+    else {
+        m_script = m_scriptLoader->script();
+        m_responseURL = m_scriptLoader->responseURL();
+        m_responseMIMEType = m_scriptLoader->responseMIMEType();
+    }
+
+    notifyClientFinished();
+}
+
+void WorkerModuleScriptLoader::notifyClientFinished()
+{
+    Ref protectedThis { *this };
+
     if (m_client)
         m_client->notifyFinished(*this, WTFMove(m_sourceURL), m_promise.releaseNonNull());
 }

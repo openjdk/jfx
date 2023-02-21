@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SplitTextNodeCommand.h"
 
+#include "CompositeEditCommand.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "Text.h"
@@ -103,7 +104,7 @@ void SplitTextNodeCommand::insertText1AndTrimText2()
 
 #ifndef NDEBUG
 
-void SplitTextNodeCommand::getNodesInCommand(HashSet<Node*>& nodes)
+void SplitTextNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
 {
     addNodeAndDescendants(m_text1.get(), nodes);
     addNodeAndDescendants(m_text2.ptr(), nodes);

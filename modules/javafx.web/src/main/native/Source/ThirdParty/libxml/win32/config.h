@@ -5,7 +5,8 @@
 #define HAVE_STDARG_H
 #define HAVE_MALLOC_H
 #define HAVE_ERRNO_H
-#define HAVE_STDINT_H
+#define SEND_ARG2_CAST
+#define GETHOSTBYNAME_ARG_CAST
 
 #if defined(_WIN32_WCE)
 #undef HAVE_ERRNO_H
@@ -45,7 +46,7 @@
    function. */
 #ifndef isinf
 #define isinf(d) ((_fpclass(d) == _FPCLASS_PINF) ? 1 \
-    : ((_fpclass(d) == _FPCLASS_NINF) ? -1 : 0))
+                 : ((_fpclass(d) == _FPCLASS_NINF) ? -1 : 0))
 #endif
 /* _isnan(x) returns nonzero if (x == NaN) and zero otherwise. */
 #ifndef isnan
@@ -90,7 +91,7 @@ static int isnan (double d) {
 
 #if defined(_MSC_VER)
 #define mkdir(p,m) _mkdir(p)
-#if _MSC_VER < 1900 // Cannot define this in VS 2015 and above!
+#if _MSC_VER < 1900
 #define snprintf _snprintf
 #endif
 #if _MSC_VER < 1500

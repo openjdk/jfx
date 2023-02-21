@@ -35,7 +35,10 @@ class RecursiveLockAdapter {
 public:
     RecursiveLockAdapter() = default;
 
-    void lock()
+    // Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS because the function does conditional locking, which is
+    // not supported by analysis. Also RecursiveLockAdapter may wrap a lock type besides WTF::Lock
+    // which doesn't support analysis.
+    void lock() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     {
         Thread& me = Thread::current();
         if (&me == m_owner) {
@@ -50,7 +53,10 @@ public:
         m_recursionCount = 1;
     }
 
-    void unlock()
+    // Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS because the function does conditional unlocking, which is
+    // not supported by analysis. Also RecursiveLockAdapter may wrap a lock type besides WTF::Lock
+    // which doesn't support analysis.
+    void unlock() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     {
         if (--m_recursionCount)
             return;
@@ -58,7 +64,10 @@ public:
         m_lock.unlock();
     }
 
-    bool tryLock()
+    // Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS because the function does conditional locking, which is
+    // not supported by analysis. Also RecursiveLockAdapter may wrap a lock type besides WTF::Lock
+    // which doesn't support analysis.
+    bool tryLock() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     {
         Thread& me = Thread::current();
         if (&me == m_owner) {
@@ -80,6 +89,8 @@ public:
     {
         return m_lock.isLocked();
     }
+
+    bool isOwner() const { return m_owner == &Thread::current(); }
 
 private:
     Thread* m_owner { nullptr }; // Use Thread* instead of RefPtr<Thread> since m_owner thread is always alive while m_onwer is set.

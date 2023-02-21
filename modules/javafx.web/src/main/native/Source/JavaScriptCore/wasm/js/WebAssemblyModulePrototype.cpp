@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 
 namespace JSC {
 
-const ClassInfo WebAssemblyModulePrototype::s_info = { "WebAssembly.Module", &Base::s_info, &prototypeTableWebAssemblyModule, nullptr, CREATE_METHOD_TABLE(WebAssemblyModulePrototype) };
+const ClassInfo WebAssemblyModulePrototype::s_info = { "WebAssembly.Module"_s, &Base::s_info, &prototypeTableWebAssemblyModule, nullptr, CREATE_METHOD_TABLE(WebAssemblyModulePrototype) };
 
 /* Source for WebAssemblyModulePrototype.lut.h
  @begin prototypeTableWebAssemblyModule
@@ -44,7 +44,7 @@ const ClassInfo WebAssemblyModulePrototype::s_info = { "WebAssembly.Module", &Ba
 
 WebAssemblyModulePrototype* WebAssemblyModulePrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<WebAssemblyModulePrototype>(vm.heap)) WebAssemblyModulePrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<WebAssemblyModulePrototype>(vm)) WebAssemblyModulePrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -57,7 +57,7 @@ Structure* WebAssemblyModulePrototype::createStructure(VM& vm, JSGlobalObject* g
 void WebAssemblyModulePrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 

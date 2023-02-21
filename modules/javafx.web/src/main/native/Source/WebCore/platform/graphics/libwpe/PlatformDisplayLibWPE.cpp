@@ -59,7 +59,6 @@ std::unique_ptr<PlatformDisplayLibWPE> PlatformDisplayLibWPE::create()
 }
 
 PlatformDisplayLibWPE::PlatformDisplayLibWPE()
-    : PlatformDisplay(NativeDisplayOwned::No)
 {
 #if PLATFORM(GTK)
     PlatformDisplay::setSharedDisplayForCompositing(*this);
@@ -68,7 +67,8 @@ PlatformDisplayLibWPE::PlatformDisplayLibWPE()
 
 PlatformDisplayLibWPE::~PlatformDisplayLibWPE()
 {
-    wpe_renderer_backend_egl_destroy(m_backend);
+    if (m_backend)
+        wpe_renderer_backend_egl_destroy(m_backend);
 }
 
 bool PlatformDisplayLibWPE::initialize(int hostFd)
@@ -84,9 +84,14 @@ bool PlatformDisplayLibWPE::initialize(int hostFd)
         GetPlatformDisplayType getPlatformDisplay =
             [] {
                 const char* extensions = eglQueryString(nullptr, EGL_EXTENSIONS);
-                if (GLContext::isExtensionSupported(extensions, "EGL_EXT_platform_base")
-                    || GLContext::isExtensionSupported(extensions, "EGL_KHR_platform_base"))
-                    return reinterpret_cast<GetPlatformDisplayType>(eglGetProcAddress("eglGetPlatformDisplay"));
+                if (GLContext::isExtensionSupported(extensions, "EGL_EXT_platform_base")) {
+                    if (auto extension = reinterpret_cast<GetPlatformDisplayType>(eglGetProcAddress("eglGetPlatformDisplayEXT")))
+                        return extension;
+                }
+                if (GLContext::isExtensionSupported(extensions, "EGL_KHR_platform_base")) {
+                    if (auto extension = reinterpret_cast<GetPlatformDisplayType>(eglGetProcAddress("eglGetPlatformDisplay")))
+                        return extension;
+                }
                 return GetPlatformDisplayType(nullptr);
             }();
 

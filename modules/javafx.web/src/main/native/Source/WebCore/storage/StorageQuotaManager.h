@@ -27,8 +27,7 @@
 
 #include <wtf/CompletionHandler.h>
 #include <wtf/Deque.h>
-#include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
 
@@ -38,7 +37,7 @@ class StorageQuotaManager : public ThreadSafeRefCounted<StorageQuotaManager>, pu
     WTF_MAKE_FAST_ALLOCATED;
 public:
     using UsageGetter = Function<uint64_t()>;
-    using QuotaIncreaseRequester = Function<void(uint64_t currentQuota, uint64_t currentUsage, uint64_t requestedIncrease, CompletionHandler<void(Optional<uint64_t>)>&&)>;
+    using QuotaIncreaseRequester = Function<void(uint64_t currentQuota, uint64_t currentUsage, uint64_t requestedIncrease, CompletionHandler<void(std::optional<uint64_t>)>&&)>;
     WEBCORE_EXPORT static Ref<StorageQuotaManager> create(uint64_t quota, UsageGetter&&, QuotaIncreaseRequester&&);
 
     static constexpr uint64_t defaultThirdPartyQuotaFromPerOriginQuota(uint64_t quota) { return quota / 10; }
@@ -52,15 +51,14 @@ public:
 
     WEBCORE_EXPORT void resetQuotaUpdatedBasedOnUsageForTesting();
     WEBCORE_EXPORT void resetQuotaForTesting();
-
 private:
     StorageQuotaManager(uint64_t quota, UsageGetter&&, QuotaIncreaseRequester&&);
-    bool tryGrantRequest(uint64_t);
+    bool tryGrantRequest(uint64_t) WTF_REQUIRES_LOCK(m_quotaCountDownLock);
 
     void updateQuotaBasedOnUsage();
 
     Lock m_quotaCountDownLock;
-    uint64_t m_quotaCountDown { 0 };
+    uint64_t m_quotaCountDown WTF_GUARDED_BY_LOCK(m_quotaCountDownLock) { 0 };
     uint64_t m_quota { 0 };
     uint64_t m_usage { 0 };
 

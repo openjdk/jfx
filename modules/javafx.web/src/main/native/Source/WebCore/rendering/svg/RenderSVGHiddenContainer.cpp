@@ -20,7 +20,6 @@
 #include "config.h"
 #include "RenderSVGHiddenContainer.h"
 
-#include "RenderSVGPath.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
@@ -29,7 +28,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGHiddenContainer);
 
 RenderSVGHiddenContainer::RenderSVGHiddenContainer(SVGElement& element, RenderStyle&& style)
-    : RenderSVGContainer(element, WTFMove(style))
+    : LegacyRenderSVGContainer(element, WTFMove(style))
 {
 }
 

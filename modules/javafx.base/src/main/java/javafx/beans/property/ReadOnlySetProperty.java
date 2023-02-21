@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,9 @@
 
 package javafx.beans.property;
 
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.Set;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.SetExpression;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 
 /**
@@ -109,19 +106,16 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this)
+        if (obj == this) {
             return true;
+        }
+        if (!(obj instanceof Set<?> otherSet) || otherSet.size() != size()) {
+            return false;
+        }
 
-        if (!(obj instanceof Set))
-            return false;
-        Set c = (Set) obj;
-        if (c.size() != size())
-            return false;
         try {
-            return containsAll(c);
-        } catch (ClassCastException unused)   {
-            return false;
-        } catch (NullPointerException unused) {
+            return containsAll(otherSet);
+        } catch (ClassCastException | NullPointerException unused)   {
             return false;
         }
     }

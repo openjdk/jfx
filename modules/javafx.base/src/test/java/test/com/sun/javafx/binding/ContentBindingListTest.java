@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,18 +49,18 @@ public class ContentBindingListTest {
 
     @Before
     public void setUp() {
-        list0 = new ArrayList<Integer>();
-        list1 = new ArrayList<Integer>(Arrays.asList(0));
-        list2 = new ArrayList<Integer>(Arrays.asList(2, 1));
+        list0 = new ArrayList<>();
+        list1 = new ArrayList<>(Arrays.asList(0));
+        list2 = new ArrayList<>(Arrays.asList(2, 1));
 
-        op1 = new ArrayList<Integer>(list1);
+        op1 = new ArrayList<>(list1);
         op2 = FXCollections.observableArrayList(list2);
         op3 = FXCollections.observableArrayList(list0);
     }
 
     @Test
     public void testBind() {
-        List<Integer> list2_sorted = new ArrayList<Integer>(Arrays.asList(1, 2));
+        List<Integer> list2_sorted = new ArrayList<>(Arrays.asList(1, 2));
 
         Bindings.bindContent(op1, op2);
         System.gc(); // making sure we did not not overdo weak references

@@ -18,6 +18,9 @@
 /* Define this if you want extra debugging. */
 /* #undef FFI_DEBUG */
 
+/* Define this if you want statically defined trampolines */
+/* #undef FFI_EXEC_STATIC_TRAMP */
+
 /* Cannot use PROT_EXEC on this target, so, we revert to alternative means */
 /* #undef FFI_EXEC_TRAMPOLINE_TABLE */
 
@@ -77,11 +80,17 @@
 /* Define to 1 if you have the `memcpy' function. */
 #define HAVE_MEMCPY 1
 
+/* Define to 1 if you have the `memfd_create' function. */
+/* #undef HAVE_MEMFD_CREATE */
+
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
 /* Define to 1 if you have the `mkostemp' function. */
 #define HAVE_MKOSTEMP 1
+
+/* Define to 1 if you have the `mkstemp' function. */
+/* #undef HAVE_MKSTEMP */
 
 /* Define to 1 if you have the `mmap' function. */
 #define HAVE_MMAP 1
@@ -94,6 +103,9 @@
 
 /* Define if read-only mmap of a plain file works. */
 #define HAVE_MMAP_FILE 1
+
+/* Define if your compiler supports pointer authentication. */
+/* #undef HAVE_PTRAUTH */
 
 /* Define if .eh_frame sections should be read-only. */
 /* #undef HAVE_RO_EH_FRAME */
@@ -109,6 +121,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
+
+/* Define to 1 if you have the <sys/memfd.h> header file. */
+/* #undef HAVE_SYS_MEMFD_H */
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #define HAVE_SYS_MMAN_H 1
@@ -138,7 +153,7 @@
 #define PACKAGE_NAME "libffi"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libffi 3.3"
+#define PACKAGE_STRING "libffi 3.4.2"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libffi"
@@ -147,7 +162,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "3.3"
+#define PACKAGE_VERSION "3.4.2"
 
 /* The size of `double', as computed by sizeof. */
 #define SIZEOF_DOUBLE 8
@@ -177,7 +192,7 @@
 /* #undef USING_PURIFY */
 
 /* Version number of package */
-#define VERSION "3.3"
+#define VERSION "3.4.2"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

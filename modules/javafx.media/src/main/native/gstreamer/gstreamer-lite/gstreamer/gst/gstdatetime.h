@@ -32,8 +32,8 @@ G_BEGIN_DECLS
  * GstDateTime:
  *
  * Opaque, immutable, refcounted struct that stores date, time and timezone
- * information. It currently supports ranges from 0001-01-01 to
- * 9999-12-31 in the Gregorian proleptic calendar.
+ * information. It currently supports ranges from `0001-01-01` to
+ * `9999-12-31` in the Gregorian proleptic calendar.
  *
  * Use the accessor functions to get the stored values.
  */

@@ -59,11 +59,11 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
 
     static SVGSpreadMethodType fromString(const String& value)
     {
-        if (value == "pad")
+        if (value == "pad"_s)
             return SVGSpreadMethodPad;
-        if (value == "reflect")
+        if (value == "reflect"_s)
             return SVGSpreadMethodReflect;
-        if (value == "repeat")
+        if (value == "repeat"_s)
             return SVGSpreadMethodRepeat;
         return SVGSpreadMethodUnknown;
     }
@@ -79,7 +79,7 @@ public:
         SVG_SPREADMETHOD_REPEAT = SVGSpreadMethodUnknown
     };
 
-    Gradient::ColorStopVector buildStops();
+    GradientColorStops buildStops();
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGGradientElement, SVGElement, SVGURIReference>;
 

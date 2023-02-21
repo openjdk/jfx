@@ -37,8 +37,9 @@
 #include "Cookie.h"
 #include "CookieJar.h"
 #include "DOMWrapperWorld.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
@@ -62,7 +63,7 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StyleScope.h"
-#include "TextEncoding.h"
+#include <pal/text/TextEncoding.h>
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/IdentifiersFactory.h>
@@ -85,12 +86,12 @@ namespace WebCore {
 
 using namespace Inspector;
 
-static bool decodeBuffer(const char* buffer, unsigned size, const String& textEncodingName, String* result)
+static bool decodeBuffer(const uint8_t* buffer, unsigned size, const String& textEncodingName, String* result)
 {
     if (buffer) {
-        TextEncoding encoding(textEncodingName);
+        PAL::TextEncoding encoding(textEncodingName);
         if (!encoding.isValid())
-            encoding = WindowsLatin1Encoding();
+            encoding = PAL::WindowsLatin1Encoding();
         *result = encoding.decode(buffer, size);
         return true;
     }
@@ -99,21 +100,21 @@ static bool decodeBuffer(const char* buffer, unsigned size, const String& textEn
 
 bool InspectorPageAgent::mainResourceContent(Frame* frame, bool withBase64Encode, String* result)
 {
-    RefPtr<SharedBuffer> buffer = frame->loader().documentLoader()->mainResourceData();
+    RefPtr<FragmentedSharedBuffer> buffer = frame->loader().documentLoader()->mainResourceData();
     if (!buffer)
         return false;
-    return InspectorPageAgent::dataContent(buffer->data(), buffer->size(), frame->document()->encoding(), withBase64Encode, result);
+    return InspectorPageAgent::dataContent(buffer->makeContiguous()->data(), buffer->size(), frame->document()->encoding(), withBase64Encode, result);
 }
 
-bool InspectorPageAgent::sharedBufferContent(RefPtr<SharedBuffer>&& buffer, const String& textEncodingName, bool withBase64Encode, String* result)
+bool InspectorPageAgent::sharedBufferContent(RefPtr<FragmentedSharedBuffer>&& buffer, const String& textEncodingName, bool withBase64Encode, String* result)
 {
-    return dataContent(buffer ? buffer->data() : nullptr, buffer ? buffer->size() : 0, textEncodingName, withBase64Encode, result);
+    return dataContent(buffer ? buffer->makeContiguous()->data() : nullptr, buffer ? buffer->size() : 0, textEncodingName, withBase64Encode, result);
 }
 
-bool InspectorPageAgent::dataContent(const char* data, unsigned size, const String& textEncodingName, bool withBase64Encode, String* result)
+bool InspectorPageAgent::dataContent(const uint8_t* data, unsigned size, const String& textEncodingName, bool withBase64Encode, String* result)
 {
     if (withBase64Encode) {
-        *result = base64Encode(data, size);
+        *result = base64EncodeToString(data, size);
         return true;
     }
 
@@ -155,7 +156,7 @@ void InspectorPageAgent::resourceContent(Protocol::ErrorString& errorString, Fra
     if (!loader)
         return;
 
-    RefPtr<SharedBuffer> buffer;
+    RefPtr<FragmentedSharedBuffer> buffer;
     bool success = false;
     if (equalIgnoringFragmentIdentifier(url, loader->url())) {
         *base64Encoded = false;
@@ -196,7 +197,7 @@ String InspectorPageAgent::sourceMapURLForResource(CachedResource* cachedResourc
     return String();
 }
 
-CachedResource* InspectorPageAgent::cachedResource(Frame* frame, const URL& url)
+CachedResource* InspectorPageAgent::cachedResource(const Frame* frame, const URL& url)
 {
     if (url.isNull())
         return nullptr;
@@ -234,6 +235,8 @@ Protocol::Page::ResourceType InspectorPageAgent::resourceTypeJSON(InspectorPageA
         return Protocol::Page::ResourceType::Beacon;
     case WebSocketResource:
         return Protocol::Page::ResourceType::WebSocket;
+    case EventSourceResource:
+        return Protocol::Page::ResourceType::EventSource;
     case OtherResource:
         return Protocol::Page::ResourceType::Other;
 #if ENABLE(APPLICATION_MANIFEST)
@@ -285,6 +288,8 @@ InspectorPageAgent::ResourceType InspectorPageAgent::inspectorResourceType(const
             return InspectorPageAgent::FetchResource;
         case ResourceRequest::Requester::Main:
             return InspectorPageAgent::DocumentResource;
+        case ResourceRequest::Requester::EventSource:
+            return InspectorPageAgent::EventSourceResource;
         default:
             return InspectorPageAgent::XHRResource;
         }
@@ -366,25 +371,25 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::disable()
     overrideUserAgent(nullString());
     setEmulatedMedia(emptyString());
 #if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-    setForcedAppearance(WTF::nullopt);
+    setForcedAppearance(std::nullopt);
 #endif
 
     auto& inspectedPageSettings = m_inspectedPage.settings();
-    inspectedPageSettings.setAuthorAndUserStylesEnabledInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setICECandidateFilteringEnabledInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setImagesEnabledInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setMediaCaptureRequiresSecureConnectionInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setMockCaptureDevicesEnabledInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setNeedsSiteSpecificQuirksInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setScriptEnabledInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setShowDebugBordersInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setShowRepaintCounterInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setWebRTCEncryptionEnabledInspectorOverride(WTF::nullopt);
-    inspectedPageSettings.setWebSecurityEnabledInspectorOverride(WTF::nullopt);
+    inspectedPageSettings.setAuthorAndUserStylesEnabledInspectorOverride(std::nullopt);
+    inspectedPageSettings.setICECandidateFilteringEnabledInspectorOverride(std::nullopt);
+    inspectedPageSettings.setImagesEnabledInspectorOverride(std::nullopt);
+    inspectedPageSettings.setMediaCaptureRequiresSecureConnectionInspectorOverride(std::nullopt);
+    inspectedPageSettings.setMockCaptureDevicesEnabledInspectorOverride(std::nullopt);
+    inspectedPageSettings.setNeedsSiteSpecificQuirksInspectorOverride(std::nullopt);
+    inspectedPageSettings.setScriptEnabledInspectorOverride(std::nullopt);
+    inspectedPageSettings.setShowDebugBordersInspectorOverride(std::nullopt);
+    inspectedPageSettings.setShowRepaintCounterInspectorOverride(std::nullopt);
+    inspectedPageSettings.setWebRTCEncryptionEnabledInspectorOverride(std::nullopt);
+    inspectedPageSettings.setWebSecurityEnabledInspectorOverride(std::nullopt);
 
-    m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::PrivateClickMeasurementDebugModeEnabled, WTF::nullopt);
-    m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::ITPDebugModeEnabled, WTF::nullopt);
-    m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::MockCaptureDevicesEnabled, WTF::nullopt);
+    m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::PrivateClickMeasurementDebugModeEnabled, std::nullopt);
+    m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::ITPDebugModeEnabled, std::nullopt);
+    m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::MockCaptureDevicesEnabled, std::nullopt);
 
     return { };
 }
@@ -394,7 +399,7 @@ double InspectorPageAgent::timestamp()
     return m_environment.executionStopwatch().elapsedTime().seconds();
 }
 
-Protocol::ErrorStringOr<void> InspectorPageAgent::reload(Optional<bool>&& ignoreCache, Optional<bool>&& revalidateAllResources)
+Protocol::ErrorStringOr<void> InspectorPageAgent::reload(std::optional<bool>&& ignoreCache, std::optional<bool>&& revalidateAllResources)
 {
     OptionSet<ReloadOption> reloadOptions;
     if (ignoreCache && *ignoreCache)
@@ -408,11 +413,12 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::reload(Optional<bool>&& ignore
 
 Protocol::ErrorStringOr<void> InspectorPageAgent::navigate(const String& url)
 {
-    UserGestureIndicator indicator { ProcessingUserGesture };
     Frame& frame = m_inspectedPage.mainFrame();
 
+    UserGestureIndicator indicator { ProcessingUserGesture, frame.document() };
+
     ResourceRequest resourceRequest { frame.document()->completeURL(url) };
-    FrameLoadRequest frameLoadRequest { *frame.document(), frame.document()->securityOrigin(), WTFMove(resourceRequest), "_self"_s, InitiatedByMainFrame::Unknown };
+    FrameLoadRequest frameLoadRequest { *frame.document(), frame.document()->securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), InitiatedByMainFrame::Unknown };
     frameLoadRequest.disableNavigationToInvalidURL();
     frame.loader().changeLocation(WTFMove(frameLoadRequest));
 
@@ -426,7 +432,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::overrideUserAgent(const String
     return { };
 }
 
-Protocol::ErrorStringOr<void> InspectorPageAgent::overrideSetting(Protocol::Page::Setting setting, Optional<bool>&& value)
+Protocol::ErrorStringOr<void> InspectorPageAgent::overrideSetting(Protocol::Page::Setting setting, std::optional<bool>&& value)
 {
     auto& inspectedPageSettings = m_inspectedPage.settings();
 
@@ -510,7 +516,7 @@ static Ref<Protocol::Page::Cookie> buildObjectForCookie(const Cookie& cookie)
         .setValue(cookie.value)
         .setDomain(cookie.domain)
         .setPath(cookie.path)
-        .setExpires(cookie.expires.valueOr(0))
+        .setExpires(cookie.expires.value_or(0))
         .setSession(cookie.session)
         .setHttpOnly(cookie.httpOnly)
         .setSecure(cookie.secure)
@@ -562,46 +568,46 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Page::Cookie>>> InspectorPag
     return buildArrayForCookies(allRawCookies);
 }
 
-static Optional<Cookie> parseCookieObject(Protocol::ErrorString& errorString, Ref<JSON::Object>&& cookieObject)
+static std::optional<Cookie> parseCookieObject(Protocol::ErrorString& errorString, Ref<JSON::Object>&& cookieObject)
 {
     Cookie cookie;
 
     cookie.name = cookieObject->getString(Protocol::Page::Cookie::nameKey);
     if (!cookie.name) {
-        errorString = "Invalid value for key name in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key name in given cookie"_s;
+        return std::nullopt;
     }
 
     cookie.value = cookieObject->getString(Protocol::Page::Cookie::valueKey);
     if (!cookie.value) {
-        errorString = "Invalid value for key value in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key value in given cookie"_s;
+        return std::nullopt;
     }
 
     cookie.domain = cookieObject->getString(Protocol::Page::Cookie::domainKey);
     if (!cookie.domain) {
-        errorString = "Invalid value for key domain in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key domain in given cookie"_s;
+        return std::nullopt;
     }
 
     cookie.path = cookieObject->getString(Protocol::Page::Cookie::pathKey);
     if (!cookie.path) {
-        errorString = "Invalid value for key path in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key path in given cookie"_s;
+        return std::nullopt;
     }
 
     auto httpOnly = cookieObject->getBoolean(Protocol::Page::Cookie::httpOnlyKey);
     if (!httpOnly) {
-        errorString = "Invalid value for key httpOnly in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key httpOnly in given cookie"_s;
+        return std::nullopt;
     }
 
     cookie.httpOnly = *httpOnly;
 
     auto secure = cookieObject->getBoolean(Protocol::Page::Cookie::secureKey);
     if (!secure) {
-        errorString = "Invalid value for key secure in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key secure in given cookie"_s;
+        return std::nullopt;
     }
 
     cookie.secure = *secure;
@@ -609,22 +615,22 @@ static Optional<Cookie> parseCookieObject(Protocol::ErrorString& errorString, Re
     auto session = cookieObject->getBoolean(Protocol::Page::Cookie::sessionKey);
     cookie.expires = cookieObject->getDouble(Protocol::Page::Cookie::expiresKey);
     if (!session && !cookie.expires) {
-        errorString = "Invalid value for key expires in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key expires in given cookie"_s;
+        return std::nullopt;
     }
 
     cookie.session = *session;
 
     auto sameSiteString = cookieObject->getString(Protocol::Page::Cookie::sameSiteKey);
     if (!sameSiteString) {
-        errorString = "Invalid value for key sameSite in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key sameSite in given cookie"_s;
+        return std::nullopt;
     }
 
     auto sameSite = Protocol::Helpers::parseEnumValueFromString<Protocol::Page::CookieSameSitePolicy>(sameSiteString);
     if (!sameSite) {
-        errorString = "Invalid value for key sameSite in given cookie";
-        return WTF::nullopt;
+        errorString = "Invalid value for key sameSite in given cookie"_s;
+        return std::nullopt;
     }
 
     switch (sameSite.value()) {
@@ -668,7 +674,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::deleteCookie(const String& coo
     for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (auto* document = frame->document()) {
             if (auto* page = document->page())
-                page->cookieJar().deleteCookie(*document, parsedURL, cookieName);
+                page->cookieJar().deleteCookie(*document, parsedURL, cookieName, [] { });
         }
     }
 
@@ -703,7 +709,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setBootstrapScript(const Strin
     return { };
 }
 
-Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::GenericTypes::SearchMatch>>> InspectorPageAgent::searchInResource(const Protocol::Network::FrameId& frameId, const String& url, const String& query, Optional<bool>&& caseSensitive, Optional<bool>&& isRegex, const Protocol::Network::RequestId& requestId)
+Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::GenericTypes::SearchMatch>>> InspectorPageAgent::searchInResource(const Protocol::Network::FrameId& frameId, const String& url, const String& query, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex, const Protocol::Network::RequestId& requestId)
 {
     Protocol::ErrorString errorString;
 
@@ -756,7 +762,7 @@ static Ref<Protocol::Page::SearchResult> buildObjectForSearchResult(const Protoc
         .release();
 }
 
-Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Page::SearchResult>>> InspectorPageAgent::searchInResources(const String& text, Optional<bool>&& caseSensitive, Optional<bool>&& isRegex)
+Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Page::SearchResult>>> InspectorPageAgent::searchInResources(const String& text, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex)
 {
     auto result = JSON::ArrayOf<Protocol::Page::SearchResult>::create();
 
@@ -837,7 +843,7 @@ String InspectorPageAgent::frameId(Frame* frame)
         return emptyString();
     return m_frameToIdentifier.ensure(frame, [this, frame] {
         auto identifier = IdentifiersFactory::createIdentifier();
-        m_identifierToFrame.set(identifier, makeWeakPtr(frame));
+        m_identifierToFrame.set(identifier, frame);
         return identifier;
     }).iterator->value;
 }
@@ -899,7 +905,7 @@ void InspectorPageAgent::didClearWindowObjectInWorld(Frame& frame, DOMWrapperWor
     if (m_bootstrapScript.isEmpty())
         return;
 
-    frame.script().evaluateIgnoringException(ScriptSourceCode(m_bootstrapScript, URL { URL(), "web-inspector://bootstrap.js"_s }));
+    frame.script().evaluateIgnoringException(ScriptSourceCode(m_bootstrapScript, URL { "web-inspector://bootstrap.js"_str }));
 }
 
 void InspectorPageAgent::didPaint(RenderObject& renderer, const LayoutRect& rect)
@@ -1017,7 +1023,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setEmulatedMedia(const String&
     // FIXME: Schedule a rendering update instead of synchronously updating the layout.
     m_inspectedPage.updateStyleAfterChangeInEnvironment();
 
-    auto document = makeRefPtr(m_inspectedPage.mainFrame().document());
+    RefPtr document = m_inspectedPage.mainFrame().document();
     if (!document)
         return { };
 
@@ -1028,10 +1034,10 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setEmulatedMedia(const String&
 }
 
 #if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-Protocol::ErrorStringOr<void> InspectorPageAgent::setForcedAppearance(Optional<Protocol::Page::Appearance>&& appearance)
+Protocol::ErrorStringOr<void> InspectorPageAgent::setForcedAppearance(std::optional<Protocol::Page::Appearance>&& appearance)
 {
     if (!appearance) {
-        m_inspectedPage.setUseDarkAppearanceOverride(WTF::nullopt);
+        m_inspectedPage.setUseDarkAppearanceOverride(std::nullopt);
         return { };
     }
 
@@ -1072,26 +1078,26 @@ Protocol::ErrorStringOr<String> InspectorPageAgent::snapshotNode(Protocol::DOM::
     if (!node)
         return makeUnexpected(errorString);
 
-    auto snapshot = WebCore::snapshotNode(m_inspectedPage.mainFrame(), *node);
+    auto snapshot = WebCore::snapshotNode(m_inspectedPage.mainFrame(), *node, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() });
     if (!snapshot)
         return makeUnexpected("Could not capture snapshot"_s);
 
-    return snapshot->toDataURL("image/png"_s, WTF::nullopt, PreserveResolution::Yes);
+    return snapshot->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
 }
 
 Protocol::ErrorStringOr<String> InspectorPageAgent::snapshotRect(int x, int y, int width, int height, Protocol::Page::CoordinateSystem coordinateSystem)
 {
-    SnapshotOptions options = SnapshotOptionsNone;
+    SnapshotOptions options { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() };
     if (coordinateSystem == Protocol::Page::CoordinateSystem::Viewport)
-        options |= SnapshotOptionsInViewCoordinates;
+        options.flags.add(SnapshotFlags::InViewCoordinates);
 
     IntRect rectangle(x, y, width, height);
-    auto snapshot = snapshotFrameRect(m_inspectedPage.mainFrame(), rectangle, options);
+    auto snapshot = snapshotFrameRect(m_inspectedPage.mainFrame(), rectangle, WTFMove(options));
 
     if (!snapshot)
         return makeUnexpected("Could not capture snapshot"_s);
 
-    return snapshot->toDataURL("image/png"_s, WTF::nullopt, PreserveResolution::Yes);
+    return snapshot->toDataURL("image/png"_s, std::nullopt, PreserveResolution::Yes);
 }
 
 #if ENABLE(WEB_ARCHIVE) && USE(CF)
@@ -1102,14 +1108,14 @@ Protocol::ErrorStringOr<String> InspectorPageAgent::archive()
         return makeUnexpected("Could not create web archive for main frame"_s);
 
     RetainPtr<CFDataRef> buffer = archive->rawDataRepresentation();
-    return base64Encode(CFDataGetBytePtr(buffer.get()), CFDataGetLength(buffer.get()));
+    return base64EncodeToString(CFDataGetBytePtr(buffer.get()), CFDataGetLength(buffer.get()));
 }
 #endif
 
 #if !PLATFORM(COCOA)
-Protocol::ErrorStringOr<void> InspectorPageAgent::setScreenSizeOverride(Optional<int>&& width, Optional<int>&& height)
+Protocol::ErrorStringOr<void> InspectorPageAgent::setScreenSizeOverride(std::optional<int>&& width, std::optional<int>&& height)
 {
-    if (width.hasValue() != height.hasValue())
+    if (width.has_value() != height.has_value())
         return makeUnexpected("Screen width and height override should be both specified or omitted"_s);
 
     if (width && *width <= 0)
@@ -1118,7 +1124,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setScreenSizeOverride(Optional
     if (height && *height <= 0)
         return makeUnexpected("Screen height override should be a positive integer"_s);
 
-    m_inspectedPage.mainFrame().setOverrideScreenSize(FloatSize(width.valueOr(0), height.valueOr(0)));
+    m_inspectedPage.mainFrame().setOverrideScreenSize(FloatSize(width.value_or(0), height.value_or(0)));
     return { };
 }
 #endif

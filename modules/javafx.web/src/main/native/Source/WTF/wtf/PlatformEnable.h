@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -108,10 +108,6 @@
 #define ENABLE_WEBPROCESS_NSRUNLOOP 0
 #endif
 
-#if !defined(ENABLE_WEBPROCESS_WINDOWSERVER_BLOCKING)
-#define ENABLE_WEBPROCESS_WINDOWSERVER_BLOCKING 0
-#endif
-
 #if !defined(ENABLE_MAC_GESTURE_EVENTS)
 #define ENABLE_MAC_GESTURE_EVENTS 0
 #endif
@@ -164,7 +160,6 @@
 #define ENABLE_META_VIEWPORT 0
 #endif
 
-
 #if !defined(ENABLE_FILE_REPLACEMENT)
 #define ENABLE_FILE_REPLACEMENT 0
 #endif
@@ -193,6 +188,10 @@
 #define ENABLE_CHANNEL_MESSAGING 1
 #endif
 
+#if !defined(ENABLE_CONTENT_CHANGE_OBSERVER)
+#define ENABLE_CONTENT_CHANGE_OBSERVER 0
+#endif
+
 #if !defined(ENABLE_CONTENT_EXTENSIONS)
 #define ENABLE_CONTENT_EXTENSIONS 0
 #endif
@@ -203,10 +202,6 @@
 
 #if !defined(ENABLE_CONTEXT_MENU_EVENT)
 #define ENABLE_CONTEXT_MENU_EVENT 1
-#endif
-
-#if !defined(ENABLE_CSS3_TEXT)
-#define ENABLE_CSS3_TEXT 0
 #endif
 
 #if !defined(ENABLE_CSS_BOX_DECORATION_BREAK)
@@ -245,6 +240,14 @@
 #define ENABLE_DEVICE_ORIENTATION 0
 #endif
 
+#if !defined(ENABLE_DESTINATION_COLOR_SPACE_DISPLAY_P3)
+#define ENABLE_DESTINATION_COLOR_SPACE_DISPLAY_P3 0
+#endif
+
+#if !defined(ENABLE_DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+#define ENABLE_DESTINATION_COLOR_SPACE_LINEAR_SRGB 0
+#endif
+
 #if !defined(ENABLE_DOWNLOAD_ATTRIBUTE)
 #define ENABLE_DOWNLOAD_ATTRIBUTE 1
 #endif
@@ -281,14 +284,6 @@
 
 #if !defined(ENABLE_GEOLOCATION)
 #define ENABLE_GEOLOCATION 0
-#endif
-
-#if !defined(ENABLE_INDEXED_DATABASE)
-#define ENABLE_INDEXED_DATABASE 0
-#endif
-
-#if !defined(ENABLE_INDEXED_DATABASE_IN_WORKERS)
-#define ENABLE_INDEXED_DATABASE_IN_WORKERS 0
 #endif
 
 #if !defined(ENABLE_INPUT_TYPE_COLOR)
@@ -344,12 +339,16 @@
 #define ENABLE_INSPECTOR_TELEMETRY 0
 #endif
 
+#if !defined(ENABLE_LAYER_BASED_SVG_ENGINE)
+#define ENABLE_LAYER_BASED_SVG_ENGINE 0
+#endif
+
 #if !defined(ENABLE_LAYOUT_FORMATTING_CONTEXT)
 #define ENABLE_LAYOUT_FORMATTING_CONTEXT 0
 #endif
 
-#if !defined(ENABLE_LETTERPRESS)
-#define ENABLE_LETTERPRESS 0
+#if !defined(ENABLE_LLVM_PROFILE_GENERATION)
+#define ENABLE_LLVM_PROFILE_GENERATION 0
 #endif
 
 #if !defined(ENABLE_MATHML)
@@ -362,6 +361,10 @@
 
 #if !defined(ENABLE_MEDIA_CONTROLS_SCRIPT)
 #define ENABLE_MEDIA_CONTROLS_SCRIPT 0
+#endif
+
+#if !defined(ENABLE_MEDIA_RECORDER)
+#define ENABLE_MEDIA_RECORDER 0
 #endif
 
 #if !defined(ENABLE_MEDIA_SOURCE)
@@ -380,16 +383,16 @@
 #define ENABLE_MHTML 0
 #endif
 
+#if !defined(ENABLE_MODERN_MEDIA_CONTROLS)
+#define ENABLE_MODERN_MEDIA_CONTROLS 0
+#endif
+
 #if !defined(ENABLE_MOUSE_CURSOR_SCALE)
 #define ENABLE_MOUSE_CURSOR_SCALE 0
 #endif
 
 #if !defined(ENABLE_MOUSE_FORCE_EVENTS)
 #define ENABLE_MOUSE_FORCE_EVENTS 1
-#endif
-
-#if !defined(ENABLE_NETSCAPE_PLUGIN_API)
-#define ENABLE_NETSCAPE_PLUGIN_API 1
 #endif
 
 #if !defined(ENABLE_NETSCAPE_PLUGIN_METADATA_CACHE)
@@ -402,6 +405,10 @@
 
 #if !defined(ENABLE_OFFSCREEN_CANVAS)
 #define ENABLE_OFFSCREEN_CANVAS 0
+#endif
+
+#if !defined(ENABLE_OFFSCREEN_CANVAS_IN_WORKERS)
+#define ENABLE_OFFSCREEN_CANVAS_IN_WORKERS 0
 #endif
 
 #if !defined(ENABLE_THUNDER)
@@ -447,10 +454,6 @@
 
 #if !defined(ENABLE_SEPARATED_WX_HEAP)
 #define ENABLE_SEPARATED_WX_HEAP 0
-#endif
-
-#if !defined(ENABLE_SMOOTH_SCROLLING)
-#define ENABLE_SMOOTH_SCROLLING 0
 #endif
 
 #if !defined(ENABLE_SPEECH_SYNTHESIS)
@@ -545,6 +548,14 @@
 #define ENABLE_FILE_SHARE 1
 #endif
 
+#if !defined(ENABLE_WEBXR)
+#define ENABLE_WEBXR 0
+#endif
+
+#if !defined(ENABLE_WEBXR_HANDS)
+#define ENABLE_WEBXR_HANDS 0
+#endif
+
 /*
  * Enable this to put each IsoHeap and other allocation categories into their own malloc heaps, so that tools like vmmap can show how big each heap is.
  * Turn BENABLE_MALLOC_HEAP_BREAKDOWN on in bmalloc together when using this.
@@ -569,18 +580,18 @@
 #endif
 
 /* The JIT is enabled by default on all x86-64 & ARM64 platforms. */
-#if !defined(ENABLE_JIT) && (CPU(X86_64) || CPU(ARM64)) && !CPU(APPLE_ARMV7K)
+#if !defined(ENABLE_JIT) && (CPU(X86_64) || (CPU(ARM64) && CPU(ADDRESS64)))
 #define ENABLE_JIT 1
 #endif
 
 #if USE(JSVALUE32_64)
-/* Disable WebAssembly on all 32bit platforms. Its LLInt tier could
- * work on them, but still needs some final touches. */
+#if CPU(MIPS)
 #undef ENABLE_WEBASSEMBLY
 #define ENABLE_WEBASSEMBLY 0
 #undef ENABLE_WEBASSEMBLY_B3JIT
 #define ENABLE_WEBASSEMBLY_B3JIT 0
-#if (CPU(ARM_THUMB2) || CPU(MIPS)) && OS(LINUX)
+#endif
+#if ((CPU(ARM_THUMB2) && CPU(ARM_HARDFP)) || CPU(MIPS)) && OS(LINUX)
 /* On ARMv7 and MIPS on Linux the JIT is enabled unless explicitly disabled. */
 #if !defined(ENABLE_JIT)
 #define ENABLE_JIT 1
@@ -599,15 +610,17 @@
 #endif
 
 #if !defined(ENABLE_C_LOOP)
-#if ENABLE(JIT) || CPU(X86_64) || (CPU(ARM64) && !defined(__ILP32__))
+#if ENABLE(JIT) || CPU(X86_64) || CPU(ARM64)
 #define ENABLE_C_LOOP 0
 #else
 #define ENABLE_C_LOOP 1
 #endif
 #endif
 
-#if !defined(ENABLE_JUMP_ISLANDS) && CPU(ARM64) && CPU(ADDRESS64) && ENABLE(JIT)
+#if !defined(ENABLE_JUMP_ISLANDS) && ENABLE(JIT)
+#if (CPU(ARM64) && CPU(ADDRESS64)) || CPU(ARM_THUMB2)
 #define ENABLE_JUMP_ISLANDS 1
+#endif
 #endif
 
 /* FIXME: This should be turned into an #error invariant */
@@ -620,15 +633,19 @@
 /* If possible, try to enable a disassembler. This is optional. We proceed in two
    steps: first we try to find some disassembler that we can use, and then we
    decide if the high-level disassembler API can be enabled. */
-#if !defined(ENABLE_UDIS86) && ENABLE(JIT) && CPU(X86_64) && !USE(CAPSTONE)
-#define ENABLE_UDIS86 1
+#if !defined(ENABLE_ZYDIS) && ENABLE(JIT) && CPU(X86_64) && !USE(CAPSTONE)
+#define ENABLE_ZYDIS 1
 #endif
 
 #if !defined(ENABLE_ARM64_DISASSEMBLER) && ENABLE(JIT) && CPU(ARM64) && !USE(CAPSTONE)
 #define ENABLE_ARM64_DISASSEMBLER 1
 #endif
 
-#if !defined(ENABLE_DISASSEMBLER) && (ENABLE(UDIS86) || ENABLE(ARM64_DISASSEMBLER) || (ENABLE(JIT) && USE(CAPSTONE)))
+#if !defined(ENABLE_RISCV64_DISASSEMBLER) && ENABLE(JIT) && CPU(RISCV64) && !USE(CAPSTONE)
+#define ENABLE_RISCV64_DISASSEMBLER 1
+#endif
+
+#if !defined(ENABLE_DISASSEMBLER) && (ENABLE(ZYDIS) || ENABLE(ARM64_DISASSEMBLER) || ENABLE(RISCV64_DISASSEMBLER) || (ENABLE(JIT) && USE(CAPSTONE)))
 #define ENABLE_DISASSEMBLER 1
 #endif
 
@@ -663,14 +680,9 @@
 #define ENABLE_FAST_TLS_JIT 1
 #endif
 
-#if ENABLE(JIT) && (CPU(X86) || CPU(X86_64) || CPU(ARM_THUMB2) || CPU(ARM64) || CPU(MIPS))
-#define ENABLE_MASM_PROBE 1
-#endif
-
 /* FIXME: This should be turned into an #error invariant */
-/* If the baseline jit is not available, then disable upper tiers as well.
-   The MacroAssembler::probe() is also required for supporting the upper tiers. */
-#if !ENABLE(JIT) || !ENABLE(MASM_PROBE)
+/* If the baseline jit is not available, then disable upper tiers as well. */
+#if !ENABLE(JIT)
 #undef ENABLE_DFG_JIT
 #undef ENABLE_FTL_JIT
 #define ENABLE_DFG_JIT 0
@@ -702,7 +714,7 @@
 #define ENABLE_SAMPLING_PROFILER 1
 #endif
 
-#if ENABLE(WEBASSEMBLY) && HAVE(MACHINE_CONTEXT)
+#if ENABLE(WEBASSEMBLY) && HAVE(MACHINE_CONTEXT) && CPU(ADDRESS64)
 #define ENABLE_WEBASSEMBLY_SIGNALING_MEMORY 1
 #endif
 
@@ -749,13 +761,18 @@
 #endif
 
 /* Enable JIT'ing Regular Expressions that have nested parenthesis . */
-#if ENABLE(YARR_JIT) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)))
+#if ENABLE(YARR_JIT) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)) || CPU(RISCV64))
 #define ENABLE_YARR_JIT_ALL_PARENS_EXPRESSIONS 1
+#define ENABLE_YARR_JIT_REGEXP_TEST_INLINE 1
 #endif
 
 /* Enable JIT'ing Regular Expressions that have nested back references. */
-#if ENABLE(YARR_JIT) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)))
+#if ENABLE(YARR_JIT) && (CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS)) || CPU(RISCV64))
 #define ENABLE_YARR_JIT_BACKREFERENCES 1
+#endif
+
+#if ENABLE(YARR_JIT) && (CPU(ARM64) || CPU(X86_64) || CPU(RISCV64))
+#define ENABLE_YARR_JIT_UNICODE_EXPRESSIONS 1
 #endif
 
 /* If either the JIT or the RegExp JIT is enabled, then the Assembler must be
@@ -783,7 +800,7 @@
 #define ENABLE_EXCEPTION_SCOPE_VERIFICATION ASSERT_ENABLED
 #endif
 
-#if ENABLE(DFG_JIT) && HAVE(MACHINE_CONTEXT) && (CPU(X86_64) || CPU(ARM64))
+#if ENABLE(DFG_JIT) && HAVE(MACHINE_CONTEXT) && (CPU(X86_64) || CPU(ARM64) || CPU(RISCV64))
 #define ENABLE_SIGNAL_BASED_VM_TRAPS 1
 #endif
 
@@ -826,6 +843,18 @@
 #define ENABLE_GC_VALIDATION 1
 #endif
 
+#if OS(DARWIN) && ENABLE(JIT) && USE(APPLE_INTERNAL_SDK) && CPU(ARM64E) && HAVE(JIT_CAGE) && !PLATFORM(MAC)
+#define ENABLE_JIT_CAGE 1
+#endif
+
+#if OS(DARWIN) && CPU(ADDRESS64) && ENABLE(JIT) && (ENABLE(JIT_CAGE) || ASSERT_ENABLED)
+#define ENABLE_JIT_OPERATION_VALIDATION 1
+#endif
+
+#if USE(APPLE_INTERNAL_SDK) && ENABLE(DISASSEMBLER) && CPU(ARM64E) && HAVE(DLADDR)
+#define ENABLE_JIT_OPERATION_DISASSEMBLY 1
+#endif
+
 #if !defined(ENABLE_BINDING_INTEGRITY) && !OS(WINDOWS)
 #define ENABLE_BINDING_INTEGRITY 1
 #endif
@@ -855,6 +884,10 @@
 #define ENABLE_WHEEL_EVENT_LATCHING 1
 #endif
 
+#if PLATFORM(MAC)
+#define ENABLE_MOMENTUM_EVENT_DISPATCHER 1
+#endif
+
 #if !defined(ENABLE_SCROLLING_THREAD)
 #if USE(NICOSIA)
 #define ENABLE_SCROLLING_THREAD 1
@@ -863,12 +896,21 @@
 #endif
 #endif
 
+// FIXME: Reenable PDFJS by default for Cocoa (https://bugs.webkit.org/show_bug.cgi?id=242263).
+#if !defined(ENABLE_PDFJS) && ( /* PLATFORM(COCOA) || */ PLATFORM(GTK) || PLATFORM(WPE))
+#define ENABLE_PDFJS 1
+#endif
+
 /* This feature works by embedding the OpcodeID in the 32 bit just before the generated LLint code
    that executes each opcode. It cannot be supported by the CLoop since there's no way to embed the
    OpcodeID word in the CLoop's switch statement cases. It is also currently not implemented for MSVC.
 */
-#if !defined(ENABLE_LLINT_EMBEDDED_OPCODE_ID) && !ENABLE(C_LOOP) && !COMPILER(MSVC) && (CPU(X86) || CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN)))
+#if !defined(ENABLE_LLINT_EMBEDDED_OPCODE_ID) && !ENABLE(C_LOOP) && !COMPILER(MSVC) && (CPU(X86) || CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN)) || CPU(RISCV64))
 #define ENABLE_LLINT_EMBEDDED_OPCODE_ID 1
+#endif
+
+#if !defined(ENABLE_PREDEFINED_COLOR_SPACE_DISPLAY_P3)
+#define ENABLE_PREDEFINED_COLOR_SPACE_DISPLAY_P3 0
 #endif
 
 
@@ -893,14 +935,43 @@
 #error "ENABLE(WEBGL2) requires ENABLE(WEBGL)"
 #endif
 
-#if ENABLE(WHLSL_COMPILER) && !ENABLE(WEBGPU)
-#error "ENABLE(WHLSL_COMPILER) requires ENABLE(WEBGPU)"
+#if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS) && !ENABLE(OFFSCREEN_CANVAS)
+#error "ENABLE(OFFSCREEN_CANVAS_IN_WORKERS) requires ENABLE(OFFSCREEN_CANVAS)"
 #endif
 
-#if OS(DARWIN) && ENABLE(JIT) && USE(APPLE_INTERNAL_SDK) && CPU(ARM64E) && ((defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 150000) || (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 120000))
-#define ENABLE_JIT_CAGE 1
+#if ENABLE(MEDIA_RECORDER) && !ENABLE(MEDIA_STREAM)
+#error "ENABLE(MEDIA_RECORDER) requires ENABLE(MEDIA_STREAM)"
 #endif
 
-#if OS(DARWIN) && CPU(ADDRESS64) && ENABLE(JIT) && (ENABLE(JIT_CAGE) || ASSERT_ENABLED)
-#define ENABLE_JIT_OPERATION_VALIDATION 1
+#if USE(CG)
+
+#if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3) && !HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE)
+#error "ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3) requires HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE) on platforms using CoreGraphics"
+#endif
+
+#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB) && !HAVE(CORE_GRAPHICS_LINEAR_SRGB_COLOR_SPACE)
+#error "ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB) requires HAVE(CORE_GRAPHICS_LINEAR_SRGB_COLOR_SPACE) on platforms using CoreGraphics"
+#endif
+
+#endif
+
+#if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3) && !ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
+#error "ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3) requires ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)"
+#endif
+
+#if ENABLE(WEBXR_HANDS) && !ENABLE(WEBXR)
+#error "ENABLE(WEBXR_HANDS) requires ENABLE(WEBXR)"
+#endif
+
+#if ENABLE(SERVICE_WORKER) && ENABLE(NOTIFICATIONS) \
+    && ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000) || (PLATFORM(GTK) || PLATFORM(WPE)))
+#if !defined(ENABLE_NOTIFICATION_EVENT)
+#define ENABLE_NOTIFICATION_EVENT 1
+#endif
+#endif
+
+#if !defined(ENABLE_IMAGE_ANALYSIS_ENHANCEMENTS) \
+    && ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000) \
+    || ((PLATFORM(IOS) || PLATFORM(MACCATALYST)) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 160000))
+#define ENABLE_IMAGE_ANALYSIS_ENHANCEMENTS 1
 #endif

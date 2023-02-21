@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,22 +36,12 @@ import javafx.scene.paint.PhongMaterial;
 
 /**
  * A light source that radiates light equally in all directions away from itself. The location of the light
- * source is a single point in space. Any pixel within the range of the light will be illuminated by it,
- * unless it belongs to a {@code Shape3D} outside of its {@code scope}.
+ * source is a single point in space. It is <a href="LightBase.html#Attenuation">attenuated</a> with the
+ * {@link #constantAttenuationProperty() constantAttenuation}, {@link #linearAttenuationProperty() linearAttenuation},
+ * {@link #quadraticAttenuationProperty() quadraticAttenuation}, and {@link #maxRangeProperty() maxRange} properties.
  * <p>
- * The light's intensity can be set to decrease over distance by attenuating it. The attenuation formula
- * <p>
- * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
- * <p>
- * defines 3 coefficients: {@code ca}, {@code la}, and {@code qa}, which control the constant, linear, and
- * quadratic behaviors of intensity falloff over distance, respectively. The effective color of the light
- * at a given point in space is {@code color * attn}. It is possible, albeit unrealistic, to specify negative
- * values to attenuation coefficients. This allows the resulting attenuation factor to be negative, which
- * results in the light's color being subtracted from the material instead of added to it, thus creating a
- * "shadow caster".
- * <p>
- * For a realistic effect, {@code maxRange} should be set to a distance at which the attenuation is close to 0
- * as this will give a soft cutoff.
+ * {@code PointLight}s can represent point-like light sources with little to no directionality. Light bulbs and candles
+ * are common light sources that can be simulated with this light type.
  *
  * @since JavaFX 8.0
  * @see PhongMaterial

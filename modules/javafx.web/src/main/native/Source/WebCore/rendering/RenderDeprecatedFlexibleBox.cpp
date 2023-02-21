@@ -148,8 +148,8 @@ static LayoutUnit marginWidthForChild(RenderBox* child)
 
 static bool childDoesNotAffectWidthOrFlexing(RenderObject* child)
 {
-    // Positioned children and collapsed children don't affect the min/max width.
-    return child->isOutOfFlowPositioned() || child->style().visibility() == Visibility::Collapse;
+    // Positioned children don't affect the min/max width.
+    return child->isOutOfFlowPositioned();
 }
 
 static LayoutUnit widthForChild(RenderBox* child)
@@ -179,14 +179,33 @@ static LayoutUnit contentHeightForChild(RenderBox* child)
 void RenderDeprecatedFlexibleBox::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
     auto* oldStyle = hasInitializedStyle() ? &style() : nullptr;
-    if (oldStyle && !oldStyle->lineClamp().isNone() && newStyle.lineClamp().isNone())
-        clearLineClamp();
+    if (oldStyle) {
+        auto hadLineClamp = !oldStyle->lineClamp().isNone();
+        auto hasLineClamp = !newStyle.lineClamp().isNone();
+        if (hasLineClamp != hadLineClamp) {
+            for (auto& child : childrenOfType<RenderBlockFlow>(*this))
+                child.invalidateLineLayoutPath();
 
+            if (hadLineClamp)
+                clearLineClamp();
+        }
+    }
     RenderBlock::styleWillChange(diff, newStyle);
 }
 
 void RenderDeprecatedFlexibleBox::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
+    auto addScrollbarWidth = [&]() {
+        LayoutUnit scrollbarWidth = intrinsicScrollbarLogicalWidth();
+        maxLogicalWidth += scrollbarWidth;
+        minLogicalWidth += scrollbarWidth;
+    };
+
+    if (shouldApplySizeContainment()) {
+        addScrollbarWidth();
+        return;
+    }
+
     if (hasMultipleLines() || isVertical()) {
         for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox()) {
             if (childDoesNotAffectWidthOrFlexing(child))
@@ -211,10 +230,7 @@ void RenderDeprecatedFlexibleBox::computeIntrinsicLogicalWidths(LayoutUnit& minL
     }
 
     maxLogicalWidth = std::max(minLogicalWidth, maxLogicalWidth);
-
-    LayoutUnit scrollbarWidth = intrinsicScrollbarLogicalWidth();
-    maxLogicalWidth += scrollbarWidth;
-    minLogicalWidth += scrollbarWidth;
+    addScrollbarWidth();
 }
 
 void RenderDeprecatedFlexibleBox::computePreferredLogicalWidths()
@@ -436,7 +452,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
 
             // Update our height and overflow height.
             if (style().boxAlign() == BoxAlignment::Baseline) {
-                LayoutUnit ascent = child->firstLineBaseline().valueOr(child->height() + child->marginBottom());
+                LayoutUnit ascent = child->firstLineBaseline().value_or(child->height() + child->marginBottom());
                 ascent += child->marginTop();
                 LayoutUnit descent = (child->height() + child->verticalMarginExtent()) - ascent;
 
@@ -484,13 +500,6 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
 
             LayoutSize& childLayoutDelta = childLayoutDeltas[childIndex++];
 
-            if (child->style().visibility() == Visibility::Collapse) {
-                // visibility: collapsed children do not participate in our positioning.
-                // But we need to lay them out.
-                layoutChildIfNeededApplyingDelta(child, childLayoutDelta);
-                continue;
-            }
-
             // We need to see if this child's height has changed, since we make block elements
             // fill the height of a containing box by default.
             // Now do a layout.
@@ -511,7 +520,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
                 childY += child->marginTop() + std::max<LayoutUnit>(0, (contentHeight() - (child->height() + child->verticalMarginExtent())) / 2);
                 break;
             case BoxAlignment::Baseline: {
-                LayoutUnit ascent = child->firstLineBaseline().valueOr(child->height() + child->marginBottom());
+                LayoutUnit ascent = child->firstLineBaseline().value_or(child->height() + child->marginBottom());
                 ascent += child->marginTop();
                 childY += child->marginTop() + (maxAscent - ascent);
                 break;
@@ -578,9 +587,6 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
 
                     // Now distribute the space to objects.
                     for (RenderBox* child = iterator.first(); child && spaceAvailableThisPass && totalFlex; child = iterator.next()) {
-                        if (child->style().visibility() == Visibility::Collapse)
-                            continue;
-
                         if (allowedChildFlex(child, expanding, i)) {
                             LayoutUnit spaceAdd = LayoutUnit(spaceAvailableThisPass * (child->style().boxFlex() / totalFlex));
                             if (spaceAdd) {
@@ -727,13 +733,6 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
             }
 
             LayoutSize& childLayoutDelta = childLayoutDeltas[childIndex++];
-
-            if (child->style().visibility() == Visibility::Collapse) {
-                // visibility: collapsed children do not participate in our positioning.
-                // But we need to lay them down.
-                layoutChildIfNeededApplyingDelta(child, childLayoutDelta);
-                continue;
-            }
 
             // Compute the child's vertical margins.
             child->computeAndSetBlockDirectionMargins(*this);
@@ -929,17 +928,29 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
         setHeight(oldHeight);
 }
 
-static bool shouldCheckLines(const RenderBlockFlow& blockFlow)
+static bool shouldIncludeLinesForParentLineCount(const RenderBlockFlow& blockFlow)
 {
     return !blockFlow.isFloatingOrOutOfFlowPositioned() && blockFlow.style().height().isAuto();
 }
 
-static RootInlineBox* lineAtIndex(const RenderBlockFlow& flow, int i)
+static void clearTruncation(RenderBlockFlow& blockFlow)
+{
+    if (blockFlow.childrenInline() && blockFlow.hasMarkupTruncation()) {
+        blockFlow.setHasMarkupTruncation(false);
+        for (auto* box = blockFlow.firstRootBox(); box; box = box->nextRootBox())
+            box->clearTruncation();
+        return;
+    }
+
+    for (auto& child : childrenOfType<RenderBlockFlow>(blockFlow)) {
+        if (shouldIncludeLinesForParentLineCount(child))
+            clearTruncation(child);
+    }
+}
+
+static LegacyRootInlineBox* lineAtIndex(const RenderBlockFlow& flow, int i)
 {
     ASSERT(i >= 0);
-
-    if (flow.style().visibility() != Visibility::Visible)
-        return nullptr;
 
     if (flow.childrenInline()) {
         for (auto* box = flow.firstRootBox(); box; box = box->nextRootBox()) {
@@ -950,20 +961,17 @@ static RootInlineBox* lineAtIndex(const RenderBlockFlow& flow, int i)
     }
 
     for (auto& blockFlow : childrenOfType<RenderBlockFlow>(flow)) {
-        if (!shouldCheckLines(blockFlow))
+        if (!shouldIncludeLinesForParentLineCount(blockFlow))
             continue;
-        if (RootInlineBox* box = lineAtIndex(blockFlow, i))
+        if (LegacyRootInlineBox* box = lineAtIndex(blockFlow, i))
             return box;
     }
 
     return nullptr;
 }
 
-static int getHeightForLineCount(const RenderBlockFlow& block, int lineCount, bool includeBottom, int& count)
+static std::optional<LayoutUnit> getHeightForLineCount(const RenderBlockFlow& block, size_t lineCount, bool includeBottom, size_t& count)
 {
-    if (block.style().visibility() != Visibility::Visible)
-        return -1;
-
     if (block.childrenInline()) {
         for (auto* box = block.firstRootBox(); box; box = box->nextRootBox()) {
             if (++count == lineCount)
@@ -972,10 +980,9 @@ static int getHeightForLineCount(const RenderBlockFlow& block, int lineCount, bo
     } else {
         RenderBox* normalFlowChildWithoutLines = nullptr;
         for (auto* obj = block.firstChildBox(); obj; obj = obj->nextSiblingBox()) {
-            if (is<RenderBlockFlow>(*obj) && shouldCheckLines(downcast<RenderBlockFlow>(*obj))) {
-                int result = getHeightForLineCount(downcast<RenderBlockFlow>(*obj), lineCount, false, count);
-                if (result != -1)
-                    return result + obj->y() + (includeBottom ? (block.borderBottom() + block.paddingBottom()) : 0_lu);
+            if (is<RenderBlockFlow>(*obj) && shouldIncludeLinesForParentLineCount(downcast<RenderBlockFlow>(*obj))) {
+                if (auto height = getHeightForLineCount(downcast<RenderBlockFlow>(*obj), lineCount, false, count))
+                    return *height + obj->y() + (includeBottom ? (block.borderBottom() + block.paddingBottom()) : 0_lu);
             } else if (!obj->isFloatingOrOutOfFlowPositioned())
                 normalFlowChildWithoutLines = obj;
         }
@@ -983,42 +990,64 @@ static int getHeightForLineCount(const RenderBlockFlow& block, int lineCount, bo
             return normalFlowChildWithoutLines->y() + normalFlowChildWithoutLines->height();
     }
 
-    return -1;
+    return { };
 }
 
-static int heightForLineCount(const RenderBlockFlow& flow, int lineCount)
+static LayoutUnit heightForLineCount(const RenderBlockFlow& flow, size_t lineCount)
 {
-    int count = 0;
-    return getHeightForLineCount(flow, lineCount, true, count);
+    size_t count = 0;
+    if (auto height = getHeightForLineCount(flow, lineCount, true, count))
+        return *height;
+    return { };
+}
+
+static size_t lineCountFor(const RenderBlockFlow& blockFlow)
+{
+    if (blockFlow.childrenInline())
+        return blockFlow.lineCount();
+
+    size_t count = 0;
+    for (auto& child : childrenOfType<RenderBlockFlow>(blockFlow)) {
+        if (blockFlow.isFloatingOrOutOfFlowPositioned() || !blockFlow.style().height().isAuto())
+            continue;
+        count += lineCountFor(child);
+    }
+    return count;
 }
 
 void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool relayoutChildren)
 {
-    int maxLineCount = 0;
+    size_t maxLineCount = 0;
     for (RenderBox* child = iterator.first(); child; child = iterator.next()) {
         if (childDoesNotAffectWidthOrFlexing(child))
             continue;
 
         child->clearOverridingContentSize();
-        if (relayoutChildren || (child->isReplaced() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
+        if (relayoutChildren || (child->isReplacedOrInlineBlock() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
             || (child->style().height().isAuto() && is<RenderBlockFlow>(*child))) {
             child->setChildNeedsLayout(MarkOnlyThis);
 
             // Dirty all the positioned objects.
             if (is<RenderBlockFlow>(*child)) {
                 downcast<RenderBlockFlow>(*child).markPositionedObjectsForLayout();
-                downcast<RenderBlockFlow>(*child).clearTruncation();
+                clearTruncation(downcast<RenderBlockFlow>(*child));
             }
         }
         child->layoutIfNeeded();
         if (child->style().height().isAuto() && is<RenderBlockFlow>(*child))
-            maxLineCount = std::max(maxLineCount, downcast<RenderBlockFlow>(*child).lineCount());
+            maxLineCount = std::max(maxLineCount, lineCountFor(downcast<RenderBlockFlow>(*child)));
     }
 
     // Get the number of lines and then alter all block flow children with auto height to use the
     // specified height. We always try to leave room for at least one line.
-    LineClampValue lineClamp = style().lineClamp();
-    int numVisibleLines = lineClamp.isPercentage() ? std::max(1, (maxLineCount + 1) * lineClamp.value() / 100) : lineClamp.value();
+    auto lineClamp = style().lineClamp();
+    ASSERT(!lineClamp.isNone());
+
+    size_t numVisibleLines = lineClamp.value();
+    if (lineClamp.isPercentage()) {
+        float percentValue = lineClamp.value();
+        numVisibleLines = std::max<size_t>(1, (maxLineCount + 1) * percentValue / 100.f);
+    }
     if (numVisibleLines >= maxLineCount)
         return;
 
@@ -1027,11 +1056,11 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
             continue;
 
         RenderBlockFlow& blockChild = downcast<RenderBlockFlow>(*child);
-        int lineCount = blockChild.lineCount();
+        auto lineCount = lineCountFor(blockChild);
         if (lineCount <= numVisibleLines)
             continue;
 
-        LayoutUnit newHeight = heightForLineCount(blockChild, numVisibleLines);
+        auto newHeight = heightForLineCount(blockChild, numVisibleLines);
         if (newHeight == child->height())
             continue;
 
@@ -1044,11 +1073,11 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
             continue;
 
         // Get the last line
-        RootInlineBox* lastLine = lineAtIndex(blockChild, lineCount - 1);
+        LegacyRootInlineBox* lastLine = lineAtIndex(blockChild, lineCount - 1);
         if (!lastLine)
             continue;
 
-        RootInlineBox* lastVisibleLine = lineAtIndex(blockChild, numVisibleLines - 1);
+        LegacyRootInlineBox* lastVisibleLine = lineAtIndex(blockChild, numVisibleLines - 1);
         if (!lastVisibleLine || !lastVisibleLine->firstChild())
             continue;
 
@@ -1060,7 +1089,7 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
 
         // Get ellipsis width, and if the last child is an anchor, it will go after the ellipsis, so add in a space and the anchor width too
         LayoutUnit totalWidth;
-        InlineBox* anchorBox = lastLine->lastChild();
+        LegacyInlineBox* anchorBox = lastLine->lastChild();
         auto& lastVisibleRenderer = lastVisibleLine->firstChild()->renderer();
         if (anchorBox && anchorBox->renderer().style().isLink() && &lastVisibleRenderer != &anchorBox->renderer())
             totalWidth = anchorBox->logicalWidth() + font.width(constructTextRun(ellipsisAndSpace, 2, style()));
@@ -1101,13 +1130,13 @@ void RenderDeprecatedFlexibleBox::clearLineClamp()
             continue;
 
         child->clearOverridingContentSize();
-        if ((child->isReplaced() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
+        if ((child->isReplacedOrInlineBlock() && (child->style().width().isPercentOrCalculated() || child->style().height().isPercentOrCalculated()))
             || (child->style().height().isAuto() && is<RenderBlockFlow>(*child))) {
             child->setChildNeedsLayout();
 
             if (is<RenderBlockFlow>(*child)) {
                 downcast<RenderBlockFlow>(*child).markPositionedObjectsForLayout();
-                downcast<RenderBlockFlow>(*child).clearTruncation();
+                clearTruncation(downcast<RenderBlockFlow>(*child));
             }
         }
     }
@@ -1180,20 +1209,20 @@ LayoutUnit RenderDeprecatedFlexibleBox::allowedChildFlex(RenderBox* child, bool 
     return 0;
 }
 
-const char* RenderDeprecatedFlexibleBox::renderName() const
+ASCIILiteral RenderDeprecatedFlexibleBox::renderName() const
 {
     if (isFloating())
-        return "RenderDeprecatedFlexibleBox (floating)";
+        return "RenderDeprecatedFlexibleBox (floating)"_s;
     if (isOutOfFlowPositioned())
-        return "RenderDeprecatedFlexibleBox (positioned)";
+        return "RenderDeprecatedFlexibleBox (positioned)"_s;
     // FIXME: Temporary hack while the new generated content system is being implemented.
     if (isPseudoElement())
-        return "RenderDeprecatedFlexibleBox (generated)";
+        return "RenderDeprecatedFlexibleBox (generated)"_s;
     if (isAnonymous())
-        return "RenderDeprecatedFlexibleBox (generated)";
+        return "RenderDeprecatedFlexibleBox (generated)"_s;
     if (isRelativelyPositioned())
-        return "RenderDeprecatedFlexibleBox (relative positioned)";
-    return "RenderDeprecatedFlexibleBox";
+        return "RenderDeprecatedFlexibleBox (relative positioned)"_s;
+    return "RenderDeprecatedFlexibleBox"_s;
 }
 
 } // namespace WebCore

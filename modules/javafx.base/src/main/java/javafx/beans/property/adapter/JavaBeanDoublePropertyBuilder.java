@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ import java.lang.reflect.Method;
  */
 public final class JavaBeanDoublePropertyBuilder {
 
-    private final JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
+    private final JavaBeanPropertyBuilderHelper<Number> helper = new JavaBeanPropertyBuilderHelper<>();
 
     private JavaBeanDoublePropertyBuilder() {}
 
@@ -82,7 +82,7 @@ public final class JavaBeanDoublePropertyBuilder {
      * {@code double} or {@code Double}
      */
     public JavaBeanDoubleProperty build() throws NoSuchMethodException {
-        final PropertyDescriptor descriptor = helper.getDescriptor();
+        final PropertyDescriptor<Number> descriptor = helper.getDescriptor();
         if (!double.class.equals(descriptor.getType()) && !Number.class.isAssignableFrom(descriptor.getType())) {
             throw new IllegalArgumentException("Not a double property");
         }

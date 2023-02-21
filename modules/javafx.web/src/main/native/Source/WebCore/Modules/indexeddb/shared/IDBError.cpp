@@ -26,21 +26,14 @@
 #include "config.h"
 #include "IDBError.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "DOMException.h"
 
 namespace WebCore {
 
-IDBError::IDBError(Optional<ExceptionCode> code, const String& message)
+IDBError::IDBError(std::optional<ExceptionCode> code, const String& message)
     : m_code(code)
     , m_message(message)
 {
-}
-
-IDBError IDBError::isolatedCopy() const
-{
-    return IDBError { m_code, m_message.isolatedCopy() };
 }
 
 String IDBError::name() const
@@ -66,5 +59,3 @@ RefPtr<DOMException> IDBError::toDOMException() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

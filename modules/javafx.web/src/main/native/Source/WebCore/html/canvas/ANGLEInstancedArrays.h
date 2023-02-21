@@ -29,17 +29,15 @@
 
 namespace WebCore {
 
-class WebGLRenderingContextBase;
-
 class ANGLEInstancedArrays final : public WebGLExtension {
     WTF_MAKE_ISO_ALLOCATED(ANGLEInstancedArrays);
 public:
     explicit ANGLEInstancedArrays(WebGLRenderingContextBase&);
     virtual ~ANGLEInstancedArrays();
 
-    ExtensionName getName() const final;
+    ExtensionName getName() const override;
 
-    static bool supported(WebGLRenderingContextBase&);
+    static bool supported(GraphicsContextGL&);
 
     void drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount);
     void drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, long long offset, GCGLsizei primcount);

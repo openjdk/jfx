@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,10 +50,10 @@ import org.junit.Test;
  */
 public class ScrollBarTest {
     private ScrollBar scrollBar;//Empty string
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         scrollBar = new ScrollBar();
     }
 
@@ -138,7 +138,7 @@ public class ScrollBarTest {
     }
 
     @Test public void checkOrientationPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Orientation>(Orientation.HORIZONTAL);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Orientation.HORIZONTAL);
         scrollBar.orientationProperty().bind(objPr);
         assertSame("orientationProperty cannot be bound", scrollBar.orientationProperty().getValue(), Orientation.HORIZONTAL);
         objPr.setValue(Orientation.VERTICAL);
@@ -266,7 +266,7 @@ public class ScrollBarTest {
     @Test public void whenOrientationIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
-        ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
+        ObjectProperty<Orientation> other = new SimpleObjectProperty<>(Orientation.VERTICAL);
         scrollBar.orientationProperty().bind(other);
         assertFalse(styleable.isSettable(scrollBar));
     }

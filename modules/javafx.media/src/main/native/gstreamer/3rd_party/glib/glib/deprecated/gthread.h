@@ -131,7 +131,11 @@ void     g_thread_foreach      (GFunc             thread_func,
 #endif
 
 #define g_static_mutex_get_mutex g_static_mutex_get_mutex_impl GLIB_DEPRECATED_MACRO_IN_2_32
+#ifndef G_OS_WIN32
+#define G_STATIC_MUTEX_INIT { NULL, PTHREAD_MUTEX_INITIALIZER } GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_mutex_init)
+#else
 #define G_STATIC_MUTEX_INIT { NULL } GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_mutex_init)
+#endif
 typedef struct
 {
   GMutex *mutex;

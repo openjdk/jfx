@@ -27,19 +27,36 @@
 #if ENABLE(WEB_RTC)
 
 #include <wtf/RefCounted.h>
+#include <wtf/Span.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
+
+struct RTCEncodedAudioFrameMetadata {
+    uint32_t synchronizationSource;
+    Vector<uint32_t> contributingSources;
+};
+
+struct RTCEncodedVideoFrameMetadata {
+    std::optional<int64_t> frameId;
+    Vector<int64_t> dependencies;
+    uint16_t width;
+    uint16_t height;
+    std::optional<int32_t> spatialIndex;
+    std::optional<int32_t> temporalIndex;
+    uint32_t synchronizationSource;
+};
 
 class RTCRtpTransformableFrame : public RefCounted<RTCRtpTransformableFrame> {
 public:
     virtual ~RTCRtpTransformableFrame() = default;
 
-    struct Data {
-        const uint8_t* data { nullptr };
-        size_t size { 0 };
-    };
-    virtual Data data() const = 0;
-    virtual void setData(Data) = 0;
+    virtual Span<const uint8_t> data() const = 0;
+    virtual void setData(Span<const uint8_t>) = 0;
+
+    virtual uint64_t timestamp() const = 0;
+    virtual RTCEncodedAudioFrameMetadata audioMetadata() const = 0;
+    virtual RTCEncodedVideoFrameMetadata videoMetadata() const = 0;
 
     virtual bool isKeyFrame() const = 0;
 };

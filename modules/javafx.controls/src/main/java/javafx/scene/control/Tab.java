@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -254,7 +254,7 @@ public class Tab implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<TabPane> tabPanePropertyImpl() {
         if (tabPane == null) {
-            tabPane = new ReadOnlyObjectWrapper<TabPane>(this, "tabPane") {
+            tabPane = new ReadOnlyObjectWrapper<>(this, "tabPane") {
                 private WeakReference<TabPane> oldParent;
 
                 @Override protected void invalidated() {
@@ -266,7 +266,7 @@ public class Tab implements EventTarget, Styleable {
                     if (newParent != null) {
                         newParent.disabledProperty().addListener(parentDisabledChangedListener);
                     }
-                    oldParent = new WeakReference<TabPane>(newParent);
+                    oldParent = new WeakReference<>(newParent);
                     super.invalidated();
                 }
             };
@@ -339,7 +339,7 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new SimpleObjectProperty<Node>(this, "graphic");
+            graphic = new SimpleObjectProperty<>(this, "graphic");
         }
         return graphic;
     }
@@ -371,7 +371,7 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<Node> contentProperty() {
         if (content == null) {
-            content = new SimpleObjectProperty<Node>(this, "content") {
+            content = new SimpleObjectProperty<>(this, "content") {
                 @Override protected void invalidated() {
                     updateDisabled();
                 }
@@ -406,7 +406,7 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<ContextMenu> contextMenuProperty() {
         if (contextMenu == null) {
-            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+            contextMenu = new SimpleObjectProperty<>(this, "contextMenu") {
                 private WeakReference<ContextMenu> contextMenuRef;
 
                 @Override protected void invalidated() {
@@ -471,7 +471,7 @@ public class Tab implements EventTarget, Styleable {
      * <p>Called when the tab becomes selected or unselected.</p>
      */
     public static final EventType<Event> SELECTION_CHANGED_EVENT =
-            new EventType<Event> (Event.ANY, "SELECTION_CHANGED_EVENT");
+            new EventType<> (Event.ANY, "SELECTION_CHANGED_EVENT");
     private ObjectProperty<EventHandler<Event>> onSelectionChanged;
 
     /**
@@ -497,7 +497,7 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<EventHandler<Event>> onSelectionChangedProperty() {
         if (onSelectionChanged == null) {
-            onSelectionChanged = new ObjectPropertyBase<EventHandler<Event>>() {
+            onSelectionChanged = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(SELECTION_CHANGED_EVENT, get());
                 }
@@ -519,7 +519,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * <p>Called when a user closes this tab. This is useful for freeing up memory.</p>
      */
-    public static final EventType<Event> CLOSED_EVENT = new EventType<Event>(Event.ANY, "TAB_CLOSED");
+    public static final EventType<Event> CLOSED_EVENT = new EventType<>(Event.ANY, "TAB_CLOSED");
     private ObjectProperty<EventHandler<Event>> onClosed;
 
     /**
@@ -545,7 +545,7 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<EventHandler<Event>> onClosedProperty() {
         if (onClosed == null) {
-            onClosed = new ObjectPropertyBase<EventHandler<Event>>() {
+            onClosed = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(CLOSED_EVENT, get());
                 }
@@ -584,7 +584,7 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<Tooltip> tooltipProperty() {
         if (tooltip == null) {
-            tooltip = new SimpleObjectProperty<Tooltip>(this, "tooltip");
+            tooltip = new SimpleObjectProperty<>(this, "tooltip");
         }
         return tooltip;
     }
@@ -706,7 +706,7 @@ public class Tab implements EventTarget, Styleable {
      * received event.
      * @since JavaFX 8.0
      */
-    public static final EventType<Event> TAB_CLOSE_REQUEST_EVENT = new EventType<Event> (Event.ANY, "TAB_CLOSE_REQUEST_EVENT");
+    public static final EventType<Event> TAB_CLOSE_REQUEST_EVENT = new EventType<> (Event.ANY, "TAB_CLOSE_REQUEST_EVENT");
 
     /**
      * Called when there is an external request to close this {@code Tab}.
@@ -717,7 +717,7 @@ public class Tab implements EventTarget, Styleable {
     private ObjectProperty<EventHandler<Event>> onCloseRequest;
     public final ObjectProperty<EventHandler<Event>> onCloseRequestProperty() {
         if (onCloseRequest == null) {
-            onCloseRequest = new ObjectPropertyBase<EventHandler<Event>>() {
+            onCloseRequest = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(TAB_CLOSE_REQUEST_EVENT, get());
                 }
@@ -762,7 +762,7 @@ public class Tab implements EventTarget, Styleable {
      */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }
@@ -898,6 +898,7 @@ public class Tab implements EventTarget, Styleable {
      * {@inheritDoc}
      * @since JavaFX 8.0
      */
+    @Override
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
         return FXCollections.emptyObservableSet();
     }

@@ -122,7 +122,7 @@ static String collectHTTPQuotedString(StringView input, unsigned& startIndex)
 static bool containsNonTokenCharacters(StringView input, Mode mode)
 {
     if (mode == Mode::MimeSniff)
-        return !isValidHTTPToken(input.toStringWithoutCopying());
+        return !isValidHTTPToken(input);
     for (unsigned index = 0; index < input.length(); ++index) {
         if (!isTokenCharacter(input[index]))
             return true;
@@ -327,17 +327,17 @@ bool ParsedContentType::parseContentType(Mode mode)
     return true;
 }
 
-Optional<ParsedContentType> ParsedContentType::create(const String& contentType, Mode mode)
+std::optional<ParsedContentType> ParsedContentType::create(const String& contentType, Mode mode)
 {
     ParsedContentType parsedContentType(mode == Mode::Rfc2045 ? contentType : stripLeadingAndTrailingHTTPSpaces(contentType));
     if (!parsedContentType.parseContentType(mode))
-        return WTF::nullopt;
+        return std::nullopt;
     return { WTFMove(parsedContentType) };
 }
 
 bool isValidContentType(const String& contentType, Mode mode)
 {
-    return ParsedContentType::create(contentType, mode) != WTF::nullopt;
+    return ParsedContentType::create(contentType, mode) != std::nullopt;
 }
 
 ParsedContentType::ParsedContentType(const String& contentType)
@@ -347,7 +347,7 @@ ParsedContentType::ParsedContentType(const String& contentType)
 
 String ParsedContentType::charset() const
 {
-    return parameterValueForName("charset");
+    return parameterValueForName("charset"_s);
 }
 
 void ParsedContentType::setCharset(String&& charset)
@@ -365,11 +365,11 @@ size_t ParsedContentType::parameterCount() const
     return m_parameterValues.size();
 }
 
-void ParsedContentType::setContentType(StringView contentRange, Mode mode)
+void ParsedContentType::setContentType(String&& contentRange, Mode mode)
 {
-    m_mimeType = contentRange.toString();
+    m_mimeType = WTFMove(contentRange);
     if (mode == Mode::MimeSniff)
-        m_mimeType = stripLeadingAndTrailingHTTPSpaces(m_mimeType).convertToASCIILowercase();
+        m_mimeType = stripLeadingAndTrailingHTTPSpaces(StringView(m_mimeType)).convertToASCIILowercase();
     else
         m_mimeType = m_mimeType.stripWhiteSpace();
 }

@@ -56,6 +56,7 @@ typedef void (* GstControlBindingConvert) (GstControlBinding *binding, gdouble s
 
 /**
  * GstControlBinding:
+ * @parent: the parent structure
  * @name: name of the property of this binding
  * @pspec: #GParamSpec for this property
  *
@@ -85,8 +86,10 @@ struct _GstControlBinding {
 
   union {
     struct {
+      /*< private >*/
       GstControlBindingPrivate *priv;
     } abi;
+    /*< private >*/
     gpointer _gst_reserved[GST_PADDING];
   } ABI;
 };
@@ -94,11 +97,6 @@ struct _GstControlBinding {
 /**
  * GstControlBindingClass:
  * @parent_class: Parent class
- * @sync_values: implementation for updating the target values
- * @get_value: implementation to fetch a single control-value
- * @get_value_array: implementation to fetch a series of control-values
- * @get_g_value_array: implementation to fetch a series of control-values
- *                     as g_values
  *
  * The class structure of #GstControlBinding.
  */
@@ -108,9 +106,59 @@ struct _GstControlBindingClass
   GstObjectClass parent_class;
 
   /*< public >*/
+
+  /**
+   * GstControlBindingClass::sync_values:
+   * @binding: the control binding
+   * @object: the object that has controlled properties
+   * @timestamp: the time that should be processed
+   * @last_sync: the last time this was called
+   *
+   * Update the target values
+   *
+   * Returns: %TRUE if the controller value could be applied to the object
+   * property, %FALSE otherwise
+   */
   gboolean (* sync_values) (GstControlBinding *binding, GstObject *object, GstClockTime timestamp, GstClockTime last_sync);
+
+  /**
+   * GstControlBindingClass::get_value:
+   * @binding: the control binding
+   * @timestamp: the time the control-change should be read from
+   *
+   * Fetch a single control-value
+   *
+   * Returns: (nullable): the GValue of the property at the given time,
+   * or %NULL if the property isn't controlled.
+   */
   GValue * (* get_value) (GstControlBinding *binding, GstClockTime timestamp);
+
+  /**
+   * GstControlBindingClass::get_value_array:
+   * @binding: the control binding
+   * @timestamp: the time that should be processed
+   * @interval: the time spacing between subsequent values
+   * @n_values: the number of values
+   * @values: (array length=n_values): array to put control-values in
+   *
+   * Fetch a series of control-values
+   *
+   * Returns: %TRUE if the given array could be filled, %FALSE otherwise
+   */
   gboolean (* get_value_array) (GstControlBinding *binding, GstClockTime timestamp,GstClockTime interval, guint n_values, gpointer values);
+
+  /**
+   * GstControlBindingClass::get_g_value_array:
+   * @binding: the control binding
+   * @timestamp: the time that should be processed
+   * @interval: the time spacing between subsequent values
+   * @n_values: the number of values
+   * @values: (array length=n_values): array to put control-values in
+   *
+   * Fetch a series of control-values as g_values
+   *
+   * Returns: %TRUE if the given array could be filled, %FALSE otherwise
+   */
   gboolean (* get_g_value_array) (GstControlBinding *binding, GstClockTime timestamp,GstClockTime interval, guint n_values, GValue *values);
 
   /*< private >*/

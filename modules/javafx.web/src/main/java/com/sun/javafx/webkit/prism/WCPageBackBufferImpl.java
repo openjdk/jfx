@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,18 @@
 
 package com.sun.javafx.webkit.prism;
 
-import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
-import com.sun.prism.Image;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
-import com.sun.prism.paint.Color;
 import com.sun.webkit.graphics.WCCamera;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCPageBackBuffer;
 import java.lang.ref.WeakReference;
-import javafx.scene.transform.Transform;
 
 final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFactoryListener {
     private RTTexture texture;
@@ -60,6 +56,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
                 .createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
     }
 
+    @Override
     public WCGraphicsContext createGraphics() {
         Graphics g = texture.createGraphics();
         // Make use of custom camera created for WebKit.
@@ -68,10 +65,12 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
         return WCGraphicsManager.getGraphicsManager().createGraphicsContext(g);
     }
 
+    @Override
     public void disposeGraphics(WCGraphicsContext gc) {
         gc.dispose();
     }
 
+    @Override
     public void flush(final WCGraphicsContext gc, int x, int y, final int w, final int h) {
         int x2 = x + w;
         int y2 = y + h;
@@ -80,6 +79,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
         texture.unlock();
     }
 
+    @Override
     protected void copyArea(int x, int y, int w, int h, int dx, int dy) {
         x *= pixelScale;
         y *= pixelScale;
@@ -94,6 +94,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
         aux.dispose();
     }
 
+    @Override
     public boolean validate(int width, int height) {
         ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
         if (factory == null || factory.isDisposed()) {

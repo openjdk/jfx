@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include <wtf/text/WTFString.h>
+#include <wtf/text/AtomString.h>
 #include "Font.h"
 
 namespace WebCore {
-using WTF::String;
+using WTF::AtomString;
 jobjectArray strVect2JArray(
-    JNIEnv* env, const Vector<String>& strVect);
+    JNIEnv* env, const Vector<AtomString>& strVect);
 
 } // namespace WebCore

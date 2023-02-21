@@ -33,7 +33,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(SymbolObject);
 
-const ClassInfo SymbolObject::s_info = { "Symbol", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(SymbolObject) };
+const ClassInfo SymbolObject::s_info = { "Symbol"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(SymbolObject) };
 
 SymbolObject::SymbolObject(VM& vm, Structure* structure)
     : Base(vm, structure)
@@ -43,14 +43,8 @@ SymbolObject::SymbolObject(VM& vm, Structure* structure)
 void SymbolObject::finishCreation(VM& vm, Symbol* symbol)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     setInternalValue(vm, symbol);
-}
-
-JSValue SymbolObject::defaultValue(const JSObject* object, JSGlobalObject*, PreferredPrimitiveType)
-{
-    const SymbolObject* symbolObject = jsCast<const SymbolObject*>(object);
-    return symbolObject->internalValue();
 }
 
 } // namespace JSC

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Caio Lima <ticaiolima@gmail.com>
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "JSObject.h"
 #include "MathCommon.h"
 #include <wtf/CagedUniquePtr.h>
+#include <wtf/Int128.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -53,9 +54,9 @@ public:
     DECLARE_VISIT_CHILDREN;
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.bigIntSpace;
+        return &vm.bigIntSpace();
     }
 
     enum class InitializationType { None, WithZero };
@@ -74,6 +75,7 @@ public:
     static JSBigInt* createFrom(JSGlobalObject*, uint32_t value);
     JS_EXPORT_PRIVATE static JSBigInt* createFrom(JSGlobalObject*, int64_t value);
     JS_EXPORT_PRIVATE static JSBigInt* createFrom(JSGlobalObject*, uint64_t value);
+    JS_EXPORT_PRIVATE static JSBigInt* createFrom(JSGlobalObject*, Int128 value);
     static JSBigInt* createFrom(JSGlobalObject*, bool value);
     static JSBigInt* createFrom(JSGlobalObject*, double value);
 
@@ -454,13 +456,15 @@ public:
     JS_EXPORT_PRIVATE JSBigInt* rightTrim(JSGlobalObject*);
     JS_EXPORT_PRIVATE JSBigInt* tryRightTrim(VM&);
 
-    JS_EXPORT_PRIVATE Optional<unsigned> concurrentHash();
+    JS_EXPORT_PRIVATE std::optional<unsigned> concurrentHash();
     unsigned hash()
     {
         if (m_hash)
             return m_hash;
         return hashSlow();
     }
+
+    static std::optional<double> tryExtractDouble(JSValue);
 
 private:
     JSBigInt(VM&, Structure*, Digit*, unsigned length);
@@ -592,7 +596,7 @@ private:
     static ImplResult rightShiftByMaximum(JSGlobalObject*, bool sign);
 
     template <typename BigIntImpl>
-    static Optional<Digit> toShiftAmount(BigIntImpl x);
+    static std::optional<Digit> toShiftAmount(BigIntImpl x);
 
     template <typename BigIntImpl>
     static ImplResult asIntNImpl(JSGlobalObject*, uint64_t, BigIntImpl);
@@ -604,8 +608,6 @@ private:
     static ImplResult truncateAndSubFromPowerOfTwo(JSGlobalObject*, int32_t, BigIntImpl, bool resultSign);
 
     JS_EXPORT_PRIVATE static uint64_t toBigUInt64Heap(JSBigInt*);
-
-    JS_EXPORT_PRIVATE static Optional<uint64_t> toUint64Heap(JSBigInt*);
 
     inline static size_t offsetOfData()
     {
@@ -674,6 +676,44 @@ ALWAYS_INLINE JSValue tryConvertToBigInt32(JSBigInt* bigInt)
 #endif
 
     return bigInt;
+}
+
+ALWAYS_INLINE std::optional<double> JSBigInt::tryExtractDouble(JSValue value)
+{
+    if (value.isNumber())
+        return value.asNumber();
+
+    if (!value.isBigInt())
+        return std::nullopt;
+
+#if USE(BIGINT32)
+    if (value.isBigInt32())
+        return value.bigInt32AsInt32();
+#endif
+
+    ASSERT(value.isHeapBigInt());
+    JSBigInt* bigInt = value.asHeapBigInt();
+    if (!bigInt->length())
+        return 0;
+
+    uint64_t integer = 0;
+    if constexpr (sizeof(Digit) == 8) {
+        if (bigInt->length() != 1)
+            return std::nullopt;
+        integer = bigInt->digit(0);
+    } else {
+        ASSERT(sizeof(Digit) == 4);
+        if (bigInt->length() > 2)
+            return std::nullopt;
+        integer = bigInt->digit(0);
+        if (bigInt->length() == 2)
+            integer |= (static_cast<uint64_t>(bigInt->digit(1)) << 32);
+    }
+
+    if (integer <= static_cast<uint64_t>(maxSafeInteger()))
+        return (bigInt->sign()) ? -static_cast<double>(integer) : static_cast<double>(integer);
+
+    return std::nullopt;
 }
 
 } // namespace JSC
