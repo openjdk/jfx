@@ -173,11 +173,7 @@ final class GtkApplication extends Application implements
             return null;
         });
 
-        int check = _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
-
-        if (check == INIT_VERSION_INCOMPATIBLE) {
-            throw new UnsupportedOperationException("Incompatible GTK %d version.".formatted(gtkVersion));
-        }
+        _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
 
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -201,10 +197,7 @@ final class GtkApplication extends Application implements
      */
     private static native int _queryLibrary(int version, boolean verbose);
 
-    @Native private static final int INIT_VERSION_INCOMPATIBLE = -1;
-    @Native private static final int INIT_VERSION_OK = 1;
-
-    private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
+    private static native void _initGTK(int version, boolean verbose, float overrideUIScale);
 
     private void initDisplay() {
         Map ds = getDeviceDetails();

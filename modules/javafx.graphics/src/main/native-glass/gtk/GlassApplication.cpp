@@ -30,6 +30,7 @@
 #include <glib.h>
 
 #include <cstdlib>
+#include <cstdio>
 #include <com_sun_glass_ui_gtk_GtkApplication.h>
 #include <com_sun_glass_events_WindowEvent.h>
 #include <com_sun_glass_events_MouseEvent.h>
@@ -95,9 +96,9 @@ jboolean gtk_verbose = JNI_FALSE;
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _initGTK
- * Signature: (IZ)I
+ * Signature: (IZ)V
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
   (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale)
 {
     (void) clazz;
@@ -114,18 +115,18 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
 
     // Major version is checked before loading
     if (version == 3) {
-        if(gtk_check_version(3, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
-            if (verbose) {
-                printf("ERROR: Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.\n",
-                    version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
-                    gtk_major_version, gtk_minor_version, gtk_micro_version);
-            }
+        if(gtk_check_version(version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
+            char message[100];
+            std::sprintf(message, "Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.",
+                     version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
+                     gtk_major_version, gtk_minor_version, gtk_micro_version);
 
-            return com_sun_glass_ui_gtk_GtkApplication_INIT_VERSION_INCOMPATIBLE;
+            jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
+            env->ThrowNew(uoe, message);
+
+            return;
         }
     }
-
-    return com_sun_glass_ui_gtk_GtkApplication_INIT_VERSION_OK;
 }
 
 /*
