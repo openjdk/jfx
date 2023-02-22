@@ -69,7 +69,7 @@ public class TableViewClickOnTroughTest {
     static volatile Scene scene;
     static final int SCENE_WIDTH = 800;
     static final int SCENE_HEIGHT = 250;
-    final static CountDownLatch startupLatch = new CountDownLatch(1);
+    static final CountDownLatch startupLatch = new CountDownLatch(1);
 
     private static TableView<TableEntry> table;
 
