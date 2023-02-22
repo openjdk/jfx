@@ -25,7 +25,9 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.KeyboardShortcutsHandler;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -1064,5 +1066,30 @@ public class SceneTest {
         pane = null;
 
         JMemoryBuddy.assertCollectable(ref);
+    }
+
+    @Test
+    public void sceneShouldSet_MnemonicsDisplayEnabled_ToFalseWhenWindowFocusIsLost() {
+        Group root = new Group();
+
+        root.setFocusTraversable(true);
+
+        Scene scene = new Scene(root);
+        SceneEventDispatcher dispatcher = (SceneEventDispatcher) scene.getEventDispatcher();
+        KeyboardShortcutsHandler keyboardShortcutsHandler = dispatcher.getKeyboardShortcutsHandler();
+
+        stage.setScene(scene);
+        stage.show();
+        stage.requestFocus();
+
+        assertFalse(keyboardShortcutsHandler.isMnemonicsDisplayEnabled());
+
+        keyboardShortcutsHandler.setMnemonicsDisplayEnabled(true);
+
+        assertTrue(keyboardShortcutsHandler.isMnemonicsDisplayEnabled());
+
+        stage.close();
+
+        assertFalse(keyboardShortcutsHandler.isMnemonicsDisplayEnabled());
     }
 }
