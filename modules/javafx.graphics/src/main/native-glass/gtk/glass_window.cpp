@@ -384,9 +384,10 @@ void WindowContextBase::process_mouse_scroll(GdkEventScroll* event) {
 
     // converting direction to change in pixels
     switch (event->direction) {
-#if GTK_CHECK_VERSION(3, 4, 0)
+#ifdef GLASS_GTK3
         case GDK_SCROLL_SMOOTH:
-            //FIXME 3.4 ???
+            dx = event->delta_x;
+            dy = event->delta_y;
             break;
 #endif
         case GDK_SCROLL_UP:
