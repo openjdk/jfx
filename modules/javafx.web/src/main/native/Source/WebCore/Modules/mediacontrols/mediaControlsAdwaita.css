@@ -27,8 +27,6 @@
 
 /* These are based on the Chromium media controls and using the Adwaita icons */
 
-#if PLATFORM(JAVA)
-
 audio::-webkit-media-controls-panel.hidden,
 video::-webkit-media-controls-panel.hidden {
     display: none !important;
@@ -527,5 +525,3 @@ video::-webkit-media-text-track-container .hidden,
 audio::-webkit-media-text-track-container .hidden {
     display: none;
 }
-
-#endif
