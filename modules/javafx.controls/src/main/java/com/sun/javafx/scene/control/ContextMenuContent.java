@@ -343,7 +343,7 @@ public class ContextMenuContent extends Region {
         itemsContainer.resize(w,contentHeight);
         itemsContainer.relocate(x, y);
 
-        if(contentHeight < Math.abs(ty)){
+        if (contentHeight < Math.abs(ty)) {
             /*
              ** This condition occurs when context menu with large number of items
              ** are replaced by smaller number of items.
@@ -815,14 +815,17 @@ public class ContextMenuContent extends Region {
         return submenu;
     }
 
+    // For test purpose only
     Menu getOpenSubMenu() {
         return openSubmenu;
     }
 
+    // For test purpose only
     boolean isUpArrowVisible() {
         return upArrow.isVisible();
     }
 
+    // For test purpose only
     boolean isDownArrowVisible() {
         return downArrow.isVisible();
     }

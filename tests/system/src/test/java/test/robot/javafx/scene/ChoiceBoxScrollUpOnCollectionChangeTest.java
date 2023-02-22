@@ -92,14 +92,12 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
 
     private void scrollChoiceBox(int scrollAmt) throws Exception {
         Util.runAndWait(() -> {
-            for (int i=0; i<scrollAmt; i++) {
+            for (int i = 0; i < scrollAmt; i++) {
                 robot.keyType(KeyCode.DOWN);
                 Toolkit.getToolkit().firePulse();
             }
 
-            try {
-                Thread.sleep(400); // Wait for up arrow to get loaded in UI
-            } catch (Exception e) {}
+            Util.sleep(400); // Wait for up arrow to get loaded in UI
 
             robot.keyType(KeyCode.ENTER);
         });
@@ -115,7 +113,7 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
     private void addChoiceBoxItems(int count) {
         Util.runAndWait(() -> {
             ObservableList<String> items = FXCollections.observableArrayList();
-            for(int i=0 ; i<count ; i++) {
+            for (int i = 0; i < count; i++) {
                 items.add("item " + (i + 1));
             }
             choiceBox.getItems().setAll(items);
