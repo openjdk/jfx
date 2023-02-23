@@ -83,9 +83,10 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
     static final int SCENE_HEIGHT = SCENE_WIDTH;
 
     private void mouseClick(double x, double y) {
+        int xCoordinate = (int) (scene.getWindow().getX() + scene.getX() + x);
+        int yCoordinate = (int) (scene.getWindow().getY() + scene.getY() + y);
         Util.runAndWait(() -> {
-            robot.mouseMove((int) (scene.getWindow().getX() + scene.getX() + x),
-                                (int) (scene.getWindow().getY() + scene.getY() + y));
+            robot.mouseMove(xCoordinate, yCoordinate);
             robot.mouseClick(MouseButton.PRIMARY);
         });
     }
@@ -104,8 +105,9 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
     }
 
     private void showChoiceBox() throws Exception {
-        mouseClick(choiceBox.getLayoutX() + choiceBox.getWidth() / 2,
-                    choiceBox.getLayoutY() + choiceBox.getHeight() / 2);
+        double x = choiceBox.getLayoutX() + choiceBox.getWidth() / 2;
+        double y = choiceBox.getLayoutY() + choiceBox.getHeight() / 2;
+        mouseClick(x, y);
 
         Util.waitForLatch(choiceBoxDisplayLatch, 5, "Timeout waiting for choicebox to be displayed.");
     }
