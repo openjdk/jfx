@@ -36,6 +36,9 @@
 #include "NavigationScheduler.h"
 #include "SecurityOrigin.h"
 #include <wtf/IsoMallocInlines.h>
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaEnv.h>
+#endif
 #include <wtf/URL.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -217,6 +220,13 @@ ExceptionOr<void> Location::assign(DOMWindow& activeWindow, DOMWindow& firstWind
     return setLocation(activeWindow, firstWindow, url);
 }
 
+#if PLATFORM(JAVA)
+bool startsWith(const std::string &str, const std::string &prefix)
+{
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+}
+#endif
+
 ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString)
 {
     auto* frame = this->frame();
@@ -235,6 +245,18 @@ ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWin
 
     if (!activeWindow.document()->canNavigate(frame, completedURL))
         return Exception { SecurityError };
+
+#if PLATFORM(JAVA)
+    std::string url_string =  urlString.convertToASCIILowercase().utf8().data();
+
+    /* check for url schema */
+    if (!startsWith(url_string, "http:") && !startsWith(url_string,"https:") && !startsWith(url_string,"file:")) {
+        if (!handleCustomProtocol(url_string)) {
+            throwException();
+            return { };
+        }
+    }
+#endif
 
     // We call DOMWindow::setLocation directly here because replace() always operates on the current frame.
     frame->document()->domWindow()->setLocation(activeWindow, completedURL, LockHistoryAndBackForwardList);
@@ -271,6 +293,17 @@ void Location::reload(DOMWindow& activeWindow)
 
 ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& urlString)
 {
+#if PLATFORM(JAVA)
+    std::string url_string =  urlString.convertToASCIILowercase().utf8().data();
+
+    /* check for url schema */
+    if (!startsWith(url_string, "http:") && !startsWith(url_string,"https:") && !startsWith(url_string,"file:")) {
+        if (!handleCustomProtocol(url_string)) {
+            throwException();
+            return { };
+        }
+    }
+#endif
     auto* frame = this->frame();
     ASSERT(frame);
 
@@ -291,5 +324,21 @@ ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& f
     frame->document()->domWindow()->setLocation(incumbentWindow, completedURL);
     return { };
 }
+
+#if PLATFORM(JAVA)
+
+void  Location::throwException()
+{
+    JNIEnv* env = WTF::GetJavaEnv();
+    jclass jcls = env->FindClass("java/lang/Exception");
+    env->ThrowNew(jcls, "Error: custom 'url' schema not supported");
+}
+
+/* url schema also known as custom protocol handler not supported*/
+bool Location::handleCustomProtocol(const std::string& url)
+{
+    return false;
+}
+#endif
 
 } // namespace WebCore
