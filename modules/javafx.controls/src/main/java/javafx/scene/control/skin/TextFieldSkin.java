@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -802,19 +802,41 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                 // empty), then we align the Text node so that the caret will
                 // appear at the left of the centered prompt.
                 newX = midPoint - promptNode.getLayoutBounds().getWidth() / 2;
-                promptNode.setLayoutX(newX);
+                if (newX > 0) {
+                    promptNode.setLayoutX(newX);
+                } else {
+                    // Align to left when prompt text length is more than text field width
+                    promptNode.setLayoutX(caretWidth / 2);
+                }
             } else {
                 newX = midPoint - textNodeWidth / 2;
+                // Update if there is space on the right
+                if (newX + textNodeWidth <= textRight.get()) {
+                    textTranslateX.set(newX);
+                } else if (newX < 0 && oldX > 1) {
+                    textTranslateX.set(caretWidth / 2);
+                }
             }
-            textTranslateX.set(newX);
             break;
 
           case RIGHT:
-            newX = textRight.get() - textNodeWidth - caretWidth / 2;
-            textTranslateX.set(newX);
             if (usePromptText.get()) {
-                promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
-                                      caretWidth / 2);
+                double promptOldX = promptNode.getLayoutX();
+                double promptNewX = textRight.get() - promptNode.getLayoutBounds().getWidth() - caretWidth / 2;
+                if(promptNewX > promptOldX || promptNewX > 0) {
+                    promptNode.setLayoutX(promptNewX);
+                } else {
+                    // Align to left when prompt text length is more than text field width
+                    promptNode.setLayoutX(caretWidth / 2);
+                }
+            } else {
+                newX = textRight.get() - textNodeWidth - caretWidth / 2;
+                // Update if there is space on the right
+                if (newX > oldX || newX > 0) {
+                  textTranslateX.set(newX);
+                } else if (newX < 0 && oldX > 1) {
+                  textTranslateX.set(caretWidth / 2);
+                }
             }
             break;
 
@@ -852,17 +874,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         // to cause the text to scroll to the right. Vice-versa for positive.
         switch (getHAlignment()) {
           case CENTER:
-            if (delta > 0) {
-                textTranslateX.set(textTranslateX.get() - delta);
-            }
+            textTranslateX.set(textTranslateX.get() - delta);
             break;
 
           case RIGHT:
-            if (delta > 0) {
-                textTranslateX.set(Math.max(textTranslateX.get() - delta,
-                                            textRight.get() - textNode.getLayoutBounds().getWidth() -
-                                            caretWidth / 2));
-            }
+            textTranslateX.set(Math.max(textTranslateX.get() - delta,
+                                        textRight.get() - textNode.getLayoutBounds().getWidth() -
+                                        caretWidth / 2));
             break;
 
           case LEFT:

@@ -587,7 +587,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(-(TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth())/2, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test
@@ -606,7 +606,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(-(TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth())/4, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     private Change upperCase(Change change) {
