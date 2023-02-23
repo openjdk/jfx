@@ -220,7 +220,7 @@ public interface Graphics {
     public float getPixelScaleFactorY();
 
 
-    /* 
+    /*
      * Identical in each of BaseShaderGraphics, J2DPrismGraphics and SWGraphics
      */
     default void drawColorGlyph(GlyphList gl, FontStrike strike, float x, float y,

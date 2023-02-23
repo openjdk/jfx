@@ -23,20 +23,20 @@
  * questions.
  */
 
-import javafx.application.Application; 
-import javafx.application.Platform; 
+import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.Group; 
-import javafx.scene.Scene; 
-import javafx.scene.control.Button; 
-import javafx.scene.control.Label; 
-import javafx.scene.control.TextField; 
-import javafx.stage.Stage; 
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.stage.Stage;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
-public class EmojiTest extends Application { 
+public class EmojiTest extends Application {
 
    static String instructions =
       """
@@ -58,16 +58,16 @@ public class EmojiTest extends Application {
 
         """;
 
-    public static void main(String[] args) { 
-        launch(args); 
-    } 
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     private void quit() {
         Platform.exit();
     }
 
-    @Override 
-    public void start(Stage stage) { 
+    @Override
+    public void start(Stage stage) {
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
         passButton.setOnAction(e -> this.quit());
@@ -77,7 +77,7 @@ public class EmojiTest extends Application {
         });
 
         HBox hbox = new HBox(10, passButton, failButton);
-    
+
         Text instTA = new Text(instructions);
         instTA.setWrappingWidth(500);
 
@@ -97,11 +97,11 @@ public class EmojiTest extends Application {
         vbox.getChildren().add(text);
         vbox.getChildren().add(label);
         vbox.getChildren().add(textField);
-        stage.setWidth(600); 
-        stage.setHeight(600); 
-        stage.setScene(scene); 
+        stage.setWidth(600);
+        stage.setHeight(600);
+        stage.setScene(scene);
 
-        stage.show(); 
-    } 
+        stage.show();
+    }
 
-} 
+}

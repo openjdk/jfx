@@ -1178,7 +1178,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
-    
+
     public float getAdvance(int glyphCode, float ptSize) {
         if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID)
             return 0f;
@@ -1400,7 +1400,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return filename.hashCode() + (71 * fullName.hashCode());
     }
 
-    
+
     private boolean checkedColorTables;
     private boolean hasColorTables;
     private synchronized boolean fontSupportsColorGlyphs() {
@@ -1425,7 +1425,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return false;
    }
 
-   
+
    private static int USHORT_MASK = 0xffff;
    private static int UINT_MASK   = 0xffffffff;
 
@@ -1440,7 +1440,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
            this.ppi  = ppi ;
            dataOffsets = offsets;
        }
-   
+
        boolean hasGlyph(int gid) {
            if (gid >= dataOffsets.length) {
               return false;
@@ -1464,14 +1464,14 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
           if (sbixStrikes[i].hasGlyph(glyphID)) {
               return true;
           }
-       } 
+       }
        return false;
    }
 
    private void buildSbixStrikeTables() {
 
        Buffer sbixTable = readTable(sbixTag);
-       
+
        if (sbixTable == null) {
            return;
        }
@@ -1481,7 +1481,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
        if (numStrikes <= 0 || numStrikes >= sz) {
            return;
        }
-       int[] strikeOffsets = new int[numStrikes]; 
+       int[] strikeOffsets = new int[numStrikes];
        for (int i=0; i<numStrikes; i++) {
            strikeOffsets[i] = sbixTable.getInt() & UINT_MASK;
            if (strikeOffsets[i] >= sz) {
@@ -1498,13 +1498,13 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
            int ppem = sbixTable.getChar() & USHORT_MASK;
            int ppi  = sbixTable.getChar() & USHORT_MASK;
-           int[] glyphDataOffsets = new int[numGlyphs+1]; 
+           int[] glyphDataOffsets = new int[numGlyphs+1];
            for (int g=0; g<=numGlyphs; g++) {
                glyphDataOffsets[g] = sbixTable.getInt() & UINT_MASK;
-           }         
+           }
            strikes[i] = new ColorGlyphStrike(ppem, ppi, glyphDataOffsets);
        }
-       sbixStrikes = strikes; 
+       sbixStrikes = strikes;
    }
 
 }
