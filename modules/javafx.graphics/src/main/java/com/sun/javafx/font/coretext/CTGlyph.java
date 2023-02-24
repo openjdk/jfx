@@ -278,7 +278,7 @@ class CTGlyph implements Glyph {
         if (isColorGlyph()) {
             return (w * 4); // has alpha
         } else {
-          return isLCDGlyph() ? w * 3 : w;
+            return isLCDGlyph() ? w * 3 : w;
         }
     }
 

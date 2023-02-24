@@ -1178,10 +1178,11 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
-
+    @Override
     public float getAdvance(int glyphCode, float ptSize) {
-        if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID)
+        if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
             return 0f;
+        }
 
         /*
          * Platform-specific but it needs to be explained why this is needed.
@@ -1235,8 +1236,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
      * required, suggesting the htmx table is fine for such cases.
      */
     private float getAdvanceFromHMTX(int glyphCode, float ptSize) {
-        if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID)
-            return 0f;
 
         // If we haven't initialised yet, do so now.
         if (advanceWidths == null && numHMetrics > 0) {
@@ -1426,8 +1425,8 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
    }
 
 
-   private static int USHORT_MASK = 0xffff;
-   private static int UINT_MASK   = 0xffffffff;
+   private static final int USHORT_MASK = 0xffff;
+   private static final int UINT_MASK   = 0xffffffff;
 
    static class ColorGlyphStrike {
 
@@ -1445,6 +1444,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
            if (gid >= dataOffsets.length) {
               return false;
            }
+           /* The following is correct, per the OpenType sbix spec
+            * there's one extra offset.
+            */
            return dataOffsets[gid] < dataOffsets[gid+1];
        }
    }
