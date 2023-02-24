@@ -51,7 +51,7 @@ public class EmojiTest extends Application {
         same background as other glyphs - this presumes the emoji image has
         transparent background pixels.
         There are 3 different ways it is displayed to verify
-        1) Text node. 2) Label control, 3) TextFile Control
+        1) Text node. 2) Label control, 3) TextField Control
         Press the Pass or Fail button as appropriate and the test will exit.
         If what you see is not explained here, ask before filing a bug.
 
