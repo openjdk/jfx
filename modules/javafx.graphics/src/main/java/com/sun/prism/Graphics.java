@@ -25,8 +25,10 @@
 
 package com.sun.prism;
 
+import java.nio.ByteBuffer;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.Glyph;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
@@ -36,6 +38,7 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NodePath;
+import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
@@ -215,4 +218,38 @@ public interface Graphics {
     public void setPixelScaleFactors(float pixelScaleX, float pixelScaleY);
     public float getPixelScaleFactorX();
     public float getPixelScaleFactorY();
+
+
+    /*
+     * Identical in each of BaseShaderGraphics, J2DPrismGraphics and SWGraphics
+     */
+    default void drawColorGlyph(GlyphList gl, FontStrike strike, float x, float y,
+                           Color selectColor, int selectStart, int selectEnd) {
+
+      int glyphCode = gl.getGlyphCode(0);
+      Glyph glyph = strike.getGlyph(glyphCode);
+      if (glyph == null) {
+          return;
+      }
+
+      byte[] glyphImage = glyph.getPixelData(0);
+      int ox = glyph.getOriginX();
+      int oy = glyph.getOriginY();
+      int height = glyph.getHeight();
+      int bytesWidth = glyph.getWidth();
+      // glyph width is reported in bytes, so code here needs to know
+      // that the bytes-per-pixel is grey=1, lcd=3, color=4
+      int width = bytesWidth / 4;
+
+      PixelFormat format = PixelFormat.BYTE_BGRA_PRE;
+      Texture tex = getResourceFactory().createTexture(
+            format, Texture.Usage.STATIC, WrapMode.CLAMP_NOT_NEEDED, width, height);
+      ByteBuffer bb = ByteBuffer.wrap(glyphImage);
+      int scan = width * tex.getPixelFormat().getBytesPerPixelUnit();
+      // format arg is the Buffer pixel format. Texture may not be created with the
+      // same as requested (ie the software pipeline).
+      tex.update(bb, format, 0, 0, 0, 0, width, height, scan, false);
+      drawTexture(tex, x+ox, y+oy, x+ox+width, y+oy+height, 0, 0, width, height);
+      tex.dispose();
+    }
 }
