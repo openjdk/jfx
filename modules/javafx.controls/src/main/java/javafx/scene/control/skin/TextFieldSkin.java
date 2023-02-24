@@ -811,9 +811,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             } else {
                 newX = midPoint - textNodeWidth / 2;
                 // Update if there is space on the right
-                if (newX + textNodeWidth <= textRight.get()) {
+                if (newX + textNodeWidth <= textRight.get() - caretWidth / 2) {
                     textTranslateX.set(newX);
-                } else if (newX < 0 && oldX > 1) {
+                } else if (newX < 0 && oldX > caretWidth / 2) {
                     textTranslateX.set(caretWidth / 2);
                 }
             }
@@ -821,10 +821,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
           case RIGHT:
             if (usePromptText.get()) {
-                double promptOldX = promptNode.getLayoutX();
-                double promptNewX = textRight.get() - promptNode.getLayoutBounds().getWidth() - caretWidth / 2;
-                if(promptNewX > promptOldX || promptNewX > 0) {
-                    promptNode.setLayoutX(promptNewX);
+                newX = textRight.get() - promptNode.getLayoutBounds().getWidth() - caretWidth / 2;
+                if (newX > 0) {
+                    promptNode.setLayoutX(newX);
                 } else {
                     // Align to left when prompt text length is more than text field width
                     promptNode.setLayoutX(caretWidth / 2);
@@ -834,7 +833,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                 // Update if there is space on the right
                 if (newX > oldX || newX > 0) {
                   textTranslateX.set(newX);
-                } else if (newX < 0 && oldX > 1) {
+                } else if (newX < 0 && oldX > caretWidth / 2) {
                   textTranslateX.set(caretWidth / 2);
                 }
             }
