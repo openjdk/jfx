@@ -30,7 +30,6 @@
 #include <glib.h>
 
 #include <cstdlib>
-#include <cstdio>
 #include <com_sun_glass_ui_gtk_GtkApplication.h>
 #include <com_sun_glass_events_WindowEvent.h>
 #include <com_sun_glass_events_MouseEvent.h>
@@ -114,18 +113,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gtk_init(NULL, NULL);
 
     // Major version is checked before loading
-    if (version == 3) {
-        if(gtk_check_version(version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
-            char message[100];
-            std::sprintf(message, "Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.",
-                     version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
-                     gtk_major_version, gtk_minor_version, gtk_micro_version);
+    if (version == 3
+        && gtk_check_version(version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
+        char message[100];
+        snprintf(message, sizeof(message),
+                 "Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.",
+                 version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
+                 gtk_major_version, gtk_minor_version, gtk_micro_version);
 
-            jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
-            env->ThrowNew(uoe, message);
+        jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
+        env->ThrowNew(uoe, message);
 
-            return;
-        }
+        return;
     }
 }
 
