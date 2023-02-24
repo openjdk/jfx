@@ -1441,11 +1441,10 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
        }
 
        boolean hasGlyph(int gid) {
-           if (gid >= dataOffsets.length) {
+           if (gid >= dataOffsets.length-1) {
               return false;
            }
-           /* The following is correct, per the OpenType sbix spec
-            * there's one extra offset.
+           /* Per the OpenType sbix specthere's one extra offset.
             */
            return dataOffsets[gid] < dataOffsets[gid+1];
        }
