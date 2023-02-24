@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Scene;
@@ -250,8 +251,14 @@ public class ControlAcceleratorSupportTest {
 
         WeakReference<Tab> wTab = new WeakReference<>(tab);
         tab = null;
+        menuItemWithReferenceToTab = null; // also holds a reference to tab through its action
+        contextMenu = null;
         JMemoryBuddy.assertNotCollectable(wTab);
         tabPane.getTabs().remove(0);
+        tabPane.getTabs().add(new Tab());
+        // the TabPane still holds onto the tab through a reference in stackpane
+        // adding a new tab and running a pulse gets rid of it
+        Toolkit.getToolkit().firePulse();
         JMemoryBuddy.assertCollectable(wTab);
         sl.dispose();
     }
@@ -294,11 +301,9 @@ public class ControlAcceleratorSupportTest {
         sl2.dispose();
     }
 
-    @Ignore
+    @Ignore // Only the first tab's context menu gets a scene change listener right now
     @Test
     public void testMultipleTabContextMenuGetsNewListChangeListenersWhenSceneChange() {
-        // JDK-8283551
-        // Test moving a tab pane from one scene to another removes and re-adds the appropriate ListChangeListeners
         Tab t = new Tab();
         Tab t2 = new Tab();
         TabPane tabPane = new TabPane(t,t2);
@@ -385,5 +390,57 @@ public class ControlAcceleratorSupportTest {
         assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
         assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu2.getItems()).size());
         JMemoryBuddy.assertCollectable(scene1);
+    }
+
+    @Ignore("JDK-8268374")
+    @Test
+    public void testContextMenuOnTabSetToNullWhenNotInSceneRemovesListeners() {
+        // JDK-8268374
+        Tab t = new Tab();
+        TabPane tabPane = new TabPane(t);
+
+        ContextMenu contextMenu1 = new ContextMenu();
+        MenuItem item1 = new MenuItem();
+        contextMenu1.getItems().add(item1);
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        t.setContextMenu(contextMenu1);
+        StackPane root = new StackPane(tabPane);
+        StageLoader sl1 = new StageLoader(root);
+        assertEquals(1, getListenerCount(item1.acceleratorProperty()));
+        root.getChildren().setAll(new StackPane()); // remove tabpane from scene
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        t.setContextMenu(null);
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        root.getChildren().setAll(tabPane);
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        sl1.dispose();
+    }
+
+    @Ignore("JDK-8268374")
+    @Test
+    public void testContextMenuOnTabSetToNullAfterTabIsRemoved() {
+        // JDK-8268374
+        Tab t = new Tab();
+        TabPane tabPane = new TabPane(t);
+
+        ContextMenu contextMenu1 = new ContextMenu();
+        MenuItem item1 = new MenuItem();
+        contextMenu1.getItems().add(item1);
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        t.setContextMenu(contextMenu1);
+        StackPane root = new StackPane(tabPane);
+        StageLoader sl1 = new StageLoader(root);
+        assertEquals(1, getListenerCount(item1.acceleratorProperty()));
+        root.getChildren().setAll(new StackPane());
+        tabPane.getTabs().remove(0);
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        t.setContextMenu(null);
+        assertEquals(0, ExpressionHelperUtility.getListChangeListeners(contextMenu1.getItems()).size());
+        tabPane.getTabs().add(t);
+        root.getChildren().setAll(tabPane);
+        assertEquals(0, getListenerCount(item1.acceleratorProperty()));
+        sl1.dispose();
     }
 }
