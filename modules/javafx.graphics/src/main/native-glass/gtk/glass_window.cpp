@@ -743,10 +743,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             owner(_owner),
             geometry(),
             resizable(),
-            map_received(false),
             on_top(false),
-            is_fullscreen(false),
-            frame_extents_received(false) {
+            is_fullscreen(false) {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
     gtk_widget = gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);
@@ -841,7 +839,6 @@ void WindowContextTop::update_frame_extents() {
 
     if (get_frame_extents_property(&top, &left, &bottom, &right)) {
         if ((top + right + bottom + left) != 0) {
-            frame_extents_received = true;
             bool changed = geometry.extents.top != top
                             || geometry.extents.left != left
                             || geometry.extents.bottom != bottom
@@ -973,10 +970,6 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
 }
 
 void WindowContextTop::process_state(GdkEventWindowState* event) {
-    if (!map_received) {
-        return;
-    }
-
     if (event->changed_mask & GDK_WINDOW_STATE_FULLSCREEN) {
         is_fullscreen = event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN;
     }
@@ -1082,6 +1075,12 @@ void WindowContextTop::set_visible(bool visible) {
     if (visible && !geometry.size_assigned) {
         set_bounds(0, 0, false, false, 320, 200, -1, -1, 0, 0);
     }
+
+    //JDK-8220272 - fire event first because GDK_FOCUS_CHANGE is not always in order
+    if (visible && jwindow && isEnabled()) {
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
+        CHECK_JNI_EXCEPTION(mainEnv);
+    }
 }
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch,
@@ -1134,14 +1133,6 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
         gtk_window_move(GTK_WINDOW(gtk_widget), geometry.x, geometry.y);
         notify_window_move();
-    }
-}
-
-void WindowContextTop::process_map() {
-    map_received = true;
-
-    if (!is_iconified) {
-        request_focus();
     }
 }
 

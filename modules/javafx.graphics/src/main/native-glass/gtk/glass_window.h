@@ -132,7 +132,6 @@ public:
 
     virtual void process_property_notify(GdkEventProperty*) = 0;
     virtual void process_configure(GdkEventConfigure*) = 0;
-    virtual void process_map() = 0;
     virtual void process_focus(GdkEventFocus*) = 0;
     virtual void process_destroy() = 0;
     virtual void process_delete() = 0;
@@ -229,7 +228,6 @@ public:
     void set_level(int) {}
     void set_background(float, float, float);
 
-    void process_map() {}
     void process_focus(GdkEventFocus*);
     void process_destroy();
     void process_delete();
@@ -271,7 +269,6 @@ class WindowContextTop: public WindowContextBase {
     bool map_received;
     bool on_top;
     bool is_fullscreen;
-    bool frame_extents_received;
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
@@ -279,7 +276,6 @@ class WindowContextTop: public WindowContextBase {
     WindowManager wmanager;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
-    void process_map();
     void process_property_notify(GdkEventProperty*);
     void process_state(GdkEventWindowState*);
     void process_configure(GdkEventConfigure*);
