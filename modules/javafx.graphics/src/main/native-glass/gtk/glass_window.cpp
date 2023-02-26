@@ -147,12 +147,12 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     }
 
     if (jwindow) {
-        if (!event->in || isEnabled()) {
+        if (isEnabled()) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
                     event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
                               : com_sun_glass_events_WindowEvent_FOCUS_LOST);
             CHECK_JNI_EXCEPTION(mainEnv)
-        } else {
+        } else if (is_visible()) {
             // when the user tries to activate a disabled window, send FOCUS_DISABLED
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
             CHECK_JNI_EXCEPTION(mainEnv)
@@ -743,7 +743,6 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             owner(_owner),
             geometry(),
             resizable(),
-            map_received(false),
             on_top(false),
             is_fullscreen(false),
             frame_extents_received(false) {
@@ -855,26 +854,13 @@ void WindowContextTop::update_frame_extents() {
 
                 set_cached_extents(geometry.extents);
 
-                // set bounds again to correct window size
-                // accounting decorations
-                int w = geometry_get_window_width(&geometry);
-                int h = geometry_get_window_height(&geometry);
-                int cw = geometry_get_content_width(&geometry);
-                int ch = geometry_get_content_height(&geometry);
-
-                int x = geometry.x;
-                int y = geometry.y;
-
-
                 if (geometry.gravity_x != 0) {
-                    x -= geometry.gravity_x * (float) (left + right);
+                    geometry.x -= geometry.gravity_x * (float) (left + right);
                 }
 
                 if (geometry.gravity_y != 0) {
-                    y -= geometry.gravity_y * (float) (top + bottom);
+                    geometry.y -= geometry.gravity_y * (float) (top + bottom);
                 }
-
-                set_bounds(x, y, true, true, w, h, cw, ch, 0, 0);
            }
         }
     }
@@ -973,10 +959,6 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
 }
 
 void WindowContextTop::process_state(GdkEventWindowState* event) {
-    if (!map_received) {
-        return;
-    }
-
     if (event->changed_mask & GDK_WINDOW_STATE_FULLSCREEN) {
         is_fullscreen = event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN;
     }
@@ -1077,11 +1059,28 @@ void WindowContextTop::set_resizable(bool res) {
 }
 
 void WindowContextTop::set_visible(bool visible) {
+
+    // Note: this correction happens here because calling when extents are
+    // received messes with internal user time and causes out-of-order focus event
+    // and set_focus_on_map (default true) won't work correctly
+    if (frame_extents_received) {
+        // set bounds again to correct window size
+        // accounting decorations
+        int w = geometry_get_window_width(&geometry);
+        int h = geometry_get_window_height(&geometry);
+        int cw = geometry_get_content_width(&geometry);
+        int ch = geometry_get_content_height(&geometry);
+
+        set_bounds(geometry.x, geometry.y, true, true, w, h, cw, ch, 0, 0);
+    }
+
     WindowContextBase::set_visible(visible);
 
     if (visible && !geometry.size_assigned) {
         set_bounds(0, 0, false, false, 320, 200, -1, -1, 0, 0);
     }
+
+    request_focus();
 }
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch,
@@ -1134,14 +1133,6 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
         gtk_window_move(GTK_WINDOW(gtk_widget), geometry.x, geometry.y);
         notify_window_move();
-    }
-}
-
-void WindowContextTop::process_map() {
-    map_received = true;
-
-    if (!is_iconified) {
-        request_focus();
     }
 }
 
@@ -1198,9 +1189,7 @@ void WindowContextTop::exit_fullscreen() {
 }
 
 void WindowContextTop::request_focus() {
-    if (is_visible()) {
-        gtk_window_present(GTK_WINDOW(gtk_widget));
-    }
+    gtk_window_present(GTK_WINDOW(gtk_widget));
 }
 
 void WindowContextTop::set_focusable(bool focusable) {

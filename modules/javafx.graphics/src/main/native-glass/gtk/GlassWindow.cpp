@@ -291,6 +291,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setTitle
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     const char* ctitle = mainEnv->GetStringUTFChars(title, NULL);
+
     ctx->set_title(ctitle);
     mainEnv->ReleaseStringUTFChars(title, ctitle);
 
