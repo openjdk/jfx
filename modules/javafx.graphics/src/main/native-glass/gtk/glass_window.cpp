@@ -838,7 +838,7 @@ void WindowContextTop::update_frame_extents() {
     int top, left, bottom, right;
 
     if (get_frame_extents_property(&top, &left, &bottom, &right)) {
-        if ((top + right + bottom + left) != 0) {
+        if (top > 0 || right > 0 || bottom > 0 || left > 0) {
             bool changed = geometry.extents.top != top
                             || geometry.extents.left != left
                             || geometry.extents.bottom != bottom
@@ -861,7 +861,6 @@ void WindowContextTop::update_frame_extents() {
 
                 int x = geometry.x;
                 int y = geometry.y;
-
 
                 if (geometry.gravity_x != 0) {
                     x -= geometry.gravity_x * (float) (left + right);
