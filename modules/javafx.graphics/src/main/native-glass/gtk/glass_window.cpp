@@ -973,6 +973,12 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
         is_fullscreen = event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN;
     }
 
+    if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED
+        && !(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED)) {
+        gtk_window_resize(GTK_WINDOW(gtk_widget), geometry_get_content_width(&geometry),
+                                    geometry_get_content_height(&geometry));
+    }
+
     WindowContextBase::process_state(event);
 }
 
