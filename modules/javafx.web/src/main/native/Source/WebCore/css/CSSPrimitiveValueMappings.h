@@ -472,6 +472,71 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
     case ListboxPart:
         m_value.valueID = CSSValueListbox;
         break;
+#if PLATFORM(JAVA)
+    case MediaEnterFullscreenButtonPart:
+        m_value.valueID = CSSValueMediaEnterFullscreenButton;
+        break;
+    case MediaExitFullscreenButtonPart:
+        m_value.valueID = CSSValueMediaExitFullscreenButton;
+        break;
+    case MediaPlayButtonPart:
+        m_value.valueID = CSSValueMediaPlayButton;
+        break;
+    case MediaOverlayPlayButtonPart:
+        m_value.valueID = CSSValueMediaOverlayPlayButton;
+        break;
+    case MediaMuteButtonPart:
+        m_value.valueID = CSSValueMediaMuteButton;
+        break;
+    case MediaSeekBackButtonPart:
+        m_value.valueID = CSSValueMediaSeekBackButton;
+        break;
+    case MediaSeekForwardButtonPart:
+        m_value.valueID = CSSValueMediaSeekForwardButton;
+        break;
+    case MediaRewindButtonPart:
+        m_value.valueID = CSSValueMediaRewindButton;
+        break;
+    case MediaReturnToRealtimeButtonPart:
+        m_value.valueID = CSSValueMediaReturnToRealtimeButton;
+        break;
+    case MediaToggleClosedCaptionsButtonPart:
+        m_value.valueID = CSSValueMediaToggleClosedCaptionsButton;
+        break;
+    case MediaSliderPart:
+        m_value.valueID = CSSValueMediaSlider;
+        break;
+    case MediaSliderThumbPart:
+        m_value.valueID = CSSValueMediaSliderthumb;
+        break;
+    case MediaVolumeSliderContainerPart:
+        m_value.valueID = CSSValueMediaVolumeSliderContainer;
+        break;
+    case MediaVolumeSliderPart:
+        m_value.valueID = CSSValueMediaVolumeSlider;
+        break;
+    case MediaVolumeSliderMuteButtonPart:
+        m_value.valueID = CSSValueMediaVolumeSliderMuteButton;
+        break;
+    case MediaVolumeSliderThumbPart:
+        m_value.valueID = CSSValueMediaVolumeSliderthumb;
+        break;
+    case MediaControlsBackgroundPart:
+        m_value.valueID = CSSValueMediaControlsBackground;
+        break;
+    case MediaFullScreenVolumeSliderPart:
+        m_value.valueID = CSSValueMediaFullscreenVolumeSlider;
+        break;
+    case MediaFullScreenVolumeSliderThumbPart:
+        m_value.valueID = CSSValueMediaFullscreenVolumeSliderThumb;
+        break;
+    case MediaCurrentTimePart:
+        m_value.valueID = CSSValueMediaCurrentTimeDisplay;
+        break;
+    case MediaTimeRemainingPart:
+        m_value.valueID = CSSValueMediaTimeRemainingDisplay;
+        break;
+#endif
     case MenulistPart:
         m_value.valueID = CSSValueMenulist;
         break;
@@ -490,6 +555,14 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
     case SliderVerticalPart:
         m_value.valueID = CSSValueSliderVertical;
         break;
+#if PLATFORM(JAVA)
+    case SliderThumbHorizontalPart:
+        m_value.valueID = CSSValueSliderthumbHorizontal;
+        break;
+    case SliderThumbVerticalPart:
+        m_value.valueID = CSSValueSliderthumbVertical;
+        break;
+#endif
     case SearchFieldPart:
         m_value.valueID = CSSValueSearchfield;
         break;
@@ -527,8 +600,10 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
     case SearchFieldResultsDecorationPart:
     case SearchFieldResultsButtonPart:
     case SearchFieldCancelButtonPart:
+#if !PLATFORM(JAVA)
     case SliderThumbHorizontalPart:
     case SliderThumbVerticalPart:
+#endif
         ASSERT_NOT_REACHED();
         m_value.valueID = CSSValueNone;
         break;
