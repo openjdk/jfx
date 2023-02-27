@@ -37,7 +37,6 @@ import javafx.scene.Node;
 import javafx.scene.web.WebEngineShim;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized.Parameters;
@@ -89,7 +88,6 @@ public final class FormControlsTest extends TestBase {
             exMessage.contains("Exception") || exMessage.contains("Error"));
     }
 
-    @Ignore("JDK-8300954")
     @Test
     public void testRendering() {
         final Runnable testBody = () -> {

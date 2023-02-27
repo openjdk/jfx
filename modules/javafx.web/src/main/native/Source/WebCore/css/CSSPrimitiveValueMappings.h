@@ -490,6 +490,14 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
     case SliderVerticalPart:
         m_value.valueID = CSSValueSliderVertical;
         break;
+#if PLATFORM(JAVA)
+    case SliderThumbHorizontalPart:
+        m_value.valueID = CSSValueSliderthumbHorizontal;
+        break;
+    case SliderThumbVerticalPart:
+        m_value.valueID = CSSValueSliderthumbVertical;
+        break;
+#endif
     case SearchFieldPart:
         m_value.valueID = CSSValueSearchfield;
         break;
@@ -527,8 +535,10 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
     case SearchFieldResultsDecorationPart:
     case SearchFieldResultsButtonPart:
     case SearchFieldCancelButtonPart:
+#if !PLATFORM(JAVA)
     case SliderThumbHorizontalPart:
     case SliderThumbVerticalPart:
+#endif
         ASSERT_NOT_REACHED();
         m_value.valueID = CSSValueNone;
         break;

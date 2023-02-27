@@ -48,6 +48,10 @@ enum ControlPart {
     ProgressBarPart,
     SliderHorizontalPart,
     SliderVerticalPart,
+#if PLATFORM(JAVA)
+    SliderThumbHorizontalPart,
+    SliderThumbVerticalPart,
+#endif
     SearchFieldPart,
 #if ENABLE(APPLE_PAY)
     ApplePayButtonPart,
@@ -74,8 +78,10 @@ enum ControlPart {
     SearchFieldResultsDecorationPart,
     SearchFieldResultsButtonPart,
     SearchFieldCancelButtonPart,
+#if !PLATFORM(JAVA)
     SliderThumbHorizontalPart,
     SliderThumbVerticalPart
+#endif
 };
 
 #if ENABLE(SERVICE_CONTROLS)

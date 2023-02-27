@@ -5225,6 +5225,9 @@
                 "progress-bar",
                 "slider-horizontal",
                 "slider-vertical",
+                //sliderthumb-horizontal and sliderthumb-vertical need to be defined for PLATFORM(JAVA)
+                "sliderthumb-horizontal",
+                "sliderthumb-vertical",
                 "searchfield",
                 "textfield",
                 "-apple-pay-button",
