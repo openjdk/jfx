@@ -898,38 +898,17 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         final Bounds clipBounds = clip.getBoundsInParent();
         final Bounds caretBounds = caretPath.getLayoutBounds();
 
-        switch (getHAlignment()) {
-          case RIGHT:
-            if (textBounds.getMaxX() > clipBounds.getMaxX()) {
-                double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
-                if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
-                    if (textMaxXOld <= clipBounds.getMaxX()) {
-                        delta = textMaxXOld - textBounds.getMaxX();
-                    } else {
-                        delta = clipBounds.getMaxX() - textBounds.getMaxX();
-                    }
-                }
-                textTranslateX.set(textTranslateX.get() + delta);
-            } else {
-                updateTextPos();
-            }
-            break;
-
-          case LEFT:
-          case CENTER:
-          default:
-            if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
+        if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
                 textBounds.getMaxX() <= clipBounds.getMaxX()) {
-                double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
-                if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
-                    if (textMaxXOld <= clipBounds.getMaxX()) {
-                        delta = textMaxXOld - textBounds.getMaxX();
-                    } else {
-                        delta = clipBounds.getMaxX() - textBounds.getMaxX();
-                    }
+            double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
+            if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
+                if (textMaxXOld <= clipBounds.getMaxX()) {
+                    delta = textMaxXOld - textBounds.getMaxX();
+                } else {
+                    delta = clipBounds.getMaxX() - textBounds.getMaxX();
                 }
-                textTranslateX.set(textTranslateX.get() + delta);
             }
+            textTranslateX.set(textTranslateX.get() + delta);
         }
 
         updateCaretOff();
