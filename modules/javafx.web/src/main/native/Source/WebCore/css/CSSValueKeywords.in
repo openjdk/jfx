@@ -843,7 +843,15 @@ square-button
 button
 default-button
 listbox
+menulist
+menulist-button
+meter
+progress-bar
+slider-horizontal
+slider-vertical
 // if platform JAVA
+sliderthumb-horizontal
+sliderthumb-vertical
 media-controls-background
 media-controls-dark-bar-background
 media-controls-fullscreen-background
@@ -868,15 +876,7 @@ media-volume-slider
 media-volume-slider-container
 media-volume-slider-mute-button
 media-volume-sliderthumb
-sliderthumb-horizontal
-sliderthumb-vertical
 // end platform JAVA
-menulist
-menulist-button
-meter
-progress-bar
-slider-horizontal
-slider-vertical
 searchfield
 #if defined(ENABLE_APPLE_PAY) && ENABLE_APPLE_PAY
 -apple-pay-button
