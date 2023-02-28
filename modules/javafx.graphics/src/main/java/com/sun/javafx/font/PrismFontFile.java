@@ -1178,6 +1178,33 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
+    @Override
+    public float getAdvance(int glyphCode, float ptSize) {
+        if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
+            return 0f;
+        }
+
+        /*
+         * Platform-specific but it needs to be explained why this is needed.
+         * The hmtx table in the Apple Color Emoji font can be woefully off
+         * compared to the size of emoji glyph CoreText generates and the advance
+         * CoreText supports. So for macOS at least, we need to get those advances
+         * another way. Note : I also see "small" discrepancies for ordinary
+         * glyphs in the mac system font between hmtx and CoreText.
+         * Limit use of this because we aren't caching the result.
+         */
+        if (PrismFontFactory.isMacOSX && isColorGlyph(glyphCode)) {
+            return getAdvanceFromPlatform(glyphCode, ptSize);
+        } else {
+            return getAdvanceFromHMTX(glyphCode, ptSize);
+        }
+    }
+
+    /* REMIND: We can cache here if it is slow */
+    protected float getAdvanceFromPlatform(int glyphCode, float ptSize) {
+        return getAdvanceFromHMTX(glyphCode, ptSize);
+    }
+
     char[] advanceWidths = null;
     /*
      * This is returning the unhinted advance, should be OK so
@@ -1208,10 +1235,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
      * they do not provide hdmx entry for sizes below that where hinting is
      * required, suggesting the htmx table is fine for such cases.
      */
-    @Override
-    public float getAdvance(int glyphCode, float ptSize) {
-        if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID)
-            return 0f;
+    private float getAdvanceFromHMTX(int glyphCode, float ptSize) {
 
         // If we haven't initialised yet, do so now.
         if (advanceWidths == null && numHMetrics > 0) {
@@ -1374,4 +1398,114 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     public int hashCode() {
         return filename.hashCode() + (71 * fullName.hashCode());
     }
+
+
+    private boolean checkedColorTables;
+    private boolean hasColorTables;
+    private synchronized boolean fontSupportsColorGlyphs() {
+       if (checkedColorTables) {
+           return hasColorTables;
+       }
+       hasColorTables =
+           getDirectoryEntry(sbixTag) != null ||
+           getDirectoryEntry(colrTag) != null;
+       checkedColorTables = true;
+
+       return hasColorTables;
+    }
+
+    public boolean isColorGlyph(int glyphID) {
+        if (!fontSupportsColorGlyphs()) {
+            return false;
+        }
+        if (getDirectoryEntry(sbixTag) != null) {
+            return isSbixGlyph(glyphID);
+        }
+        return false;
+   }
+
+
+   private static final int USHORT_MASK = 0xffff;
+   private static final int UINT_MASK   = 0xffffffff;
+
+   static class ColorGlyphStrike {
+
+       private int ppem;
+       private int ppi;
+       private int dataOffsets[];
+
+       ColorGlyphStrike(int ppem, int ppi, int[] offsets) {
+           this.ppem = ppem;
+           this.ppi  = ppi ;
+           dataOffsets = offsets;
+       }
+
+       boolean hasGlyph(int gid) {
+           if (gid >= dataOffsets.length-1) {
+              return false;
+           }
+           /* Per the OpenType sbix specthere's one extra offset.
+            */
+           return dataOffsets[gid] < dataOffsets[gid+1];
+       }
+   }
+
+   ColorGlyphStrike[] sbixStrikes = null;
+
+   private boolean isSbixGlyph(int glyphID) {
+       if (sbixStrikes == null) {
+           synchronized (this) {
+               buildSbixStrikeTables();
+               if (sbixStrikes == null) {
+                   sbixStrikes = new ColorGlyphStrike[0];
+               }
+           }
+       }
+       for (int i=0; i<sbixStrikes.length; i++) {
+          if (sbixStrikes[i].hasGlyph(glyphID)) {
+              return true;
+          }
+       }
+       return false;
+   }
+
+   private void buildSbixStrikeTables() {
+
+       Buffer sbixTable = readTable(sbixTag);
+
+       if (sbixTable == null) {
+           return;
+       }
+       int sz = sbixTable.capacity();
+       sbixTable.skip(4); // past version and flags
+       int numStrikes = sbixTable.getInt() & UINT_MASK;
+       if (numStrikes <= 0 || numStrikes >= sz) {
+           return;
+       }
+       int[] strikeOffsets = new int[numStrikes];
+       for (int i=0; i<numStrikes; i++) {
+           strikeOffsets[i] = sbixTable.getInt() & UINT_MASK;
+           if (strikeOffsets[i] >= sz) {
+               return;
+           }
+       }
+       int numGlyphs = getNumGlyphs();
+       ColorGlyphStrike[] strikes = new ColorGlyphStrike[numStrikes];
+       for (int i=0; i<numStrikes; i++) {
+           if (strikeOffsets[i] + 4 + (4*(numGlyphs+1)) > sz) {
+                return;
+           }
+           sbixTable.position(strikeOffsets[i]);
+
+           int ppem = sbixTable.getChar() & USHORT_MASK;
+           int ppi  = sbixTable.getChar() & USHORT_MASK;
+           int[] glyphDataOffsets = new int[numGlyphs+1];
+           for (int g=0; g<=numGlyphs; g++) {
+               glyphDataOffsets[g] = sbixTable.getInt() & UINT_MASK;
+           }
+           strikes[i] = new ColorGlyphStrike(ppem, ppi, glyphDataOffsets);
+       }
+       sbixStrikes = strikes;
+   }
+
 }

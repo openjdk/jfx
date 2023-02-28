@@ -484,12 +484,20 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 {
+#if ENABLE(MODERN_MEDIA_CONTROLS)
     return { String(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
+#else
+    return { String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript)) };
+#endif
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
 {
+#if ENABLE(MODERN_MEDIA_CONTROLS)
     return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+#else
+    return String(mediaControlsAdwaitaUserAgentStyleSheet, sizeof(mediaControlsAdwaitaUserAgentStyleSheet));
+#endif
 }
 
 static RefPtr<HTMLMediaElement> parentMediaElement(const Node* node)

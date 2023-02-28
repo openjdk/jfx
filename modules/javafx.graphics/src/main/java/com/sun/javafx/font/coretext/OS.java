@@ -59,6 +59,7 @@ class OS {
 
     /* Custom */
     static final native byte[] CGBitmapContextGetData(long c, int width, int height, int bpp);
+    static final native byte[] CGImageContextGetData(long c, int width, int height, int bpp);
     static final native void CGRectApplyAffineTransform(CGRect rect, CGAffineTransform t);
     static final native Path2D CGPathApply(long path);
     static final native CGRect CGPathGetPathBoundingBox(long path);
@@ -66,6 +67,7 @@ class OS {
     static final native String CTFontCopyAttributeDisplayName(long font);
     static final native void CTFontDrawGlyphs(long font, short glyphs, double x, double y, long context);
     static final native double CTFontGetAdvancesForGlyphs(long font, int orientation, short glyphs, CGSize advances);
+    static final native CGRect CTFontGetBoundingRectForGlyphs(long font, short glyph);
     static final native boolean CTFontGetBoundingRectForGlyphUsingTables(long font, short glyphs, short format, int[] retArr);
     static final native int CTRunGetGlyphs(long run, int slotMask, int start, int[] buffer);
     static final native int CTRunGetStringIndices(long run, int start, int[] buffer);
