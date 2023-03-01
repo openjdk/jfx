@@ -54,12 +54,11 @@ import java.lang.annotation.Native;
 final class GtkApplication extends Application implements
                                     InvokeLaterDispatcher.InvokeLaterSubmitter {
     private static final int forcedGtkVersion;
-    private static boolean gtk2WarningIssued = false;
-    private static final String GTK2_SPECIFIED_WARNING =
-        "WARNING: A command line option tried to enable the GTK 2 library";
+    private static final String GTK2_REMOVED_EXCEPTION =
+        "FATAL: The JavaFX GTK 2 library specified in \"jdk.gtk.version\" was removed and is no longer available.";
 
-    private static final String GTK2_REMOVED_WARNING =
-        "WARNING: The JavaFX GTK 2 library was removed. The option will be ignored.";
+    private static final String GTK_INVALID_VERSION_EXCEPTION =
+        "FATAL: The JavaFX GTK %d library specified in \"jdk.gtk.version\" is invalid.";
 
     static  {
         String gtkVersion = System.getProperty("org.eclipse.swt.internal.gtk.version");
@@ -122,20 +121,15 @@ final class GtkApplication extends Application implements
         int gtkVersion = forcedGtkVersion == 0 ?
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
                 String v = System.getProperty("jdk.gtk.version","3");
-                int ret = 0;
-                if ("3".equals(v) || v.startsWith("3.")) {
-                    ret = 3;
-                } else if ("2".equals(v) || v.startsWith("2.")) {
-                    ret = 2;
-                }
-                return ret;
+                return Character.getNumericValue(v.charAt(0));
             }) : forcedGtkVersion;
 
-        if (gtkVersion == 2 && !gtk2WarningIssued) {
-            System.err.println(GTK2_SPECIFIED_WARNING);
-            System.err.println(GTK2_REMOVED_WARNING);
-            gtk2WarningIssued = true;
-            gtkVersion = 3;
+        if (gtkVersion != 3) {
+            if (gtkVersion == 2) {
+                throw new UnsupportedOperationException(GTK2_REMOVED_EXCEPTION);
+            }
+
+            throw new UnsupportedOperationException(GTK_INVALID_VERSION_EXCEPTION.formatted(gtkVersion));
         }
 
         @SuppressWarnings("removal")

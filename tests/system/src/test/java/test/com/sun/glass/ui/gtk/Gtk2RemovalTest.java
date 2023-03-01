@@ -26,36 +26,34 @@
 package test.com.sun.glass.ui.gtk;
 
 import com.sun.javafx.PlatformUtil;
-
+import javafx.application.Platform;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.Assert.fail;
 
+public class Gtk2RemovalTest {
 
-public class Gtk2Removal2Test extends Gtk2RemovalCommon {
+    private static boolean shouldExit;
 
-    @BeforeAll
-    public static void setup() throws Exception {
-        doSetup(false);
+    @Test
+    public void testGtk2Removal() {
+        if (!PlatformUtil.isLinux()) return;
+
+        System.setProperty("jdk.gtk.version", "2");
+
+        Assertions.assertThrows(UnsupportedOperationException.class,
+                () -> Platform.startup(() -> { shouldExit = true; }),
+                "Gtk 2 should throw exception");
     }
 
     @AfterAll
-    public static void teardown() {
-        doTeardown();
+    public static void doTeardown() {
+        if (!PlatformUtil.isLinux()) return;
+
+        if (shouldExit) {
+            Platform.exit();
+        }
     }
-
-    @Test
-    public void testNoDeprecationMessage() throws Exception {
-        assumeTrue(PlatformUtil.isLinux());
-
-        final String output = out.toString();
-        System.err.println(output);
-        assertFalse(output.contains("WARNING"), "Unexpected warning message");
-        assertFalse(output.contains("deprecated"), "Unexpected warning message");
-        assertFalse(output.contains("removed"), "Unexpected warning message");
-    }
-
 }
