@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -214,6 +214,7 @@ public class Util {
 
         // This is a "minimum" set, rather than the full @addExports
         cmd.add("--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED");
+        cmd.add("--add-exports=javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED");
 
         if (workerClassPath != null) {
             cmd.add("@" + workerClassPath);
