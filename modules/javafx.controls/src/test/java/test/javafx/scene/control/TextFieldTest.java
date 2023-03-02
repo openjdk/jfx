@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -541,6 +541,13 @@ public class TextFieldTest {
         // 3 is removed, therefore we get 100. The value converter above will then add 100 (=200).
         txtField.setText("1300");
         assertEquals("200", txtField.getText());
+    }
+
+    @Test public void stripInvalidCharacters() {
+        txtField.setText("abcdefghijklm");
+        char[] c = new char[]{0x7F, 0xA, 0x9, 0x00, 0x05, 0x10, 0x19};
+        txtField.setText(String.valueOf(c));
+        assertEquals("", txtField.getText());
     }
 
     private Change upperCase(Change change) {
