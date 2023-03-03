@@ -37,12 +37,12 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.skin.ChoiceBoxSkin;
 import javafx.scene.control.skin.ChoiceBoxSkinNodesShim;
-import javafx.scene.control.skin.ContextMenuSkin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.application.Platform;
 import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -97,9 +97,13 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
                 robot.keyType(KeyCode.DOWN);
                 Toolkit.getToolkit().firePulse();
             }
+            scrollLatch.countDown();
+        });
 
-            Util.sleep(400); // Wait for up arrow to get loaded in UI
+        Util.waitForLatch(scrollLatch, 5, "Timeout waiting for choicebox to be hidden.");
+        Thread.sleep(400); // Wait for up arrow to get loaded in UI
 
+        Util.runAndWait(() -> {
             robot.keyType(KeyCode.ENTER);
         });
     }
@@ -130,12 +134,16 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
         addChoiceBoxItems(150);
         showChoiceBox();
 
+        Thread.sleep(400); // Small delay to avoid test failure due to slow UI loading.
+
         Assert.assertFalse(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
         Assert.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
-        scrollChoiceBox(75);
+
+        double rowHeight = ContextMenuContentShim.getContextMenuRowHeight(popup);
+        double screenHeight = Screen.getPrimary().getBounds().getHeight();
+        scrollChoiceBox((int) (screenHeight / rowHeight));
 
         Util.waitForLatch(choiceBoxHiddenLatch, 5, "Timeout waiting for choicebox to be hidden.");
-        Thread.sleep(400); // Small delay to avoid test failure due to slow UI loading.
         Assert.assertTrue(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
         Assert.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
 

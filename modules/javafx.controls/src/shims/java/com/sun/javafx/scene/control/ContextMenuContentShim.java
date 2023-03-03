@@ -148,4 +148,9 @@ public class ContextMenuContentShim {
         return content.isDownArrowVisible();
     }
 
+    public static double getContextMenuRowHeight(ContextMenu menu) {
+        ContextMenuContent content = getMenuContent(menu);
+        return content.getItemsContainer().getChildren().get(0).prefHeight(-1);
+    }
+
 }
