@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2018 Apple Inc.  All rights reserved.
+# Copyright (C) 2007-2022 Apple Inc.  All rights reserved.
 # Copyright (C) 2009, 2010 Chris Jerdonek (chris.jerdonek@gmail.com)
 # Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
 # Copyright (C) 2012 Daniel Bates (dbates@intudata.com)
@@ -71,8 +71,6 @@ BEGIN {
         &isGit
         &isGitBranchBuild
         &isGitDirectory
-        &isGitSVN
-        &isGitSVNDirectory
         &isSVN
         &isSVNDirectory
         &isSVNVersion16OrNewer
@@ -111,7 +109,6 @@ our @EXPORT_OK;
 
 my $gitRoot;
 my $isGit;
-my $isGitSVN;
 my $isGitBranchBuild;
 my $isSVN;
 my $svnVersion;
@@ -235,26 +232,6 @@ sub isGit()
 
     $isGit = isGitDirectory(".");
     return $isGit;
-}
-
-sub isGitSVNDirectory($)
-{
-    my ($directory) = @_;
-
-    # There doesn't seem to be an officially documented way to determine
-    # if you're in a git-svn checkout. The best suggestions seen so far
-    # all use something like the following:
-    my $output = `git -C \"$directory\" config --get svn-remote.svn.fetch 2>&1`;
-    $isGitSVN = exitStatus($?) == 0 && $output ne "";
-    return $isGitSVN;
-}
-
-sub isGitSVN()
-{
-    return $isGitSVN if defined $isGitSVN;
-
-    $isGitSVN = isGitSVNDirectory(".");
-    return $isGitSVN;
 }
 
 sub gitDirectory()
@@ -593,17 +570,6 @@ sub possiblyColored($$)
     }
 }
 
-sub adjustPathForRecentRenamings($) 
-{ 
-    my ($fullPath) = @_; 
- 
-    $fullPath =~ s|WebCore/webaudio|WebCore/Modules/webaudio|g;
-    $fullPath =~ s|JavaScriptCore/wtf|WTF/wtf|g;
-    $fullPath =~ s|test_expectations.txt|TestExpectations|g;
-
-    return $fullPath; 
-} 
-
 sub canonicalizePath($)
 {
     my ($file) = @_;
@@ -850,12 +816,7 @@ sub parseGitDiffHeader($$)
     if (/$gitDiffStartRegEx/) {
         # Use $POSTMATCH to preserve the end-of-line character.
         my $eol = $POSTMATCH;
-
-        # The first and second paths can differ in the case of copies
-        # and renames.  We use the second file path because it is the
-        # destination path.
-        $indexPath = adjustPathForRecentRenamings(parseGitDiffStartLine($_));
-
+        $indexPath = parseGitDiffStartLine($_);
         $_ = "Index: $indexPath$eol"; # Convert to SVN format.
     } else {
         die("Could not parse leading \"diff --git\" line: \"$line\".");
@@ -978,7 +939,7 @@ sub parseSvnDiffHeader($$)
 
     my $indexPath;
     if (/$svnDiffStartRegEx/) {
-        $indexPath = adjustPathForRecentRenamings($1);
+        $indexPath = $1;
     } else {
         die("First line of SVN diff does not begin with \"Index \": \"$_\"");
     }

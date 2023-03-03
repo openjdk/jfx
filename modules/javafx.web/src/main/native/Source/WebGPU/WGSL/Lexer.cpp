@@ -110,9 +110,9 @@ Token Lexer<T>::lex()
             // FIXME: add support for hexadecimal floating point literals
             shift();
             bool hexNumberIsEmpty = true;
-            while (isHexadecimal(m_current)) {
+            while (isASCIIHexDigit(m_current)) {
                 literalValue *= 16;
-                literalValue += readHexadecimal(m_current);
+                literalValue += toASCIIHexValue(m_current);
                 shift();
                 hexNumberIsEmpty = false;
             }
@@ -122,7 +122,7 @@ Token Lexer<T>::lex()
         }
 
         bool isFloatingPoint = false;
-        if (isDecimal(m_current) || m_current == '.' || m_current == 'e' || m_current == 'E') {
+        if (isASCIIDigit(m_current) || m_current == '.' || m_current == 'e' || m_current == 'E') {
             std::optional<uint64_t> integerPart = parseDecimalInteger();
             if (integerPart)
                 literalValue = integerPart.value();
@@ -159,7 +159,7 @@ Token Lexer<T>::lex()
         return parseIntegerLiteralSuffix(literalValue);
     }
     default:
-        if (isDecimal (m_current)) {
+        if (isASCIIDigit(m_current)) {
             std::optional<uint64_t> value = parseDecimalInteger();
             if (!value)
                 return makeToken(TokenType::Invalid);
@@ -195,47 +195,47 @@ Token Lexer<T>::lex()
             // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
             StringView view { startOfToken, currentTokenLength() };
             // FIXME: I don't think that true/false/f32/u32/i32/bool need to be their own tokens, they could just be regular identifiers.
-            if (view == "true")
+            if (view == "true"_s)
                 return makeToken(TokenType::LiteralTrue);
-            if (view == "false")
+            if (view == "false"_s)
                 return makeToken(TokenType::LiteralFalse);
-            if (view == "bool")
+            if (view == "bool"_s)
                 return makeToken(TokenType::KeywordBool);
-            if (view == "i32")
+            if (view == "i32"_s)
                 return makeToken(TokenType::KeywordI32);
-            if (view == "u32")
+            if (view == "u32"_s)
                 return makeToken(TokenType::KeywordU32);
-            if (view == "f32")
+            if (view == "f32"_s)
                 return makeToken(TokenType::KeywordF32);
-            if (view == "fn")
+            if (view == "fn"_s)
                 return makeToken(TokenType::KeywordFn);
-            if (view == "function")
+            if (view == "function"_s)
                 return makeToken(TokenType::KeywordFunction);
-            if (view == "private")
+            if (view == "private"_s)
                 return makeToken(TokenType::KeywordPrivate);
-            if (view == "read")
+            if (view == "read"_s)
                 return makeToken(TokenType::KeywordRead);
-            if (view == "read_write")
+            if (view == "read_write"_s)
                 return makeToken(TokenType::KeywordReadWrite);
-            if (view == "return")
+            if (view == "return"_s)
                 return makeToken(TokenType::KeywordReturn);
-            if (view == "storage")
+            if (view == "storage"_s)
                 return makeToken(TokenType::KeywordStorage);
-            if (view == "struct")
+            if (view == "struct"_s)
                 return makeToken(TokenType::KeywordStruct);
-            if (view == "uniform")
+            if (view == "uniform"_s)
                 return makeToken(TokenType::KeywordUniform);
-            if (view == "var")
+            if (view == "var"_s)
                 return makeToken(TokenType::KeywordVar);
-            if (view == "workgroup")
+            if (view == "workgroup"_s)
                 return makeToken(TokenType::KeywordWorkgroup);
-            if (view == "write")
+            if (view == "write"_s)
                 return makeToken(TokenType::KeywordWrite);
-            if (view == "asm" || view == "bf16" || view == "const" || view == "do" || view == "enum"
-                || view == "f16" || view == "f64" || view == "handle" || view == "i8" || view == "i16"
-                || view == "i64" || view == "mat" || view == "premerge" || view == "regardless"
-                || view == "typedef" || view == "u8" || view == "u16" || view == "u64" || view == "unless"
-                || view == "using" || view == "vec" || view == "void" || view == "while")
+            if (view == "asm"_s || view == "bf16"_s || view == "const"_s || view == "do"_s || view == "enum"_s
+                || view == "f16"_s || view == "f64"_s || view == "handle"_s || view == "i8"_s || view == "i16"_s
+                || view == "i64"_s || view == "mat"_s || view == "premerge"_s || view == "regardless"_s
+                || view == "typedef"_s || view == "u8"_s || view == "u16"_s || view == "u64"_s || view == "unless"_s
+                || view == "using"_s || view == "vec"_s || view == "void"_s || view == "while"_s)
                 return makeToken(TokenType::ReservedWord);
             return makeIdentifierToken(view);
         }
@@ -267,7 +267,7 @@ T Lexer<T>::peek(unsigned i)
 template <typename T>
 void Lexer<T>::skipWhitespace()
 {
-    while (isWhiteSpace(m_current)) {
+    while (isASCIISpace(m_current)) {
         if (m_current == '\n') {
             shift();
             ++m_currentPosition.m_line;
@@ -291,11 +291,11 @@ bool Lexer<T>::isAtEndOfFile() const
 template <typename T>
 std::optional<uint64_t> Lexer<T>::parseDecimalInteger()
 {
-    if (!isDecimal(m_current))
+    if (!isASCIIDigit(m_current))
         return std::nullopt;
 
     CheckedUint64 value = 0;
-    while (isDecimal(m_current)) {
+    while (isASCIIDigit(m_current)) {
         value *= 10ull;
         value += readDecimal(m_current);
         shift();
@@ -315,9 +315,9 @@ std::optional<int64_t> Lexer<T>::parseDecimalFloatExponent()
     if (m_current != 'e' && m_current != 'E')
         return std::nullopt;
     if (char1 == '+' || char1 == '-') {
-        if (!isDecimal(char2))
+        if (!isASCIIDigit(char2))
             return std::nullopt;
-    } else if (!isDecimal(char1))
+    } else if (!isASCIIDigit(char1))
         return std::nullopt;
     shift();
 
@@ -352,65 +352,6 @@ Token Lexer<T>::parseIntegerLiteralSuffix(double literalValue)
     }
     return makeLiteralToken(TokenType::IntegerLiteral, literalValue);
 };
-
-template <typename T>
-ALWAYS_INLINE bool Lexer<T>::isWhiteSpace(T ch)
-{
-    switch (ch) {
-    case WTF::Unicode::space:
-    case WTF::Unicode::tabCharacter:
-    case WTF::Unicode::carriageReturn:
-    case WTF::Unicode::newlineCharacter:
-    case WTF::Unicode::verticalTabulation:
-    case WTF::Unicode::formFeed:
-        return true;
-    default:
-        return false;
-    }
-}
-
-template <typename T>
-ALWAYS_INLINE bool Lexer<T>::isIdentifierStart(T ch)
-{
-    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
-}
-
-template <typename T>
-ALWAYS_INLINE bool Lexer<T>::isValidIdentifierCharacter(T ch)
-{
-    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_';
-}
-
-template <typename T>
-ALWAYS_INLINE bool Lexer<T>::isDecimal(T ch)
-{
-    return (ch >= '0' && ch <= '9');
-}
-
-template <typename T>
-ALWAYS_INLINE bool Lexer<T>::isHexadecimal(T ch)
-{
-    return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
-}
-
-template <typename T>
-ALWAYS_INLINE uint64_t Lexer<T>::readDecimal(T ch)
-{
-    ASSERT(isDecimal(ch));
-    return ch - '0';
-}
-
-template <typename T>
-ALWAYS_INLINE uint64_t Lexer<T>::readHexadecimal(T ch)
-{
-    ASSERT(isHexadecimal(ch));
-    if (ch >= '0' && ch <= '9')
-        return ch - '0';
-    if (ch >= 'a' && ch <= 'f')
-        return ch - 'a';
-    ASSERT(ch >= 'A' && ch <= 'F');
-    return ch - 'A';
-}
 
 template class Lexer<LChar>;
 template class Lexer<UChar>;

@@ -38,19 +38,19 @@
 #include "LinkBuffer.h"
 #include "WasmCallee.h"
 #include "WasmLLIntGenerator.h"
-#include "WasmSignatureInlines.h"
+#include "WasmTypeDefinitionInlines.h"
 
 namespace JSC { namespace Wasm {
 
-LLIntPlan::LLIntPlan(Context* context, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(context, WTFMove(source), compilerMode, WTFMove(task))
+LLIntPlan::LLIntPlan(VM& vm, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(vm, WTFMove(source), compilerMode, WTFMove(task))
 {
     if (parseAndValidateModule(m_source.data(), m_source.size()))
         prepare();
 }
 
-LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, const Ref<LLIntCallee>* callees, CompletionTask&& task)
-    : Base(context, WTFMove(info), CompilerMode::FullCompile, WTFMove(task))
+LLIntPlan::LLIntPlan(VM& vm, Ref<ModuleInformation> info, const Ref<LLIntCallee>* callees, CompletionTask&& task)
+    : Base(vm, WTFMove(info), CompilerMode::FullCompile, WTFMove(task))
     , m_callees(callees)
 {
     ASSERT(m_callees || !m_moduleInformation->functions.size());
@@ -58,8 +58,8 @@ LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, const Ref<LL
     m_currentIndex = m_moduleInformation->functions.size();
 }
 
-LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(context, WTFMove(info), compilerMode, WTFMove(task))
+LLIntPlan::LLIntPlan(VM& vm, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(vm, WTFMove(info), compilerMode, WTFMove(task))
 {
     prepare();
     m_currentIndex = m_moduleInformation->functions.size();
@@ -79,10 +79,10 @@ bool LLIntPlan::prepareImpl()
 void LLIntPlan::compileFunction(uint32_t functionIndex)
 {
     const auto& function = m_moduleInformation->functions[functionIndex];
-    SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
-    const Signature& signature = SignatureInformation::get(signatureIndex);
+    TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
+    const TypeDefinition& signature = TypeInformation::get(typeIndex);
     unsigned functionIndexSpace = m_wasmToWasmExitStubs.size() + functionIndex;
-    ASSERT_UNUSED(functionIndexSpace, m_moduleInformation->signatureIndexFromFunctionIndexSpace(functionIndexSpace) == signatureIndex);
+    ASSERT_UNUSED(functionIndexSpace, m_moduleInformation->typeIndexFromFunctionIndexSpace(functionIndexSpace) == typeIndex);
 
     m_unlinkedWasmToWasmCalls[functionIndex] = Vector<UnlinkedWasmToWasmCall>();
     Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileResult = parseAndCompileBytecode(function.data.data(), function.data.size(), signature, m_moduleInformation.get(), functionIndex);
@@ -119,18 +119,21 @@ void LLIntPlan::didCompleteCompilation()
             entrypoints[i] = jit.label();
 #if CPU(X86_64)
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CPURegister));
-#elif CPU(ARM64) || CPU(RISCV64)
+#elif CPU(ARM64) || CPU(RISCV64) || CPU(ARM)
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CallerFrameAndPC));
 #else
 #error Unsupported architecture.
 #endif
-            jit.storePtr(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(m_calleesVector[i].ptr())), calleeSlot);
+            jit.storePtr(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(m_calleesVector[i].ptr())), calleeSlot.withOffset(PayloadOffset));
+#if USE(JSVALUE32_64)
+            jit.store32(CCallHelpers::TrustedImm32(JSValue::WasmTag), calleeSlot.withOffset(TagOffset));
+#endif
             jumps[i] = jit.jump();
         }
 
         LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
         if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-            Base::fail("Out of executable memory in Wasm LLInt entry thunks");
+            Base::fail("Out of executable memory in Wasm LLInt entry thunks"_s);
             return;
         }
 
@@ -148,8 +151,8 @@ void LLIntPlan::didCompleteCompilation()
 
     for (uint32_t functionIndex = 0; functionIndex < m_moduleInformation->functions.size(); functionIndex++) {
         if (m_exportedFunctionIndices.contains(functionIndex) || m_moduleInformation->referencedFunctions().contains(functionIndex)) {
-            SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
-            const Signature& signature = SignatureInformation::get(signatureIndex);
+            TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
+            const TypeDefinition& signature = TypeInformation::get(typeIndex);
             CCallHelpers jit;
             // The LLInt always bounds checks
             MemoryMode mode = MemoryMode::BoundsChecking;

@@ -48,13 +48,11 @@ public:
     static RefPtr<MediaQuerySet> parseMediaQuerySet(const String&, MediaQueryParserContext);
     static RefPtr<MediaQuerySet> parseMediaQuerySet(CSSParserTokenRange, MediaQueryParserContext);
     static RefPtr<MediaQuerySet> parseMediaCondition(CSSParserTokenRange, MediaQueryParserContext);
-    static RefPtr<MediaQuerySet> parseContainerQuery(CSSParserTokenRange, MediaQueryParserContext);
 
 private:
     enum ParserType {
         MediaQuerySetParser,
         MediaConditionParser,
-        ContainerQueryParser,
     };
 
     MediaQueryParser(ParserType, MediaQueryParserContext);
@@ -66,7 +64,6 @@ private:
 
     void readRestrictor(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readMediaNot(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
-    void readContainerQuery(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readMediaType(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readAnd(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
     void readFeatureStart(CSSParserTokenType, const CSSParserToken&, CSSParserTokenRange&);
@@ -93,7 +90,7 @@ private:
         void addExpression(CSSParserTokenRange&);
         bool lastExpressionValid();
         void removeLastExpression();
-        void setMediaType(const String& mediaType) { m_mediaType = mediaType; }
+        void setMediaType(String&& mediaType) { m_mediaType = WTFMove(mediaType); }
 
         MediaQuery::Restrictor restrictor() const { return m_restrictor; }
         Vector<MediaQueryExpression>& expressions() { return m_expressions; }
@@ -127,7 +124,6 @@ private:
 
     const static State ReadRestrictor;
     const static State ReadMediaNot;
-    const static State ReadContainerQuery;
     const static State ReadMediaType;
     const static State ReadAnd;
     const static State ReadFeatureStart;

@@ -6,7 +6,6 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
 list(APPEND WebCore_SOURCES
     platform/graphics/nicosia/NicosiaAnimation.cpp
 
-    platform/graphics/texmap/ANGLEContext.cpp
     platform/graphics/texmap/BitmapTexture.cpp
     platform/graphics/texmap/BitmapTexturePool.cpp
     platform/graphics/texmap/GraphicsContextGLTextureMapper.cpp
@@ -22,10 +21,10 @@ list(APPEND WebCore_SOURCES
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/nicosia/NicosiaAnimation.h
 
-    platform/graphics/texmap/ANGLEContext.h
     platform/graphics/texmap/BitmapTexture.h
     platform/graphics/texmap/ClipStack.h
     platform/graphics/texmap/GraphicsContextGLTextureMapper.h
+    platform/graphics/texmap/GraphicsContextGLTextureMapperANGLE.h
     platform/graphics/texmap/GraphicsLayerTextureMapper.h
     platform/graphics/texmap/TextureMapper.h
     platform/graphics/texmap/TextureMapperBackingStore.h
@@ -50,6 +49,16 @@ if (USE_TEXTURE_MAPPER_GL)
         platform/graphics/texmap/TextureMapperContextAttributes.cpp
         platform/graphics/texmap/TextureMapperGL.cpp
         platform/graphics/texmap/TextureMapperShaderProgram.cpp
+    )
+endif ()
+
+if (USE_TEXTURE_MAPPER_DMABUF)
+    list(APPEND WebCore_SOURCES
+        platform/graphics/texmap/TextureMapperPlatformLayerProxyDMABuf.cpp
+    )
+
+    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        platform/graphics/texmap/TextureMapperPlatformLayerProxyDMABuf.h
     )
 endif ()
 
@@ -102,6 +111,7 @@ if (USE_COORDINATED_GRAPHICS)
         platform/graphics/nicosia/texmap/NicosiaCompositionLayerTextureMapperImpl.cpp
         platform/graphics/nicosia/texmap/NicosiaContentLayerTextureMapperImpl.cpp
         platform/graphics/nicosia/texmap/NicosiaGCGLLayer.cpp
+        platform/graphics/nicosia/texmap/NicosiaImageBackingStore.cpp
         platform/graphics/nicosia/texmap/NicosiaImageBackingTextureMapperImpl.cpp
     )
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
@@ -118,6 +128,7 @@ if (USE_COORDINATED_GRAPHICS)
         platform/graphics/nicosia/texmap/NicosiaBackingStoreTextureMapperImpl.h
         platform/graphics/nicosia/texmap/NicosiaCompositionLayerTextureMapperImpl.h
         platform/graphics/nicosia/texmap/NicosiaContentLayerTextureMapperImpl.h
+        platform/graphics/nicosia/texmap/NicosiaImageBackingStore.h
         platform/graphics/nicosia/texmap/NicosiaImageBackingTextureMapperImpl.h
     )
 else ()
@@ -139,5 +150,20 @@ if (USE_GRAPHICS_LAYER_WC)
     )
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
         platform/graphics/texmap/TextureMapperSparseBackingStore.h
+    )
+endif ()
+
+if (USE_LIBGBM)
+    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        platform/graphics/gbm/DMABufColorSpace.h
+        platform/graphics/gbm/DMABufEGLUtilities.h
+        platform/graphics/gbm/DMABufFormat.h
+        platform/graphics/gbm/DMABufObject.h
+        platform/graphics/gbm/DMABufReleaseFlag.h
+        platform/graphics/gbm/GBMBufferSwapchain.h
+        platform/graphics/gbm/GBMDevice.h
+        platform/graphics/gbm/GraphicsContextGLFallback.h
+        platform/graphics/gbm/GraphicsContextGLGBM.h
+        platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.h
     )
 endif ()

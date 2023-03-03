@@ -141,7 +141,7 @@ PAS_API pas_thread_local_cache* pas_thread_local_cache_create(void);
 PAS_API void pas_thread_local_cache_destroy(pas_lock_hold_mode heap_lock_hold_mode);
 
 PAS_API pas_thread_local_cache* pas_thread_local_cache_get_slow(
-    pas_heap_config* config, pas_lock_hold_mode heap_lock_hold_mode);
+    const pas_heap_config* config, pas_lock_hold_mode heap_lock_hold_mode);
 
 static inline pas_thread_local_cache* pas_thread_local_cache_get_already_initialized(void)
 {
@@ -155,7 +155,7 @@ static inline pas_thread_local_cache* pas_thread_local_cache_get_already_initial
 }
 
 static inline pas_thread_local_cache*
-pas_thread_local_cache_get_with_heap_lock_hold_mode(pas_heap_config* config,
+pas_thread_local_cache_get_with_heap_lock_hold_mode(const pas_heap_config* config,
                                                     pas_lock_hold_mode heap_lock_hold_mode)
 {
     pas_thread_local_cache* result;
@@ -168,13 +168,13 @@ pas_thread_local_cache_get_with_heap_lock_hold_mode(pas_heap_config* config,
     return pas_thread_local_cache_get_slow(config, heap_lock_hold_mode);
 }
 
-static inline pas_thread_local_cache* pas_thread_local_cache_get(pas_heap_config* config)
+static inline pas_thread_local_cache* pas_thread_local_cache_get(const pas_heap_config* config)
 {
     return pas_thread_local_cache_get_with_heap_lock_hold_mode(config, pas_lock_is_not_held);
 }
 
 static inline pas_thread_local_cache* pas_thread_local_cache_get_holding_heap_lock(
-    pas_heap_config* config)
+    const pas_heap_config* config)
 {
     return pas_thread_local_cache_get_with_heap_lock_hold_mode(config, pas_lock_is_held);
 }
@@ -330,12 +330,12 @@ pas_thread_local_cache_try_get_local_allocator_for_possibly_uninitialized_but_no
 PAS_API pas_local_allocator_result
 pas_thread_local_cache_get_local_allocator_if_can_set_cache_for_possibly_uninitialized_index_slow(
     unsigned allocator_index,
-    pas_heap_config* heap_config);
+    const pas_heap_config* heap_config);
 
 static PAS_ALWAYS_INLINE pas_local_allocator_result
 pas_thread_local_cache_get_local_allocator_if_can_set_cache_for_possibly_uninitialized_index(
     unsigned allocator_index,
-    pas_heap_config* heap_config)
+    const pas_heap_config* heap_config)
 {
     pas_thread_local_cache* cache;
 
@@ -372,10 +372,17 @@ PAS_API void pas_thread_local_cache_flush_deallocation_log_direct(
     pas_thread_local_cache* thread_local_cache,
     pas_lock_hold_mode heap_lock_hold_mode);
 
+enum pas_thread_local_cache_decommit_action {
+    pas_thread_local_cache_decommit_no_action,
+    pas_thread_local_cache_decommit_if_possible_action,
+};
+typedef enum pas_thread_local_cache_decommit_action pas_thread_local_cache_decommit_action;
+
 /* Returns true if it's possible that we'll be able to return more memory if this was called
    again. */
 PAS_API bool pas_thread_local_cache_for_all(pas_allocator_scavenge_action allocator_action,
-                                            pas_deallocator_scavenge_action deallocator_action);
+                                            pas_deallocator_scavenge_action deallocator_action,
+                                            pas_thread_local_cache_decommit_action thread_local_cache_decommit_action);
 
 PAS_API PAS_NEVER_INLINE void pas_thread_local_cache_append_deallocation_slow(
     pas_thread_local_cache* thread_local_cache,

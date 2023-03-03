@@ -26,6 +26,7 @@
 #include "CSSStyleSheet.h"
 #include "CachePolicy.h"
 #include "CachedCSSStyleSheet.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -36,6 +37,7 @@
 #include "ResourceLoadInfo.h"
 #include "RuleSet.h"
 #include "SecurityOrigin.h"
+#include "StyleProperties.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
 #include <wtf/Deque.h>
@@ -81,6 +83,7 @@ StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     , m_ownerRule(nullptr)
     , m_originalURL(o.m_originalURL)
     , m_encodingFromCharsetRule(o.m_encodingFromCharsetRule)
+    , m_layerRulesBeforeImportRules(o.m_layerRulesBeforeImportRules.size())
     , m_importRules(o.m_importRules.size())
     , m_namespaceRules(o.m_namespaceRules.size())
     , m_childRules(o.m_childRules.size())
@@ -97,7 +100,10 @@ StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     // FIXME: Copy import rules.
     ASSERT(o.m_importRules.isEmpty());
 
-    for (unsigned i = 0; i < m_childRules.size(); ++i)
+    for (size_t i = 0; i < m_layerRulesBeforeImportRules.size(); ++i)
+        m_layerRulesBeforeImportRules[i] = o.m_layerRulesBeforeImportRules[i]->copy();
+
+    for (size_t i = 0; i < m_childRules.size(); ++i)
         m_childRules[i] = o.m_childRules[i]->copy();
 }
 
@@ -159,9 +165,6 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
         m_namespaceRules.append(&namespaceRule);
         return;
     }
-
-    if (is<StyleRuleMedia>(rule))
-        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), &downcast<StyleRuleMedia>(rule.get()).mediaQueries());
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
@@ -386,14 +389,14 @@ bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
         return false;
     }
 
-    CSSParser(parserContext()).parseSheet(*this, sheetText, CSSParser::RuleParsing::Deferred);
+    CSSParser(parserContext()).parseSheet(*this, sheetText);
     return true;
 }
 
 bool StyleSheetContents::parseString(const String& sheetText)
 {
     CSSParser p(parserContext());
-    p.parseSheet(*this, sheetText, parserContext().mode != UASheetMode ? CSSParser::RuleParsing::Deferred : CSSParser::RuleParsing::Normal);
+    p.parseSheet(*this, sheetText);
     return true;
 }
 
@@ -471,8 +474,7 @@ static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, co
             return true;
         if (!rule->isGroupRule())
             continue;
-        auto* childRules = downcast<StyleRuleGroup>(*rule).childRulesWithoutDeferredParsing();
-        if (childRules && traverseRulesInVector(*childRules, handler))
+        if (traverseRulesInVector(downcast<StyleRuleGroup>(*rule).childRules(), handler))
             return true;
     }
     return false;
@@ -494,10 +496,8 @@ bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedRe
 {
     return traverseRules([&] (const StyleRuleBase& rule) {
         switch (rule.type()) {
-        case StyleRuleType::Style: {
-            auto* properties = downcast<StyleRule>(rule).propertiesWithoutDeferredParsing();
-            return properties && properties->traverseSubresources(handler);
-        }
+        case StyleRuleType::Style:
+            return downcast<StyleRule>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::FontFace:
             return downcast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::Import:

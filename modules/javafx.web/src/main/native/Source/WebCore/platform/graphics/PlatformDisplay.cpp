@@ -80,7 +80,7 @@
 #include <wtf/NeverDestroyed.h>
 #endif
 
-#if USE(ATSPI) || USE(ATK)
+#if USE(ATSPI)
 #include <wtf/glib/GUniquePtr.h>
 #endif
 
@@ -269,6 +269,22 @@ void PlatformDisplay::initializeEGLDisplay()
     m_eglMajorVersion = majorVersion;
     m_eglMinorVersion = minorVersion;
 
+    {
+        const char* extensionsString = eglQueryString(m_eglDisplay, EGL_EXTENSIONS);
+        auto displayExtensions = StringView::fromLatin1(extensionsString).split(' ');
+        auto findExtension =
+            [&](auto extensionName) {
+                return std::any_of(displayExtensions.begin(), displayExtensions.end(),
+                    [&](auto extensionEntry) {
+                        return extensionEntry == extensionName;
+                    });
+            };
+
+        m_eglExtensions.KHR_image_base = findExtension("EGL_KHR_image_base"_s);
+        m_eglExtensions.EXT_image_dma_buf_import = findExtension("EGL_EXT_image_dma_buf_import"_s);
+        m_eglExtensions.EXT_image_dma_buf_import_modifiers = findExtension("EGL_EXT_image_dma_buf_import_modifiers"_s);
+    }
+
     eglDisplays().add(this);
 
 #if !PLATFORM(WIN)
@@ -319,7 +335,7 @@ cmsHPROFILE PlatformDisplay::colorProfile() const
 }
 #endif
 
-#if USE(ATSPI) || USE(ATK)
+#if USE(ATSPI)
 const String& PlatformDisplay::accessibilityBusAddress() const
 {
     if (m_accessibilityBusAddress)

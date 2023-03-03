@@ -49,6 +49,10 @@
 #include <usp10.h>
 #endif
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class FontCache;
@@ -207,6 +211,9 @@ public:
     static float ascentConsideringMacAscentHack(const WCHAR*, float ascent, float descent);
 #endif
 
+    void setIsUsedInSystemFallbackFontCache() { m_isUsedInSystemFallbackFontCache = true; }
+    bool isUsedInSystemFallbackFontCache() const { return m_isUsedInSystemFallbackFontCache; }
+
 private:
     WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, std::optional<RenderingResourceIdentifier>);
 
@@ -220,8 +227,6 @@ private:
     RefPtr<Font> createFontWithoutSynthesizableFeatures() const;
     RefPtr<Font> createScaledFont(const FontDescription&, float scaleFactor) const;
     RefPtr<Font> platformCreateScaledFont(const FontDescription&, float scaleFactor) const;
-
-    void removeFromSystemFallbackCache();
 
     struct DerivedFonts;
     DerivedFonts& ensureDerivedFontData() const;
@@ -335,7 +340,7 @@ private:
     unsigned m_isBrokenIdeographFallback : 1;
     unsigned m_hasVerticalGlyphs : 1;
 
-    unsigned m_isUsedInSystemFallbackCache : 1;
+    unsigned m_isUsedInSystemFallbackFontCache : 1;
 
     unsigned m_allowsAntialiasing : 1;
 
@@ -392,6 +397,10 @@ ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph, SyntheticBoldInclusion Synt
     m_glyphToWidthMap.setMetricsForGlyph(glyph, width);
     return width + (SyntheticBoldInclusion == SyntheticBoldInclusion::Incorporate ? syntheticBoldOffset() : 0);
 }
+
+#if !LOG_DISABLED
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Font&);
+#endif
 
 } // namespace WebCore
 

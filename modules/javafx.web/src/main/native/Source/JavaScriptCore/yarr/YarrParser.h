@@ -41,7 +41,7 @@ template<class Delegate, typename CharType>
 class Parser {
 private:
     template<class FriendDelegate>
-    friend ErrorCode parse(FriendDelegate&, const String& pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed);
+    friend ErrorCode parse(FriendDelegate&, StringView pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed);
 
     enum class UnicodeParseContext : uint8_t { PatternCodePoint, GroupName };
 
@@ -219,7 +219,7 @@ private:
         UChar32 m_character;
     };
 
-    Parser(Delegate& delegate, const String& pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
+    Parser(Delegate& delegate, StringView pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
         : m_delegate(delegate)
         , m_data(pattern.characters<CharType>())
         , m_size(pattern.length())
@@ -454,27 +454,27 @@ private:
             consume();
             ParseState state = saveState();
             if (!inCharacterClass && tryConsume('<')) {
-                    auto groupName = tryConsumeGroupName();
+                auto groupName = tryConsumeGroupName();
                 if (hasError(m_errorCode))
                     break;
 
-                    if (groupName) {
-                        if (m_captureGroupNames.contains(groupName.value())) {
-                            delegate.atomNamedBackReference(groupName.value());
-                            break;
-                        }
+                if (groupName) {
+                    if (m_captureGroupNames.contains(groupName.value())) {
+                        delegate.atomNamedBackReference(groupName.value());
+                        break;
+                    }
 
                     if (m_isNamedForwardReferenceAllowed) {
                         m_forwardReferenceNames.add(groupName.value());
-                            delegate.atomNamedForwardReference(groupName.value());
-                            break;
-                        }
+                        delegate.atomNamedForwardReference(groupName.value());
+                        break;
                     }
+                }
             }
 
             restoreState(state);
             if (!isIdentityEscapeAnError('k')) {
-            delegate.atomPatternCharacter('k');
+                delegate.atomPatternCharacter('k');
                 m_kIdentityEscapeSeen = true;
             }
             break;
@@ -508,7 +508,7 @@ private:
         // UnicodeEscape
         case 'u': {
             int codePoint = tryConsumeUnicodeEscape<UnicodeParseContext::PatternCodePoint>();
-                if (hasError(m_errorCode))
+            if (hasError(m_errorCode))
                 break;
 
             delegate.atomPatternCharacter(codePoint == -1 ? 'u' : codePoint);
@@ -860,7 +860,7 @@ private:
         if (m_size > MAX_PATTERN_SIZE)
             return ErrorCode::PatternTooLarge;
 
-            parseTokens();
+        parseTokens();
 
         if (!hasError(m_errorCode)) {
             ASSERT(atEndOfPattern());
@@ -1287,7 +1287,7 @@ private:
  */
 
 template<class Delegate>
-ErrorCode parse(Delegate& delegate, const String& pattern, bool isUnicode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
+ErrorCode parse(Delegate& delegate, const StringView pattern, bool isUnicode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
 {
     if (pattern.is8Bit())
         return Parser<Delegate, LChar>(delegate, pattern, isUnicode, backReferenceLimit, isNamedForwardReferenceAllowed).parse();

@@ -260,14 +260,16 @@ end
 #
 
 class Parser
-    def initialize(data, fileName, options)
+    def initialize(data, fileName, options, sources=nil)
         @tokens = lex(data, fileName)
         @idx = 0
         @annotation = nil
         # FIXME: CMake does not currently set BUILT_PRODUCTS_DIR.
         # https://bugs.webkit.org/show_bug.cgi?id=229340
         @buildProductsDirectory = ENV['BUILT_PRODUCTS_DIR'];
+        @headersFolderPath = ENV['WK_LIBRARY_HEADERS_FOLDER_PATH'];
         @options = options
+        @sources = sources
     end
     
     def parseError(*comment)
@@ -835,15 +837,15 @@ class Parser
                 if @options[:webkit_additions_path]
                     additionsDirectoryName = @options[:webkit_additions_path]
                 else
-                    additionsDirectoryName = "#{@buildProductsDirectory}/usr/local/include/WebKitAdditions/"
+                    additionsDirectoryName = "#{@buildProductsDirectory}#{@headersFolderPath}/WebKitAdditions/"
                 end
                 fileName = IncludeFile.new(moduleName, additionsDirectoryName).fileName
-                if not File.exists?(fileName)
+                if not File.exist?(fileName)
                     fileName = IncludeFile.new(moduleName, @tokens[@idx].codeOrigin.fileName.dirname).fileName
                 end
-                fileExists = File.exists?(fileName)
+                fileExists = File.exist?(fileName)
                 raise "File not found: #{fileName}" if not fileExists and not isOptional
-                list << parse(fileName, @options) if fileExists
+                list << parse(fileName, @options, @sources) if fileExists
             else
                 parseError "Expecting terminal #{final} #{comment}"
             end
@@ -851,7 +853,7 @@ class Parser
         Sequence.new(firstCodeOrigin, list)
     end
 
-    def parseIncludes(final, comment)
+    def parseIncludes(final, comment, options)
         firstCodeOrigin = @tokens[@idx].codeOrigin
         fileList = []
         fileList << @tokens[@idx].codeOrigin.fileName
@@ -871,15 +873,18 @@ class Parser
                 if @options[:webkit_additions_path]
                     additionsDirectoryName = @options[:webkit_additions_path]
                 else
-                    additionsDirectoryName = "#{@buildProductsDirectory}/usr/local/include/WebKitAdditions/"
+                    additionsDirectoryName = "#{@buildProductsDirectory}#{@headersFolderPath}/WebKitAdditions/"
                 end
                 fileName = IncludeFile.new(moduleName, additionsDirectoryName).fileName
-                if not File.exists?(fileName)
+                if not File.exist?(fileName)
                     fileName = IncludeFile.new(moduleName, @tokens[@idx].codeOrigin.fileName.dirname).fileName
                 end
-                fileExists = File.exists?(fileName)
+                fileExists = File.exist?(fileName)
                 raise "File not found: #{fileName}" if not fileExists and not isOptional
-                fileList << fileName if fileExists
+                if fileExists
+                    parser = Parser.new(readTextFile(fileName), SourceFile.new(fileName), options)
+                    fileList << parser.parseIncludes(nil, "", options)
+                end
             else
                 @idx += 1
             end
@@ -900,18 +905,20 @@ def readTextFile(fileName)
     return data
 end
 
-def parseData(data, fileName, options)
-    parser = Parser.new(data, SourceFile.new(fileName), options)
+def parseData(data, fileName, options, sources)
+    parser = Parser.new(data, SourceFile.new(fileName), options, sources)
     parser.parseSequence(nil, "")
 end
 
-def parse(fileName, options)
-    parseData(readTextFile(fileName), fileName, options)
+def parse(fileName, options, sources=nil)
+    sources << fileName if sources
+    parseData(readTextFile(fileName), fileName, options, sources)
 end
 
 def parseHash(fileName, options)
     parser = Parser.new(readTextFile(fileName), SourceFile.new(fileName), options)
-    fileList = parser.parseIncludes(nil, "")
+    fileList = parser.parseIncludes(nil, "", options)
+    fileList.flatten!
     fileListHash(fileList)
 end
 

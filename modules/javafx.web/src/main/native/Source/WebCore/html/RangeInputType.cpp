@@ -33,8 +33,10 @@
 #include "RangeInputType.h"
 
 #include "Decimal.h"
+#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "ElementChildIterator.h"
+#include "ElementRareData.h"
 #include "EventNames.h"
 #include "HTMLCollection.h"
 #include "HTMLInputElement.h"
@@ -44,8 +46,8 @@
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "RenderSlider.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScopedEventQueue.h"
+#include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "SliderThumbElement.h"
@@ -122,7 +124,7 @@ StepRange RangeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 
     const AtomString& precisionValue = element()->attributeWithoutSynchronization(precisionAttr);
     if (!precisionValue.isNull()) {
-        const Decimal step = equalLettersIgnoringASCIICase(precisionValue, "float") ? Decimal::nan() : 1;
+        const Decimal step = equalLettersIgnoringASCIICase(precisionValue, "float"_s) ? Decimal::nan() : 1;
         return StepRange(minimum, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
     }
 
@@ -213,31 +215,29 @@ auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
 
     // FIXME: We can't use stepUp() for the step value "any". So, we increase
     // or decrease the value by 1/100 of the value range. Is it reasonable?
-    const Decimal step = equalLettersIgnoringASCIICase(element()->attributeWithoutSynchronization(stepAttr), "any") ? (stepRange.maximum() - stepRange.minimum()) / 100 : stepRange.step();
+    const Decimal step = equalLettersIgnoringASCIICase(element()->attributeWithoutSynchronization(stepAttr), "any"_s) ? (stepRange.maximum() - stepRange.minimum()) / 100 : stepRange.step();
     const Decimal bigStep = std::max((stepRange.maximum() - stepRange.minimum()) / 10, step);
 
     bool isVertical = false;
-    if (auto* renderer = element()->renderer()) {
-        ControlPart part = renderer->style().effectiveAppearance();
-        isVertical = part == SliderVerticalPart || part == MediaVolumeSliderPart;
-    }
+    if (auto* renderer = element()->renderer())
+        isVertical = renderer->style().effectiveAppearance() == SliderVerticalPart;
 
     Decimal newValue;
-    if (key == "Up")
+    if (key == "Up"_s)
         newValue = current + step;
-    else if (key == "Down")
+    else if (key == "Down"_s)
         newValue = current - step;
-    else if (key == "Left")
+    else if (key == "Left"_s)
         newValue = isVertical ? current + step : current - step;
-    else if (key == "Right")
+    else if (key == "Right"_s)
         newValue = isVertical ? current - step : current + step;
-    else if (key == "PageUp")
+    else if (key == "PageUp"_s)
         newValue = current + bigStep;
-    else if (key == "PageDown")
+    else if (key == "PageDown"_s)
         newValue = current - bigStep;
-    else if (key == "Home")
+    else if (key == "Home"_s)
         newValue = isVertical ? stepRange.maximum() : stepRange.minimum();
-    else if (key == "End")
+    else if (key == "End"_s)
         newValue = isVertical ? stepRange.minimum() : stepRange.maximum();
     else
         return ShouldCallBaseEventHandler::Yes; // Did not match any key binding.
@@ -260,12 +260,16 @@ void RangeInputType::createShadowSubtree()
     ASSERT(element()->userAgentShadowRoot());
 
     Document& document = element()->document();
+
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
+
     auto track = HTMLDivElement::create(document);
+    auto container = SliderContainerElement::create(document);
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, container);
+    container->appendChild(ContainerNode::ChildChange::Source::Parser, track);
+
     track->setPseudo(ShadowPseudoIds::webkitSliderRunnableTrack());
     track->appendChild(ContainerNode::ChildChange::Source::Parser, SliderThumbElement::create(document));
-    auto container = SliderContainerElement::create(document);
-    container->appendChild(ContainerNode::ChildChange::Source::Parser, track);
-    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, container);
 }
 
 HTMLElement* RangeInputType::sliderTrackElement() const
@@ -345,9 +349,9 @@ void RangeInputType::attributeChanged(const QualifiedName& name)
     InputType::attributeChanged(name);
 }
 
-void RangeInputType::setValue(const String& value, bool valueChanged, TextFieldEventBehavior eventBehavior)
+void RangeInputType::setValue(const String& value, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
-    InputType::setValue(value, valueChanged, eventBehavior);
+    InputType::setValue(value, valueChanged, eventBehavior, selection);
 
     if (!valueChanged)
         return;
@@ -376,7 +380,7 @@ String RangeInputType::sanitizeValue(const String& proposedValue) const
 bool RangeInputType::shouldRespectListAttribute()
 {
 #if ENABLE(DATALIST_ELEMENT)
-    return RuntimeEnabledFeatures::sharedFeatures().dataListElementEnabled();
+    return DeprecatedGlobalSettings::dataListElementEnabled();
 #else
     return InputType::themeSupportsDataListUI(this);
 #endif

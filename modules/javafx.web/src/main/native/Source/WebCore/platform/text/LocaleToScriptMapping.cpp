@@ -364,8 +364,7 @@ UScriptCode localeToScriptCodeForFontSelection(const String& locale)
     static_assert(LocaleName("aa").value() == 0x6161000000000000ULL);
     static_assert(LocaleName("zh_tw").value() == 0x7a685f7477000000ULL);
     static constexpr SortedArrayMap map { localeScriptList };
-    String canonicalLocaleString = locale;
-    canonicalLocaleString.replace('-', '_');
+    String canonicalLocaleString = makeStringByReplacingAll(locale, '-', '_');
     for (StringView canonicalLocale = canonicalLocaleString; !canonicalLocale.isEmpty(); ) {
         if (auto scriptCode = map.tryGet(canonicalLocale))
             return *scriptCode;
@@ -375,7 +374,7 @@ UScriptCode localeToScriptCodeForFontSelection(const String& locale)
         UScriptCode code = scriptNameToCode(canonicalLocale.substring(underscorePosition + 1));
         if (code != USCRIPT_INVALID_CODE && code != USCRIPT_UNKNOWN)
             return code;
-        canonicalLocale = canonicalLocale.substring(0, underscorePosition);
+        canonicalLocale = canonicalLocale.left(underscorePosition);
     }
     return USCRIPT_COMMON;
 }

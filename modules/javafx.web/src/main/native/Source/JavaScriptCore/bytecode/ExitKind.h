@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
+
 namespace JSC {
 
 enum ExitKind : uint8_t {
@@ -59,7 +61,7 @@ enum ExitKind : uint8_t {
     BigInt32Overflow, // We exited because of an BigInt32 overflow.
 };
 
-const char* exitKindToString(ExitKind);
+ASCIILiteral exitKindToString(ExitKind);
 bool exitKindMayJettison(ExitKind);
 
 } // namespace JSC

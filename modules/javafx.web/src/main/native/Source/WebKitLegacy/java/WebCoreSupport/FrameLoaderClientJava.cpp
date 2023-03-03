@@ -170,7 +170,7 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
     String dispositionType = parameters[0];
     dispositionType.stripWhiteSpace();
 
-    if (equalLettersIgnoringASCIICase(dispositionType, "inline"))
+    if (equalLettersIgnoringASCIICase(dispositionType, "inline"_s))
         return ContentDispositionInline;
 
     // Some broken sites just send bogus headers like
@@ -476,21 +476,21 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
     policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore, identifier);
 }
 
-RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLPlugInElement& element, const URL& url,
-                                            const Vector<String>& paramNames, const Vector<String>& paramValues,
-                                            const String& mimeType, bool)
+RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& size, HTMLPlugInElement& element,
+                                     const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually)
+
 {
     return adoptRef(new PluginWidgetJava(
         m_webPage,
         &element,
-        intSize,
+        size,
         url.string(),
         mimeType,
         paramNames,
         paramValues));
 }
 
-RefPtr<Frame> FrameLoaderClientJava::createFrame(const String& name, HTMLFrameOwnerElement& ownerElement)
+RefPtr<Frame> FrameLoaderClientJava::createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement)
 {
     using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -547,7 +547,7 @@ ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const
     if (MIMETypeRegistry::isSupportedNonImageMIMEType(type))
         return ObjectContentType::Frame;
 
-    if (url.protocol() == "about")
+    if (url.protocol() == "about"_s)
         return ObjectContentType::Frame;
 
     return ObjectContentType::None;
@@ -784,7 +784,7 @@ void FrameLoaderClientJava::finishedLoading(DocumentLoader* dl)
     // However, we only want to do this if makeRepresentation has been called, to
     // match the behavior on the Mac.
     if (m_hasRepresentation)
-        dl->writer().setEncoding("", DocumentWriter::IsEncodingUserChosen::No);
+        dl->writer().setEncoding(""_s, DocumentWriter::IsEncodingUserChosen::No);
 }
 
 void FrameLoaderClientJava::frameLoadCompleted()
@@ -920,13 +920,13 @@ bool FrameLoaderClientJava::canShowMIMETypeAsHTML(const String&) const
 }
 
 
-bool FrameLoaderClientJava::representationExistsForURLScheme(const String&) const
+bool FrameLoaderClientJava::representationExistsForURLScheme(StringView URLScheme) const
 {
     notImplemented();
     return false;
 }
 
-String FrameLoaderClientJava::generatedMIMETypeForURLScheme(const String&) const
+String FrameLoaderClientJava::generatedMIMETypeForURLScheme(StringView URLScheme) const
 {
     notImplemented();
     return String();
@@ -964,55 +964,55 @@ bool FrameLoaderClientJava::dispatchDidLoadResourceFromMemoryCache(
 
 ResourceError FrameLoaderClientJava::cancelledError(const ResourceRequest& request) const
 {
-    return ResourceError("Error", -999, request.url(), "Request cancelled");
+    return ResourceError("Error"_s, -999, request.url(), "Request cancelled"_s);
 }
 
 ResourceError FrameLoaderClientJava::blockedError(const ResourceRequest& request) const
 {
     using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error", WebKitErrorCannotUseRestrictedPort, request.url(),
-                         "Request blocked");
+    return ResourceError("Error"_s, WebKitErrorCannotUseRestrictedPort, request.url(),
+                         "Request blocked"_s);
 }
 
 ResourceError FrameLoaderClientJava::blockedByContentBlockerError(const ResourceRequest& request) const
 {
     using namespace FrameLoaderClientJavaInternal;
     RELEASE_ASSERT_NOT_REACHED(); // Content Blockers are not enabled for WK1.
-    return ResourceError("Error", WebKitErrorCannotShowURL, request.url(),
-                         "Cannot show URL");
+    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
+                         "Cannot show URL"_s);
 }
 
 ResourceError FrameLoaderClientJava::cannotShowURLError(const ResourceRequest& request) const
 {
     using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error", WebKitErrorCannotShowURL, request.url(),
-                         "Cannot show URL");
+    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
+                         "Cannot show URL"_s);
 }
 
 ResourceError FrameLoaderClientJava::interruptedForPolicyChangeError(const ResourceRequest& request) const
 {
     using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error", WebKitErrorFrameLoadInterruptedByPolicyChange,
-                         request.url(), "Frame load interrupted by policy change");
+    return ResourceError("Error"_s, WebKitErrorFrameLoadInterruptedByPolicyChange,
+                         request.url(), "Frame load interrupted by policy change"_s);
 }
 
 ResourceError FrameLoaderClientJava::cannotShowMIMETypeError(const ResourceResponse& response) const
 {
     using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error", WebKitErrorCannotShowMIMEType, response.url(),
-                         "Cannot show mimetype");
+    return ResourceError("Error"_s, WebKitErrorCannotShowMIMEType, response.url(),
+                         "Cannot show mimetype"_s);
 }
 
 ResourceError FrameLoaderClientJava::fileDoesNotExistError(const ResourceResponse& response) const
 {
-    return ResourceError("Error", -998 /* ### */, response.url(),
-                         "File does not exist");
+    return ResourceError("Error"_s, -998 /* ### */, response.url(),
+                         "File does not exist"_s);
 }
 
 ResourceError FrameLoaderClientJava::pluginWillHandleLoadError(const ResourceResponse& response) const
 {
     using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error", WebKitErrorPluginWillHandleLoad, response.url(), "Loading is handled by the media engine");
+    return ResourceError("Error"_s, WebKitErrorPluginWillHandleLoad, response.url(), "Loading is handled by the media engine"_s);
 }
 
 bool FrameLoaderClientJava::shouldFallBack(const ResourceError& error) const

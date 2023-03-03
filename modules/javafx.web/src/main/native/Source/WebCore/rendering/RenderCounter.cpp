@@ -199,7 +199,7 @@ static std::optional<CounterPlan> planCounter(RenderElement& renderer, const Ato
     if (auto map = style.counterDirectives())
         directives = map->get(identifier);
 
-    if (identifier == "list-item") {
+    if (identifier == "list-item"_s) {
         auto itemDirectives = listItemCounterDirectives(renderer);
         if (!directives.resetValue)
             directives.resetValue = itemDirectives.resetValue;
@@ -357,7 +357,7 @@ static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& i
     maps.add(&renderer, makeUnique<CounterMap>()).iterator->value->add(identifier, newNode.copyRef());
     renderer.setHasCounterNodeMap(true);
 
-    if (newNode->parent() || shouldApplyStyleContainment(renderer))
+    if (newNode->parent() || renderer.shouldApplyStyleContainment())
         return newNode.ptr();
 
     // Check if some nodes that were previously root nodes should become children of this node now.
@@ -365,7 +365,7 @@ static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& i
     auto* stayWithin = parentOrPseudoHostElement(renderer);
     bool skipDescendants = false;
     while ((currentRenderer = nextInPreOrder(*currentRenderer, stayWithin, skipDescendants))) {
-        skipDescendants = shouldApplyStyleContainment(*currentRenderer);
+        skipDescendants = currentRenderer->shouldApplyStyleContainment();
         if (!currentRenderer->hasCounterNodeMap())
             continue;
         auto* currentCounter = maps.find(currentRenderer)->value->get(identifier);
@@ -406,9 +406,9 @@ void RenderCounter::willBeDestroyed()
     RenderText::willBeDestroyed();
 }
 
-const char* RenderCounter::renderName() const
+ASCIILiteral RenderCounter::renderName() const
 {
-    return "RenderCounter";
+    return "RenderCounter"_s;
 }
 
 bool RenderCounter::isCounter() const
@@ -571,10 +571,14 @@ void RenderCounter::rendererSubtreeAttached(RenderElement& renderer)
         element = renderer.generatingElement();
     if (element && !element->renderer())
         return; // No need to update if the parent is not attached yet
+
     bool crossedStyleContainmentBoundary = false;
     for (RenderObject* descendant = &renderer; descendant; descendant = descendant->nextInPreOrder(&renderer)) {
-        crossedStyleContainmentBoundary = crossedStyleContainmentBoundary || shouldApplyStyleContainment(*descendant);
-        if (crossedStyleContainmentBoundary && is<RenderElement>(*descendant))
+        if (!is<RenderElement>(descendant))
+            continue;
+
+        crossedStyleContainmentBoundary = crossedStyleContainmentBoundary || downcast<RenderElement>(*descendant).shouldApplyStyleContainment();
+        if (crossedStyleContainmentBoundary)
             updateCounters(downcast<RenderElement>(*descendant));
     }
 }
@@ -633,7 +637,7 @@ void showCounterRendererTree(const WebCore::RenderObject* renderer, const char* 
     while (root->parent())
         root = root->parent();
 
-    AtomString identifier(counterName);
+    auto identifier = AtomString::fromLatin1(counterName);
     for (auto* current = root; current; current = current->nextInPreOrder()) {
         if (!is<WebCore::RenderElement>(*current))
             continue;

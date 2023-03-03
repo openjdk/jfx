@@ -25,11 +25,11 @@
 
 [
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=ServiceWorkerEnabled,
+    EnabledBySetting=ServiceWorkersEnabled,
     Exposed=ServiceWorker,
     JSGenerateToJSObject,
 ] interface ExtendableMessageEvent : ExtendableEvent {
-    [Custom] constructor(DOMString type, optional ExtendableMessageEventInit eventInitDict);
+    [Custom] constructor([AtomString] DOMString type, optional ExtendableMessageEventInit eventInitDict);
 
     [CachedAttribute, CustomGetter] readonly attribute any data;
     readonly attribute USVString origin;

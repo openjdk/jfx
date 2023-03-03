@@ -54,14 +54,14 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
     // content:attr() value depends on the element it is being applied to.
     if (style.hasAttrContent() || (style.styleType() != PseudoId::None && parentStyle.hasAttrContent()))
         return false;
-    if (style.hasEffectiveAppearance())
-        return false;
     if (style.zoom() != RenderStyle::initialZoom())
         return false;
     if (style.writingMode() != RenderStyle::initialWritingMode() || style.direction() != RenderStyle::initialDirection())
         return false;
     // The cache assumes static knowledge about which properties are inherited.
     if (style.hasExplicitlyInheritedProperties())
+        return false;
+    if (style.usesContainerUnits())
         return false;
 
     // Getting computed style after a font environment change but before full style resolution may involve styles with non-current fonts.
@@ -79,6 +79,11 @@ bool MatchedDeclarationsCache::Entry::isUsableAfterHighPriorityProperties(const 
 {
     if (style.effectiveZoom() != renderStyle->effectiveZoom())
         return false;
+
+#if ENABLE(DARK_MODE_CSS)
+    if (style.colorScheme() != renderStyle->colorScheme())
+        return false;
+#endif
 
     return CSSPrimitiveValue::equalForLengthResolution(style, *renderStyle);
 }
@@ -107,7 +112,7 @@ const MatchedDeclarationsCache::Entry* MatchedDeclarationsCache::find(unsigned h
     return &entry;
 }
 
-void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& parentStyle, unsigned hash, const MatchResult& matchResult)
+void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& parentStyle, const RenderStyle* userAgentAppearanceStyle, unsigned hash, const MatchResult& matchResult)
 {
     constexpr unsigned additionsBetweenSweeps = 100;
     if (++m_additionsSinceLastSweep >= additionsBetweenSweeps && !m_sweepTimer.isActive()) {
@@ -115,10 +120,21 @@ void MatchedDeclarationsCache::add(const RenderStyle& style, const RenderStyle& 
         m_sweepTimer.startOneShot(sweepDelay);
     }
 
+    auto userAgentAppearanceStyleCopy = [&]() -> std::unique_ptr<RenderStyle> {
+        if (userAgentAppearanceStyle)
+            return RenderStyle::clonePtr(*userAgentAppearanceStyle);
+        return { };
+    };
+
     ASSERT(hash);
     // Note that we don't cache the original RenderStyle instance. It may be further modified.
     // The RenderStyle in the cache is really just a holder for the substructures and never used as-is.
-    m_entries.add(hash, Entry { matchResult, RenderStyle::clonePtr(style), RenderStyle::clonePtr(parentStyle) });
+    m_entries.add(hash, Entry { matchResult, RenderStyle::clonePtr(style), RenderStyle::clonePtr(parentStyle), userAgentAppearanceStyleCopy() });
+}
+
+void MatchedDeclarationsCache::remove(unsigned hash)
+{
+    m_entries.remove(hash);
 }
 
 void MatchedDeclarationsCache::invalidate()
@@ -129,7 +145,7 @@ void MatchedDeclarationsCache::invalidate()
 void MatchedDeclarationsCache::clearEntriesAffectedByViewportUnits()
 {
     m_entries.removeIf([](auto& keyValue) {
-        return keyValue.value.renderStyle->hasViewportUnits();
+        return keyValue.value.renderStyle->usesViewportUnits();
     });
 }
 

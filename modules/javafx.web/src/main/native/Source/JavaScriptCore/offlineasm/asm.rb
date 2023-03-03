@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@ require 'optparse'
 require "parser"
 require "self_hash"
 require "settings"
+require "shellwords"
 require "transform"
 
 class Assembler
@@ -49,7 +50,7 @@ class Assembler
         @codeOrigin = nil
         @numLocalLabels = 0
         @numGlobalLabels = 0
-        @deferredActions = []
+        @deferredOSDarwinActions = []
         @deferredNextLabelActions = []
         @count = 0
         @debugAnnotationStr = nil
@@ -63,35 +64,27 @@ class Assembler
         @outp.puts ""
         putStr "OFFLINE_ASM_BEGIN" if !$emitWinAsm
 
-        if !$emitWinAsm
-            putStr "OFFLINE_ASM_GLOBAL_LABEL(llintPCRangeStart)"
-        else
-            putsProc("llintPCRangeStart", "")
-            putsProcEndIfNeeded
-        end
         @state = :asm
         SourceFile.outputDotFileList(@outp) if $enableDebugAnnotations
     end
     
     def leaveAsm
         putsProcEndIfNeeded if $emitWinAsm
-        if !$emitWinAsm
-            putStr "OFFLINE_ASM_GLOBAL_LABEL(llintPCRangeEnd)"
-        else
-            putsProc("llintPCRangeEnd", "")
-            putsProcEndIfNeeded
-        end
         putsLastComment
-        (@deferredNextLabelActions + @deferredActions).each {
-            | action |
-            action.call()
-        }
+        if not @deferredOSDarwinActions.size.zero?
+            putStr("#if OS(DARWIN)")
+            (@deferredNextLabelActions + @deferredOSDarwinActions).each {
+                | action |
+                action.call()
+            }
+            putStr("#endif // OS(DARWIN)")
+        end
         putStr "OFFLINE_ASM_END" if !$emitWinAsm
         @state = :cpp
     end
     
-    def deferAction(&proc)
-        @deferredActions << proc
+    def deferOSDarwinAction(&proc)
+        @deferredOSDarwinActions << proc
     end
 
     def deferNextLabelAction(&proc)
@@ -347,7 +340,7 @@ variants = ARGV.shift.split(/[,\s]+/)
 
 $options = {}
 OptionParser.new do |opts|
-    opts.banner = "Usage: asm.rb asmFile offsetsFile outputFileName [--assembler=<ASM>] [--webkit-additions-path=<path>] [--binary-format=<format>]"
+    opts.banner = "Usage: asm.rb asmFile offsetsFile outputFileName [--assembler=<ASM>] [--webkit-additions-path=<path>] [--binary-format=<format>] [--depfile=<depfile>]"
     # This option is currently only used to specify the masm assembler
     opts.on("--assembler=[ASM]", "Specify an assembler to use.") do |assembler|
         $options[:assembler] = assembler
@@ -357,6 +350,9 @@ OptionParser.new do |opts|
     end
     opts.on("--binary-format=FORMAT", "Specify the binary format used by the target system.") do |format|
         $options[:binary_format] = format
+    end
+    opts.on("--depfile=DEPFILE", "Path to write Makefile-style discovered dependencies to.") do |path|
+        $options[:depfile] = path
     end
 end.parse!
 
@@ -384,7 +380,7 @@ inputHash =
     " " + selfHash +
     " " + Digest::SHA1.hexdigest($options.has_key?(:assembler) ? $options[:assembler] : "")
 
-if FileTest.exist? outputFlnm
+if FileTest.exist?(outputFlnm) and (not $options[:depfile] or FileTest.exist?($options[:depfile]))
     lastLine = nil
     File.open(outputFlnm, "r") {
         | file |
@@ -407,9 +403,16 @@ File.open(outputFlnm, "w") {
     $output = outp
 
     $asm = Assembler.new($output)
-    
-    ast = parse(asmFile, $options)
+
+    sources = Set.new
+    ast = parse(asmFile, $options, sources)
     settingsCombinations = computeSettingsCombinations(ast)
+    
+    if $options[:depfile]
+        depfile = File.open($options[:depfile], "w")
+        depfile.print(Shellwords.escape(outputFlnm), ": ")
+        depfile.puts(Shellwords.join(sources.sort))
+    end
 
     configurationList.each {
         | configuration |

@@ -38,7 +38,7 @@
 
 #if PLATFORM(COCOA)
 #include "MediaStreamTrackAudioSourceProviderCocoa.h"
-#elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 #include "AudioSourceProviderGStreamer.h"
 #else
 #include "WebAudioSourceProvider.h"
@@ -173,11 +173,6 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     return clonedMediaStreamTrackPrivate;
 }
 
-RealtimeMediaSource::Type MediaStreamTrackPrivate::type() const
-{
-    return m_source->type();
-}
-
 const RealtimeMediaSourceSettings& MediaStreamTrackPrivate::settings() const
 {
     return m_source->settings();
@@ -199,7 +194,7 @@ RefPtr<WebAudioSourceProvider> MediaStreamTrackPrivate::createAudioSourceProvide
 
 #if PLATFORM(COCOA)
     return MediaStreamTrackAudioSourceProviderCocoa::create(*this);
-#elif USE(LIBWEBRTC) && USE(GSTREAMER)
+#elif USE(GSTREAMER)
     return AudioSourceProviderGStreamer::create(*this);
 #else
     return nullptr;

@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_getSelectorTex
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_setSelectorTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setSelectorText(String(env, value));
+    IMPL->setSelectorText(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSPageRuleImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)

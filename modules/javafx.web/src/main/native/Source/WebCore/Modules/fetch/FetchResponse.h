@@ -53,7 +53,7 @@ public:
 
     struct Init {
         unsigned short status { 200 };
-        String statusText;
+        AtomString statusText;
         std::optional<FetchHeaders::Init> headers;
     };
 
@@ -65,6 +65,7 @@ public:
 
     using NotificationCallback = Function<void(ExceptionOr<Ref<FetchResponse>>&&)>;
     static void fetch(ScriptExecutionContext&, FetchRequest&, NotificationCallback&&, const String& initiator);
+    static Ref<FetchResponse> createFetchResponse(ScriptExecutionContext&, FetchRequest&, NotificationCallback&&);
 
     void startConsumingStream(unsigned);
     void consumeChunk(Ref<JSC::Uint8Array>&&);
@@ -96,6 +97,7 @@ public:
 
     using ConsumeDataByChunkCallback = Function<void(ExceptionOr<Span<const uint8_t>*>&&)>;
     void consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&&);
+    void cancelStream();
 
     WEBCORE_EXPORT ResourceResponse resourceResponse() const;
     ResourceResponse::Tainting tainting() const { return m_internalResponse.tainting(); }
@@ -112,6 +114,13 @@ public:
     bool hasWasmMIMEType() const;
 
     const NetworkLoadMetrics& networkLoadMetrics() const { return m_networkLoadMetrics; }
+    void setReceivedInternalResponse(const ResourceResponse&, FetchOptions::Credentials);
+    void startLoader(ScriptExecutionContext&, FetchRequest&, const String& initiator);
+
+    void setIsNavigationPreload(bool isNavigationPreload) { m_isNavigationPreload = isNavigationPreload; }
+    bool isAvailableNavigationPreload() const { return m_isNavigationPreload && m_bodyLoader && !m_bodyLoader->hasLoader() && !hasReadableStreamBody(); }
+    void markAsUsedForPreload();
+    bool isUsedForPreload() const { return m_isUsedForPreload; }
 
 private:
     FetchResponse(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);
@@ -136,6 +145,8 @@ private:
 
         void consumeDataByChunk(ConsumeDataByChunkCallback&&);
 
+        bool hasLoader() const { return !!m_loader; }
+
         RefPtr<FragmentedSharedBuffer> startStreaming();
         NotificationCallback takeNotificationCallback() { return WTFMove(m_responseCallback); }
         ConsumeDataByChunkCallback takeConsumeDataCallback() { return WTFMove(m_consumeDataCallback); }
@@ -153,6 +164,7 @@ private:
         std::unique_ptr<FetchLoader> m_loader;
         Ref<PendingActivity<FetchResponse>> m_pendingActivity;
         FetchOptions::Credentials m_credentials;
+        bool m_shouldStartStreaming { false };
     };
 
     mutable std::optional<ResourceResponse> m_filteredResponse;
@@ -164,6 +176,9 @@ private:
     uint64_t m_opaqueLoadIdentifier { 0 };
     RefPtr<AbortSignal> m_abortSignal;
     NetworkLoadMetrics m_networkLoadMetrics;
+    bool m_hasInitializedInternalResponse { false };
+    bool m_isNavigationPreload { false };
+    bool m_isUsedForPreload { false };
 };
 
 } // namespace WebCore

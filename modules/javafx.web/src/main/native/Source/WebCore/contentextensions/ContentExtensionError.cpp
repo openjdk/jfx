@@ -30,11 +30,12 @@
 
 #include <string>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/ASCIILiteral.h>
 
 namespace WebCore {
 namespace ContentExtensions {
 
-const char* WebKitContentBlockerDomain = "WebKitContentBlockerDomain";
+ASCIILiteral WebKitContentBlockerDomain = "WebKitContentBlockerDomain"_s;
 
 const std::error_category& contentExtensionErrorCategory()
 {

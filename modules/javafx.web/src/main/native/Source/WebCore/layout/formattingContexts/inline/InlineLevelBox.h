@@ -67,26 +67,33 @@ public:
         VerticalAlign type { VerticalAlign::Baseline };
         std::optional<InlineLayoutUnit> baselineOffset;
     };
-    VerticalAlignment verticalAlign() const;
+    VerticalAlignment verticalAlign() const { return m_style.verticalAlignment; }
+    bool hasLineBoxRelativeAlignment() const;
+
     InlineLayoutUnit preferredLineHeight() const;
-    bool isPreferredLineHeightFontMetricsBased() const;
-    const FontMetrics& primarymetricsOfPrimaryFont() const;
-    InlineLayoutUnit fontSize() const;
+    bool isPreferredLineHeightFontMetricsBased() const { return m_style.lineHeight.isNegative(); }
+
+    const FontMetrics& primarymetricsOfPrimaryFont() const { return m_style.primaryFontMetrics; }
+    InlineLayoutUnit fontSize() const { return m_style.primaryFontSize; }
+
+    bool hasAnnotation() const { return hasContent() && m_annotation.has_value(); };
+    std::optional<InlineLayoutUnit> annotationAbove() const { return hasAnnotation() && m_annotation->type == Annotation::Type::Above ? std::make_optional(m_annotation->size) : std::nullopt; }
+    std::optional<InlineLayoutUnit> annotationUnder() const { return hasAnnotation() && m_annotation->type == Annotation::Type::Under ? std::make_optional(m_annotation->size) : std::nullopt; }
 
     bool isInlineBox() const { return m_type == Type::InlineBox || isRootInlineBox() || isLineSpanningInlineBox(); }
     bool isRootInlineBox() const { return m_type == Type::RootInlineBox; }
     bool isLineSpanningInlineBox() const { return m_type == Type::LineSpanningInlineBox; }
     bool isAtomicInlineLevelBox() const { return m_type == Type::AtomicInlineLevelBox; }
+    bool isListMarker() const { return isAtomicInlineLevelBox() && layoutBox().isListMarkerBox(); }
     bool isLineBreakBox() const { return m_type == Type::LineBreakBox; }
-    bool hasLineBoxRelativeAlignment() const;
 
     enum class Type : uint8_t {
         InlineBox             = 1 << 0,
         LineSpanningInlineBox = 1 << 1,
-        RootInlineBox         = 1 << 1,
-        AtomicInlineLevelBox  = 1 << 2,
-        LineBreakBox          = 1 << 3,
-        GenericInlineLevelBox = 1 << 4
+        RootInlineBox         = 1 << 2,
+        AtomicInlineLevelBox  = 1 << 3,
+        LineBreakBox          = 1 << 4,
+        GenericInlineLevelBox = 1 << 5
     };
     Type type() const { return m_type; }
 
@@ -117,7 +124,7 @@ private:
     // FIXME: Remove legacy rounding.
     void setLogicalWidth(InlineLayoutUnit logicalWidth) { m_logicalRect.setWidth(logicalWidth); }
     void setLogicalHeight(InlineLayoutUnit logicalHeight) { m_logicalRect.setHeight(roundToInt(logicalHeight)); }
-    void setLogicalTop(InlineLayoutUnit logicalTop) { m_logicalRect.setTop(roundToInt(logicalTop)); }
+    void setLogicalTop(InlineLayoutUnit logicalTop) { m_logicalRect.setTop(logicalTop >= 0 ? roundToInt(logicalTop) : -roundToInt(-logicalTop)); }
     void setAscent(InlineLayoutUnit ascent) { m_ascent = roundToInt(ascent); }
     void setDescent(InlineLayoutUnit descent) { m_descent = roundToInt(descent); }
     void setLayoutBounds(const LayoutBounds& layoutBounds) { m_layoutBounds = { InlineLayoutUnit(roundToInt(layoutBounds.ascent)), InlineLayoutUnit(roundToInt(layoutBounds.descent)) }; }
@@ -146,6 +153,13 @@ private:
         VerticalAlignment verticalAlignment { };
     };
     Style m_style;
+
+    struct Annotation {
+        enum class Type : uint8_t { Above, Under };
+        Type type { Type::Above };
+        InlineLayoutUnit size { };
+    };
+    std::optional<Annotation> m_annotation;
 };
 
 inline InlineLevelBox::InlineLevelBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutSize logicalSize, Type type, OptionSet<PositionWithinLayoutBox> positionWithinLayoutBox)
@@ -160,6 +174,31 @@ inline InlineLevelBox::InlineLevelBox(const Box& layoutBox, const RenderStyle& s
     if (m_style.verticalAlignment.type == VerticalAlign::Length)
         m_style.verticalAlignment.baselineOffset = floatValueForLength(style.verticalAlignLength(), preferredLineHeight());
 
+    auto setAnnotationIfApplicable = [&] {
+        // Generic, non-inline box inline-level content (e.g. replaced elements) can't have annotations.
+        if (!isRootInlineBox() && !isInlineBox())
+            return;
+        auto hasTextEmphasis =  style.textEmphasisMark() != TextEmphasisMark::None;
+        if (!hasTextEmphasis)
+            return;
+        auto emphasisPosition = style.textEmphasisPosition();
+        // Normally we resolve visual -> logical values at pre-layout time, but emphaisis values are not part of the general box geometry.
+        auto hasAboveTextEmphasis = false;
+        auto hasUnderTextEmphasis = false;
+        if (style.isHorizontalWritingMode()) {
+            hasAboveTextEmphasis = emphasisPosition.contains(TextEmphasisPosition::Over);
+            hasUnderTextEmphasis = !hasAboveTextEmphasis && emphasisPosition.contains(TextEmphasisPosition::Under);
+        } else {
+            hasAboveTextEmphasis = emphasisPosition.contains(TextEmphasisPosition::Right) || emphasisPosition == TextEmphasisPosition::Over;
+            hasUnderTextEmphasis = !hasAboveTextEmphasis && (emphasisPosition.contains(TextEmphasisPosition::Left) || emphasisPosition == TextEmphasisPosition::Under);
+        }
+
+        if (hasAboveTextEmphasis || hasUnderTextEmphasis) {
+            InlineLayoutUnit annotationSize = roundToInt(style.fontCascade().floatEmphasisMarkHeight(style.textEmphasisMarkString()));
+            m_annotation = { hasAboveTextEmphasis ? Annotation::Type::Above : Annotation::Type::Under, annotationSize };
+        }
+    };
+    setAnnotationIfApplicable();
 }
 
 inline void InlineLevelBox::setHasContent()
@@ -179,30 +218,11 @@ inline InlineLayoutUnit InlineLevelBox::preferredLineHeight() const
     return floorf(m_style.lineHeight.value());
 }
 
-inline InlineLevelBox::VerticalAlignment InlineLevelBox::verticalAlign() const
-{
-    return m_style.verticalAlignment;
-}
 
 inline bool InlineLevelBox::hasLineBoxRelativeAlignment() const
 {
     auto verticalAlignment = verticalAlign().type;
     return verticalAlignment == VerticalAlign::Top || verticalAlignment == VerticalAlign::Bottom;
-}
-
-inline bool InlineLevelBox::isPreferredLineHeightFontMetricsBased() const
-{
-    return m_style.lineHeight.isNegative();
-}
-
-inline const FontMetrics& InlineLevelBox::primarymetricsOfPrimaryFont() const
-{
-    return m_style.primaryFontMetrics;
-}
-
-inline InlineLayoutUnit InlineLevelBox::fontSize() const
-{
-    return m_style.primaryFontSize;
 }
 
 inline InlineLevelBox InlineLevelBox::createAtomicInlineLevelBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutSize logicalSize)

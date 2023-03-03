@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BaselineJITRegisters.h"
 #include "CallFrameShuffleData.h"
 #include "CallMode.h"
 #include "CodeLocation.h"
@@ -46,14 +47,6 @@ enum OpcodeID : unsigned;
 
 struct CallFrameShuffleData;
 struct UnlinkedCallLinkInfo;
-
-#if ENABLE(JIT)
-namespace BaselineCallRegisters {
-constexpr JSValueRegs calleeJSR { JSRInfo::jsRegT10 };
-constexpr GPRReg calleeGPR { GPRInfo::regT0 };
-constexpr GPRReg callLinkInfoGPR { GPRInfo::regT2 };
-}
-#endif
 
 class CallLinkInfo : public PackedRawSentinelNode<CallLinkInfo> {
 public:
@@ -194,8 +187,8 @@ public:
 
     void revertCallToStub();
 
-    bool isDataIC() const { return static_cast<UseDataIC>(m_useDataIC) == UseDataIC::Yes; }
-    void setUsesDataICs(UseDataIC useDataIC) { m_useDataIC = static_cast<unsigned>(useDataIC); }
+    bool isDataIC() const { return useDataIC() == UseDataIC::Yes; }
+    UseDataIC useDataIC() const { return static_cast<UseDataIC>(m_useDataIC); }
 
     bool allowStubs() const { return m_allowStubs; }
 
@@ -206,7 +199,7 @@ public:
 
     CodeLocationLabel<JSInternalPtrTag> doneLocation();
 
-    void setMonomorphicCallee(VM&, JSCell*, JSObject* callee, MacroAssemblerCodePtr<JSEntryPtrTag>);
+    void setMonomorphicCallee(VM&, JSCell*, JSObject* callee, CodeBlock*, MacroAssemblerCodePtr<JSEntryPtrTag>);
     void setSlowPathCallDestination(MacroAssemblerCodePtr<JSEntryPtrTag>);
     void clearCallee();
     JSObject* callee();
@@ -272,19 +265,9 @@ public:
         return m_clearedByVirtual;
     }
 
-    bool clearedByJettison()
-    {
-        return m_clearedByJettison;
-    }
-
     void setClearedByVirtual()
     {
         m_clearedByVirtual = true;
-    }
-
-    void setClearedByJettison()
-    {
-        m_clearedByJettison = true;
     }
 
     void setCallType(CallType callType)
@@ -322,6 +305,11 @@ public:
     static ptrdiff_t offsetOfCallee()
     {
         return OBJECT_OFFSETOF(CallLinkInfo, m_calleeOrCodeBlock);
+    }
+
+    static ptrdiff_t offsetOfCodeBlock()
+    {
+        return OBJECT_OFFSETOF(CallLinkInfo, u) + OBJECT_OFFSETOF(UnionType, dataIC.m_codeBlock);
     }
 
     static ptrdiff_t offsetOfMonomorphicCallDestination()
@@ -371,36 +359,22 @@ public:
 
     void visitWeak(VM&);
 
-#if ENABLE(JIT)
-    void setFrameShuffleData(const CallFrameShuffleData&);
-
-    const CallFrameShuffleData* frameShuffleData()
-    {
-        return m_frameShuffleData.get();
-    }
-#endif
-
     Type type() const { return static_cast<Type>(m_type); }
 
 protected:
-    CallLinkInfo(Type type, CodeOrigin codeOrigin)
+    CallLinkInfo(Type type, CodeOrigin codeOrigin, UseDataIC useDataIC)
         : m_codeOrigin(codeOrigin)
         , m_hasSeenShouldRepatch(false)
         , m_hasSeenClosure(false)
         , m_clearedByGC(false)
         , m_clearedByVirtual(false)
         , m_allowStubs(true)
-        , m_clearedByJettison(false)
         , m_callType(None)
-        , m_useDataIC(static_cast<unsigned>(UseDataIC::Yes))
+        , m_useDataIC(static_cast<unsigned>(useDataIC))
         , m_type(static_cast<unsigned>(type))
     {
         ASSERT(type == this->type());
-    }
-
-    CallLinkInfo(Type type)
-        : CallLinkInfo(type, CodeOrigin { })
-    {
+        ASSERT(useDataIC == this->useDataIC());
     }
 
 #if ENABLE(JIT)
@@ -412,14 +386,16 @@ protected:
     MacroAssemblerCodePtr<JSEntryPtrTag> m_slowPathCallDestination;
     union UnionType {
         UnionType()
-            : dataIC { nullptr }
+            : dataIC { nullptr, nullptr }
         { }
 
         struct DataIC {
+            CodeBlock* m_codeBlock; // This is weekly held. And cleared whenever m_monomorphicCallDestination is changed.
             MacroAssemblerCodePtr<JSEntryPtrTag> m_monomorphicCallDestination;
         } dataIC;
 
         struct {
+            CodeLocationDataLabelPtr<JSInternalPtrTag> m_codeBlockLocation;
             CodeLocationDataLabelPtr<JSInternalPtrTag> m_calleeLocation;
         } codeIC;
     } u;
@@ -428,7 +404,6 @@ protected:
     WriteBarrier<JSCell> m_lastSeenCalleeOrExecutable;
 #if ENABLE(JIT)
     RefPtr<PolymorphicCallStubRoutine> m_stub;
-    std::unique_ptr<CallFrameShuffleData> m_frameShuffleData;
 #endif
     CodeOrigin m_codeOrigin;
     bool m_hasSeenShouldRepatch : 1;
@@ -436,7 +411,6 @@ protected:
     bool m_clearedByGC : 1;
     bool m_clearedByVirtual : 1;
     bool m_allowStubs : 1;
-    bool m_clearedByJettison : 1;
     unsigned m_callType : 4; // CallType
     unsigned m_useDataIC : 1; // UseDataIC
     unsigned m_type : 1; // Type
@@ -450,11 +424,11 @@ protected:
 class BaselineCallLinkInfo final : public CallLinkInfo {
 public:
     BaselineCallLinkInfo()
-        : CallLinkInfo(Type::Baseline)
+        : CallLinkInfo(Type::Baseline, CodeOrigin { }, UseDataIC::Yes)
     {
     }
 
-    void initialize(VM&, CallType, BytecodeIndex, CallFrameShuffleData*);
+    void initialize(VM&, CallType, BytecodeIndex);
 
     void setCodeLocations(CodeLocationLabel<JSInternalPtrTag> doneLocation)
     {
@@ -462,9 +436,9 @@ public:
     }
 
 #if ENABLE(JIT)
-    static constexpr GPRReg calleeGPR() { return BaselineCallRegisters::calleeGPR; }
-    static constexpr GPRReg callLinkInfoGPR() { return BaselineCallRegisters::callLinkInfoGPR; }
-    void setCallLinkInfoGPR(GPRReg callLinkInfoGPR) { RELEASE_ASSERT(callLinkInfoGPR == BaselineCallRegisters::callLinkInfoGPR); }
+    static constexpr GPRReg calleeGPR() { return BaselineJITRegisters::Call::calleeGPR; }
+    static constexpr GPRReg callLinkInfoGPR() { return BaselineJITRegisters::Call::callLinkInfoGPR; }
+    void setCallLinkInfoGPR(GPRReg callLinkInfoGPR) { RELEASE_ASSERT(callLinkInfoGPR == BaselineJITRegisters::Call::callLinkInfoGPR); }
 #endif
 };
 
@@ -484,8 +458,8 @@ class OptimizingCallLinkInfo final : public CallLinkInfo {
 public:
     friend class CallLinkInfo;
 
-    OptimizingCallLinkInfo(CodeOrigin codeOrigin)
-        : CallLinkInfo(Type::Optimizing, codeOrigin)
+    OptimizingCallLinkInfo(CodeOrigin codeOrigin, UseDataIC useDataIC)
+        : CallLinkInfo(Type::Optimizing, codeOrigin, useDataIC)
     {
     }
 
@@ -514,16 +488,24 @@ public:
     void emitDirectFastPath(CCallHelpers&);
     void emitDirectTailCallFastPath(CCallHelpers&, ScopedLambda<void()>&& prepareForTailCall);
     void initializeDirectCall();
-    void setDirectCallTarget(CodeLocationLabel<JSEntryPtrTag>);
+    void setDirectCallTarget(CodeBlock*, CodeLocationLabel<JSEntryPtrTag>);
     void emitSlowPath(VM&, CCallHelpers&);
 
-    MacroAssembler::JumpList emitFastPath(CCallHelpers&, GPRReg calleeGPR, GPRReg callLinkInfoGPR, UseDataIC) WARN_UNUSED_RETURN;
-    MacroAssembler::JumpList emitTailCallFastPath(CCallHelpers&, GPRReg calleeGPR, ScopedLambda<void()>&& prepareForTailCall) WARN_UNUSED_RETURN;
+    MacroAssembler::JumpList emitFastPath(CCallHelpers&, GPRReg calleeGPR, GPRReg callLinkInfoGPR) WARN_UNUSED_RETURN;
+    MacroAssembler::JumpList emitTailCallFastPath(CCallHelpers&, GPRReg calleeGPR, GPRReg callLinkInfoGPR, ScopedLambda<void()>&& prepareForTailCall) WARN_UNUSED_RETURN;
+
+    void setFrameShuffleData(const CallFrameShuffleData&);
+
+    const CallFrameShuffleData* frameShuffleData()
+    {
+        return m_frameShuffleData.get();
+    }
 
 private:
     CodeLocationNearCall<JSInternalPtrTag> m_callLocation;
     CodeLocationLabel<JSInternalPtrTag> m_slowPathStart;
     CodeLocationLabel<JSInternalPtrTag> m_fastPathStart;
+    std::unique_ptr<CallFrameShuffleData> m_frameShuffleData;
 };
 
 inline GPRReg CallLinkInfo::calleeGPR() const

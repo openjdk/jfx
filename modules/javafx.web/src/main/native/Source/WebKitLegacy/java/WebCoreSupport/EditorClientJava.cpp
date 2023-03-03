@@ -42,6 +42,8 @@
 #include <WebCore/Widget.h>
 
 #include <wtf/Assertions.h>
+//#include <wtf/text/ASCIILiteral.h>
+
 
 #include "com_sun_webkit_event_WCKeyEvent.h"
 
@@ -296,7 +298,7 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     if (!frame)
         return false;
 
-    String commandName = interpretKeyEvent(evt);
+    String commandName = String::fromLatin1(interpretKeyEvent(evt));
     Editor::Command command = frame->editor().command(commandName);
 
     if (keyEvent->type() == PlatformKeyboardEvent::RawKeyDown) {
@@ -532,33 +534,33 @@ void EditorClientJava::toggleGrammarChecking()
     notImplemented();
 }
 
-void EditorClientJava::textFieldDidBeginEditing(Element*)
+void EditorClientJava::textFieldDidBeginEditing(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textFieldDidEndEditing(Element*)
+void EditorClientJava::textFieldDidEndEditing(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textDidChangeInTextField(Element*)
+void EditorClientJava::textDidChangeInTextField(Element&)
 {
     notImplemented();
 }
 
-bool EditorClientJava::doTextFieldCommandFromEvent(Element*, KeyboardEvent*)
+bool EditorClientJava::doTextFieldCommandFromEvent(Element&, KeyboardEvent*)
 {
     notImplemented();
     return false;
 }
 
-void EditorClientJava::textWillBeDeletedInTextField(Element*)
+void EditorClientJava::textWillBeDeletedInTextField(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textDidChangeInTextArea(Element*)
+void EditorClientJava::textDidChangeInTextArea(Element&)
 {
     notImplemented();
 }
@@ -701,11 +703,11 @@ void EditorClientJava::checkSpellingOfString(StringView, int*, int*)
     notImplemented();
 }
 
-String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String&)
+/*String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String&)
 {
     notImplemented();
     return String();
-}
+}*/
 
 void EditorClientJava::checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*)
 {

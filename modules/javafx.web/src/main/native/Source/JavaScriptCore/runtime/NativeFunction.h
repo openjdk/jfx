@@ -27,6 +27,7 @@
 
 #include "JSCJSValue.h"
 #include "JSCPtrTag.h"
+#include <wtf/Hasher.h>
 
 namespace JSC {
 
@@ -58,7 +59,7 @@ private:
 };
 
 struct NativeFunctionHash {
-    static unsigned hash(NativeFunction key) { return IntHash<uintptr_t>::hash(bitwise_cast<uintptr_t>(key)); }
+    static unsigned hash(NativeFunction key) { return computeHash(key); }
     static bool equal(NativeFunction a, NativeFunction b) { return a == b; }
     static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
@@ -96,20 +97,30 @@ private:
 };
 
 struct TaggedNativeFunctionHash {
-    static unsigned hash(TaggedNativeFunction key) { return IntHash<uintptr_t>::hash(bitwise_cast<uintptr_t>(key)); }
+    static unsigned hash(TaggedNativeFunction key) { return computeHash(key); }
     static bool equal(TaggedNativeFunction a, TaggedNativeFunction b) { return a == b; }
     static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
-static_assert(sizeof(NativeFunction) == sizeof(void*), "");
-static_assert(sizeof(TaggedNativeFunction) == sizeof(void*), "");
+static_assert(sizeof(NativeFunction) == sizeof(void*));
+static_assert(sizeof(TaggedNativeFunction) == sizeof(void*));
 
 } // namespace JSC
 
 namespace WTF {
 
+inline void add(Hasher& hasher, JSC::NativeFunction key)
+{
+    add(hasher, bitwise_cast<uintptr_t>(key));
+}
+
 template<typename> struct DefaultHash;
 template<> struct DefaultHash<JSC::NativeFunction> : JSC::NativeFunctionHash { };
+
+inline void add(Hasher& hasher, JSC::TaggedNativeFunction key)
+{
+    add(hasher, bitwise_cast<uintptr_t>(key));
+}
 
 template<typename> struct DefaultHash;
 template<> struct DefaultHash<JSC::TaggedNativeFunction> : JSC::TaggedNativeFunctionHash { };

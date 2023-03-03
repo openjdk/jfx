@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -123,10 +123,11 @@ import java.lang.ref.WeakReference;
  * a different type is specified and the ComboBox is to be editable, it is
  * necessary to specify a custom {@link StringConverter}.
  *
- * <h2>A warning about inserting Nodes into the ComboBox items list</h2>
- * ComboBox allows for the items list to contain elements of any type, including
+ * <h2>Warning: Nodes should not be inserted directly into the ComboBox items list</h2>
+ * {@code ComboBox} allows for the items list to contain elements of any type, including
  * {@link Node} instances. Putting nodes into
- * the items list is <strong>strongly not recommended</strong>. This is because
+ * the items list is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results. This is because
  * the default {@link #cellFactoryProperty() cell factory} simply inserts Node
  * items directly into the cell, including in the ComboBox 'button' area too.
  * Because the scenegraph only allows for Nodes to be in one place at a time,
@@ -134,18 +135,16 @@ import java.lang.ref.WeakReference;
  * list, and becomes visible in the button area. When selection changes the
  * previously selected item returns to the list and the new selection is removed.
  *
- * <p>The recommended approach, rather than inserting Node instances into the
- * items list, is to put the relevant information into the ComboBox, and then
- * provide a custom {@link #cellFactoryProperty() cell factory}. For example,
- * rather than use the following code:
- *
- * <pre> {@code ComboBox<Rectangle> cmb = new ComboBox<>();
- * cmb.getItems().addAll(
- *     new Rectangle(10, 10, Color.RED),
- *     new Rectangle(10, 10, Color.GREEN),
- *     new Rectangle(10, 10, Color.BLUE));}}</pre>
- *
- * <p>You should do the following:</p>
+ *<p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code ComboBox} items list or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of
+ * a custom {@link #cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code ComboBox} containing {@code Node}s:
  *
  * <pre><code> ComboBox&lt;Color&gt; cmb = new ComboBox&lt;&gt;();
  * cmb.getItems().addAll(
@@ -173,6 +172,9 @@ import java.lang.ref.WeakReference;
  *         }
  *     };
  * });</code></pre>
+ * <p> This example has an anonymous custom {@code ListCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code ListCell} class and updated/used in its {@code updateItem} method.
  *
  * <img src="doc-files/ComboBox.png" alt="Image of the ComboBox control">
  *

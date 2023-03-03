@@ -65,7 +65,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getCssTextImpl(JNI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_setCssTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setCssText(String(env, value));
+    IMPL->setCssText(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getParentStyleSheetImpl(JNIEnv* env, jclass, jlong peer)

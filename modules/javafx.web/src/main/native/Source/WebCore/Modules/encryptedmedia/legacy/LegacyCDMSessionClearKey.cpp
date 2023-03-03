@@ -50,7 +50,7 @@ static VM& clearKeyVM()
     return vm;
 }
 
-CDMSessionClearKey::CDMSessionClearKey(LegacyCDMSessionClient* client)
+CDMSessionClearKey::CDMSessionClearKey(LegacyCDMSessionClient& client)
     : m_client(client)
     , m_sessionId(createVersion4UUIDString())
 {
@@ -134,7 +134,7 @@ bool CDMSessionClearKey::update(Uint8Array* rawKeysData, RefPtr<Uint8Array>& nex
 
             auto keyObject = asObject(keyValue);
 
-            auto getStringProperty = [&scope, &lexicalGlobalObject, &keyObject, &vm](const char* name) -> String {
+            auto getStringProperty = [&scope, &lexicalGlobalObject, &keyObject, &vm](ASCIILiteral name) -> String {
                 auto value = keyObject->get(&lexicalGlobalObject, Identifier::fromString(vm, name));
                 if (scope.exception() || !value.isString())
                     return { };
@@ -146,25 +146,25 @@ bool CDMSessionClearKey::update(Uint8Array* rawKeysData, RefPtr<Uint8Array>& nex
                 return string;
             };
 
-            auto algorithm = getStringProperty("alg");
-            if (!equalLettersIgnoringASCIICase(algorithm, "a128kw")) {
+            auto algorithm = getStringProperty("alg"_s);
+            if (!equalLettersIgnoringASCIICase(algorithm, "a128kw"_s)) {
                 LOG(Media, "CDMSessionClearKey::update(%p) - failed: algorithm unsupported", this);
                 continue;
             }
 
-            auto keyType = getStringProperty("kty");
-            if (!equalLettersIgnoringASCIICase(keyType, "oct")) {
+            auto keyType = getStringProperty("kty"_s);
+            if (!equalLettersIgnoringASCIICase(keyType, "oct"_s)) {
                 LOG(Media, "CDMSessionClearKey::update(%p) - failed: keyType unsupported", this);
                 continue;
             }
 
-            auto keyId = getStringProperty("kid");
+            auto keyId = getStringProperty("kid"_s);
             if (keyId.isEmpty()) {
                 LOG(Media, "CDMSessionClearKey::update(%p) - failed: keyId missing or empty", this);
                 continue;
             }
 
-            auto rawKeyData = getStringProperty("k");
+            auto rawKeyData = getStringProperty("k"_s);
             if (rawKeyData.isEmpty())  {
                 LOG(Media, "CDMSessionClearKey::update(%p) - failed: key missing or empty", this);
                 continue;

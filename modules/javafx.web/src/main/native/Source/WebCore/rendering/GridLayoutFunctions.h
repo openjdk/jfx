@@ -34,7 +34,10 @@ class RenderBox;
 class RenderElement;
 class RenderGrid;
 
-enum GridAxis { GridRowAxis, GridColumnAxis };
+enum GridAxis {
+    GridRowAxis = 1 << 0,
+    GridColumnAxis = 1 << 1
+};
 
 namespace GridLayoutFunctions {
 
@@ -50,6 +53,7 @@ std::optional<LayoutUnit> overridingContainingBlockContentSizeForChild(const Ren
 
 bool isFlippedDirection(const RenderGrid&, GridTrackSizingDirection);
 bool isSubgridReversedDirection(const RenderGrid&, GridTrackSizingDirection outerDirection, const RenderGrid& subgrid);
+LayoutUnit extraMarginForSubgridAncestors(GridTrackSizingDirection, const RenderBox& child);
 
 }
 

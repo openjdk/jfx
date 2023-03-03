@@ -31,6 +31,7 @@
 #pragma once
 
 #include <wtf/Hasher.h>
+#include <wtf/HexNumber.h>
 #include <wtf/Int128.h>
 #include <wtf/text/WTFString.h>
 
@@ -47,6 +48,11 @@ public:
     static UUID createVersion4()
     {
         return UUID { };
+    }
+
+    static UUID createVersion4Weak()
+    {
+        return UUID { generateWeakRandomUUIDVersion4() };
     }
 
     static std::optional<UUID> parse(StringView);
@@ -83,19 +89,28 @@ public:
     }
 
     bool isHashTableDeletedValue() const { return m_data == deletedValue; }
-    WTF_EXPORT_PRIVATE unsigned hash() const;
     WTF_EXPORT_PRIVATE String toString() const;
 
     operator bool() const { return !!m_data; }
 
+    UInt128 data() const { return m_data; }
+
 private:
     WTF_EXPORT_PRIVATE UUID();
+    friend void add(Hasher&, UUID);
+
+    WTF_EXPORT_PRIVATE static UInt128 generateWeakRandomUUIDVersion4();
 
     UInt128 m_data;
 };
 
+inline void add(Hasher& hasher, UUID uuid)
+{
+    add(hasher, uuid.m_data);
+}
+
 struct UUIDHash {
-    static unsigned hash(const UUID& key) { return key.hash(); }
+    static unsigned hash(const UUID& key) { return computeHash(key); }
     static bool equal(const UUID& a, const UUID& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = true;
 };
@@ -146,6 +161,56 @@ WTF_EXPORT_PRIVATE String createVersion4UUIDString();
 
 WTF_EXPORT_PRIVATE String bootSessionUUIDString();
 WTF_EXPORT_PRIVATE bool isVersion4UUID(StringView);
+
+template<>
+class StringTypeAdapter<UUID> {
+public:
+    StringTypeAdapter(UUID uuid)
+        : m_uuid { uuid }
+    {
+    }
+
+    template<typename Func>
+    auto handle(Func&& func) const -> decltype(auto)
+    {
+        UInt128 data = m_uuid.data();
+        auto high = static_cast<uint64_t>(data >> 64);
+        auto low = static_cast<uint64_t>(data);
+        return handleWithAdapters(std::forward<Func>(func),
+            hex(high >> 32, 8, Lowercase),
+            '-',
+            hex((high >> 16) & 0xffff, 4, Lowercase),
+            '-',
+            hex(high & 0xffff, 4, Lowercase),
+            '-',
+            hex(low >> 48, 4, Lowercase),
+            '-',
+            hex(low & 0xffffffffffff, 12, Lowercase));
+    }
+
+    unsigned length() const
+    {
+        return handle([](auto&&... adapters) -> unsigned {
+            auto sum = checkedSum<int32_t>(adapters.length()...);
+            if (sum.hasOverflowed())
+                return UINT_MAX;
+            return sum;
+        });
+    }
+
+    bool is8Bit() const { return true; }
+
+    template<typename CharacterType>
+    void writeTo(CharacterType* destination) const
+    {
+        handle([&](auto&&... adapters) {
+            stringTypeAdapterAccumulator(destination, std::forward<decltype(adapters)>(adapters)...);
+        });
+    }
+
+private:
+    UUID m_uuid;
+};
 
 }
 

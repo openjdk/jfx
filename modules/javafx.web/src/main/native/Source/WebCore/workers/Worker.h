@@ -76,13 +76,17 @@ public:
 
 #if ENABLE(WEB_RTC)
     void createRTCRtpScriptTransformer(RTCRtpScriptTransform&, MessageWithMessagePorts&&);
-    void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&);
 #endif
 
     WorkerType type() const { return m_options.type; }
 
+    void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&);
+
+    static void forEachWorker(const Function<Function<void(ScriptExecutionContext&)>()>&);
+    static Worker* byIdentifier(ScriptExecutionContextIdentifier);
+
 private:
-    explicit Worker(ScriptExecutionContext&, JSC::RuntimeFlags, WorkerOptions&&);
+    Worker(ScriptExecutionContext&, JSC::RuntimeFlags, WorkerOptions&&);
 
     EventTargetInterface eventTargetInterface() const final { return WorkerEventTargetInterfaceType; }
 
@@ -111,9 +115,7 @@ private:
     JSC::RuntimeFlags m_runtimeFlags;
     Deque<RefPtr<Event>> m_pendingEvents;
     bool m_wasTerminated { false };
-#if ENABLE(WEB_RTC)
-    HashSet<String> m_transformers;
-#endif
+    ScriptExecutionContextIdentifier m_clientIdentifier;
 };
 
 } // namespace WebCore

@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-RefPtr<HTMLCanvasElement> GPUCanvasContext::canvas()
+GPUCanvasContext::CanvasType GPUCanvasContext::canvas()
 {
     return { };
 }
@@ -43,11 +43,6 @@ void GPUCanvasContext::configure(const GPUCanvasConfiguration&)
 
 void GPUCanvasContext::unconfigure()
 {
-}
-
-GPUTextureFormat GPUCanvasContext::getPreferredFormat(const GPUAdapter&)
-{
-    return GPUTextureFormat::Rgba8unorm;
 }
 
 RefPtr<GPUTexture> GPUCanvasContext::getCurrentTexture()

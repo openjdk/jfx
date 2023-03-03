@@ -67,8 +67,9 @@ static void registerBlobResourceHandleConstructor()
 {
     static bool didRegister = false;
     if (!didRegister) {
-        ResourceHandle::registerBuiltinConstructor("blob", createBlobResourceHandle);
-        ResourceHandle::registerBuiltinSynchronousLoader("blob", loadBlobResourceSynchronously);
+        AtomString blob = "blob"_s;
+        ResourceHandle::registerBuiltinConstructor(blob, createBlobResourceHandle);
+        ResourceHandle::registerBuiltinSynchronousLoader(blob, loadBlobResourceSynchronously);
         didRegister = true;
     }
 }
@@ -141,10 +142,8 @@ void BlobRegistryImpl::registerBlobURL(const URL& url, Vector<BlobPart>&& blobPa
             break;
         }
         case BlobPart::Type::Blob: {
-            if (auto blob = m_blobs.get(part.url().string())) {
-                for (const BlobDataItem& item : blob->items())
-                    blobData->m_items.append(item);
-            }
+            if (auto blob = m_blobs.get(part.url().string()))
+                blobData->m_items.appendVector(blob->items());
             break;
         }
         }
@@ -232,7 +231,7 @@ BlobData* BlobRegistryImpl::getBlobDataFromURL(const URL& url) const
 {
     ASSERT(isMainThread());
     if (url.hasFragmentIdentifier())
-        return m_blobs.get(url.stringWithoutFragmentIdentifier().toStringWithoutCopying());
+        return m_blobs.get<StringViewHashTranslator>(url.viewWithoutFragmentIdentifier());
     return m_blobs.get(url.string());
 }
 
@@ -328,7 +327,7 @@ void BlobRegistryImpl::writeBlobsToTemporaryFilesForIndexedDB(const Vector<Strin
                 filePaths.clear();
                 break;
             }
-            filePaths.append(tempFilePath.isolatedCopy());
+            filePaths.append(WTFMove(tempFilePath).isolatedCopy());
         }
 
         callOnMainThread([completionHandler = WTFMove(completionHandler), filePaths = WTFMove(filePaths)] () mutable {
@@ -377,14 +376,16 @@ void BlobRegistryImpl::addBlobData(const String& url, RefPtr<BlobData>&& blobDat
 
 void BlobRegistryImpl::registerBlobURLHandle(const URL& url)
 {
-    if (m_blobs.contains(url.string()))
-        m_blobReferences.add(url.string());
+    auto urlKey = url.stringWithoutFragmentIdentifier();
+    if (m_blobs.contains(urlKey))
+        m_blobReferences.add(urlKey);
 }
 
 void BlobRegistryImpl::unregisterBlobURLHandle(const URL& url)
 {
-    if (m_blobReferences.remove(url.string()))
-        m_blobs.remove(url.string());
+    auto urlKey = url.stringWithoutFragmentIdentifier();
+    if (m_blobReferences.remove(urlKey))
+        m_blobs.remove(urlKey);
 }
 
 } // namespace WebCore
