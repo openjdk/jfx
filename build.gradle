@@ -3748,14 +3748,10 @@ project(":systemTests") {
     project.ext.moduleName = "systemTests"
 
     dependencies {
-        testImplementation project(":graphics")
-        testImplementation files(project(":graphics").sourceSets.test.output.classesDir)
-        testImplementation project(":base")
-        testImplementation files(project(":base").sourceSets.test.output.classesDir)
-        testImplementation project(":controls")
-        testImplementation files(project(":controls").sourceSets.test.output.classesDir)
-        testImplementation project(":swing")
-        testImplementation files(project(":swing").sourceSets.test.output.classesDir)
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":swing").sourceSets.test.output
     }
 
     def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ]
