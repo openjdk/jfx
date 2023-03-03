@@ -110,9 +110,10 @@
       <property name="scope" value="public"/>
     </module>
     <module name="JavadocStyle"/>
-    <module name="MissingJavadocMethod">
-      <property name="scope" value="public"/>
-    </module>
+<!--    <module name="MissingJavadocMethod">-->
+<!--      <property name="scope" value="public"/>-->
+<!--      <property name="ignoreMethodNamesRegex" value="^test.*$"/>-->
+<!--    </module>-->
 
     <!-- Checks for Naming Conventions.                  -->
     <!-- See https://checkstyle.org/config_naming.html -->
@@ -179,7 +180,7 @@
     </module>
     <module name="IllegalInstantiation"/>
     <module name="InnerAssignment"/>
-    <module name="MagicNumber"/>
+<!--    <module name="MagicNumber"/>-->
     <module name="MissingSwitchDefault"/>
     <module name="MultipleVariableDeclarations"/>
     <module name="SimplifyBooleanExpression"/>

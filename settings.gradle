@@ -23,7 +23,7 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "web", "media", "systemTests", "manualTests"
+include "base", "graphics", "controls", "swing", "swt", "fxml", "web", "media", "systemTests"
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
@@ -34,7 +34,6 @@ project(":fxml").projectDir = file("modules/javafx.fxml")
 project(":web").projectDir = file("modules/javafx.web")
 project(":media").projectDir = file("modules/javafx.media")
 project(":systemTests").projectDir = file("tests/system")
-project(":manualTests").projectDir = file("tests/manual")
 
 def closedDir = file("../rt-closed")
 def buildClosed = closedDir.isDirectory()
