@@ -1985,6 +1985,10 @@ public abstract class BaseShaderGraphics
     public void drawString(GlyphList gl, FontStrike strike, float x, float y,
                            Color selectColor, int selectStart, int selectEnd) {
 
+        if (strike.getFontResource().isColorGlyph(gl.getGlyphCode(0))) {
+            drawColorGlyph(gl, strike, x, y, selectColor, selectStart, selectEnd);
+            return;
+        }
         if (isComplexPaint ||
             paint.getType().isImagePattern() ||
             strike.drawAsShapes())

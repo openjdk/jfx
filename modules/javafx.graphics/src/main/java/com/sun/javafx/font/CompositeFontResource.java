@@ -38,4 +38,10 @@ public interface CompositeFontResource extends FontResource {
      */
     public int getSlotForFont(String fontName);
 
+    default boolean isColorGlyph(int glyphCode) {
+        int slot = (glyphCode >>> 24);
+        int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
+        FontResource slotResource = getSlotResource(slot);
+        return slotResource.isColorGlyph(slotglyphCode);
+    }
 }

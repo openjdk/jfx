@@ -1202,17 +1202,20 @@ void DocumentLoader::commitLoad(const SharedBuffer& data)
 
 ResourceError DocumentLoader::interruptedForPolicyChangeError() const
 {
-    if (!frameLoader())
-        return {};
+    if (!frameLoader()) {
+        ResourceError error;
+        error.setType(ResourceError::Type::Cancellation);
+        return error;
+    }
 
-    return frameLoader()->client().interruptedForPolicyChangeError(request());
+    auto error = frameLoader()->client().interruptedForPolicyChangeError(request());
+    error.setType(ResourceError::Type::Cancellation);
+    return error;
 }
 
 void DocumentLoader::stopLoadingForPolicyChange()
 {
-    ResourceError error = interruptedForPolicyChangeError();
-    error.setType(ResourceError::Type::Cancellation);
-    cancelMainResourceLoad(error);
+    cancelMainResourceLoad(interruptedForPolicyChangeError());
 }
 
 #if ENABLE(SERVICE_WORKER)

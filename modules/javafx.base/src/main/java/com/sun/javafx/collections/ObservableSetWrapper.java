@@ -203,8 +203,8 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      * @return an iterator over the elements in this set
      */
     @Override
-    public Iterator iterator() {
-        return new Iterator<E>() {
+    public Iterator<E> iterator() {
+        return new Iterator<>() {
 
             private final Iterator<E> backingIt = backingSet.iterator();
             private E lastElement;
