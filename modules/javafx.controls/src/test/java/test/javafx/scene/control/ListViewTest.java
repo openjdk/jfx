@@ -2519,7 +2519,7 @@ public class ListViewTest {
     }
 
     @Test
-    public void fixListViewCrash() {
+    public void fixListViewCrash_JDK_8303680() {
         final ListView<String> listView = new ListView<>();
 
         // add 100 entries
