@@ -608,7 +608,7 @@ public class TextFieldTest {
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
         assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
-    
+
     @Test public void stripInvalidCharacters() {
         txtField.setText("abcdefghijklm");
         char[] c = new char[]{0x7F, 0xA, 0x9, 0x00, 0x05, 0x10, 0x19};
