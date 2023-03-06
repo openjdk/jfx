@@ -247,12 +247,11 @@ ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWin
         return Exception { SecurityError };
 
 #if PLATFORM(JAVA)
-    std::string url_string =  urlString.convertToASCIILowercase().utf8().data();
+    std::string url_string =  completedURL.string().convertToASCIILowercase().utf8().data();
 
     /* check for url schema */
     if (!startsWith(url_string, "http:") && !startsWith(url_string,"https:") && !startsWith(url_string,"file:")) {
         if (!handleCustomProtocol(url_string)) {
-            throwException();
             return { };
         }
     }
@@ -293,17 +292,6 @@ void Location::reload(DOMWindow& activeWindow)
 
 ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& urlString)
 {
-#if PLATFORM(JAVA)
-    std::string url_string =  urlString.convertToASCIILowercase().utf8().data();
-
-    /* check for url schema */
-    if (!startsWith(url_string, "http:") && !startsWith(url_string,"https:") && !startsWith(url_string,"file:")) {
-        if (!handleCustomProtocol(url_string)) {
-            throwException();
-            return { };
-        }
-    }
-#endif
     auto* frame = this->frame();
     ASSERT(frame);
 
@@ -319,6 +307,17 @@ ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& f
     if (!incumbentWindow.document()->canNavigate(frame, completedURL))
         return Exception { SecurityError };
 
+#if PLATFORM(JAVA)
+    std::string url_string =  completedURL.string().convertToASCIILowercase().utf8().data();
+
+    /* check for url schema */
+    if (!startsWith(url_string, "http:") && !startsWith(url_string,"https:") && !startsWith(url_string,"file:")) {
+        if (!handleCustomProtocol(url_string)) {
+            return { };
+        }
+    }
+#endif
+
     ASSERT(frame->document());
     ASSERT(frame->document()->domWindow());
     frame->document()->domWindow()->setLocation(incumbentWindow, completedURL);
@@ -326,17 +325,13 @@ ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& f
 }
 
 #if PLATFORM(JAVA)
-
-void  Location::throwException()
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-    jclass jcls = env->FindClass("java/lang/Exception");
-    env->ThrowNew(jcls, "Error: custom 'url' schema not supported");
-}
-
 /* url schema also known as custom protocol handler not supported*/
 bool Location::handleCustomProtocol(const std::string& url)
 {
+    // check for internal value based protocol
+    if (startsWith(url, "about:blank"))
+        return true;
+
     return false;
 }
 #endif
