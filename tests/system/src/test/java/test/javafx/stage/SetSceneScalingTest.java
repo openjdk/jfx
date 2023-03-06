@@ -54,19 +54,18 @@ public class SetSceneScalingTest {
 
 
     public abstract class TestApp {
-        protected Stage stage = new Stage(StageStyle.UNDECORATED);
+        protected CountDownLatch shownLatch = new CountDownLatch(1);
+        protected Stage stage;
         protected Button button;
         protected boolean wasClicked = false;
 
-        protected void testButtonClick()
-        {
+        protected void testButtonClick() {
             robot.mouseMove(400, 400);
-            Util.sleep(2000);
-            robot.mouseClick(MouseButton.PRIMARY);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
         }
 
-        protected Scene createTestScene()
-        {
+        protected Scene createTestScene() {
             button = new Button("I should be centered");
             button.setOnAction((ActionEvent e) -> wasClicked = true);
 
@@ -76,20 +75,32 @@ public class SetSceneScalingTest {
         }
 
         protected abstract void test();
+        protected abstract void sceneShowSetup();
 
         public void runTest() {
-            wasClicked = false;
-            Util.runAndWait(() -> test());
-            Assert.assertTrue(wasClicked);
+            start();
+
+            Assert.assertNotNull(stage);
+            Assert.assertNotNull(button);
+
+            test();
         }
 
         public void start() {
-            stage.setX(200);
-            stage.setY(200);
-            stage.setWidth(400);
-            stage.setHeight(400);
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->
-                                    Platform.runLater(startupLatch::countDown));
+            Util.runAndWait(() -> {
+                stage = new Stage(StageStyle.UNDECORATED);
+                stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->
+                                        Platform.runLater(shownLatch::countDown));
+                stage.setX(200);
+                stage.setY(200);
+                stage.setWidth(400);
+                stage.setHeight(400);
+                stage.setAlwaysOnTop(true);
+
+                sceneShowSetup();
+            });
+
+            Util.waitForLatch(shownLatch, 5, "Stage not shown");
         }
 
         public void hideStage() {
@@ -100,12 +111,13 @@ public class SetSceneScalingTest {
     public class TestSetSceneShowApp extends TestApp {
         @Override
         protected void test() {
-            testButtonClick();
+            wasClicked = false;
+            Util.runAndWait(() -> testButtonClick());
+            Assert.assertTrue(wasClicked);
         }
 
         @Override
-        public void start() {
-            super.start();
+        public void sceneShowSetup() {
             stage.setScene(createTestScene());
             stage.show();
         }
@@ -114,12 +126,13 @@ public class SetSceneScalingTest {
     public class TestShowSetSceneApp extends TestApp {
         @Override
         protected void test() {
-            testButtonClick();
+            wasClicked = false;
+            Util.runAndWait(() -> testButtonClick());
+            Assert.assertTrue(wasClicked);
         }
 
         @Override
-        public void start() {
-            super.start();
+        public void sceneShowSetup() {
             stage.show();
             stage.setScene(createTestScene());
         }
@@ -128,15 +141,23 @@ public class SetSceneScalingTest {
     public class TestSecondSetSceneApp extends TestApp {
         @Override
         protected void test() {
-            testButtonClick();
+            // Test that everything is okay for start
+            wasClicked = false;
+            Util.runAndWait(() -> testButtonClick());
+            Assert.assertTrue(wasClicked);
 
-            stage.setScene(createTestScene());
-            testButtonClick();
+            // Recreate scene and set it
+            Util.runAndWait(() -> stage.setScene(createTestScene()));
+
+            // retest - if DPI scaling is mishandled the button should
+            // NOT be where it was (and thus, the test fails)
+            wasClicked = false;
+            Util.runAndWait(() -> testButtonClick());
+            Assert.assertTrue(wasClicked);
         }
 
         @Override
-        public void start() {
-            super.start();
+        public void sceneShowSetup() {
             stage.setScene(createTestScene());
             stage.show();
         }
@@ -166,34 +187,19 @@ public class SetSceneScalingTest {
 
     @Test
     public void testSetSceneAndShow() throws Exception {
-        Util.runAndWait(() -> {
-            app = new TestSetSceneShowApp();
-            app.start();
-        });
-        Util.waitForLatch(startupLatch, 5, "Stage failed to show");
-
+        app = new TestSetSceneShowApp();
         app.runTest();
     }
 
     @Test
     public void testShowAndSetScene() throws Exception {
-        Util.runAndWait(() -> {
-            app = new TestShowSetSceneApp();
-            app.start();
-        });
-        Util.waitForLatch(startupLatch, 5, "Stage failed to show");
-
+        app = new TestShowSetSceneApp();
         app.runTest();
     }
 
     @Test
     public void testSecondSetScene() throws Exception {
-        Util.runAndWait(() -> {
-            app = new TestSecondSetSceneApp();
-            app.start();
-        });
-        Util.waitForLatch(startupLatch, 5, "Stage failed to show");
-
+        app = new TestSecondSetSceneApp();
         app.runTest();
     }
 }
