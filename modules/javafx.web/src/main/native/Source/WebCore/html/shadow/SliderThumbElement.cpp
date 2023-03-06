@@ -603,8 +603,8 @@ std::optional<Style::ElementStyle> SliderThumbElement::resolveCustomStyle(const 
         break;
     default:
         break;
-	}
-	return elementStyle;		
+    }
+    return elementStyle;
 #else
     case MediaSliderPart:
     case MediaSliderThumbPart:
@@ -617,7 +617,7 @@ std::optional<Style::ElementStyle> SliderThumbElement::resolveCustomStyle(const 
     default:
         m_shadowPseudoId = ShadowPseudoIds::webkitSliderThumb();
     }
-#endif	
+#endif
 
     return std::nullopt;
 }
