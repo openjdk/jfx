@@ -295,6 +295,9 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
         return adjustMenuListStyle(style, element);
     case MenulistButtonPart:
         return adjustMenuListButtonStyle(style, element);
+#if PLATFORM(JAVA)
+    case MediaSliderPart:
+#endif
     case SliderHorizontalPart:
     case SliderVerticalPart:
         return adjustSliderTrackStyle(style, element);
@@ -524,6 +527,12 @@ bool RenderTheme::paint(const RenderBox& box, ControlStates& controlStates, cons
     case SliderThumbHorizontalPart:
     case SliderThumbVerticalPart:
         return paintSliderThumb(box, paintInfo, integralSnappedRect);
+#if PLATFORM(JAVA)
+    case MediaSliderPart:
+        return paintMediaSliderTrack(box, paintInfo, integralSnappedRect);
+    case MediaSliderThumbPart:
+        return paintMediaSliderThumb(box, paintInfo, integralSnappedRect);
+#endif
     case MenulistButtonPart:
     case TextFieldPart:
     case TextAreaPart:

@@ -870,6 +870,9 @@ button[type="menu"], button[type="menu"]:active {
 #endif
 
 input[type="range"] {
+    /*This is needed for PLATFORM(JAVA)*/
+    -webkit-appearance: slider-horizontal;
+    appearance: slider-horizontal;
     padding: initial;
     border: initial;
     margin: 2px;
@@ -893,7 +896,9 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 input[type="range"]::-webkit-slider-thumb, input[type="range"]::-webkit-media-slider-thumb {
-    appearance: auto;
+    /*This is needed for PLATFORM(JAVA)*/
+    -webkit-appearance: sliderthumb-horizontal;
+    appearance: sliderthumb-horizontal;
     box-sizing: border-box;
     display: block;
 }

@@ -238,6 +238,9 @@ public:
     virtual bool isRubyText() const { return false; }
 
     virtual bool isSlider() const { return false; }
+#if PLATFORM(JAVA)
+    virtual bool isSliderThumb() const { return false; }
+#endif
     virtual bool isTable() const { return false; }
     virtual bool isTableCell() const { return false; }
     virtual bool isRenderTableCol() const { return false; }

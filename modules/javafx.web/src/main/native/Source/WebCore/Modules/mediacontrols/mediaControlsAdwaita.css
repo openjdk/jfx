@@ -119,6 +119,8 @@ video::-webkit-media-controls-panel div.mute-box.hidden {
 
 audio::-webkit-media-controls-mute-button,
 video::-webkit-media-controls-mute-button {
+    -webkit-appearance:media-mute-button;
+    appearance:media-mute-button;
     display: flex;
     flex: none;
     border: none;
@@ -155,6 +157,8 @@ video::-webkit-media-controls-mute-button.muted {
 
 audio::-webkit-media-controls-play-button,
 video::-webkit-media-controls-play-button {
+    -webkit-appearance:media-play-button;
+    appearance:media-play-button;
     display: flex;
     flex: none;
     border: none;
