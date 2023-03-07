@@ -140,8 +140,8 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
         Assert.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
 
         double rowHeight = ContextMenuContentShim.getContextMenuRowHeight(popup);
-        double screenHeight = Math.ceil(Screen.getPrimary().getVisualBounds().getHeight());
-        scrollChoiceBox((int) (screenHeight / rowHeight));
+        double screenHeight = Screen.getPrimary().getVisualBounds().getHeight();
+        scrollChoiceBox((int) Math.ceil(screenHeight / rowHeight));
 
         Util.waitForLatch(choiceBoxHiddenLatch, 5, "Timeout waiting for choicebox to be hidden.");
         Assert.assertTrue(ContextMenuContentShim.isContextMenuUpArrowVisible(popup));
