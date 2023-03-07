@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.javafx.stage;
+package test.robot.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
 
