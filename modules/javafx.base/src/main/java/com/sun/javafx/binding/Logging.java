@@ -29,6 +29,8 @@ import com.sun.javafx.logging.PlatformLogger;
 
 public class Logging {
 
+    public static boolean keepException = false;
+
     public static ErrorLogger getLogger() {
         return ErrorLogger.INSTANCE;
     }
@@ -50,7 +52,11 @@ public class Logging {
 
             public ErrorLogRecord(Level level, Throwable thrown) {
                 this.level = level;
-                this.thrown = thrown;
+                if (Logging.keepException) {
+                    this.thrown = thrown;
+                } else {
+                    this.thrown = null;
+                }
             }
 
             public Throwable getThrown() {

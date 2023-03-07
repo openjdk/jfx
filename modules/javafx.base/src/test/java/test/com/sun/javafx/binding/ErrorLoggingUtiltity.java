@@ -38,6 +38,7 @@ public class ErrorLoggingUtiltity {
     private static ErrorLogger errorLogger = Logging.getLogger();
 
     public static void reset() {
+        Logging.keepException = true;
         errorLogger.setErrorLogRecord(null);
     }
 
@@ -60,6 +61,7 @@ public class ErrorLoggingUtiltity {
     }
 
     public static void check(Level expectedLevel, Class<?> expectedException) {
+        assertTrue(Logging.keepException);
         ErrorLogRecord errorLogRecord = errorLogger.getErrorLogRecord();
         assertNotNull(errorLogRecord);
         assertEquals(expectedLevel, errorLogRecord.getLevel());
