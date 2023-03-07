@@ -59,7 +59,7 @@ import test.util.Util;
  *
  * There is 1 test in this file.
  * Steps for testChoicBoxScrollOnCollectionChange()
- * 1. Create a ChoiceBox and add 50 items to it.
+ * 1. Create a ChoiceBox and add 150 items to it.
  * 2. Display the ChoiceBox and scroll down.
  * 3. Verify if both up and down scroll arrows are displayed.
  * 4. Replace the ChoiceBox items with 2 items.
@@ -140,7 +140,7 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
         Assert.assertTrue(ContextMenuContentShim.isContextMenuDownArrowVisible(popup));
 
         double rowHeight = ContextMenuContentShim.getContextMenuRowHeight(popup);
-        double screenHeight = Screen.getPrimary().getBounds().getHeight();
+        double screenHeight = Math.ceil(Screen.getPrimary().getVisualBounds().getHeight());
         scrollChoiceBox((int) (screenHeight / rowHeight));
 
         Util.waitForLatch(choiceBoxHiddenLatch, 5, "Timeout waiting for choicebox to be hidden.");
