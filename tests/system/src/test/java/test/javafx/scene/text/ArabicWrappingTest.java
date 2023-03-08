@@ -92,7 +92,15 @@ public class ArabicWrappingTest extends Application {
     static volatile boolean testDone = false;
     static volatile boolean testPassed;
 
-    @Test
+    /*
+     * Junit will create an extra instance of the Application class
+     * but there's no default constructor for the class that does
+     * anything, and this test method just checks static variables
+     * which are updated by the instance explicitly created in
+     * the @BeforeClass annotated method.
+     * In other words, this is fine here.
+     */
+    @Test(timeout=120000)
     public void testWrapping() {
 
        while (!ArabicWrappingTest.testDone) {
