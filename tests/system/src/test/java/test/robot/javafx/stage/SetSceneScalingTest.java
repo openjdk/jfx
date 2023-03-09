@@ -25,6 +25,7 @@
 package test.robot.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -55,9 +56,9 @@ public class SetSceneScalingTest {
 
     public abstract class TestApp {
         protected CountDownLatch shownLatch = new CountDownLatch(1);
+        protected CountDownLatch buttonLatch;
         protected Stage stage;
         protected Button button;
-        protected boolean wasClicked = false;
 
         protected void testButtonClick() {
             robot.mouseMove(400, 400);
@@ -66,18 +67,20 @@ public class SetSceneScalingTest {
         }
 
         protected Scene createTestScene() {
+            buttonLatch = new CountDownLatch(1);
+
             button = new Button("I should be centered");
-            button.setOnAction((ActionEvent e) -> wasClicked = true);
+            button.setOnAction((ActionEvent e) -> buttonLatch.countDown());
 
             VBox box = new VBox(button);
             box.setAlignment(Pos.CENTER);
             return new Scene(box);
         }
 
-        protected abstract void test();
+        protected abstract void test() throws Exception;
         protected abstract void sceneShowSetup();
 
-        public void runTest() {
+        public void runTest() throws Exception {
             start();
 
             Assert.assertNotNull(stage);
@@ -110,10 +113,9 @@ public class SetSceneScalingTest {
 
     public class TestSetSceneShowApp extends TestApp {
         @Override
-        protected void test() {
-            wasClicked = false;
-            Util.runAndWait(() -> testButtonClick());
-            Assert.assertTrue(wasClicked);
+        protected void test() throws Exception {
+            Platform.runLater(() -> testButtonClick());
+            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
         }
 
         @Override
@@ -125,10 +127,9 @@ public class SetSceneScalingTest {
 
     public class TestShowSetSceneApp extends TestApp {
         @Override
-        protected void test() {
-            wasClicked = false;
-            Util.runAndWait(() -> testButtonClick());
-            Assert.assertTrue(wasClicked);
+        protected void test() throws Exception {
+            Platform.runLater(() -> testButtonClick());
+            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
         }
 
         @Override
@@ -140,20 +141,18 @@ public class SetSceneScalingTest {
 
     public class TestSecondSetSceneApp extends TestApp {
         @Override
-        protected void test() {
+        protected void test() throws Exception {
             // Test that everything is okay for start
-            wasClicked = false;
-            Util.runAndWait(() -> testButtonClick());
-            Assert.assertTrue(wasClicked);
+            Platform.runLater(() -> testButtonClick());
+            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
 
             // Recreate scene and set it
             Util.runAndWait(() -> stage.setScene(createTestScene()));
 
             // retest - if DPI scaling is mishandled the button should
             // NOT be where it was (and thus, the test fails)
-            wasClicked = false;
-            Util.runAndWait(() -> testButtonClick());
-            Assert.assertTrue(wasClicked);
+            Platform.runLater(() -> testButtonClick());
+            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
         }
 
         @Override
