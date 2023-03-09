@@ -203,6 +203,6 @@ rm -fr %{buildroot}
 %endif # with_python3
 
 %changelog
-* Wed Mar  8 2023 Daniel Veillard <veillard@redhat.com>
+* Thu Mar  9 2023 Daniel Veillard <veillard@redhat.com>
 - upstream release 2.10.3
 
