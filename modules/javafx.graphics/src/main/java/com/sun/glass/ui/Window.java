@@ -371,7 +371,7 @@ public abstract class Window {
         if (view != null && _setView(this.ptr, view)) {
             this.view = view;
             this.view.setWindow(this);
-            // JDK-8299968: View size update (especially notifyResize event) have to happen
+            // View size update (especially notifyResize event) has to happen
             // after we call view.setWindow(this); otherwise with UI scaling different than
             // 100% some platforms might display scenes wrong after Window was shown.
             _updateViewSize(this.ptr);
