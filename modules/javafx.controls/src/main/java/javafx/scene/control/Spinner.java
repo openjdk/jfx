@@ -541,6 +541,10 @@ public class Spinner<T> extends Control {
                         // this binding is what ensures the Spinner.valueProperty()
                         // properly represents the value in the value factory
                         value.bind(newFactory.valueProperty());
+                        // Update the spinner editor when converter is changed.
+                        newFactory.converterProperty().addListener((o, oldValue, newValue) -> {
+                            setText(valueProperty().getValue());
+                        });
                     }
                 }
             };
