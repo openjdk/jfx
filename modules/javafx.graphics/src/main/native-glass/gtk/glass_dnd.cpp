@@ -809,6 +809,9 @@ static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root
     GdkDragProtocol prot;
     GdkWindow *ignore = NULL;
 
+    ctx->last_x = x_root;
+    ctx->last_y = y_root;
+
     if (ctx->drag_view) {
         ctx->drag_view->move(x_root, y_root);
         ignore = ctx->drag_view->get_window();
@@ -856,8 +859,7 @@ static void process_dnd_source_key_press_release(DragSourceContext *ctx, GdkEven
             state ^= new_mod;
         }
 
-        glass_gdk_master_pointer_get_position(&x, &y);
-        process_drag_motion(ctx, x, y, state);
+        process_drag_motion(ctx, ctx->last_x, ctx->last_y, state);
     }
 }
 
@@ -1207,7 +1209,14 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     }
 
     int mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL | GDK_WA_TYPE_HINT;
-    glass_gdk_master_pointer_get_position(&attrs.x, &attrs.y);
+
+#ifdef GLASS_GTK3
+    gdk_device_get_position(gdk_device_manager_get_client_pointer(
+                                gdk_display_get_device_manager(gdk_display_get_default())),
+                                NULL, &attrs.x, &attrs.y);
+#else
+       gdk_display_get_pointer(gdk_display_get_default(), NULL, &attrs.x, &attrs.y, NULL);
+#endif
 
     attrs.x -= offset_x;
     attrs.y -= offset_y;

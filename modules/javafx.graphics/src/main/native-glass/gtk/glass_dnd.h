@@ -78,6 +78,8 @@ struct DragSourceContext {
     jobject data;
     jint performed_action;
     gboolean device_released;
+    int last_x;
+    int last_y;
 
     ~DragSourceContext() {
         if (drag_view) {
@@ -88,6 +90,8 @@ struct DragSourceContext {
             mainEnv->DeleteGlobalRef(data);
         }
     };
+
+    DragSourceContext() : last_x(0), last_y(0) {}
 };
 
 #endif        /* GLASS_DND_H */

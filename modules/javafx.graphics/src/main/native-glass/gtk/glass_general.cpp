@@ -552,17 +552,6 @@ glass_gdk_mouse_devices_ungrab() {
     gdk_pointer_ungrab(GDK_CURRENT_TIME);
 }
 
-void
-glass_gdk_master_pointer_get_position(gint *x, gint *y) {
-#ifdef GLASS_GTK3
-        gdk_device_get_position(gdk_device_manager_get_client_pointer(
-                                    gdk_display_get_device_manager(
-                                        gdk_display_get_default())), NULL, x, y);
-#else
-        gdk_display_get_pointer(gdk_display_get_default(), NULL, x, y, NULL);
-#endif
-}
-
 gboolean
 glass_gdk_device_is_grabbed(GdkDevice *device) {
 #ifdef GLASS_GTK3
