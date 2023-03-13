@@ -1324,7 +1324,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1updateViewSize
             pWindow->NotifyViewSize(hWnd);
         }
     }
-    GlassView * view;
     LEAVE_MAIN_THREAD_WITH_hWnd;
 
     PERFORM();
