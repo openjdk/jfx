@@ -60,8 +60,12 @@ public class SetSceneScalingTest {
         protected Stage stage;
         protected Button button;
 
+        private final int WIDTH = 400;
+        private final int HEIGHT = 400;
+
         protected void testButtonClick() {
-            robot.mouseMove(400, 400);
+            robot.mouseMove((int)(stage.getX() + stage.getScene().getX()) + (WIDTH / 2),
+                            (int)(stage.getY() + stage.getScene().getY()) + (HEIGHT / 2));
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
         }
@@ -92,12 +96,9 @@ public class SetSceneScalingTest {
         public void start() {
             Util.runAndWait(() -> {
                 stage = new Stage(StageStyle.UNDECORATED);
-                stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->
-                                        Platform.runLater(shownLatch::countDown));
-                stage.setX(200);
-                stage.setY(200);
-                stage.setWidth(400);
-                stage.setHeight(400);
+                stage.setOnShown(e -> Platform.runLater(() -> shownLatch.countDown()));
+                stage.setWidth(WIDTH);
+                stage.setHeight(HEIGHT);
                 stage.setAlwaysOnTop(true);
 
                 sceneShowSetup();
