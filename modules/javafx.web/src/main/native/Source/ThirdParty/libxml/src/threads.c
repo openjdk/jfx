@@ -495,7 +495,7 @@ __xmlGlobalInitMutexUnlock(void)
     pthread_mutex_unlock(&global_init_lock);
 #elif defined HAVE_WIN32_THREADS
     if (global_init_lock != NULL) {
-	LeaveCriticalSection(global_init_lock);
+        LeaveCriticalSection(global_init_lock);
     }
 #elif defined HAVE_BEOS_THREADS
     release_sem(global_init_lock);
@@ -522,9 +522,9 @@ __xmlGlobalInitMutexDestroy(void)
 }
 
 /************************************************************************
- *									*
- *			Per thread global state handling		*
- *									*
+ *                                                                      *
+ *                      Per thread global state handling                *
+ *                                                                      *
  ************************************************************************/
 
 #ifdef LIBXML_THREAD_ENABLED
@@ -565,8 +565,8 @@ xmlNewGlobalState(void)
 
     gs = malloc(sizeof(xmlGlobalState));
     if (gs == NULL) {
-	xmlGenericError(xmlGenericErrorContext,
-			"xmlGetGlobalState: out of memory\n");
+        xmlGenericError(xmlGenericErrorContext,
+                        "xmlGetGlobalState: out of memory\n");
         return (NULL);
     }
 
@@ -650,8 +650,8 @@ xmlGetGlobalState(void)
     if ((globalval = (xmlGlobalState *)
          pthread_getspecific(globalkey)) == NULL) {
         xmlGlobalState *tsd = xmlNewGlobalState();
-	if (tsd == NULL)
-	    return(NULL);
+        if (tsd == NULL)
+            return(NULL);
 
         pthread_setspecific(globalkey, tsd);
         return (tsd);
@@ -679,15 +679,15 @@ xmlGetGlobalState(void)
         xmlGlobalState *tsd = xmlNewGlobalState();
 
         if (tsd == NULL)
-	    return(NULL);
+            return(NULL);
         p = (xmlGlobalStateCleanupHelperParams *)
             malloc(sizeof(xmlGlobalStateCleanupHelperParams));
-	if (p == NULL) {
+        if (p == NULL) {
             xmlGenericError(xmlGenericErrorContext,
                             "xmlGetGlobalState: out of memory\n");
             xmlFreeGlobalState(tsd);
-	    return(NULL);
-	}
+            return(NULL);
+        }
         p->memory = tsd;
 #if defined(LIBXML_STATIC) && !defined(LIBXML_STATIC_FOR_DLL)
         DuplicateHandle(GetCurrentProcess(), GetCurrentThread(),
@@ -718,8 +718,8 @@ xmlGetGlobalState(void)
 
     if ((globalval = (xmlGlobalState *) tls_get(globalkey)) == NULL) {
         xmlGlobalState *tsd = xmlNewGlobalState();
-	if (tsd == NULL)
-	    return (NULL);
+        if (tsd == NULL)
+            return (NULL);
 
         tls_set(globalkey, tsd);
         on_exit_thread(xmlGlobalStateCleanup, NULL);
@@ -732,9 +732,9 @@ xmlGetGlobalState(void)
 }
 
 /************************************************************************
- *									*
- *			Library wide thread interfaces			*
- *									*
+ *                                                                      *
+ *                      Library wide thread interfaces                  *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -964,7 +964,7 @@ xmlOnceInit(void)
             globalkey = TlsAlloc();
 #endif
             mainthread = GetCurrentThreadId();
-	    __xmlInitializeDict();
+            __xmlInitializeDict();
             run_once.done = 1;
         } else {
             /* Another thread is working; give up our slice and
@@ -978,7 +978,7 @@ xmlOnceInit(void)
         globalkey = tls_allocate();
         tls_set(globalkey, NULL);
         mainthread = find_thread(NULL);
-	__xmlInitializeDict();
+        __xmlInitializeDict();
     } else
         atomic_add(&run_once_init, -1);
 #endif
