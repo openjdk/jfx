@@ -36,7 +36,6 @@ Issue key | Summary | Subcomponent
 [JDK-8290530](https://bugs.openjdk.org/browse/JDK-8290530) | Bump minimum JDK version for JavaFX to JDK 17 | build
 [JDK-8294809](https://bugs.openjdk.org/browse/JDK-8294809) | ListenerHelper for managing and disconnecting listeners | controls
 [JDK-8290844](https://bugs.openjdk.org/browse/JDK-8290844) | Add Skin.install() method | controls
-[JDK-8298728](https://bugs.openjdk.org/browse/JDK-8298728) | Cells in VirtualFlow jump after resizing | controls
 [JDK-8287604](https://bugs.openjdk.org/browse/JDK-8287604) | Update MarlinFX to 0.9.4.6 | graphics
 [JDK-8287822](https://bugs.openjdk.org/browse/JDK-8287822) | [macos] Remove support of duplicated formats from macOS | media
 [JDK-8293119](https://bugs.openjdk.org/browse/JDK-8293119) | Additional constrained resize policies for Tree/TableView | other
@@ -77,6 +76,7 @@ Issue key | Summary | Subcomponent
 [JDK-8218826](https://bugs.openjdk.org/browse/JDK-8218826) | TableRowSkinBase: horizontal layout broken if row has padding | controls
 [JDK-8291625](https://bugs.openjdk.org/browse/JDK-8291625) | DialogPane without header nor headerText nor graphic node adds padding to the left of the content pane | controls
 [JDK-8291908](https://bugs.openjdk.org/browse/JDK-8291908) | VirtualFlow creates unneeded empty cells | controls
+[JDK-8298728](https://bugs.openjdk.org/browse/JDK-8298728) | Cells in VirtualFlow jump after resizing | controls
 [JDK-8279514](https://bugs.openjdk.org/browse/JDK-8279514) | NPE on clearing value of IntegerSpinnerValueFactory | controls
 [JDK-8293171](https://bugs.openjdk.org/browse/JDK-8293171) | Minor typographical errors in JavaDoc javafx.scene.control.ScrollPane.java | controls
 [JDK-8279640](https://bugs.openjdk.org/browse/JDK-8279640) | ListView with null SelectionModel/FocusModel throws NPE | controls
