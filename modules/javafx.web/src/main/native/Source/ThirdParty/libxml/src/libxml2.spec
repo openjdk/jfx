@@ -2,11 +2,11 @@
 
 Summary: Library providing XML and HTML support
 Name: libxml2
-Version: 2.9.14
+Version: 2.10.3
 Release: 1%{?dist}%{?extra_release}
 License: MIT
 Group: Development/Libraries
-Source: https://download.gnome.org/sources/libxml2/2.9/libxml2-%{version}.tar.xz
+Source: https://download.gnome.org/sources/libxml2/2.10/libxml2-%{version}.tar.xz
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 BuildRequires: python-devel
 %if 0%{?with_python3}
@@ -99,7 +99,7 @@ at parse time or later once the document has been modified.
 
 mkdir py3doc
 cp doc/*.py py3doc
-sed -i 's|#!/usr/bin/python |#!%{__python3} |' py3doc/*.py
+sed -i 's|#!/usr/bin/env python|#!/usr/bin/env %{__python3}|' py3doc/*.py
 
 %build
 %configure
@@ -144,7 +144,6 @@ rm -fr %{buildroot}
 %doc NEWS README.md Copyright TODO
 %doc %{_mandir}/man1/xmllint.1*
 %doc %{_mandir}/man1/xmlcatalog.1*
-%doc %{_mandir}/man3/libxml.3*
 
 %{_libdir}/lib*.so.*
 %{_bindir}/xmllint
@@ -204,6 +203,6 @@ rm -fr %{buildroot}
 %endif # with_python3
 
 %changelog
-* Fri May 13 2022 Daniel Veillard <veillard@redhat.com>
-- upstream release 2.9.14
+* Thu Mar  9 2023 Daniel Veillard <veillard@redhat.com>
+- upstream release 2.10.3
 
