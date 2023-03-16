@@ -1526,15 +1526,11 @@ public class SpinnerTest {
         assertNull(localTimeSpinner.getValue());
     }
 
-    @Test public void testSpinnerEditorUpdateOnConverterChange() {
+    @Test public void testDoubleSpinnerEditorUpdateOnConverterChange() {
         dblSpinner = new Spinner<>(0.0, 1.0, 0.5, 0.01);
         dblSpinner.setEditable(true);
 
-        intSpinner = new Spinner<>(0, 100, 50, 1);
-        intSpinner.setEditable(true);
-
         assertEquals("0.5", dblSpinner.getEditor().getText());
-        assertEquals("50", intSpinner.getEditor().getText());
 
         dblSpinner.getValueFactory().setConverter(new StringConverter<Double>() {
             private final DecimalFormat df = new DecimalFormat("#.##%");
@@ -1557,6 +1553,15 @@ public class SpinnerTest {
             }
         });
 
+        assertEquals("50%", dblSpinner.getEditor().getText());
+    }
+
+    @Test public void testIntegerSpinnerEditorUpdateOnConverterChange() {
+        intSpinner = new Spinner<>(0, 100, 50, 1);
+        intSpinner.setEditable(true);
+
+        assertEquals("50", intSpinner.getEditor().getText());
+
         intSpinner.getValueFactory().setConverter(new StringConverter<Integer>() {
             @Override
             public String toString(Integer value) {
@@ -1574,7 +1579,6 @@ public class SpinnerTest {
             }
         });
 
-        assertEquals("50%", dblSpinner.getEditor().getText());
         assertEquals("50%", intSpinner.getEditor().getText());
     }
 }
