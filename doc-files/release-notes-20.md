@@ -17,6 +17,16 @@ the Java launcher will exit with an error message indicating that the
 
 See [JDK-8290530](https://bugs.openjdk.org/browse/JDK-8290530) for more information.
 
+### FXML JavaScript Engine Disabled by Default
+
+The “JavaScript script engine” for FXML is now disabled by default. Any `.fxml` file that has a "javascript" Processing Instruction (PI) will no longer load by default, and an exception will be thrown.
+
+If the JDK has a JavaScript script engine, it can be enabled by setting the system property:
+
+```
+-Djavafx.allowjs=true
+```
+
 ## List of Enhancements
 
 Issue key | Summary | Subcomponent
