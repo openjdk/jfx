@@ -2130,7 +2130,8 @@ public class LabelSkinTest {
 
     /********************************************************************************
      *                                                                              *
-     *                             Helper classes                                   *
+     * Custom skin class implemntation to fetch default skin field values and       *
+     * monitor change in label properties.                                          *
      *                                                                              *
      *******************************************************************************/
 
