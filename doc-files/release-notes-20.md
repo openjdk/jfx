@@ -89,8 +89,6 @@ Issue key | Summary | Subcomponent
 [JDK-8296409](https://bugs.openjdk.org/browse/JDK-8296409) | Multiple copies of accelerator change listeners are added to MenuItems, but only 1 is removed | controls
 [JDK-8296413](https://bugs.openjdk.org/browse/JDK-8296413) | Tree/TableView with null focus model throws NPE in queryAccessibleAttribute() | controls
 [JDK-8298728](https://bugs.openjdk.org/browse/JDK-8298728) | Cells in VirtualFlow jump after resizing | controls
-[JDK-8301797](https://bugs.openjdk.org/browse/JDK-8301797) | Pagination control has the wrong size | controls
-[JDK-8301832](https://bugs.openjdk.org/browse/JDK-8301832) | InputMethodEvents are not enabled for text input controls | controls
 [JDK-8181084](https://bugs.openjdk.org/browse/JDK-8181084) | JavaFX show big icons in system menu on macOS with Retina display | graphics
 [JDK-8231864](https://bugs.openjdk.org/browse/JDK-8231864) | JavaFX Labels in Tab's VBox is not displayed until it is clicked  | graphics
 [JDK-8238968](https://bugs.openjdk.org/browse/JDK-8238968) | Inconsisent formatting of Rectangle2D toString method | graphics
