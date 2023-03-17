@@ -27,7 +27,6 @@ package javafx.animation;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
@@ -81,7 +80,7 @@ import javafx.util.Duration;
  *
  * @since JavaFX 2.0
  */
-public final class FadeTransition extends Transition {
+public final class FadeTransition extends TimedTransition {
     private static final double EPSILON = 1e-12;
 
     private double start;
@@ -116,68 +115,6 @@ public final class FadeTransition extends Transition {
     }
 
     private Node cachedNode;
-
-    /**
-     * The duration of this {@code FadeTransition}.
-     * <p>
-     * It is not possible to change the {@code duration} of a running
-     * {@code FadeTransition}. If the value of {@code duration} is changed for a
-     * running {@code FadeTransition}, the animation has to be stopped and
-     * started again to pick up the new value.
-     * <p>
-     * Note: While the unit of {@code duration} is a millisecond, the
-     * granularity depends on the underlying operating system and will in
-     * general be larger. For example animations on desktop systems usually run
-     * with a maximum of 60fps which gives a granularity of ~17 ms.
-     *
-     * Setting duration to value lower than {@link Duration#ZERO} will result
-     * in {@link IllegalArgumentException}.
-     *
-     * @defaultValue 400ms
-     */
-    private ObjectProperty<Duration> duration;
-    private static final Duration DEFAULT_DURATION = Duration.millis(400);
-
-    public final void setDuration(Duration value) {
-        if ((duration != null) || (!DEFAULT_DURATION.equals(value))) {
-            durationProperty().set(value);
-        }
-    }
-
-    public final Duration getDuration() {
-        return (duration == null)? DEFAULT_DURATION : duration.get();
-    }
-
-    public final ObjectProperty<Duration> durationProperty() {
-        if (duration == null) {
-            duration = new ObjectPropertyBase<Duration>(DEFAULT_DURATION) {
-
-                @Override
-                public void invalidated() {
-                    try {
-                        setCycleDuration(getDuration());
-                    } catch (IllegalArgumentException e) {
-                        if (isBound()) {
-                            unbind();
-                        }
-                        set(getCycleDuration());
-                        throw e;
-                    }
-                }
-
-                @Override
-                public Object getBean() {
-                    return FadeTransition.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "duration";
-                }
-            };
-        }
-        return duration;
-    }
 
     /**
      * Specifies the start opacity value for this {@code FadeTransition}.
@@ -296,7 +233,6 @@ public final class FadeTransition extends Transition {
      * The constructor of {@code FadeTransition}
      */
     public FadeTransition() {
-        this(DEFAULT_DURATION, null);
     }
 
     /**
