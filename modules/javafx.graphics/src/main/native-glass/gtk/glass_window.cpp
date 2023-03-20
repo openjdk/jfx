@@ -137,11 +137,11 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
         ungrab_focus();
     }
 
-    if (xim.enabled && xim.ic) {
+    if (im_ctx.enabled && im_ctx.ctx) {
         if (event->in) {
-            XSetICFocus(xim.ic);
+            gtk_im_context_focus_in(im_ctx.ctx);
         } else {
-            XUnsetICFocus(xim.ic);
+            gtk_im_context_focus_out(im_ctx.ctx);
         }
     }
 
@@ -687,14 +687,14 @@ void WindowContextBase::set_background(float r, float g, float b) {
 }
 
 WindowContextBase::~WindowContextBase() {
-    if (xim.ic) {
-        XDestroyIC(xim.ic);
-        xim.ic = NULL;
-    }
-    if (xim.im) {
-        XCloseIM(xim.im);
-        xim.im = NULL;
-    }
+//    if (xim.ic) {
+//        XDestroyIC(xim.ic);
+//        xim.ic = NULL;
+//    }
+//    if (xim.im) {
+//        XCloseIM(xim.im);
+//        xim.im = NULL;
+//    }
 
     gtk_widget_destroy(gtk_widget);
 }

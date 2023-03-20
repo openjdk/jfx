@@ -173,11 +173,10 @@ public:
 
 class WindowContextBase: public WindowContext {
 
-    struct _XIM{
-        XIM im;
-        XIC ic;
+    struct ImContext {
+        GtkIMContext *ctx;
         bool enabled;
-    } xim;
+    } im_ctx;
 
     size_t events_processing_cnt;
     bool can_be_deleted;

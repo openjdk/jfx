@@ -62,9 +62,6 @@ jmethodID jViewNotifyDragDrop;
 jmethodID jViewNotifyDragLeave;
 jmethodID jViewNotifyScroll;
 jmethodID jViewNotifyInputMethod;
-jmethodID jViewNotifyInputMethodDraw;
-jmethodID jViewNotifyInputMethodCaret;
-jmethodID jViewNotifyPreeditMode;
 jmethodID jViewNotifyMenu;
 jfieldID  jViewPtr;
 
@@ -218,12 +215,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodDraw = env->GetMethodID(clazz, "notifyInputMethodDraw", "(Ljava/lang/String;III[B)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodCaret = env->GetMethodID(clazz, "notifyInputMethodCaret", "(III)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyPreeditMode = env->GetMethodID(clazz, "notifyPreeditMode", "(Z)V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Window");
