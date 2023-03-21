@@ -135,7 +135,21 @@ class CTFontFile extends PrismFontFile {
         return path;
     }
 
-    @Override protected int[] createGlyphBoundingBox(int gc) {
+   @Override protected float getAdvanceFromPlatform(int glyphCode, float ptSize) {
+      CTFontStrike strike =
+          (CTFontStrike)getStrike(ptSize, BaseTransform.IDENTITY_TRANSFORM);
+      long fontRef = strike.getFontRef();
+      int orientation = OS.kCTFontOrientationDefault;
+      CGSize size = new CGSize();
+      return (float)OS.CTFontGetAdvancesForGlyphs(fontRef, orientation, (short)glyphCode, size);
+   }
+
+   @Override protected int[] createGlyphBoundingBox(int gc) {
+        /*
+         * This is being done at size 12 so that the font can cache
+         * bounds and scale to the required point size. But if the
+         * bounds do not scale linearly this will fail badly
+         */
         float size = 12;
         CTFontStrike strike = (CTFontStrike)getStrike(size,
                                                       BaseTransform.IDENTITY_TRANSFORM);
@@ -148,13 +162,25 @@ class CTFontFile extends PrismFontFile {
          * The fix is to use the 'loca' and the 'glyf' tables to determine
          * the glyph bounding box (same as T2K). This implementation
          * uses native code to read these tables since they can be large.
+         * However for color (emoji) glyphs this returns the wrong bounds,
+         * so use CTFontGetBoundingRectsForGlyphs anyway.
          * In case it fails, or the font doesn't have a glyph table
          * (CFF fonts), then the bounds of the glyph outline is used instead.
          */
         if (!isCFF()) {
-            short format = getIndexToLocFormat();
-            if (OS.CTFontGetBoundingRectForGlyphUsingTables(fontRef, (short)gc, format, bb)) {
+            if (isColorGlyph(gc)) {
+                CGRect rect = OS.CTFontGetBoundingRectForGlyphs(fontRef, (short)gc);
+                float scale = getUnitsPerEm() / size;
+                bb[0] = (int)(Math.round(rect.origin.x * scale));
+                bb[1] = (int)(Math.round(rect.origin.y * scale));
+                bb[2] = (int)(Math.round((rect.origin.x + rect.size.width) * scale));
+                bb[3] = (int)(Math.round((rect.origin.y + rect.size.height) * scale));
                 return bb;
+            } else {
+                short format = getIndexToLocFormat();
+                if (OS.CTFontGetBoundingRectForGlyphUsingTables(fontRef, (short)gc, format, bb)) {
+                    return bb;
+                }
             }
         }
         /* Note: not using tx here as the bounds need to be y up */

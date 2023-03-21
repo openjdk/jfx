@@ -125,7 +125,7 @@ bool TextFieldInputType::isEmptyValue() const
 bool TextFieldInputType::valueMissing(const String& value) const
 {
     ASSERT(element());
-    return !element()->isDisabledOrReadOnly() && element()->isRequired() && value.isEmpty();
+    return element()->isMutable() && element()->isRequired() && value.isEmpty();
 }
 
 void TextFieldInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
@@ -213,7 +213,7 @@ auto TextFieldInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallB
 void TextFieldInputType::handleKeydownEventForSpinButton(KeyboardEvent& event)
 {
     ASSERT(element());
-    if (element()->isDisabledOrReadOnly())
+    if (!element()->isMutable())
         return;
 #if ENABLE(DATALIST_ELEMENT)
     if (m_suggestionPicker)
@@ -407,11 +407,6 @@ HTMLElement* TextFieldInputType::innerSpinButtonElement() const
     return m_innerSpinButton.get();
 }
 
-HTMLElement* TextFieldInputType::capsLockIndicatorElement() const
-{
-    return m_capsLockIndicator.get();
-}
-
 HTMLElement* TextFieldInputType::autoFillButtonElement() const
 {
     return m_autoFillButton.get();
@@ -487,6 +482,8 @@ void TextFieldInputType::createDataListDropdownIndicator()
     ASSERT(!m_dataListDropdownIndicator);
     if (!m_container)
         createContainer();
+    if (!element())
+        return;
 
     ScriptDisallowedScope::EventAllowedScope allowedScope(*m_container);
     m_dataListDropdownIndicator = DataListButtonElement::create(element()->document(), *this);
@@ -766,7 +763,7 @@ void TextFieldInputType::focusAndSelectSpinButtonOwner()
 bool TextFieldInputType::shouldSpinButtonRespondToMouseEvents() const
 {
     ASSERT(element());
-    return !element()->isDisabledOrReadOnly();
+    return element()->isMutable();
 }
 
 bool TextFieldInputType::shouldSpinButtonRespondToWheelEvents() const
@@ -781,7 +778,7 @@ bool TextFieldInputType::shouldDrawCapsLockIndicator() const
     if (element()->document().focusedElement() != element())
         return false;
 
-    if (element()->isDisabledOrReadOnly())
+    if (!element()->isMutable())
         return false;
 
     if (element()->hasAutoFillStrongPasswordButton())
@@ -809,7 +806,7 @@ void TextFieldInputType::capsLockStateMayHaveChanged()
 bool TextFieldInputType::shouldDrawAutoFillButton() const
 {
     ASSERT(element());
-    return !element()->isDisabledOrReadOnly() && element()->autoFillButtonType() != AutoFillButtonType::None;
+    return element()->isMutable() && element()->autoFillButtonType() != AutoFillButtonType::None;
 }
 
 void TextFieldInputType::autoFillButtonElementWasClicked()
@@ -900,7 +897,8 @@ void TextFieldInputType::dataListMayHaveChanged()
 
     if (!m_dataListDropdownIndicator)
         createDataListDropdownIndicator();
-
+    if (!element())
+        return;
     if (!shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited())
         m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, element()->list() ? CSSValueBlock : CSSValueNone, true);
 }

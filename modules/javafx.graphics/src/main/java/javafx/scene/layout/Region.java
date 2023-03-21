@@ -1454,9 +1454,9 @@ public class Region extends Parent {
     }
 
     /**
-     * Defines whether the shape is centered within the Region's width or height.
-     * {@code true} means the shape centered within the Region's width and height,
-     * {@code false} means the shape is positioned at its source position.
+     * Defines whether the shape is centered within the {@code Region}'s width and height.
+     * When {@code true}, the shape is centered within the {@code Region}'s width and height,
+     * otherwise the shape is positioned at its source position.
      *
      * @defaultValue true
      * @since JavaFX 8.0

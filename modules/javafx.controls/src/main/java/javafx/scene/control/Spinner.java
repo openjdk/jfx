@@ -34,6 +34,8 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
@@ -513,7 +515,11 @@ public class Spinner<T> extends Control {
         return value;
     }
 
-
+    private final ChangeListener<StringConverter> converterListener = new ChangeListener<StringConverter>() {
+        @Override public void changed(ObservableValue<? extends StringConverter> observable, StringConverter oldValue, StringConverter newRate) {
+            setText(valueProperty().getValue());
+        }
+    };
     // --- valueFactory
     /**
      * The value factory is the model behind the JavaFX Spinner control - without
@@ -533,15 +539,22 @@ public class Spinner<T> extends Control {
      */
     private ObjectProperty<SpinnerValueFactory<T>> valueFactory =
             new SimpleObjectProperty<>(this, "valueFactory") {
+                private SpinnerValueFactory oldFactory;
                 @Override protected void invalidated() {
                     value.unbind();
+                    if(oldFactory != null) {
+                        oldFactory.converterProperty().removeListener(converterListener);
+                    }
 
                     SpinnerValueFactory<T> newFactory = get();
                     if (newFactory != null) {
                         // this binding is what ensures the Spinner.valueProperty()
                         // properly represents the value in the value factory
                         value.bind(newFactory.valueProperty());
+                        // Listener to update the spinner editor when converter is changed.
+                        newFactory.converterProperty().addListener(converterListener);
                     }
+                    oldFactory = newFactory;
                 }
             };
     public final void setValueFactory(SpinnerValueFactory<T> value) {
