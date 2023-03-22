@@ -1,6 +1,6 @@
 Updating libxml in OpenJFX:
 
-1. Download respective libxml source tarball from here: http://xmlsoft.org/sources.
+1. Download respective libxml source tarball from here: https://download.gnome.org/sources/libxml2/
    Alternatively we can also clone the libxml repo from github. (url- https://gitlab.gnome.org/GNOME/libxml2.git)
 
 2. Extract contents into `modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src` directory.
@@ -26,9 +26,9 @@ Updating libxml in OpenJFX:
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
         > ./configure
 
-7.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\mac\include\libxml\xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
+7.1 Copy `libxml/src/include/libxml/xmlversion.h` to `libxml/mac/include/libxml/xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
 
-7.2 Copy libxml\src\config.h to libxml\mac\config.h
+7.2 Copy libxml/src/config.h to libxml/mac/config.h
 
 - For Linux
 8. Prerequisites to compile libxml: libtool, autoconf, automake
@@ -37,9 +37,9 @@ Updating libxml in OpenJFX:
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
         > ./configure
 
-9.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\linux\include\libxml\xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
+9.1 Copy `libxml/src/include/libxml/xmlversion.h` to `libxml/linux/include/libxml/xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
 
-9.2 Copy libxml\src\config.h to libxml\linux\config.h
+9.2 Copy libxml/src/config.h to libxml/linux/config.h
 
 10. Update version info in 'modules/javafx.web/src/main/legal/libxml.md'. Also, update copyright if any new files are added.
 

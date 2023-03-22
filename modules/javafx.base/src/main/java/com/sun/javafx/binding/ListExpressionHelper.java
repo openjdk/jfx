@@ -554,7 +554,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                         final ObservableList<E> safeOldValue = (oldValue == null)?
                                 FXCollections.<E>emptyObservableList()
                                 : FXCollections.unmodifiableObservableList(oldValue);
-                        change = new NonIterableChange.GenericAddRemoveChange(0, safeSize, safeOldValue, observable);
+                        change = new NonIterableChange.GenericAddRemoveChange<>(0, safeSize, safeOldValue, observable);
                     }
                     notifyListeners(oldValue, change, false);
                 } else {
