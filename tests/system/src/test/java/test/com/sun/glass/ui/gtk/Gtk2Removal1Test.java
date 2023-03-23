@@ -26,23 +26,22 @@
 package test.com.sun.glass.ui.gtk;
 
 import com.sun.javafx.PlatformUtil;
-import java.io.ByteArrayOutputStream;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+public class Gtk2Removal1Test extends Gtk2RemovalCommon {
 
-public class Gtk2Deprecation1Test extends Gtk2DeprecationCommon {
-
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws Exception {
         doSetup(true);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         doTeardown();
     }
@@ -53,9 +52,9 @@ public class Gtk2Deprecation1Test extends Gtk2DeprecationCommon {
 
         final String output = out.toString();
         System.err.println(output);
-        assertTrue("Missing warning message", output.contains("WARNING"));
-        assertTrue("Missing warning message", output.contains("deprecated"));
-        assertTrue("Missing warning message", output.contains("removed"));
+        assertTrue(output.contains("WARNING"), "Missing warning message");
+        assertTrue(output.contains("removed"), "Missing removed message");
+        assertFalse(output.contains("deprecated"), "Wrong message (deprecated)");
     }
 
 }
