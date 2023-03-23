@@ -26,48 +26,36 @@
 package test.com.sun.glass.ui.gtk;
 
 import com.sun.javafx.PlatformUtil;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import javafx.application.Platform;
-import test.util.Util;
 
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-public class Gtk2DeprecationCommon {
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-    private static final CountDownLatch startupLatch = new CountDownLatch(1);
-    private static final PrintStream defaultErrorStream = System.err;
-    protected static final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    public static void doSetup(boolean forceGtk2) throws Exception {
-        if (!PlatformUtil.isLinux()) return;
+public class Gtk2Removal2Test extends Gtk2RemovalCommon {
 
-        if (forceGtk2) {
-            System.setProperty("jdk.gtk.version", "2");
-        }
-
-        System.setErr(new PrintStream(out, true));
-
-        Platform.startup(() -> {
-            startupLatch.countDown();
-        });
-
-        if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-            System.setErr(defaultErrorStream);
-            System.err.println(out.toString());
-            fail("Timeout waiting for FX runtime to start");
-        }
-
-        Thread.sleep(250);
-        System.setErr(defaultErrorStream);
+    @BeforeAll
+    public static void setup() throws Exception {
+        doSetup(false);
     }
 
-    public static void doTeardown() {
-        if (!PlatformUtil.isLinux()) return;
+    @AfterAll
+    public static void teardown() {
+        doTeardown();
+    }
 
-        Platform.exit();
+    @Test
+    public void testNoDeprecationMessage() throws Exception {
+        assumeTrue(PlatformUtil.isLinux());
+
+        final String output = out.toString();
+        System.err.println(output);
+        assertFalse(output.contains("WARNING"), "Unexpected warning message");
+        assertFalse(output.contains("deprecated"), "Unexpected warning message");
+        assertFalse(output.contains("removed"), "Unexpected warning message");
     }
 
 }
