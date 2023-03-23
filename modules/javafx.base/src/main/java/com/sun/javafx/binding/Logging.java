@@ -29,7 +29,23 @@ import com.sun.javafx.logging.PlatformLogger;
 
 public class Logging {
 
-    public static boolean keepException = false;
+    private static boolean keepException = false;
+
+    /**
+     * This is only used for testing purposes.
+     * @param keepException
+     */
+    public static void setKeepException(boolean keepException) {
+        Logging.keepException = keepException;
+    }
+
+    /**
+     * This is only used for testing purposes.
+     * @return
+     */
+    public static boolean getKeepException() {
+        return keepException;
+    }
 
     public static ErrorLogger getLogger() {
         return ErrorLogger.INSTANCE;
