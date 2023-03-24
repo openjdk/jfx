@@ -760,7 +760,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
         seed = [pasteboard clearContents];
 
         jsize itemCount = (*env)->GetArrayLength(env, jObjects);
-        //NSLog(@"Java_com_sun_glass_ui_mac_MacPasteboard__1putItems itemCount: %d", itemCount);
+        LOG(@"Java_com_sun_glass_ui_mac_MacPasteboard__1putItems itemCount: %d", itemCount);
         if (itemCount > 0)
         {
             NSMutableArray *objects = [NSMutableArray arrayWithCapacity:(NSUInteger)itemCount];
@@ -775,12 +775,23 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                 }
             }
 
-            // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
-            [pasteboard writeObjects:objects];
-
             if (pasteboard == [NSPasteboard pasteboardWithName:NSDragPboard])
             {
-                [GlassDragSource flushWithMask:supportedActions];
+                // DnD requires separate NSDragging* calls to work since macOS 10.14
+                // convert NSPasteboardItem-s array to NSDraggingItem-s
+                NSMutableArray<NSDraggingItem*> *dItems = [NSMutableArray<NSDraggingItem*> arrayWithCapacity:itemCount];
+                for (NSPasteboardItem* i in objects)
+                {
+                    [dItems addObject:[[NSDraggingItem alloc] initWithPasteboardWriter:i]];
+                }
+
+                [GlassDragSource flushWithMask:supportedActions withItems:dItems];
+            }
+            else
+            {
+                // previous write to pasteboard for compatibility
+                // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
+                [pasteboard writeObjects:objects];
             }
         }
     }

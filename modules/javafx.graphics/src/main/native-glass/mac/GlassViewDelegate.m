@@ -23,6 +23,7 @@
  * questions.
  */
 
+#include "GlassDraggingSource.h"
 #import "common.h"
 #import "com_sun_glass_events_ViewEvent.h"
 #import "com_sun_glass_events_MouseEvent.h"
@@ -963,15 +964,14 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     }
     return self->dragOperation;
 }
-
-// called from Java layer drag handler, triggered by DnD Pasteboard flush
+/*
 - (void)startDrag:(NSDragOperation)operation
 {
     DNDLOG("startDrag");
     self->dragOperation = operation;
     {
         NSPoint dragPoint = [self->nsView convertPoint:[self->lastEvent locationInWindow] fromView:nil];
-        NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
+        NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:NSPasteboardNameDrag];
         NSImage *image = nil;
 
         if ([[pasteboard types] containsObject:DRAG_IMAGE_MIME]) {
@@ -1064,6 +1064,26 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     }
     self->dragOperation = NSDragOperationNone;
 }
+*/
+
+// called from Java layer drag handler, triggered by DnD Pasteboard flush
+- (void)startDrag:(NSDragOperation)operation withItems:(NSArray<NSDraggingItem*>*)items
+{
+    DNDLOG("startDrag");
+
+    // Set up frames for dragging items
+    for (NSDraggingItem* i in items)
+    {
+        NSRect rect = [i draggingFrame];
+        rect.size.width = DEFAULT_DRAG_SIZE;
+        rect.size.height = DEFAULT_DRAG_SIZE;
+        [i setDraggingFrame:rect];
+    }
+
+    self->draggingSource = [[GlassDraggingSource alloc] initWithOperation:operation];
+
+    NSDraggingSession *session = [self->nsView beginDraggingSessionWithItems:items event:self->lastEvent source:self->draggingSource];
+}
 
 - (void)synthesizeMouseUp:(NSEventType)type
 {
@@ -1083,6 +1103,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)draggingEnded
 {
+    if (self->draggingSource)
+    {
+        [self->draggingSource release];
+        self->draggingSource = nil;
+    }
+
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd,  [GlassDragSource getMask]);
     GLASS_CHECK_EXCEPTION(env);

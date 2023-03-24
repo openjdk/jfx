@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,31 +23,16 @@
  * questions.
  */
 
+
 #import <Cocoa/Cocoa.h>
-#import <jni.h>
 
-@protocol GlassDragSourceDelegate <NSObject>
+@interface GlassDraggingSource : NSObject <NSDraggingSource>
+{
+@public
+    NSDragOperation dragOperation;
 
-- (void)startDrag:(NSDragOperation)operation;
-- (void)draggingEnded;
+}
 
-@end
-
-@interface GlassDragSource : NSObject
-
-+ (void)setDelegate:(NSObject<GlassDragSourceDelegate>*)delegate;
-+ (void)flushWithMask:(jint)mask withItems:(NSArray<NSDraggingItem*>*)items;
-
-+ (NSDragOperation)mapJavaMaskToNsOperation:(jint)mask;
-+ (jint)mapNsOperationToJavaMaskExternal:(NSDragOperation)operation;
-+ (jint)mapNSOperationToJavaMaskInternal:(NSDragOperation)operation;
-+ (jint)getRecommendedActionForMaskExternal:(NSDragOperation)operation;
-+ (jint)getRecommendedActionForMaskInternal:(NSDragOperation)operation;
-
-+ (void)setMask:(jint)mask;
-+ (jint)getMask;
-
-+ (jint)getSupportedActions;
-+ (void)setSupportedActions:(jint)actions;
+- (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation;
 
 @end
