@@ -64,7 +64,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     // then its really expensive as all font files need to be opened.
     //
     String familyName;           /* Family font name (English) */
-    String fullName;             /* Full font name (English)   */
+    protected String fullName;   /* Full font name (English)   */
     String psName;               /* PostScript font name       */
     String localeFamilyName;
     String localeFullName;

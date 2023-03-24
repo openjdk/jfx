@@ -80,6 +80,22 @@ class CTGlyphLayout extends GlyphLayout {
         if (!fontName.equalsIgnoreCase(name)) {
             if (fr == null) return -1;
             slot = fr.getSlotForFont(fontName);
+            if (slot == -1) {
+                 CTFontFile newFont = null;
+                 try {
+                     CTFactory factory = (CTFactory)PrismFontFactory.getFontFactory();
+                     long newRef = OS.CTFontCreateCopyWithAttributes(actualFont, 0, null,0);
+                      OS.CFRetain(newRef); // hope not needed ..
+                     newFont = factory.createFontFile(fontName, newRef);
+                     if (newFont != null) {
+                         slot = fr.addSlotFont(newFont);
+                     }
+                 } catch (Exception e) {
+                     if (PrismFontFactory.debugFonts) {
+                         e.printStackTrace();
+                     }
+                 }
+            }
             if (PrismFontFactory.debugFonts) {
                 System.err.println("\tFallback font= "+ fontName + " slot=" + slot);
             }
