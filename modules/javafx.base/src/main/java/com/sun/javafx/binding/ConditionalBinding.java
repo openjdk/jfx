@@ -28,6 +28,7 @@ package com.sun.javafx.binding;
 import java.util.Objects;
 
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.Subscription;
 
 public class ConditionalBinding<T> extends LazyObjectBinding<T> {
 
@@ -41,7 +42,7 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
         this.nonNullCondition = Objects.requireNonNull(condition, "condition cannot be null").orElse(false);
 
         // condition is always observed and never unsubscribed
-        Subscription.subscribe(nonNullCondition, current -> {
+        nonNullCondition.values(current -> {
             invalidate();
 
             if (!current) {
@@ -64,7 +65,7 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
     protected T computeValue() {
         if (isObserved() && isActive()) {
             if (subscription == null) {
-                subscription = Subscription.subscribeInvalidations(source, this::invalidate);
+                subscription = source.invalidations(this::invalidate);
             }
         }
         else {

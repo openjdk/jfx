@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package javafx.beans.value;
 
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.sun.javafx.binding.ConditionalBinding;
@@ -296,5 +299,68 @@ public interface ObservableValue<T> extends Observable {
      */
     default ObservableValue<T> when(ObservableValue<Boolean> condition) {
         return new ConditionalBinding<>(this, condition);
+    }
+
+    /**
+     * Creates a {@link Subscription} on this value which calls the given
+     * {@code subscriber} with the old and new value of this value whenever it
+     * changes.<p>
+     *
+     * The parameters supplied to the {@link BiConsumer} are the old and new value
+     * respectively.
+     *
+     * @param subscriber a {@code BiConsumer} to supply with the old and new values
+     *     of this {@code ObservableValue}, cannot be {@code null}
+     * @return a {@code Subscription} which can be used to cancel this
+     *     subscription, never {@code null}
+     * @since 21
+     */
+    default Subscription changes(BiConsumer<? super T, ? super T> subscriber) {
+      Objects.requireNonNull(subscriber, "subscriber cannot be null");
+      ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(old, current);
+
+      addListener(listener);
+
+      return () -> removeListener(listener);
+    }
+
+    /**
+     * Creates a {@link Subscription} on this value which immediately provides
+     * the current value to the given {@code subscriber}, followed by any
+     * subsequent changes in value.
+     *
+     * @param subscriber a {@link Consumer} to supply with the values of this
+     *     {@code ObservableValue}, cannot be {@code null}
+     * @return a {@code Subscription} which can be used to cancel this
+     *     subscription, never {@code null}
+     * @since 21
+     */
+    default Subscription values(Consumer<? super T> subscriber) {
+        Objects.requireNonNull(subscriber, "subscriber cannot be null");
+        ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(current);
+
+        subscriber.accept(getValue());  // eagerly send current value
+        addListener(listener);
+
+        return () -> removeListener(listener);
+    }
+
+    /**
+     * Creates a {@link Subscription} on this value which calls the given
+     * {@code runnable} whenever it becomes invalid.
+     *
+     * @param subscriber a {@code Runnable} to call whenever this
+     *     value becomes invalid, cannot be {@code null}
+     * @return a {@code Subscription} which can be used to cancel this
+     *     subscription, never {@code null}
+     * @since 21
+     */
+    default Subscription invalidations(Runnable subscriber) {
+        Objects.requireNonNull(subscriber, "subscriber cannot be null");
+        InvalidationListener listener = obs -> subscriber.run();
+
+        addListener(listener);
+
+        return () -> removeListener(listener);
     }
 }
