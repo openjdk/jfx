@@ -20,7 +20,7 @@ public class BitSetTest {
     private final PseudoClass c = PseudoClass.getPseudoClass("c");
 
     @Test
-    void setShouldProcssAddAndRemoveCorrectly() {
+    void setShouldProcessAddAndRemoveCorrectly() {
         assertEquals(0, set.size());
         assertTrue(set.isEmpty());
 
