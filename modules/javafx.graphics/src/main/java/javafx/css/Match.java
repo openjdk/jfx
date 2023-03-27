@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,9 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.PseudoClassState;
-
 import static javafx.geometry.NodeOrientation.INHERIT;
 
+import java.util.Set;
 
 /**
  * Used by {@link Rule} to determine whether or not the selector applies to a
@@ -41,7 +40,7 @@ import static javafx.geometry.NodeOrientation.INHERIT;
 public final class Match implements Comparable<Match> {
 
     final Selector selector;
-    final PseudoClassState pseudoClasses;
+    final Set<PseudoClass> pseudoClasses;
     final int idCount;
     final int styleClassCount;
 
@@ -49,7 +48,7 @@ public final class Match implements Comparable<Match> {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
-    Match(final Selector selector, PseudoClassState pseudoClasses, int idCount, int styleClassCount) {
+    Match(final Selector selector, Set<PseudoClass> pseudoClasses, int idCount, int styleClassCount) {
         assert selector != null;
         this.selector = selector;
         this.idCount = idCount;
@@ -77,7 +76,7 @@ public final class Match implements Comparable<Match> {
      * Gets the pseudo class state.
      * @return the pseudo class state
      */
-    public PseudoClassState getPseudoClasses() {
+    public Set<PseudoClass> getPseudoClasses() {
         return pseudoClasses;
     }
 
