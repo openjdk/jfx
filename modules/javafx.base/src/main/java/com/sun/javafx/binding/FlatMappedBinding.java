@@ -28,8 +28,8 @@ package com.sun.javafx.binding;
 import java.util.Objects;
 import java.util.function.Function;
 
+import javafx.beans.Subscription;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.Subscription;
 
 /**
  * A binding holding the value of an indirect source. The indirect source results from

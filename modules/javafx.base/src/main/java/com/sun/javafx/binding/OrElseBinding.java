@@ -27,8 +27,8 @@ package com.sun.javafx.binding;
 
 import java.util.Objects;
 
+import javafx.beans.Subscription;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.Subscription;
 
 public class OrElseBinding<T> extends LazyObjectBinding<T> {
 

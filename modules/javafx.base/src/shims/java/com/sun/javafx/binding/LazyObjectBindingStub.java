@@ -25,7 +25,7 @@
 
 package com.sun.javafx.binding;
 
-import javafx.beans.value.Subscription;
+import javafx.beans.Subscription;
 
 /**
  * Stub to allow testing of package private LazyObjectBinding.

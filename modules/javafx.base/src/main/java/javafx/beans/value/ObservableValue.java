@@ -37,6 +37,7 @@ import com.sun.javafx.binding.OrElseBinding;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.Subscription;
 
 /**
  * An {@code ObservableValue} is an entity that wraps a value and allows to
@@ -340,25 +341,6 @@ public interface ObservableValue<T> extends Observable {
         ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(current);
 
         subscriber.accept(getValue());  // eagerly send current value
-        addListener(listener);
-
-        return () -> removeListener(listener);
-    }
-
-    /**
-     * Creates a {@link Subscription} on this value which calls the given
-     * {@code runnable} whenever it becomes invalid.
-     *
-     * @param subscriber a {@code Runnable} to call whenever this
-     *     value becomes invalid, cannot be {@code null}
-     * @return a {@code Subscription} which can be used to cancel this
-     *     subscription, never {@code null}
-     * @since 21
-     */
-    default Subscription invalidations(Runnable subscriber) {
-        Objects.requireNonNull(subscriber, "subscriber cannot be null");
-        InvalidationListener listener = obs -> subscriber.run();
-
         addListener(listener);
 
         return () -> removeListener(listener);

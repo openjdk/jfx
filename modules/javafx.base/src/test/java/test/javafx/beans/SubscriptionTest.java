@@ -1,4 +1,4 @@
-package test.javafx.beans.value;
+package test.javafx.beans;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import javafx.beans.value.Subscription;
+import javafx.beans.Subscription;
 
 public class SubscriptionTest {
 

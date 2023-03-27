@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.beans.value;
+package javafx.beans;
 
 import java.util.List;
 import java.util.Objects;
