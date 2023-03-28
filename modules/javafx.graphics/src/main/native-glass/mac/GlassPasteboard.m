@@ -68,7 +68,7 @@ static BOOL validate(NSString *data)
             loSurrogate = YES;
         }
 
-        if (loSurrogate && !prevHiSurrogate ) {
+        if (loSurrogate && !prevHiSurrogate) {
             return NO;
         }
         if (prevHiSurrogate && !loSurrogate) {
