@@ -111,7 +111,7 @@ add_compile_options(
 
 if (NOT WTF_CPU_X86)
     # Create pdb files for debugging purposes, also for Release builds
-    add_compile_options(/Zi /GS)
+    #add_compile_options(/Zi /GS)
 
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
