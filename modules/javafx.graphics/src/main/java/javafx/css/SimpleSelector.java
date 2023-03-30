@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.StyleClassSet;
 
@@ -109,7 +110,7 @@ final public class SimpleSelector extends Selector {
     }
 
     // a mask of bits corresponding to the pseudoclasses
-    final private PseudoClassState pseudoClassState;
+    final private Set<PseudoClass> pseudoClassState;
 
     Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
@@ -182,7 +183,7 @@ final public class SimpleSelector extends Selector {
 
         this.matchOnStyleClass = (this.styleClassSet.size() > 0);
 
-        this.pseudoClassState = new PseudoClassState();
+        PseudoClassState pcs = new PseudoClassState();
 
         nMax = pseudoClasses != null ? pseudoClasses.size() : 0;
 
@@ -199,10 +200,10 @@ final public class SimpleSelector extends Selector {
                 continue;
             }
 
-            final PseudoClass pseudoClass = PseudoClassState.getPseudoClass(pclass);
-            this.pseudoClassState.add(pseudoClass);
+            pcs.add(PseudoClassState.getPseudoClass(pclass));
         }
 
+        this.pseudoClassState = ImmutablePseudoClassSetsCache.of(pcs);
         this.nodeOrientation = dir;
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
