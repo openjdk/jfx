@@ -26,6 +26,7 @@ package com.sun.javafx.css;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javafx.css.PseudoClass;
@@ -44,23 +45,12 @@ public class ImmutablePseudoClassSetsCache {
      *
      * @param pseudoClasses a set of {@link PseudoClass} to make immutable, cannot be {@code null}
      * @return an immutable set of {@link PseudoClass}es, never {@code null}
+     * @throws NullPointerException when {@code pseudoClasses} is {@code null} or contains {@code null}s
      */
     public static Set<PseudoClass> of(Set<PseudoClass> pseudoClasses) {
-        Set<PseudoClass> immutableSet = Set.copyOf(pseudoClasses);
-
-        /*
-         * Note, the computeIfAbsent looks a bit odd, but it does serve a purpose.
-         *
-         * If the given set was already immutable; the copyOf will return the same
-         * set; however, that may or may not be the set that is already in the cache.
-         *
-         * If the set already exists in the cache, then the exact same set or another
-         * set is returned which was present already. This is okay.
-         *
-         * If the set didn't already exist, it is stored in the cache and that same set
-         * is returned.
-         */
-
-        return CACHE.computeIfAbsent(immutableSet, k -> immutableSet);
+        return CACHE.computeIfAbsent(
+            Objects.requireNonNull(pseudoClasses, "pseudoClasses cannot be null"),
+            k -> Set.copyOf(pseudoClasses)
+        );
     }
 }
