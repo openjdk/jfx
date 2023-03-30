@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,28 +60,28 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
         return toArray(new PseudoClass[size()]);
     }
 
-    /** {@inheritDoc} */
     @Override
     public <T> T[] toArray(T[] a) {
         if (a.length < size()) {
             a = (T[]) new PseudoClass[size()];
         }
-        int index = 0;
-        while(index < getBits().length) {
-            final long state = getBits()[index];
-            for(int bit=0; bit<Long.SIZE; bit++) {
-                long mask = 1l << bit;
-                if ((state & mask) == mask) {
-                    int n = index * Long.SIZE + bit;
-                    PseudoClass impl = getPseudoClass(n);
-                    a[index++] = (T) impl;
-                }
 
+        int setIndex = 0;
+
+        for (int index = 0; index < getBits().length; index++) {
+            long state = getBits()[index];
+
+            for (int bit = 0; bit < Long.SIZE; bit++) {
+                long mask = 1L << bit;
+
+                if ((state & mask) == mask) {
+                    a[setIndex++] = (T) getPseudoClass(index * Long.SIZE + bit);
+                }
             }
         }
+
         return a;
     }
-
 
     @Override
     public String toString() {
@@ -98,8 +98,8 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
         if (o == null) {
             throw new NullPointerException("null arg");
         }
-        PseudoClass pseudoClass = (PseudoClass) o;
-        return pseudoClass;
+
+        return o instanceof PseudoClass pseudoClass ? pseudoClass : null;
     }
 
     @Override

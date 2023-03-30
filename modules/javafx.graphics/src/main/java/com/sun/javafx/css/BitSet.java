@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -182,6 +182,10 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         T t = cast(o);
 
+        if (t == null) {  // if cast failed, it can't be part of this set, so not modified
+            return false;
+        }
+
         final int element = getIndex(t) / Long.SIZE;
         final long bit = 1l << (getIndex(t) % Long.SIZE);
 
@@ -220,19 +224,30 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         final T t = cast(o);
 
+        if (t == null) {  // if cast failed, it can't be part of this set
+            return false;
+        }
+
         final int element = getIndex(t) / Long.SIZE;
         final long bit = 1l << (getIndex(t) % Long.SIZE);
 
         return (element < bits.length) && (bits[element] & bit) == bit;
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean containsAll(Collection<?> c) {
+        if (c == null) {
+           throw new NullPointerException("c cannot be null");
+        }
 
-        if (c == null || this.getClass() != c.getClass()) {
-            // this not modified!
-            return false;
+        if (this.getClass() != c.getClass()) {
+            for (Object obj : c) {
+                if (!contains(obj)) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         BitSet other = (BitSet)c;
@@ -254,14 +269,20 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return true;
     }
 
-
-    /** {@inheritDoc} */
     @Override
     public boolean addAll(Collection<? extends T> c) {
+        if (c == null) {
+            throw new NullPointerException("c cannot be null");
+        }
 
-        if (c == null || this.getClass() != c.getClass()) {
-            // this not modified!
-            return false;
+        if (this.getClass() != c.getClass()) {
+            boolean modified = false;
+
+            for (T obj : c) {
+                modified |= add(obj);
+            }
+
+            return modified;
         }
 
         boolean modified = false;
@@ -327,13 +348,25 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean retainAll(Collection<?> c) {
+        if (c == null) {
+            throw new NullPointerException("c cannot be null");
+        }
 
-        if (c == null || this.getClass() != c.getClass()) {
-            clear();
-            return true;
+        if (this.getClass() != c.getClass()) {
+            boolean modified = false;
+
+            for (Iterator<T> iterator = this.iterator(); iterator.hasNext();) {
+                T obj = iterator.next();
+
+                if (!c.contains(obj)) {
+                    iterator.remove();
+                    modified = true;
+                }
+            }
+
+            return modified;
         }
 
         boolean modified = false;
@@ -408,14 +441,20 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return modified;
     }
 
-
-    /** {@inheritDoc} */
     @Override
     public boolean removeAll(Collection<?> c) {
+        if (c == null) {
+            throw new NullPointerException("c cannot be null");
+        }
 
-        if (c == null || this.getClass() != c.getClass()) {
-            // this not modified!
-            return false;
+        if (this.getClass() != c.getClass()) {
+            boolean modified = false;
+
+            for (Object obj : c) {
+                modified |= remove(obj);
+            }
+
+            return modified;
         }
 
         boolean modified = false;
@@ -473,7 +512,6 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return modified;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void clear() {
 
@@ -533,16 +571,18 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return true;
     }
 
-    abstract protected T getT(int index);
-    abstract protected int getIndex(T t);
+    protected abstract T getT(int index);
+    protected abstract int getIndex(T t);
 
-    /*
-     * Try to cast the arg to a T.
-     * @throws ClassCastException if the class of the argument is
-     *         is not a T
-     * @throws NullPointerException if the argument is null
+    /**
+     * Return {@code obj} if it is an instance of type {@code T},
+     * otherwise return {@code null}.
+     *
+     * @param obj the object to cast, cannot be {@code null}
+     * @return a type T, or {@code null} if the argument was not of this type
+     * @throws NullPointerException when {@code obj} is {@code null}
      */
-    abstract protected T cast(Object o);
+    protected abstract T cast(Object obj);
 
     protected long[] getBits() {
         return bits;
