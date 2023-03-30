@@ -112,30 +112,9 @@ final public class SimpleSelector extends Selector {
     // a mask of bits corresponding to the pseudoclasses
     final private Set<PseudoClass> pseudoClassState;
 
+    // for test purposes
     Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
-    }
-
-    /**
-     * Gets an immutable list of {@code String}s of pseudo classes of the {@code Selector}
-     * @return an immutable list of {@code String}s
-     */
-    List<String> getPseudoclasses() {
-
-        final List<String> names = new ArrayList<>();
-
-        Iterator<PseudoClass> iter = pseudoClassState.iterator();
-        while (iter.hasNext()) {
-            names.add(iter.next().getPseudoClassName());
-        }
-
-        if (nodeOrientation == RIGHT_TO_LEFT) {
-            names.add("dir(rtl)");
-        } else if (nodeOrientation == LEFT_TO_RIGHT) {
-            names.add("dir(ltr)");
-        }
-
-        return Collections.unmodifiableList(names);
     }
 
     // true if name is not a wildcard
