@@ -228,8 +228,9 @@ abstract class BitSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        final int element = getIndex(t) / Long.SIZE;
-        final long bit = 1l << (getIndex(t) % Long.SIZE);
+        int index = getIndex(t);
+        int element = index / Long.SIZE;
+        long bit = 1L << (index % Long.SIZE);
 
         return (element < bits.length) && (bits[element] & bit) == bit;
     }
