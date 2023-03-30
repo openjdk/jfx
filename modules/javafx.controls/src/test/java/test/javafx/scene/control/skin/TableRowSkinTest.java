@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2023 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TableColumn;
@@ -38,6 +39,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TableRowSkin;
+import javafx.scene.layout.Region;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +48,7 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -242,6 +245,47 @@ public class TableRowSkinTest {
         assertEquals(prefHeight, cell.prefHeight(-1), 0);
         assertEquals(maxHeight, cell.maxHeight(-1), 0);
         assertEquals(height, cell.getHeight(), 0);
+    }
+
+    /**
+     * When we make an invisible column visible we expect the underlying cells to be visible, e.g. as width > 0.
+     * See also: JDK-8305248
+     */
+    @Test
+    public void testMakeInvisibleColumnVisible() {
+        tableView.setFixedCellSize(24);
+        TableColumn<Person, ?> firstColumn = tableView.getColumns().get(0);
+        firstColumn.setVisible(false);
+
+        tableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(true);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 0);
+        for (Node cellNode : row.getChildrenUnmodifiable()) {
+            double width = ((Region) cellNode).getWidth();
+            assertNotEquals(0.0, width);
+        }
+    }
+
+    @Test
+    public void testMakeVisibleColumnInvisible() {
+        tableView.setFixedCellSize(24);
+        TableColumn<Person, ?> firstColumn = tableView.getColumns().get(0);
+
+        tableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(false);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 0);
+        for (Node cellNode : row.getChildrenUnmodifiable()) {
+            double width = ((Region) cellNode).getWidth();
+            assertNotEquals(0.0, width);
+        }
     }
 
     @Test
