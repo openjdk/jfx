@@ -65,7 +65,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleChange<>(observable, listener) : helper.addListener(listener);
+        return (helper == null)? new SingleChange<>(observable, observable.getValue(), listener) : helper.addListener(listener);
     }
 
     public static <T> ExpressionHelper<T> removeListener(ExpressionHelper<T> helper, ChangeListener<? super T> listener) {
@@ -122,7 +122,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> addListener(ChangeListener<? super T> listener) {
-            return new Generic<>(observable, this.listener, listener);
+            return new Generic<>(observable, observable.getValue(), this.listener, listener);
         }
 
         @Override
@@ -145,15 +145,15 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         private final ChangeListener<? super T> listener;
         private T currentValue;
 
-        private SingleChange(ObservableValue<T> observable, ChangeListener<? super T> listener) {
+        private SingleChange(ObservableValue<T> observable, T currentValue, ChangeListener<? super T> listener) {
             super(observable);
             this.listener = listener;
-            this.currentValue = observable.getValue();
+            this.currentValue = currentValue;
         }
 
         @Override
         protected ExpressionHelper<T> addListener(InvalidationListener listener) {
-            return new Generic<>(observable, listener, this.listener);
+            return new Generic<>(observable, currentValue, listener, this.listener);
         }
 
         @Override
@@ -163,7 +163,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> addListener(ChangeListener<? super T> listener) {
-            return new Generic<>(observable, this.listener, listener);
+            return new Generic<>(observable, currentValue, this.listener, listener);
         }
 
         @Override
@@ -201,20 +201,20 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             this.invalidationSize = 2;
         }
 
-        private Generic(ObservableValue<T> observable, ChangeListener<? super T> listener0, ChangeListener<? super T> listener1) {
+        private Generic(ObservableValue<T> observable, T currentValue, ChangeListener<? super T> listener0, ChangeListener<? super T> listener1) {
             super(observable);
             this.changeListeners = new ChangeListener[] {listener0, listener1};
             this.changeSize = 2;
-            this.currentValue = observable.getValue();
+            this.currentValue = currentValue;
         }
 
-        private Generic(ObservableValue<T> observable, InvalidationListener invalidationListener, ChangeListener<? super T> changeListener) {
+        private Generic(ObservableValue<T> observable, T currentValue, InvalidationListener invalidationListener, ChangeListener<? super T> changeListener) {
             super(observable);
             this.invalidationListeners = new InvalidationListener[] {invalidationListener};
             this.invalidationSize = 1;
             this.changeListeners = new ChangeListener[] {changeListener};
             this.changeSize = 1;
-            this.currentValue = observable.getValue();
+            this.currentValue = currentValue;
         }
 
         @Override
@@ -246,7 +246,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                     if (listener.equals(invalidationListeners[index])) {
                         if (invalidationSize == 1) {
                             if (changeSize == 1) {
-                                return new SingleChange<>(observable, changeListeners[0]);
+                                return new SingleChange<>(observable, currentValue, changeListeners[0]);
                             }
                             invalidationListeners = null;
                             invalidationSize = 0;
@@ -310,8 +310,9 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                             }
                             changeListeners = null;
                             changeSize = 0;
+                            currentValue = null;  // clear current value to avoid stale reference
                         } else if ((changeSize == 2) && (invalidationSize == 0)) {
-                            return new SingleChange<>(observable, changeListeners[1-index]);
+                            return new SingleChange<>(observable, currentValue, changeListeners[1-index]);
                         } else {
                             final int numMoved = changeSize - index - 1;
                             final ChangeListener<? super T>[] oldListeners = changeListeners;
