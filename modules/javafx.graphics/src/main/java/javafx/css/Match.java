@@ -29,6 +29,8 @@ import static javafx.geometry.NodeOrientation.INHERIT;
 
 import java.util.Set;
 
+import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
+
 /**
  * Used by {@link Rule} to determine whether or not the selector applies to a
  * given object.
@@ -50,13 +52,14 @@ public final class Match implements Comparable<Match> {
 
     Match(final Selector selector, Set<PseudoClass> pseudoClasses, int idCount, int styleClassCount) {
         assert selector != null;
+        assert pseudoClasses != null;
+
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
-        this.pseudoClasses = pseudoClasses;
-        int nPseudoClasses = pseudoClasses != null ? pseudoClasses.size() : 0;
-        if (selector instanceof SimpleSelector) {
-            final SimpleSelector simple = (SimpleSelector)selector;
+        this.pseudoClasses = ImmutablePseudoClassSetsCache.of(pseudoClasses);
+        int nPseudoClasses = pseudoClasses.size();
+        if (selector instanceof SimpleSelector simple) {
             if (simple.getNodeOrientation() != INHERIT) {
                 nPseudoClasses += 1;
             }
@@ -66,7 +69,8 @@ public final class Match implements Comparable<Match> {
 
     /**
      * Gets the {@code Selector}.
-     * @return the {@code Selector}
+     *
+     * @return the {@code Selector}, never {@code null}
      */
     public Selector getSelector() {
         return selector;
@@ -74,7 +78,8 @@ public final class Match implements Comparable<Match> {
 
     /**
      * Gets the pseudo class state.
-     * @return the pseudo class state
+     *
+     * @return an immutable set of {@link PseudoClass}es, never {@code null}
      */
     public Set<PseudoClass> getPseudoClasses() {
         return pseudoClasses;
