@@ -151,7 +151,9 @@ final public class CompoundSelector extends Selector {
                 final Set<PseudoClass> pseudoClassIn = tempStates[n];
 
                 if (pseudoClassOut != null) {
-                    pseudoClassOut.addAll(pseudoClassIn);
+                    if (pseudoClassIn != null) {
+                        pseudoClassOut.addAll(pseudoClassIn);
+                    }
                 } else {
                     triggerStates[n] = pseudoClassIn;
                 }
