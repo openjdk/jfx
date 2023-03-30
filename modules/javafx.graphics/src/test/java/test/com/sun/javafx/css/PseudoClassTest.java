@@ -609,14 +609,8 @@ public class PseudoClassTest {
 
         PseudoClassState aStates = new PseudoClassState();
         PseudoClassState bStates = null;
-        BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<>();
-        Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
-        while (iter.hasNext()) {
-            states.add(iter.next());
-        }
-        assertEquals(0, states.size(), 0.000001);
 
+        assertThrows(NullPointerException.class, () -> BitSetShim.retainAll(aStates, bStates));
     }
 
     @Test
@@ -715,14 +709,8 @@ public class PseudoClassTest {
 
         PseudoClassState aStates = new PseudoClassState();
         PseudoClassState bStates = null;
-        BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<>();
-        Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
-        while (iter.hasNext()) {
-            states.add(iter.next());
-        }
-        assertEquals(0, states.size(), 0.000001);
 
+        assertThrows(NullPointerException.class, () -> BitSetShim.addAll(aStates, bStates));
     }
 
     @Test
