@@ -48,31 +48,11 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
 
     gDelegate = delegate; // notice, there is no retain
 }
-/*
-+ (void)flushWithMask:(jint)mask
-{
-    LOG("GlassDragSource:flushWithMask: %d", mask);
 
-    if ([NSThread isMainThread] == YES)
-    {
-        supportedActions = mask;
-        NSDragOperation operation = [GlassDragSource mapJavaMaskToNsOperation:mask];
-        if (operation != NSDragOperationNone)
-        {
-            LOG("[gDelegate startDrag:operation]");
-                [gDelegate startDrag:operation];
-        }
-        else
-        {
-            LOG("[gDelegate startDrag:operation] NOT TAKEN!");
-        }
-    }
-    else
-    {
-        NSLog(@"GlassDragSource flush called on nonmain thread!");
-    }
++ (BOOL)isDelegateSet
+{
+    return (gDelegate != nil);
 }
-*/
 
 + (void)flushWithMask:(jint)mask withItems:(NSArray<NSDraggingItem*>*)items
 {
@@ -84,12 +64,12 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
         NSDragOperation operation = [GlassDragSource mapJavaMaskToNsOperation:mask];
         if (operation != NSDragOperationNone)
         {
-            LOG("[gDelegate startDrag:operation]");
-                [gDelegate startDrag:operation withItems:items];
+            LOG("[gDelegate startDrag:operation withItems:items] gDelegate %p", gDelegate);
+            [gDelegate startDrag:operation withItems:items];
         }
         else
         {
-            LOG("[gDelegate startDrag:operation] NOT TAKEN!");
+            LOG("[gDelegate startDrag:operation withItems:items] NOT TAKEN!");
         }
     }
     else

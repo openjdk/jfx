@@ -35,4 +35,10 @@
 
 - (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation;
 
+- (void)draggingSession:(NSDraggingSession *)session willBeginAtPoint:(NSPoint)screenPoint;
+- (void)draggingSession:(NSDraggingSession *)session movedToPoint:(NSPoint)screenPoint;
+- (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation;
+
+- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)session;
+
 @end

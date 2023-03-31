@@ -25,6 +25,14 @@
 
 #import "common.h"
 #import "GlassDraggingSource.h"
+#import "GlassMacros.h"
+
+//#define VERBOSE
+#ifndef VERBOSE
+    #define LOG(MSG, ...)
+#else
+    #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
+#endif
 
 
 @implementation GlassDraggingSource
@@ -38,6 +46,27 @@
 {
     dragOperation = operation;
     return self;
+}
+
+- (void)draggingSession:(NSDraggingSession *)session willBeginAtPoint:(NSPoint)screenPoint
+{
+    LOG("LKDEBUG draggingSession: willBeginAtPoint:");
+}
+
+- (void)draggingSession:(NSDraggingSession *)session movedToPoint:(NSPoint)screenPoint
+{
+    LOG("LKDEBUG draggingSession: movedToPoint:");
+}
+
+- (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation
+{
+    LOG("LKDEBUG draggingSession: endedAtPoint:");
+}
+
+- (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)session
+{
+    LOG("LKDEBUG ignoreModifierKeysForDraggingSession:");
+    return NO;
 }
 
 @end

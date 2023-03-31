@@ -775,7 +775,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                 }
             }
 
-            if (pasteboard == [NSPasteboard pasteboardWithName:NSDragPboard])
+            // We perform a Drag-n-Drop only when our pasteboard is a DnD pasteboard
+            // and if drag delegate was set. The latter one is set when DnD operation
+            // came from a NSView (ex. mouse drag).
+            if ([[pasteboard name] isEqualToString:NSDragPboard] && [GlassDragSource isDelegateSet])
             {
                 // DnD requires separate NSDragging* calls to work since macOS 10.14
                 // convert NSPasteboardItem-s array to NSDraggingItem-s
@@ -785,6 +788,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                     [dItems addObject:[[NSDraggingItem alloc] initWithPasteboardWriter:i]];
                 }
 
+                // New DnD API (macOS 10.14+) requires us to skip writing data to Pasteboard.
+                // It handles managing the pasteboard separately on its own.
                 [GlassDragSource flushWithMask:supportedActions withItems:dItems];
             }
             else
