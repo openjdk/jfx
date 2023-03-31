@@ -54,35 +54,6 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public Object[] toArray() {
-        return toArray(new PseudoClass[size()]);
-    }
-
-    @Override
-    public <T> T[] toArray(T[] a) {
-        if (a.length < size()) {
-            a = (T[]) new PseudoClass[size()];
-        }
-
-        int setIndex = 0;
-
-        for (int index = 0; index < getBits().length; index++) {
-            long state = getBits()[index];
-
-            for (int bit = 0; bit < Long.SIZE; bit++) {
-                long mask = 1L << bit;
-
-                if ((state & mask) == mask) {
-                    a[setIndex++] = (T) getPseudoClass(index * Long.SIZE + bit);
-                }
-            }
-        }
-
-        return a;
-    }
-
     @Override
     public String toString() {
         List<String> strings = new ArrayList<>();

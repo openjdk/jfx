@@ -24,22 +24,24 @@
  */
 package com.sun.javafx.css;
 
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 import com.sun.javafx.collections.SetListenerHelper;
+
 import javafx.beans.InvalidationListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 
 /**
  * Pseudo-class state and style-classes are represented as bits in a long[]
  * which makes matching faster.
  */
-abstract class BitSet<T> implements ObservableSet<T> {
+abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
 
     /** Create an empty set of T */
     protected BitSet () {
@@ -533,42 +535,37 @@ abstract class BitSet<T> implements ObservableSet<T> {
     }
 
     @Override
-    public int hashCode() {
-        int hash = 7;
-        if (bits.length > 0) {
-            for (int n = 0; n < bits.length; n++) {
-                final long mask = bits[n];
-                hash = 71 * hash + (int)(mask ^ (mask >>> 32));
-            }
-        }
-        return hash;
-    }
-
-    @Override
     public boolean equals(Object obj) {
-
-        if (this == obj) {
+        // Note: overridden to provide a fast path; must still respect Set contract or it
+        // will not interact correctly with other sets; same goes for hashCode, do not
+        // override arbitrarily!
+        if (obj == this) {
             return true;
         }
+        if (obj instanceof BitSet<?> bitSet) {  // fast path if other is a BitSet
+            return equalsBitSet(bitSet);
+        }
 
-        if (obj == null || this.getClass() != obj.getClass()) {
+        return super.equals(obj);
+    }
+
+    private boolean equalsBitSet(BitSet<?> other) {
+        int a = this.bits != null ? this.bits.length : 0;
+        int b = other.bits != null ? other.bits.length : 0;
+
+        if (a != b) {
             return false;
         }
 
-        final BitSet other = (BitSet) obj;
+        for (int m = 0; m < a; m++) {
+            long m0 = this.bits[m];
+            long m1 = other.bits[m];
 
-        final int a = this.bits != null ? this.bits.length : 0;
-        final int b = other.bits != null ? other.bits.length : 0;
-
-        if (a != b) return false;
-
-        for(int m=0; m<a; m++) {
-            final long m0 = this.bits[m];
-            final long m1 = other.bits[m];
             if (m0 != m1) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -585,7 +582,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
      */
     protected abstract T cast(Object obj);
 
-    protected long[] getBits() {
+    long[] getBits() {
         return bits;
     }
 
@@ -642,7 +639,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     @Override
     public void removeListener(SetChangeListener<? super T> setChangeListener) {
         if (setChangeListener != null) {
-            SetListenerHelper.removeListener(listenerHelper, setChangeListener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, setChangeListener);
         }
     }
 
@@ -656,7 +653,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     @Override
     public void removeListener(InvalidationListener invalidationListener) {
         if (invalidationListener != null) {
-            SetListenerHelper.removeListener(listenerHelper, invalidationListener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, invalidationListener);
         }
     }
 
