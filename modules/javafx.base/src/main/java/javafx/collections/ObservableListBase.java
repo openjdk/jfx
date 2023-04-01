@@ -90,7 +90,7 @@ import javafx.beans.InvalidationListener;
 public abstract class ObservableListBase<E> extends AbstractList<E>  implements ObservableList<E> {
 
     private ListListenerHelper<E> listenerHelper;
-    private final ListChangeBuilder<E> changeBuilder = new ListChangeBuilder<>(this);
+    private ListChangeBuilder<E> changeBuilder;
 
     /**
      * Creates a default {@code ObservableListBase}.
@@ -105,7 +105,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @param pos the position in the list where the updated element resides.
      */
     protected final void nextUpdate(int pos) {
-        changeBuilder.nextUpdate(pos);
+        getListChangeBuilder().nextUpdate(pos);
     }
 
     /**
@@ -117,7 +117,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @param old the old value at the {@code idx} position.
      */
     protected final void nextSet(int idx, E old) {
-        changeBuilder.nextSet(idx, old);
+        getListChangeBuilder().nextSet(idx, old);
     }
 
     /**
@@ -130,7 +130,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @param removed the list of items that were removed
      */
     protected final void nextReplace(int from, int to, List<? extends E> removed) {
-        changeBuilder.nextReplace(from, to, removed);
+        getListChangeBuilder().nextReplace(from, to, removed);
     }
 
     /**
@@ -141,7 +141,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @param removed the list of items that were removed
      */
     protected final void nextRemove(int idx, List<? extends E> removed) {
-        changeBuilder.nextRemove(idx, removed);
+        getListChangeBuilder().nextRemove(idx, removed);
     }
 
     /**
@@ -152,7 +152,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @param removed the item that was removed
      */
     protected final void nextRemove(int idx, E removed) {
-        changeBuilder.nextRemove(idx, removed);
+        getListChangeBuilder().nextRemove(idx, removed);
     }
 
     /**
@@ -168,7 +168,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * contain the indexes of the list. Therefore, such permutation would not contain indexes of range {@code (0, from)}
      */
     protected final void nextPermutation(int from, int to, int[] perm) {
-        changeBuilder.nextPermutation(from, to, perm);
+        getListChangeBuilder().nextPermutation(from, to, perm);
     }
 
     /**
@@ -181,7 +181,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @param to marks the end (exclusive) of the range that was added
      */
     protected final void nextAdd(int from, int to) {
-        changeBuilder.nextAdd(from, to);
+        getListChangeBuilder().nextAdd(from, to);
     }
 
     /**
@@ -194,7 +194,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @see #endChange()
      */
     protected final void beginChange() {
-        changeBuilder.beginChange();
+        getListChangeBuilder().beginChange();
     }
 
     /**
@@ -207,7 +207,15 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * @see #beginChange()
      */
     protected final void endChange() {
-        changeBuilder.endChange();
+        getListChangeBuilder().endChange();
+    }
+
+    private ListChangeBuilder<E> getListChangeBuilder() {
+        if (changeBuilder == null) {
+            changeBuilder = new ListChangeBuilder<>(this);
+        }
+
+        return changeBuilder;
     }
 
     @Override

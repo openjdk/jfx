@@ -63,7 +63,9 @@ final class GtkApplication extends Application implements
     private static final String GTK3_FALLBACK_WARNING = "WARNING: The GTK 3 library will be used instead.";
 
     static  {
-        String gtkVersion = System.getProperty("org.eclipse.swt.internal.gtk.version");
+        @SuppressWarnings("removal")
+        String gtkVersion = AccessController.doPrivileged((PrivilegedAction<String>)
+                                () -> System.getProperty("org.eclipse.swt.internal.gtk.version"));
         if (gtkVersion != null && gtkVersion.contains(".")) {
             PlatformLogger logger = Logging.getJavaFXLogger();
             logger.fine(String.format("SWT-GTK library found. Gtk Version = %s.", gtkVersion));
