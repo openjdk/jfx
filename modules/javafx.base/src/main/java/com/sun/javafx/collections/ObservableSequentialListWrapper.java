@@ -175,11 +175,12 @@ public class ObservableSequentialListWrapper<E> extends ModifiableObservableList
 
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
-        if (c.isEmpty()) {
-            if (index < 0 || index > size()) {
-                throw new IndexOutOfBoundsException("Index: " + index);
-            }
+        if (index < 0 || index > size()) {
+            throw new IndexOutOfBoundsException("Index: " + index);
+        }
 
+        // implicit check to ensure c != null
+        if (c.isEmpty()) {
             return false;
         }
 

@@ -57,11 +57,16 @@ public class ObservableSequentialListWrapperTest {
     }
 
     @Test
-    public void testAddAllWithEmptyCollectionArgumentAndInvalidIndexThrowsIOOBE() {
-        var list = new ObservableSequentialListWrapper<>(new ArrayList<>(List.of("a", "b", "c")));
-        assertThrows(IndexOutOfBoundsException.class, () -> list.addAll(-1, Collections.emptyList()));
-        assertThrows(IndexOutOfBoundsException.class, () -> list.addAll(4, Collections.emptyList()));
-        assertDoesNotThrow(() -> list.addAll(3, List.of("d", "e")));
+    public void testAddAllWithInvalidIndexThrowsIOOBE() {
+        var nonEmptyList = new ObservableSequentialListWrapper<>(new ArrayList<>(List.of("a", "b", "c")));
+        assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(-1, Collections.emptyList()));
+        assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(4, Collections.emptyList()));
+        assertDoesNotThrow(() -> nonEmptyList.addAll(3, List.of("d", "e")));
+
+        var emptyList = new ObservableSequentialListWrapper<>(new ArrayList<>());
+        assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(-1, Collections.emptyList()));
+        assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(1, Collections.emptyList()));
+        assertDoesNotThrow(() -> emptyList.addAll(0, List.of("d", "e")));
     }
 
 }

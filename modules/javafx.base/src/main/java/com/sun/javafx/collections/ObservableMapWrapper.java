@@ -321,13 +321,14 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
-            if (backingMap.isEmpty()) {
-                return false;
-            }
-
-            if (c.isEmpty()) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() && !backingMap.isEmpty()) {
                 clear();
                 return true;
+            }
+
+            if (backingMap.isEmpty()) {
+                return false;
             }
 
             return removeRetain(c, false);
@@ -350,7 +351,8 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
-            if (backingMap.isEmpty() || c.isEmpty()) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() || backingMap.isEmpty()) {
                 return false;
             }
 
@@ -463,7 +465,8 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
-            if (backingMap.isEmpty() || c.isEmpty()) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() || backingMap.isEmpty()) {
                 return false;
             }
 
@@ -487,13 +490,14 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
-            if (backingMap.isEmpty()) {
-                return false;
-            }
-
-            if (c.isEmpty()) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() && !backingMap.isEmpty()) {
                 clear();
                 return true;
+            }
+
+            if (backingMap.isEmpty()) {
+                return false;
             }
 
             return removeRetain(c, false);
@@ -672,10 +676,13 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            // implicit check to ensure c != null
             if (c.isEmpty() && !backingMap.isEmpty()) {
                 clear();
                 return true;
-            } else if (backingMap.isEmpty()) {
+            }
+
+            if (backingMap.isEmpty()) {
                 return false;
             }
 
@@ -699,6 +706,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            // implicit check to ensure c != null
             if (c.isEmpty() || backingMap.isEmpty()) {
                 return false;
             }

@@ -331,10 +331,13 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      */
     @Override
     public boolean retainAll(Collection<?> c) {
+        // implicit check to ensure c != null
         if (c.isEmpty() && !backingSet.isEmpty()) {
             clear();
             return true;
-        } else if (backingSet.isEmpty()) {
+        }
+
+        if (backingSet.isEmpty()) {
             return false;
         }
 
@@ -351,6 +354,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      */
     @Override
     public boolean removeAll(Collection<?> c) {
+        // implicit check to ensure c != null
         if (c.isEmpty() || backingSet.isEmpty()) {
             return false;
         }

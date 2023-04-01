@@ -88,7 +88,11 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     public boolean setAll(Collection<? extends E> col) {
-        if (isEmpty() && col.isEmpty()) return false;
+        // implicit check to ensure col != null
+        if (col.isEmpty() && isEmpty()) {
+            return false;
+        }
+
         beginChange();
         try {
             clear();
@@ -101,6 +105,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
+        // implicit check to ensure c != null
         if (c.isEmpty()) {
             return false;
         }
@@ -115,11 +120,12 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
-        if (c.isEmpty()) {
-            if (index < 0 || index > size()) {
-                throw new IndexOutOfBoundsException("Index: " + index);
-            }
+        if (index < 0 || index > size()) {
+            throw new IndexOutOfBoundsException("Index: " + index);
+        }
 
+        // implicit check to ensure c != null
+        if (c.isEmpty()) {
             return false;
         }
 
@@ -133,11 +139,12 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     protected void removeRange(int fromIndex, int toIndex) {
-        if (fromIndex == toIndex) {
-            if (fromIndex < 0 || fromIndex > size()) {
-                throw new IndexOutOfBoundsException("Index: " + fromIndex);
-            }
+        if (fromIndex < 0 || fromIndex > size()) {
+            throw new IndexOutOfBoundsException("Index: " + fromIndex);
+        }
 
+        // return early if the range is empty
+        if (fromIndex == toIndex) {
             return;
         }
 
@@ -151,6 +158,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     public boolean removeAll(Collection<?> c) {
+        // implicit check to ensure c != null
         if (c.isEmpty() || isEmpty()) {
             return false;
         }
@@ -165,10 +173,13 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     public boolean retainAll(Collection<?> c) {
+        // implicit check to ensure c != null
         if (c.isEmpty() && !isEmpty()) {
             clear();
             return true;
-        } else if (isEmpty()) {
+        }
+
+        if (isEmpty()) {
             return false;
         }
 
@@ -336,6 +347,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
         @Override
         public boolean addAll(Collection<? extends E> c) {
+            // implicit check to ensure c != null
             if (c.isEmpty()) {
                 return false;
             }
@@ -350,11 +362,12 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
         @Override
         public boolean addAll(int index, Collection<? extends E> c) {
-            if (c.isEmpty()) {
-                if (index < 0 || index > sublist.size()) {
-                    throw new IndexOutOfBoundsException("Index: " + index);
-                }
+            if (index < 0 || index > sublist.size()) {
+                throw new IndexOutOfBoundsException("Index: " + index);
+            }
 
+            // implicit check to ensure c != null
+            if (c.isEmpty()) {
                 return false;
             }
 
@@ -368,6 +381,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            // implicit check to ensure c != null
             if (c.isEmpty() || sublist.isEmpty()) {
                 return false;
             }
@@ -382,10 +396,13 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            // implicit check to ensure c != null
             if (c.isEmpty() && !sublist.isEmpty()) {
                 sublist.clear();
                 return true;
-            } else if (sublist.isEmpty()) {
+            }
+
+            if (sublist.isEmpty()) {
                 return false;
             }
 

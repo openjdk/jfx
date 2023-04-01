@@ -26,6 +26,7 @@
 package test.com.sun.javafx.collections;
 
 import com.sun.javafx.collections.ObservableMapWrapper;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import java.util.AbstractSet;
 import java.util.Collection;
@@ -40,69 +41,116 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class ObservableMapWrapperTest {
 
-    @Test
-    public void testRemoveAllKeysWithEmptyArgumentDoesNotEnumerateBackingMap() {
-        ObservableMapWrapper<String, String> map = newNonIterableObservableMapWrapper();
-        map.keySet().removeAll(Collections.<String>emptySet());
+    @Nested
+    class RemoveAllTest {
+        @Test
+        public void testEntrySetNullArgumentThrowsNPE() {
+            var map1 = new ObservableMapWrapper<>(new HashMap<>());
+            assertThrows(NullPointerException.class, () -> map1.entrySet().removeAll((Collection<?>) null));
+
+            var map2 = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            assertThrows(NullPointerException.class, () -> map2.entrySet().removeAll((Collection<?>) null));
+        }
+
+        @Test
+        public void testKeySetNullArgumentThrowsNPE() {
+            var map1 = new ObservableMapWrapper<>(new HashMap<>());
+            assertThrows(NullPointerException.class, () -> map1.keySet().removeAll((Collection<?>) null));
+
+            var map2 = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            assertThrows(NullPointerException.class, () -> map2.keySet().removeAll((Collection<?>) null));
+        }
+
+        @Test
+        public void testValueSetNullArgumentThrowsNPE() {
+            var map1 = new ObservableMapWrapper<>(new HashMap<>());
+            assertThrows(NullPointerException.class, () -> map1.values().removeAll((Collection<?>) null));
+
+            var map2 = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            assertThrows(NullPointerException.class, () -> map2.values().removeAll((Collection<?>) null));
+        }
+
+        @Test
+        public void testRemoveAllKeysWithEmptyCollectionArgumentDoesNotEnumerateBackingMap() {
+            ObservableMapWrapper<String, String> map = newNonIterableObservableMapWrapper();
+            map.keySet().removeAll(Collections.<String>emptySet());
+        }
+
+        @Test
+        public void testRemoveAllValuesWithEmptyCollectionArgumentDoesNotEnumerateBackingMap() {
+            ObservableMapWrapper<String, String> map = newNonIterableObservableMapWrapper();
+            map.values().removeAll(Collections.<String>emptySet());
+        }
+
+        @Test
+        public void testRemoveAllEntriesWithEmptyCollectionArgumentDoesNotEnumerateBackingMap() {
+            ObservableMapWrapper<String, String> map = newNonIterableObservableMapWrapper();
+            map.entrySet().removeAll(Collections.<Map.Entry<String, String>>emptySet());
+        }
+
+        @Test
+        public void testRemoveAllEntriesWithEmptyCollectionArgumentWorksCorrectly() {
+            var content = Map.of("k0", "v0", "k1", "v1", "k2", "v2");
+            var map = new ObservableMapWrapper<>(new HashMap<>(content));
+            assertFalse(map.entrySet().removeAll(Set.of()));
+            assertEquals(content, map);
+        }
     }
 
-    @Test
-    public void testRemoveAllValuesWithEmptyArgumentDoesNotEnumerateBackingMap() {
-        ObservableMapWrapper<String, String> map = newNonIterableObservableMapWrapper();
-        map.values().removeAll(Collections.<String>emptySet());
-    }
+    @Nested
+    class RetainAllTest {
+        @Test
+        public void testEntrySetNullArgumentThrowsNPE() {
+            var map1 = new ObservableMapWrapper<>(new HashMap<>());
+            assertThrows(NullPointerException.class, () -> map1.entrySet().retainAll((Collection<?>) null));
 
-    @Test
-    public void testRemoveAllEntriesWithEmptyArgumentDoesNotEnumerateBackingMap() {
-        ObservableMapWrapper<String, String> map = newNonIterableObservableMapWrapper();
-        map.entrySet().removeAll(Collections.<Map.Entry<String, String>>emptySet());
-    }
+            var map2 = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            assertThrows(NullPointerException.class, () -> map2.entrySet().retainAll((Collection<?>) null));
+        }
 
-    @Test
-    public void testRetainAllKeysWithEmptyArgumentDoesNotCallContains() {
-        var map = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
-        map.keySet().retainAll(newNoContainsHashSet());
-    }
+        @Test
+        public void testKeySetNullArgumentThrowsNPE() {
+            var map1 = new ObservableMapWrapper<>(new HashMap<>());
+            assertThrows(NullPointerException.class, () -> map1.keySet().retainAll((Collection<?>) null));
 
-    @Test
-    public void testRetainAllValuesWithEmptyArgumentDoesNotCallContains() {
-        var map = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
-        map.values().retainAll(newNoContainsHashSet());
-    }
+            var map2 = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            assertThrows(NullPointerException.class, () -> map2.keySet().retainAll((Collection<?>) null));
+        }
 
-    @Test
-    public void testRetainAllEntriesWithEmptyArgumentDoesNotCallContains() {
-        var map = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
-        map.entrySet().retainAll(newNoContainsHashSet());
-    }
+        @Test
+        public void testValueSetNullArgumentThrowsNPE() {
+            var map1 = new ObservableMapWrapper<>(new HashMap<>());
+            assertThrows(NullPointerException.class, () -> map1.values().retainAll((Collection<?>) null));
 
-    @Test
-    public void testRemoveAllWithNullArgumentThrowsNPE() {
-        var map = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
-        assertThrows(NullPointerException.class, () -> map.entrySet().removeAll((Collection<?>) null));
-    }
+            var map2 = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            assertThrows(NullPointerException.class, () -> map2.values().retainAll((Collection<?>) null));
+        }
 
-    @Test
-    public void testRemoveAllWithEmptyListArgumentWorksCorrectly() {
-        var content = Map.of("k0", "v0", "k1", "v1", "k2", "v2");
-        var map = new ObservableMapWrapper<>(new HashMap<>(content));
-        assertFalse(map.entrySet().removeAll(Set.of()));
-        assertEquals(content, map);
-    }
+        @Test
+        public void testRetainAllKeysWithEmptyCollectionArgumentDoesNotCallContains() {
+            var map = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            map.keySet().retainAll(newNoContainsHashSet());
+        }
 
-    @Test
-    public void testRetainAllWithNullArgumentThrowsNPE() {
-        var content = Map.of("k0", "v0", "k1", "v1", "k2", "v2");
-        var map = new ObservableMapWrapper<>(new HashMap<>(content));
-        assertThrows(NullPointerException.class, () -> map.entrySet().retainAll((Collection<?>) null));
-    }
+        @Test
+        public void testRetainAllValuesWithEmptyCollectionArgumentDoesNotCallContains() {
+            var map = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            map.values().retainAll(newNoContainsHashSet());
+        }
 
-    @Test
-    public void testRetainAllWithEmptyListArgumentWorksCorrectly() {
-        var content = Map.of("k0", "v0", "k1", "v1", "k2", "v2");
-        var map = new ObservableMapWrapper<>(new HashMap<>(content));
-        assertTrue(map.entrySet().retainAll(Set.of()));
-        assertTrue(map.isEmpty());
+        @Test
+        public void testRetainAllEntriesWithEmptyCollectionArgumentDoesNotCallContains() {
+            var map = new ObservableMapWrapper<>(new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")));
+            map.entrySet().retainAll(newNoContainsHashSet());
+        }
+
+        @Test
+        public void testRetainAllWithEmptyCollectionArgumentWorksCorrectly() {
+            var content = Map.of("k0", "v0", "k1", "v1", "k2", "v2");
+            var map = new ObservableMapWrapper<>(new HashMap<>(content));
+            assertTrue(map.entrySet().retainAll(Set.of()));
+            assertTrue(map.isEmpty());
+        }
     }
 
     private ObservableMapWrapper<String, String> newNonIterableObservableMapWrapper() {

@@ -168,6 +168,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean removeAll(Collection<?> c) {
+        // implicit check to ensure c != null
         if (c.isEmpty() || backingList.isEmpty()) {
             return false;
         }
@@ -191,10 +192,13 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean retainAll(Collection<?> c) {
+        // implicit check to ensure c != null
         if (c.isEmpty() && !backingList.isEmpty()) {
             clear();
             return true;
-        } else if (backingList.isEmpty()) {
+        }
+
+        if (backingList.isEmpty()) {
             return false;
         }
 

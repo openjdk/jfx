@@ -26,6 +26,7 @@
 package test.com.sun.javafx.collections;
 
 import com.sun.javafx.collections.ObservableSetWrapper;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,54 +38,59 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class ObservableSetWrapperTest {
 
-    @Test
-    public void testRemoveAllWithEmptyArgumentDoesNotEnumerateBackingSet() {
-        ObservableSetWrapper<String> set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")) {
-            @Override
-            public Iterator<String> iterator() {
-                throw new AssertionError("iterator() was not elided");
-            }
-        });
+    @Nested
+    class RemoveAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
+            assertThrows(NullPointerException.class, () -> set.removeAll((Collection<?>) null));
+        }
 
-        set.removeAll(Collections.<String>emptySet());
+        @Test
+        public void testEmptyCollectionArgumentDoesNotEnumerateBackingSet() {
+            ObservableSetWrapper<String> set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")) {
+                @Override
+                public Iterator<String> iterator() {
+                    throw new AssertionError("iterator() was not elided");
+                }
+            });
+
+            set.removeAll(Collections.<String>emptySet());
+        }
+
+        @Test
+        public void testEmptyCollectionArgumentWorksCorrectly() {
+            var set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
+            assertFalse(set.removeAll(Set.of()));
+            assertEquals(Set.of("a", "b", "c"), set);
+        }
     }
 
-    @Test
-    public void testRetainAllWithEmptyArgumentDoesNotCallContains() {
-        ObservableSetWrapper<String> set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
+    @Nested
+    class RetainAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
+            assertThrows(NullPointerException.class, () -> set.retainAll((Collection<?>) null));
+        }
 
-        set.removeAll(new HashSet<String>() {
-            @Override
-            public boolean contains(Object o) {
-                throw new AssertionError("contains() was not elided");
-            }
-        });
-    }
+        @Test
+        public void testEmptyCollectionArgumentDoesNotCallContains() {
+            ObservableSetWrapper<String> set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
+            set.removeAll(new HashSet<String>() {
+                @Override
+                public boolean contains(Object o) {
+                    throw new AssertionError("contains() was not elided");
+                }
+            });
+        }
 
-    @Test
-    public void testRemoveAllWithNullArgumentThrowsNPE() {
-        var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
-        assertThrows(NullPointerException.class, () -> set.removeAll((Collection<?>) null));
-    }
-
-    @Test
-    public void testRemoveAllWithEmptyListArgumentWorksCorrectly() {
-        var set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
-        assertFalse(set.removeAll(Set.of()));
-        assertEquals(Set.of("a", "b", "c"), set);
-    }
-
-    @Test
-    public void testRetainAllWithNullArgumentThrowsNPE() {
-        var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
-        assertThrows(NullPointerException.class, () -> set.retainAll((Collection<?>) null));
-    }
-
-    @Test
-    public void testRetainAllWithEmptyListArgumentWorksCorrectly() {
-        var set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
-        assertTrue(set.retainAll(Set.of()));
-        assertTrue(set.isEmpty());
+        @Test
+        public void testEmptyCollectionArgumentWorksCorrectly() {
+            var set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
+            assertTrue(set.retainAll(Set.of()));
+            assertTrue(set.isEmpty());
+        }
     }
 
 }

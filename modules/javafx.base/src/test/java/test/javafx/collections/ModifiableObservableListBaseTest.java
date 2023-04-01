@@ -40,82 +40,6 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ModifiableObservableListBaseTest {
 
     @Test
-    public void testAddAllWithEmptyCollectionArgumentDoesNotEnumerateCollection() {
-        var list = new MockModifiableObservableList(Collections.emptyList()) {
-            @Override
-            public Iterator<String> iterator() {
-                throw new AssertionError("iterator() was not elided");
-            }
-
-            @Override
-            public ListIterator<String> listIterator() {
-                throw new AssertionError("listIterator() was not elided");
-            }
-        };
-
-        assertDoesNotThrow(() -> list.addAll(Collections.emptyList()));
-        assertDoesNotThrow(() -> list.addAll(0, Collections.emptyList()));
-    }
-
-    @Test
-    public void testAddAllWithEmptyCollectionArgumentAndInvalidIndexThrowsIOOBE() {
-        var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
-        assertThrows(IndexOutOfBoundsException.class, () -> list.addAll(-1, Collections.emptyList()));
-        assertThrows(IndexOutOfBoundsException.class, () -> list.addAll(4, Collections.emptyList()));
-        assertDoesNotThrow(() -> list.addAll(3, List.of("d", "e")));
-    }
-
-    @Test
-    public void testRemoveAllWithEmptyCollectionArgumentDoesNotEnumerateBackingList() {
-        var list = new MockModifiableObservableList(List.of("a", "b", "c")) {
-            @Override
-            public String get(int index) {
-                throw new AssertionError("get() was not elided");
-            }
-        };
-
-        assertDoesNotThrow(() -> list.removeAll(Collections.<String>emptyList()));
-    }
-
-    @Test
-    public void testRetainAllWithEmptyCollectionArgumentDoesNotCallContains() {
-        var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
-
-        assertDoesNotThrow(() -> list.retainAll(new ArrayList<String>() {
-            @Override
-            public boolean contains(Object o) {
-                throw new AssertionError("contains() was not elided");
-            }
-        }));
-    }
-
-    @Test
-    public void testRetainAllWithEmptyCollectionArgumentCallsClear() {
-        boolean[] flag = new boolean[1];
-        new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c"))) {
-            @Override
-            public void clear() {
-                flag[0] = true;
-                super.clear();
-            }
-        }.retainAll(Collections.<String>emptyList());
-
-        assertTrue(flag[0], "clear() was not called");
-    }
-
-    @Test
-    public void testRetainAllOnEmptyListDoesNotCallClear() {
-        var list = new MockModifiableObservableList(new ArrayList<>()) {
-            @Override
-            public void clear() {
-                throw new AssertionError("clear() was not elided");
-            }
-        };
-
-        assertDoesNotThrow(() -> list.retainAll(Collections.<String>emptyList()));
-    }
-
-    @Test
     public void testRemoveEmptyRangeDoesNotEnumerateList() {
         var list = new MockModifiableObservableList(List.of("a", "b", "c")) {
             @Override
@@ -133,9 +57,132 @@ public class ModifiableObservableListBaseTest {
     }
 
     @Nested
-    class SubListTest {
+    class SetAllTest {
         @Test
-        public void testAddAllWithEmptyCollectionArgumentDoesNotEnumerateCollection() {
+        public void testNullArgumentThrowsNPE() {
+            var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
+            assertThrows(NullPointerException.class, () -> list.setAll((Collection<? extends String>) null));
+        }
+    }
+
+    @Nested
+    class AddAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
+            assertThrows(NullPointerException.class, () -> list.addAll((Collection<? extends String>) null));
+        }
+
+        @Test
+        public void testEmptyCollectionArgumentDoesNotEnumerateCollection() {
+            var list = new MockModifiableObservableList(Collections.emptyList()) {
+                @Override
+                public Iterator<String> iterator() {
+                    throw new AssertionError("iterator() was not elided");
+                }
+
+                @Override
+                public ListIterator<String> listIterator() {
+                    throw new AssertionError("listIterator() was not elided");
+                }
+            };
+
+            assertDoesNotThrow(() -> list.addAll(Collections.emptyList()));
+            assertDoesNotThrow(() -> list.addAll(0, Collections.emptyList()));
+        }
+
+        @Test
+        public void testInvalidIndexThrowsIOOBE() {
+            var nonEmptyList = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
+            assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(-1, Collections.emptyList()));
+            assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(4, Collections.emptyList()));
+            assertDoesNotThrow(() -> nonEmptyList.addAll(3, List.of("d", "e")));
+
+            var emptyList = new MockModifiableObservableList(new ArrayList<>());
+            assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(-1, Collections.emptyList()));
+            assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(1, Collections.emptyList()));
+            assertDoesNotThrow(() -> emptyList.addAll(0, List.of("d", "e")));
+        }
+    }
+
+    @Nested
+    class RemoveAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
+            assertThrows(NullPointerException.class, () -> list.removeAll((Collection<? extends String>) null));
+        }
+
+        @Test
+        public void testEmptyCollectionArgumentDoesNotEnumerateBackingList() {
+            var list = new MockModifiableObservableList(List.of("a", "b", "c")) {
+                @Override
+                public String get(int index) {
+                    throw new AssertionError("get() was not elided");
+                }
+            };
+
+            assertDoesNotThrow(() -> list.removeAll(Collections.<String>emptyList()));
+        }
+    }
+
+    @Nested
+    class RetainAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
+            assertThrows(NullPointerException.class, () -> list.retainAll((Collection<? extends String>) null));
+        }
+
+        @Test
+        public void testEmptyCollectionArgumentDoesNotCallContains() {
+            var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
+
+            assertDoesNotThrow(() -> list.retainAll(new ArrayList<String>() {
+                @Override
+                public boolean contains(Object o) {
+                    throw new AssertionError("contains() was not elided");
+                }
+            }));
+        }
+
+        @Test
+        public void testEmptyCollectionArgumentCallsClear() {
+            boolean[] flag = new boolean[1];
+            new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c"))) {
+                @Override
+                public void clear() {
+                    flag[0] = true;
+                    super.clear();
+                }
+            }.retainAll(Collections.<String>emptyList());
+
+            assertTrue(flag[0], "clear() was not called");
+        }
+
+        @Test
+        public void testRetainAllOnEmptyListDoesNotCallClear() {
+            var list = new MockModifiableObservableList(new ArrayList<>()) {
+                @Override
+                public void clear() {
+                    throw new AssertionError("clear() was not elided");
+                }
+            };
+
+            assertDoesNotThrow(() -> list.retainAll(Collections.<String>emptyList()));
+        }
+    }
+
+    @Nested
+    class SubList_AddAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var subList = new MockModifiableObservableList(List.of("a", "b", "c"), List.of("a", "b")).subList(0, 2);
+            assertThrows(NullPointerException.class, () -> subList.addAll((Collection<? extends String>) null));
+        }
+
+        @Test
+        public void testEmptyCollectionArgumentDoesNotEnumerateCollection() {
             var backingSubList = new ArrayList<>(Collections.<String>emptyList()) {
                 @Override
                 public Iterator<String> iterator() {
@@ -154,17 +201,35 @@ public class ModifiableObservableListBaseTest {
         }
 
         @Test
-        public void testAddAllWithEmptyCollectionArgumentAndInvalidIndexThrowsIOOBE() {
-            var backingList = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
-            var backingSubList = new ArrayList<>(new ArrayList<>(List.of("a", "b")));
-            var subList = new MockModifiableObservableList(backingList, backingSubList).subList(0, 2);
-            assertThrows(IndexOutOfBoundsException.class, () -> subList.addAll(-1, Collections.emptyList()));
-            assertThrows(IndexOutOfBoundsException.class, () -> subList.addAll(3, Collections.emptyList()));
-            assertDoesNotThrow(() -> subList.addAll(2, List.of("d", "e")));
+        public void testInvalidIndexThrowsIOOBE() {
+            var nonEmptySubList = new MockModifiableObservableList(
+                    new ArrayList<>(List.of("a", "b", "c")),
+                    new ArrayList<>(List.of("a", "b")))
+                .subList(0, 2);
+            assertThrows(IndexOutOfBoundsException.class, () -> nonEmptySubList.addAll(-1, Collections.emptyList()));
+            assertThrows(IndexOutOfBoundsException.class, () -> nonEmptySubList.addAll(3, Collections.emptyList()));
+            assertDoesNotThrow(() -> nonEmptySubList.addAll(2, List.of("d", "e")));
+
+            var emptySubList = new MockModifiableObservableList(
+                    new ArrayList<>(List.of("a", "b", "c")),
+                    new ArrayList<>())
+                .subList(0, 0);
+            assertThrows(IndexOutOfBoundsException.class, () -> emptySubList.addAll(-1, Collections.emptyList()));
+            assertThrows(IndexOutOfBoundsException.class, () -> emptySubList.addAll(1, Collections.emptyList()));
+            assertDoesNotThrow(() -> emptySubList.addAll(0, List.of("d", "e")));
+        }
+    }
+
+    @Nested
+    class SubList_RemoveAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var subList = new MockModifiableObservableList(List.of("a", "b", "c"), List.of("a", "b")).subList(0, 2);
+            assertThrows(NullPointerException.class, () -> subList.removeAll((Collection<? extends String>) null));
         }
 
         @Test
-        public void testRemoveAllWithEmptyCollectionArgumentDoesNotCallRemoveAll() {
+        public void testEmptyCollectionArgumentDoesNotCallRemoveAll() {
             var backingList = List.of("a", "b", "c");
             var backingSubList = new ArrayList<>(List.of("a", "b")) {
                 @Override
@@ -176,9 +241,18 @@ public class ModifiableObservableListBaseTest {
             var subList = new MockModifiableObservableList(backingList, backingSubList).subList(0, 2);
             assertDoesNotThrow(() -> subList.removeAll(Collections.<String>emptyList()));
         }
+    }
+
+    @Nested
+    class SubList_RetainAllTest {
+        @Test
+        public void testNullArgumentThrowsNPE() {
+            var subList = new MockModifiableObservableList(List.of("a", "b", "c"), List.of("a", "b")).subList(0, 2);
+            assertThrows(NullPointerException.class, () -> subList.retainAll((Collection<? extends String>) null));
+        }
 
         @Test
-        public void testRetainAllWithEmptyCollectionArgumentDoesNotCallContains() {
+        public void testEmptyCollectionArgumentDoesNotCallContains() {
             var backingList = List.of("a", "b", "c");
             var backingSubList = new ArrayList<>(List.of("a", "b"));
             var subList = new MockModifiableObservableList(backingList, backingSubList).subList(0, 2);
@@ -192,7 +266,7 @@ public class ModifiableObservableListBaseTest {
         }
 
         @Test
-        public void testRetainAllWithEmptyCollectionArgumentCallsClear() {
+        public void testEmptyCollectionArgumentCallsClear() {
             boolean[] flag = new boolean[1];
             var backingList = List.of("a", "b", "c");
             var backingSubList = new ArrayList<>(List.of("a", "b")) {
