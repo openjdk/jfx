@@ -477,7 +477,7 @@ public:
             struct CopyTypes {
                 uint32_t content[3];
             } copyTypes;
-            COMPILE_ASSERT(sizeof(RealTypes) == sizeof(CopyTypes), LinkRecordCopyStructSizeEqualsRealStruct);
+            static_assert(sizeof(RealTypes) == sizeof(CopyTypes), "LinkRecord's CopyStruct size equals to RealStruct");
         } data;
     };
 
@@ -490,6 +490,16 @@ public:
     AssemblerBuffer& buffer() { return m_formatter.m_buffer; }
 
 private:
+
+    // In the ARMv7 ISA, the LSB of a code pointer indicates whether the target uses Thumb vs ARM
+    // encoding. These utility functions are there for when we need to deal with this.
+    static bool isEven(const void* ptr) { return !(reinterpret_cast<uintptr_t>(ptr) & 1); }
+    static bool isEven(AssemblerLabel &label) { return !(label.offset() & 1); }
+    static void* makeEven(const void* ptr)
+    {
+        ASSERT(!isEven(ptr));
+        return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) & ~1);
+    }
 
     // ARMv7, Appx-A.6.3
     static bool BadReg(RegisterID reg)
@@ -562,6 +572,8 @@ private:
     typedef enum {
         OP_B_T1         = 0xD000,
         OP_B_T2         = 0xE000,
+        OP_STRD_imm_T1  = 0xE840,
+        OP_LDRD_imm_T1  = 0xE850,
         OP_POP_T2       = 0xE8BD,
         OP_PUSH_T2      = 0xE92D,
         OP_AND_reg_T2   = 0xEA00,
@@ -581,6 +593,8 @@ private:
         OP_CMP_reg_T2   = 0xEBB0,
         OP_VMOV_CtoD    = 0xEC00,
         OP_VMOV_DtoC    = 0xEC10,
+        OP_VSTMIA       = 0xEC80,
+        OP_VLDMIA       = 0xEC90,
         OP_FSTS         = 0xED00,
         OP_VSTR         = 0xED00,
         OP_FLDS         = 0xED10,
@@ -605,8 +619,10 @@ private:
         OP_VORR_T1      = 0xEF20,
         OP_B_T3a        = 0xF000,
         OP_B_T4a        = 0xF000,
+        OP_BL_T4a       = 0xF000,
         OP_AND_imm_T1   = 0xF000,
         OP_TST_imm      = 0xF010,
+        OP_BIC_imm_T1   = 0xF020,
         OP_ORR_imm_T1   = 0xF040,
         OP_MOV_imm_T2   = 0xF040,
         OP_MVN_imm      = 0xF060,
@@ -685,11 +701,14 @@ private:
         OP_VSQRT_T1b     = 0x0A40,
         OP_VCVTSD_T1b    = 0x0A40,
         OP_VCVTDS_T1b    = 0x0A40,
+        OP_VSTMIAb       = 0x0B00,
+        OP_VLDMIAb       = 0x0B00,
         OP_NOP_T2b       = 0x8000,
         OP_DMB_SY_T1b    = 0x8F5F,
         OP_DMB_ISHST_T1b = 0x8F5A,
         OP_B_T3b         = 0x8000,
         OP_B_T4b         = 0x9000,
+        OP_BL_T4b        = 0xD000,
     } OpcodeID2;
 
     struct FourFours {
@@ -710,6 +729,11 @@ private:
                 unsigned f3 : 4;
             };
         } m_u;
+    };
+
+    enum class BranchWithLink : bool {
+        No = false,
+        Yes = true
     };
 
     class ARMInstructionFormatter;
@@ -810,7 +834,7 @@ public:
     // NOTE: In an IT block, add doesn't modify the flags register.
     ALWAYS_INLINE void add(RegisterID rd, RegisterID rn, RegisterID rm)
     {
-        if (rd == ARMRegisters::sp) {
+        if (rd == ARMRegisters::sp && rd != rn) {
             mov(rd, rn);
             rn = rd;
         }
@@ -916,6 +940,13 @@ public:
     }
 
     // Only allowed in IT (if then) block if last instruction.
+    ALWAYS_INLINE AssemblerLabel bl()
+    {
+        m_formatter.twoWordOp16Op16(OP_BL_T4a, OP_BL_T4b);
+        return m_formatter.label();
+    }
+
+    // Only allowed in IT (if then) block if last instruction.
     ALWAYS_INLINE AssemblerLabel blx(RegisterID rm)
     {
         ASSERT(rm != ARMRegisters::pc);
@@ -928,6 +959,14 @@ public:
     {
         m_formatter.oneWordOp8RegReg143(OP_BX, rm, (RegisterID)0);
         return m_formatter.label();
+    }
+
+    ALWAYS_INLINE void bic(RegisterID rd, RegisterID rn, ARMThumbImmediate imm)
+    {
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rn));
+        ASSERT(imm.isEncodedImm());
+        m_formatter.twoWordOp5i6Imm4Reg4EncodedImm(OP_BIC_imm_T1, rn, rd, imm);
     }
 
     void bkpt(uint8_t imm = 0)
@@ -1240,6 +1279,47 @@ public:
             m_formatter.twoWordOp12Reg4FourFours(OP_LDRSH_reg_T2, rn, FourFours(rt, 0, shift, rm));
     }
 
+    // If index is set, this is a regular offset or a pre-indexed load;
+    // if index is not set then it is a post-index load.
+    //
+    // If wback is set rn is updated - this is a pre or post index load,
+    // if wback is not set this is a regular offset memory access.
+    //
+    // (-1020 <= offset <= 1020)
+    // offset % 4 == 0
+    // _reg = REG[rn]
+    // _tmp = _reg + offset
+    // _addr = index ? _tmp : _reg
+    // REG[rt] = MEM[_addr]
+    // REG[rt2] = MEM[_addr + 4]
+    // if (wback) REG[rn] = _tmp
+    ALWAYS_INLINE void ldrd(RegisterID rt, RegisterID rt2, RegisterID rn, int offset, bool index, bool wback)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(!BadReg(rt2));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(rt != rt2);
+        ASSERT(index || wback);
+        ASSERT(!wback | (rt != rn));
+        ASSERT(!wback | (rt2 != rn));
+        ASSERT(!(offset & 0x3));
+
+        bool add = true;
+        if (offset < 0) {
+            add = false;
+            offset = -offset;
+        }
+        offset >>= 2;
+        ASSERT(!(offset & ~0xff));
+
+        uint16_t opcode = OP_LDRD_imm_T1;
+        opcode |= (wback << 5);
+        opcode |= (add << 7);
+        opcode |= (index << 8);
+
+        m_formatter.twoWordOp12Reg4Reg4Reg4Imm8(static_cast<OpcodeID1>(opcode), rn, rt, rt2, offset);
+    }
+
     void lsl(RegisterID rd, RegisterID rm, int32_t shiftAmount)
     {
         ASSERT(!BadReg(rd));
@@ -1329,6 +1409,7 @@ public:
 
     ALWAYS_INLINE void mov(RegisterID rd, RegisterID rm)
     {
+        ASSERT(rd != rm); // Use a NOP instead
         m_formatter.oneWordOp8RegReg143(OP_MOV_reg_T1, rm, rd);
     }
 
@@ -1565,8 +1646,8 @@ public:
         ASSERT(rn != ARMRegisters::pc);
         ASSERT(imm.isUInt12());
 
-        if (!((rt | rn) & 8) && imm.isUInt7())
-            m_formatter.oneWordOp5Imm5Reg3Reg3(OP_STRB_imm_T1, imm.getUInt7() >> 2, rn, rt);
+        if (!((rt | rn) & 8) && imm.isUInt5())
+            m_formatter.oneWordOp5Imm5Reg3Reg3(OP_STRB_imm_T1, imm.getUInt5(), rn, rt);
         else
             m_formatter.twoWordOp12Reg4Reg4Imm12(OP_STRB_imm_T2, rn, rt, imm.getUInt12());
     }
@@ -1674,6 +1755,46 @@ public:
             m_formatter.oneWordOp7Reg3Reg3Reg3(OP_STRH_reg_T1, rm, rn, rt);
         else
             m_formatter.twoWordOp12Reg4FourFours(OP_STRH_reg_T2, rn, FourFours(rt, 0, shift, rm));
+    }
+
+    // If index is set, this is a regular offset or a pre-indexed load;
+    // if index is not set then it is a post-index load.
+    //
+    // If wback is set rn is updated - this is a pre or post index load,
+    // if wback is not set this is a regular offset memory access.
+    //
+    // (-1020 <= offset <= 1020)
+    // offset % 4 == 0
+    // _reg = REG[rn]
+    // _tmp = _reg + offset
+    // _addr = index ? _tmp : _reg
+    // MEM[_addr] = REG[rt]
+    // MEM[_addr + 4] = REG[rt2]
+    // if (wback) REG[rn] = _tmp
+    ALWAYS_INLINE void strd(RegisterID rt, RegisterID rt2, RegisterID rn, int offset, bool index, bool wback)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(!BadReg(rt2));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(index || wback);
+        ASSERT(!wback | (rt != rn));
+        ASSERT(!wback | (rt2 != rn));
+        ASSERT(!(offset & 0x3));
+
+        bool add = true;
+        if (offset < 0) {
+            add = false;
+            offset = -offset;
+        }
+        offset >>= 2;
+        ASSERT(!(offset & ~0xff));
+
+        uint16_t opcode = OP_STRD_imm_T1;
+        opcode |= (wback << 5);
+        opcode |= (add << 7);
+        opcode |= (index << 8);
+
+        m_formatter.twoWordOp12Reg4Reg4Reg4Imm8(static_cast<OpcodeID1>(opcode), rn, rt, rt2, offset);
     }
 
     ALWAYS_INLINE void sub(RegisterID rd, RegisterID rn, ARMThumbImmediate imm)
@@ -1833,6 +1954,18 @@ public:
     }
 #endif
 
+    void vldmia(RegisterID rn, FPDoubleRegisterID rs, uint32_t count)
+    {
+        ASSERT(count < 16);
+        m_formatter.vfpMemOp(OP_VLDMIA, OP_VLDMIAb, true, rn, rs, count << 3);
+    }
+
+    void vstmia(RegisterID rn, FPDoubleRegisterID rs, uint32_t count)
+    {
+        ASSERT(count < 16);
+        m_formatter.vfpMemOp(OP_VSTMIA, OP_VSTMIAb, true, rn, rs, count << 3);
+    }
+
     void vand(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
     {
         m_formatter.vfpOp(OP_VAND_T1, OP_VAND_T1b, true, rn, rd, rm);
@@ -1858,10 +1991,10 @@ public:
         m_formatter.vfpOp(OP_VCMP, OP_VCMPb, true, VFPOperand(5), rd, VFPOperand(0));
     }
 
-    void vcvt_signedToFloatingPoint(FPDoubleRegisterID rd, FPSingleRegisterID rm)
+    void vcvt_signedToFloatingPoint(FPDoubleRegisterID rd, FPSingleRegisterID rm, bool toDouble = true)
     {
         // boolean values are 64bit (toInt, unsigned, roundZero)
-        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, true, vcvtOp(false, false, false), rd, rm);
+        m_formatter.vfpOp(OP_VCVT_FPIVFP, OP_VCVT_FPIVFPb, toDouble, vcvtOp(false, false, false), rd, rm);
     }
 
     void vcvt_floatingPointToSigned(FPSingleRegisterID rd, FPDoubleRegisterID rm)
@@ -2164,7 +2297,7 @@ public:
             linkJumpT3<copy>(record.condition(), reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to);
             break;
         case LinkJumpT4:
-            linkJumpT4<copy>(reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to);
+            linkJumpT4<copy>(reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to, BranchWithLink::No);
             break;
         case LinkConditionalJumpT4:
             linkConditionalJumpT4<copy>(record.condition(), reinterpret_cast_ptr<uint16_t*>(from), fromInstruction, to);
@@ -2212,12 +2345,20 @@ public:
         linkJumpAbsolute(location, location, to);
     }
 
-    static void linkCall(void* code, AssemblerLabel from, void* to)
+    static void linkTailCall(void* code, AssemblerLabel from, void* to)
     {
-        ASSERT(!(reinterpret_cast<intptr_t>(code) & 1));
         ASSERT(from.isSet());
 
-        setPointer(reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset()) - 1, to, false);
+        uint16_t* location = reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset());
+        linkBranch(location, location, makeEven(to), BranchWithLink::No);
+    }
+
+    static void linkCall(void* code, AssemblerLabel from, void* to)
+    {
+        ASSERT(from.isSet());
+
+        uint16_t* location = reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset());
+        linkBranch(location, location, makeEven(to), BranchWithLink::Yes);
     }
 
     static void linkPointer(void* code, AssemblerLabel where, void* value)
@@ -2239,17 +2380,51 @@ public:
         cacheFlush(reinterpret_cast<uint16_t*>(from) - 5, 5 * sizeof(uint16_t));
     }
 
-    static void relinkJumpToNop(void* from)
-    {
-        relinkJump(from, from);
-    }
-
     static void relinkCall(void* from, void* to)
     {
-        ASSERT(!(reinterpret_cast<intptr_t>(from) & 1));
+        ASSERT(isEven(from));
 
-        setPointer(reinterpret_cast<uint16_t*>(from) - 1, to, true);
+        uint16_t* location = reinterpret_cast<uint16_t*>(from);
+        if (isBL(location - 2)) {
+            linkBranch(location, location, makeEven(to), BranchWithLink::Yes);
+            cacheFlush(location - 2, 2 * sizeof(uint16_t));
+            return;
+        }
+
+        setPointer(location - 1, to, true);
     }
+
+    static void relinkTailCall(void* from, void* to)
+    {
+        ASSERT(isEven(from));
+
+        uint16_t* location = reinterpret_cast<uint16_t*>(from);
+        linkBranch(location, location, to, BranchWithLink::No);
+        cacheFlush(location - 2, 2 * sizeof(uint16_t));
+    }
+
+#if ENABLE(JUMP_ISLANDS)
+    static void* prepareForAtomicRelinkJumpConcurrently(void* from, void* to)
+    {
+        ASSERT(isEven(from));
+        ASSERT(isEven(to));
+
+        intptr_t offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(from);
+        ASSERT(static_cast<int>(offset) == offset);
+
+        if (isInt<25>(offset))
+            return to;
+
+        return ExecutableAllocator::singleton().getJumpIslandToConcurrently(from, to);
+    }
+
+    static void* prepareForAtomicRelinkCallConcurrently(void* from, void* to)
+    {
+        ASSERT(isEven(from));
+
+        return prepareForAtomicRelinkJumpConcurrently(from, makeEven(to));
+    }
+#endif
 
     static void* readCallTarget(void* from)
     {
@@ -2261,27 +2436,6 @@ public:
         ASSERT(!(reinterpret_cast<intptr_t>(where) & 1));
 
         setInt32(where, value, true);
-    }
-
-    static void repatchCompact(void* where, int32_t offset)
-    {
-        ASSERT(offset >= -255 && offset <= 255);
-
-        bool add = true;
-        if (offset < 0) {
-            add = false;
-            offset = -offset;
-        }
-
-        offset |= (add << 9);
-        offset |= (1 << 10);
-        offset |= (1 << 11);
-
-        uint16_t* location = reinterpret_cast<uint16_t*>(where);
-        uint16_t instruction = location[1] & ~((1 << 12) - 1);
-        instruction |= offset;
-        performJITMemcpy(location + 1, &instruction, sizeof(uint16_t));
-        cacheFlush(location, sizeof(uint16_t) * 2);
     }
 
     static void repatchPointer(void* where, void* value)
@@ -2304,7 +2458,7 @@ public:
 #if OS(LINUX)
         if (canBeJumpT4(reinterpret_cast<uint16_t*>(instructionStart), to)) {
             uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart) + 2;
-            linkJumpT4(ptr, ptr, to);
+            linkJumpT4(ptr, ptr, to, BranchWithLink::No);
             cacheFlush(ptr - 2, sizeof(uint16_t) * 2);
         } else {
             uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart) + 5;
@@ -2313,7 +2467,7 @@ public:
         }
 #else
         uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart) + 2;
-        linkJumpT4(ptr, ptr, to);
+        linkJumpT4(ptr, ptr, to, BranchWithLink::No);
         cacheFlush(ptr - 2, sizeof(uint16_t) * 2);
 #endif
     }
@@ -2424,10 +2578,18 @@ public:
 #endif
     }
 
+    static ALWAYS_INLINE bool canEmitJump(void* from, void* to)
+    {
+        // 'from' holds the address of the branch instruction. The branch range however is relative
+        // to the architectural value of the PC which is 4 larger than the address of the branch.
+        intptr_t offset = bitwise_cast<intptr_t>(to) - (bitwise_cast<intptr_t>(from) + 4);
+        return isInt<25>(offset);
+    }
+
 private:
     // VFP operations commonly take one or more 5-bit operands, typically representing a
-    // floating point register number.  This will commonly be encoded in the instruction
-    // in two parts, with one single bit field, and one 4-bit field.  In the case of
+    // floating point register number. This will commonly be encoded in the instruction
+    // in two parts, with one single bit field, and one 4-bit field. In the case of
     // double precision operands the high bit of the register number will be encoded
     // separately, and for single precision operands the high bit of the register number
     // will be encoded individually.
@@ -2548,6 +2710,12 @@ private:
     {
         const uint16_t* instruction = static_cast<const uint16_t*>(address);
         return ((instruction[0] & 0xf800) == OP_B_T4a) && ((instruction[1] & 0xd000) == OP_B_T4b);
+    }
+
+    static bool isBL(const void* address)
+    {
+        const uint16_t* instruction = static_cast<const uint16_t*>(address);
+        return ((instruction[0] & 0xf800) == OP_BL_T4a) && ((instruction[1] & 0xd000) == OP_BL_T4b);
     }
 
     static bool isBX(const void* address)
@@ -2683,7 +2851,7 @@ private:
     }
 
     template<CopyFunction copy = performJITMemcpy>
-    static void linkJumpT4(uint16_t* writeTarget, const uint16_t* instruction, void* target)
+    static void linkJumpT4(uint16_t* writeTarget, const uint16_t* instruction, void* target, BranchWithLink link)
     {
         // FIMXE: this should be up in the MacroAssembler layer. :-(
         ASSERT(!(reinterpret_cast<intptr_t>(instruction) & 1));
@@ -2699,7 +2867,7 @@ private:
         ASSERT(!(relative & 1));
         uint16_t instructions[2];
         instructions[0] = OP_B_T4a | ((relative & 0x1000000) >> 14) | ((relative & 0x3ff000) >> 12);
-        instructions[1] = OP_B_T4b | ((relative & 0x800000) >> 10) | ((relative & 0x400000) >> 11) | ((relative & 0xffe) >> 1);
+        instructions[1] = OP_B_T4b | (static_cast<uint16_t>(link) << 14) | ((relative & 0x800000) >> 10) | ((relative & 0x400000) >> 11) | ((relative & 0xffe) >> 1);
         copy(writeTarget - 2, instructions, 2 * sizeof(uint16_t));
     }
 
@@ -2712,7 +2880,7 @@ private:
 
         uint16_t newInstruction = ifThenElse(cond) | OP_IT;
         copy(writeTarget - 3, &newInstruction, sizeof(uint16_t));
-        linkJumpT4<copy>(writeTarget, instruction, target);
+        linkJumpT4<copy>(writeTarget, instruction, target, BranchWithLink::No);
     }
 
     template<CopyFunction copy = performJITMemcpy>
@@ -2768,7 +2936,7 @@ private:
             instructions[1] = OP_NOP_T2a;
             instructions[2] = OP_NOP_T2b;
             performJITMemcpy(writeTarget - 5, instructions, 3 * sizeof(uint16_t));
-            linkJumpT4(writeTarget, instruction, target);
+            linkJumpT4(writeTarget, instruction, target, BranchWithLink::No);
         } else {
             const uint16_t JUMP_TEMPORARY_REGISTER = ARMRegisters::ip;
             ARMThumbImmediate lo16 = ARMThumbImmediate::makeUInt16(static_cast<uint16_t>(reinterpret_cast<uint32_t>(target) + 1));
@@ -2782,6 +2950,25 @@ private:
             instructions[4] = OP_BX | (JUMP_TEMPORARY_REGISTER << 3);
             performJITMemcpy(writeTarget - 5, instructions, 5 * sizeof(uint16_t));
         }
+    }
+
+    static void linkBranch(uint16_t* from, const uint16_t* fromInstruction, void* to, BranchWithLink link)
+    {
+        ASSERT(isEven(fromInstruction));
+        ASSERT(isEven(from));
+        ASSERT(isEven(to));
+        ASSERT(link == BranchWithLink::Yes ? isBL(from - 2) : isB(from - 2));
+
+        intptr_t offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction);
+#if ENABLE(JUMP_ISLANDS)
+        if (!isInt<25>(offset)) {
+            to = ExecutableAllocator::singleton().getJumpIslandTo(bitwise_cast<void*>(fromInstruction), to);
+            offset = bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction);
+        }
+#endif
+        RELEASE_ASSERT(isInt<25>(offset));
+
+        linkJumpT4(from, fromInstruction, to, link);
     }
 
     static uint16_t twoWordOp5i6Imm4Reg4EncodedImmFirst(uint16_t op, ARMThumbImmediate imm)
@@ -2885,6 +3072,12 @@ private:
         {
             m_buffer.putShort(op | reg1);
             m_buffer.putShort((reg2 << 12) | imm);
+        }
+
+        ALWAYS_INLINE void twoWordOp12Reg4Reg4Reg4Imm8(OpcodeID1 op, RegisterID reg1, RegisterID reg2, RegisterID reg3, uint8_t imm)
+        {
+            m_buffer.putShort(op | reg1);
+            m_buffer.putShort((reg2 << 12) | (reg3 << 8) | imm);
         }
 
         ALWAYS_INLINE void twoWordOp12Reg40Imm3Reg4Imm20Imm5(OpcodeID1 op, RegisterID reg1, RegisterID reg2, uint16_t imm1, uint16_t imm2, uint16_t imm3)

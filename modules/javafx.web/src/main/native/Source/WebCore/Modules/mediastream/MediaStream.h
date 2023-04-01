@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,9 +38,9 @@
 #include "ScriptWrappable.h"
 #include "Timer.h"
 #include "URLRegistry.h"
-#include <wtf/HashMap.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RobinHoodHashMap.h>
 
 namespace WebCore {
 
@@ -59,7 +59,7 @@ class MediaStream final
 public:
     static Ref<MediaStream> create(Document&);
     static Ref<MediaStream> create(Document&, MediaStream&);
-    static Ref<MediaStream> create(Document&, const MediaStreamTrackVector&);
+    static Ref<MediaStream> create(Document&, const Vector<RefPtr<MediaStreamTrack>>&);
     static Ref<MediaStream> create(Document&, Ref<MediaStreamPrivate>&&);
     virtual ~MediaStream();
 
@@ -69,6 +69,9 @@ public:
     void removeTrack(MediaStreamTrack&);
     MediaStreamTrack* getTrackById(String);
 
+    MediaStreamTrack* getFirstAudioTrack() const;
+    MediaStreamTrack* getFirstVideoTrack() const;
+
     MediaStreamTrackVector getAudioTracks() const;
     MediaStreamTrackVector getVideoTracks() const;
     MediaStreamTrackVector getTracks() const;
@@ -77,6 +80,8 @@ public:
 
     bool active() const { return m_isActive; }
     bool muted() const { return m_private->muted(); }
+
+    template<typename Function> bool hasMatchingTrack(Function&& function) const { return anyOf(m_trackMap.values(), WTFMove(function)); }
 
     MediaStreamPrivate& privateStream() { return m_private.get(); }
 
@@ -99,7 +104,7 @@ public:
 #endif
 
 protected:
-    MediaStream(Document&, const MediaStreamTrackVector&);
+    MediaStream(Document&, const Vector<Ref<MediaStreamTrack>>&);
     MediaStream(Document&, Ref<MediaStreamPrivate>&&);
 
 #if !RELEASE_LOG_DISABLED
@@ -122,7 +127,7 @@ private:
     void didRemoveTrack(MediaStreamTrackPrivate&) final;
     void characteristicsChanged() final;
 
-    MediaProducer::MediaStateFlags mediaState() const;
+    MediaProducerMediaStateFlags mediaState() const;
 
     // MediaCanStartListener
     void mediaCanStart(Document&) final;
@@ -137,13 +142,13 @@ private:
     void setIsActive(bool);
     void statusDidChange();
 
-    MediaStreamTrackVector trackVectorForType(RealtimeMediaSource::Type) const;
+    MediaStreamTrackVector filteredTracks(const Function<bool(const MediaStreamTrack&)>&) const;
 
     Ref<MediaStreamPrivate> m_private;
 
-    HashMap<String, RefPtr<MediaStreamTrack>> m_trackSet;
+    MemoryCompactRobinHoodHashMap<String, Ref<MediaStreamTrack>> m_trackMap;
 
-    MediaProducer::MediaStateFlags m_state;
+    MediaProducerMediaStateFlags m_state;
 
     bool m_isActive { false };
     bool m_isProducingData { false };

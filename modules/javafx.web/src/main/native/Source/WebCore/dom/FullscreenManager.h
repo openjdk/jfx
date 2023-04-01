@@ -28,6 +28,8 @@
 #if ENABLE(FULLSCREEN_API)
 
 #include "Document.h"
+#include "FrameDestructionObserverInlines.h"
+#include "GCReachableRef.h"
 #include "LayoutRect.h"
 #include <wtf/Deque.h>
 #include <wtf/WeakPtr.h>
@@ -69,7 +71,7 @@ public:
         EnforceIFrameAllowFullscreenRequirement,
         ExemptIFrameAllowFullscreenRequirement,
     };
-    WEBCORE_EXPORT void requestFullscreenForElement(Element*, FullscreenCheckType);
+    WEBCORE_EXPORT void requestFullscreenForElement(Ref<Element>&&, FullscreenCheckType);
 
     WEBCORE_EXPORT bool willEnterFullscreen(Element&);
     WEBCORE_EXPORT bool didEnterFullscreen();
@@ -96,7 +98,7 @@ public:
 protected:
     friend class Document;
 
-    void dispatchFullscreenChangeOrErrorEvent(Deque<RefPtr<Node>>&, const AtomString& eventName, bool shouldNotifyMediaElement);
+    void dispatchFullscreenChangeOrErrorEvent(Deque<GCReachableRef<Node>>&, const AtomString& eventName, bool shouldNotifyMediaElement);
     void clearFullscreenElementStack();
     void popFullscreenElementStack();
     void pushFullscreenElementStack(Element&);
@@ -104,7 +106,7 @@ protected:
 
 private:
 #if !RELEASE_LOG_DISABLED
-    const WTF::Logger& logger() const { return m_document.logger(); }
+    const Logger& logger() const { return m_document.logger(); }
     const void* logIdentifier() const { return m_logIdentifier; }
     const char* logClassName() const { return "FullscreenManager"; }
     WTFLogChannel& logChannel() const;
@@ -119,8 +121,8 @@ private:
     RefPtr<Element> m_fullscreenElement;
     Vector<RefPtr<Element>> m_fullscreenElementStack;
     WeakPtr<RenderFullScreen> m_fullscreenRenderer { nullptr };
-    Deque<RefPtr<Node>> m_fullscreenChangeEventTargetQueue;
-    Deque<RefPtr<Node>> m_fullscreenErrorEventTargetQueue;
+    Deque<GCReachableRef<Node>> m_fullscreenChangeEventTargetQueue;
+    Deque<GCReachableRef<Node>> m_fullscreenErrorEventTargetQueue;
     LayoutRect m_savedPlaceholderFrameRect;
     std::unique_ptr<RenderStyle> m_savedPlaceholderRenderStyle;
 

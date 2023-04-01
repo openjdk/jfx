@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -88,19 +88,22 @@ void SVGFETurbulenceElement::parseAttribute(const QualifiedName& name, const Ato
     SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
 }
 
-bool SVGFETurbulenceElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
+bool SVGFETurbulenceElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
 {
-    FETurbulence* turbulence = static_cast<FETurbulence*>(effect);
+    auto& feTurbulence = downcast<FETurbulence>(effect);
     if (attrName == SVGNames::typeAttr)
-        return turbulence->setType(type());
+        return feTurbulence.setType(type());
     if (attrName == SVGNames::stitchTilesAttr)
-        return turbulence->setStitchTiles(stitchTiles());
-    if (attrName == SVGNames::baseFrequencyAttr)
-        return (turbulence->setBaseFrequencyX(baseFrequencyX()) || turbulence->setBaseFrequencyY(baseFrequencyY()));
+        return feTurbulence.setStitchTiles(stitchTiles());
+    if (attrName == SVGNames::baseFrequencyAttr) {
+        bool baseFrequencyXChanged = feTurbulence.setBaseFrequencyX(baseFrequencyX());
+        bool baseFrequencyYChanged = feTurbulence.setBaseFrequencyY(baseFrequencyY());
+        return baseFrequencyXChanged || baseFrequencyYChanged;
+    }
     if (attrName == SVGNames::seedAttr)
-        return turbulence->setSeed(seed());
+        return feTurbulence.setSeed(seed());
     if (attrName == SVGNames::numOctavesAttr)
-        return turbulence->setNumOctaves(numOctaves());
+        return feTurbulence.setNumOctaves(numOctaves());
 
     ASSERT_NOT_REACHED();
     return false;
@@ -117,11 +120,12 @@ void SVGFETurbulenceElement::svgAttributeChanged(const QualifiedName& attrName)
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFETurbulenceElement::build(SVGFilterBuilder*, Filter& filter) const
+RefPtr<FilterEffect> SVGFETurbulenceElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     if (baseFrequencyX() < 0 || baseFrequencyY() < 0)
         return nullptr;
-    return FETurbulence::create(filter, type(), baseFrequencyX(), baseFrequencyY(), numOctaves(), seed(), stitchTiles() == SVG_STITCHTYPE_STITCH);
+
+    return FETurbulence::create(type(), baseFrequencyX(), baseFrequencyY(), numOctaves(), seed(), stitchTiles() == SVG_STITCHTYPE_STITCH);
 }
 
-}
+} // namespace WebCore

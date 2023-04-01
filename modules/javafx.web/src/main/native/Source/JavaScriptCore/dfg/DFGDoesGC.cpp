@@ -171,9 +171,6 @@ bool doesGC(Graph& graph, Node* node)
     case LoadKeyFromMapBucket:
     case LoadValueFromMapBucket:
     case ExtractValueFromWeakMapGet:
-    case WeakMapGet:
-    case WeakSetAdd:
-    case WeakMapSet:
     case Unreachable:
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
@@ -185,6 +182,7 @@ bool doesGC(Graph& graph, Node* node)
     case NotifyWrite:
     case AssertInBounds:
     case CheckInBounds:
+    case CheckInBoundsInt52:
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
@@ -197,10 +195,12 @@ bool doesGC(Graph& graph, Node* node)
     case GetGetter:
     case GetSetter:
     case GetArrayLength:
+    case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case StringCharCodeAt:
     case StringCodePointAt:
     case GetTypedArrayByteOffset:
+    case GetTypedArrayByteOffsetAsInt52:
     case GetPrototypeOf:
     case PutStructure:
     case GetByOffset:
@@ -258,6 +258,7 @@ bool doesGC(Graph& graph, Node* node)
     case DataViewGetFloat:
     case DataViewSet:
     case PutByOffset:
+    case WeakMapGet:
         return false;
 
 #if ASSERT_ENABLED
@@ -335,6 +336,7 @@ bool doesGC(Graph& graph, Node* node)
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
     case RegExpTest:
+    case RegExpTestInline:
     case ResolveScope:
     case ResolveScopeForHoistingFuncDeclInEval:
     case Return:
@@ -449,7 +451,7 @@ bool doesGC(Graph& graph, Node* node)
 
     case CheckTraps:
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=194323
-        ASSERT(Options::usePollingTraps());
+        ASSERT(Options::usePollingTraps() || graph.m_plan.isUnlinked());
         return true;
 
     case CompareEq:
@@ -492,16 +494,21 @@ bool doesGC(Graph& graph, Node* node)
             || node->isBinaryUseKind(ObjectUse)
             || node->isBinaryUseKind(MiscUse, UntypedUse) || node->isBinaryUseKind(UntypedUse, MiscUse)
             || node->isBinaryUseKind(StringIdentUse, NotStringVarUse) || node->isBinaryUseKind(NotStringVarUse, StringIdentUse)
-            || node->isBinaryUseKind(NotDoubleUse, NeitherDoubleNorHeapBigIntNorStringUse) || node->isBinaryUseKind(NotDoubleUse, NeitherDoubleNorHeapBigIntNorStringUse))
+            || node->isBinaryUseKind(NotDoubleUse, NeitherDoubleNorHeapBigIntNorStringUse) || node->isBinaryUseKind(NeitherDoubleNorHeapBigIntNorStringUse, NotDoubleUse))
             return false;
         return true;
 
     case GetIndexedPropertyStorage:
+        return false;
+
     case GetByVal:
     case EnumeratorGetByVal:
         if (node->arrayMode().type() == Array::String)
             return true;
         return false;
+
+    case ResolveRope:
+        return true;
 
     case EnumeratorNextExtractMode:
     case EnumeratorNextExtractIndex:
@@ -584,6 +591,14 @@ bool doesGC(Graph& graph, Node* node)
         default:
             return true;
         }
+
+    // WeakSet / WeakMap storages are not GC-managed buffer, thus adding an element does not cause GC,
+    // unless we throw an error due to key type. An error can be thrown even though a key is Symbol
+    // if the Symbol key is not registered one.
+    case WeakSetAdd:
+        return node->child2().useKind() != ObjectUse;
+    case WeakMapSet:
+        return graph.varArgChild(node, 1).useKind() != ObjectUse;
 
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();

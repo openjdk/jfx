@@ -29,6 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "CanvasBase.h"
+#include "Document.h"
 #include "FloatRect.h"
 #include "HTMLElement.h"
 #include <memory>
@@ -47,18 +48,15 @@ class GraphicsContext;
 class Image;
 class ImageBuffer;
 class ImageData;
-class MediaSample;
 class MediaStream;
 class OffscreenCanvas;
+class VideoFrame;
 class WebGLRenderingContextBase;
 class GPUCanvasContext;
+class WebCoreOpaqueRoot;
 struct CanvasRenderingContext2DSettings;
 struct ImageBitmapRenderingContextSettings;
 struct UncachedString;
-
-namespace DisplayList {
-using AsTextFlags = unsigned;
-}
 
 class HTMLCanvasElement final : public HTMLElement, public CanvasBase, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLCanvasElement);
@@ -73,7 +71,7 @@ public:
     void setSize(const IntSize& newSize) override;
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
-    ExceptionOr<std::optional<RenderingContext>> getContext(JSC::JSGlobalObject&, const String& contextId, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<std::optional<RenderingContext>> getContext(JSC::JSGlobalObject&, const String& contextId, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
 
     CanvasRenderingContext* getContext(const String&);
 
@@ -95,9 +93,9 @@ public:
 
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType, JSC::JSValue quality);
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType);
-    ExceptionOr<void> toBlob(ScriptExecutionContext&, Ref<BlobCallback>&&, const String& mimeType, JSC::JSValue quality);
+    ExceptionOr<void> toBlob(Ref<BlobCallback>&&, const String& mimeType, JSC::JSValue quality);
 #if ENABLE(OFFSCREEN_CANVAS)
-    ExceptionOr<Ref<OffscreenCanvas>> transferControlToOffscreen(ScriptExecutionContext&);
+    ExceptionOr<Ref<OffscreenCanvas>> transferControlToOffscreen();
 #endif
 
     // Used for rendering
@@ -106,8 +104,8 @@ public:
     void paint(GraphicsContext&, const LayoutRect&);
 
 #if ENABLE(MEDIA_STREAM)
-    RefPtr<MediaSample> toMediaSample();
-    ExceptionOr<Ref<MediaStream>> captureStream(Document&, std::optional<double>&& frameRequestRate);
+    RefPtr<VideoFrame> toVideoFrame();
+    ExceptionOr<Ref<MediaStream>> captureStream(std::optional<double>&& frameRequestRate);
 #endif
 
     Image* copiedImage() const final;
@@ -120,9 +118,6 @@ public:
     bool shouldAccelerate(unsigned area) const;
 
     WEBCORE_EXPORT void setUsesDisplayListDrawing(bool);
-    WEBCORE_EXPORT void setTracksDisplayListReplay(bool);
-    WEBCORE_EXPORT String displayListAsText(DisplayList::AsTextFlags) const;
-    WEBCORE_EXPORT String replayDisplayListAsText(DisplayList::AsTextFlags) const;
 
     // FIXME: Only some canvas rendering contexts need an ImageBuffer.
     // It would be better to have the contexts own the buffers.
@@ -139,6 +134,13 @@ public:
 
     bool isControlledByOffscreen() const;
 
+    WEBCORE_EXPORT static size_t maxActivePixelMemory();
+
+#if PLATFORM(COCOA)
+    GraphicsContext* drawingContext() const final;
+#endif
+    WEBCORE_EXPORT void setAvoidIOSurfaceSizeCheckInWebProcessForTesting();
+
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
 
@@ -152,6 +154,8 @@ private:
     void eventListenersDidChange() final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
     bool canContainRangeEndPoint() const final;
@@ -183,8 +187,8 @@ private:
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 
     std::optional<bool> m_usesDisplayListDrawing;
-    bool m_tracksDisplayListReplay { false };
 
+    bool m_avoidBackendSizeCheckForTesting { false };
     bool m_ignoreReset { false };
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer { false };
@@ -193,7 +197,12 @@ private:
     bool m_hasRelevantWebGLEventListener { false };
 #endif
     bool m_isSnapshotting { false };
+#if PLATFORM(COCOA)
+    mutable bool m_mustGuardAgainstUseByPendingLayerTransaction { false };
+#endif
 };
+
+WebCoreOpaqueRoot root(HTMLCanvasElement*);
 
 } // namespace WebCore
 

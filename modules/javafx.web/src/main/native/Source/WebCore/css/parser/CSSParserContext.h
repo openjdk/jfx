@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 #include "CSSParserMode.h"
 #include "CSSPropertyNames.h"
 #include "StyleRuleType.h"
-#include "TextEncoding.h"
+#include <pal/text/TextEncoding.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/Hasher.h>
 #include <wtf/URL.h>
@@ -54,28 +54,14 @@ struct CSSParserContext {
     bool isContentOpaque { false };
     bool useSystemAppearance { false };
 
-    // Settings.
-    bool aspectRatioEnabled { false };
+    // Settings, excluding those affecting properties.
     bool colorContrastEnabled { false };
-    bool colorFilterEnabled { false };
     bool colorMixEnabled { false };
     bool constantPropertiesEnabled { false };
-    bool containmentEnabled { false };
-    bool counterStyleAtRulesEnabled { false };
     bool counterStyleAtRuleImageSymbolsEnabled { false };
     bool cssColor4 { false };
-    bool deferredCSSParserEnabled { false };
-    bool individualTransformPropertiesEnabled { false };
-#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
-    bool legacyOverflowScrollingTouchEnabled { false };
-#endif
-    bool overscrollBehaviorEnabled { false };
     bool relativeColorSyntaxEnabled { false };
-    bool scrollBehaviorEnabled { false };
     bool springTimingFunctionEnabled { false };
-#if ENABLE(TEXT_AUTOSIZING)
-    bool textAutosizingEnabled { false };
-#endif
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
     bool transformStyleOptimized3DEnabled { false };
 #endif
@@ -83,17 +69,16 @@ struct CSSParserContext {
     bool focusVisibleEnabled { false };
     bool hasPseudoClassEnabled { false };
     bool cascadeLayersEnabled { false };
-
-    // RuntimeEnabledFeatures.
-#if ENABLE(ATTACHMENT_ELEMENT)
-    bool attachmentEnabled { false };
-#endif
-
     bool overflowClipEnabled { false };
+    bool gradientPremultipliedAlphaInterpolationEnabled { false };
+    bool gradientInterpolationColorSpacesEnabled { false };
+    bool subgridEnabled { false };
+
+    // Settings, those affecting properties.
+    CSSPropertySettings propertySettings;
 
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
-    bool isPropertyRuntimeDisabled(CSSPropertyID) const;
     ResolvedURL completeURL(const String&) const;
 };
 

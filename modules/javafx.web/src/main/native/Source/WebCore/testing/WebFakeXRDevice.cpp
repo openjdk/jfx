@@ -91,6 +91,12 @@ void SimulatedXRDevice::setViewerOrigin(const std::optional<FrameData::Pose>& or
     m_frameData.isTrackingValid = false;
 }
 
+void SimulatedXRDevice::setVisibilityState(XRVisibilityState visibilityState)
+{
+    if (m_trackingAndRenderingClient)
+        m_trackingAndRenderingClient->updateSessionVisibilityState(visibilityState);
+}
+
 void SimulatedXRDevice::simulateShutdownCompleted()
 {
     if (m_trackingAndRenderingClient)
@@ -103,20 +109,20 @@ WebCore::IntSize SimulatedXRDevice::recommendedResolution(PlatformXR::SessionMod
     return IntSize(32, 32);
 }
 
-void SimulatedXRDevice::initializeTrackingAndRendering(PlatformXR::SessionMode)
+void SimulatedXRDevice::initializeTrackingAndRendering(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&)
 {
     GraphicsContextGLAttributes attributes;
     attributes.depth = false;
     attributes.stencil = false;
     attributes.antialias = false;
-    m_gl = GraphicsContextGL::create(attributes, nullptr);
+    m_gl = createWebProcessGraphicsContextGL(attributes);
 
     if (m_trackingAndRenderingClient) {
         // WebXR FakeDevice waits for simulateInputConnection calls to add input sources-
         // There is no way to know how many simulateInputConnection calls will the device receive,
         // so notify the input sources have been initialized with an empty list. This is not a problem because
         // WPT tests rely on requestAnimationFrame updates to test the input sources.
-        callOnMainThread([this, weakThis = makeWeakPtr(*this)]() {
+        callOnMainThread([this, weakThis = WeakPtr { *this }]() {
             if (!weakThis)
                 return;
             if (m_trackingAndRenderingClient)
@@ -151,7 +157,7 @@ void SimulatedXRDevice::frameTimerFired()
 
     for (auto& layer : m_layers) {
 #if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-        data.layers.add(layer.key, FrameData::LayerData { .surface = IOSurface::create(recommendedResolution(PlatformXR::SessionMode::ImmersiveVr), DestinationColorSpace::SRGB()) });
+        data.layers.add(layer.key, FrameData::LayerData { .surface = IOSurface::create(nullptr, recommendedResolution(PlatformXR::SessionMode::ImmersiveVr), DestinationColorSpace::SRGB()) });
 #else
         data.layers.add(layer.key, FrameData::LayerData { .opaqueTexture = layer.value });
 #endif
@@ -250,8 +256,9 @@ void WebFakeXRDevice::setViewerOrigin(FakeXRRigidTransformInit origin, bool emul
     m_device.setEmulatedPosition(emulatedPosition);
 }
 
-void WebFakeXRDevice::simulateVisibilityChange(XRVisibilityState)
+void WebFakeXRDevice::simulateVisibilityChange(XRVisibilityState visibilityState)
 {
+    m_device.setVisibilityState(visibilityState);
 }
 
 void WebFakeXRDevice::setFloorOrigin(FakeXRRigidTransformInit origin)

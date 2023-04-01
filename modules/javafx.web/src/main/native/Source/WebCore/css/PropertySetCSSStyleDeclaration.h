@@ -59,7 +59,7 @@ protected:
     virtual CSSParserContext cssParserContext() const;
 
     MutableStyleProperties* m_propertySet;
-    std::unique_ptr<HashMap<CSSValue*, WeakPtr<DeprecatedCSSOMValue>>> m_cssomValueWrappers;
+    HashMap<CSSValue*, WeakPtr<DeprecatedCSSOMValue>> m_cssomValueWrappers;
 
 private:
     void ref() override;
@@ -82,6 +82,7 @@ private:
     ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
 
     Ref<MutableStyleProperties> copyProperties() const final;
+    bool isCSSPropertyExposed(CSSPropertyID) const;
 
     RefPtr<DeprecatedCSSOMValue> wrapForDeprecatedCSSOM(CSSValue*);
 

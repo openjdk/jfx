@@ -74,8 +74,10 @@ protected:
     PerformanceResourceTiming(MonotonicTime timeOrigin, ResourceTiming&&);
     ~PerformanceResourceTiming();
 
+    bool isLoadedFromServiceWorker() const { return m_resourceTiming.isLoadedFromServiceWorker(); }
+
     MonotonicTime m_timeOrigin;
-    const ResourceTiming m_resourceTiming;
+    ResourceTiming m_resourceTiming;
     Vector<Ref<PerformanceServerTiming>> m_serverTiming;
 };
 

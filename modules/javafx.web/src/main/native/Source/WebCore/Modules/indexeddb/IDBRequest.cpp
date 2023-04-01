@@ -30,7 +30,6 @@
 #include "Event.h"
 #include "EventDispatcher.h"
 #include "EventNames.h"
-#include "EventQueue.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBCursor.h"
@@ -45,10 +44,11 @@
 #include "Logging.h"
 #include "ScriptExecutionContext.h"
 #include "ThreadSafeDataBuffer.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/StrongInlines.h>
+#include <variant>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Scope.h>
-#include <wtf/Variant.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -57,27 +57,37 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(IDBRequest);
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBObjectStore& objectStore, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, objectStore, transaction));
+    auto request = adoptRef(*new IDBRequest(context, objectStore, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBCursor& cursor, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, cursor, transaction));
+    auto request = adoptRef(*new IDBRequest(context, cursor, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBIndex& index, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, index, transaction));
+    auto request = adoptRef(*new IDBRequest(context, index, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::createObjectStoreGet(ScriptExecutionContext& context, IDBObjectStore& objectStore, IndexedDB::ObjectStoreRecordType type, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, objectStore, type, transaction));
+    auto request = adoptRef(*new IDBRequest(context, objectStore, type, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::createIndexGet(ScriptExecutionContext& context, IDBIndex& index, IndexedDB::IndexRecordType requestedRecordType, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, index, requestedRecordType, transaction));
+    auto request = adoptRef(*new IDBRequest(context, index, requestedRecordType, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, IndexedDB::RequestType requestType)
@@ -87,7 +97,6 @@ IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBClient::IDBConnection
     , m_connectionProxy(connectionProxy)
     , m_requestType(requestType)
 {
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBObjectStore& objectStore, IDBTransaction& transaction)
@@ -98,7 +107,6 @@ IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBObjectStore& objectSt
     , m_source(&objectStore)
     , m_connectionProxy(transaction.database().connectionProxy())
 {
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBCursor& cursor, IDBTransaction& transaction)
@@ -109,8 +117,6 @@ IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBCursor& cursor, IDBTr
     , m_pendingCursor(&cursor)
     , m_connectionProxy(transaction.database().connectionProxy())
 {
-    suspendIfNeeded();
-
     WTF::switchOn(cursor.source(),
         [this] (const auto& value) { this->m_source = IDBRequest::Source { value }; }
     );
@@ -126,7 +132,6 @@ IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBIndex& index, IDBTran
     , m_source(&index)
     , m_connectionProxy(transaction.database().connectionProxy())
 {
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBObjectStore& objectStore, IndexedDB::ObjectStoreRecordType type, IDBTransaction& transaction)
@@ -138,7 +143,6 @@ IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBObjectStore& objectSt
     , m_connectionProxy(transaction.database().connectionProxy())
     , m_requestedObjectStoreRecordType(type)
 {
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBIndex& index, IndexedDB::IndexRecordType requestedRecordType, IDBTransaction& transaction)
@@ -206,9 +210,9 @@ uint64_t IDBRequest::sourceObjectStoreIdentifier() const
         return 0;
 
     return WTF::switchOn(m_source.value(),
-        [] (const RefPtr<IDBObjectStore>& objectStore) { return objectStore->info().identifier(); },
-        [] (const RefPtr<IDBIndex>& index) { return index->info().objectStoreIdentifier(); },
-        [] (const RefPtr<IDBCursor>&) { return 0; }
+        [] (const RefPtr<IDBObjectStore>& objectStore) -> uint64_t { return objectStore->info().identifier(); },
+        [] (const RefPtr<IDBIndex>& index) -> uint64_t { return index->info().objectStoreIdentifier(); },
+        [] (const RefPtr<IDBCursor>&) -> uint64_t { return 0; }
     );
 }
 
@@ -237,7 +241,7 @@ IndexedDB::IndexRecordType IDBRequest::requestedIndexRecordType() const
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(m_source);
-    ASSERT(WTF::holds_alternative<RefPtr<IDBIndex>>(m_source.value()));
+    ASSERT(std::holds_alternative<RefPtr<IDBIndex>>(m_source.value()));
 
     return m_requestedIndexRecordType;
 }
@@ -295,7 +299,7 @@ void IDBRequest::dispatchEvent(Event& event)
     ASSERT(m_hasPendingActivity);
     ASSERT(!isContextStopped());
 
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
     m_eventBeingDispatched = &event;
 
     if (event.type() != eventNames().blockedEvent)
@@ -365,7 +369,7 @@ void IDBRequest::setResult(const IDBKeyData& keyData)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = keyData;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResult(const Vector<IDBKeyData>& keyDatas)
@@ -379,7 +383,7 @@ void IDBRequest::setResult(const Vector<IDBKeyData>& keyDatas)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = keyDatas;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResult(const IDBGetAllResult& result)
@@ -393,7 +397,7 @@ void IDBRequest::setResult(const IDBGetAllResult& result)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = result;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResult(uint64_t number)
@@ -407,7 +411,7 @@ void IDBRequest::setResult(uint64_t number)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = number;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResultToStructuredClone(const IDBGetResult& result)
@@ -423,7 +427,7 @@ void IDBRequest::setResultToStructuredClone(const IDBGetResult& result)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = result;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResultToUndefined()
@@ -437,7 +441,7 @@ void IDBRequest::setResultToUndefined()
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = NullResultType::Undefined;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 IDBCursor* IDBRequest::resultCursor()
@@ -467,12 +471,6 @@ void IDBRequest::willIterateCursor(IDBCursor& cursor)
     if (!context)
         return;
 
-    VM& vm = context->vm();
-    JSLockHolder lock(vm);
-
-    if (m_resultWrapper)
-        m_cursorWrapper = m_resultWrapper;
-    m_resultWrapper = { };
     m_readyState = ReadyState::Pending;
     m_domError = nullptr;
     m_idbError = IDBError { };
@@ -491,14 +489,14 @@ void IDBRequest::didOpenOrIterateCursor(const IDBResultData& resultData)
     JSLockHolder lock(vm);
 
     m_result = NullResultType::Empty;
-    m_resultWrapper = { };
-
     if (resultData.type() == IDBResultType::IterateCursorSuccess || resultData.type() == IDBResultType::OpenCursorSuccess) {
-        if (m_pendingCursor->setGetResult(*this, resultData.getResult(), m_currentTransactionOperationID) && m_cursorWrapper)
-            m_resultWrapper = m_cursorWrapper;
+        m_pendingCursor->setGetResult(*this, resultData.getResult(), m_currentTransactionOperationID);
         if (resultData.getResult().isDefined())
             m_result = m_pendingCursor;
     }
+
+    if (std::get_if<NullResultType>(&m_result))
+        m_resultWrapper.clear();
 
     m_pendingCursor = nullptr;
 
@@ -548,7 +546,7 @@ void IDBRequest::setResult(Ref<IDBDatabase>&& database)
     JSLockHolder lock(vm);
 
     m_result = RefPtr<IDBDatabase> { WTFMove(database) };
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::clearWrappers()
@@ -560,7 +558,6 @@ void IDBRequest::clearWrappers()
     JSLockHolder lock(vm);
 
     m_resultWrapper.clear();
-    m_cursorWrapper.clear();
 
     WTF::switchOn(m_result,
         [] (RefPtr<IDBCursor>& cursor) { cursor->clearWrappers(); },
@@ -577,6 +574,11 @@ bool IDBRequest::willAbortTransactionAfterDispatchingEvent() const
         return true;
 
     return !m_eventBeingDispatched->defaultPrevented() && m_eventBeingDispatched->type() == eventNames().errorEvent;
+}
+
+WebCoreOpaqueRoot root(IDBRequest* request)
+{
+    return WebCoreOpaqueRoot { request };
 }
 
 } // namespace WebCore

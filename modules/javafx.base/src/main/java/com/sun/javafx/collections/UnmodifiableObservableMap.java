@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package com.sun.javafx.collections;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 import javafx.beans.InvalidationListener;
@@ -55,9 +54,9 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
     public UnmodifiableObservableMap(ObservableMap<K, V> map) {
         this.backingMap = map;
         listener = c -> {
-            callObservers(new MapAdapterChange<K, V>(UnmodifiableObservableMap.this, c));
+            callObservers(new MapAdapterChange<>(UnmodifiableObservableMap.this, c));
         };
-        this.backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
+        this.backingMap.addListener(new WeakMapChangeListener<>(listener));
     }
 
     private void callObservers(Change<? extends K,? extends V> c) {
@@ -109,6 +108,7 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
         return backingMap.get(key);
     }
 
+    @Override
     public Set<K> keySet() {
         if (keyset == null) {
             keyset = Collections.unmodifiableSet(backingMap.keySet());
@@ -116,6 +116,7 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
         return keyset;
     }
 
+    @Override
     public Collection<V> values() {
         if (values == null) {
             values = Collections.unmodifiableCollection(backingMap.values());
@@ -123,6 +124,7 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
         return values;
     }
 
+    @Override
     public Set<Entry<K,V>> entrySet() {
         if (entryset == null) {
             entryset = Collections.unmodifiableMap(backingMap).entrySet();

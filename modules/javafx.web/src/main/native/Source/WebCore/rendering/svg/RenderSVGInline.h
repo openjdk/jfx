@@ -21,21 +21,22 @@
 #pragma once
 
 #include "RenderInline.h"
-#include "SVGGraphicsElement.h"
 
 namespace WebCore {
+
+class SVGGraphicsElement;
 
 class RenderSVGInline : public RenderInline {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGInline);
 public:
     RenderSVGInline(SVGGraphicsElement&, RenderStyle&&);
 
-    SVGGraphicsElement& graphicsElement() const { return downcast<SVGGraphicsElement>(nodeForNonAnonymous()); }
+    inline SVGGraphicsElement& graphicsElement() const;
 
 private:
     void element() const = delete;
 
-    const char* renderName() const override { return "RenderSVGInline"; }
+    ASCIILiteral renderName() const override { return "RenderSVGInline"_s; }
     bool requiresLayer() const final { return false; }
     bool isSVGInline() const final { return true; }
 
@@ -49,6 +50,11 @@ private:
     FloatRect objectBoundingBox() const final;
     FloatRect strokeBoundingBox() const final;
     FloatRect repaintRectInLocalCoordinates() const final;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    LayoutPoint currentSVGLayoutLocation() const final { return { }; }
+    void setCurrentSVGLayoutLocation(const LayoutPoint&) final { ASSERT_NOT_REACHED(); }
+#endif
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
     std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;

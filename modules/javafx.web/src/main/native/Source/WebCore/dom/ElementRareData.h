@@ -35,13 +35,9 @@
 #include "ShadowRoot.h"
 #include "SpaceSplitString.h"
 #include "StylePropertyMap.h"
+#include "StylePropertyMapReadOnly.h"
 
 namespace WebCore {
-
-inline IntSize defaultMinimumSizeForResizing()
-{
-    return IntSize(LayoutUnit::max(), LayoutUnit::max());
-}
 
 class ElementRareData : public NodeRareData {
 public:
@@ -82,9 +78,6 @@ public:
     DatasetDOMStringMap* dataset() const { return m_dataset.get(); }
     void setDataset(std::unique_ptr<DatasetDOMStringMap> dataset) { m_dataset = WTFMove(dataset); }
 
-    LayoutSize minimumSizeForResizing() const { return m_minimumSizeForResizing; }
-    void setMinimumSizeForResizing(LayoutSize size) { m_minimumSizeForResizing = size; }
-
     IntPoint savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
     void setSavedLayerScrollPosition(IntPoint position) { m_savedLayerScrollPosition = position; }
 
@@ -97,20 +90,24 @@ public:
     const SpaceSplitString& partNames() const { return m_partNames; }
     void setPartNames(SpaceSplitString&& partNames) { m_partNames = WTFMove(partNames); }
 
-#if ENABLE(INTERSECTION_OBSERVER)
     IntersectionObserverData* intersectionObserverData() { return m_intersectionObserverData.get(); }
     void setIntersectionObserverData(std::unique_ptr<IntersectionObserverData>&& data) { m_intersectionObserverData = WTFMove(data); }
-#endif
 
-#if ENABLE(RESIZE_OBSERVER)
     ResizeObserverData* resizeObserverData() { return m_resizeObserverData.get(); }
     void setResizeObserverData(std::unique_ptr<ResizeObserverData>&& data) { m_resizeObserverData = WTFMove(data); }
-#endif
+
+    const AtomString& nonce() const { return m_nonce; }
+    void setNonce(const AtomString& value) { m_nonce = value; }
 
 #if ENABLE(CSS_TYPED_OM)
     StylePropertyMap* attributeStyleMap() { return m_attributeStyleMap.get(); }
     void setAttributeStyleMap(Ref<StylePropertyMap>&& map) { m_attributeStyleMap = WTFMove(map); }
+
+    StylePropertyMapReadOnly* computedStyleMap() { return m_computedStyleMap.get(); }
+    void setComputedStyleMap(Ref<StylePropertyMapReadOnly>&& map) { m_computedStyleMap = WTFMove(map); }
 #endif
+
+    ExplicitlySetAttrElementsMap& explicitlySetAttrElementsMap() { return m_explicitlySetAttrElementsMap; }
 
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
@@ -118,8 +115,6 @@ public:
         auto result = NodeRareData::useTypes();
         if (m_unusualTabIndex)
             result.add(UseType::TabIndex);
-        if (m_minimumSizeForResizing != defaultMinimumSizeForResizing())
-            result.add(UseType::MinimumSize);
         if (!m_savedLayerScrollPosition.isZero())
             result.add(UseType::ScrollingPosition);
         if (m_computedStyle)
@@ -136,10 +131,8 @@ public:
             result.add(UseType::AttributeMap);
         if (m_intersectionObserverData)
             result.add(UseType::InteractionObserver);
-#if ENABLE(RESIZE_OBSERVER)
         if (m_resizeObserverData)
             result.add(UseType::ResizeObserver);
-#endif
         if (!m_animationRareData.isEmpty())
             result.add(UseType::Animations);
         if (m_beforePseudoElement || m_afterPseudoElement)
@@ -147,17 +140,22 @@ public:
 #if ENABLE(CSS_TYPED_OM)
         if (m_attributeStyleMap)
             result.add(UseType::StyleMap);
+        if (m_computedStyleMap)
+            result.add(UseType::ComputedStyleMap);
 #endif
         if (m_partList)
             result.add(UseType::PartList);
         if (!m_partNames.isEmpty())
             result.add(UseType::PartNames);
+        if (m_nonce)
+            result.add(UseType::Nonce);
+        if (!m_explicitlySetAttrElementsMap.isEmpty())
+            result.add(UseType::ExplicitlySetAttrElementsMap);
         return result;
     }
 #endif
 
 private:
-    LayoutSize m_minimumSizeForResizing;
     IntPoint m_savedLayerScrollPosition;
     std::unique_ptr<RenderStyle> m_computedStyle;
 
@@ -166,13 +164,10 @@ private:
     RefPtr<ShadowRoot> m_shadowRoot;
     std::unique_ptr<CustomElementReactionQueue> m_customElementReactionQueue;
     std::unique_ptr<NamedNodeMap> m_attributeMap;
-#if ENABLE(INTERSECTION_OBSERVER)
-    std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
-#endif
 
-#if ENABLE(RESIZE_OBSERVER)
+    std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
+
     std::unique_ptr<ResizeObserverData> m_resizeObserverData;
-#endif
 
     Vector<std::unique_ptr<ElementAnimationRareData>> m_animationRareData;
 
@@ -181,17 +176,21 @@ private:
 
 #if ENABLE(CSS_TYPED_OM)
     RefPtr<StylePropertyMap> m_attributeStyleMap;
+    RefPtr<StylePropertyMapReadOnly> m_computedStyleMap;
 #endif
 
     std::unique_ptr<DOMTokenList> m_partList;
     SpaceSplitString m_partNames;
+
+    AtomString m_nonce;
+
+    ExplicitlySetAttrElementsMap m_explicitlySetAttrElementsMap;
 
     void releasePseudoElement(PseudoElement*);
 };
 
 inline ElementRareData::ElementRareData()
     : NodeRareData(Type::Element)
-    , m_minimumSizeForResizing(defaultMinimumSizeForResizing())
 {
 }
 
@@ -247,6 +246,24 @@ inline ElementAnimationRareData& ElementRareData::ensureAnimationRareData(Pseudo
 
     m_animationRareData.append(makeUnique<ElementAnimationRareData>(pseudoId));
     return *m_animationRareData.last().get();
+}
+
+inline ElementRareData* Element::elementRareData() const
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(hasRareData());
+    return static_cast<ElementRareData*>(rareData());
+}
+
+inline ShadowRoot* Node::shadowRoot() const
+{
+    if (!is<Element>(*this))
+        return nullptr;
+    return downcast<Element>(*this).shadowRoot();
+}
+
+inline ShadowRoot* Element::shadowRoot() const
+{
+    return hasRareData() ? elementRareData()->shadowRoot() : nullptr;
 }
 
 } // namespace WebCore

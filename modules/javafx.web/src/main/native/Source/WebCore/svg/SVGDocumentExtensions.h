@@ -23,6 +23,7 @@
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -51,10 +52,6 @@ public:
     void removeResource(const AtomString& id);
     RenderSVGResourceContainer* resourceById(const AtomString& id) const;
 
-    void addUseElementWithPendingShadowTreeUpdate(SVGUseElement&);
-    void removeUseElementWithPendingShadowTreeUpdate(SVGUseElement&);
-    const WeakHashSet<SVGUseElement>& useElementsWithPendingShadowTreeUpdate() const { return m_useElementsWithPendingShadowTreeUpdate; }
-
     void startAnimations();
     void pauseAnimations();
     void unpauseAnimations();
@@ -80,13 +77,12 @@ private:
     Document& m_document;
     WeakHashSet<SVGSVGElement> m_timeContainers; // For SVG 1.2 support this will need to be made more general.
     WeakHashSet<SVGFontFaceElement> m_svgFontFaceElements;
-    HashMap<AtomString, RenderSVGResourceContainer*> m_resources;
-    HashMap<AtomString, WeakHashSet<Element>> m_pendingResources; // Resources that are pending.
-    HashMap<AtomString, WeakHashSet<Element>> m_pendingResourcesForRemoval; // Resources that are pending and scheduled for removal.
+    MemoryCompactRobinHoodHashMap<AtomString, RenderSVGResourceContainer*> m_resources;
+    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<Element>> m_pendingResources; // Resources that are pending.
+    MemoryCompactRobinHoodHashMap<AtomString, WeakHashSet<Element>> m_pendingResourcesForRemoval; // Resources that are pending and scheduled for removal.
     std::unique_ptr<SVGResourcesCache> m_resourcesCache;
 
     Vector<Ref<SVGElement>> m_rebuildElements;
-    WeakHashSet<SVGUseElement> m_useElementsWithPendingShadowTreeUpdate;
     bool m_areAnimationsPaused;
 
 public:

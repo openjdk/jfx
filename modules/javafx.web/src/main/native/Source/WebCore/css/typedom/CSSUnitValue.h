@@ -34,35 +34,40 @@
 
 namespace WebCore {
 
+enum class CSSUnitType : uint8_t;
+
 class CSSUnitValue final : public CSSNumericValue {
     WTF_MAKE_ISO_ALLOCATED(CSSUnitValue);
 public:
-    static Ref<CSSUnitValue> create(double value, const String& unit)
-    {
-        return adoptRef(*new CSSUnitValue(value, unit));
-    }
+    static ExceptionOr<Ref<CSSUnitValue>> create(double value, const String& unit);
+    static Ref<CSSUnitValue> create(double value, CSSUnitType unit) { return adoptRef(*new CSSUnitValue(value, unit)); }
 
-    // FIXME: not correct.
-    String toString() const final { return makeString((int) m_value, m_unit); }
+    void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
 
     double value() const { return m_value; }
     void setValue(double value) { m_value = value; }
-    const String& unit() const { return m_unit; }
-    void setUnit(const String& unit) { m_unit = unit; }
+    ASCIILiteral unit() const;
+    ASCIILiteral unitSerialization() const;
+    CSSUnitType unitEnum() const { return m_unit; }
+
+    RefPtr<CSSUnitValue> convertTo(CSSUnitType) const;
+    static CSSUnitType parseUnit(const String& unit);
 
 private:
-    CSSUnitValue(double value, const String& unit)
-        : m_value(value)
-        , m_unit(unit)
-    {
-    }
+    CSSUnitValue(double, CSSUnitType);
 
     CSSStyleValueType getType() const final { return CSSStyleValueType::CSSUnitValue; }
+    std::optional<SumValue> toSumValue() const final;
+    bool equals(const CSSNumericValue&) const final;
 
     double m_value;
-    String m_unit;
+    const CSSUnitType m_unit;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSUnitValue)
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSUnitValue; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

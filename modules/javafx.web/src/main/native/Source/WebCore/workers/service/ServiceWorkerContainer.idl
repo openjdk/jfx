@@ -29,9 +29,9 @@
 [
     ActiveDOMObject,
     SecureContext,
-    Exposed=(Window,ServiceWorker),
+    Exposed=(Window,Worker),
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=ServiceWorker,
+    EnabledBySetting=ServiceWorkersEnabled,
     GenerateIsReachable=ReachableFromNavigator
 ] interface ServiceWorkerContainer : EventTarget {
     readonly attribute ServiceWorker? controller;

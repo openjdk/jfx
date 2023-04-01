@@ -37,6 +37,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/MediaTime.h>
 #include <wtf/Nonmovable.h>
+#include <wtf/StdIntExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TriState.h>
 
@@ -72,7 +73,6 @@ class CLoop;
 
 struct ClassInfo;
 struct DumpContext;
-struct Instruction;
 struct MethodTable;
 enum class Unknown { };
 
@@ -157,16 +157,16 @@ class JSValue {
 
 public:
 #if USE(JSVALUE32_64)
-    enum { Int32Tag =        0xffffffff };
-    enum { BooleanTag =      0xfffffffe };
-    enum { NullTag =         0xfffffffd };
-    enum { UndefinedTag =    0xfffffffc };
-    enum { CellTag =         0xfffffffb };
-    enum { EmptyValueTag =   0xfffffffa };
-    enum { DeletedValueTag = 0xfffffff9 };
+    static constexpr uint32_t Int32Tag =        0xffffffff;
+    static constexpr uint32_t BooleanTag =      0xfffffffe;
+    static constexpr uint32_t NullTag =         0xfffffffd;
+    static constexpr uint32_t UndefinedTag =    0xfffffffc;
+    static constexpr uint32_t CellTag =         0xfffffffb;
+    static constexpr uint32_t WasmTag =         0xfffffffa;
+    static constexpr uint32_t EmptyValueTag =   0xfffffff9;
+    static constexpr uint32_t DeletedValueTag = 0xfffffff8;
 
-    enum { LowestTag =  DeletedValueTag };
-
+    static constexpr uint32_t LowestTag =  DeletedValueTag;
 #endif
 
     static EncodedJSValue encode(JSValue);
@@ -181,6 +181,9 @@ public:
     enum EncodeAsBigInt32Tag { EncodeAsBigInt32 };
 #endif
     enum EncodeAsDoubleTag { EncodeAsDouble };
+#if ENABLE(WEBASSEMBLY) && USE(JSVALUE32_64)
+    enum EncodeAsUnboxedFloatTag { EncodeAsUnboxedFloat };
+#endif
 
     JSValue();
     JSValue(JSNullTag);
@@ -191,6 +194,9 @@ public:
     JSValue(const JSCell* ptr);
 #if USE(BIGINT32)
     JSValue(EncodeAsBigInt32Tag, int32_t);
+#endif
+#if ENABLE(WEBASSEMBLY) && USE(JSVALUE32_64)
+    JSValue(EncodeAsUnboxedFloatTag, float);
 #endif
 
     // Numbers
@@ -235,10 +241,10 @@ public:
 
     // Querying the type.
     bool isEmpty() const;
-    bool isCallable(VM&) const;
-    template<Concurrency> TriState isCallableWithConcurrency(VM&) const;
-    bool isConstructor(VM&) const;
-    template<Concurrency> TriState isConstructorWithConcurrency(VM&) const;
+    bool isCallable() const;
+    template<Concurrency> TriState isCallableWithConcurrency() const;
+    bool isConstructor() const;
+    template<Concurrency> TriState isConstructorWithConcurrency() const;
     bool isUndefined() const;
     bool isNull() const;
     bool isUndefinedOrNull() const;
@@ -256,9 +262,9 @@ public:
     bool isGetterSetter() const;
     bool isCustomGetterSetter() const;
     bool isObject() const;
-    bool inherits(VM&, const ClassInfo*) const;
-    template<typename Target> bool inherits(VM&) const;
-    const ClassInfo* classInfoOrNull(VM&) const;
+    bool inherits(const ClassInfo*) const;
+    template<typename Target> bool inherits() const;
+    const ClassInfo* classInfoOrNull() const;
 
     // Extracting the value.
     bool getString(JSGlobalObject*, WTF::String&) const;
@@ -289,14 +295,17 @@ public:
     Identifier toPropertyKey(JSGlobalObject*) const;
     JSValue toPropertyKeyValue(JSGlobalObject*) const;
     WTF::String toWTFString(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE WTF::String toWTFStringForConsole(JSGlobalObject*) const;
     JSObject* toObject(JSGlobalObject*) const;
 
     // Integer conversions.
     JS_EXPORT_PRIVATE double toIntegerPreserveNaN(JSGlobalObject*) const;
+    double toIntegerWithoutRounding(JSGlobalObject*) const;
     double toIntegerOrInfinity(JSGlobalObject*) const;
     int32_t toInt32(JSGlobalObject*) const;
     uint32_t toUInt32(JSGlobalObject*) const;
     uint32_t toIndex(JSGlobalObject*, const char* errorName) const;
+    size_t toTypedArrayIndex(JSGlobalObject*, const char* errorName) const;
     double toLength(JSGlobalObject*) const;
 
     JS_EXPORT_PRIVATE JSValue toBigInt(JSGlobalObject*) const;
@@ -320,8 +329,8 @@ public:
     T getAs(JSGlobalObject*, PropertyNameType) const;
 
     bool getPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&) const;
-    template<typename CallbackWhenNoException> typename std::result_of<CallbackWhenNoException(bool, PropertySlot&)>::type getPropertySlot(JSGlobalObject*, PropertyName, CallbackWhenNoException) const;
-    template<typename CallbackWhenNoException> typename std::result_of<CallbackWhenNoException(bool, PropertySlot&)>::type getPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&, CallbackWhenNoException) const;
+    template<typename CallbackWhenNoException> typename std::invoke_result<CallbackWhenNoException, bool, PropertySlot&>::type getPropertySlot(JSGlobalObject*, PropertyName, CallbackWhenNoException) const;
+    template<typename CallbackWhenNoException> typename std::invoke_result<CallbackWhenNoException, bool, PropertySlot&>::type getPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&, CallbackWhenNoException) const;
 
     bool getOwnPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&) const;
 
@@ -344,7 +353,7 @@ public:
     bool isCell() const;
     JSCell* asCell() const;
 
-    Structure* structureOrNull(VM&) const;
+    Structure* structureOrNull() const;
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
@@ -588,6 +597,13 @@ inline JSValue jsBoolean(bool b)
 ALWAYS_INLINE JSValue jsBigInt32(int32_t intValue)
 {
     return JSValue(JSValue::EncodeAsBigInt32, intValue);
+}
+#endif
+
+#if ENABLE(WEBASSEMBLY) && USE(JSVALUE32_64)
+ALWAYS_INLINE JSValue wasmUnboxedFloat(float f)
+{
+    return JSValue(JSValue::EncodeAsUnboxedFloat, f);
 }
 #endif
 

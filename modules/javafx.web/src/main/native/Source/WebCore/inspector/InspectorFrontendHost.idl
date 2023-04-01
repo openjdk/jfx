@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Matt Lilek <webkit@mattlilek.com>
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
@@ -31,7 +31,6 @@
  */
 
 [
-    ImplementationLacksVTable,
     LegacyNoInterfaceObject,
 ] interface InspectorFrontendHost {
     undefined loaded();
@@ -71,13 +70,19 @@
 
     undefined copyText(DOMString text);
     undefined killText(DOMString text, boolean shouldPrependToKillRing, boolean shouldStartNewSequence);
-    undefined openURLExternally(DOMString url);
-    boolean canSave();
-    undefined save(DOMString url, DOMString content, boolean base64Encoded, boolean forceSaveAs);
-    undefined append(DOMString url, DOMString content);
-    undefined close(DOMString url);
 
-    readonly attribute DOMString port;
+    undefined openURLExternally(DOMString url);
+    undefined revealFileExternally(DOMString path);
+
+    boolean canSave(SaveMode saveMode);
+    undefined save(sequence<SaveData> saveDatas, boolean forceSaveAs);
+
+    boolean canLoad();
+    [NewObject] Promise<DOMString> load(DOMString path);
+
+    boolean canPickColorFromScreen();
+    [NewObject] Promise<DOMString> pickColorFromScreen();
+
     readonly attribute DOMString platform;
     readonly attribute DOMString platformVersionName;
 
@@ -87,7 +92,6 @@
     undefined unbufferedLog(DOMString message);
 
     boolean isUnderTest();
-    boolean isExperimentalBuild();
 
     undefined beep();
     undefined inspectInspector();
@@ -98,8 +102,33 @@
     [Conditional=INSPECTOR_TELEMETRY] undefined logDiagnosticEvent(DOMString eventName, DOMString content);
 
     readonly attribute boolean supportsWebExtensions;
-    [Conditional=INSPECTOR_EXTENSIONS] undefined didShowExtensionTab(DOMString extensionID, DOMString extensionTabID);
+    [Conditional=INSPECTOR_EXTENSIONS] undefined didShowExtensionTab(DOMString extensionID, DOMString extensionTabID, HTMLIFrameElement extensionFrame);
     [Conditional=INSPECTOR_EXTENSIONS] undefined didHideExtensionTab(DOMString extensionID, DOMString extensionTabID);
+    [Conditional=INSPECTOR_EXTENSIONS] undefined didNavigateExtensionTab(DOMString extensionID, DOMString extensionTabID, DOMString newURL);
+    [Conditional=INSPECTOR_EXTENSIONS] undefined inspectedPageDidNavigate(DOMString newURL);
+    [Conditional=INSPECTOR_EXTENSIONS] any evaluateScriptInExtensionTab(HTMLIFrameElement extensionFrame, DOMString scriptSource);
+
+    // IDL extensions.
+
+    DOMString getPath(File file);
+
+    float getCurrentX(CanvasRenderingContext2D context);
+    float getCurrentY(CanvasRenderingContext2D context);
+    [NewObject] Path2D getPath(CanvasRenderingContext2D context);
+    undefined setPath(CanvasRenderingContext2D context, Path2D path);
+};
+
+// Keep in sync with `WI.FileUtilities.SaveMode` and `InspectorFrontendClient::SaveMode`.
+enum SaveMode {
+    "single-file",
+    "file-variants"
+};
+
+dictionary SaveData {
+    DOMString displayType;
+    DOMString url;
+    DOMString content;
+    boolean base64Encoded;
 };
 
 dictionary ContextMenuItem {

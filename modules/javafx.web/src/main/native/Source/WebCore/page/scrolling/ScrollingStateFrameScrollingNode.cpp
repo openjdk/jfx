@@ -309,13 +309,13 @@ void ScrollingStateFrameScrollingNode::setScrollingPerformanceTestingEnabled(boo
     setPropertyChanged(Property::ScrollingPerformanceTestingEnabled);
 }
 
-void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "Frame scrolling node";
 
     ScrollingStateScrollingNode::dumpProperties(ts, behavior);
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs) {
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs) {
         ts.dumpProperty("root contents layer ID", m_rootContentsLayer.layerID());
         if (m_counterScrollingLayer.layerID())
             ts.dumpProperty("counter scrolling layer ID", m_counterScrollingLayer.layerID());
@@ -357,11 +357,11 @@ void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingS
     auto& synchronousDispatchRegionMap = m_eventTrackingRegions.eventSpecificSynchronousDispatchRegions;
     if (!synchronousDispatchRegionMap.isEmpty()) {
         auto eventRegionNames = copyToVector(synchronousDispatchRegionMap.keys());
-        std::sort(eventRegionNames.begin(), eventRegionNames.end(), WTF::codePointCompareLessThan);
+        std::sort(eventRegionNames.begin(), eventRegionNames.end());
         for (const auto& name : eventRegionNames) {
             const auto& region = synchronousDispatchRegionMap.get(name);
             TextStream::GroupScope scope(ts);
-            ts << "synchronous event dispatch region for event " << name;
+            ts << "synchronous event dispatch region for event " << EventTrackingRegions::eventName(name);
             for (auto rect : region.rects()) {
                 ts << "\n";
                 ts << indent << rect;

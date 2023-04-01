@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "APICast.h"
 #include "CallFrame.h"
 #include "InitializeThreading.h"
+#include "IntegrityInlines.h"
 #include "JSAPIGlobalObject.h"
 #include "JSAPIWrapperObject.h"
 #include "JSCallbackObject.h"
@@ -191,7 +192,7 @@ JSObjectRef JSContextGetGlobalObject(JSContextRef ctx)
     VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    return toRef(jsCast<JSObject*>(globalObject->methodTable(vm)->toThis(globalObject, globalObject, ECMAMode::sloppy())));
+    return toRef(jsCast<JSObject*>(globalObject->methodTable()->toThis(globalObject, globalObject, ECMAMode::sloppy())));
 }
 
 JSContextGroupRef JSContextGetGroup(JSContextRef ctx)
@@ -260,12 +261,26 @@ void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObje
     JSLockHolder locker(vm);
 
     JSObject* object = toJS(function);
-    if (!object->isCallable(vm)) {
+    if (!object->isCallable()) {
         *exception = toRef(createTypeError(globalObject));
         return;
     }
 
     globalObject->setUnhandledRejectionCallback(vm, object);
+}
+
+void JSGlobalContextSetEvalEnabled(JSGlobalContextRef ctx, bool enabled, JSStringRef message)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
+    JSLockHolder locker(vm);
+
+    globalObject->setEvalEnabled(enabled, message ? message->string() : String());
 }
 
 class BacktraceFunctor {
@@ -276,7 +291,7 @@ public:
     {
     }
 
-    StackVisitor::Status operator()(StackVisitor& visitor) const
+    IterationStatus operator()(StackVisitor& visitor) const
     {
         if (m_remainingCapacityForFrameCapture) {
             // If callee is unknown, but we've not added any frame yet, we should
@@ -284,7 +299,7 @@ public:
             if (visitor->callee().isCell()) {
                 JSCell* callee = visitor->callee().asCell();
                 if (!callee && visitor->index())
-                    return StackVisitor::Done;
+                    return IterationStatus::Done;
             }
 
             StringBuilder& builder = m_builder;
@@ -299,12 +314,12 @@ public:
             }
 
             if (!visitor->callee().rawPtr())
-                return StackVisitor::Done;
+                return IterationStatus::Done;
 
             m_remainingCapacityForFrameCapture--;
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         }
-        return StackVisitor::Done;
+        return IterationStatus::Done;
     }
 
 private:

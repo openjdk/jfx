@@ -47,14 +47,14 @@ typedef (
     [CEReactions=NotNeeded, Reflect, URL] attribute USVString src;
     attribute MediaProvider? srcObject;
     [URL] readonly attribute USVString currentSrc;
-    [CEReactions=NotNeeded] attribute DOMString? crossOrigin;
+    [CEReactions=NotNeeded] attribute [AtomString] DOMString? crossOrigin;
 
     const unsigned short NETWORK_EMPTY = 0;
     const unsigned short NETWORK_IDLE = 1;
     const unsigned short NETWORK_LOADING = 2;
     const unsigned short NETWORK_NO_SOURCE = 3;
     readonly attribute unsigned short networkState;
-    [CEReactions=NotNeeded] attribute DOMString preload;
+    [CEReactions=NotNeeded] attribute [AtomString] DOMString preload;
 
     readonly attribute TimeRanges buffered;
     undefined load();
@@ -75,8 +75,8 @@ typedef (
     readonly attribute unrestricted double duration;
     Date getStartDate();
     readonly attribute boolean paused;
-    attribute unrestricted double defaultPlaybackRate;
-    attribute unrestricted double playbackRate;
+    attribute double defaultPlaybackRate;
+    attribute double playbackRate;
     readonly attribute TimeRanges played;
     readonly attribute TimeRanges seekable;
     readonly attribute boolean ended;
@@ -102,14 +102,14 @@ typedef (
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitAudioDecodedByteCount;
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitVideoDecodedByteCount;
 
-    [Conditional=LEGACY_ENCRYPTED_MEDIA, EnabledBySetting=LegacyEncryptedMediaAPI] readonly attribute WebKitMediaKeys webkitKeys;
-    [Conditional=LEGACY_ENCRYPTED_MEDIA, EnabledBySetting=LegacyEncryptedMediaAPI] undefined webkitSetMediaKeys(WebKitMediaKeys? mediaKeys);
-    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPI, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] readonly attribute MediaKeys mediaKeys;
-    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPI, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] attribute EventHandler onencrypted;
-    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPI, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] attribute EventHandler onwaitingforkey;
-    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPI, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] Promise<undefined> setMediaKeys(MediaKeys? mediaKeys);
+    [Conditional=LEGACY_ENCRYPTED_MEDIA, EnabledBySetting=LegacyEncryptedMediaAPIEnabled] readonly attribute WebKitMediaKeys webkitKeys;
+    [Conditional=LEGACY_ENCRYPTED_MEDIA, EnabledBySetting=LegacyEncryptedMediaAPIEnabled] undefined webkitSetMediaKeys(WebKitMediaKeys? mediaKeys);
+    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPIEnabled, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] readonly attribute MediaKeys mediaKeys;
+    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPIEnabled, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] attribute EventHandler onencrypted;
+    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPIEnabled, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] attribute EventHandler onwaitingforkey;
+    [Conditional=ENCRYPTED_MEDIA, EnabledBySetting=EncryptedMediaAPIEnabled, DisabledByQuirk=hasBrokenEncryptedMediaAPISupport] Promise<undefined> setMediaKeys(MediaKeys? mediaKeys);
 
-    TextTrack addTextTrack(DOMString kind, optional DOMString label = "", optional DOMString language = "");
+    TextTrack addTextTrack([AtomString] DOMString kind, optional [AtomString] DOMString label = "", optional [AtomString] DOMString language = "");
     [ImplementedAs=ensureAudioTracks] readonly attribute AudioTrackList audioTracks;
     [ImplementedAs=ensureTextTracks] readonly attribute TextTrackList textTracks;
     [ImplementedAs=ensureVideoTracks] readonly attribute VideoTrackList videoTracks;

@@ -91,16 +91,21 @@ inline ResultType JSArrayBufferView::byteOffsetImpl()
 
     ArrayBuffer* buffer = possiblySharedBufferImpl<requester>();
     ASSERT(buffer);
-    if (requester == Mutator) {
+    ptrdiff_t delta = 0;
+    if constexpr (requester == Mutator) {
         ASSERT(!isCompilationThread());
         ASSERT(!vector() == !buffer->data());
+        delta = bitwise_cast<uint8_t*>(vector()) - static_cast<uint8_t*>(buffer->data());
+    } else {
+        uint8_t* vector = bitwise_cast<uint8_t*>(vectorWithoutPACValidation());
+        uint8_t* data = static_cast<uint8_t*>(buffer->dataWithoutPACValidation());
+        if (!vector || !data)
+            return 0;
+        delta = vector - data;
     }
 
-    ptrdiff_t delta =
-        bitwise_cast<uint8_t*>(vectorWithoutPACValidation()) - static_cast<uint8_t*>(buffer->data());
-
-    unsigned result = static_cast<unsigned>(delta);
-    if (requester == Mutator)
+    size_t result = static_cast<size_t>(delta);
+    if constexpr (requester == Mutator)
         ASSERT(static_cast<ptrdiff_t>(result) == delta);
     else {
         if (static_cast<ptrdiff_t>(result) != delta)
@@ -110,28 +115,28 @@ inline ResultType JSArrayBufferView::byteOffsetImpl()
     return result;
 }
 
-inline unsigned JSArrayBufferView::byteOffset()
+inline size_t JSArrayBufferView::byteOffset()
 {
-    return byteOffsetImpl<Mutator, unsigned>();
+    return byteOffsetImpl<Mutator, size_t>();
 }
 
-inline std::optional<unsigned> JSArrayBufferView::byteOffsetConcurrently()
+inline std::optional<size_t> JSArrayBufferView::byteOffsetConcurrently()
 {
-    return byteOffsetImpl<ConcurrentThread, std::optional<unsigned>>();
+    return byteOffsetImpl<ConcurrentThread, std::optional<size_t>>();
 }
 
-inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrapped(VM& vm, JSValue value)
+inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrapped(VM&, JSValue value)
 {
-    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(vm, value)) {
+    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(value)) {
         if (!view->isShared())
             return view->unsharedImpl();
     }
     return nullptr;
 }
 
-inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrappedAllowShared(VM& vm, JSValue value)
+inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrappedAllowShared(VM&, JSValue value)
 {
-    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(vm, value))
+    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(value))
         return view->possiblySharedImpl();
     return nullptr;
 }

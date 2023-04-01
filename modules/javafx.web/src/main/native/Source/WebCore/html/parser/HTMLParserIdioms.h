@@ -54,10 +54,10 @@ String serializeForNumberType(double);
 // Convert the specified string to a decimal/double. If the conversion fails, the return value is fallback value or NaN if not specified.
 // Leading or trailing illegal characters cause failure, as does passing an empty string.
 // The double* parameter may be 0 to check if the string can be parsed without getting the result.
-Decimal parseToDecimalForNumberType(const String&);
-Decimal parseToDecimalForNumberType(const String&, const Decimal& fallbackValue);
-double parseToDoubleForNumberType(const String&);
-double parseToDoubleForNumberType(const String&, double fallbackValue);
+Decimal parseToDecimalForNumberType(StringView);
+Decimal parseToDecimalForNumberType(StringView, const Decimal& fallbackValue);
+double parseToDoubleForNumberType(StringView);
+double parseToDoubleForNumberType(StringView, double fallbackValue);
 
 // http://www.whatwg.org/specs/web-apps/current-work/#rules-for-parsing-integers
 enum class HTMLIntegerParsingError { NegativeOverflow, PositiveOverflow, Other };
@@ -77,7 +77,7 @@ std::optional<double> parseValidHTMLFloatingPointNumber(StringView);
 Vector<double> parseHTMLListOfOfFloatingPointNumberValues(StringView);
 
 // https://html.spec.whatwg.org/multipage/semantics.html#attr-meta-http-equiv-refresh
-bool parseMetaHTTPEquivRefresh(const StringView&, double& delay, String& url);
+bool parseMetaHTTPEquivRefresh(StringView, double& delay, String& url);
 
 // https://html.spec.whatwg.org/multipage/infrastructure.html#cors-settings-attribute
 String parseCORSSettingsAttribute(const AtomString&);

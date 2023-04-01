@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,12 +109,12 @@ public final class SelectorPartitioning {
 
         private Partition(PartitionKey key) {
            this.key = key;
-            slots = new HashMap<PartitionKey,Slot>();
+            slots = new HashMap<>();
         }
 
         private void addSelector(Selector pair) {
             if (selectors == null) {
-                selectors = new ArrayList<Selector>();
+                selectors = new ArrayList<>();
             }
             selectors.add(pair);
         }
@@ -153,12 +153,12 @@ public final class SelectorPartitioning {
 
         private Slot(Partition partition) {
             this.partition = partition;
-            this.referents = new HashMap<PartitionKey, Slot>();
+            this.referents = new HashMap<>();
         }
 
         private void addSelector(Selector pair) {
             if (selectors == null) {
-                selectors = new ArrayList<Selector>();
+                selectors = new ArrayList<>();
             }
             selectors.add(pair);
         }
@@ -182,13 +182,13 @@ public final class SelectorPartitioning {
     }
 
     /* A Map for selectors that have an id */
-    private final Map<PartitionKey, Partition> idMap = new HashMap<PartitionKey,Partition>();
+    private final Map<PartitionKey, Partition> idMap = new HashMap<>();
 
     /* A Map for selectors that have an element type */
-    private final Map<PartitionKey, Partition> typeMap = new HashMap<PartitionKey,Partition>();
+    private final Map<PartitionKey, Partition> typeMap = new HashMap<>();
 
     /* A Map for selectors that have style classes */
-    private final Map<PartitionKey, Partition> styleClassMap = new HashMap<PartitionKey,Partition>();
+    private final Map<PartitionKey, Partition> styleClassMap = new HashMap<>();
 
     /**
      * Keep track of the order in which a selector is added to the mapping so
@@ -226,7 +226,7 @@ public final class SelectorPartitioning {
     /* Mask that indicates the selector has a styleclass part, e.g. .label */
     private static final int STYLECLASS_BIT = 1;
     /* If there is no type part, then * is the default. */
-    private static final PartitionKey WILDCARD = new PartitionKey<String>("*");
+    private static final PartitionKey WILDCARD = new PartitionKey<>("*");
 
     /* Place this selector into the partitioning map. Package accessible */
     public void partition(Selector selector) {
@@ -258,7 +258,7 @@ public final class SelectorPartitioning {
         final boolean hasStyleClass =
             (selectorStyleClass != null && selectorStyleClass.size() > 0);
         final PartitionKey styleClassKey = hasStyleClass
-                ? new PartitionKey<Set<StyleClass>>(selectorStyleClass)
+                ? new PartitionKey<>(selectorStyleClass)
                 : null;
 
         final int c =
@@ -321,7 +321,7 @@ public final class SelectorPartitioning {
         final boolean hasStyleClass =
             (selectorStyleClass != null && selectorStyleClass.size() > 0);
         final PartitionKey styleClassKey = hasStyleClass
-                ? new PartitionKey<Set<StyleClass>>(selectorStyleClass)
+                ? new PartitionKey<>(selectorStyleClass)
                 : null;
 
         int c =
@@ -329,7 +329,7 @@ public final class SelectorPartitioning {
 
         Partition partition = null;
         Slot slot = null;
-        List<Selector> selectors = new ArrayList<Selector>();
+        List<Selector> selectors = new ArrayList<>();
 
         while (c != 0) {
 

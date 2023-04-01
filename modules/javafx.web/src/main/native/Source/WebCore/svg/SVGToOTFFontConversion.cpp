@@ -30,6 +30,7 @@
 #include "ElementChildIterator.h"
 #include "Glyph.h"
 #include "HTMLParserIdioms.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGFontElement.h"
 #include "SVGFontFaceElement.h"
 #include "SVGGlyphElement.h"
@@ -233,7 +234,7 @@ private:
     size_t finishAppendingKERNSubtable(Vector<KerningData>, uint16_t coverage);
 
     void appendLigatureSubtable(size_t subtableRecordLocation);
-    void appendArabicReplacementSubtable(size_t subtableRecordLocation, const char arabicForm[]);
+    void appendArabicReplacementSubtable(size_t subtableRecordLocation, ASCIILiteral arabicForm);
     void appendScriptSubtable(unsigned featureCount);
     Vector<Glyph, 1> glyphsForCodepoint(UChar32) const;
     Glyph firstGlyph(const Vector<Glyph, 1>&, UChar32) const;
@@ -518,12 +519,14 @@ void SVGToOTFFontConverter::appendOS2Table()
     const unsigned panoseSize = 10;
     char panoseBytes[panoseSize];
     if (m_fontFaceElement) {
-        Vector<String> segments = m_fontFaceElement->attributeWithoutSynchronization(SVGNames::panose_1Attr).string().split(' ');
-        if (segments.size() == panoseSize) {
-            for (auto& segment : segments) {
-                if (auto value = parseIntegerAllowingTrailingJunk<uint8_t>(segment))
-                    panoseBytes[numPanoseBytes++] = *value;
+        auto segments = StringView(m_fontFaceElement->attributeWithoutSynchronization(SVGNames::panose_1Attr)).split(' ');
+        for (auto segment : segments) {
+            if (numPanoseBytes == panoseSize) {
+                ++numPanoseBytes;
+                break;
             }
+            if (auto value = parseIntegerAllowingTrailingJunk<uint8_t>(segment))
+                panoseBytes[numPanoseBytes++] = *value;
         }
     }
     if (numPanoseBytes != panoseSize)
@@ -804,7 +807,7 @@ void SVGToOTFFontConverter::appendLigatureSubtable(size_t subtableRecordLocation
     }
 }
 
-void SVGToOTFFontConverter::appendArabicReplacementSubtable(size_t subtableRecordLocation, const char arabicForm[])
+void SVGToOTFFontConverter::appendArabicReplacementSubtable(size_t subtableRecordLocation, ASCIILiteral arabicForm)
 {
     Vector<std::pair<Glyph, Glyph>> arabicFinalReplacements;
     for (auto& pair : m_codepointsToIndicesMap) {
@@ -926,9 +929,9 @@ void SVGToOTFFontConverter::appendGSUBTable()
     }
 
     appendLigatureSubtable(subtableRecordLocations[0]);
-    appendArabicReplacementSubtable(subtableRecordLocations[1], "terminal");
-    appendArabicReplacementSubtable(subtableRecordLocations[2], "medial");
-    appendArabicReplacementSubtable(subtableRecordLocations[3], "initial");
+    appendArabicReplacementSubtable(subtableRecordLocations[1], "terminal"_s);
+    appendArabicReplacementSubtable(subtableRecordLocations[2], "medial"_s);
+    appendArabicReplacementSubtable(subtableRecordLocations[3], "initial"_s);
 
     // Manually append empty "rlig" subtable
     overwrite16(subtableRecordLocations[4] + 6, m_result.size() - subtableRecordLocations[4]);
@@ -1291,7 +1294,7 @@ void SVGToOTFFontConverter::processGlyphElement(const SVGElement& glyphOrMissing
     if (glyphBoundingBox)
         m_minRightSideBearing = std::min(m_minRightSideBearing, horizontalAdvance - glyphBoundingBox.value().maxX());
 
-    m_glyphs.append(GlyphData(WTFMove(path), glyphElement, horizontalAdvance, verticalAdvance, glyphBoundingBox.value_or(FloatRect()), codepoints));
+    m_glyphs.append(GlyphData(WTFMove(path), glyphElement, horizontalAdvance, verticalAdvance, valueOrDefault(glyphBoundingBox), codepoints));
 }
 
 void SVGToOTFFontConverter::appendLigatureGlyphs()
@@ -1344,8 +1347,8 @@ bool SVGToOTFFontConverter::compareCodepointsLexicographically(const GlyphData& 
     }
 
     if (iterator1 == codePoints1.end() && iterator2 == codePoints2.end()) {
-        bool firstIsIsolated = data1.glyphElement && equalLettersIgnoringASCIICase(data1.glyphElement->attributeWithoutSynchronization(SVGNames::arabic_formAttr), "isolated");
-        bool secondIsIsolated = data2.glyphElement && equalLettersIgnoringASCIICase(data2.glyphElement->attributeWithoutSynchronization(SVGNames::arabic_formAttr), "isolated");
+        bool firstIsIsolated = data1.glyphElement && equalLettersIgnoringASCIICase(data1.glyphElement->attributeWithoutSynchronization(SVGNames::arabic_formAttr), "isolated"_s);
+        bool secondIsIsolated = data2.glyphElement && equalLettersIgnoringASCIICase(data2.glyphElement->attributeWithoutSynchronization(SVGNames::arabic_formAttr), "isolated"_s);
         return firstIsIsolated && !secondIsIsolated;
     }
     return iterator1 == codePoints1.end();
@@ -1415,7 +1418,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
             processGlyphElement(glyphElement, &glyphElement, defaultHorizontalAdvance, defaultVerticalAdvance, unicodeAttribute, boundingBox);
     }
 
-    m_boundingBox = boundingBox.value_or(FloatRect());
+    m_boundingBox = valueOrDefault(boundingBox);
 
     appendLigatureGlyphs();
 
@@ -1436,7 +1439,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
         if (m_codepointsToIndicesMap.isValidKey(glyph.codepoints)) {
             auto& glyphVector = m_codepointsToIndicesMap.add(glyph.codepoints, Vector<Glyph>()).iterator->value;
             // Prefer isolated arabic forms
-            if (glyph.glyphElement && equalLettersIgnoringASCIICase(glyph.glyphElement->attributeWithoutSynchronization(SVGNames::arabic_formAttr), "isolated"))
+            if (glyph.glyphElement && equalLettersIgnoringASCIICase(glyph.glyphElement->attributeWithoutSynchronization(SVGNames::arabic_formAttr), "isolated"_s))
                 glyphVector.insert(0, i);
             else
                 glyphVector.append(i);
@@ -1446,7 +1449,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
     // FIXME: Handle commas.
     if (m_fontFaceElement) {
         for (auto segment : StringView(m_fontFaceElement->attributeWithoutSynchronization(SVGNames::font_weightAttr)).split(' ')) {
-            if (equalLettersIgnoringASCIICase(segment, "bold")) {
+            if (equalLettersIgnoringASCIICase(segment, "bold"_s)) {
                 m_weight = 7;
                 break;
             }
@@ -1456,7 +1459,7 @@ SVGToOTFFontConverter::SVGToOTFFontConverter(const SVGFontElement& fontElement)
             }
         }
         for (auto segment : StringView(m_fontFaceElement->attributeWithoutSynchronization(SVGNames::font_styleAttr)).split(' ')) {
-            if (equalLettersIgnoringASCIICase(segment, "italic") || equalLettersIgnoringASCIICase(segment, "oblique")) {
+            if (equalLettersIgnoringASCIICase(segment, "italic"_s) || equalLettersIgnoringASCIICase(segment, "oblique"_s)) {
                 m_italic = true;
                 break;
             }

@@ -47,6 +47,7 @@
 namespace WebCore {
 
 class XRFrameRequestCallback;
+class WebCoreOpaqueRoot;
 class WebXRSystem;
 class WebXRView;
 class WebXRViewerSpace;
@@ -99,6 +100,10 @@ public:
     const WebXRViewerSpace& viewerReferenceSpace() const { return *m_viewerReferenceSpace; }
     bool posesCanBeReported(const Document&) const;
 
+#if ENABLE(WEBXR_HANDS)
+    bool isHandTrackingEnabled() const;
+#endif
+
 private:
     WebXRSession(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&, FeatureList&&);
 
@@ -114,6 +119,7 @@ private:
     // PlatformXR::TrackingAndRenderingClient
     void sessionDidInitializeInputSources(Vector<PlatformXR::Device::FrameData::InputSource>&&) final;
     void sessionDidEnd() final;
+    void updateSessionVisibilityState(PlatformXR::VisibilityState) final;
 
     enum class InitiatedBySystem : bool { No, Yes };
     void shutdown(InitiatedBySystem);
@@ -122,12 +128,12 @@ private:
     bool referenceSpaceIsSupported(XRReferenceSpaceType) const;
 
     bool frameShouldBeRendered() const;
-    void requestFrame();
+    void requestFrameIfNeeded();
     void onFrame(PlatformXR::Device::FrameData&&);
     void applyPendingRenderState();
 
-    XREnvironmentBlendMode m_environmentBlendMode;
-    XRInteractionMode m_interactionMode;
+    XREnvironmentBlendMode m_environmentBlendMode { XREnvironmentBlendMode::Opaque };
+    XRInteractionMode m_interactionMode { XRInteractionMode::WorldSpace };
     XRVisibilityState m_visibilityState { XRVisibilityState::Visible };
     UniqueRef<WebXRInputSourceArray> m_inputSources;
     bool m_ended { false };
@@ -144,6 +150,7 @@ private:
 
     unsigned m_nextCallbackId { 1 };
     Vector<Ref<XRFrameRequestCallback>> m_callbacks;
+    bool m_isDeviceFrameRequestPending { false };
 
     Vector<PlatformXR::Device::ViewData> m_views;
     PlatformXR::Device::FrameData m_frameData;
@@ -158,6 +165,8 @@ private:
     // https://immersive-web.github.io/webxr/#xrsession-promise-resolved
     bool m_inputInitialized { false };
 };
+
+WebCoreOpaqueRoot root(WebXRSession*);
 
 } // namespace WebCore
 

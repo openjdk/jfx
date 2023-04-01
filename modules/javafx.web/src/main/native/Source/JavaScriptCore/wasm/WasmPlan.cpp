@@ -29,7 +29,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmCallee.h"
-#include "WasmCodeBlock.h"
+#include "WasmCalleeGroup.h"
 #include "WasmMachineThreads.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
@@ -41,15 +41,15 @@ namespace WasmPlanInternal {
 static constexpr bool verbose = false;
 }
 
-Plan::Plan(Context* context, Ref<ModuleInformation> info, CompletionTask&& task)
+Plan::Plan(VM& vm, Ref<ModuleInformation> info, CompletionTask&& task)
     : m_moduleInformation(WTFMove(info))
 {
-    m_completionTasks.append(std::make_pair(context, WTFMove(task)));
+    m_completionTasks.append(std::make_pair(&vm, WTFMove(task)));
 }
-Plan::Plan(Context* context, CompletionTask&& task)
+Plan::Plan(VM& vm, CompletionTask&& task)
     : m_moduleInformation(ModuleInformation::create())
 {
-    m_completionTasks.append(std::make_pair(context, WTFMove(task)));
+    m_completionTasks.append(std::make_pair(&vm, WTFMove(task)));
 }
 
 void Plan::runCompletionTasks()
@@ -62,11 +62,11 @@ void Plan::runCompletionTasks()
     m_completed.notifyAll();
 }
 
-void Plan::addCompletionTask(Context* context, CompletionTask&& task)
+void Plan::addCompletionTask(VM& vm, CompletionTask&& task)
 {
     Locker locker { m_lock };
     if (!isComplete())
-        m_completionTasks.append(std::make_pair(context, WTFMove(task)));
+        m_completionTasks.append(std::make_pair(&vm, WTFMove(task)));
     else
         task->run(*this);
 }
@@ -79,19 +79,19 @@ void Plan::waitForCompletion()
     }
 }
 
-bool Plan::tryRemoveContextAndCancelIfLast(Context& context)
+bool Plan::tryRemoveContextAndCancelIfLast(VM& vm)
 {
     Locker locker { m_lock };
 
     if (ASSERT_ENABLED) {
-        // We allow the first completion task to not have a Context.
+        // We allow the first completion task to not have a VM.
         for (unsigned i = 1; i < m_completionTasks.size(); ++i)
             ASSERT(m_completionTasks[i].first);
     }
 
     bool removedAnyTasks = false;
-    m_completionTasks.removeAllMatching([&] (const std::pair<Context*, CompletionTask>& pair) {
-        bool shouldRemove = pair.first == &context;
+    m_completionTasks.removeAllMatching([&] (const std::pair<VM*, CompletionTask>& pair) {
+        bool shouldRemove = pair.first == &vm;
         removedAnyTasks |= shouldRemove;
         return shouldRemove;
     });
@@ -124,10 +124,10 @@ void Plan::fail(String&& errorMessage)
 }
 
 #if ENABLE(WEBASSEMBLY_B3JIT)
-void Plan::updateCallSitesToCallUs(CodeBlock& codeBlock, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace)
+void Plan::updateCallSitesToCallUs(const AbstractLocker& calleeGroupLocker, CalleeGroup& calleeGroup, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace)
 {
     HashMap<void*, CodeLocationLabel<WasmEntryPtrTag>> stagedCalls;
-    auto stageRepatch = [&] (const Vector<UnlinkedWasmToWasmCall>& callsites) {
+    auto stageRepatch = [&] (const auto& callsites) {
         for (auto& call : callsites) {
             if (call.functionIndexSpace == functionIndexSpace) {
                 CodeLocationLabel<WasmEntryPtrTag> target = MacroAssembler::prepareForAtomicRepatchNearCallConcurrently(call.callLocation, entrypoint);
@@ -135,19 +135,19 @@ void Plan::updateCallSitesToCallUs(CodeBlock& codeBlock, CodeLocationLabel<WasmE
             }
         }
     };
-    for (unsigned i = 0; i < codeBlock.m_wasmToWasmCallsites.size(); ++i) {
-        stageRepatch(codeBlock.m_wasmToWasmCallsites[i]);
-        if (codeBlock.m_llintCallees) {
-            LLIntCallee& llintCallee = codeBlock.m_llintCallees->at(i).get();
-            if (JITCallee* replacementCallee = llintCallee.replacement(codeBlock.mode()))
+    for (unsigned i = 0; i < calleeGroup.m_wasmToWasmCallsites.size(); ++i) {
+        stageRepatch(calleeGroup.m_wasmToWasmCallsites[i]);
+        if (calleeGroup.m_llintCallees) {
+            LLIntCallee& llintCallee = calleeGroup.m_llintCallees->at(i).get();
+            if (JITCallee* replacementCallee = llintCallee.replacement(calleeGroup.mode()))
                 stageRepatch(replacementCallee->wasmToWasmCallsites());
-            if (OMGForOSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee(codeBlock.mode()))
+            if (OSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee(calleeGroup.mode()))
                 stageRepatch(osrEntryCallee->wasmToWasmCallsites());
         }
-        if (BBQCallee* bbqCallee = codeBlock.m_bbqCallees[i].get()) {
+        if (BBQCallee* bbqCallee = calleeGroup.bbqCallee(calleeGroupLocker, i)) {
             if (OMGCallee* replacementCallee = bbqCallee->replacement())
                 stageRepatch(replacementCallee->wasmToWasmCallsites());
-            if (OMGForOSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
+            if (OSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
                 stageRepatch(osrEntryCallee->wasmToWasmCallsites());
         }
     }
@@ -158,9 +158,9 @@ void Plan::updateCallSitesToCallUs(CodeBlock& codeBlock, CodeLocationLabel<WasmE
     resetInstructionCacheOnAllThreads();
     WTF::storeStoreFence(); // This probably isn't necessary but it's good to be paranoid.
 
-    codeBlock.m_wasmIndirectCallEntryPoints[functionIndex] = entrypoint;
+    calleeGroup.m_wasmIndirectCallEntryPoints[functionIndex] = entrypoint;
 
-    auto repatchCalls = [&] (const Vector<UnlinkedWasmToWasmCall>& callsites) {
+    auto repatchCalls = [&] (const auto& callsites) {
         for (auto& call : callsites) {
             dataLogLnIf(WasmPlanInternal::verbose, "Considering repatching call at: ", RawPointer(call.callLocation.dataLocation()), " that targets ", call.functionIndexSpace);
             if (call.functionIndexSpace == functionIndexSpace) {
@@ -170,19 +170,19 @@ void Plan::updateCallSitesToCallUs(CodeBlock& codeBlock, CodeLocationLabel<WasmE
         }
     };
 
-    for (unsigned i = 0; i < codeBlock.m_wasmToWasmCallsites.size(); ++i) {
-        repatchCalls(codeBlock.m_wasmToWasmCallsites[i]);
-        if (codeBlock.m_llintCallees) {
-            LLIntCallee& llintCallee = codeBlock.m_llintCallees->at(i).get();
-            if (JITCallee* replacementCallee = llintCallee.replacement(codeBlock.mode()))
+    for (unsigned i = 0; i < calleeGroup.m_wasmToWasmCallsites.size(); ++i) {
+        repatchCalls(calleeGroup.m_wasmToWasmCallsites[i]);
+        if (calleeGroup.m_llintCallees) {
+            LLIntCallee& llintCallee = calleeGroup.m_llintCallees->at(i).get();
+            if (JITCallee* replacementCallee = llintCallee.replacement(calleeGroup.mode()))
                 repatchCalls(replacementCallee->wasmToWasmCallsites());
-            if (OMGForOSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee(codeBlock.mode()))
+            if (OSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee(calleeGroup.mode()))
                 repatchCalls(osrEntryCallee->wasmToWasmCallsites());
         }
-        if (BBQCallee* bbqCallee = codeBlock.m_bbqCallees[i].get()) {
+        if (BBQCallee* bbqCallee = calleeGroup.bbqCallee(calleeGroupLocker, i)) {
             if (OMGCallee* replacementCallee = bbqCallee->replacement())
                 repatchCalls(replacementCallee->wasmToWasmCallsites());
-            if (OMGForOSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
+            if (OSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
                 repatchCalls(osrEntryCallee->wasmToWasmCallsites());
         }
     }

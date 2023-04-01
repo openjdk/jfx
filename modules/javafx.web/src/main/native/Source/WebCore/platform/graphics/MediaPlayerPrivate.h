@@ -29,8 +29,16 @@
 
 #include "MediaPlayer.h"
 #include "MediaPlayerIdentifier.h"
+#include "NativeImage.h"
 #include "PlatformTimeRanges.h"
+#include "ProcessIdentity.h"
+#include "VideoFrame.h"
+#include <optional>
 #include <wtf/CompletionHandler.h>
+
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+#include "LegacyCDMSession.h"
+#endif
 
 namespace WebCore {
 
@@ -44,7 +52,7 @@ public:
     virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
 
 #if ENABLE(MEDIA_SOURCE)
-    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient*) = 0;
+    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient&) = 0;
 #endif
 #if ENABLE(MEDIA_STREAM)
     virtual void load(MediaStreamPrivate&) = 0;
@@ -65,7 +73,7 @@ public:
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     virtual RetainPtr<PlatformLayer> createVideoFullscreenLayer() { return nullptr; }
-    virtual void setVideoFullscreenLayer(PlatformLayer*, WTF::Function<void()>&& completionHandler) { completionHandler(); }
+    virtual void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler) { completionHandler(); }
     virtual void updateVideoFullscreenInlineImage() { }
     virtual void setVideoFullscreenFrame(FloatRect) { }
     virtual void setVideoFullscreenGravity(MediaPlayer::VideoGravity) { }
@@ -87,6 +95,7 @@ public:
     virtual bool supportsPictureInPicture() const { return false; }
     virtual bool supportsFullscreen() const { return false; }
     virtual bool supportsScanning() const { return false; }
+    virtual bool supportsProgressMonitoring() const { return true; }
     virtual bool requiresImmediateCompositing() const { return false; }
 
     virtual bool canSaveMediaData() const { return false; }
@@ -172,10 +181,15 @@ public:
     virtual void paintCurrentFrameInContext(GraphicsContext& c, const FloatRect& r) { paint(c, r); }
 #if !USE(AVFOUNDATION)
     virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
-#else
-    virtual RetainPtr<CVPixelBufferRef> pixelBufferForCurrentTime() { return nullptr; }
 #endif
+#if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
+    virtual void willBeAskedToPaintGL() { }
+#endif
+
+    virtual RefPtr<VideoFrame> videoFrameForCurrentTime() { return nullptr; }
     virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
+    virtual DestinationColorSpace colorSpace() = 0;
+    virtual bool shouldGetNativeImageForCanvasDrawing() const { return true; }
 
     virtual void setPreload(MediaPlayer::Preload) { }
 
@@ -238,7 +252,7 @@ public:
 #endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-    virtual std::unique_ptr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient*) { return nullptr; }
+    virtual std::unique_ptr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient&) { return nullptr; }
     virtual void setCDM(LegacyCDM*) { }
     virtual void setCDMSession(LegacyCDMSession*) { }
     virtual void keyAdded() { }
@@ -285,9 +299,7 @@ public:
 
     virtual std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() { return std::nullopt; }
 
-#if ENABLE(AVF_CAPTIONS)
     virtual void notifyTrackModeChanged() { }
-#endif
 
     virtual void notifyActiveSourceBuffersChanged() { }
 
@@ -314,6 +326,18 @@ public:
     virtual bool supportsPauseAtHostTime() const { return false; }
     virtual bool playAtHostTime(const MonotonicTime&) { return false; }
     virtual bool pauseAtHostTime(const MonotonicTime&) { return false; }
+
+    virtual std::optional<VideoFrameMetadata> videoFrameMetadata() { return { }; }
+    virtual void startVideoFrameMetadataGathering() { }
+    virtual void stopVideoFrameMetadataGathering() { }
+
+    virtual void playerContentBoxRectChanged(const LayoutRect&) { }
+
+    virtual void setResourceOwner(const ProcessIdentity&) { }
+
+    virtual String errorMessage() const { return { }; }
+
+    virtual void renderVideoWillBeDestroyed() { }
 };
 
 }

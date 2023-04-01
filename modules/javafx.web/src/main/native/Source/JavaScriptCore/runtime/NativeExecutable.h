@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ExecutableBase.h"
+#include "ImplementationVisibility.h"
 
 namespace JSC {
 
@@ -36,14 +37,14 @@ public:
     typedef ExecutableBase Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    static NativeExecutable* create(VM&, Ref<JITCode>&& callThunk, TaggedNativeFunction, Ref<JITCode>&& constructThunk, TaggedNativeFunction constructor, const String& name);
+    static NativeExecutable* create(VM&, Ref<JITCode>&& callThunk, TaggedNativeFunction, Ref<JITCode>&& constructThunk, TaggedNativeFunction constructor, ImplementationVisibility, const String& name);
 
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.nativeExecutableSpace;
+        return &vm.nativeExecutableSpace();
     }
 
     CodeBlockHash hashFor(CodeSpecializationKind) const;
@@ -75,6 +76,7 @@ public:
     const String& name() const { return m_name; }
 
     const DOMJIT::Signature* signatureFor(CodeSpecializationKind) const;
+    ImplementationVisibility implementationVisibility() const { return static_cast<ImplementationVisibility>(m_implementationVisibility); }
     Intrinsic intrinsic() const;
 
     JSString* toString(JSGlobalObject* globalObject)
@@ -88,13 +90,15 @@ public:
     static inline ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(NativeExecutable, m_asString); }
 
 private:
-    NativeExecutable(VM&, TaggedNativeFunction, TaggedNativeFunction constructor);
+    NativeExecutable(VM&, TaggedNativeFunction, TaggedNativeFunction constructor, ImplementationVisibility);
     void finishCreation(VM&, Ref<JITCode>&& callThunk, Ref<JITCode>&& constructThunk, const String& name);
 
     JSString* toStringSlow(JSGlobalObject*);
 
     TaggedNativeFunction m_function;
     TaggedNativeFunction m_constructor;
+
+    unsigned m_implementationVisibility : bitWidthOfImplementationVisibility;
 
     String m_name;
     WriteBarrier<JSString> m_asString;

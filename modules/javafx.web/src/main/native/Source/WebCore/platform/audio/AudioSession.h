@@ -46,6 +46,16 @@ enum class RouteSharingPolicy : uint8_t {
     LongFormVideo
 };
 
+enum class AudioSessionCategory : uint8_t {
+    None,
+    AmbientSound,
+    SoloAmbientSound,
+    MediaPlayback,
+    RecordAudio,
+    PlayAndRecord,
+    AudioProcessing,
+};
+
 class AudioSessionRoutingArbitrationClient;
 
 class WEBCORE_EXPORT AudioSession {
@@ -63,15 +73,7 @@ public:
 
     virtual ~AudioSession();
 
-    enum class CategoryType : uint8_t {
-        None,
-        AmbientSound,
-        SoloAmbientSound,
-        MediaPlayback,
-        RecordAudio,
-        PlayAndRecord,
-        AudioProcessing,
-    };
+    using CategoryType = AudioSessionCategory;
     virtual void setCategory(CategoryType, RouteSharingPolicy);
     virtual CategoryType category() const;
 
@@ -113,6 +115,9 @@ public:
     enum class MayResume { No, Yes };
     virtual void endInterruption(MayResume);
 
+    virtual void beginInterruptionForTesting() { beginInterruption(); }
+    virtual void endInterruptionForTesting() { endInterruption(MayResume::Yes); }
+
     class InterruptionObserver : public CanMakeWeakPtr<InterruptionObserver> {
     public:
         virtual ~InterruptionObserver() = default;
@@ -130,6 +135,11 @@ public:
     static bool shouldManageAudioSessionCategory() { return s_shouldManageAudioSessionCategory; }
     static void setShouldManageAudioSessionCategory(bool flag) { s_shouldManageAudioSessionCategory = flag; }
 
+    virtual void setHostProcessAttribution(audit_token_t) { };
+    virtual void setPresentingProcesses(Vector<audit_token_t>&&) { };
+
+    bool isInterrupted() const { return m_isInterrupted; }
+
 protected:
     friend class NeverDestroyed<AudioSession>;
     AudioSession();
@@ -141,11 +151,12 @@ protected:
     WeakPtr<AudioSessionRoutingArbitrationClient> m_routingArbitrationClient;
     AudioSession::CategoryType m_categoryOverride { AudioSession::CategoryType::None };
     bool m_active { false }; // Used only for testing.
+    bool m_isInterrupted { false };
 
     static bool s_shouldManageAudioSessionCategory;
 };
 
-class WEBCORE_EXPORT AudioSessionRoutingArbitrationClient {
+class WEBCORE_EXPORT AudioSessionRoutingArbitrationClient : public CanMakeWeakPtr<AudioSessionRoutingArbitrationClient> {
 public:
     virtual ~AudioSessionRoutingArbitrationClient() = default;
 

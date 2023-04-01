@@ -31,6 +31,7 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "RegistrableDomain.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerClientData.h"
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerData.h"
@@ -40,6 +41,7 @@
 #include "Timer.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakPtr.h>
 
@@ -48,11 +50,11 @@ namespace WebCore {
 class SWServer;
 class SWServerRegistration;
 class SWServerToContextConnection;
-struct ServiceWorkerClientIdentifier;
 struct ServiceWorkerClientQueryOptions;
 struct ServiceWorkerContextData;
 struct ServiceWorkerJobDataIdentifier;
-enum class WorkerType : uint8_t;
+enum class WorkerThreadMode : bool;
+enum class WorkerType : bool;
 
 class SWServerWorker : public RefCounted<SWServerWorker> {
 public:
@@ -101,12 +103,13 @@ public:
     void didFinishInstall(const std::optional<ServiceWorkerJobDataIdentifier>&, bool wasSuccessful);
     void didFinishActivation();
     void contextTerminated();
-    WEBCORE_EXPORT std::optional<ServiceWorkerClientData> findClientByIdentifier(const ServiceWorkerClientIdentifier&) const;
+    WEBCORE_EXPORT std::optional<ServiceWorkerClientData> findClientByIdentifier(const ScriptExecutionContextIdentifier&) const;
+    WEBCORE_EXPORT void findClientByVisibleIdentifier(const String& clientIdentifier, CompletionHandler<void(std::optional<WebCore::ServiceWorkerClientData>&&)>&&);
     void matchAll(const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&);
     void setScriptResource(URL&&, ServiceWorkerContextData::ImportedScript&&);
-    void didSaveScriptsToDisk(ScriptBuffer&& mainScript, HashMap<URL, ScriptBuffer>&& importedScripts);
+    void didSaveScriptsToDisk(ScriptBuffer&& mainScript, MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>&& importedScripts);
 
-    void skipWaiting();
+    WEBCORE_EXPORT void skipWaiting();
     bool isSkipWaitingFlagSet() const { return m_isSkipWaitingFlagSet; }
 
     WEBCORE_EXPORT static SWServerWorker* existingWorkerForIdentifier(ServiceWorkerIdentifier);
@@ -115,8 +118,9 @@ public:
     const ServiceWorkerData& data() const { return m_data; }
     ServiceWorkerContextData contextData() const;
 
-    const ClientOrigin& origin() const;
+    WEBCORE_EXPORT const ClientOrigin& origin() const;
     const RegistrableDomain& registrableDomain() const { return m_registrableDomain; }
+    WEBCORE_EXPORT std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier() const;
 
     WEBCORE_EXPORT SWServerToContextConnection* contextConnection();
     String userAgent() const;
@@ -130,15 +134,32 @@ public:
     void didFailHeartBeatCheck();
     void updateAppInitiatedValue(LastNavigationWasAppInitiated);
 
+    WorkerThreadMode workerThreadMode() const;
+
+    void incrementFunctionalEventCounter() { ++m_functionalEventCounter; }
+    void decrementFunctionalEventCounter();
+    void setAsInspected(bool);
+
+    bool shouldContinue() const { return !!m_functionalEventCounter || m_isInspected; }
+
+    WEBCORE_EXPORT bool isClientActiveServiceWorker(ScriptExecutionContextIdentifier) const;
+
+    Vector<URL> importedScriptURLs() const;
+    const MemoryCompactRobinHoodHashMap<URL, ServiceWorkerContextData::ImportedScript>& scriptResourceMap() const { return m_scriptResourceMap; }
+    bool matchingImportedScripts(const Vector<std::pair<URL, ScriptBuffer>>&) const;
+
 private:
-    SWServerWorker(SWServer&, SWServerRegistration&, const URL&, const ScriptBuffer&, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const CrossOriginEmbedderPolicy&, String&& referrerPolicy, WorkerType, ServiceWorkerIdentifier, HashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
+    SWServerWorker(SWServer&, SWServerRegistration&, const URL&, const ScriptBuffer&, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const CrossOriginEmbedderPolicy&, String&& referrerPolicy, WorkerType, ServiceWorkerIdentifier, MemoryCompactRobinHoodHashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
 
     void callWhenActivatedHandler(bool success);
 
     void startTermination(CompletionHandler<void()>&&);
     void terminationCompleted();
     void terminationTimerFired();
+    void terminationIfPossibleTimerFired();
     void callTerminationCallbacks();
+    void terminateIfPossible();
+    bool shouldBeTerminated() const;
 
     WeakPtr<SWServer> m_server;
     ServiceWorkerRegistrationKey m_registrationKey;
@@ -155,12 +176,15 @@ private:
     RegistrableDomain m_registrableDomain;
     bool m_isSkipWaitingFlagSet { false };
     Vector<CompletionHandler<void(bool)>> m_whenActivatedHandlers;
-    HashMap<URL, ServiceWorkerContextData::ImportedScript> m_scriptResourceMap;
+    MemoryCompactRobinHoodHashMap<URL, ServiceWorkerContextData::ImportedScript> m_scriptResourceMap;
     bool m_shouldSkipHandleFetch { false };
     bool m_hasTimedOutAnyFetchTasks { false };
     Vector<CompletionHandler<void()>> m_terminationCallbacks;
     Timer m_terminationTimer;
+    Timer m_terminationIfPossibleTimer;
     LastNavigationWasAppInitiated m_lastNavigationWasAppInitiated;
+    int m_functionalEventCounter { 0 };
+    bool m_isInspected { false };
 };
 
 } // namespace WebCore

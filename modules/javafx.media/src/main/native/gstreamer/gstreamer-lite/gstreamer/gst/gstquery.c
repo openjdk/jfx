@@ -44,7 +44,7 @@
  *   res = gst_element_query (pipeline, query);
  *   if (res) {
  *     gint64 duration;
- *     gst_query_parse_duration (query, NULL, &amp;duration);
+ *     gst_query_parse_duration (query, NULL, &duration);
  *     g_print ("duration = %"GST_TIME_FORMAT, GST_TIME_ARGS (duration));
  *   } else {
  *     g_print ("duration query failed...");

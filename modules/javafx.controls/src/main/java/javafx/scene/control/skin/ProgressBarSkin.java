@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import javafx.animation.Transition;
 import javafx.beans.binding.When;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
@@ -394,7 +393,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
      */
     private static class StyleableProperties {
         private static final CssMetaData<ProgressBar, Number> INDETERMINATE_BAR_LENGTH =
-                new CssMetaData<ProgressBar, Number>("-fx-indeterminate-bar-length",
+                new CssMetaData<>("-fx-indeterminate-bar-length",
                         SizeConverter.getInstance(), 60.0) {
 
                     @Override
@@ -407,12 +406,12 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Number>) (WritableValue<Number>) skin.indeterminateBarLengthProperty();
+                        return (StyleableProperty<Number>) skin.indeterminateBarLengthProperty();
                     }
                 };
 
         private static final CssMetaData<ProgressBar, Boolean> INDETERMINATE_BAR_ESCAPE =
-                new CssMetaData<ProgressBar, Boolean>("-fx-indeterminate-bar-escape",
+                new CssMetaData<>("-fx-indeterminate-bar-escape",
                         BooleanConverter.getInstance(), Boolean.TRUE) {
 
                     @Override
@@ -425,12 +424,12 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Boolean>) (WritableValue<Boolean>) skin.indeterminateBarEscapeProperty();
+                        return (StyleableProperty<Boolean>) skin.indeterminateBarEscapeProperty();
                     }
                 };
 
         private static final CssMetaData<ProgressBar, Boolean> INDETERMINATE_BAR_FLIP =
-                new CssMetaData<ProgressBar, Boolean>("-fx-indeterminate-bar-flip",
+                new CssMetaData<>("-fx-indeterminate-bar-flip",
                         BooleanConverter.getInstance(), Boolean.TRUE) {
 
                     @Override
@@ -443,12 +442,12 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Boolean>) (WritableValue<Boolean>) skin.indeterminateBarFlipProperty();
+                        return (StyleableProperty<Boolean>) skin.indeterminateBarFlipProperty();
                     }
                 };
 
         private static final CssMetaData<ProgressBar, Number> INDETERMINATE_BAR_ANIMATION_TIME =
-                new CssMetaData<ProgressBar, Number>("-fx-indeterminate-bar-animation-time",
+                new CssMetaData<>("-fx-indeterminate-bar-animation-time",
                         SizeConverter.getInstance(), 2.0) {
 
                     @Override
@@ -461,7 +460,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Number>) (WritableValue<Number>) skin.indeterminateBarAnimationTimeProperty();
+                        return (StyleableProperty<Number>) skin.indeterminateBarAnimationTimeProperty();
                     }
                 };
 
@@ -469,7 +468,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
 
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                    new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                    new ArrayList<>(SkinBase.getClassCssMetaData());
             styleables.add(INDETERMINATE_BAR_LENGTH);
             styleables.add(INDETERMINATE_BAR_ESCAPE);
             styleables.add(INDETERMINATE_BAR_FLIP);

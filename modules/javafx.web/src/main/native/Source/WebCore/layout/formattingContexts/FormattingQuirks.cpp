@@ -31,6 +31,7 @@
 #include "FormattingGeometry.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
+#include "LayoutContainingBlockChainIterator.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutState.h"
 
@@ -63,8 +64,8 @@ LayoutUnit FormattingQuirks::heightValueOfNearestContainingBlockWithFixedHeight(
             auto verticalMargin = formattingGeometry.computedVerticalMargin(*containingBlock, horizontalConstraints);
 
             auto& boxGeometry = formattingContext.geometryForBox(*containingBlock, FormattingContext::EscapeReason::FindFixedHeightAncestorQuirk);
-            auto verticalPadding = boxGeometry.paddingTop().value_or(0) + boxGeometry.paddingBottom().value_or(0);
-            auto verticalBorder = boxGeometry.borderTop() + boxGeometry.borderBottom();
+            auto verticalPadding = boxGeometry.paddingBefore().value_or(0) + boxGeometry.paddingAfter().value_or(0);
+            auto verticalBorder = boxGeometry.borderBefore() + boxGeometry.borderAfter();
             bodyAndDocumentVerticalMarginPaddingAndBorder += verticalMargin.before.value_or(0) + verticalMargin.after.value_or(0) + verticalPadding + verticalBorder;
         }
 

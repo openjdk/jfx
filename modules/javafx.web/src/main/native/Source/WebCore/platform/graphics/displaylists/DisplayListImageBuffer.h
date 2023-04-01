@@ -25,45 +25,42 @@
 
 #pragma once
 
-#include "ConcreteImageBuffer.h"
 #include "DisplayListDrawingContext.h"
+#include "ImageBuffer.h"
 #include "InMemoryDisplayList.h"
 
 namespace WebCore {
 namespace DisplayList {
 
-template<typename BackendType>
-class ImageBuffer : public ConcreteImageBuffer<BackendType> {
-    using BaseConcreteImageBuffer = ConcreteImageBuffer<BackendType>;
-    using BaseConcreteImageBuffer::logicalSize;
-    using BaseConcreteImageBuffer::baseTransform;
-
+class ImageBuffer final : public WebCore::ImageBuffer {
 public:
-    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, const HostWindow* hostWindow)
+    template<typename BackendType>
+    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const WebCore::ImageBuffer::CreationContext& creationContext)
     {
-        return BaseConcreteImageBuffer::template create<ImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
+        return WebCore::ImageBuffer::create<BackendType, ImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
     }
 
-    static auto create(const FloatSize& size, const GraphicsContext& context)
+    template<typename BackendType>
+    static auto create(const FloatSize& size, const GraphicsContext& context, RenderingPurpose purpose)
     {
-        return BaseConcreteImageBuffer::template create<ImageBuffer>(size, context);
+        return WebCore::ImageBuffer::create<BackendType, ImageBuffer>(size, context, purpose);
     }
 
-    ImageBuffer(const ImageBufferBackend::Parameters& parameters, std::unique_ptr<BackendType>&& backend)
-        : BaseConcreteImageBuffer(parameters, WTFMove(backend))
+    ImageBuffer(const ImageBufferBackend::Parameters& parameters, const ImageBufferBackend::Info& info, std::unique_ptr<ImageBufferBackend>&& backend)
+        : WebCore::ImageBuffer(parameters, info, WTFMove(backend))
         , m_drawingContext(logicalSize(), baseTransform())
-        , m_writingClient(WTF::makeUnique<InMemoryDisplayList::WritingClient>())
-        , m_readingClient(WTF::makeUnique<InMemoryDisplayList::ReadingClient>())
+        , m_writingClient(makeUnique<InMemoryDisplayList::WritingClient>())
+        , m_readingClient(makeUnique<InMemoryDisplayList::ReadingClient>())
     {
         m_drawingContext.displayList().setItemBufferWritingClient(m_writingClient.get());
         m_drawingContext.displayList().setItemBufferReadingClient(m_readingClient.get());
     }
 
-    ImageBuffer(const ImageBufferBackend::Parameters& parameters, Recorder::Delegate* delegate = nullptr)
-        : BaseConcreteImageBuffer(parameters)
-        , m_drawingContext(logicalSize(), baseTransform(), delegate)
-        , m_writingClient(WTF::makeUnique<InMemoryDisplayList::WritingClient>())
-        , m_readingClient(WTF::makeUnique<InMemoryDisplayList::ReadingClient>())
+    ImageBuffer(const ImageBufferBackend::Parameters& parameters, const ImageBufferBackend::Info& info)
+        : WebCore::ImageBuffer(parameters, info)
+        , m_drawingContext(logicalSize(), baseTransform())
+        , m_writingClient(makeUnique<InMemoryDisplayList::WritingClient>())
+        , m_readingClient(makeUnique<InMemoryDisplayList::ReadingClient>())
     {
         m_drawingContext.displayList().setItemBufferWritingClient(m_writingClient.get());
         m_drawingContext.displayList().setItemBufferReadingClient(m_readingClient.get());
@@ -74,23 +71,23 @@ public:
         flushDrawingContext();
     }
 
-    GraphicsContext& context() const override
+    GraphicsContext& context() const final
     {
         return m_drawingContext.context();
     }
 
-    DrawingContext* drawingContext() override { return &m_drawingContext; }
+    GraphicsContext* drawingContext() override { return &m_drawingContext.context(); }
 
-    void flushDrawingContext() override
+    void flushDrawingContext() final
     {
         if (!m_drawingContext.displayList().isEmpty())
-            m_drawingContext.replayDisplayList(BaseConcreteImageBuffer::context());
+            m_drawingContext.replayDisplayList(WebCore::ImageBuffer::context());
     }
 
-    void clearBackend() override
+    void clearBackend() final
     {
         m_drawingContext.displayList().clear();
-        BaseConcreteImageBuffer::clearBackend();
+        WebCore::ImageBuffer::clearBackend();
     }
 
 protected:

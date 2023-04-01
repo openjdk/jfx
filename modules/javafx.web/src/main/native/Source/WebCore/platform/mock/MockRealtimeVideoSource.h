@@ -48,18 +48,21 @@ class GraphicsContext;
 
 class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
-    static CaptureSourceOrError create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints*);
+    static CaptureSourceOrError create(String&& deviceID, AtomString&& name, String&& hashSalt, const MediaConstraints*, PageIdentifier);
+    ~MockRealtimeVideoSource();
+
+    static void setIsInterrupted(bool);
 
     ImageBuffer* imageBuffer() const;
 
 protected:
-    MockRealtimeVideoSource(String&& deviceID, String&& name, String&& hashSalt);
+    MockRealtimeVideoSource(String&& deviceID, AtomString&& name, String&& hashSalt, PageIdentifier);
 
     virtual void updateSampleBuffer() = 0;
 
     Seconds elapsedTime();
     void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) override;
-    MediaSample::VideoRotation sampleRotation() const final { return m_deviceOrientation; }
+    VideoFrame::Rotation videoFrameRotation() const final { return m_deviceOrientation; }
     void generatePresets() override;
 
     IntSize captureSize() const;
@@ -92,8 +95,8 @@ private:
 
     void delaySamples(Seconds) final;
 
-    bool mockCamera() const { return WTF::holds_alternative<MockCameraProperties>(m_device.properties); }
-    bool mockDisplay() const { return WTF::holds_alternative<MockDisplayProperties>(m_device.properties); }
+    bool mockCamera() const { return std::holds_alternative<MockCameraProperties>(m_device.properties); }
+    bool mockDisplay() const { return std::holds_alternative<MockDisplayProperties>(m_device.properties); }
     bool mockScreen() const { return mockDisplayType(CaptureDevice::DeviceType::Screen); }
     bool mockWindow() const { return mockDisplayType(CaptureDevice::DeviceType::Window); }
     bool mockDisplayType(CaptureDevice::DeviceType) const;
@@ -119,7 +122,7 @@ private:
     Color m_fillColor { Color::black };
     MockMediaDevice m_device;
     RefPtr<VideoPreset> m_preset;
-    MediaSample::VideoRotation m_deviceOrientation { MediaSample::VideoRotation::None };
+    VideoFrame::Rotation m_deviceOrientation { VideoFrame::Rotation::None };
 };
 
 } // namespace WebCore

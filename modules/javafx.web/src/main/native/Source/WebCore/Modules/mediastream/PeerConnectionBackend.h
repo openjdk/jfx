@@ -35,9 +35,12 @@
 
 #include "IDLTypes.h"
 #include "LibWebRTCProvider.h"
+#include "RTCIceGatheringState.h"
+#include "RTCRtpCapabilities.h"
 #include "RTCRtpSendParameters.h"
 #include "RTCSessionDescription.h"
 #include "RTCSignalingState.h"
+#include <wtf/FixedVector.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/WeakPtr.h>
 
@@ -57,6 +60,7 @@ class RTCPeerConnection;
 class RTCRtpReceiver;
 class RTCRtpSender;
 class RTCRtpTransceiver;
+class RTCSctpTransportBackend;
 class RTCSessionDescription;
 class RTCStatsReport;
 class ScriptExecutionContext;
@@ -91,11 +95,12 @@ public:
     explicit PeerConnectionBackend(RTCPeerConnection&);
     virtual ~PeerConnectionBackend();
 
-    void createOffer(RTCOfferOptions&&, PeerConnection::SessionDescriptionPromise&&);
-    void createAnswer(RTCAnswerOptions&&, PeerConnection::SessionDescriptionPromise&&);
-    void setLocalDescription(const RTCSessionDescription*, DOMPromiseDeferred<void>&&);
-    void setRemoteDescription(const RTCSessionDescription&, DOMPromiseDeferred<void>&&);
-    void addIceCandidate(RTCIceCandidate*, DOMPromiseDeferred<void>&&);
+    using CreateCallback = Function<void(ExceptionOr<RTCSessionDescriptionInit>&&)>;
+    void createOffer(RTCOfferOptions&&, CreateCallback&&);
+    void createAnswer(RTCAnswerOptions&&, CreateCallback&&);
+    void setLocalDescription(const RTCSessionDescription*, Function<void(ExceptionOr<void>&&)>&&);
+    void setRemoteDescription(const RTCSessionDescription&, Function<void(ExceptionOr<void>&&)>&&);
+    void addIceCandidate(RTCIceCandidate*, Function<void(ExceptionOr<void>&&)>&&);
 
     virtual std::unique_ptr<RTCDataChannelHandler> createDataChannelHandler(const String&, const RTCDataChannelInit&) = 0;
 
@@ -103,34 +108,40 @@ public:
 
     virtual void close() = 0;
 
-    virtual RefPtr<RTCSessionDescription> localDescription() const = 0;
-    virtual RefPtr<RTCSessionDescription> currentLocalDescription() const = 0;
-    virtual RefPtr<RTCSessionDescription> pendingLocalDescription() const = 0;
-
-    virtual RefPtr<RTCSessionDescription> remoteDescription() const = 0;
-    virtual RefPtr<RTCSessionDescription> currentRemoteDescription() const = 0;
-    virtual RefPtr<RTCSessionDescription> pendingRemoteDescription() const = 0;
-
     virtual void restartIce() = 0;
     virtual bool setConfiguration(MediaEndpointConfiguration&&) = 0;
 
+    virtual void gatherDecoderImplementationName(Function<void(String&&)>&&) = 0;
     virtual void getStats(Ref<DeferredPromise>&&) = 0;
     virtual void getStats(RTCRtpSender&, Ref<DeferredPromise>&&) = 0;
     virtual void getStats(RTCRtpReceiver&, Ref<DeferredPromise>&&) = 0;
 
-    virtual ExceptionOr<Ref<RTCRtpSender>> addTrack(MediaStreamTrack&, Vector<String>&&);
+    virtual ExceptionOr<Ref<RTCRtpSender>> addTrack(MediaStreamTrack&, FixedVector<String>&&);
     virtual void removeTrack(RTCRtpSender&) { }
 
     virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(const String&, const RTCRtpTransceiverInit&);
     virtual ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(Ref<MediaStreamTrack>&&, const RTCRtpTransceiverInit&);
 
-    void markAsNeedingNegotiation();
-    bool isNegotiationNeeded() const { return m_negotiationNeeded; };
-    void clearNegotiationNeededState() { m_negotiationNeeded = false; };
+    void markAsNeedingNegotiation(uint32_t);
+    virtual bool isNegotiationNeeded(uint32_t) const = 0;
 
     virtual void emulatePlatformEvent(const String& action) = 0;
 
-    void newICECandidate(String&& sdp, String&& mid, unsigned short sdpMLineIndex, String&& serverURL);
+    struct DescriptionStates {
+        std::optional<RTCSignalingState> signalingState;
+        std::optional<RTCSdpType> currentLocalDescriptionSdpType;
+        String currentLocalDescriptionSdp;
+        std::optional<RTCSdpType> pendingLocalDescriptionSdpType;
+        String pendingLocalDescriptionSdp;
+        std::optional<RTCSdpType> currentRemoteDescriptionSdpType;
+        String currentRemoteDescriptionSdp;
+        std::optional<RTCSdpType> pendingRemoteDescriptionSdpType;
+        String pendingRemoteDescriptionSdp;
+    };
+
+    void newICECandidate(String&& sdp, String&& mid, unsigned short sdpMLineIndex, String&& serverURL, std::optional<DescriptionStates>&&);
+    void newDataChannel(UniqueRef<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&);
+
     virtual void disableICECandidateFiltering();
     void enableICECandidateFiltering();
 
@@ -187,11 +198,13 @@ public:
 
     bool shouldFilterICECandidates() const { return m_shouldFilterICECandidates; };
 
-protected:
-    void fireICECandidateEvent(RefPtr<RTCIceCandidate>&&, String&& url);
-    void doneGatheringCandidates();
+    using AddIceCandidateCallbackFunction = void(ExceptionOr<std::optional<PeerConnectionBackend::DescriptionStates>>&&);
+    using AddIceCandidateCallback = Function<AddIceCandidateCallbackFunction>;
 
-    void updateSignalingState(RTCSignalingState);
+    void iceGatheringStateChanged(RTCIceGatheringState);
+
+protected:
+    void doneGatheringCandidates();
 
     void createOfferSucceeded(String&&);
     void createOfferFailed(Exception&&);
@@ -199,16 +212,13 @@ protected:
     void createAnswerSucceeded(String&&);
     void createAnswerFailed(Exception&&);
 
-    void setLocalDescriptionSucceeded();
+    void setLocalDescriptionSucceeded(std::optional<DescriptionStates>&&, std::unique_ptr<RTCSctpTransportBackend>&&);
     void setLocalDescriptionFailed(Exception&&);
 
-    void setRemoteDescriptionSucceeded();
+    void setRemoteDescriptionSucceeded(std::optional<DescriptionStates>&&, std::unique_ptr<RTCSctpTransportBackend>&&);
     void setRemoteDescriptionFailed(Exception&&);
 
-    void addIceCandidateSucceeded();
-    void addIceCandidateFailed(Exception&&);
-
-    String filterSDP(String&&) const;
+    void validateSDP(const String&) const;
 
     struct PendingTrackEvent {
         Ref<RTCRtpReceiver> receiver;
@@ -218,45 +228,32 @@ protected:
     };
     void addPendingTrackEvent(PendingTrackEvent&&);
 
+    void dispatchTrackEvent(PendingTrackEvent&);
+
 private:
     virtual void doCreateOffer(RTCOfferOptions&&) = 0;
     virtual void doCreateAnswer(RTCAnswerOptions&&) = 0;
     virtual void doSetLocalDescription(const RTCSessionDescription*) = 0;
     virtual void doSetRemoteDescription(const RTCSessionDescription&) = 0;
-    virtual void doAddIceCandidate(RTCIceCandidate&) = 0;
-    virtual void endOfIceCandidates(DOMPromiseDeferred<void>&&);
+    virtual void doAddIceCandidate(RTCIceCandidate&, AddIceCandidateCallback&&) = 0;
     virtual void doStop() = 0;
-
-    void registerMDNSName(const String& ipAddress);
 
 protected:
     RTCPeerConnection& m_peerConnection;
 
 private:
-    std::unique_ptr<PeerConnection::SessionDescriptionPromise> m_offerAnswerPromise;
-    std::unique_ptr<DOMPromiseDeferred<void>> m_setDescriptionPromise;
-    std::unique_ptr<DOMPromiseDeferred<void>> m_addIceCandidatePromise;
+    CreateCallback m_offerAnswerCallback;
+    Function<void(ExceptionOr<void>&&)> m_setDescriptionCallback;
 
     bool m_shouldFilterICECandidates { true };
-    struct PendingICECandidate {
-        // Fields described in https://www.w3.org/TR/webrtc/#idl-def-rtcicecandidateinit.
-        String sdp;
-        String mid;
-        unsigned short sdpMLineIndex;
-        String serverURL;
-    };
-    Vector<PendingICECandidate> m_pendingICECandidates;
 
     Vector<PendingTrackEvent> m_pendingTrackEvents;
 
-    HashMap<String, String> m_ipAddressToMDNSNameMap;
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif
-    bool m_negotiationNeeded { false };
     bool m_finishedGatheringCandidates { false };
-    uint64_t m_waitingForMDNSRegistration { 0 };
 };
 
 } // namespace WebCore

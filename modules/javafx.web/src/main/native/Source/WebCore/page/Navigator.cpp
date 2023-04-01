@@ -2,7 +2,7 @@
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (c) 2000 Daniel Molkentin (molkentin@kde.org)
  *  Copyright (c) 2000 Stefan Schimanski (schimmi@kde.org)
- *  Copyright (C) 2003, 2004, 2005, 2006 Apple Inc.
+ *  Copyright (C) 2003-2022 Apple Inc.
  *  Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  *  This library is free software; you can redistribute it and/or
@@ -29,18 +29,21 @@
 #include "DOMMimeTypeArray.h"
 #include "DOMPlugin.h"
 #include "DOMPluginArray.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
+#include "FeaturePolicy.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include "GPU.h"
 #include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LoaderStrategy.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "PluginData.h"
+#include "Quirks.h"
 #include "ResourceLoadObserver.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
@@ -69,7 +72,7 @@ String Navigator::appVersion() const
     auto* frame = this->frame();
     if (!frame)
         return String();
-    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
+    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::AppVersion);
     return NavigatorBase::appVersion();
 }
@@ -79,7 +82,7 @@ const String& Navigator::userAgent() const
     auto* frame = this->frame();
     if (!frame || !frame->page())
         return m_userAgent;
-    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
+    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::UserAgent);
     if (m_userAgent.isNull())
         m_userAgent = frame->loader().userAgent(frame->document()->url());
@@ -118,31 +121,46 @@ static std::optional<URL> shareableURLForShareData(ScriptExecutionContext& conte
     auto url = context.completeURL(data.url);
     if (!url.isValid())
         return std::nullopt;
-    if (!url.protocolIsInHTTPFamily() && !url.protocolIsData())
+    if (!url.protocolIsInHTTPFamily())
         return std::nullopt;
 
     return url;
 }
 
+static bool validateWebSharePolicy(Document& document)
+{
+    return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::WebShare, document, LogFeaturePolicyFailure::Yes);
+}
+
 bool Navigator::canShare(Document& document, const ShareData& data)
 {
-    auto* frame = this->frame();
-    if (!frame || !frame->page())
+    if (!document.isFullyActive() || !validateWebSharePolicy(document))
         return false;
 
-    bool hasShareableTitleOrText = !data.title.isNull() || !data.text.isNull();
-    bool hasShareableURL = !!shareableURLForShareData(document, data);
 #if ENABLE(FILE_SHARE)
     bool hasShareableFiles = document.settings().webShareFileAPIEnabled() && !data.files.isEmpty();
 #else
     bool hasShareableFiles = false;
 #endif
 
-    return hasShareableTitleOrText || hasShareableURL || hasShareableFiles;
+    if (data.title.isNull() && data.text.isNull() && data.url.isNull() && !hasShareableFiles)
+        return false;
+
+    return data.url.isNull() || shareableURLForShareData(document, data);
 }
 
 void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPromise>&& promise)
 {
+    if (!document.isFullyActive()) {
+        promise->reject(InvalidStateError);
+        return;
+    }
+
+    if (!validateWebSharePolicy(document)) {
+        promise->reject(NotAllowedError, "Third-party iframes are not allowed to call share() unless explicitly allowed via Feature-Policy (web-share)"_s);
+        return;
+    }
+
     if (m_hasPendingShare) {
         promise->reject(NotAllowedError);
         return;
@@ -262,7 +280,7 @@ void Navigator::initializePluginAndMimeTypeArrays()
 
 DOMPluginArray& Navigator::plugins()
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
+    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled()) {
         if (auto* frame = this->frame())
             ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::Plugins);
     }
@@ -272,7 +290,7 @@ DOMPluginArray& Navigator::plugins()
 
 DOMMimeTypeArray& Navigator::mimeTypes()
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
+    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled()) {
         if (auto* frame = this->frame())
             ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::MimeTypes);
     }
@@ -286,7 +304,7 @@ bool Navigator::cookieEnabled() const
     if (!frame)
         return false;
 
-    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
+    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::CookieEnabled);
 
     auto* page = frame->page();
@@ -303,23 +321,6 @@ bool Navigator::cookieEnabled() const
     return page->cookieJar().cookiesEnabled(*document);
 }
 
-bool Navigator::javaEnabled() const
-{
-    auto* frame = this->frame();
-    if (!frame)
-        return false;
-
-    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::JavaEnabled);
-
-    if (!frame->settings().isJavaEnabled())
-        return false;
-    if (frame->document()->securityOrigin().isLocal() && !frame->settings().isJavaEnabledForLocalFiles())
-        return false;
-
-    return true;
-}
-
 #if PLATFORM(IOS_FAMILY)
 
 bool Navigator::standalone() const
@@ -332,6 +333,26 @@ bool Navigator::standalone() const
 
 void Navigator::getStorageUpdates()
 {
+}
+
+GPU* Navigator::gpu()
+{
+    if (!m_gpuForWebGPU) {
+        auto* frame = this->frame();
+        if (!frame)
+            return nullptr;
+        auto* page = frame->page();
+        if (!page)
+            return nullptr;
+        auto gpu = page->chrome().createGPUForWebGPU();
+        if (!gpu)
+            return nullptr;
+
+        m_gpuForWebGPU = GPU::create();
+        m_gpuForWebGPU->setBacking(*gpu);
+    }
+
+    return m_gpuForWebGPU.get();
 }
 
 } // namespace WebCore

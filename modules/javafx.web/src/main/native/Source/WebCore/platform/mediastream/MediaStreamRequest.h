@@ -30,15 +30,17 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "MediaConstraints.h"
+#include "PageIdentifier.h"
 
 namespace WebCore {
 
 struct MediaStreamRequest {
-    enum class Type { UserMedia, DisplayMedia };
+    enum class Type { UserMedia, DisplayMedia, DisplayMediaWithAudio };
     Type type { Type::UserMedia };
     MediaConstraints audioConstraints;
     MediaConstraints videoConstraints;
     bool isUserGesturePriviledged { false };
+    PageIdentifier pageIdentifier;
 
     template<class Encoder>
     void encode(Encoder& encoder) const
@@ -47,15 +49,20 @@ struct MediaStreamRequest {
         encoder << audioConstraints;
         encoder << videoConstraints;
         encoder << isUserGesturePriviledged;
+        encoder << pageIdentifier;
     }
 
     template <class Decoder> static std::optional<MediaStreamRequest> decode(Decoder& decoder)
     {
         MediaStreamRequest request;
-        if (decoder.decode(request.type) && decoder.decode(request.audioConstraints) && decoder.decode(request.videoConstraints) && decoder.decode(request.isUserGesturePriviledged))
-            return request;
+        if (!decoder.decode(request.type)
+            || !decoder.decode(request.audioConstraints)
+            || !decoder.decode(request.videoConstraints)
+            || !decoder.decode(request.isUserGesturePriviledged)
+            || !decoder.decode(request.pageIdentifier))
+            return std::nullopt;
 
-        return std::nullopt;
+        return request;
     }
 };
 
@@ -66,7 +73,7 @@ struct MediaStreamRequest {
 namespace WebCore {
 
 struct MediaStreamRequest {
-    enum class Type { UserMedia, DisplayMedia };
+    enum class Type { UserMedia, DisplayMedia, DisplayMediaWithAudio };
     Type type;
 };
 
@@ -80,7 +87,8 @@ template<> struct EnumTraits<WebCore::MediaStreamRequest::Type> {
     using values = EnumValues<
         WebCore::MediaStreamRequest::Type,
         WebCore::MediaStreamRequest::Type::UserMedia,
-        WebCore::MediaStreamRequest::Type::DisplayMedia
+        WebCore::MediaStreamRequest::Type::DisplayMedia,
+        WebCore::MediaStreamRequest::Type::DisplayMediaWithAudio
     >;
 };
 

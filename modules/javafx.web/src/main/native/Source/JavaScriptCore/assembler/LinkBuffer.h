@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,12 +42,6 @@
 #include <wtf/Noncopyable.h>
 
 namespace JSC {
-
-namespace Wasm {
-enum class CompilationMode : uint8_t;
-}
-
-class CodeBlock;
 
 // LinkBuffer:
 //
@@ -98,6 +92,7 @@ public:
     v(DFGThunk) \
     v(FTLThunk) \
     v(BoundFunctionThunk) \
+    v(RemoteFunctionThunk) \
     v(SpecializedThunk) \
     v(VirtualThunk) \
     v(WasmThunk) \
@@ -347,6 +342,8 @@ public:
         m_mainThreadFinalizationTasks.append(createSharedTask<void()>(functor));
     }
 
+    void setIsThunk() { m_isThunk = true; }
+
 private:
     JS_EXPORT_PRIVATE CodeRef<LinkBufferPtrTag> finalizeCodeWithoutDisassemblyImpl();
     JS_EXPORT_PRIVATE CodeRef<LinkBufferPtrTag> finalizeCodeWithDisassemblyImpl(bool dumpDisassembly, const char* format, ...) WTF_ATTRIBUTE_PRINTF(3, 4);
@@ -377,6 +374,8 @@ private:
     {
         return m_code.dataLocation();
     }
+
+    void linkComments(MacroAssembler&);
 
     void allocate(MacroAssembler&, JITCompilationEffort);
 
@@ -422,6 +421,7 @@ private:
     bool m_isJumpIsland { false };
 #endif
     bool m_alreadyDisassembled { false };
+    bool m_isThunk { false };
     Profile m_profile { Profile::Uncategorized };
     MacroAssemblerCodePtr<LinkBufferPtrTag> m_code;
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
@@ -445,8 +445,6 @@ private:
         ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>((condition), __VA_ARGS__) \
         : (linkBufferReference).finalizeCodeWithoutDisassembly<resultPtrTag>())
 #endif
-
-bool shouldDumpDisassemblyFor(CodeBlock*);
 
 #define FINALIZE_CODE_FOR(codeBlock, linkBufferReference, resultPtrTag, ...)  \
     FINALIZE_CODE_IF((shouldDumpDisassemblyFor(codeBlock) || Options::asyncDisassembly()), linkBufferReference, resultPtrTag, __VA_ARGS__)
@@ -475,8 +473,6 @@ bool shouldDumpDisassemblyFor(CodeBlock*);
 
 #define FINALIZE_REGEXP_CODE(linkBufferReference, resultPtrTag, dataLogFArgumentsForHeading)  \
     FINALIZE_CODE_IF(JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpRegExpDisassembly(), linkBufferReference, resultPtrTag, dataLogFArgumentsForHeading)
-
-bool shouldDumpDisassemblyFor(Wasm::CompilationMode);
 
 #define FINALIZE_WASM_CODE(linkBufferReference, resultPtrTag, ...)  \
     FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpWasmDisassembly()), linkBufferReference, resultPtrTag, __VA_ARGS__)

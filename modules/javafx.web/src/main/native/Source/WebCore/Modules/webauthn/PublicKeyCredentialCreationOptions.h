@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "BufferSource.h"
 #include "PublicKeyCredentialDescriptor.h"
 #include "PublicKeyCredentialType.h"
+#include "ResidentKeyRequirement.h"
 #include "UserVerificationRequirement.h"
 #include <wtf/Forward.h>
 #endif // ENABLE(WEB_AUTHN)
@@ -47,12 +48,11 @@ struct PublicKeyCredentialCreationOptions {
     };
 
     struct RpEntity : public Entity {
-        mutable String id;
+        mutable std::optional<String> id;
     };
 
     struct UserEntity : public Entity {
-        BufferSource id; // id becomes idVector once it is passed to UIProcess.
-        Vector<uint8_t> idVector;
+        BufferSource id;
         String displayName;
     };
 
@@ -66,6 +66,8 @@ struct PublicKeyCredentialCreationOptions {
 
     struct AuthenticatorSelectionCriteria {
         std::optional<AuthenticatorAttachment> authenticatorAttachment;
+        // residentKey replaces requireResidentKey, see: https://www.w3.org/TR/webauthn-2/#dictionary-authenticatorSelection
+        std::optional<ResidentKeyRequirement> residentKey;
         bool requireResidentKey { false };
         UserVerificationRequirement userVerification { UserVerificationRequirement::Preferred };
 
@@ -77,7 +79,7 @@ struct PublicKeyCredentialCreationOptions {
     UserEntity user;
 
     BufferSource challenge;
-    Vector<Parameters> pubKeyCredParams;
+    mutable Vector<Parameters> pubKeyCredParams;
 
     std::optional<unsigned> timeout;
     Vector<PublicKeyCredentialDescriptor> excludeCredentials;
@@ -111,7 +113,7 @@ std::optional<PublicKeyCredentialCreationOptions::Parameters> PublicKeyCredentia
 template<class Encoder>
 void PublicKeyCredentialCreationOptions::AuthenticatorSelectionCriteria::encode(Encoder& encoder) const
 {
-    encoder << authenticatorAttachment << requireResidentKey << userVerification;
+    encoder << authenticatorAttachment << requireResidentKey << userVerification << residentKey;
 }
 
 template<class Decoder>
@@ -133,6 +135,13 @@ std::optional<PublicKeyCredentialCreationOptions::AuthenticatorSelectionCriteria
 
     if (!decoder.decode(result.userVerification))
         return std::nullopt;
+
+    std::optional<std::optional<ResidentKeyRequirement>> residentKey;
+    decoder >> residentKey;
+    if (!residentKey)
+        return std::nullopt;
+    result.residentKey = *residentKey;
+
     return result;
 }
 
@@ -141,9 +150,10 @@ template<class Encoder>
 void PublicKeyCredentialCreationOptions::encode(Encoder& encoder) const
 {
     encoder << rp.id << rp.name << rp.icon;
-    encoder << static_cast<uint64_t>(user.id.length());
-    encoder.encodeFixedLengthData(user.id.data(), user.id.length(), 1);
+    encoder << user.id;
     encoder << user.displayName << user.name << user.icon << pubKeyCredParams << timeout << excludeCredentials << authenticatorSelection << attestation << extensions;
+    encoder << static_cast<uint64_t>(challenge.length());
+    encoder.encodeFixedLengthData(challenge.data(), challenge.length(), 1);
 }
 
 template<class Decoder>
@@ -156,7 +166,7 @@ std::optional<PublicKeyCredentialCreationOptions> PublicKeyCredentialCreationOpt
         return std::nullopt;
     if (!decoder.decode(result.rp.icon))
         return std::nullopt;
-    if (!decoder.decode(result.user.idVector))
+    if (!decoder.decode(result.user.id))
         return std::nullopt;
     if (!decoder.decode(result.user.displayName))
         return std::nullopt;
@@ -193,6 +203,9 @@ std::optional<PublicKeyCredentialCreationOptions> PublicKeyCredentialCreationOpt
     if (!extensions)
         return std::nullopt;
     result.extensions = WTFMove(*extensions);
+
+    if (!decoder.decode(result.challenge))
+        return std::nullopt;
 
     return result;
 }

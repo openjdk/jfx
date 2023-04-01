@@ -26,8 +26,11 @@
 #pragma once
 
 #include <wtf/ASCIICType.h>
+#include <wtf/Forward.h>
 #include <wtf/StdLibExtras.h>
-
+#ifdef __OBJC__
+@class NSString;
+#endif
 namespace WTF {
 
 class PrintStream;
@@ -43,22 +46,41 @@ public:
 
     WTF_EXPORT_PRIVATE void dump(PrintStream& out) const;
 
-    static constexpr ASCIILiteral null()
-    {
-        return ASCIILiteral { nullptr };
-    }
+    ASCIILiteral() = default;
+
+    constexpr bool isNull() const { return !m_characters; }
 
     constexpr const char* characters() const { return m_characters; }
     const LChar* characters8() const { return bitwise_cast<const LChar*>(m_characters); }
     size_t length() const { return strlen(m_characters); }
+    size_t isEmpty() const { return !m_characters || !*m_characters; }
 
     constexpr char characterAt(unsigned index) const { return m_characters[index]; }
+
+#ifdef __OBJC__
+    // This function convert null strings to empty strings.
+    WTF_EXPORT_PRIVATE RetainPtr<NSString> createNSString() const;
+#endif
 
 private:
     constexpr explicit ASCIILiteral(const char* characters) : m_characters(characters) { }
 
-    const char* m_characters;
+    const char* m_characters { nullptr };
 };
+
+inline bool operator==(ASCIILiteral a, const char* b)
+{
+    if (!a || !b)
+        return a.characters() == b;
+    return !strcmp(a.characters(), b);
+}
+
+inline bool operator==(ASCIILiteral a, ASCIILiteral b)
+{
+    if (!a || !b)
+        return a.characters() == b.characters();
+    return !strcmp(a.characters(), b.characters());
+}
 
 inline namespace StringLiterals {
 
@@ -78,4 +100,3 @@ constexpr ASCIILiteral operator"" _s(const char* characters, size_t n)
 } // namespace WTF
 
 using namespace WTF::StringLiterals;
-using WTF::ASCIILiteral;

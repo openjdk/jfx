@@ -27,6 +27,10 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "NotificationClient.h"
+#include "NotificationEventType.h"
+#include "PushSubscriptionData.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerFetch.h"
 #include "ServiceWorkerIdentifier.h"
@@ -44,7 +48,7 @@ class MessagePortChannel;
 class SerializedScriptValue;
 class WorkerObjectProxy;
 struct MessageWithMessagePorts;
-struct ServiceWorkerClientIdentifier;
+struct NotificationData;
 
 class ServiceWorkerThread : public WorkerThread, public CanMakeWeakPtr<ServiceWorkerThread, WeakPtrFactoryInitialization::Eager> {
 public:
@@ -61,11 +65,17 @@ public:
     void willPostTaskToFireInstallEvent();
     void willPostTaskToFireActivateEvent();
     void willPostTaskToFireMessageEvent();
+    void willPostTaskToFirePushSubscriptionChangeEvent();
 
-    void queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&&, std::optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
+    void queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&&, ResourceRequest&&, String&& referrer, FetchOptions&&, FetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier);
     void queueTaskToPostMessage(MessageWithMessagePorts&&, ServiceWorkerOrClientData&& sourceData);
     void queueTaskToFireInstallEvent();
     void queueTaskToFireActivateEvent();
+    void queueTaskToFirePushEvent(std::optional<Vector<uint8_t>>&&, Function<void(bool)>&&);
+    void queueTaskToFirePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
+#if ENABLE(NOTIFICATION_EVENT)
+    void queueTaskToFireNotificationEvent(NotificationData&&, NotificationEventType, Function<void(bool)>&&);
+#endif
 
     ServiceWorkerIdentifier identifier() const { return m_serviceWorkerIdentifier; }
     std::optional<ServiceWorkerJobDataIdentifier> jobDataIdentifier() const { return m_jobDataIdentifier; }
@@ -73,20 +83,23 @@ public:
 
     void startFetchEventMonitoring();
     void stopFetchEventMonitoring() { m_isHandlingFetchEvent = false; }
+    void startFunctionalEventMonitoring();
+    void stopFunctionalEventMonitoring() { m_isHandlingFunctionalEvent = false; }
 
 protected:
     Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) final;
     void runEventLoop() override;
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, String&& userAgent, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID);
 
-    bool isServiceWorkerThread() const final { return true; }
+    ASCIILiteral threadName() const final { return "WebCore: ServiceWorker"_s; }
     void finishedEvaluatingScript() final;
 
     void finishedFiringInstallEvent(bool hasRejectedAnyPromise);
     void finishedFiringActivateEvent();
     void finishedFiringMessageEvent();
+    void finishedFiringPushSubscriptionChangeEvent();
     void finishedStarting();
 
     void startHeartBeatTimer();
@@ -95,11 +108,14 @@ private:
 
     ServiceWorkerIdentifier m_serviceWorkerIdentifier;
     std::optional<ServiceWorkerJobDataIdentifier> m_jobDataIdentifier;
-    std::optional<ServiceWorkerContextData> m_data; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
+    std::optional<ServiceWorkerContextData> m_contextData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
+    std::optional<ServiceWorkerData> m_workerData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
     WorkerObjectProxy& m_workerObjectProxy;
     bool m_doesHandleFetch { false };
 
     bool m_isHandlingFetchEvent { false };
+    bool m_isHandlingFunctionalEvent { false };
+    uint64_t m_pushSubscriptionChangeEventCount { 0 };
     uint64_t m_messageEventCount { 0 };
     enum class State { Idle, Starting, Installing, Activating };
     State m_state { State::Idle };
@@ -109,6 +125,7 @@ private:
     static constexpr Seconds heartBeatTimeoutForTest { 1_s };
     Seconds m_heartBeatTimeout { heartBeatTimeout };
     Timer m_heartBeatTimer;
+    std::unique_ptr<NotificationClient> m_notificationClient;
 };
 
 } // namespace WebCore

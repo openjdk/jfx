@@ -32,7 +32,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ScopedArguments);
 
-const ClassInfo ScopedArguments::s_info = { "Arguments", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ScopedArguments) };
+const ClassInfo ScopedArguments::s_info = { "Arguments"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ScopedArguments) };
 
 ScopedArguments::ScopedArguments(VM& vm, Structure* structure, WriteBarrier<Unknown>* storage, unsigned totalLength)
     : GenericArguments(vm, structure)
@@ -55,12 +55,12 @@ ScopedArguments* ScopedArguments::createUninitialized(VM& vm, Structure* structu
     WriteBarrier<Unknown>* storage = nullptr;
     if (totalLength > table->length()) {
         Checked<unsigned> overflowLength = totalLength - table->length();
-        storage = static_cast<WriteBarrier<Unknown>*>(vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, overflowLength * sizeof(WriteBarrier<Unknown>), nullptr, AllocationFailureMode::Assert));
+        storage = static_cast<WriteBarrier<Unknown>*>(vm.jsValueGigacageAuxiliarySpace().allocate(vm, overflowLength * sizeof(WriteBarrier<Unknown>), nullptr, AllocationFailureMode::Assert));
     }
 
     ScopedArguments* result = new (
         NotNull,
-        allocateCell<ScopedArguments>(vm.heap))
+        allocateCell<ScopedArguments>(vm))
         ScopedArguments(vm, structure, storage, totalLength);
     result->finishCreation(vm, callee, table, scope);
     return result;

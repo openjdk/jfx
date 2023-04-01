@@ -67,9 +67,10 @@ public:
     static bool isInUserInfoEncodeSet(UChar);
 
     static std::optional<uint16_t> defaultPortForProtocol(StringView);
+    WTF_EXPORT_PRIVATE static std::optional<String> formURLDecode(StringView input);
 
 private:
-    URLParser(const String&, const URL& = { }, const URLTextEncoding* = nullptr);
+    URLParser(String&&, const URL& = { }, const URLTextEncoding* = nullptr);
     URL result() { return m_url; }
 
     friend class URL;
@@ -88,7 +89,8 @@ private:
 
     template<typename CharacterType> void parse(const CharacterType*, const unsigned length, const URL&, const URLTextEncoding*);
     template<typename CharacterType> void parseAuthority(CodePointIterator<CharacterType>);
-    template<typename CharacterType> bool parseHostAndPort(CodePointIterator<CharacterType>);
+    enum class HostParsingResult : uint8_t { InvalidHost, IPv6WithPort, IPv6WithoutPort, IPv4WithPort, IPv4WithoutPort, DNSNameWithPort, DNSNameWithoutPort, NonSpecialHostWithoutPort, NonSpecialHostWithPort };
+    template<typename CharacterType> HostParsingResult parseHostAndPort(CodePointIterator<CharacterType>);
     template<typename CharacterType> bool parsePort(CodePointIterator<CharacterType>&);
 
     void failure();
@@ -117,7 +119,6 @@ private:
     template<typename CharacterType> std::optional<LCharBuffer> domainToASCII(StringImpl&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     template<typename CharacterType> LCharBuffer percentDecode(const LChar*, size_t, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     static LCharBuffer percentDecode(const LChar*, size_t);
-    static std::optional<String> formURLDecode(StringView input);
     static bool hasForbiddenHostCodePoint(const LCharBuffer&);
     void percentEncodeByte(uint8_t);
     void appendToASCIIBuffer(UChar32);

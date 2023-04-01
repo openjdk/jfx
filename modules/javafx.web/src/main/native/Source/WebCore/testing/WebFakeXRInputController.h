@@ -37,6 +37,10 @@
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
+#if ENABLE(WEBXR_HANDS)
+#include "FakeXRJointStateInit.h"
+#endif
+
 namespace WebCore {
 
 class WebFakeXRInputController final : public RefCounted<WebFakeXRInputController> {
@@ -58,6 +62,10 @@ public:
     void updateButtonState(const FakeXRButtonStateInit&);
     bool isConnected() const { return m_connected; }
 
+#if ENABLE(WEBXR_HANDS)
+    void updateHandJoints(const Vector<FakeXRJointStateInit>&);
+#endif
+
     PlatformXR::Device::FrameData::InputSource getFrameData();
 
 private:
@@ -75,10 +83,13 @@ private:
     Vector<String> m_profiles;
     PlatformXR::Device::FrameData::InputSourcePose m_pointerOrigin;
     std::optional<PlatformXR::Device::FrameData::InputSourcePose> m_gripOrigin;
-    HashMap<FakeXRButtonStateInit::Type, FakeXRButtonStateInit, WTF::IntHash<FakeXRButtonStateInit::Type>, WTF::StrongEnumHashTraits<FakeXRButtonStateInit::Type>> m_buttons;
+    HashMap<FakeXRButtonStateInit::Type, FakeXRButtonStateInit, IntHash<FakeXRButtonStateInit::Type>, WTF::StrongEnumHashTraits<FakeXRButtonStateInit::Type>> m_buttons;
     bool m_connected { true };
     bool m_primarySelected { false };
     bool m_simulateSelect { false };
+#if ENABLE(WEBXR_HANDS)
+    std::optional<PlatformXR::Device::FrameData::HandJointsVector> m_handJoints;
+#endif
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "CachedResourceRequest.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginPreflightResultCache.h"
+#include "DocumentLoader.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "LegacySchemeRegistry.h"
@@ -48,7 +49,7 @@ namespace WebCore {
 
 bool isOnAccessControlSimpleRequestMethodAllowlist(const String& method)
 {
-    return method == "GET" || method == "HEAD" || method == "POST";
+    return method == "GET"_s || method == "HEAD"_s || method == "POST"_s;
 }
 
 bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap& headerMap)
@@ -76,7 +77,8 @@ void updateRequestReferrer(ResourceRequest& request, ReferrerPolicy referrerPoli
 void updateRequestForAccessControl(ResourceRequest& request, SecurityOrigin& securityOrigin, StoredCredentialsPolicy storedCredentialsPolicy)
 {
     request.removeCredentials();
-    request.setAllowCookies(storedCredentialsPolicy == StoredCredentialsPolicy::Use);
+    if (request.allowCookies())
+        request.setAllowCookies(storedCredentialsPolicy == StoredCredentialsPolicy::Use);
     request.setHTTPOrigin(securityOrigin.toString());
 }
 
@@ -86,7 +88,7 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
     static const double platformDefaultTimeout = 0;
     preflightRequest.setTimeoutInterval(platformDefaultTimeout);
     updateRequestForAccessControl(preflightRequest, securityOrigin, StoredCredentialsPolicy::DoNotUse);
-    preflightRequest.setHTTPMethod("OPTIONS");
+    preflightRequest.setHTTPMethod("OPTIONS"_s);
     preflightRequest.setHTTPHeaderField(HTTPHeaderName::AccessControlRequestMethod, request.httpMethod());
     preflightRequest.setPriority(request.priority());
     preflightRequest.setFirstPartyForCookies(request.firstPartyForCookies());
@@ -139,14 +141,17 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
         }
     }
 
+    if (auto* documentLoader = document.loader())
+        request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
+
     if (crossOriginAttribute.isNull()) {
         CachedResourceRequest cachedRequest { WTFMove(request), WTFMove(options) };
         cachedRequest.setOrigin(document.securityOrigin());
         return cachedRequest;
     }
 
-    FetchOptions::Credentials credentials = equalLettersIgnoringASCIICase(crossOriginAttribute, "omit")
-        ? FetchOptions::Credentials::Omit : equalLettersIgnoringASCIICase(crossOriginAttribute, "use-credentials")
+    FetchOptions::Credentials credentials = equalLettersIgnoringASCIICase(crossOriginAttribute, "omit"_s)
+        ? FetchOptions::Credentials::Omit : equalLettersIgnoringASCIICase(crossOriginAttribute, "use-credentials"_s)
         ? FetchOptions::Credentials::Include : FetchOptions::Credentials::SameOrigin;
     options.credentials = credentials;
     switch (credentials) {
@@ -167,7 +172,7 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
 
 String validateCrossOriginRedirectionURL(const URL& redirectURL)
 {
-    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(redirectURL.protocol().toStringWithoutCopying()))
+    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(redirectURL.protocol()))
         return makeString("not allowed to follow a cross-origin CORS redirection with non CORS scheme");
 
     if (redirectURL.hasCredentials())
@@ -189,6 +194,8 @@ OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeepFromCleaning(const HTT
         headersToKeep.add(HTTPHeadersToKeepFromCleaning::UserAgent);
     if (headers.contains(HTTPHeaderName::AcceptEncoding))
         headersToKeep.add(HTTPHeadersToKeepFromCleaning::AcceptEncoding);
+    if (headers.contains(HTTPHeaderName::CacheControl))
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::CacheControl);
     return headersToKeep;
 }
 
@@ -208,6 +215,10 @@ void cleanHTTPRequestHeadersForAccessControl(ResourceRequest& request, OptionSet
         request.clearHTTPUserAgent();
     if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::AcceptEncoding))
         request.clearHTTPAcceptEncoding();
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::CacheControl))
+        request.removeHTTPHeaderField(HTTPHeaderName::CacheControl);
+    request.removeHTTPHeaderField(HTTPHeaderName::SecFetchDest);
+    request.removeHTTPHeaderField(HTTPHeaderName::SecFetchMode);
 }
 
 CrossOriginAccessControlCheckDisabler& CrossOriginAccessControlCheckDisabler::singleton()
@@ -237,21 +248,21 @@ Expected<void, String> passesAccessControlCheck(const ResourceResponse& response
     bool starAllowed = storedCredentialsPolicy == StoredCredentialsPolicy::DoNotUse;
     if (!starAllowed)
         starAllowed = checkDisabler && !checkDisabler->crossOriginAccessControlCheckEnabled();
-    if (accessControlOriginString == "*" && starAllowed)
+    if (accessControlOriginString == "*"_s && starAllowed)
         return { };
 
     String securityOriginString = securityOrigin.toString();
     if (accessControlOriginString != securityOriginString) {
-        if (accessControlOriginString == "*")
+        if (accessControlOriginString == "*"_s)
             return makeUnexpected("Cannot use wildcard in Access-Control-Allow-Origin when credentials flag is true."_s);
         if (accessControlOriginString.find(',') != notFound)
             return makeUnexpected("Access-Control-Allow-Origin cannot contain more than one origin."_s);
-        return makeUnexpected(makeString("Origin ", securityOriginString, " is not allowed by Access-Control-Allow-Origin."));
+        return makeUnexpected(makeString("Origin ", securityOriginString, " is not allowed by Access-Control-Allow-Origin.", " Status code: ", response.httpStatusCode()));
     }
 
     if (storedCredentialsPolicy == StoredCredentialsPolicy::Use) {
         const String& accessControlCredentialsString = response.httpHeaderField(HTTPHeaderName::AccessControlAllowCredentials);
-        if (accessControlCredentialsString != "true")
+        if (accessControlCredentialsString != "true"_s)
             return makeUnexpected("Credentials flag is true, but Access-Control-Allow-Credentials is not \"true\"."_s);
     }
 
@@ -261,7 +272,7 @@ Expected<void, String> passesAccessControlCheck(const ResourceResponse& response
 Expected<void, String> validatePreflightResponse(PAL::SessionID sessionID, const ResourceRequest& request, const ResourceResponse& response, StoredCredentialsPolicy storedCredentialsPolicy, const SecurityOrigin& securityOrigin, const CrossOriginAccessControlCheckDisabler* checkDisabler)
 {
     if (!response.isSuccessful())
-        return makeUnexpected("Preflight response is not successful"_s);
+        return makeUnexpected(makeString("Preflight response is not successful. Status code: ", response.httpStatusCode()));
 
     auto accessControlCheckResult = passesAccessControlCheck(response, storedCredentialsPolicy, securityOrigin, checkDisabler);
     if (!accessControlCheckResult)
@@ -306,7 +317,7 @@ static inline bool shouldCrossOriginResourcePolicyCancelLoad(CrossOriginEmbedder
         if (!RegistrableDomain::uncheckedCreateFromHost(origin.host()).matches(response.url()))
             return true;
 #endif
-        if (origin.protocol() == "http" && response.url().protocol() == "https")
+        if (origin.protocol() == "http"_s && response.url().protocol() == "https"_s)
             return true;
     }
 

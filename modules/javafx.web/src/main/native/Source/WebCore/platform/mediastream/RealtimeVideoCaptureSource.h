@@ -28,7 +28,6 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "ImageBuffer.h"
-#include "MediaSample.h"
 #include "RealtimeMediaSource.h"
 #include "VideoPreset.h"
 #include <wtf/Lock.h>
@@ -46,17 +45,18 @@ public:
 
     bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
     virtual void generatePresets() = 0;
-    virtual MediaSample::VideoRotation sampleRotation() const { return MediaSample::VideoRotation::None; }
+    virtual VideoFrame::Rotation videoFrameRotation() const { return VideoFrame::Rotation::None; }
 
     double observedFrameRate() const { return m_observedFrameRate; }
     Vector<VideoPresetData> presetsData();
 
     void ensureIntrinsicSizeMaintainsAspectRatio();
 
-protected:
-    RealtimeVideoCaptureSource(String&& name, String&& id, String&& hashSalt);
+    const VideoPreset* currentPreset() const { return m_currentPreset.get(); }
 
-    void prepareToProduceData();
+protected:
+    RealtimeVideoCaptureSource(AtomString&& name, String&& id, String&& hashSalt, PageIdentifier);
+
     void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
 
     virtual bool prefersPreset(VideoPreset&) { return true; }
@@ -72,8 +72,9 @@ protected:
 
     void updateCapabilities(RealtimeMediaSourceCapabilities&);
 
-    void dispatchMediaSampleToObservers(MediaSample&);
-    const Vector<IntSize>& standardVideoSizes();
+    void dispatchVideoFrameToObservers(VideoFrame&, VideoFrameTimeMetadata);
+
+    static Span<const IntSize> standardVideoSizes();
 
 private:
     struct CaptureSizeAndFrameRate {
@@ -89,6 +90,7 @@ private:
     const char* logClassName() const override { return "RealtimeVideoCaptureSource"; }
 #endif
 
+    RefPtr<VideoPreset> m_currentPreset;
     Vector<Ref<VideoPreset>> m_presets;
     Deque<double> m_observedFrameTimeStamps;
     double m_observedFrameRate { 0 };

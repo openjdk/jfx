@@ -23,8 +23,10 @@
 #include "config.h"
 #include "SVGRectElement.h"
 
+#include "LegacyRenderSVGRect.h"
 #include "RenderSVGRect.h"
 #include "RenderSVGResource.h"
+#include "SVGElementInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -78,7 +80,7 @@ void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationalHintStyle();
+        setPresentationalHintStyleIsDirty();
         return;
     }
 
@@ -87,7 +89,12 @@ void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RenderPtr<RenderElement> SVGRectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGRect>(*this, WTFMove(style));
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGRect>(*this, WTFMove(style));
+#endif
+
+    return createRenderer<LegacyRenderSVGRect>(*this, WTFMove(style));
 }
 
 }

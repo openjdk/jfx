@@ -148,7 +148,7 @@ gst_task_win32_load_library (void)
 {
   /* FIXME: Add support for UWP app */
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-  static volatile gsize _init_once = 0;
+  static gsize _init_once = 0;
   if (g_once_init_enter (&_init_once)) {
     kernel32_module = LoadLibraryW (L"kernel32.dll");
     if (kernel32_module) {

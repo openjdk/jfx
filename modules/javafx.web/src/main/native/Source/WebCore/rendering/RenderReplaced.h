@@ -42,7 +42,7 @@ public:
 
     LayoutSize intrinsicSize() const final
     {
-        if (shouldApplySizeContainment(*this))
+        if (shouldApplySizeContainment())
             return LayoutSize();
         return m_intrinsicSize;
     }
@@ -51,6 +51,8 @@ public:
 
     bool isContentLikelyVisibleInViewport();
     bool needsPreferredWidthsRecalculation() const override;
+
+    double computeIntrinsicAspectRatio() const;
 
 protected:
     RenderReplaced(Element&, RenderStyle&&);
@@ -83,7 +85,7 @@ private:
     LayoutUnit computeConstrainedLogicalWidth(ShouldComputePreferred) const;
 
     virtual RenderBox* embeddedContentBox() const { return 0; }
-    const char* renderName() const override { return "RenderReplaced"; }
+    ASCIILiteral renderName() const override { return "RenderReplaced"_s; }
 
     bool canHaveChildren() const override { return false; }
 

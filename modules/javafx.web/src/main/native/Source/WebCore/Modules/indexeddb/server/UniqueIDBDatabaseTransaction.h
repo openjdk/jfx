@@ -49,46 +49,48 @@ struct IDBKeyRangeData;
 namespace IDBServer {
 
 class IDBServer;
+class UniqueIDBDatabase;
 class UniqueIDBDatabaseConnection;
 
-class UniqueIDBDatabaseTransaction : public RefCounted<UniqueIDBDatabaseTransaction> {
+class UniqueIDBDatabaseTransaction : public CanMakeWeakPtr<UniqueIDBDatabaseTransaction>, public RefCounted<UniqueIDBDatabaseTransaction> {
 public:
     static Ref<UniqueIDBDatabaseTransaction> create(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
 
     ~UniqueIDBDatabaseTransaction();
 
-    UniqueIDBDatabaseConnection& databaseConnection();
+    UniqueIDBDatabaseConnection* databaseConnection() const;
+    UniqueIDBDatabase* database() const;
     const IDBTransactionInfo& info() const { return m_transactionInfo; }
-    bool isVersionChange() const;
+    WEBCORE_EXPORT bool isVersionChange() const;
     bool isReadOnly() const;
 
     IDBDatabaseInfo* originalDatabaseInfo() const;
 
-    void abort();
-    void abortWithoutCallback();
-    void commit(uint64_t pendingRequestCount);
+    WEBCORE_EXPORT void abort();
+    WEBCORE_EXPORT void abortWithoutCallback();
+    WEBCORE_EXPORT void commit(uint64_t pendingRequestCount);
 
-    void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&);
-    void deleteObjectStore(const IDBRequestData&, const String& objectStoreName);
-    void renameObjectStore(const IDBRequestData&, uint64_t objectStoreIdentifier, const String& newName);
-    void clearObjectStore(const IDBRequestData&, uint64_t objectStoreIdentifier);
-    void createIndex(const IDBRequestData&, const IDBIndexInfo&);
-    void deleteIndex(const IDBRequestData&, uint64_t objectStoreIdentifier, const String& indexName);
-    void renameIndex(const IDBRequestData&, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
-    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode);
-    void getRecord(const IDBRequestData&, const IDBGetRecordData&);
-    void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&);
-    void getCount(const IDBRequestData&, const IDBKeyRangeData&);
-    void deleteRecord(const IDBRequestData&, const IDBKeyRangeData&);
-    void openCursor(const IDBRequestData&, const IDBCursorInfo&);
-    void iterateCursor(const IDBRequestData&, const IDBIterateCursorData&);
+    WEBCORE_EXPORT void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&);
+    WEBCORE_EXPORT void deleteObjectStore(const IDBRequestData&, const String& objectStoreName);
+    WEBCORE_EXPORT void renameObjectStore(const IDBRequestData&, uint64_t objectStoreIdentifier, const String& newName);
+    WEBCORE_EXPORT void clearObjectStore(const IDBRequestData&, uint64_t objectStoreIdentifier);
+    WEBCORE_EXPORT void createIndex(const IDBRequestData&, const IDBIndexInfo&);
+    WEBCORE_EXPORT void deleteIndex(const IDBRequestData&, uint64_t objectStoreIdentifier, const String& indexName);
+    WEBCORE_EXPORT void renameIndex(const IDBRequestData&, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
+    WEBCORE_EXPORT void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode);
+    WEBCORE_EXPORT void getRecord(const IDBRequestData&, const IDBGetRecordData&);
+    WEBCORE_EXPORT void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&);
+    WEBCORE_EXPORT void getCount(const IDBRequestData&, const IDBKeyRangeData&);
+    WEBCORE_EXPORT void deleteRecord(const IDBRequestData&, const IDBKeyRangeData&);
+    WEBCORE_EXPORT void openCursor(const IDBRequestData&, const IDBCursorInfo&);
+    WEBCORE_EXPORT void iterateCursor(const IDBRequestData&, const IDBIterateCursorData&);
 
     void didActivateInBackingStore(const IDBError&);
 
     const Vector<uint64_t>& objectStoreIdentifiers();
 
-    void setMainThreadAbortResult(const IDBError& error) { m_mainThreadAbortResult = { error }; }
-    const std::optional<IDBError>& mainThreadAbortResult() const { return m_mainThreadAbortResult; }
+    void setSuspensionAbortResult(const IDBError& error) { m_suspensionAbortResult = { error }; }
+    const std::optional<IDBError>& suspensionAbortResult() const { return m_suspensionAbortResult; }
 
 private:
     UniqueIDBDatabaseTransaction(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
@@ -100,7 +102,7 @@ private:
 
     Vector<uint64_t> m_objectStoreIdentifiers;
 
-    std::optional<IDBError> m_mainThreadAbortResult;
+    std::optional<IDBError> m_suspensionAbortResult;
     Deque<IDBError> m_requestResults;
 };
 

@@ -36,8 +36,11 @@ namespace JSC { namespace B3 {
 
 const char* const tierName = "b3  ";
 
-bool shouldDumpIR(B3CompilationMode mode)
+bool shouldDumpIR(Procedure& procedure, B3CompilationMode mode)
 {
+    if (procedure.shouldDumpIR())
+        return true;
+
 #if ENABLE(FTL_JIT)
     return FTL::verboseCompilationEnabled() || FTL::shouldDumpDisassembly() || shouldDumpIRAtEachPhase(mode);
 #else
@@ -67,12 +70,13 @@ bool shouldSaveIRBeforePhase()
     return Options::verboseValidationFailure();
 }
 
-std::optional<GPRReg> pinnedExtendedOffsetAddrRegister()
+GPRReg extendedOffsetAddrRegister()
 {
-#if CPU(ARM64)
-    return MacroAssembler::dataTempRegister;
+    RELEASE_ASSERT(isARM64() || isRISCV64());
+#if CPU(ARM64) || CPU(RISCV64)
+    return MacroAssembler::linkRegister;
 #elif CPU(X86_64)
-    return std::nullopt;
+    return GPRReg::InvalidGPRReg;
 #else
 #error Unhandled architecture.
 #endif

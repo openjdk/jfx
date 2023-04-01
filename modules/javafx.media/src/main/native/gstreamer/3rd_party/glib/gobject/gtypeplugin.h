@@ -67,7 +67,7 @@ typedef void  (*GTypePluginCompleteTypeInfo)    (GTypePlugin     *plugin,
 /**
  * GTypePluginCompleteInterfaceInfo:
  * @plugin: the #GTypePlugin
- * @instance_type: the #GType of an instantiable type to which the interface
+ * @instance_type: the #GType of an instantiatable type to which the interface
  *  is added
  * @interface_type: the #GType of the interface whose info is completed
  * @info: the #GInterfaceInfo to fill in

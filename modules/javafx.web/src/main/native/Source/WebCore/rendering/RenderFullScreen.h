@@ -37,10 +37,10 @@ public:
     RenderFullScreen(Document&, RenderStyle&&);
     virtual ~RenderFullScreen();
 
-    const char* renderName() const override { return "RenderFullScreen"; }
+    ASCIILiteral renderName() const override { return "RenderFullScreen"_s; }
 
     RenderBlock* placeholder() { return m_placeholder.get(); }
-    void setPlaceholder(RenderBlock& placeholder) { m_placeholder = makeWeakPtr(placeholder); }
+    void setPlaceholder(RenderBlock& placeholder) { m_placeholder = placeholder; }
 
     static RenderPtr<RenderFullScreen> wrapNewRenderer(RenderTreeBuilder&, RenderPtr<RenderElement>, RenderElement& parent, Document&);
     static void wrapExistingRenderer(RenderElement&, Document&);

@@ -24,11 +24,10 @@
  */
 
 [
-    EnabledAtRuntime=HighlightAPI,
-    ImplementationLacksVTable,
+    EnabledByDeprecatedGlobalSetting=HighlightAPIEnabled,
     Exposed=Window
 ] interface HighlightRegister {
     constructor();
 
-    maplike<DOMString, Highlight>;
+    maplike<[AtomString] DOMString, Highlight>;
 };

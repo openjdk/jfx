@@ -32,6 +32,10 @@
 OBJC_CLASS NSView;
 #endif
 
+namespace PAL::WebGPU {
+class GPU;
+}
+
 namespace WebCore {
 
 class ChromeClient;
@@ -85,11 +89,13 @@ public:
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const override;
 
 #if ENABLE(WEBGL)
     RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
 #endif
+
+    RefPtr<PAL::WebGPU::GPU> createGPUForWebGPU() const;
 
     PlatformDisplayID displayID() const override;
     void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond>) override;
@@ -140,7 +146,7 @@ public:
     bool canRunBeforeUnloadConfirmPanel();
     bool runBeforeUnloadConfirmPanel(const String& message, Frame&);
 
-    void closeWindowSoon();
+    void closeWindow();
 
     void runJavaScriptAlert(Frame&, const String&);
     bool runJavaScriptConfirm(Frame&, const String&);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -129,6 +129,7 @@ public class Ellipse2D extends RectangularShape {
      * @param w the width of the specified rectangular shape
      * @param h the height of the specified rectangular shape
      */
+    @Override
     public void setFrame(float x, float y, float w, float h) {
         this.x = x;
         this.y = y;
@@ -139,6 +140,7 @@ public class Ellipse2D extends RectangularShape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public RectBounds getBounds() {
         return new RectBounds(x, y, x + width, y + height);
     }
@@ -146,6 +148,7 @@ public class Ellipse2D extends RectangularShape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y) {
         // Normalize the coordinates compared to the ellipse
         // having a center at 0,0 and a radius of 0.5.
@@ -165,6 +168,7 @@ public class Ellipse2D extends RectangularShape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean intersects(float x, float y, float w, float h) {
         if (w <= 0f || h <= 0f) {
             return false;
@@ -211,6 +215,7 @@ public class Ellipse2D extends RectangularShape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y, float w, float h) {
         return (contains(x, y) &&
             contains(x + w, y) &&
@@ -233,6 +238,7 @@ public class Ellipse2D extends RectangularShape {
      *          geometry of the outline of this <code>Ellipse2D</code>,
      *      one segment at a time.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx) {
         return new EllipseIterator(this, tx);
     }

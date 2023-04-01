@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,7 +75,7 @@ final public class SimpleSelector extends Selector {
      */
     public List<String> getStyleClasses() {
 
-        final List<String> names = new ArrayList<String>();
+        final List<String> names = new ArrayList<>();
 
         Iterator<StyleClass> iter = styleClassSet.iterator();
         while (iter.hasNext()) {
@@ -121,7 +121,7 @@ final public class SimpleSelector extends Selector {
      */
     List<String> getPseudoclasses() {
 
-        final List<String> names = new ArrayList<String>();
+        final List<String> names = new ArrayList<>();
 
         Iterator<PseudoClass> iter = pseudoClassState.iterator();
         while (iter.hasNext()) {
@@ -403,13 +403,13 @@ final public class SimpleSelector extends Selector {
     {
         final String name = strings[is.readShort()];
         final int nStyleClasses = is.readShort();
-        final List<String> styleClasses = new ArrayList<String>();
+        final List<String> styleClasses = new ArrayList<>();
         for (int n=0; n < nStyleClasses; n++) {
             styleClasses.add(strings[is.readShort()]);
         }
         final String id = strings[is.readShort()];
         final int nPseudoclasses = is.readShort();
-        final List<String> pseudoclasses = new ArrayList<String>();
+        final List<String> pseudoclasses = new ArrayList<>();
         for(int n=0; n < nPseudoclasses; n++) {
             pseudoclasses.add(strings[is.readShort()]);
         }

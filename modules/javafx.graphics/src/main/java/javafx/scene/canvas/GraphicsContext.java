@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,6 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.effect.EffectHelper;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
-import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
 import javafx.scene.image.Image;
@@ -495,8 +494,8 @@ public final class GraphicsContext {
         pathDirty = true;
 
         this.curState = new State();
-        this.stateStack = new LinkedList<State>();
-        this.clipStack = new LinkedList<Path2D>();
+        this.stateStack = new LinkedList<>();
+        this.clipStack = new LinkedList<>();
     }
 
     static class State {
@@ -2166,8 +2165,8 @@ public final class GraphicsContext {
         coords[0] = (float) x;
         coords[1] = (float) y;
         coords[2] = (float) w;
-        coords[3] = (float) 0;
-        coords[4] = (float) 0;
+        coords[3] = 0;
+        coords[4] = 0;
         coords[5] = (float) h;
         curState.transform.deltaTransform(coords, 0, coords, 0, 3);
         float x0 = coords[0] + (float) curState.transform.getMxt();

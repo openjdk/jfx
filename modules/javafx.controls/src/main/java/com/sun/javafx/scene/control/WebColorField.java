@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ public class WebColorField extends InputField {
      * The value of the WebColorField. If null, the value will be treated as "#000000" black, but
      * will still actually be null.
      */
-    private ObjectProperty<Color> value = new SimpleObjectProperty<Color>(this, "value");
+    private ObjectProperty<Color> value = new SimpleObjectProperty<>(this, "value");
     public final Color getValue() { return value.get(); }
     public final void setValue(Color value) { this.value.set(value); }
     public final ObjectProperty<Color> valueProperty() { return value; }

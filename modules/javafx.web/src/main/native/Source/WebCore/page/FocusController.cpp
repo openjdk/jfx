@@ -30,11 +30,12 @@
 #include "AXObjectCache.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
 #include "Element.h"
+#include "ElementRareData.h"
 #include "ElementTraversal.h"
 #include "Event.h"
 #include "EventHandler.h"
@@ -310,7 +311,7 @@ static inline void dispatchEventsOnWindowAndFocusedElement(Document* document, b
         document->focusedElement()->dispatchBlurEvent(nullptr);
     document->dispatchWindowEvent(Event::create(focused ? eventNames().focusEvent : eventNames().blurEvent, Event::CanBubble::No, Event::IsCancelable::No));
     if (focused && document->focusedElement())
-        document->focusedElement()->dispatchFocusEvent(nullptr, FocusDirection::None);
+        document->focusedElement()->dispatchFocusEvent(nullptr, { });
 }
 
 static inline bool isFocusableElementOrScopeOwner(Element& element, KeyboardEvent* event)
@@ -359,14 +360,29 @@ void FocusController::setFocusedFrame(Frame* frame)
     m_focusedFrame = newFrame;
 
     // Now that the frame is updated, fire events and update the selection focused states of both frames.
-    if (oldFrame && oldFrame->view()) {
+    if (auto* oldFrameView = oldFrame ? oldFrame->view() : nullptr) {
+        oldFrameView->stopKeyboardScrollAnimation();
         oldFrame->selection().setFocused(false);
         oldFrame->document()->dispatchWindowEvent(Event::create(eventNames().blurEvent, Event::CanBubble::No, Event::IsCancelable::No));
+#if ENABLE(SERVICE_WORKER)
+        auto* frame = oldFrame.get();
+        do {
+            frame->document()->updateServiceWorkerClientData();
+            frame = frame->tree().parent();
+        } while (frame);
+#endif
     }
 
     if (newFrame && newFrame->view() && isFocused()) {
         newFrame->selection().setFocused(true);
         newFrame->document()->dispatchWindowEvent(Event::create(eventNames().focusEvent, Event::CanBubble::No, Event::IsCancelable::No));
+#if ENABLE(SERVICE_WORKER)
+        auto* frame = newFrame.get();
+        do {
+            frame->document()->updateServiceWorkerClientData();
+            frame = frame->tree().parent();
+        } while (frame);
+#endif
     }
 
     m_page.chrome().focusedFrameChanged(newFrame.get());
@@ -836,7 +852,7 @@ bool FocusController::setFocusedElement(Element* element, Frame& newFocusedFrame
     Element* oldFocusedElement = oldDocument ? oldDocument->focusedElement() : nullptr;
     if (oldFocusedElement == element) {
         if (element)
-            m_page.chrome().client().elementDidRefocus(*element);
+            m_page.chrome().client().elementDidRefocus(*element, options);
         return true;
     }
 
@@ -948,7 +964,6 @@ void FocusController::setIsVisibleAndActiveInternal(bool contentIsVisible)
 
         for (auto& scrollableArea : *scrollableAreas) {
             ASSERT(scrollableArea->scrollbarsCanBeActive() || m_page.shouldSuppressScrollbarAnimations());
-
             contentAreaDidShowOrHide(scrollableArea, contentIsVisible);
         }
     }
@@ -971,7 +986,7 @@ static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCa
     if (candidate.distance == maxDistance())
         return;
 
-    if (candidate.isOffscreenAfterScrolling && candidate.alignment < Full)
+    if (candidate.isOffscreenAfterScrolling && candidate.alignment < RectsAlignment::Full)
         return;
 
     if (closest.isNull()) {

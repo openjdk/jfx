@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "LayoutIntegrationRunIterator.h"
+#include "InlineIteratorBox.h"
 
 namespace WebCore {
 
-struct InlineRunAndOffset {
-    LayoutIntegration::RunIterator run { };
+struct InlineBoxAndOffset {
+    InlineIterator::LeafBoxIterator box { };
     unsigned offset { 0 };
 };
 

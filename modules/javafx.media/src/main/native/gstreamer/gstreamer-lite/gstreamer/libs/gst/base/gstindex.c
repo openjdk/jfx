@@ -61,6 +61,7 @@
 #endif
 
 #include <gst/gst.h>
+#include "gst/glib-compat-private.h"
 
 /* Index signals and args */
 enum
@@ -798,7 +799,7 @@ gst_index_add_associationv (GstIndex * index, gint id,
   entry->type = GST_INDEX_ENTRY_ASSOCIATION;
   entry->id = id;
   entry->data.assoc.flags = flags;
-  entry->data.assoc.assocs = g_memdup (list, sizeof (GstIndexAssociation) * n);
+  entry->data.assoc.assocs = g_memdup2 (list, sizeof (GstIndexAssociation) * n);
   entry->data.assoc.nassocs = n;
 
   gst_index_add_entry (index, entry);

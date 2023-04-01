@@ -96,7 +96,7 @@ JSValue JSValue::toBigInt(JSGlobalObject* globalObject) const
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue primitive = toPrimitive(globalObject);
+    JSValue primitive = toPrimitive(globalObject, PreferNumber);
     RETURN_IF_EXCEPTION(scope, { });
 
     if (primitive.isBigInt())
@@ -228,7 +228,7 @@ bool JSValue::putToPrimitive(JSGlobalObject* globalObject, PropertyName property
     EXCEPTION_ASSERT(!!scope.exception() == !obj);
     if (UNLIKELY(!obj))
         return false;
-    RELEASE_AND_RETURN(scope, obj->methodTable(vm)->put(obj, globalObject, propertyName, value, slot));
+    RELEASE_AND_RETURN(scope, obj->methodTable()->put(obj, globalObject, propertyName, value, slot));
 }
 
 bool JSValue::putToPrimitiveByIndex(JSGlobalObject* globalObject, unsigned propertyName, JSValue value, bool shouldThrow)
@@ -284,7 +284,7 @@ void JSValue::dumpInContextAssumingStructure(
         out.printf("Double: %08x:%08x, %lf", u.asTwoInt32s[1], u.asTwoInt32s[0], asDouble());
 #endif
     } else if (isCell()) {
-        if (structure->classInfo()->isSubClassOf(JSString::info())) {
+        if (structure->classInfoForCells()->isSubClassOf(JSString::info())) {
             JSString* string = asString(asCell());
             out.print("String");
             if (string->isRope())
@@ -303,24 +303,24 @@ void JSValue::dumpInContextAssumingStructure(
                 out.print(",8Bit:(0)");
             out.print(",length:(", string->length(), ")");
             out.print(": ", impl);
-        } else if (structure->classInfo()->isSubClassOf(RegExp::info()))
+        } else if (structure->classInfoForCells()->isSubClassOf(RegExp::info()))
             out.print("RegExp: ", *jsCast<RegExp*>(asCell()));
-        else if (structure->classInfo()->isSubClassOf(Symbol::info()))
+        else if (structure->classInfoForCells()->isSubClassOf(Symbol::info()))
             out.print("Symbol: ", RawPointer(asCell()));
-        else if (structure->classInfo()->isSubClassOf(Structure::info()))
+        else if (structure->classInfoForCells()->isSubClassOf(Structure::info()))
             out.print("Structure: ", inContext(*jsCast<Structure*>(asCell()), context));
         else if (isHeapBigInt())
             out.print("BigInt[heap-allocated]: addr=", RawPointer(asCell()), ", length=", jsCast<JSBigInt*>(asCell())->length(), ", sign=", jsCast<JSBigInt*>(asCell())->sign());
-        else if (structure->classInfo()->isSubClassOf(JSObject::info())) {
+        else if (structure->classInfoForCells()->isSubClassOf(JSObject::info())) {
             out.print("Object: ", RawPointer(asCell()));
-            out.print(" with butterfly ", RawPointer(asObject(asCell())->butterfly()));
+            out.print(" with butterfly ", RawPointer(asObject(asCell())->butterfly()), "(base=", RawPointer(asObject(asCell())->butterfly()->base(structure)), ")");
             out.print(" (Structure ", inContext(*structure, context), ")");
         } else {
             out.print("Cell: ", RawPointer(asCell()));
             out.print(" (", inContext(*structure, context), ")");
         }
 #if USE(JSVALUE64)
-        out.print(", StructureID: ", asCell()->structureID());
+        out.print(", StructureID: ", asCell()->structureID().bits());
 #endif
     } else if (isTrue())
         out.print("True");
@@ -347,25 +347,18 @@ void JSValue::dumpForBacktrace(PrintStream& out) const
     else if (isDouble())
         out.printf("%lf", asDouble());
     else if (isCell()) {
-        VM& vm = asCell()->vm();
-        if (asCell()->inherits<JSString>(vm)) {
+        if (asCell()->inherits<JSString>()) {
             JSString* string = asString(asCell());
             const StringImpl* impl = string->tryGetValueImpl();
             if (impl)
                 out.print("\"", impl, "\"");
             else
                 out.print("(unresolved string)");
-        } else if (asCell()->inherits<Structure>(vm)) {
-            out.print("Structure[ ", asCell()->structure()->classInfo()->className);
-#if USE(JSVALUE64)
-            out.print(" ID: ", asCell()->structureID());
-#endif
+        } else if (asCell()->inherits<Structure>()) {
+            out.print("Structure[ ", asCell()->structure()->classInfoForCells()->className);
             out.print("]: ", RawPointer(asCell()));
         } else {
-            out.print("Cell[", asCell()->structure()->classInfo()->className);
-#if USE(JSVALUE64)
-            out.print(" ID: ", asCell()->structureID());
-#endif
+            out.print("Cell[", asCell()->structure()->classInfoForCells()->className);
             out.print("]: ", RawPointer(asCell()));
         }
     } else if (isTrue())
@@ -470,5 +463,20 @@ NEVER_INLINE void ensureStillAliveHere(JSValue)
 {
 }
 #endif
+
+WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSString* string = toString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    String result = string->value(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (isString())
+        return tryMakeString("\"", result, "\"");
+    if (jsDynamicCast<JSArray*>(*this))
+        return tryMakeString("[", result, "]");
+    return result;
+}
 
 } // namespace JSC

@@ -71,6 +71,12 @@ class GraphicsContextGLOpenGL;
 
 class ExtensionsGLOpenGLES : public ExtensionsGLOpenGLCommon {
 public:
+    // GL_IMG_multisampled_render_to_texture
+    static constexpr GCGLenum RENDERBUFFER_SAMPLES_IMG = 0x9133;
+    static constexpr GCGLenum FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_IMG = 0x9134;
+    static constexpr GCGLenum MAX_SAMPLES_IMG = 0x9135;
+    static constexpr GCGLenum TEXTURE_SAMPLES_IMG = 0x9136;
+
     // This class only needs to be instantiated by GraphicsContextGLOpenGL implementations.
     ExtensionsGLOpenGLES(GraphicsContextGLOpenGL*, bool useIndexedGetString);
     virtual ~ExtensionsGLOpenGLES();
@@ -92,16 +98,13 @@ public:
     void drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLvoidptr offset, GCGLsizei primcount) override;
     void vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor) override;
 
-    // EXT Robustness - reset
-    int getGraphicsResetStatusARB() override;
-
     // EXT Robustness - etc
     void readnPixelsEXT(int x, int y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, void *data) override;
     void getnUniformfvEXT(GCGLuint program, int location, GCGLsizei bufSize, float *params) override;
     void getnUniformivEXT(GCGLuint program, int location, GCGLsizei bufSize, int *params) override;
 
 protected:
-    bool supportsExtension(const String&) override;
+    bool platformSupportsExtension(const String&) override;
     String getExtensions() override;
 
     GCGLenum m_contextResetStatus;

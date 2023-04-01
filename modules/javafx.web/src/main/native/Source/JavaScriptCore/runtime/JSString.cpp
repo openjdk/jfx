@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-const ClassInfo JSString::s_info = { "string", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSString) };
+const ClassInfo JSString::s_info = { "string"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSString) };
 
 Structure* JSString::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
 {
@@ -41,7 +41,7 @@ Structure* JSString::createStructure(VM& vm, JSGlobalObject* globalObject, JSVal
 
 JSString* JSString::createEmptyString(VM& vm)
 {
-    JSString* newString = new (NotNull, allocateCell<JSString>(vm.heap)) JSString(vm, *StringImpl::empty());
+    JSString* newString = new (NotNull, allocateCell<JSString>(vm)) JSString(vm, *StringImpl::empty());
     newString->finishCreation(vm);
     return newString;
 }
@@ -51,7 +51,7 @@ void JSRopeString::RopeBuilder<RecordOverflow>::expand()
 {
     RELEASE_ASSERT(!this->hasOverflowed());
     ASSERT(m_strings.size() == JSRopeString::s_maxInternalRopeLength);
-    static_assert(3 == JSRopeString::s_maxInternalRopeLength, "");
+    static_assert(3 == JSRopeString::s_maxInternalRopeLength);
     ASSERT(m_length);
     ASSERT(asString(m_strings.at(0))->length());
     ASSERT(asString(m_strings.at(1))->length());
@@ -65,10 +65,9 @@ void JSRopeString::RopeBuilder<RecordOverflow>::expand()
 
 void JSString::dumpToStream(const JSCell* cell, PrintStream& out)
 {
-    VM& vm = cell->vm();
     const JSString* thisObject = jsCast<const JSString*>(cell);
-    out.printf("<%p, %s, [%u], ", thisObject, thisObject->className(vm), thisObject->length());
-    uintptr_t pointer = thisObject->m_fiber;
+    out.printf("<%p, %s, [%u], ", thisObject, thisObject->className().characters(), thisObject->length());
+    uintptr_t pointer = thisObject->fiberConcurrently();
     if (pointer & isRopeInPointer) {
         if (pointer & JSRopeString::isSubstringInPointer)
             out.printf("[substring]");
@@ -103,7 +102,7 @@ bool JSString::equalSlowCase(JSGlobalObject* globalObject, JSString* other) cons
 size_t JSString::estimatedSize(JSCell* cell, VM& vm)
 {
     JSString* thisObject = asString(cell);
-    uintptr_t pointer = thisObject->m_fiber;
+    uintptr_t pointer = thisObject->fiberConcurrently();
     if (pointer & isRopeInPointer)
         return Base::estimatedSize(cell, vm);
     return Base::estimatedSize(cell, vm) + bitwise_cast<StringImpl*>(pointer)->costDuringGC();
@@ -116,7 +115,7 @@ void JSString::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
 
-    uintptr_t pointer = thisObject->m_fiber;
+    uintptr_t pointer = thisObject->fiberConcurrently();
     if (pointer & isRopeInPointer) {
         if (pointer & JSRopeString::isSubstringInPointer) {
             visitor.appendUnbarriered(static_cast<JSRopeString*>(thisObject)->fiber1());
@@ -152,21 +151,17 @@ DEFINE_VISIT_CHILDREN(JSString);
 
 static constexpr unsigned maxLengthForOnStackResolve = 2048;
 
-void JSRopeString::resolveRopeInternal8(LChar* buffer) const
+template<typename CharacterType>
+void JSRopeString::resolveRopeInternal(CharacterType* buffer) const
 {
     if (isSubstring()) {
-        StringImpl::copyCharacters(buffer, substringBase()->valueInternal().characters8() + substringOffset(), length());
-        return;
-    }
-
-    resolveRopeInternalNoSubstring(buffer);
-}
-
-void JSRopeString::resolveRopeInternal16(UChar* buffer) const
-{
-    if (isSubstring()) {
-        StringImpl::copyCharacters(
-            buffer, substringBase()->valueInternal().characters16() + substringOffset(), length());
+        // It is possible that underlying string becomes 8bit/16bit while wrapper substring is saying it is 16bit/8bit.
+        // But It is definitely true that substring part can be represented as its parent's status 8bit/16bit, which is described as CharacterType.
+        auto& string = substringBase()->valueInternal();
+        if (string.is8Bit())
+            StringImpl::copyCharacters(buffer, string.characters8() + substringOffset(), length());
+        else
+            StringImpl::copyCharacters(buffer, string.characters16() + substringOffset(), length());
         return;
     }
 
@@ -201,27 +196,32 @@ AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) c
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    auto convertToAtomString = [](const String& string) -> AtomString {
+        ASSERT(!string.impl() || string.impl()->isAtom());
+        return static_cast<AtomStringImpl*>(string.impl());
+    };
+
     if (length() > maxLengthForOnStackResolve) {
         scope.release();
-        return resolveRopeWithFunction(globalObject, [&] (Ref<StringImpl>&& newImpl) {
+        return convertToAtomString(resolveRopeWithFunction(globalObject, [&] (Ref<StringImpl>&& newImpl) {
             return AtomStringImpl::add(newImpl.ptr());
-        });
+        }));
     }
 
     if (is8Bit()) {
         LChar buffer[maxLengthForOnStackResolve];
-        resolveRopeInternal8(buffer);
+        resolveRopeInternal(buffer);
         convertToNonRope(AtomStringImpl::add(buffer, length()));
     } else {
         UChar buffer[maxLengthForOnStackResolve];
-        resolveRopeInternal16(buffer);
+        resolveRopeInternal(buffer);
         convertToNonRope(AtomStringImpl::add(buffer, length()));
     }
 
     // If we resolved a string that didn't previously exist, notify the heap that we've grown.
     if (valueInternal().impl()->hasOneRef())
         vm.heap.reportExtraMemoryAllocated(valueInternal().impl()->cost());
-    return valueInternal();
+    return convertToAtomString(valueInternal());
 }
 
 inline void JSRopeString::convertToNonRope(String&& string) const
@@ -246,7 +246,7 @@ RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObj
         resolveRopeWithFunction(globalObject, [&] (Ref<StringImpl>&& newImpl) -> Ref<StringImpl> {
             existingAtomString = AtomStringImpl::lookUp(newImpl.ptr());
             if (existingAtomString)
-                return makeRef(*existingAtomString);
+                return Ref { *existingAtomString };
             return WTFMove(newImpl);
         });
         RETURN_IF_EXCEPTION(scope, nullptr);
@@ -255,14 +255,14 @@ RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObj
 
     if (is8Bit()) {
         LChar buffer[maxLengthForOnStackResolve];
-        resolveRopeInternal8(buffer);
+        resolveRopeInternal(buffer);
         if (RefPtr<AtomStringImpl> existingAtomString = AtomStringImpl::lookUp(buffer, length())) {
             convertToNonRope(*existingAtomString);
             return existingAtomString;
         }
     } else {
         UChar buffer[maxLengthForOnStackResolve];
-        resolveRopeInternal16(buffer);
+        resolveRopeInternal(buffer);
         if (RefPtr<AtomStringImpl> existingAtomString = AtomStringImpl::lookUp(buffer, length())) {
             convertToNonRope(*existingAtomString);
             return existingAtomString;
@@ -400,7 +400,7 @@ double JSString::toNumber(JSGlobalObject* globalObject) const
 
 inline StringObject* StringObject::create(VM& vm, JSGlobalObject* globalObject, JSString* string)
 {
-    StringObject* object = new (NotNull, allocateCell<StringObject>(vm.heap)) StringObject(vm, globalObject->stringObjectStructure());
+    StringObject* object = new (NotNull, allocateCell<StringObject>(vm)) StringObject(vm, globalObject->stringObjectStructure());
     object->finishCreation(vm, string);
     return object;
 }
@@ -436,9 +436,6 @@ bool JSString::getStringPropertyDescriptor(JSGlobalObject* globalObject, Propert
 
 JSString* jsStringWithCacheSlowCase(VM& vm, StringImpl& stringImpl)
 {
-    if (JSString* string = vm.stringCache.get(&stringImpl))
-        return string;
-
     JSString* string = jsString(vm, String(stringImpl));
     vm.lastCachedString.set(vm, string);
     return string;

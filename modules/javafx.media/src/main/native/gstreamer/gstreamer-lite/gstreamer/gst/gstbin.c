@@ -19,8 +19,6 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
- * MT safe.
  */
 
 /**
@@ -56,75 +54,82 @@
  * the bin. Likewise the #GstBin::element-removed signal is fired whenever an
  * element is removed from the bin.
  *
- * ## Notes
- *
  * A #GstBin internally intercepts every #GstMessage posted by its children and
  * implements the following default behaviour for each of them:
  *
- * * GST_MESSAGE_EOS: This message is only posted by sinks in the PLAYING
+ * * %GST_MESSAGE_EOS: This message is only posted by sinks in the PLAYING
  * state. If all sinks posted the EOS message, this bin will post and EOS
  * message upwards.
  *
- * * GST_MESSAGE_SEGMENT_START: Just collected and never forwarded upwards.
- * The messages are used to decide when all elements have completed playback
- * of their segment.
+ * * %GST_MESSAGE_SEGMENT_START: Just collected and never forwarded upwards.
+ *   The messages are used to decide when all elements have completed playback
+ *   of their segment.
  *
- * * GST_MESSAGE_SEGMENT_DONE: Is posted by #GstBin when all elements that posted
- * a SEGMENT_START have posted a SEGMENT_DONE.
+ * * %GST_MESSAGE_SEGMENT_DONE: Is posted by #GstBin when all elements that posted
+ *   a SEGMENT_START have posted a SEGMENT_DONE.
  *
- * * GST_MESSAGE_DURATION_CHANGED: Is posted by an element that detected a change
- * in the stream duration. The duration change is posted to the
- * application so that it can refetch the new duration with a duration
- * query. Note that these messages can be posted before the bin is
- * prerolled, in which case the duration query might fail. Note also that
- * there might be a discrepancy (due to internal buffering/queueing) between the
- * stream being currently displayed and the returned duration query.
- * Applications might want to also query for duration (and changes) by
- * listening to the GST_MESSAGE_STREAM_START message, signaling the active start
- * of a (new) stream.
+ * * %GST_MESSAGE_DURATION_CHANGED: Is posted by an element that detected a change
+ *   in the stream duration. The duration change is posted to the
+ *   application so that it can refetch the new duration with a duration
+ *   query.
  *
- * * GST_MESSAGE_CLOCK_LOST: This message is posted by an element when it
- * can no longer provide a clock. The default bin behaviour is to
- * check if the lost clock was the one provided by the bin. If so and
- * the bin is currently in the PLAYING state, the message is forwarded to
- * the bin parent.
- * This message is also generated when a clock provider is removed from
- * the bin. If this message is received by the application, it should
- * PAUSE the pipeline and set it back to PLAYING to force a new clock
- * distribution.
+ *   Note that these messages can be posted before the bin is prerolled, in which
+ *   case the duration query might fail.
  *
- * * GST_MESSAGE_CLOCK_PROVIDE: This message is generated when an element
- * can provide a clock. This mostly happens when a new clock
- * provider is added to the bin. The default behaviour of the bin is to
- * mark the currently selected clock as dirty, which will perform a clock
- * recalculation the next time the bin is asked to provide a clock.
- * This message is never sent tot the application but is forwarded to
- * the parent of the bin.
+ *   Note also that there might be a discrepancy (due to internal buffering/queueing)
+ *   between the stream being currently displayed and the returned duration query.
+ *
+ *   Applications might want to also query for duration (and changes) by
+ *   listening to the %GST_MESSAGE_STREAM_START message, signaling the active start
+ *   of a (new) stream.
+ *
+ * * %GST_MESSAGE_CLOCK_LOST: This message is posted by an element when it
+ *   can no longer provide a clock.
+ *
+ *   The default bin behaviour is to check if the lost clock was the one provided
+ *   by the bin. If so and the bin is currently in the PLAYING state, the message
+ *   is forwarded to the bin parent.
+ *
+ *   This message is also generated when a clock provider is removed from
+ *   the bin. If this message is received by the application, it should
+ *   PAUSE the pipeline and set it back to PLAYING to force a new clock
+ *   distribution.
+ *
+ * * %GST_MESSAGE_CLOCK_PROVIDE: This message is generated when an element
+ *   can provide a clock. This mostly happens when a new clock
+ *   provider is added to the bin.
+ *
+ *   The default behaviour of the bin is to mark the currently selected clock as
+ *   dirty, which will perform a clock recalculation the next time the bin is
+ *   asked to provide a clock.
+ *
+ *   This message is never sent to the application but is forwarded to
+ *   the parent of the bin.
  *
  * * OTHERS: posted upwards.
  *
  * A #GstBin implements the following default behaviour for answering to a
  * #GstQuery:
  *
- * * GST_QUERY_DURATION: The bin will forward the query to all sink
- * elements contained within and will return the maximum value.
- * If no sinks are available in the bin, the query fails.
+ * * %GST_QUERY_DURATION: The bin will forward the query to all sink
+ *   elements contained within and will return the maximum value.
+ *   If no sinks are available in the bin, the query fails.
  *
- * * GST_QUERY_POSITION:The query is sent to all sink elements in the bin and the
- * MAXIMUM of all values is returned. If no sinks are available in the bin,
- * the query fails.
+ * * %GST_QUERY_POSITION: The query is sent to all sink elements in the bin and the
+ *   MAXIMUM of all values is returned. If no sinks are available in the bin,
+ *   the query fails.
  *
- * * OTHERS:the query is forwarded to all sink elements, the result
- * of the first sink that answers the query successfully is returned. If no
- * sink is in the bin, the query fails.
+ * * OTHERS: the query is forwarded to all sink elements, the result
+ *   of the first sink that answers the query successfully is returned. If no
+ *   sink is in the bin, the query fails.
  *
  * A #GstBin will by default forward any event sent to it to all sink
- * (#GST_EVENT_TYPE_DOWNSTREAM) or source (#GST_EVENT_TYPE_UPSTREAM) elements
+ * ( %GST_EVENT_TYPE_DOWNSTREAM ) or source ( %GST_EVENT_TYPE_UPSTREAM ) elements
  * depending on the event type.
+ *
  * If all the elements return %TRUE, the bin will also return %TRUE, else %FALSE
  * is returned. If no elements of the required type are in the bin, the event
  * handler will return %TRUE.
- *
  */
 
 #include "gst_private.h"
@@ -321,8 +326,7 @@ _gst_boolean_accumulator (GSignalInvocationHint * ihint,
   gboolean myboolean;
 
   myboolean = g_value_get_boolean (handler_return);
-  if (!(ihint->run_type & G_SIGNAL_RUN_CLEANUP))
-    g_value_set_boolean (return_accu, myboolean);
+  g_value_set_boolean (return_accu, myboolean);
 
   GST_DEBUG ("invocation %d, %d", ihint->run_type, myboolean);
 
@@ -356,7 +360,7 @@ gst_bin_class_init (GstBinClass * klass)
 
   /**
    * GstBin::element-added:
-   * @bin: the #GstBin
+   * @self: the #GstBin
    * @element: the #GstElement that was added to the bin
    *
    * Will be emitted after the element was added to the bin.
@@ -367,7 +371,7 @@ gst_bin_class_init (GstBinClass * klass)
       NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_ELEMENT);
   /**
    * GstBin::element-removed:
-   * @bin: the #GstBin
+   * @self: the #GstBin
    * @element: the #GstElement that was removed from the bin
    *
    * Will be emitted after the element was removed from the bin.
@@ -378,11 +382,11 @@ gst_bin_class_init (GstBinClass * klass)
       NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_ELEMENT);
   /**
    * GstBin::deep-element-added:
-   * @bin: the #GstBin
+   * @self: the #GstBin
    * @sub_bin: the #GstBin the element was added to
    * @element: the #GstElement that was added to @sub_bin
    *
-   * Will be emitted after the element was added to sub_bin.
+   * Will be emitted after the element was added to @sub_bin.
    *
    * Since: 1.10
    */
@@ -392,11 +396,11 @@ gst_bin_class_init (GstBinClass * klass)
       NULL, NULL, NULL, G_TYPE_NONE, 2, GST_TYPE_BIN, GST_TYPE_ELEMENT);
   /**
    * GstBin::deep-element-removed:
-   * @bin: the #GstBin
+   * @self: the #GstBin
    * @sub_bin: the #GstBin the element was removed from
    * @element: the #GstElement that was removed from @sub_bin
    *
-   * Will be emitted after the element was removed from sub_bin.
+   * Will be emitted after the element was removed from @sub_bin.
    *
    * Since: 1.10
    */
@@ -406,10 +410,10 @@ gst_bin_class_init (GstBinClass * klass)
       NULL, NULL, NULL, G_TYPE_NONE, 2, GST_TYPE_BIN, GST_TYPE_ELEMENT);
   /**
    * GstBin::do-latency:
-   * @bin: the #GstBin
+   * @self: the #GstBin
    *
    * Will be emitted when the bin needs to perform latency calculations. This
-   * signal is only emitted for toplevel bins or when async-handling is
+   * signal is only emitted for toplevel bins or when #GstBin:async-handling is
    * enabled.
    *
    * Only one signal handler is invoked. If no signals are connected, the
@@ -433,9 +437,8 @@ gst_bin_class_init (GstBinClass * klass)
    * state of individual elements, for example.
    *
    * The messages are converted to an ELEMENT message with the bin as the
-   * source. The structure of the message is named 'GstBinForwarded' and contains
-   * a field named 'message' of type GST_TYPE_MESSAGE that contains the original
-   * forwarded message.
+   * source. The structure of the message is named `GstBinForwarded` and contains
+   * a field named `message` that contains the original forwarded #GstMessage.
    */
   g_object_class_install_property (gobject_class, PROP_MESSAGE_FORWARD,
       g_param_spec_boolean ("message-forward", "Message Forward",
@@ -1163,10 +1166,6 @@ gst_bin_add_func (GstBin * bin, GstElement * element)
 
   GST_DEBUG_OBJECT (bin, "element :%s", GST_ELEMENT_NAME (element));
 
-  /* we obviously can't add ourself to ourself */
-  if (G_UNLIKELY (element == GST_ELEMENT_CAST (bin)))
-    goto adding_itself;
-
   /* get the element name to make sure it is unique in this bin. */
   GST_OBJECT_LOCK (element);
   elem_name = g_strdup (GST_ELEMENT_NAME (element));
@@ -1376,20 +1375,11 @@ no_state_recalc:
   return TRUE;
 
   /* ERROR handling here */
-adding_itself:
-  {
-    GST_OBJECT_LOCK (bin);
-    g_warning ("Cannot add bin '%s' to itself", GST_ELEMENT_NAME (bin));
-    GST_OBJECT_UNLOCK (bin);
-    gst_object_ref_sink (element);
-    gst_object_unref (element);
-    return FALSE;
-  }
 duplicate_name:
   {
-    g_warning ("Name '%s' is not unique in bin '%s', not adding",
-        elem_name, GST_ELEMENT_NAME (bin));
     GST_OBJECT_UNLOCK (bin);
+    GST_WARNING_OBJECT (bin, "Name '%s' is not unique in bin, not adding",
+        elem_name);
     g_free (elem_name);
     gst_object_ref_sink (element);
     gst_object_unref (element);
@@ -1397,8 +1387,8 @@ duplicate_name:
   }
 had_parent:
   {
-    g_warning ("Element '%s' already has parent", elem_name);
     GST_OBJECT_UNLOCK (bin);
+    GST_WARNING_OBJECT (bin, "Element '%s' already has parent", elem_name);
     g_free (elem_name);
     return FALSE;
   }
@@ -1409,12 +1399,10 @@ had_parent:
  * @bin: a #GstBin
  * @flags: the #GstElementFlags to suppress
  *
- * Suppress the given flags on the bin. #GstElementFlags of a
+ * Suppresses the given flags on the bin. #GstElementFlags of a
  * child element are propagated when it is added to the bin.
  * When suppressed flags are set, those specified flags will
  * not be propagated to the bin.
- *
- * MT safe.
  *
  * Since: 1.10
  */
@@ -1434,10 +1422,6 @@ gst_bin_set_suppressed_flags (GstBin * bin, GstElementFlags flags)
 /**
  * gst_bin_get_suppressed_flags:
  * @bin: a #GstBin
- *
- * Return the suppressed flags of the bin.
- *
- * MT safe.
  *
  * Returns: the bin's suppressed #GstElementFlags.
  *
@@ -1520,8 +1504,6 @@ gst_bin_deep_element_removed_func (GstBin * bin, GstBin * sub_bin,
  * > with gst_element_set_state(), or use gst_element_sync_state_with_parent().
  * > The bin or pipeline will not take care of this for you.
  *
- * MT safe.
- *
  * Returns: %TRUE if the element could be added, %FALSE if
  * the bin does not want to accept the element.
  */
@@ -1553,8 +1535,7 @@ gst_bin_add (GstBin * bin, GstElement * element)
   /* ERROR handling */
 no_function:
   {
-    g_warning ("adding elements to bin '%s' is not supported",
-        GST_ELEMENT_NAME (bin));
+    GST_WARNING_OBJECT (bin, "adding elements to bin is not supported");
     gst_object_ref_sink (element);
     gst_object_unref (element);
     return FALSE;
@@ -1580,10 +1561,6 @@ gst_bin_remove_func (GstBin * bin, GstElement * element)
   GstStateChangeReturn ret;
 
   GST_DEBUG_OBJECT (bin, "element :%s", GST_ELEMENT_NAME (element));
-
-  /* we obviously can't remove ourself from ourself */
-  if (G_UNLIKELY (element == GST_ELEMENT_CAST (bin)))
-    goto removing_itself;
 
   GST_OBJECT_LOCK (bin);
 
@@ -1840,19 +1817,11 @@ no_state_recalc:
   return TRUE;
 
   /* ERROR handling */
-removing_itself:
-  {
-    GST_OBJECT_LOCK (bin);
-    g_warning ("Cannot remove bin '%s' from itself", GST_ELEMENT_NAME (bin));
-    GST_OBJECT_UNLOCK (bin);
-    return FALSE;
-  }
 not_in_bin:
   {
-    g_warning ("Element '%s' is not in bin '%s'", elem_name,
-        GST_ELEMENT_NAME (bin));
     GST_OBJECT_UNLOCK (element);
     GST_OBJECT_UNLOCK (bin);
+    GST_WARNING_OBJECT (bin, "Element '%s' is not in bin", elem_name);
     g_free (elem_name);
     return FALSE;
   }
@@ -1872,8 +1841,6 @@ not_in_bin:
  *
  * If the element's pads are linked to other pads, the pads will be unlinked
  * before the element is removed from the bin.
- *
- * MT safe.
  *
  * Returns: %TRUE if the element could be removed, %FALSE if
  * the bin does not want to remove the element.
@@ -1905,8 +1872,7 @@ gst_bin_remove (GstBin * bin, GstElement * element)
   /* ERROR handling */
 no_function:
   {
-    g_warning ("removing elements from bin '%s' is not supported",
-        GST_ELEMENT_NAME (bin));
+    GST_WARNING_OBJECT (bin, "Removing elements from bin is not supported");
     return FALSE;
   }
 }
@@ -1917,10 +1883,7 @@ no_function:
  *
  * Gets an iterator for the elements in this bin.
  *
- * MT safe.  Caller owns returned value.
- *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement,
- * or %NULL
+ * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_elements (GstBin * bin)
@@ -1958,10 +1921,7 @@ iterate_child_recurse (GstIterator * it, const GValue * item)
  * Gets an iterator for the elements in this bin.
  * This iterator recurses into GstBin children.
  *
- * MT safe.  Caller owns returned value.
- *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement,
- * or %NULL
+ * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_recurse (GstBin * bin)
@@ -2021,10 +1981,7 @@ sink_iterator_filter (const GValue * vchild, GValue * vbin)
  * Gets an iterator for all elements in the bin that have the
  * #GST_ELEMENT_FLAG_SINK flag set.
  *
- * MT safe.  Caller owns returned value.
- *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement,
- * or %NULL
+ * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sinks (GstBin * bin)
@@ -2082,10 +2039,7 @@ src_iterator_filter (const GValue * vchild, GValue * vbin)
  * Gets an iterator for all elements in the bin that have the
  * #GST_ELEMENT_FLAG_SOURCE flag set.
  *
- * MT safe.  Caller owns returned value.
- *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement,
- * or %NULL
+ * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sources (GstBin * bin)
@@ -2475,10 +2429,7 @@ gst_bin_sort_iterator_new (GstBin * bin)
  * This function is used internally to perform the state changes
  * of the bin elements and for clock selection.
  *
- * MT safe.  Caller owns returned value.
- *
- * Returns: (transfer full) (nullable): a #GstIterator of #GstElement,
- * or %NULL
+ * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
  */
 GstIterator *
 gst_bin_iterate_sorted (GstBin * bin)
@@ -2751,13 +2702,13 @@ failed:
  * gst_bin_recalculate_latency:
  * @bin: a #GstBin
  *
- * Query @bin for the current latency using and reconfigures this latency to all the
- * elements with a LATENCY event.
+ * Queries @bin for the current latency and reconfigures this latency on all the
+ * elements using a LATENCY event.
  *
  * This method is typically called on the pipeline when a #GST_MESSAGE_LATENCY
  * is posted on the bus.
  *
- * This function simply emits the 'do-latency' signal so any custom latency
+ * This function simply emits the #GstBin::do-latency signal so any custom latency
  * calculations will be performed.
  *
  * Returns: %TRUE if the latency could be queried and reconfigured.
@@ -4415,12 +4366,8 @@ compare_name (const GValue * velement, const gchar * name)
  * Gets the element with the given name from a bin. This
  * function recurses into child bins.
  *
- * Returns %NULL if no element with the given name is found in the bin.
- *
- * MT safe.  Caller owns returned reference.
- *
  * Returns: (transfer full) (nullable): the #GstElement with the given
- * name, or %NULL
+ * name
  */
 GstElement *
 gst_bin_get_by_name (GstBin * bin, const gchar * name)
@@ -4458,13 +4405,8 @@ gst_bin_get_by_name (GstBin * bin, const gchar * name)
  * Gets the element with the given name from this bin. If the
  * element is not found, a recursion is performed on the parent bin.
  *
- * Returns %NULL if:
- * - no element with the given name is found in the bin
- *
- * MT safe.  Caller owns returned reference.
- *
  * Returns: (transfer full) (nullable): the #GstElement with the given
- * name, or %NULL
+ * name
  */
 GstElement *
 gst_bin_get_by_name_recurse_up (GstBin * bin, const gchar * name)
@@ -4517,8 +4459,6 @@ compare_interface (const GValue * velement, GValue * interface)
  * all elements that implement the interface, use
  * gst_bin_iterate_all_by_interface(). This function recurses into child bins.
  *
- * MT safe.  Caller owns returned reference.
- *
  * Returns: (transfer full) (nullable): A #GstElement inside the bin
  * implementing the interface
  */
@@ -4561,13 +4501,10 @@ gst_bin_get_by_interface (GstBin * bin, GType iface)
  * Looks for all elements inside the bin that implements the given
  * interface. You can safely cast all returned elements to the given interface.
  * The function recurses inside child bins. The iterator will yield a series
- * of #GstElement that should be unreffed after use.
- *
- * MT safe.  Caller owns returned value.
+ * of #GstElement.
  *
  * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
- *     for all elements in the bin implementing the given interface,
- *     or %NULL
+ *     for all elements in the bin implementing the given interface
  */
 GstIterator *
 gst_bin_iterate_all_by_interface (GstBin * bin, GType iface)
@@ -4611,13 +4548,10 @@ compare_factory_names (const GValue * velement, GValue * factory_name_val)
  *
  * Looks for all elements inside the bin with the given element factory name.
  * The function recurses inside child bins. The iterator will yield a series of
- * #GstElement that should be unreffed after use.
- *
- * MT safe. Caller owns returned value.
+ * #GstElement.
  *
  * Returns: (transfer full) (nullable): a #GstIterator of #GstElement
- *     for all elements in the bin with the given element factory name,
- *     or %NULL.
+ *     for all elements in the bin with the given element factory name
  *
  * Since: 1.18
  */

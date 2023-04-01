@@ -21,11 +21,10 @@
 [
     GenerateIsReachable=ReachableFromNavigator,
     LegacyUnenumerableNamedProperties,
-    ImplementationLacksVTable,
     InterfaceName=MimeTypeArray,
     Exposed=Window
 ] interface DOMMimeTypeArray {
     readonly attribute unsigned long length;
     getter DOMMimeType? item(unsigned long index);
-    getter DOMMimeType? namedItem(DOMString name);
+    getter DOMMimeType? namedItem([AtomString] DOMString name);
 };

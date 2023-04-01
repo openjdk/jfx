@@ -55,8 +55,8 @@ G_BEGIN_DECLS
  * GST_BASE_PARSE_FLOW_DROPPED:
  *
  * A #GstFlowReturn that can be returned from
- * #GstBaseParseClass.handle_frame() to indicate that no output buffer was
- * generated, or from #GstBaseParseClass.pre_push_frame() to to forego
+ * #GstBaseParseClass::handle_frame to indicate that no output buffer was
+ * generated, or from #GstBaseParseClass::pre_push_frame to to forego
  * pushing buffer.
  */
 #define GST_BASE_PARSE_FLOW_DROPPED     GST_FLOW_CUSTOM_SUCCESS
@@ -242,6 +242,21 @@ struct _GstBaseParseClass {
   gboolean      (*set_sink_caps)      (GstBaseParse * parse,
                                        GstCaps      * caps);
 
+  /**
+   * GstBaseParseClass::handle_frame:
+   * @skipsize: (out):
+   *
+   * Parses the input data into valid frames as defined by subclass
+   * which should be passed to gst_base_parse_finish_frame().
+   * The frame's input buffer is guaranteed writable,
+   * whereas the input frame ownership is held by caller
+   * (so subclass should make a copy if it needs to hang on).
+   * Input buffer (data) is provided by baseclass with as much
+   * metadata set as possible by baseclass according to upstream
+   * information and/or subclass settings,
+   * though subclass may still set buffer timestamp and duration
+   * if desired.
+   */
   GstFlowReturn (*handle_frame)       (GstBaseParse      * parse,
                                        GstBaseParseFrame * frame,
                                        gint              * skipsize);

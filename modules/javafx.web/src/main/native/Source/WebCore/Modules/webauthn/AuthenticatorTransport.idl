@@ -29,5 +29,8 @@
     "usb",
     "nfc",
     "ble",
-    "internal"
+    "internal",
+    "cable",
+    "hybrid",
+    "smart-card"
 };

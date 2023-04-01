@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google, Inc.
+ * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,10 @@
 #include "config.h"
 #include "RenderSVGEllipse.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+#include "RenderSVGShapeInlines.h"
 #include "SVGCircleElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGEllipseElement.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -160,3 +164,5 @@ bool RenderSVGEllipse::isRenderingDisabled() const
 }
 
 }
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

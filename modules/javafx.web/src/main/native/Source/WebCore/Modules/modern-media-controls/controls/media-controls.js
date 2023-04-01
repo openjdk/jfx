@@ -30,6 +30,9 @@ class MediaControls extends LayoutNode
     {
         super(`<div class="media-controls"></div>`);
 
+        if (layoutTraits?.inheritsBorderRadius())
+            this.element.classList.add("inherits-border-radius");
+
         this._scaleFactor = 1;
         this._shouldCenterControlsVertically = false;
 
@@ -38,7 +41,6 @@ class MediaControls extends LayoutNode
         this.layoutTraits = layoutTraits;
 
         this.playPauseButton = new PlayPauseButton(this);
-        this.airplayButton = new AirplayButton(this);
         this.pipButton = new PiPButton(this);
         this.fullscreenButton = new FullscreenButton(this);
         this.muteButton = new MuteButton(this);
@@ -55,9 +57,21 @@ class MediaControls extends LayoutNode
         this.autoHideController.hasSecondaryUIAttached = false;
 
         this._placard = null;
-        this.airplayPlacard = new AirplayPlacard(this);
         this.invalidPlacard = new InvalidPlacard(this);
-        this.pipPlacard = new PiPPlacard(this);
+
+        // FIXME: Adwaita layout doesn't have an icon for pip-placard.
+        if (this.layoutTraits?.supportsPiP())
+            this.pipPlacard = new PiPPlacard(this);
+        else
+            this.pipPlacard = null;
+
+        if (this.layoutTraits?.supportsAirPlay()) {
+            this.airplayButton = new AirplayButton(this);
+            this.airplayPlacard = new AirplayPlacard(this);
+        } else {
+            this.airplayButton = null;
+            this.airplayPlacard = null;
+        }
 
         this.element.addEventListener("focusin", this);
         window.addEventListener("dragstart", this, true);
@@ -234,5 +248,4 @@ class MediaControls extends LayoutNode
         else
             super.commitProperty(propertyName);
     }
-
 }

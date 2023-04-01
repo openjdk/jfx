@@ -7,8 +7,8 @@ dialog {
     margin: auto;
     border: solid;
     padding: 1em;
-    background: white;
-    color: black;
+    background-color: Canvas;
+    color: CanvasText;
     display: none;
 }
 
@@ -16,13 +16,14 @@ dialog[open] {
     display: block;
 }
 
-dialog:-internal-modal-dialog {
+dialog:modal {
     position: fixed;
     overflow: auto;
     inset-block-start: 0;
     inset-block-end: 0;
     max-width: calc(100% - 6px - 2em);
     max-height: calc(100% - 6px - 2em);
+    visibility: visible;
 }
 
 dialog::backdrop {

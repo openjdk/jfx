@@ -29,6 +29,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.beans.property.SimpleStringProperty;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,9 +75,9 @@ public class TableCellTest {
             }
         });
 
-        cell = new TableCell<String,String>();
+        cell = new TableCell<>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
-        table = new TableView<String>(model);
+        table = new TableView<>(model);
         editingColumn = new TableColumn<>("TEST");
 
         row = new TableRow<>();
@@ -192,7 +193,7 @@ public class TableCellTest {
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
-        cell = new TableCellShim<String,String>() {
+        cell = new TableCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 rt_29923_count++;
@@ -360,6 +361,33 @@ public class TableCellTest {
         table.getColumns().add(tableColumn);
 
         stageLoader = new StageLoader(table);
+    }
+
+    /**
+     * The item of the {@link TableRow} should not be null, when the {@link TableCell} is not empty.
+     * See also: JDK-8251483
+     */
+    @Test
+    public void testRowItemIsNotNullForNonEmptyCell() {
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellValueFactory(cc -> new SimpleStringProperty(cc.getValue()));
+        tableColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (!empty) {
+                    assertNotNull(getTableRow().getItem());
+                }
+            }
+        });
+        table.getColumns().add(tableColumn);
+
+        stageLoader = new StageLoader(table);
+
+        // Will create a new row and cell.
+        table.getItems().add("newItem");
+        Toolkit.getToolkit().firePulse();
     }
 
     /**
@@ -832,7 +860,7 @@ public class TableCellTest {
      * Test that cell.cancelEdit can switch table editing off
      * even if a subclass violates its contract.
      *
-     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     * For details, see https://bugs.openjdk.org/browse/JDK-8265206
      *
      */
     @Test

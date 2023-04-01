@@ -29,12 +29,12 @@
 #include "InspectorAuditAccessibilityObject.h"
 #include "InspectorAuditDOMObject.h"
 #include "InspectorAuditResourcesObject.h"
+#include "JSDOMWindowCustom.h"
 #include "JSInspectorAuditAccessibilityObject.h"
 #include "JSInspectorAuditDOMObject.h"
 #include "JSInspectorAuditResourcesObject.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
-#include "ScriptState.h"
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
@@ -60,9 +60,7 @@ InjectedScript PageAuditAgent::injectedScriptForEval(std::optional<Protocol::Run
 {
     if (executionContextId)
         return injectedScriptManager().injectedScriptForId(*executionContextId);
-
-    JSC::JSGlobalObject* scriptState = mainWorldExecState(&m_inspectedPage.mainFrame());
-    return injectedScriptManager().injectedScriptFor(scriptState);
+    return injectedScriptManager().injectedScriptFor(&mainWorldGlobalObject(m_inspectedPage.mainFrame()));
 }
 
 InjectedScript PageAuditAgent::injectedScriptForEval(Protocol::ErrorString& errorString, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
@@ -90,13 +88,13 @@ void PageAuditAgent::populateAuditObject(JSC::JSGlobalObject* lexicalGlobalObjec
         JSC::JSLockHolder lock(vm);
 
         if (JSC::JSValue jsInspectorAuditAccessibilityObject = toJSNewlyCreated(lexicalGlobalObject, globalObject, InspectorAuditAccessibilityObject::create(*this)))
-            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Accessibility"), jsInspectorAuditAccessibilityObject);
+            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Accessibility"_s), jsInspectorAuditAccessibilityObject);
 
         if (JSC::JSValue jsInspectorAuditDOMObject = toJSNewlyCreated(lexicalGlobalObject, globalObject, InspectorAuditDOMObject::create(*this)))
-            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "DOM"), jsInspectorAuditDOMObject);
+            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "DOM"_s), jsInspectorAuditDOMObject);
 
         if (JSC::JSValue jsInspectorAuditResourcesObject = toJSNewlyCreated(lexicalGlobalObject, globalObject, InspectorAuditResourcesObject::create(*this)))
-            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Resources"), jsInspectorAuditResourcesObject);
+            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Resources"_s), jsInspectorAuditResourcesObject);
     }
 }
 

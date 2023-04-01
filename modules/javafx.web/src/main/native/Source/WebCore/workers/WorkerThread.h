@@ -28,11 +28,15 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "FetchRequestCredentials.h"
+#include "NotificationPermission.h"
+#include "ScriptExecutionContextIdentifier.h"
+#include "ServiceWorkerRegistrationData.h"
 #include "WorkerOrWorkletThread.h"
 #include "WorkerRunLoop.h"
 #include "WorkerType.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <memory>
+#include <pal/SessionID.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -60,8 +64,9 @@ struct WorkerThreadStartupData;
 struct WorkerParameters {
 public:
     URL scriptURL;
+    URL ownerURL;
     String name;
-    String identifier;
+    String inspectorIdentifier;
     String userAgent;
     bool isOnline;
     ContentSecurityPolicyResponseHeaders contentSecurityPolicyResponseHeaders;
@@ -72,6 +77,12 @@ public:
     WorkerType workerType;
     FetchRequestCredentials credentials;
     Settings::Values settingsValues;
+    WorkerThreadMode workerThreadMode { WorkerThreadMode::CreateNewThread };
+    PAL::SessionID sessionID;
+#if ENABLE(SERVICE_WORKER)
+    std::optional<ServiceWorkerData> serviceWorkerData;
+#endif
+    ScriptExecutionContextIdentifier clientIdentifier;
 
     WorkerParameters isolatedCopy() const;
 };
@@ -93,6 +104,7 @@ public:
 #endif
 
     JSC::RuntimeFlags runtimeFlags() const { return m_runtimeFlags; }
+    bool isInStaticScriptEvaluation() const { return m_isInStaticScriptEvaluation; }
 
 protected:
     WorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
@@ -106,12 +118,12 @@ protected:
     SocketProvider* socketProvider();
 
 private:
-    virtual bool isServiceWorkerThread() const { return false; }
+    virtual ASCIILiteral threadName() const = 0;
 
     virtual void finishedEvaluatingScript() { }
 
     // WorkerOrWorkletThread.
-    Ref<WTF::Thread> createThread() final;
+    Ref<Thread> createThread() final;
     RefPtr<WorkerOrWorkletGlobalScope> createGlobalScope() final;
     void evaluateScriptIfNecessary(String& exceptionMessage) final;
     bool shouldWaitForWebInspectorOnStartup() const final;
@@ -129,6 +141,7 @@ private:
 
     RefPtr<IDBClient::IDBConnectionProxy> m_idbConnectionProxy;
     RefPtr<SocketProvider> m_socketProvider;
+    bool m_isInStaticScriptEvaluation { false };
 };
 
 } // namespace WebCore

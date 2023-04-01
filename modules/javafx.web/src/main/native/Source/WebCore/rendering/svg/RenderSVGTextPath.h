@@ -25,6 +25,7 @@
 namespace WebCore {
 
 class SVGGeometryElement;
+class SVGTextPathElement;
 
 class RenderSVGTextPath final : public RenderSVGInline {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGTextPath);
@@ -43,7 +44,7 @@ private:
     void graphicsElement() const = delete;
 
     bool isSVGTextPath() const override { return true; }
-    const char* renderName() const override { return "RenderSVGTextPath"; }
+    ASCIILiteral renderName() const override { return "RenderSVGTextPath"_s; }
 
     Path m_layoutPath;
 };

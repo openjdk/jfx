@@ -32,6 +32,7 @@
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/Forward.h>
+#include <wtf/RobinHoodHashMap.h>
 
 namespace WebCore {
 
@@ -43,6 +44,8 @@ class Frame;
 class KeyframeEffect;
 class Page;
 class WebAnimation;
+
+struct Styleable;
 
 class InspectorAnimationAgent final : public InspectorAgentBase, public Inspector::AnimationBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorAnimationAgent);
@@ -58,13 +61,13 @@ public:
     // AnimationBackendDispatcherHandler
     Inspector::Protocol::ErrorStringOr<void> enable();
     Inspector::Protocol::ErrorStringOr<void> disable();
-    Inspector::Protocol::ErrorStringOr<Inspector::Protocol::DOM::NodeId> requestEffectTarget(const Inspector::Protocol::Animation::AnimationId&);
+    Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Styleable>> requestEffectTarget(const Inspector::Protocol::Animation::AnimationId&);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObject>> resolveAnimation(const Inspector::Protocol::Animation::AnimationId&, const String& objectGroup);
     Inspector::Protocol::ErrorStringOr<void> startTracking();
     Inspector::Protocol::ErrorStringOr<void> stopTracking();
 
     // InspectorInstrumentation
-    void willApplyKeyframeEffect(Element&, KeyframeEffect&, ComputedEffectTiming);
+    void willApplyKeyframeEffect(const Styleable&, KeyframeEffect&, ComputedEffectTiming);
     void didChangeWebAnimationName(WebAnimation&);
     void didSetWebAnimationEffect(WebAnimation&);
     void didChangeWebAnimationEffectTiming(WebAnimation&);
@@ -89,7 +92,7 @@ private:
     Inspector::InjectedScriptManager& m_injectedScriptManager;
     Page& m_inspectedPage;
 
-    HashMap<String, WebAnimation*> m_animationIdMap;
+    MemoryCompactRobinHoodHashMap<String, WebAnimation*> m_animationIdMap;
     Vector<String> m_removedAnimationIds;
     Timer m_animationDestroyedTimer;
 

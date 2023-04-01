@@ -63,10 +63,10 @@ void MockMediaPlayerMediaSource::registerMediaEngine(MediaEngineRegistrar regist
 // FIXME: What does the word "cache" mean here?
 static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
 {
-    static const auto cache = makeNeverDestroyed(HashSet<String, ASCIICaseInsensitiveHash> {
-        "video/mock",
-        "audio/mock",
-    });
+    static NeverDestroyed cache = HashSet<String, ASCIICaseInsensitiveHash> {
+        "video/mock"_s,
+        "audio/mock"_s,
+    };
     return cache;
 }
 
@@ -88,7 +88,7 @@ MediaPlayer::SupportsType MockMediaPlayerMediaSource::supportsType(const MediaEn
     if (codecs.isEmpty())
         return MediaPlayer::SupportsType::MayBeSupported;
 
-    if (codecs == "mock" || codecs == "kcom")
+    if (codecs == "mock"_s || codecs == "kcom"_s)
         return MediaPlayer::SupportsType::IsSupported;
 
     return MediaPlayer::SupportsType::MayBeSupported;
@@ -111,9 +111,9 @@ void MockMediaPlayerMediaSource::load(const String&)
     ASSERT_NOT_REACHED();
 }
 
-void MockMediaPlayerMediaSource::load(const URL&, const ContentType&, MediaSourcePrivateClient* source)
+void MockMediaPlayerMediaSource::load(const URL&, const ContentType&, MediaSourcePrivateClient& source)
 {
-    m_mediaSourcePrivate = MockMediaSourcePrivate::create(*this, *source);
+    m_mediaSourcePrivate = MockMediaSourcePrivate::create(*this, source);
 }
 
 void MockMediaPlayerMediaSource::cancelLoad()
@@ -123,7 +123,7 @@ void MockMediaPlayerMediaSource::cancelLoad()
 void MockMediaPlayerMediaSource::play()
 {
     m_playing = 1;
-    callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+    callOnMainThread([this, weakThis = WeakPtr { *this }] {
         if (!weakThis)
             return;
         advanceCurrentTime();
@@ -222,7 +222,7 @@ void MockMediaPlayerMediaSource::seekWithTolerance(const MediaTime& time, const 
         m_player->timeChanged();
 
         if (m_playing)
-            callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+            callOnMainThread([this, weakThis = WeakPtr { *this }] {
                 if (!weakThis)
                     return;
                 advanceCurrentTime();
@@ -286,7 +286,7 @@ void MockMediaPlayerMediaSource::seekCompleted()
     m_player->timeChanged();
 
     if (m_playing)
-        callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+        callOnMainThread([this, weakThis = WeakPtr { *this }] {
             if (!weakThis)
                 return;
             advanceCurrentTime();
@@ -296,6 +296,11 @@ void MockMediaPlayerMediaSource::seekCompleted()
 std::optional<VideoPlaybackQualityMetrics> MockMediaPlayerMediaSource::videoPlaybackQualityMetrics()
 {
     return m_mediaSourcePrivate ? m_mediaSourcePrivate->videoPlaybackQualityMetrics() : std::nullopt;
+}
+
+DestinationColorSpace MockMediaPlayerMediaSource::colorSpace()
+{
+    return DestinationColorSpace::SRGB();
 }
 
 }

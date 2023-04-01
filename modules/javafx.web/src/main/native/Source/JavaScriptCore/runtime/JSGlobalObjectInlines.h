@@ -34,27 +34,48 @@
 #include "JSFunction.h"
 #include "LinkTimeConstant.h"
 #include "ObjectPrototype.h"
+#include <wtf/Hasher.h>
 
 namespace JSC {
 
-ALWAYS_INLINE bool JSGlobalObject::objectPrototypeIsSane()
+ALWAYS_INLINE bool JSGlobalObject::objectPrototypeIsSaneConcurrently(Structure* objectPrototypeStructure)
 {
-    return !hasIndexedProperties(m_objectPrototype->indexingType())
-        && m_objectPrototype->getPrototypeDirect(vm()).isNull();
+    ASSERT(objectPrototypeStructure->typeInfo().isImmutablePrototypeExoticObject());
+    ASSERT(objectPrototypeStructure->storedPrototype().isNull());
+
+    return !hasIndexedProperties(objectPrototypeStructure->indexingType());
+}
+
+ALWAYS_INLINE bool JSGlobalObject::arrayPrototypeChainIsSaneConcurrently(Structure* arrayPrototypeStructure, Structure* objectPrototypeStructure)
+{
+    return !hasIndexedProperties(arrayPrototypeStructure->indexingType())
+        && arrayPrototypeStructure->hasMonoProto()
+        && arrayPrototypeStructure->storedPrototype() == objectPrototype()
+        && objectPrototypeIsSaneConcurrently(objectPrototypeStructure);
+}
+
+ALWAYS_INLINE bool JSGlobalObject::stringPrototypeChainIsSaneConcurrently(Structure* stringPrototypeStructure, Structure* objectPrototypeStructure)
+{
+    return !hasIndexedProperties(stringPrototypeStructure->indexingType())
+        && stringPrototypeStructure->hasMonoProto()
+        && stringPrototypeStructure->storedPrototype() == objectPrototype()
+        && objectPrototypeIsSaneConcurrently(objectPrototypeStructure);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::arrayPrototypeChainIsSane()
 {
-    return !hasIndexedProperties(m_arrayPrototype->indexingType())
-        && m_arrayPrototype->getPrototypeDirect(vm()) == m_objectPrototype.get()
-        && objectPrototypeIsSane();
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+    Structure* arrayPrototypeStructure = arrayPrototype()->structure();
+    Structure* objectPrototypeStructure = objectPrototype()->structure();
+    return arrayPrototypeChainIsSaneConcurrently(arrayPrototypeStructure, objectPrototypeStructure);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::stringPrototypeChainIsSane()
 {
-    return !hasIndexedProperties(m_stringPrototype->indexingType())
-        && m_stringPrototype->getPrototypeDirect(vm()) == m_objectPrototype.get()
-        && objectPrototypeIsSane();
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+    Structure* stringPrototypeStructure = stringPrototype()->structure();
+    Structure* objectPrototypeStructure = objectPrototype()->structure();
+    return stringPrototypeChainIsSaneConcurrently(stringPrototypeStructure, objectPrototypeStructure);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObservable()
@@ -68,6 +89,31 @@ ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObs
     // executing concurrently.
 
     return arrayIteratorProtocolWatchpointSet().isStillValid() && !isHavingABadTime() && arrayPrototypeChainIsSane();
+}
+
+ALWAYS_INLINE bool JSGlobalObject::isTypedArrayPrototypeIteratorProtocolFastAndNonObservable(TypedArrayType typedArrayType)
+{
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+
+    typedArrayPrototype(typedArrayType); // Materialize WatchpointSet.
+
+    // Since TypedArray iteration uses ArrayIterator, we need to check the state of ArrayIteratorProtocolWatchpointSet.
+    // But we do not need to check isHavingABadTime() and array prototype's chain.
+    if (!arrayIteratorProtocolWatchpointSet().isStillValid())
+        return false;
+
+    // This WatchpointSet ensures that
+    //     1. "length" getter is absent on derived TypedArray prototype (e.g. Uint8Array.prototype).
+    //     2. @@iterator function is absent on derived TypedArray prototype.
+    //     3. derived TypedArray prototype's [[Prototype]] is TypedArray.prototype.
+    if (typedArrayIteratorProtocolWatchpointSet(typedArrayType).state() != IsWatched)
+        return false;
+
+    // This WatchpointSet ensures that TypedArray.prototype has default "length" getter and @@iterator function.
+    if (typedArrayPrototypeIteratorProtocolWatchpointSet().state() != IsWatched)
+        return false;
+
+    return true;
 }
 
 // We're non-observable if the iteration protocol hasn't changed.
@@ -113,10 +159,12 @@ ALWAYS_INLINE Structure* JSGlobalObject::arrayStructureForIndexingTypeDuringAllo
 }
 
 inline JSFunction* JSGlobalObject::throwTypeErrorFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::throwTypeErrorFunction)); }
+inline JSFunction* JSGlobalObject::iteratorProtocolFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performIteration)); }
 inline JSFunction* JSGlobalObject::newPromiseCapabilityFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::newPromiseCapability)); }
 inline JSFunction* JSGlobalObject::resolvePromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::resolvePromise)); }
 inline JSFunction* JSGlobalObject::rejectPromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::rejectPromise)); }
 inline JSFunction* JSGlobalObject::promiseProtoThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::defaultPromiseThen)); }
+inline JSFunction* JSGlobalObject::performPromiseThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performPromiseThen)); }
 inline JSFunction* JSGlobalObject::regExpProtoExecFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::regExpBuiltinExec)); }
 inline GetterSetter* JSGlobalObject::regExpProtoGlobalGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoGlobalGetter)); }
 inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeGetter)); }
@@ -131,7 +179,7 @@ inline unsigned JSGlobalObject::WeakCustomGetterOrSetterHash<T>::hash(const Weak
 {
     if (!value)
         return 0;
-    return hash(value->propertyName(), value->customFunctionPointer());
+    return hash(value->propertyName(), value->customFunctionPointer(), value->slotBaseClassInfoIfExists());
 }
 
 template<typename T>
@@ -143,12 +191,11 @@ inline bool JSGlobalObject::WeakCustomGetterOrSetterHash<T>::equal(const Weak<T>
 }
 
 template<typename T>
-inline unsigned JSGlobalObject::WeakCustomGetterOrSetterHash<T>::hash(const PropertyName& propertyName, typename T::CustomFunctionPointer functionPointer)
+inline unsigned JSGlobalObject::WeakCustomGetterOrSetterHash<T>::hash(const PropertyName& propertyName, typename T::CustomFunctionPointer functionPointer, const ClassInfo* classInfo)
 {
-    unsigned hash = DefaultHash<typename T::CustomFunctionPointer>::hash(functionPointer);
     if (!propertyName.isNull())
-        hash = WTF::pairIntHash(hash, propertyName.uid()->existingSymbolAwareHash());
-    return hash;
+        return WTF::computeHash(functionPointer, propertyName.uid()->existingSymbolAwareHash(), classInfo);
+    return WTF::computeHash(functionPointer, classInfo);
 }
 
 } // namespace JSC

@@ -362,6 +362,32 @@ bool AccessibilityTable::computeIsTableExposableThroughAccessibility() const
     return isDataTable();
 }
 
+
+void AccessibilityTable::recomputeIsExposable()
+{
+    bool previouslyExposable = m_isExposable;
+    m_isExposable = computeIsTableExposableThroughAccessibility();
+    if (previouslyExposable != m_isExposable) {
+        // A table's role value is dependent on whether it's exposed, so notify the cache this has changed.
+        if (auto* cache = axObjectCache())
+            cache->handleRoleChanged(this);
+
+        // Before resetting our existing children, possibly losing references to them, ensure we update their role (since a table cell's role is dependent on whether its parent table is exposable).
+        updateChildrenRoles();
+
+        m_childrenDirty = true;
+    }
+}
+
+void AccessibilityTable::updateChildrenRoles()
+{
+    for (const auto& row : m_rows) {
+        downcast<AccessibilityObject>(*row).updateRole();
+        for (const auto& cell : row->children())
+            downcast<AccessibilityObject>(*cell).updateRole();
+    }
+}
+
 void AccessibilityTable::clearChildren()
 {
     AccessibilityRenderObject::clearChildren();
@@ -381,9 +407,9 @@ void AccessibilityTable::addChildren()
         return;
     }
 
-    ASSERT(!m_haveChildren);
+    ASSERT(!m_childrenInitialized);
 
-    m_haveChildren = true;
+    m_childrenInitialized = true;
     if (!is<RenderTable>(renderer()))
         return;
 
@@ -394,8 +420,7 @@ void AccessibilityTable::addChildren()
     if (HTMLTableElement* tableElement = this->tableElement()) {
         if (auto caption = tableElement->caption()) {
             AccessibilityObject* axCaption = axObjectCache()->getOrCreate(caption.get());
-            if (axCaption && !axCaption->accessibilityIsIgnored())
-                m_children.append(axCaption);
+            addChild(axCaption, DescendIfIgnored::No);
         }
     }
 
@@ -420,22 +445,15 @@ void AccessibilityTable::addChildren()
         column.setColumnIndex(i);
         column.setParent(this);
         m_columns.append(&column);
-        if (!column.accessibilityIsIgnored())
-            m_children.append(&column);
+        addChild(&column, DescendIfIgnored::No);
     }
-
-    auto* headerContainerObject = headerContainer();
-    if (headerContainerObject && !headerContainerObject->accessibilityIsIgnored())
-        m_children.append(headerContainerObject);
+    addChild(headerContainer(), DescendIfIgnored::No);
 
     // Sometimes the cell gets the wrong role initially because it is created before the parent
     // determines whether it is an accessibility table. Iterate all the cells and allow them to
     // update their roles now that the table knows its status.
     // see bug: https://bugs.webkit.org/show_bug.cgi?id=147001
-    for (const auto& row : m_rows) {
-        for (const auto& cell : row->children())
-            cell->updateAccessibilityRole();
-    }
+    updateChildrenRoles();
 }
 
 void AccessibilityTable::addTableCellChild(AccessibilityObject* rowObject, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
@@ -451,8 +469,7 @@ void AccessibilityTable::addTableCellChild(AccessibilityObject* rowObject, HashS
 
     row.setRowIndex(static_cast<int>(m_rows.size()));
     m_rows.append(&row);
-    if (!row.accessibilityIsIgnored())
-        m_children.append(&row);
+    addChild(&row, DescendIfIgnored::No);
     appendedRows.add(&row);
 
     // store the maximum number of columns

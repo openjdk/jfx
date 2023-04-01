@@ -26,11 +26,11 @@
 #include "config.h"
 #include "CSSGradientValue.h"
 
-#include "AnimationUtilities.h"
 #include "CSSCalcValue.h"
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
-#include "ColorBlending.h"
+#include "ColorInterpolation.h"
+#include "GeometryUtilities.h"
 #include "GradientImage.h"
 #include "NodeRenderStyle.h"
 #include "Pair.h"
@@ -109,7 +109,7 @@ bool CSSGradientValue::hasColorDerivedFromElement() const
 
 Ref<CSSGradientValue> CSSGradientValue::valueWithStylesResolved(Style::BuilderState& builderState)
 {
-    auto result = hasColorDerivedFromElement() ? clone(*this) : makeRef(*this);
+    auto result = hasColorDerivedFromElement() ? clone(*this) : Ref { *this };
     resolveStopColors(result->m_stops, [&](const CSSPrimitiveValue& colorValue) {
         return builderState.colorFromPrimitiveValueWithResolvedCurrentColor(colorValue);
     });
@@ -138,7 +138,7 @@ public:
     }
     float maxExtent(float, float) const { return 1; }
 
-    void normalizeStopsAndEndpointsOutsideRange(Vector<GradientStop>& stops)
+    void normalizeStopsAndEndpointsOutsideRange(Vector<GradientStop>& stops, ColorInterpolationMethod)
     {
         float firstOffset = *stops.first().offset;
         float lastOffset = *stops.last().offset;
@@ -181,7 +181,7 @@ public:
         return 1;
     }
 
-    void normalizeStopsAndEndpointsOutsideRange(Vector<GradientStop>& stops)
+    void normalizeStopsAndEndpointsOutsideRange(Vector<GradientStop>& stops, ColorInterpolationMethod colorInterpolationMethod)
     {
         auto numStops = stops.size();
 
@@ -205,8 +205,7 @@ public:
                 float nextOffset = *stops[firstZeroOrGreaterIndex].offset;
 
                 float interStopProportion = -prevOffset / (nextOffset - prevOffset);
-                // FIXME: when we interpolate gradients using premultiplied colors, this should do premultiplication.
-                Color blendedColor = blend(stops[firstZeroOrGreaterIndex - 1].color, stops[firstZeroOrGreaterIndex].color, { interStopProportion });
+                auto blendedColor = interpolateColors(colorInterpolationMethod, stops[firstZeroOrGreaterIndex - 1].color, 1.0f - interStopProportion, stops[firstZeroOrGreaterIndex].color, interStopProportion);
 
                 // Clamp the positions to 0 and set the color.
                 for (size_t i = 0; i < firstZeroOrGreaterIndex; ++i) {
@@ -236,7 +235,7 @@ public:
     float gradientLength() const { return 1; }
     float maxExtent(float, float) const { return 1; }
 
-    void normalizeStopsAndEndpointsOutsideRange(Vector<GradientStop>& stops)
+    void normalizeStopsAndEndpointsOutsideRange(Vector<GradientStop>& stops, ColorInterpolationMethod colorInterpolationMethod)
     {
         size_t numStops = stops.size();
         size_t lastStopIndex = numStops - 1;
@@ -256,8 +255,7 @@ public:
                 float nextOffset = *stops[index].offset;
 
                 float interStopProportion = -previousOffset / (nextOffset - previousOffset);
-                // FIXME: when we interpolate gradients using premultiplied colors, this should do premultiplication.
-                Color blendedColor = blend(stops[index - 1].color, stops[index].color, { interStopProportion });
+                auto blendedColor = interpolateColors(colorInterpolationMethod, stops[index - 1].color, 1.0f - interStopProportion, stops[index].color, interStopProportion);
 
                 // Clamp the positions to 0 and set the color.
                 for (size_t i = 0; i < index; ++i) {
@@ -286,8 +284,7 @@ public:
                 float nextOffset = *stops[index + 1].offset;
 
                 float interStopProportion = (1 - previousOffset) / (nextOffset - previousOffset);
-                // FIXME: when we interpolate gradients using premultiplied colors, this should do premultiplication.
-                Color blendedColor = blend(stops[index].color, stops[index + 1].color, { interStopProportion });
+                auto blendedColor = interpolateColors(colorInterpolationMethod, stops[index].color, 1.0f - interStopProportion, stops[index + 1].color, interStopProportion);
 
                 // Clamp the positions to 1 and set the color.
                 for (size_t i = index + 1; i < numStops; ++i) {
@@ -304,10 +301,12 @@ public:
 };
 
 template<typename GradientAdapter>
-Gradient::ColorStopVector CSSGradientValue::computeStops(GradientAdapter& gradientAdapter, const CSSToLengthConversionData& conversionData, const RenderStyle& style, float maxLengthForRepeat)
+GradientColorStops CSSGradientValue::computeStops(GradientAdapter& gradientAdapter, const CSSToLengthConversionData& conversionData, const RenderStyle& style, float maxLengthForRepeat)
 {
+    bool hasColorFilter = style.hasAppleColorFilter();
+
     if (m_gradientType == CSSDeprecatedLinearGradient || m_gradientType == CSSDeprecatedRadialGradient) {
-        Gradient::ColorStopVector result;
+        GradientColorStops::StopVector result;
         result.reserveInitialCapacity(m_stops.size());
 
         for (auto& stop : m_stops) {
@@ -317,17 +316,14 @@ Gradient::ColorStopVector CSSGradientValue::computeStops(GradientAdapter& gradie
             else
                 offset = stop.position->floatValue(CSSUnitType::CSS_NUMBER);
 
-            Color color = stop.resolvedColor;
-            if (style.hasAppleColorFilter())
-                style.appleColorFilter().transformColor(color);
-            result.uncheckedAppend({ offset, color });
+            result.uncheckedAppend({ offset, hasColorFilter ? style.colorByApplyingColorFilter(stop.resolvedColor) : stop.resolvedColor });
         }
 
-        std::stable_sort(result.begin(), result.end(), [] (const Gradient::ColorStop& a, const Gradient::ColorStop& b) {
+        std::stable_sort(result.begin(), result.end(), [] (const GradientColorStop& a, const GradientColorStop& b) {
             return a.offset < b.offset;
         });
 
-        return result;
+        return GradientColorStops::Sorted { WTFMove(result) };
     }
 
     size_t numStops = m_stops.size();
@@ -338,11 +334,7 @@ Gradient::ColorStopVector CSSGradientValue::computeStops(GradientAdapter& gradie
     for (size_t i = 0; i < numStops; ++i) {
         auto& stop = m_stops[i];
 
-        Color color = stop.resolvedColor;
-        if (style.hasAppleColorFilter())
-            style.appleColorFilter().transformColor(color);
-
-        stops[i].color = color;
+        stops[i].color = hasColorFilter ? style.colorByApplyingColorFilter(stop.resolvedColor) : stop.resolvedColor;
 
         if (stop.position) {
             auto& positionValue = *stop.position;
@@ -485,8 +477,7 @@ Gradient::ColorStopVector CSSGradientValue::computeStops(GradientAdapter& gradie
         for (size_t y = 0; y < 9; ++y) {
             float relativeOffset = (*newStops[y].offset - offset1) / (offset2 - offset1);
             float multiplier = std::pow(relativeOffset, std::log(.5f) / std::log(midpoint));
-            // FIXME: Why not premultiply here?
-            newStops[y].color = blendWithoutPremultiply(color1, color2, { multiplier });
+            newStops[y].color = interpolateColors(m_colorInterpolationMethod.method, color1, 1.0f - multiplier, color2, multiplier);
         }
 
         stops.remove(x);
@@ -557,14 +548,14 @@ Gradient::ColorStopVector CSSGradientValue::computeStops(GradientAdapter& gradie
 
     // If the gradient goes outside the 0-1 range, normalize it by moving the endpoints, and adjusting the stops.
     if (stops.size() > 1 && (*stops.first().offset < 0 || *stops.last().offset > 1))
-        gradientAdapter.normalizeStopsAndEndpointsOutsideRange(stops);
+        gradientAdapter.normalizeStopsAndEndpointsOutsideRange(stops, m_colorInterpolationMethod.method);
 
-    Gradient::ColorStopVector result;
+    GradientColorStops::StopVector result;
     result.reserveInitialCapacity(stops.size());
     for (auto& stop : stops)
-        result.uncheckedAppend({ *stop.offset, stop.color });
+        result.uncheckedAppend({ *stop.offset, WTFMove(stop.color) });
 
-    return result;
+    return GradientColorStops::Sorted { WTFMove(result) };
 }
 
 static float positionFromValue(const CSSPrimitiveValue* value, const CSSToLengthConversionData& conversionData, const FloatSize& size, bool isHorizontal)
@@ -657,7 +648,84 @@ bool CSSGradientValue::equals(const CSSGradientValue& other) const
         && compareCSSValuePtr(m_secondY, other.m_secondY)
         && m_stops == other.m_stops
         && m_gradientType == other.m_gradientType
-        && m_repeating == other.m_repeating;
+        && m_repeating == other.m_repeating
+        && m_colorInterpolationMethod == other.m_colorInterpolationMethod;
+}
+
+static void appendHueInterpolationMethod(StringBuilder& builder, HueInterpolationMethod hueInterpolationMethod)
+{
+    switch (hueInterpolationMethod) {
+    case HueInterpolationMethod::Shorter:
+        break;
+    case HueInterpolationMethod::Longer:
+        builder.append(" longer hue");
+        break;
+    case HueInterpolationMethod::Increasing:
+        builder.append(" increasing hue");
+        break;
+    case HueInterpolationMethod::Decreasing:
+        builder.append(" decreasing hue");
+        break;
+    case HueInterpolationMethod::Specified:
+        builder.append(" specified hue");
+        break;
+    }
+}
+
+static bool appendColorInterpolationMethod(StringBuilder& builder, CSSGradientColorInterpolationMethod colorInterpolationMethod, bool needsLeadingSpace)
+{
+    return WTF::switchOn(colorInterpolationMethod.method.colorSpace,
+        [&] (const ColorInterpolationMethod::HSL& hsl) {
+            builder.append(needsLeadingSpace ? " " : "", "in hsl");
+            appendHueInterpolationMethod(builder, hsl.hueInterpolationMethod);
+            return true;
+        },
+        [&] (const ColorInterpolationMethod::HWB& hwb) {
+            builder.append(needsLeadingSpace ? " " : "", "in hwb");
+            appendHueInterpolationMethod(builder, hwb.hueInterpolationMethod);
+            return true;
+        },
+        [&] (const ColorInterpolationMethod::LCH& lch) {
+            builder.append(needsLeadingSpace ? " " : "", "in lch");
+            appendHueInterpolationMethod(builder, lch.hueInterpolationMethod);
+            return true;
+        },
+        [&] (const ColorInterpolationMethod::Lab&) {
+            builder.append(needsLeadingSpace ? " " : "", "in lab");
+            return true;
+        },
+        [&] (const ColorInterpolationMethod::OKLCH& oklch) {
+            builder.append(needsLeadingSpace ? " " : "", "in oklch");
+            appendHueInterpolationMethod(builder, oklch.hueInterpolationMethod);
+            return true;
+        },
+        [&] (const ColorInterpolationMethod::OKLab&) {
+            if (colorInterpolationMethod.defaultMethod != CSSGradientColorInterpolationMethod::Default::OKLab) {
+                builder.append(needsLeadingSpace ? " " : "", "in oklab");
+                return true;
+            }
+            return false;
+        },
+        [&] (const ColorInterpolationMethod::SRGB&) {
+            if (colorInterpolationMethod.defaultMethod != CSSGradientColorInterpolationMethod::Default::SRGB) {
+                builder.append(needsLeadingSpace ? " " : "", "in srgb");
+                return true;
+            }
+            return false;
+        },
+        [&] (const ColorInterpolationMethod::SRGBLinear&) {
+            builder.append(needsLeadingSpace ? " " : "", "in srgb-linear");
+            return true;
+        },
+        [&] (const ColorInterpolationMethod::XYZD50&) {
+            builder.append(needsLeadingSpace ? " " : "", "in xyz-d50");
+            return true;
+        },
+        [&] (const ColorInterpolationMethod::XYZD65&) {
+            builder.append(needsLeadingSpace ? " " : "", "in xyz-d65");
+            return true;
+        }
+    );
 }
 
 static void appendGradientStops(StringBuilder& builder, const Vector<CSSGradientColorStop, 2>& stops)
@@ -726,6 +794,9 @@ String CSSLinearGradientValue::customCSSText() const
             wroteSomething = true;
         }
 
+        if (appendColorInterpolationMethod(result, colorInterpolationMethod(), wroteSomething))
+            wroteSomething = true;
+
         for (auto& stop : stops()) {
             if (wroteSomething)
                 result.append(", ");
@@ -745,9 +816,7 @@ static void endPointsFromAngle(float angleDeg, const FloatSize& size, FloatPoint
     if (type == CSSPrefixedLinearGradient)
         angleDeg = 90 - angleDeg;
 
-    angleDeg = fmodf(angleDeg, 360);
-    if (angleDeg < 0)
-        angleDeg += 360;
+    angleDeg = toPositiveAngle(angleDeg);
 
     if (!angleDeg) {
         firstPoint.set(0, size.height());
@@ -814,7 +883,7 @@ Ref<Gradient> CSSLinearGradientValue::createGradient(RenderElement& renderer, co
     if (auto* documentElement = renderer.document().documentElement())
         rootStyle = documentElement->renderStyle();
 
-    CSSToLengthConversionData conversionData(&renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view());
+    CSSToLengthConversionData conversionData(renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view(), renderer.generatingElement());
 
     FloatPoint firstPoint;
     FloatPoint secondPoint;
@@ -871,9 +940,7 @@ Ref<Gradient> CSSLinearGradientValue::createGradient(RenderElement& renderer, co
     LinearGradientAdapter adapter { data };
     auto stops = computeStops(adapter, conversionData, renderer.style(), 1);
 
-    auto gradient = Gradient::create(WTFMove(data));
-    gradient->setSortedColorStops(WTFMove(stops));
-    return gradient;
+    return Gradient::create(WTFMove(data), colorInterpolationMethod().method, GradientSpreadMethod::Pad, WTFMove(stops));
 }
 
 bool CSSLinearGradientValue::equals(const CSSLinearGradientValue& other) const
@@ -954,6 +1021,9 @@ String CSSRadialGradientValue::customCSSText() const
             wroteSomething = true;
         }
 
+        if (appendColorInterpolationMethod(result, colorInterpolationMethod(), wroteSomething))
+            wroteSomething = true;
+
         if (wroteSomething)
             result.append(", ");
 
@@ -977,6 +1047,10 @@ float CSSRadialGradientValue::resolveRadius(CSSPrimitiveValue& radius, const CSS
         result = radius.floatValue() * conversionData.zoom();
     else if (widthOrHeight && radius.isPercentage())
         result = *widthOrHeight * radius.floatValue() / 100;
+    else if (widthOrHeight && radius.isCalculatedPercentageWithLength()) {
+        auto expression = radius.cssCalcValue()->createCalculationValue(conversionData);
+        result = expression->evaluate(*widthOrHeight);
+    }
     else
         result = radius.computeLength<float>(conversionData);
     return result;
@@ -1067,7 +1141,7 @@ Ref<Gradient> CSSRadialGradientValue::createGradient(RenderElement& renderer, co
     if (auto* documentElement = renderer.document().documentElement())
         rootStyle = documentElement->renderStyle();
 
-    CSSToLengthConversionData conversionData(&renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view());
+    CSSToLengthConversionData conversionData(renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view(), renderer.generatingElement());
 
     FloatPoint firstPoint = computeEndPoint(firstX(), firstY(), conversionData, size);
     if (!firstX())
@@ -1201,9 +1275,7 @@ Ref<Gradient> CSSRadialGradientValue::createGradient(RenderElement& renderer, co
     RadialGradientAdapter adapter { data };
     auto stops = computeStops(adapter, conversionData, renderer.style(), maxExtent);
 
-    auto gradient = Gradient::create(WTFMove(data));
-    gradient->setSortedColorStops(WTFMove(stops));
-    return gradient;
+    return Gradient::create(WTFMove(data), colorInterpolationMethod().method, GradientSpreadMethod::Pad, WTFMove(stops));
 }
 
 bool CSSRadialGradientValue::equals(const CSSRadialGradientValue& other) const
@@ -1236,6 +1308,9 @@ String CSSConicGradientValue::customCSSText() const
         wroteSomething = true;
     }
 
+    if (appendColorInterpolationMethod(result, colorInterpolationMethod(), wroteSomething))
+        wroteSomething = true;
+
     if (wroteSomething)
         result.append(", ");
 
@@ -1259,7 +1334,7 @@ Ref<Gradient> CSSConicGradientValue::createGradient(RenderElement& renderer, con
     if (auto* documentElement = renderer.document().documentElement())
         rootStyle = documentElement->renderStyle();
 
-    CSSToLengthConversionData conversionData(&renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view());
+    CSSToLengthConversionData conversionData(renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view(), renderer.generatingElement());
 
     FloatPoint centerPoint = computeEndPoint(firstX(), firstY(), conversionData, size);
     if (!firstX())
@@ -1275,9 +1350,7 @@ Ref<Gradient> CSSConicGradientValue::createGradient(RenderElement& renderer, con
     ConicGradientAdapter adapter;
     auto stops = computeStops(adapter, conversionData, renderer.style(), 1);
 
-    auto gradient = Gradient::create(WTFMove(data));
-    gradient->setSortedColorStops(WTFMove(stops));
-    return gradient;
+    return Gradient::create(WTFMove(data), colorInterpolationMethod().method, GradientSpreadMethod::Pad, WTFMove(stops));
 }
 
 bool CSSConicGradientValue::equals(const CSSConicGradientValue& other) const

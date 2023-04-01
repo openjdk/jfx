@@ -33,6 +33,7 @@
 #include <cstdlib>
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/Int128.h>
 #include <wtf/JSONValues.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PrintStream.h>
@@ -303,13 +304,10 @@ MediaTime MediaTime::operator*(int32_t rhs) const
         return positiveInfiniteTime();
     }
 
+    if (hasDoubleValue())
+        return MediaTime::createWithDouble(m_timeValueAsDouble * rhs);
+
     MediaTime a = *this;
-
-    if (a.hasDoubleValue()) {
-        a.m_timeValueAsDouble *= rhs;
-        return a;
-    }
-
     while (!safeMultiply(a.m_timeValue, rhs, a.m_timeValue)) {
         if (a.m_timeScale == 1)
             return signum(a.m_timeValue) == signum(rhs) ? positiveInfiniteTime() : negativeInfiniteTime();
@@ -488,9 +486,8 @@ void MediaTime::setTimeScale(uint32_t timeScale, RoundingFlags flags)
 
     timeScale = std::min(MaximumTimeScale, timeScale);
 
-#if HAVE(INT128_T)
-    __int128_t newValue = static_cast<__int128_t>(m_timeValue) * timeScale;
-    int64_t remainder = newValue % m_timeScale;
+    Int128 newValue = static_cast<Int128>(m_timeValue) * timeScale;
+    int64_t remainder = static_cast<int64_t>(newValue % m_timeScale);
     newValue = newValue / m_timeScale;
 
     if (newValue < std::numeric_limits<int64_t>::min()) {
@@ -502,19 +499,8 @@ void MediaTime::setTimeScale(uint32_t timeScale, RoundingFlags flags)
         *this = positiveInfiniteTime();
         return;
     }
-#else
-    int64_t newValue = m_timeValue / m_timeScale;
-    int64_t partialRemainder = (m_timeValue % m_timeScale) * timeScale;
-    int64_t remainder = partialRemainder % m_timeScale;
 
-    if (!safeMultiply<int64_t>(newValue, static_cast<int64_t>(timeScale), newValue)
-        || !safeAdd(newValue, partialRemainder / m_timeScale, newValue)) {
-        *this = newValue < 0 ? negativeInfiniteTime() : positiveInfiniteTime();
-        return;
-    }
-#endif
-
-    m_timeValue = newValue;
+    m_timeValue = static_cast<int64_t>(newValue);
     std::swap(m_timeScale, timeScale);
 
     if (!remainder)
@@ -626,13 +612,9 @@ String MediaTimeRange::toJSONString() const
     return object->toJSONString();
 }
 
-#ifndef NDEBUG
-
 TextStream& operator<<(TextStream& stream, const MediaTime& time)
 {
     return stream << time.toJSONString();
 }
-
-#endif
 
 }

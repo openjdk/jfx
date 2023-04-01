@@ -29,13 +29,14 @@
 #include "CachedResourceHandle.h"
 #include "CachedResourceRequest.h"
 #include "ContentSecurityPolicy.h"
+#include "Document.h"
 #include "KeepaliveRequestTracker.h"
 #include "ResourceTimingInformation.h"
 #include "Timer.h"
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -136,8 +137,7 @@ public:
 
     Frame* frame() const; // Can be null
     Document* document() const { return m_document.get(); } // Can be null
-    void setDocument(Document* document) { m_document = makeWeakPtr(document); }
-    DocumentLoader* documentLoader() const { return m_documentLoader; }
+    void setDocument(Document* document) { m_document = document; }
     void clearDocumentLoader() { m_documentLoader = nullptr; }
 
     void loadDone(LoadCompletionType, bool shouldPerformPostLoadActions = true);
@@ -200,8 +200,8 @@ private:
     bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&, const URL& preRedirectURL) const;
     bool canRequestInContentDispositionAttachmentSandbox(CachedResource::Type, const URL&) const;
 
-    HashSet<String> m_validatedURLs;
-    HashSet<String> m_cachedSVGImagesURLs;
+    MemoryCompactRobinHoodHashSet<URL> m_validatedURLs;
+    MemoryCompactRobinHoodHashSet<URL> m_cachedSVGImagesURLs;
     mutable DocumentResourceMap m_documentResources;
     WeakPtr<Document> m_document;
     DocumentLoader* m_documentLoader;

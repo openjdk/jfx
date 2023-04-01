@@ -47,34 +47,26 @@ OBJC_CLASS RSABSSATokenBlinder;
 
 namespace WebCore {
 
-enum class PrivateClickMeasurementAttributionEphemeral : bool { No, Yes };
-
 class PrivateClickMeasurement {
 public:
-    using PriorityValue = uint32_t;
+    using PriorityValue = uint8_t;
+    enum class AttributionEphemeral : bool { No, Yes };
 
     enum class PcmDataCarried : bool { NonPersonallyIdentifiable, PersonallyIdentifiable };
     enum class AttributionReportEndpoint : bool { Source, Destination };
+    enum class IsRunningLayoutTest : bool { No, Yes };
 
     struct SourceID {
-        static constexpr uint32_t MaxEntropy = 255;
-
-        SourceID() = default;
-        explicit SourceID(uint32_t id)
+        static constexpr uint8_t MaxEntropy = 255;
+        explicit SourceID(uint8_t id)
             : id { id }
         {
         }
 
-        bool isValid() const
-        {
-            return id <= MaxEntropy;
-        }
-
-        uint32_t id { 0 };
+        uint8_t id { 0 };
     };
 
     struct SourceSite {
-        SourceSite() = default;
         explicit SourceSite(const URL& url)
             : registrableDomain { url }
         {
@@ -85,7 +77,8 @@ public:
         {
         }
 
-        SourceSite isolatedCopy() const { return SourceSite { registrableDomain.isolatedCopy() }; }
+        SourceSite isolatedCopy() const & { return SourceSite { registrableDomain.isolatedCopy() }; }
+        SourceSite isolatedCopy() && { return SourceSite { WTFMove(registrableDomain).isolatedCopy() }; }
 
         bool operator==(const SourceSite& other) const
         {
@@ -131,7 +124,8 @@ public:
         {
         }
 
-        AttributionDestinationSite isolatedCopy() const { return AttributionDestinationSite { registrableDomain.isolatedCopy() }; }
+        AttributionDestinationSite isolatedCopy() const & { return AttributionDestinationSite { registrableDomain.isolatedCopy() }; }
+        AttributionDestinationSite isolatedCopy() && { return AttributionDestinationSite { WTFMove(registrableDomain).isolatedCopy() }; }
 
         bool operator==(const AttributionDestinationSite& other) const
         {
@@ -166,25 +160,80 @@ public:
     };
 
     struct Priority {
-        static constexpr uint32_t MaxEntropy = 63;
+        static constexpr uint8_t MaxEntropy = 63;
 
         explicit Priority(PriorityValue value)
-        : value { value }
+            : value { value }
         {
         }
 
         PriorityValue value;
     };
 
+    struct EphemeralNonce {
+        String nonce;
+
+        EphemeralNonce isolatedCopy() const & { return { nonce.isolatedCopy() }; }
+        EphemeralNonce isolatedCopy() &&  { return { WTFMove(nonce).isolatedCopy() }; }
+
+        WEBCORE_EXPORT bool isValid() const;
+
+        template<class Encoder> void encode(Encoder&) const;
+        template<class Decoder> static std::optional<EphemeralNonce> decode(Decoder&);
+    };
+
+    struct UnlinkableToken {
+#if PLATFORM(COCOA)
+        RetainPtr<RSABSSATokenBlinder> blinder;
+        RetainPtr<RSABSSATokenWaitingActivation> waitingToken;
+        RetainPtr<RSABSSATokenReady> readyToken;
+#endif
+        String valueBase64URL;
+
+        UnlinkableToken isolatedCopy() const &;
+        UnlinkableToken isolatedCopy() &&;
+    };
+
+    struct SourceUnlinkableToken : UnlinkableToken {
+        SourceUnlinkableToken isolatedCopy() const & { return { UnlinkableToken::isolatedCopy() }; }
+        SourceUnlinkableToken isolatedCopy() && { return { UnlinkableToken::isolatedCopy() }; }
+    };
+
+    struct DestinationUnlinkableToken : UnlinkableToken {
+        DestinationUnlinkableToken isolatedCopy() const & { return { UnlinkableToken::isolatedCopy() }; }
+        DestinationUnlinkableToken isolatedCopy() && { return { UnlinkableToken::isolatedCopy() }; }
+    };
+
+    struct SecretToken {
+        String tokenBase64URL;
+        String signatureBase64URL;
+        String keyIDBase64URL;
+        SecretToken isolatedCopy() const & { return { tokenBase64URL.isolatedCopy(), signatureBase64URL.isolatedCopy(), keyIDBase64URL.isolatedCopy() }; }
+        SecretToken isolatedCopy() && { return { WTFMove(tokenBase64URL).isolatedCopy(), WTFMove(signatureBase64URL).isolatedCopy(), WTFMove(keyIDBase64URL).isolatedCopy() }; }
+        bool isValid() const;
+    };
+
+    struct SourceSecretToken : SecretToken {
+        SourceSecretToken isolatedCopy() const & { return { SecretToken::isolatedCopy() }; }
+        SourceSecretToken isolatedCopy() && { return { SecretToken::isolatedCopy() }; }
+    };
+
+    struct DestinationSecretToken : SecretToken {
+        DestinationSecretToken isolatedCopy() const & { return { SecretToken::isolatedCopy() }; }
+        DestinationSecretToken isolatedCopy() && { return { SecretToken::isolatedCopy() }; }
+    };
+
     struct AttributionTriggerData {
-        static constexpr uint32_t MaxEntropy = 15;
+        static constexpr uint8_t MaxEntropy = 15;
 
         enum class WasSent : bool { No, Yes };
 
-        AttributionTriggerData(uint32_t data, Priority priority, WasSent wasSent = WasSent::No)
+        AttributionTriggerData() = default;
+        AttributionTriggerData(uint8_t data, Priority priority, WasSent wasSent = WasSent::No, std::optional<EphemeralNonce> nonce = std::nullopt)
             : data { data }
             , priority { priority.value }
             , wasSent { wasSent }
+            , ephemeralDestinationNonce { nonce }
         {
         }
 
@@ -193,9 +242,25 @@ public:
             return data <= MaxEntropy && priority <= Priority::MaxEntropy;
         }
 
-        uint32_t data;
+        void setDestinationUnlinkableTokenValue(const String& value)
+        {
+            if (!destinationUnlinkableToken)
+                destinationUnlinkableToken = DestinationUnlinkableToken { };
+            destinationUnlinkableToken->valueBase64URL = value;
+        }
+        void setDestinationSecretToken(const DestinationSecretToken& token) { destinationSecretToken = token; }
+        const std::optional<const URL> tokenPublicKeyURL() const { return destinationSite ? PrivateClickMeasurement::tokenPublicKeyURL(*destinationSite) : URL(); }
+        const std::optional<const URL> tokenSignatureURL() const { return destinationSite ? PrivateClickMeasurement::tokenSignatureURL(*destinationSite) : URL(); }
+        WEBCORE_EXPORT Ref<JSON::Object> tokenSignatureJSON() const;
+
+        uint8_t data { 0 };
         PriorityValue priority;
         WasSent wasSent = WasSent::No;
+        std::optional<RegistrableDomain> sourceRegistrableDomain;
+        std::optional<EphemeralNonce> ephemeralDestinationNonce;
+        std::optional<DestinationUnlinkableToken> destinationUnlinkableToken;
+        std::optional<DestinationSecretToken> destinationSecretToken;
+        std::optional<RegistrableDomain> destinationSite;
 
         template<class Encoder> void encode(Encoder&) const;
         template<class Decoder> static std::optional<AttributionTriggerData> decode(Decoder&);
@@ -311,24 +376,23 @@ public:
         }
     };
 
-    PrivateClickMeasurement() = default;
-    PrivateClickMeasurement(SourceID sourceID, const SourceSite& sourceSite, const AttributionDestinationSite& destinationSite, String&& sourceDescription = { }, String&& purchaser = { }, WallTime timeOfAdClick = WallTime::now(), PrivateClickMeasurementAttributionEphemeral isEphemeral = PrivateClickMeasurementAttributionEphemeral::No)
+    PrivateClickMeasurement(SourceID sourceID, const SourceSite& sourceSite, const AttributionDestinationSite& destinationSite, const String& sourceApplicationBundleID, WallTime timeOfAdClick, AttributionEphemeral isEphemeral)
         : m_sourceID { sourceID }
         , m_sourceSite { sourceSite }
         , m_destinationSite { destinationSite }
-        , m_sourceDescription { WTFMove(sourceDescription) }
-        , m_purchaser { WTFMove(purchaser) }
         , m_timeOfAdClick { timeOfAdClick }
         , m_isEphemeral { isEphemeral }
+        , m_sourceApplicationBundleID { sourceApplicationBundleID }
     {
     }
 
     WEBCORE_EXPORT static const Seconds maxAge();
+    WEBCORE_EXPORT bool isNeitherSameSiteNorCrossSiteTriggeringEvent(const RegistrableDomain& redirectDomain, const URL& firstPartyURL, const AttributionTriggerData&);
     WEBCORE_EXPORT static Expected<AttributionTriggerData, String> parseAttributionRequest(const URL& redirectURL);
-    WEBCORE_EXPORT AttributionSecondsUntilSendData attributeAndGetEarliestTimeToSend(AttributionTriggerData&&);
+    WEBCORE_EXPORT AttributionSecondsUntilSendData attributeAndGetEarliestTimeToSend(AttributionTriggerData&&, IsRunningLayoutTest);
     WEBCORE_EXPORT bool hasHigherPriorityThan(const PrivateClickMeasurement&) const;
-    WEBCORE_EXPORT URL attributionReportSourceURL() const;
-    WEBCORE_EXPORT URL attributionReportAttributeOnURL() const;
+    WEBCORE_EXPORT URL attributionReportClickSourceURL() const;
+    WEBCORE_EXPORT URL attributionReportClickDestinationURL() const;
     WEBCORE_EXPORT Ref<JSON::Object> attributionReportJSON() const;
     const SourceSite& sourceSite() const { return m_sourceSite; };
     const AttributionDestinationSite& destinationSite() const { return m_destinationSite; };
@@ -337,86 +401,73 @@ public:
     AttributionTimeToSendData timesToSend() const { return m_timesToSend; };
     void setTimesToSend(AttributionTimeToSendData data) { m_timesToSend = data; }
     const SourceID& sourceID() const { return m_sourceID; }
-    std::optional<AttributionTriggerData> attributionTriggerData() { return m_attributionTriggerData; }
+    const std::optional<AttributionTriggerData>& attributionTriggerData() const { return m_attributionTriggerData; }
     void setAttribution(AttributionTriggerData&& attributionTriggerData) { m_attributionTriggerData = WTFMove(attributionTriggerData); }
+    const String& sourceApplicationBundleID() const { return m_sourceApplicationBundleID; }
+    WEBCORE_EXPORT void setSourceApplicationBundleIDForTesting(const String&);
 
-    const String& sourceDescription() const { return m_sourceDescription; }
-    const String& purchaser() const { return m_purchaser; }
-    bool isEphemeral() const { return m_isEphemeral == PrivateClickMeasurementAttributionEphemeral::Yes; }
-    void setEphemeral(PrivateClickMeasurementAttributionEphemeral isEphemeral) { m_isEphemeral = isEphemeral; }
+    bool isEphemeral() const { return m_isEphemeral == AttributionEphemeral::Yes; }
+    void setEphemeral(AttributionEphemeral isEphemeral) { m_isEphemeral = isEphemeral; }
 
     // MARK: - Fraud Prevention
-    WEBCORE_EXPORT URL tokenPublicKeyURL() const;
-    WEBCORE_EXPORT URL tokenSignatureURL() const;
+    WEBCORE_EXPORT const std::optional<const URL> tokenPublicKeyURL() const;
+    WEBCORE_EXPORT static const std::optional<const URL> tokenPublicKeyURL(const RegistrableDomain&);
+    WEBCORE_EXPORT const std::optional<const URL> tokenSignatureURL() const;
+    WEBCORE_EXPORT static const std::optional<const URL> tokenSignatureURL(const RegistrableDomain&);
 
     WEBCORE_EXPORT Ref<JSON::Object> tokenSignatureJSON() const;
 
-    struct EphemeralSourceNonce {
-        String nonce;
-
-        EphemeralSourceNonce isolatedCopy() const;
-
-        WEBCORE_EXPORT bool isValid() const;
-
-        template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<EphemeralSourceNonce> decode(Decoder&);
-    };
-
-    WEBCORE_EXPORT void setEphemeralSourceNonce(EphemeralSourceNonce&&);
-    std::optional<EphemeralSourceNonce> ephemeralSourceNonce() const { return m_ephemeralSourceNonce; };
+    WEBCORE_EXPORT void setEphemeralSourceNonce(EphemeralNonce&&);
+    std::optional<EphemeralNonce> ephemeralSourceNonce() const { return m_ephemeralSourceNonce; };
     void clearEphemeralSourceNonce() { m_ephemeralSourceNonce.reset(); };
-
-    struct SourceSecretToken {
-        String tokenBase64URL;
-        String signatureBase64URL;
-        String keyIDBase64URL;
-
-        SourceSecretToken isolatedCopy() const;
-        bool isValid() const;
-    };
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT std::optional<String> calculateAndUpdateSourceUnlinkableToken(const String& serverPublicKeyBase64URL);
+    WEBCORE_EXPORT static Expected<DestinationUnlinkableToken, String> calculateAndUpdateDestinationUnlinkableToken(const String& serverPublicKeyBase64URL);
     WEBCORE_EXPORT std::optional<String> calculateAndUpdateSourceSecretToken(const String& serverResponseBase64URL);
+    WEBCORE_EXPORT static Expected<DestinationSecretToken, String> calculateAndUpdateDestinationSecretToken(const String& serverResponseBase64URL, DestinationUnlinkableToken&);
 #endif
 
+    SourceUnlinkableToken& sourceUnlinkableToken() { return m_sourceUnlinkableToken; }
     void setSourceUnlinkableTokenValue(const String& value) { m_sourceUnlinkableToken.valueBase64URL = value; }
-    const std::optional<SourceSecretToken>& sourceUnlinkableToken() const { return m_sourceSecretToken; }
+    const std::optional<SourceSecretToken>& sourceSecretToken() const { return m_sourceSecretToken; }
     WEBCORE_EXPORT void setSourceSecretToken(SourceSecretToken&&);
+    WEBCORE_EXPORT void setDestinationSecretToken(DestinationSecretToken&&);
+
+    static std::optional<uint64_t> appStoreURLAdamID(const URL&);
+    bool isSKAdNetworkAttribution() const { return !!m_adamID; }
+    std::optional<uint64_t> adamID() const { return m_adamID; };
+    void setAdamID(uint64_t adamID) { m_adamID = adamID; };
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<PrivateClickMeasurement> decode(Decoder&);
 
-    WEBCORE_EXPORT PrivateClickMeasurement isolatedCopy() const;
+    WEBCORE_EXPORT PrivateClickMeasurement isolatedCopy() const &;
+    WEBCORE_EXPORT PrivateClickMeasurement isolatedCopy() &&;
 
 private:
+    static Expected<AttributionTriggerData, String> parseAttributionRequestQuery(const URL&);
     bool isValid() const;
+
+#if PLATFORM(COCOA)
+    static std::optional<String> calculateAndUpdateUnlinkableToken(const String& serverPublicKeyBase64URL, UnlinkableToken&, const String& contextForLogMessage);
+    static std::optional<String> calculateAndUpdateSecretToken(const String& serverResponseBase64URL, UnlinkableToken&, SecretToken&, const String& contextForLogMessage);
+#endif
 
     SourceID m_sourceID;
     SourceSite m_sourceSite;
     AttributionDestinationSite m_destinationSite;
-    String m_sourceDescription;
-    String m_purchaser;
     WallTime m_timeOfAdClick;
-    PrivateClickMeasurementAttributionEphemeral m_isEphemeral;
+    AttributionEphemeral m_isEphemeral;
+    std::optional<uint64_t> m_adamID;
 
     std::optional<AttributionTriggerData> m_attributionTriggerData;
     AttributionTimeToSendData m_timesToSend;
 
-    struct SourceUnlinkableToken {
-#if PLATFORM(COCOA)
-        RetainPtr<RSABSSATokenBlinder> blinder;
-        RetainPtr<RSABSSATokenWaitingActivation> waitingToken;
-        RetainPtr<RSABSSATokenReady> readyToken;
-#endif
-        String valueBase64URL;
-
-        SourceUnlinkableToken isolatedCopy() const;
-    };
-
-    std::optional<EphemeralSourceNonce> m_ephemeralSourceNonce;
+    std::optional<EphemeralNonce> m_ephemeralSourceNonce;
     SourceUnlinkableToken m_sourceUnlinkableToken;
     std::optional<SourceSecretToken> m_sourceSecretToken;
+    String m_sourceApplicationBundleID;
 };
 
 template<class Encoder>
@@ -425,19 +476,19 @@ void PrivateClickMeasurement::encode(Encoder& encoder) const
     encoder << m_sourceID.id
         << m_sourceSite.registrableDomain
         << m_destinationSite.registrableDomain
-        << m_sourceDescription
-        << m_purchaser
         << m_timeOfAdClick
         << m_ephemeralSourceNonce
         << m_isEphemeral
         << m_attributionTriggerData
-        << m_timesToSend;
+        << m_sourceApplicationBundleID
+        << m_timesToSend
+        << m_adamID;
 }
 
 template<class Decoder>
 std::optional<PrivateClickMeasurement> PrivateClickMeasurement::decode(Decoder& decoder)
 {
-    std::optional<uint32_t> sourceID;
+    std::optional<uint8_t> sourceID;
     decoder >> sourceID;
     if (!sourceID)
         return std::nullopt;
@@ -452,27 +503,17 @@ std::optional<PrivateClickMeasurement> PrivateClickMeasurement::decode(Decoder& 
     if (!destinationRegistrableDomain)
         return std::nullopt;
 
-    std::optional<String> sourceDescription;
-    decoder >> sourceDescription;
-    if (!sourceDescription)
-        return std::nullopt;
-
-    std::optional<String> purchaser;
-    decoder >> purchaser;
-    if (!purchaser)
-        return std::nullopt;
-
     std::optional<WallTime> timeOfAdClick;
     decoder >> timeOfAdClick;
     if (!timeOfAdClick)
         return std::nullopt;
 
-    std::optional<std::optional<EphemeralSourceNonce>> ephemeralSourceNonce;
+    std::optional<std::optional<EphemeralNonce>> ephemeralSourceNonce;
     decoder >> ephemeralSourceNonce;
     if (!ephemeralSourceNonce)
         return std::nullopt;
 
-    std::optional<PrivateClickMeasurementAttributionEphemeral> isEphemeral;
+    std::optional<AttributionEphemeral> isEphemeral;
     decoder >> isEphemeral;
     if (!isEphemeral)
         return std::nullopt;
@@ -482,54 +523,64 @@ std::optional<PrivateClickMeasurement> PrivateClickMeasurement::decode(Decoder& 
     if (!attributionTriggerData)
         return std::nullopt;
 
+    std::optional<String> sourceApplicationBundleID;
+    decoder >> sourceApplicationBundleID;
+    if (!sourceApplicationBundleID)
+        return std::nullopt;
+
     std::optional<AttributionTimeToSendData> timesToSend;
     decoder >> timesToSend;
     if (!timesToSend)
+        return std::nullopt;
+
+    std::optional<std::optional<uint64_t>> adamID;
+    decoder >> adamID;
+    if (!adamID)
         return std::nullopt;
 
     PrivateClickMeasurement attribution {
         SourceID { WTFMove(*sourceID) },
         SourceSite { WTFMove(*sourceRegistrableDomain) },
         AttributionDestinationSite { WTFMove(*destinationRegistrableDomain) },
-        WTFMove(*sourceDescription),
-        WTFMove(*purchaser),
+        WTFMove(*sourceApplicationBundleID),
         WTFMove(*timeOfAdClick),
         WTFMove(*isEphemeral)
     };
     attribution.m_ephemeralSourceNonce = WTFMove(*ephemeralSourceNonce);
     attribution.m_attributionTriggerData = WTFMove(*attributionTriggerData);
     attribution.m_timesToSend = WTFMove(*timesToSend);
+    attribution.m_adamID = WTFMove(*adamID);
 
     return attribution;
 }
 
 template<class Encoder>
-void PrivateClickMeasurement::EphemeralSourceNonce::encode(Encoder& encoder) const
+void PrivateClickMeasurement::EphemeralNonce::encode(Encoder& encoder) const
 {
     encoder << nonce;
 }
 
 template<class Decoder>
-std::optional<PrivateClickMeasurement::EphemeralSourceNonce> PrivateClickMeasurement::EphemeralSourceNonce::decode(Decoder& decoder)
+std::optional<PrivateClickMeasurement::EphemeralNonce> PrivateClickMeasurement::EphemeralNonce::decode(Decoder& decoder)
 {
     std::optional<String> nonce;
     decoder >> nonce;
     if (!nonce)
         return std::nullopt;
 
-    return EphemeralSourceNonce { WTFMove(*nonce) };
+    return EphemeralNonce { WTFMove(*nonce) };
 }
 
 template<class Encoder>
 void PrivateClickMeasurement::AttributionTriggerData::encode(Encoder& encoder) const
 {
-    encoder << data << priority << wasSent;
+    encoder << data << priority << wasSent << sourceRegistrableDomain << ephemeralDestinationNonce << destinationSite;
 }
 
 template<class Decoder>
 std::optional<PrivateClickMeasurement::AttributionTriggerData> PrivateClickMeasurement::AttributionTriggerData::decode(Decoder& decoder)
 {
-    std::optional<uint32_t> data;
+    std::optional<uint8_t> data;
     decoder >> data;
     if (!data)
         return std::nullopt;
@@ -544,7 +595,26 @@ std::optional<PrivateClickMeasurement::AttributionTriggerData> PrivateClickMeasu
     if (!wasSent)
         return std::nullopt;
 
-    return AttributionTriggerData { WTFMove(*data), Priority { *priority }, *wasSent };
+    std::optional<std::optional<RegistrableDomain>> sourceRegistrableDomain;
+    decoder >> sourceRegistrableDomain;
+    if (!sourceRegistrableDomain)
+        return std::nullopt;
+
+    std::optional<std::optional<EphemeralNonce>> ephemeralDestinationNonce;
+    decoder >> ephemeralDestinationNonce;
+    if (!ephemeralDestinationNonce)
+        return std::nullopt;
+
+    std::optional<std::optional<RegistrableDomain>> destinationSite;
+    decoder >> destinationSite;
+    if (!destinationSite)
+        return std::nullopt;
+
+    AttributionTriggerData attributionTriggerData { WTFMove(*data), Priority { *priority }, *wasSent };
+    attributionTriggerData.sourceRegistrableDomain = WTFMove(*sourceRegistrableDomain);
+    attributionTriggerData.ephemeralDestinationNonce = WTFMove(*ephemeralDestinationNonce);
+    attributionTriggerData.destinationSite = WTFMove(*destinationSite);
+    return attributionTriggerData;
 }
 
 } // namespace WebCore
@@ -554,7 +624,7 @@ template<typename T> struct DefaultHash;
 
 template<> struct DefaultHash<WebCore::PrivateClickMeasurement::SourceSite> : WebCore::PrivateClickMeasurement::SourceSiteHash { };
 template<> struct HashTraits<WebCore::PrivateClickMeasurement::SourceSite> : GenericHashTraits<WebCore::PrivateClickMeasurement::SourceSite> {
-    static WebCore::PrivateClickMeasurement::SourceSite emptyValue() { return { }; }
+    static WebCore::PrivateClickMeasurement::SourceSite emptyValue() { return WebCore::PrivateClickMeasurement::SourceSite(WebCore::RegistrableDomain()); }
     static void constructDeletedValue(WebCore::PrivateClickMeasurement::SourceSite& slot) { new (NotNull, &slot.registrableDomain) WebCore::RegistrableDomain(WTF::HashTableDeletedValue); }
     static bool isDeletedValue(const WebCore::PrivateClickMeasurement::SourceSite& slot) { return slot.registrableDomain.isHashTableDeletedValue(); }
 };

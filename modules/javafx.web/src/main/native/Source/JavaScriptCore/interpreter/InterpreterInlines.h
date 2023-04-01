@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,10 +35,27 @@
 #include "JSCPtrTag.h"
 #include "LLIntData.h"
 #include "ProtoCallFrameInlines.h"
+#include "StackAlignment.h"
 #include "UnlinkedCodeBlock.h"
+#include "VMTrapsInlines.h"
 #include <wtf/UnalignedAccess.h>
 
 namespace JSC {
+
+inline CallFrame* calleeFrameForVarargs(CallFrame* callFrame, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis)
+{
+    // We want the new frame to be allocated on a stack aligned offset with a stack
+    // aligned size. Align the size here.
+    argumentCountIncludingThis = WTF::roundUpToMultipleOf(
+        stackAlignmentRegisters(),
+        argumentCountIncludingThis + CallFrame::headerSizeInRegisters) - CallFrame::headerSizeInRegisters;
+
+    // Align the frame offset here.
+    unsigned paddedCalleeFrameOffset = WTF::roundUpToMultipleOf(
+        stackAlignmentRegisters(),
+        numUsedStackSlots + argumentCountIncludingThis + CallFrame::headerSizeInRegisters);
+    return CallFrame::create(callFrame->registers() - paddedCalleeFrameOffset);
+}
 
 inline Opcode Interpreter::getOpcode(OpcodeID id)
 {
@@ -86,21 +103,25 @@ ALWAYS_INLINE JSValue Interpreter::execute(CallFrameClosure& closure)
             return throwScope.exception();
     }
 
-    // Reload CodeBlock since GC can replace CodeBlock owned by Executable.
-    CodeBlock* codeBlock;
-    Exception* error = closure.functionExecutable->prepareForExecution<FunctionExecutable>(vm, closure.function, closure.scope, CodeForCall, codeBlock);
-    EXCEPTION_ASSERT(throwScope.exception() == error);
-    if (UNLIKELY(error))
-        return checkedReturn(error);
-    codeBlock->m_shouldAlwaysBeInlined = false;
     {
-        DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
-        closure.protoCallFrame->setCodeBlock(codeBlock);
+        DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
+
+        // Reload CodeBlock since GC can replace CodeBlock owned by Executable.
+        CodeBlock* codeBlock;
+        closure.functionExecutable->prepareForExecution<FunctionExecutable>(vm, closure.function, closure.scope, CodeForCall, codeBlock);
+        RETURN_IF_EXCEPTION(throwScope, checkedReturn(throwScope.exception()));
+
+        ASSERT(codeBlock);
+        codeBlock->m_shouldAlwaysBeInlined = false;
+        {
+            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
+            closure.protoCallFrame->setCodeBlock(codeBlock);
+        }
     }
+
     // Execute the code:
     throwScope.release();
     JSValue result = closure.functionExecutable->generatedJITCodeForCall()->execute(&vm, closure.protoCallFrame);
-
     return checkedReturn(result);
 }
 

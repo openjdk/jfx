@@ -33,6 +33,7 @@
 #include "CanvasRenderingContext.h"
 #include "CanvasRenderingContext2D.h"
 #include "DOMMatrix2DInit.h"
+#include "DOMPointInit.h"
 #include "Element.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
@@ -62,8 +63,8 @@
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <JavaScriptCore/TypedArrays.h>
+#include <variant>
 #include <wtf/RefPtr.h>
-#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

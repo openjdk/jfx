@@ -66,7 +66,7 @@ gst_stream_volume_class_init (GstStreamVolumeInterface * iface)
 GType
 gst_stream_volume_get_type (void)
 {
-  static volatile gsize type = 0;
+  static gsize type = 0;
   if (g_once_init_enter (&type)) {
     GType tmp;
     static const GTypeInfo info = {

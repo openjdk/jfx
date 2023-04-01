@@ -57,14 +57,27 @@ endif ()
 #FIXME: Workaround
 list(APPEND WebCoreTestSupport_LIBRARIES ${SQLite3_LIBRARIES})
 
+if (ENABLE_MODERN_MEDIA_CONTROLS)
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.css
     ${WEBCORE_DIR}/css/themeAdwaita.css
+    ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
 )
+else()
+list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
+    ${WEBCORE_DIR}/css/themeAdwaita.css
+    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.css
+)
+endif()
 
+if (ENABLE_MODERN_MEDIA_CONTROLS)
+set(WebCore_USER_AGENT_SCRIPTS
+    ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
+)
+else()
 set(WebCore_USER_AGENT_SCRIPTS
     ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.js
 )
+endif()
 
 add_definitions(-DMAX_DOM_TREE_DEPTH=2000)
 
@@ -78,10 +91,15 @@ list(APPEND WebCore_LIBRARIES
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+if (USE_SYSTEM_MALLOC)
+    message(STATUS "Using system malloc")
+    add_definitions(-DUSE_SYSTEM_MALLOC)
+endif ()
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/java/JavaDOMUtils.h
     bindings/java/JavaEventListener.h
+    bindings/java/EventListenerManager.h
     bindings/java/JavaNodeFilterCondition.h
     bridge/jni/jsc/BridgeUtils.h
     dom/DOMStringList.h

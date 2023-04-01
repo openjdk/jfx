@@ -89,13 +89,13 @@ public:
     ForcedAccessibilityValue forcedSupportsHighDynamicRangeValue() const;
     void setForcedSupportsHighDynamicRangeValue(ForcedAccessibilityValue);
 
-    // RuntimeEnabledFeatures.
+    // DeprecatedGlobalSettings.
     ExceptionOr<void> setFetchAPIKeepAliveEnabled(bool);
     ExceptionOr<void> setCustomPasteboardDataEnabled(bool);
 
     bool vp9DecoderEnabled() const;
+    bool mediaSourceInlinePaintingEnabled() const;
 
-    // DeprecatedGlobalSettings.
     ExceptionOr<void> setShouldManageAudioSessionCategory(bool);
 
     // CaptionUserPreferences.
@@ -120,6 +120,12 @@ public:
 
     // AudioContext
     ExceptionOr<void> setDefaultAudioContextSampleRate(float);
+
+    ExceptionOr<void> setAllowedMediaContainerTypes(const String&);
+    ExceptionOr<void> setAllowedMediaCodecTypes(const String&);
+    ExceptionOr<void> setAllowedMediaVideoCodecIDs(const String&);
+    ExceptionOr<void> setAllowedMediaAudioCodecIDs(const String&);
+    ExceptionOr<void> setAllowedMediaCaptionFormatTypes(const String&);
 
 private:
     explicit InternalSettings(Page*);
@@ -155,11 +161,9 @@ private:
         WebCore::FontLoadTimingOverride m_fontLoadTimingOverride;
         WebCore::FrameFlattening m_frameFlattening;
 
-        // RuntimeEnabledFeatures
+        // DeprecatedGlobalSettings
         bool m_fetchAPIKeepAliveAPIEnabled;
         bool m_customPasteboardDataEnabled;
-
-        // DeprecatedGlobalSettings
         bool m_originalMockScrollbarsEnabled;
 #if USE(AUDIO_SESSION)
         bool m_shouldManageAudioSessionCategory;
@@ -167,9 +171,6 @@ private:
 
         // PlatformMediaSessionManager
         bool m_shouldDeactivateAudioSession;
-
-        // RenderTheme/FontCache
-        bool m_shouldMockBoldSystemFontForAccessibility;
     };
 
     Page* m_page;

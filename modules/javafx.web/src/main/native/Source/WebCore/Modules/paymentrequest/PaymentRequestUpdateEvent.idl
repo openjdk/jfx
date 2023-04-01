@@ -25,11 +25,11 @@
 
 [
     Conditional=PAYMENT_REQUEST,
-    EnabledBySetting=PaymentRequest,
+    EnabledBySetting=PaymentRequestEnabled,
     Exposed=Window,
     SecureContext
 ] interface PaymentRequestUpdateEvent : Event {
-    constructor(DOMString type, optional PaymentRequestUpdateEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional PaymentRequestUpdateEventInit eventInitDict);
 
     undefined updateWith(Promise<PaymentDetailsUpdate> detailsPromise);
 };

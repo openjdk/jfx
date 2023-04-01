@@ -135,11 +135,7 @@ static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggi
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isErrorPageKey());
         isCacheable = false;
     }
-    if (frameLoader.subframeLoader().containsPlugins() && !frame.page()->settings().backForwardCacheSupportsPlugins()) {
-        PCLOG("   -Frame contains plugins");
-        isCacheable = false;
-    }
-    if (frame.isMainFrame() && frame.document() && frame.document()->url().protocolIs("https") && documentLoader->response().cacheControlContainsNoStore()) {
+    if (frame.isMainFrame() && frame.document() && frame.document()->url().protocolIs("https"_s) && documentLoader->response().cacheControlContainsNoStore()) {
         PCLOG("   -Frame is HTTPS, and cache control prohibits storing");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::httpsNoStoreKey());
         isCacheable = false;
@@ -289,7 +285,7 @@ BackForwardCache::BackForwardCache()
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
-        PAL::registerNotifyCallback("com.apple.WebKit.showBackForwardCache", [] {
+        PAL::registerNotifyCallback("com.apple.WebKit.showBackForwardCache"_s, [] {
             BackForwardCache::singleton().dump();
         });
     });
@@ -321,7 +317,7 @@ bool BackForwardCache::canCache(Page& page) const
 
 void BackForwardCache::pruneToSizeNow(unsigned size, PruningReason pruningReason)
 {
-    SetForScope<unsigned> change(m_maxSize, size);
+    SetForScope change(m_maxSize, size);
     prune(pruningReason);
 }
 
@@ -388,10 +384,9 @@ static String pruningReasonToDiagnosticLoggingKey(PruningReason pruningReason)
 
 static void setBackForwardCacheState(Page& page, Document::BackForwardCacheState BackForwardCacheState)
 {
-    for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (auto* document = frame->document())
-            document->setBackForwardCacheState(BackForwardCacheState);
-    }
+    page.forEachDocument([&] (Document& document) {
+        document.setBackForwardCacheState(BackForwardCacheState);
+    });
 }
 
 // When entering back/forward cache, tear down the render tree before setting the in-cache flag.
@@ -439,8 +434,8 @@ std::unique_ptr<CachedPage> BackForwardCache::trySuspendPage(Page& page, ForceSu
 
     // Focus the main frame, defocusing a focused subframe (if we have one). We do this here,
     // before the page enters the back/forward cache, while we still can dispatch DOM blur/focus events.
-    if (page.focusController().focusedFrame())
-        page.focusController().setFocusedFrame(&page.mainFrame());
+    if (CheckedRef focusController { page.focusController() }; focusController->focusedFrame())
+        focusController->setFocusedFrame(&page.mainFrame());
 
     // Fire the pagehide event in all frames.
     firePageHideEventRecursively(page.mainFrame());
@@ -525,7 +520,7 @@ void BackForwardCache::removeAllItemsForPage(Page& page)
 {
 #if ASSERT_ENABLED
     ASSERT_WITH_MESSAGE(!m_isInRemoveAllItemsForPage, "We should not reenter this method");
-    SetForScope<bool> inRemoveAllItemsForPageScope { m_isInRemoveAllItemsForPage, true };
+    SetForScope inRemoveAllItemsForPageScope { m_isInRemoveAllItemsForPage, true };
 #endif
 
     for (auto it = m_items.begin(); it != m_items.end();) {

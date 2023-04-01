@@ -39,6 +39,9 @@ public:
     static Ref<WorkerSWClientConnection> create(WorkerGlobalScope& scope) { return adoptRef(*new WorkerSWClientConnection { scope }); }
     ~WorkerSWClientConnection();
 
+    void registerServiceWorkerClient(const ClientOrigin&, ServiceWorkerClientData&&, const std::optional<ServiceWorkerRegistrationIdentifier>&, String&& userAgent) final;
+    void unregisterServiceWorkerClient(ScriptExecutionContextIdentifier) final;
+
 private:
     explicit WorkerSWClientConnection(WorkerGlobalScope&);
 
@@ -51,12 +54,20 @@ private:
     void postMessageToServiceWorker(ServiceWorkerIdentifier destination, MessageWithMessagePorts&&, const ServiceWorkerOrClientIdentifier& source) final;
     SWServerConnectionIdentifier serverConnectionIdentifier() const final;
     bool mayHaveServiceWorkerRegisteredForOrigin(const SecurityOriginData&) const final;
-    void registerServiceWorkerClient(const SecurityOrigin& topOrigin, const ServiceWorkerClientData&, const std::optional<ServiceWorkerRegistrationIdentifier>&, const String& userAgent) final;
-    void unregisterServiceWorkerClient(DocumentIdentifier) final;
-    void finishFetchingScriptInServer(const ServiceWorkerFetchResult&) final;
+    void finishFetchingScriptInServer(const ServiceWorkerJobDataIdentifier&, ServiceWorkerRegistrationKey&&, WorkerFetchResult&&) final;
     void scheduleJobInServer(const ServiceWorkerJobData&) final;
-    void scheduleJob(DocumentOrWorkerIdentifier, const ServiceWorkerJobData&) final;
-    void scheduleUnregisterJobInServer(ServiceWorkerRegistrationIdentifier, DocumentOrWorkerIdentifier, CompletionHandler<void(ExceptionOr<bool>&&)>&&) final;
+    void scheduleJob(ServiceWorkerOrClientIdentifier, const ServiceWorkerJobData&) final;
+    void scheduleUnregisterJobInServer(ServiceWorkerRegistrationIdentifier, ServiceWorkerOrClientIdentifier, CompletionHandler<void(ExceptionOr<bool>&&)>&&) final;
+    void subscribeToPushService(ServiceWorkerRegistrationIdentifier, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&&) final;
+    void unsubscribeFromPushService(ServiceWorkerRegistrationIdentifier, PushSubscriptionIdentifier, UnsubscribeFromPushServiceCallback&&) final;
+    void getPushSubscription(ServiceWorkerRegistrationIdentifier, GetPushSubscriptionCallback&&) final;
+    void getPushPermissionState(ServiceWorkerRegistrationIdentifier, GetPushPermissionStateCallback&&) final;
+    void getNotifications(const URL&, const String&, GetNotificationsCallback&&) final;
+
+    void enableNavigationPreload(ServiceWorkerRegistrationIdentifier, ExceptionOrVoidCallback&&) final;
+    void disableNavigationPreload(ServiceWorkerRegistrationIdentifier, ExceptionOrVoidCallback&&) final;
+    void setNavigationPreloadHeaderValue(ServiceWorkerRegistrationIdentifier, String&&, ExceptionOrVoidCallback&&) final;
+    void getNavigationPreloadState(ServiceWorkerRegistrationIdentifier, ExceptionOrNavigationPreloadStateCallback&&) final;
 
     Ref<WorkerThread> m_thread;
 
@@ -65,6 +76,13 @@ private:
     HashMap<uint64_t, GetRegistrationsCallback> m_getRegistrationsRequests;
     HashMap<uint64_t, WhenRegistrationReadyCallback> m_whenRegistrationReadyRequests;
     HashMap<uint64_t, CompletionHandler<void(ExceptionOr<bool>&&)>> m_unregisterRequests;
+    HashMap<uint64_t, SubscribeToPushServiceCallback> m_subscribeToPushServiceRequests;
+    HashMap<uint64_t, UnsubscribeFromPushServiceCallback> m_unsubscribeFromPushServiceRequests;
+    HashMap<uint64_t, GetPushSubscriptionCallback> m_getPushSubscriptionRequests;
+    HashMap<uint64_t, GetPushPermissionStateCallback> m_getPushPermissionStateCallbacks;
+    HashMap<uint64_t, ExceptionOrVoidCallback> m_voidCallbacks;
+    HashMap<uint64_t, ExceptionOrNavigationPreloadStateCallback> m_navigationPreloadStateCallbacks;
+    HashMap<uint64_t, GetNotificationsCallback> m_getNotificationsCallbacks;
 };
 
 } // namespace WebCore

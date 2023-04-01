@@ -355,12 +355,13 @@ public:
     RegisterSet mutableFPRs();
     RegisterSet pinnedRegisters() const { return m_pinnedRegs; }
 
-    WeakRandom& weakRandom() { return m_weakRandom; }
-
     void emitDefaultPrologue(CCallHelpers&);
     void emitEpilogue(CCallHelpers&);
 
     std::unique_ptr<GenerateAndAllocateRegisters> m_generateAndAllocateRegisters;
+
+    void setForceIRCRegisterAllocation() { m_forceIRC = true; }
+    bool forceIRCRegisterAllocation() { return m_forceIRC; }
 
 private:
     friend class ::JSC::B3::Procedure;
@@ -381,7 +382,6 @@ private:
         ASSERT_NOT_REACHED();
     }
 
-    WeakRandom m_weakRandom;
     Procedure& m_proc; // Some meta-data, like byproducts, is stored in the Procedure.
     Vector<Reg> m_gpRegsInPriorityOrder;
     Vector<Reg> m_fpRegsInPriorityOrder;
@@ -400,6 +400,7 @@ private:
     unsigned m_optLevel { defaultOptLevel() };
     bool m_stackIsAllocated { false };
     bool m_preserveB3Origins { true };
+    bool m_forceIRC { false };
     RegisterAtOffsetList m_uncorrectedCalleeSaveRegisterAtOffsetList;
     RegisterSet m_calleeSaveRegisters;
     StackSlot* m_calleeSaveStackSlot { nullptr };

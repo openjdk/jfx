@@ -58,6 +58,7 @@ public:
     const_iterator end() const { return m_values.end(); }
     iterator begin() { return m_values.begin(); }
     iterator end() { return m_values.end(); }
+    size_t size() const { return m_values.size(); }
 
     void append(Ref<CSSValue>&&);
     void prepend(Ref<CSSValue>&&);
@@ -65,11 +66,11 @@ public:
     bool hasValue(CSSValue*) const;
     Ref<CSSValueList> copy();
 
-    String customCSSText() const;
+    String customCSSText(Document* = nullptr) const;
     bool equals(const CSSValueList&) const;
     bool equals(const CSSValue&) const;
 
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
 
     unsigned separator() const { return m_valueSeparator; }
 

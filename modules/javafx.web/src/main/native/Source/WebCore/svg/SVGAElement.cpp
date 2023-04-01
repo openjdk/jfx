@@ -32,12 +32,15 @@
 #include "HTMLAnchorElement.h"
 #include "HTMLParserIdioms.h"
 #include "KeyboardEvent.h"
+#include "LegacyRenderSVGTransformableContainer.h"
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGText.h"
 #include "RenderSVGTransformableContainer.h"
 #include "ResourceRequest.h"
+#include "SVGElementInlines.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGSMILElement.h"
 #include "XLinkNames.h"
@@ -108,7 +111,12 @@ RenderPtr<RenderElement> SVGAElement::createElementRenderer(RenderStyle&& style,
 {
     if (is<SVGElement>(parentNode()) && downcast<SVGElement>(*parentNode()).isTextContent())
         return createRenderer<RenderSVGInline>(*this, WTFMove(style));
-    return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
 }
 
 void SVGAElement::defaultEventHandler(Event& event)
@@ -124,7 +132,7 @@ void SVGAElement::defaultEventHandler(Event& event)
             String url = stripLeadingAndTrailingHTMLSpaces(href());
 
             if (url[0] == '#') {
-                auto targetElement = makeRefPtr(treeScope().getElementById(url.substringSharingImpl(1)));
+                RefPtr targetElement = treeScope().getElementById(url.substringSharingImpl(1));
                 if (is<SVGSMILElement>(targetElement)) {
                     downcast<SVGSMILElement>(*targetElement).beginByLinkActivation();
                     event.setDefaultHandled();
@@ -132,12 +140,12 @@ void SVGAElement::defaultEventHandler(Event& event)
                 }
             }
 
-            String target = this->target();
-            if (target.isEmpty() && attributeWithoutSynchronization(XLinkNames::showAttr) == "new")
-                target = "_blank";
+            auto target = this->target();
+            if (target.isEmpty() && attributeWithoutSynchronization(XLinkNames::showAttr) == "new"_s)
+                target = blankTargetFrameName();
             event.setDefaultHandled();
 
-            auto frame = makeRefPtr(document().frame());
+            RefPtr frame = document().frame();
             if (!frame)
                 return;
             frame->loader().changeLocation(document().completeURL(url), target, &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
@@ -208,9 +216,9 @@ bool SVGAElement::childShouldCreateRenderer(const Node& child) const
     return SVGElement::childShouldCreateRenderer(child);
 }
 
-bool SVGAElement::willRespondToMouseClickEvents()
+bool SVGAElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
-    return isLink() || SVGGraphicsElement::willRespondToMouseClickEvents();
+    return isLink() || SVGGraphicsElement::willRespondToMouseClickEventsWithEditability(editability);
 }
 
 SharedStringHash SVGAElement::visitedLinkHash() const
@@ -226,10 +234,10 @@ DOMTokenList& SVGAElement::relList()
     if (!m_relList) {
         m_relList = makeUnique<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
 #if USE(SYSTEM_PREVIEW)
-            if (equalIgnoringASCIICase(token, "ar"))
+            if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return true;
 #endif
-            return equalIgnoringASCIICase(token, "noreferrer") || equalIgnoringASCIICase(token, "noopener");
+            return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s);
         });
     }
     return *m_relList;

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ImplementationVisibility.h"
 #include "Lexer.h"
 #include "ParserFunctionInfo.h"
 #include "YarrSyntaxChecker.h"
@@ -86,7 +87,7 @@ public:
         TemplateExpressionListResult, TemplateExpr,
         TaggedTemplateExpr, YieldExpr, AwaitExpr,
         ModuleNameResult, PrivateIdentifier,
-        ImportSpecifierResult, ImportSpecifierListResult,
+        ImportSpecifierResult, ImportSpecifierListResult, ImportAssertionListResult,
         ExportSpecifierResult, ExportSpecifierListResult,
 
         NewTargetExpr = MetaPropertyBit | 0,
@@ -128,6 +129,7 @@ public:
     typedef int ModuleName;
     typedef int ImportSpecifier;
     typedef int ImportSpecifierList;
+    typedef int ImportAssertionList;
     typedef int ExportSpecifier;
     typedef int ExportSpecifierList;
     typedef int Statement;
@@ -159,7 +161,7 @@ public:
     ExpressionType createLogicalNot(const JSTokenLocation&, ExpressionType) { return UnaryExpr; }
     ExpressionType createUnaryPlus(const JSTokenLocation&, ExpressionType) { return UnaryExpr; }
     ExpressionType createVoid(const JSTokenLocation&, ExpressionType) { return UnaryExpr; }
-    ExpressionType createImportExpr(const JSTokenLocation&, ExpressionType, int, int, int) { return ImportExpr; }
+    ExpressionType createImportExpr(const JSTokenLocation&, ExpressionType, ExpressionType, int, int, int) { return ImportExpr; }
     ExpressionType createThisExpr(const JSTokenLocation&) { return ThisExpr; }
     ExpressionType createSuperExpr(const JSTokenLocation&) { return SuperExpr; }
     ExpressionType createNewTargetExpr(const JSTokenLocation&) { return NewTargetExpr; }
@@ -196,7 +198,7 @@ public:
     ExpressionType createFunctionExpr(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     ExpressionType createGeneratorFunctionBody(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&, const Identifier&) { return FunctionExpr; }
     ExpressionType createAsyncFunctionBody(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
-    int createFunctionMetadata(const JSTokenLocation&, const JSTokenLocation&, unsigned, unsigned, int, int, int, LexicalScopeFeatures, ConstructorKind, SuperBinding, unsigned, SourceParseMode, bool) { return FunctionBodyResult; }
+    int createFunctionMetadata(const JSTokenLocation&, const JSTokenLocation&, unsigned, unsigned, int, int, int, ImplementationVisibility, LexicalScopeFeatures, ConstructorKind, SuperBinding, unsigned, SourceParseMode, bool) { return FunctionBodyResult; }
     ExpressionType createArrowFunctionExpr(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     ExpressionType createMethodDefinition(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return FunctionExpr; }
     void setFunctionNameStart(int, int) { }
@@ -278,11 +280,13 @@ public:
     ImportSpecifier createImportSpecifier(const JSTokenLocation&, const Identifier&, const Identifier&) { return ImportSpecifierResult; }
     ImportSpecifierList createImportSpecifierList() { return ImportSpecifierListResult; }
     void appendImportSpecifier(ImportSpecifierList, ImportSpecifier) { }
-    int createImportDeclaration(const JSTokenLocation&, ImportSpecifierList, ModuleName) { return StatementResult; }
-    int createExportAllDeclaration(const JSTokenLocation&, ModuleName) { return StatementResult; }
+    ImportAssertionList createImportAssertionList() { return ImportAssertionListResult; }
+    void appendImportAssertion(ImportAssertionList, const Identifier&, const Identifier&) { }
+    int createImportDeclaration(const JSTokenLocation&, ImportSpecifierList, ModuleName, ImportAssertionList) { return StatementResult; }
+    int createExportAllDeclaration(const JSTokenLocation&, ModuleName, ImportAssertionList) { return StatementResult; }
     int createExportDefaultDeclaration(const JSTokenLocation&, int, const Identifier&) { return StatementResult; }
     int createExportLocalDeclaration(const JSTokenLocation&, int) { return StatementResult; }
-    int createExportNamedDeclaration(const JSTokenLocation&, ExportSpecifierList, ModuleName) { return StatementResult; }
+    int createExportNamedDeclaration(const JSTokenLocation&, ExportSpecifierList, ModuleName, ImportAssertionList) { return StatementResult; }
     ExportSpecifier createExportSpecifier(const JSTokenLocation&, const Identifier&, const Identifier&) { return ExportSpecifierResult; }
     ExportSpecifierList createExportSpecifierList() { return ExportSpecifierListResult; }
     void appendExportSpecifier(ExportSpecifierList, ExportSpecifier) { }

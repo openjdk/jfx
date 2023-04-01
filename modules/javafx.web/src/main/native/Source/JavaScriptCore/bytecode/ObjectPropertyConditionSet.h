@@ -27,8 +27,8 @@
 
 #include "ObjectPropertyCondition.h"
 #include <wtf/FastMalloc.h>
-#include <wtf/FixedVector.h>
 #include <wtf/Hasher.h>
+#include <wtf/RefCountedFixedVector.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -43,52 +43,54 @@ namespace JSC {
 
 class ObjectPropertyConditionSet {
 public:
-    ObjectPropertyConditionSet() { }
+    using Conditions = ThreadSafeRefCountedFixedVector<ObjectPropertyCondition>;
+
+    ObjectPropertyConditionSet() = default;
 
     static ObjectPropertyConditionSet invalid()
     {
         ObjectPropertyConditionSet result;
-        result.m_data = adoptRef(new Data());
+        result.m_data = Conditions::create(0);
+        ASSERT(!result.isValid());
         return result;
     }
 
-    static ObjectPropertyConditionSet create(Vector<ObjectPropertyCondition>&& vector)
+    template<typename Vector>
+    static ObjectPropertyConditionSet create(Vector&& vector)
     {
         if (vector.isEmpty())
             return ObjectPropertyConditionSet();
 
         ObjectPropertyConditionSet result;
-        result.m_data = adoptRef(new Data());
-        result.m_data->m_vector = FixedVector<ObjectPropertyCondition>(WTFMove(vector));
+        result.m_data = Conditions::createFromVector(std::forward<Vector>(vector));
+        ASSERT(result.isValid());
         return result;
     }
 
     bool isValid() const
     {
-        return !m_data || !m_data->m_vector.isEmpty();
+        return !m_data || !m_data->isEmpty();
     }
 
-    bool isValidAndWatchable() const;
-
-    size_t size() const { return m_data ? m_data->m_vector.size() : 0; }
+    size_t size() const { return m_data ? m_data->size() : 0; }
     bool isEmpty() const
     {
         return !m_data;
     }
 
-    typedef const ObjectPropertyCondition* iterator;
+    using const_iterator = Conditions::const_iterator;
 
-    iterator begin() const
+    const_iterator begin() const
     {
         if (!m_data)
             return nullptr;
-        return m_data->m_vector.begin();
+        return m_data->cbegin();
     }
-    iterator end() const
+    const_iterator end() const
     {
         if (!m_data)
             return nullptr;
-        return m_data->m_vector.end();
+        return m_data->cend();
     }
 
     unsigned hash() const
@@ -136,7 +138,6 @@ public:
     ObjectPropertyConditionSet mergedWith(const ObjectPropertyConditionSet& other) const;
 
     bool structuresEnsureValidity() const;
-    bool structuresEnsureValidityAssumingImpurePropertyWatchpoint() const;
 
     bool needImpurePropertyWatchpoint() const;
 
@@ -152,44 +153,14 @@ public:
     void dumpInContext(PrintStream&, DumpContext*) const;
     void dump(PrintStream&) const;
 
-    // Helpers for using this in a union.
-    void* releaseRawPointer()
-    {
-        return static_cast<void*>(m_data.leakRef());
-    }
-    static ObjectPropertyConditionSet adoptRawPointer(void* rawPointer)
-    {
-        ObjectPropertyConditionSet result;
-        result.m_data = adoptRef(static_cast<Data*>(rawPointer));
-        return result;
-    }
-    static ObjectPropertyConditionSet fromRawPointer(void* rawPointer)
-    {
-        ObjectPropertyConditionSet result;
-        result.m_data = static_cast<Data*>(rawPointer);
-        return result;
-    }
-
-    // FIXME: Everything below here should be private, but cannot be because of a bug in VS.
-
     // Internally, this represents Invalid using a pointer to a Data that has an empty vector.
 
     // FIXME: This could be made more compact by having it internally use a vector that just has
     // the non-uid portion of ObjectPropertyCondition, and then requiring that the callers of all
     // of the APIs supply the uid.
 
-    class Data : public ThreadSafeRefCounted<Data> {
-        WTF_MAKE_NONCOPYABLE(Data);
-        WTF_MAKE_FAST_ALLOCATED;
-
-    public:
-        Data() { }
-
-        FixedVector<ObjectPropertyCondition> m_vector;
-    };
-
 private:
-    RefPtr<Data> m_data;
+    RefPtr<Conditions> m_data;
 };
 
 ObjectPropertyCondition generateConditionForSelfEquivalence(
@@ -199,6 +170,7 @@ ObjectPropertyConditionSet generateConditionsForPropertyMiss(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPropertySetterMiss(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
+ObjectPropertyConditionSet generateConditionsForIndexedMiss(VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(
     VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
     UniquedStringImpl* uid);

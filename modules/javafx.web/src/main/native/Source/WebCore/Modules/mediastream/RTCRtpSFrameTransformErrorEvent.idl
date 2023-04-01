@@ -36,11 +36,11 @@ dictionary RTCRtpSFrameTransformErrorEventInit : EventInit {
 
 [
     Conditional=WEB_RTC,
-    EnabledBySetting=WebRTCInsertableStreams,
+    EnabledBySetting=WebRTCSFrameTransformEnabled,
     Exposed=(Window,DedicatedWorker),
     InterfaceName=SFrameTransformErrorEvent
 ] interface RTCRtpSFrameTransformErrorEvent : Event {
-    constructor(DOMString type, RTCRtpSFrameTransformErrorEventInit eventInitDict);
+    constructor([AtomString] DOMString type, RTCRtpSFrameTransformErrorEventInit eventInitDict);
 
     readonly attribute RTCRtpSFrameTransformErrorEventType errorType;
     // FIXME: Add below fields

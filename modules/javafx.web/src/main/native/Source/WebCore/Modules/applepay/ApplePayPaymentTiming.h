@@ -25,16 +25,21 @@
 
 #pragma once
 
-#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM) || ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
-
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 enum class ApplePayPaymentTiming : uint8_t {
     Immediate,
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
     Recurring,
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
     Deferred,
+#endif
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_LINE_ITEM)
+    AutomaticReload,
+#endif
 };
 
 } // namespace WebCore
@@ -44,12 +49,17 @@ namespace WTF {
 template<> struct EnumTraits<WebCore::ApplePayPaymentTiming> {
     using values = EnumValues<
         WebCore::ApplePayPaymentTiming,
-        WebCore::ApplePayPaymentTiming::Immediate,
-        WebCore::ApplePayPaymentTiming::Recurring,
-        WebCore::ApplePayPaymentTiming::Deferred
+        WebCore::ApplePayPaymentTiming::Immediate
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+        , WebCore::ApplePayPaymentTiming::Recurring
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+        , WebCore::ApplePayPaymentTiming::Deferred
+#endif
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_LINE_ITEM)
+        , WebCore::ApplePayPaymentTiming::AutomaticReload
+#endif
     >;
 };
 
 } // namespace WTF
-
-#endif // ENABLE(APPLE_PAY_RECURRING_LINE_ITEM) || ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)

@@ -38,6 +38,8 @@ struct pas_segregated_shared_view;
 typedef struct pas_extended_segregated_shared_view pas_extended_segregated_shared_view;
 typedef struct pas_segregated_shared_view pas_segregated_shared_view;
 
+PAS_API extern size_t pas_segregated_shared_view_count;
+
 struct pas_segregated_shared_view {
     pas_shared_handle_or_page_boundary shared_handle_or_page_boundary;
     pas_lock commit_lock;
@@ -119,7 +121,7 @@ pas_segregated_shared_view_can_bump(
     unsigned bump_limit;
 
     bump_limit = (unsigned)
-        pas_segregated_page_config_object_payload_end_offset_from_boundary(page_config);
+        pas_segregated_page_config_payload_end_offset_for_role(page_config, pas_segregated_page_shared_role);
     result = pas_segregated_shared_view_compute_initial_new_bump(view, size, alignment, page_config);
 
     return result.new_bump <= bump_limit;
@@ -138,7 +140,7 @@ pas_segregated_shared_view_compute_new_bump(
 
     total_shift = page_config.base.min_align_shift + page_config.sharing_shift;
     bump_limit = (unsigned)
-        pas_segregated_page_config_object_payload_end_offset_from_boundary(page_config);
+        pas_segregated_page_config_payload_end_offset_for_role(page_config, pas_segregated_page_shared_role);
     result = pas_segregated_shared_view_compute_initial_new_bump(view, size, alignment, page_config);
 
     if (result.new_bump > bump_limit)
@@ -179,7 +181,7 @@ pas_segregated_shared_view_bump(
 
 PAS_API pas_heap_summary
 pas_segregated_shared_view_compute_summary(pas_segregated_shared_view* view,
-                                           pas_segregated_page_config* page_config);
+                                           const pas_segregated_page_config* page_config);
 
 PAS_API bool pas_segregated_shared_view_is_empty(pas_segregated_shared_view* view);
 

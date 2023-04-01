@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,8 +21,7 @@
 #include "config.h"
 #include "SVGFEMorphologyElement.h"
 
-#include "FilterEffect.h"
-#include "SVGFilterBuilder.h"
+#include "FEMorphology.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -53,14 +52,14 @@ void SVGFEMorphologyElement::setRadius(float x, float y)
 {
     m_radiusX->setBaseValInternal(x);
     m_radiusY->setBaseValInternal(y);
-    invalidate();
+    updateSVGRendererForElementChange();
 }
 
 void SVGFEMorphologyElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::operatorAttr) {
         MorphologyOperatorType propertyValue = SVGPropertyTraits<MorphologyOperatorType>::fromString(value);
-        if (propertyValue > 0)
+        if (propertyValue != MorphologyOperatorType::Unknown)
             m_svgOperator->setBaseValInternal<MorphologyOperatorType>(propertyValue);
         return;
     }
@@ -81,15 +80,15 @@ void SVGFEMorphologyElement::parseAttribute(const QualifiedName& name, const Ato
     SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
 }
 
-bool SVGFEMorphologyElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
+bool SVGFEMorphologyElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
 {
-    FEMorphology* morphology = static_cast<FEMorphology*>(effect);
+    auto& feMorphology = downcast<FEMorphology>(effect);
     if (attrName == SVGNames::operatorAttr)
-        return morphology->setMorphologyOperator(svgOperator());
+        return feMorphology.setMorphologyOperator(svgOperator());
     if (attrName == SVGNames::radiusAttr) {
         // Both setRadius functions should be evaluated separately.
-        bool isRadiusXChanged = morphology->setRadiusX(radiusX());
-        bool isRadiusYChanged = morphology->setRadiusY(radiusY());
+        bool isRadiusXChanged = feMorphology.setRadiusX(radiusX());
+        bool isRadiusYChanged = feMorphology.setRadiusY(radiusY());
         return isRadiusXChanged || isRadiusYChanged;
     }
 
@@ -99,36 +98,32 @@ bool SVGFEMorphologyElement::setFilterEffectAttribute(FilterEffect* effect, cons
 
 void SVGFEMorphologyElement::svgAttributeChanged(const QualifiedName& attrName)
 {
+    if (attrName == SVGNames::inAttr) {
+        InstanceInvalidationGuard guard(*this);
+        updateSVGRendererForElementChange();
+        return;
+    }
+
     if (attrName == SVGNames::operatorAttr || attrName == SVGNames::radiusAttr) {
         InstanceInvalidationGuard guard(*this);
         primitiveAttributeChanged(attrName);
         return;
     }
 
-    if (attrName == SVGNames::inAttr) {
-        InstanceInvalidationGuard guard(*this);
-        invalidate();
-        return;
-    }
-
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFEMorphologyElement::build(SVGFilterBuilder* filterBuilder, Filter& filter) const
+bool SVGFEMorphologyElement::isIdentity() const
 {
-    auto input1 = filterBuilder->getEffectById(in1());
-    float xRadius = radiusX();
-    float yRadius = radiusY();
+    return !radiusX() && !radiusY();
+}
 
-    if (!input1)
+RefPtr<FilterEffect> SVGFEMorphologyElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
+{
+    if (radiusX() < 0 || radiusY() < 0)
         return nullptr;
 
-    if (xRadius < 0 || yRadius < 0)
-        return nullptr;
-
-    auto effect = FEMorphology::create(filter, svgOperator(), xRadius, yRadius);
-    effect->inputEffects() = { input1 };
-    return effect;
+    return FEMorphology::create(svgOperator(), radiusX(), radiusY());
 }
 
 } // namespace WebCore

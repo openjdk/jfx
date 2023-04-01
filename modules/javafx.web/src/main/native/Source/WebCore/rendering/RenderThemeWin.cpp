@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Kenneth Rohde Christiansen
  *
  * This library is free software; you can redistribute it and/or
@@ -285,84 +285,27 @@ bool RenderThemeWin::supportsHover(const RenderStyle&) const
     return haveTheme;
 }
 
-Color RenderThemeWin::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeWin::platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const
 {
     COLORREF color = GetSysColor(COLOR_HIGHLIGHT);
     return SRGBA<uint8_t> { GetRValue(color), GetGValue(color), GetBValue(color) };
 }
 
-Color RenderThemeWin::platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeWin::platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const
 {
     // This color matches Firefox.
     return SRGBA<uint8_t> { 176, 176, 176 };
 }
 
-Color RenderThemeWin::platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
+Color RenderThemeWin::platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const
 {
     COLORREF color = GetSysColor(COLOR_HIGHLIGHTTEXT);
     return SRGBA<uint8_t> { GetRValue(color), GetGValue(color), GetBValue(color) };
 }
 
-Color RenderThemeWin::platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options> options) const
+Color RenderThemeWin::platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions> options) const
 {
     return platformActiveSelectionForegroundColor(options);
-}
-
-static void fillFontDescription(FontCascadeDescription& fontDescription, LOGFONT& logFont, float fontSize)
-{
-    fontDescription.setIsAbsoluteSize(true);
-    fontDescription.setOneFamily(logFont.lfFaceName);
-    fontDescription.setSpecifiedSize(fontSize);
-    fontDescription.setWeight(logFont.lfWeight >= 700 ? boldWeightValue() : normalWeightValue()); // FIXME: Use real weight.
-    fontDescription.setIsItalic(logFont.lfItalic);
-}
-
-void RenderThemeWin::updateCachedSystemFontDescription(CSSValueID valueID, FontCascadeDescription& fontDescription) const
-{
-    static bool initialized;
-    static NONCLIENTMETRICS ncm;
-
-    if (!initialized) {
-        initialized = true;
-        ncm.cbSize = sizeof(NONCLIENTMETRICS);
-        ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0);
-    }
-
-    LOGFONT logFont;
-    bool shouldUseDefaultControlFontPixelSize = false;
-    switch (valueID) {
-    case CSSValueIcon:
-        ::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(logFont), &logFont, 0);
-        break;
-    case CSSValueMenu:
-        logFont = ncm.lfMenuFont;
-        break;
-    case CSSValueMessageBox:
-        logFont = ncm.lfMessageFont;
-        break;
-    case CSSValueStatusBar:
-        logFont = ncm.lfStatusFont;
-        break;
-    case CSSValueCaption:
-        logFont = ncm.lfCaptionFont;
-        break;
-    case CSSValueSmallCaption:
-        logFont = ncm.lfSmCaptionFont;
-        break;
-    case CSSValueWebkitSmallControl:
-    case CSSValueWebkitMiniControl: // Just map to small.
-    case CSSValueWebkitControl: // Just map to small.
-        shouldUseDefaultControlFontPixelSize = true;
-        FALLTHROUGH;
-    default: { // Everything else uses the stock GUI font.
-        HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
-        if (!hGDI)
-            return;
-        if (::GetObject(hGDI, sizeof(logFont), &logFont) <= 0)
-            return;
-    }
-    }
-    fillFontDescription(fontDescription, logFont, shouldUseDefaultControlFontPixelSize ? defaultControlFontPixelSize : abs(logFont.lfHeight));
 }
 
 bool RenderThemeWin::supportsFocus(ControlPart appearance) const
@@ -379,13 +322,13 @@ bool RenderThemeWin::supportsFocus(ControlPart appearance) const
 
 bool RenderThemeWin::supportsFocusRing(const RenderStyle& style) const
 {
-    return supportsFocus(style.appearance());
+    return supportsFocus(style.effectiveAppearance());
 }
 
 unsigned RenderThemeWin::determineClassicState(const RenderObject& o, ControlSubPart subPart)
 {
     unsigned state = 0;
-    switch (o.style().appearance()) {
+    switch (o.style().effectiveAppearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -397,7 +340,7 @@ unsigned RenderThemeWin::determineClassicState(const RenderObject& o, ControlSub
             break;
         case RadioPart:
         case CheckboxPart:
-            state = (o.style().appearance() == RadioPart) ? DFCS_BUTTONRADIO : DFCS_BUTTONCHECK;
+            state = (o.style().effectiveAppearance() == RadioPart) ? DFCS_BUTTONRADIO : DFCS_BUTTONCHECK;
             if (isChecked(o))
                 state |= DFCS_CHECKED;
             if (!isEnabled(o))
@@ -432,7 +375,7 @@ unsigned RenderThemeWin::determineClassicState(const RenderObject& o, ControlSub
 unsigned RenderThemeWin::determineState(const RenderObject& o)
 {
     unsigned result = TS_NORMAL;
-    ControlPart appearance = o.style().appearance();
+    ControlPart appearance = o.style().effectiveAppearance();
     if (!isEnabled(o))
         result = TS_DISABLED;
     else if (isReadOnlyControl(o) && (TextFieldPart == appearance || TextAreaPart == appearance || SearchFieldPart == appearance))
@@ -443,10 +386,10 @@ unsigned RenderThemeWin::determineState(const RenderObject& o)
         result = TS_FOCUSED;
     else if (isHovered(o))
         result = TS_HOVER;
-    if (isChecked(o))
-        result += 4; // 4 unchecked states, 4 checked states.
-    else if (isIndeterminate(o) && appearance == CheckboxPart)
+    if (isIndeterminate(o) && appearance == CheckboxPart)
         result += 8;
+    else if (isChecked(o))
+        result += 4; // 4 unchecked states, 4 checked states.
     return result;
 }
 
@@ -455,7 +398,7 @@ unsigned RenderThemeWin::determineSliderThumbState(const RenderObject& o)
     unsigned result = TUS_NORMAL;
     if (!isEnabled(o))
         result = TUS_DISABLED;
-    else if (supportsFocus(o.style().appearance()) && isFocused(o))
+    else if (supportsFocus(o.style().effectiveAppearance()) && isFocused(o))
         result = TUS_FOCUSED;
     else if (isPressed(o))
         result = TUS_PRESSED;
@@ -471,7 +414,7 @@ unsigned RenderThemeWin::determineButtonState(const RenderObject& o)
         result = PBS_DISABLED;
     else if (isPressed(o))
         result = PBS_PRESSED;
-    else if (supportsFocus(o.style().appearance()) && isFocused(o))
+    else if (supportsFocus(o.style().effectiveAppearance()) && isFocused(o))
         result = PBS_DEFAULTED;
     else if (isHovered(o))
         result = PBS_HOT;
@@ -496,7 +439,7 @@ unsigned RenderThemeWin::determineSpinButtonState(const RenderObject& o, Control
 ThemeData RenderThemeWin::getClassicThemeData(const RenderObject& o, ControlSubPart subPart)
 {
     ThemeData result;
-    switch (o.style().appearance()) {
+    switch (o.style().effectiveAppearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -551,7 +494,7 @@ ThemeData RenderThemeWin::getThemeData(const RenderObject& o, ControlSubPart sub
         return getClassicThemeData(o, subPart);
 
     ThemeData result;
-    switch (o.style().appearance()) {
+    switch (o.style().effectiveAppearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -633,8 +576,8 @@ static void drawControl(GraphicsContext& context, const RenderObject& o, HANDLE 
         } else if (themeData.m_part == TKP_TRACK || themeData.m_part == TKP_TRACKVERT) {
             ::DrawEdge(hdc, &widgetRect, EDGE_SUNKEN, BF_RECT | BF_ADJUST);
             ::FillRect(hdc, &widgetRect, (HBRUSH)GetStockObject(GRAY_BRUSH));
-        } else if ((o.style().appearance() == SliderThumbHorizontalPart
-        || o.style().appearance() == SliderThumbVerticalPart)
+        } else if ((o.style().effectiveAppearance() == SliderThumbHorizontalPart
+        || o.style().effectiveAppearance() == SliderThumbVerticalPart)
         && (themeData.m_part == TKP_THUMBBOTTOM || themeData.m_part == TKP_THUMBTOP
         || themeData.m_part == TKP_THUMBLEFT || themeData.m_part == TKP_THUMBRIGHT)) {
             ::DrawEdge(hdc, &widgetRect, EDGE_RAISED, BF_RECT | BF_SOFT | BF_MIDDLE | BF_ADJUST);
@@ -658,7 +601,7 @@ static void drawControl(GraphicsContext& context, const RenderObject& o, HANDLE 
             }
         } else {
             // Push buttons, buttons, checkboxes and radios, and the dropdown arrow in menulists.
-            if (o.style().appearance() == DefaultButtonPart) {
+            if (o.style().effectiveAppearance() == DefaultButtonPart) {
                 HBRUSH brush = ::GetSysColorBrush(COLOR_3DDKSHADOW);
                 ::FrameRect(hdc, &widgetRect, brush);
                 ::InflateRect(&widgetRect, -1, -1);
@@ -746,6 +689,7 @@ bool RenderThemeWin::paintMenuList(const RenderObject& renderer, const PaintInfo
 
 void RenderThemeWin::adjustMenuListStyle(RenderStyle& style, const Element* e) const
 {
+    RenderTheme::adjustMenuListStyle(style, e);
     style.resetBorder();
     adjustMenuListButtonStyle(style, e);
 }
@@ -770,7 +714,7 @@ void RenderThemeWin::adjustMenuListButtonStyle(RenderStyle& style, const Element
     style.setHeight(Length(LengthType::Auto));
 
     // Calculate our min-height
-    int minHeight = style.fontMetrics().height();
+    int minHeight = style.metricsOfPrimaryFont().height();
     minHeight = std::max(minHeight, dropDownBoxMinHeight);
 
     style.setMinHeight(Length(minHeight, LengthType::Fixed));
@@ -810,10 +754,10 @@ bool RenderThemeWin::paintSliderTrack(const RenderObject& o, const PaintInfo& i,
 {
     IntRect bounds = r;
 
-    if (o.style().appearance() ==  SliderHorizontalPart) {
+    if (o.style().effectiveAppearance() ==  SliderHorizontalPart) {
         bounds.setHeight(trackWidth);
         bounds.setY(r.y() + r.height() / 2 - trackWidth / 2);
-    } else if (o.style().appearance() == SliderVerticalPart) {
+    } else if (o.style().effectiveAppearance() == SliderVerticalPart) {
         bounds.setWidth(trackWidth);
         bounds.setX(r.x() + r.width() / 2 - trackWidth / 2);
     }
@@ -833,7 +777,7 @@ const int sliderThumbHeight = 15;
 
 void RenderThemeWin::adjustSliderThumbSize(RenderStyle& style, const Element*) const
 {
-    ControlPart part = style.appearance();
+    ControlPart part = style.effectiveAppearance();
     if (part == SliderThumbVerticalPart) {
         style.setWidth(Length(sliderThumbHeight, LengthType::Fixed));
         style.setHeight(Length(sliderThumbWidth, LengthType::Fixed));
@@ -1002,8 +946,15 @@ static int cssValueIdToSysColorIndex(CSSValueID cssValueId)
     }
 }
 
-Color RenderThemeWin::systemColor(CSSValueID cssValueId, OptionSet<StyleColor::Options> options) const
+Color RenderThemeWin::systemColor(CSSValueID cssValueId, OptionSet<StyleColorOptions> options) const
 {
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    switch (cssValueId) {
+    case CSSValueWebkitControlBackground:
+        // FIXME: Dark mode isn't supported yet. https://webkit.org/b/230032
+        return Color::white;
+    }
+#endif
     int sysColorIndex = cssValueIdToSysColorIndex(cssValueId);
     if (sysColorIndex == -1)
         return RenderTheme::systemColor(cssValueId, options);
@@ -1013,30 +964,6 @@ Color RenderThemeWin::systemColor(CSSValueID cssValueId, OptionSet<StyleColor::O
 }
 
 #if ENABLE(VIDEO)
-static void fillBufferWithContentsOfFile(FileSystem::PlatformFileHandle file, long long filesize, Vector<uint8_t>& buffer)
-{
-    // Load the file content into buffer
-    buffer.resize(filesize + 1);
-
-    int bufferPosition = 0;
-    int bufferReadSize = 4096;
-    int bytesRead = 0;
-    while (filesize > bufferPosition) {
-        if (filesize - bufferPosition < bufferReadSize)
-            bufferReadSize = filesize - bufferPosition;
-
-        bytesRead = FileSystem::readFromFile(file, buffer.data() + bufferPosition, bufferReadSize);
-        if (bytesRead != bufferReadSize) {
-            buffer.clear();
-            return;
-        }
-
-        bufferPosition += bufferReadSize;
-    }
-
-    buffer[filesize] = 0;
-}
-
 String RenderThemeWin::stringWithContentsOfFile(const String& name, const String& type)
 {
 #if USE(CF)
@@ -1048,21 +975,9 @@ String RenderThemeWin::stringWithContentsOfFile(const String& name, const String
     if (!CFURLGetFileSystemRepresentation(requestedURLRef.get(), false, requestedFilePath, MAX_PATH))
         return String();
 
-    FileSystem::PlatformFileHandle requestedFileHandle = FileSystem::openFile(requestedFilePath, FileSystem::FileOpenMode::Read);
-    if (!FileSystem::isHandleValid(requestedFileHandle))
-        return String();
+    auto contents = FileSystem::readEntireFile(requestedFilePath);
 
-    auto filesize = FileSystem::fileSize(requestedFileHandle);
-    if (!filesize) {
-        FileSystem::closeFile(requestedFileHandle);
-        return String();
-    }
-
-    Vector<uint8_t> fileContents;
-    fillBufferWithContentsOfFile(requestedFileHandle, *filesize, fileContents);
-    FileSystem::closeFile(requestedFileHandle);
-
-    return String(fileContents.data(), *filesize);
+    return contents ? String::adopt(WTFMove(*contents)) : String();
 #else
     return emptyString();
 #endif

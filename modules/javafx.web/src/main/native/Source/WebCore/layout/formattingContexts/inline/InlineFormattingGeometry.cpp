@@ -104,6 +104,8 @@ bool InlineFormattingGeometry::inlineLevelBoxAffectsLineBox(const InlineLevelBox
 {
     if (inlineLevelBox.isInlineBox() || inlineLevelBox.isLineBreakBox())
         return layoutState().inStandardsMode() ? true : formattingContext().formattingQuirks().inlineLevelBoxAffectsLineBox(inlineLevelBox, lineBox);
+    if (inlineLevelBox.isListMarker())
+        return inlineLevelBox.layoutBounds().height();
     if (inlineLevelBox.isAtomicInlineLevelBox()) {
         if (inlineLevelBox.layoutBounds().height())
             return true;
@@ -114,6 +116,66 @@ bool InlineFormattingGeometry::inlineLevelBoxAffectsLineBox(const InlineLevelBox
     }
     return false;
 }
+
+InlineRect InlineFormattingGeometry::flipVisualRectToLogicalForWritingMode(const InlineRect& visualRect, WritingMode writingMode)
+{
+    switch (writingMode) {
+    case WritingMode::TopToBottom:
+        return visualRect;
+    case WritingMode::LeftToRight:
+    case WritingMode::RightToLeft: {
+        // FIXME: While vertical-lr and vertical-rl modes do differ in the ordering direction of line boxes
+        // in a block container (see: https://drafts.csswg.org/css-writing-modes/#block-flow)
+        // we ignore it for now as RenderBlock takes care of it for us.
+        return InlineRect { visualRect.left(), visualRect.top(), visualRect.height(), visualRect.width() };
+    }
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+    return visualRect;
+}
+
+InlineLayoutUnit InlineFormattingGeometry::computedTextIndent(IsIntrinsicWidthMode isIntrinsicWidthMode, std::optional<bool> previousLineEndsWithLineBreak, InlineLayoutUnit availableWidth) const
+{
+    auto& root = formattingContext().root();
+
+    // text-indent property specifies the indentation applied to lines of inline content in a block.
+    // The indent is treated as a margin applied to the start edge of the line box.
+    // The first formatted line of an element is always indented. For example, the first line of an anonymous block box
+    // is only affected if it is the first child of its parent element.
+    // If 'each-line' is specified, indentation also applies to all lines where the previous line ends with a hard break.
+    // [Integration] root()->parent() would normally produce a valid layout box.
+    bool shouldIndent = false;
+    if (!previousLineEndsWithLineBreak) {
+        shouldIndent = !root.isAnonymous();
+        if (root.isAnonymous()) {
+            auto isIntegratedRootBoxFirstChild = layoutState().isIntegratedRootBoxFirstChild();
+            if (isIntegratedRootBoxFirstChild == LayoutState::IsIntegratedRootBoxFirstChild::NotApplicable)
+                shouldIndent = root.parent().firstInFlowChild() == &root;
+            else
+                shouldIndent = isIntegratedRootBoxFirstChild == LayoutState::IsIntegratedRootBoxFirstChild::Yes;
+        }
+    } else
+        shouldIndent = root.style().textIndentLine() == TextIndentLine::EachLine && *previousLineEndsWithLineBreak;
+
+    // Specifying 'hanging' inverts whether the line should be indented or not.
+    if (root.style().textIndentType() == TextIndentType::Hanging)
+        shouldIndent = !shouldIndent;
+
+    if (!shouldIndent)
+        return { };
+
+    auto textIndent = root.style().textIndent();
+    if (textIndent == RenderStyle::initialTextIndent())
+        return { };
+    if (isIntrinsicWidthMode == IsIntrinsicWidthMode::Yes && textIndent.isPercent()) {
+        // Percentages must be treated as 0 for the purpose of calculating intrinsic size contributions.
+        // https://drafts.csswg.org/css-text/#text-indent-property
+        return { };
+    }
+    return { minimumValueForLength(textIndent, availableWidth) };
+};
 
 }
 }

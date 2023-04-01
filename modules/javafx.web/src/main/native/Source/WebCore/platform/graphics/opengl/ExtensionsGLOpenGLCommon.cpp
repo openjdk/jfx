@@ -74,17 +74,17 @@ ExtensionsGLOpenGLCommon::ExtensionsGLOpenGLCommon(GraphicsContextGLOpenGL* cont
     , m_requiresRestrictedMaximumTextureSize(false)
     , m_useIndexedGetString(useIndexedGetString)
 {
-    m_vendor = String(reinterpret_cast<const char*>(::glGetString(GL_VENDOR)));
-    m_renderer = String(reinterpret_cast<const char*>(::glGetString(GL_RENDERER)));
+    m_vendor = String::fromLatin1(reinterpret_cast<const char*>(::glGetString(GL_VENDOR)));
+    m_renderer = String::fromLatin1(reinterpret_cast<const char*>(::glGetString(GL_RENDERER)));
 
     Vector<String> vendorComponents = m_vendor.convertToASCIILowercase().split(' ');
-    if (vendorComponents.contains("nvidia"))
+    if (vendorComponents.contains("nvidia"_s))
         m_isNVIDIA = true;
-    if (vendorComponents.contains("ati") || vendorComponents.contains("amd"))
+    if (vendorComponents.contains("ati"_s) || vendorComponents.contains("amd"_s))
         m_isAMD = true;
-    if (vendorComponents.contains("intel"))
+    if (vendorComponents.contains("intel"_s))
         m_isIntel = true;
-    if (vendorComponents.contains("imagination"))
+    if (vendorComponents.contains("imagination"_s))
         m_isImagination = true;
 
 #if PLATFORM(MAC)
@@ -106,15 +106,15 @@ bool ExtensionsGLOpenGLCommon::supports(const String& name)
     // We explicitly do not support this extension until
     // we fix the following bug:
     // https://bugs.webkit.org/show_bug.cgi?id=149734
-    if (name == "GL_ANGLE_translated_shader_source")
+    if (name == "GL_ANGLE_translated_shader_source"_s)
         return false;
 
-    return supportsExtension(name);
+    return platformSupportsExtension(name);
 }
 
 void ExtensionsGLOpenGLCommon::ensureEnabled(const String& name)
 {
-    if (name == "GL_OES_standard_derivatives") {
+    if (name == "GL_OES_standard_derivatives"_s) {
         // Enable support in ANGLE (if not enabled already)
         ANGLEWebKitBridge& compiler = m_context->m_compiler;
         ShBuiltInResources ANGLEResources = compiler.getResources();
@@ -122,16 +122,16 @@ void ExtensionsGLOpenGLCommon::ensureEnabled(const String& name)
             ANGLEResources.OES_standard_derivatives = 1;
             compiler.setResources(ANGLEResources);
         }
-    } else if (name == "GL_EXT_draw_buffers") {
+    } else if (name == "GL_EXT_draw_buffers"_s) {
         // Enable support in ANGLE (if not enabled already)
         ANGLEWebKitBridge& compiler = m_context->m_compiler;
         ShBuiltInResources ANGLEResources = compiler.getResources();
         if (!ANGLEResources.EXT_draw_buffers) {
             ANGLEResources.EXT_draw_buffers = 1;
-            ANGLEResources.MaxDrawBuffers = m_context->getInteger(ExtensionsGL::MAX_DRAW_BUFFERS_EXT);
+            ANGLEResources.MaxDrawBuffers = m_context->getInteger(GraphicsContextGL::MAX_DRAW_BUFFERS_EXT);
             compiler.setResources(ANGLEResources);
         }
-    } else if (name == "GL_EXT_shader_texture_lod") {
+    } else if (name == "GL_EXT_shader_texture_lod"_s) {
         // Enable support in ANGLE (if not enabled already)
         ANGLEWebKitBridge& compiler = m_context->m_compiler;
         ShBuiltInResources ANGLEResources = compiler.getResources();
@@ -139,7 +139,7 @@ void ExtensionsGLOpenGLCommon::ensureEnabled(const String& name)
             ANGLEResources.EXT_shader_texture_lod = 1;
             compiler.setResources(ANGLEResources);
         }
-    } else if (name == "GL_EXT_frag_depth") {
+    } else if (name == "GL_EXT_frag_depth"_s) {
         // Enable support in ANGLE (if not enabled already)
         ANGLEWebKitBridge& compiler = m_context->m_compiler;
         ShBuiltInResources ANGLEResources = compiler.getResources();
@@ -152,16 +152,11 @@ void ExtensionsGLOpenGLCommon::ensureEnabled(const String& name)
 
 bool ExtensionsGLOpenGLCommon::isEnabled(const String& name)
 {
-    if (name == "GL_OES_standard_derivatives") {
+    if (name == "GL_OES_standard_derivatives"_s) {
         ANGLEWebKitBridge& compiler = m_context->m_compiler;
         return compiler.getResources().OES_standard_derivatives;
     }
     return supports(name);
-}
-
-int ExtensionsGLOpenGLCommon::getGraphicsResetStatusARB()
-{
-    return GraphicsContextGL::NO_ERROR;
 }
 
 String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject shader)
@@ -179,18 +174,19 @@ String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject
     else if (GLshaderType == GraphicsContextGL::FRAGMENT_SHADER)
         shaderType = SHADER_TYPE_FRAGMENT;
     else
-        return ""; // Invalid shader type.
+        return emptyString(); // Invalid shader type.
 
     HashMap<PlatformGLObject, GraphicsContextGLOpenGL::ShaderSourceEntry>::iterator result = m_context->m_shaderSourceMap.find(shader);
 
     if (result == m_context->m_shaderSourceMap.end())
-        return "";
+        return emptyString();
 
     GraphicsContextGLOpenGL::ShaderSourceEntry& entry = result->value;
 
     String translatedShaderSource;
     String shaderInfoLog;
-    GCGLuint64 extraCompileOptions = SH_CLAMP_INDIRECT_ARRAY_BOUNDS | SH_UNFOLD_SHORT_CIRCUIT | SH_INIT_OUTPUT_VARIABLES | SH_ENFORCE_PACKING_RESTRICTIONS | SH_LIMIT_EXPRESSION_COMPLEXITY | SH_LIMIT_CALL_STACK_DEPTH | SH_INITIALIZE_UNINITIALIZED_LOCALS;
+
+    GCGLuint64 extraCompileOptions = SH_CLAMP_INDIRECT_ARRAY_BOUNDS | SH_INIT_OUTPUT_VARIABLES | SH_ENFORCE_PACKING_RESTRICTIONS | SH_LIMIT_EXPRESSION_COMPLEXITY | SH_LIMIT_CALL_STACK_DEPTH | SH_INITIALIZE_UNINITIALIZED_LOCALS;
 
     if (m_requiresBuiltInFunctionEmulation)
         extraCompileOptions |= SH_EMULATE_ABS_INT_FUNCTION;
@@ -203,11 +199,11 @@ String ExtensionsGLOpenGLCommon::getTranslatedShaderSourceANGLE(PlatformGLObject
 
     for (const std::pair<ANGLEShaderSymbolType, sh::ShaderVariable>& pair : symbols) {
         const std::string& name = pair.second.name;
-        entry.symbolMap(pair.first).set(String(name.c_str(), name.length()), WTF::makeUniqueRefWithoutFastMallocCheck<sh::ShaderVariable>(pair.second));
+        entry.symbolMap(pair.first).set(String(name.c_str(), name.length()), makeUniqueRefWithoutFastMallocCheck<sh::ShaderVariable>(pair.second));
     }
 
     if (!isValid)
-        return "";
+        return emptyString();
 
     return translatedShaderSource;
 }
@@ -219,7 +215,7 @@ void ExtensionsGLOpenGLCommon::initializeAvailableExtensions()
         GLint numExtensions = 0;
         ::glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
         for (GLint i = 0; i < numExtensions; ++i)
-            m_availableExtensions.add(glGetStringi(GL_EXTENSIONS, i));
+            m_availableExtensions.add(String::fromLatin1(reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i))));
 
         if (!m_availableExtensions.contains("GL_ARB_texture_storage"_s)) {
             GLint majorVersion;

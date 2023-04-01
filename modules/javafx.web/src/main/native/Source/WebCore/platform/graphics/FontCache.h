@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,18 +29,25 @@
 
 #pragma once
 
-#include "FontCascadeFonts.h"
+#include "FontCascadeCache.h"
+#include "FontCreationContext.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
 #include "FontSelector.h"
 #include "FontTaggedSettings.h"
+#include "SystemFallbackFontCache.h"
 #include "Timer.h"
 #include <array>
 #include <limits.h>
+#include <wtf/CrossThreadCopier.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkQueue.h>
@@ -49,6 +56,9 @@
 
 #if PLATFORM(COCOA)
 #include "FontCacheCoreText.h"
+#include "FontDatabase.h"
+#include "FontFamilySpecificationCoreTextCache.h"
+#include "SystemFontDatabaseCoreText.h"
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -60,6 +70,10 @@
 #include <windows.h>
 #include <objidl.h>
 #include <mlang.h>
+#endif
+
+#if USE(FREETYPE)
+#include "FontSetCache.h"
 #endif
 
 namespace WebCore {
@@ -78,155 +92,19 @@ using IMLangFontLinkType = IMLangFontLink2;
 using IMLangFontLinkType = IMLangFontLink;
 #endif
 
-// This key contains the FontDescription fields other than family that matter when fetching FontDatas (platform fonts).
-struct FontDescriptionKey {
-    FontDescriptionKey() = default;
-
-    FontDescriptionKey(const FontDescription& description)
-        : m_size(description.computedPixelSize())
-        , m_fontSelectionRequest(description.fontSelectionRequest())
-        , m_flags(makeFlagsKey(description))
-        , m_locale(description.specifiedLocale())
-        , m_featureSettings(description.featureSettings())
-        , m_variationSettings(description.variationSettings())
-    { }
-
-    explicit FontDescriptionKey(WTF::HashTableDeletedValueType)
-        : m_isDeletedValue(true)
-    { }
-
-    bool operator==(const FontDescriptionKey& other) const
-    {
-        return m_isDeletedValue == other.m_isDeletedValue
-            && m_size == other.m_size
-            && m_fontSelectionRequest == other.m_fontSelectionRequest
-            && m_flags == other.m_flags
-            && m_locale == other.m_locale
-            && m_variationSettings == other.m_variationSettings
-            && m_featureSettings == other.m_featureSettings;
-    }
-
-    bool operator!=(const FontDescriptionKey& other) const
-    {
-        return !(*this == other);
-    }
-
-    bool isHashTableDeletedValue() const { return m_isDeletedValue; }
-
-    friend void add(Hasher&, const FontDescriptionKey&);
-
-private:
-    static std::array<unsigned, 2> makeFlagsKey(const FontDescription& description)
-    {
-        unsigned first = static_cast<unsigned>(description.script()) << 15
-            | static_cast<unsigned>(description.shouldDisableLigaturesForSpacing()) << 14
-            | static_cast<unsigned>(description.shouldAllowUserInstalledFonts()) << 13
-            | static_cast<unsigned>(description.fontStyleAxis() == FontStyleAxis::slnt) << 12
-            | static_cast<unsigned>(description.opticalSizing()) << 11
-            | static_cast<unsigned>(description.textRenderingMode()) << 9
-            | static_cast<unsigned>(description.fontSynthesis()) << 6
-            | static_cast<unsigned>(description.widthVariant()) << 4
-            | static_cast<unsigned>(description.nonCJKGlyphOrientation()) << 3
-            | static_cast<unsigned>(description.orientation()) << 2
-            | static_cast<unsigned>(description.renderingMode());
-        unsigned second = static_cast<unsigned>(description.variantEastAsianRuby()) << 27
-            | static_cast<unsigned>(description.variantEastAsianWidth()) << 25
-            | static_cast<unsigned>(description.variantEastAsianVariant()) << 22
-            | static_cast<unsigned>(description.variantAlternates()) << 21
-            | static_cast<unsigned>(description.variantNumericSlashedZero()) << 20
-            | static_cast<unsigned>(description.variantNumericOrdinal()) << 19
-            | static_cast<unsigned>(description.variantNumericFraction()) << 17
-            | static_cast<unsigned>(description.variantNumericSpacing()) << 15
-            | static_cast<unsigned>(description.variantNumericFigure()) << 13
-            | static_cast<unsigned>(description.variantCaps()) << 10
-            | static_cast<unsigned>(description.variantPosition()) << 8
-            | static_cast<unsigned>(description.variantContextualAlternates()) << 6
-            | static_cast<unsigned>(description.variantHistoricalLigatures()) << 4
-            | static_cast<unsigned>(description.variantDiscretionaryLigatures()) << 2
-            | static_cast<unsigned>(description.variantCommonLigatures());
-        return {{ first, second }};
-    }
-
-    bool m_isDeletedValue { false };
-    unsigned m_size { 0 };
-    FontSelectionRequest m_fontSelectionRequest;
-    std::array<unsigned, 2> m_flags {{ 0, 0 }};
-    AtomString m_locale;
-    FontFeatureSettings m_featureSettings;
-    FontVariationSettings m_variationSettings;
-};
-
-inline void add(Hasher& hasher, const FontDescriptionKey& key)
-{
-    add(hasher, key.m_size, key.m_fontSelectionRequest, key.m_flags, key.m_locale, key.m_featureSettings, key.m_variationSettings);
-}
-
-struct FontDescriptionKeyHash {
-    static unsigned hash(const FontDescriptionKey& key) { return computeHash(key); }
-    static bool equal(const FontDescriptionKey& a, const FontDescriptionKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
-// This class holds the name of a font family, and defines hashing and == of this name to
-// use the rules for font family names instead of using straight string comparison.
-class FontFamilyName {
-public:
-    FontFamilyName();
-    FontFamilyName(const AtomString&);
-    const AtomString& string() const;
-    friend void add(Hasher&, const FontFamilyName&);
-
-private:
-    AtomString m_name;
-};
-
-bool operator==(const FontFamilyName&, const FontFamilyName&);
-bool operator!=(const FontFamilyName&, const FontFamilyName&);
-
-struct FontCascadeCacheKey {
-    FontDescriptionKey fontDescriptionKey; // Shared with the lower level FontCache (caching Font objects)
-    Vector<FontFamilyName, 3> families;
-    unsigned fontSelectorId;
-    unsigned fontSelectorVersion;
-};
-
-bool operator==(const FontCascadeCacheKey&, const FontCascadeCacheKey&);
-
-struct FontCascadeCacheEntry {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-
-    FontCascadeCacheKey key;
-    Ref<FontCascadeFonts> fonts;
-};
-
-struct FontCascadeCacheKeyHash {
-    static unsigned hash(const FontCascadeCacheKey&);
-    static bool equal(const FontCascadeCacheKey& a, const FontCascadeCacheKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = false;
-};
-
-struct FontCascadeCacheKeyHashTraits : HashTraits<FontCascadeCacheKey> {
-    static FontCascadeCacheKey emptyValue() { return { }; }
-    static void constructDeletedValue(FontCascadeCacheKey& slot) { new (NotNull, &slot.fontDescriptionKey) FontDescriptionKey(WTF::HashTableDeletedValue); }
-    static bool isDeletedValue(const FontCascadeCacheKey& key) { return key.fontDescriptionKey.isHashTableDeletedValue(); }
-};
-
-using FontCascadeCache = HashMap<FontCascadeCacheKey, std::unique_ptr<FontCascadeCacheEntry>, FontCascadeCacheKeyHash, FontCascadeCacheKeyHashTraits>;
-
-class FontCache : public RefCounted<FontCache> {
-    friend class WTF::NeverDestroyed<FontCache, MainThreadAccessTraits>;
-
+class FontCache {
     WTF_MAKE_NONCOPYABLE(FontCache); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<FontCache> create();
-    WEBCORE_EXPORT static FontCache& singleton();
-    static FontCache& fontCacheFallingBackToSingleton(RefPtr<FontSelector>);
+    WEBCORE_EXPORT static FontCache& forCurrentThread();
+    static FontCache* forCurrentThreadIfExists();
+    static FontCache* forCurrentThreadIfNotDestroyed();
 
+    FontCache();
     ~FontCache();
 
     // These methods are implemented by the platform.
     enum class PreferColoredFont : bool { No, Yes };
-    RefPtr<Font> systemFallbackForCharacters(const FontDescription&, const Font* originalFontData, IsForPlatformFont, PreferColoredFont, const UChar* characters, unsigned length);
+    RefPtr<Font> systemFallbackForCharacters(const FontDescription&, const Font& originalFontData, IsForPlatformFont, PreferColoredFont, const UChar* characters, unsigned length);
     Vector<String> systemFontFamilies();
     void platformInit();
 
@@ -247,7 +125,7 @@ public:
     // It comes into play when you create an @font-face which shares a family name as a preinstalled font.
     Vector<FontSelectionCapabilities> getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts);
 
-    WEBCORE_EXPORT RefPtr<Font> fontForFamily(const FontDescription&, const String&, const FontFeatureSettings* fontFaceFeatures = nullptr, FontSelectionSpecifiedCapabilities fontFaceCapabilities = { }, bool checkingAlternateName = false);
+    WEBCORE_EXPORT RefPtr<Font> fontForFamily(const FontDescription&, const String&, const FontCreationContext& = { }, bool checkingAlternateName = false);
     WEBCORE_EXPORT Ref<Font> lastResortFallbackFont(const FontDescription&);
     WEBCORE_EXPORT Ref<Font> fontForPlatformData(const FontPlatformData&);
     RefPtr<Font> similarFont(const FontDescription&, const String& family);
@@ -256,16 +134,28 @@ public:
     void removeClient(FontSelector&);
 
     unsigned short generation() const { return m_generation; }
-    WEBCORE_EXPORT void invalidate();
+    static void registerFontCacheInvalidationCallback(Function<void()>&&);
+
+    // The invalidation callback runs a style recalc on the page.
+    // If we're invalidating because of memory pressure, we shouldn't run a style recalc.
+    // A style recalc would just allocate a bunch of the memory that we're trying to release.
+    // On the other hand, if we're invalidating because the set of installed fonts changed,
+    // or if some accessibility text settings were altered, we should run a style recalc
+    // so the user can immediately see the effect of the new environment.
+    enum class ShouldRunInvalidationCallback : bool {
+        No,
+        Yes
+    };
+    WEBCORE_EXPORT static void invalidateAllFontCaches(ShouldRunInvalidationCallback = ShouldRunInvalidationCallback::Yes);
 
     WEBCORE_EXPORT size_t fontCount();
     WEBCORE_EXPORT size_t inactiveFontCount();
     WEBCORE_EXPORT void purgeInactiveFontData(unsigned count = UINT_MAX);
     void platformPurgeInactiveFontData();
 
+    static void releaseNoncriticalMemoryInAllFontCaches();
+
     void updateFontCascade(const FontCascade&, RefPtr<FontSelector>&&);
-    void invalidateFontCascadeCache();
-    void clearWidthCaches();
 
 #if PLATFORM(WIN)
     RefPtr<Font> fontFromDescriptionAndLogFont(const FontDescription&, const LOGFONT&, String& outFontFamilyName);
@@ -277,47 +167,66 @@ public:
 
     std::unique_ptr<FontPlatformData> createFontPlatformDataForTesting(const FontDescription&, const AtomString& family);
 
-    bool shouldMockBoldSystemFontForAccessibility() const { return m_shouldMockBoldSystemFontForAccessibility; }
-    void setShouldMockBoldSystemFontForAccessibility(bool shouldMockBoldSystemFontForAccessibility) { m_shouldMockBoldSystemFontForAccessibility = shouldMockBoldSystemFontForAccessibility; }
-
     struct PrewarmInformation {
         Vector<String> seenFamilies;
         Vector<String> fontNamesRequiringSystemFallback;
 
         bool isEmpty() const;
-        PrewarmInformation isolatedCopy() const;
+        PrewarmInformation isolatedCopy() const & { return { crossThreadCopy(seenFamilies), crossThreadCopy(fontNamesRequiringSystemFallback) }; }
+        PrewarmInformation isolatedCopy() && { return { crossThreadCopy(WTFMove(seenFamilies)), crossThreadCopy(WTFMove(fontNamesRequiringSystemFallback)) }; }
 
         template<class Encoder> void encode(Encoder&) const;
         template<class Decoder> static std::optional<PrewarmInformation> decode(Decoder&);
     };
     PrewarmInformation collectPrewarmInformation() const;
-    void prewarm(const PrewarmInformation&);
-    void prewarmGlobally();
+    void prewarm(PrewarmInformation&&);
+    static void prewarmGlobally();
+
+    FontCascadeCache& fontCascadeCache() { return m_fontCascadeCache; }
+    SystemFallbackFontCache& systemFallbackFontCache() { return m_systemFallbackFontCache; }
+#if PLATFORM(COCOA)
+    FontFamilySpecificationCoreTextCache& fontFamilySpecificationCoreTextCache() { return m_fontFamilySpecificationCoreTextCache; }
+    SystemFontDatabaseCoreText& systemFontDatabaseCoreText() { return m_systemFontDatabaseCoreText; }
+#endif
+
+    bool useBackslashAsYenSignForFamily(const AtomString& family);
+
+#if USE(FREETYPE)
+    static bool configurePatternForFontDescription(FcPattern*, const FontDescription&);
+#endif
+
+    void invalidate();
 
 private:
-    FontCache();
-
+    void releaseNoncriticalMemory();
+    void platformReleaseNoncriticalMemory();
+    void platformInvalidate();
     WEBCORE_EXPORT void purgeInactiveFontDataIfNeeded();
-    void pruneUnreferencedEntriesFromFontCascadeCache();
-    void pruneSystemFallbackFonts();
-    Ref<FontCascadeFonts> retrieveOrAddCachedFonts(const FontCascadeDescription&, RefPtr<FontSelector>&&);
 
-    FontPlatformData* cachedFontPlatformData(const FontDescription&, const String& family, const FontFeatureSettings* = nullptr, FontSelectionSpecifiedCapabilities = { }, bool checkingAlternateName = false);
+    FontPlatformData* cachedFontPlatformData(const FontDescription&, const String& family, const FontCreationContext& = { }, bool checkingAlternateName = false);
 
     // These functions are implemented by each platform (unclear which functions this comment applies to).
-    WEBCORE_EXPORT std::unique_ptr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomString& family, const FontFeatureSettings*, FontSelectionSpecifiedCapabilities);
+    WEBCORE_EXPORT std::unique_ptr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomString& family, const FontCreationContext&);
 
     static std::optional<ASCIILiteral> alternateFamilyName(const String&);
     static std::optional<ASCIILiteral> platformAlternateFamilyName(const String&);
 
-    Timer m_purgeTimer;
+#if PLATFORM(MAC)
+    bool shouldAutoActivateFontIfNeeded(const AtomString& family);
+#endif
 
-    bool m_shouldMockBoldSystemFontForAccessibility { false };
+#if PLATFORM(COCOA)
+    FontDatabase& database(AllowUserInstalledFonts);
+#endif
+
+    Timer m_purgeTimer;
 
     HashSet<FontSelector*> m_clients;
     struct FontDataCaches;
     UniqueRef<FontDataCaches> m_fontDataCaches;
     FontCascadeCache m_fontCascadeCache;
+    SystemFallbackFontCache m_systemFallbackFontCache;
+    MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> m_familiesUsingBackslashAsYenSign;
 
     unsigned short m_generation { 0 };
 
@@ -325,12 +234,29 @@ private:
     RecursiveLock m_fontLock;
 #endif
 
+#if PLATFORM(MAC)
+    HashSet<AtomString> m_knownFamilies;
+#endif
+
 #if PLATFORM(COCOA)
+    FontDatabase m_databaseAllowingUserInstalledFonts { AllowUserInstalledFonts::Yes };
+    FontDatabase m_databaseDisallowingUserInstalledFonts { AllowUserInstalledFonts::No };
+
+    using FallbackFontSet = HashSet<RetainPtr<CTFontRef>, WTF::RetainPtrObjectHash<CTFontRef>, WTF::RetainPtrObjectHashTraits<CTFontRef>>;
+    FallbackFontSet m_fallbackFonts;
+
     ListHashSet<String> m_seenFamiliesForPrewarming;
     ListHashSet<String> m_fontNamesRequiringSystemFallbackForPrewarming;
     RefPtr<WorkQueue> m_prewarmQueue;
 
+    FontFamilySpecificationCoreTextCache m_fontFamilySpecificationCoreTextCache;
+    SystemFontDatabaseCoreText m_systemFontDatabaseCoreText;
+
     friend class ComplexTextController;
+#endif
+
+#if USE(FREETYPE)
+    FontSetCache m_fontSetCache;
 #endif
 
     friend class Font;
@@ -338,7 +264,7 @@ private:
 
 inline std::unique_ptr<FontPlatformData> FontCache::createFontPlatformDataForTesting(const FontDescription& fontDescription, const AtomString& family)
 {
-    return createFontPlatformData(fontDescription, family, nullptr, { });
+    return createFontPlatformData(fontDescription, family, { });
 }
 
 #if !PLATFORM(COCOA) && !USE(FREETYPE)
@@ -352,11 +278,6 @@ inline void FontCache::platformPurgeInactiveFontData()
 inline bool FontCache::PrewarmInformation::isEmpty() const
 {
     return seenFamilies.isEmpty() && fontNamesRequiringSystemFallback.isEmpty();
-}
-
-inline FontCache::PrewarmInformation FontCache::PrewarmInformation::isolatedCopy() const
-{
-    return { seenFamilies.isolatedCopy(), fontNamesRequiringSystemFallback.isolatedCopy() };
 }
 
 template<class Encoder>
@@ -376,11 +297,6 @@ std::optional<FontCache::PrewarmInformation> FontCache::PrewarmInformation::deco
         return { };
 
     return prewarmInformation;
-}
-
-inline FontCache& FontCache::fontCacheFallingBackToSingleton(RefPtr<FontSelector> fontSelector)
-{
-    return fontSelector ? fontSelector->fontCache() : FontCache::singleton();
 }
 
 }

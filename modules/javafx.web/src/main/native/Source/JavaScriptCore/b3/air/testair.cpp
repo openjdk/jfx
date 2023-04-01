@@ -2071,7 +2071,7 @@ inline Vector<String> matchAll(const CString& source, std::regex regex)
     std::smatch match;
     for (std::string str = source.data(); std::regex_search(str, match, regex); str = match.suffix()) {
         ASSERT(match.size() == 1);
-        matches.append(match[0].str().c_str());
+        matches.append(String::fromLatin1(match[0].str().c_str()));
     }
     return matches;
 }
@@ -2360,6 +2360,160 @@ void testLinearScanSpillRangesEarlyDef()
     CHECK(runResult == 99);
 }
 
+void testZDefOfSpillSlotWithOffsetNeedingToBeMaterializedInARegister()
+{
+    if (Options::defaultB3OptLevel() == 2)
+        return;
+
+    B3::Procedure proc;
+    Code& code = proc.code();
+
+    BasicBlock* root = code.addBlock();
+
+    Vector<Tmp> tmps;
+    unsigned numberOfLiveTmps = 10000;
+    for (unsigned i = 0; i < numberOfLiveTmps; ++i)
+        tmps.append(code.newTmp(GP));
+
+    Tmp val = code.newTmp(GP);
+    root->append(Move, nullptr, Arg::imm(0), val);
+    for (auto tmp : tmps) {
+        root->append(Move32, nullptr, val, tmp);
+        root->append(Add64, nullptr, Arg::imm(1), val);
+    }
+
+    Tmp loadResult = code.newTmp(GP);
+    Tmp sum = code.newTmp(GP);
+    root->append(Move, nullptr, Arg::imm(0), sum);
+    for (auto tmp : tmps) {
+        root->append(Move, nullptr, tmp, loadResult);
+        root->append(Add64, nullptr, loadResult, sum);
+    }
+    root->append(Move, nullptr, sum, Tmp(GPRInfo::returnValueGPR));
+    root->append(Ret64, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+    const auto result = compileAndRun<uint64_t>(proc);
+    CHECK(result == (numberOfLiveTmps * (numberOfLiveTmps - 1)) / 2);
+}
+
+void testEarlyAndLateUseOfSameTmp()
+{
+    WeakRandom weakRandom;
+    size_t numTmps = RegisterSet::allGPRs().numberOfSetRegisters();
+    int64_t expectedResult = 0;
+    for (size_t i = 0; i < numTmps; ++i)
+        expectedResult += i;
+
+    for (unsigned j = 0; j < 60; ++j) {
+        B3::Procedure proc;
+        Code& code = proc.code();
+
+        B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+
+        BasicBlock* root = code.addBlock();
+        Vector<Tmp> tmps;
+        Tmp result = code.newTmp(B3::GP);
+        root->append(Move, nullptr, Arg::imm(0), result);
+        for (size_t i = 0; i < numTmps; ++i) {
+            Tmp tmp = code.newTmp(B3::GP);
+            tmps.append(tmp);
+            root->append(Move, nullptr, Arg::imm(i), tmp);
+        }
+
+        {
+            unsigned rand = weakRandom.getUint32(tmps.size());
+            B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+            B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Void, B3::Origin());
+            patchpoint->append(dummyValue, B3::ValueRep::SomeRegister);
+            patchpoint->append(dummyValue, B3::ValueRep::SomeLateRegister);
+            patchpoint->clobberLate(RegisterSet::volatileRegistersForJSCall());
+            patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+                RELEASE_ASSERT(!RegisterSet::volatileRegistersForJSCall().get(params[1].gpr()));
+
+                auto good = jit.branch64(CCallHelpers::Equal, params[1].gpr(), CCallHelpers::TrustedImm32(rand));
+                jit.breakpoint();
+                good.link(&jit);
+
+                auto good2 = jit.branch64(CCallHelpers::Equal, params[0].gpr(), CCallHelpers::TrustedImm32(rand));
+                jit.breakpoint();
+                good2.link(&jit);
+            });
+
+            Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+
+            Tmp tmp = tmps[rand];
+            inst.args.append(tmp);
+            inst.args.append(tmp);
+            root->append(inst);
+        }
+
+        for (Tmp tmp : tmps)
+            root->append(Add64, nullptr, tmp, result);
+        root->append(Move, nullptr, result, Tmp(GPRInfo::returnValueGPR));
+        root->append(Ret64, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+        int64_t actualResult = compileAndRun<int64_t>(proc);
+        CHECK(actualResult == expectedResult);
+    }
+}
+
+void testEarlyClobberInterference()
+{
+    WeakRandom weakRandom;
+    size_t numTmps = RegisterSet::allGPRs().numberOfSetRegisters();
+    int64_t expectedResult = 0;
+    for (size_t i = 0; i < numTmps; ++i)
+        expectedResult += i;
+
+    for (unsigned j = 0; j < 100; ++j) {
+        B3::Procedure proc;
+        Code& code = proc.code();
+
+        B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+
+        BasicBlock* root = code.addBlock();
+        Vector<Tmp> tmps;
+        Tmp result = code.newTmp(B3::GP);
+        root->append(Move, nullptr, Arg::imm(0), result);
+        for (size_t i = 0; i < numTmps; ++i) {
+            Tmp tmp = code.newTmp(B3::GP);
+            tmps.append(tmp);
+            root->append(Move, nullptr, Arg::imm(i), tmp);
+        }
+
+        {
+            unsigned rand = weakRandom.getUint32(tmps.size());
+            B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+            B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Void, B3::Origin());
+            patchpoint->append(dummyValue, B3::ValueRep::SomeRegister);
+            patchpoint->clobberEarly(RegisterSet::volatileRegistersForJSCall());
+            patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+                RELEASE_ASSERT(!RegisterSet::volatileRegistersForJSCall().get(params[0].gpr()));
+
+                auto good = jit.branch64(CCallHelpers::Equal, params[0].gpr(), CCallHelpers::TrustedImm32(rand));
+                jit.breakpoint();
+                good.link(&jit);
+            });
+
+            Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+
+            Tmp tmp = tmps[rand];
+            inst.args.append(tmp);
+            root->append(inst);
+        }
+
+        for (Tmp tmp : tmps)
+            root->append(Add64, nullptr, tmp, result);
+        root->append(Move, nullptr, result, Tmp(GPRInfo::returnValueGPR));
+        root->append(Ret64, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+        int64_t actualResult = compileAndRun<int64_t>(proc);
+        CHECK(actualResult == expectedResult);
+    }
+}
+
 #define PREFIX "O", Options::defaultB3OptLevel(), ": "
 
 #define RUN(test) do {                                 \
@@ -2454,6 +2608,11 @@ void run(const char* filter)
 
     RUN(testLinearScanSpillRangesLateUse());
     RUN(testLinearScanSpillRangesEarlyDef());
+
+    RUN(testZDefOfSpillSlotWithOffsetNeedingToBeMaterializedInARegister());
+
+    RUN(testEarlyAndLateUseOfSameTmp());
+    RUN(testEarlyClobberInterference());
 
     if (tasks.isEmpty())
         usage();

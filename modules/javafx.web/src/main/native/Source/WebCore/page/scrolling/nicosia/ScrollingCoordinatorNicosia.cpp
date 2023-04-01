@@ -56,8 +56,10 @@ void ScrollingCoordinatorNicosia::pageDestroyed()
     AsyncScrollingCoordinator::pageDestroyed();
 
     // Invalidating the scrolling tree will break the reference cycle between the ScrollingCoordinator and ScrollingTree objects.
-    RefPtr<ThreadedScrollingTree> scrollingTree = static_pointer_cast<ThreadedScrollingTree>(releaseScrollingTree());
-    ScrollingThread::dispatch([scrollingTree] { scrollingTree->invalidate(); });
+    RefPtr scrollingTree = static_pointer_cast<ThreadedScrollingTree>(releaseScrollingTree());
+    ScrollingThread::dispatch([scrollingTree = WTFMove(scrollingTree)] {
+        scrollingTree->invalidate();
+    });
 }
 
 void ScrollingCoordinatorNicosia::commitTreeStateIfNeeded()
@@ -77,7 +79,7 @@ bool ScrollingCoordinatorNicosia::handleWheelEventForScrolling(const PlatformWhe
     ASSERT(m_page);
     ASSERT(scrollingTree());
 
-    ScrollingThread::dispatch([threadedScrollingTree = makeRef(downcast<ThreadedScrollingTree>(*scrollingTree())), wheelEvent, targetNode, gestureState] {
+    ScrollingThread::dispatch([threadedScrollingTree = Ref { downcast<ThreadedScrollingTree>(*scrollingTree()) }, wheelEvent, targetNode, gestureState] {
         threadedScrollingTree->handleWheelEventAfterMainThread(wheelEvent, targetNode, gestureState);
     });
     return true;
@@ -100,6 +102,22 @@ void ScrollingCoordinatorNicosia::willStartRenderingUpdate()
     threadedScrollingTree->willStartRenderingUpdate();
     commitTreeStateIfNeeded();
     synchronizeStateFromScrollingTree();
+}
+
+void ScrollingCoordinatorNicosia::didCompleteRenderingUpdate()
+{
+    downcast<ThreadedScrollingTree>(scrollingTree())->didCompleteRenderingUpdate();
+
+    // Scroll animations are driven by the display refresh, so make sure that we
+    // keep firing until they're complete.
+    if (scrollingTree()->hasNodeWithActiveScrollAnimations())
+        scheduleRenderingUpdate();
+}
+
+void ScrollingCoordinatorNicosia::hasNodeWithAnimatedScrollChanged(bool hasAnimatingNode)
+{
+    if (hasAnimatingNode)
+        scheduleRenderingUpdate();
 }
 
 } // namespace WebCore

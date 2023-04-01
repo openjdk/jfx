@@ -50,13 +50,15 @@
 #include "PerformanceTiming.h"
 #include "PerformanceUserTiming.h"
 #include "ResourceResponse.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Performance);
+
+constexpr Seconds highTimePrecision { 20_us };
+static Seconds timePrecision { 1_ms };
 
 Performance::Performance(ScriptExecutionContext* context, MonotonicTime timeOrigin)
     : ContextDestructionObserver(context)
@@ -92,9 +94,14 @@ ReducedResolutionSeconds Performance::nowInReducedResolutionSeconds() const
 
 Seconds Performance::reduceTimeResolution(Seconds seconds)
 {
-    double resolution = (1000_us).seconds();
+    double resolution = timePrecision.seconds();
     double reduced = std::floor(seconds.seconds() / resolution) * resolution;
     return Seconds(reduced);
+}
+
+void Performance::allowHighPrecisionTime()
+{
+    timePrecision = highTimePrecision;
 }
 
 DOMHighResTimeStamp Performance::relativeTimeFromTimeOriginInReducedResolution(MonotonicTime timestamp) const
@@ -150,19 +157,19 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntriesByType(const String& ent
 {
     Vector<RefPtr<PerformanceEntry>> entries;
 
-    if (m_navigationTiming && entryType == "navigation")
+    if (m_navigationTiming && entryType == "navigation"_s)
         entries.append(m_navigationTiming);
 
-    if (entryType == "resource")
+    if (entryType == "resource"_s)
         entries.appendVector(m_resourceTimingBuffer);
 
-    if (m_firstContentfulPaint && entryType == "paint")
+    if (m_firstContentfulPaint && entryType == "paint"_s)
         entries.append(m_firstContentfulPaint);
 
     if (m_userTiming) {
-        if (entryType == "mark")
+        if (entryType == "mark"_s)
             entries.appendVector(m_userTiming->getMarks());
-        else if (entryType == "measure")
+        else if (entryType == "measure"_s)
             entries.appendVector(m_userTiming->getMeasures());
     }
 
@@ -174,23 +181,23 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntriesByName(const String& nam
 {
     Vector<RefPtr<PerformanceEntry>> entries;
 
-    if (m_navigationTiming && (entryType.isNull() || entryType == "navigation") && name == m_navigationTiming->name())
+    if (m_navigationTiming && (entryType.isNull() || entryType == "navigation"_s) && name == m_navigationTiming->name())
         entries.append(m_navigationTiming);
 
-    if (entryType.isNull() || entryType == "resource") {
+    if (entryType.isNull() || entryType == "resource"_s) {
         for (auto& resource : m_resourceTimingBuffer) {
             if (resource->name() == name)
                 entries.append(resource);
         }
     }
 
-    if (m_firstContentfulPaint && (entryType.isNull() || entryType == "paint") && name == "first-contentful-paint")
+    if (m_firstContentfulPaint && (entryType.isNull() || entryType == "paint"_s) && name == "first-contentful-paint"_s)
         entries.append(m_firstContentfulPaint);
 
     if (m_userTiming) {
-        if (entryType.isNull() || entryType == "mark")
+        if (entryType.isNull() || entryType == "mark"_s)
             entries.appendVector(m_userTiming->getMarks(name));
-        if (entryType.isNull() || entryType == "measure")
+        if (entryType.isNull() || entryType == "measure"_s)
             entries.appendVector(m_userTiming->getMeasures(name));
     }
 
@@ -201,19 +208,22 @@ Vector<RefPtr<PerformanceEntry>> Performance::getEntriesByName(const String& nam
 void Performance::appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>& entries, PerformanceObserver& observer) const
 {
     if (m_navigationTiming
-        && entryType == "navigation"
+        && entryType == "navigation"_s
         && !observer.hasNavigationTiming()) {
         entries.append(m_navigationTiming);
         observer.addedNavigationTiming();
     }
 
-    if (entryType == "resource")
+    if (entryType == "resource"_s)
         entries.appendVector(m_resourceTimingBuffer);
 
+    if (entryType == "paint"_s && m_firstContentfulPaint)
+        entries.append(m_firstContentfulPaint);
+
     if (m_userTiming) {
-        if (entryType.isNull() || entryType == "mark")
+        if (entryType.isNull() || entryType == "mark"_s)
             entries.appendVector(m_userTiming->getMarks());
-        if (entryType.isNull() || entryType == "measure")
+        if (entryType.isNull() || entryType == "measure"_s)
             entries.appendVector(m_userTiming->getMeasures());
     }
 }
@@ -241,6 +251,14 @@ void Performance::addNavigationTiming(DocumentLoader& documentLoader, Document& 
 {
     ASSERT(document.settings().performanceNavigationTimingAPIEnabled());
     m_navigationTiming = PerformanceNavigationTiming::create(m_timeOrigin, resource, timing, metrics, document.eventTiming(), document.securityOrigin(), documentLoader.triggeringAction().type());
+}
+
+void Performance::navigationFinished(const NetworkLoadMetrics& metrics)
+{
+    if (!m_navigationTiming)
+        return;
+    m_navigationTiming->navigationFinished(metrics);
+
     queueEntry(*m_navigationTiming);
 }
 
@@ -422,7 +440,7 @@ void Performance::scheduleTaskIfNeeded()
         return;
 
     m_hasScheduledTimingBufferDeliveryTask = true;
-    context->eventLoop().queueTask(TaskSource::PerformanceTimeline, [protectedThis = makeRef(*this), this] {
+    context->eventLoop().queueTask(TaskSource::PerformanceTimeline, [protectedThis = Ref { *this }, this] {
         auto* context = scriptExecutionContext();
         if (!context)
             return;

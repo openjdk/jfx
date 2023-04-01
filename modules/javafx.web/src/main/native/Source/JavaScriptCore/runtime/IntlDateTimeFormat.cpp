@@ -60,7 +60,7 @@ void UDateIntervalFormatDeleter::operator()(UDateIntervalFormat* formatter)
         udtitvfmt_close(formatter);
 }
 
-const ClassInfo IntlDateTimeFormat::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlDateTimeFormat) };
+const ClassInfo IntlDateTimeFormat::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlDateTimeFormat) };
 
 namespace IntlDateTimeFormatInternal {
 static constexpr bool verbose = false;
@@ -68,7 +68,7 @@ static constexpr bool verbose = false;
 
 IntlDateTimeFormat* IntlDateTimeFormat::create(VM& vm, Structure* structure)
 {
-    IntlDateTimeFormat* format = new (NotNull, allocateCell<IntlDateTimeFormat>(vm.heap)) IntlDateTimeFormat(vm, structure);
+    IntlDateTimeFormat* format = new (NotNull, allocateCell<IntlDateTimeFormat>(vm)) IntlDateTimeFormat(vm, structure);
     format->finishCreation(vm);
     return format;
 }
@@ -86,7 +86,7 @@ IntlDateTimeFormat::IntlDateTimeFormat(VM& vm, Structure* structure)
 void IntlDateTimeFormat::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>
@@ -327,7 +327,7 @@ static inline unsigned skipLiteralText(const Container& container, unsigned star
     return length - 1;
 }
 
-void IntlDateTimeFormat::setFormatsFromPattern(const StringView& pattern)
+void IntlDateTimeFormat::setFormatsFromPattern(StringView pattern)
 {
     // Get all symbols from the pattern, and set format fields accordingly.
     // http://unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table
@@ -604,7 +604,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     LocaleMatcher localeMatcher = intlOption<LocaleMatcher>(globalObject, options, vm.propertyNames->localeMatcher, { { "lookup"_s, LocaleMatcher::Lookup }, { "best fit"_s, LocaleMatcher::BestFit } }, "localeMatcher must be either \"lookup\" or \"best fit\""_s, LocaleMatcher::BestFit);
     RETURN_IF_EXCEPTION(scope, void());
 
-    String calendar = intlStringOption(globalObject, options, vm.propertyNames->calendar, { }, nullptr, nullptr);
+    String calendar = intlStringOption(globalObject, options, vm.propertyNames->calendar, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!calendar.isNull()) {
         if (!isUnicodeLocaleIdentifierType(calendar)) {
@@ -614,7 +614,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
         localeOptions[static_cast<unsigned>(RelevantExtensionKey::Ca)] = calendar;
     }
 
-    String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, nullptr, nullptr);
+    String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!numberingSystem.isNull()) {
         if (!isUnicodeLocaleIdentifierType(numberingSystem)) {
@@ -881,7 +881,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
         break;
     }
 
-    intlStringOption(globalObject, options, vm.propertyNames->formatMatcher, { "basic", "best fit" }, "formatMatcher must be either \"basic\" or \"best fit\"", "best fit");
+    intlStringOption(globalObject, options, vm.propertyNames->formatMatcher, { "basic"_s, "best fit"_s }, "formatMatcher must be either \"basic\" or \"best fit\""_s, "best fit"_s);
     RETURN_IF_EXCEPTION(scope, void());
 
     m_dateStyle = intlOption<DateTimeStyle>(globalObject, options, vm.propertyNames->dateStyle, { { "full"_s, DateTimeStyle::Full }, { "long"_s, DateTimeStyle::Long }, { "medium"_s, DateTimeStyle::Medium }, { "short"_s, DateTimeStyle::Short } }, "dateStyle must be \"full\", \"long\", \"medium\", or \"short\""_s, DateTimeStyle::None);
@@ -1019,10 +1019,10 @@ ASCIILiteral IntlDateTimeFormat::hourCycleString(HourCycle hourCycle)
         return "h24"_s;
     case HourCycle::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::weekdayString(Weekday weekday)
@@ -1036,10 +1036,10 @@ ASCIILiteral IntlDateTimeFormat::weekdayString(Weekday weekday)
         return "long"_s;
     case Weekday::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::eraString(Era era)
@@ -1053,10 +1053,10 @@ ASCIILiteral IntlDateTimeFormat::eraString(Era era)
         return "long"_s;
     case Era::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::yearString(Year year)
@@ -1068,10 +1068,10 @@ ASCIILiteral IntlDateTimeFormat::yearString(Year year)
         return "numeric"_s;
     case Year::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::monthString(Month month)
@@ -1089,10 +1089,10 @@ ASCIILiteral IntlDateTimeFormat::monthString(Month month)
         return "long"_s;
     case Month::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::dayString(Day day)
@@ -1104,10 +1104,10 @@ ASCIILiteral IntlDateTimeFormat::dayString(Day day)
         return "numeric"_s;
     case Day::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::dayPeriodString(DayPeriod dayPeriod)
@@ -1121,10 +1121,10 @@ ASCIILiteral IntlDateTimeFormat::dayPeriodString(DayPeriod dayPeriod)
         return "long"_s;
     case DayPeriod::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::hourString(Hour hour)
@@ -1136,10 +1136,10 @@ ASCIILiteral IntlDateTimeFormat::hourString(Hour hour)
         return "numeric"_s;
     case Hour::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::minuteString(Minute minute)
@@ -1151,10 +1151,10 @@ ASCIILiteral IntlDateTimeFormat::minuteString(Minute minute)
         return "numeric"_s;
     case Minute::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::secondString(Second second)
@@ -1166,10 +1166,10 @@ ASCIILiteral IntlDateTimeFormat::secondString(Second second)
         return "numeric"_s;
     case Second::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::timeZoneNameString(TimeZoneName timeZoneName)
@@ -1189,10 +1189,10 @@ ASCIILiteral IntlDateTimeFormat::timeZoneNameString(TimeZoneName timeZoneName)
         return "longGeneric"_s;
     case TimeZoneName::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlDateTimeFormat::formatStyleString(DateTimeStyle style)
@@ -1208,10 +1208,10 @@ ASCIILiteral IntlDateTimeFormat::formatStyleString(DateTimeStyle style)
         return "short"_s;
     case DateTimeStyle::None:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral::null();
+        return { };
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.resolvedoptions
@@ -1230,44 +1230,46 @@ JSObject* IntlDateTimeFormat::resolvedOptions(JSGlobalObject* globalObject) cons
         options->putDirect(vm, vm.propertyNames->hour12, jsBoolean(m_hourCycle == HourCycle::H11 || m_hourCycle == HourCycle::H12));
     }
 
-    if (m_weekday != Weekday::None)
-        options->putDirect(vm, vm.propertyNames->weekday, jsNontrivialString(vm, weekdayString(m_weekday)));
+    if (m_dateStyle == DateTimeStyle::None && m_timeStyle == DateTimeStyle::None) {
+        if (m_weekday != Weekday::None)
+            options->putDirect(vm, vm.propertyNames->weekday, jsNontrivialString(vm, weekdayString(m_weekday)));
 
-    if (m_era != Era::None)
-        options->putDirect(vm, vm.propertyNames->era, jsNontrivialString(vm, eraString(m_era)));
+        if (m_era != Era::None)
+            options->putDirect(vm, vm.propertyNames->era, jsNontrivialString(vm, eraString(m_era)));
 
-    if (m_year != Year::None)
-        options->putDirect(vm, vm.propertyNames->year, jsNontrivialString(vm, yearString(m_year)));
+        if (m_year != Year::None)
+            options->putDirect(vm, vm.propertyNames->year, jsNontrivialString(vm, yearString(m_year)));
 
-    if (m_month != Month::None)
-        options->putDirect(vm, vm.propertyNames->month, jsNontrivialString(vm, monthString(m_month)));
+        if (m_month != Month::None)
+            options->putDirect(vm, vm.propertyNames->month, jsNontrivialString(vm, monthString(m_month)));
 
-    if (m_day != Day::None)
-        options->putDirect(vm, vm.propertyNames->day, jsNontrivialString(vm, dayString(m_day)));
+        if (m_day != Day::None)
+            options->putDirect(vm, vm.propertyNames->day, jsNontrivialString(vm, dayString(m_day)));
 
-    if (m_dayPeriod != DayPeriod::None)
-        options->putDirect(vm, vm.propertyNames->dayPeriod, jsNontrivialString(vm, dayPeriodString(m_dayPeriod)));
+        if (m_dayPeriod != DayPeriod::None)
+            options->putDirect(vm, vm.propertyNames->dayPeriod, jsNontrivialString(vm, dayPeriodString(m_dayPeriod)));
 
-    if (m_hour != Hour::None)
-        options->putDirect(vm, vm.propertyNames->hour, jsNontrivialString(vm, hourString(m_hour)));
+        if (m_hour != Hour::None)
+            options->putDirect(vm, vm.propertyNames->hour, jsNontrivialString(vm, hourString(m_hour)));
 
-    if (m_minute != Minute::None)
-        options->putDirect(vm, vm.propertyNames->minute, jsNontrivialString(vm, minuteString(m_minute)));
+        if (m_minute != Minute::None)
+            options->putDirect(vm, vm.propertyNames->minute, jsNontrivialString(vm, minuteString(m_minute)));
 
-    if (m_second != Second::None)
-        options->putDirect(vm, vm.propertyNames->second, jsNontrivialString(vm, secondString(m_second)));
+        if (m_second != Second::None)
+            options->putDirect(vm, vm.propertyNames->second, jsNontrivialString(vm, secondString(m_second)));
 
-    if (m_fractionalSecondDigits)
-        options->putDirect(vm, vm.propertyNames->fractionalSecondDigits, jsNumber(m_fractionalSecondDigits));
+        if (m_fractionalSecondDigits)
+            options->putDirect(vm, vm.propertyNames->fractionalSecondDigits, jsNumber(m_fractionalSecondDigits));
 
-    if (m_timeZoneName != TimeZoneName::None)
-        options->putDirect(vm, vm.propertyNames->timeZoneName, jsNontrivialString(vm, timeZoneNameString(m_timeZoneName)));
+        if (m_timeZoneName != TimeZoneName::None)
+            options->putDirect(vm, vm.propertyNames->timeZoneName, jsNontrivialString(vm, timeZoneNameString(m_timeZoneName)));
+    } else {
+        if (m_dateStyle != DateTimeStyle::None)
+            options->putDirect(vm, vm.propertyNames->dateStyle, jsNontrivialString(vm, formatStyleString(m_dateStyle)));
 
-    if (m_dateStyle != DateTimeStyle::None)
-        options->putDirect(vm, vm.propertyNames->dateStyle, jsNontrivialString(vm, formatStyleString(m_dateStyle)));
-
-    if (m_timeStyle != DateTimeStyle::None)
-        options->putDirect(vm, vm.propertyNames->timeStyle, jsNontrivialString(vm, formatStyleString(m_timeStyle)));
+        if (m_timeStyle != DateTimeStyle::None)
+            options->putDirect(vm, vm.propertyNames->timeStyle, jsNontrivialString(vm, formatStyleString(m_timeStyle)));
+    }
 
     return options;
 }
@@ -1288,7 +1290,7 @@ JSValue IntlDateTimeFormat::format(JSGlobalObject* globalObject, double value) c
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format date value"_s);
 
-    return jsString(vm, String(result));
+    return jsString(vm, String(WTFMove(result)));
 }
 
 static ASCIILiteral partTypeString(UDateFormatField field)
@@ -1379,7 +1381,7 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
     if (!parts)
         return throwOutOfMemoryError(globalObject, scope);
 
-    auto resultString = String(result);
+    StringView resultStringView(result.data(), result.size());
     auto literalString = jsNontrivialString(vm, "literal"_s);
 
     int32_t resultLength = result.size();
@@ -1392,7 +1394,7 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
             beginIndex = endIndex = resultLength;
 
         if (previousEndIndex < beginIndex) {
-            auto value = jsString(vm, resultString.substring(previousEndIndex, beginIndex - previousEndIndex));
+            auto value = jsString(vm, resultStringView.substring(previousEndIndex, beginIndex - previousEndIndex));
             JSObject* part = constructEmptyObject(globalObject);
             part->putDirect(vm, vm.propertyNames->type, literalString);
             part->putDirect(vm, vm.propertyNames->value, value);
@@ -1404,8 +1406,8 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
         previousEndIndex = endIndex;
 
         if (fieldType >= 0) {
-            auto type = jsString(vm, partTypeString(UDateFormatField(fieldType)));
-            auto value = jsString(vm, resultString.substring(beginIndex, endIndex - beginIndex));
+            auto type = jsNontrivialString(vm, partTypeString(UDateFormatField(fieldType)));
+            auto value = jsString(vm, resultStringView.substring(beginIndex, endIndex - beginIndex));
             JSObject* part = constructEmptyObject(globalObject);
             part->putDirect(vm, vm.propertyNames->type, type);
             part->putDirect(vm, vm.propertyNames->value, value);
@@ -1611,7 +1613,7 @@ JSValue IntlDateTimeFormat::formatRange(JSGlobalObject* globalObject, double sta
         return { };
     }
 
-    return jsString(vm, String(buffer));
+    return jsString(vm, String(WTFMove(buffer)));
 #endif
 }
 
@@ -1714,7 +1716,7 @@ JSValue IntlDateTimeFormat::formatRangeToParts(JSGlobalObject* globalObject, dou
         throwTypeError(globalObject, scope, "Failed to format date interval"_s);
         return { };
     }
-    String resultString(formattedStringPointer, formattedStringLength);
+    StringView resultStringView(formattedStringPointer, formattedStringLength);
 
     // We care multiple categories (UFIELD_CATEGORY_DATE and UFIELD_CATEGORY_DATE_INTERVAL_SPAN).
     // So we do not constraint iterator.
@@ -1740,7 +1742,7 @@ JSValue IntlDateTimeFormat::formatRangeToParts(JSGlobalObject* globalObject, dou
             return sharedString;
         };
 
-        auto value = jsString(vm, resultString.substring(beginIndex, length));
+        auto value = jsString(vm, resultStringView.substring(beginIndex, length));
         JSObject* part = constructEmptyObject(globalObject);
         part->putDirect(vm, vm.propertyNames->type, type);
         part->putDirect(vm, vm.propertyNames->value, value);
@@ -1748,7 +1750,7 @@ JSValue IntlDateTimeFormat::formatRangeToParts(JSGlobalObject* globalObject, dou
         return part;
     };
 
-    int32_t resultLength = resultString.length();
+    int32_t resultLength = resultStringView.length();
     int32_t previousEndIndex = 0;
     while (true) {
         bool next = ufmtval_nextPosition(formattedValue, iterator.get(), &status);
@@ -1809,7 +1811,7 @@ JSValue IntlDateTimeFormat::formatRangeToParts(JSGlobalObject* globalObject, dou
 
         ASSERT(category == UFIELD_CATEGORY_DATE);
 
-        auto type = jsString(vm, partTypeString(UDateFormatField(fieldType)));
+        auto type = jsNontrivialString(vm, partTypeString(UDateFormatField(fieldType)));
         JSObject* part = createPart(type, beginIndex, endIndex - beginIndex);
         parts->push(globalObject, part);
         RETURN_IF_EXCEPTION(scope, { });

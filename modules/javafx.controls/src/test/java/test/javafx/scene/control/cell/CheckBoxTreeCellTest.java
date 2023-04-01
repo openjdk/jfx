@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ public class CheckBoxTreeCellTest {
     @Before public void setup() {
         booleanProperty = new SimpleBooleanProperty(false);
         callback = param -> booleanProperty;
-        converter = new StringConverter<TreeItem<Object>>() {
+        converter = new StringConverter<>() {
             @Override public String toString(TreeItem<Object> object) {
                 return null;
             }
@@ -310,7 +310,7 @@ public class CheckBoxTreeCellTest {
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback);
 
-        TreeItem<Object> treeItem = new TreeItem<Object>("TREEITEM TEST");
+        TreeItem<Object> treeItem = new TreeItem<>("TREEITEM TEST");
         cell.updateTreeItem(treeItem);
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
@@ -321,7 +321,7 @@ public class CheckBoxTreeCellTest {
         CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback);
         cell.setConverter(null);
 
-        TreeItem<Object> treeItem = new TreeItem<Object>("TREEITEM TEST");
+        TreeItem<Object> treeItem = new TreeItem<>("TREEITEM TEST");
         cell.updateTreeItem(treeItem);
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());

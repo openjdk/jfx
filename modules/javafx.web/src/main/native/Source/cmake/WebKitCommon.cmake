@@ -13,11 +13,16 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         message(STATUS "The CMake build type is: ${CMAKE_BUILD_TYPE}")
     endif ()
 
-    set(ENABLE_JAVASCRIPTCORE ON)
-    set(ENABLE_WEBCORE ON)
+    option(ENABLE_JAVASCRIPTCORE "Enable building JavaScriptCore" ON)
+    option(ENABLE_WEBCORE "Enable building JavaScriptCore" ON)
+    option(ENABLE_WEBKIT "Enable building WebKit" ON)
 
-    if (NOT DEFINED ENABLE_WEBKIT)
-        set(ENABLE_WEBKIT ON)
+    if (NOT ENABLE_JAVASCRIPTCORE)
+        set(ENABLE_WEBCORE OFF)
+    endif ()
+
+    if (NOT ENABLE_WEBCORE)
+        set(ENABLE_WEBKIT OFF)
     endif ()
 
     if (NOT DEFINED ENABLE_TOOLS AND EXISTS "${CMAKE_SOURCE_DIR}/Tools")
@@ -64,8 +69,8 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     endif ()
 
     if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-        if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "7.3.0")
-            message(FATAL_ERROR "GCC 7.3 or newer is required to build WebKit. Use a newer GCC version or Clang.")
+        if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "8.3.0")
+            message(FATAL_ERROR "GCC 8.3 or newer is required to build WebKit. Use a newer GCC version or Clang.")
         endif ()
     endif ()
 
@@ -87,9 +92,9 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     else ()
         string(TOLOWER ${CMAKE_SYSTEM_PROCESSOR} LOWERCASE_CMAKE_SYSTEM_PROCESSOR)
     endif ()
-    if (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(^aarch64|^arm64)")
+    if (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(^aarch64|^arm64|^cortex-?[am][2-7][2-8])")
         set(WTF_CPU_ARM64 1)
-    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
+    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(^arm|^cortex)")
         set(WTF_CPU_ARM 1)
     elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^mips64")
         set(WTF_CPU_MIPS64 1)
@@ -115,6 +120,8 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         set(WTF_CPU_PPC64LE 1)
     elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^riscv64")
         set(WTF_CPU_RISCV64 1)
+    elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^loongarch64")
+        set(WTF_CPU_LOONGARCH64 1)
     else ()
         set(WTF_CPU_UNKNOWN 1)
     endif ()
@@ -181,10 +188,12 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
 
     # TODO Enforce version requirement for perl
     find_package(Perl 5.10.0 REQUIRED)
-    find_package(PerlModules COMPONENTS JSON::PP REQUIRED)
+    find_package(PerlModules COMPONENTS English FindBin JSON::PP REQUIRED)
 
-    set(Python_ADDITIONAL_VERSIONS 3)
-    find_package(PythonInterp 2.7.0 REQUIRED)
+    # This module looks preferably for version 3 of Python. If not found, version 2 is searched.
+    find_package(Python COMPONENTS Interpreter REQUIRED)
+    # Set the variable with uppercase name to keep compatibility with code and users expecting it.
+    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE FILEPATH "Path to the Python interpreter")
 
     # We cannot check for RUBY_FOUND because it is set only when the full package is installed and
     # the only thing we need is the interpreter. Unlike Python, cmake does not provide a macro

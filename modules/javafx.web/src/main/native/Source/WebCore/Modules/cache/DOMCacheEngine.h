@@ -57,7 +57,7 @@ Exception convertToExceptionAndLog(ScriptExecutionContext*, Error);
 WEBCORE_EXPORT bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cachedRequest, const ResourceResponse&, const CacheQueryOptions&);
 WEBCORE_EXPORT bool queryCacheMatch(const ResourceRequest& request, const URL& url, bool hasVaryStar, const HashMap<String, String>& varyHeaders, const CacheQueryOptions&);
 
-using ResponseBody = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
+using ResponseBody = std::variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
 ResponseBody isolatedResponseBody(const ResponseBody&);
 WEBCORE_EXPORT ResponseBody copyResponseBody(const ResponseBody&);
 
@@ -82,16 +82,20 @@ struct Record {
 struct CacheInfo {
     uint64_t identifier;
     String name;
+
+    CacheInfo isolatedCopy() const & { return { identifier, name.isolatedCopy() }; }
+    CacheInfo isolatedCopy() && { return { identifier, WTFMove(name).isolatedCopy() }; }
 };
 
 struct CacheInfos {
-    CacheInfos isolatedCopy();
+    Vector<CacheInfo> infos;
+    uint64_t updateCounter;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<CacheInfos> decode(Decoder&);
 
-    Vector<CacheInfo> infos;
-    uint64_t updateCounter;
+    CacheInfos isolatedCopy() const & { return { crossThreadCopy(infos), updateCounter }; }
+    CacheInfos isolatedCopy() && { return { crossThreadCopy(WTFMove(infos)), updateCounter }; }
 };
 
 struct CacheIdentifierOperationResult {

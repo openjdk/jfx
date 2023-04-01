@@ -87,13 +87,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MutationEventImpl_initMutationEve
     , jshort attrChange)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->initMutationEvent(String(env, type)
+    IMPL->initMutationEvent(AtomString{String(env, type)}
             , canBubble
             , cancelable
             , static_cast<Node*>(jlong_to_ptr(relatedNode))
-            , String(env, prevValue)
-            , String(env, newValue)
-            , String(env, attrName)
+            , AtomString{String(env, prevValue)}
+            , AtomString{String(env, newValue)}
+            , AtomString{String(env, attrName)}
             , attrChange);
 }
 

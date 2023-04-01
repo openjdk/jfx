@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Pasteboard.h"
 
+#include "CommonAtomStrings.h"
 #include "PasteboardStrategy.h"
 #include "PlatformStrategies.h"
 #include "Settings.h"
@@ -38,9 +39,13 @@ namespace WebCore {
 PasteboardImage::PasteboardImage() = default;
 PasteboardImage::~PasteboardImage() = default;
 
+// Making this non-inline so that WebKit 2's decoding doesn't have to include SharedBuffer.h.
+PasteboardBuffer::PasteboardBuffer() = default;
+PasteboardBuffer::~PasteboardBuffer() = default;
+
 bool Pasteboard::isSafeTypeForDOMToReadAndWrite(const String& type)
 {
-    return type == "text/plain" || type == "text/html" || type == "text/uri-list";
+    return type == textPlainContentTypeAtom() || type == "text/html"_s || type == "text/uri-list"_s;
 }
 
 bool Pasteboard::canExposeURLToDOMWhenPasteboardContainsFiles(const String& urlString)
@@ -89,7 +94,7 @@ String Pasteboard::readString(size_t index, const String& type)
     return { };
 }
 
-RefPtr<WebCore::SharedBuffer> Pasteboard::readBuffer(size_t index, const String& type)
+RefPtr<WebCore::SharedBuffer> Pasteboard::readBuffer(std::optional<size_t> index, const String& type)
 {
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
         return strategy->readBufferFromPasteboard(index, type, name(), context());

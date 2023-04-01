@@ -24,8 +24,8 @@
  */
 
 [
-    EnabledAtRuntime=TransformStreamAPI,
-    Exposed=(Window,Worker),
+    EnabledBySetting=TransformStreamAPIEnabled,
+    Exposed=*,
     JSBuiltin,
 ] interface TextDecoderStream {
     constructor(optional DOMString label, optional any options);

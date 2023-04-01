@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.RandomAccess;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.collections.ObservableList;
 import javafx.util.Callback;
 
 /**
@@ -43,11 +42,11 @@ import javafx.util.Callback;
  *
  */
 public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements
-        ObservableList<E>, SortableList<E>, RandomAccess {
+        SortableList<E>, RandomAccess {
 
     private final List<E> backingList;
 
-    private final ElementObserver elementObserver;
+    private final ElementObserver<E> elementObserver;
 
     public ObservableListWrapper(List<E> list) {
         backingList = list;
@@ -56,7 +55,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     public ObservableListWrapper(List<E> list, Callback<E, Observable[]> extractor) {
         backingList = list;
-        this.elementObserver = new ElementObserver(extractor, new Callback<E, InvalidationListener>() {
+        this.elementObserver = new ElementObserver<>(extractor, new Callback<E, InvalidationListener>() {
 
             @Override
             public InvalidationListener call(final E e) {
@@ -219,13 +218,8 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
     private SortHelper helper;
 
     @Override
-    @SuppressWarnings("unchecked")
     public void sort() {
-        if (backingList.isEmpty()) {
-            return;
-        }
-        int[] perm = getSortHelper().sort((List<? extends Comparable>)backingList);
-        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
+        sort(null);
     }
 
     @Override
@@ -233,8 +227,10 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
         if (backingList.isEmpty()) {
             return;
         }
-        int[] perm = getSortHelper().sort(backingList, comparator);
-        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
+        @SuppressWarnings("unchecked")
+        int[] perm = comparator == null ? getSortHelper().sort((List<? extends Comparable<Object>>) backingList)
+                : getSortHelper().sort(backingList, comparator);
+        fireChange(new SimplePermutationChange<>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {

@@ -83,6 +83,9 @@ Range
 Referer
 Referrer-Policy
 Refresh
+Report-To
+Sec-Fetch-Dest
+Sec-Fetch-Mode
 Sec-WebSocket-Accept
 Sec-WebSocket-Extensions
 Sec-WebSocket-Key
@@ -91,6 +94,7 @@ Sec-WebSocket-Version
 Server-Timing
 Service-Worker
 Service-Worker-Allowed
+Service-Worker-Navigation-Preload
 Set-Cookie
 Set-Cookie2
 SourceMap

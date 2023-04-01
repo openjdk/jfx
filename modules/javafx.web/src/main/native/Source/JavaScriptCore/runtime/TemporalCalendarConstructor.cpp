@@ -41,7 +41,7 @@ static JSC_DECLARE_HOST_FUNCTION(temporalCalendarConstructorFuncFrom);
 
 namespace JSC {
 
-const ClassInfo TemporalCalendarConstructor::s_info = { "Function", &InternalFunction::s_info, &temporalCalendarConstructorTable, nullptr, CREATE_METHOD_TABLE(TemporalCalendarConstructor) };
+const ClassInfo TemporalCalendarConstructor::s_info = { "Function"_s, &InternalFunction::s_info, &temporalCalendarConstructorTable, nullptr, CREATE_METHOD_TABLE(TemporalCalendarConstructor) };
 
 /* Source for TemporalCalendarConstructor.lut.h
 @begin temporalCalendarConstructorTable
@@ -51,7 +51,7 @@ const ClassInfo TemporalCalendarConstructor::s_info = { "Function", &InternalFun
 
 TemporalCalendarConstructor* TemporalCalendarConstructor::create(VM& vm, Structure* structure, TemporalCalendarPrototype* temporalCalendarPrototype)
 {
-    TemporalCalendarConstructor* constructor = new (NotNull, allocateCell<TemporalCalendarConstructor>(vm.heap)) TemporalCalendarConstructor(vm, structure);
+    TemporalCalendarConstructor* constructor = new (NotNull, allocateCell<TemporalCalendarConstructor>(vm)) TemporalCalendarConstructor(vm, structure);
     constructor->finishCreation(vm, temporalCalendarPrototype);
     return constructor;
 }
@@ -73,6 +73,7 @@ void TemporalCalendarConstructor::finishCreation(VM& vm, TemporalCalendarPrototy
 {
     Base::finishCreation(vm, 0, "Calendar"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, temporalCalendarPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+    temporalCalendarPrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 JSC_DEFINE_HOST_FUNCTION(constructTemporalCalendar, (JSGlobalObject* globalObject, CallFrame* callFrame))

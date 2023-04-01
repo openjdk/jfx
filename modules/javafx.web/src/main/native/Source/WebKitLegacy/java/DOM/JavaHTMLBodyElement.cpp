@@ -55,7 +55,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getALinkIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setALinkImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alinkAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alinkAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getBackgroundImpl(JNIEnv* env, jclass, jlong peer)
@@ -67,7 +67,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getBackgro
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setBackgroundImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::backgroundAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::backgroundAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getBgColorImpl(JNIEnv* env, jclass, jlong peer)
@@ -79,7 +79,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getBgColor
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setBgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getLinkImpl(JNIEnv* env, jclass, jlong peer)
@@ -91,7 +91,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getLinkImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setLinkImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::linkAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::linkAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getTextImpl(JNIEnv* env, jclass, jlong peer)
@@ -103,7 +103,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getTextImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::textAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::textAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getVLinkImpl(JNIEnv* env, jclass, jlong peer)
@@ -115,7 +115,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getVLinkIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_setVLinkImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::vlinkAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::vlinkAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLBodyElementImpl_getOnblurImpl(JNIEnv* env, jclass, jlong peer)

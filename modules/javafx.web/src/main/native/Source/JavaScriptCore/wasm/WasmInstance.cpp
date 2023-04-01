@@ -33,7 +33,8 @@
 #include "JSWebAssemblyInstance.h"
 #include "Register.h"
 #include "WasmModuleInformation.h"
-#include "WasmSignatureInlines.h"
+#include "WasmTag.h"
+#include "WasmTypeDefinitionInlines.h"
 #include <wtf/CheckedArithmetic.h>
 
 namespace JSC { namespace Wasm {
@@ -45,18 +46,18 @@ size_t globalMemoryByteSize(Module& module)
 }
 }
 
-Instance::Instance(Context* context, Ref<Module>&& module, EntryFrame** pointerToTopEntryFrame, void** pointerToActualStackLimit, StoreTopCallFrameCallback&& storeTopCallFrame)
-    : m_context(context)
+Instance::Instance(VM& vm, Ref<Module>&& module)
+    : m_vm(vm)
     , m_module(WTFMove(module))
     , m_globals(MallocPtr<Global::Value, VMMalloc>::malloc(globalMemoryByteSize(m_module.get())))
     , m_globalsToMark(m_module.get().moduleInformation().globals.size())
     , m_globalsToBinding(m_module.get().moduleInformation().globals.size())
-    , m_pointerToTopEntryFrame(pointerToTopEntryFrame)
-    , m_pointerToActualStackLimit(pointerToActualStackLimit)
-    , m_storeTopCallFrame(WTFMove(storeTopCallFrame))
+    , m_pointerToTopEntryFrame(&vm.topEntryFrame)
+    , m_pointerToActualStackLimit(vm.addressOfSoftStackLimit())
     , m_numImportFunctions(m_module->moduleInformation().importFunctionCount())
     , m_passiveElements(m_module->moduleInformation().elementCount())
     , m_passiveDataSegments(m_module->moduleInformation().dataSegmentsCount())
+    , m_tags(m_module->moduleInformation().exceptionIndexSpaceSize())
 {
     for (unsigned i = 0; i < m_numImportFunctions; ++i)
         new (importFunctionInfo(i)) ImportFunctionInfo();
@@ -85,12 +86,14 @@ Instance::Instance(Context* context, Ref<Module>&& module, EntryFrame** pointerT
     }
 }
 
-Ref<Instance> Instance::create(Context* context, Ref<Module>&& module, EntryFrame** pointerToTopEntryFrame, void** pointerToActualStackLimit, StoreTopCallFrameCallback&& storeTopCallFrame)
+Ref<Instance> Instance::create(VM& vm, Ref<Module>&& module)
 {
-    return adoptRef(*new (NotNull, fastMalloc(allocationSize(module->moduleInformation().importFunctionCount(), module->moduleInformation().tableCount()))) Instance(context, WTFMove(module), pointerToTopEntryFrame, pointerToActualStackLimit, WTFMove(storeTopCallFrame)));
+    return adoptRef(*new (NotNull, fastMalloc(allocationSize(module->moduleInformation().importFunctionCount(), module->moduleInformation().tableCount()))) Instance(vm, WTFMove(module)));
 }
 
-Instance::~Instance() { }
+Instance::~Instance()
+{
+}
 
 size_t Instance::extraMemoryAllocated() const
 {
@@ -122,7 +125,7 @@ JSValue Instance::getFunctionWrapper(unsigned i) const
 void Instance::setFunctionWrapper(unsigned i, JSValue value)
 {
     ASSERT(m_owner);
-    ASSERT(value.isCallable(owner<JSWebAssemblyInstance>()->vm()));
+    ASSERT(value.isCallable());
     ASSERT(!m_functionWrappers.contains(i));
     Locker locker { owner<JSWebAssemblyInstance>()->cellLock() };
     m_functionWrappers.set(i, WriteBarrier<Unknown>(owner<JSWebAssemblyInstance>()->vm(), owner<JSWebAssemblyInstance>(), value));
@@ -228,11 +231,11 @@ void Instance::initElementSegment(uint32_t tableIndex, const Element& segment, u
         // for the import.
         // https://bugs.webkit.org/show_bug.cgi?id=165510
         uint32_t functionIndex = segment.functionIndices[srcIndex];
-        SignatureIndex signatureIndex = m_module->signatureIndexFromFunctionIndexSpace(functionIndex);
+        TypeIndex typeIndex = m_module->typeIndexFromFunctionIndexSpace(functionIndex);
         if (isImportFunction(functionIndex)) {
             JSObject* functionImport = importFunction<WriteBarrier<JSObject>>(functionIndex)->get();
-            if (isWebAssemblyHostFunction(vm, functionImport)) {
-                WebAssemblyFunction* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(vm, functionImport);
+            if (isWebAssemblyHostFunction(functionImport)) {
+                WebAssemblyFunction* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(functionImport);
                 // If we ever import a WebAssemblyWrapperFunction, we set the import as the unwrapped value.
                 // Because a WebAssemblyWrapperFunction can never wrap another WebAssemblyWrapperFunction,
                 // the only type this could be is WebAssemblyFunction.
@@ -247,14 +250,14 @@ void Instance::initElementSegment(uint32_t tableIndex, const Element& segment, u
                 functionImport,
                 functionIndex,
                 jsInstance,
-                signatureIndex);
+                typeIndex);
             jsTable->set(dstIndex, wrapperFunction);
             continue;
         }
 
-        Callee& embedderEntrypointCallee = codeBlock()->embedderEntrypointCalleeFromFunctionIndexSpace(functionIndex);
-        WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation = codeBlock()->entrypointLoadLocationFromFunctionIndexSpace(functionIndex);
-        const Signature& signature = SignatureInformation::get(signatureIndex);
+        Callee& embedderEntrypointCallee = calleeGroup()->embedderEntrypointCalleeFromFunctionIndexSpace(functionIndex);
+        WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation = calleeGroup()->entrypointLoadLocationFromFunctionIndexSpace(functionIndex);
+        const auto& signature = TypeInformation::getFunctionSignature(typeIndex);
         // FIXME: Say we export local function "foo" at function index 0.
         // What if we also set it to the table an Element w/ index 0.
         // Does (new Instance(...)).exports.foo === table.get(0)?
@@ -268,7 +271,7 @@ void Instance::initElementSegment(uint32_t tableIndex, const Element& segment, u
             jsInstance,
             embedderEntrypointCallee,
             entrypointLoadLocation,
-            signatureIndex);
+            typeIndex);
         jsTable->set(dstIndex, function);
     }
 }
@@ -295,6 +298,11 @@ void Instance::linkGlobal(unsigned i, Ref<Global>&& global)
 {
     m_globals.get()[i].m_pointer = global->valuePointer();
     m_linkedGlobals.set(i, WTFMove(global));
+}
+
+void Instance::setTag(unsigned index, Ref<const Tag>&& tag)
+{
+    m_tags[index] = WTFMove(tag);
 }
 
 } } // namespace JSC::Wasm

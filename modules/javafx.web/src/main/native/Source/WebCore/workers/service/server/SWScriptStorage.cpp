@@ -44,7 +44,7 @@ static bool shouldUseFileMapping(uint64_t fileSize)
 
 SWScriptStorage::SWScriptStorage(const String& directory)
     : m_directory(directory)
-    , m_salt(FileSystem::readOrMakeSalt(saltPath()).value_or(FileSystem::Salt()))
+    , m_salt(valueOrDefault(FileSystem::readOrMakeSalt(saltPath())))
 {
     ASSERT(!isMainThread());
 }
@@ -66,7 +66,7 @@ String SWScriptStorage::sha2Hash(const URL& input) const
 
 String SWScriptStorage::saltPath() const
 {
-    return FileSystem::pathByAppendingComponent(m_directory, "salt");
+    return FileSystem::pathByAppendingComponent(m_directory, "salt"_s);
 }
 
 String SWScriptStorage::registrationDirectory(const ServiceWorkerRegistrationKey& registrationKey) const
@@ -91,6 +91,9 @@ ScriptBuffer SWScriptStorage::store(const ServiceWorkerRegistrationKey& registra
             writeData({ entry.segment->data(), entry.segment->size() });
     };
 
+    // Make sure we delete the file before writing as there may be code using a mmap'd version of this file.
+    FileSystem::deleteFile(scriptPath);
+
     if (!shouldUseFileMapping(script.buffer()->size())) {
         auto handle = FileSystem::openFile(scriptPath, FileSystem::FileOpenMode::Write);
         if (!FileSystem::isHandleValid(handle)) {
@@ -105,8 +108,6 @@ ScriptBuffer SWScriptStorage::store(const ServiceWorkerRegistrationKey& registra
         return script;
     }
 
-    // Make sure we delete the file before writing as there may be code using a mmap'd version of this file.
-    FileSystem::deleteFile(scriptPath);
     auto mappedFile = FileSystem::mapToFile(scriptPath, script.buffer()->size(), WTFMove(iterateOverBufferAndWriteData));
     if (!mappedFile) {
         RELEASE_LOG_ERROR(ServiceWorker, "SWScriptStorage::store: Failure to store %s, FileSystem::mapToFile() failed", scriptPath.utf8().data());
@@ -127,7 +128,8 @@ ScriptBuffer SWScriptStorage::retrieve(const ServiceWorkerRegistrationKey& regis
     }
 
     // FIXME: Do we need to disable file mapping in more cases to avoid having too many file descriptors open?
-    return SharedBuffer::createWithContentsOfFile(scriptPath, FileSystem::MappedFileMode::Private, shouldUseFileMapping(*fileSize) ? SharedBuffer::MayUseFileMapping::Yes : SharedBuffer::MayUseFileMapping::No);
+    RefPtr<FragmentedSharedBuffer> buffer = SharedBuffer::createWithContentsOfFile(scriptPath, FileSystem::MappedFileMode::Private, shouldUseFileMapping(*fileSize) ? SharedBuffer::MayUseFileMapping::Yes : SharedBuffer::MayUseFileMapping::No);
+    return buffer;
 }
 
 void SWScriptStorage::clear(const ServiceWorkerRegistrationKey& registrationKey)

@@ -102,7 +102,7 @@ public:
         MayResumePlaying = 1 << 0,
     };
 
-    void clientCharacteristicsChanged();
+    virtual void clientCharacteristicsChanged(bool);
 
     void beginInterruption(InterruptionType);
     void endInterruption(EndInterruptionFlags);
@@ -179,6 +179,7 @@ public:
 
     bool activeAudioSessionRequired() const;
     bool canProduceAudio() const;
+    bool hasMediaStreamSource() const;
     void canProduceAudioChanged();
 
     virtual void resetPlaybackSessionState() { }
@@ -186,6 +187,8 @@ public:
 
     bool hasPlayedSinceLastInterruption() const { return m_hasPlayedSinceLastInterruption; }
     void clearHasPlayedSinceLastInterruption() { m_hasPlayedSinceLastInterruption = false; }
+
+    bool preparingToPlay() const { return m_preparingToPlay; }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
@@ -225,6 +228,7 @@ private:
     bool m_notifyingClient { false };
     bool m_isPlayingToWirelessPlaybackTarget { false };
     bool m_hasPlayedSinceLastInterruption { false };
+    bool m_preparingToPlay { false };
 
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;

@@ -243,7 +243,7 @@ updateSrc(UBiDiTransform *pTransform, const UChar *newSrc, uint32_t newLength,
     }
     u_strncpy(pTransform->src, newSrc, newLength);
     pTransform->srcLength = u_terminateUChars(pTransform->src,
-            pTransform->srcSize, newLength, pErrorCode);
+                pTransform->srcSize, newLength, pErrorCode);
 }
 
 /**

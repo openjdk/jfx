@@ -36,9 +36,11 @@
 [
     ActiveDOMObject,
     Conditional=MEDIA_SOURCE,
-    EnabledBySetting=MediaSource,
+    EnabledBySetting=MediaSourceEnabled,
     ExportMacro=WEBCORE_EXPORT,
-    Exposed=Window
+    GenerateAddOpaqueRoot,
+    Exposed=Window,
+    ReportExtraMemoryCost
 ] interface SourceBuffer : EventTarget {
     attribute AppendMode mode;
 
@@ -71,5 +73,5 @@
     attribute EventHandler onerror;
     attribute EventHandler onabort;
 
-    [EnabledBySetting=SourceBufferChangeType] undefined changeType(DOMString type);
+    [EnabledBySetting=SourceBufferChangeTypeEnabled] undefined changeType(DOMString type);
 };

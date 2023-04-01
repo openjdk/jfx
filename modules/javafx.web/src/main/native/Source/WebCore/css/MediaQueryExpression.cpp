@@ -67,6 +67,8 @@ static inline bool isValidValueForIdentMediaFeature(const AtomString& feature, c
         return valueID == CSSValuePrefers || valueID == CSSValueNoPreference;
     if (feature == MediaFeatureNames::dynamicRange)
         return valueID == CSSValueHigh || valueID == CSSValueStandard;
+    if (feature == MediaFeatureNames::scan)
+        return valueID == CSSValueProgressive || valueID == CSSValueInterlace;
 
     return false;
 }
@@ -92,7 +94,8 @@ static inline bool featureWithValidIdent(const AtomString& mediaFeature, const C
         || mediaFeature == MediaFeatureNames::prefersContrast
         || mediaFeature == MediaFeatureNames::prefersReducedMotion
         || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)))
-        || mediaFeature == MediaFeatureNames::dynamicRange;
+        || mediaFeature == MediaFeatureNames::dynamicRange
+        || mediaFeature == MediaFeatureNames::scan;
 }
 
 static inline bool featureWithValidDensity(const String& mediaFeature, const CSSPrimitiveValue& value)
@@ -107,7 +110,7 @@ static inline bool featureWithValidDensity(const String& mediaFeature, const CSS
 
 static inline bool featureWithValidPositiveLength(const String& mediaFeature, const CSSPrimitiveValue& value)
 {
-    if (!(value.isLength() || (value.isNumber() && !value.doubleValue())) || value.doubleValue() < 0)
+    if (!(value.isLength() || (value.isNumberOrInteger() && !value.doubleValue())) || value.doubleValue() < 0)
         return false;
 
     return mediaFeature == MediaFeatureNames::height
@@ -139,14 +142,14 @@ static inline bool featureExpectingPositiveInteger(const String& mediaFeature)
 
 static inline bool featureWithPositiveInteger(const String& mediaFeature, const CSSPrimitiveValue& value)
 {
-    if (!value.isNumber())
+    if (!value.isInteger())
         return false;
     return featureExpectingPositiveInteger(mediaFeature);
 }
 
 static inline bool featureWithPositiveNumber(const String& mediaFeature, const CSSPrimitiveValue& value)
 {
-    if (!value.isNumber())
+    if (!value.isNumberOrInteger())
         return false;
 
     return mediaFeature == MediaFeatureNames::transform3d
@@ -160,7 +163,7 @@ static inline bool featureWithPositiveNumber(const String& mediaFeature, const C
 
 static inline bool featureWithZeroOrOne(const String& mediaFeature, const CSSPrimitiveValue& value)
 {
-    if (!value.isNumber() || !(value.doubleValue() == 1 || !value.doubleValue()))
+    if (!value.isNumberOrInteger() || !(value.doubleValue() == 1 || !value.doubleValue()))
         return false;
 
     return mediaFeature == MediaFeatureNames::grid;
@@ -210,15 +213,16 @@ static inline bool isFeatureValidWithoutValue(const AtomString& mediaFeature, co
 #if ENABLE(APPLICATION_MANIFEST)
         || mediaFeature == MediaFeatureNames::displayMode
 #endif
+        || mediaFeature == MediaFeatureNames::scan
         || mediaFeature == MediaFeatureNames::videoPlayableInline;
 }
 
 inline RefPtr<CSSPrimitiveValue> consumeFirstValue(const String& mediaFeature, CSSParserTokenRange& range)
 {
-    if (auto value = CSSPropertyParserHelpers::consumeInteger(range, 0))
+    if (auto value = CSSPropertyParserHelpers::consumeIntegerZeroAndGreater(range))
         return value;
 
-    if (!featureExpectingPositiveInteger(mediaFeature) && !isAspectRatioFeature(mediaFeature)) {
+    if (!featureExpectingPositiveInteger(mediaFeature) && !isAspectRatioFeature(AtomString { mediaFeature })) {
         if (auto value = CSSPropertyParserHelpers::consumeNumber(range, ValueRange::NonNegative))
             return value;
     }
@@ -249,7 +253,7 @@ MediaQueryExpression::MediaQueryExpression(const String& feature, CSSParserToken
     }
     // Create value for media query expression that must have 1 or more values.
     if (isAspectRatioFeature(m_mediaFeature)) {
-        if (!firstValue->isNumber() || !firstValue->doubleValue())
+        if (!firstValue->isNumberOrInteger() || !firstValue->doubleValue())
             return;
         if (!CSSPropertyParserHelpers::consumeSlashIncludingWhitespace(range))
             return;
@@ -271,10 +275,24 @@ MediaQueryExpression::MediaQueryExpression(const String& feature, CSSParserToken
     }
 }
 
+bool MediaQueryExpression::isViewportDependent() const
+{
+    return m_mediaFeature == MediaFeatureNames::width
+        || m_mediaFeature == MediaFeatureNames::height
+        || m_mediaFeature == MediaFeatureNames::minWidth
+        || m_mediaFeature == MediaFeatureNames::minHeight
+        || m_mediaFeature == MediaFeatureNames::maxWidth
+        || m_mediaFeature == MediaFeatureNames::maxHeight
+        || m_mediaFeature == MediaFeatureNames::orientation
+        || m_mediaFeature == MediaFeatureNames::aspectRatio
+        || m_mediaFeature == MediaFeatureNames::minAspectRatio
+        || m_mediaFeature == MediaFeatureNames::maxAspectRatio;
+}
+
 String MediaQueryExpression::serialize() const
 {
     if (m_serializationCache.isNull())
-        m_serializationCache = makeString('(', m_mediaFeature.convertToASCIILowercase(), m_value ? ": " : "", m_value ? m_value->cssText() : "", ')');
+        m_serializationCache = makeString('(', asASCIILowercase(m_mediaFeature), m_value ? ": " : "", m_value ? m_value->cssText() : emptyString(), ')');
     return m_serializationCache;
 }
 

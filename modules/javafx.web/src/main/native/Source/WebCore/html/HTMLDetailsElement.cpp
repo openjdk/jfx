@@ -23,7 +23,9 @@
 #include "HTMLDetailsElement.h"
 
 #include "AXObjectCache.h"
+#include "DocumentInlines.h"
 #include "ElementIterator.h"
+#include "ElementRareData.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "HTMLSlotElement.h"
@@ -45,7 +47,7 @@ using namespace HTMLNames;
 
 static const AtomString& summarySlotName()
 {
-    static MainThreadNeverDestroyed<const AtomString> summarySlot("summarySlot");
+    static MainThreadNeverDestroyed<const AtomString> summarySlot("summarySlot"_s);
     return summarySlot;
 }
 
@@ -101,11 +103,11 @@ void HTMLDetailsElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
     auto summarySlot = HTMLSlotElement::create(slotTag, document());
     summarySlot->setAttributeWithoutSynchronization(nameAttr, summarySlotName());
-    m_summarySlot = summarySlot.ptr();
+    m_summarySlot = summarySlot.get();
 
     auto defaultSummary = HTMLSummaryElement::create(summaryTag, document());
     defaultSummary->appendChild(Text::create(document(), defaultDetailsSummaryText()));
-    m_defaultSummary = defaultSummary.ptr();
+    m_defaultSummary = defaultSummary.get();
 
     summarySlot->appendChild(defaultSummary);
     root.appendChild(summarySlot);
@@ -122,10 +124,10 @@ bool HTMLDetailsElement::isActiveSummary(const HTMLSummaryElement& summary) cons
     if (summary.parentNode() != this)
         return false;
 
-    auto slot = makeRefPtr(shadowRoot()->findAssignedSlot(summary));
+    RefPtr slot = shadowRoot()->findAssignedSlot(summary);
     if (!slot)
         return false;
-    return slot == m_summarySlot;
+    return slot == m_summarySlot.get();
 }
 
 void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -134,7 +136,7 @@ void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomStr
         bool oldValue = m_isOpen;
         m_isOpen = !value.isNull();
         if (oldValue != m_isOpen) {
-            auto root = makeRefPtr(shadowRoot());
+            RefPtr root = shadowRoot();
             ASSERT(root);
             if (m_isOpen)
                 root->appendChild(*m_defaultSlot);
@@ -145,9 +147,9 @@ void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomStr
             if (m_isToggleEventTaskQueued)
                 return;
 
-            document().eventLoop().queueTask(TaskSource::DOMManipulation, [protectedThis = GCReachableRef { *this }] {
-                protectedThis->dispatchEvent(Event::create(eventNames().toggleEvent, Event::CanBubble::No, Event::IsCancelable::No));
-                protectedThis->m_isToggleEventTaskQueued = false;
+            queueTaskKeepingThisNodeAlive(TaskSource::DOMManipulation, [this] {
+                dispatchEvent(Event::create(eventNames().toggleEvent, Event::CanBubble::No, Event::IsCancelable::No));
+                m_isToggleEventTaskQueued = false;
             });
             m_isToggleEventTaskQueued = true;
         }

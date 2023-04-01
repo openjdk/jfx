@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,7 +26,7 @@
 #include "CSSStyleSheet.h"
 #include "CachePolicy.h"
 #include "CachedCSSStyleSheet.h"
-#include "ContentRuleListResults.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -37,6 +37,7 @@
 #include "ResourceLoadInfo.h"
 #include "RuleSet.h"
 #include "SecurityOrigin.h"
+#include "StyleProperties.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
 #include <wtf/Deque.h>
@@ -44,6 +45,7 @@
 #include <wtf/Ref.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
+#include "ContentRuleListResults.h"
 #include "UserContentController.h"
 #endif
 
@@ -81,6 +83,7 @@ StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     , m_ownerRule(nullptr)
     , m_originalURL(o.m_originalURL)
     , m_encodingFromCharsetRule(o.m_encodingFromCharsetRule)
+    , m_layerRulesBeforeImportRules(o.m_layerRulesBeforeImportRules.size())
     , m_importRules(o.m_importRules.size())
     , m_namespaceRules(o.m_namespaceRules.size())
     , m_childRules(o.m_childRules.size())
@@ -97,7 +100,10 @@ StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     // FIXME: Copy import rules.
     ASSERT(o.m_importRules.isEmpty());
 
-    for (unsigned i = 0; i < m_childRules.size(); ++i)
+    for (size_t i = 0; i < m_layerRulesBeforeImportRules.size(); ++i)
+        m_layerRulesBeforeImportRules[i] = o.m_layerRulesBeforeImportRules[i]->copy();
+
+    for (size_t i = 0; i < m_childRules.size(); ++i)
         m_childRules[i] = o.m_childRules[i]->copy();
 }
 
@@ -133,6 +139,14 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
 {
     ASSERT(!rule->isCharsetRule());
 
+    if (is<StyleRuleLayer>(rule) && m_importRules.isEmpty() && m_childRules.isEmpty() && m_namespaceRules.isEmpty()) {
+        auto& layerRule = downcast<StyleRuleLayer>(rule.get());
+        if (layerRule.isStatement()) {
+            m_layerRulesBeforeImportRules.append(&layerRule);
+            return;
+        }
+    }
+
     if (is<StyleRuleImport>(rule)) {
         // Parser enforces that @import rules come before anything else except @charset.
         ASSERT(m_childRules.isEmpty());
@@ -146,14 +160,11 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
         // Parser enforces that @namespace rules come before all rules other than
         // import/charset rules
         ASSERT(m_childRules.isEmpty());
-        StyleRuleNamespace& namespaceRule = downcast<StyleRuleNamespace>(rule.get());
+        auto& namespaceRule = downcast<StyleRuleNamespace>(rule.get());
         parserAddNamespace(namespaceRule.prefix(), namespaceRule.uri());
-        m_namespaceRules.append(downcast<StyleRuleNamespace>(rule.ptr()));
+        m_namespaceRules.append(&namespaceRule);
         return;
     }
-
-    if (is<StyleRuleMedia>(rule))
-        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), &downcast<StyleRuleMedia>(rule.get()).mediaQueries());
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
@@ -170,6 +181,11 @@ StyleRuleBase* StyleSheetContents::ruleAt(unsigned index) const
     ASSERT_WITH_SECURITY_IMPLICATION(index < ruleCount());
 
     unsigned childVectorIndex = index;
+    if (childVectorIndex < m_layerRulesBeforeImportRules.size())
+        return m_layerRulesBeforeImportRules[childVectorIndex].get();
+
+    childVectorIndex -= m_layerRulesBeforeImportRules.size();
+
     if (childVectorIndex < m_importRules.size())
         return m_importRules[childVectorIndex].get();
 
@@ -186,6 +202,7 @@ StyleRuleBase* StyleSheetContents::ruleAt(unsigned index) const
 unsigned StyleSheetContents::ruleCount() const
 {
     unsigned result = 0;
+    result += m_layerRulesBeforeImportRules.size();
     result += m_importRules.size();
     result += m_namespaceRules.size();
     result += m_childRules.size();
@@ -203,6 +220,7 @@ void StyleSheetContents::clearRules()
         ASSERT(m_importRules.at(i)->parentStyleSheet() == this);
         m_importRules[i]->clearParentStyleSheet();
     }
+    m_layerRulesBeforeImportRules.clear();
     m_importRules.clear();
     m_namespaceRules.clear();
     m_childRules.clear();
@@ -223,7 +241,33 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     // Parser::parseRule doesn't currently allow @charset so we don't need to deal with it.
     ASSERT(!rule->isCharsetRule());
 
+    // Maybe the insert will be legal if we treat early layer statement rules as normal child rules?
+    auto shouldMoveLayerRulesBeforeImportToNormalChildRules = [&] {
+        if (index >= m_layerRulesBeforeImportRules.size())
+            return false;
+        if (!m_importRules.isEmpty() || !m_namespaceRules.isEmpty())
+            return false;
+        bool isLayerStatement = is<StyleRuleLayer>(rule) && downcast<StyleRuleLayer>(rule.get()).isStatement();
+        return !rule->isImportRule() && !rule->isNamespaceRule() && !isLayerStatement;
+    };
+
+    if (shouldMoveLayerRulesBeforeImportToNormalChildRules())
+        m_childRules.insertVector(0, std::exchange(m_layerRulesBeforeImportRules, { }));
+
     unsigned childVectorIndex = index;
+    if (childVectorIndex < m_layerRulesBeforeImportRules.size() || (childVectorIndex == m_layerRulesBeforeImportRules.size() && is<StyleRuleLayer>(rule))) {
+        if (!is<StyleRuleLayer>(rule))
+            return false;
+        auto& layerRule = downcast<StyleRuleLayer>(rule.get());
+        if (layerRule.isStatement()) {
+            m_layerRulesBeforeImportRules.insert(childVectorIndex, &layerRule);
+            return true;
+        }
+        if (childVectorIndex < m_layerRulesBeforeImportRules.size())
+            return false;
+    }
+    childVectorIndex -= m_layerRulesBeforeImportRules.size();
+
     if (childVectorIndex < m_importRules.size() || (childVectorIndex == m_importRules.size() && rule->isImportRule())) {
         // Inserting non-import rule before @import is not allowed.
         if (!is<StyleRuleImport>(rule))
@@ -239,9 +283,8 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
         return false;
     childVectorIndex -= m_importRules.size();
 
-
     if (childVectorIndex < m_namespaceRules.size() || (childVectorIndex == m_namespaceRules.size() && rule->isNamespaceRule())) {
-        // Inserting non-namespace rules other than import rule before @namespace is
+        // Inserting non-namespace rules other than import and layer statement rules before @namespace is
         // not allowed.
         if (!is<StyleRuleNamespace>(rule))
             return false;
@@ -278,7 +321,14 @@ void StyleSheetContents::wrapperDeleteRule(unsigned index)
     ASSERT_WITH_SECURITY_IMPLICATION(index < ruleCount());
 
     unsigned childVectorIndex = index;
+    if (childVectorIndex < m_layerRulesBeforeImportRules.size()) {
+        m_layerRulesBeforeImportRules.remove(childVectorIndex);
+        return;
+    }
+    childVectorIndex -= m_layerRulesBeforeImportRules.size();
+
     if (childVectorIndex < m_importRules.size()) {
+        m_importRules[childVectorIndex]->cancelLoad();
         m_importRules[childVectorIndex]->clearParentStyleSheet();
         m_importRules.remove(childVectorIndex);
         return;
@@ -339,14 +389,14 @@ bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
         return false;
     }
 
-    CSSParser(parserContext()).parseSheet(*this, sheetText, CSSParser::RuleParsing::Deferred);
+    CSSParser(parserContext()).parseSheet(*this, sheetText);
     return true;
 }
 
 bool StyleSheetContents::parseString(const String& sheetText)
 {
     CSSParser p(parserContext());
-    p.parseSheet(*this, sheetText, parserContext().mode != UASheetMode ? CSSParser::RuleParsing::Deferred : CSSParser::RuleParsing::Normal);
+    p.parseSheet(*this, sheetText);
     return true;
 }
 
@@ -417,39 +467,20 @@ Document* StyleSheetContents::singleOwnerDocument() const
     return ownerNode ? &ownerNode->document() : nullptr;
 }
 
-static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, const WTF::Function<bool (const StyleRuleBase&)>& handler)
+static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, const Function<bool(const StyleRuleBase&)>& handler)
 {
     for (auto& rule : rules) {
         if (handler(*rule))
             return true;
-        switch (rule->type()) {
-        case StyleRuleType::Media:
-        case StyleRuleType::Supports:
-        case StyleRuleType::Layer: {
-            auto* childRules = downcast<StyleRuleGroup>(*rule).childRulesWithoutDeferredParsing();
-            if (childRules && traverseRulesInVector(*childRules, handler))
-                return true;
-            break;
-        }
-        case StyleRuleType::Import:
-            ASSERT_NOT_REACHED();
-            break;
-        case StyleRuleType::Style:
-        case StyleRuleType::FontFace:
-        case StyleRuleType::Page:
-        case StyleRuleType::Keyframes:
-        case StyleRuleType::Namespace:
-        case StyleRuleType::Unknown:
-        case StyleRuleType::Charset:
-        case StyleRuleType::CounterStyle:
-        case StyleRuleType::Keyframe:
-            break;
-        }
+        if (!rule->isGroupRule())
+            continue;
+        if (traverseRulesInVector(downcast<StyleRuleGroup>(*rule).childRules(), handler))
+            return true;
     }
     return false;
 }
 
-bool StyleSheetContents::traverseRules(const WTF::Function<bool (const StyleRuleBase&)>& handler) const
+bool StyleSheetContents::traverseRules(const Function<bool(const StyleRuleBase&)>& handler) const
 {
     for (auto& importRule : m_importRules) {
         if (handler(*importRule))
@@ -461,14 +492,12 @@ bool StyleSheetContents::traverseRules(const WTF::Function<bool (const StyleRule
     return traverseRulesInVector(m_childRules, handler);
 }
 
-bool StyleSheetContents::traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const
+bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     return traverseRules([&] (const StyleRuleBase& rule) {
         switch (rule.type()) {
-        case StyleRuleType::Style: {
-            auto* properties = downcast<StyleRule>(rule).propertiesWithoutDeferredParsing();
-            return properties && properties->traverseSubresources(handler);
-        }
+        case StyleRuleType::Style:
+            return downcast<StyleRule>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::FontFace:
             return downcast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::Import:
@@ -485,7 +514,11 @@ bool StyleSheetContents::traverseSubresources(const WTF::Function<bool (const Ca
         case StyleRuleType::Charset:
         case StyleRuleType::Keyframe:
         case StyleRuleType::Supports:
-        case StyleRuleType::Layer:
+        case StyleRuleType::LayerBlock:
+        case StyleRuleType::LayerStatement:
+        case StyleRuleType::Container:
+        case StyleRuleType::FontPaletteValues:
+        case StyleRuleType::Margin:
             return false;
         };
         ASSERT_NOT_REACHED();

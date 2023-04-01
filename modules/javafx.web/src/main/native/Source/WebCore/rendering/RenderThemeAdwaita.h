@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,28 +34,37 @@ class RenderThemeAdwaita : public RenderTheme {
 public:
     virtual ~RenderThemeAdwaita() = default;
 
+    void setAccentColor(const Color&);
+
 private:
     String extraDefaultStyleSheet() final;
 #if ENABLE(VIDEO)
-    String extraMediaControlsStyleSheet() final;
     Vector<String, 2> mediaControlsScripts() final;
+    String mediaControlsStyleSheet() final;
 #endif
+
+#if ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
+    String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
+    String mediaControlsFormattedStringForDuration(double) final;
+
+    String m_mediaControlsStyleSheet;
+#endif // ENABLE(VIDEO) && ENABLE(MODERN_MEDIA_CONTROLS)
 
     bool supportsHover(const RenderStyle&) const final { return true; }
     bool supportsFocusRing(const RenderStyle&) const final;
+    bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return false; }
+    bool supportsListBoxSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return true; }
     bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const final;
 
-    void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override { };
-
-    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
-    Color platformFocusRingColor(OptionSet<StyleColor::Options>) const final;
+    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformActiveListBoxSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformActiveListBoxSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColorOptions>) const final;
+    Color platformFocusRingColor(OptionSet<StyleColorOptions>) const final;
     void platformColorsDidChange() final;
 
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
@@ -82,12 +92,7 @@ private:
     void adjustSliderThumbSize(RenderStyle&, const Element*) const final;
     bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
-#if ENABLE(VIDEO)
-    bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    bool paintMediaVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
-#endif
-
-    Color systemColor(CSSValueID, OptionSet<StyleColor::Options>) const final;
+    Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
 #if ENABLE(DATALIST_ELEMENT)
     IntSize sliderTickSize() const final;

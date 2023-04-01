@@ -20,9 +20,11 @@
 
 [
     CustomPushEventHandlerScope,
+    CustomToJSObject,
     ExportMacro=WEBCORE_EXPORT,
+    Exposed=Window,
+    GenerateForEachEventHandlerContentAttribute,
     JSGenerateToNativeObject,
-    Exposed=Window
 ] interface HTMLElement : Element {
     [Custom] constructor();
 
@@ -30,7 +32,7 @@
     [CEReactions, Reflect] attribute DOMString title;
     [CEReactions, Reflect] attribute DOMString lang;
     [CEReactions] attribute boolean translate;
-    [CEReactions] attribute DOMString dir;
+    [CEReactions] attribute [AtomString] DOMString dir;
 
     // user interaction
     [CEReactions, Reflect] attribute boolean hidden;
@@ -40,7 +42,7 @@
     [CEReactions] attribute boolean draggable;
     [CEReactions] attribute boolean spellcheck;
     // FIXME: 'autocapitalize' should not be [LegacyNullToEmptyString].
-    [Conditional=AUTOCAPITALIZE, CEReactions] attribute [LegacyNullToEmptyString] DOMString autocapitalize;
+    [Conditional=AUTOCAPITALIZE, CEReactions] attribute [LegacyNullToEmptyString, AtomString] DOMString autocapitalize;
 
     [CEReactions] attribute [LegacyNullToEmptyString] DOMString innerText;
 
@@ -48,7 +50,7 @@
     // ElementInternals attachInternals();
 
     // Experimental: https://github.com/WICG/inert/blob/master/README.md
-    [CEReactions, Reflect, EnabledBySetting=InertAttribute] attribute boolean inert;
+    [CEReactions, Reflect, EnabledBySetting=InertAttributeEnabled] attribute boolean inert;
 
     // Non-standard: IE extension. May get added to the specification (https://github.com/whatwg/html/issues/668).
     [CEReactions] attribute [LegacyNullToEmptyString] DOMString outerText;

@@ -34,11 +34,6 @@
 #include <wtf/SystemTracing.h>
 #include <wtf/URL.h>
 
-#if USE(DIRECT2D)
-#include "GraphicsContext.h"
-#include "PlatformContextDirect2D.h"
-#endif
-
 namespace WebCore {
 
 ImageSource::ImageSource(BitmapImage* image, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
@@ -49,7 +44,7 @@ ImageSource::ImageSource(BitmapImage* image, AlphaOption alphaOption, GammaAndCo
 {
 }
 
-ImageSource::ImageSource(RefPtr<NativeImage>&& nativeImage)
+ImageSource::ImageSource(Ref<NativeImage>&& nativeImage)
     : m_runLoop(RunLoop::current())
 {
     m_frameCount = 1;
@@ -72,7 +67,7 @@ ImageSource::~ImageSource()
     ASSERT(&m_runLoop == &RunLoop::current());
 }
 
-bool ImageSource::ensureDecoderAvailable(SharedBuffer* data)
+bool ImageSource::ensureDecoderAvailable(FragmentedSharedBuffer* data)
 {
     if (!data || isDecoderAvailable())
         return true;
@@ -81,7 +76,7 @@ bool ImageSource::ensureDecoderAvailable(SharedBuffer* data)
     if (!isDecoderAvailable())
         return false;
 
-    m_decoder->setEncodedDataStatusChangeCallback([weakThis = makeWeakPtr(this)] (auto status) {
+    m_decoder->setEncodedDataStatusChangeCallback([weakThis = WeakPtr { *this }] (auto status) {
         if (weakThis)
             weakThis->encodedDataStatusChanged(status);
     });
@@ -96,7 +91,7 @@ bool ImageSource::ensureDecoderAvailable(SharedBuffer* data)
     return true;
 }
 
-void ImageSource::setData(SharedBuffer* data, bool allDataReceived)
+void ImageSource::setData(FragmentedSharedBuffer* data, bool allDataReceived)
 {
     if (!data || !ensureDecoderAvailable(data))
         return;
@@ -104,13 +99,13 @@ void ImageSource::setData(SharedBuffer* data, bool allDataReceived)
     m_decoder->setData(*data, allDataReceived);
 }
 
-void ImageSource::resetData(SharedBuffer* data)
+void ImageSource::resetData(FragmentedSharedBuffer* data)
 {
     m_decoder = nullptr;
     setData(data, isAllDataReceived());
 }
 
-EncodedDataStatus ImageSource::dataChanged(SharedBuffer* data, bool allDataReceived)
+EncodedDataStatus ImageSource::dataChanged(FragmentedSharedBuffer* data, bool allDataReceived)
 {
     setData(data, allDataReceived);
     clearMetadata();
@@ -125,17 +120,17 @@ bool ImageSource::isAllDataReceived()
     return isDecoderAvailable() ? m_decoder->isAllDataReceived() : frameCount();
 }
 
-void ImageSource::destroyDecodedData(size_t frameCount, size_t excludeFrame)
+void ImageSource::destroyDecodedData(size_t begin, size_t end)
 {
+    if (begin >= end)
+        return;
+
+    ASSERT(end <= m_frames.size());
+
     unsigned decodedSize = 0;
 
-    ASSERT(frameCount <= m_frames.size());
-
-    for (size_t index = 0; index < frameCount; ++index) {
-        if (index == excludeFrame)
-            continue;
+    for (size_t index = begin; index < end; ++index)
         decodedSize += m_frames[index].clearImage();
-    }
 
     decodedSizeReset(decodedSize);
 }
@@ -237,7 +232,7 @@ void ImageSource::growFrames()
         m_frames.grow(newSize);
 }
 
-void ImageSource::setNativeImage(RefPtr<NativeImage>&& nativeImage)
+void ImageSource::setNativeImage(Ref<NativeImage>&& nativeImage)
 {
     ASSERT(m_frames.size() == 1);
     ImageFrame& frame = m_frames[0];
@@ -247,7 +242,19 @@ void ImageSource::setNativeImage(RefPtr<NativeImage>&& nativeImage)
     frame.m_nativeImage = WTFMove(nativeImage);
 
     frame.m_decodingStatus = DecodingStatus::Complete;
-    frame.m_size = frame.m_nativeImage->size();
+
+/*   In the case of the canvas pattern having transform property filled with SVGMatrix()
+    created by SVG element, the frame.m_nativeImage->size()  is calling NativeImageJava.cpp
+    class NativeImage::size() method, where *m_platformImage->getImage().get() looks invalid */
+
+#if PLATFORM(JAVA)
+    /* Image decoder has already filing frame.m_size during caching Image MetaData*/
+    /* So , Frame might have already native image , do not override size again */
+    if (!frame.hasNativeImage())
+        frame.m_size = frame.m_nativeImage->size();
+#else
+    frame.m_size = frame.m_nativeImage->size()
+#endif
     frame.m_hasAlpha = frame.m_nativeImage->hasAlpha();
 }
 
@@ -323,7 +330,7 @@ void ImageSource::cachePlatformImageAtIndexAsync(PlatformImagePtr&& platformImag
 WorkQueue& ImageSource::decodingQueue()
 {
     if (!m_decodingQueue)
-        m_decodingQueue = WorkQueue::create("org.webkit.ImageDecoder", WorkQueue::Type::Serial, WorkQueue::QOS::Default);
+        m_decodingQueue = WorkQueue::create("org.webkit.ImageDecoder", WorkQueue::QOS::Default);
 
     return *m_decodingQueue;
 }
@@ -353,7 +360,7 @@ void ImageSource::startAsyncDecodingQueue()
     ASSERT(isMainThread());
 
     // We need to protect this, m_decodingQueue and m_decoder from being deleted while we are in the decoding loop.
-    decodingQueue().dispatch([protectedThis = makeRef(*this), protectedDecodingQueue = makeRef(decodingQueue()), protectedFrameRequestQueue = makeRef(frameRequestQueue()), protectedDecoder = makeRef(*m_decoder), sourceURL = sourceURL().string().isolatedCopy()] () mutable {
+    decodingQueue().dispatch([protectedThis = Ref { *this }, protectedDecodingQueue = Ref { decodingQueue() }, protectedFrameRequestQueue = Ref { frameRequestQueue() }, protectedDecoder = Ref { *m_decoder }, sourceURL = sourceURL().string().isolatedCopy()] () mutable {
         ImageFrameRequest frameRequest;
         Seconds minDecodingDuration = protectedThis->frameDecodingDurationForTesting();
 
@@ -378,7 +385,7 @@ void ImageSource::startAsyncDecodingQueue()
                 sleep(minDecodingDuration - (MonotonicTime::now() - startingTime));
 
             // Update the cached frames on the creation thread to avoid updating the MemoryCache from a different thread.
-            callOnMainThread([protectedThis, protectedDecodingQueue, protectedDecoder, sourceURL = sourceURL.isolatedCopy(), platformImage = WTFMove(platformImage), frameRequest] () mutable {
+            callOnMainThread([protectedThis, protectedDecodingQueue, protectedDecoder, sourceURL = WTFMove(sourceURL).isolatedCopy(), platformImage = WTFMove(platformImage), frameRequest] () mutable {
                 // The queue may have been closed if after we got the frame NativeImage, stopAsyncDecodingQueue() was called.
                 if (protectedDecodingQueue.ptr() == protectedThis->m_decodingQueue && protectedDecoder.ptr() == protectedThis->m_decoder) {
                     ASSERT(protectedThis->m_frameCommitQueue.first() == frameRequest);
@@ -692,14 +699,6 @@ ImageOrientation ImageSource::frameOrientationAtIndex(size_t index)
 {
     return frameAtIndexCacheIfNeeded(index, ImageFrame::Caching::Metadata).orientation();
 }
-
-#if USE(DIRECT2D)
-void ImageSource::setTargetContext(const GraphicsContext* targetContext)
-{
-    if (isDecoderAvailable() && targetContext)
-        m_decoder->setTargetContext(targetContext->platformContext()->renderTarget());
-}
-#endif
 
 RefPtr<NativeImage> ImageSource::createFrameImageAtIndex(size_t index, SubsamplingLevel subsamplingLevel)
 {

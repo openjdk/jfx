@@ -49,7 +49,7 @@
     [DoNotCheckSecurity, LegacyUnforgeable, CustomGetter] readonly attribute WindowProxy window;
     [Replaceable, DoNotCheckSecurityOnGetter, CustomGetter] readonly attribute WindowProxy self;
     [LegacyUnforgeable] readonly attribute Document document;
-    attribute DOMString name;
+    attribute [AtomString] DOMString name;
     [DoNotCheckSecurity, PutForwards=href, LegacyUnforgeable] readonly attribute Location location;
     readonly attribute History history;
     [ImplementedAs=ensureCustomElementRegistry] readonly attribute CustomElementRegistry customElements;
@@ -73,12 +73,12 @@
     [DoNotCheckSecurityOnGetter, CustomSetter] attribute WindowProxy? opener;
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute WindowProxy? parent;
     [CheckSecurityForNode] readonly attribute Element? frameElement;
-    [CallWith=ActiveWindow&FirstWindow] WindowProxy? open(optional USVString url = "", optional DOMString target = "_blank", optional [LegacyNullToEmptyString] DOMString features = "");
+    [CallWith=ActiveWindow&FirstWindow] WindowProxy? open(optional USVString url = "", optional [AtomString] DOMString target = "_blank", optional [LegacyNullToEmptyString] DOMString features = "");
 
     // the user agent
     readonly attribute Navigator navigator;
     // FIXME: This is specified to be [SecureContext]
-    readonly attribute DOMApplicationCache applicationCache;
+    [EnabledByQuirk=shouldEnableApplicationCache] readonly attribute DOMApplicationCache applicationCache;
 
     // user prompts
     undefined alert();
@@ -87,8 +87,8 @@
     DOMString? prompt(optional DOMString message = "", optional DOMString defaultValue = "");
     undefined print();
 
-    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity] undefined postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
-    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity] undefined postMessage(any message, optional WindowPostMessageOptions options);
+    [CallWith=CurrentGlobalObject&IncumbentWindow, DoNotCheckSecurity] undefined postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
+    [CallWith=CurrentGlobalObject&IncumbentWindow, DoNotCheckSecurity] undefined postMessage(any message, optional WindowPostMessageOptions options);
 
 
     // Obsolete: Still part of the HTML specification (https://html.spec.whatwg.org/#Window-partial).
@@ -114,12 +114,8 @@
     [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongestureend;
     [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongesturestart;
 
-    // Non-standard: This has been dropped from the HTML specification and by other browsers.
-    [Custom] any showModalDialog(DOMString url, optional any dialogArgs, optional DOMString featureArgs);
-
-    // Non-standard: should probably deprecate this (https://bugs.webkit.org/show_bug.cgi?id=79653).
-    // Blink already deprecated it (https://bugs.chromium.org/p/chromium/issues/detail?id=437569).
-    CSSRuleList getMatchedCSSRules(optional Element? element = null, optional DOMString? pseudoElement = null);
+    // Non-standard: For now we expose this to user worlds since Safari is using it, but we plan to remove it.
+    [EnabledForWorld=isUser] CSSRuleList getMatchedCSSRules(optional Element? element = null, optional DOMString? pseudoElement = null);
 
     // Non-standard: Blink has already dropped these (https://bugs.chromium.org/p/chromium/issues/detail?id=398352).
     WebKitPoint webkitConvertPointFromPageToNode(optional Node? node = null, optional WebKitPoint? p = null);

@@ -27,6 +27,7 @@
 
 #include "UnlinkedCodeBlock.h"
 
+#include "BaselineJITCode.h"
 #include "BytecodeLivenessAnalysis.h"
 #include "BytecodeStructs.h"
 #include "ClassInfo.h"
@@ -38,7 +39,7 @@
 
 namespace JSC {
 
-const ClassInfo UnlinkedCodeBlock::s_info = { "UnlinkedCodeBlock", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(UnlinkedCodeBlock) };
+const ClassInfo UnlinkedCodeBlock::s_info = { "UnlinkedCodeBlock"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(UnlinkedCodeBlock) };
 
 UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType codeType, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
     : Base(vm, structure)
@@ -77,6 +78,18 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
         Locker locker { cellLock() };
         createRareDataIfNecessary(locker);
         m_rareData->m_privateBrandRequirement = static_cast<unsigned>(PrivateBrandRequirement::Needed);
+    }
+
+    m_llintExecuteCounter.setNewThreshold(thresholdForJIT(Options::thresholdForJITAfterWarmUp()));
+}
+
+void UnlinkedCodeBlock::initializeLoopHintExecutionCounter()
+{
+    ASSERT(Options::returnEarlyFromInfiniteLoopsForFuzzing());
+    VM& vm = this->vm();
+    for (const auto& instruction : instructions()) {
+        if (instruction->is<OpLoopHint>())
+            vm.addLoopHintExecutionCounter(instruction.ptr());
     }
 }
 
@@ -171,7 +184,7 @@ inline void UnlinkedCodeBlock::getLineAndColumn(const ExpressionRangeInfo& info,
 }
 
 #ifndef NDEBUG
-static void dumpLineColumnEntry(size_t index, const InstructionStream& instructionStream, unsigned instructionOffset, unsigned line, unsigned column)
+static void dumpLineColumnEntry(size_t index, const JSInstructionStream& instructionStream, unsigned instructionOffset, unsigned line, unsigned column)
 {
     const auto instruction = instructionStream.at(instructionOffset);
     const char* event = "";
@@ -270,9 +283,18 @@ bool UnlinkedCodeBlock::typeProfilerExpressionInfoForBytecodeOffset(unsigned byt
 
 UnlinkedCodeBlock::~UnlinkedCodeBlock()
 {
+    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing())) {
+        if (auto* instructions = m_instructions.get()) {
+            VM& vm = this->vm();
+            for (const auto& instruction : *instructions) {
+                if (instruction->is<OpLoopHint>())
+                    vm.removeLoopHintExecutionCounter(instruction.ptr());
+            }
+        }
+    }
 }
 
-const InstructionStream& UnlinkedCodeBlock::instructions() const
+const JSInstructionStream& UnlinkedCodeBlock::instructions() const
 {
     ASSERT(m_instructions.get());
     return *m_instructions;
@@ -310,10 +332,85 @@ BytecodeLivenessAnalysis& UnlinkedCodeBlock::livenessAnalysisSlow(CodeBlock* cod
     return *m_liveness;
 }
 
-int UnlinkedCodeBlock::outOfLineJumpOffset(InstructionStream::Offset bytecodeOffset)
+int UnlinkedCodeBlock::outOfLineJumpOffset(JSInstructionStream::Offset bytecodeOffset)
 {
     ASSERT(m_outOfLineJumpTargets.contains(bytecodeOffset));
     return m_outOfLineJumpTargets.get(bytecodeOffset);
+}
+
+#if ASSERT_ENABLED
+bool UnlinkedCodeBlock::hasIdentifier(UniquedStringImpl* uid)
+{
+    if (numberOfIdentifiers() > 100) {
+        if (numberOfIdentifiers() != m_cachedIdentifierUids.size()) {
+            Locker locker(m_cachedIdentifierUidsLock);
+            HashSet<UniquedStringImpl*> cachedIdentifierUids;
+            for (unsigned i = 0; i < numberOfIdentifiers(); ++i) {
+                const Identifier& identifier = this->identifier(i);
+                cachedIdentifierUids.add(identifier.impl());
+            }
+
+            WTF::storeStoreFence();
+            m_cachedIdentifierUids = WTFMove(cachedIdentifierUids);
+        }
+
+        return m_cachedIdentifierUids.contains(uid);
+    }
+
+    for (unsigned i = 0; i < numberOfIdentifiers(); ++i) {
+        if (identifier(i).impl() == uid)
+            return true;
+    }
+    return false;
+}
+#endif
+
+int32_t UnlinkedCodeBlock::thresholdForJIT(int32_t threshold)
+{
+    switch (didOptimize()) {
+    case TriState::Indeterminate:
+        return threshold;
+    case TriState::False:
+        return threshold * 4;
+    case TriState::True:
+        return threshold / 2;
+    }
+    ASSERT_NOT_REACHED();
+    return threshold;
+}
+
+
+void UnlinkedCodeBlock::allocateSharedProfiles(unsigned numBinaryArithProfiles, unsigned numUnaryArithProfiles)
+{
+    RELEASE_ASSERT(!m_metadata->isFinalized());
+
+    {
+        unsigned numberOfValueProfiles = numParameters();
+        if (m_metadata->hasMetadata()) {
+#define COUNT(__op) \
+            numberOfValueProfiles += m_metadata->numEntries<__op>();
+            FOR_EACH_OPCODE_WITH_VALUE_PROFILE(COUNT)
+#undef COUNT
+            numberOfValueProfiles += m_metadata->numEntries<OpIteratorOpen>() * 3;
+            numberOfValueProfiles += m_metadata->numEntries<OpIteratorNext>() * 3;
+        }
+
+        m_valueProfiles = FixedVector<UnlinkedValueProfile>(numberOfValueProfiles);
+    }
+
+    if (m_metadata->hasMetadata()) {
+        unsigned numberOfArrayProfiles = 0;
+
+#define COUNT(__op) numberOfArrayProfiles += m_metadata->numEntries<__op>();
+        FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(COUNT)
+#undef COUNT
+        numberOfArrayProfiles += m_metadata->numEntries<OpIteratorNext>();
+        numberOfArrayProfiles += m_metadata->numEntries<OpGetById>();
+        m_arrayProfiles = FixedVector<UnlinkedArrayProfile>(numberOfArrayProfiles);
+    }
+
+    m_binaryArithProfiles = FixedVector<BinaryArithProfile>(numBinaryArithProfiles);
+    m_unaryArithProfiles = FixedVector<UnaryArithProfile>(numUnaryArithProfiles);
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,7 @@ public final class MediaException extends RuntimeException {
          * Indicates an error has occurred for an unknown reason.
          */
         UNKNOWN
-    };
+    }
 
     /**
      * Map {@link MediaError} codes to {@link Type}s.
@@ -198,4 +198,4 @@ public final class MediaException extends RuntimeException {
         if (getCause() != null) errString += " : " + getCause();
         return errString;
     }
-};
+}

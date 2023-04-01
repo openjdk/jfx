@@ -24,6 +24,7 @@
 #include "HTMLBaseElement.h"
 
 #include "Document.h"
+#include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "TextResourceDecoder.h"
@@ -74,7 +75,7 @@ bool HTMLBaseElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name().localName() == hrefAttr || HTMLElement::isURLAttribute(attribute);
 }
 
-String HTMLBaseElement::target() const
+AtomString HTMLBaseElement::target() const
 {
     return attributeWithoutSynchronization(targetAttr);
 }

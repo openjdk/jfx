@@ -32,6 +32,8 @@
 #include "Packed.h"
 #include "PhysicalPageMap.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class AllIsoHeaps;
@@ -43,8 +45,8 @@ class BEXPORT IsoHeapImplBase {
 public:
     static constexpr unsigned maxAllocationFromShared = 8;
     static constexpr unsigned maxAllocationFromSharedMask = (1U << maxAllocationFromShared) - 1U;
-    static_assert(maxAllocationFromShared <= bmalloc::alignment, "");
-    static_assert(isPowerOfTwo(maxAllocationFromShared), "");
+    static_assert(maxAllocationFromShared <= bmalloc::alignment);
+    static_assert(isPowerOfTwo(maxAllocationFromShared));
 
     virtual ~IsoHeapImplBase();
 
@@ -91,7 +93,7 @@ protected:
     unsigned m_availableShared { maxAllocationFromSharedMask };
     AllocationMode m_allocationMode { AllocationMode::Init };
     bool m_isInlineDirectoryEligibleOrDecommitted { true };
-    static_assert(sizeof(m_availableShared) * 8 >= maxAllocationFromShared, "");
+    static_assert(sizeof(m_availableShared) * 8 >= maxAllocationFromShared);
 };
 
 template<typename Config>
@@ -142,4 +144,4 @@ private:
 
 } // namespace bmalloc
 
-
+#endif

@@ -21,11 +21,13 @@
 #pragma once
 
 #include "CSSRuleList.h"
+#include "CommonAtomStrings.h"
 #include "ExceptionOr.h"
 #include "StyleSheet.h"
 #include <memory>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/TextPosition.h>
 
@@ -58,7 +60,7 @@ public:
     Node* ownerNode() const final { return m_ownerNode; }
     MediaList* media() const final;
     String href() const final;
-    String title() const final { return m_title; }
+    String title() const final { return !m_title.isEmpty() ? m_title : String(); }
     bool disabled() const final { return m_isDisabled; }
     void setDisabled(bool) final;
 
@@ -95,7 +97,7 @@ public:
     bool hadRulesMutation() const { return m_mutatedRules; }
     void clearHadRulesMutation() { m_mutatedRules = false; }
 
-    enum RuleMutationType { OtherMutation, RuleInsertion };
+    enum RuleMutationType { OtherMutation, RuleInsertion, KeyframesRuleMutation };
     enum WhetherContentsWereClonedForMutation { ContentsWereNotClonedForMutation = 0, ContentsWereClonedForMutation };
 
     class RuleMutationScope {
@@ -109,11 +111,12 @@ public:
         CSSStyleSheet* m_styleSheet;
         RuleMutationType m_mutationType;
         WhetherContentsWereClonedForMutation m_contentsWereClonedForMutation;
-        StyleRuleKeyframes* m_insertedKeyframesRule;
+        RefPtr<StyleRuleKeyframes> m_insertedKeyframesRule;
+        String m_modifiedKeyframesRuleName;
     };
 
     WhetherContentsWereClonedForMutation willMutateRules();
-    void didMutateRules(RuleMutationType, WhetherContentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule);
+    void didMutateRules(RuleMutationType, WhetherContentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName);
     void didMutateRuleFromCSSStyleDeclaration();
     void didMutate();
 
@@ -137,7 +140,7 @@ private:
     CSSStyleSheet(Ref<StyleSheetContents>&&, Node& ownerNode, const TextPosition& startPosition, bool isInlineStylesheet, const std::optional<bool>&);
 
     bool isCSSStyleSheet() const final { return true; }
-    String type() const final { return "text/css"_s; }
+    String type() const final { return cssContentTypeAtom(); }
 
     Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet { false };
@@ -146,6 +149,7 @@ private:
     std::optional<bool> m_isOriginClean;
     String m_title;
     RefPtr<MediaQuerySet> m_mediaQueries;
+    WeakPtr<Style::Scope> m_styleScope;
 
     Node* m_ownerNode { nullptr };
     CSSImportRule* m_ownerRule { nullptr };

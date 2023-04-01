@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "ExecutableToCodeBlockEdge.h"
 #include "GlobalExecutable.h"
 
 namespace JSC {
+
+class UnlinkedProgramCodeBlock;
 
 class ProgramExecutable final : public GlobalExecutable {
     friend class LLIntOffsetsExtractor;
@@ -37,15 +38,15 @@ public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.programExecutableSpace.space;
+        return &vm.programExecutableSpace();
     }
 
     static ProgramExecutable* create(JSGlobalObject* globalObject, const SourceCode& source)
     {
         VM& vm = getVM(globalObject);
-        ProgramExecutable* executable = new (NotNull, allocateCell<ProgramExecutable>(vm.heap)) ProgramExecutable(globalObject, source);
+        ProgramExecutable* executable = new (NotNull, allocateCell<ProgramExecutable>(vm)) ProgramExecutable(globalObject, source);
         executable->finishCreation(vm);
         return executable;
     }
@@ -54,9 +55,14 @@ public:
 
     static void destroy(JSCell*);
 
-    ProgramCodeBlock* codeBlock()
+    ProgramCodeBlock* codeBlock() const
     {
-        return bitwise_cast<ProgramCodeBlock*>(ExecutableToCodeBlockEdge::unwrap(m_programCodeBlock.get()));
+        return bitwise_cast<ProgramCodeBlock*>(Base::codeBlock());
+    }
+
+    UnlinkedProgramCodeBlock* unlinkedCodeBlock() const
+    {
+        return bitwise_cast<UnlinkedProgramCodeBlock*>(Base::unlinkedCodeBlock());
     }
 
     Ref<JITCode> generatedJITCode()
@@ -81,8 +87,6 @@ private:
 
     DECLARE_VISIT_CHILDREN;
 
-    WriteBarrier<UnlinkedProgramCodeBlock> m_unlinkedProgramCodeBlock;
-    WriteBarrier<ExecutableToCodeBlockEdge> m_programCodeBlock;
     std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
 };
 

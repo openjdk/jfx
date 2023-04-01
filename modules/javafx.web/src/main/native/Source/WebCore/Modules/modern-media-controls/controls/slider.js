@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016, 2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,127 +23,55 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-class Slider extends LayoutNode
+class Slider extends SliderBase
 {
-
-    constructor(cssClassName = "", knobStyle = Slider.KnobStyle.Circle)
+    constructor(layoutDelegate, cssClassName = "", knobStyle = Slider.KnobStyle.Circle)
     {
-        super(`<div class="slider ${cssClassName}"></div>`);
+        super(layoutDelegate, `default ${cssClassName}`);
 
-        this._container = new LayoutNode(`<div class="custom-slider"></div>`);
-        this._primaryFill = new LayoutNode(`<div class="primary fill"></div>`);
-        this._trackFill = new LayoutNode(`<div class="track fill"></div>`);
-        this._secondaryFill = new LayoutNode(`<div class="secondary fill"></div>`);
+        this._primaryFill = new LayoutNode(`<div class="primary"></div>`);
+        this._trackFill = new LayoutNode(`<div class="track"></div>`);
+        this._secondaryFill = new LayoutNode(`<div class="secondary"></div>`);
+
+        let fillContainer = new LayoutNode(`<div class="fill"></div>`);
+        fillContainer.children = [this._primaryFill, this._trackFill, this._secondaryFill];
+
         this._knob = new LayoutNode(`<div class="knob ${knobStyle}"></div>`);
-        this._container.children = [this._primaryFill, this._trackFill, this._secondaryFill, this._knob];
 
-        this._input = new LayoutNode(`<input type="range" min="0" max="1" step="0.001" />`);
-        this._input.element.addEventListener("pointerdown", this);
-        this._input.element.addEventListener("input", this);
-        this._input.element.addEventListener("change", this);
+        this.appearanceContainer.children = [fillContainer, this._knob];
 
-        this.value = 0;
         this.height = 16;
-        this.enabled = true;
-        this.isActive = false;
-        this._secondaryValue = 0;
-        this._disabled = false;
         this._knobStyle = knobStyle;
-
-        this.children = [this._container, this._input];
     }
 
     // Public
 
-    set inputAccessibleLabel(timeValue)
+    get knobStyle()
     {
-        this._input.element.setAttribute("aria-valuetext", formattedStringForDuration(timeValue));
+        return this._knobStyle;
     }
 
-    get disabled()
+    set knobStyle(knobStyle)
     {
-        return this._disabled;
-    }
-
-    set disabled(flag)
-    {
-        if (this._disabled === flag)
+        if (this._knobStyle === knobStyle)
             return;
 
-        this._disabled = flag;
-        this.markDirtyProperty("disabled");
-    }
+        this._knob.element.classList.remove(this._knobStyle);
 
-    get value()
-    {
-        if (this._value !== undefined)
-            return this._value;
-        return parseFloat(this._input.element.value);
-    }
+        this._knobStyle = knobStyle;
 
-    set value(value)
-    {
-        if (this.isActive)
-            return;
+        this._knob.element.classList.add(this._knobStyle);
 
-        this._value = value;
-        this.markDirtyProperty("value");
-        this.needsLayout = true;
-    }
-
-    get secondaryValue()
-    {
-        return this._secondaryValue;
-    }
-
-    set secondaryValue(secondaryValue)
-    {
-        if (this._secondaryValue === secondaryValue)
-            return;
-
-        this._secondaryValue = secondaryValue;
         this.needsLayout = true;
     }
 
     // Protected
 
-    handleEvent(event)
-    {
-        switch (event.type) {
-        case "pointerdown":
-            this._handlePointerdownEvent();
-            break;
-        case "pointerup":
-            this._handlePointerupEvent();
-            break;
-        case "change":
-        case "input":
-            this._valueDidChange();
-            break;
-        }
-    }
-
-    commitProperty(propertyName)
-    {
-        switch (propertyName) {
-        case "value":
-            this._input.element.value = this._value;
-            delete this._value;
-            break;
-        case "disabled":
-            this.element.classList.toggle("disabled", this._disabled);
-            break;
-        default :
-            super.commitProperty(propertyName);
-            break;
-        }
-    }
-
     commit()
     {
         super.commit();
 
-        let scrubberWidth = (style => {
+        const scrubberWidth = (style => {
             switch (style) {
             case Slider.KnobStyle.Bar:
                 return 4;
@@ -156,7 +84,7 @@ class Slider extends LayoutNode
             return 0;
         })(this._knobStyle);
 
-        let scrubberBorder = (style => {
+        const scrubberBorder = (style => {
             switch (style) {
             case Slider.KnobStyle.Bar:
                 return 1;
@@ -169,66 +97,14 @@ class Slider extends LayoutNode
             return 0;
         })(this._knobStyle);
 
-        let scrubberCenterX = (scrubberWidth / 2) + Math.round((this.width - scrubberWidth) * this.value);
+        const scrubberCenterX = (scrubberWidth / 2) + Math.round((this.width - scrubberWidth) * this.value);
         this._primaryFill.element.style.width = `${scrubberCenterX - (scrubberWidth / 2) - scrubberBorder}px`;
         this._trackFill.element.style.left = `${scrubberCenterX + (scrubberWidth / 2) + scrubberBorder}px`;
         this._secondaryFill.element.style.left = `${scrubberCenterX + (scrubberWidth / 2) + scrubberBorder}px`;
-        this._secondaryFill.element.style.right = `${(1 - this._secondaryValue) * 100}%`;
+        this._secondaryFill.element.style.right = `${(1 - this.secondaryValue) * 100}%`;
         this._knob.element.style.left = `${scrubberCenterX}px`;
     }
 
-    // Private
-
-    _handlePointerdownEvent()
-    {
-        this._pointerupTarget = this._interactionEndTarget();
-        this._pointerupTarget.addEventListener("pointerup", this, true);
-
-        this._valueWillStartChanging();
-    }
-
-    _interactionEndTarget()
-    {
-        const mediaControls = this.parentOfType(MediaControls);
-        return (!mediaControls || mediaControls instanceof MacOSInlineMediaControls) ? window : mediaControls.element;
-    }
-
-    _valueWillStartChanging()
-    {
-        // We should no longer cache the value since we'll be interacting with the <input>
-        // so the value should be read back from it dynamically.
-        delete this._value;
-
-        if (this.uiDelegate && typeof this.uiDelegate.controlValueWillStartChanging === "function")
-            this.uiDelegate.controlValueWillStartChanging(this);
-        this.isActive = true;
-        this.needsLayout = true;
-    }
-
-    _valueDidChange()
-    {
-        if (this.uiDelegate && typeof this.uiDelegate.controlValueDidChange === "function")
-            this.uiDelegate.controlValueDidChange(this);
-
-        this.needsLayout = true;
-    }
-
-    _valueDidStopChanging()
-    {
-        this.isActive = false;
-        if (this.uiDelegate && typeof this.uiDelegate.controlValueDidStopChanging === "function")
-            this.uiDelegate.controlValueDidStopChanging(this);
-
-        this.needsLayout = true;
-    }
-
-    _handlePointerupEvent()
-    {
-        this._pointerupTarget.removeEventListener("pointerup", this, true);
-        delete this._pointerupTarget;
-
-        this._valueDidStopChanging();
-    }
 }
 
 Slider.KnobStyle = {

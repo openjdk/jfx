@@ -29,6 +29,7 @@
 #include "GraphicsContext.h"
 #include "HTMLBodyElement.h"
 #include "HTMLFrameOwnerElement.h"
+#include "HTMLFrameSetElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLIFrameElement.h"
 #include "HitTestResult.h"
@@ -168,7 +169,7 @@ void RenderView::layout()
                 || box.style().logicalHeight().isPercentOrCalculated()
                 || box.style().logicalMinHeight().isPercentOrCalculated()
                 || box.style().logicalMaxHeight().isPercentOrCalculated()
-                || box.isSVGRoot()
+                || box.isSVGRootOrLegacySVGRoot()
                 )
                 box.setChildNeedsLayout(MarkOnlyThis);
         }
@@ -178,7 +179,7 @@ void RenderView::layout()
     if (!needsLayout())
         return;
 
-    LayoutStateMaintainer statePusher(*this, { }, false, m_pageLogicalSize.value_or(LayoutSize()).height(), m_pageLogicalHeightChanged);
+    LayoutStateMaintainer statePusher(*this, { }, false, valueOrDefault(m_pageLogicalSize).height(), m_pageLogicalHeightChanged);
 
     m_pageLogicalHeightChanged = false;
 
@@ -328,9 +329,14 @@ RenderElement* RenderView::rendererForRootBackground() const
     if (!is<HTMLHtmlElement>(documentRenderer.element()))
         return &documentRenderer;
 
+    if (documentRenderer.shouldApplyAnyContainment())
+        return nullptr;
+
     if (auto* body = document().body()) {
-        if (auto* renderer = body->renderer())
-            return renderer;
+        if (auto* renderer = body->renderer()) {
+            if (!renderer->shouldApplyAnyContainment())
+                return renderer;
+        }
     }
     return &documentRenderer;
 }
@@ -374,7 +380,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
             break;
         }
 
-        if (RenderLayer* compositingLayer = layer->enclosingCompositingLayerForRepaint()) {
+        if (auto* compositingLayer = layer->enclosingCompositingLayerForRepaint().layer) {
             if (!compositingLayer->backing()->paintsIntoWindow()) {
                 frameView().setCannotBlitToWindow();
                 break;
@@ -390,12 +396,14 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
 
     bool rootFillsViewport = false;
     bool rootObscuresBackground = false;
+    auto shouldPropagateBackgroundPaintingToInitialContainingBlock = true;
     Element* documentElement = document().documentElement();
     if (RenderElement* rootRenderer = documentElement ? documentElement->renderer() : nullptr) {
         // The document element's renderer is currently forced to be a block, but may not always be.
-        RenderBox* rootBox = is<RenderBox>(*rootRenderer) ? downcast<RenderBox>(rootRenderer) : nullptr;
+        auto* rootBox = dynamicDowncast<RenderBox>(*rootRenderer);
         rootFillsViewport = rootBox && !rootBox->x() && !rootBox->y() && rootBox->width() >= width() && rootBox->height() >= height();
         rootObscuresBackground = rendererObscuresBackground(*rootRenderer);
+        shouldPropagateBackgroundPaintingToInitialContainingBlock = !!rendererForRootBackground();
     }
 
     compositor().rootBackgroundColorOrTransparencyChanged();
@@ -417,7 +425,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         frameView().setCannotBlitToWindow(); // The parent must show behind the child.
     else {
         const Color& documentBackgroundColor = frameView().documentBackgroundColor();
-        const Color& backgroundColor = (settings().backgroundShouldExtendBeyondPage() && documentBackgroundColor.isValid()) ? documentBackgroundColor : frameView().baseBackgroundColor();
+        const Color& backgroundColor = (shouldPropagateBackgroundPaintingToInitialContainingBlock && settings().backgroundShouldExtendBeyondPage() && documentBackgroundColor.isValid()) ? documentBackgroundColor : frameView().baseBackgroundColor();
         if (backgroundColor.isVisible()) {
             CompositeOperator previousOperator = paintInfo.context().compositeOperation();
             paintInfo.context().setCompositeOperation(CompositeOperator::Copy);
@@ -442,7 +450,7 @@ void RenderView::repaintRootContents()
 
     // Always use layoutOverflowRect() to fix rdar://problem/27182267.
     // This should be cleaned up via webkit.org/b/159913 and webkit.org/b/159914.
-    RenderLayerModelObject* repaintContainer = containerForRepaint();
+    auto* repaintContainer = containerForRepaint().renderer;
     repaintUsingContainer(repaintContainer, computeRectForRepaint(layoutOverflowRect(), repaintContainer));
 }
 
@@ -594,6 +602,46 @@ bool RenderView::rootBackgroundIsEntirelyFixed() const
     return false;
 }
 
+bool RenderView::shouldPaintBaseBackground() const
+{
+    auto& document = this->document();
+    auto& frameView = this->frameView();
+    auto* ownerElement = document.ownerElement();
+
+    // Fill with a base color if we're the root document.
+    if (!ownerElement)
+        return !frameView.isTransparent();
+
+    if (ownerElement->hasTagName(HTMLNames::frameTag))
+        return true;
+
+    // Locate the <body> element using the DOM. This is easier than trying
+    // to crawl around a render tree with potential :before/:after content and
+    // anonymous blocks created by inline <body> tags etc. We can locate the <body>
+    // render object very easily via the DOM.
+    auto* body = document.bodyOrFrameset();
+
+    // SVG documents and XML documents with SVG root nodes are transparent.
+    if (!body)
+        return !document.hasSVGRootNode();
+
+    // Can't scroll a frameset document anyway.
+    if (is<HTMLFrameSetElement>(*body))
+        return true;
+
+    auto* frameRenderer = ownerElement->renderer();
+    if (!frameRenderer)
+        return false;
+
+    // iframes should fill with a base color if the used color scheme of the
+    // element and the used color scheme of the embedded document’s root
+    // element do not match.
+    if (frameView.useDarkAppearance() != frameRenderer->useDarkAppearance())
+        return !frameView.isTransparent();
+
+    return false;
+}
+
 LayoutRect RenderView::unextendedBackgroundRect() const
 {
     // FIXME: What is this? Need to patch for new columns?
@@ -656,9 +704,24 @@ float RenderView::zoomFactor() const
     return frameView().frame().pageZoomFactor();
 }
 
-IntSize RenderView::viewportSizeForCSSViewportUnits() const
+FloatSize RenderView::sizeForCSSSmallViewportUnits() const
 {
-    return frameView().viewportSizeForCSSViewportUnits();
+    return frameView().sizeForCSSSmallViewportUnits();
+}
+
+FloatSize RenderView::sizeForCSSLargeViewportUnits() const
+{
+    return frameView().sizeForCSSLargeViewportUnits();
+}
+
+FloatSize RenderView::sizeForCSSDynamicViewportUnits() const
+{
+    return frameView().sizeForCSSDynamicViewportUnits();
+}
+
+FloatSize RenderView::sizeForCSSDefaultViewportUnits() const
+{
+    return frameView().sizeForCSSDefaultViewportUnits();
 }
 
 Node* RenderView::nodeForHitTest() const
@@ -823,7 +886,7 @@ RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator(RenderView* view)
     m_wasAccumulatingRepaintRegion = !!rootRenderView->m_accumulatedRepaintRegion;
     if (!m_wasAccumulatingRepaintRegion)
         rootRenderView->m_accumulatedRepaintRegion = makeUnique<Region>();
-    m_rootView = makeWeakPtr(*rootRenderView);
+    m_rootView = *rootRenderView;
 }
 
 RenderView::RepaintRegionAccumulator::~RepaintRegionAccumulator()
@@ -876,12 +939,12 @@ unsigned RenderView::pageCount() const
 void RenderView::layerChildrenChangedDuringStyleChange(RenderLayer& layer)
 {
     if (!m_styleChangeLayerMutationRoot) {
-        m_styleChangeLayerMutationRoot = makeWeakPtr(layer);
+        m_styleChangeLayerMutationRoot = layer;
         return;
     }
 
     RenderLayer* commonAncestor = m_styleChangeLayerMutationRoot->commonAncestorWithLayer(layer);
-    m_styleChangeLayerMutationRoot = makeWeakPtr(commonAncestor);
+    m_styleChangeLayerMutationRoot = commonAncestor;
 }
 
 RenderLayer* RenderView::takeStyleChangeLayerTreeMutationRoot()
@@ -899,6 +962,16 @@ void RenderView::registerBoxWithScrollSnapPositions(const RenderBox& box)
 void RenderView::unregisterBoxWithScrollSnapPositions(const RenderBox& box)
 {
     m_boxesWithScrollSnapPositions.remove(&box);
+}
+
+void RenderView::registerContainerQueryBox(const RenderBox& box)
+{
+    m_containerQueryBoxes.add(box);
+}
+
+void RenderView::unregisterContainerQueryBox(const RenderBox& box)
+{
+    m_containerQueryBoxes.remove(box);
 }
 
 } // namespace WebCore

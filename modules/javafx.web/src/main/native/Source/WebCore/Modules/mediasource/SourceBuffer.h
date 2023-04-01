@@ -34,15 +34,16 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "ActiveDOMObject.h"
-#include "AudioTrack.h"
+#include "AudioTrackClient.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"
-#include "TextTrack.h"
+#include "TextTrackClient.h"
 #include "Timer.h"
-#include "VideoTrack.h"
+#include "VideoTrackClient.h"
 #include <wtf/LoggerHelper.h>
+#include <wtf/Observer.h>
 
 namespace WebCore {
 
@@ -54,6 +55,7 @@ class SourceBufferPrivate;
 class TextTrackList;
 class TimeRanges;
 class VideoTrackList;
+class WebCoreOpaqueRoot;
 
 class SourceBuffer final
     : public RefCounted<SourceBuffer>
@@ -69,6 +71,9 @@ class SourceBuffer final
 {
     WTF_MAKE_ISO_ALLOCATED(SourceBuffer);
 public:
+    using WeakValueType = EventTarget::WeakValueType;
+    using EventTarget::weakPtrFactory;
+
     static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource*);
     virtual ~SourceBuffer();
 
@@ -126,6 +131,8 @@ public:
     MediaTime highestPresentationTimestamp() const;
     void readyStateChanged();
 
+    size_t memoryCost() const;
+
     void setMediaSourceEnded(bool isEnded);
 
 #if !RELEASE_LOG_DISABLED
@@ -134,6 +141,8 @@ public:
     const char* logClassName() const final { return "SourceBuffer"; }
     WTFLogChannel& logChannel() const final;
 #endif
+
+    WebCoreOpaqueRoot opaqueRoot();
 
 private:
     SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource*);
@@ -147,7 +156,7 @@ private:
     bool virtualHasPendingActivity() const final;
 
     // SourceBufferPrivateClient
-    void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void()>&&) final;
+    void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void(ReceiveResult)>&&) final;
     void sourceBufferPrivateStreamEndedWithDecodeError() final;
     void sourceBufferPrivateAppendError(bool decodeError) final;
     void sourceBufferPrivateAppendComplete(AppendResult) final;
@@ -161,15 +170,20 @@ private:
 
     // AudioTrackClient
     void audioTrackEnabledChanged(AudioTrack&) final;
-    // VideoTrackClient
-    void videoTrackSelectedChanged(VideoTrack&) final;
+    void audioTrackKindChanged(AudioTrack&) final;
+    void audioTrackLabelChanged(AudioTrack&) final;
+    void audioTrackLanguageChanged(AudioTrack&) final;
+
     // TextTrackClient
     void textTrackKindChanged(TextTrack&) final;
     void textTrackModeChanged(TextTrack&) final;
-    void textTrackAddCues(TextTrack&, const TextTrackCueList&) final;
-    void textTrackRemoveCues(TextTrack&, const TextTrackCueList&) final;
-    void textTrackAddCue(TextTrack&, TextTrackCue&) final;
-    void textTrackRemoveCue(TextTrack&, TextTrackCue&) final;
+    void textTrackLanguageChanged(TextTrack&) final;
+
+    // VideoTrackClient
+    void videoTrackKindChanged(VideoTrack&) final;
+    void videoTrackLabelChanged(VideoTrack&) final;
+    void videoTrackLanguageChanged(VideoTrack&) final;
+    void videoTrackSelectedChanged(VideoTrack&) final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return SourceBufferEventTargetInterfaceType; }
@@ -209,7 +223,9 @@ private:
     MediaSource* m_source;
     AppendMode m_mode { AppendMode::Segments };
 
-    Vector<unsigned char> m_pendingAppendData;
+    WTF::Observer<WebCoreOpaqueRoot()> m_opaqueRootProvider;
+
+    RefPtr<SharedBuffer> m_pendingAppendData;
     Timer m_appendBufferTimer;
 
     RefPtr<VideoTrackList> m_videoTracks;
@@ -232,7 +248,10 @@ private:
     double m_averageBufferRate { 0 };
     bool m_bufferedDirty { true };
 
+    // Can only grow.
     uint64_t m_reportedExtraMemoryCost { 0 };
+    // Can grow and shrink.
+    uint64_t m_extraMemoryCost { 0 };
 
     MediaTime m_pendingRemoveStart;
     MediaTime m_pendingRemoveEnd;

@@ -31,10 +31,6 @@
 #include "PaymentCoordinator.h"
 #include <wtf/text/StringConcatenateNumbers.h>
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePayRequestBaseAdditions.cpp>
-#endif
-
 namespace WebCore {
 
 static bool requiresSupportedNetworks(unsigned version, const ApplePayRequestBase& request)
@@ -77,7 +73,7 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
     result.setMerchantCapabilities(merchantCapabilities.releaseReturnValue());
 
     if (requiresSupportedNetworks(version, request) && request.supportedNetworks.isEmpty())
-        return Exception { TypeError, "At least one supported network must be provided." };
+        return Exception { TypeError, "At least one supported network must be provided."_s };
 
     auto supportedNetworks = convertAndValidate(document, version, request.supportedNetworks, paymentCoordinator);
     if (supportedNetworks.hasException())
@@ -125,10 +121,6 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
 
 #if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)
     result.setShippingContactEditingMode(request.shippingContactEditingMode);
-#endif
-
-#if defined(ApplePayRequestBaseAdditions_convertAndValidate_request)
-    ApplePayRequestBaseAdditions_convertAndValidate_request
 #endif
 
     return WTFMove(result);

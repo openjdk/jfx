@@ -97,8 +97,8 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
     ASSERT(JITCode::isOptimizingJIT(codeBlock->jitType()));
     ASSERT(codeBlock->alternative());
     ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
-    ASSERT(!codeBlock->jitCodeMap());
-    ASSERT(codeBlock->jitCode()->dfgCommon()->isStillValid);
+    ASSERT(codeBlock->jitCode()->dfgCommon()->isStillValid());
+    ASSERT(!codeBlock->isJettisoned());
 
     if (!Options::useOSREntryToDFG())
         return nullptr;
@@ -295,11 +295,11 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
 
     // 6) Copy our callee saves to buffer.
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
-    const RegisterAtOffsetList* registerSaveLocations = codeBlock->calleeSaveRegisters();
+    const RegisterAtOffsetList* registerSaveLocations = codeBlock->jitCode()->calleeSaveRegisters();
     RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
     RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters());
 
-    unsigned registerCount = registerSaveLocations->size();
+    unsigned registerCount = registerSaveLocations->registerCount();
     VMEntryRecord* record = vmEntryRecord(vm.topEntryFrame);
     for (unsigned i = 0; i < registerCount; i++) {
         RegisterAtOffset currentEntry = registerSaveLocations->at(i);
@@ -347,7 +347,8 @@ void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, Byteco
 MacroAssemblerCodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* baselineCodeBlock, CodeBlock* optimizedCodeBlock, BytecodeIndex bytecodeIndex)
 {
     ASSERT(optimizedCodeBlock->jitType() == JITType::DFGJIT || optimizedCodeBlock->jitType() == JITType::FTLJIT);
-    ASSERT(optimizedCodeBlock->jitCode()->dfgCommon()->isStillValid);
+    ASSERT(optimizedCodeBlock->jitCode()->dfgCommon()->isStillValid());
+    ASSERT(!optimizedCodeBlock->isJettisoned());
 
     if (!Options::useOSREntryToDFG() && optimizedCodeBlock->jitCode()->jitType() == JITType::DFGJIT)
         return nullptr;
@@ -409,6 +410,10 @@ MacroAssemblerCodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(VM& vm, CallF
 
     // The active length of catchOSREntryBuffer will be zeroed by ClearCatchLocals node.
     dfgCommon->catchOSREntryBuffer->setActiveLength(sizeof(JSValue) * index);
+
+    // At this point, we're committed to triggering an OSR entry immediately after we return. Hence, it is safe to modify stack here.
+    callFrame->setCodeBlock(optimizedCodeBlock);
+
     return catchEntrypoint->machineCode;
 }
 

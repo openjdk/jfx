@@ -30,20 +30,22 @@
 #include "FrameLoaderClient.h"
 #include "HTMLTextFormControlElement.h"
 #include "LayoutRect.h"
-#include "TextIterator.h"
+#include "SimpleRange.h"
+#include "TextIteratorBehavior.h"
 #include "VisibleSelection.h"
 #include "Widget.h"
+#include <variant>
 #include <wtf/HashSet.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Variant.h>
 
 #if PLATFORM(WIN)
 #include "AccessibilityObjectWrapperWin.h"
 #include "COMPtr.h"
 #endif
 
-#if USE(ATK)
-#include <wtf/glib/GRefPtr.h>
+#if USE(ATSPI)
+#include "AccessibilityObjectAtspi.h"
 #endif
 
 #if PLATFORM(COCOA)
@@ -52,12 +54,15 @@ typedef WebAccessibilityObjectWrapper AccessibilityObjectWrapper;
 typedef struct _NSRange NSRange;
 typedef const struct __AXTextMarker* AXTextMarkerRef;
 typedef const struct __AXTextMarkerRange* AXTextMarkerRangeRef;
-#elif USE(ATK)
-typedef struct _WebKitAccessible WebKitAccessible;
-typedef struct _WebKitAccessible AccessibilityObjectWrapper;
+#elif USE(ATSPI)
+typedef WebCore::AccessibilityObjectAtspi AccessibilityObjectWrapper;
 #else
 class AccessibilityObjectWrapper;
 #endif
+
+namespace PAL {
+class SessionID;
+}
 
 namespace WTF {
 class TextStream;
@@ -78,13 +83,25 @@ class Path;
 class QualifiedName;
 class RenderObject;
 class ScrollView;
-class Widget;
 
 struct AccessibilityText;
 struct ScrollRectToVisibleOptions;
 
-using AXID = size_t;
-extern const AXID InvalidAXID;
+enum AXIDType { };
+using AXID = ObjectIdentifier<AXIDType>;
+
+enum class AXAncestorFlag : uint8_t {
+    // When the flags aren't initialized, it means the object hasn't been inserted into the tree,
+    // and thus we haven't set any of these ancestry flags.
+    FlagsInitialized = 1 << 0,
+    HasDocumentRoleAncestor = 1 << 1,
+    HasWebApplicationAncestor = 1 << 2,
+    IsInDescriptionListDetail = 1 << 3,
+    IsInDescriptionListTerm = 1 << 4,
+    IsInCell = 1 << 5,
+
+    // Bits 6 and 7 are free.
+};
 
 enum class AccessibilityRole {
     Annotation = 1,
@@ -114,8 +131,8 @@ enum class AccessibilityRole {
     Definition,
     Deletion,
     DescriptionList,
-    DescriptionListTerm,
     DescriptionListDetail,
+    DescriptionListTerm,
     Details,
     Directory,
     DisclosureTriangle,
@@ -176,6 +193,7 @@ enum class AccessibilityRole {
     MenuListPopup,
     MenuListOption,
     Meter,
+    Model,
     Outline,
     Paragraph,
     PopUpButton,
@@ -206,6 +224,7 @@ enum class AccessibilityRole {
     Splitter,
     StaticText,
     Subscript,
+    Suggestion,
     Summary,
     Superscript,
     Switch,
@@ -240,316 +259,320 @@ enum class AccessibilityRole {
     Window,
 };
 
-using AccessibilityRoleSet = WTF::HashSet<AccessibilityRole, WTF::IntHash<AccessibilityRole>, WTF::StrongEnumHashTraits<AccessibilityRole>>;
+using AccessibilityRoleSet = HashSet<AccessibilityRole, IntHash<AccessibilityRole>, WTF::StrongEnumHashTraits<AccessibilityRole>>;
 
 ALWAYS_INLINE String accessibilityRoleToString(AccessibilityRole role)
 {
     switch (role) {
     case AccessibilityRole::Annotation:
-        return "Annotation";
+        return "Annotation"_s;
     case AccessibilityRole::Application:
-        return "Application";
+        return "Application"_s;
     case AccessibilityRole::ApplicationAlert:
-        return "ApplicationAlert";
+        return "ApplicationAlert"_s;
     case AccessibilityRole::ApplicationAlertDialog:
-        return "ApplicationAlertDialog";
+        return "ApplicationAlertDialog"_s;
     case AccessibilityRole::ApplicationDialog:
-        return "ApplicationDialog";
+        return "ApplicationDialog"_s;
     case AccessibilityRole::ApplicationGroup:
-        return "ApplicationGroup";
+        return "ApplicationGroup"_s;
     case AccessibilityRole::ApplicationLog:
-        return "ApplicationLog";
+        return "ApplicationLog"_s;
     case AccessibilityRole::ApplicationMarquee:
-        return "ApplicationMarquee";
+        return "ApplicationMarquee"_s;
     case AccessibilityRole::ApplicationStatus:
-        return "ApplicationStatus";
+        return "ApplicationStatus"_s;
     case AccessibilityRole::ApplicationTextGroup:
-        return "ApplicationTextGroup";
+        return "ApplicationTextGroup"_s;
     case AccessibilityRole::ApplicationTimer:
-        return "ApplicationTimer";
+        return "ApplicationTimer"_s;
     case AccessibilityRole::Audio:
-        return "Audio";
+        return "Audio"_s;
     case AccessibilityRole::Blockquote:
-        return "Blockquote";
+        return "Blockquote"_s;
     case AccessibilityRole::Browser:
-        return "Browser";
+        return "Browser"_s;
     case AccessibilityRole::BusyIndicator:
-        return "BusyIndicator";
+        return "BusyIndicator"_s;
     case AccessibilityRole::Button:
-        return "Button";
+        return "Button"_s;
     case AccessibilityRole::Canvas:
-        return "Canvas";
+        return "Canvas"_s;
     case AccessibilityRole::Caption:
-        return "Caption";
+        return "Caption"_s;
     case AccessibilityRole::Cell:
-        return "Cell";
+        return "Cell"_s;
     case AccessibilityRole::CheckBox:
-        return "CheckBox";
+        return "CheckBox"_s;
     case AccessibilityRole::ColorWell:
-        return "ColorWell";
+        return "ColorWell"_s;
     case AccessibilityRole::Column:
-        return "Column";
+        return "Column"_s;
     case AccessibilityRole::ColumnHeader:
-        return "ColumnHeader";
+        return "ColumnHeader"_s;
     case AccessibilityRole::ComboBox:
-        return "ComboBox";
+        return "ComboBox"_s;
     case AccessibilityRole::Definition:
-        return "Definition";
+        return "Definition"_s;
     case AccessibilityRole::Deletion:
-        return "Deletion";
+        return "Deletion"_s;
     case AccessibilityRole::DescriptionList:
-        return "DescriptionList";
+        return "DescriptionList"_s;
     case AccessibilityRole::DescriptionListTerm:
-        return "DescriptionListTerm";
+        return "DescriptionListTerm"_s;
     case AccessibilityRole::DescriptionListDetail:
-        return "DescriptionListDetail";
+        return "DescriptionListDetail"_s;
     case AccessibilityRole::Details:
-        return "Details";
+        return "Details"_s;
     case AccessibilityRole::Directory:
-        return "Directory";
+        return "Directory"_s;
     case AccessibilityRole::DisclosureTriangle:
-        return "DisclosureTriangle";
+        return "DisclosureTriangle"_s;
     case AccessibilityRole::Div:
-        return "Div";
+        return "Div"_s;
     case AccessibilityRole::Document:
-        return "Document";
+        return "Document"_s;
     case AccessibilityRole::DocumentArticle:
-        return "DocumentArticle";
+        return "DocumentArticle"_s;
     case AccessibilityRole::DocumentMath:
-        return "DocumentMath";
+        return "DocumentMath"_s;
     case AccessibilityRole::DocumentNote:
-        return "DocumentNote";
+        return "DocumentNote"_s;
     case AccessibilityRole::Drawer:
-        return "Drawer";
+        return "Drawer"_s;
     case AccessibilityRole::EditableText:
-        return "EditableText";
+        return "EditableText"_s;
     case AccessibilityRole::Feed:
-        return "Feed";
+        return "Feed"_s;
     case AccessibilityRole::Figure:
-        return "Figure";
+        return "Figure"_s;
     case AccessibilityRole::Footer:
-        return "Footer";
+        return "Footer"_s;
     case AccessibilityRole::Footnote:
-        return "Footnote";
+        return "Footnote"_s;
     case AccessibilityRole::Form:
-        return "Form";
+        return "Form"_s;
     case AccessibilityRole::GraphicsDocument:
-        return "GraphicsDocument";
+        return "GraphicsDocument"_s;
     case AccessibilityRole::GraphicsObject:
-        return "GraphicsObject";
+        return "GraphicsObject"_s;
     case AccessibilityRole::GraphicsSymbol:
-        return "GraphicsSymbol";
+        return "GraphicsSymbol"_s;
     case AccessibilityRole::Grid:
-        return "Grid";
+        return "Grid"_s;
     case AccessibilityRole::GridCell:
-        return "GridCell";
+        return "GridCell"_s;
     case AccessibilityRole::Group:
-        return "Group";
+        return "Group"_s;
     case AccessibilityRole::GrowArea:
-        return "GrowArea";
+        return "GrowArea"_s;
     case AccessibilityRole::Heading:
-        return "Heading";
+        return "Heading"_s;
     case AccessibilityRole::HelpTag:
-        return "HelpTag";
+        return "HelpTag"_s;
     case AccessibilityRole::HorizontalRule:
-        return "HorizontalRule";
+        return "HorizontalRule"_s;
     case AccessibilityRole::Ignored:
-        return "Ignored";
+        return "Ignored"_s;
     case AccessibilityRole::Inline:
-        return "Inline";
+        return "Inline"_s;
     case AccessibilityRole::Image:
-        return "Image";
+        return "Image"_s;
     case AccessibilityRole::ImageMap:
-        return "ImageMap";
+        return "ImageMap"_s;
     case AccessibilityRole::ImageMapLink:
-        return "ImageMapLink";
+        return "ImageMapLink"_s;
     case AccessibilityRole::Incrementor:
-        return "Incrementor";
+        return "Incrementor"_s;
     case AccessibilityRole::Insertion:
-        return "Insertion";
+        return "Insertion"_s;
     case AccessibilityRole::Label:
-        return "Label";
+        return "Label"_s;
     case AccessibilityRole::LandmarkBanner:
-        return "LandmarkBanner";
+        return "LandmarkBanner"_s;
     case AccessibilityRole::LandmarkComplementary:
-        return "LandmarkComplementary";
+        return "LandmarkComplementary"_s;
     case AccessibilityRole::LandmarkContentInfo:
-        return "LandmarkContentInfo";
+        return "LandmarkContentInfo"_s;
     case AccessibilityRole::LandmarkDocRegion:
-        return "LandmarkDocRegion";
+        return "LandmarkDocRegion"_s;
     case AccessibilityRole::LandmarkMain:
-        return "LandmarkMain";
+        return "LandmarkMain"_s;
     case AccessibilityRole::LandmarkNavigation:
-        return "LandmarkNavigation";
+        return "LandmarkNavigation"_s;
     case AccessibilityRole::LandmarkRegion:
-        return "LandmarkRegion";
+        return "LandmarkRegion"_s;
     case AccessibilityRole::LandmarkSearch:
-        return "LandmarkSearch";
+        return "LandmarkSearch"_s;
     case AccessibilityRole::Legend:
-        return "Legend";
+        return "Legend"_s;
     case AccessibilityRole::Link:
-        return "Link";
+        return "Link"_s;
     case AccessibilityRole::List:
-        return "List";
+        return "List"_s;
     case AccessibilityRole::ListBox:
-        return "ListBox";
+        return "ListBox"_s;
     case AccessibilityRole::ListBoxOption:
-        return "ListBoxOption";
+        return "ListBoxOption"_s;
     case AccessibilityRole::ListItem:
-        return "ListItem";
+        return "ListItem"_s;
     case AccessibilityRole::ListMarker:
-        return "ListMarker";
+        return "ListMarker"_s;
     case AccessibilityRole::Mark:
-        return "Mark";
+        return "Mark"_s;
     case AccessibilityRole::MathElement:
-        return "MathElement";
+        return "MathElement"_s;
     case AccessibilityRole::Matte:
-        return "Matte";
+        return "Matte"_s;
     case AccessibilityRole::Menu:
-        return "Menu";
+        return "Menu"_s;
     case AccessibilityRole::MenuBar:
-        return "MenuBar";
+        return "MenuBar"_s;
     case AccessibilityRole::MenuButton:
-        return "MenuButton";
+        return "MenuButton"_s;
     case AccessibilityRole::MenuItem:
-        return "MenuItem";
+        return "MenuItem"_s;
     case AccessibilityRole::MenuItemCheckbox:
-        return "MenuItemCheckbox";
+        return "MenuItemCheckbox"_s;
     case AccessibilityRole::MenuItemRadio:
-        return "MenuItemRadio";
+        return "MenuItemRadio"_s;
     case AccessibilityRole::MenuListPopup:
-        return "MenuListPopup";
+        return "MenuListPopup"_s;
     case AccessibilityRole::MenuListOption:
-        return "MenuListOption";
+        return "MenuListOption"_s;
     case AccessibilityRole::Meter:
-        return "Meter";
+        return "Meter"_s;
+    case AccessibilityRole::Model:
+        return "Model"_s;
     case AccessibilityRole::Outline:
-        return "Outline";
+        return "Outline"_s;
     case AccessibilityRole::Paragraph:
-        return "Paragraph";
+        return "Paragraph"_s;
     case AccessibilityRole::PopUpButton:
-        return "PopUpButton";
+        return "PopUpButton"_s;
     case AccessibilityRole::Pre:
-        return "Pre";
+        return "Pre"_s;
     case AccessibilityRole::Presentational:
-        return "Presentational";
+        return "Presentational"_s;
     case AccessibilityRole::ProgressIndicator:
-        return "ProgressIndicator";
+        return "ProgressIndicator"_s;
     case AccessibilityRole::RadioButton:
-        return "RadioButton";
+        return "RadioButton"_s;
     case AccessibilityRole::RadioGroup:
-        return "RadioGroup";
+        return "RadioGroup"_s;
     case AccessibilityRole::RowHeader:
-        return "RowHeader";
+        return "RowHeader"_s;
     case AccessibilityRole::Row:
-        return "Row";
+        return "Row"_s;
     case AccessibilityRole::RowGroup:
-        return "RowGroup";
+        return "RowGroup"_s;
     case AccessibilityRole::RubyBase:
-        return "RubyBase";
+        return "RubyBase"_s;
     case AccessibilityRole::RubyBlock:
-        return "RubyBlock";
+        return "RubyBlock"_s;
     case AccessibilityRole::RubyInline:
-        return "RubyInline";
+        return "RubyInline"_s;
     case AccessibilityRole::RubyRun:
-        return "RubyRun";
+        return "RubyRun"_s;
     case AccessibilityRole::RubyText:
-        return "RubyText";
+        return "RubyText"_s;
     case AccessibilityRole::Ruler:
-        return "Ruler";
+        return "Ruler"_s;
     case AccessibilityRole::RulerMarker:
-        return "RulerMarker";
+        return "RulerMarker"_s;
     case AccessibilityRole::ScrollArea:
-        return "ScrollArea";
+        return "ScrollArea"_s;
     case AccessibilityRole::ScrollBar:
-        return "ScrollBar";
+        return "ScrollBar"_s;
     case AccessibilityRole::SearchField:
-        return "SearchField";
+        return "SearchField"_s;
     case AccessibilityRole::Sheet:
-        return "Sheet";
+        return "Sheet"_s;
     case AccessibilityRole::Slider:
-        return "Slider";
+        return "Slider"_s;
     case AccessibilityRole::SliderThumb:
-        return "SliderThumb";
+        return "SliderThumb"_s;
     case AccessibilityRole::SpinButton:
-        return "SpinButton";
+        return "SpinButton"_s;
     case AccessibilityRole::SpinButtonPart:
-        return "SpinButtonPart";
+        return "SpinButtonPart"_s;
     case AccessibilityRole::SplitGroup:
-        return "SplitGroup";
+        return "SplitGroup"_s;
     case AccessibilityRole::Splitter:
-        return "Splitter";
+        return "Splitter"_s;
     case AccessibilityRole::StaticText:
-        return "StaticText";
+        return "StaticText"_s;
     case AccessibilityRole::Subscript:
-        return "Subscript";
+        return "Subscript"_s;
+    case AccessibilityRole::Suggestion:
+        return "Suggestion"_s;
     case AccessibilityRole::Summary:
-        return "Summary";
+        return "Summary"_s;
     case AccessibilityRole::Superscript:
-        return "Superscript";
+        return "Superscript"_s;
     case AccessibilityRole::Switch:
-        return "Switch";
+        return "Switch"_s;
     case AccessibilityRole::SystemWide:
-        return "SystemWide";
+        return "SystemWide"_s;
     case AccessibilityRole::SVGRoot:
-        return "SVGRoot";
+        return "SVGRoot"_s;
     case AccessibilityRole::SVGText:
-        return "SVGText";
+        return "SVGText"_s;
     case AccessibilityRole::SVGTSpan:
-        return "SVGTSpan";
+        return "SVGTSpan"_s;
     case AccessibilityRole::SVGTextPath:
-        return "SVGTextPath";
+        return "SVGTextPath"_s;
     case AccessibilityRole::TabGroup:
-        return "TabGroup";
+        return "TabGroup"_s;
     case AccessibilityRole::TabList:
-        return "TabList";
+        return "TabList"_s;
     case AccessibilityRole::TabPanel:
-        return "TabPanel";
+        return "TabPanel"_s;
     case AccessibilityRole::Tab:
-        return "Tab";
+        return "Tab"_s;
     case AccessibilityRole::Table:
-        return "Table";
+        return "Table"_s;
     case AccessibilityRole::TableHeaderContainer:
-        return "TableHeaderContainer";
+        return "TableHeaderContainer"_s;
     case AccessibilityRole::Term:
-        return "Term";
+        return "Term"_s;
     case AccessibilityRole::TextArea:
-        return "TextArea";
+        return "TextArea"_s;
     case AccessibilityRole::TextField:
-        return "TextField";
+        return "TextField"_s;
     case AccessibilityRole::TextGroup:
-        return "TextGroup";
+        return "TextGroup"_s;
     case AccessibilityRole::Time:
-        return "Time";
+        return "Time"_s;
     case AccessibilityRole::Tree:
-        return "Tree";
+        return "Tree"_s;
     case AccessibilityRole::TreeGrid:
-        return "TreeGrid";
+        return "TreeGrid"_s;
     case AccessibilityRole::TreeItem:
-        return "TreeItem";
+        return "TreeItem"_s;
     case AccessibilityRole::ToggleButton:
-        return "ToggleButton";
+        return "ToggleButton"_s;
     case AccessibilityRole::Toolbar:
-        return "Toolbar";
+        return "Toolbar"_s;
     case AccessibilityRole::Unknown:
-        return "Unknown";
+        return "Unknown"_s;
     case AccessibilityRole::UserInterfaceTooltip:
-        return "UserInterfaceTooltip";
+        return "UserInterfaceTooltip"_s;
     case AccessibilityRole::ValueIndicator:
-        return "ValueIndicator";
+        return "ValueIndicator"_s;
     case AccessibilityRole::Video:
-        return "Video";
+        return "Video"_s;
     case AccessibilityRole::WebApplication:
-        return "WebApplication";
+        return "WebApplication"_s;
     case AccessibilityRole::WebArea:
-        return "WebArea";
+        return "WebArea"_s;
     case AccessibilityRole::WebCoreLink:
-        return "WebCoreLink";
+        return "WebCoreLink"_s;
     case AccessibilityRole::Window:
-        return "Window";
+        return "Window"_s;
     }
     UNREACHABLE();
-    return "";
+    return ""_s;
 }
 
 enum class AccessibilityDetachmentType { CacheDestroyed, ElementDestroyed, ElementChanged };
@@ -619,7 +642,7 @@ enum class AccessibilitySearchKey {
     VisitedLink,
 };
 
-using AXEditingStyleValueVariant = Variant<String, bool, int>;
+using AXEditingStyleValueVariant = std::variant<String, bool, int>;
 
 struct AccessibilitySearchCriteria {
     AXCoreObject* anchorObject { nullptr };
@@ -756,6 +779,30 @@ enum class AccessibilityVisiblePositionForBounds {
 enum class AccessibilityMathScriptObjectType { Subscript, Superscript };
 enum class AccessibilityMathMultiscriptObjectType { PreSubscript, PreSuperscript, PostSubscript, PostSuperscript };
 
+// Relationships between AX objects.
+enum class AXRelationType : uint8_t {
+    None,
+    ActiveDescendant,
+    ActiveDescendantOf,
+    ControlledBy,
+    ControllerFor,
+    DescribedBy,
+    DescriptionFor,
+    Details,
+    DetailsFor,
+    ErrorMessage,
+    ErrorMessageFor,
+    FlowsFrom,
+    FlowsTo,
+    Headers,
+    HeaderFor,
+    LabelledBy,
+    LabelFor,
+    OwnedBy,
+    OwnerFor,
+};
+using AXRelations = HashMap<AXRelationType, Vector<AXID>, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>>;
+
 // Use this struct to store the isIgnored data that depends on the parents, so that in addChildren()
 // we avoid going up the parent chain for each element while traversing the tree with useful information already.
 struct AccessibilityIsIgnoredFromParentData {
@@ -799,6 +846,9 @@ public:
     virtual bool isAccessibilitySVGElement() const = 0;
     virtual bool isAccessibilityTableInstance() const = 0;
     virtual bool isAccessibilityTableColumnInstance() const = 0;
+    virtual bool isAccessibilityARIAGridInstance() const = 0;
+    virtual bool isAccessibilityARIAGridRowInstance() const = 0;
+    virtual bool isAccessibilityARIAGridCellInstance() const = 0;
     virtual bool isAccessibilityProgressIndicatorInstance() const = 0;
     virtual bool isAccessibilityListBoxInstance() const = 0;
     virtual bool isAXIsolatedObjectInstance() const = 0;
@@ -808,6 +858,7 @@ public:
     virtual bool isLink() const = 0;
     bool isImage() const { return roleValue() == AccessibilityRole::Image; }
     bool isImageMap() const { return roleValue() == AccessibilityRole::ImageMap; }
+    bool isVideo() const { return roleValue() == AccessibilityRole::Video; }
     virtual bool isNativeImage() const = 0;
     virtual bool isImageButton() const = 0;
     virtual bool isPasswordField() const = 0;
@@ -931,6 +982,9 @@ public:
     bool isToolbar() const { return roleValue() == AccessibilityRole::Toolbar; }
     bool isSummary() const { return roleValue() == AccessibilityRole::Summary; }
     bool isBlockquote() const { return roleValue() == AccessibilityRole::Blockquote; }
+#if ENABLE(MODEL_ELEMENT)
+    bool isModel() const { return roleValue() == AccessibilityRole::Model; }
+#endif
 
     virtual bool isLandmark() const = 0;
     virtual bool isRangeControl() const = 0;
@@ -963,6 +1017,7 @@ public:
     virtual void setIsExpanded(bool) = 0;
     virtual FloatRect relativeFrame() const = 0;
     virtual FloatRect convertFrameToSpace(const FloatRect&, AccessibilityConversionSpace) const = 0;
+    virtual FloatRect unobscuredContentRect() const = 0;
     virtual bool supportsCheckedState() const = 0;
 
     // In a multi-select list, many items can be selected but only one is active at a time.
@@ -972,6 +1027,7 @@ public:
     virtual bool hasItalicFont() const = 0;
     virtual bool hasMisspelling() const = 0;
     virtual std::optional<SimpleRange> misspellingRange(const SimpleRange& start, AccessibilitySearchDirection) const = 0;
+    virtual std::optional<SimpleRange> visibleCharacterRange() const = 0;
     virtual bool hasPlainText() const = 0;
     virtual bool hasSameFont(const AXCoreObject&) const = 0;
     virtual bool hasSameFontColor(const AXCoreObject&) const = 0;
@@ -1003,7 +1059,7 @@ public:
     virtual String validationMessage() const = 0;
 
     virtual unsigned blockquoteLevel() const = 0;
-    virtual int headingLevel() const = 0;
+    virtual unsigned headingLevel() const = 0;
     virtual AccessibilityButtonState checkboxOrRadioValue() const = 0;
     virtual String valueDescription() const = 0;
     virtual float valueForRange() const = 0;
@@ -1014,7 +1070,7 @@ public:
     virtual AXCoreObject* selectedTabItem() = 0;
     virtual AXCoreObject* selectedListItem() = 0;
     virtual int layoutCount() const = 0;
-    virtual double estimatedLoadingProgress() const = 0;
+    virtual double loadingProgress() const = 0;
     virtual String brailleLabel() const = 0;
     virtual String brailleRoleDescription() const = 0;
     virtual String embeddedImageDescription() const = 0;
@@ -1022,21 +1078,24 @@ public:
 
     virtual bool supportsARIAOwns() const = 0;
     virtual bool isActiveDescendantOfFocusedContainer() const = 0;
-    virtual void ariaActiveDescendantReferencingElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaControlsElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaControlsReferencingElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaDescribedByElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaDescribedByReferencingElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaDetailsElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaDetailsReferencingElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaErrorMessageElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaErrorMessageReferencingElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaFlowToElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaFlowToReferencingElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaLabelledByElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaLabelledByReferencingElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaOwnsElements(AccessibilityChildrenVector&) const = 0;
-    virtual void ariaOwnsReferencingElements(AccessibilityChildrenVector&) const = 0;
+
+    // Retrieval of related objects.
+    AccessibilityChildrenVector activeDescendantOfObjects() const { return relatedObjects(AXRelationType::ActiveDescendantOf); }
+    AccessibilityChildrenVector controlledObjects() const { return relatedObjects(AXRelationType::ControllerFor); }
+    AccessibilityChildrenVector controllers() const { return relatedObjects(AXRelationType::ControlledBy); }
+    AccessibilityChildrenVector describedByObjects() const { return relatedObjects(AXRelationType::DescribedBy); }
+    AccessibilityChildrenVector descriptionForObjects() const { return relatedObjects(AXRelationType::DescriptionFor); }
+    AccessibilityChildrenVector detailedByObjects() const { return relatedObjects(AXRelationType::Details); }
+    AccessibilityChildrenVector detailsForObjects() const { return relatedObjects(AXRelationType::DetailsFor); }
+    AccessibilityChildrenVector errorMessageObjects() const { return relatedObjects(AXRelationType::ErrorMessage); }
+    AccessibilityChildrenVector errorMessageForObjects() const { return relatedObjects(AXRelationType::ErrorMessageFor); }
+    AccessibilityChildrenVector flowToObjects() const { return relatedObjects(AXRelationType::FlowsTo); }
+    AccessibilityChildrenVector flowFromObjects() const { return relatedObjects(AXRelationType::FlowsFrom); }
+    AccessibilityChildrenVector labelledByObjects() const { return relatedObjects(AXRelationType::LabelledBy); }
+    AccessibilityChildrenVector labelForObjects() const { return relatedObjects(AXRelationType::LabelFor); }
+    AccessibilityChildrenVector ownedObjects() const { return relatedObjects(AXRelationType::OwnerFor); }
+    AccessibilityChildrenVector owners() const { return relatedObjects(AXRelationType::OwnedBy); }
+    virtual AccessibilityChildrenVector relatedObjects(AXRelationType) const = 0;
 
     virtual bool hasPopup() const = 0;
     virtual String popupValue() const = 0;
@@ -1061,7 +1120,6 @@ public:
     virtual const String keyShortcutsValue() const = 0;
 
     // This function checks if the object should be ignored when there's a modal dialog displayed.
-    virtual bool ignoredFromModalPresence() const = 0;
     virtual bool isModalDescendant(Node*) const = 0;
     virtual bool isModalNode() const = 0;
 
@@ -1084,25 +1142,25 @@ public:
 
     virtual AXCoreObject* focusedUIElement() const = 0;
 
-    virtual AXCoreObject* firstChild() const = 0;
-    virtual AXCoreObject* lastChild() const = 0;
-    virtual AXCoreObject* previousSibling() const = 0;
-    virtual AXCoreObject* nextSibling() const = 0;
-    virtual AXCoreObject* nextSiblingUnignored(int limit) const = 0;
-    virtual AXCoreObject* previousSiblingUnignored(int limit) const = 0;
     virtual AXCoreObject* parentObject() const = 0;
     virtual AXCoreObject* parentObjectUnignored() const = 0;
     virtual AXCoreObject* parentObjectIfExists() const = 0;
+
     virtual void findMatchingObjects(AccessibilitySearchCriteria*, AccessibilityChildrenVector&) = 0;
-    virtual bool isDescendantOfBarrenParent() const = 0;
     virtual bool isDescendantOfRole(AccessibilityRole) const = 0;
+
+    virtual bool hasDocumentRoleAncestor() const = 0;
+    virtual bool hasWebApplicationAncestor() const = 0;
+    virtual bool isInDescriptionListDetail() const = 0;
+    virtual bool isInDescriptionListTerm() const = 0;
+    virtual bool isInCell() const = 0;
 
     // Text selection
     virtual Vector<SimpleRange> findTextRanges(const AccessibilitySearchTextCriteria&) const = 0;
     virtual Vector<String> performTextOperation(AccessibilityTextOperation const&) = 0;
 
     virtual AXCoreObject* observableObject() const = 0;
-    virtual void linkedUIElements(AccessibilityChildrenVector&) const = 0;
+    virtual AccessibilityChildrenVector linkedObjects() const = 0;
     virtual AXCoreObject* titleUIElement() const = 0;
     virtual AXCoreObject* correspondingLabelForControlElement() const = 0;
     virtual AXCoreObject* correspondingControlForLabelElement() const = 0;
@@ -1112,6 +1170,9 @@ public:
     virtual bool isPresentationalChildOfAriaRole() const = 0;
     virtual bool ariaRoleHasPresentationalChildren() const = 0;
     virtual bool inheritsPresentationalRole() const = 0;
+
+    using AXValue = std::variant<bool, unsigned, float, String, AccessibilityButtonState, AXCoreObject*>;
+    AXValue value();
 
     // Accessibility Text
     virtual void accessibilityText(Vector<AccessibilityText>&) const = 0;
@@ -1126,14 +1187,6 @@ public:
     virtual String accessibilityDescription() const = 0;
     virtual String title() const = 0;
     virtual String helpText() const = 0;
-    bool containsText(String const& text) const
-    {
-        // If text is empty we return true.
-        return text.isEmpty()
-            || containsPlainText(title(), text, CaseInsensitive)
-            || containsPlainText(accessibilityDescription(), text, CaseInsensitive)
-            || containsPlainText(stringValue(), text, CaseInsensitive);
-    }
 
     // Methods for determining accessibility text.
     virtual bool isARIAStaticText() const = 0;
@@ -1150,8 +1203,6 @@ public:
     virtual String expandedTextValue() const = 0;
     virtual bool supportsExpandedTextValue() const = 0;
 
-    virtual void elementsFromAttribute(Vector<Element*>&, const QualifiedName&) const = 0;
-
     // Only if isColorWell()
     virtual SRGBA<uint8_t> colorValue() const = 0;
 
@@ -1162,6 +1213,8 @@ public:
     virtual String roleDescription() const = 0;
     // Localized string that describes ARIA landmark roles.
     virtual String ariaLandmarkRoleDescription() const = 0;
+    // Non-localized string associated with the object's subrole.
+    virtual String subrolePlatformString() const = 0;
 
     virtual AXObjectCache* axObjectCache() const = 0;
 
@@ -1184,14 +1237,19 @@ public:
     virtual VisibleSelection selection() const = 0;
     virtual String selectedText() const = 0;
     virtual String accessKey() const = 0;
+    virtual String localizedActionVerb() const = 0;
     virtual String actionVerb() const = 0;
+
+    // Widget support.
+    virtual bool isWidget() const = 0;
     virtual Widget* widget() const = 0;
     virtual PlatformWidget platformWidget() const = 0;
+    virtual Widget* widgetForAttachmentView() const = 0;
+
 #if PLATFORM(COCOA)
     virtual RemoteAXObjectRef remoteParentObject() const = 0;
     virtual FloatRect convertRectToPlatformSpace(const FloatRect&, AccessibilityConversionSpace) const = 0;
 #endif
-    virtual Widget* widgetForAttachmentView() const = 0;
     virtual Page* page() const = 0;
     virtual Document* document() const = 0;
     virtual FrameView* documentFrameView() const = 0;
@@ -1225,22 +1283,9 @@ public:
     virtual void increment() = 0;
     virtual void decrement() = 0;
 
-    virtual void childrenChanged() = 0;
-    virtual void updateAccessibilityRole() = 0;
-
     virtual const AccessibilityChildrenVector& children(bool updateChildrenIfNeeded = true) = 0;
-    virtual void addChildren() = 0;
-    virtual void addChild(AXCoreObject*) = 0;
-    virtual void insertChild(AXCoreObject*, unsigned) = 0;
-    Vector<AXID> childrenIDs();
-
-    virtual bool canHaveChildren() const = 0;
-    virtual bool hasChildren() const = 0;
+    Vector<AXID> childrenIDs(bool updateChildrenIfNecessary = true);
     virtual void updateChildrenIfNecessary() = 0;
-    virtual void setNeedsToUpdateChildren() = 0;
-    virtual void setNeedsToUpdateSubtree() = 0;
-    virtual void clearChildren() = 0;
-    virtual bool needsToUpdateChildren() const = 0;
     virtual void detachFromParent() = 0;
     virtual bool isDetachedFromParent() = 0;
 
@@ -1251,15 +1296,13 @@ public:
     virtual void tabChildren(AccessibilityChildrenVector&) = 0;
     virtual bool shouldFocusActiveDescendant() const = 0;
     virtual AXCoreObject* activeDescendant() const = 0;
-    virtual void handleActiveDescendantChanged() = 0;
     bool isDescendantOfObject(const AXCoreObject*) const;
     bool isAncestorOfObject(const AXCoreObject*) const;
     virtual AXCoreObject* firstAnonymousBlockChild() const = 0;
 
-    virtual bool hasAttribute(const QualifiedName&) const = 0;
-    virtual const AtomString& getAttribute(const QualifiedName&) const = 0;
+    virtual std::optional<String> attributeValue(const String&) const = 0;
     virtual bool hasTagName(const QualifiedName&) const = 0;
-    virtual String tagName() const = 0;
+    virtual AtomString tagName() const = 0;
 
     virtual VisiblePositionRange visiblePositionRange() const = 0;
     virtual VisiblePositionRange visiblePositionRangeForLine(unsigned) const = 0;
@@ -1332,7 +1375,6 @@ public:
     virtual AccessibilityRole roleValueForMSAA() const = 0;
 
     virtual String passwordFieldValue() const = 0;
-    virtual bool isValueAutofilled() const = 0;
     virtual bool isValueAutofillAvailable() const = 0;
     virtual AutoFillButtonType valueAutofillButtonType() const = 0;
     virtual bool hasARIAValueNow() const = 0;
@@ -1340,7 +1382,7 @@ public:
     // Used by an ARIA tree to get all its rows.
     virtual void ariaTreeRows(AccessibilityChildrenVector&) = 0;
     // Used by an ARIA tree item to get only its content, and not its child tree items and groups.
-    virtual void ariaTreeItemContent(AccessibilityChildrenVector&) = 0;
+    virtual AccessibilityChildrenVector ariaTreeItemContent() = 0;
 
     // ARIA live-region features.
     virtual bool supportsLiveRegion(bool excludeIfOff = true) const = 0;
@@ -1374,15 +1416,10 @@ public:
     enum class ScrollByPageDirection { Up, Down, Left, Right };
     virtual bool scrollByPage(ScrollByPageDirection) const = 0;
     virtual IntPoint scrollPosition() const = 0;
+    virtual AccessibilityChildrenVector contents() = 0;
     virtual IntSize scrollContentsSize() const = 0;
     virtual IntRect scrollVisibleContentRect() const = 0;
     virtual void scrollToMakeVisible(const ScrollRectToVisibleOptions&) const = 0;
-
-    virtual bool lastKnownIsIgnoredValue() = 0;
-    virtual void setLastKnownIsIgnoredValue(bool) = 0;
-
-    // Fires a children changed notification on the parent if the isIgnored value changed.
-    virtual void notifyIfIgnoredValueChanged() = 0;
 
     // All math elements return true for isMathElement().
     virtual bool isMathElement() const = 0;
@@ -1408,7 +1445,7 @@ public:
     virtual bool isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType) const = 0;
 
     // Root components.
-    virtual AXCoreObject* mathRadicandObject() = 0;
+    virtual std::optional<AccessibilityChildrenVector> mathRadicand() = 0;
     virtual AXCoreObject* mathRootIndexObject() = 0;
 
     // Under over components.
@@ -1498,13 +1535,18 @@ public:
     virtual void clearIsIgnoredFromParentData() = 0;
     virtual void setIsIgnoredFromParentDataForChild(AXCoreObject*) = 0;
 
-    virtual uint64_t sessionID() const = 0;
+    virtual PAL::SessionID sessionID() const = 0;
     virtual String documentURI() const = 0;
     virtual String documentEncoding() const = 0;
     virtual AccessibilityChildrenVector documentLinks() = 0;
 
     virtual String innerHTML() const = 0;
     virtual String outerHTML() const = 0;
+
+
+#if PLATFORM(COCOA) && ENABLE(MODEL_ELEMENT)
+    virtual Vector<RetainPtr<id>> modelElementChildren() = 0;
+#endif
 
 private:
     // Detaches this object from the objects it references and it is referenced by.
@@ -1514,17 +1556,57 @@ private:
     RetainPtr<WebAccessibilityObjectWrapper> m_wrapper;
 #elif PLATFORM(WIN)
     COMPtr<AccessibilityObjectWrapper> m_wrapper;
-#elif USE(ATK)
-    GRefPtr<WebKitAccessible> m_wrapper;
+#elif USE(ATSPI)
+    RefPtr<AccessibilityObjectAtspi> m_wrapper;
 #endif
     virtual void detachPlatformWrapper(AccessibilityDetachmentType) = 0;
 };
 
+inline Vector<AXID> axIDs(const AXCoreObject::AccessibilityChildrenVector& objects)
+{
+    return objects.map([] (const auto& object) {
+        return object ? object->objectID() : AXID();
+    });
+}
+
+inline AXCoreObject::AXValue AXCoreObject::value()
+{
+    if (supportsRangeValue())
+        return valueForRange();
+
+    if (roleValue() == AccessibilityRole::SliderThumb)
+        return parentObject()->valueForRange();
+
+    if (isHeading())
+        return headingLevel();
+
+    if (supportsCheckedState())
+        return checkboxOrRadioValue();
+
+    // Radio groups return the selected radio button as the AXValue.
+    if (isRadioGroup())
+        return selectedRadioButton();
+
+    if (isTabList())
+        return selectedTabItem();
+
+    if (isTabItem())
+        return isSelected();
+
+    if (isColorWell()) {
+        auto color = convertColor<SRGBA<float>>(colorValue()).resolved();
+        return makeString("rgb ", String::numberToStringFixedPrecision(color.red, 6, KeepTrailingZeros), " ", String::numberToStringFixedPrecision(color.green, 6, KeepTrailingZeros), " ", String::numberToStringFixedPrecision(color.blue, 6, KeepTrailingZeros), " 1");
+    }
+
+    return stringValue();
+}
+
 inline void AXCoreObject::detach(AccessibilityDetachmentType detachmentType)
 {
     detachWrapper(detachmentType);
-    detachRemoteParts(detachmentType);
-    setObjectID(InvalidAXID);
+    if (detachmentType != AccessibilityDetachmentType::ElementChanged)
+        detachRemoteParts(detachmentType);
+    setObjectID({ });
 }
 
 #if ENABLE(ACCESSIBILITY)
@@ -1535,12 +1617,9 @@ inline void AXCoreObject::detachWrapper(AccessibilityDetachmentType detachmentTy
 }
 #endif
 
-inline Vector<AXID> AXCoreObject::childrenIDs()
+inline Vector<AXID> AXCoreObject::childrenIDs(bool updateChildrenIfNecessary)
 {
-    Vector<AXID> childrenIDs;
-    for (const auto& child : children())
-        childrenIDs.append(child->objectID());
-    return childrenIDs;
+    return axIDs(children(updateChildrenIfNecessary));
 }
 
 namespace Accessibility {
@@ -1566,7 +1645,31 @@ T* findAncestor(const T& object, bool includeSelf, const F& matches)
     return nullptr;
 }
 
+template<typename T>
+T* findRelatedObjectInAncestry(const T& object, AXRelationType relationType, const T& descendant)
+{
+    auto relatedObjects = object.relatedObjects(relationType);
+    for (const auto& object : relatedObjects) {
+        auto* ancestor = findAncestor(descendant, false, [&object] (const auto& ancestor) {
+            return object.get() == &ancestor;
+        });
+        if (ancestor)
+            return ancestor;
+    }
+    return nullptr;
+}
+
 void findMatchingObjects(AccessibilitySearchCriteria const&, AXCoreObject::AccessibilityChildrenVector&);
+
+template<typename T, typename F>
+void enumerateAncestors(const T& object, bool includeSelf, const F& lambda)
+{
+    if (includeSelf)
+        lambda(object);
+
+    if (auto* parent = object.parentObject())
+        enumerateAncestors(*parent, true, lambda);
+}
 
 template<typename T, typename F>
 void enumerateDescendants(T& object, bool includeSelf, const F& lambda)
@@ -1609,10 +1712,9 @@ template<typename T, typename U> inline T retrieveAutoreleasedValueFromMainThrea
 
 inline bool AXCoreObject::isDescendantOfObject(const AXCoreObject* axObject) const
 {
-    return axObject && axObject->hasChildren()
-        && Accessibility::findAncestor<AXCoreObject>(*this, false, [axObject] (const AXCoreObject& object) {
-            return &object == axObject;
-        }) != nullptr;
+    return axObject && Accessibility::findAncestor<AXCoreObject>(*this, false, [axObject] (const AXCoreObject& object) {
+        return &object == axObject;
+    }) != nullptr;
 }
 
 inline bool AXCoreObject::isAncestorOfObject(const AXCoreObject* axObject) const

@@ -42,12 +42,15 @@ public:
     explicit PlatformTimeRanges() { }
     PlatformTimeRanges(const MediaTime& start, const MediaTime& end);
 
+    PlatformTimeRanges copyWithEpsilon(const MediaTime&) const;
+
     MediaTime start(unsigned index) const;
     MediaTime start(unsigned index, bool& valid) const;
     MediaTime end(unsigned index) const;
     MediaTime end(unsigned index, bool& valid) const;
     MediaTime duration(unsigned index) const;
     MediaTime maximumBufferedTime() const;
+    MediaTime minimumBufferedTime() const;
 
     void invert();
     void intersectWith(const PlatformTimeRanges&);
@@ -61,12 +64,13 @@ public:
     bool contain(const MediaTime&) const;
 
     size_t find(const MediaTime&) const;
+    size_t findWithEpsilon(const MediaTime&, const MediaTime& epsilon);
 
     MediaTime nearest(const MediaTime&) const;
 
     MediaTime totalDuration() const;
 
-    void dump(WTF::PrintStream&) const;
+    void dump(PrintStream&) const;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<PlatformTimeRanges> decode(Decoder&);

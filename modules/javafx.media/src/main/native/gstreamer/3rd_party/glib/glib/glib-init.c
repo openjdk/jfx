@@ -31,6 +31,11 @@
 #include <stdio.h>
 #include <ctype.h>
 
+/* Deliberately not checking HAVE_STDINT_H here: we officially require a
+ * C99 toolchain, which implies <stdint.h>, int8_t and so on. If your
+ * toolchain does not have this, now would be a good time to upgrade. */
+#include <stdint.h>
+
 /* This seems as good a place as any to make static assertions about platform
  * assumptions we make throughout GLib. */
 
@@ -66,6 +71,71 @@ G_STATIC_ASSERT (sizeof (TestInt) == sizeof (int));
 G_STATIC_ASSERT (G_ALIGNOF (TestChar) == G_ALIGNOF (int));
 G_STATIC_ASSERT (G_ALIGNOF (TestShort) == G_ALIGNOF (int));
 G_STATIC_ASSERT (G_ALIGNOF (TestInt) == G_ALIGNOF (int));
+
+G_STATIC_ASSERT (sizeof (gchar) == 1);
+G_STATIC_ASSERT (sizeof (guchar) == 1);
+G_STATIC_ASSERT (sizeof (gint8) * CHAR_BIT == 8);
+G_STATIC_ASSERT (sizeof (guint8) * CHAR_BIT == 8);
+G_STATIC_ASSERT (sizeof (gint16) * CHAR_BIT == 16);
+G_STATIC_ASSERT (sizeof (guint16) * CHAR_BIT == 16);
+G_STATIC_ASSERT (sizeof (gint32) * CHAR_BIT == 32);
+G_STATIC_ASSERT (sizeof (guint32) * CHAR_BIT == 32);
+G_STATIC_ASSERT (sizeof (gint64) * CHAR_BIT == 64);
+G_STATIC_ASSERT (sizeof (guint64) * CHAR_BIT == 64);
+
+G_STATIC_ASSERT (sizeof (void *) == GLIB_SIZEOF_VOID_P);
+G_STATIC_ASSERT (sizeof (gintptr) == sizeof (void *));
+G_STATIC_ASSERT (sizeof (guintptr) == sizeof (void *));
+
+G_STATIC_ASSERT (sizeof (long) == GLIB_SIZEOF_LONG);
+
+G_STATIC_ASSERT (G_HAVE_GINT64 == 1);
+
+G_STATIC_ASSERT (sizeof (size_t) == GLIB_SIZEOF_SIZE_T);
+/* Not a typo: ssize_t is POSIX, not Standard C, but if it exists then
+ * it's the same size as size_t. */
+G_STATIC_ASSERT (sizeof (size_t) == GLIB_SIZEOF_SSIZE_T);
+G_STATIC_ASSERT (sizeof (gsize) == GLIB_SIZEOF_SSIZE_T);
+G_STATIC_ASSERT (sizeof (gsize) == sizeof (size_t));
+/* Again this is size_t not ssize_t, because ssize_t is POSIX, not C99 */
+G_STATIC_ASSERT (sizeof (gssize) == sizeof (size_t));
+G_STATIC_ASSERT (G_ALIGNOF (gsize) == G_ALIGNOF (size_t));
+G_STATIC_ASSERT (G_ALIGNOF (gssize) == G_ALIGNOF (size_t));
+
+/* goffset is always 64-bit, even if off_t is only 32-bit
+ * (compiling without large-file-support on 32-bit) */
+G_STATIC_ASSERT (sizeof (goffset) == sizeof (gint64));
+G_STATIC_ASSERT (G_ALIGNOF (goffset) == G_ALIGNOF (gint64));
+
+G_STATIC_ASSERT (sizeof (gfloat) == sizeof (float));
+G_STATIC_ASSERT (G_ALIGNOF (gfloat) == G_ALIGNOF (float));
+G_STATIC_ASSERT (sizeof (gdouble) == sizeof (double));
+G_STATIC_ASSERT (G_ALIGNOF (gdouble) == G_ALIGNOF (double));
+
+G_STATIC_ASSERT (sizeof (gintptr) == sizeof (intptr_t));
+G_STATIC_ASSERT (sizeof (guintptr) == sizeof (uintptr_t));
+G_STATIC_ASSERT (G_ALIGNOF (gintptr) == G_ALIGNOF (intptr_t));
+G_STATIC_ASSERT (G_ALIGNOF (guintptr) == G_ALIGNOF (uintptr_t));
+
+G_STATIC_ASSERT (sizeof (gint8) == sizeof (int8_t));
+G_STATIC_ASSERT (sizeof (guint8) == sizeof (uint8_t));
+G_STATIC_ASSERT (G_ALIGNOF (gint8) == G_ALIGNOF (int8_t));
+G_STATIC_ASSERT (G_ALIGNOF (guint8) == G_ALIGNOF (uint8_t));
+
+G_STATIC_ASSERT (sizeof (gint16) == sizeof (int16_t));
+G_STATIC_ASSERT (sizeof (guint16) == sizeof (uint16_t));
+G_STATIC_ASSERT (G_ALIGNOF (gint16) == G_ALIGNOF (int16_t));
+G_STATIC_ASSERT (G_ALIGNOF (guint16) == G_ALIGNOF (uint16_t));
+
+G_STATIC_ASSERT (sizeof (gint32) == sizeof (int32_t));
+G_STATIC_ASSERT (sizeof (guint32) == sizeof (uint32_t));
+G_STATIC_ASSERT (G_ALIGNOF (gint32) == G_ALIGNOF (int32_t));
+G_STATIC_ASSERT (G_ALIGNOF (guint32) == G_ALIGNOF (uint32_t));
+
+G_STATIC_ASSERT (sizeof (gint64) == sizeof (int64_t));
+G_STATIC_ASSERT (sizeof (guint64) == sizeof (uint64_t));
+G_STATIC_ASSERT (G_ALIGNOF (gint64) == G_ALIGNOF (int64_t));
+G_STATIC_ASSERT (G_ALIGNOF (guint64) == G_ALIGNOF (uint64_t));
 
 /**
  * g_mem_gc_friendly:
@@ -267,15 +337,54 @@ glib_init (void)
   g_messages_prefixed_init ();
   g_debug_init ();
   g_quark_init ();
+  g_error_init ();
 }
 
-#if defined (G_OS_WIN32)
+#ifdef G_PLATFORM_WIN32
+
+HMODULE glib_dll = NULL;
+void glib_win32_init (void);
+
+void
+glib_win32_init (void)
+{
+  /* May be called more than once in static compilation mode */
+  static gboolean win32_already_init = FALSE;
+  if (!win32_already_init)
+    {
+      win32_already_init = TRUE;
+
+#ifndef GSTREAMER_LITE
+      g_crash_handler_win32_init ();
+#endif // GSTREAMER_LITE
+#ifdef THREADS_WIN32
+      g_thread_win32_init ();
+#endif
+
+      g_clock_win32_init ();
+      glib_init ();
+      /* must go after glib_init */
+      g_console_win32_init ();
+    }
+}
+
+static void
+glib_win32_deinit (gboolean detach_thread)
+{
+#ifdef THREADS_WIN32
+  if (detach_thread)
+    g_thread_win32_process_detach ();
+#endif
+#ifndef GSTREAMER_LITE
+  g_crash_handler_win32_deinit ();
+#endif // GSTREAMER_LITE
+}
+
+#ifndef GLIB_STATIC_COMPILATION
 
 BOOL WINAPI DllMain (HINSTANCE hinstDLL,
                      DWORD     fdwReason,
                      LPVOID    lpvReserved);
-
-HMODULE glib_dll;
 
 BOOL WINAPI
 DllMain (HINSTANCE hinstDLL,
@@ -286,16 +395,7 @@ DllMain (HINSTANCE hinstDLL,
     {
     case DLL_PROCESS_ATTACH:
       glib_dll = hinstDLL;
-#ifndef GSTREAMER_LITE
-      g_crash_handler_win32_init ();
-#endif // GSTREAMER_LITE
-      g_clock_win32_init ();
-#ifdef THREADS_WIN32
-      g_thread_win32_init ();
-#endif
-      glib_init ();
-      /* must go after glib_init */
-      g_console_win32_init ();
+      glib_win32_init ();
       break;
 
     case DLL_THREAD_DETACH:
@@ -305,13 +405,7 @@ DllMain (HINSTANCE hinstDLL,
       break;
 
     case DLL_PROCESS_DETACH:
-#ifdef THREADS_WIN32
-      if (lpvReserved == NULL)
-        g_thread_win32_process_detach ();
-#endif
-#ifndef GSTREAMER_LITE
-      g_crash_handler_win32_deinit ();
-#endif // GSTREAMER_LITE
+      glib_win32_deinit (lpvReserved == NULL);
       break;
 
     default:
@@ -322,7 +416,35 @@ DllMain (HINSTANCE hinstDLL,
   return TRUE;
 }
 
-#elif defined (G_HAS_CONSTRUCTORS)
+#elif defined(G_HAS_CONSTRUCTORS) /* && G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION */
+#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
+#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(glib_init_ctor)
+#endif
+#ifdef G_DEFINE_DESTRUCTOR_NEEDS_PRAGMA
+#pragma G_DEFINE_DESTRUCTOR_PRAGMA_ARGS(glib_init_dtor)
+#endif
+
+G_DEFINE_CONSTRUCTOR (glib_init_ctor)
+
+static void
+glib_init_ctor (void)
+{
+  glib_win32_init ();
+}
+
+G_DEFINE_DESTRUCTOR (glib_init_dtor)
+
+static void
+glib_init_dtor (void)
+{
+  glib_win32_deinit (FALSE);
+}
+
+#else /* G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION && !G_HAS_CONSTRUCTORS */
+#error Your platform/compiler is missing constructor support
+#endif /* GLIB_STATIC_COMPILATION */
+
+#elif defined(G_HAS_CONSTRUCTORS) /* && !G_PLATFORM_WIN32 */
 
 #ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
 #pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(glib_init_ctor)
@@ -335,6 +457,6 @@ glib_init_ctor (void)
   glib_init ();
 }
 
-#else
+#else /* !G_PLATFORM_WIN32 && !G_HAS_CONSTRUCTORS */
 # error Your platform/compiler is missing constructor support
-#endif
+#endif /* G_PLATFORM_WIN32 */

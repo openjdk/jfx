@@ -306,7 +306,7 @@ void g_value_set_string_take_ownership          (GValue            *value,
 /**
  * gchararray:
  *
- * A C representable type name for #G_TYPE_STRING.
+ * A C representable type name for %G_TYPE_STRING.
  */
 typedef gchar* gchararray;
 

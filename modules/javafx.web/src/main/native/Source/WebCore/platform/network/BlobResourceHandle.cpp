@@ -59,13 +59,13 @@ static const int httpPartialContent = 206;
 static const int httpNotAllowed = 403;
 static const int httpRequestedRangeNotSatisfiable = 416;
 static const int httpInternalError = 500;
-static const char* httpOKText = "OK";
-static const char* httpPartialContentText = "Partial Content";
-static const char* httpNotAllowedText = "Not Allowed";
-static const char* httpRequestedRangeNotSatisfiableText = "Requested Range Not Satisfiable";
-static const char* httpInternalErrorText = "Internal Server Error";
+static constexpr auto httpOKText = "OK"_s;
+static constexpr auto httpPartialContentText = "Partial Content"_s;
+static constexpr auto httpNotAllowedText = "Not Allowed"_s;
+static constexpr auto httpRequestedRangeNotSatisfiableText = "Requested Range Not Satisfiable"_s;
+static constexpr auto httpInternalErrorText = "Internal Server Error"_s;
 
-static const char* const webKitBlobResourceDomain = "WebKitBlobResource";
+static constexpr auto webKitBlobResourceDomain = "WebKitBlobResource"_s;
 
 ///////////////////////////////////////////////////////////////////////////////
 // BlobResourceSynchronousLoader
@@ -114,7 +114,7 @@ void BlobResourceSynchronousLoader::didReceiveResponseAsync(ResourceHandle* hand
 {
     // We cannot handle the size that is more than maximum integer.
     if (response.expectedContentLength() > INT_MAX) {
-        m_error = ResourceError(webKitBlobResourceDomain, static_cast<int>(BlobResourceHandle::Error::NotReadableError), response.url(), "File is too large");
+        m_error = ResourceError(webKitBlobResourceDomain, static_cast<int>(BlobResourceHandle::Error::NotReadableError), response.url(), "File is too large"_s);
         completionHandler();
         return;
     }
@@ -144,8 +144,8 @@ Ref<BlobResourceHandle> BlobResourceHandle::createAsync(BlobData* blobData, cons
 
 void BlobResourceHandle::loadResourceSynchronously(BlobData* blobData, const ResourceRequest& request, ResourceError& error, ResourceResponse& response, Vector<uint8_t>& data)
 {
-    if (!equalLettersIgnoringASCIICase(request.httpMethod(), "get")) {
-        error = ResourceError(webKitBlobResourceDomain, static_cast<int>(Error::MethodNotAllowed), response.url(), "Request method must be GET");
+    if (!equalLettersIgnoringASCIICase(request.httpMethod(), "get"_s)) {
+        error = ResourceError(webKitBlobResourceDomain, static_cast<int>(Error::MethodNotAllowed), response.url(), "Request method must be GET"_s);
         return;
     }
 
@@ -155,7 +155,7 @@ void BlobResourceHandle::loadResourceSynchronously(BlobData* blobData, const Res
 }
 
 BlobResourceHandle::BlobResourceHandle(BlobData* blobData, const ResourceRequest& request, ResourceHandleClient* client, bool async)
-    : ResourceHandle { nullptr, request, client, false /* defersLoading */, false /* shouldContentSniff */, true /* shouldContentEncodingSniff */, nullptr /* sourceOrigin */, false /* isMainFrameNavigation */ }
+    : ResourceHandle { nullptr, request, client, false /* defersLoading */, false /* shouldContentSniff */, ContentEncodingSniffingPolicy::Default, nullptr /* sourceOrigin */, false /* isMainFrameNavigation */ }
     , m_blobData { blobData }
     , m_async { async }
 {
@@ -185,7 +185,7 @@ void BlobResourceHandle::start()
     }
 
     // Finish this async call quickly and return.
-    callOnMainThread([protectedThis = makeRef(*this)]() mutable {
+    callOnMainThread([protectedThis = Ref { *this }]() mutable {
         protectedThis->doStart();
     });
 }
@@ -198,7 +198,7 @@ void BlobResourceHandle::doStart()
     if (erroredOrAborted())
         return;
 
-    if (!equalLettersIgnoringASCIICase(firstRequest().httpMethod(), "get")) {
+    if (!equalLettersIgnoringASCIICase(firstRequest().httpMethod(), "get"_s)) {
         notifyFail(Error::MethodNotAllowed);
         return;
     }
@@ -379,7 +379,7 @@ int BlobResourceHandle::readDataSync(const BlobDataItem& item, void* buf, int le
     int bytesToRead = (length > remaining) ? static_cast<int>(remaining) : length;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = static_cast<int>(m_totalRemainingSize);
-    memcpy(buf, item.data().data() + item.offset() + m_currentItemReadSize, bytesToRead);
+    memcpy(buf, item.data().data()->data() + item.offset() + m_currentItemReadSize, bytesToRead);
     m_totalRemainingSize -= bytesToRead;
 
     m_currentItemReadSize += bytesToRead;
@@ -579,13 +579,18 @@ void BlobResourceHandle::notifyResponseOnSuccess()
     addCrossOriginOpenerPolicyHeaders(response, m_blobData->policyContainer().crossOriginOpenerPolicy);
     addCrossOriginEmbedderPolicyHeaders(response, m_blobData->policyContainer().crossOriginEmbedderPolicy);
 
-    if (isRangeRequest)
-        response.setHTTPHeaderField(HTTPHeaderName::ContentRange, ParsedContentRange(m_rangeOffset, m_rangeEnd, m_totalSize).headerValue());
+    if (isRangeRequest) {
+        auto rangeEnd = m_rangeEnd;
+        if (rangeEnd == kPositionNotSpecified)
+            rangeEnd = m_totalSize - 1;
+
+        response.setHTTPHeaderField(HTTPHeaderName::ContentRange, ParsedContentRange(m_rangeOffset, rangeEnd, m_totalSize).headerValue());
+    }
     // FIXME: If a resource identified with a blob: URL is a File object, user agents must use that file's name attribute,
     // as if the response had a Content-Disposition header with the filename parameter set to the File's name attribute.
     // Notably, this will affect a name suggested in "File Save As".
 
-    client()->didReceiveResponseAsync(this, WTFMove(response), [this, protectedThis = makeRef(*this)] {
+    client()->didReceiveResponseAsync(this, WTFMove(response), [this, protectedThis = Ref { *this }] {
         m_buffer.resize(bufferSize);
         readAsync();
     });
@@ -595,7 +600,7 @@ void BlobResourceHandle::notifyResponseOnError()
 {
     ASSERT(m_errorCode != Error::NoError);
 
-    ResourceResponse response(firstRequest().url(), "text/plain", 0, String());
+    ResourceResponse response(firstRequest().url(), "text/plain"_s, 0, String());
     switch (m_errorCode) {
     case Error::RangeError:
         response.setHTTPStatusCode(httpRequestedRangeNotSatisfiable);
@@ -611,7 +616,7 @@ void BlobResourceHandle::notifyResponseOnError()
         break;
     }
 
-    client()->didReceiveResponseAsync(this, WTFMove(response), [this, protectedThis = makeRef(*this)] {
+    client()->didReceiveResponseAsync(this, WTFMove(response), [this, protectedThis = Ref { *this }] {
         m_buffer.resize(bufferSize);
         readAsync();
     });
@@ -649,7 +654,7 @@ void BlobResourceHandle::notifyFinish()
 
     // Schedule to notify the client from a standalone function because the client might dispose the handle immediately from the callback function
     // while we still have BlobResourceHandle calls in the stack.
-    callOnMainThread([protectedThis = makeRef(*this)]() mutable {
+    callOnMainThread([protectedThis = Ref { *this }]() mutable {
         doNotifyFinish(protectedThis);
     });
 

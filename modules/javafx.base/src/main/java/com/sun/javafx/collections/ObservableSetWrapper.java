@@ -203,8 +203,8 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      * @return an iterator over the elements in this set
      */
     @Override
-    public Iterator iterator() {
-        return new Iterator<E>() {
+    public Iterator<E> iterator() {
+        return new Iterator<>() {
 
             private final Iterator<E> backingIt = backingSet.iterator();
             private E lastElement;
@@ -321,11 +321,11 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
     }
 
     /**
-     * Keeps only elements that are included the specified collection.
+     * Keeps only elements that are included in the specified collection.
      * All other elements are removed. For each removed element all the
      * observers are called.
      *
-     * @see java.util.Set in JDK API documentation
+     * @see java.util.Set
      * @param c collection containing elements to be kept in this set
      * @return true if this set changed as a result of the call
      */

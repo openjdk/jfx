@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Igalia S.L.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,12 +25,13 @@
 
 #include "CairoUniquePtr.h"
 #include "CairoUtilities.h"
-#include "CharacterProperties.h"
 #include "FcUniquePtr.h"
 #include "FloatConversion.h"
 #include "Font.h"
 #include "FontDescription.h"
 #include "FontCacheFreeType.h"
+#include FT_SFNT_NAMES_H
+#include FT_TRUETYPE_IDS_H
 #include "RefPtrCairo.h"
 #include "RefPtrFontconfig.h"
 #include "UTF16UChar32Iterator.h"
@@ -79,7 +81,7 @@ static int fontWeightToFontconfigWeight(FontSelectionValue weight)
     return FC_WEIGHT_ULTRABLACK;
 }
 
-static bool configurePatternForFontDescription(FcPattern* pattern, const FontDescription& fontDescription)
+bool FontCache::configurePatternForFontDescription(FcPattern* pattern, const FontDescription& fontDescription)
 {
     if (!FcPatternAddInteger(pattern, FC_SLANT, fontDescription.italic() ? FC_SLANT_ITALIC : FC_SLANT_ROMAN))
         return false;
@@ -121,148 +123,9 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
     }
 }
 
-struct CachedPattern {
-    // The pattern is owned by the CachedFontSet.
-    FcPattern* pattern { nullptr };
-    FcCharSet* charSet { nullptr };
-};
-
-class CachedFontSet {
-    WTF_MAKE_NONCOPYABLE(CachedFontSet); WTF_MAKE_FAST_ALLOCATED;
-public:
-    explicit CachedFontSet(RefPtr<FcPattern>&& pattern)
-        : m_pattern(WTFMove(pattern))
-    {
-        FcResult result;
-        m_fontSet.reset(FcFontSort(nullptr, m_pattern.get(), FcTrue, nullptr, &result));
-        for (int i = 0; i < m_fontSet->nfont; ++i) {
-            FcPattern* pattern = m_fontSet->fonts[i];
-            FcCharSet* charSet;
-
-            if (FcPatternGetCharSet(pattern, FC_CHARSET, 0, &charSet) == FcResultMatch)
-                m_patterns.append({ pattern, charSet });
-        }
-    }
-
-    RefPtr<FcPattern> bestForCharacters(const UChar* characters, unsigned length)
-    {
-        if (m_patterns.isEmpty()) {
-            FcResult result;
-            return adoptRef(FcFontMatch(nullptr, m_pattern.get(), &result));
-        }
-
-        FcUniquePtr<FcCharSet> fontConfigCharSet(FcCharSetCreate());
-        UTF16UChar32Iterator iterator(characters, length);
-        UChar32 character = iterator.next();
-        bool hasNonIgnorableCharacters = false;
-        while (character != iterator.end()) {
-            if (!isDefaultIgnorableCodePoint(character)) {
-                FcCharSetAddChar(fontConfigCharSet.get(), character);
-                hasNonIgnorableCharacters = true;
-            }
-            character = iterator.next();
-        }
-
-        FcPattern* bestPattern = nullptr;
-        int minScore = std::numeric_limits<int>::max();
-        if (hasNonIgnorableCharacters) {
-            for (const auto& cachedPattern : m_patterns) {
-                if (!cachedPattern.charSet)
-                    continue;
-
-                int score = FcCharSetSubtractCount(fontConfigCharSet.get(), cachedPattern.charSet);
-                if (!score)
-                    return adoptRef(FcFontRenderPrepare(nullptr, m_pattern.get(), cachedPattern.pattern));
-
-                if (score < minScore) {
-                    bestPattern = cachedPattern.pattern;
-                    minScore = score;
-                }
-            }
-        }
-
-        if (bestPattern)
-            return adoptRef(FcFontRenderPrepare(nullptr, m_pattern.get(), bestPattern));
-
-        // If there aren't fonts with the given characters or all characters are ignorable, the first one is the best match.
-        return adoptRef(FcFontRenderPrepare(nullptr, m_pattern.get(), m_patterns[0].pattern));
-    }
-
-private:
-    RefPtr<FcPattern> m_pattern;
-    FcUniquePtr<FcFontSet> m_fontSet;
-    Vector<CachedPattern> m_patterns;
-};
-
-struct FallbackFontDescriptionKey {
-    FontDescriptionKey descriptionKey;
-    bool coloredFont { false };
-
-    FallbackFontDescriptionKey() = default;
-
-    FallbackFontDescriptionKey(const FontDescription& description, FontCache::PreferColoredFont preferColoredFont)
-        : descriptionKey(description)
-        , coloredFont(preferColoredFont == FontCache::PreferColoredFont::Yes)
-    {
-    }
-
-    explicit FallbackFontDescriptionKey(WTF::HashTableDeletedValueType deletedValue)
-        : descriptionKey(deletedValue)
-    {
-    }
-
-    bool operator==(const FallbackFontDescriptionKey& other) const
-    {
-        return descriptionKey == other.descriptionKey && coloredFont == other.coloredFont;
-    }
-
-    bool operator!=(const FallbackFontDescriptionKey& other) const
-    {
-        return !(*this == other);
-    }
-
-    bool isHashTableDeletedValue() const { return descriptionKey.isHashTableDeletedValue(); }
-
-};
-
-struct FallbackFontDescriptionKeyHash {
-    static unsigned hash(const FallbackFontDescriptionKey& key) { return computeHash(key.descriptionKey, key.coloredFont); }
-    static bool equal(const FallbackFontDescriptionKey& a, const FallbackFontDescriptionKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
-using SystemFallbackCache = HashMap<FallbackFontDescriptionKey, std::unique_ptr<CachedFontSet>, FallbackFontDescriptionKeyHash, SimpleClassHashTraits<FallbackFontDescriptionKey>>;
-static SystemFallbackCache& systemFallbackCache()
+RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font&, IsForPlatformFont, PreferColoredFont preferColoredFont, const UChar* characters, unsigned length)
 {
-    static NeverDestroyed<SystemFallbackCache> cache;
-    return cache.get();
-}
-
-RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font*, IsForPlatformFont, PreferColoredFont preferColoredFont, const UChar* characters, unsigned length)
-{
-    auto addResult = systemFallbackCache().ensure(FallbackFontDescriptionKey(description, preferColoredFont), [&description, preferColoredFont]() -> std::unique_ptr<CachedFontSet> {
-        RefPtr<FcPattern> pattern = adoptRef(FcPatternCreate());
-        FcPatternAddBool(pattern.get(), FC_SCALABLE, FcTrue);
-#ifdef FC_COLOR
-        if (preferColoredFont == PreferColoredFont::Yes)
-            FcPatternAddBool(pattern.get(), FC_COLOR, FcTrue);
-#else
-        UNUSED_VARIABLE(preferColoredFont);
-#endif
-        if (!configurePatternForFontDescription(pattern.get(), description))
-            return nullptr;
-
-        FcConfigSubstitute(nullptr, pattern.get(), FcMatchPattern);
-        cairo_ft_font_options_substitute(getDefaultCairoFontOptions(), pattern.get());
-        FcDefaultSubstitute(pattern.get());
-
-        return makeUnique<CachedFontSet>(WTFMove(pattern));
-    });
-
-    if (!addResult.iterator->value)
-        return nullptr;
-
-    RefPtr<FcPattern> resultPattern = addResult.iterator->value->bestForCharacters(characters, length);
+    RefPtr<FcPattern> resultPattern = m_fontSetCache.bestForCharacters(description, preferColoredFont == PreferColoredFont::Yes, characters, length);
     if (!resultPattern)
         return nullptr;
 
@@ -276,7 +139,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& descr
 
 void FontCache::platformPurgeInactiveFontData()
 {
-    systemFallbackCache().clear();
+    m_fontSetCache.clear();
 }
 
 static Vector<String> patternToFamilies(FcPattern& pattern)
@@ -333,26 +196,26 @@ static String getFamilyNameStringFromFamily(const String& family)
 {
     // If we're creating a fallback font (e.g. "-webkit-monospace"), convert the name into
     // the fallback name (like "monospace") that fontconfig understands.
-    if (family.length() && !family.startsWith("-webkit-"))
+    if (family.length() && !family.startsWith("-webkit-"_s))
         return family;
 
     if (family == familyNamesData->at(FamilyNamesIndex::StandardFamily) || family == familyNamesData->at(FamilyNamesIndex::SerifFamily))
-        return "serif";
+        return "serif"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::SansSerifFamily))
-        return "sans-serif";
+        return "sans-serif"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::MonospaceFamily))
-        return "monospace";
+        return "monospace"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::CursiveFamily))
-        return "cursive";
+        return "cursive"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::FantasyFamily))
-        return "fantasy";
+        return "fantasy"_s;
 
 #if PLATFORM(GTK)
-    if (family == familyNamesData->at(FamilyNamesIndex::SystemUiFamily) || family == "-webkit-system-font")
+    if (family == familyNamesData->at(FamilyNamesIndex::SystemUiFamily) || family == "-webkit-system-font"_s)
         return defaultGtkSystemFont();
 #endif
 
-    return "";
+    return emptyString();
 }
 
 #if FC_VERSION < 21395
@@ -486,19 +349,19 @@ static bool areStronglyAliased(const String& familyA, const String& familyB)
 
 static inline bool isCommonlyUsedGenericFamily(const String& familyNameString)
 {
-    return equalLettersIgnoringASCIICase(familyNameString, "sans")
-        || equalLettersIgnoringASCIICase(familyNameString, "sans-serif")
-        || equalLettersIgnoringASCIICase(familyNameString, "serif")
-        || equalLettersIgnoringASCIICase(familyNameString, "monospace")
-        || equalLettersIgnoringASCIICase(familyNameString, "fantasy")
+    return equalLettersIgnoringASCIICase(familyNameString, "sans"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "sans-serif"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "serif"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "monospace"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "fantasy"_s)
 #if PLATFORM(GTK)
-        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-font")
-        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-ui")
+        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-font"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-ui"_s)
 #endif
-        || equalLettersIgnoringASCIICase(familyNameString, "cursive");
+        || equalLettersIgnoringASCIICase(familyNameString, "cursive"_s);
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontFeatureSettings* fontFaceFeatures, FontSelectionSpecifiedCapabilities)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext& fontCreationContext)
 {
     // The CSS font matching algorithm (http://www.w3.org/TR/css3-fonts/#font-matching-algorithm)
     // says that we must find an exact match for font family, slant (italic or oblique can be used)
@@ -573,8 +436,8 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     bool fixedWidth, syntheticBold, syntheticOblique;
     getFontPropertiesFromPattern(resultPattern.get(), fontDescription, fixedWidth, syntheticBold, syntheticOblique);
 
-    if (fontFaceFeatures) {
-        for (auto& fontFaceFeature : *fontFaceFeatures) {
+    if (fontCreationContext.fontFaceFeatures() && !fontCreationContext.fontFaceFeatures()->isEmpty()) {
+        for (auto& fontFaceFeature : *fontCreationContext.fontFaceFeatures()) {
             if (fontFaceFeature.enabled()) {
                 const auto& tag = fontFaceFeature.tag();
                 const char buffer[] = { tag[0], tag[1], tag[2], tag[3], '\0' };
@@ -614,16 +477,44 @@ std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&
 }
 
 #if ENABLE(VARIATION_FONTS)
-struct VariationDefaults {
-    float defaultValue;
-    float minimumValue;
-    float maximumValue;
-};
+static String fontNameMapName(FT_Face face, unsigned id)
+{
+    auto nameCount = FT_Get_Sfnt_Name_Count(face);
+    if (!nameCount)
+        return { };
 
-typedef HashMap<FontTag, VariationDefaults, FourCharacterTagHash, FourCharacterTagHashTraits> VariationDefaultsMap;
-typedef HashMap<FontTag, float, FourCharacterTagHash, FourCharacterTagHashTraits> VariationsMap;
+    auto decodeName = [](FT_SfntName name) -> String {
+        switch (name.platform_id) {
+        case TT_PLATFORM_MACINTOSH:
+            if (name.encoding_id == TT_MAC_ID_ROMAN)
+                return String(name.string, name.string_len);
+            // FIXME: implement other macintosh encodings.
+            break;
+        case TT_PLATFORM_APPLE_UNICODE:
+        case TT_PLATFORM_ISO:
+        case TT_PLATFORM_MICROSOFT:
+        case TT_PLATFORM_CUSTOM:
+        case TT_PLATFORM_ADOBE:
+            // FIXME: implement these platforms.
+            break;
+        }
 
-static VariationDefaultsMap defaultVariationValues(FT_Face face)
+        return { };
+    };
+
+    for (unsigned i = 0; i < nameCount; ++i) {
+        FT_SfntName name;
+        if (FT_Get_Sfnt_Name(face, i, &name))
+            continue;
+
+        if (name.name_id == id)
+            return decodeName(name);
+    }
+
+    return { };
+}
+
+VariationDefaultsMap defaultVariationValues(FT_Face face, ShouldLocalizeAxisNames shouldLocalizeAxisNames)
 {
     VariationDefaultsMap result;
     FT_MM_Var* ftMMVar;
@@ -637,7 +528,14 @@ static VariationDefaultsMap defaultVariationValues(FT_Face face)
         auto b3 = 0xFF & (tag >> 8);
         auto b4 = 0xFF & (tag >> 0);
         FontTag resultKey = {{ static_cast<char>(b1), static_cast<char>(b2), static_cast<char>(b3), static_cast<char>(b4) }};
-        VariationDefaults resultValues = { narrowPrecisionToFloat(ftMMVar->axis[i].def / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].minimum / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].maximum / 65536.) };
+
+        String axisName;
+        if (shouldLocalizeAxisNames == ShouldLocalizeAxisNames::Yes)
+            axisName = fontNameMapName(face, ftMMVar->axis[i].strid);
+        if (axisName.isEmpty())
+            axisName = String::fromUTF8(ftMMVar->axis[i].name);
+
+        VariationDefaults resultValues = { WTFMove(axisName), narrowPrecisionToFloat(ftMMVar->axis[i].def / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].minimum / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].maximum / 65536.) };
         result.set(resultKey, resultValues);
     }
     FT_Done_MM_Var(face->glyph->library, ftMMVar);
@@ -646,7 +544,7 @@ static VariationDefaultsMap defaultVariationValues(FT_Face face)
 
 String buildVariationSettings(FT_Face face, const FontDescription& fontDescription)
 {
-    auto defaultValues = defaultVariationValues(face);
+    auto defaultValues = defaultVariationValues(face, ShouldLocalizeAxisNames::No);
     const auto& variations = fontDescription.variationSettings();
 
     VariationsMap variationsToBeApplied;
@@ -675,5 +573,9 @@ String buildVariationSettings(FT_Face face, const FontDescription& fontDescripti
     return builder.toString();
 }
 #endif // ENABLE(VARIATION_FONTS)
+
+void FontCache::platformInvalidate()
+{
+}
 
 }

@@ -32,7 +32,7 @@
 
 #include "GCReachableRef.h"
 #include "MutationObserver.h"
-#include <wtf/HashSet.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
@@ -48,20 +48,20 @@ class QualifiedName;
 class MutationObserverRegistration : public CanMakeWeakPtr<MutationObserverRegistration> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    MutationObserverRegistration(MutationObserver&, Node&, MutationObserverOptions, const HashSet<AtomString>& attributeFilter);
+    MutationObserverRegistration(MutationObserver&, Node&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     ~MutationObserverRegistration();
 
-    void resetObservation(MutationObserverOptions, const HashSet<AtomString>& attributeFilter);
+    void resetObservation(MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     void observedSubtreeNodeWillDetach(Node&);
-    std::unique_ptr<HashSet<GCReachableRef<Node>>> takeTransientRegistrations();
-    bool hasTransientRegistrations() const { return m_transientRegistrationNodes && !m_transientRegistrationNodes->isEmpty(); }
+    HashSet<GCReachableRef<Node>> takeTransientRegistrations();
+    bool hasTransientRegistrations() const { return !m_transientRegistrationNodes.isEmpty(); }
 
-    bool shouldReceiveMutationFrom(Node&, MutationObserver::MutationType, const QualifiedName* attributeName) const;
-    bool isSubtree() const { return m_options & MutationObserver::Subtree; }
+    bool shouldReceiveMutationFrom(Node&, MutationObserverOptionType, const QualifiedName* attributeName) const;
+    bool isSubtree() const { return m_options.contains(MutationObserverOptionType::Subtree); }
 
     MutationObserver& observer() { return m_observer.get(); }
     Node& node() { return m_node; }
-    MutationRecordDeliveryOptions deliveryOptions() const { return m_options & (MutationObserver::AttributeOldValue | MutationObserver::CharacterDataOldValue); }
+    MutationRecordDeliveryOptions deliveryOptions() const { return m_options & MutationObserver::AllDeliveryFlags; }
     MutationObserverOptions mutationTypes() const { return m_options & MutationObserver::AllMutationTypes; }
 
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
@@ -70,9 +70,9 @@ private:
     Ref<MutationObserver> m_observer;
     Node& m_node;
     RefPtr<Node> m_nodeKeptAlive;
-    std::unique_ptr<HashSet<GCReachableRef<Node>>> m_transientRegistrationNodes;
+    HashSet<GCReachableRef<Node>> m_transientRegistrationNodes;
     MutationObserverOptions m_options;
-    HashSet<AtomString> m_attributeFilter;
+    MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> m_attributeFilter;
 };
 
 } // namespace WebCore

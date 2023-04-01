@@ -27,8 +27,6 @@
 
 #include "ClientOrigin.h"
 #include "SecurityOriginData.h"
-#include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -44,21 +42,12 @@ public:
 
     WEBCORE_EXPORT IDBDatabaseIdentifier(const String& databaseName, SecurityOriginData&& openingOrigin, SecurityOriginData&& mainFrameOrigin, bool isTransient = false);
 
-    IDBDatabaseIdentifier isolatedCopy() const;
+    IDBDatabaseIdentifier isolatedCopy() const &;
+    IDBDatabaseIdentifier isolatedCopy() &&;
 
     bool isHashTableDeletedValue() const
     {
         return m_databaseName.isHashTableDeletedValue();
-    }
-
-    unsigned hash() const
-    {
-        unsigned nameHash = StringHash::hash(m_databaseName);
-        unsigned originHash = m_origin.hash();
-        unsigned transientHash = m_isTransient;
-
-        unsigned hashCodes[3] = { nameHash, originHash, transientHash };
-        return StringHasher::hashMemory<sizeof(hashCodes)>(hashCodes);
     }
 
     bool isValid() const
@@ -81,8 +70,8 @@ public:
     const ClientOrigin& origin() const { return m_origin; }
     bool isTransient() const { return m_isTransient; }
 
-    String databaseDirectoryRelativeToRoot(const String& rootDirectory, const String& versionString="v1") const;
-    static String databaseDirectoryRelativeToRoot(const SecurityOriginData& topLevelOrigin, const SecurityOriginData& openingOrigin, const String& rootDirectory, const String& versionString);
+    String databaseDirectoryRelativeToRoot(const String& rootDirectory, ASCIILiteral versionString = "v1"_s) const;
+    WEBCORE_EXPORT static String databaseDirectoryRelativeToRoot(const ClientOrigin&, const String& rootDirectory, ASCIILiteral versionString);
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<IDBDatabaseIdentifier> decode(Decoder&);
@@ -99,13 +88,18 @@ private:
     bool m_isTransient { false };
 };
 
+inline void add(Hasher& hasher, const IDBDatabaseIdentifier& identifier)
+{
+    add(hasher, identifier.databaseName(), identifier.origin(), identifier.isTransient());
+}
+
 struct IDBDatabaseIdentifierHash {
-    static unsigned hash(const IDBDatabaseIdentifier& a) { return a.hash(); }
+    static unsigned hash(const IDBDatabaseIdentifier& a) { return computeHash(a); }
     static bool equal(const IDBDatabaseIdentifier& a, const IDBDatabaseIdentifier& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
-struct IDBDatabaseIdentifierHashTraits : WTF::SimpleClassHashTraits<IDBDatabaseIdentifier> {
+struct IDBDatabaseIdentifierHashTraits : SimpleClassHashTraits<IDBDatabaseIdentifier> {
     static const bool hasIsEmptyValueFunction = true;
     static const bool emptyValueIsZero = false;
     static bool isEmptyValue(const IDBDatabaseIdentifier& info) { return info.isEmpty(); }

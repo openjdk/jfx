@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ public class WCCamera extends NGDefaultCamera {
 
     public static final NGCamera INSTANCE = new WCCamera();
 
+    @Override
     public void validate(final int w, final int h) {
         if ((w != viewWidth) || (h != viewHeight)) {
             setViewWidth(w);

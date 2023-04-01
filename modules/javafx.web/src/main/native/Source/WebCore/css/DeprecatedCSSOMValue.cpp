@@ -57,7 +57,7 @@ unsigned DeprecatedCSSOMValue::cssValueType() const
     case DeprecatedComplexValueClass:
         return downcast<DeprecatedCSSOMComplexValue>(*this).cssValueType();
     case DeprecatedPrimitiveValueClass:
-        return CSS_PRIMITIVE_VALUE;
+        return downcast<DeprecatedCSSOMPrimitiveValue>(*this).cssValueType();
     case DeprecatedValueListClass:
         return CSS_VALUE_LIST;
     }
@@ -76,7 +76,7 @@ String DeprecatedCSSOMValue::cssText() const
         return downcast<DeprecatedCSSOMValueList>(*this).cssText();
     }
     ASSERT_NOT_REACHED();
-    return "";
+    return emptyString();
 }
 
 }

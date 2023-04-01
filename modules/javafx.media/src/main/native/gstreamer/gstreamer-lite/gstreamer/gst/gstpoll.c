@@ -151,11 +151,11 @@ struct _GstPoll
 #endif
 
   gboolean controllable;
-  volatile gint waiting;
-  volatile gint control_pending;
-  volatile gint flushing;
+  gint waiting;
+  gint control_pending;
+  gint flushing;
   gboolean timer;
-  volatile gint rebuild;
+  gint rebuild;
 };
 
 static gboolean gst_poll_fd_ctl_read_unlocked (GstPoll * set, GstPollFD * fd,

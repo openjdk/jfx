@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,6 +72,7 @@ public class DoubleFieldSkin extends InputFieldSkin {
         super.dispose();
     }
 
+    @Override
     protected boolean accept(String text) {
         if (text.length() == 0) return true;
         if (text.matches("[0-9\\.]*")) {
@@ -83,10 +84,12 @@ public class DoubleFieldSkin extends InputFieldSkin {
         return false;
     }
 
+    @Override
     protected void updateText() {
         getTextField().setText("" + ((DoubleField) control).getValue());
     }
 
+    @Override
     protected void updateValue() {
         double value = ((DoubleField) control).getValue();
         double newValue;

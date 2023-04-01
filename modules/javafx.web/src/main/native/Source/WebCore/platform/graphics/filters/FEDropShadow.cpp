@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,18 +22,20 @@
 #include "FEDropShadow.h"
 
 #include "ColorSerialization.h"
+#include "FEDropShadowSoftwareApplier.h"
 #include "FEGaussianBlur.h"
 #include "Filter.h"
-#include "GraphicsContext.h"
-#include "PixelBuffer.h"
-#include "ShadowBlur.h"
-#include <wtf/MathExtras.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-FEDropShadow::FEDropShadow(Filter& filter, float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
-    : FilterEffect(filter, Type::DropShadow)
+Ref<FEDropShadow> FEDropShadow::create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
+{
+    return adoptRef(*new FEDropShadow(stdX, stdY, dx, dy, shadowColor, shadowOpacity));
+}
+
+FEDropShadow::FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
+    : FilterEffect(FilterEffect::Type::FEDropShadow)
     , m_stdX(stdX)
     , m_stdY(stdY)
     , m_dx(dx)
@@ -42,100 +45,98 @@ FEDropShadow::FEDropShadow(Filter& filter, float stdX, float stdY, float dx, flo
 {
 }
 
-Ref<FEDropShadow> FEDropShadow::create(Filter& filter, float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
+bool FEDropShadow::setStdDeviationX(float stdX)
 {
-    return adoptRef(*new FEDropShadow(filter, stdX, stdY, dx, dy, shadowColor, shadowOpacity));
+    if (m_stdX == stdX)
+        return false;
+    m_stdX = stdX;
+    return true;
 }
 
-void FEDropShadow::determineAbsolutePaintRect()
+bool FEDropShadow::setStdDeviationY(float stdY)
 {
-    Filter& filter = this->filter();
+    if (m_stdY == stdY)
+        return false;
+    m_stdY = stdY;
+    return true;
+}
 
-    FloatRect absolutePaintRect = inputEffect(0)->absolutePaintRect();
-    FloatRect absoluteOffsetPaintRect(absolutePaintRect);
-    absoluteOffsetPaintRect.move(filter.scaledByFilterResolution({ m_dx, m_dy }));
-    absolutePaintRect.unite(absoluteOffsetPaintRect);
+bool FEDropShadow::setDx(float dx)
+{
+    if (m_dx == dx)
+        return false;
+    m_dx = dx;
+    return true;
+}
 
-    IntSize kernelSize = FEGaussianBlur::calculateKernelSize(filter, { m_stdX, m_stdY });
+bool FEDropShadow::setDy(float dy)
+{
+    if (m_dy == dy)
+        return false;
+    m_dy = dy;
+    return true;
+}
+
+bool FEDropShadow::setShadowColor(const Color& shadowColor)
+{
+    if (m_shadowColor == shadowColor)
+        return false;
+    m_shadowColor = shadowColor;
+    return true;
+}
+
+bool FEDropShadow::setShadowOpacity(float shadowOpacity)
+{
+    if (m_shadowOpacity == shadowOpacity)
+        return false;
+    m_shadowOpacity = shadowOpacity;
+    return true;
+}
+
+FloatRect FEDropShadow::calculateImageRect(const Filter& filter, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const
+{
+    auto imageRect = inputs[0]->imageRect();
+    auto imageRectWithOffset(imageRect);
+    imageRectWithOffset.move(filter.resolvedSize({ m_dx, m_dy }));
+    imageRect.unite(imageRectWithOffset);
+
+    auto kernelSize = FEGaussianBlur::calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
 
     // We take the half kernel size and multiply it with three, because we run box blur three times.
-    absolutePaintRect.inflateX(3 * kernelSize.width() * 0.5f);
-    absolutePaintRect.inflateY(3 * kernelSize.height() * 0.5f);
+    imageRect.inflateX(3 * kernelSize.width() * 0.5f);
+    imageRect.inflateY(3 * kernelSize.height() * 0.5f);
 
-    if (clipsToBounds())
-        absolutePaintRect.intersect(maxEffectRect());
-    else
-        absolutePaintRect.unite(maxEffectRect());
-
-    setAbsolutePaintRect(enclosingIntRect(absolutePaintRect));
+    return filter.clipToMaxEffectRect(imageRect, primitiveSubregion);
 }
 
-void FEDropShadow::platformApplySoftware()
+IntOutsets FEDropShadow::calculateOutsets(const FloatSize& offset, const FloatSize& stdDeviation)
 {
-    FilterEffect* in = inputEffect(0);
+    IntSize outsetSize = FEGaussianBlur::calculateOutsetSize(stdDeviation);
 
-    ImageBuffer* resultImage = createImageBufferResult();
-    if (!resultImage)
-        return;
+    int top = std::max<int>(0, outsetSize.height() - offset.height());
+    int right = std::max<int>(0, outsetSize.width() + offset.width());
+    int bottom = std::max<int>(0, outsetSize.height() + offset.height());
+    int left = std::max<int>(0, outsetSize.width() - offset.width());
 
-    Filter& filter = this->filter();
-
-    FloatSize blurRadius = 2 * filter.scaledByFilterResolution({ m_stdX, m_stdY });
-    blurRadius.scale(filter.filterScale());
-    FloatSize offset = filter.scaledByFilterResolution({ m_dx, m_dy });
-
-    FloatRect drawingRegion = drawingRegionOfInputImage(in->absolutePaintRect());
-    FloatRect drawingRegionWithOffset(drawingRegion);
-    drawingRegionWithOffset.move(offset);
-
-    ImageBuffer* sourceImage = in->imageBufferResult();
-    if (!sourceImage)
-        return;
-
-    GraphicsContext& resultContext = resultImage->context();
-    resultContext.setAlpha(m_shadowOpacity);
-    resultContext.drawImageBuffer(*sourceImage, drawingRegionWithOffset);
-    resultContext.setAlpha(1);
-
-    ShadowBlur contextShadow(blurRadius, offset, m_shadowColor);
-
-    PixelBufferFormat format { AlphaPremultiplication::Premultiplied, PixelFormat::RGBA8, resultColorSpace() };
-    IntRect shadowArea(IntPoint(), resultImage->logicalSize());
-    auto pixelBuffer = resultImage->getPixelBuffer(format, shadowArea);
-    if (!pixelBuffer)
-        return;
-
-    auto& sourcePixelArray = pixelBuffer->data();
-    contextShadow.blurLayerImage(sourcePixelArray.data(), pixelBuffer->size(), 4 * pixelBuffer->size().width());
-
-    resultImage->putPixelBuffer(*pixelBuffer, shadowArea);
-
-    resultContext.setCompositeOperation(CompositeOperator::SourceIn);
-    resultContext.fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()), m_shadowColor);
-    resultContext.setCompositeOperation(CompositeOperator::DestinationOver);
-
-    resultImage->context().drawImageBuffer(*sourceImage, drawingRegion);
+    return { top, right, bottom, left };
 }
 
-IntOutsets FEDropShadow::outsets() const
+std::unique_ptr<FilterEffectApplier> FEDropShadow::createSoftwareApplier() const
 {
-    IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ m_stdX, m_stdY });
-    return {
-        std::max<int>(0, outsetSize.height() - m_dy),
-        std::max<int>(0, outsetSize.width() + m_dx),
-        std::max<int>(0, outsetSize.height() + m_dy),
-        std::max<int>(0, outsetSize.width() - m_dx)
-    };
+    return FilterEffectApplier::create<FEDropShadowSoftwareApplier>(*this);
 }
 
-TextStream& FEDropShadow::externalRepresentation(TextStream& ts, RepresentationType representation) const
+TextStream& FEDropShadow::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
     ts << indent <<"[feDropShadow";
     FilterEffect::externalRepresentation(ts, representation);
-    ts << " stdDeviation=\"" << m_stdX << ", " << m_stdY << "\" dx=\"" << m_dx << "\" dy=\"" << m_dy << "\" flood-color=\"" << serializationForRenderTreeAsText(m_shadowColor) <<"\" flood-opacity=\"" << m_shadowOpacity << "]\n";
 
-    TextStream::IndentScope indentScope(ts);
-    inputEffect(0)->externalRepresentation(ts, representation);
+    ts << " stdDeviation=\"" << m_stdX << ", " << m_stdY << "\"";
+    ts << " dx=\"" << m_dx << "\" dy=\"" << m_dy << "\"";
+    ts << " flood-color=\"" << serializationForRenderTreeAsText(m_shadowColor) << "\"";
+    ts << " flood-opacity=\"" << m_shadowOpacity << "\"";
+
+    ts << "]\n";
     return ts;
 }
 

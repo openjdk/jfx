@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "DocumentLoader.h"
 #include "EventLoop.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLDocument.h"
 #include "HTMLParserScheduler.h"
 #include "HTMLPreloadScanner.h"
@@ -64,7 +65,6 @@ HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document)
     , m_scriptRunner(makeUnique<HTMLScriptRunner>(document, static_cast<HTMLScriptRunnerHost&>(*this)))
     , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, document, parserContentPolicy(), m_options))
     , m_parserScheduler(makeUnique<HTMLParserScheduler>(*this))
-    , m_xssAuditorDelegate(document)
     , m_preloader(makeUnique<HTMLResourcePreloader>(document))
     , m_shouldEmitTracePoints(isMainDocumentLoadingFromHTTP(document))
 {
@@ -80,13 +80,11 @@ inline HTMLDocumentParser::HTMLDocumentParser(DocumentFragment& fragment, Elemen
     , m_options(fragment.document())
     , m_tokenizer(m_options)
     , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, fragment, contextElement, parserContentPolicy(), m_options))
-    , m_xssAuditorDelegate(fragment.document())
     , m_shouldEmitTracePoints(false) // Avoid emitting trace points when parsing fragments like outerHTML.
 {
     // https://html.spec.whatwg.org/multipage/syntax.html#parsing-html-fragments
     if (contextElement.isHTMLElement())
         m_tokenizer.updateStateFor(contextElement.tagQName().localName());
-    m_xssAuditor.initForFragment();
 }
 
 inline Ref<HTMLDocumentParser> HTMLDocumentParser::create(DocumentFragment& fragment, Element& contextElement, ParserContentPolicy parserContentPolicy)
@@ -164,12 +162,14 @@ inline bool HTMLDocumentParser::shouldDelayEnd() const
 
 void HTMLDocumentParser::didBeginYieldingParser()
 {
-    m_parserScheduler->didBeginYieldingParser();
+    if (m_parserScheduler)
+        m_parserScheduler->didBeginYieldingParser();
 }
 
 void HTMLDocumentParser::didEndYieldingParser()
 {
-    m_parserScheduler->didEndYieldingParser();
+    if (m_parserScheduler)
+        m_parserScheduler->didEndYieldingParser();
 }
 
 bool HTMLDocumentParser::isParsingFragment() const
@@ -230,7 +230,8 @@ void HTMLDocumentParser::runScriptsForPausedTreeBuilder()
 
             CustomElementReactionStack reactionStack(document()->globalObject());
             auto& elementInterface = constructionData->elementInterface.get();
-            auto newElement = elementInterface.constructElementWithFallback(*document(), constructionData->name);
+            auto newElement = elementInterface.constructElementWithFallback(*document(), constructionData->name,
+                m_scriptRunner && !m_scriptRunner->isExecutingScript() ? ParserConstructElementWithEmptyStack::Yes : ParserConstructElementWithEmptyStack::No);
             m_treeBuilder->didCreateCustomOrFallbackElement(WTFMove(newElement), *constructionData);
         }
         return;
@@ -277,21 +278,9 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
         if (UNLIKELY(mode == AllowYield && m_parserScheduler->shouldYieldBeforeToken(session)))
             return true;
 
-        if (!parsingFragment)
-            m_sourceTracker.startToken(m_input.current(), m_tokenizer);
-
         auto token = m_tokenizer.nextToken(m_input.current());
         if (!token)
             return false;
-
-        if (!parsingFragment) {
-            m_sourceTracker.endToken(m_input.current(), m_tokenizer);
-
-            // We do not XSS filter innerHTML, which means we (intentionally) fail
-            // http/tests/security/xssAuditor/dom-write-innerHTML.html
-            if (auto xssInfo = m_xssAuditor.filterToken(FilterTokenRequest(*token, m_sourceTracker, m_tokenizer.shouldAllowCDATA())))
-                m_xssAuditorDelegate.didBlockScript(*xssInfo);
-        }
 
         constructTreeFromHTMLToken(token);
     } while (!isStopped());
@@ -308,8 +297,6 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
     ASSERT(refCount() >= 2);
 
     PumpSession session(m_pumpSessionNestingLevel, contextForParsingSession());
-
-    m_xssAuditor.init(document(), &m_xssAuditorDelegate);
 
     auto emitTracePoint = [this](TracePointCode code) {
         if (!m_shouldEmitTracePoints)
@@ -360,7 +347,7 @@ void HTMLDocumentParser::constructTreeFromHTMLToken(HTMLTokenizer::TokenPtr& raw
     // FIXME: Stop clearing the rawToken once we start running the parser off
     // the main thread or once we stop allowing synchronous JavaScript
     // execution from parseAttribute.
-    if (rawToken->type() != HTMLToken::Character) {
+    if (rawToken->type() != HTMLToken::Type::Character) {
         // Clearing the TokenPtr makes sure we don't clear the HTMLToken a second time
         // later when the TokenPtr is destroyed.
         rawToken.clear();
@@ -405,6 +392,16 @@ void HTMLDocumentParser::insert(SegmentedString&& source)
 
 void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
 {
+    append(WTFMove(inputSource), AllowYield);
+}
+
+void HTMLDocumentParser::appendSynchronously(RefPtr<StringImpl>&& inputSource)
+{
+    append(WTFMove(inputSource), ForceSynchronous);
+}
+
+void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource, SynchronousMode synchronousMode)
+{
     if (isStopped())
         return;
 
@@ -435,7 +432,7 @@ void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
         return;
     }
 
-    pumpTokenizerIfPossible(AllowYield);
+    pumpTokenizerIfPossible(synchronousMode);
 
     endIfDelayed();
 }

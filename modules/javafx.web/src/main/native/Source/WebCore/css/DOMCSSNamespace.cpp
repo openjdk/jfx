@@ -32,6 +32,7 @@
 
 #include "CSSMarkup.h"
 #include "CSSParser.h"
+#include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
 #include "Document.h"
 #include "HighlightRegister.h"
@@ -43,7 +44,7 @@ namespace WebCore {
 
 static String valueWithoutImportant(const String& value)
 {
-    if (!value.endsWithIgnoringASCIICase("important"))
+    if (!value.endsWithIgnoringASCIICase("important"_s))
         return value;
 
     String newValue = value;
@@ -57,13 +58,20 @@ static String valueWithoutImportant(const String& value)
 
 bool DOMCSSNamespace::supports(Document& document, const String& property, const String& value)
 {
-    CSSPropertyID propertyID = cssPropertyID(property.stripWhiteSpace());
-
     CSSParserContext parserContext(document);
-    if (parserContext.isPropertyRuntimeDisabled(propertyID))
+
+    auto propertyNameWithoutWhitespace = property.stripWhiteSpace();
+    CSSPropertyID propertyID = cssPropertyID(propertyNameWithoutWhitespace);
+    if (propertyID == CSSPropertyInvalid && isCustomPropertyName(propertyNameWithoutWhitespace)) {
+        auto dummyStyle = MutableStyleProperties::create();
+        constexpr bool importance = false;
+        return CSSParser::parseCustomPropertyValue(dummyStyle, AtomString { propertyNameWithoutWhitespace }, value, importance, parserContext) != CSSParser::ParseResult::Error;
+    }
+
+    if (!isCSSPropertyExposed(propertyID, &document.settings()))
         return false;
 
-    if (isInternalCSSProperty(propertyID))
+    if (CSSProperty::isDescriptorOnly(propertyID))
         return false;
 
     if (propertyID == CSSPropertyInvalid)

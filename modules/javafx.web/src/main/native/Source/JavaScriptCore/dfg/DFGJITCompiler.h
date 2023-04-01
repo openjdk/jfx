@@ -234,12 +234,12 @@ public:
         m_privateBrandAccesses.append(InlineCacheWrapper<JITPrivateBrandAccessGenerator>(gen, slowPath));
     }
 
-    void addJSCall(Label slowPathStart, Label doneLocation, CallLinkInfo* info)
+    void addJSCall(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
     {
         m_jsCalls.append(JSCallRecord(slowPathStart, doneLocation, info));
     }
 
-    void addJSDirectCall(Label slowPath, CallLinkInfo* info)
+    void addJSDirectCall(Label slowPath, OptimizingCallLinkInfo* info)
     {
         m_jsDirectCalls.append(JSDirectCallRecord(slowPath, info));
     }
@@ -256,19 +256,11 @@ public:
     }
 
     template<typename T>
-    Jump branchWeakPtr(RelationalCondition cond, T left, JSCell* weakPtr)
-    {
-        Jump result = branchPtr(cond, left, TrustedImmPtr(weakPtr));
-        addWeakReference(weakPtr);
-        return result;
-    }
-
-    template<typename T>
     Jump branchWeakStructure(RelationalCondition cond, T left, RegisteredStructure weakStructure)
     {
         Structure* structure = weakStructure.get();
 #if USE(JSVALUE64)
-        Jump result = branch32(cond, left, TrustedImm32(structure->id()));
+        Jump result = branch32(cond, left, TrustedImm32(structure->id().bits()));
         return result;
 #else
         return branchPtr(cond, left, TrustedImmPtr(structure));
@@ -302,6 +294,85 @@ public:
 
     VM& vm() { return m_graph.m_vm; }
 
+    void emitRestoreCalleeSaves()
+    {
+        emitRestoreCalleeSavesFor(&RegisterAtOffsetList::dfgCalleeSaveRegisters());
+    }
+
+    void emitSaveCalleeSaves()
+    {
+        emitSaveCalleeSavesFor(&RegisterAtOffsetList::dfgCalleeSaveRegisters());
+    }
+
+    class LinkableConstant final : public CCallHelpers::ConstantMaterializer {
+    public:
+        enum NonCellTag { NonCell };
+        LinkableConstant() = default;
+        LinkableConstant(JITCompiler&, JSCell*);
+        LinkableConstant(LinkerIR::Constant index)
+            : m_index(index)
+        { }
+
+        void materialize(CCallHelpers&, GPRReg);
+        void store(CCallHelpers&, CCallHelpers::Address);
+
+        template<typename T>
+        static LinkableConstant nonCellPointer(JITCompiler& jit, T* pointer)
+        {
+            static_assert(!std::is_base_of_v<JSCell, T>);
+            return LinkableConstant(jit, pointer, NonCell);
+        }
+
+        static LinkableConstant structure(JITCompiler& jit, RegisteredStructure structure)
+        {
+            return LinkableConstant(jit, structure.get());
+        }
+
+        bool isUnlinked() const { return m_index != UINT_MAX; }
+
+        void* pointer() const { return m_pointer; }
+        LinkerIR::Constant index() const { return m_index; }
+
+#if USE(JSVALUE64)
+        Address unlinkedAddress()
+        {
+            ASSERT(isUnlinked());
+            return Address(GPRInfo::constantsRegister, JITData::offsetOfData() + sizeof(void*) * m_index);
+        }
+#endif
+
+    private:
+        LinkableConstant(JITCompiler&, void*, NonCellTag);
+
+        LinkerIR::Constant m_index { UINT_MAX };
+        void* m_pointer { nullptr };
+    };
+
+    void loadConstant(LinkerIR::Constant, GPRReg);
+    void loadLinkableConstant(LinkableConstant, GPRReg);
+    void storeLinkableConstant(LinkableConstant, Address);
+
+    Jump branchLinkableConstant(RelationalCondition cond, GPRReg left, LinkableConstant constant)
+    {
+#if USE(JSVALUE64)
+        if (constant.isUnlinked())
+            return CCallHelpers::branchPtr(cond, left, constant.unlinkedAddress());
+#endif
+        return CCallHelpers::branchPtr(cond, left, CCallHelpers::TrustedImmPtr(constant.pointer()));
+    }
+
+    Jump branchLinkableConstant(RelationalCondition cond, Address left, LinkableConstant constant)
+    {
+#if USE(JSVALUE64)
+        if (constant.isUnlinked())
+            return CCallHelpers::branchPtr(cond, left, constant.unlinkedAddress());
+#endif
+        return CCallHelpers::branchPtr(cond, left, CCallHelpers::TrustedImmPtr(constant.pointer()));
+    }
+
+    std::tuple<CompileTimeStructureStubInfo, LinkableConstant> addStructureStubInfo();
+    LinkerIR::Constant addToConstantPool(LinkerIR::Type, void*);
+
 private:
     friend class OSRExitJumpPlaceholder;
 
@@ -313,7 +384,6 @@ private:
     void link(LinkBuffer&);
 
     void exitSpeculativeWithOSR(const OSRExit&, SpeculationRecovery*);
-    void compileExceptionHandlers();
     void linkOSRExits();
     void disassemble(LinkBuffer&);
 
@@ -338,7 +408,7 @@ private:
 
 
     struct JSCallRecord {
-        JSCallRecord(Label slowPathStart, Label doneLocation, CallLinkInfo* info)
+        JSCallRecord(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
             : slowPathStart(slowPathStart)
             , doneLocation(doneLocation)
             , info(info)
@@ -347,18 +417,18 @@ private:
 
         Label slowPathStart;
         Label doneLocation;
-        CallLinkInfo* info;
+        OptimizingCallLinkInfo* info;
     };
 
     struct JSDirectCallRecord {
-        JSDirectCallRecord(Label slowPath, CallLinkInfo* info)
+        JSDirectCallRecord(Label slowPath, OptimizingCallLinkInfo* info)
             : slowPath(slowPath)
             , info(info)
         {
         }
 
         Label slowPath;
-        CallLinkInfo* info;
+        OptimizingCallLinkInfo* info;
     };
 
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
@@ -379,6 +449,9 @@ private:
     Vector<DFG::OSREntryData> m_osrEntry;
     Vector<DFG::OSRExit> m_osrExit;
     Vector<DFG::SpeculationRecovery> m_speculationRecovery;
+    Vector<LinkerIR::Value> m_constantPool;
+    HashMap<LinkerIR::Value, LinkerIR::Constant, LinkerIR::ValueHash, LinkerIR::ValueTraits> m_constantPoolMap;
+    SegmentedVector<DFG::UnlinkedStructureStubInfo> m_unlinkedStubInfos;
 
     struct ExceptionHandlingOSRExitInfo {
         OSRExitCompilationInfo& exitInfo;

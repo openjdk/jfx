@@ -51,13 +51,13 @@ float SizesAttributeParser::computeLength(double value, CSSUnitType type, const 
         return 0;
     auto& style = renderer->style();
 
-    CSSToLengthConversionData conversionData(&style, &style, renderer->parentStyle(), renderer);
+    CSSToLengthConversionData conversionData(style, &style, renderer->parentStyle(), renderer);
     // Because we evaluate "sizes" at parse time (before style has been resolved), the font metrics used for these specific units
     // are not available. The font selector's internal consistency isn't guaranteed just yet, so we can just temporarily clear
     // the pointer to it for the duration of the unit evaluation. This is acceptible because the style always comes from the
     // RenderView, which has its font information hardcoded in resolveForDocument() to be -webkit-standard, whose operations
     // don't require a font selector.
-    if (type == CSSUnitType::CSS_EXS || type == CSSUnitType::CSS_CHS) {
+    if (type == CSSUnitType::CSS_EXS || type == CSSUnitType::CSS_CHS || type == CSSUnitType::CSS_IC) {
         RefPtr<FontSelector> fontSelector = style.fontCascade().fontSelector();
         style.fontCascade().update(nullptr);
         float result = CSSPrimitiveValue::computeNonCalcLengthDouble(conversionData, type, value);
@@ -112,7 +112,7 @@ bool SizesAttributeParser::mediaConditionMatches(const MediaQuerySet& mediaCondi
     if (!renderer)
         return false;
     auto& style = renderer->style();
-    return MediaQueryEvaluator { "screen", m_document, &style }.evaluate(mediaCondition, m_mediaQueryDynamicResults);
+    return MediaQueryEvaluator { "screen"_s, m_document, &style }.evaluate(mediaCondition, m_mediaQueryDynamicResults);
 }
 
 bool SizesAttributeParser::parse(CSSParserTokenRange range)
@@ -157,7 +157,7 @@ unsigned SizesAttributeParser::effectiveSizeDefaultValue()
     if (!renderer)
         return 0;
     auto& style = renderer->style();
-    return clampTo<float>(CSSPrimitiveValue::computeNonCalcLengthDouble({ &style, &style, renderer->parentStyle(), renderer }, CSSUnitType::CSS_VW, 100.0));
+    return clampTo<float>(CSSPrimitiveValue::computeNonCalcLengthDouble({ style, &style, renderer->parentStyle(), renderer }, CSSUnitType::CSS_VW, 100.0));
 }
 
 } // namespace WebCore

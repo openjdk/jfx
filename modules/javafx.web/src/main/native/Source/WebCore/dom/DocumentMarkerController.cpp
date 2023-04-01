@@ -30,7 +30,6 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Frame.h"
-#include "LayoutIntegrationLineLayout.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "RenderBlockFlow.h"
@@ -93,7 +92,7 @@ void DocumentMarkerController::removeMarkers(const SimpleRange& range, OptionSet
     filterMarkers(range, nullptr, types, overlapRule);
 }
 
-void DocumentMarkerController::filterMarkers(const SimpleRange& range, const Function<bool(const DocumentMarker&)>& filter, OptionSet<DocumentMarker::MarkerType> types, RemovePartiallyOverlappingMarker overlapRule)
+void DocumentMarkerController::filterMarkers(const SimpleRange& range, const Function<FilterMarkerResult(const DocumentMarker&)>& filter, OptionSet<DocumentMarker::MarkerType> types, RemovePartiallyOverlappingMarker overlapRule)
 {
     for (auto& textPiece : collectTextRanges(range)) {
         if (!possiblyHasMarkers(types))
@@ -239,7 +238,7 @@ static bool shouldInsertAsSeparateMarker(const DocumentMarker& marker)
 #endif
 
     if (marker.type() == DocumentMarker::DraggedContent)
-        return is<RenderReplaced>(WTF::get<RefPtr<Node>>(marker.data())->renderer());
+        return is<RenderReplaced>(std::get<RefPtr<Node>>(marker.data())->renderer());
 
     return false;
 }
@@ -252,14 +251,6 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
     ASSERT(newMarker.endOffset() >= newMarker.startOffset());
     if (newMarker.endOffset() == newMarker.startOffset())
         return;
-
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    if (auto* renderer = node.renderer()) {
-        // FIXME: Factor the marker painting code out of LegacyInlineTextBox and teach simple line layout to use it.
-        if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*renderer))
-            lineLayout->flow().ensureLineBoxes();
-    }
-#endif
 
     m_possiblyExistingMarkerTypes.add(newMarker.type());
 
@@ -366,7 +357,7 @@ void DocumentMarkerController::copyMarkers(Node& source, OffsetRange range, Node
     }
 }
 
-void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, OptionSet<DocumentMarker::MarkerType> types, const Function<bool(const DocumentMarker&)>& filter, RemovePartiallyOverlappingMarker overlapRule)
+void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, OptionSet<DocumentMarker::MarkerType> types, const Function<FilterMarkerResult(const DocumentMarker&)>& filter, RemovePartiallyOverlappingMarker overlapRule)
 {
     if (range.start >= range.end)
         return;
@@ -393,7 +384,7 @@ void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, Opti
             continue;
         }
 
-        if (filter && !filter(marker)) {
+        if (filter && filter(marker) == FilterMarkerResult::Keep) {
             i++;
             continue;
         }

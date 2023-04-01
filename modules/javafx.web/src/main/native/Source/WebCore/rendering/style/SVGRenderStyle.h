@@ -77,7 +77,6 @@ public:
     static float initialFloodOpacity() { return 1; }
     static Color initialFloodColor() { return Color::black; }
     static Color initialLightingColor() { return Color::white; }
-    static String initialMaskerResource() { return String(); }
     static String initialMarkerStartResource() { return String(); }
     static String initialMarkerMidResource() { return String(); }
     static String initialMarkerEndResource() { return String(); }
@@ -94,7 +93,6 @@ public:
     void setClipRule(WindRule val) { m_inheritedFlags.clipRule = static_cast<unsigned>(val); }
     void setColorInterpolation(ColorInterpolation val) { m_inheritedFlags.colorInterpolation = static_cast<unsigned>(val); }
     void setColorInterpolationFilters(ColorInterpolation val) { m_inheritedFlags.colorInterpolationFilters = static_cast<unsigned>(val); }
-    void setColorRendering(ColorRendering val) { m_inheritedFlags.colorRendering = static_cast<unsigned>(val); }
     void setFillRule(WindRule val) { m_inheritedFlags.fillRule = static_cast<unsigned>(val); }
     void setShapeRendering(ShapeRendering val) { m_inheritedFlags.shapeRendering = static_cast<unsigned>(val); }
     void setTextAnchor(TextAnchor val) { m_inheritedFlags.textAnchor = static_cast<unsigned>(val); }
@@ -123,9 +121,6 @@ public:
     void setLightingColor(const Color&);
     void setBaselineShiftValue(const SVGLengthValue&);
 
-    // Setters for non-inherited resources
-    void setMaskerResource(const String&);
-
     // Setters for inherited resources
     void setMarkerStartResource(const String&);
     void setMarkerMidResource(const String&);
@@ -140,7 +135,6 @@ public:
     WindRule clipRule() const { return static_cast<WindRule>(m_inheritedFlags.clipRule); }
     ColorInterpolation colorInterpolation() const { return static_cast<ColorInterpolation>(m_inheritedFlags.colorInterpolation); }
     ColorInterpolation colorInterpolationFilters() const { return static_cast<ColorInterpolation>(m_inheritedFlags.colorInterpolationFilters); }
-    ColorRendering colorRendering() const { return static_cast<ColorRendering>(m_inheritedFlags.colorRendering); }
     WindRule fillRule() const { return static_cast<WindRule>(m_inheritedFlags.fillRule); }
     ShapeRendering shapeRendering() const { return static_cast<ShapeRendering>(m_inheritedFlags.shapeRendering); }
     TextAnchor textAnchor() const { return static_cast<TextAnchor>(m_inheritedFlags.textAnchor); }
@@ -170,7 +164,6 @@ public:
     const Length& ry() const { return m_layoutData->ry; }
     const Length& x() const { return m_layoutData->x; }
     const Length& y() const { return m_layoutData->y; }
-    const String& maskerResource() const { return m_nonInheritedResourceData->masker; }
     const String& markerStartResource() const { return m_inheritedResourceData->markerStart; }
     const String& markerMidResource() const { return m_inheritedResourceData->markerMid; }
     const String& markerEndResource() const { return m_inheritedResourceData->markerEnd; }
@@ -184,11 +177,9 @@ public:
     const String& visitedLinkStrokePaintUri() const { return m_strokeData->visitedLinkPaintUri; }
 
     // convenience
-    bool hasMasker() const { return !maskerResource().isEmpty(); }
     bool hasMarkers() const { return !markerStartResource().isEmpty() || !markerMidResource().isEmpty() || !markerEndResource().isEmpty(); }
     bool hasStroke() const { return strokePaintType() != SVGPaintType::None; }
     bool hasFill() const { return fillPaintType() != SVGPaintType::None; }
-    bool isolatesBlending() const { return hasMasker(); }
 
 private:
     SVGRenderStyle();
@@ -203,7 +194,6 @@ private:
         bool operator==(const InheritedFlags&) const;
         bool operator!=(const InheritedFlags& other) const { return !(*this == other); }
 
-        unsigned colorRendering : 2; // ColorRendering
         unsigned shapeRendering : 2; // ShapeRendering
         unsigned clipRule : 1; // WindRule
         unsigned fillRule : 1; // WindRule
@@ -246,7 +236,6 @@ private:
     DataRef<StyleStopData> m_stopData;
     DataRef<StyleMiscData> m_miscData;
     DataRef<StyleLayoutData> m_layoutData;
-    DataRef<StyleResourceData> m_nonInheritedResourceData;
 };
 
 inline void SVGRenderStyle::setCx(const Length& length)
@@ -293,8 +282,9 @@ inline void SVGRenderStyle::setY(const Length& length)
 
 inline void SVGRenderStyle::setFillOpacity(float opacity)
 {
-    if (!(m_fillData->opacity == opacity))
-        m_fillData.access().opacity = opacity;
+    auto clampedOpacity = clampTo<float>(opacity, 0.f, 1.f);
+    if (!(m_fillData->opacity == clampedOpacity))
+        m_fillData.access().opacity = clampedOpacity;
 }
 
 inline void SVGRenderStyle::setFillPaint(SVGPaintType type, const Color& color, const String& uri, bool applyToRegularStyle, bool applyToVisitedLinkStyle)
@@ -319,8 +309,9 @@ inline void SVGRenderStyle::setFillPaint(SVGPaintType type, const Color& color, 
 
 inline void SVGRenderStyle::setStrokeOpacity(float opacity)
 {
-    if (!(m_strokeData->opacity == opacity))
-        m_strokeData.access().opacity = opacity;
+    auto clampedOpacity = clampTo<float>(opacity, 0.f, 1.f);
+    if (!(m_strokeData->opacity == clampedOpacity))
+        m_strokeData.access().opacity = clampedOpacity;
 }
 
 inline void SVGRenderStyle::setStrokePaint(SVGPaintType type, const Color& color, const String& uri, bool applyToRegularStyle, bool applyToVisitedLinkStyle)
@@ -363,8 +354,9 @@ inline void SVGRenderStyle::setKerning(const SVGLengthValue& kerning)
 
 inline void SVGRenderStyle::setStopOpacity(float opacity)
 {
-    if (!(m_stopData->opacity == opacity))
-        m_stopData.access().opacity = opacity;
+    auto clampedOpacity = clampTo<float>(opacity, 0.f, 1.f);
+    if (!(m_stopData->opacity == clampedOpacity))
+        m_stopData.access().opacity = clampedOpacity;
 }
 
 inline void SVGRenderStyle::setStopColor(const Color& color)
@@ -375,8 +367,9 @@ inline void SVGRenderStyle::setStopColor(const Color& color)
 
 inline void SVGRenderStyle::setFloodOpacity(float opacity)
 {
-    if (!(m_miscData->floodOpacity == opacity))
-        m_miscData.access().floodOpacity = opacity;
+    auto clampedOpacity = clampTo<float>(opacity, 0.f, 1.f);
+    if (!(m_miscData->floodOpacity == clampedOpacity))
+        m_miscData.access().floodOpacity = clampedOpacity;
 }
 
 inline void SVGRenderStyle::setFloodColor(const Color& color)
@@ -395,12 +388,6 @@ inline void SVGRenderStyle::setBaselineShiftValue(const SVGLengthValue& shiftVal
 {
     if (!(m_miscData->baselineShiftValue == shiftValue))
         m_miscData.access().baselineShiftValue = shiftValue;
-}
-
-inline void SVGRenderStyle::setMaskerResource(const String& resource)
-{
-    if (!(m_nonInheritedResourceData->masker == resource))
-        m_nonInheritedResourceData.access().masker = resource;
 }
 
 inline void SVGRenderStyle::setMarkerStartResource(const String& resource)
@@ -424,7 +411,6 @@ inline void SVGRenderStyle::setMarkerEndResource(const String& resource)
 inline void SVGRenderStyle::setBitDefaults()
 {
     m_inheritedFlags.clipRule = static_cast<unsigned>(initialClipRule());
-    m_inheritedFlags.colorRendering = static_cast<unsigned>(initialColorRendering());
     m_inheritedFlags.fillRule = static_cast<unsigned>(initialFillRule());
     m_inheritedFlags.shapeRendering = static_cast<unsigned>(initialShapeRendering());
     m_inheritedFlags.textAnchor = static_cast<unsigned>(initialTextAnchor());
@@ -444,8 +430,7 @@ inline void SVGRenderStyle::setBitDefaults()
 
 inline bool SVGRenderStyle::InheritedFlags::operator==(const InheritedFlags& other) const
 {
-    return colorRendering == other.colorRendering
-        && shapeRendering == other.shapeRendering
+    return shapeRendering == other.shapeRendering
         && clipRule == other.clipRule
         && fillRule == other.fillRule
         && textAnchor == other.textAnchor

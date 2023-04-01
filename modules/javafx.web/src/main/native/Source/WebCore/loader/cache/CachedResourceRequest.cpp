@@ -27,7 +27,7 @@
 #include "CachedResourceRequest.h"
 
 #include "CachedResourceLoader.h"
-#include "ContentExtensionActions.h"
+#include "ContentExtensionsBackend.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
 #include "Element.h"
@@ -40,6 +40,10 @@
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
+
+// Created by binding generator.
+String convertEnumerationToString(FetchOptions::Destination);
+String convertEnumerationToString(FetchOptions::Mode);
 
 CachedResourceRequest::CachedResourceRequest(ResourceRequest&& resourceRequest, const ResourceLoaderOptions& options, std::optional<ResourceLoadPriority> priority, String&& charset)
     : m_resourceRequest(WTFMove(resourceRequest))
@@ -82,7 +86,7 @@ const AtomString& CachedResourceRequest::initiatorName() const
     if (!m_initiatorName.isEmpty())
         return m_initiatorName;
 
-    static MainThreadNeverDestroyed<const AtomString> defaultName("other", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> defaultName("other"_s);
     return defaultName;
 }
 
@@ -122,17 +126,37 @@ void CachedResourceRequest::setDomainForCachePartition(const String& domain)
     m_resourceRequest.setDomainForCachePartition(domain);
 }
 
-static inline constexpr ASCIILiteral acceptHeaderValueForImageResource(bool supportsVideoImage)
+static constexpr ASCIILiteral acceptHeaderValueForWebPImageResource()
 {
 #if HAVE(WEBP) || USE(WEBP)
-    #define WEBP_HEADER_PART "image/webp,"
+    return "image/webp,"_s;
 #else
-    #define WEBP_HEADER_PART ""
+    return ""_s;
 #endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForAVIFImageResource()
+{
+#if HAVE(AVIF) || USE(AVIF)
+    return "image/avif,"_s;
+#else
+    return ""_s;
+#endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForVideoImageResource(bool supportsVideoImage)
+{
     if (supportsVideoImage)
-        return WEBP_HEADER_PART "image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5"_s;
-    return WEBP_HEADER_PART "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
-    #undef WEBP_HEADER_PART
+        return "video/*;q=0.8,"_s;
+    return ""_s;
+}
+
+static String acceptHeaderValueForImageResource()
+{
+    return String(acceptHeaderValueForWebPImageResource())
+        + acceptHeaderValueForAVIFImageResource()
+        + acceptHeaderValueForVideoImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video))
+        + "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
 }
 
 String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type type)
@@ -141,7 +165,7 @@ String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type typ
     case CachedResource::Type::MainResource:
         return "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"_s;
     case CachedResource::Type::ImageResource:
-        return acceptHeaderValueForImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video));
+        return acceptHeaderValueForImageResource();
     case CachedResource::Type::CSSStyleSheet:
         return "text/css,*/*;q=0.1"_s;
     case CachedResource::Type::SVGDocumentResource:
@@ -250,6 +274,20 @@ void CachedResourceRequest::updateReferrerAndOriginHeaders(FrameLoader& frameLoa
     FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
 }
 
+void CachedResourceRequest::updateFetchMetadataHeaders()
+{
+    // Implementing step 13 of https://fetch.spec.whatwg.org/#http-network-or-cache-fetch as of 22 Feb 2022
+    // https://w3c.github.io/webappsec-fetch-metadata/#fetch-integration
+    auto requestOrigin = SecurityOrigin::create(m_resourceRequest.url());
+    if (!requestOrigin->isPotentiallyTrustworthy())
+        return;
+
+    // The Fetch IDL documents this as "" while FetchMetadata expects "empty", otherwise they match.
+    String destinationString = m_options.destination == FetchOptions::Destination::EmptyString ? "empty"_s : convertEnumerationToString(m_options.destination);
+    m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::SecFetchDest, WTFMove(destinationString));
+    m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::SecFetchMode, convertEnumerationToString(m_options.mode));
+}
+
 void CachedResourceRequest::updateUserAgentHeader(FrameLoader& frameLoader)
 {
     frameLoader.applyUserAgentIfNeeded(m_resourceRequest);
@@ -279,7 +317,7 @@ void CachedResourceRequest::setDestinationIfNotSet(FetchOptions::Destination des
 }
 
 #if ENABLE(SERVICE_WORKER)
-void CachedResourceRequest::setClientIdentifierIfNeeded(DocumentIdentifier clientIdentifier)
+void CachedResourceRequest::setClientIdentifierIfNeeded(ScriptExecutionContextIdentifier clientIdentifier)
 {
     if (!m_options.clientIdentifier)
         m_options.clientIdentifier = clientIdentifier;

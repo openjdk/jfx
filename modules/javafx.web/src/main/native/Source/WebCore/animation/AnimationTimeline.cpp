@@ -48,10 +48,14 @@ void AnimationTimeline::animationTimingDidChange(WebAnimation& animation)
     updateGlobalPosition(animation);
 
     if (m_animations.add(&animation)) {
-        m_allAnimations.append(makeWeakPtr(&animation));
+        m_allAnimations.append(animation);
         auto* timeline = animation.timeline();
         if (timeline && timeline != this)
             timeline->removeAnimation(animation);
+        else if (timeline == this && is<KeyframeEffect>(animation.effect())) {
+            if (auto styleable = downcast<KeyframeEffect>(animation.effect())->targetStyleable())
+                styleable->animationWasAdded(animation);
+        }
     }
 }
 

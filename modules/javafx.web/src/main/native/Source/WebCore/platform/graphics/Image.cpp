@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004, 2005, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "AffineTransform.h"
 #include "BitmapImage.h"
+#include "DeprecatedGlobalSettings.h"
 #include "GraphicsContext.h"
 #include "ImageObserver.h"
 #include "Length.h"
@@ -69,12 +70,14 @@ RefPtr<Image> Image::create(ImageObserver& observer)
     ASSERT(isMainThread());
 
     auto mimeType = observer.mimeType();
-    if (mimeType == "image/svg+xml")
+    if (mimeType == "image/svg+xml"_s)
         return SVGImage::create(observer);
 
     auto url = observer.sourceUrl();
     if (isPDFResource(mimeType, url) || isPostScriptResource(mimeType, url)) {
 #if USE(CG) && !USE(WEBKIT_IMAGE_DECODERS)
+        if (!DeprecatedGlobalSettings::arePDFImagesEnabled())
+            return nullptr;
         return PDFDocumentImage::create(&observer);
 #else
         return nullptr;
@@ -92,19 +95,19 @@ bool Image::supportsType(const String& type)
 bool Image::isPDFResource(const String& mimeType, const URL& url)
 {
     if (mimeType.isEmpty())
-        return url.path().endsWithIgnoringASCIICase(".pdf");
+        return url.path().endsWithIgnoringASCIICase(".pdf"_s);
     return MIMETypeRegistry::isPDFMIMEType(mimeType);
 }
 
 bool Image::isPostScriptResource(const String& mimeType, const URL& url)
 {
     if (mimeType.isEmpty())
-        return url.path().endsWithIgnoringASCIICase(".ps");
+        return url.path().endsWithIgnoringASCIICase(".ps"_s);
     return MIMETypeRegistry::isPostScriptMIMEType(mimeType);
 }
 
 
-EncodedDataStatus Image::setData(RefPtr<SharedBuffer>&& data, bool allDataReceived)
+EncodedDataStatus Image::setData(RefPtr<FragmentedSharedBuffer>&& data, bool allDataReceived)
 {
     m_encodedImageData = WTFMove(data);
 
@@ -147,7 +150,7 @@ void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const 
     if (!tileImage)
         return;
 
-    ctxt.drawPattern(*tileImage, size(), destRect, tileRect, patternTransform, phase, spacing, options);
+    ctxt.drawPattern(*tileImage, destRect, tileRect, patternTransform, phase, spacing, options);
 
     if (imageObserver())
         imageObserver()->didDraw(*this);
@@ -352,6 +355,11 @@ void Image::startAnimationAsynchronously()
     if (m_animationStartTimer->isActive())
         return;
     m_animationStartTimer->startOneShot(0_s);
+}
+
+DestinationColorSpace Image::colorSpace()
+{
+    return DestinationColorSpace::SRGB();
 }
 
 void Image::dump(TextStream& ts) const

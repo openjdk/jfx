@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -30,7 +30,8 @@ namespace JSC {
 class ErrorInstance : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesPut;
+
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesPut | GetOwnPropertySlotIsImpureForPropertyAbsence;
     static constexpr bool needsDestruction = true;
 
     static void destroy(JSCell* cell)
@@ -39,13 +40,13 @@ public:
     }
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.errorInstanceSpace<mode>();
     }
 
     enum SourceTextWhereErrorOccurred { FoundExactSource, FoundApproximateSource };
-    typedef String (*SourceAppender) (const String& originalMessage, const String& sourceText, RuntimeType, SourceTextWhereErrorOccurred);
+    typedef String (*SourceAppender) (const String& originalMessage, StringView sourceText, RuntimeType, SourceTextWhereErrorOccurred);
 
     DECLARE_EXPORT_INFO;
 
@@ -56,7 +57,7 @@ public:
 
     static ErrorInstance* create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const String& message, JSValue cause, SourceAppender appender = nullptr, RuntimeType type = TypeNothing, ErrorType errorType = ErrorType::Error, bool useCurrentFrame = true)
     {
-        ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(vm.heap)) ErrorInstance(vm, structure, errorType);
+        ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(vm)) ErrorInstance(vm, structure, errorType);
         instance->finishCreation(vm, globalObject, message, cause, appender, type, useCurrentFrame);
         return instance;
     }
@@ -79,6 +80,11 @@ public:
 
     void setNativeGetterTypeError() { m_nativeGetterTypeError = true; }
     bool isNativeGetterTypeError() const { return m_nativeGetterTypeError; }
+
+#if ENABLE(WEBASSEMBLY)
+    void setCatchableFromWasm(bool flag) { m_catchableFromWasm = flag; }
+    bool isCatchableFromWasm() const { return m_catchableFromWasm; }
+#endif
 
     JS_EXPORT_PRIVATE String sanitizedToString(JSGlobalObject*);
     JS_EXPORT_PRIVATE String sanitizedMessageString(JSGlobalObject*);
@@ -116,6 +122,9 @@ protected:
     bool m_outOfMemoryError : 1;
     bool m_errorInfoMaterialized : 1;
     bool m_nativeGetterTypeError : 1;
+#if ENABLE(WEBASSEMBLY)
+    bool m_catchableFromWasm : 1;
+#endif
 };
 
 } // namespace JSC

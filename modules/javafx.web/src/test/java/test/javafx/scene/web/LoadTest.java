@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,10 +35,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import java.io.File;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import javafx.concurrent.Worker.State;
-import javafx.event.EventHandler;
 import javafx.scene.web.WebEngine;
 import netscape.javascript.JSObject;
 import org.junit.Test;
@@ -191,9 +189,9 @@ public class LoadTest extends TestBase {
     @Test public void testLoadLocalCSS() {
         load(new File("src/test/resources/test/html/dom.html"));
         submit(() -> {
-            assertEquals("Font weight should be bold", "bold", (String) getEngine().executeScript(
+            assertEquals("Font weight should be bold", "700", getEngine().executeScript(
                 "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-weight')"));
-            assertEquals("font style should be italic", "italic", (String) getEngine().executeScript(
+            assertEquals("font style should be italic", "italic", getEngine().executeScript(
                 "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-style')"));
         });
     }

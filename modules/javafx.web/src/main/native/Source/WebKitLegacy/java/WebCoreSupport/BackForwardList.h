@@ -36,9 +36,6 @@
 typedef Vector<Ref<WebCore::HistoryItem>> HistoryItemVector;
 typedef HashSet<RefPtr<WebCore::HistoryItem>> HistoryItemHashSet;
 
-typedef Vector<Ref<WebCore::HistoryItem>> HistoryItemVector;
-typedef HashSet<RefPtr<WebCore::HistoryItem>> HistoryItemHashSet;
-
 class BackForwardList : public WebCore::BackForwardClient {
 public:
     static Ref<BackForwardList> create() { return adoptRef(*new BackForwardList()); }
@@ -61,14 +58,14 @@ public:
     void setCapacity(int);
     bool enabled();
     void setEnabled(bool);
-    unsigned backListCount() const final;
-    unsigned forwardListCount() const final;
-    bool containsItem(WebCore::HistoryItem*);
+    unsigned backListCount() const override;
+    unsigned forwardListCount() const override;
+    bool containsItem(const WebCore::HistoryItem&) const override;
 
     void close() override;
     bool closed();
 
-    void removeItem(WebCore::HistoryItem*);
+    void removeItem(WebCore::HistoryItem&);
     HistoryItemVector& entries();
 
     JLObject hostObject() const { return m_hostObject; }

@@ -54,7 +54,7 @@ static const float cTargetPrunePercentage = .95f; // Percentage of capacity towa
 
 MemoryCache& MemoryCache::singleton()
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     static NeverDestroyed<MemoryCache> memoryCache;
     return memoryCache;
 }
@@ -68,7 +68,7 @@ MemoryCache::MemoryCache()
 
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
-        PAL::registerNotifyCallback("com.apple.WebKit.showMemoryCache", [] {
+        PAL::registerNotifyCallback("com.apple.WebKit.showMemoryCache"_s, [] {
             MemoryCache::singleton().dumpStats();
             MemoryCache::singleton().dumpLRULists(true);
         });
@@ -114,10 +114,10 @@ bool MemoryCache::add(CachedResource& resource)
     if (disabled())
         return false;
 
-    if (resource.resourceRequest().httpMethod() != "GET")
+    if (resource.resourceRequest().httpMethod() != "GET"_s)
         return false;
 
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
 
     auto key = std::make_pair(resource.url(), resource.cachePartition());
 
@@ -167,7 +167,7 @@ void MemoryCache::revalidationSucceeded(CachedResource& revalidatingResource, co
 
 void MemoryCache::revalidationFailed(CachedResource& revalidatingResource)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     LOG(ResourceLoading, "Revalidation failed for %p", &revalidatingResource);
     ASSERT(revalidatingResource.resourceToRevalidate());
     revalidatingResource.clearResourceToRevalidate();
@@ -185,7 +185,7 @@ CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request, 
 
 CachedResource* MemoryCache::resourceForRequestImpl(const ResourceRequest& request, CachedResourceMap& resources)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     URL url = removeFragmentIdentifierIfNeeded(request.url());
 
     auto key = std::make_pair(url, request.cachePartition());
@@ -218,7 +218,7 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
     pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
-void MemoryCache::forEachResource(const WTF::Function<void(CachedResource&)>& function)
+void MemoryCache::forEachResource(const Function<void(CachedResource&)>& function)
 {
     for (auto& unprotectedLRUList : m_allResources) {
         for (auto& resource : copyToVector(*unprotectedLRUList))
@@ -226,7 +226,7 @@ void MemoryCache::forEachResource(const WTF::Function<void(CachedResource&)>& fu
     }
 }
 
-void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const WTF::Function<void (CachedResource&)>& function)
+void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const Function<void(CachedResource&)>& function)
 {
     auto it = m_sessionResources.find(sessionID);
     if (it == m_sessionResources.end())
@@ -254,7 +254,7 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
 
     LOG(ResourceLoading, "MemoryCache::pruneLiveResourcesToSize(%d, shouldDestroyDecodedDataForAllLiveResources = %d)", targetSize, shouldDestroyDecodedDataForAllLiveResources);
 
-    SetForScope<bool> reentrancyProtector(m_inPruneResources, true);
+    SetForScope reentrancyProtector(m_inPruneResources, true);
 
     MonotonicTime currentTime = FrameView::currentPaintTimeStamp();
     if (!currentTime) // In case prune is called directly, outside of a Frame paint.
@@ -320,7 +320,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
 
     LOG(ResourceLoading, "MemoryCache::pruneDeadResourcesToSize(%d)", targetSize);
 
-    SetForScope<bool> reentrancyProtector(m_inPruneResources, true);
+    SetForScope reentrancyProtector(m_inPruneResources, true);
 
     if (targetSize && m_deadSize <= targetSize)
         return;
@@ -391,7 +391,7 @@ void MemoryCache::setCapacities(unsigned minDeadBytes, unsigned maxDeadBytes, un
 
 void MemoryCache::remove(CachedResource& resource)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     LOG(ResourceLoading, "Evicting resource %p for '%.255s' from cache", &resource, resource.url().string().latin1().data());
     // The resource may have already been removed by someone other than our caller,
     // who needed a fresh copy for a reload. See <http://bugs.webkit.org/show_bug.cgi?id=12479#c6>.
@@ -558,7 +558,7 @@ HashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID ses
             auto& resource = *keyValue.value;
             auto& partitionName = keyValue.key.second;
             if (!partitionName.isEmpty())
-                origins.add(SecurityOrigin::create("http", partitionName, 0));
+                origins.add(SecurityOrigin::create("http"_s, partitionName, 0));
             else
                 origins.add(SecurityOrigin::create(resource.url()));
         }

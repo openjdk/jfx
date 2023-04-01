@@ -236,7 +236,7 @@ gst_video_overlay_composition_meta_transform (GstBuffer * dest, GstMeta * meta,
 GType
 gst_video_overlay_composition_meta_api_get_type (void)
 {
-  static volatile GType type = 0;
+  static GType type = 0;
   static const gchar *tags[] = { NULL };
 
   if (g_once_init_enter (&type)) {
@@ -327,11 +327,13 @@ gst_video_overlay_composition_free (GstMiniObject * mini_obj)
 
 /**
  * gst_video_overlay_composition_new:
- * @rectangle: (transfer none): a #GstVideoOverlayRectangle to add to the
+ * @rectangle: (transfer none) (nullable): a #GstVideoOverlayRectangle to add to the
  *     composition
  *
  * Creates a new video overlay composition object to hold one or more
  * overlay rectangles.
+ *
+ * Note that since 1.20 this allows to pass %NULL for @rectangle.
  *
  * Returns: (transfer full): a new #GstVideoOverlayComposition. Unref with
  *     gst_video_overlay_composition_unref() when no longer needed.
@@ -341,11 +343,8 @@ gst_video_overlay_composition_new (GstVideoOverlayRectangle * rectangle)
 {
   GstVideoOverlayComposition *comp;
 
-
-  /* FIXME: should we allow empty compositions? Could also be expressed as
-   * buffer without a composition on it. Maybe there are cases where doing
-   * an empty new + _add() in a loop is easier? */
-  g_return_val_if_fail (GST_IS_VIDEO_OVERLAY_RECTANGLE (rectangle), NULL);
+  g_return_val_if_fail (GST_IS_VIDEO_OVERLAY_RECTANGLE (rectangle)
+      || rectangle == NULL, NULL);
 
   comp = g_slice_new0 (GstVideoOverlayComposition);
 
@@ -355,18 +354,17 @@ gst_video_overlay_composition_new (GstVideoOverlayRectangle * rectangle)
       NULL, (GstMiniObjectFreeFunction) gst_video_overlay_composition_free);
 
   comp->rectangles = g_new0 (GstVideoOverlayRectangle *, RECTANGLE_ARRAY_STEP);
-  comp->rectangles[0] = gst_video_overlay_rectangle_ref (rectangle);
-  gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (rectangle),
-      GST_MINI_OBJECT_CAST (comp));
-  comp->num_rectangles = 1;
 
   comp->seq_num = gst_video_overlay_get_seqnum ();
+  comp->min_seq_num_used = comp->seq_num;
 
-  /* since the rectangle was created earlier, its seqnum is smaller than ours */
-  comp->min_seq_num_used = rectangle->seq_num;
+  GST_LOG ("new composition %p: seq_num %u", comp, comp->seq_num);
 
-  GST_LOG ("new composition %p: seq_num %u with rectangle %p", comp,
-      comp->seq_num, rectangle);
+  if (rectangle) {
+    /* since the rectangle was created earlier, its seqnum is smaller than ours */
+    comp->min_seq_num_used = rectangle->seq_num;
+    gst_video_overlay_composition_add_rectangle (comp, rectangle);
+  }
 
   return comp;
 }
@@ -1078,8 +1076,9 @@ gst_video_overlay_rectangle_apply_global_alpha (GstVideoOverlayRectangle * rect,
 }
 
 static void
-gst_video_overlay_rectangle_convert (GstVideoInfo * src, GstBuffer * src_buffer,
-    GstVideoFormat dest_format, GstVideoInfo * dest, GstBuffer ** dest_buffer)
+gst_video_overlay_rectangle_convert (const GstVideoInfo * src,
+    GstBuffer * src_buffer, GstVideoFormat dest_format, GstVideoInfo * dest,
+    GstBuffer ** dest_buffer)
 {
   gint width, height, stride;
   GstVideoFrame src_frame, dest_frame;

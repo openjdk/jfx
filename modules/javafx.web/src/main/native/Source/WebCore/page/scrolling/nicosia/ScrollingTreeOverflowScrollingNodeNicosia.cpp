@@ -47,19 +47,6 @@ ScrollingTreeOverflowScrollingNodeNicosia::ScrollingTreeOverflowScrollingNodeNic
 
 ScrollingTreeOverflowScrollingNodeNicosia::~ScrollingTreeOverflowScrollingNodeNicosia() = default;
 
-void ScrollingTreeOverflowScrollingNodeNicosia::commitStateAfterChildren(const ScrollingStateNode& stateNode)
-{
-    ScrollingTreeOverflowScrollingNode::commitStateAfterChildren(stateNode);
-
-    const auto& overflowStateNode = downcast<ScrollingStateOverflowScrollingNode>(stateNode);
-    if (overflowStateNode.hasChangedProperty(ScrollingStateNode::Property::RequestedScrollPosition)) {
-        stopScrollAnimations();
-        const auto& requestedScrollData = overflowStateNode.requestedScrollData();
-        scrollTo(requestedScrollData.scrollPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
-        m_delegate.resetCurrentPosition();
-    }
-}
-
 FloatPoint ScrollingTreeOverflowScrollingNodeNicosia::adjustedScrollPosition(const FloatPoint& position, ScrollClamping clamping) const
 {
     FloatPoint scrollPosition(roundf(position.x()), roundf(position.y()));
@@ -89,9 +76,23 @@ WheelEventHandlingResult ScrollingTreeOverflowScrollingNodeNicosia::handleWheelE
     return m_delegate.handleWheelEvent(wheelEvent, eventTargeting);
 }
 
-void ScrollingTreeOverflowScrollingNodeNicosia::stopScrollAnimations()
+bool ScrollingTreeOverflowScrollingNodeNicosia::startAnimatedScrollToPosition(FloatPoint destinationPosition)
 {
-    m_delegate.stopScrollAnimations();
+    bool started = m_delegate.startAnimatedScrollToPosition(destinationPosition);
+    if (started)
+        willStartAnimatedScroll();
+
+    return started;
+}
+
+void ScrollingTreeOverflowScrollingNodeNicosia::stopAnimatedScroll()
+{
+    m_delegate.stopAnimatedScroll();
+}
+
+void ScrollingTreeOverflowScrollingNodeNicosia::serviceScrollAnimation(MonotonicTime currentTime)
+{
+    m_delegate.serviceScrollAnimation(currentTime);
 }
 
 } // namespace WebCore

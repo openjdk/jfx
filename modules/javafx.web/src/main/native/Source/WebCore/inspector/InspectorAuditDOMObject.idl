@@ -24,9 +24,10 @@
  */
 
 [
-    ImplementationLacksVTable,
     JSGenerateToJSObject,
     LegacyNoInterfaceObject,
 ] interface InspectorAuditDOMObject {
     boolean hasEventListeners(Node node, optional DOMString type);
+
+    [CallWith=CurrentDocument] undefined simulateUserInteraction(VoidCallback callback);
 };

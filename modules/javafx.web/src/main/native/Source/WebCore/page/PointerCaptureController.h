@@ -110,14 +110,21 @@ private:
     void pointerEventWasDispatched(const PointerEvent&);
 
     void updateHaveAnyCapturingElement();
+    void elementWasRemovedSlow(Element&);
 
     Page& m_page;
     // While PointerID is defined as int32_t, we use int64_t here so that we may use a value outside of the int32_t range to have safe
     // empty and removed values, allowing any int32_t to be provided through the API for lookup in this hashmap.
-    using PointerIdToCapturingDataMap = HashMap<int64_t, Ref<CapturingData>, WTF::IntHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>>;
+    using PointerIdToCapturingDataMap = HashMap<int64_t, Ref<CapturingData>, IntHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>>;
     PointerIdToCapturingDataMap m_activePointerIdsToCapturingData;
     bool m_processingPendingPointerCapture { false };
     bool m_haveAnyCapturingElement { false };
 };
+
+inline void PointerCaptureController::elementWasRemoved(Element& element)
+{
+    if (m_haveAnyCapturingElement)
+        elementWasRemovedSlow(element);
+}
 
 } // namespace WebCore

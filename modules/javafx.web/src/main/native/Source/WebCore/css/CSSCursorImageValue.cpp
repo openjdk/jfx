@@ -25,6 +25,7 @@
 #include "CSSImageSetValue.h"
 #include "CSSImageValue.h"
 #include "SVGCursorElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGLengthContext.h"
 #include "SVGURIReference.h"
 #include "StyleBuilderState.h"
@@ -39,7 +40,7 @@ CSSCursorImageValue::CSSCursorImageValue(Ref<CSSValue>&& imageValue, const std::
     , m_hotSpot(hotSpot)
     , m_loadedFromOpaqueSource(loadedFromOpaqueSource)
 {
-    if (is<CSSImageValue>(m_imageValue.get()))
+    if (is<CSSImageValue>(m_imageValue))
         m_originalURL = downcast<CSSImageValue>(m_imageValue.get()).imageURL();
 }
 
@@ -50,8 +51,8 @@ Ref<CSSCursorImageValue> CSSCursorImageValue::create(Ref<CSSValue>&& imageValue,
 
 CSSCursorImageValue::~CSSCursorImageValue()
 {
-    for (auto* element : m_cursorElements)
-        element->removeClient(*this);
+    for (auto& element : m_cursorElements)
+        element.removeClient(*this);
 }
 
 String CSSCursorImageValue::customCSSText() const
@@ -71,7 +72,7 @@ SVGCursorElement* CSSCursorImageValue::updateCursorElement(const Document& docum
 
     // FIXME: Not right to keep old cursor elements as clients. The new one should replace the old, not join it in a set.
     auto& cursorElement = downcast<SVGCursorElement>(*element);
-    if (m_cursorElements.add(&cursorElement).isNewEntry) {
+    if (m_cursorElements.add(cursorElement).isNewEntry) {
         cursorElementChanged(cursorElement);
         cursorElement.addClient(*this);
     }
@@ -81,7 +82,7 @@ SVGCursorElement* CSSCursorImageValue::updateCursorElement(const Document& docum
 void CSSCursorImageValue::cursorElementRemoved(SVGCursorElement& cursorElement)
 {
     // FIXME: Not right to stay a client of a cursor element until the element is destroyed. We'd want to stop being a client once it's no longer a valid target, like when it's disconnected.
-    m_cursorElements.remove(&cursorElement);
+    m_cursorElements.remove(cursorElement);
 }
 
 void CSSCursorImageValue::cursorElementChanged(SVGCursorElement& cursorElement)
@@ -100,7 +101,7 @@ void CSSCursorImageValue::cursorElementChanged(SVGCursorElement& cursorElement)
 
 ImageWithScale CSSCursorImageValue::selectBestFitImage(const Document& document)
 {
-    if (is<CSSImageSetValue>(m_imageValue.get()))
+    if (is<CSSImageSetValue>(m_imageValue))
         return downcast<CSSImageSetValue>(m_imageValue.get()).selectBestFitImage(document);
 
     if (auto* cursorElement = updateCursorElement(document)) {

@@ -33,26 +33,25 @@
 #include "SerializedScriptValue.h"
 #include "ServiceWorker.h"
 #include "WindowProxy.h"
-#include <wtf/Variant.h>
+#include <variant>
 
 namespace WebCore {
 
 class Blob;
 
 #if ENABLE(SERVICE_WORKER)
-using MessageEventSource = Variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
+using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
 #else
-using MessageEventSource = Variant<RefPtr<WindowProxy>, RefPtr<MessagePort>>;
+using MessageEventSource = std::variant<RefPtr<WindowProxy>, RefPtr<MessagePort>>;
 #endif
 
 class MessageEvent final : public Event {
     WTF_MAKE_ISO_ALLOCATED(MessageEvent);
 public:
-    static Ref<MessageEvent> create(Vector<RefPtr<MessagePort>>&&, Ref<SerializedScriptValue>&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& source = std::nullopt);
-    static Ref<MessageEvent> create(const AtomString& type, Ref<SerializedScriptValue>&&, const String& origin, const String& lastEventId);
-    static Ref<MessageEvent> create(const String& data, const String& origin = { });
-    static Ref<MessageEvent> create(Ref<Blob>&& data, const String& origin);
-    static Ref<MessageEvent> create(Ref<ArrayBuffer>&& data, const String& origin = { });
+    struct JSValueTag { };
+    using DataType = std::variant<JSValueTag, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
+    static Ref<MessageEvent> create(const AtomString& type, DataType&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<RefPtr<MessagePort>>&& = { });
+    static Ref<MessageEvent> create(DataType&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<RefPtr<MessagePort>>&& = { });
     static Ref<MessageEvent> createForBindings();
 
     struct Init : EventInit {
@@ -73,9 +72,9 @@ public:
     const std::optional<MessageEventSource>& source() const { return m_source; }
     const Vector<RefPtr<MessagePort>>& ports() const { return m_ports; }
 
-    using DataType = Variant<JSValueInWrappedObject, Ref<SerializedScriptValue>, String, Ref<Blob>, Ref<ArrayBuffer>>;
     const DataType& data() const { return m_data; }
 
+    JSValueInWrappedObject& jsData() { return m_jsData; }
     JSValueInWrappedObject& cachedData() { return m_cachedData; }
     JSValueInWrappedObject& cachedPorts() { return m_cachedPorts; }
 
@@ -84,8 +83,7 @@ public:
 private:
     MessageEvent();
     MessageEvent(const AtomString& type, Init&&, IsTrusted);
-    MessageEvent(const AtomString& type, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId);
-    MessageEvent(DataType&&, const String& origin, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<RefPtr<MessagePort>>&& = { });
+    MessageEvent(const AtomString& type, DataType&&, const String& origin, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<RefPtr<MessagePort>>&& = { });
 
     EventInterface eventInterface() const final;
 
@@ -95,8 +93,11 @@ private:
     std::optional<MessageEventSource> m_source;
     Vector<RefPtr<MessagePort>> m_ports;
 
+    JSValueInWrappedObject m_jsData;
     JSValueInWrappedObject m_cachedData;
     JSValueInWrappedObject m_cachedPorts;
+
+    mutable Lock m_concurrentDataAccessLock;
 };
 
 } // namespace WebCore

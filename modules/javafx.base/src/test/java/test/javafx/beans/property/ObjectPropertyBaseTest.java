@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public class ObjectPropertyBaseTest {
     public void setUp() throws Exception {
         property = new ObjectPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<Object>(UNDEFINED);
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListener() {
@@ -75,12 +75,12 @@ public class ObjectPropertyBaseTest {
 
     @Test
     public void testConstructor() {
-        final ObjectProperty<Object> p1 = new SimpleObjectProperty<Object>();
+        final ObjectProperty<Object> p1 = new SimpleObjectProperty<>();
         assertEquals(null, p1.get());
         assertEquals(null, p1.getValue());
         assertFalse(property.isBound());
 
-        final ObjectProperty<Object> p2 = new SimpleObjectProperty<Object>(VALUE_1b);
+        final ObjectProperty<Object> p2 = new SimpleObjectProperty<>(VALUE_1b);
         assertEquals(VALUE_1b, p2.get());
         assertEquals(VALUE_1b, p2.getValue());
         assertFalse(property.isBound());
@@ -206,7 +206,7 @@ public class ObjectPropertyBaseTest {
 
     @Test(expected=RuntimeException.class)
     public void testSetBoundValue() {
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(VALUE_1a);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1a);
         property.bind(v);
         property.set(VALUE_1a);
     }
@@ -214,7 +214,7 @@ public class ObjectPropertyBaseTest {
     @Test
     public void testLazyBind() {
         attachInvalidationListener();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1a);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1a);
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -246,7 +246,7 @@ public class ObjectPropertyBaseTest {
     @Test
     public void testEagerBind() {
         attachChangeListener();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1a);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1a);
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -283,8 +283,8 @@ public class ObjectPropertyBaseTest {
     @Test
     public void testRebind() {
         attachInvalidationListener();
-        final ObjectProperty<Object> v1 = new SimpleObjectProperty<Object>(VALUE_1a);
-        final ObjectProperty<Object> v2 = new SimpleObjectProperty<Object>(VALUE_2a);
+        final ObjectProperty<Object> v1 = new SimpleObjectProperty<>(VALUE_1a);
+        final ObjectProperty<Object> v2 = new SimpleObjectProperty<>(VALUE_2a);
         property.bind(v1);
         property.get();
         property.reset();
@@ -323,7 +323,7 @@ public class ObjectPropertyBaseTest {
     @Test
     public void testUnbind() {
         attachInvalidationListener();
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(VALUE_1a);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1a);
         property.bind(v);
         property.unbind();
         assertEquals(VALUE_1a, property.get());
@@ -347,7 +347,7 @@ public class ObjectPropertyBaseTest {
 
     @Test
     public void testAddingListenerWillAlwaysReceiveInvalidationEvent() {
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(VALUE_1a);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1a);
         final InvalidationListenerMock listener2 = new InvalidationListenerMock();
         final InvalidationListenerMock listener3 = new InvalidationListenerMock();
 
@@ -372,7 +372,7 @@ public class ObjectPropertyBaseTest {
     public void testToString() {
         final Object value1 = new Object();
         final Object value2 = new Object();
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(value2);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(value2);
 
         property.set(value1);
         assertEquals("ObjectProperty [value: " + value1 + "]", property.toString());

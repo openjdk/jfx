@@ -45,6 +45,7 @@ struct MarkedText {
         TextMatch,
         DictationAlternatives,
         Highlight,
+        FragmentHighlight,
 #if ENABLE(APP_HIGHLIGHTS)
         AppHighlight,
 #endif
@@ -71,7 +72,7 @@ struct MarkedText {
     unsigned endOffset;
     Type type;
     const RenderedDocumentMarker* marker { nullptr };
-    String highlightName { };
+    AtomString highlightName { };
 
     bool isEmpty() const { return endOffset <= startOffset; }
     bool operator!=(const MarkedText& other) const { return !(*this == other); }
@@ -82,9 +83,9 @@ struct MarkedText {
 
     WEBCORE_EXPORT static Vector<MarkedText> subdivide(const Vector<MarkedText>&, OverlapStrategy = OverlapStrategy::None);
 
-    static Vector<MarkedText> collectForDocumentMarkers(RenderText&, const TextBoxSelectableRange&, PaintPhase);
-    static Vector<MarkedText> collectForHighlights(RenderText&, RenderBoxModelObject& parentRenderer, const TextBoxSelectableRange&, PaintPhase);
-    static Vector<MarkedText> collectForDraggedContent(RenderText&, const TextBoxSelectableRange&);
+    static Vector<MarkedText> collectForDocumentMarkers(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
+    static Vector<MarkedText> collectForHighlights(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
+    static Vector<MarkedText> collectForDraggedContent(const RenderText&, const TextBoxSelectableRange&);
 };
 
 }

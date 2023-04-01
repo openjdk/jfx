@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013-2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,19 +41,18 @@ public:
     }
 
     JavaScriptCallFrame* caller();
-    intptr_t sourceID() const { return m_debuggerCallFrame->sourceID(); }
+    JSC::SourceID sourceID() const { return m_debuggerCallFrame->sourceID(); }
     const TextPosition position() const { return m_debuggerCallFrame->position(); }
     int line() const { return m_debuggerCallFrame->line(); }
     int column() const { return m_debuggerCallFrame->column(); }
 
-    String functionName() const { return m_debuggerCallFrame->functionName(); }
-    JSC::DebuggerCallFrame::Type type() const { return m_debuggerCallFrame->type(); }
-    JSC::DebuggerScope* scopeChain() const { return m_debuggerCallFrame->scope(); }
-    JSC::JSGlobalObject* deprecatedVMEntryGlobalObject() const { return m_debuggerCallFrame->deprecatedVMEntryGlobalObject(); }
+    String functionName(JSC::VM& vm) const { return m_debuggerCallFrame->functionName(vm); }
+    JSC::DebuggerCallFrame::Type type(JSC::VM& vm) const { return m_debuggerCallFrame->type(vm); }
+    JSC::DebuggerScope* scopeChain(JSC::VM& vm) const { return m_debuggerCallFrame->scope(vm); }
     bool isTailDeleted() const { return m_debuggerCallFrame->isTailDeleted(); }
 
     JSC::JSValue thisValue(JSC::VM& vm) const { return m_debuggerCallFrame->thisValue(vm); }
-    JSC::JSValue evaluateWithScopeExtension(const String& script, JSC::JSObject* scopeExtension, NakedPtr<JSC::Exception>& exception) const { return m_debuggerCallFrame->evaluateWithScopeExtension(script, scopeExtension, exception); }
+    JSC::JSValue evaluateWithScopeExtension(JSC::VM& vm, const String& script, JSC::JSObject* scopeExtension, NakedPtr<JSC::Exception>& exception) const { return m_debuggerCallFrame->evaluateWithScopeExtension(vm, script, scopeExtension, exception); }
 
 private:
     JavaScriptCallFrame(Ref<JSC::DebuggerCallFrame>&&);

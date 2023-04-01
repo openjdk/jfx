@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,7 +157,7 @@ void writeImageToDataObject(RefPtr<DataObjectJava> dataObject, const Element& el
     if (!cachedImage || !cachedImage->image() || !cachedImage->isLoaded()) {
         return;
     }
-    SharedBuffer* imageBuffer = cachedImage->image()->data();
+    FragmentedSharedBuffer* imageBuffer = cachedImage->image()->data();
     if (!imageBuffer || !imageBuffer->size()) {
         return;
     }
@@ -187,13 +187,13 @@ String imageToMarkup(const String& url, const Element& element)
     unsigned length = attrs->length();
     for (unsigned i = 0; i < length; ++i) {
         RefPtr<Attr> attr(static_cast<Attr*>(attrs->item(i).get()));
-        if (attr->name() == "src")
+        if (attr->name() == "src"_s)
             continue;
         markup.append(" ");
         markup.append(attr->name());
         markup.append("=\"");
         String escapedAttr = attr->value();
-        escapedAttr.replace("\"", "&quot;");
+        escapedAttr = makeStringByReplacingAll(escapedAttr,"\""_s, "&quot;"_s);
         markup.append(escapedAttr);
         markup.append("\"");
     }
@@ -263,7 +263,7 @@ void Pasteboard::writeSelection(
     Frame& frame,
     ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
-    String markup = serializePreservingVisualAppearance(selectedRange, nullptr, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingLocalFileURLsForPrivacy);
+    String markup = serializePreservingVisualAppearance(selectedRange, nullptr, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingURLsForPrivacy);
     String plainText = shouldSerializeSelectedTextForDataTransfer == IncludeImageAltTextForDataTransfer
         ? frame.editor().selectedTextForDataTransfer()
         : frame.editor().selectedText();
@@ -514,6 +514,10 @@ void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std:
 }
 
 void Pasteboard::write(const PasteboardImage&)
+{
+}
+
+void Pasteboard::write(const PasteboardBuffer&)
 {
 }
 

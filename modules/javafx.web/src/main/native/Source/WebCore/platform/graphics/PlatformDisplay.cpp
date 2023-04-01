@@ -80,8 +80,12 @@
 #include <wtf/NeverDestroyed.h>
 #endif
 
-#if USE(LCMS)
-#include <lcms2.h>
+#if USE(ATSPI)
+#include <wtf/glib/GUniquePtr.h>
+#endif
+
+#if USE(GLIB)
+#include <wtf/glib/GRefPtr.h>
 #endif
 
 namespace WebCore {
@@ -93,11 +97,12 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
         GdkDisplay* display = gdk_display_manager_get_default_display(gdk_display_manager_get());
 #if PLATFORM(X11)
         if (GDK_IS_X11_DISPLAY(display))
-            return PlatformDisplayX11::create(GDK_DISPLAY_XDISPLAY(display));
+            return PlatformDisplayX11::create(display);
 #endif
+
 #if PLATFORM(WAYLAND)
         if (GDK_IS_WAYLAND_DISPLAY(display))
-            return PlatformDisplayWayland::create(gdk_wayland_display_get_wl_display(display));
+            return PlatformDisplayWayland::create(display);
 #endif
     }
 #endif // PLATFORM(GTK)
@@ -158,25 +163,52 @@ void PlatformDisplay::setSharedDisplayForCompositing(PlatformDisplay& display)
     s_sharedDisplayForCompositing = &display;
 }
 
-PlatformDisplay::PlatformDisplay(NativeDisplayOwned displayOwned)
-    : m_nativeDisplayOwned(displayOwned)
+PlatformDisplay::PlatformDisplay()
+#if USE(EGL)
+    : m_eglDisplay(EGL_NO_DISPLAY)
+#endif
+{
+}
+
+#if PLATFORM(GTK)
+PlatformDisplay::PlatformDisplay(GdkDisplay* display)
+    : m_sharedDisplay(display)
 #if USE(EGL)
     , m_eglDisplay(EGL_NO_DISPLAY)
 #endif
 {
+    if (m_sharedDisplay) {
+#if USE(ATSPI) && USE(GTK4)
+        if (const char* atspiBusAddress = static_cast<const char*>(g_object_get_data(G_OBJECT(m_sharedDisplay.get()), "-gtk-atspi-bus-address")))
+            m_accessibilityBusAddress = String::fromUTF8(atspiBusAddress);
+#endif
+
+        g_signal_connect(m_sharedDisplay.get(), "closed", G_CALLBACK(+[](GdkDisplay*, gboolean, gpointer userData) {
+            auto& platformDisplay = *static_cast<PlatformDisplay*>(userData);
+            platformDisplay.sharedDisplayDidClose();
+        }), this);
+    }
 }
+
+void PlatformDisplay::sharedDisplayDidClose()
+{
+#if USE(EGL) || USE(GLX)
+    clearSharingGLContext();
+#endif
+}
+#endif
 
 PlatformDisplay::~PlatformDisplay()
 {
 #if USE(EGL) && !PLATFORM(WIN)
     ASSERT(m_eglDisplay == EGL_NO_DISPLAY);
 #endif
+#if PLATFORM(GTK)
+    if (m_sharedDisplay)
+        g_signal_handlers_disconnect_by_data(m_sharedDisplay.get(), this);
+#endif
     if (s_sharedDisplayForCompositing == this)
         s_sharedDisplayForCompositing = nullptr;
-#if USE(LCMS)
-    if (m_iccProfile)
-        cmsCloseProfile(m_iccProfile);
-#endif
 }
 
 #if USE(EGL) || USE(GLX)
@@ -185,6 +217,11 @@ GLContext* PlatformDisplay::sharingGLContext()
     if (!m_sharingGLContext)
         m_sharingGLContext = GLContext::createSharingContext(*this);
     return m_sharingGLContext.get();
+}
+
+void PlatformDisplay::clearSharingGLContext()
+{
+    m_sharingGLContext = nullptr;
 }
 #endif
 
@@ -232,6 +269,22 @@ void PlatformDisplay::initializeEGLDisplay()
     m_eglMajorVersion = majorVersion;
     m_eglMinorVersion = minorVersion;
 
+    {
+        const char* extensionsString = eglQueryString(m_eglDisplay, EGL_EXTENSIONS);
+        auto displayExtensions = StringView::fromLatin1(extensionsString).split(' ');
+        auto findExtension =
+            [&](auto extensionName) {
+                return std::any_of(displayExtensions.begin(), displayExtensions.end(),
+                    [&](auto extensionEntry) {
+                        return extensionEntry == extensionName;
+                    });
+            };
+
+        m_eglExtensions.KHR_image_base = findExtension("EGL_KHR_image_base"_s);
+        m_eglExtensions.EXT_image_dma_buf_import = findExtension("EGL_EXT_image_dma_buf_import"_s);
+        m_eglExtensions.EXT_image_dma_buf_import_modifiers = findExtension("EGL_EXT_image_dma_buf_import_modifiers"_s);
+    }
+
     eglDisplays().add(this);
 
 #if !PLATFORM(WIN)
@@ -262,10 +315,11 @@ void PlatformDisplay::terminateEGLDisplay()
     m_gstGLDisplay = nullptr;
     m_gstGLContext = nullptr;
 #endif
-    m_sharingGLContext = nullptr;
+    clearSharingGLContext();
     ASSERT(m_eglDisplayInitialized);
     if (m_eglDisplay == EGL_NO_DISPLAY)
         return;
+    eglMakeCurrent(m_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglTerminate(m_eglDisplay);
     m_eglDisplay = EGL_NO_DISPLAY;
 }
@@ -276,8 +330,52 @@ void PlatformDisplay::terminateEGLDisplay()
 cmsHPROFILE PlatformDisplay::colorProfile() const
 {
     if (!m_iccProfile)
-        m_iccProfile = cmsCreate_sRGBProfile();
-    return m_iccProfile;
+        m_iccProfile = LCMSProfilePtr(cmsCreate_sRGBProfile());
+    return m_iccProfile.get();
+}
+#endif
+
+#if USE(ATSPI)
+const String& PlatformDisplay::accessibilityBusAddress() const
+{
+    if (m_accessibilityBusAddress)
+        return m_accessibilityBusAddress.value();
+
+    const char* address = g_getenv("AT_SPI_BUS_ADDRESS");
+    if (address && *address) {
+        m_accessibilityBusAddress = String::fromUTF8(address);
+        return m_accessibilityBusAddress.value();
+    }
+
+    auto platformAddress = plartformAccessibilityBusAddress();
+    if (!platformAddress.isEmpty()) {
+        m_accessibilityBusAddress = platformAddress;
+        return m_accessibilityBusAddress.value();
+    }
+
+    GRefPtr<GDBusConnection> sessionBus = adoptGRef(g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr));
+    if (sessionBus.get()) {
+        GRefPtr<GDBusMessage> message = adoptGRef(g_dbus_message_new_method_call("org.a11y.Bus", "/org/a11y/bus", "org.a11y.Bus", "GetAddress"));
+        g_dbus_message_set_body(message.get(), g_variant_new("()"));
+        GRefPtr<GDBusMessage> reply = adoptGRef(g_dbus_connection_send_message_with_reply_sync(sessionBus.get(), message.get(),
+            G_DBUS_SEND_MESSAGE_FLAGS_NONE, 30000, nullptr, nullptr, nullptr));
+        if (reply) {
+            GUniqueOutPtr<GError> error;
+            if (g_dbus_message_to_gerror(reply.get(), &error.outPtr())) {
+                if (!g_error_matches(error.get(), G_DBUS_ERROR, G_DBUS_ERROR_SERVICE_UNKNOWN))
+                    WTFLogAlways("Can't find a11y bus: %s", error->message);
+            } else {
+                GUniqueOutPtr<char> a11yAddress;
+                g_variant_get(g_dbus_message_get_body(reply.get()), "(s)", &a11yAddress.outPtr());
+                m_accessibilityBusAddress = String::fromUTF8(a11yAddress.get());
+                return m_accessibilityBusAddress.value();
+            }
+        }
+    }
+
+    WTFLogAlways("Could not determine the accessibility bus address");
+    m_accessibilityBusAddress = String();
+    return m_accessibilityBusAddress.value();
 }
 #endif
 

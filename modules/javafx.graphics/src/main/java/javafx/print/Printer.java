@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public final class Printer {
     /**
      * Retrieve the installed printers.
      * The set of printers may be dynamic.
-     * Consequently there is no guarantee that the result will be
+     * Consequently, there is no guarantee that the result will be
      * the same from call to call, but should change only as
      * a result of the default changing in the environment of the
      * application.
@@ -86,10 +86,12 @@ public final class Printer {
         if (security != null) {
             security.checkPrintJobAccess();
         }
+        Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
         if (defaultPrinter == null) {
-            Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
             defaultPrinter =
-                new ReadOnlyObjectWrapper<Printer>(null, "defaultPrinter", p);
+                new ReadOnlyObjectWrapper<>(null, "defaultPrinter", p);
+        } else {
+            defaultPrinter.setValue(p);
         }
         return defaultPrinter;
     }
@@ -210,7 +212,7 @@ public final class Printer {
          */
         EQUAL_OPPOSITES,
 
-    };
+    }
 
     private PageLayout defPageLayout;
     /**
@@ -270,15 +272,15 @@ public final class Printer {
             pbm = (pbm <= 0.75) ? 0.75 : pbm;
             break;
         case EQUAL: {
-            double maxH = (double)Math.max(plm, prm);
-            double maxV = (double)Math.max(ptm, pbm);
-            double maxM = (double)Math.max(maxH, maxV);
+            double maxH = Math.max(plm, prm);
+            double maxV = Math.max(ptm, pbm);
+            double maxM = Math.max(maxH, maxV);
             plm = prm = ptm = pbm = maxM;
             break;
         }
         case EQUAL_OPPOSITES: {
-            double maxH = (double)Math.max(plm, prm);
-            double maxV = (double)Math.max(ptm, pbm);
+            double maxH = Math.max(plm, prm);
+            double maxV = Math.max(ptm, pbm);
             plm = prm = maxH;
             ptm = pbm = maxV;
             break;

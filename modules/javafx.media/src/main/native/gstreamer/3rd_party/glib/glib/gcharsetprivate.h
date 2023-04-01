@@ -25,6 +25,10 @@ G_BEGIN_DECLS
 
 const char ** _g_charset_get_aliases (const char *canonical_name);
 
+gboolean      _g_get_time_charset    (const char **charset);
+
+gboolean      _g_get_ctype_charset   (const char **charset);
+
 G_END_DECLS
 
 #endif

@@ -41,29 +41,29 @@ namespace WebCore {
 // These response headers are not copied from a revalidated response to the
 // cached response headers. For compatibility, this list is based on Chromium's
 // net/http/http_response_headers.cc.
-static const char* const headersToIgnoreAfterRevalidation[] = {
-    "allow",
-    "connection",
-    "etag",
-    "keep-alive",
-    "last-modified",
-    "proxy-authenticate",
-    "proxy-connection",
-    "trailer",
-    "transfer-encoding",
-    "upgrade",
-    "www-authenticate",
-    "x-frame-options",
-    "x-xss-protection",
+static constexpr ASCIILiteral headersToIgnoreAfterRevalidation[] = {
+    "allow"_s,
+    "connection"_s,
+    "etag"_s,
+    "keep-alive"_s,
+    "last-modified"_s,
+    "proxy-authenticate"_s,
+    "proxy-connection"_s,
+    "trailer"_s,
+    "transfer-encoding"_s,
+    "upgrade"_s,
+    "www-authenticate"_s,
+    "x-frame-options"_s,
+    "x-xss-protection"_s,
 };
 
 // Some header prefixes mean "Don't copy this header from a 304 response.".
 // Rather than listing all the relevant headers, we can consolidate them into
 // this list, also grabbed from Chromium's net/http/http_response_headers.cc.
-static const char* const headerPrefixesToIgnoreAfterRevalidation[] = {
-    "content-",
-    "x-content-",
-    "x-webkit-"
+static constexpr ASCIILiteral headerPrefixesToIgnoreAfterRevalidation[] = {
+    "content-"_s,
+    "x-content-"_s,
+    "x-webkit-"_s
 };
 
 static inline bool shouldUpdateHeaderAfterRevalidation(const String& header)
@@ -93,7 +93,10 @@ void updateResponseHeadersAfterRevalidation(ResourceResponse& response, const Re
         // we care about.
         if (!shouldUpdateHeaderAfterRevalidation(header.key))
             continue;
-        response.setHTTPHeaderField(header.key, header.value);
+        if (header.keyAsHTTPHeaderName)
+            response.setHTTPHeaderField(*header.keyAsHTTPHeaderName, header.value);
+        else
+            response.setUncommonHTTPHeaderField(header.key, header.value);
     }
 }
 
@@ -207,15 +210,15 @@ inline bool isControlCharacterOrSpace(UChar character)
 
 inline StringView trimToNextSeparator(StringView string)
 {
-    return string.substring(0, string.find(isCacheHeaderSeparator));
+    return string.left(string.find(isCacheHeaderSeparator));
 }
 
-static Vector<std::pair<String, String>> parseCacheHeader(const String& header)
+static Vector<std::pair<StringView, StringView>> parseCacheHeader(StringView safeHeader)
 {
-    Vector<std::pair<String, String>> result;
+    ASSERT(safeHeader.find(isControlCharacterOrSpace) == notFound);
 
-    String safeHeaderString = header.removeCharacters(isControlCharacterOrSpace);
-    StringView safeHeader = safeHeaderString;
+    Vector<std::pair<StringView, StringView>> result;
+
     unsigned max = safeHeader.length();
     unsigned pos = 0;
     while (pos < max) {
@@ -223,30 +226,30 @@ static Vector<std::pair<String, String>> parseCacheHeader(const String& header)
         size_t nextEqualSignPosition = safeHeader.find('=', pos);
         if (nextEqualSignPosition == notFound && nextCommaPosition == notFound) {
             // Add last directive to map with empty string as value
-            result.append({ trimToNextSeparator(safeHeader.substring(pos, max - pos)).toString(), emptyString() });
+            result.append({ trimToNextSeparator(safeHeader.substring(pos, max - pos)), emptyString() });
             return result;
         }
         if (nextCommaPosition != notFound && (nextCommaPosition < nextEqualSignPosition || nextEqualSignPosition == notFound)) {
             // Add directive to map with empty string as value
-            result.append({ trimToNextSeparator(safeHeader.substring(pos, nextCommaPosition - pos)).toString(), emptyString() });
+            result.append({ trimToNextSeparator(safeHeader.substring(pos, nextCommaPosition - pos)), emptyString() });
             pos += nextCommaPosition - pos + 1;
             continue;
         }
         // Get directive name, parse right hand side of equal sign, then add to map
-        String directive = trimToNextSeparator(safeHeader.substring(pos, nextEqualSignPosition - pos)).toString();
+        StringView directive = trimToNextSeparator(safeHeader.substring(pos, nextEqualSignPosition - pos));
         pos += nextEqualSignPosition - pos + 1;
 
         StringView value = safeHeader.substring(pos, max - pos);
-        if (value[0] == '"') {
+        if (value.startsWith('"')) {
             // The value is a quoted string
             size_t nextDoubleQuotePosition = value.find('"', 1);
             if (nextDoubleQuotePosition == notFound) {
                 // Parse error; just use the rest as the value
-                result.append({ directive, trimToNextSeparator(value.substring(1)).toString() });
+                result.append({ directive, trimToNextSeparator(value.substring(1)) });
                 return result;
             }
             // Store the value as a quoted string without quotes
-            result.append({ directive, value.substring(1, nextDoubleQuotePosition - 1).toString() });
+            result.append({ directive, value.substring(1, nextDoubleQuotePosition - 1) });
             pos += (safeHeader.find('"', pos) - pos) + nextDoubleQuotePosition + 1;
             // Move past next comma, if there is one
             size_t nextCommaPosition2 = safeHeader.find(',', pos);
@@ -259,11 +262,11 @@ static Vector<std::pair<String, String>> parseCacheHeader(const String& header)
         size_t nextCommaPosition2 = value.find(',');
         if (nextCommaPosition2 == notFound) {
             // The rest is the value; no change to value needed
-            result.append({ directive, trimToNextSeparator(value).toString() });
+            result.append({ directive, trimToNextSeparator(value) });
             return result;
         }
         // The value is delimited by the next comma
-        result.append({ directive, trimToNextSeparator(value.substring(0, nextCommaPosition2)).toString() });
+        result.append({ directive, trimToNextSeparator(value.left(nextCommaPosition2)) });
         pos += (safeHeader.find(',', pos) - pos) + 1;
     }
     return result;
@@ -275,29 +278,30 @@ CacheControlDirectives parseCacheControlDirectives(const HTTPHeaderMap& headers)
 
     String cacheControlValue = headers.get(HTTPHeaderName::CacheControl);
     if (!cacheControlValue.isEmpty()) {
-        auto directives = parseCacheHeader(cacheControlValue);
+        auto safeHeaderString = cacheControlValue.removeCharacters(isControlCharacterOrSpace);
+        auto directives = parseCacheHeader(safeHeaderString);
 
         size_t directivesSize = directives.size();
         for (size_t i = 0; i < directivesSize; ++i) {
             // A no-cache directive with a value is only meaningful for proxy caches.
             // It should be ignored by a browser level cache.
             // http://tools.ietf.org/html/rfc7234#section-5.2.2.2
-            if (equalLettersIgnoringASCIICase(directives[i].first, "no-cache") && directives[i].second.isEmpty())
+            if (equalLettersIgnoringASCIICase(directives[i].first, "no-cache"_s) && directives[i].second.isEmpty())
                 result.noCache = true;
-            else if (equalLettersIgnoringASCIICase(directives[i].first, "no-store"))
+            else if (equalLettersIgnoringASCIICase(directives[i].first, "no-store"_s))
                 result.noStore = true;
-            else if (equalLettersIgnoringASCIICase(directives[i].first, "must-revalidate"))
+            else if (equalLettersIgnoringASCIICase(directives[i].first, "must-revalidate"_s))
                 result.mustRevalidate = true;
-            else if (equalLettersIgnoringASCIICase(directives[i].first, "max-age")) {
+            else if (equalLettersIgnoringASCIICase(directives[i].first, "max-age"_s)) {
                 if (result.maxAge) {
                     // First max-age directive wins if there are multiple ones.
                     continue;
                 }
                 bool ok;
-                double maxAge = directives[i].second.toDouble(&ok);
+                double maxAge = directives[i].second.toDouble(ok);
                 if (ok)
                     result.maxAge = Seconds { maxAge };
-            } else if (equalLettersIgnoringASCIICase(directives[i].first, "max-stale")) {
+            } else if (equalLettersIgnoringASCIICase(directives[i].first, "max-stale"_s)) {
                 // https://tools.ietf.org/html/rfc7234#section-5.2.1.2
                 if (result.maxStale) {
                     // First max-stale directive wins if there are multiple ones.
@@ -309,18 +313,18 @@ CacheControlDirectives parseCacheControlDirectives(const HTTPHeaderMap& headers)
                     continue;
                 }
                 bool ok;
-                double maxStale = directives[i].second.toDouble(&ok);
+                double maxStale = directives[i].second.toDouble(ok);
                 if (ok)
                     result.maxStale = Seconds { maxStale };
-            } else if (equalLettersIgnoringASCIICase(directives[i].first, "immutable")) {
+            } else if (equalLettersIgnoringASCIICase(directives[i].first, "immutable"_s)) {
                 result.immutable = true;
-            } else if (equalLettersIgnoringASCIICase(directives[i].first, "stale-while-revalidate")) {
+            } else if (equalLettersIgnoringASCIICase(directives[i].first, "stale-while-revalidate"_s)) {
                 if (result.staleWhileRevalidate) {
                     // First stale-while-revalidate directive wins if there are multiple ones.
                     continue;
                 }
                 bool ok;
-                double staleWhileRevalidate = directives[i].second.toDouble(&ok);
+                double staleWhileRevalidate = directives[i].second.toDouble(ok);
                 if (ok)
                     result.staleWhileRevalidate = Seconds { staleWhileRevalidate };
             }
@@ -331,7 +335,7 @@ CacheControlDirectives parseCacheControlDirectives(const HTTPHeaderMap& headers)
         // Handle Pragma: no-cache
         // This is deprecated and equivalent to Cache-control: no-cache
         // Don't bother tokenizing the value; handling that exactly right is not important.
-        result.noCache = headers.get(HTTPHeaderName::Pragma).containsIgnoringASCIICase("no-cache");
+        result.noCache = headers.get(HTTPHeaderName::Pragma).containsIgnoringASCIICase("no-cache"_s);
     }
 
     return result;
@@ -339,7 +343,7 @@ CacheControlDirectives parseCacheControlDirectives(const HTTPHeaderMap& headers)
 
 static String cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const ResourceRequest& request)
 {
-    return session.cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https") ? IncludeSecureCookies::Yes : IncludeSecureCookies::No, ShouldAskITP::Yes, ShouldRelaxThirdPartyCookieBlocking::No).first;
+    return session.cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No, ShouldAskITP::Yes, ShouldRelaxThirdPartyCookieBlocking::No).first;
 }
 
 static String cookieRequestHeaderFieldValue(const CookieJar* cookieJar, const ResourceRequest& request)
@@ -347,10 +351,10 @@ static String cookieRequestHeaderFieldValue(const CookieJar* cookieJar, const Re
     if (!cookieJar)
         return { };
 
-    return cookieJar->cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https") ? IncludeSecureCookies::Yes : IncludeSecureCookies::No).first;
+    return cookieJar->cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No).first;
 }
 
-static String headerValueForVary(const ResourceRequest& request, const String& headerName, Function<String()>&& cookieRequestHeaderFieldValueFunction)
+static String headerValueForVary(const ResourceRequest& request, StringView headerName, Function<String()>&& cookieRequestHeaderFieldValueFunction)
 {
     // Explicit handling for cookies is needed because they are added magically by the networking layer.
     // FIXME: The value might have changed between making the request and retrieving the cookie here.
@@ -361,27 +365,25 @@ static String headerValueForVary(const ResourceRequest& request, const String& h
     return request.httpHeaderField(headerName);
 }
 
-static Vector<std::pair<String, String>> collectVaryingRequestHeadersInternal(const ResourceResponse& response, Function<String(const String& headerName)>&& headerValueForVaryFunction)
+static Vector<std::pair<String, String>> collectVaryingRequestHeadersInternal(const ResourceResponse& response, Function<String(StringView headerName)>&& headerValueForVaryFunction)
 {
-    String varyValue = response.httpHeaderField(HTTPHeaderName::Vary);
+    auto varyValue = response.httpHeaderField(HTTPHeaderName::Vary);
     if (varyValue.isEmpty())
         return { };
-    Vector<String> varyingHeaderNames = varyValue.split(',');
-    Vector<std::pair<String, String>> varyingRequestHeaders;
-    varyingRequestHeaders.reserveCapacity(varyingHeaderNames.size());
-    for (auto& varyHeaderName : varyingHeaderNames) {
-        String headerName = varyHeaderName.stripWhiteSpace();
-        String headerValue = headerValueForVaryFunction(headerName);
-        varyingRequestHeaders.append(std::make_pair(headerName, headerValue));
+
+    Vector<std::pair<String, String>> headers;
+    for (auto varyHeaderName : StringView(varyValue).split(',')) {
+        auto headerName = varyHeaderName.stripWhiteSpace();
+        headers.append(std::pair { headerName.toString(), headerValueForVaryFunction(headerName) });
     }
-    return varyingRequestHeaders;
+    return headers;
 }
 
 Vector<std::pair<String, String>> collectVaryingRequestHeaders(NetworkStorageSession* storageSession, const ResourceRequest& request, const ResourceResponse& response)
 {
     if (!storageSession)
         return { };
-    return collectVaryingRequestHeadersInternal(response, [&] (const String& headerName) {
+    return collectVaryingRequestHeadersInternal(response, [&] (StringView headerName) {
         return headerValueForVary(request, headerName, [&] {
             return cookieRequestHeaderFieldValue(*storageSession, request);
         });
@@ -390,7 +392,7 @@ Vector<std::pair<String, String>> collectVaryingRequestHeaders(NetworkStorageSes
 
 Vector<std::pair<String, String>> collectVaryingRequestHeaders(const CookieJar* cookieJar, const ResourceRequest& request, const ResourceResponse& response)
 {
-    return collectVaryingRequestHeadersInternal(response, [&] (const String& headerName) {
+    return collectVaryingRequestHeadersInternal(response, [&] (StringView headerName) {
         return headerValueForVary(request, headerName, [&] {
             return cookieRequestHeaderFieldValue(cookieJar, request);
         });
@@ -401,7 +403,7 @@ static bool verifyVaryingRequestHeadersInternal(const Vector<std::pair<String, S
 {
     for (auto& varyingRequestHeader : varyingRequestHeaders) {
         // FIXME: Vary: * in response would ideally trigger a cache delete instead of a store.
-        if (varyingRequestHeader.first == "*")
+        if (varyingRequestHeader.first == "*"_s)
             return false;
         if (headerValueForVary(varyingRequestHeader.first) != varyingRequestHeader.second)
             return false;

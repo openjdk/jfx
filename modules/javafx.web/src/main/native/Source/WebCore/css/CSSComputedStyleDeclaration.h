@@ -20,10 +20,12 @@
 
 #pragma once
 
+#include "Animation.h"
 #include "CSSStyleDeclaration.h"
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
 #include "TextFlags.h"
+#include <wtf/FixedVector.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
@@ -56,10 +58,11 @@ public:
     ComputedStyleExtractor(Node*, bool allowVisitedStyle = false, PseudoId = PseudoId::None);
     ComputedStyleExtractor(Element*, bool allowVisitedStyle = false, PseudoId = PseudoId::None);
 
-    RefPtr<CSSValue> propertyValue(CSSPropertyID, EUpdateLayout = UpdateLayout);
+    enum class PropertyValueType : bool { Resolved, Computed };
+    RefPtr<CSSValue> propertyValue(CSSPropertyID, EUpdateLayout = UpdateLayout, PropertyValueType = PropertyValueType::Resolved);
     RefPtr<CSSValue> valueForPropertyInStyle(const RenderStyle&, CSSPropertyID, RenderElement* = nullptr);
-    String customPropertyText(const String& propertyName);
-    RefPtr<CSSValue> customPropertyValue(const String& propertyName);
+    String customPropertyText(const AtomString& propertyName);
+    RefPtr<CSSValue> customPropertyValue(const AtomString& propertyName);
 
     // Helper methods for HTML editing.
     Ref<MutableStyleProperties> copyPropertiesInSet(const CSSPropertyID* set, unsigned length);
@@ -77,15 +80,10 @@ public:
     static Ref<CSSFontStyleValue> fontNonKeywordStyleFromStyleValue(FontSelectionValue);
     static Ref<CSSFontStyleValue> fontStyleFromStyleValue(std::optional<FontSelectionValue>, FontStyleAxis);
 
-private:
-    // The styled element is either the element passed into
-    // computedPropertyValue, or the PseudoElement for :before and :after if
-    // they exist.
-    Element* styledElement() const;
+    static void addValueForAnimationPropertyToList(CSSValueList&, CSSPropertyID, const Animation*);
 
+private:
     // The renderer we should use for resolving layout-dependent properties.
-    // Note that it differs from styledElement()->renderer() in the case we have
-    // no pseudo-element.
     RenderElement* styledRenderer() const;
 
     RefPtr<CSSValue> svgPropertyValue(CSSPropertyID);
@@ -96,7 +94,11 @@ private:
     Ref<CSSValueList> getCSSPropertyValuesForShorthandProperties(const StylePropertyShorthand&);
     RefPtr<CSSValueList> getCSSPropertyValuesFor2SidesShorthand(const StylePropertyShorthand&);
     RefPtr<CSSValueList> getCSSPropertyValuesFor4SidesShorthand(const StylePropertyShorthand&);
-    Ref<CSSValueList> getBackgroundShorthandValue();
+
+    size_t getLayerCount(CSSPropertyID);
+    Ref<CSSValue> getFillLayerPropertyShorthandValue(CSSPropertyID, const StylePropertyShorthand& propertiesBeforeSlashSeparator, const StylePropertyShorthand& propertiesAfterSlashSeparator, CSSPropertyID lastLayerProperty);
+    Ref<CSSValue> getBackgroundShorthandValue();
+    Ref<CSSValue> getMaskShorthandValue();
     Ref<CSSValueList> getCSSPropertyValuesForGridShorthand(const StylePropertyShorthand&);
 
     RefPtr<Element> m_element;
@@ -139,6 +141,7 @@ private:
     RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, EUpdateLayout = UpdateLayout) const;
 
     const Settings* settings() const final;
+    const FixedVector<CSSPropertyID>& exposedComputedCSSPropertyIDs() const;
 
     mutable Ref<Element> m_element;
     PseudoId m_pseudoElementSpecifier;

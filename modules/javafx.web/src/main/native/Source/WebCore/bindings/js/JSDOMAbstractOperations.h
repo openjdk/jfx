@@ -31,12 +31,12 @@
 namespace WebCore {
 
 // Implementations of the abstract operations defined at
-// https://heycam.github.io/webidl/#legacy-platform-object-abstract-ops
+// https://webidl.spec.whatwg.org/#legacy-platform-object-abstract-ops
 
 enum class LegacyOverrideBuiltIns { No, Yes };
 
 // An implementation of the 'named property visibility algorithm'
-// https://heycam.github.io/webidl/#dfn-named-property-visibility
+// https://webidl.spec.whatwg.org/#dfn-named-property-visibility
 template<LegacyOverrideBuiltIns overrideBuiltins, class JSClass>
 static bool isVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSClass& thisObject, JSC::PropertyName propertyName)
 {
@@ -70,7 +70,7 @@ static bool isVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSC
     //    1. If prototype is not a named properties object, and prototype has an own property named P, then return false.
     // FIXME: Implement checking for 'named properties object'.
     //    2. Set prototype to be the value of the internal [[Prototype]] property of prototype.
-    auto prototype = thisObject.getPrototypeDirect(JSC::getVM(&lexicalGlobalObject));
+    auto prototype = thisObject.getPrototypeDirect();
     if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&lexicalGlobalObject, propertyName, slot))
         return false;
 
@@ -143,7 +143,7 @@ static auto accessVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject,
     //    1. If prototype is not a named properties object, and prototype has an own property named P, then return false.
     // FIXME: Implement checking for 'named properties object'.
     //    2. Set prototype to be the value of the internal [[Prototype]] property of prototype.
-    auto prototype = thisObject.getPrototypeDirect(JSC::getVM(&lexicalGlobalObject));
+    auto prototype = thisObject.getPrototypeDirect();
     if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&lexicalGlobalObject, propertyName, slot))
         return std::nullopt;
 
@@ -151,7 +151,7 @@ static auto accessVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject,
     return result;
 }
 
-// This implements steps 2.2 through 2.5 of https://heycam.github.io/webidl/#legacy-platform-object-delete.
+// This implements steps 2.2 through 2.5 of https://webidl.spec.whatwg.org/#legacy-platform-object-delete.
 template<typename Functor> bool performLegacyPlatformObjectDeleteOperation(JSC::JSGlobalObject& lexicalGlobalObject, Functor&& functor)
 {
     using ReturnType = std::invoke_result_t<Functor>;

@@ -33,6 +33,7 @@
 #include "B3HeapRange.h"
 #include "B3InsertionSetInlines.h"
 #include "B3MemoryValue.h"
+#include "B3MemoryValueInlines.h"
 #include "B3PhaseScope.h"
 #include "B3ProcedureInlines.h"
 #include "B3PureCSE.h"
@@ -42,6 +43,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/ListDump.h>
 #include <wtf/RangeSet.h>
+#include <wtf/Scope.h>
 
 namespace JSC { namespace B3 {
 
@@ -144,10 +146,14 @@ struct ImpureBlockData {
 
     RangeSet<HeapRange> reads; // This only gets used for forward store elimination.
     RangeSet<HeapRange> writes; // This gets used for both load and store elimination.
-    bool fence;
+    bool fence { false };
+    bool writesPinned { false };
 
     MemoryValueMap storesAtHead;
     MemoryValueMap memoryValuesAtTail;
+
+    // This Maps x->y in "y = WasmAddress(@x)"
+    HashMap<Value*, Value*> m_candidateWasmAddressesAtTail;
 };
 
 class CSE {
@@ -188,6 +194,14 @@ public:
 
                 if (memory)
                     data.memoryValuesAtTail.add(memory);
+
+                if (WasmAddressValue* wasmAddress = value->as<WasmAddressValue>())
+                    data.m_candidateWasmAddressesAtTail.add(wasmAddress->child(0), wasmAddress);
+
+                if (effects.writesPinned) {
+                    data.writesPinned = true;
+                    data.m_candidateWasmAddressesAtTail.clear();
+                }
             }
 
             if (B3EliminateCommonSubexpressionsInternal::verbose)
@@ -236,16 +250,30 @@ private:
         m_value->performSubstitution();
 
         if (m_pureCSE.process(m_value, m_dominators)) {
+            ASSERT(!m_value->effects().readsPinned || !m_data.writesPinned);
             ASSERT(!m_value->effects().writes);
+            ASSERT(!m_value->effects().writesPinned);
             m_changed = true;
             return;
+        }
+
+        if (WasmAddressValue* wasmAddress = m_value->as<WasmAddressValue>()) {
+            processWasmAddressValue(wasmAddress);
+            return;
+        }
+
+        Effects effects = m_value->effects();
+
+        if (effects.writesPinned) {
+            m_data.writesPinned = true;
+            m_data.m_candidateWasmAddressesAtTail.clear();
         }
 
         MemoryValue* memory = m_value->as<MemoryValue>();
         if (memory && processMemoryBeforeClobber(memory))
             return;
 
-        if (HeapRange writes = m_value->effects().writes)
+        if (HeapRange writes = effects.writes)
             clobber(m_data, writes);
 
         if (memory)
@@ -451,11 +479,13 @@ private:
         }
 
         case Store: {
+            auto clobberWidth = memory->accessWidth();
             handleStoreAfterClobber(
                 ptr, range,
                 [&] (MemoryValue* candidate) -> bool {
                     return candidate->opcode() == Store
-                        && candidate->offset() == offset;
+                        && candidate->offset() == offset
+                        && candidate->accessWidth() >= clobberWidth;
                 });
             break;
         }
@@ -692,6 +722,63 @@ private:
         if (B3EliminateCommonSubexpressionsInternal::verbose)
             dataLog("    Got matches: ", pointerListDump(matches), "\n");
         return matches;
+    }
+
+    void processWasmAddressValue(WasmAddressValue* wasmAddress)
+    {
+        Value* ptr = wasmAddress->child(0);
+
+        if (Value* replacement = m_data.m_candidateWasmAddressesAtTail.get(ptr)) {
+            if (B3EliminateCommonSubexpressionsInternal::verbose)
+                dataLog("    Replacing WasmAddress: ", *wasmAddress, " with ", *replacement, "\n");
+            wasmAddress->replaceWithIdentity(replacement);
+            m_changed = true;
+            return;
+        }
+
+        auto addPtrOnScopeExit = makeScopeExit([&] {
+            m_data.m_candidateWasmAddressesAtTail.add(ptr, wasmAddress);
+        });
+
+        if (m_data.writesPinned) {
+            // Someone before us in this block wrote to pinned. So we have no
+            // hope of finding a match if the above search failed.
+            return;
+        }
+
+        Value* candidateReplacement = nullptr;
+        BasicBlock* dominator = nullptr;
+        m_dominators.forAllStrictDominatorsOf(m_block, [&] (BasicBlock* block) {
+            if (candidateReplacement)
+                return;
+
+            if (Value* replacement = m_impureBlockData[block].m_candidateWasmAddressesAtTail.get(ptr)) {
+                candidateReplacement = replacement;
+                dominator = block;
+            }
+        });
+
+        if (!candidateReplacement)
+            return;
+
+        BlockWorklist worklist;
+        worklist.pushAll(m_block->predecessors());
+        while (BasicBlock* block = worklist.pop()) {
+            if (block == dominator)
+                continue;
+            if (m_impureBlockData[block].writesPinned) {
+                candidateReplacement = nullptr;
+                break;
+            }
+            worklist.pushAll(block->predecessors());
+        }
+
+        if (candidateReplacement) {
+            if (B3EliminateCommonSubexpressionsInternal::verbose)
+                dataLog("    Replacing WasmAddress: ", *wasmAddress, " with ", *candidateReplacement, "\n");
+            wasmAddress->replaceWithIdentity(candidateReplacement);
+            m_changed = true;
+        }
     }
 
     Procedure& m_proc;

@@ -27,6 +27,7 @@
 #include "AnimationEffect.h"
 
 #include "CSSAnimation.h"
+#include "CommonAtomStrings.h"
 #include "FillMode.h"
 #include "JSComputedEffectTiming.h"
 #include "WebAnimation.h"
@@ -41,6 +42,16 @@ AnimationEffect::AnimationEffect()
 
 AnimationEffect::~AnimationEffect()
 {
+}
+
+void AnimationEffect::setAnimation(WebAnimation* animation)
+{
+    if (m_animation == animation)
+        return;
+
+    m_animation = animation;
+    if (animation)
+        animation->updateRelevance();
 }
 
 EffectTiming AnimationEffect::getBindingsTiming() const
@@ -59,7 +70,7 @@ EffectTiming AnimationEffect::getTiming() const
     timing.iterationStart = m_iterationStart;
     timing.iterations = m_iterations;
     if (m_iterationDuration == 0_s)
-        timing.duration = "auto";
+        timing.duration = autoAtom();
     else
         timing.duration = secondsToWebAnimationsAPITime(m_iterationDuration);
     timing.direction = m_direction;
@@ -326,7 +337,7 @@ ComputedEffectTiming AnimationEffect::getComputedTiming(std::optional<Seconds> s
 
             // 3. Return the result of evaluating the animation effect’s timing function passing directed progress as the
             //    input progress value and before flag as the before flag.
-            return m_timingFunction->transformTime(*directedProgress, iterationDuration, before);
+            return m_timingFunction->transformProgress(*directedProgress, iterationDuration, before);
         }
 
         return *directedProgress;
@@ -384,12 +395,12 @@ ExceptionOr<void> AnimationEffect::updateTiming(std::optional<OptionalEffectTimi
     // 3. If the duration member of input is present, and less than zero or is the value NaN, throw a TypeError and abort this procedure.
     // FIXME: should it not throw an exception on a string other than "auto"?
     if (timing->duration) {
-        if (WTF::holds_alternative<double>(timing->duration.value())) {
-            auto durationAsDouble = WTF::get<double>(timing->duration.value());
+        if (std::holds_alternative<double>(timing->duration.value())) {
+            auto durationAsDouble = std::get<double>(timing->duration.value());
             if (durationAsDouble < 0 || std::isnan(durationAsDouble))
                 return Exception { TypeError };
         } else {
-            if (WTF::get<String>(timing->duration.value()) != "auto")
+            if (std::get<String>(timing->duration.value()) != autoAtom())
                 return Exception { TypeError };
         }
     }
@@ -429,7 +440,7 @@ ExceptionOr<void> AnimationEffect::updateTiming(std::optional<OptionalEffectTimi
         m_iterations = timing->iterations.value();
 
     if (timing->duration)
-        m_iterationDuration = WTF::holds_alternative<double>(timing->duration.value()) ? Seconds::fromMilliseconds(WTF::get<double>(timing->duration.value())) : 0_s;
+        m_iterationDuration = std::holds_alternative<double>(timing->duration.value()) ? Seconds::fromMilliseconds(std::get<double>(timing->duration.value())) : 0_s;
 
     if (timing->direction)
         m_direction = timing->direction.value();
@@ -549,6 +560,36 @@ std::optional<double> AnimationEffect::progressUntilNextStep(double iterationPro
     auto numberOfSteps = downcast<StepsTimingFunction>(*m_timingFunction).numberOfSteps();
     auto nextStepProgress = ceil(iterationProgress * numberOfSteps) / numberOfSteps;
     return nextStepProgress - iterationProgress;
+}
+
+Seconds AnimationEffect::timeToNextTick(BasicEffectTiming timing) const
+{
+    switch (timing.phase) {
+    case AnimationEffectPhase::Before:
+        // The effect is in its "before" phase, in this case we can wait until it enters its "active" phase.
+        return delay() - *timing.localTime;
+    case AnimationEffectPhase::Active: {
+        if (!ticksContinouslyWhileActive())
+            return endTime() - *timing.localTime;
+        if (auto iterationProgress = getComputedTiming().simpleIterationProgress) {
+            // In case we're in a range that uses a steps() timing function, we can compute the time until the next step starts.
+            if (auto progressUntilNextStep = this->progressUntilNextStep(*iterationProgress))
+                return iterationDuration() * *progressUntilNextStep;
+        }
+        // Other effects that continuously tick in the "active" phase will need to update their animated
+        // progress at the immediate next opportunity.
+        return 0_s;
+    }
+    case AnimationEffectPhase::After:
+        // The effect is in its after phase, which means it will no longer update its progress, so it doens't need a tick.
+        return Seconds::infinity();
+    case AnimationEffectPhase::Idle:
+        ASSERT_NOT_REACHED();
+        return Seconds::infinity();
+    }
+
+    ASSERT_NOT_REACHED();
+    return Seconds::infinity();
 }
 
 } // namespace WebCore

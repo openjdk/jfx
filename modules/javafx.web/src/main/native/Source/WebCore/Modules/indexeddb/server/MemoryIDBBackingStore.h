@@ -30,7 +30,6 @@
 #include "IDBResourceIdentifier.h"
 #include "IndexKey.h"
 #include "MemoryBackingStoreTransaction.h"
-#include <pal/SessionID.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -41,15 +40,18 @@ class MemoryObjectStore;
 class MemoryIDBBackingStore final : public IDBBackingStore {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    MemoryIDBBackingStore(PAL::SessionID, const IDBDatabaseIdentifier&);
-    ~MemoryIDBBackingStore();
+    WEBCORE_EXPORT explicit MemoryIDBBackingStore(const IDBDatabaseIdentifier&);
+    WEBCORE_EXPORT ~MemoryIDBBackingStore();
 
     IDBError getOrEstablishDatabaseInfo(IDBDatabaseInfo&) final;
     uint64_t databaseVersion() final;
     void setDatabaseInfo(const IDBDatabaseInfo&);
+    bool hasObjectStore(uint64_t objectStoreIdentifier) { return !!infoForObjectStore(objectStoreIdentifier); }
 
+    void renameObjectStoreForVersionChangeAbort(MemoryObjectStore&, const String& oldName);
     void removeObjectStoreForVersionChangeAbort(MemoryObjectStore&);
     void restoreObjectStoreForVersionChangeAbort(Ref<MemoryObjectStore>&&);
+    void handleLowMemoryWarning() final { };
 
 private:
     IDBError beginTransaction(const IDBTransactionInfo&) final;
@@ -92,7 +94,6 @@ private:
     void unregisterObjectStore(MemoryObjectStore&);
 
     IDBDatabaseIdentifier m_identifier;
-    PAL::SessionID m_sessionID;
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
 
     HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryBackingStoreTransaction>> m_transactions;

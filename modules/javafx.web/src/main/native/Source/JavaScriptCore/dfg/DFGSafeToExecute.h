@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -94,6 +94,7 @@ public:
         case DoubleRepAnyIntUse:
         case NotDoubleUse:
         case NeitherDoubleNorHeapBigIntNorStringUse:
+        case NeitherDoubleNorHeapBigIntUse:
             return;
 
         case KnownInt32Use:
@@ -287,6 +288,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ExtractCatchLocal:
     case AssertInBounds:
     case CheckInBounds:
+    case CheckInBoundsInt52:
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
@@ -318,6 +320,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case DateGetTime:
     case DataViewGetInt:
     case DataViewGetFloat:
+    case ResolveRope:
         return true;
 
     case GetButterfly:
@@ -372,6 +375,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetByVal:
     case GetIndexedPropertyStorage:
     case GetArrayLength:
+    case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case ArrayPop:
     case StringCharAt:
@@ -384,6 +388,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
 
     case CheckDetached:
     case GetTypedArrayByteOffset:
+    case GetTypedArrayByteOffsetAsInt52:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
 
     case PutByValDirect:
@@ -432,7 +437,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         // know anything about inferred types. But if we have a proof derived from watching a
         // structure that has a type proof, then the next case below will deal with it.
         if (state.structureClobberState() == StructuresAreWatched) {
-            if (JSObject* knownBase = node->child2()->dynamicCastConstant<JSObject*>(graph.m_vm)) {
+            if (JSObject* knownBase = node->child2()->dynamicCastConstant<JSObject*>()) {
                 if (graph.isSafeToLoad(knownBase, offset))
                     return true;
             }
@@ -488,7 +493,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         bool isSafe = true;
         const ClassInfo* classInfo = node->requiredDOMJITClassInfo();
         structures.forEach([&] (RegisteredStructure structure) {
-            isSafe &= structure->classInfo()->isSubClassOf(classInfo);
+            isSafe &= structure->classInfoForCells()->isSubClassOf(classInfo);
         });
         return isSafe;
     }
@@ -553,6 +558,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case RegExpExec:
     case RegExpExecNonGlobalOrSticky:
     case RegExpTest:
+    case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
     case Call:

@@ -29,12 +29,11 @@
 
 #include "CachedResourceRequestInitiators.h"
 #include "EventNames.h"
+#include "FontCache.h"
 #include "MIMETypeRegistry.h"
 #include "QualifiedNameCache.h"
-#include "TextCodecICU.h"
 #include "ThreadTimers.h"
 #include <wtf/MainThread.h>
-#include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
 #include <wtf/text/StringImpl.h>
 
@@ -42,31 +41,23 @@ namespace WebCore {
 
 ThreadGlobalData::ThreadGlobalData()
     : m_threadTimers(makeUnique<ThreadTimers>())
-    , m_cachedConverterICU(makeUnique<ICUConverterWrapper>())
 #ifndef NDEBUG
     , m_isMainThread(isMainThread())
 #endif
 {
-    // This constructor will have been called on the main thread before being called on
-    // any other thread, and is only called once per thread - this makes this a convenient
-    // point to call methods that internally perform a one-time initialization that is not
-    // threadsafe.
-    Thread::current();
 }
 
 ThreadGlobalData::~ThreadGlobalData() = default;
 
 void ThreadGlobalData::destroy()
 {
-    m_cachedConverterICU = nullptr;
-
-    m_eventNames = nullptr;
-    m_threadTimers = nullptr;
-    m_qualifiedNameCache = nullptr;
+    if (m_fontCache)
+        m_fontCache->invalidate();
+    m_fontCache = nullptr;
+    m_destroyed = true;
 }
 
 #if USE(WEB_THREAD)
-static ThreadSpecific<RefPtr<ThreadGlobalData>>* staticData { nullptr };
 static ThreadGlobalData* sharedMainThreadStaticData { nullptr };
 
 void ThreadGlobalData::setWebCoreThreadData()
@@ -75,42 +66,42 @@ void ThreadGlobalData::setWebCoreThreadData()
     ASSERT(&threadGlobalData() != sharedMainThreadStaticData);
 
     // Set WebThread's ThreadGlobalData object to be the same as the main UI thread.
-    **staticData = adoptRef(sharedMainThreadStaticData);
+    Thread::current().m_clientData = adoptRef(sharedMainThreadStaticData);
 
     ASSERT(&threadGlobalData() == sharedMainThreadStaticData);
 }
 
 ThreadGlobalData& threadGlobalData()
 {
-    if (UNLIKELY(!staticData)) {
-        staticData = new ThreadSpecific<RefPtr<ThreadGlobalData>>;
-        auto& result = **staticData;
-        ASSERT(!result);
-        result = adoptRef(new ThreadGlobalData);
-        // WebThread and main UI thread need to share the same object. Save it in a static
-        // here, the WebThread will pick it up in setWebCoreThreadData().
-        if (pthread_main_np()) {
-            sharedMainThreadStaticData = result.get();
-            result->ref();
-        }
-        return *result;
+    auto& thread = Thread::current();
+    auto* clientData = thread.m_clientData.get();
+    if (LIKELY(clientData))
+        return *static_cast<ThreadGlobalData*>(clientData);
+
+    auto data = adoptRef(*new ThreadGlobalData);
+    if (pthread_main_np()) {
+        sharedMainThreadStaticData = data.ptr();
+        data->ref();
     }
 
-    auto& result = **staticData;
-    if (!result)
-        result = adoptRef(new ThreadGlobalData);
-    return *result;
+    clientData = data.ptr();
+    thread.m_clientData = WTFMove(data);
+    return *static_cast<ThreadGlobalData*>(clientData);
 }
 
 #else
 
-static ThreadSpecific<ThreadGlobalData>* staticData { nullptr };
-
 ThreadGlobalData& threadGlobalData()
 {
-    if (UNLIKELY(!staticData))
-        staticData = new ThreadSpecific<ThreadGlobalData>;
-    return **staticData;
+    auto& thread = Thread::current();
+    auto* clientData = thread.m_clientData.get();
+    if (LIKELY(clientData))
+        return *static_cast<ThreadGlobalData*>(clientData);
+
+    auto data = adoptRef(*new ThreadGlobalData);
+    clientData = data.ptr();
+    thread.m_clientData = WTFMove(data);
+    return *static_cast<ThreadGlobalData*>(clientData);
 }
 
 #endif
@@ -139,4 +130,19 @@ void ThreadGlobalData::initializeMimeTypeRegistryThreadGlobalData()
     m_MIMETypeRegistryThreadGlobalData = MIMETypeRegistry::createMIMETypeRegistryThreadGlobalData();
 }
 
+void ThreadGlobalData::initializeFontCache()
+{
+    ASSERT(!m_fontCache);
+    m_fontCache = makeUnique<FontCache>();
+}
+
 } // namespace WebCore
+
+namespace PAL {
+
+ThreadGlobalData& threadGlobalData()
+{
+    return WebCore::threadGlobalData();
+}
+
+} // namespace PAL

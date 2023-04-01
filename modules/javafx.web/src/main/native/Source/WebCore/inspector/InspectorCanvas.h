@@ -26,13 +26,14 @@
 #pragma once
 
 #include "InspectorCanvasCallTracer.h"
+#include <JavaScriptCore/AsyncStackTrace.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <initializer_list>
+#include <variant>
 #include <wtf/HashSet.h>
-#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -106,7 +107,7 @@ private:
 
     void appendActionSnapshotIfNeeded();
 
-    using DuplicateDataVariant = Variant<
+    using DuplicateDataVariant = std::variant<
         RefPtr<CanvasGradient>,
         RefPtr<CanvasPattern>,
         RefPtr<HTMLCanvasElement>,
@@ -117,6 +118,7 @@ private:
         RefPtr<ImageData>,
         RefPtr<ImageBitmap>,
         RefPtr<Inspector::ScriptCallStack>,
+        RefPtr<Inspector::AsyncStackTrace>,
 #if ENABLE(CSS_TYPED_OM)
         RefPtr<CSSStyleImageValue>,
 #endif
@@ -138,9 +140,9 @@ private:
 
     String m_identifier;
 
-    Variant<
+    std::variant<
         std::reference_wrapper<CanvasRenderingContext>,
-        Monostate
+        std::monostate
     > m_context;
 
     RefPtr<Inspector::Protocol::Recording::InitialState> m_initialState;

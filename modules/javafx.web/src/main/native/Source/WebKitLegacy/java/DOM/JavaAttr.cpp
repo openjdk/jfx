@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
+#include "HTMLNames.h"
 
 #include <WebCore/JavaDOMUtils.h>
 #include <wtf/java/JavaEnv.h>
@@ -65,7 +66,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_AttrImpl_getValueImpl(JNIEnv* 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_AttrImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setValue(String(env, value));
+    IMPL->setValue(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl(JNIEnv* env, jclass, jlong peer)

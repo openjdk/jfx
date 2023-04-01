@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Nokia Corporation. All rights reserved.
  *   Contact: Stefan Kost <stefan.kost@nokia.com>
  * Copyright (C) 2012 Collabora Ltd.
- *  Author : Edward Hervey <edward@collabora.com>
+ *      Author : Edward Hervey <edward@collabora.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -214,11 +214,13 @@ struct _GstVideoDecoder
  * @reset:          Optional.
  *                  Allows subclass (decoder) to perform post-seek semantics reset.
  *                  Deprecated.
- * @handle_frame:   Provides input data frame to subclass.
+ * @handle_frame:   Provides input data frame to subclass. In subframe mode, the subclass needs
+ *                  to take ownership of @GstVideoCodecFrame.input_buffer as it will be modified
+ *                  by the base class on the next subframe buffer receiving.
  * @finish:         Optional.
  *                  Called to request subclass to dispatch any pending remaining
  *                  data at EOS. Sub-classes can refuse to decode new data after.
- * @drain:      Optional.
+ * @drain:          Optional.
  *                  Called to request subclass to decode any data it can at this
  *                  point, but that more data may arrive after. (e.g. at segment end).
  *                  Sub-classes should be prepared to handle new data afterward,
@@ -305,6 +307,11 @@ struct _GstVideoDecoderClass
 
   GstFlowReturn (*finish)         (GstVideoDecoder *decoder);
 
+  /**
+   * GstVideoDecoderClass::handle_frame:
+   * @decoder: The #GstVideoDecoder
+   * @frame: (transfer full): The frame to handle
+   */
   GstFlowReturn (*handle_frame)   (GstVideoDecoder *decoder,
            GstVideoCodecFrame *frame);
 
@@ -337,9 +344,40 @@ struct _GstVideoDecoderClass
                                    GstVideoCodecFrame *frame,
                                    GstMeta * meta);
 
+  /**
+   * GstVideoDecoderClass::handle_missing_data:
+   * @decoder: The #GstVideoDecoder
+   * @timestamp: Timestamp of the missing data
+   * @duration: Duration of the missing data
+   *
+   * Returns: %TRUE if the decoder should be drained afterwards.
+   *
+   * Since: 1.20
+   */
+  gboolean      (*handle_missing_data) (GstVideoDecoder *decoder,
+                                        GstClockTime timestamp,
+                                        GstClockTime duration);
+
   /*< private >*/
-  gpointer padding[GST_PADDING_LARGE-6];
+  gpointer padding[GST_PADDING_LARGE-7];
 };
+
+/**
+ * GstVideoDecoderRequestSyncPointFlags:
+ * @GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT: discard all following
+ *     input until the next sync point.
+ * @GST_VIDEO_DECODER_REQUEST_SYNC_POINT_CORRUPT_OUTPUT: discard all following
+ *     output until the next sync point.
+ *
+ * Flags to be used in combination with gst_video_decoder_request_sync_point().
+ * See the function documentation for more details.
+ *
+ * Since: 1.20
+ */
+typedef enum {
+  GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT  = (1<<0),
+  GST_VIDEO_DECODER_REQUEST_SYNC_POINT_CORRUPT_OUTPUT = (1<<1),
+} GstVideoDecoderRequestSyncPointFlags;
 
 GST_VIDEO_API
 GType    gst_video_decoder_get_type (void);
@@ -352,6 +390,19 @@ void     gst_video_decoder_set_packetized (GstVideoDecoder * decoder,
 
 GST_VIDEO_API
 gboolean gst_video_decoder_get_packetized (GstVideoDecoder * decoder);
+
+GST_VIDEO_API
+void     gst_video_decoder_set_subframe_mode (GstVideoDecoder * decoder,
+                                              gboolean subframe_mode);
+
+GST_VIDEO_API
+gboolean gst_video_decoder_get_subframe_mode (GstVideoDecoder * decoder);
+
+GST_VIDEO_API
+guint gst_video_decoder_get_input_subframe_index (GstVideoDecoder * decoder, GstVideoCodecFrame * frame);
+
+GST_VIDEO_API
+guint gst_video_decoder_get_processed_subframe_index (GstVideoDecoder * decoder, GstVideoCodecFrame * frame);
 
 GST_VIDEO_API
 void     gst_video_decoder_set_estimate_rate (GstVideoDecoder * dec,
@@ -373,6 +424,13 @@ void     gst_video_decoder_set_needs_format (GstVideoDecoder * dec,
 
 GST_VIDEO_API
 gboolean gst_video_decoder_get_needs_format (GstVideoDecoder * dec);
+
+GST_VIDEO_API
+void     gst_video_decoder_set_needs_sync_point (GstVideoDecoder * dec,
+                                                 gboolean enabled);
+
+GST_VIDEO_API
+gboolean gst_video_decoder_get_needs_sync_point (GstVideoDecoder * dec);
 
 GST_VIDEO_API
 void     gst_video_decoder_set_latency (GstVideoDecoder *decoder,
@@ -412,6 +470,10 @@ void           gst_video_decoder_add_to_frame     (GstVideoDecoder *decoder,
 
 GST_VIDEO_API
 GstFlowReturn  gst_video_decoder_have_frame       (GstVideoDecoder *decoder);
+
+GST_VIDEO_API
+GstFlowReturn  gst_video_decoder_have_last_subframe (GstVideoDecoder *decoder,
+                                                     GstVideoCodecFrame * frame);
 
 GST_VIDEO_API
 gsize          gst_video_decoder_get_pending_frame_size (GstVideoDecoder *decoder);
@@ -454,10 +516,21 @@ gdouble          gst_video_decoder_get_qos_proportion (GstVideoDecoder * decoder
 GST_VIDEO_API
 GstFlowReturn    gst_video_decoder_finish_frame (GstVideoDecoder *decoder,
              GstVideoCodecFrame *frame);
+GST_VIDEO_API
+GstFlowReturn    gst_video_decoder_finish_subframe (GstVideoDecoder *decoder,
+                                                 GstVideoCodecFrame *frame);
 
 GST_VIDEO_API
 GstFlowReturn    gst_video_decoder_drop_frame (GstVideoDecoder *dec,
                  GstVideoCodecFrame *frame);
+GST_VIDEO_API
+GstFlowReturn    gst_video_decoder_drop_subframe (GstVideoDecoder *dec,
+                                               GstVideoCodecFrame *frame);
+
+GST_VIDEO_API
+void             gst_video_decoder_request_sync_point (GstVideoDecoder *dec,
+                                                       GstVideoCodecFrame *frame,
+                                                       GstVideoDecoderRequestSyncPointFlags flags);
 
 GST_VIDEO_API
 void             gst_video_decoder_release_frame (GstVideoDecoder * dec,

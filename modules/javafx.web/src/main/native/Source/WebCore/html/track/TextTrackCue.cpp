@@ -37,6 +37,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "DOMRect.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLDivElement.h"
@@ -45,6 +46,7 @@
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "ScriptDisallowedScope.h"
+#include "ShadowPseudoIds.h"
 #include "Text.h"
 #include "TextTrack.h"
 #include "TextTrackCueList.h"
@@ -63,33 +65,15 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackCue);
 WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackCueBox);
 
-const AtomString& TextTrackCue::cueShadowPseudoId()
-{
-    static MainThreadNeverDestroyed<const AtomString> cue("cue", AtomString::ConstructFromLiteral);
-    return cue;
-}
-
-const AtomString& TextTrackCue::cueBoxShadowPseudoId()
-{
-    static MainThreadNeverDestroyed<const AtomString> trackDisplayBoxShadowPseudoId("-webkit-media-text-track-display", AtomString::ConstructFromLiteral);
-    return trackDisplayBoxShadowPseudoId;
-}
-
-const AtomString& TextTrackCue::cueBackdropShadowPseudoId()
-{
-    static MainThreadNeverDestroyed<const AtomString> cueBackdropShadowPseudoId("-webkit-media-text-track-display-backdrop", AtomString::ConstructFromLiteral);
-    return cueBackdropShadowPseudoId;
-}
-
 static const QualifiedName& cueAttributName()
 {
-    static NeverDestroyed<QualifiedName> cueTag(nullAtom(), "cue", nullAtom());
+    static NeverDestroyed<QualifiedName> cueTag(nullAtom(), "cue"_s, nullAtom());
     return cueTag;
 }
 
 static const QualifiedName& cueBackgroundAttributName()
 {
-    static NeverDestroyed<QualifiedName> cueBackgroundTag(nullAtom(), "cuebackground", nullAtom());
+    static NeverDestroyed<QualifiedName> cueBackgroundTag(nullAtom(), "cuebackground"_s, nullAtom());
     return cueBackgroundTag;
 }
 
@@ -102,14 +86,14 @@ Ref<TextTrackCueBox> TextTrackCueBox::create(Document& document, TextTrackCue& c
 
 TextTrackCueBox::TextTrackCueBox(Document& document, TextTrackCue& cue)
     : HTMLElement(HTMLNames::divTag, document)
-    , m_cue(makeWeakPtr(cue))
+    , m_cue(cue)
 {
     setHasCustomStyleResolveCallbacks();
 }
 
 void TextTrackCueBox::initialize()
 {
-    setPseudo(TextTrackCue::cueBoxShadowPseudoId());
+    setPseudo(ShadowPseudoIds::webkitMediaTextTrackDisplay());
 }
 
 TextTrackCue* TextTrackCueBox::getCue() const
@@ -169,10 +153,10 @@ static OptionSet<RequiredNodes> tagPseudoObjects(Node& node)
 
     auto& element = downcast<Element>(node);
     if (element.hasAttributeWithoutSynchronization(cueAttributName())) {
-        element.setPseudo(TextTrackCue::cueShadowPseudoId());
+        element.setPseudo(ShadowPseudoIds::cue());
         nodeTypes = { RequiredNodes::Cue };
     } else if (element.hasAttributeWithoutSynchronization(cueBackgroundAttributName())) {
-        element.setPseudo(TextTrackCue::cueBackdropShadowPseudoId());
+        element.setPseudo(ShadowPseudoIds::webkitMediaTextTrackDisplayBackdrop());
         nodeTypes = { RequiredNodes::CueBackground };
     }
 
@@ -198,7 +182,7 @@ static void removePseudoAttributes(Node& node)
 ExceptionOr<Ref<TextTrackCue>> TextTrackCue::create(Document& document, double start, double end, DocumentFragment& cueFragment)
 {
     if (!cueFragment.firstChild())
-        return Exception { InvalidNodeTypeError, "Empty cue fragment" };
+        return Exception { InvalidNodeTypeError, "Empty cue fragment"_s };
 
     for (Node* node = cueFragment.firstChild(); node; node = node->nextSibling()) {
         auto result = checkForInvalidNodeTypes(*node);
@@ -232,7 +216,6 @@ TextTrackCue::TextTrackCue(Document& document, const MediaTime& start, const Med
     : ActiveDOMObject(document)
     , m_startTime(start)
     , m_endTime(end)
-    , m_document(document)
     , m_cueNode(WTFMove(cueFragment))
 {
 }
@@ -241,13 +224,17 @@ TextTrackCue::TextTrackCue(Document& document, const MediaTime& start, const Med
     : ActiveDOMObject(document)
     , m_startTime(start)
     , m_endTime(end)
-    , m_document(document)
 {
 }
 
 ScriptExecutionContext* TextTrackCue::scriptExecutionContext() const
 {
-    return &m_document;
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
+Document* TextTrackCue::document() const
+{
+    return downcast<Document>(scriptExecutionContext());
 }
 
 void TextTrackCue::willChange()
@@ -281,7 +268,7 @@ void TextTrackCue::setTrack(TextTrack* track)
     m_track = track;
 }
 
-void TextTrackCue::setId(const String& id)
+void TextTrackCue::setId(const AtomString& id)
 {
     if (m_id == id)
         return;
@@ -452,7 +439,11 @@ RefPtr<DocumentFragment> TextTrackCue::getCueAsHTML()
     if (!m_cueNode)
         return nullptr;
 
-    auto clonedFragment = DocumentFragment::create(ownerDocument());
+    auto* document = this->document();
+    if (!document)
+        return nullptr;
+
+    auto clonedFragment = DocumentFragment::create(*document);
     m_cueNode->cloneChildNodes(clonedFragment);
 
     for (Node* node = clonedFragment->firstChild(); node; node = node->nextSibling())
@@ -501,24 +492,27 @@ void TextTrackCue::rebuildDisplayTree()
     if (!m_cueNode)
         return;
 
+    RefPtr document = this->document();
+    if (!document)
+        return;
+
     ScriptDisallowedScope::EventAllowedScope allowedScopeForReferenceTree(*m_cueNode);
 
     if (!m_displayTree) {
-        static MainThreadNeverDestroyed<const AtomString> webkitGenericCueRootName("-webkit-generic-cue-root", AtomString::ConstructFromLiteral);
-        m_displayTree = TextTrackCueBox::create(ownerDocument(), *this);
-        m_displayTree->setPseudo(webkitGenericCueRootName);
+        m_displayTree = TextTrackCueBox::create(*document, *this);
+        m_displayTree->setPseudo(ShadowPseudoIds::webkitGenericCueRoot());
     }
 
     m_displayTree->removeChildren();
-    auto clonedFragment = DocumentFragment::create(ownerDocument());
+    auto clonedFragment = DocumentFragment::create(*document);
     m_cueNode->cloneChildNodes(clonedFragment);
     m_displayTree->appendChild(clonedFragment);
 
     if (m_fontSize) {
-        if (auto page = ownerDocument().page()) {
-            auto style = HTMLStyleElement::create(HTMLNames::styleTag, ownerDocument(), false);
+        if (auto page = document->page()) {
+            auto style = HTMLStyleElement::create(HTMLNames::styleTag, *document, false);
             style->setTextContent(makeString(page->captionUserPreferencesStyleSheet(),
-                " ::", TextTrackCue::cueShadowPseudoId(), "{font-size:", m_fontSize, m_fontSizeIsImportant ? "px !important}" : "px}"));
+                " ::", ShadowPseudoIds::cue(), "{font-size:", m_fontSize, m_fontSizeIsImportant ? "px !important}" : "px}"));
             m_displayTree->appendChild(style);
         }
     }
@@ -527,8 +521,8 @@ void TextTrackCue::rebuildDisplayTree()
         if (const auto& styleSheets = track()->styleSheets()) {
             for (const auto& cssString : *styleSheets) {
                 auto style = HTMLStyleElement::create(HTMLNames::styleTag, m_displayTree->document(), false);
-                style->setTextContent(cssString);
-                m_displayTree->appendChild(style);
+                style->setTextContent(String { cssString });
+                m_displayTree->appendChild(WTFMove(style));
             }
         }
     }

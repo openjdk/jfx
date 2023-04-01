@@ -36,8 +36,10 @@
 #include <wtf/NakedPtr.h>
 
 namespace JSC {
+class AbstractModuleRecord;
 class Exception;
 class JSGlobalObject;
+class JSModuleRecord;
 class VM;
 }
 
@@ -55,7 +57,6 @@ class WorkerOrWorkletScriptController {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WorkerOrWorkletScriptController(WorkerThreadType, Ref<JSC::VM>&&, WorkerOrWorkletGlobalScope*);
-    explicit WorkerOrWorkletScriptController(WorkerThreadType, WorkerOrWorkletGlobalScope*);
     ~WorkerOrWorkletScriptController();
 
     void releaseHeapAccess();
@@ -96,10 +97,10 @@ public:
     void evaluate(const ScriptSourceCode&, String* returnedExceptionMessage = nullptr);
     void evaluate(const ScriptSourceCode&, NakedPtr<JSC::Exception>& returnedException, String* returnedExceptionMessage = nullptr);
 
-    JSC::JSValue evaluateModule(JSC::JSModuleRecord&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
+    JSC::JSValue evaluateModule(JSC::AbstractModuleRecord&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
 
     void linkAndEvaluateModule(WorkerScriptFetcher&, const ScriptSourceCode&, String* returnedExceptionMessage = nullptr);
-    MessageQueueWaitResult loadModuleSynchronously(WorkerScriptFetcher&, const ScriptSourceCode&);
+    bool loadModuleSynchronously(WorkerScriptFetcher&, const ScriptSourceCode&);
 
     void loadAndEvaluateModule(const URL& moduleURL, FetchOptions::Credentials, CompletionHandler<void(std::optional<Exception>&&)>&&);
 

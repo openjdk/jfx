@@ -36,7 +36,7 @@
 pas_heap* pas_ensure_heap_with_page_caches(
     pas_heap_ref* heap_ref,
     pas_heap_ref_kind heap_ref_kind,
-    pas_heap_config* config,
+    const pas_heap_config* config,
     pas_heap_runtime_config* template_runtime_config,
     pas_basic_heap_page_caches* page_caches)
 {
@@ -55,7 +55,7 @@ pas_heap* pas_ensure_heap_with_page_caches(
     runtime_config->page_caches = page_caches;
 
     PAS_ASSERT(!heap_ref->heap);
-    PAS_ASSERT(heap_ref->allocator_index == UINT_MAX);
+    PAS_ASSERT(!heap_ref->allocator_index);
 
     return pas_ensure_heap(heap_ref, heap_ref_kind, config, &runtime_config->base);
 }

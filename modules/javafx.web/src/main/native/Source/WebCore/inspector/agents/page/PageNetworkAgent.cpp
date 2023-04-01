@@ -29,9 +29,11 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
+#include "InspectorClient.h"
 #include "InstrumentingAgents.h"
 #include "Page.h"
-#include "ScriptState.h"
+#include "PageConsoleClient.h"
 #include "WebSocket.h"
 #include "WebSocketChannel.h"
 
@@ -39,9 +41,10 @@ namespace WebCore {
 
 using namespace Inspector;
 
-PageNetworkAgent::PageNetworkAgent(PageAgentContext& context)
+PageNetworkAgent::PageNetworkAgent(PageAgentContext& context, InspectorClient* client)
     : InspectorNetworkAgent(context)
     , m_inspectedPage(context.inspectedPage)
+    , m_client(client)
 {
 }
 
@@ -96,6 +99,15 @@ void PageNetworkAgent::setResourceCachingDisabledInternal(bool disabled)
     m_inspectedPage.setResourceCachingDisabledByWebInspector(disabled);
 }
 
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
+bool PageNetworkAgent::setEmulatedConditionsInternal(std::optional<int>&& bytesPerSecondLimit)
+{
+    return m_client && m_client->setEmulatedConditions(WTFMove(bytesPerSecondLimit));
+}
+
+#endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
 ScriptExecutionContext* PageNetworkAgent::scriptExecutionContext(Protocol::ErrorString& errorString, const Protocol::Network::FrameId& frameId)
 {
     auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
@@ -115,6 +127,11 @@ ScriptExecutionContext* PageNetworkAgent::scriptExecutionContext(Protocol::Error
     }
 
     return document;
+}
+
+void PageNetworkAgent::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
+{
+    m_inspectedPage.console().addMessage(WTFMove(message));
 }
 
 } // namespace WebCore

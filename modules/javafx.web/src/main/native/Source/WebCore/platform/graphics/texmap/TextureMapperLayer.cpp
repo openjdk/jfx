@@ -1,5 +1,6 @@
 /*
  Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
+ Copyright (C) 2022 Sony Interactive Entertainment Inc.
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -21,7 +22,6 @@
 #include "TextureMapperLayer.h"
 
 #include "FloatQuad.h"
-#include "GraphicsLayerTextureMapper.h"
 #include "Region.h"
 #include <wtf/MathExtras.h>
 #include <wtf/SetForScope.h>
@@ -40,6 +40,7 @@ public:
     float opacity { 1 };
     IntSize offset;
     TextureMapperLayer* backdropLayer { nullptr };
+    TextureMapperLayer* replicaLayer { nullptr };
     bool preserves3D { false };
 };
 
@@ -144,17 +145,12 @@ void TextureMapperLayer::paint(TextureMapper& textureMapper)
     paintRecursive(options);
 }
 
-static Color blendWithOpacity(const Color& color, float opacity)
-{
-    if (color.isOpaque() && opacity == 1.)
-        return color;
-
-    return color.colorWithAlphaMultipliedBy(opacity);
-}
-
 void TextureMapperLayer::paintSelf(TextureMapperPaintOptions& options)
 {
     if (!m_state.visible || !m_state.contentsVisible)
+        return;
+    auto targetRect = layerRect();
+    if (targetRect.isEmpty())
         return;
 
     // We apply the following transform to compensate for painting into a surface, and then apply the offset so that the painting fits in the target rect.
@@ -163,28 +159,31 @@ void TextureMapperLayer::paintSelf(TextureMapperPaintOptions& options)
     transform.multiply(options.transform);
     transform.multiply(m_layerTransforms.combined);
 
-    if (m_state.solidColor.isValid() && !m_state.contentsRect.isEmpty() && m_state.solidColor.isVisible()) {
-        options.textureMapper.drawSolidColor(m_state.contentsRect, transform, blendWithOpacity(m_state.solidColor, options.opacity), true);
-        if (m_state.showDebugBorders)
-            options.textureMapper.drawBorder(m_state.debugBorderColor, m_state.debugBorderWidth, layerRect(), transform);
-        return;
+    TextureMapperSolidColorLayer solidColorLayer;
+    TextureMapperBackingStore* backingStore = m_backingStore;
+    if (m_state.backgroundColor.isValid()) {
+        solidColorLayer.setColor(m_state.backgroundColor);
+        backingStore = &solidColorLayer;
     }
 
     options.textureMapper.setWrapMode(TextureMapper::StretchWrap);
     options.textureMapper.setPatternTransform(TransformationMatrix());
 
-    if (m_backingStore) {
-        FloatRect targetRect = layerRect();
-        ASSERT(!targetRect.isEmpty());
-        m_backingStore->paintToTextureMapper(options.textureMapper, targetRect, transform, options.opacity);
+    if (backingStore) {
+        backingStore->paintToTextureMapper(options.textureMapper, targetRect, transform, options.opacity);
         if (m_state.showDebugBorders)
-            m_backingStore->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, targetRect, transform);
+            backingStore->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, targetRect, transform);
         // Only draw repaint count for the main backing store.
         if (m_state.showRepaintCounter)
-            m_backingStore->drawRepaintCounter(options.textureMapper, m_state.repaintCount, m_state.debugBorderColor, targetRect, transform);
+            backingStore->drawRepaintCounter(options.textureMapper, m_state.repaintCount, m_state.debugBorderColor, targetRect, transform);
     }
 
-    if (!m_contentsLayer)
+    TextureMapperPlatformLayer* contentsLayer = m_contentsLayer;
+    if (m_state.solidColor.isValid() && m_state.solidColor.isVisible()) {
+        solidColorLayer.setColor(m_state.solidColor);
+        contentsLayer = &solidColorLayer;
+    }
+    if (!contentsLayer)
         return;
 
     if (!m_state.contentsTileSize.isEmpty()) {
@@ -195,20 +194,18 @@ void TextureMapperLayer::paintSelf(TextureMapperPaintOptions& options)
         options.textureMapper.setPatternTransform(patternTransform);
     }
 
-    ASSERT(!layerRect().isEmpty());
-
     bool shouldClip = m_state.contentsClippingRect.isRounded() || !m_state.contentsClippingRect.rect().contains(m_state.contentsRect);
     if (shouldClip) {
         options.textureMapper.beginClip(transform, m_state.contentsClippingRect);
     }
 
-    m_contentsLayer->paintToTextureMapper(options.textureMapper, m_state.contentsRect, transform, options.opacity);
+    contentsLayer->paintToTextureMapper(options.textureMapper, m_state.contentsRect, transform, options.opacity);
 
     if (shouldClip)
         options.textureMapper.endClip();
 
     if (m_state.showDebugBorders)
-        m_contentsLayer->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, m_state.contentsRect, transform);
+        contentsLayer->drawBorder(options.textureMapper, m_state.debugBorderColor, m_state.debugBorderWidth, m_state.contentsRect, transform);
 }
 
 void TextureMapperLayer::sortByZOrder(Vector<TextureMapperLayer* >& array)
@@ -260,14 +257,18 @@ void TextureMapperLayer::paintSelfAndChildren(TextureMapperPaintOptions& options
     if (m_children.isEmpty())
         return;
 
-    bool shouldClip = m_state.masksToBounds && !m_state.preserves3D;
+    bool shouldClip = (m_state.masksToBounds || m_state.contentsRectClipsDescendants) && !m_state.preserves3D;
     if (shouldClip) {
         TransformationMatrix clipTransform;
         clipTransform.translate(options.offset.width(), options.offset.height());
         clipTransform.multiply(options.transform);
         clipTransform.multiply(m_layerTransforms.combined);
-        clipTransform.translate(m_state.boundsOrigin.x(), m_state.boundsOrigin.y());
-        options.textureMapper.beginClip(clipTransform, FloatRoundedRect(layerRect()));
+        if (m_state.contentsRectClipsDescendants)
+            options.textureMapper.beginClip(clipTransform, m_state.contentsClippingRect);
+        else {
+            clipTransform.translate(m_state.boundsOrigin.x(), m_state.boundsOrigin.y());
+            options.textureMapper.beginClip(clipTransform, FloatRoundedRect(layerRect()));
+        }
 
         // If as a result of beginClip(), the clipping area is empty, it means that the intersection of the previous
         // clipping area and the current one don't have any pixels in common. In this case we can skip painting the
@@ -290,10 +291,7 @@ bool TextureMapperLayer::shouldBlend() const
     if (m_state.preserves3D)
         return false;
 
-    return m_currentOpacity < 1
-        || hasFilters()
-        || m_state.maskLayer
-        || (m_state.replicaLayer && m_state.replicaLayer->m_state.maskLayer);
+    return m_currentOpacity < 1;
 }
 
 bool TextureMapperLayer::isVisible() const
@@ -312,7 +310,8 @@ bool TextureMapperLayer::isVisible() const
 void TextureMapperLayer::paintSelfAndChildrenWithReplica(TextureMapperPaintOptions& options)
 {
     if (m_state.replicaLayer) {
-        SetForScope<TransformationMatrix> scopedTransform(options.transform, options.transform);
+        SetForScope scopedReplicaLayer(options.replicaLayer, this);
+        SetForScope scopedTransform(options.transform, options.transform);
         options.transform.multiply(replicaTransform());
         paintSelfAndChildren(options);
     }
@@ -338,6 +337,178 @@ static void resolveOverlaps(const IntRect& newRegion, Region& overlapRegion, Reg
     nonOverlapRegion.unite(newNonOverlapRegion);
 }
 
+template<typename T>
+struct Point4D {
+    T x;
+    T y;
+    T z;
+    T w;
+};
+
+template<typename T>
+Point4D<T> operator+(Point4D<T> s, Point4D<T> t)
+{
+    return { s.x + t.x, s.y + t.y, s.z + t.z, s.w + t.w };
+}
+
+template<typename T>
+Point4D<T> operator-(Point4D<T> s, Point4D<T> t)
+{
+    return { s.x - t.x, s.y - t.y, s.z - t.z, s.w - t.w };
+}
+
+template<typename T>
+Point4D<T> operator*(T s, Point4D<T> t)
+{
+    return { s * t.x, s * t.y, s * t.z, s * t.w };
+}
+
+template<typename T>
+struct MinMax {
+    T min;
+    T max;
+};
+
+IntRect transformedBoundingBox(const TransformationMatrix& transform, FloatRect rect, const IntRect& clip)
+{
+    using Point = Point4D<double>;
+    auto mapPoint = [&](FloatPoint p) -> Point {
+        double x = p.x();
+        double y = p.y();
+        double z = 0;
+        double w = 1;
+        transform.map4ComponentPoint(x, y, z, w);
+        return { x, y, z, w };
+    };
+    Point vertex[] = {
+        mapPoint(rect.minXMinYCorner()),
+        mapPoint(rect.maxXMinYCorner()),
+        mapPoint(rect.maxXMaxYCorner()),
+        mapPoint(rect.minXMaxYCorner())
+    };
+    bool isPositive[] = {
+        vertex[0].w >= 0,
+        vertex[1].w >= 0,
+        vertex[2].w >= 0,
+        vertex[3].w >= 0
+    };
+
+    auto findFirstPositiveVertex = [&]() {
+        int i = 0;
+        for (; i < 4; i++) {
+            if (isPositive[i])
+                return i;
+        }
+        return i;
+    };
+    auto findFirstNegativeVertex = [&]() {
+        int i = 0;
+        for (; i < 4; i++) {
+            if (!isPositive[i])
+                return i;
+        }
+        return i;
+    };
+
+    auto leftVertexIndex = [](int i) {
+        return (i + 1) % 4;
+    };
+    auto diagonalVertexIndex = [](int i) {
+        return (i + 2) % 4;
+    };
+    auto rightVertexIndex = [](int i) {
+        return (i + 3) % 4;
+    };
+
+    auto minMax2 = [](double d1, double d2) -> MinMax<double> {
+        if (d1 < d2)
+            return { d1, d2 };
+        return { d2, d1 };
+    };
+    auto minMax3 = [&](double d1, double d2, double d3) -> MinMax<double> {
+        auto minmax = minMax2(d1, d2);
+        return { std::min(minmax.min, d3), std::max(minmax.max, d3) };
+    };
+    auto minMax4 = [&](double d1, double d2, double d3, double d4) -> MinMax<double> {
+        auto minmax1 = minMax2(d1, d2);
+        auto minmax2 = minMax2(d3, d4);
+        return { std::min(minmax1.min, minmax2.min), std::max(minmax1.max, minmax2.max) };
+    };
+
+    auto clipped = [&](const MinMax<double>& xMinMax, const MinMax<double>& yMinMax) -> IntRect {
+        int minX = std::max<double>(xMinMax.min, clip.x());
+        int minY = std::max<double>(yMinMax.min, clip.y());
+        int maxX = std::min<double>(xMinMax.max, clip.maxX());
+        int maxY = std::min<double>(yMinMax.max, clip.maxY());
+        return { minX, minY, maxX - minX, maxY - minY };
+    };
+
+    auto toPositive = [&](Point positive, Point negative) -> Point {
+        ASSERT(positive.w > 0);
+        ASSERT(negative.w <= 0);
+        auto v = positive.w * negative - negative.w * positive;
+        v.w = 0;
+        return v;
+    };
+    auto boundingBoxPPP = [&](Point p1, Point p2, Point p3) -> IntRect {
+        ASSERT(p1.w >= 0);
+        ASSERT(p2.w >= 0);
+        ASSERT(p3.w >= 0);
+        auto xMinMax = minMax3(p1.x / p1.w, p2.x / p2.w, p3.x / p3.w);
+        auto yMinMax = minMax3(p1.y / p1.w, p2.y / p2.w, p3.y / p3.w);
+        return clipped(xMinMax, yMinMax);
+    };
+    auto boundingBoxPPN = [&](Point p1, Point p2, Point n3) -> IntRect {
+        return boundingBoxPPP(p1, p2, toPositive(p1, n3));
+    };
+    auto boundingBoxPNN = [&](Point p1, Point n2, Point n3) -> IntRect {
+        return boundingBoxPPP(p1, toPositive(p1, n2), toPositive(p1, n3));
+    };
+
+    auto boundingBoxPPPByIndex = [&](int i1, int i2, int i3) {
+        return boundingBoxPPP(vertex[i1], vertex[i2], vertex[i3]);
+    };
+    auto boundingBoxPPNByIndex = [&](int i1, int i2, int i3) {
+        return boundingBoxPPN(vertex[i1], vertex[i2], vertex[i3]);
+    };
+    auto boundingBoxPNNByIndex = [&](int i1, int i2, int i3) {
+        return boundingBoxPNN(vertex[i1], vertex[i2], vertex[i3]);
+    };
+
+    int count = isPositive[0] + isPositive[1] + isPositive[2] + isPositive[3];
+    switch (count) {
+    case 0:
+        return { };
+    case 1: {
+        int i = findFirstPositiveVertex();
+        ASSERT(i < 4);
+        return boundingBoxPNNByIndex(i, rightVertexIndex(i), leftVertexIndex(i));
+    }
+    case 2: {
+        int i = findFirstPositiveVertex();
+        ASSERT(i < 3);
+        if (!i && isPositive[3])
+            i = 3;
+        int positiveRightIndex = i;
+        int positiveLeftIndex = leftVertexIndex(i);
+        ASSERT(isPositive[positiveLeftIndex]);
+        return unionRect(boundingBoxPPNByIndex(positiveRightIndex, positiveLeftIndex, leftVertexIndex(positiveLeftIndex)), boundingBoxPPNByIndex(positiveRightIndex, positiveLeftIndex, rightVertexIndex(positiveRightIndex)));
+    }
+    case 3: {
+        int i = findFirstNegativeVertex();
+        ASSERT(i < 4);
+        return unionRect(boundingBoxPPNByIndex(leftVertexIndex(i), rightVertexIndex(i), i), boundingBoxPPPByIndex(leftVertexIndex(i), rightVertexIndex(i), diagonalVertexIndex(i)));
+    }
+    case 4: {
+        auto xMinMax = minMax4(vertex[0].x / vertex[0].w, vertex[1].x / vertex[1].w, vertex[2].x / vertex[2].w, vertex[3].x / vertex[3].w);
+        auto yMinMax = minMax4(vertex[0].y / vertex[0].w, vertex[1].y / vertex[1].w, vertex[2].y / vertex[2].w, vertex[3].y / vertex[3].w);
+        return clipped(xMinMax, yMinMax);
+    }
+    }
+    ASSERT_NOT_REACHED();
+    return { };
+}
+
 void TextureMapperLayer::computeOverlapRegions(ComputeOverlapRegionData& data, const TransformationMatrix& accumulatedReplicaTransform, bool includesReplica)
 {
     if (!m_state.visible || !m_state.contentsVisible)
@@ -349,7 +520,7 @@ void TextureMapperLayer::computeOverlapRegions(ComputeOverlapRegionData& data, c
     else if (m_contentsLayer || m_state.solidColor.isVisible())
         localBoundingRect = m_state.contentsRect;
 
-    if (m_currentFilters.hasOutsets() && !m_state.backdropLayer) {
+    if (m_currentFilters.hasOutsets() && !m_state.backdropLayer && !m_state.masksToBounds && !m_state.maskLayer) {
         auto outsets = m_currentFilters.outsets();
         localBoundingRect.move(-outsets.left(), -outsets.top());
         localBoundingRect.expand(outsets.left() + outsets.right(), outsets.top() + outsets.bottom());
@@ -358,8 +529,7 @@ void TextureMapperLayer::computeOverlapRegions(ComputeOverlapRegionData& data, c
     TransformationMatrix transform(accumulatedReplicaTransform);
     transform.multiply(m_layerTransforms.combined);
 
-    IntRect viewportBoundingRect = enclosingIntRect(transform.mapRect(localBoundingRect));
-    viewportBoundingRect.intersect(data.clipBounds);
+    IntRect viewportBoundingRect = transformedBoundingBox(transform, localBoundingRect, data.clipBounds);
 
     switch (data.mode) {
     case ComputeOverlapRegionMode::Intersection:
@@ -388,10 +558,6 @@ void TextureMapperLayer::paintUsingOverlapRegions(TextureMapperPaintOptions& opt
     Region overlapRegion;
     Region nonOverlapRegion;
     auto mode = ComputeOverlapRegionMode::Intersection;
-    if (m_state.maskLayer)
-        mode = ComputeOverlapRegionMode::Mask;
-    else if (hasFilters() || (m_state.replicaLayer && m_state.replicaLayer->m_state.maskLayer))
-        mode = ComputeOverlapRegionMode::Union;
     ComputeOverlapRegionData data {
         mode,
         options.textureMapper.clipBounds(),
@@ -401,13 +567,13 @@ void TextureMapperLayer::paintUsingOverlapRegions(TextureMapperPaintOptions& opt
     data.clipBounds.move(-options.offset);
     computeOverlapRegions(data, options.transform);
     if (overlapRegion.isEmpty()) {
-        paintSelfAndChildrenWithReplica(options);
+        paintSelfChildrenReplicaFilterAndMask(options);
         return;
     }
 
     // Having both overlap and non-overlap regions carries some overhead. Avoid it if the overlap area
     // is big anyway.
-    if (overlapRegion.bounds().size().area() > nonOverlapRegion.bounds().size().area()) {
+    if (overlapRegion.totalArea() > nonOverlapRegion.totalArea()) {
         overlapRegion.unite(nonOverlapRegion);
         nonOverlapRegion = Region();
     }
@@ -417,7 +583,7 @@ void TextureMapperLayer::paintUsingOverlapRegions(TextureMapperPaintOptions& opt
 
     for (auto& rect : rects) {
         options.textureMapper.beginClip(TransformationMatrix(), FloatRoundedRect(rect));
-        paintSelfAndChildrenWithReplica(options);
+        paintSelfChildrenReplicaFilterAndMask(options);
         options.textureMapper.endClip();
     }
 
@@ -441,6 +607,43 @@ void TextureMapperLayer::paintUsingOverlapRegions(TextureMapperPaintOptions& opt
     }
 }
 
+void TextureMapperLayer::paintSelfChildrenFilterAndMask(TextureMapperPaintOptions& options)
+{
+    Region overlapRegion;
+    Region nonOverlapRegion;
+    auto mode = ComputeOverlapRegionMode::Union;
+    if (m_state.maskLayer || (options.replicaLayer == this && m_state.replicaLayer->m_state.maskLayer))
+        mode = ComputeOverlapRegionMode::Mask;
+    ComputeOverlapRegionData data {
+        mode,
+        options.textureMapper.clipBounds(),
+        overlapRegion,
+        nonOverlapRegion
+    };
+    data.clipBounds.move(-options.offset);
+    computeOverlapRegions(data, options.transform, false);
+    ASSERT(nonOverlapRegion.isEmpty());
+
+    auto rects = overlapRegion.rects();
+    static const size_t OverlapRegionConsolidationThreshold = 4;
+    if (rects.size() > OverlapRegionConsolidationThreshold) {
+        rects.clear();
+        rects.append(overlapRegion.bounds());
+    }
+
+    IntSize maxTextureSize = options.textureMapper.maxTextureSize();
+    for (auto& rect : rects) {
+        for (int x = rect.x(); x < rect.maxX(); x += maxTextureSize.width()) {
+            for (int y = rect.y(); y < rect.maxY(); y += maxTextureSize.height()) {
+                IntRect tileRect(IntPoint(x, y), maxTextureSize);
+                tileRect.intersect(rect);
+
+                paintSelfAndChildrenWithIntermediateSurface(options, tileRect);
+            }
+        }
+    }
+}
+
 void TextureMapperLayer::applyMask(TextureMapperPaintOptions& options)
 {
     options.textureMapper.setMaskMode(true);
@@ -452,15 +655,22 @@ void TextureMapperLayer::paintIntoSurface(TextureMapperPaintOptions& options)
 {
     options.textureMapper.bindSurface(options.surface.get());
     if (m_isBackdrop) {
-        SetForScope<TransformationMatrix> scopedTransform(options.transform, TransformationMatrix());
-        SetForScope<TextureMapperLayer*> scopedBackdropLayer(options.backdropLayer, this);
+        SetForScope scopedTransform(options.transform, TransformationMatrix());
+        SetForScope scopedReplicaLayer(options.replicaLayer, nullptr);
+        SetForScope scopedBackdropLayer(options.backdropLayer, this);
         rootLayer().paintSelfAndChildren(options);
     } else
         paintSelfAndChildren(options);
-    if (m_state.maskLayer)
-        m_state.maskLayer->applyMask(options);
-    options.surface = options.surface->applyFilters(options.textureMapper, m_currentFilters);
+
+    bool hasMask = !!m_state.maskLayer;
+    bool hasReplicaMask = options.replicaLayer == this && m_state.replicaLayer->m_state.maskLayer;
+    bool defersLastFilter = !hasMask && !hasReplicaMask;
+    options.surface = options.surface->applyFilters(options.textureMapper, m_currentFilters, defersLastFilter);
     options.textureMapper.bindSurface(options.surface.get());
+    if (hasMask)
+        m_state.maskLayer->applyMask(options);
+    if (hasReplicaMask)
+        m_state.replicaLayer->m_state.maskLayer->applyMask(options);
 }
 
 static void commitSurface(TextureMapperPaintOptions& options, BitmapTexture& surface, const IntRect& rect, float opacity)
@@ -475,18 +685,24 @@ void TextureMapperLayer::paintWithIntermediateSurface(TextureMapperPaintOptions&
 {
     auto surface = options.textureMapper.acquireTextureFromPool(rect.size(), BitmapTexture::SupportsAlpha);
     {
-        SetForScope<RefPtr<BitmapTexture>> scopedSurface(options.surface, surface);
-        SetForScope<IntSize> scopedOffset(options.offset, -toIntSize(rect.location()));
-        SetForScope<float> scopedOpacity(options.opacity, 1);
-        if (m_state.replicaLayer) {
-            {
-                SetForScope<TransformationMatrix> scopedTransform(options.transform, options.transform);
-                options.transform.multiply(replicaTransform());
-                paintIntoSurface(options);
-            }
-            if (m_state.replicaLayer->m_state.maskLayer)
-                m_state.replicaLayer->m_state.maskLayer->applyMask(options);
-        }
+        SetForScope scopedSurface(options.surface, surface);
+        SetForScope scopedOffset(options.offset, -toIntSize(rect.location()));
+        SetForScope scopedOpacity(options.opacity, 1);
+
+        options.textureMapper.bindSurface(options.surface.get());
+        paintSelfChildrenReplicaFilterAndMask(options);
+    }
+
+    commitSurface(options, *surface, rect, options.opacity);
+}
+
+void TextureMapperLayer::paintSelfAndChildrenWithIntermediateSurface(TextureMapperPaintOptions& options, const IntRect& rect)
+{
+    auto surface = options.textureMapper.acquireTextureFromPool(rect.size(), BitmapTexture::SupportsAlpha);
+    {
+        SetForScope scopedSurface(options.surface, surface);
+        SetForScope scopedOffset(options.offset, -toIntSize(rect.location()));
+        SetForScope scopedOpacity(options.opacity, 1);
 
         paintIntoSurface(options);
         surface = options.surface;
@@ -495,29 +711,41 @@ void TextureMapperLayer::paintWithIntermediateSurface(TextureMapperPaintOptions&
     commitSurface(options, *surface, rect, options.opacity);
 }
 
+void TextureMapperLayer::paintSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions& options)
+{
+    bool hasFilterOrMask = [&] {
+        if (hasFilters())
+            return true;
+        if (m_state.maskLayer)
+            return true;
+        if (m_state.replicaLayer && m_state.replicaLayer->m_state.maskLayer)
+            return true;
+        return false;
+    }();
+    if (hasFilterOrMask) {
+        if (m_state.replicaLayer) {
+            SetForScope scopedReplicaLayer(options.replicaLayer, this);
+            SetForScope scopedTransform(options.transform, options.transform);
+            options.transform.multiply(replicaTransform());
+            paintSelfChildrenFilterAndMask(options);
+        }
+        paintSelfChildrenFilterAndMask(options);
+    } else
+        paintSelfAndChildrenWithReplica(options);
+}
+
 void TextureMapperLayer::paintRecursive(TextureMapperPaintOptions& options)
 {
     if (!isVisible())
         return;
 
-    SetForScope<float> scopedOpacity(options.opacity, options.opacity * m_currentOpacity);
+    SetForScope scopedOpacity(options.opacity, options.opacity * m_currentOpacity);
 
-    if (!shouldBlend()) {
-        paintSelfAndChildrenWithReplica(options);
-        return;
-    }
-
-    paintUsingOverlapRegions(options);
+    if (shouldBlend())
+        paintUsingOverlapRegions(options);
+    else
+        paintSelfChildrenReplicaFilterAndMask(options);
 }
-
-#if !USE(COORDINATED_GRAPHICS)
-void TextureMapperLayer::setChildren(const Vector<GraphicsLayer*>& newChildren)
-{
-    removeAllChildren();
-    for (auto* child : newChildren)
-        addChild(&downcast<GraphicsLayerTextureMapper>(child)->layer());
-}
-#endif
 
 void TextureMapperLayer::setChildren(const Vector<TextureMapperLayer*>& newChildren)
 {
@@ -558,8 +786,8 @@ void TextureMapperLayer::removeAllChildren()
 void TextureMapperLayer::setMaskLayer(TextureMapperLayer* maskLayer)
 {
     if (maskLayer) {
-        maskLayer->m_effectTarget = makeWeakPtr(*this);
-        m_state.maskLayer = makeWeakPtr(*maskLayer);
+        maskLayer->m_effectTarget = m_isReplica ? m_effectTarget : *this;
+        m_state.maskLayer = *maskLayer;
     } else
         m_state.maskLayer = nullptr;
 }
@@ -568,8 +796,8 @@ void TextureMapperLayer::setReplicaLayer(TextureMapperLayer* replicaLayer)
 {
     if (replicaLayer) {
         replicaLayer->m_isReplica = true;
-        replicaLayer->m_effectTarget = makeWeakPtr(*this);
-        m_state.replicaLayer = makeWeakPtr(*replicaLayer);
+        replicaLayer->m_effectTarget = *this;
+        m_state.replicaLayer = *replicaLayer;
     } else
         m_state.replicaLayer = nullptr;
 }
@@ -578,8 +806,8 @@ void TextureMapperLayer::setBackdropLayer(TextureMapperLayer* backdropLayer)
 {
     if (backdropLayer) {
         backdropLayer->m_isBackdrop = true;
-        backdropLayer->m_effectTarget = makeWeakPtr(*this);
-        m_state.backdropLayer = makeWeakPtr(*backdropLayer);
+        backdropLayer->m_effectTarget = *this;
+        m_state.backdropLayer = *backdropLayer;
     } else
         m_state.backdropLayer = nullptr;
 }
@@ -644,6 +872,11 @@ void TextureMapperLayer::setContentsClippingRect(const FloatRoundedRect& content
     m_state.contentsClippingRect = contentsClippingRect;
 }
 
+void TextureMapperLayer::setContentsRectClipsDescendants(bool clips)
+{
+    m_state.contentsRectClipsDescendants = clips;
+}
+
 void TextureMapperLayer::setMasksToBounds(bool masksToBounds)
 {
     m_state.masksToBounds = masksToBounds;
@@ -677,6 +910,11 @@ void TextureMapperLayer::setOpacity(float opacity)
 void TextureMapperLayer::setSolidColor(const Color& color)
 {
     m_state.solidColor = color;
+}
+
+void TextureMapperLayer::setBackgroundColor(const Color& color)
+{
+    m_state.backgroundColor = color;
 }
 
 void TextureMapperLayer::setFilters(const FilterOperations& filters)

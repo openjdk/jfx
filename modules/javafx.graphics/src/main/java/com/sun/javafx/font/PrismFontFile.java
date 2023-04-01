@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,8 +87,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
      * manage how much of that is kept around. We clearly want
      * to keep a reference to the strike that created that data.
      */
-    Map<FontStrikeDesc, WeakReference<PrismFontStrike>> strikeMap =
-        new ConcurrentHashMap<FontStrikeDesc, WeakReference<PrismFontStrike>>();
+    Map<FontStrikeDesc, WeakReference<PrismFontStrike>> strikeMap = new ConcurrentHashMap<>();
 
     protected PrismFontFile(String name, String filename, int fIndex,
                           boolean register, boolean embedded,
@@ -150,6 +149,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
     }
 
+    @Override
     public int getDefaultAAMode() {
         return AA_GREYSCALE;
     }
@@ -219,6 +219,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             this.refKey = refKey;
         }
 
+        @Override
         @SuppressWarnings("removal")
         public synchronized void dispose() {
             if (fileName != null) {
@@ -263,6 +264,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
     }
 
+    @Override
     public String getFileName() {
         return filename;
     }
@@ -275,10 +277,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return fontIndex;
     }
 
+    @Override
     public String getFullName() {
         return fullName;
     }
 
+    @Override
     public String getPSName() {
         if (psName == null) {
             psName = fullName;
@@ -286,22 +290,27 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return psName;
     }
 
+    @Override
     public String getFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getStyleName() {
         return styleName;
     }
 
+    @Override
     public String getLocaleFullName() {
         return localeFullName;
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return localeFamilyName;
     }
 
+    @Override
     public String getLocaleStyleName() {
         return localeStyleName;
     }
@@ -309,11 +318,13 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     /*
      * Returns the features the font supports.
      */
+    @Override
     public int getFeatures() {
         //TODO check font file for features
         return -1;
     }
 
+    @Override
     public Map getStrikeMap() {
         return strikeMap;
     }
@@ -323,6 +334,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                                                     int aaMode,
                                                     FontStrikeDesc desc);
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
         FontStrikeDesc desc = new FontStrikeDesc(size, transform, aaMode);
@@ -337,7 +349,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             if (disposer != null) {
                 ref = Disposer.addRecord(strike, disposer);
             } else {
-                ref = new WeakReference<PrismFontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }
@@ -359,7 +371,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             return retArr;
         }
         if (bbCache == null) {
-            bbCache = new HashMap<Integer, int[]>();
+            bbCache = new HashMap<>();
         }
         int[] bb = bbCache.get(gc);
         if (bb == null) {
@@ -388,10 +400,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     }
 
     private Object peer;
+    @Override
     public Object getPeer() {
         return peer;
     }
 
+    @Override
     public void setPeer(Object peer) {
         this.peer = peer;
     }
@@ -548,7 +562,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             Buffer headTable = filereader.readBlock(headDE.offset,
                                                     headDE.length);
             // Important font attribute must be set in order to prevent div by zero
-            upem = (float)(headTable.getShort(18) & 0xffff);
+            upem = headTable.getShort(18) & 0xffff;
             if (!(16 <= upem && upem <= 16384)) {
                 upem = 2048;
             }
@@ -569,7 +583,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 // reversed from our coordinate system.
                 ascent = -(float)hhea.getShort(4);
                 descent = -(float)hhea.getShort(6);
-                linegap = (float)hhea.getShort(8);
+                linegap = hhea.getShort(8);
                 // advanceWidthMax is max horizontal advance of all glyphs in
                 // font. For some fonts advanceWidthMax is much larger then "M"
                 // advanceWidthMax = (float)hhea.getChar(10);
@@ -708,10 +722,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
     }
 
+    @Override
     public boolean isBold() {
         return isBold;
     }
 
+    @Override
     public boolean isItalic() {
         return isItalic;
     }
@@ -724,6 +740,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return isRegistered;
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return isEmbedded;
     }
@@ -800,9 +817,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 buffer.skip(6);
                 continue;
             }
-            short nameID     = buffer.getShort();
-            int nameLen    = ((int)buffer.getShort()) & 0xffff;
-            int namePtr    = (((int)buffer.getShort()) & 0xffff) + stringPtr;
+            short nameID   = buffer.getShort();
+            int nameLen    = buffer.getShort() & 0xffff;
+            int namePtr    = (buffer.getShort() & 0xffff) + stringPtr;
             String tmpName = null;
             String enc;
             switch (nameID) {
@@ -949,7 +966,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             return;
         }
 
-        Map<String, Short> map = new HashMap<String, Short>(200);
+        Map<String, Short> map = new HashMap<>(200);
         addLCIDMapEntry(map, "ar", (short) 0x0401);
         addLCIDMapEntry(map, "bg", (short) 0x0402);
         addLCIDMapEntry(map, "ca", (short) 0x0403);
@@ -1117,7 +1134,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
         String key = locale.toString();
         while (!key.isEmpty()) {
-            Short lcidObject = (Short) lcidMap.get(key);
+            Short lcidObject = lcidMap.get(key);
             if (lcidObject != null) {
                 return lcidObject.shortValue();
             }
@@ -1148,6 +1165,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
     private OpenTypeGlyphMapper mapper = null;
 
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         if (mapper == null) {
             mapper = new OpenTypeGlyphMapper(this);
@@ -1155,8 +1173,36 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return mapper;
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
+    }
+
+    @Override
+    public float getAdvance(int glyphCode, float ptSize) {
+        if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
+            return 0f;
+        }
+
+        /*
+         * Platform-specific but it needs to be explained why this is needed.
+         * The hmtx table in the Apple Color Emoji font can be woefully off
+         * compared to the size of emoji glyph CoreText generates and the advance
+         * CoreText supports. So for macOS at least, we need to get those advances
+         * another way. Note : I also see "small" discrepancies for ordinary
+         * glyphs in the mac system font between hmtx and CoreText.
+         * Limit use of this because we aren't caching the result.
+         */
+        if (PrismFontFactory.isMacOSX && isColorGlyph(glyphCode)) {
+            return getAdvanceFromPlatform(glyphCode, ptSize);
+        } else {
+            return getAdvanceFromHMTX(glyphCode, ptSize);
+        }
+    }
+
+    /* REMIND: We can cache here if it is slow */
+    protected float getAdvanceFromPlatform(int glyphCode, float ptSize) {
+        return getAdvanceFromHMTX(glyphCode, ptSize);
     }
 
     char[] advanceWidths = null;
@@ -1189,9 +1235,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
      * they do not provide hdmx entry for sizes below that where hinting is
      * required, suggesting the htmx table is fine for such cases.
      */
-    public float getAdvance(int glyphCode, float ptSize) {
-        if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID)
-            return 0f;
+    private float getAdvanceFromHMTX(int glyphCode, float ptSize) {
 
         // If we haven't initialised yet, do so now.
         if (advanceWidths == null && numHMetrics > 0) {
@@ -1217,7 +1261,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             } else {
                 cadv = advanceWidths[numHMetrics-1];
             }
-            return ((float)(cadv & 0xffff)*ptSize)/upem;
+            return ((cadv & 0xffff)*ptSize)/upem;
         } else { // no valid lookup.
             return 0f;
         }
@@ -1354,4 +1398,114 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     public int hashCode() {
         return filename.hashCode() + (71 * fullName.hashCode());
     }
+
+
+    private boolean checkedColorTables;
+    private boolean hasColorTables;
+    private synchronized boolean fontSupportsColorGlyphs() {
+       if (checkedColorTables) {
+           return hasColorTables;
+       }
+       hasColorTables =
+           getDirectoryEntry(sbixTag) != null ||
+           getDirectoryEntry(colrTag) != null;
+       checkedColorTables = true;
+
+       return hasColorTables;
+    }
+
+    public boolean isColorGlyph(int glyphID) {
+        if (!fontSupportsColorGlyphs()) {
+            return false;
+        }
+        if (getDirectoryEntry(sbixTag) != null) {
+            return isSbixGlyph(glyphID);
+        }
+        return false;
+   }
+
+
+   private static final int USHORT_MASK = 0xffff;
+   private static final int UINT_MASK   = 0xffffffff;
+
+   static class ColorGlyphStrike {
+
+       private int ppem;
+       private int ppi;
+       private int dataOffsets[];
+
+       ColorGlyphStrike(int ppem, int ppi, int[] offsets) {
+           this.ppem = ppem;
+           this.ppi  = ppi ;
+           dataOffsets = offsets;
+       }
+
+       boolean hasGlyph(int gid) {
+           if (gid >= dataOffsets.length-1) {
+              return false;
+           }
+           /* Per the OpenType sbix specthere's one extra offset.
+            */
+           return dataOffsets[gid] < dataOffsets[gid+1];
+       }
+   }
+
+   ColorGlyphStrike[] sbixStrikes = null;
+
+   private boolean isSbixGlyph(int glyphID) {
+       if (sbixStrikes == null) {
+           synchronized (this) {
+               buildSbixStrikeTables();
+               if (sbixStrikes == null) {
+                   sbixStrikes = new ColorGlyphStrike[0];
+               }
+           }
+       }
+       for (int i=0; i<sbixStrikes.length; i++) {
+          if (sbixStrikes[i].hasGlyph(glyphID)) {
+              return true;
+          }
+       }
+       return false;
+   }
+
+   private void buildSbixStrikeTables() {
+
+       Buffer sbixTable = readTable(sbixTag);
+
+       if (sbixTable == null) {
+           return;
+       }
+       int sz = sbixTable.capacity();
+       sbixTable.skip(4); // past version and flags
+       int numStrikes = sbixTable.getInt() & UINT_MASK;
+       if (numStrikes <= 0 || numStrikes >= sz) {
+           return;
+       }
+       int[] strikeOffsets = new int[numStrikes];
+       for (int i=0; i<numStrikes; i++) {
+           strikeOffsets[i] = sbixTable.getInt() & UINT_MASK;
+           if (strikeOffsets[i] >= sz) {
+               return;
+           }
+       }
+       int numGlyphs = getNumGlyphs();
+       ColorGlyphStrike[] strikes = new ColorGlyphStrike[numStrikes];
+       for (int i=0; i<numStrikes; i++) {
+           if (strikeOffsets[i] + 4 + (4*(numGlyphs+1)) > sz) {
+                return;
+           }
+           sbixTable.position(strikeOffsets[i]);
+
+           int ppem = sbixTable.getChar() & USHORT_MASK;
+           int ppi  = sbixTable.getChar() & USHORT_MASK;
+           int[] glyphDataOffsets = new int[numGlyphs+1];
+           for (int g=0; g<=numGlyphs; g++) {
+               glyphDataOffsets[g] = sbixTable.getInt() & UINT_MASK;
+           }
+           strikes[i] = new ColorGlyphStrike(ppem, ppi, glyphDataOffsets);
+       }
+       sbixStrikes = strikes;
+   }
+
 }

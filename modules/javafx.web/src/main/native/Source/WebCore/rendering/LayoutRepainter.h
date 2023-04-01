@@ -32,9 +32,11 @@ namespace WebCore {
 class RenderElement;
 class RenderLayerModelObject;
 
+enum class RepaintOutlineBounds : bool { No, Yes };
+
 class LayoutRepainter {
 public:
-    LayoutRepainter(RenderElement&, bool checkForRepaint);
+    LayoutRepainter(RenderElement&, bool checkForRepaint, RepaintOutlineBounds = RepaintOutlineBounds::Yes);
 
     bool checkForRepaint() const { return m_checkForRepaint; }
 
@@ -42,12 +44,13 @@ public:
     bool repaintAfterLayout();
 
 private:
-    RenderElement& m_object;
-    RenderLayerModelObject* m_repaintContainer;
+    RenderElement& m_renderer;
+    const RenderLayerModelObject* m_repaintContainer { nullptr };
     // We store these values as LayoutRects, but the final invalidations will be pixel snapped
     LayoutRect m_oldBounds;
-    LayoutRect m_oldOutlineBox;
+    LayoutRect m_oldOutlineBounds;
     bool m_checkForRepaint;
+    bool m_repaintOutlineBounds;
 };
 
 } // namespace WebCore

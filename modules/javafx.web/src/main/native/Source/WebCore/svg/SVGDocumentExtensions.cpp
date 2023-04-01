@@ -26,6 +26,7 @@
 #include "Document.h"
 #include "EventListener.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "Page.h"
 #include "SMILTimeContainer.h"
@@ -48,10 +49,7 @@ SVGDocumentExtensions::SVGDocumentExtensions(Document& document)
 {
 }
 
-SVGDocumentExtensions::~SVGDocumentExtensions()
-{
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_useElementsWithPendingShadowTreeUpdate.computesEmpty());
-}
+SVGDocumentExtensions::~SVGDocumentExtensions() = default;
 
 void SVGDocumentExtensions::addTimeContainer(SVGSVGElement& element)
 {
@@ -89,20 +87,6 @@ RenderSVGResourceContainer* SVGDocumentExtensions::resourceById(const AtomString
 
     return m_resources.get(id);
 }
-
-
-void SVGDocumentExtensions::addUseElementWithPendingShadowTreeUpdate(SVGUseElement& element)
-{
-    auto result = m_useElementsWithPendingShadowTreeUpdate.add(element);
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(result.isNewEntry);
-}
-
-void SVGDocumentExtensions::removeUseElementWithPendingShadowTreeUpdate(SVGUseElement& element)
-{
-    m_useElementsWithPendingShadowTreeUpdate.remove(element);
-    // FIXME: Assert that element was in m_svgUseElements once re-entrancy to update style and layout have been removed.
-}
-
 
 void SVGDocumentExtensions::startAnimations()
 {
@@ -258,7 +242,7 @@ RefPtr<Element> SVGDocumentExtensions::takeElementFromPendingResourcesForRemoval
         return nullptr;
 
     auto& resourceSet = it->value;
-    auto firstElement = makeRefPtr(resourceSet.begin().get());
+    RefPtr firstElement = resourceSet.begin().get();
     if (!firstElement)
         return nullptr;
 
@@ -277,7 +261,7 @@ void SVGDocumentExtensions::addElementToRebuild(SVGElement& element)
 
 void SVGDocumentExtensions::removeElementToRebuild(SVGElement& element)
 {
-    m_rebuildElements.removeFirst(element);
+    m_rebuildElements.removeFirstMatching([&](auto& item) { return item.ptr() == &element; });
 }
 
 void SVGDocumentExtensions::rebuildElements()

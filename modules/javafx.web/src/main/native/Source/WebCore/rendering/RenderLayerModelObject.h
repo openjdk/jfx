@@ -28,6 +28,7 @@ namespace WebCore {
 
 class KeyframeList;
 class RenderLayer;
+class SVGGraphicsElement;
 
 struct LayerRepaintRects {
     LayoutRect clippedOverflowRect;
@@ -54,6 +55,10 @@ public:
     // The query rect is given in local coordinate system.
     virtual bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const { return false; }
 
+    // Returns false if the rect has no intersection with the applied clip rect. When the context specifies edge-inclusive
+    // intersection, this return value allows distinguishing between no intersection and zero-area intersection.
+    virtual bool applyCachedClipAndScrollPosition(LayoutRect&, const RenderLayerModelObject*, VisibleRectContext) const { return false; }
+
     virtual bool isScrollableOrRubberbandableBox() const { return false; }
 
     bool shouldPlaceVerticalScrollbarOnLeft() const;
@@ -67,12 +72,35 @@ public:
 
     void suspendAnimations(MonotonicTime = MonotonicTime()) override;
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // Provides the SVG implementation for computeVisibleRectInContainer().
+    // This lives in RenderLayerModelObject, which is the common base-class for all SVG renderers.
+    std::optional<LayoutRect> computeVisibleRectInSVGContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const;
+
+    // Provides the SVG implementation for mapLocalToContainer().
+    // This lives in RenderLayerModelObject, which is the common base-class for all SVG renderers.
+    void mapLocalToSVGContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const;
+
+    void applySVGTransform(TransformationMatrix&, SVGGraphicsElement&, const RenderStyle&, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption>) const;
+    void updateHasSVGTransformFlags(const SVGGraphicsElement&);
+
+    LayoutPoint nominalSVGLayoutLocation() const { return flooredLayoutPoint(objectBoundingBoxWithoutTransformations().minXMinYCorner()); }
+    virtual LayoutPoint currentSVGLayoutLocation() const { ASSERT_NOT_REACHED(); return { }; }
+    virtual void setCurrentSVGLayoutLocation(const LayoutPoint&) { ASSERT_NOT_REACHED(); }
+#endif
+
+    TransformationMatrix* layerTransform() const;
+
+    virtual void updateLayerTransform();
+    virtual void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const = 0;
+
 protected:
     RenderLayerModelObject(Element&, RenderStyle&&, BaseTypeFlags);
     RenderLayerModelObject(Document&, RenderStyle&&, BaseTypeFlags);
 
     void createLayer();
     void willBeDestroyed() override;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
 private:
     std::unique_ptr<RenderLayer> m_layer;
@@ -83,6 +111,11 @@ private:
     static bool s_hadTransform;
     static bool s_layerWasSelfPainting;
 };
+
+// Pixel-snapping (== 'device pixel alignment') helpers.
+bool rendererNeedsPixelSnapping(const RenderLayerModelObject&);
+FloatRect snapRectToDevicePixelsIfNeeded(const LayoutRect&, const RenderLayerModelObject&);
+FloatRect snapRectToDevicePixelsIfNeeded(const FloatRect&, const RenderLayerModelObject&);
 
 } // namespace WebCore
 

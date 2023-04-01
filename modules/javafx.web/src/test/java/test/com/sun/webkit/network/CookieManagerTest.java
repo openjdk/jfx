@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -513,7 +513,7 @@ public class CookieManagerTest {
     }
 
     private static Set<String> gen(int from, int to) {
-        Set<String> set = new LinkedHashSet<String>(to - from);
+        Set<String> set = new LinkedHashSet<>(to - from);
         for (int i = from; i < to; i++) {
             set.add(fmt("foo%1$d=bar%1$d", i));
         }
@@ -688,8 +688,8 @@ public class CookieManagerTest {
     }
 
     private void put(String uri, String... values) {
-        Map<String,List<String>> map = new HashMap<String,List<String>>(1);
-        List<String> list = new ArrayList<String>(values.length);
+        Map<String,List<String>> map = new HashMap<>(1);
+        List<String> list = new ArrayList<>(values.length);
         for (int i = values.length - 1; i >= 0; i--) {
             list.add(values[i]);
         }
@@ -735,7 +735,7 @@ public class CookieManagerTest {
     }
 
     private static Set<String> toSet(String s) {
-        return new TreeSet<String>(Arrays.asList(s.split("; ")));
+        return new TreeSet<>(Arrays.asList(s.split("; ")));
     }
 
     private static String fmt(String format, Object... args) {

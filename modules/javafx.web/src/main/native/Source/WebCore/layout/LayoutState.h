@@ -49,21 +49,24 @@ class LayoutState : public CanMakeWeakPtr<LayoutState> {
     WTF_MAKE_NONCOPYABLE(LayoutState);
     WTF_MAKE_ISO_ALLOCATED(LayoutState);
 public:
-    LayoutState(const Document&, const ContainerBox& rootContainer);
+    enum class FormattingContextIntegrationType {
+        Inline,
+        Flex
+    };
+    LayoutState(const Document&, const ContainerBox& rootContainer, std::optional<FormattingContextIntegrationType> = std::nullopt);
     ~LayoutState();
 
-    FormattingState& ensureFormattingState(const ContainerBox& formattingContextRoot);
     InlineFormattingState& ensureInlineFormattingState(const ContainerBox& formattingContextRoot);
     BlockFormattingState& ensureBlockFormattingState(const ContainerBox& formattingContextRoot);
     TableFormattingState& ensureTableFormattingState(const ContainerBox& formattingContextRoot);
     FlexFormattingState& ensureFlexFormattingState(const ContainerBox& formattingContextRoot);
 
-    FormattingState& establishedFormattingState(const ContainerBox& formattingRoot) const;
-    InlineFormattingState& establishedInlineFormattingState(const ContainerBox& formattingContextRoot) const;
-    BlockFormattingState& establishedBlockFormattingState(const ContainerBox& formattingContextRoot) const;
-    TableFormattingState& establishedTableFormattingState(const ContainerBox& formattingContextRoot) const;
-    FlexFormattingState& establishedFlexFormattingState(const ContainerBox& formattingContextRoot) const;
+    InlineFormattingState& formattingStateForInlineFormattingContext(const ContainerBox& inlineFormattingContextRoot) const;
+    BlockFormattingState& formattingStateForBlockFormattingContext(const ContainerBox& blockFormattingContextRoot) const;
+    TableFormattingState& formattingStateForTableFormattingContext(const ContainerBox& tableFormattingContextRoot) const;
+    FlexFormattingState& formattingStateForFlexFormattingContext(const ContainerBox& flexFormattingContextRoot) const;
 
+    FormattingState& formattingStateForFormattingContext(const ContainerBox& formattingRoot) const;
     FormattingState& formattingStateForBox(const Box&) const;
 
     bool hasFormattingState(const ContainerBox& formattingRoot) const;
@@ -85,10 +88,12 @@ public:
     bool inLimitedQuirksMode() const { return m_quirksMode == QuirksMode::Limited; }
     bool inStandardsMode() const { return m_quirksMode == QuirksMode::No; }
 
-    bool hasRoot() const { return !!m_rootContainer; }
-    const ContainerBox& root() const { return *m_rootContainer; }
+    const ContainerBox& root() const { return m_rootContainer; }
 
     // LFC integration only. Full LFC has proper ICB access.
+    bool isInlineFormattingContextIntegration() const { return m_formattingContextIntegrationType && *m_formattingContextIntegrationType == FormattingContextIntegrationType::Inline; }
+    bool isFlexFormattingContextIntegration() const { return m_formattingContextIntegrationType && *m_formattingContextIntegrationType == FormattingContextIntegrationType::Flex; }
+
     void setViewportSize(const LayoutSize&);
     LayoutSize viewportSize() const;
     enum IsIntegratedRootBoxFirstChild { Yes, No, NotApplicable };
@@ -107,6 +112,7 @@ private:
     HashMap<const ContainerBox*, std::unique_ptr<FlexFormattingState>> m_flexFormattingStates;
 
     std::unique_ptr<InlineFormattingState> m_rootInlineFormattingStateForIntegration;
+    std::unique_ptr<FlexFormattingState> m_rootFlexFormattingStateForIntegration;
 
 #ifndef NDEBUG
     HashSet<const FormattingContext*> m_formattingContextList;
@@ -114,9 +120,10 @@ private:
     HashMap<const Box*, std::unique_ptr<BoxGeometry>> m_layoutBoxToBoxGeometry;
     QuirksMode m_quirksMode { QuirksMode::No };
 
-    WeakPtr<const ContainerBox> m_rootContainer;
+    CheckedRef<const ContainerBox> m_rootContainer;
 
     // LFC integration only.
+    std::optional<FormattingContextIntegrationType> m_formattingContextIntegrationType;
     LayoutSize m_viewportSize;
     IsIntegratedRootBoxFirstChild m_isIntegratedRootBoxFirstChild { IsIntegratedRootBoxFirstChild::NotApplicable };
 };

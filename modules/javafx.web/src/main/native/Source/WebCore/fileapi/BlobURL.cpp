@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-const char* kBlobProtocol = "blob";
+static constexpr auto kBlobProtocol = "blob"_s;
 
 URL BlobURL::createPublicURL(SecurityOrigin* securityOrigin)
 {
@@ -51,7 +51,7 @@ URL BlobURL::createPublicURL(SecurityOrigin* securityOrigin)
 
 URL BlobURL::createInternalURL()
 {
-    return createBlobURL("blobinternal://");
+    return createBlobURL("blobinternal://"_s);
 }
 
 static const Document* blobOwner(const SecurityOrigin& blobOrigin)
@@ -89,10 +89,10 @@ bool BlobURL::isSecureBlobURL(const URL& url)
     return SecurityOrigin::isSecure(url);
 }
 
-URL BlobURL::createBlobURL(const String& originString)
+URL BlobURL::createBlobURL(StringView originString)
 {
     ASSERT(!originString.isEmpty());
-    String urlString = "blob:" + originString + '/' + createCanonicalUUIDString();
+    String urlString = makeString("blob:"_s, originString, '/', UUID::createVersion4());
     return URL({ }, urlString);
 }
 

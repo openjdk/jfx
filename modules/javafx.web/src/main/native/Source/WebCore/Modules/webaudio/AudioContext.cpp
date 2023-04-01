@@ -31,9 +31,10 @@
 #include "AudioContextOptions.h"
 #include "AudioTimestamp.h"
 #include "DOMWindow.h"
+#include "DocumentInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Logging.h"
-#include "Page.h"
+#include "PageInlines.h"
 #include "Performance.h"
 #include "PlatformMediaSessionManager.h"
 #include "Quirks.h"
@@ -121,7 +122,6 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
     pageMutedStateDidChange();
 
     document.addAudioProducer(*this);
-    document.registerForVisibilityStateChangedCallbacks(*this);
 
     // Unlike OfflineAudioContext, AudioContext does not require calling resume() to start rendering.
     // Lazy initialization starts rendering so we schedule a task here to make sure lazy initialization
@@ -147,10 +147,8 @@ void AudioContext::constructCommon()
 
 AudioContext::~AudioContext()
 {
-    if (!isOfflineContext() && scriptExecutionContext()) {
-        document()->removeAudioProducer(*this);
-        document()->unregisterForVisibilityStateChangedCallbacks(*this);
-    }
+    if (auto* document = this->document())
+        document->removeAudioProducer(*this);
 }
 
 void AudioContext::uninitialize()
@@ -175,25 +173,24 @@ double AudioContext::baseLatency()
     return static_cast<double>(destination().framesPerBuffer()) / sampleRate();
 }
 
-AudioTimestamp AudioContext::getOutputTimestamp(DOMWindow& window)
+AudioTimestamp AudioContext::getOutputTimestamp()
 {
-    auto& performance = window.performance();
-
     auto position = outputPosition();
 
     // The timestamp of what is currently being played (contextTime) cannot be
     // later than what is being rendered. (currentTime)
     position.position = Seconds { std::min(position.position.seconds(), currentTime()) };
 
-    auto performanceTime = performance.relativeTimeFromTimeOriginInReducedResolution(position.timestamp);
-    performanceTime = std::max(performanceTime, 0.0);
+    DOMHighResTimeStamp performanceTime = 0.0;
+    if (document() && document()->domWindow())
+        performanceTime = std::max(document()->domWindow()->performance().relativeTimeFromTimeOriginInReducedResolution(position.timestamp), 0.0);
 
     return { position.position.seconds(), performanceTime };
 }
 
 void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 {
-    if (isOfflineContext() || isStopped()) {
+    if (isStopped()) {
         promise.reject(InvalidStateError);
         return;
     }
@@ -216,11 +213,6 @@ void AudioContext::close(DOMPromiseDeferred<void>&& promise)
 
 void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 {
-    if (isOfflineContext()) {
-        promise.reject(Exception { InvalidStateError, "Cannot call suspend() on an OfflineAudioContext"_s });
-        return;
-    }
-
     if (isStopped() || state() == State::Closed) {
         promise.reject(Exception { InvalidStateError, "Context is closed"_s });
         return;
@@ -247,11 +239,6 @@ void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 
 void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
 {
-    if (isOfflineContext()) {
-        promise.reject(Exception { InvalidStateError, "Cannot call resume() on an OfflineAudioContext"_s });
-        return;
-    }
-
     if (isStopped() || state() == State::Closed) {
         promise.reject(Exception { InvalidStateError, "Context is closed"_s });
         return;
@@ -306,7 +293,7 @@ void AudioContext::startRendering()
         return;
 
     lazyInitialize();
-    destination().startRendering([this, protectedThis = makeRef(*this), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    destination().startRendering([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (!exception)
             setState(State::Running);
     });
@@ -356,10 +343,10 @@ bool AudioContext::willPausePlayback()
     return m_mediaSession->clientWillPausePlayback();
 }
 
-MediaProducer::MediaStateFlags AudioContext::mediaState() const
+MediaProducerMediaStateFlags AudioContext::mediaState() const
 {
     if (!isStopped() && destination().isPlayingAudio())
-        return MediaProducer::MediaState::IsPlayingAudio;
+        return MediaProducerMediaState::IsPlayingAudio;
 
     return MediaProducer::IsNotPlaying;
 }
@@ -379,7 +366,7 @@ void AudioContext::mayResumePlayback(bool shouldResume)
 
     lazyInitialize();
 
-    destination().resume([this, protectedThis = makeRef(*this), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    destination().resume([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         setState(exception ? State::Suspended : State::Running);
     });
 }
@@ -416,25 +403,6 @@ bool AudioContext::willBeginPlayback()
     return willBegin;
 }
 
-void AudioContext::visibilityStateChanged()
-{
-    // Do not suspend if audio is audible.
-    if (!document() || mediaState() == MediaProducer::MediaState::IsPlayingAudio || isStopped())
-        return;
-
-    if (document()->hidden()) {
-        if (state() == State::Running) {
-            ALWAYS_LOG(LOGIDENTIFIER, "Suspending playback after going to the background");
-            m_mediaSession->beginInterruption(PlatformMediaSession::EnteringBackground);
-        }
-    } else {
-        if (state() == State::Interrupted) {
-            ALWAYS_LOG(LOGIDENTIFIER, "Resuming playback after entering foreground");
-            m_mediaSession->endInterruption(PlatformMediaSession::MayResumePlaying);
-        }
-    }
-}
-
 void AudioContext::suspend(ReasonForSuspension)
 {
     if (isClosed() || m_wasSuspendedByScript)
@@ -465,7 +433,7 @@ void AudioContext::suspendPlayback()
 
     lazyInitialize();
 
-    destination().suspend([this, protectedThis = makeRef(*this), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    destination().suspend([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (exception)
             return;
 
@@ -476,7 +444,7 @@ void AudioContext::suspendPlayback()
 
 MediaSessionGroupIdentifier AudioContext::mediaSessionGroupIdentifier() const
 {
-    auto* document = downcast<Document>(m_scriptExecutionContext);
+    auto* document = downcast<Document>(scriptExecutionContext());
     return document && document->page() ? document->page()->mediaSessionGroupIdentifier() : MediaSessionGroupIdentifier { };
 }
 
@@ -511,10 +479,29 @@ void AudioContext::isPlayingAudioDidChange()
 
     // Make sure to call Document::updateIsPlayingMedia() on the main thread, since
     // we could be on the audio I/O thread here and the call into WebCore could block.
-    callOnMainThread([protectedThis = makeRef(*this)] {
+    callOnMainThread([protectedThis = Ref { *this }] {
         if (auto* document = protectedThis->document())
             document->updateIsPlayingMedia();
     });
+}
+
+bool AudioContext::shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType interruption) const
+{
+    return m_canOverrideBackgroundPlaybackRestriction && interruption == PlatformMediaSession::InterruptionType::EnteringBackground && !destination().isConnected();
+}
+
+void AudioContext::defaultDestinationWillBecomeConnected()
+{
+    // We might need to interrupt if we previously overrode a background interruption.
+    if (!PlatformMediaSessionManager::sharedManager().isApplicationInBackground() || m_mediaSession->state() == PlatformMediaSession::Interrupted)
+        return;
+
+    // We end the overriden interruption (if any) to get the right count of interruptions and start a new interruption.
+    m_mediaSession->endInterruption(PlatformMediaSession::EndInterruptionFlags::NoFlags);
+
+    m_canOverrideBackgroundPlaybackRestriction = false;
+    m_mediaSession->beginInterruption(PlatformMediaSession::EnteringBackground);
+    m_canOverrideBackgroundPlaybackRestriction = true;
 }
 
 #if !RELEASE_LOG_DISABLED

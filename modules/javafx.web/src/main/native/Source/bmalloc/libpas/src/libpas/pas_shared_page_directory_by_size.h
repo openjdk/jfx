@@ -65,7 +65,7 @@ struct pas_shared_page_directory_by_size_data {
 PAS_API pas_segregated_shared_page_directory* pas_shared_page_directory_by_size_get(
     pas_shared_page_directory_by_size* by_size,
     unsigned size,
-    pas_segregated_page_config* page_config);
+    const pas_segregated_page_config* page_config);
 
 PAS_API bool pas_shared_page_directory_by_size_for_each(
     pas_shared_page_directory_by_size* by_size,
@@ -80,6 +80,10 @@ PAS_API bool pas_shared_page_directory_by_size_for_each_remote(
                      pas_segregated_shared_page_directory* directory,
                      void* arg),
     void* arg);
+
+PAS_API void pas_shared_page_directory_by_size_dump_directory_arg(
+    pas_stream* stream,
+    pas_segregated_shared_page_directory* directory);
 
 PAS_END_EXTERN_C;
 

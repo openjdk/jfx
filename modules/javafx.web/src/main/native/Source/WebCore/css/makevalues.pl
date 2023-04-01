@@ -102,21 +102,25 @@ EOF
 for my $i (0 .. $#names) {
   my $id = $names[$i];
   $id =~ s/(^[^-])|-(.)/uc($1||$2)/ge;
-  print GPERF $lower_names[$i] . ", CSSValue" . $id . "\n";
+  if($lower_names[$i] eq "-infinity") {
+    print GPERF $lower_names[$i] . ", CSSValueNegativeInfinity" . "\n";
+  } else {
+    print GPERF $lower_names[$i] . ", CSSValue" . $id . "\n";
+  }
 }
 
 print GPERF << "EOF";
 %%
-static const char* const valueList[] = {
-    "",
+static constexpr ASCIILiteral valueList[] = {
+    ""_s,
 EOF
 
 foreach my $name (@names) {
-  print GPERF "    \"" . $name . "\",\n";
+  print GPERF "    \"" . $name . "\"_s,\n";
 }
 
 print GPERF << "EOF";
-    0
+    ASCIILiteral()
 };
 
 const Value* findValue(const char* str, unsigned int len)
@@ -124,10 +128,10 @@ const Value* findValue(const char* str, unsigned int len)
     return CSSValueKeywordsHash::findValueImpl(str, len);
 }
 
-const char* getValueName(unsigned short id)
+ASCIILiteral getValueName(unsigned short id)
 {
     if (id > lastCSSValueKeyword)
-        return 0;
+        return { };
     return valueList[id];
 }
 
@@ -179,7 +183,11 @@ my $maxLen = 0;
 foreach my $name (@names) {
   my $id = $name;
   $id =~ s/(^[^-])|-(.)/uc($1||$2)/ge;
-  print HEADER "    CSSValue" . $id . " = " . $i . ",\n";
+  if($name eq "-infinity") {
+    print HEADER "    CSSValueNegativeInfinity = " . $i . ",\n";
+  } else {
+    print HEADER "    CSSValue" . $id . " = " . $i . ",\n";
+  }
   $i = $i + 1;
   if (length($name) > $maxLen) {
     $maxLen = length($name);
@@ -195,9 +203,9 @@ print HEADER "const int lastCSSValueKeyword = $last;\n";
 print HEADER "const size_t maxCSSValueKeywordLength = " . $maxLen . ";\n";
 print HEADER << "EOF";
 
-const char* getValueName(unsigned short id);
-const WTF::AtomString& getValueNameAtomString(CSSValueID id);
-WTF::String getValueNameString(CSSValueID id);
+ASCIILiteral getValueName(unsigned short id);
+const AtomString& getValueNameAtomString(CSSValueID id);
+String getValueNameString(CSSValueID id);
 
 inline CSSValueID convertToCSSValueID(int value)
 {

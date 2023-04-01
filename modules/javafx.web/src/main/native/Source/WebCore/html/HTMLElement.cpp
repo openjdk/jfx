@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2011 Motorola Mobility. All rights reserved.
  *
@@ -32,6 +32,7 @@
 #include "CSSValuePool.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "CommonAtomStrings.h"
 #include "DOMTokenList.h"
 #include "DocumentFragment.h"
 #include "ElementAncestorIterator.h"
@@ -39,31 +40,32 @@
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventListener.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
-#include "GeometryUtilities.h"
 #include "HTMLBDIElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLButtonElement.h"
-#include "HTMLDivElement.h"
 #include "HTMLDocument.h"
 #include "HTMLElementFactory.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
-#include "HTMLStyleElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
+#include "ImageOverlay.h"
+#include "JSHTMLElement.h"
+#include "MediaControlsHost.h"
 #include "NodeTraversal.h"
 #include "RenderElement.h"
-#include "RenderImage.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
@@ -80,16 +82,8 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(IMAGE_ANALYSIS)
-#include "TextRecognitionResult.h"
-#endif
-
 #if PLATFORM(IOS_FAMILY)
 #include "SelectionGeometry.h"
-#endif
-
-#if ENABLE(DATA_DETECTION)
-#include "DataDetection.h"
 #endif
 
 namespace WebCore {
@@ -158,7 +152,7 @@ bool HTMLElement::hasPresentationalHintsForAttribute(const QualifiedName& name) 
 
 static bool isLTROrRTLIgnoringCase(const AtomString& dirAttributeValue)
 {
-    return equalLettersIgnoringASCIICase(dirAttributeValue, "rtl") || equalLettersIgnoringASCIICase(dirAttributeValue, "ltr");
+    return equalLettersIgnoringASCIICase(dirAttributeValue, "rtl"_s) || equalLettersIgnoringASCIICase(dirAttributeValue, "ltr"_s);
 }
 
 enum class ContentEditableType {
@@ -172,11 +166,11 @@ static inline ContentEditableType contentEditableType(const AtomString& value)
 {
     if (value.isNull())
         return ContentEditableType::Inherit;
-    if (value.isEmpty() || equalLettersIgnoringASCIICase(value, "true"))
+    if (value.isEmpty() || equalLettersIgnoringASCIICase(value, "true"_s))
         return ContentEditableType::True;
-    if (equalLettersIgnoringASCIICase(value, "false"))
+    if (equalLettersIgnoringASCIICase(value, "false"_s))
         return ContentEditableType::False;
-    if (equalLettersIgnoringASCIICase(value, "plaintext-only"))
+    if (equalLettersIgnoringASCIICase(value, "plaintext-only"_s))
         return ContentEditableType::PlaintextOnly;
 
     return ContentEditableType::Inherit;
@@ -190,7 +184,7 @@ static ContentEditableType contentEditableType(const HTMLElement& element)
 void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
-        if (equalLettersIgnoringASCIICase(value, "middle"))
+        if (equalLettersIgnoringASCIICase(value, "middle"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, CSSValueCenter);
         else
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, value);
@@ -206,7 +200,7 @@ void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& na
             userModifyValue = CSSValueReadWritePlaintextOnly;
             FALLTHROUGH;
         case ContentEditableType::True:
-            addPropertyToPresentationalHintStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyOverflowWrap, CSSValueBreakWord);
             addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
             addPropertyToPresentationalHintStyle(style, CSSPropertyLineBreak, CSSValueAfterWhiteSpace);
 #if PLATFORM(IOS_FAMILY)
@@ -218,14 +212,14 @@ void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& na
     } else if (name == hiddenAttr) {
         addPropertyToPresentationalHintStyle(style, CSSPropertyDisplay, CSSValueNone);
     } else if (name == draggableAttr) {
-        if (equalLettersIgnoringASCIICase(value, "true")) {
+        if (equalLettersIgnoringASCIICase(value, "true"_s)) {
             addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserDrag, CSSValueElement);
             if (!isDraggableIgnoringAttributes())
                 addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserSelect, CSSValueNone);
-        } else if (equalLettersIgnoringASCIICase(value, "false"))
+        } else if (equalLettersIgnoringASCIICase(value, "false"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserDrag, CSSValueNone);
     } else if (name == dirAttr) {
-        if (equalLettersIgnoringASCIICase(value, "auto"))
+        if (equalLettersIgnoringASCIICase(value, "auto"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
         else {
             auto unicodeBidiValue = CSSValueEmbed;
@@ -248,170 +242,6 @@ void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& na
         StyledElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
-HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
-{
-    EventHandlerNameMap map;
-
-    static const QualifiedName* const table[] = {
-        &onabortAttr.get(),
-        &onanimationendAttr.get(),
-        &onanimationiterationAttr.get(),
-        &onanimationstartAttr.get(),
-        &onanimationcancelAttr.get(),
-        &onautocompleteAttr.get(),
-        &onautocompleteerrorAttr.get(),
-        &onbeforecopyAttr.get(),
-        &onbeforecutAttr.get(),
-        &onbeforeinputAttr.get(),
-        &onbeforeloadAttr.get(),
-        &onbeforepasteAttr.get(),
-        &onblurAttr.get(),
-        &oncancelAttr.get(),
-        &oncanplayAttr.get(),
-        &oncanplaythroughAttr.get(),
-        &onchangeAttr.get(),
-        &onclickAttr.get(),
-        &oncloseAttr.get(),
-        &oncontextmenuAttr.get(),
-        &oncopyAttr.get(),
-        &oncutAttr.get(),
-        &ondblclickAttr.get(),
-        &ondragAttr.get(),
-        &ondragendAttr.get(),
-        &ondragenterAttr.get(),
-        &ondragleaveAttr.get(),
-        &ondragoverAttr.get(),
-        &ondragstartAttr.get(),
-        &ondropAttr.get(),
-        &ondurationchangeAttr.get(),
-        &onemptiedAttr.get(),
-        &onendedAttr.get(),
-        &onerrorAttr.get(),
-        &onfocusAttr.get(),
-        &onfocusinAttr.get(),
-        &onfocusoutAttr.get(),
-        &onformdataAttr.get(),
-        &ongesturechangeAttr.get(),
-        &ongestureendAttr.get(),
-        &ongesturestartAttr.get(),
-        &ongotpointercaptureAttr.get(),
-        &oninputAttr.get(),
-        &oninvalidAttr.get(),
-        &onkeydownAttr.get(),
-        &onkeypressAttr.get(),
-        &onkeyupAttr.get(),
-        &onloadAttr.get(),
-        &onloadeddataAttr.get(),
-        &onloadedmetadataAttr.get(),
-        &onloadstartAttr.get(),
-        &onlostpointercaptureAttr.get(),
-        &onmousedownAttr.get(),
-        &onmouseenterAttr.get(),
-        &onmouseleaveAttr.get(),
-        &onmousemoveAttr.get(),
-        &onmouseoutAttr.get(),
-        &onmouseoverAttr.get(),
-        &onmouseupAttr.get(),
-        &onmousewheelAttr.get(),
-        &onpasteAttr.get(),
-        &onpauseAttr.get(),
-        &onplayAttr.get(),
-        &onplayingAttr.get(),
-        &onpointerdownAttr.get(),
-        &onpointermoveAttr.get(),
-        &onpointerupAttr.get(),
-        &onpointercancelAttr.get(),
-        &onpointeroverAttr.get(),
-        &onpointeroutAttr.get(),
-        &onpointerenterAttr.get(),
-        &onpointerleaveAttr.get(),
-        &onprogressAttr.get(),
-        &onratechangeAttr.get(),
-        &onresetAttr.get(),
-        &onresizeAttr.get(),
-        &onscrollAttr.get(),
-        &onsearchAttr.get(),
-        &onsecuritypolicyviolationAttr.get(),
-        &onseekedAttr.get(),
-        &onseekingAttr.get(),
-        &onselectAttr.get(),
-        &onselectstartAttr.get(),
-        &onslotchangeAttr.get(),
-        &onstalledAttr.get(),
-        &onsubmitAttr.get(),
-        &onsuspendAttr.get(),
-        &ontimeupdateAttr.get(),
-        &ontoggleAttr.get(),
-        &ontouchcancelAttr.get(),
-        &ontouchendAttr.get(),
-        &ontouchforcechangeAttr.get(),
-        &ontouchmoveAttr.get(),
-        &ontouchstartAttr.get(),
-        &ontransitioncancelAttr.get(),
-        &ontransitionendAttr.get(),
-        &ontransitionrunAttr.get(),
-        &ontransitionstartAttr.get(),
-        &onvolumechangeAttr.get(),
-        &onwaitingAttr.get(),
-        &onwebkitbeginfullscreenAttr.get(),
-        &onwebkitcurrentplaybacktargetiswirelesschangedAttr.get(),
-        &onwebkitendfullscreenAttr.get(),
-        &onwebkitfullscreenchangeAttr.get(),
-        &onwebkitfullscreenerrorAttr.get(),
-        &onwebkitkeyaddedAttr.get(),
-        &onwebkitkeyerrorAttr.get(),
-        &onwebkitkeymessageAttr.get(),
-        &onwebkitmouseforcechangedAttr.get(),
-        &onwebkitmouseforcedownAttr.get(),
-        &onwebkitmouseforcewillbeginAttr.get(),
-        &onwebkitmouseforceupAttr.get(),
-        &onwebkitneedkeyAttr.get(),
-        &onwebkitplaybacktargetavailabilitychangedAttr.get(),
-        &onwebkitpresentationmodechangedAttr.get(),
-        &onwebkitwillrevealbottomAttr.get(),
-        &onwebkitwillrevealleftAttr.get(),
-        &onwebkitwillrevealrightAttr.get(),
-        &onwebkitwillrevealtopAttr.get(),
-        &onwheelAttr.get(),
-    };
-
-    populateEventHandlerNameMap(map, table);
-
-    struct UnusualMapping {
-        const QualifiedName& attributeName;
-        const AtomString& eventName;
-    };
-
-    const UnusualMapping unusualPairsTable[] = {
-        { onwebkitanimationendAttr, eventNames().webkitAnimationEndEvent },
-        { onwebkitanimationiterationAttr, eventNames().webkitAnimationIterationEvent },
-        { onwebkitanimationstartAttr, eventNames().webkitAnimationStartEvent },
-        { onwebkittransitionendAttr, eventNames().webkitTransitionEndEvent },
-    };
-
-    for (auto& entry : unusualPairsTable)
-        map.add(entry.attributeName.localName().impl(), entry.eventName);
-
-    return map;
-}
-
-void HTMLElement::populateEventHandlerNameMap(EventHandlerNameMap& map, const QualifiedName* const table[], size_t tableSize)
-{
-    for (size_t i = 0; i < tableSize; ++i) {
-        auto* entry = table[i];
-
-        // FIXME: Would be nice to check these against the actual event names in eventNames().
-        // Not obvious how to do that simply, though.
-        auto& attributeName = entry->localName();
-
-        // Remove the "on" prefix. Requires some memory allocation and computing a hash, but by not
-        // using pointers from eventNames(), the passed-in table can be initialized at compile time.
-        AtomString eventName = attributeName.string().substring(2);
-
-        map.add(attributeName.impl(), WTFMove(eventName));
-    }
-}
-
 const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap& map)
 {
     ASSERT(!attributeName.localName().isNull());
@@ -431,12 +261,50 @@ const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const Qualified
 
 const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const QualifiedName& attributeName)
 {
-    static NeverDestroyed<EventHandlerNameMap> map = createEventHandlerNameMap();
-    return eventNameForEventHandlerAttribute(attributeName, map.get());
+    static NeverDestroyed map = [] {
+        EventHandlerNameMap map;
+        JSHTMLElement::forEachEventHandlerContentAttribute([&] (const AtomString& attributeName, const AtomString& eventName) {
+            // FIXME: Remove this special case. This has an [EventHandler] line in the IDL but was not historically in this map.
+            if (attributeName == oncuechangeAttr.get().localName())
+                return;
+            map.add(attributeName.impl(), eventName);
+        });
+        // FIXME: Remove these special cases. These are not in IDL with [EventHandler] but were historically in this map.
+        static constexpr std::array table {
+            &onautocompleteAttr,
+            &onautocompleteerrorAttr,
+            &onbeforeloadAttr,
+            &onfocusinAttr,
+            &onfocusoutAttr,
+            &ongesturechangeAttr,
+            &ongestureendAttr,
+            &ongesturestartAttr,
+            &onwebkitbeginfullscreenAttr,
+            &onwebkitcurrentplaybacktargetiswirelesschangedAttr,
+            &onwebkitendfullscreenAttr,
+            &onwebkitfullscreenchangeAttr,
+            &onwebkitfullscreenerrorAttr,
+            &onwebkitkeyaddedAttr,
+            &onwebkitkeyerrorAttr,
+            &onwebkitkeymessageAttr,
+            &onwebkitneedkeyAttr,
+            &onwebkitplaybacktargetavailabilitychangedAttr,
+            &onwebkitpresentationmodechangedAttr,
+        };
+        for (auto& entry : table) {
+            auto* name = entry->get().localName().impl();
+            map.add(name, AtomString { name, 2, String::MaxLength });
+        }
+        return map;
+    }();
+    return eventNameForEventHandlerAttribute(attributeName, map);
 }
 
-Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& node)
+Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& node, PageIsEditable pageIsEditable)
 {
+    if (pageIsEditable == PageIsEditable::Yes)
+        return Editability::CanEditRichly;
+
     if (auto* startElement = is<Element>(node) ? &downcast<Element>(node) : node.parentElement()) {
         for (auto& element : lineageOfType<HTMLElement>(*startElement)) {
             switch (contentEditableType(element)) {
@@ -452,20 +320,19 @@ Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& no
         }
     }
 
-    auto containingShadowRoot = makeRefPtr(node.containingShadowRoot());
+    RefPtr containingShadowRoot { node.containingShadowRoot() };
     if (containingShadowRoot && containingShadowRoot->mode() == ShadowRootMode::UserAgent)
         return Editability::ReadOnly;
 
-    auto& document = node.document();
-    if (is<HTMLDocument>(document))
-        return downcast<HTMLDocument>(document).inDesignMode() ? Editability::CanEditRichly : Editability::ReadOnly;
+    if (node.document().inDesignMode())
+        return Editability::CanEditRichly;
 
     return Editability::ReadOnly;
 }
 
 bool HTMLElement::matchesReadWritePseudoClass() const
 {
-    return editabilityFromContentEditableAttr(*this) != Editability::ReadOnly;
+    return editabilityFromContentEditableAttr(*this, PageIsEditable::No) != Editability::ReadOnly;
 }
 
 void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -483,6 +350,9 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& va
         return;
     }
 
+    if (document().settings().inertAttributeEnabled() && name == inertAttr)
+        invalidateStyleInternal();
+
     if (name == inputmodeAttr) {
         auto& document = this->document();
         if (this == document.focusedElement()) {
@@ -494,6 +364,13 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& va
     auto& eventName = eventNameForEventHandlerAttribute(name);
     if (!eventName.isNull())
         setAttributeEventListener(eventName, name, value);
+}
+
+Node::InsertedIntoAncestorResult HTMLElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& containerNode)
+{
+    auto result = Element::insertedIntoAncestor(insertionType, containerNode);
+    hideNonce();
+    return result;
 }
 
 static Ref<DocumentFragment> textToFragment(Document& document, const String& text)
@@ -537,15 +414,14 @@ static Ref<DocumentFragment> textToFragment(Document& document, const String& te
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/common-dom-interfaces.html#limited-to-only-known-values
 static inline const AtomString& toValidDirValue(const AtomString& value)
 {
-    static MainThreadNeverDestroyed<const AtomString> ltrValue("ltr", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> rtlValue("rtl", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> autoValue("auto", AtomString::ConstructFromLiteral);
-    if (equalLettersIgnoringASCIICase(value, "ltr"))
+    static MainThreadNeverDestroyed<const AtomString> ltrValue("ltr"_s);
+    static MainThreadNeverDestroyed<const AtomString> rtlValue("rtl"_s);
+    if (equalLettersIgnoringASCIICase(value, "ltr"_s))
         return ltrValue;
-    if (equalLettersIgnoringASCIICase(value, "rtl"))
+    if (equalLettersIgnoringASCIICase(value, "rtl"_s))
         return rtlValue;
-    if (equalLettersIgnoringASCIICase(value, "auto"))
-        return autoValue;
+    if (equalLettersIgnoringASCIICase(value, "auto"_s))
+        return autoAtom();
     return nullAtom();
 }
 
@@ -559,36 +435,34 @@ void HTMLElement::setDir(const AtomString& value)
     setAttributeWithoutSynchronization(dirAttr, value);
 }
 
-ExceptionOr<void> HTMLElement::setInnerText(const String& text)
+ExceptionOr<void> HTMLElement::setInnerText(String&& text)
 {
     // FIXME: This doesn't take whitespace collapsing into account at all.
 
-    if (!text.contains('\n') && !text.contains('\r')) {
-        stringReplaceAll(text);
+    if (!text.contains([](UChar c) { return c == '\n' || c == '\r'; })) {
+        stringReplaceAll(WTFMove(text));
         return { };
     }
 
     if (isConnected() && isTextControlInnerTextElement()) {
         if (!text.contains('\r')) {
-            stringReplaceAll(text);
+            stringReplaceAll(WTFMove(text));
             return { };
         }
-        String textWithConsistentLineBreaks = text;
-        textWithConsistentLineBreaks.replace("\r\n", "\n");
-        textWithConsistentLineBreaks.replace('\r', '\n');
-        stringReplaceAll(textWithConsistentLineBreaks);
+        String textWithConsistentLineBreaks = makeStringBySimplifyingNewLines(text);
+        stringReplaceAll(WTFMove(textWithConsistentLineBreaks));
         return { };
     }
 
     // FIXME: This should use replaceAll(), after we fix that to work properly for DocumentFragment.
     // Add text nodes and <br> elements.
-    auto fragment = textToFragment(document(), text);
+    auto fragment = textToFragment(document(), WTFMove(text));
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
     ScriptDisallowedScope::EventAllowedScope allowedScope(fragment.get());
     return replaceChildrenWithFragment(*this, WTFMove(fragment));
 }
 
-ExceptionOr<void> HTMLElement::setOuterText(const String& text)
+ExceptionOr<void> HTMLElement::setOuterText(String&& text)
 {
     RefPtr<ContainerNode> parent = parentNode();
     if (!parent)
@@ -599,10 +473,10 @@ ExceptionOr<void> HTMLElement::setOuterText(const String& text)
     RefPtr<Node> newChild;
 
     // Convert text to fragment with <br> tags instead of linebreaks if needed.
-    if (text.contains('\r') || text.contains('\n'))
-        newChild = textToFragment(document(), text);
+    if (text.contains([](UChar c) { return c == '\n' || c == '\r'; }))
+        newChild = textToFragment(document(), WTFMove(text));
     else
-        newChild = Text::create(document(), text);
+        newChild = Text::create(document(), WTFMove(text));
 
     if (!parentNode())
         return Exception { HierarchyRequestError };
@@ -637,9 +511,29 @@ void HTMLElement::applyAspectRatioFromWidthAndHeightAttributesToStyle(StringView
     if (!dimensionHeight || dimensionHeight->type != HTMLDimension::Type::Pixel)
         return;
 
+    addParsedWidthAndHeightToAspectRatioList(dimensionWidth->number, dimensionHeight->number, style);
+}
+
+void HTMLElement::applyAspectRatioWithoutDimensionalRulesFromWidthAndHeightAttributesToStyle(StringView widthAttribute, StringView heightAttribute, MutableStyleProperties& style)
+{
+    if (!document().settings().aspectRatioOfImgFromWidthAndHeightEnabled())
+        return;
+
+    auto dimensionWidth = parseHTMLNonNegativeInteger(widthAttribute);
+    if (!dimensionWidth)
+        return;
+    auto dimensionHeight = parseHTMLNonNegativeInteger(heightAttribute);
+    if (!dimensionHeight)
+        return;
+
+    addParsedWidthAndHeightToAspectRatioList(dimensionWidth.value(), dimensionHeight.value(), style);
+}
+
+void HTMLElement::addParsedWidthAndHeightToAspectRatioList(double width, double height, MutableStyleProperties& style)
+{
     auto ratioList = CSSValueList::createSlashSeparated();
-    ratioList->append(CSSValuePool::singleton().createValue(dimensionWidth->number, CSSUnitType::CSS_NUMBER));
-    ratioList->append(CSSValuePool::singleton().createValue(dimensionHeight->number, CSSUnitType::CSS_NUMBER));
+    ratioList->append(CSSValuePool::singleton().createValue(width, CSSUnitType::CSS_NUMBER));
+    ratioList->append(CSSValuePool::singleton().createValue(height, CSSUnitType::CSS_NUMBER));
     auto list = CSSValueList::createSpaceSeparated();
     list->append(CSSValuePool::singleton().createIdentifierValue(CSSValueAuto));
     list->append(ratioList);
@@ -654,25 +548,25 @@ void HTMLElement::applyAlignmentAttributeToStyle(const AtomString& alignment, Mu
     CSSValueID floatValue = CSSValueInvalid;
     CSSValueID verticalAlignValue = CSSValueInvalid;
 
-    if (equalLettersIgnoringASCIICase(alignment, "absmiddle"))
+    if (equalLettersIgnoringASCIICase(alignment, "absmiddle"_s))
         verticalAlignValue = CSSValueMiddle;
-    else if (equalLettersIgnoringASCIICase(alignment, "absbottom"))
+    else if (equalLettersIgnoringASCIICase(alignment, "absbottom"_s))
         verticalAlignValue = CSSValueBottom;
-    else if (equalLettersIgnoringASCIICase(alignment, "left")) {
+    else if (equalLettersIgnoringASCIICase(alignment, "left"_s)) {
         floatValue = CSSValueLeft;
         verticalAlignValue = CSSValueTop;
-    } else if (equalLettersIgnoringASCIICase(alignment, "right")) {
+    } else if (equalLettersIgnoringASCIICase(alignment, "right"_s)) {
         floatValue = CSSValueRight;
         verticalAlignValue = CSSValueTop;
-    } else if (equalLettersIgnoringASCIICase(alignment, "top"))
+    } else if (equalLettersIgnoringASCIICase(alignment, "top"_s))
         verticalAlignValue = CSSValueTop;
-    else if (equalLettersIgnoringASCIICase(alignment, "middle"))
+    else if (equalLettersIgnoringASCIICase(alignment, "middle"_s))
         verticalAlignValue = CSSValueWebkitBaselineMiddle;
-    else if (equalLettersIgnoringASCIICase(alignment, "center"))
+    else if (equalLettersIgnoringASCIICase(alignment, "center"_s))
         verticalAlignValue = CSSValueMiddle;
-    else if (equalLettersIgnoringASCIICase(alignment, "bottom"))
+    else if (equalLettersIgnoringASCIICase(alignment, "bottom"_s))
         verticalAlignValue = CSSValueBaseline;
-    else if (equalLettersIgnoringASCIICase(alignment, "texttop"))
+    else if (equalLettersIgnoringASCIICase(alignment, "texttop"_s))
         verticalAlignValue = CSSValueTextTop;
 
     if (floatValue != CSSValueInvalid)
@@ -698,42 +592,24 @@ String HTMLElement::contentEditable() const
     case ContentEditableType::Inherit:
         return "inherit"_s;
     case ContentEditableType::True:
-        return "true"_s;
+        return trueAtom();
     case ContentEditableType::False:
-        return "false"_s;
+        return falseAtom();
     case ContentEditableType::PlaintextOnly:
-        return "plaintext-only"_s;
+        return plaintextOnlyAtom();
     }
     return "inherit"_s;
 }
 
-static const AtomString& trueName()
-{
-    static MainThreadNeverDestroyed<const AtomString> trueValue("true", AtomString::ConstructFromLiteral);
-    return trueValue.get();
-}
-
-static const AtomString& falseName()
-{
-    static MainThreadNeverDestroyed<const AtomString> falseValue("false", AtomString::ConstructFromLiteral);
-    return falseValue.get();
-}
-
-static const AtomString& plaintextOnlyName()
-{
-    static MainThreadNeverDestroyed<const AtomString> plaintextOnlyValue("plaintext-only", AtomString::ConstructFromLiteral);
-    return plaintextOnlyValue.get();
-}
-
 ExceptionOr<void> HTMLElement::setContentEditable(const String& enabled)
 {
-    if (equalLettersIgnoringASCIICase(enabled, "true"))
-        setAttributeWithoutSynchronization(contenteditableAttr, trueName());
-    else if (equalLettersIgnoringASCIICase(enabled, "false"))
-        setAttributeWithoutSynchronization(contenteditableAttr, falseName());
-    else if (equalLettersIgnoringASCIICase(enabled, "plaintext-only"))
-        setAttributeWithoutSynchronization(contenteditableAttr, plaintextOnlyName());
-    else if (equalLettersIgnoringASCIICase(enabled, "inherit"))
+    if (equalLettersIgnoringASCIICase(enabled, "true"_s))
+        setAttributeWithoutSynchronization(contenteditableAttr, trueAtom());
+    else if (equalLettersIgnoringASCIICase(enabled, "false"_s))
+        setAttributeWithoutSynchronization(contenteditableAttr, falseAtom());
+    else if (equalLettersIgnoringASCIICase(enabled, "plaintext-only"_s))
+        setAttributeWithoutSynchronization(contenteditableAttr, plaintextOnlyAtom());
+    else if (equalLettersIgnoringASCIICase(enabled, "inherit"_s))
         removeAttribute(contenteditableAttr);
     else
         return Exception { SyntaxError };
@@ -744,14 +620,14 @@ bool HTMLElement::draggable() const
 {
     auto& value = attributeWithoutSynchronization(draggableAttr);
     if (isDraggableIgnoringAttributes())
-        return !equalLettersIgnoringASCIICase(value, "false");
+        return !equalLettersIgnoringASCIICase(value, "false"_s);
 
-    return equalLettersIgnoringASCIICase(value, "true");
+    return equalLettersIgnoringASCIICase(value, "true"_s);
 }
 
 void HTMLElement::setDraggable(bool value)
 {
-    setAttributeWithoutSynchronization(draggableAttr, value ? trueName() : falseName());
+    setAttributeWithoutSynchronization(draggableAttr, value ? trueAtom() : falseAtom());
 }
 
 bool HTMLElement::spellcheck() const
@@ -761,7 +637,7 @@ bool HTMLElement::spellcheck() const
 
 void HTMLElement::setSpellcheck(bool enable)
 {
-    setAttributeWithoutSynchronization(spellcheckAttr, enable ? trueName() : falseName());
+    setAttributeWithoutSynchronization(spellcheckAttr, enable ? trueAtom() : falseAtom());
 }
 
 void HTMLElement::click()
@@ -771,6 +647,8 @@ void HTMLElement::click()
 
 bool HTMLElement::accessKeyAction(bool sendMouseEvents)
 {
+    if (isFocusable())
+        focus();
     return dispatchSimulatedClick(nullptr, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
@@ -807,9 +685,9 @@ bool HTMLElement::translate() const
 {
     for (auto& element : lineageOfType<HTMLElement>(*this)) {
         const AtomString& value = element.attributeWithoutSynchronization(translateAttr);
-        if (equalLettersIgnoringASCIICase(value, "yes") || (value.isEmpty() && !value.isNull()))
+        if (equalLettersIgnoringASCIICase(value, "yes"_s) || (value.isEmpty() && !value.isNull()))
             return true;
-        if (equalLettersIgnoringASCIICase(value, "no"))
+        if (equalLettersIgnoringASCIICase(value, "no"_s))
             return false;
     }
     // Default on the root element is translate=yes.
@@ -818,7 +696,7 @@ bool HTMLElement::translate() const
 
 void HTMLElement::setTranslate(bool enable)
 {
-    setAttributeWithoutSynchronization(translateAttr, enable ? "yes" : "no");
+    setAttributeWithoutSynchronization(translateAttr, enable ? "yes"_s : "no"_s);
 }
 
 bool HTMLElement::rendererIsEverNeeded()
@@ -833,11 +711,6 @@ bool HTMLElement::rendererIsEverNeeded()
             return false;
     }
     return StyledElement::rendererIsEverNeeded();
-}
-
-RenderPtr<RenderElement> HTMLElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
-{
-    return RenderElement::createFor(*this, WTFMove(style));
 }
 
 HTMLFormElement* HTMLElement::form() const
@@ -894,10 +767,38 @@ void HTMLElement::childrenChanged(const ChildChange& change)
     adjustDirectionalityIfNeededAfterChildrenChanged(change.previousSiblingElement, change.type);
 }
 
+static bool isValidDirValue(const AtomString& direction)
+{
+    return equalLettersIgnoringASCIICase(direction, "ltr"_s)
+        || equalLettersIgnoringASCIICase(direction, "rtl"_s)
+        || equalLettersIgnoringASCIICase(direction, "auto"_s);
+}
+
 bool HTMLElement::hasDirectionAuto() const
 {
     const AtomString& direction = attributeWithoutSynchronization(dirAttr);
-    return (hasTagName(bdiTag) && direction.isNull()) || equalLettersIgnoringASCIICase(direction, "auto");
+    return (hasTagName(bdiTag) && !isValidDirValue(direction)) || equalLettersIgnoringASCIICase(direction, "auto"_s);
+}
+
+// FIXME: Cache directionality.
+TextDirection HTMLElement::computeDirectionality() const
+{
+    if (auto* inputElement = dynamicDowncast<HTMLInputElement>(const_cast<HTMLElement*>(this))) {
+        auto direction = inputElement->attributeWithoutSynchronization(dirAttr);
+        if (inputElement->isTelephoneField() && !isValidDirValue(direction))
+            return TextDirection::LTR;
+    }
+    for (const Element* element = this; element; element = const_cast<Element*>(element)->parentOrShadowHostElement()) {
+        auto direction = element->attributeWithoutSynchronization(dirAttr);
+        if ((element->hasTagName(bdiTag) && !isValidDirValue(direction)) || equalLettersIgnoringASCIICase(direction, "auto"_s))
+            return directionality();
+
+        if (equalLettersIgnoringASCIICase(direction, "ltr"_s))
+            return TextDirection::LTR;
+        if (equalLettersIgnoringASCIICase(direction, "rtl"_s))
+            return TextDirection::RTL;
+    }
+    return TextDirection::LTR;
 }
 
 TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) const
@@ -913,19 +814,21 @@ TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) con
 
 TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) const
 {
-    if (isTextField()) {
-        HTMLTextFormControlElement& textElement = downcast<HTMLTextFormControlElement>(const_cast<HTMLElement&>(*this));
-        bool hasStrongDirectionality;
-        UCharDirection textDirection = textElement.value().defaultWritingDirection(&hasStrongDirectionality);
-        if (strongDirectionalityTextNode)
-            *strongDirectionalityTextNode = hasStrongDirectionality ? &textElement : nullptr;
-        return (textDirection == U_LEFT_TO_RIGHT) ? TextDirection::LTR : TextDirection::RTL;
+    if (auto* textControl = dynamicDowncast<HTMLTextFormControlElement>(const_cast<HTMLElement*>(this))) {
+        auto* inputElement = dynamicDowncast<HTMLInputElement>(textControl);
+        if (!inputElement || (inputElement->isTextType() && !inputElement->isPasswordField())) {
+            bool hasStrongDirectionality;
+            UCharDirection textDirection = textControl->value().defaultWritingDirection(&hasStrongDirectionality);
+            if (strongDirectionalityTextNode)
+                *strongDirectionalityTextNode = hasStrongDirectionality ? textControl : nullptr;
+            return (textDirection == U_LEFT_TO_RIGHT) ? TextDirection::LTR : TextDirection::RTL;
+        }
     }
 
     RefPtr<Node> node = firstChild();
     while (node) {
         // Skip bdi, script, style and text form controls.
-        if (equalLettersIgnoringASCIICase(node->nodeName(), "bdi") || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
+        if (equalLettersIgnoringASCIICase(node->nodeName(), "bdi"_s) || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
             || (is<Element>(*node) && downcast<Element>(*node).isTextField())) {
             node = NodeTraversal::nextSkippingChildren(*node, this);
             continue;
@@ -934,7 +837,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
         // Skip elements with valid dir attribute
         if (is<Element>(*node)) {
             auto& dirAttributeValue = downcast<Element>(*node).attributeWithoutSynchronization(dirAttr);
-            if (isLTROrRTLIgnoringCase(dirAttributeValue) || equalLettersIgnoringASCIICase(dirAttributeValue, "auto")) {
+            if (isLTROrRTLIgnoringCase(dirAttributeValue) || equalLettersIgnoringASCIICase(dirAttributeValue, "auto"_s)) {
                 node = NodeTraversal::nextSkippingChildren(*node, this);
                 continue;
             }
@@ -963,7 +866,7 @@ void HTMLElement::dirAttributeChanged(const AtomString& value)
     if (is<HTMLElement>(parent) && parent->selfOrAncestorHasDirAutoAttribute())
         downcast<HTMLElement>(*parent).adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
 
-    if (equalLettersIgnoringASCIICase(value, "auto"))
+    if (equalLettersIgnoringASCIICase(value, "auto"_s))
         calculateAndAdjustDirectionality();
 }
 
@@ -1016,10 +919,10 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
     }
 }
 
-void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value, AllowPercentage allowPercentage, UseCSSPXAsUnitType useCSSPX, IsMultiLength isMultiLength)
+void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value, AllowPercentage allowPercentage, UseCSSPXAsUnitType useCSSPX, IsMultiLength isMultiLength, AllowZeroValue allowZeroValue)
 {
     auto dimensionValue = isMultiLength == IsMultiLength::No ? parseHTMLDimension(value) : parseHTMLMultiLength(value);
-    if (!dimensionValue)
+    if (!dimensionValue || (!dimensionValue->number && allowZeroValue == AllowZeroValue::No))
         return;
     if (dimensionValue->type == HTMLDimension::Type::Percentage) {
         if (allowPercentage == AllowPercentage::Yes)
@@ -1033,9 +936,9 @@ void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropert
 }
 
 // https://www.w3.org/TR/html4/sgml/dtd.html#Length, including pixel and percentage values.
-void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value)
+void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value, AllowZeroValue allowZeroValue)
 {
-    addHTMLLengthToStyle(style, propertyID, value, AllowPercentage::Yes, UseCSSPXAsUnitType::Yes, IsMultiLength::No);
+    addHTMLLengthToStyle(style, propertyID, value, AllowPercentage::Yes, UseCSSPXAsUnitType::Yes, IsMultiLength::No, allowZeroValue);
 }
 
 // https://www.w3.org/TR/html4/sgml/dtd.html#MultiLength, including pixel, percentage, and relative values.
@@ -1058,7 +961,7 @@ void HTMLElement::addHTMLNumberToStyle(MutableStyleProperties& style, CSSPropert
 
 // Color parsing that matches HTML's "rules for parsing a legacy color value"
 // https://html.spec.whatwg.org/#rules-for-parsing-a-legacy-colour-value
-static std::optional<SRGBA<uint8_t>> parseLegacyColorValue(StringView string)
+std::optional<SRGBA<uint8_t>> HTMLElement::parseLegacyColorValue(StringView string)
 {
     // An empty string doesn't apply a color.
     if (string.isEmpty())
@@ -1069,7 +972,7 @@ static std::optional<SRGBA<uint8_t>> parseLegacyColorValue(StringView string)
         return Color::black;
 
     // "transparent" doesn't apply a color either.
-    if (equalLettersIgnoringASCIICase(string, "transparent"))
+    if (equalLettersIgnoringASCIICase(string, "transparent"_s))
         return std::nullopt;
 
     if (auto namedColor = CSSParser::parseNamedColor(string))
@@ -1131,25 +1034,25 @@ static std::optional<SRGBA<uint8_t>> parseLegacyColorValue(StringView string)
     return { { redValue, greenValue, blueValue } };
 }
 
-void HTMLElement::addHTMLColorToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& attributeValue)
+void HTMLElement::addHTMLColorToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const AtomString& attributeValue)
 {
     if (auto color = parseLegacyColorValue(attributeValue))
         style.setProperty(propertyID, CSSValuePool::singleton().createColorValue(*color));
 }
 
-bool HTMLElement::willRespondToMouseMoveEvents()
+bool HTMLElement::willRespondToMouseMoveEvents() const
 {
     return !isDisabledFormControl() && Element::willRespondToMouseMoveEvents();
 }
 
-bool HTMLElement::willRespondToMouseWheelEvents()
+bool HTMLElement::willRespondToMouseWheelEvents() const
 {
     return !isDisabledFormControl() && Element::willRespondToMouseWheelEvents();
 }
 
-bool HTMLElement::willRespondToMouseClickEvents()
+bool HTMLElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
-    return !isDisabledFormControl() && Element::willRespondToMouseClickEvents();
+    return !isDisabledFormControl() && Element::willRespondToMouseClickEventsWithEditability(editability);
 }
 
 bool HTMLElement::canBeActuallyDisabled() const
@@ -1193,14 +1096,12 @@ bool HTMLElement::shouldAutocorrect() const
 {
     auto& autocorrectValue = attributeWithoutSynchronization(HTMLNames::autocorrectAttr);
     // Unrecognized values fall back to "on".
-    return !equalLettersIgnoringASCIICase(autocorrectValue, "off");
+    return !equalLettersIgnoringASCIICase(autocorrectValue, "off"_s);
 }
 
 void HTMLElement::setAutocorrect(bool autocorrect)
 {
-    static MainThreadNeverDestroyed<const AtomString> onName("on", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> offName("off", AtomString::ConstructFromLiteral);
-    setAttributeWithoutSynchronization(autocorrectAttr, autocorrect ? onName.get() : offName.get());
+    setAttributeWithoutSynchronization(autocorrectAttr, autocorrect ? onAtom() : offAtom());
 }
 
 #endif
@@ -1235,389 +1136,24 @@ String HTMLElement::enterKeyHint() const
     return attributeValueForEnterKeyHint(canonicalEnterKeyHint());
 }
 
-void HTMLElement::setEnterKeyHint(const String& value)
+void HTMLElement::setEnterKeyHint(const AtomString& value)
 {
     setAttributeWithoutSynchronization(enterkeyhintAttr, value);
 }
 
-static const AtomString& imageOverlayElementIdentifier()
-{
-    static MainThreadNeverDestroyed<const AtomString> identifier("image-overlay", AtomString::ConstructFromLiteral);
-    return identifier;
-}
-
-static const AtomString& imageOverlayDataDetectorClassName()
-{
-    static MainThreadNeverDestroyed<const AtomString> className("image-overlay-data-detector-result", AtomString::ConstructFromLiteral);
-    return className;
-}
-
 bool HTMLElement::shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate)
 {
-    if (!is<HTMLDivElement>(targetNode))
-        return true;
-
-    auto shadowHost = makeRefPtr(targetNode.shadowHost());
-    if (!is<HTMLElement>(shadowHost))
-        return true;
-
-    auto& host = downcast<HTMLElement>(*shadowHost);
-    if (!host.hasImageOverlay())
-        return true;
-
-    if (!targetNode.contains(selectionBeforeUpdate.start().containerNode()))
-        return true;
-
-    for (auto& child : childrenOfType<HTMLDivElement>(*host.userAgentShadowRoot())) {
-        if (child.getIdAttribute() == imageOverlayElementIdentifier())
-            return &targetNode != &child;
-    }
+    if (auto range = selectionBeforeUpdate.range(); range && ImageOverlay::isInsideOverlay(*range))
+        return ImageOverlay::isOverlayText(targetNode);
 
     return true;
 }
-
-bool HTMLElement::hasImageOverlay() const
-{
-    auto shadowRoot = this->shadowRoot();
-    if (LIKELY(!shadowRoot || shadowRoot->mode() != ShadowRootMode::UserAgent))
-        return false;
-
-    return shadowRoot->hasElementWithId(*imageOverlayElementIdentifier().impl());
-}
-
-static RefPtr<HTMLElement> imageOverlayHost(const Node& node)
-{
-    auto host = node.shadowHost();
-    if (!is<HTMLElement>(host))
-        return nullptr;
-
-    auto element = makeRefPtr(downcast<HTMLElement>(*host));
-    return element->hasImageOverlay() ? element : nullptr;
-}
-
-bool HTMLElement::isImageOverlayDataDetectorResult() const
-{
-    return imageOverlayHost(*this) && hasClass() && classNames().contains(imageOverlayDataDetectorClassName());
-}
-
-bool HTMLElement::isInsideImageOverlay(const SimpleRange& range)
-{
-    auto commonAncestor = makeRefPtr(commonInclusiveAncestor<ComposedTree>(range));
-    if (!commonAncestor)
-        return false;
-
-    return isInsideImageOverlay(*commonAncestor);
-}
-
-bool HTMLElement::isInsideImageOverlay(const Node& node)
-{
-    auto host = imageOverlayHost(node);
-    if (!host)
-        return false;
-
-    return host->userAgentShadowRoot()->contains(node);
-}
-
-bool HTMLElement::isImageOverlayText(const Node* node)
-{
-    return node && isImageOverlayText(*node);
-}
-
-bool HTMLElement::isImageOverlayText(const Node& node)
-{
-    auto host = imageOverlayHost(node);
-    if (!host)
-        return false;
-
-    for (auto& child : childrenOfType<HTMLDivElement>(*host->userAgentShadowRoot())) {
-        if (child.getIdAttribute() == imageOverlayElementIdentifier())
-            return node.isDescendantOf(child);
-    }
-
-    return false;
-}
-
-#if ENABLE(IMAGE_ANALYSIS)
-
-IntRect HTMLElement::containerRectForTextRecognition()
-{
-    auto* renderer = this->renderer();
-    if (!is<RenderImage>(renderer))
-        return { };
-
-    if (!renderer->opacity())
-        return { 0, 0, offsetWidth(), offsetHeight() };
-
-    return enclosingIntRect(downcast<RenderImage>(*renderer).replacedContentRect());
-}
-
-void HTMLElement::updateWithTextRecognitionResult(const TextRecognitionResult& result, CacheTextRecognitionResults cacheTextRecognitionResults)
-{
-    static MainThreadNeverDestroyed<const AtomString> imageOverlayLineClass("image-overlay-line", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> imageOverlayTextClass("image-overlay-text", AtomString::ConstructFromLiteral);
-
-    struct TextRecognitionLineElements {
-        Ref<HTMLDivElement> line;
-        Vector<Ref<HTMLElement>> children;
-    };
-
-    struct TextRecognitionElements {
-        RefPtr<HTMLDivElement> root;
-        Vector<TextRecognitionLineElements> lines;
-        Vector<Ref<HTMLDivElement>> dataDetectors;
-    };
-
-    bool hadExistingTextRecognitionElements = false;
-    TextRecognitionElements textRecognitionElements;
-
-    if (hasImageOverlay()) {
-        for (auto& child : childrenOfType<HTMLDivElement>(*userAgentShadowRoot())) {
-            if (child.getIdAttribute() == imageOverlayElementIdentifier()) {
-                textRecognitionElements.root = &child;
-                hadExistingTextRecognitionElements = true;
-                break;
-            }
-        }
-    }
-
-    if (textRecognitionElements.root) {
-        for (auto& lineOrDataDetector : childrenOfType<HTMLDivElement>(*textRecognitionElements.root)) {
-            if (!lineOrDataDetector.hasClass())
-                continue;
-
-            if (lineOrDataDetector.classList().contains(imageOverlayLineClass)) {
-                TextRecognitionLineElements lineElements { lineOrDataDetector, { } };
-                for (auto& text : childrenOfType<HTMLDivElement>(lineOrDataDetector))
-                    lineElements.children.append(text);
-                textRecognitionElements.lines.append(WTFMove(lineElements));
-            } else if (lineOrDataDetector.classList().contains(imageOverlayDataDetectorClassName()))
-                textRecognitionElements.dataDetectors.append(lineOrDataDetector);
-        }
-
-        bool canUseExistingTextRecognitionElements = ([&] {
-            if (result.dataDetectors.size() != textRecognitionElements.dataDetectors.size())
-                return false;
-
-            if (result.lines.size() != textRecognitionElements.lines.size())
-                return false;
-
-            for (size_t lineIndex = 0; lineIndex < result.lines.size(); ++lineIndex) {
-                auto& childResults = result.lines[lineIndex].children;
-                auto& childTextElements = textRecognitionElements.lines[lineIndex].children;
-                if (childResults.size() != childTextElements.size())
-                    return false;
-
-                for (size_t childIndex = 0; childIndex < childResults.size(); ++childIndex) {
-                    if (childResults[childIndex].text != childTextElements[childIndex]->textContent().stripWhiteSpace())
-                        return false;
-                }
-            }
-
-            return true;
-        })();
-
-        if (!canUseExistingTextRecognitionElements) {
-            textRecognitionElements.root->remove();
-            textRecognitionElements = { };
-        }
-    }
-
-    if (result.isEmpty())
-        return;
-
-    auto shadowRoot = makeRef(ensureUserAgentShadowRoot());
-    if (!textRecognitionElements.root) {
-        auto rootContainer = HTMLDivElement::create(document());
-        rootContainer->setIdAttribute(imageOverlayElementIdentifier());
-        if (document().isImageDocument())
-            rootContainer->setInlineStyleProperty(CSSPropertyWebkitUserSelect, CSSValueText);
-        shadowRoot->appendChild(rootContainer);
-        textRecognitionElements.root = rootContainer.copyRef();
-        textRecognitionElements.lines.reserveInitialCapacity(result.lines.size());
-        for (auto& line : result.lines) {
-            auto lineContainer = HTMLDivElement::create(document());
-            lineContainer->classList().add(imageOverlayLineClass);
-            rootContainer->appendChild(lineContainer);
-            TextRecognitionLineElements lineElements { lineContainer, { } };
-            lineElements.children.reserveInitialCapacity(line.children.size());
-            for (size_t childIndex = 0; childIndex < line.children.size(); ++childIndex) {
-                auto& child = line.children[childIndex];
-                auto textContainer = HTMLDivElement::create(document());
-                textContainer->classList().add(imageOverlayTextClass);
-                lineContainer->appendChild(textContainer);
-                textContainer->appendChild(Text::create(document(), child.hasLeadingWhitespace ? makeString('\n', child.text) : child.text));
-                lineElements.children.uncheckedAppend(WTFMove(textContainer));
-            }
-
-            lineContainer->appendChild(HTMLBRElement::create(document()));
-            textRecognitionElements.lines.uncheckedAppend(WTFMove(lineElements));
-        }
-
-#if ENABLE(DATA_DETECTION)
-        textRecognitionElements.dataDetectors.reserveInitialCapacity(result.dataDetectors.size());
-        for (auto& dataDetector : result.dataDetectors) {
-            auto dataDetectorContainer = DataDetection::createElementForImageOverlay(document(), dataDetector);
-            dataDetectorContainer->classList().add(imageOverlayDataDetectorClassName());
-            rootContainer->appendChild(dataDetectorContainer);
-            textRecognitionElements.dataDetectors.uncheckedAppend(WTFMove(dataDetectorContainer));
-        }
-#endif // ENABLE(DATA_DETECTION)
-
-        if (document().quirks().needsToForceUserSelectWhenInstallingImageOverlay())
-            setInlineStyleProperty(CSSPropertyWebkitUserSelect, CSSValueText);
-    }
-
-    if (!hadExistingTextRecognitionElements) {
-        static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(imageOverlayUserAgentStyleSheet, sizeof(imageOverlayUserAgentStyleSheet)));
-        auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
-        style->setTextContent(shadowStyle);
-        shadowRoot->appendChild(WTFMove(style));
-    }
-
-    document().updateLayoutIgnorePendingStylesheets();
-
-    auto* renderer = this->renderer();
-    if (!is<RenderImage>(renderer))
-        return;
-
-    downcast<RenderImage>(*renderer).setHasImageOverlay();
-
-    auto containerRect = containerRectForTextRecognition();
-    auto convertToContainerCoordinates = [&](const FloatQuad& normalizedQuad) {
-        auto quad = normalizedQuad;
-        quad.scale(containerRect.width(), containerRect.height());
-        quad.move(containerRect.x(), containerRect.y());
-        return quad;
-    };
-
-    bool applyUserSelectAll = document().isImageDocument() || renderer->style().userSelect() != UserSelect::None;
-    for (size_t lineIndex = 0; lineIndex < result.lines.size(); ++lineIndex) {
-        auto& lineElements = textRecognitionElements.lines[lineIndex];
-        auto& lineContainer = lineElements.line;
-        auto& line = result.lines[lineIndex];
-        auto lineQuad = convertToContainerCoordinates(line.normalizedQuad);
-        if (lineQuad.isEmpty())
-            continue;
-
-        auto lineBounds = rotatedBoundingRectWithMinimumAngleOfRotation(lineQuad, 0.01);
-        lineContainer->setInlineStyleProperty(CSSPropertyWidth, lineBounds.size.width(), CSSUnitType::CSS_PX);
-        lineContainer->setInlineStyleProperty(CSSPropertyHeight, lineBounds.size.height(), CSSUnitType::CSS_PX);
-        lineContainer->setInlineStyleProperty(CSSPropertyTransform, makeString(
-            "translate("_s,
-            std::round(lineBounds.center.x() - (lineBounds.size.width() / 2)), "px, "_s,
-            std::round(lineBounds.center.y() - (lineBounds.size.height() / 2)), "px) "_s,
-            lineBounds.angleInRadians ? makeString("rotate("_s, lineBounds.angleInRadians, "rad) "_s) : emptyString()
-        ));
-
-        auto offsetAlongHorizontalAxis = [&](const FloatPoint& quadPoint1, const FloatPoint& quadPoint2) {
-            auto intervalLength = lineBounds.size.width();
-            auto mid = midPoint(quadPoint1, quadPoint2);
-            mid.moveBy(-lineBounds.center);
-            mid.rotate(-lineBounds.angleInRadians);
-            return intervalLength * clampTo<float>(0.5 + mid.x() / intervalLength, 0, 1);
-        };
-
-        auto offsetsAlongHorizontalAxis = line.children.map([&](auto& child) -> WTF::Range<float> {
-            auto textQuad = convertToContainerCoordinates(child.normalizedQuad);
-            return {
-                offsetAlongHorizontalAxis(textQuad.p1(), textQuad.p4()),
-                offsetAlongHorizontalAxis(textQuad.p2(), textQuad.p3())
-            };
-        });
-
-        for (size_t childIndex = 0; childIndex < line.children.size(); ++childIndex) {
-            auto& textContainer = lineElements.children[childIndex];
-            bool lineHasOneChild = line.children.size() == 1;
-            float horizontalMarginToMinimizeSelectionGaps = lineHasOneChild ? 0 : 0.125;
-            float horizontalOffset = lineHasOneChild ? 0 : -horizontalMarginToMinimizeSelectionGaps;
-            float horizontalExtent = lineHasOneChild ? 0 : horizontalMarginToMinimizeSelectionGaps;
-
-            if (lineHasOneChild) {
-                horizontalOffset += offsetsAlongHorizontalAxis[childIndex].begin();
-                horizontalExtent += offsetsAlongHorizontalAxis[childIndex].end();
-            } else if (!childIndex) {
-                horizontalOffset += offsetsAlongHorizontalAxis[childIndex].begin();
-                horizontalExtent += (offsetsAlongHorizontalAxis[childIndex].end() + offsetsAlongHorizontalAxis[childIndex + 1].begin()) / 2;
-            } else if (childIndex == line.children.size() - 1) {
-                horizontalOffset += (offsetsAlongHorizontalAxis[childIndex - 1].end() + offsetsAlongHorizontalAxis[childIndex].begin()) / 2;
-                horizontalExtent += offsetsAlongHorizontalAxis[childIndex].end();
-            } else {
-                horizontalOffset += (offsetsAlongHorizontalAxis[childIndex - 1].end() + offsetsAlongHorizontalAxis[childIndex].begin()) / 2;
-                horizontalExtent += (offsetsAlongHorizontalAxis[childIndex].end() + offsetsAlongHorizontalAxis[childIndex + 1].begin()) / 2;
-            }
-
-            FloatSize targetSize { horizontalExtent - horizontalOffset, lineBounds.size.height() };
-            if (targetSize.isEmpty()) {
-                textContainer->setInlineStyleProperty(CSSPropertyTransform, "scale(0, 0)");
-                continue;
-            }
-
-            document().updateLayoutIfDimensionsOutOfDate(textContainer);
-
-            FloatSize sizeBeforeTransform;
-            if (auto* renderer = textContainer->renderBoxModelObject()) {
-                sizeBeforeTransform = {
-                    adjustLayoutUnitForAbsoluteZoom(renderer->offsetWidth(), *renderer).toFloat(),
-                    adjustLayoutUnitForAbsoluteZoom(renderer->offsetHeight(), *renderer).toFloat(),
-                };
-            }
-
-            if (sizeBeforeTransform.isEmpty()) {
-                textContainer->setInlineStyleProperty(CSSPropertyTransform, "scale(0, 0)");
-                continue;
-            }
-
-            textContainer->setInlineStyleProperty(CSSPropertyTransform, makeString(
-                "translate("_s,
-                horizontalOffset + (targetSize.width() - sizeBeforeTransform.width()) / 2, "px, "_s,
-                (targetSize.height() - sizeBeforeTransform.height()) / 2, "px) "_s,
-                "scale("_s, targetSize.width() / sizeBeforeTransform.width(), ", "_s, targetSize.height() / sizeBeforeTransform.height(), ") "_s
-            ));
-
-            textContainer->setInlineStyleProperty(CSSPropertyWebkitUserSelect, applyUserSelectAll ? CSSValueAll : CSSValueNone);
-        }
-
-        if (document().isImageDocument())
-            lineContainer->setInlineStyleProperty(CSSPropertyCursor, CSSValueText);
-    }
-
-#if ENABLE(DATA_DETECTION)
-    for (size_t index = 0; index < result.dataDetectors.size(); ++index) {
-        auto dataDetectorContainer = textRecognitionElements.dataDetectors[index];
-        auto& dataDetector = result.dataDetectors[index];
-        if (dataDetector.normalizedQuads.isEmpty())
-            continue;
-
-        // FIXME: We should come up with a way to coalesce the bounding quads into one or more rotated rects with the same angle of rotation.
-        auto targetQuad = convertToContainerCoordinates(dataDetector.normalizedQuads.first());
-        auto targetBounds = rotatedBoundingRectWithMinimumAngleOfRotation(targetQuad, 0.01);
-        dataDetectorContainer->setInlineStyleProperty(CSSPropertyWidth, targetBounds.size.width(), CSSUnitType::CSS_PX);
-        dataDetectorContainer->setInlineStyleProperty(CSSPropertyHeight, targetBounds.size.height(), CSSUnitType::CSS_PX);
-        dataDetectorContainer->setInlineStyleProperty(CSSPropertyTransform, makeString(
-            "translate("_s,
-            std::round(targetBounds.center.x() - (targetBounds.size.width() / 2)), "px, "_s,
-            std::round(targetBounds.center.y() - (targetBounds.size.height() / 2)), "px) "_s,
-            targetBounds.angleInRadians ? makeString("rotate("_s, targetBounds.angleInRadians, "rad) "_s) : emptyString()
-        ));
-    }
-#endif // ENABLE(DATA_DETECTION)
-
-    if (auto frame = makeRefPtr(document().frame()))
-        frame->eventHandler().scheduleCursorUpdate();
-
-    if (cacheTextRecognitionResults == CacheTextRecognitionResults::Yes) {
-        if (auto* page = document().page())
-            page->cacheTextRecognitionResult(*this, containerRect, result);
-    }
-}
-
-#endif // ENABLE(IMAGE_ANALYSIS)
 
 #if PLATFORM(IOS_FAMILY)
 
 SelectionRenderingBehavior HTMLElement::selectionRenderingBehavior(const Node* node)
 {
-    return isImageOverlayText(node) ? SelectionRenderingBehavior::UseIndividualQuads : SelectionRenderingBehavior::CoalesceBoundingRects;
+    return ImageOverlay::isOverlayText(node) ? SelectionRenderingBehavior::UseIndividualQuads : SelectionRenderingBehavior::CoalesceBoundingRects;
 }
 
 #endif // PLATFORM(IOS_FAMILY)

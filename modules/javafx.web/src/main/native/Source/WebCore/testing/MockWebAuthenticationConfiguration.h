@@ -92,6 +92,7 @@ struct MockWebAuthenticationConfiguration {
         bool canDowngrade { false };
         bool expectCancel { false };
         bool supportClientPin { false };
+        bool supportInternalUV { false };
 
         template<class Encoder> void encode(Encoder&) const;
         template<class Decoder> static std::optional<HidConfiguration> decode(Decoder&);
@@ -107,10 +108,18 @@ struct MockWebAuthenticationConfiguration {
         template<class Decoder> static std::optional<NfcConfiguration> decode(Decoder&);
     };
 
+    struct CcidConfiguration {
+        Vector<String> payloadBase64;
+
+        template<class Encoder> void encode(Encoder&) const;
+        template<class Decoder> static std::optional<CcidConfiguration> decode(Decoder&);
+    };
+
     bool silentFailure { false };
     std::optional<LocalConfiguration> local;
     std::optional<HidConfiguration> hid;
     std::optional<NfcConfiguration> nfc;
+    std::optional<CcidConfiguration> ccid;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<MockWebAuthenticationConfiguration> decode(Decoder&);
@@ -169,7 +178,7 @@ std::optional<MockWebAuthenticationConfiguration::LocalConfiguration> MockWebAut
 template<class Encoder>
 void MockWebAuthenticationConfiguration::HidConfiguration::encode(Encoder& encoder) const
 {
-    encoder << payloadBase64 << stage << subStage << error << isU2f << keepAlive << fastDataArrival << continueAfterErrorData << canDowngrade << expectCancel << supportClientPin;
+    encoder << payloadBase64 << stage << subStage << error << isU2f << keepAlive << fastDataArrival << continueAfterErrorData << canDowngrade << expectCancel << supportClientPin << supportInternalUV;
 }
 
 template<class Decoder>
@@ -198,6 +207,23 @@ std::optional<MockWebAuthenticationConfiguration::HidConfiguration> MockWebAuthe
         return std::nullopt;
     if (!decoder.decode(result.supportClientPin))
         return std::nullopt;
+    if (!decoder.decode(result.supportInternalUV))
+        return std::nullopt;
+    return result;
+}
+
+template<class Encoder>
+void MockWebAuthenticationConfiguration::CcidConfiguration::encode(Encoder& encoder) const
+{
+    encoder << payloadBase64;
+}
+
+template<class Decoder>
+std::optional<MockWebAuthenticationConfiguration::CcidConfiguration> MockWebAuthenticationConfiguration::CcidConfiguration::decode(Decoder& decoder)
+{
+    MockWebAuthenticationConfiguration::CcidConfiguration result;
+    if (!decoder.decode(result.payloadBase64))
+        return std::nullopt;
     return result;
 }
 
@@ -225,7 +251,7 @@ std::optional<MockWebAuthenticationConfiguration::NfcConfiguration> MockWebAuthe
 template<class Encoder>
 void MockWebAuthenticationConfiguration::encode(Encoder& encoder) const
 {
-    encoder << silentFailure << local << hid << nfc;
+    encoder << silentFailure << local << hid << nfc << ccid;
 }
 
 template<class Decoder>
@@ -256,6 +282,12 @@ std::optional<MockWebAuthenticationConfiguration> MockWebAuthenticationConfigura
     if (!nfc)
         return std::nullopt;
     result.nfc = WTFMove(*nfc);
+
+    std::optional<std::optional<CcidConfiguration>> ccid;
+    decoder >> ccid;
+    if (!ccid)
+        return std::nullopt;
+    result.ccid = WTFMove(*ccid);
 
     return result;
 }

@@ -104,6 +104,11 @@ public:
     void setHasHorizontalScrollbar(bool);
     void setHasVerticalScrollbar(bool);
 
+    bool needsAnimatedScroll() const final { return m_isRegisteredForAnimatedScroll; }
+
+    OverscrollBehavior horizontalOverscrollBehavior() const final;
+    OverscrollBehavior verticalOverscrollBehavior() const final;
+
     bool requiresScrollPositionReconciliation() const { return m_requiresScrollPositionReconciliation; }
     void setRequiresScrollPositionReconciliation(bool requiresReconciliation = true) { m_requiresScrollPositionReconciliation = requiresReconciliation; }
 
@@ -127,7 +132,7 @@ public:
     void updateScrollInfoAfterLayout();
     void updateScrollbarSteps();
 
-    bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1);
+    bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1);
 
 public:
     // All methods in this section override ScrollableaArea methods (final).
@@ -135,6 +140,8 @@ public:
 
     bool horizontalScrollbarHiddenByStyle() const final;
     bool verticalScrollbarHiddenByStyle() const final;
+
+    bool canShowNonOverlayScrollbars() const final;
 
     ScrollPosition scrollPosition() const final { return m_scrollPosition; }
 
@@ -190,16 +197,20 @@ public:
     bool isRubberBandInProgress() const final;
     bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const final;
     bool isScrollSnapInProgress() const final;
-    bool usesMockScrollAnimator() const final;
-    void logMockScrollAnimatorMessage(const String&) const final;
+    bool scrollAnimatorEnabled() const final;
+    bool mockScrollbarsControllerEnabled() const final;
+    void logMockScrollbarsControllerMessage(const String&) const final;
 
     String debugDescription() const final;
+    void didStartScrollAnimation() final;
 
     IntSize visibleSize() const final;
     IntSize contentsSize() const final;
     IntSize reachableTotalContentsSize() const final;
 
     bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) final;
+    bool requestAnimatedScrollToPosition(const ScrollPosition&, ScrollClamping = ScrollClamping::Clamped) final;
+    void stopAsyncAnimatedScroll() final;
 
     bool containsDirtyOverlayScrollbars() const { return m_containsDirtyOverlayScrollbars; }
     void setContainsDirtyOverlayScrollbars(bool dirtyScrollbars) { m_containsDirtyOverlayScrollbars = dirtyScrollbars; }
@@ -230,15 +241,11 @@ public:
 
     IntSize scrollbarOffset(const Scrollbar&) const;
 
-    void updateLayerPositionsAfterOverflowScroll();
-    void updateLayerPositionsAfterDocumentScroll();
-
     std::optional<LayoutRect> updateScrollPosition(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
-
-#if PLATFORM(IOS_FAMILY)
-    bool adjustForIOSCaretWhenScrolling() const { return m_adjustForIOSCaretWhenScrolling; }
-    void setAdjustForIOSCaretWhenScrolling(bool adjustForIOSCaretWhenScrolling) { m_adjustForIOSCaretWhenScrolling = adjustForIOSCaretWhenScrolling; }
-#endif
+    bool isVisibleToHitTesting() const final;
+    void animatedScrollDidEnd() final;
+    LayoutRect scrollRectToVisible(const LayoutRect& absoluteRect, const ScrollRectToVisibleOptions&);
+    std::optional<LayoutRect> updateScrollPositionForScrollIntoView(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
 
 private:
     bool hasHorizontalOverflow() const;
@@ -265,6 +272,7 @@ private:
     void clearResizer();
 
     void updateScrollbarPresenceAndState(std::optional<bool> hasHorizontalOverflow = std::nullopt, std::optional<bool> hasVerticalOverflow = std::nullopt);
+    void registerScrollableAreaForAnimatedScroll();
 
 private:
     bool m_scrollDimensionsDirty { true };
@@ -272,15 +280,14 @@ private:
     bool m_registeredScrollableArea { false };
     bool m_hasCompositedScrollableOverflow { false };
 
-#if PLATFORM(IOS_FAMILY)
-#if ENABLE(IOS_TOUCH_EVENTS)
+#if PLATFORM(IOS_FAMILY) && ENABLE(IOS_TOUCH_EVENTS)
     bool m_registeredAsTouchEventListenerForScrolling { false };
-#endif
-    bool m_adjustForIOSCaretWhenScrolling { false };
 #endif
     bool m_requiresScrollPositionReconciliation { false };
     bool m_containsDirtyOverlayScrollbars { false };
     bool m_updatingMarqueePosition { false };
+
+    bool m_isRegisteredForAnimatedScroll { false };
 
     // The width/height of our scrolled area.
     int m_scrollWidth { 0 };

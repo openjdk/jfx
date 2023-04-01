@@ -37,11 +37,11 @@
 #include "Frame.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
-#include "JSDOMWindowBase.h"
+#include "JSDOMWindowCustom.h"
+#include "JSExecState.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include "ScriptController.h"
-#include "ScriptState.h"
 #include "SecurityOrigin.h"
 #include "UserGestureEmulationScope.h"
 #include <JavaScriptCore/InjectedScript.h>
@@ -91,7 +91,7 @@ Protocol::ErrorStringOr<void> PageRuntimeAgent::disable()
 void PageRuntimeAgent::frameNavigated(Frame& frame)
 {
     // Ensure execution context is created for the frame even if it doesn't have scripts.
-    mainWorldExecState(&frame);
+    mainWorldGlobalObject(frame);
 }
 
 void PageRuntimeAgent::didClearWindowObjectInWorld(Frame& frame, DOMWrapperWorld& world)
@@ -106,8 +106,7 @@ void PageRuntimeAgent::didClearWindowObjectInWorld(Frame& frame, DOMWrapperWorld
 InjectedScript PageRuntimeAgent::injectedScriptForEval(Protocol::ErrorString& errorString, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (!executionContextId) {
-        JSC::JSGlobalObject* scriptState = mainWorldExecState(&m_inspectedPage.mainFrame());
-        InjectedScript result = injectedScriptManager().injectedScriptFor(scriptState);
+        InjectedScript result = injectedScriptManager().injectedScriptFor(&mainWorldGlobalObject(m_inspectedPage.mainFrame()));
         if (result.hasNoValue())
             errorString = "Internal error: main world execution context not found"_s;
         return result;
@@ -135,25 +134,25 @@ void PageRuntimeAgent::reportExecutionContextCreation()
     if (!pageAgent)
         return;
 
-    for (auto* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->script().canExecuteScripts(NotAboutToExecuteScript))
-            continue;
+    m_inspectedPage.forEachFrame([&](Frame& frame) {
+        if (!frame.script().canExecuteScripts(NotAboutToExecuteScript))
+            return;
 
-        auto frameId = pageAgent->frameId(frame);
+        auto frameId = pageAgent->frameId(&frame);
 
         // Always send the main world first.
-        auto* mainGlobalObject = mainWorldExecState(frame);
-        notifyContextCreated(frameId, mainGlobalObject, mainThreadNormalWorld());
+        auto& mainGlobalObject = mainWorldGlobalObject(frame);
+        notifyContextCreated(frameId, &mainGlobalObject, mainThreadNormalWorld());
 
-        for (auto& jsWindowProxy : frame->windowProxy().jsWindowProxiesAsVector()) {
+        for (auto& jsWindowProxy : frame.windowProxy().jsWindowProxiesAsVector()) {
             auto* globalObject = jsWindowProxy->window();
-            if (globalObject == mainGlobalObject)
+            if (globalObject == &mainGlobalObject)
                 continue;
 
             auto& securityOrigin = downcast<DOMWindow>(jsWindowProxy->wrapped()).document()->securityOrigin();
             notifyContextCreated(frameId, globalObject, jsWindowProxy->world(), &securityOrigin);
         }
-    }
+    });
 }
 
 static Protocol::Runtime::ExecutionContextType toProtocol(DOMWrapperWorld::Type type)
@@ -191,14 +190,24 @@ void PageRuntimeAgent::notifyContextCreated(const Protocol::Network::FrameId& fr
 
 Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> PageRuntimeAgent::evaluate(const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture)
 {
-    UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture && *emulateUserGesture);
-    return InspectorRuntimeAgent::evaluate(expression, objectGroup, WTFMove(includeCommandLineAPI), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(executionContextId), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(saveResult), WTFMove(emulateUserGesture));
+    Protocol::ErrorString errorString;
+
+    auto injectedScript = injectedScriptForEval(errorString, WTFMove(executionContextId));
+    if (injectedScript.hasNoValue())
+        return makeUnexpected(errorString);
+
+    UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture.value_or(false), dynamicDowncast<Document>(executionContext(injectedScript.globalObject())));
+    return InspectorRuntimeAgent::evaluate(injectedScript, expression, objectGroup, WTFMove(includeCommandLineAPI), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(saveResult), WTFMove(emulateUserGesture));
 }
 
 Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */>> PageRuntimeAgent::callFunctionOn(const Protocol::Runtime::RemoteObjectId& objectId, const String& expression, RefPtr<JSON::Array>&& optionalArguments, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& emulateUserGesture)
 {
-    UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture && *emulateUserGesture);
-    return InspectorRuntimeAgent::callFunctionOn(objectId, expression, WTFMove(optionalArguments), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(emulateUserGesture));
+    auto injectedScript = injectedScriptManager().injectedScriptForObjectId(objectId);
+    if (injectedScript.hasNoValue())
+        return makeUnexpected("Missing injected script for given objectId"_s);
+
+    UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture.value_or(false), dynamicDowncast<Document>(executionContext(injectedScript.globalObject())));
+    return InspectorRuntimeAgent::callFunctionOn(injectedScript, objectId, expression, WTFMove(optionalArguments), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(emulateUserGesture));
 }
 
 } // namespace WebCore

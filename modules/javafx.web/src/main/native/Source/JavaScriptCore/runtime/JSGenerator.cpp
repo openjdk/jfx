@@ -31,11 +31,11 @@
 
 namespace JSC {
 
-const ClassInfo JSGenerator::s_info = { "Generator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSGenerator) };
+const ClassInfo JSGenerator::s_info = { "Generator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSGenerator) };
 
 JSGenerator* JSGenerator::create(VM& vm, Structure* structure)
 {
-    JSGenerator* generator = new (NotNull, allocateCell<JSGenerator>(vm.heap)) JSGenerator(vm, structure);
+    JSGenerator* generator = new (NotNull, allocateCell<JSGenerator>(vm)) JSGenerator(vm, structure);
     generator->finishCreation(vm);
     return generator;
 }

@@ -29,6 +29,7 @@
 
 #include "LibWebRTCMacros.h"
 #include "RTCDtlsTransportState.h"
+#include "RTCError.h"
 #include "RTCIceCandidate.h"
 #include "RTCPeerConnection.h"
 #include "RTCRtpSendParameters.h"
@@ -206,8 +207,6 @@ RTCRtpParameters toRTCRtpParameters(const webrtc::RtpParameters& rtcParameters)
         parameters.codecs.append(toRTCCodecParameters(codec));
 
     parameters.rtcp.reducedSize = rtcParameters.rtcp.reduced_size;
-    if (rtcParameters.rtcp.cname.length())
-        parameters.rtcp.cname = fromStdString(rtcParameters.rtcp.cname);
 
     return parameters;
 }
@@ -215,6 +214,7 @@ RTCRtpParameters toRTCRtpParameters(const webrtc::RtpParameters& rtcParameters)
 RTCRtpSendParameters toRTCRtpSendParameters(const webrtc::RtpParameters& rtcParameters)
 {
     RTCRtpSendParameters parameters { toRTCRtpParameters(rtcParameters) };
+    parameters.rtcp.cname = fromStdString(rtcParameters.rtcp.cname);
 
     parameters.transactionId = fromStdString(rtcParameters.transaction_id);
     for (auto& rtcEncoding : rtcParameters.encodings)
@@ -359,7 +359,7 @@ Exception toException(const webrtc::RTCError& error)
 {
     ASSERT(!error.ok());
 
-    return Exception { toExceptionCode(error.type()), error.message() };
+    return Exception { toExceptionCode(error.type()), String::fromLatin1(error.message()) };
 }
 
 static inline RTCIceComponent toRTCIceComponent(int component)
@@ -427,6 +427,34 @@ std::optional<RTCIceCandidate::Fields> parseIceCandidateSDP(const String& sdp)
 
     fields.usernameFragment = fromStdString(candidate.username());
     return fields;
+}
+
+static std::optional<RTCErrorDetailType> toRTCErrorDetailType(webrtc::RTCErrorDetailType type)
+{
+    switch (type) {
+    case webrtc::RTCErrorDetailType::DATA_CHANNEL_FAILURE:
+        return RTCErrorDetailType::DataChannelFailure;
+    case webrtc::RTCErrorDetailType::DTLS_FAILURE:
+        return RTCErrorDetailType::DtlsFailure;
+    case webrtc::RTCErrorDetailType::FINGERPRINT_FAILURE:
+        return RTCErrorDetailType::FingerprintFailure;
+    case webrtc::RTCErrorDetailType::SCTP_FAILURE:
+        return RTCErrorDetailType::SctpFailure;
+    case webrtc::RTCErrorDetailType::SDP_SYNTAX_ERROR:
+        return RTCErrorDetailType::SdpSyntaxError;
+    case webrtc::RTCErrorDetailType::HARDWARE_ENCODER_NOT_AVAILABLE:
+    case webrtc::RTCErrorDetailType::HARDWARE_ENCODER_ERROR:
+    case webrtc::RTCErrorDetailType::NONE:
+        return { };
+    };
+}
+
+RefPtr<RTCError> toRTCError(const webrtc::RTCError& rtcError)
+{
+    auto detail = toRTCErrorDetailType(rtcError.error_detail());
+    if (!detail)
+        return nullptr;
+    return RTCError::create(*detail, String::fromLatin1(rtcError.message()));
 }
 
 } // namespace WebCore

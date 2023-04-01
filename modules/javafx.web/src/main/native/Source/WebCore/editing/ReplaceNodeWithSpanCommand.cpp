@@ -49,7 +49,8 @@ static void swapInNodePreservingAttributesAndChildren(HTMLElement& newNode, HTML
 
     // FIXME: Fix this to send the proper MutationRecords when MutationObservers are present.
     newNode.cloneDataFromElement(nodeToReplace);
-    auto children = collectChildNodes(nodeToReplace);
+    NodeVector children;
+    collectChildNodes(nodeToReplace, children);
     for (auto& child : children)
         newNode.appendChild(child);
 
@@ -68,7 +69,7 @@ void ReplaceNodeWithSpanCommand::doApply()
 
 void ReplaceNodeWithSpanCommand::doUnapply()
 {
-    if (!m_spanElement->isConnected())
+    if (!m_spanElement || !m_spanElement->isConnected())
         return;
     swapInNodePreservingAttributesAndChildren(m_elementToReplace, *m_spanElement);
 }

@@ -37,17 +37,17 @@ const GamepadButtonRole maximumGamepadButton = GamepadButtonRole::CenterClusterC
 const size_t numberOfStandardGamepadButtonsWithoutHomeButton = static_cast<size_t>(maximumGamepadButton);
 const size_t numberOfStandardGamepadButtonsWithHomeButton = numberOfStandardGamepadButtonsWithoutHomeButton + 1;
 
-const WTF::String& standardGamepadMappingString()
+const String& standardGamepadMappingString()
 {
-    static NeverDestroyed<String> standardGamepadMapping = "standard";
+    static NeverDestroyed<String> standardGamepadMapping = "standard"_s;
     return standardGamepadMapping;
 }
 
 #if ENABLE(WEBXR)
 // https://immersive-web.github.io/webxr-gamepads-module/#dom-gamepadmappingtype-xr-standard
-const WTF::String& xrStandardGamepadMappingString()
+const String& xrStandardGamepadMappingString()
 {
-    static NeverDestroyed<String> xrStandardGamepadMapping = "xr-standard";
+    static NeverDestroyed<String> xrStandardGamepadMapping = "xr-standard"_s;
     return xrStandardGamepadMapping;
 }
 #endif

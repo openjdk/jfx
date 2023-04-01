@@ -271,6 +271,8 @@ public:
     void willInsertTableColumn(RenderTableCol& child, RenderObject* beforeChild);
     void willInsertTableSection(RenderTableSection& child, RenderObject* beforeChild);
 
+    LayoutUnit sumCaptionsLogicalHeight() const;
+
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void simplifiedNormalFlowLayout() final;
@@ -278,7 +280,7 @@ protected:
 private:
     static RenderPtr<RenderTable> createTableWithStyle(Document&, const RenderStyle&);
 
-    const char* renderName() const override { return "RenderTable"; }
+    ASCIILiteral renderName() const override { return "RenderTable"_s; }
 
     bool isTable() const final { return true; }
 
@@ -305,8 +307,6 @@ private:
     void invalidateCachedColumns();
 
     void invalidateCachedColumnOffsets();
-
-    RenderBlock* firstLineBlock() const final;
 
     void updateLogicalWidth() final;
 

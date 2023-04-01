@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ class D3DResourceFactory extends BaseShaderFactory {
      * @see D3DResource
      */
     private final LinkedList<D3DResource.D3DRecord> records =
-        new LinkedList<D3DResource.D3DRecord>();
+        new LinkedList<>();
 
     D3DResourceFactory(long pContext, Screen screen) {
         super(clampTexCache, repeatTexCache, mipmapTexCache);
@@ -166,6 +166,16 @@ class D3DResourceFactory extends BaseShaderFactory {
             allocw = w;
             alloch = h;
         }
+
+        if (allocw <= 0 || alloch <= 0) {
+            throw new RuntimeException("Illegal texture dimensions (" + allocw + "x" + alloch + ")");
+        }
+
+        int bpp = format.getBytesPerPixelUnit();
+        if (allocw >= (Integer.MAX_VALUE / alloch / bpp)) {
+            throw new RuntimeException("Illegal texture dimensions (" + allocw + "x" + alloch + ")");
+        }
+
         D3DVramPool pool = D3DVramPool.instance;
         long size = pool.estimateTextureSize(allocw, alloch, format);
         if (!pool.prepareForAllocation(size)) {
@@ -227,6 +237,18 @@ class D3DResourceFactory extends BaseShaderFactory {
             frame.releaseFrame();
             return tex;
         } else {
+
+            if (texWidth <= 0 || texHeight <= 0) {
+                frame.releaseFrame();
+                throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
+            }
+
+            int bpp = texFormat.getBytesPerPixelUnit();
+            if (texWidth >= (Integer.MAX_VALUE / texHeight / bpp)) {
+                frame.releaseFrame();
+                throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
+            }
+
             D3DVramPool pool = D3DVramPool.instance;
             long size = pool.estimateTextureSize(texWidth, texHeight, texFormat);
             if (!pool.prepareForAllocation(size)) {
@@ -297,6 +319,17 @@ class D3DResourceFactory extends BaseShaderFactory {
             createw = nextPowerOfTwo(createw, Integer.MAX_VALUE);
             createh = nextPowerOfTwo(createh, Integer.MAX_VALUE);
         }
+
+        if (createw <= 0 || createh <= 0) {
+            throw new RuntimeException("Illegal texture dimensions (" + createw + "x" + createh + ")");
+        }
+
+        PixelFormat format = PixelFormat.INT_ARGB_PRE;
+        int bpp = format.getBytesPerPixelUnit();
+        if (createw >= (Integer.MAX_VALUE / createh / bpp)) {
+            throw new RuntimeException("Illegal texture dimensions (" + createw + "x" + createh + ")");
+        }
+
         D3DVramPool pool = D3DVramPool.instance;
         int aaSamples;
         if (msaa) {
@@ -312,7 +345,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
 
         long pResource = nCreateTexture(context.getContextHandle(),
-                                        PixelFormat.INT_ARGB_PRE.ordinal(),
+                                        format.ordinal(),
                                         Usage.DEFAULT.ordinal(),
                                         true /*isRTT*/, createw, createh, aaSamples, false);
         if (pResource == 0L) {

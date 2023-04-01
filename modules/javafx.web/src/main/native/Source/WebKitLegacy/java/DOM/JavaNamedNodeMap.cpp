@@ -63,7 +63,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_getNamedItemImp
     , jstring name)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->getNamedItem(String(env, name))));
+    return JavaReturn<Node>(env, WTF::getPtr(IMPL->getNamedItem(AtomString {String(env, name)})));
 }
 
 
@@ -88,7 +88,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_removeNamedItem
     , jstring name)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->removeNamedItem(String(env, name)))));
+    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->removeNamedItem(AtomString {String(env, name)}))));
 }
 
 
@@ -105,8 +105,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_getNamedItemNSI
     , jstring localName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->getNamedItemNS(String(env, namespaceURI)
-            , String(env, localName))));
+    return JavaReturn<Node>(env, WTF::getPtr(IMPL->getNamedItemNS(AtomString {String(env, namespaceURI)}
+            , AtomString{String(env, localName)})));
 }
 
 
@@ -122,8 +122,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NamedNodeMapImpl_removeNamedItem
     , jstring localName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->removeNamedItemNS(String(env, namespaceURI)
-            , String(env, localName)))));
+    return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->removeNamedItemNS(AtomString {String(env, namespaceURI)}
+            , AtomString{String(env, localName)}))));
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ void ResourceHandle::cancel()
 
 static bool shouldRedirectAsGET(const ResourceRequest& request, const ResourceResponse& response, bool crossOrigin)
 {
-    if (request.httpMethod() == "GET" || request.httpMethod() == "HEAD")
+    if (request.httpMethod() == "GET"_s || request.httpMethod() == "HEAD"_s)
         return false;
 
     if (!request.url().protocolIsInHTTPFamily())
@@ -67,10 +67,10 @@ static bool shouldRedirectAsGET(const ResourceRequest& request, const ResourceRe
     if (response.isSeeOther())
         return true;
 
-    if ((response.isMovedPermanently() || response.isFound()) && (request.httpMethod() == "POST"))
+    if ((response.isMovedPermanently() || response.isFound()) && (request.httpMethod() == "POST"_s))
         return true;
 
-    if (crossOrigin && (request.httpMethod() == "DELETE"))
+    if (crossOrigin && (request.httpMethod() == "DELETE"_s))
         return true;
 
     return false;
@@ -88,7 +88,7 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
             String(),
             com_sun_webkit_LoadListenerClient_TOO_MANY_REDIRECTS,
             request.url(),
-            "Illegal redirect"));
+            "Illegal redirect"_s));
         return;
     }
 
@@ -98,7 +98,7 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
             request.setHTTPMethod(lastHTTPMethod);
 
             FormData* body = d->m_firstRequest.httpBody();
-            if (!equalLettersIgnoringASCIICase(lastHTTPMethod, "get") && body && !body->isEmpty())
+            if (!equalLettersIgnoringASCIICase(lastHTTPMethod, "get"_s) && body && !body->isEmpty())
                 request.setHTTPBody(body);
 
             String originalContentType = d->m_firstRequest.httpContentType();
@@ -115,7 +115,7 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
     newRequest.setURL(newURL);
 
     if (shouldRedirectAsGET(newRequest, response, crossOrigin)) {
-        newRequest.setHTTPMethod("GET");
+        newRequest.setHTTPMethod("GET"_s);
         newRequest.setHTTPBody(nullptr);
         newRequest.clearHTTPContentType();
     }
@@ -128,10 +128,10 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
     }
 
     // Should not set Referer after a redirect from a secure resource to non-secure one.
-    if (!newURL.protocolIs("https") && protocolIs(newRequest.httpReferrer(), "https") && context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
+    if (!newURL.protocolIs("https"_s) && protocolIs(newRequest.httpReferrer(), "https"_s) && context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
         newRequest.clearHTTPReferrer();
 
-    client()->willSendRequestAsync(this, WTFMove(newRequest), ResourceResponse(response), [this, protectedThis = makeRef(*this)] (ResourceRequest&& request) {
+    client()->willSendRequestAsync(this, WTFMove(newRequest), ResourceResponse(response), [this, protectedThis = Ref(*this)] (ResourceRequest&& request) {
         continueAfterWillSendRequest(WTFMove(request));
     });
 }
@@ -182,7 +182,7 @@ void ResourceHandle::receivedRequestToContinueWithoutCredential(const Authentica
 
 void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challenge)
 {
-    if (challenge != d->m_currentWebChallenge)
+    if (!AuthenticationChallengeBase::equalForWebKitLegacyChallengeComparison(challenge, d->m_currentWebChallenge))
         return;
 
     if (client())

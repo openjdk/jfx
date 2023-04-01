@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Apple Inc. All rights reserved.
+ * Copyright (c) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,6 +59,9 @@ struct pas_page_base {
                           from segregated_page and bitfit_page if we ever did need that space for
                           basically any reason. */
 };
+
+PAS_API size_t pas_page_base_header_size(const pas_page_base_config* config,
+                                         pas_page_kind page_kind);
 
 static inline void pas_page_base_construct(pas_page_base* page_base,
                                            pas_page_kind page_kind)
@@ -164,7 +167,7 @@ pas_page_base_for_address_and_page_config(uintptr_t begin,
         page_config);
 }
 
-PAS_API pas_page_base_config* pas_page_base_get_config(pas_page_base* page);
+PAS_API const pas_page_base_config* pas_page_base_get_config(pas_page_base* page);
 
 PAS_API pas_page_granule_use_count*
 pas_page_base_get_granule_use_counts(pas_page_base* page);

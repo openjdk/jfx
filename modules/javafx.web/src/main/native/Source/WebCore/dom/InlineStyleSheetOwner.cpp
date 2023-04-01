@@ -21,8 +21,9 @@
 #include "config.h"
 #include "InlineStyleSheetOwner.h"
 
+#include "CommonAtomStrings.h"
 #include "ContentSecurityPolicy.h"
-#include "Element.h"
+#include "ElementInlines.h"
 #include "Logging.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
@@ -96,6 +97,8 @@ void InlineStyleSheetOwner::insertedIntoDocument(Element& element)
 void InlineStyleSheetOwner::removedFromDocument(Element& element)
 {
     if (m_styleScope) {
+        if (m_styleScope->hasPendingSheet(element))
+            m_styleScope->removePendingSheet(element);
         m_styleScope->removeStyleSheetCandidateNode(element);
         m_styleScope = nullptr;
     }
@@ -149,8 +152,7 @@ inline bool isValidCSSContentType(Element& element, const AtomString& type)
     // FIXME: Should MIME types really be case sensitive in XML documents? Doesn't seem like they should,
     // even though other things are case sensitive in that context. MIME types should never be case sensitive.
     // We should verify this and then remove the isHTMLElement check here.
-    static MainThreadNeverDestroyed<const AtomString> cssContentType("text/css", AtomString::ConstructFromLiteral);
-    return element.isHTMLElement() ? equalLettersIgnoringASCIICase(type, "text/css") : type == cssContentType;
+    return element.isHTMLElement() ? equalLettersIgnoringASCIICase(type, "text/css"_s) : type == cssContentTypeAtom();
 }
 
 void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
@@ -168,8 +170,7 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 
     ASSERT(document.contentSecurityPolicy());
     const ContentSecurityPolicy& contentSecurityPolicy = *document.contentSecurityPolicy();
-    bool hasKnownNonce = contentSecurityPolicy.allowStyleWithNonce(element.attributeWithoutSynchronization(HTMLNames::nonceAttr), element.isInUserAgentShadowTree());
-    if (!contentSecurityPolicy.allowInlineStyle(document.url().string(), m_startTextPosition.m_line, text, hasKnownNonce))
+    if (!contentSecurityPolicy.allowInlineStyle(document.url().string(), m_startTextPosition.m_line, text, CheckUnsafeHashes::No, element, element.nonce(), element.isInUserAgentShadowTree()))
         return;
 
     auto mediaQueries = MediaQuerySet::create(m_media, MediaQueryParserContext(document));

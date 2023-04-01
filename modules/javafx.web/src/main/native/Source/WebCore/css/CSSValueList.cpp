@@ -83,12 +83,12 @@ Ref<CSSValueList> CSSValueList::copy()
     return newList.releaseNonNull();
 }
 
-String CSSValueList::customCSSText() const
+String CSSValueList::customCSSText(Document* document) const
 {
     StringBuilder result;
     auto separator = separatorCSSText();
     for (auto& value : m_values)
-        result.append(result.isEmpty() ? ""_s : separator, value.get().cssText());
+        result.append(result.isEmpty() ? ""_s : separator, value.get().cssText(document));
     return result.toString();
 }
 
@@ -115,7 +115,7 @@ bool CSSValueList::equals(const CSSValue& other) const
     return m_values[0].get().equals(other);
 }
 
-bool CSSValueList::traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const
+bool CSSValueList::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     for (unsigned i = 0; i < m_values.size(); ++i) {
         if (m_values[i].get().traverseSubresources(handler))

@@ -67,7 +67,7 @@ public:
     using MessageType = CDMMessageType;
 
 #if !RELEASE_LOG_DISABLED
-    virtual void setLogger(WTF::Logger&, const void*) { }
+    virtual void setLogIdentifier(const void*) { }
 #endif
 
     virtual void setClient(WeakPtr<CDMInstanceSessionClient>&&) { }
@@ -100,7 +100,7 @@ public:
     using CloseSessionCallback = CompletionHandler<void()>;
     virtual void closeSession(const String& sessionId, CloseSessionCallback&&) = 0;
 
-    using RemoveSessionDataCallback = CompletionHandler<void(KeyStatusVector&&, std::optional<Ref<SharedBuffer>>&&, SuccessValue)>;
+    using RemoveSessionDataCallback = CompletionHandler<void(KeyStatusVector&&, RefPtr<SharedBuffer>&&, SuccessValue)>;
     virtual void removeSessionData(const String& sessionId, LicenseType, RemoveSessionDataCallback&&) = 0;
 
     virtual void storeRecordOfKeyUsage(const String& sessionId) = 0;

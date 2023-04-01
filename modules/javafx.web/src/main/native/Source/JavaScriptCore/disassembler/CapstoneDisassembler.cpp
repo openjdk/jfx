@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, size_t size, const char* prefix, PrintStream& out)
+bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, size_t size, void*, void*, const char* prefix, PrintStream& out)
 {
     csh handle;
     cs_insn* instructions;
@@ -68,9 +68,7 @@ bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, s
     if (count > 0) {
         for (size_t i = 0; i < count; ++i) {
             auto& instruction = instructions[i];
-            char pcString[20];
-            snprintf(pcString, sizeof(pcString), "0x%llx", static_cast<unsigned long long>(instruction.address));
-            out.printf("%s%16s: %s %s\n", prefix, pcString, instruction.mnemonic, instruction.op_str);
+            out.printf("%s%#16llx: %s %s\n", prefix, static_cast<unsigned long long>(instruction.address), instruction.mnemonic, instruction.op_str);
         }
         cs_free(instructions, count);
     }

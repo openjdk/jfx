@@ -24,7 +24,6 @@
 
 #if USE(TEXTURE_MAPPER_GL)
 
-#include "ExtensionsGL.h"
 #include "FilterOperations.h"
 #include "LengthFunctions.h"
 #include "NativeImage.h"
@@ -40,11 +39,6 @@
 #include "RefPtrCairo.h"
 #include <cairo.h>
 #include <wtf/text/CString.h>
-#endif
-
-#if USE(DIRECT2D)
-#include <d2d1.h>
-#include <wincodec.h>
 #endif
 
 #if OS(DARWIN)
@@ -163,8 +157,6 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
     cairo_surface_t* surface = frameImage->platformImage().get();
     imageData = cairo_image_surface_get_data(surface);
     bytesPerLine = cairo_image_surface_get_stride(surface);
-#elif USE(DIRECT2D)
-    notImplemented();
 #endif
 
     updateContents(imageData, targetRect, offset, bytesPerLine);
@@ -210,7 +202,7 @@ static unsigned getPassesRequiredForFilter(FilterOperation::OperationType type)
     }
 }
 
-RefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper& textureMapper, const FilterOperations& filters)
+RefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper& textureMapper, const FilterOperations& filters, bool defersLastFilter)
 {
     if (filters.isEmpty())
         return this;
@@ -230,17 +222,14 @@ RefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper& textureMapper
         int numPasses = getPassesRequiredForFilter(filter->type());
         for (int j = 0; j < numPasses; ++j) {
             bool last = (i == filters.size() - 1) && (j == numPasses - 1);
-            if (!last) {
-                if (!intermediateSurface)
-                    intermediateSurface = texmapGL.acquireTextureFromPool(contentSize(), BitmapTexture::SupportsAlpha);
-                texmapGL.bindSurface(intermediateSurface.get());
-            }
-
-            if (last) {
+            if (defersLastFilter && last) {
                 toBitmapTextureGL(resultSurface.get())->m_filterInfo = BitmapTextureGL::FilterInfo(filter.copyRef(), j, spareSurface.copyRef());
                 break;
             }
 
+            if (!intermediateSurface)
+                intermediateSurface = texmapGL.acquireTextureFromPool(contentSize(), BitmapTexture::SupportsAlpha);
+            texmapGL.bindSurface(intermediateSurface.get());
             texmapGL.drawFiltered(*resultSurface.get(), spareSurface.get(), *filter, j);
             if (!j && filter->type() == FilterOperation::DROP_SHADOW) {
                 spareSurface = resultSurface;

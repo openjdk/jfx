@@ -130,10 +130,10 @@ void ResourceRequestBase::setURL(const URL& url)
 
 static bool shouldUseGet(const ResourceRequestBase& request, const ResourceResponse& redirectResponse)
 {
-    if (equalLettersIgnoringASCIICase(request.httpMethod(), "get") || equalLettersIgnoringASCIICase(request.httpMethod(), "head"))
+    if (equalLettersIgnoringASCIICase(request.httpMethod(), "get"_s) || equalLettersIgnoringASCIICase(request.httpMethod(), "head"_s))
         return false;
     if (redirectResponse.httpStatusCode() == 301 || redirectResponse.httpStatusCode() == 302)
-        return equalLettersIgnoringASCIICase(request.httpMethod(), "post");
+        return equalLettersIgnoringASCIICase(request.httpMethod(), "post"_s);
     return redirectResponse.httpStatusCode() == 303;
 }
 
@@ -164,7 +164,7 @@ ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& r
 
     request.redirectAsGETIfNeeded(*this, redirectResponse);
 
-    if (shouldClearReferrerOnHTTPSToHTTPRedirect && !request.url().protocolIs("https") && WTF::protocolIs(request.httpReferrer(), "https"))
+    if (shouldClearReferrerOnHTTPSToHTTPRedirect && !request.url().protocolIs("https"_s) && WTF::protocolIs(request.httpReferrer(), "https"_s))
         request.clearHTTPReferrer();
 
     if (!protocolHostAndPortAreEqual(request.url(), redirectResponse.url()))
@@ -308,7 +308,7 @@ const HTTPHeaderMap& ResourceRequestBase::httpHeaderFields() const
     return m_httpHeaderFields;
 }
 
-String ResourceRequestBase::httpHeaderField(const String& name) const
+String ResourceRequestBase::httpHeaderField(StringView name) const
 {
     updateResourceRequest();
 
@@ -394,7 +394,7 @@ void ResourceRequestBase::setHTTPReferrer(const String& httpReferrer)
     constexpr size_t maxLength = 4096;
     if (httpReferrer.length() > maxLength) {
         RELEASE_LOG(Loading, "Truncating HTTP referer");
-        String origin = URL(URL(), SecurityOrigin::create(URL(URL(), httpReferrer))->toString()).string();
+        String origin = URL(SecurityOrigin::create(URL { httpReferrer })->toString()).string();
         if (origin.length() <= maxLength)
             setHTTPHeaderField(HTTPHeaderName::Referer, origin);
     } else
@@ -502,7 +502,7 @@ bool ResourceRequestBase::hasUpload() const
 {
     if (auto* body = httpBody()) {
         for (auto& element : body->elements()) {
-            if (WTF::holds_alternative<WebCore::FormDataElement::EncodedFileData>(element.data) || WTF::holds_alternative<WebCore::FormDataElement::EncodedBlobData>(element.data))
+            if (std::holds_alternative<WebCore::FormDataElement::EncodedFileData>(element.data) || std::holds_alternative<WebCore::FormDataElement::EncodedBlobData>(element.data))
                 return true;
         }
     }
@@ -601,6 +601,36 @@ void ResourceRequestBase::setHTTPHeaderFields(HTTPHeaderMap headerFields)
     m_platformRequestUpdated = false;
 }
 
+void ResourceRequestBase::removeHTTPHeaderField(const String& name)
+{
+    updateResourceRequest();
+
+    m_httpHeaderFields.remove(name);
+
+    m_platformRequestUpdated = false;
+}
+
+void ResourceRequestBase::removeHTTPHeaderField(HTTPHeaderName name)
+{
+    updateResourceRequest();
+
+    m_httpHeaderFields.remove(name);
+
+    m_platformRequestUpdated = false;
+}
+
+void ResourceRequestBase::setIsAppInitiated(bool isAppInitiated)
+{
+    updateResourceRequest();
+
+    if (m_isAppInitiated == isAppInitiated)
+        return;
+
+    m_isAppInitiated = isAppInitiated;
+
+    m_platformRequestUpdated = false;
+};
+
 #if USE(SYSTEM_PREVIEW)
 
 bool ResourceRequestBase::isSystemPreview() const
@@ -610,7 +640,7 @@ bool ResourceRequestBase::isSystemPreview() const
 
 SystemPreviewInfo ResourceRequestBase::systemPreviewInfo() const
 {
-    return m_systemPreviewInfo.value_or(SystemPreviewInfo { });
+    return valueOrDefault(m_systemPreviewInfo);
 }
 
 void ResourceRequestBase::setSystemPreviewInfo(const SystemPreviewInfo& info)

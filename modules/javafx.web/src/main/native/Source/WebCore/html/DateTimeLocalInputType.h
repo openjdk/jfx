@@ -47,11 +47,12 @@ public:
 private:
     const AtomString& formControlType() const final;
     DateComponentsType dateType() const final;
-    double valueAsDate() const final;
-    ExceptionOr<void> setValueAsDate(double) const final;
+    WallTime valueAsDate() const final;
+    ExceptionOr<void> setValueAsDate(WallTime) const final;
     StepRange createStepRange(AnyStepHandling) const final;
-    std::optional<DateComponents> parseToDateComponents(const StringView&) const final;
+    std::optional<DateComponents> parseToDateComponents(StringView) const final;
     std::optional<DateComponents> setMillisecondToDateComponents(double) const final;
+    String sanitizeValue(const String&) const final;
 
     bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
     String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;
@@ -59,5 +60,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(DateTimeLocalInputType, Type::DateTimeLocal)
 
 #endif

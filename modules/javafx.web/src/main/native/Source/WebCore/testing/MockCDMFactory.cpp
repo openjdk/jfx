@@ -29,6 +29,7 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "InitDataRegistry.h"
+#include "SharedBuffer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/Algorithms.h>
 #include <wtf/NeverDestroyed.h>
@@ -60,7 +61,17 @@ void MockCDMFactory::unregister()
 
 bool MockCDMFactory::supportsKeySystem(const String& keySystem)
 {
-    return equalIgnoringASCIICase(keySystem, "org.webkit.mock");
+    return equalLettersIgnoringASCIICase(keySystem, "org.webkit.mock"_s);
+}
+
+bool MockCDMFactory::hasSessionWithID(const String& id)
+{
+    return m_sessions.contains(id);
+}
+
+void MockCDMFactory::removeSessionWithID(const String& id)
+{
+    m_sessions.remove(id);
 }
 
 void MockCDMFactory::addKeysToSessionWithID(const String& id, Vector<Ref<SharedBuffer>>&& keys)
@@ -98,14 +109,9 @@ void MockCDMFactory::setSupportedDataTypes(Vector<String>&& types)
         m_supportedDataTypes.append(type);
 }
 
-void MockCDMFactory::setSupportedRobustness(Vector<String>&& robustnesses)
+std::unique_ptr<CDMPrivate> MockCDMFactory::createCDM(const String&, const CDMPrivateClient&)
 {
-    m_supportedRobustness = robustnesses.map([] (auto& robustness) -> AtomString { return robustness; });
-}
-
-std::unique_ptr<CDMPrivate> MockCDMFactory::createCDM(const String&)
-{
-    return makeUnique<MockCDM>(makeWeakPtr(*this));
+    return makeUnique<MockCDM>(*this);
 }
 
 MockCDM::MockCDM(WeakPtr<MockCDMFactory> factory)
@@ -184,7 +190,7 @@ RefPtr<CDMInstance> MockCDM::createInstance()
 {
     if (m_factory && !m_factory->canCreateInstances())
         return nullptr;
-    return adoptRef(new MockCDMInstance(makeWeakPtr(*this)));
+    return adoptRef(new MockCDMInstance(*this));
 }
 
 void MockCDM::loadAndInitialize()
@@ -213,20 +219,21 @@ bool MockCDM::supportsInitData(const AtomString& initDataType, const SharedBuffe
 
 RefPtr<SharedBuffer> MockCDM::sanitizeResponse(const SharedBuffer& response) const
 {
-    if (!charactersAreAllASCII(response.data(), response.size()))
+    auto buffer = response.makeContiguous();
+    if (!charactersAreAllASCII(buffer->data(), response.size()))
         return nullptr;
 
-    Vector<String> responseArray = String(response.data(), response.size()).split(' ');
+    Vector<String> responseArray = String(buffer->data(), response.size()).split(' ');
 
     if (!responseArray.contains(String("valid-response"_s)))
         return nullptr;
 
-    return response.copy();
+    return response.makeContiguous();
 }
 
 std::optional<String> MockCDM::sanitizeSessionId(const String& sessionId) const
 {
-    if (equalLettersIgnoringASCIICase(sessionId, "valid-loaded-session"))
+    if (equalLettersIgnoringASCIICase(sessionId, "valid-loaded-session"_s))
         return sessionId;
     return std::nullopt;
 }
@@ -271,9 +278,9 @@ void MockCDMInstance::initializeWithConfiguration(const MediaKeySystemConfigurat
 
 void MockCDMInstance::setServerCertificate(Ref<SharedBuffer>&& certificate, SuccessCallback&& callback)
 {
-    StringView certificateStringView(certificate->data(), certificate->size());
+    StringView certificateStringView(certificate->makeContiguous()->data(), certificate->size());
 
-    callback(equalIgnoringASCIICase(certificateStringView, "valid") ? Succeeded : Failed);
+    callback(equalLettersIgnoringASCIICase(certificateStringView, "valid"_s) ? Succeeded : Failed);
 }
 
 void MockCDMInstance::setStorageDirectory(const String&)
@@ -289,7 +296,7 @@ const String& MockCDMInstance::keySystem() const
 
 RefPtr<CDMInstanceSession> MockCDMInstance::createSession()
 {
-    return adoptRef(new MockCDMInstanceSession(makeWeakPtr(*this)));
+    return adoptRef(new MockCDMInstanceSession(*this));
 }
 
 MockCDMInstanceSession::MockCDMInstanceSession(WeakPtr<MockCDMInstance>&& instance)
@@ -316,7 +323,7 @@ void MockCDMInstanceSession::requestLicense(LicenseType licenseType, const AtomS
         return;
     }
 
-    String sessionID = createCanonicalUUIDString();
+    String sessionID = createVersion4UUIDString();
     factory->addKeysToSessionWithID(sessionID, WTFMove(keyIDs.value()));
 
     CString license { "license" };
@@ -331,7 +338,7 @@ void MockCDMInstanceSession::updateLicense(const String& sessionID, LicenseType,
         return;
     }
 
-    Vector<String> responseVector = String(response->data(), response->size()).split(' ');
+    Vector<String> responseVector = String(response->makeContiguous()->data(), response->size()).split(' ');
 
     if (responseVector.contains(String("invalid-format"_s))) {
         callback(false, std::nullopt, std::nullopt, std::nullopt, SuccessValue::Failed);
@@ -342,12 +349,9 @@ void MockCDMInstanceSession::updateLicense(const String& sessionID, LicenseType,
     if (responseVector.contains(String("keys-changed"_s))) {
         const auto* keys = factory->keysForSessionWithID(sessionID);
         if (keys) {
-            KeyStatusVector keyStatusVector;
-            keyStatusVector.reserveInitialCapacity(keys->size());
-            for (auto& key : *keys)
-                keyStatusVector.uncheckedAppend({ key.copyRef(), KeyStatus::Usable });
-
-            changedKeys = WTFMove(keyStatusVector);
+            changedKeys = keys->map([](auto& key) {
+                return std::pair { key.copyRef(), KeyStatus::Usable };
+            });
         }
     }
 
@@ -389,15 +393,14 @@ void MockCDMInstanceSession::removeSessionData(const String& id, LicenseType, Re
 {
     MockCDMFactory* factory = m_instance ? m_instance->factory() : nullptr;
     if (!factory) {
-        callback({ }, std::nullopt, SuccessValue::Failed);
+        callback({ }, nullptr, SuccessValue::Failed);
         return;
     }
 
     auto keys = factory->removeKeysFromSessionWithID(id);
-    KeyStatusVector keyStatusVector;
-    keyStatusVector.reserveInitialCapacity(keys.size());
-    for (auto& key : keys)
-        keyStatusVector.uncheckedAppend({ WTFMove(key), KeyStatus::Released });
+    auto keyStatusVector = WTF::map(WTFMove(keys), [](auto&& key) {
+        return std::pair { WTFMove(key), KeyStatus::Released };
+    });
 
     CString message { "remove-message" };
     callback(WTFMove(keyStatusVector), SharedBuffer::create(message.data(), message.length()), SuccessValue::Succeeded);

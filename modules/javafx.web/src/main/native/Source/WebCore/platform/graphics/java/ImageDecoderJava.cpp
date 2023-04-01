@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,7 +97,7 @@ ImageDecoderJava::~ImageDecoderJava()
     WTF::CheckAndClearException(env);
 }
 
-void ImageDecoderJava::setData(SharedBuffer& data, bool allDataReceived)
+void ImageDecoderJava::setData(const FragmentedSharedBuffer& data, bool allDataReceived)
 {
     JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
@@ -196,7 +196,7 @@ PlatformImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, Subsampli
     WTF::CheckAndClearException(env);
 
     if(!frame)
-        return 0;
+        return nullptr;
 
     static jmethodID midGetSize = env->GetMethodID(
         PG_GetImageFrameClass(env),

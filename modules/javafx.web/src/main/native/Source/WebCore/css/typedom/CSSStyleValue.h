@@ -30,38 +30,93 @@
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "ScriptWrappable.h"
+#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 template<typename T> class ExceptionOr;
+struct CSSParserContext;
+class Document;
 
 enum class CSSStyleValueType : uint8_t {
     CSSStyleValue,
     CSSStyleImageValue,
     CSSTransformValue,
-    CSSNumericValue,
-    CSSMathValue,
+    CSSMathInvert,
+    CSSMathMin,
+    CSSMathMax,
+    CSSMathNegate,
+    CSSMathProduct,
+    CSSMathSum,
     CSSUnitValue,
     CSSUnparsedValue,
     CSSKeywordValue
 };
 
+inline bool isCSSNumericValue(CSSStyleValueType type)
+{
+    switch (type) {
+    case CSSStyleValueType::CSSMathInvert:
+    case CSSStyleValueType::CSSMathMin:
+    case CSSStyleValueType::CSSMathMax:
+    case CSSStyleValueType::CSSMathNegate:
+    case CSSStyleValueType::CSSMathProduct:
+    case CSSStyleValueType::CSSMathSum:
+    case CSSStyleValueType::CSSUnitValue:
+        return true;
+    case CSSStyleValueType::CSSStyleValue:
+    case CSSStyleValueType::CSSStyleImageValue:
+    case CSSStyleValueType::CSSTransformValue:
+    case CSSStyleValueType::CSSUnparsedValue:
+    case CSSStyleValueType::CSSKeywordValue:
+        break;
+    }
+    return false;
+}
+
+inline bool isCSSMathValue(CSSStyleValueType type)
+{
+    switch (type) {
+    case CSSStyleValueType::CSSMathInvert:
+    case CSSStyleValueType::CSSMathMin:
+    case CSSStyleValueType::CSSMathMax:
+    case CSSStyleValueType::CSSMathNegate:
+    case CSSStyleValueType::CSSMathProduct:
+    case CSSStyleValueType::CSSMathSum:
+        return true;
+    case CSSStyleValueType::CSSUnitValue:
+    case CSSStyleValueType::CSSStyleValue:
+    case CSSStyleValueType::CSSStyleImageValue:
+    case CSSStyleValueType::CSSTransformValue:
+    case CSSStyleValueType::CSSUnparsedValue:
+    case CSSStyleValueType::CSSKeywordValue:
+        break;
+    }
+    return false;
+}
+
+enum class SerializationArguments : uint8_t {
+    Nested = 0x1,
+    WithoutParentheses = 0x2,
+};
+
 class CSSStyleValue : public RefCounted<CSSStyleValue>, public ScriptWrappable {
     WTF_MAKE_ISO_ALLOCATED(CSSStyleValue);
 public:
+    String toString() const;
+    virtual void serialize(StringBuilder&, OptionSet<SerializationArguments> = { }) const;
 
-    virtual String toString() const;
+IGNORE_GCC_WARNINGS_BEGIN("mismatched-new-delete")
+    // https://webkit.org/b/241516
     virtual ~CSSStyleValue() = default;
+IGNORE_GCC_WARNINGS_END
 
     virtual CSSStyleValueType getType() const { return CSSStyleValueType::CSSStyleValue; }
 
-    static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseStyleValue(const String&, const String&, bool);
-    static ExceptionOr<Ref<CSSStyleValue>> parse(const String&, const String&);
-    static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseAll(const String&, const String&);
-
-    static RefPtr<CSSStyleValue> reifyValue(CSSPropertyID, RefPtr<CSSValue>&&);
+    static ExceptionOr<Ref<CSSStyleValue>> parse(const AtomString&, const String&);
+    static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseAll(const AtomString&, const String&);
 
     static Ref<CSSStyleValue> create(RefPtr<CSSValue>&&, String&& = String());
     static Ref<CSSStyleValue> create();

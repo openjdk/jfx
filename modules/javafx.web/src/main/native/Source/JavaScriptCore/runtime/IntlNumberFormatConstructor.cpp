@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2016-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ static JSC_DECLARE_HOST_FUNCTION(intlNumberFormatConstructorFuncSupportedLocales
 
 namespace JSC {
 
-const ClassInfo IntlNumberFormatConstructor::s_info = { "Function", &Base::s_info, &numberFormatConstructorTable, nullptr, CREATE_METHOD_TABLE(IntlNumberFormatConstructor) };
+const ClassInfo IntlNumberFormatConstructor::s_info = { "Function"_s, &Base::s_info, &numberFormatConstructorTable, nullptr, CREATE_METHOD_TABLE(IntlNumberFormatConstructor) };
 
 /* Source for IntlNumberFormatConstructor.lut.h
 @begin numberFormatConstructorTable
@@ -54,7 +54,7 @@ const ClassInfo IntlNumberFormatConstructor::s_info = { "Function", &Base::s_inf
 
 IntlNumberFormatConstructor* IntlNumberFormatConstructor::create(VM& vm, Structure* structure, IntlNumberFormatPrototype* numberFormatPrototype)
 {
-    IntlNumberFormatConstructor* constructor = new (NotNull, allocateCell<IntlNumberFormatConstructor>(vm.heap)) IntlNumberFormatConstructor(vm, structure);
+    IntlNumberFormatConstructor* constructor = new (NotNull, allocateCell<IntlNumberFormatConstructor>(vm)) IntlNumberFormatConstructor(vm, structure);
     constructor->finishCreation(vm, numberFormatPrototype);
     return constructor;
 }

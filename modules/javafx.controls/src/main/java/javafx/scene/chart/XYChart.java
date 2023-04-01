@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package javafx.scene.chart;
 
 
 import com.sun.javafx.charts.Legend;
+
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -37,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -45,11 +48,12 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.WritableValue;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -131,7 +135,7 @@ public abstract class XYChart<X,Y> extends Chart {
             Set<Series<X, Y>> dupCheck = new HashSet<>(displayedSeries);
             dupCheck.removeAll(c.getRemoved());
             for (Series<X, Y> d : c.getAddedSubList()) {
-                if (!dupCheck.add(d)) {
+                if (!dupCheck.add(d) && !d.setToRemove) {
                     throw new IllegalArgumentException("Duplicate series added");
                 }
             }
@@ -143,12 +147,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
                 final Series<X,Y> s = c.getList().get(i);
-                // add new listener to data
-                s.setChart(XYChart.this);
                 if (s.setToRemove) {
                     s.setToRemove = false;
                     s.getChart().seriesBeingRemovedIsAdded(s);
                 }
+                // add new listener to data
+                s.setChart(XYChart.this);
                 // update linkedList Pointers for series
                 displayedSeries.add(s);
                 // update default color style class
@@ -172,21 +176,65 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final Axis<X> xAxis;
+
+    private ReadOnlyObjectProperty<Axis<X>> xAxisProperty = new ReadOnlyObjectPropertyBase<Axis<X>>() {
+        @Override
+        public Object getBean() {
+            return this;
+        }
+
+        @Override
+        public String getName() {
+            return "xAxis";
+        }
+
+        @Override
+        public Axis<X> get() {
+            return xAxis;
+        }
+    };
+
     /**
      * Get the X axis, by default it is along the bottom of the plot
      * @return the X axis of the chart
      */
     public Axis<X> getXAxis() { return xAxis; }
 
+    private ObservableValue<Axis<X>> xAxisProperty() {
+        return xAxisProperty;
+    }
+
     private final Axis<Y> yAxis;
+
+    private ReadOnlyObjectProperty<Axis<Y>> yAxisProperty = new ReadOnlyObjectPropertyBase<Axis<Y>>() {
+        @Override
+        public Object getBean() {
+            return this;
+        }
+
+        @Override
+        public String getName() {
+            return "yAxis";
+        }
+
+        @Override
+        public Axis<Y> get() {
+            return yAxis;
+        }
+    };
+
     /**
      * Get the Y axis, by default it is along the left of the plot
      * @return the Y axis of this chart
      */
     public Axis<Y> getYAxis() { return yAxis; }
 
+    private ObservableValue<Axis<Y>> yAxisProperty() {
+        return yAxisProperty;
+    }
+
     /** XYCharts data */
-    private ObjectProperty<ObservableList<Series<X,Y>>> data = new ObjectPropertyBase<ObservableList<Series<X,Y>>>() {
+    private ObjectProperty<ObservableList<Series<X,Y>>> data = new ObjectPropertyBase<>() {
         private ObservableList<Series<X,Y>> old;
         @Override protected void invalidated() {
             final ObservableList<Series<X,Y>> current = getValue();
@@ -210,7 +258,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 final int toIndex = (current != null) ? current.size() : 0;
                 // let series listener know all old series have been removed and new that have been added
                 if (toIndex > 0 || !removed.isEmpty()) {
-                    seriesChanged.onChanged(new NonIterableChange<Series<X,Y>>(0, toIndex, current){
+                    seriesChanged.onChanged(new NonIterableChange<>(0, toIndex, current){
                         @Override public List<Series<X,Y>> getRemoved() { return removed; }
                         @Override protected int[] getPermutation() {
                             return new int[0];
@@ -219,7 +267,7 @@ public abstract class XYChart<X,Y> extends Chart {
                 }
             } else if (old != null && old.size() > 0) {
                 // let series listener know all old series have been removed
-                seriesChanged.onChanged(new NonIterableChange<Series<X,Y>>(0, 0, current){
+                seriesChanged.onChanged(new NonIterableChange<>(0, 0, current){
                     @Override public List<Series<X,Y>> getRemoved() { return old; }
                     @Override protected int[] getPermutation() {
                         return new int[0];
@@ -499,7 +547,6 @@ public abstract class XYChart<X,Y> extends Chart {
         requestChartLayout();
     }
 
-    @SuppressWarnings({"UnusedParameters"})
     private void dataItemsChanged(Series<X,Y> series, List<Data<X,Y>> removed, int addedFrom, int addedTo, boolean permutation) {
         for (Data<X,Y> item : removed) {
             dataItemRemoved(item, series);
@@ -641,8 +688,8 @@ public abstract class XYChart<X,Y> extends Chart {
         final Axis<Y> ya = getYAxis();
         List<X> xData = null;
         List<Y> yData = null;
-        if(xa.isAutoRanging()) xData = new ArrayList<X>();
-        if(ya.isAutoRanging()) yData = new ArrayList<Y>();
+        if(xa.isAutoRanging()) xData = new ArrayList<>();
+        if(ya.isAutoRanging()) yData = new ArrayList<>();
         if(xData != null || yData != null) {
             for(Series<X,Y> series : getData()) {
                 for(Data<X,Y> data: series.getData()) {
@@ -802,10 +849,10 @@ public abstract class XYChart<X,Y> extends Chart {
         verticalRowFill.getElements().clear();
         if (isAlternativeColumnFillVisible()) {
             // tick marks are not sorted so get all the positions and sort them
-            final List<Double> tickPositionsPositive = new ArrayList<Double>();
-            final List<Double> tickPositionsNegative = new ArrayList<Double>();
+            final List<Double> tickPositionsPositive = new ArrayList<>();
+            final List<Double> tickPositionsNegative = new ArrayList<>();
             for(int i=0; i < xaTickMarks.size(); i++) {
-                double pos = xa.getDisplayPosition((X) xaTickMarks.get(i).getValue());
+                double pos = xa.getDisplayPosition(xaTickMarks.get(i).getValue());
                 if (pos == xAxisZero) {
                     tickPositionsPositive.add(pos);
                     tickPositionsNegative.add(pos);
@@ -848,10 +895,10 @@ public abstract class XYChart<X,Y> extends Chart {
         horizontalRowFill.getElements().clear();
         if (isAlternativeRowFillVisible()) {
             // tick marks are not sorted so get all the positions and sort them
-            final List<Double> tickPositionsPositive = new ArrayList<Double>();
-            final List<Double> tickPositionsNegative = new ArrayList<Double>();
+            final List<Double> tickPositionsPositive = new ArrayList<>();
+            final List<Double> tickPositionsNegative = new ArrayList<>();
             for(int i=0; i < yaTickMarks.size(); i++) {
-                double pos = ya.getDisplayPosition((Y) yaTickMarks.get(i).getValue());
+                double pos = ya.getDisplayPosition(yaTickMarks.get(i).getValue());
                 if (pos == yAxisZero) {
                     tickPositionsPositive.add(pos);
                     tickPositionsNegative.add(pos);
@@ -1074,7 +1121,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     private static class StyleableProperties {
         private static final CssMetaData<XYChart<?,?>,Boolean> HORIZONTAL_GRID_LINE_VISIBLE =
-            new CssMetaData<XYChart<?,?>,Boolean>("-fx-horizontal-grid-lines-visible",
+            new CssMetaData<>("-fx-horizontal-grid-lines-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1085,12 +1132,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)node.horizontalGridLinesVisibleProperty();
             }
         };
 
         private static final CssMetaData<XYChart<?,?>,Boolean> HORIZONTAL_ZERO_LINE_VISIBLE =
-            new CssMetaData<XYChart<?,?>,Boolean>("-fx-horizontal-zero-line-visible",
+            new CssMetaData<>("-fx-horizontal-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1101,12 +1148,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)node.horizontalZeroLineVisibleProperty();
             }
         };
 
         private static final CssMetaData<XYChart<?,?>,Boolean> ALTERNATIVE_ROW_FILL_VISIBLE =
-            new CssMetaData<XYChart<?,?>,Boolean>("-fx-alternative-row-fill-visible",
+            new CssMetaData<>("-fx-alternative-row-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1117,12 +1164,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeRowFillVisibleProperty();
+                return (StyleableProperty<Boolean>)node.alternativeRowFillVisibleProperty();
             }
         };
 
         private static final CssMetaData<XYChart<?,?>,Boolean> VERTICAL_GRID_LINE_VISIBLE =
-            new CssMetaData<XYChart<?,?>,Boolean>("-fx-vertical-grid-lines-visible",
+            new CssMetaData<>("-fx-vertical-grid-lines-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1133,12 +1180,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)node.verticalGridLinesVisibleProperty();
             }
         };
 
         private static final CssMetaData<XYChart<?,?>,Boolean> VERTICAL_ZERO_LINE_VISIBLE =
-            new CssMetaData<XYChart<?,?>,Boolean>("-fx-vertical-zero-line-visible",
+            new CssMetaData<>("-fx-vertical-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1149,12 +1196,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)node.verticalZeroLineVisibleProperty();
             }
         };
 
         private static final CssMetaData<XYChart<?,?>,Boolean> ALTERNATIVE_COLUMN_FILL_VISIBLE =
-            new CssMetaData<XYChart<?,?>,Boolean>("-fx-alternative-column-fill-visible",
+            new CssMetaData<>("-fx-alternative-column-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1165,14 +1212,14 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeColumnFillVisibleProperty();
+                return (StyleableProperty<Boolean>)node.alternativeColumnFillVisibleProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Chart.getClassCssMetaData());
+                new ArrayList<>(Chart.getClassCssMetaData());
             styleables.add(HORIZONTAL_GRID_LINE_VISIBLE);
             styleables.add(HORIZONTAL_ZERO_LINE_VISIBLE);
             styleables.add(ALTERNATIVE_ROW_FILL_VISIBLE);
@@ -1214,12 +1261,14 @@ public abstract class XYChart<X,Y> extends Chart {
         private boolean setToRemove = false;
         /** The series this data belongs to */
         private Series<X,Y> series;
+        private ObjectProperty<Series<X, Y>> seriesProperty = new SimpleObjectProperty<>();
         void setSeries(Series<X,Y> series) {
             this.series = series;
+            this.seriesProperty.set(series);
         }
 
         /** The generic data value to be plotted on the X axis */
-        private ObjectProperty<X> xValue = new SimpleObjectProperty<X>(Data.this, "XValue") {
+        private ObjectProperty<X> xValue = new SimpleObjectProperty<>(Data.this, "XValue") {
             @Override protected void invalidated() {
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
@@ -1254,7 +1303,7 @@ public abstract class XYChart<X,Y> extends Chart {
         public final ObjectProperty<X> XValueProperty() { return xValue; }
 
         /** The generic data value to be plotted on the Y axis */
-        private ObjectProperty<Y> yValue = new SimpleObjectProperty<Y>(Data.this, "YValue") {
+        private ObjectProperty<Y> yValue = new SimpleObjectProperty<>(Data.this, "YValue") {
             @Override protected void invalidated() {
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
@@ -1293,7 +1342,7 @@ public abstract class XYChart<X,Y> extends Chart {
          * The generic data value to be plotted in any way the chart needs. For example used as the radius
          * for BubbleChart.
          */
-        private ObjectProperty<Object> extraValue = new SimpleObjectProperty<Object>(Data.this, "extraValue") {
+        private ObjectProperty<Object> extraValue = new SimpleObjectProperty<>(Data.this, "extraValue") {
             @Override protected void invalidated() {
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
@@ -1313,20 +1362,45 @@ public abstract class XYChart<X,Y> extends Chart {
          * appropriately, for example on a Line or Scatter chart this node will be positioned centered on the data
          * values position. For a bar chart this is positioned and resized as the bar for this data item.
          */
-        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node") {
+        private ObjectProperty<Node> node = new SimpleObjectProperty<>(this, "node") {
             protected void invalidated() {
                 Node node = get();
                 if (node != null) {
                     node.accessibleTextProperty().unbind();
+                    ObservableValue<String> seriesLabel = seriesProperty
+                            .flatMap(Series::nameProperty)
+                            .orElse("");
+                    ObservableValue<String> xAxisLabel= seriesProperty
+                            .flatMap(Series::chartProperty)
+                            .flatMap(XYChart::xAxisProperty)
+                            .flatMap(Axis::labelProperty)
+                            .orElse(ControlResources.getString("XYChart.series.xaxis"));
+                    ObservableValue<String> yAxisLabel = seriesProperty
+                            .flatMap(Series::chartProperty)
+                            .flatMap(XYChart::yAxisProperty)
+                            .flatMap(Axis::labelProperty)
+                            .orElse(ControlResources.getString("XYChart.series.yaxis"));
                     node.accessibleTextProperty().bind(new StringBinding() {
-                        {bind(currentXProperty(), currentYProperty());}
+                        {
+                            bind(currentXProperty(),
+                                    currentYProperty(),
+                                    seriesLabel,
+                                    xAxisLabel,
+                                    yAxisLabel);
+                        }
                         @Override protected String computeValue() {
-                            String seriesName = series != null ? series.getName() : "";
-                            return seriesName + " X Axis is " + getCurrentX() + " Y Axis is " + getCurrentY();
+                            String seriesName = seriesLabel.getValue();
+                            String xAxisName = xAxisLabel.getValue();
+                            String yAxisName = yAxisLabel.getValue();
+                            String format = ControlResources.getString("XYChart.series.accessibleText");
+                            MessageFormat mf = new MessageFormat(format);
+                            Object[] args = {seriesName, xAxisName, getCurrentX(), yAxisName, getCurrentY()};
+                            String retVal = mf.format(args);
+                            return retVal;
                         }
                     });
                 }
-            };
+            }
         };
         public final Node getNode() { return node.get(); }
         public final void setNode(Node value) { node.set(value); }
@@ -1338,7 +1412,7 @@ public abstract class XYChart<X,Y> extends Chart {
          * in any custom XYChart implementations. Some XYChart chart implementations such as LineChart also use this
          * to animate when data is added or removed.
          */
-        private ObjectProperty<X> currentX = new SimpleObjectProperty<X>(this, "currentX");
+        private ObjectProperty<X> currentX = new SimpleObjectProperty<>(this, "currentX");
         final X getCurrentX() { return currentX.get(); }
         final void setCurrentX(X value) { currentX.set(value); }
         final ObjectProperty<X> currentXProperty() { return currentX; }
@@ -1349,7 +1423,7 @@ public abstract class XYChart<X,Y> extends Chart {
          * in any custom XYChart implementations. Some XYChart chart implementations such as LineChart also use this
          * to animate when data is added or removed.
          */
-        private ObjectProperty<Y> currentY = new SimpleObjectProperty<Y>(this, "currentY");
+        private ObjectProperty<Y> currentY = new SimpleObjectProperty<>(this, "currentY");
         final Y getCurrentY() { return currentY.get(); }
         final void setCurrentY(Y value) { currentY.set(value); }
         final ObjectProperty<Y> currentYProperty() { return currentY; }
@@ -1359,7 +1433,7 @@ public abstract class XYChart<X,Y> extends Chart {
          * used by XYChart to animate the extraValue from the old value to the new value. This is what you should plot
          * in any custom XYChart implementations.
          */
-        private ObjectProperty<Object> currentExtraValue = new SimpleObjectProperty<Object>(this, "currentExtraValue");
+        private ObjectProperty<Object> currentExtraValue = new SimpleObjectProperty<>(this, "currentExtraValue");
         final Object getCurrentExtraValue() { return currentExtraValue.getValue(); }
         final void setCurrentExtraValue(Object value) { currentExtraValue.setValue(value); }
         final ObjectProperty<Object> currentExtraValueProperty() { return currentExtraValue; }
@@ -1428,7 +1502,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
         private List<Data<X, Y>> displayedData = new ArrayList<>();
 
-        private final ListChangeListener<Data<X,Y>> dataChangeListener = new ListChangeListener<Data<X, Y>>() {
+        private final ListChangeListener<Data<X,Y>> dataChangeListener = new ListChangeListener<>() {
             @Override public void onChanged(Change<? extends Data<X, Y>> c) {
                 ObservableList<? extends Data<X, Y>> data = c.getList();
                 final XYChart<X, Y> chart = getChart();
@@ -1493,7 +1567,7 @@ public abstract class XYChart<X,Y> extends Chart {
         // -------------- PUBLIC PROPERTIES ----------------------------------------
 
         /** Reference to the chart this series belongs to */
-        private final ReadOnlyObjectWrapper<XYChart<X,Y>> chart = new ReadOnlyObjectWrapper<XYChart<X,Y>>(this, "chart") {
+        private final ReadOnlyObjectWrapper<XYChart<X,Y>> chart = new ReadOnlyObjectWrapper<>(this, "chart") {
             @Override
             protected void invalidated() {
                 if (get() == null) {
@@ -1533,13 +1607,13 @@ public abstract class XYChart<X,Y> extends Chart {
          * series. For example line chart uses this for the line but scatter chart does not use it. This node will be
          * set as soon as the series is added to the chart. You can then get it to add mouse listeners etc.
          */
-        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
+        private ObjectProperty<Node> node = new SimpleObjectProperty<>(this, "node");
         public final Node getNode() { return node.get(); }
         public final void setNode(Node value) { node.set(value); }
         public final ObjectProperty<Node> nodeProperty() { return node; }
 
         /** ObservableList of data items that make up this series */
-        private final ObjectProperty<ObservableList<Data<X,Y>>> data = new ObjectPropertyBase<ObservableList<Data<X,Y>>>() {
+        private final ObjectProperty<ObservableList<Data<X,Y>>> data = new ObjectPropertyBase<>() {
             private ObservableList<Data<X,Y>> old;
             @Override protected void invalidated() {
                 final ObservableList<Data<X,Y>> current = getValue();
@@ -1552,7 +1626,7 @@ public abstract class XYChart<X,Y> extends Chart {
                     final int toIndex = (current != null) ? current.size() : 0;
                     // let data listener know all old data have been removed and new data that has been added
                     if (toIndex > 0 || !removed.isEmpty()) {
-                        dataChangeListener.onChanged(new NonIterableChange<Data<X,Y>>(0, toIndex, current){
+                        dataChangeListener.onChanged(new NonIterableChange<>(0, toIndex, current){
                             @Override public List<Data<X,Y>> getRemoved() { return removed; }
 
                             @Override protected int[] getPermutation() {
@@ -1562,7 +1636,7 @@ public abstract class XYChart<X,Y> extends Chart {
                     }
                 } else if (old != null && old.size() > 0) {
                     // let series listener know all old series have been removed
-                    dataChangeListener.onChanged(new NonIterableChange<Data<X,Y>>(0, 0, current){
+                    dataChangeListener.onChanged(new NonIterableChange<>(0, 0, current){
                         @Override public List<Data<X,Y>> getRemoved() { return old; }
                         @Override protected int[] getPermutation() {
                             return new int[0];

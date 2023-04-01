@@ -38,6 +38,8 @@
 
 namespace WebCore {
 
+constexpr double defaultDesktopViewportWidth = 980;
+
 #if ASSERT_ENABLED
 static bool constraintsAreAllRelative(const ViewportConfiguration::Parameters& configuration)
 {
@@ -123,16 +125,16 @@ bool ViewportConfiguration::setContentsSize(const IntSize& contentSize)
     return true;
 }
 
-bool ViewportConfiguration::setViewLayoutSize(const FloatSize& viewLayoutSize, std::optional<double>&& scaleFactor, std::optional<double>&& minimumEffectiveDeviceWidth)
+bool ViewportConfiguration::setViewLayoutSize(const FloatSize& viewLayoutSize, std::optional<double>&& scaleFactor, std::optional<double>&& minimumEffectiveDeviceWidthFromClient)
 {
     double newScaleFactor = scaleFactor.value_or(m_layoutSizeScaleFactor);
-    double newEffectiveWidth = minimumEffectiveDeviceWidth.value_or(m_minimumEffectiveDeviceWidth);
-    if (m_viewLayoutSize == viewLayoutSize && m_layoutSizeScaleFactor == newScaleFactor && newEffectiveWidth == m_minimumEffectiveDeviceWidth)
+    double newEffectiveWidth = minimumEffectiveDeviceWidthFromClient.value_or(m_minimumEffectiveDeviceWidthForView);
+    if (m_viewLayoutSize == viewLayoutSize && m_layoutSizeScaleFactor == newScaleFactor && newEffectiveWidth == m_minimumEffectiveDeviceWidthForView)
         return false;
 
     m_layoutSizeScaleFactor = newScaleFactor;
     m_viewLayoutSize = viewLayoutSize;
-    m_minimumEffectiveDeviceWidth = newEffectiveWidth;
+    m_minimumEffectiveDeviceWidthForView = newEffectiveWidth;
 
     updateMinimumLayoutSize();
     updateConfiguration();
@@ -281,8 +283,12 @@ double ViewportConfiguration::initialScaleFromSize(double width, double height, 
             initialScale = m_viewLayoutSize.width() / m_configuration.width;
         else if (shouldShrinkToFitMinimumEffectiveDeviceWidthWhenIgnoringScalingConstraints())
             initialScale = effectiveLayoutSizeScaleFactor();
-        else if (width > 0)
-            initialScale = m_viewLayoutSize.width() / width;
+        else if (width > 0) {
+            auto shrinkToFitWidth = m_viewLayoutSize.width();
+            if (m_prefersHorizontalScrollingBelowDesktopViewportWidths)
+                shrinkToFitWidth = std::max<float>(shrinkToFitWidth, std::min(width, defaultDesktopViewportWidth));
+            initialScale = shrinkToFitWidth / width;
+        }
     }
 
     // Prevent the initial scale from shrinking to a height smaller than our view's minimum height.
@@ -356,7 +362,7 @@ bool ViewportConfiguration::allowsUserScalingIgnoringAlwaysScalable() const
 
 ViewportConfiguration::Parameters ViewportConfiguration::nativeWebpageParameters()
 {
-    if (m_canIgnoreScalingConstraints || !shouldIgnoreMinimumEffectiveDeviceWidth())
+    if (m_canIgnoreScalingConstraints || !shouldIgnoreMinimumEffectiveDeviceWidthForShrinkToFit())
         return ViewportConfiguration::nativeWebpageParametersWithShrinkToFit();
 
     return ViewportConfiguration::nativeWebpageParametersWithoutShrinkToFit();
@@ -389,7 +395,7 @@ ViewportConfiguration::Parameters ViewportConfiguration::nativeWebpageParameters
 ViewportConfiguration::Parameters ViewportConfiguration::webpageParameters()
 {
     Parameters parameters;
-    parameters.width = 980;
+    parameters.width = defaultDesktopViewportWidth;
     parameters.widthIsSet = true;
     parameters.allowsUserScaling = true;
     parameters.allowsShrinkToFit = true;
@@ -420,7 +426,7 @@ ViewportConfiguration::Parameters ViewportConfiguration::textDocumentParameters(
 ViewportConfiguration::Parameters ViewportConfiguration::imageDocumentParameters()
 {
     Parameters parameters;
-    parameters.width = 980;
+    parameters.width = defaultDesktopViewportWidth;
     parameters.widthIsSet = true;
     parameters.allowsUserScaling = true;
     parameters.allowsShrinkToFit = false;
@@ -618,14 +624,14 @@ int ViewportConfiguration::layoutHeight() const
     return minimumLayoutSize.height();
 }
 
-bool ViewportConfiguration::setMinimumEffectiveDeviceWidth(double width)
+bool ViewportConfiguration::setMinimumEffectiveDeviceWidthForShrinkToFit(double width)
 {
-    if (WTF::areEssentiallyEqual(m_minimumEffectiveDeviceWidth, width))
+    if (WTF::areEssentiallyEqual(m_minimumEffectiveDeviceWidthForShrinkToFit, width))
         return false;
 
-    m_minimumEffectiveDeviceWidth = width;
+    m_minimumEffectiveDeviceWidthForShrinkToFit = width;
 
-    if (shouldIgnoreMinimumEffectiveDeviceWidth())
+    if (shouldIgnoreMinimumEffectiveDeviceWidthForShrinkToFit())
         return false;
 
     updateMinimumLayoutSize();
@@ -721,8 +727,10 @@ String ViewportConfiguration::description() const
     ts.dumpProperty("ignoring horizontal scaling constraints", shouldIgnoreHorizontalScalingConstraints() ? "true" : "false");
     ts.dumpProperty("ignoring vertical scaling constraints", shouldIgnoreVerticalScalingConstraints() ? "true" : "false");
     ts.dumpProperty("avoids unsafe area", avoidsUnsafeArea() ? "true" : "false");
-    ts.dumpProperty("minimum effective device width", m_minimumEffectiveDeviceWidth);
+    ts.dumpProperty("minimum effective device width (for view)", m_minimumEffectiveDeviceWidthForView);
+    ts.dumpProperty("minimum effective device width (for shrink-to-fit)", m_minimumEffectiveDeviceWidthForShrinkToFit);
     ts.dumpProperty("known to lay out wider than viewport", m_isKnownToLayOutWiderThanViewport ? "true" : "false");
+    ts.dumpProperty("prefers horizontal scrolling", m_prefersHorizontalScrollingBelowDesktopViewportWidths ? "true" : "false");
 
     ts.endGroup();
 

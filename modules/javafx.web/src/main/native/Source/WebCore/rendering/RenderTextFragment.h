@@ -46,7 +46,7 @@ public:
     unsigned end() const { return m_end; }
 
     RenderBoxModelObject* firstLetter() const { return m_firstLetter.get(); }
-    void setFirstLetter(RenderBoxModelObject& firstLetter) { m_firstLetter = makeWeakPtr(firstLetter); }
+    void setFirstLetter(RenderBoxModelObject& firstLetter) { m_firstLetter = firstLetter; }
 
     RenderBlock* blockForAccompanyingFirstLetter();
 
@@ -60,7 +60,6 @@ public:
 
 private:
     bool isTextFragment() const override { return true; }
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     UChar previousCharacter() const override;
 

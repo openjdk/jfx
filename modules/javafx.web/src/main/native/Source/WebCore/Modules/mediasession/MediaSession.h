@@ -71,6 +71,8 @@ public:
     std::optional<MediaPositionState> positionState() const { return m_positionState; }
 
     WEBCORE_EXPORT std::optional<double> currentPosition() const;
+    void willBeginPlayback();
+    void willPausePlayback();
 
     Document* document() const;
 
@@ -93,7 +95,9 @@ public:
     };
     WEBCORE_EXPORT bool callActionHandler(const MediaSessionActionDetails&, TriggerGestureIndicator = TriggerGestureIndicator::Yes);
 
+#if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return *m_logger.get(); }
+#endif
 
     class Observer : public CanMakeWeakPtr<Observer> {
     public:
@@ -118,6 +122,8 @@ private:
 
     const void* logIdentifier() const { return m_logIdentifier; }
 
+    void updateReportedPosition();
+
     void forEachObserver(const Function<void(Observer&)>&);
     void notifyMetadataObservers();
     void notifyPositionStateObservers();
@@ -136,7 +142,7 @@ private:
     std::optional<MediaPositionState> m_positionState;
     std::optional<double> m_lastReportedPosition;
     MonotonicTime m_timeAtLastPositionUpdate;
-    HashMap<MediaSessionAction, RefPtr<MediaSessionActionHandler>, WTF::IntHash<MediaSessionAction>, WTF::StrongEnumHashTraits<MediaSessionAction>> m_actionHandlers;
+    HashMap<MediaSessionAction, RefPtr<MediaSessionActionHandler>, IntHash<MediaSessionAction>, WTF::StrongEnumHashTraits<MediaSessionAction>> m_actionHandlers;
     RefPtr<const Logger> m_logger;
     const void* m_logIdentifier;
 

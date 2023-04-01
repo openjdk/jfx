@@ -23,9 +23,11 @@
 #pragma once
 
 #include "CacheValidation.h"
+#include "CachedResourceClient.h"
 #include "FrameLoaderTypes.h"
 #include "ResourceError.h"
 #include "ResourceLoadPriority.h"
+#include "ResourceLoaderIdentifier.h"
 #include "ResourceLoaderOptions.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
@@ -36,6 +38,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakHashCountedSet.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -48,7 +52,7 @@ class CookieJar;
 class MemoryCache;
 class NetworkLoadMetrics;
 class SecurityOrigin;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 class SubresourceLoader;
 class TextResourceDecoder;
 
@@ -111,9 +115,9 @@ public:
     virtual void setEncoding(const String&) { }
     virtual String encoding() const { return String(); }
     virtual const TextResourceDecoder* textResourceDecoder() const { return nullptr; }
-    virtual void updateBuffer(SharedBuffer&);
-    virtual void updateData(const uint8_t* data, unsigned length);
-    virtual void finishLoading(SharedBuffer*, const NetworkLoadMetrics&);
+    virtual void updateBuffer(const FragmentedSharedBuffer&);
+    virtual void updateData(const SharedBuffer&);
+    virtual void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&);
     virtual void error(CachedResource::Status);
 
     void setResourceError(const ResourceError& error) { m_error = error; }
@@ -137,8 +141,8 @@ public:
 
     WEBCORE_EXPORT void addClient(CachedResourceClient&);
     WEBCORE_EXPORT void removeClient(CachedResourceClient&);
-    bool hasClients() const { return !m_clients.isEmpty() || !m_clientsAwaitingCallback.isEmpty(); }
-    bool hasClient(CachedResourceClient& client) { return m_clients.contains(&client) || m_clientsAwaitingCallback.contains(&client); }
+    bool hasClients() const { return m_clients.computeSize() || m_clientsAwaitingCallback.computeSize(); }
+    bool hasClient(const CachedResourceClient& client) { return m_clients.contains(client) || m_clientsAwaitingCallback.contains(client); }
     bool deleteIfPossible();
 
     enum class PreloadResult : uint8_t {
@@ -156,7 +160,7 @@ public:
     virtual void allClientsRemoved();
     void destroyDecodedDataIfNeeded();
 
-    unsigned numberOfClients() const { return m_clients.size(); }
+    unsigned numberOfClients() const { return m_clients.computeSize(); }
 
     Status status() const { return static_cast<Status>(m_status); }
     void setStatus(Status status)
@@ -212,7 +216,7 @@ public:
 
     void clearLoader();
 
-    SharedBuffer* resourceBuffer() const { return m_data.get(); }
+    FragmentedSharedBuffer* resourceBuffer() const { return m_data.get(); }
 
     virtual void redirectReceived(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
     virtual void responseReceived(const ResourceResponse&);
@@ -228,7 +232,8 @@ public:
 
     void loadFrom(const CachedResource&);
 
-    SecurityOrigin* origin() const { return m_origin.get(); }
+    const SecurityOrigin* origin() const { return m_origin.get(); }
+    SecurityOrigin* origin() { return m_origin.get(); }
     AtomString initiatorName() const { return m_initiatorName; }
 
     bool canDelete() const { return !hasClients() && !m_loader && !m_preloadCount && !m_handleCount && !m_resourceToRevalidate && !m_proxyResource; }
@@ -286,7 +291,7 @@ public:
     WEBCORE_EXPORT void tryReplaceEncodedData(SharedBuffer&);
 #endif
 
-    unsigned long identifierForLoadWithoutResourceLoader() const { return m_identifierForLoadWithoutResourceLoader; }
+    ResourceLoaderIdentifier identifierForLoadWithoutResourceLoader() const { return m_identifierForLoadWithoutResourceLoader; }
 
     void setOriginalRequest(std::unique_ptr<ResourceRequest>&& originalRequest) { m_originalRequest = WTFMove(originalRequest); }
     const std::unique_ptr<ResourceRequest>& originalRequest() const { return m_originalRequest; }
@@ -309,6 +314,7 @@ protected:
 
 private:
     class Callback;
+    template<typename T> friend class CachedResourceClientWalker;
 
     void deleteThis();
 
@@ -332,19 +338,19 @@ protected:
     DeferrableOneShotTimer m_decodedDataDeletionTimer;
 
     // FIXME: Make the rest of these data members private and use functions in derived classes instead.
-    HashCountedSet<CachedResourceClient*> m_clients;
+    WeakHashCountedSet<CachedResourceClient> m_clients;
     std::unique_ptr<ResourceRequest> m_originalRequest; // Needed by Ping loads.
     RefPtr<SubresourceLoader> m_loader;
-    RefPtr<SharedBuffer> m_data;
+    RefPtr<FragmentedSharedBuffer> m_data;
 
 private:
     MonotonicTime m_lastDecodedAccessTime; // Used as a "thrash guard" in the cache
     PAL::SessionID m_sessionID;
     RefPtr<const CookieJar> m_cookieJar;
     WallTime m_responseTimestamp;
-    unsigned long m_identifierForLoadWithoutResourceLoader { 0 };
+    ResourceLoaderIdentifier m_identifierForLoadWithoutResourceLoader;
 
-    HashMap<CachedResourceClient*, std::unique_ptr<Callback>> m_clientsAwaitingCallback;
+    WeakHashMap<CachedResourceClient, std::unique_ptr<Callback>> m_clientsAwaitingCallback;
 
     // These handles will need to be updated to point to the m_resourceToRevalidate in case we get 304 response.
     HashSet<CachedResourceHandleBase*> m_handlesToRevalidate;

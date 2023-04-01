@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,8 +48,6 @@ static size_t sizeOfItemInBytes(ItemType type)
         return sizeof(ConcatenateCTM);
     case ItemType::SetCTM:
         return sizeof(SetCTM);
-    case ItemType::SetInlineFillGradient:
-        return sizeof(SetInlineFillGradient);
     case ItemType::SetInlineFillColor:
         return sizeof(SetInlineFillColor);
     case ItemType::SetInlineStrokeColor:
@@ -78,16 +76,18 @@ static size_t sizeOfItemInBytes(ItemType type)
         return sizeof(ClipOutToPath);
     case ItemType::ClipPath:
         return sizeof(ClipPath);
-    case ItemType::BeginClipToDrawingCommands:
-        return sizeof(BeginClipToDrawingCommands);
-    case ItemType::EndClipToDrawingCommands:
-        return sizeof(EndClipToDrawingCommands);
+    case ItemType::DrawFilteredImageBuffer:
+        return sizeof(DrawFilteredImageBuffer);
     case ItemType::DrawGlyphs:
         return sizeof(DrawGlyphs);
+    case ItemType::DrawDecomposedGlyphs:
+        return sizeof(DrawDecomposedGlyphs);
     case ItemType::DrawImageBuffer:
         return sizeof(DrawImageBuffer);
     case ItemType::DrawNativeImage:
         return sizeof(DrawNativeImage);
+    case ItemType::DrawSystemImage:
+        return sizeof(DrawSystemImage);
     case ItemType::DrawPattern:
         return sizeof(DrawPattern);
     case ItemType::DrawRect:
@@ -132,16 +132,6 @@ static size_t sizeOfItemInBytes(ItemType type)
         return sizeof(FillPath);
     case ItemType::FillEllipse:
         return sizeof(FillEllipse);
-    case ItemType::FlushContext:
-        return sizeof(FlushContext);
-    case ItemType::MetaCommandChangeDestinationImageBuffer:
-        return sizeof(MetaCommandChangeDestinationImageBuffer);
-    case ItemType::MetaCommandChangeItemBuffer:
-        return sizeof(MetaCommandChangeItemBuffer);
-    case ItemType::GetPixelBuffer:
-        return sizeof(GetPixelBuffer);
-    case ItemType::PutPixelBuffer:
-        return sizeof(PutPixelBuffer);
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
         return sizeof(PaintFrameForMedia);
@@ -198,19 +188,13 @@ bool isDrawingItem(ItemType type)
     case ItemType::ClipToImageBuffer:
     case ItemType::ClipOutToPath:
     case ItemType::ClipPath:
-    case ItemType::BeginClipToDrawingCommands:
-    case ItemType::EndClipToDrawingCommands:
     case ItemType::ConcatenateCTM:
-    case ItemType::FlushContext:
-    case ItemType::MetaCommandChangeDestinationImageBuffer:
-    case ItemType::MetaCommandChangeItemBuffer:
     case ItemType::Restore:
     case ItemType::Rotate:
     case ItemType::Save:
     case ItemType::Scale:
     case ItemType::SetCTM:
     case ItemType::SetInlineFillColor:
-    case ItemType::SetInlineFillGradient:
     case ItemType::SetInlineStrokeColor:
     case ItemType::SetLineCap:
     case ItemType::SetLineDash:
@@ -219,19 +203,21 @@ bool isDrawingItem(ItemType type)
     case ItemType::SetState:
     case ItemType::SetStrokeThickness:
     case ItemType::Translate:
-    case ItemType::GetPixelBuffer:
         return false;
     case ItemType::BeginTransparencyLayer:
     case ItemType::ClearRect:
     case ItemType::DrawDotsForDocumentMarker:
     case ItemType::DrawEllipse:
+    case ItemType::DrawFilteredImageBuffer:
     case ItemType::DrawFocusRingPath:
     case ItemType::DrawFocusRingRects:
     case ItemType::DrawGlyphs:
+    case ItemType::DrawDecomposedGlyphs:
     case ItemType::DrawImageBuffer:
     case ItemType::DrawLine:
     case ItemType::DrawLinesForText:
     case ItemType::DrawNativeImage:
+    case ItemType::DrawSystemImage:
     case ItemType::DrawPattern:
     case ItemType::DrawPath:
     case ItemType::DrawRect:
@@ -253,7 +239,6 @@ bool isDrawingItem(ItemType type)
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
 #endif
-    case ItemType::PutPixelBuffer:
     case ItemType::StrokeEllipse:
 #if ENABLE(INLINE_PATH_DATA)
     case ItemType::StrokeArc:
@@ -276,7 +261,7 @@ size_t paddedSizeOfTypeAndItemInBytes(ItemType type)
 
 size_t paddedSizeOfTypeAndItemInBytes(const DisplayListItem& displayListItem)
 {
-    auto itemSize = WTF::visit([](const auto& item) {
+    auto itemSize = std::visit([](const auto& item) {
         return sizeof(item);
     }, displayListItem);
     return sizeof(uint64_t) + roundUpToMultipleOf(alignof(uint64_t), itemSize);
@@ -284,7 +269,7 @@ size_t paddedSizeOfTypeAndItemInBytes(const DisplayListItem& displayListItem)
 
 ItemType displayListItemType(const DisplayListItem& displayListItem)
 {
-    return WTF::visit([](const auto& item) {
+    return std::visit([](const auto& item) {
         return item.itemType;
     }, displayListItem);
 }
@@ -296,7 +281,6 @@ bool isInlineItem(ItemType type)
      * and (3) all the "static constexpr bool isInlineItem"s inside the individual item classes. */
 
     switch (type) {
-    case ItemType::BeginClipToDrawingCommands:
     case ItemType::ClipOutToPath:
     case ItemType::ClipPath:
     case ItemType::DrawFocusRingPath:
@@ -310,11 +294,10 @@ bool isInlineItem(ItemType type)
     case ItemType::FillRectWithGradient:
     case ItemType::FillRectWithRoundedHole:
     case ItemType::FillRoundedRect:
-    case ItemType::GetPixelBuffer:
-    case ItemType::PutPixelBuffer:
     case ItemType::SetLineDash:
     case ItemType::SetState:
     case ItemType::StrokePath:
+    case ItemType::DrawSystemImage:
         return false;
     case ItemType::ApplyDeviceScaleFactor:
 #if USE(CG)
@@ -327,10 +310,11 @@ bool isInlineItem(ItemType type)
     case ItemType::Clip:
     case ItemType::ClipOut:
     case ItemType::ClipToImageBuffer:
-    case ItemType::EndClipToDrawingCommands:
     case ItemType::ConcatenateCTM:
     case ItemType::DrawDotsForDocumentMarker:
     case ItemType::DrawEllipse:
+    case ItemType::DrawFilteredImageBuffer:
+    case ItemType::DrawDecomposedGlyphs:
     case ItemType::DrawImageBuffer:
     case ItemType::DrawNativeImage:
     case ItemType::DrawPattern:
@@ -345,9 +329,6 @@ bool isInlineItem(ItemType type)
     case ItemType::FillBezierCurve:
 #endif
     case ItemType::FillRect:
-    case ItemType::FlushContext:
-    case ItemType::MetaCommandChangeDestinationImageBuffer:
-    case ItemType::MetaCommandChangeItemBuffer:
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
 #endif
@@ -357,7 +338,6 @@ bool isInlineItem(ItemType type)
     case ItemType::Scale:
     case ItemType::SetCTM:
     case ItemType::SetInlineFillColor:
-    case ItemType::SetInlineFillGradient:
     case ItemType::SetInlineStrokeColor:
     case ItemType::SetLineCap:
     case ItemType::SetLineJoin:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@ static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoFuncType);
 
 namespace JSC {
 
-const ClassInfo WebAssemblyGlobalPrototype::s_info = { "WebAssembly.Global", &Base::s_info, &prototypeGlobalWebAssemblyGlobal, nullptr, CREATE_METHOD_TABLE(WebAssemblyGlobalPrototype) };
+const ClassInfo WebAssemblyGlobalPrototype::s_info = { "WebAssembly.Global"_s, &Base::s_info, &prototypeGlobalWebAssemblyGlobal, nullptr, CREATE_METHOD_TABLE(WebAssemblyGlobalPrototype) };
 
 /* Source for WebAssemblyGlobalPrototype.lut.h
  @begin prototypeGlobalWebAssemblyGlobal
@@ -58,13 +58,13 @@ const ClassInfo WebAssemblyGlobalPrototype::s_info = { "WebAssembly.Global", &Ba
 static ALWAYS_INLINE JSWebAssemblyGlobal* getGlobal(JSGlobalObject* globalObject, VM& vm, JSValue v)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    JSWebAssemblyGlobal* result = jsDynamicCast<JSWebAssemblyGlobal*>(vm, v);
+    JSWebAssemblyGlobal* result = jsDynamicCast<JSWebAssemblyGlobal*>(v);
     if (!result) {
         throwException(globalObject, throwScope,
             createTypeError(globalObject, "expected |this| value to be an instance of WebAssembly.Global"_s));
         return nullptr;
     }
-    Integrity::auditStructureID(vm, result->structureID());
+    Integrity::auditStructureID(result->structureID());
     return result;
 }
 
@@ -111,7 +111,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoSetterFuncValue, (JSGlobalObject*
     JSWebAssemblyGlobal* global = getGlobal(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    if (global->global()->mutability() == Wasm::GlobalInformation::Mutability::Immutable)
+    if (global->global()->mutability() == Wasm::Mutability::Immutable)
         return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global.prototype.value attempts to modify immutable global value"_s)));
 
     global->global()->set(globalObject, callFrame->argument(0));
@@ -121,7 +121,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoSetterFuncValue, (JSGlobalObject*
 
 WebAssemblyGlobalPrototype* WebAssemblyGlobalPrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<WebAssemblyGlobalPrototype>(vm.heap)) WebAssemblyGlobalPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<WebAssemblyGlobalPrototype>(vm)) WebAssemblyGlobalPrototype(vm, structure);
     object->finishCreation(vm, globalObject);
     return object;
 }
@@ -134,10 +134,10 @@ Structure* WebAssemblyGlobalPrototype::createStructure(VM& vm, JSGlobalObject* g
 void WebAssemblyGlobalPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
-    JSFunction* valueGetterFunction = JSFunction::create(vm, globalObject, 0, "get value"_s, webAssemblyGlobalProtoGetterFuncValue, NoIntrinsic);
-    JSFunction* valueSetterFunction = JSFunction::create(vm, globalObject, 1, "set value"_s, webAssemblyGlobalProtoSetterFuncValue, NoIntrinsic);
+    JSFunction* valueGetterFunction = JSFunction::create(vm, globalObject, 0, "get value"_s, webAssemblyGlobalProtoGetterFuncValue, ImplementationVisibility::Public);
+    JSFunction* valueSetterFunction = JSFunction::create(vm, globalObject, 1, "set value"_s, webAssemblyGlobalProtoSetterFuncValue, ImplementationVisibility::Public);
     GetterSetter* valueAccessor = GetterSetter::create(vm, globalObject, valueGetterFunction, valueSetterFunction);
     putDirectNonIndexAccessorWithoutTransition(vm, Identifier::fromString(vm, "value"_s), valueAccessor, static_cast<unsigned>(PropertyAttribute::Accessor));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();

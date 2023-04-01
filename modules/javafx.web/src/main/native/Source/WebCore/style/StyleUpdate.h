@@ -37,6 +37,7 @@ class Document;
 class Element;
 class Node;
 class RenderStyle;
+class SVGElement;
 class Text;
 
 namespace Style {
@@ -45,16 +46,6 @@ struct ElementUpdate {
     std::unique_ptr<RenderStyle> style;
     Change change { Change::None };
     bool recompositeLayer { false };
-};
-
-enum class DescendantsToResolve { None, ChildrenWithExplicitInherit, Children, All };
-
-using PseudoIdToElementUpdateMap = HashMap<PseudoId, ElementUpdate, WTF::IntHash<PseudoId>, WTF::StrongEnumHashTraits<PseudoId>>;
-
-struct ElementUpdates {
-    ElementUpdate update;
-    DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
-    PseudoIdToElementUpdateMap pseudoElementUpdates;
 };
 
 struct TextUpdate {
@@ -70,8 +61,8 @@ public:
 
     const ListHashSet<RefPtr<ContainerNode>>& roots() const { return m_roots; }
 
-    const ElementUpdates* elementUpdates(const Element&) const;
-    ElementUpdates* elementUpdates(const Element&);
+    const ElementUpdate* elementUpdate(const Element&) const;
+    ElementUpdate* elementUpdate(const Element&);
 
     const TextUpdate* textUpdate(const Text&) const;
 
@@ -80,18 +71,20 @@ public:
 
     const Document& document() const { return m_document; }
 
+    bool isEmpty() const { return !size(); }
     unsigned size() const { return m_elements.size() + m_texts.size(); }
 
-    void addElement(Element&, Element* parent, ElementUpdates&&);
+    void addElement(Element&, Element* parent, ElementUpdate&&);
     void addText(Text&, Element* parent, TextUpdate&&);
     void addText(Text&, TextUpdate&&);
+    void addSVGRendererUpdate(SVGElement&);
 
 private:
     void addPossibleRoot(Element*);
 
     Ref<Document> m_document;
     ListHashSet<RefPtr<ContainerNode>> m_roots;
-    HashMap<RefPtr<const Element>, ElementUpdates> m_elements;
+    HashMap<RefPtr<const Element>, ElementUpdate> m_elements;
     HashMap<RefPtr<const Text>, TextUpdate> m_texts;
 };
 

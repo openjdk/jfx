@@ -35,18 +35,21 @@ public:
     WEBCORE_EXPORT RefPtr<LabelableElement> control() const;
     WEBCORE_EXPORT HTMLFormElement* form() const final;
 
-    bool willRespondToMouseClickEvents() final;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
 private:
     HTMLLabelElement(const QualifiedName&, Document&);
+
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode& parentOfInsertedTree) final;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
 
     bool isEventTargetedAtInteractiveDescendants(Event&) const;
 
     bool accessKeyAction(bool sendMouseEvents) final;
 
     // Overridden to update the hover/active state of the corresponding control.
-    void setActive(bool, bool pause, Style::InvalidationScope) final;
-    void setHovered(bool, Style::InvalidationScope) final;
+    void setActive(bool, Style::InvalidationScope) final;
+    void setHovered(bool, Style::InvalidationScope, HitTestRequest) final;
 
     // Overridden to either click() or focus() the corresponding control.
     void defaultEventHandler(Event&) final;

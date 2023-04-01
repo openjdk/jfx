@@ -31,6 +31,7 @@
 #include "EventNames.h"
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
+#include "ScrollingEffectsController.h"
 #include "ScrollingStateFrameScrollingNode.h"
 #include "ScrollingStateTree.h"
 #include "ScrollingTreeFrameScrollingNode.h"
@@ -63,6 +64,25 @@ ScrollingTree::ScrollingTree()
 
 ScrollingTree::~ScrollingTree() = default;
 
+bool ScrollingTree::isUserScrollInProgressAtEventLocation(const PlatformWheelEvent& wheelEvent)
+{
+    if (!m_rootNode)
+        return false;
+
+    // This method is invoked by the event handling thread
+    Locker locker { m_treeStateLock };
+
+    if (m_treeState.nodesWithActiveUserScrolls.isEmpty())
+        return false;
+
+    FloatPoint position = wheelEvent.position();
+    position.move(m_rootNode->viewToContentsOffset(m_treeState.mainFrameScrollPosition));
+    if (auto node = scrollingNodeForPoint(position))
+        return m_treeState.nodesWithActiveUserScrolls.contains(node->scrollingNodeID());
+
+    return false;
+}
+
 OptionSet<WheelEventProcessingSteps> ScrollingTree::computeWheelProcessingSteps(const PlatformWheelEvent& wheelEvent)
 {
     if (!m_rootNode)
@@ -72,12 +92,11 @@ OptionSet<WheelEventProcessingSteps> ScrollingTree::computeWheelProcessingSteps(
     position.move(m_rootNode->viewToContentsOffset(m_treeState.mainFrameScrollPosition));
 
     if (!m_treeState.eventTrackingRegions.isEmpty()) {
-        const EventNames& names = eventNames();
         IntPoint roundedPosition = roundedIntPoint(position);
 
         // Event regions are affected by page scale, so no need to map through scale.
-        bool isSynchronousDispatchRegion = m_treeState.eventTrackingRegions.trackingTypeForPoint(names.wheelEvent, roundedPosition) == TrackingType::Synchronous
-            || m_treeState.eventTrackingRegions.trackingTypeForPoint(names.mousewheelEvent, roundedPosition) == TrackingType::Synchronous;
+        bool isSynchronousDispatchRegion = m_treeState.eventTrackingRegions.trackingTypeForPoint(EventTrackingRegions::EventType::Wheel, roundedPosition) == TrackingType::Synchronous
+            || m_treeState.eventTrackingRegions.trackingTypeForPoint(EventTrackingRegions::EventType::Mousewheel, roundedPosition) == TrackingType::Synchronous;
         LOG_WITH_STREAM(Scrolling, stream << "\nScrollingTree::determineWheelEventProcessing: wheelEvent " << wheelEvent << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
 
         if (isSynchronousDispatchRegion)
@@ -182,19 +201,30 @@ WheelEventHandlingResult ScrollingTree::handleWheelEvent(const PlatformWheelEven
 
 WheelEventHandlingResult ScrollingTree::handleWheelEventWithNode(const PlatformWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps, ScrollingTreeNode* node, EventTargeting eventTargeting)
 {
+    auto adjustedWheelEvent = wheelEvent;
     while (node) {
         if (is<ScrollingTreeScrollingNode>(*node)) {
             auto& scrollingNode = downcast<ScrollingTreeScrollingNode>(*node);
-            auto result = scrollingNode.handleWheelEvent(wheelEvent, eventTargeting);
+            auto result = scrollingNode.handleWheelEvent(adjustedWheelEvent, eventTargeting);
 
             if (result.wasHandled) {
-                m_latchingController.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), processingSteps, wheelEvent, m_allowLatching);
-                m_gestureState.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), wheelEvent);
+                m_latchingController.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), processingSteps, adjustedWheelEvent, m_allowLatching);
+                m_gestureState.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), adjustedWheelEvent);
                 return result;
             }
 
             if (result.needsMainThreadProcessing() || eventTargeting != EventTargeting::Propagate)
                 return result;
+
+            auto scrollPropagationInfo = scrollingNode.computeScrollPropagation(adjustedWheelEvent.delta());
+            if (scrollPropagationInfo.shouldBlockScrollPropagation) {
+                if (!scrollPropagationInfo.isHandled)
+                    return WheelEventHandlingResult::unhandled();
+                m_latchingController.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), processingSteps, adjustedWheelEvent, m_allowLatching);
+                m_gestureState.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), adjustedWheelEvent);
+                return WheelEventHandlingResult::handled();
+            }
+            adjustedWheelEvent = scrollingNode.eventForPropagation(adjustedWheelEvent);
         }
 
         if (is<ScrollingTreeOverflowScrollProxyNode>(*node)) {
@@ -264,7 +294,7 @@ void ScrollingTree::mainFrameViewportChangedViaDelegatedScrolling(const FloatPoi
 
 void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scrollingStateTree)
 {
-    SetForScope<bool> inCommitTreeState(m_inCommitTreeState, true);
+    SetForScope inCommitTreeState(m_inCommitTreeState, true);
     Locker locker { m_treeLock };
 
     bool rootStateNodeChanged = scrollingStateTree->hasNewRootStateNode();
@@ -321,7 +351,9 @@ void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scroll
             node->willBeDestroyed();
     }
 
-    LOG_WITH_STREAM(ScrollingTree, stream << "committed ScrollingTree" << scrollingTreeAsText(ScrollingStateTreeAsTextBehaviorDebug));
+    didCommitTree();
+
+    LOG_WITH_STREAM(ScrollingTree, stream << "committed ScrollingTree" << scrollingTreeAsText(debugScrollingStateTreeAsTextBehaviors));
 }
 
 void ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* stateNode, CommitTreeState& state)
@@ -416,7 +448,6 @@ void ScrollingTree::applyLayerPositionsAfterCommit()
 
 void ScrollingTree::applyLayerPositions()
 {
-    ASSERT(isMainThread());
     Locker locker { m_treeLock };
 
     applyLayerPositionsInternal();
@@ -510,10 +541,10 @@ std::optional<WheelScrollGestureState> ScrollingTree::gestureState()
     return m_treeState.gestureState;
 }
 
-TrackingType ScrollingTree::eventTrackingTypeForPoint(const AtomString& eventName, IntPoint p)
+TrackingType ScrollingTree::eventTrackingTypeForPoint(EventTrackingRegions::EventType eventType, IntPoint p)
 {
     Locker locker { m_treeStateLock };
-    return m_treeState.eventTrackingRegions.trackingTypeForPoint(eventName, p);
+    return m_treeState.eventTrackingRegions.trackingTypeForPoint(eventType, p);
 }
 
 // Can be called from the main thread.
@@ -581,6 +612,46 @@ void ScrollingTree::setNodeScrollSnapInProgress(ScrollingNodeID nodeID, bool isS
         m_treeState.nodesWithActiveScrollSnap.remove(nodeID);
 }
 
+bool ScrollingTree::isScrollAnimationInProgressForNode(ScrollingNodeID nodeID)
+{
+    if (!nodeID)
+        return false;
+
+    Locker locker { m_treeStateLock };
+    return m_treeState.nodesWithActiveScrollAnimations.contains(nodeID);
+}
+
+void ScrollingTree::setScrollAnimationInProgressForNode(ScrollingNodeID nodeID, bool isScrollAnimationInProgress)
+{
+    if (!nodeID)
+        return;
+
+    Locker locker { m_treeStateLock };
+
+    bool hadAnyAnimatedScrollingNodes = !m_treeState.nodesWithActiveScrollAnimations.isEmpty();
+
+    if (isScrollAnimationInProgress)
+        m_treeState.nodesWithActiveScrollAnimations.add(nodeID);
+    else
+        m_treeState.nodesWithActiveScrollAnimations.remove(nodeID);
+
+    bool hasAnyAnimatedScrollingNodes = !m_treeState.nodesWithActiveScrollAnimations.isEmpty();
+    if (hasAnyAnimatedScrollingNodes != hadAnyAnimatedScrollingNodes)
+        hasNodeWithAnimatedScrollChanged(hasAnyAnimatedScrollingNodes);
+}
+
+bool ScrollingTree::hasNodeWithActiveScrollAnimations()
+{
+    Locker locker { m_treeStateLock };
+    return !m_treeState.nodesWithActiveScrollAnimations.isEmpty();
+}
+
+HashSet<ScrollingNodeID> ScrollingTree::nodesWithActiveScrollAnimations()
+{
+    Locker locker { m_treeStateLock };
+    return m_treeState.nodesWithActiveScrollAnimations;
+}
+
 void ScrollingTree::setMainFramePinnedState(RectEdges<bool> edgePinningState)
 {
     Locker locker { m_swipeStateLock };
@@ -595,18 +666,10 @@ void ScrollingTree::setMainFrameCanRubberBand(RectEdges<bool> canRubberBand)
     m_swipeState.canRubberBand = canRubberBand;
 }
 
-bool ScrollingTree::mainFrameCanRubberBandInDirection(ScrollDirection direction)
+bool ScrollingTree::mainFrameCanRubberBandOnSide(BoxSide side)
 {
     Locker locker { m_swipeStateLock };
-
-    switch (direction) {
-    case ScrollUp: return m_swipeState.canRubberBand.top();
-    case ScrollDown: return m_swipeState.canRubberBand.bottom();
-    case ScrollLeft: return m_swipeState.canRubberBand.left();
-    case ScrollRight: return m_swipeState.canRubberBand.right();
-    };
-
-    return false;
+    return m_swipeState.canRubberBand.at(side);
 }
 
 void ScrollingTree::addPendingScrollUpdate(ScrollUpdate&& update)
@@ -622,10 +685,16 @@ void ScrollingTree::addPendingScrollUpdate(ScrollUpdate&& update)
     m_pendingScrollUpdates.append(WTFMove(update));
 }
 
-Vector<ScrollingTree::ScrollUpdate> ScrollingTree::takePendingScrollUpdates()
+Vector<ScrollUpdate> ScrollingTree::takePendingScrollUpdates()
 {
     Locker locker { m_pendingScrollUpdatesLock };
     return std::exchange(m_pendingScrollUpdates, { });
+}
+
+bool ScrollingTree::hasPendingScrollUpdates()
+{
+    Locker locker { m_pendingScrollUpdatesLock };
+    return m_pendingScrollUpdates.size();
 }
 
 // Can be called from the main thread.
@@ -700,13 +769,13 @@ void ScrollingTree::willProcessWheelEvent()
     m_lastWheelEventTime = MonotonicTime::now();
 }
 
-std::optional<unsigned> ScrollingTree::nominalFramesPerSecond()
+std::optional<FramesPerSecond> ScrollingTree::nominalFramesPerSecond()
 {
     Locker locker { m_treeStateLock };
     return m_treeState.nominalFramesPerSecond;
 }
 
-String ScrollingTree::scrollingTreeAsText(ScrollingStateTreeAsTextBehavior behavior)
+String ScrollingTree::scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> behavior)
 {
     TextStream ts(TextStream::LineMode::MultipleLine);
 
@@ -724,10 +793,10 @@ String ScrollingTree::scrollingTreeAsText(ScrollingStateTreeAsTextBehavior behav
 
         if (m_rootNode) {
             TextStream::GroupScope scope(ts);
-            m_rootNode->dump(ts, behavior | ScrollingStateTreeAsTextBehaviorIncludeLayerPositions);
+            m_rootNode->dump(ts, behavior | ScrollingStateTreeAsTextBehavior::IncludeLayerPositions);
         }
 
-        if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs) {
+        if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs) {
             if (!m_overflowRelatedNodesMap.isEmpty()) {
                 TextStream::GroupScope scope(ts);
                 ts << "overflow related nodes";

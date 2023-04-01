@@ -27,6 +27,7 @@
 
 #if ENABLE(CSS_TYPED_OM)
 
+#include "CSSStyleValue.h"
 #include "CSSValue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/UniqueRef.h>
@@ -36,15 +37,33 @@ namespace WebCore {
 class Document;
 class Element;
 class StyledElement;
-class CSSStyleValue;
 
 class StylePropertyMapReadOnly : public RefCounted<StylePropertyMapReadOnly> {
 public:
+    using StylePropertyMapEntry = KeyValuePair<String, Vector<RefPtr<CSSStyleValue>>>;
+    class Iterator {
+    public:
+        explicit Iterator(StylePropertyMapReadOnly&);
+        std::optional<StylePropertyMapEntry> next();
+
+    private:
+        Vector<StylePropertyMapEntry> m_values;
+        size_t m_index { 0 };
+    };
+    Iterator createIterator() { return Iterator(*this); }
+
     virtual ~StylePropertyMapReadOnly() = default;
-    virtual RefPtr<CSSStyleValue> get(const String& property) const = 0;
+    virtual ExceptionOr<RefPtr<CSSStyleValue>> get(const AtomString& property) const = 0;
+    virtual ExceptionOr<Vector<RefPtr<CSSStyleValue>>> getAll(const AtomString&) const = 0;
+    virtual ExceptionOr<bool> has(const AtomString&) const = 0;
+    virtual unsigned size() const = 0;
 
     static RefPtr<CSSStyleValue> reifyValue(CSSValue*, Document&, Element* = nullptr);
     static RefPtr<CSSStyleValue> customPropertyValueOrDefault(const String& name, Document&, CSSValue*, Element* = nullptr);
+    static Vector<RefPtr<CSSStyleValue>> reifyValueToVector(CSSValue*, Document&, Element* = nullptr);
+
+protected:
+    virtual Vector<StylePropertyMapEntry> entries() const = 0;
 };
 
 } // namespace WebCore

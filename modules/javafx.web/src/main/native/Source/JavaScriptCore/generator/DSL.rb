@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Apple Inc. All rights reserved.
+# Copyright (C) 2018-2021 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -147,10 +147,12 @@ module DSL
 
 namespace JSC {
 
-void dumpBytecode(BytecodeDumperBase* dumper, InstructionStream::Offset, const Instruction*);
+class BasicBlockLocation;
+
+void dumpBytecode(BytecodeDumperBase<JSInstructionStream>* dumper, JSInstructionStream::Offset, const JSInstruction*);
 
 #if ENABLE(WEBASSEMBLY)
-void dumpWasm(BytecodeDumperBase* dumper, InstructionStream::Offset, const Instruction*);
+void dumpWasm(BytecodeDumperBase<WasmInstructionStream>* dumper, WasmInstructionStream::Offset, const WasmInstruction*);
 #endif // ENABLE(WEBASSEMBLY)
 
 EOF

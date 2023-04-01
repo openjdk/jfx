@@ -48,7 +48,7 @@ public:
     //
     // path - The directory.
     // fileName - The file name.
-    WEBCORE_EXPORT static String appendDatabaseFileNameToPath(const String& path, const String& fileName);
+    WEBCORE_EXPORT static String appendDatabaseFileNameToPath(StringView path, StringView fileName);
 
     // Makes sure the given directory exists, by creating all missing directories
     // on the given path.
@@ -78,9 +78,11 @@ public:
     // Deletes a database file.
     //
     // fileName - The file name.
-    WEBCORE_EXPORT static bool deleteDatabaseFile(const String& fileName);
+    WEBCORE_EXPORT static bool deleteDatabaseFile(const String& filePath);
 
-    WEBCORE_EXPORT static String computeHashForFileName(const String& fileName);
+    // Moves a database file to a new place.
+    WEBCORE_EXPORT static bool moveDatabaseFile(const String& oldFilePath, const String& newFilePath);
+    WEBCORE_EXPORT static String computeHashForFileName(StringView filePath);
 
 #if PLATFORM(IOS_FAMILY)
     // Truncates a database file. Used when MobileSafariSettings deletes a database file,

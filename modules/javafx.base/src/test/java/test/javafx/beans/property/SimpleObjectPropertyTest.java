@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ public class SimpleObjectPropertyTest {
 
     @Test
     public void testConstructor_NoArguments() {
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>();
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>();
         assertEquals(DEFAULT_BEAN, v.getBean());
         assertEquals(DEFAULT_NAME, v.getName());
         assertEquals(DEFAULT_VALUE, v.get());
@@ -49,12 +49,12 @@ public class SimpleObjectPropertyTest {
 
     @Test
     public void testConstructor_InitialValue() {
-        final ObjectProperty<Object> v1 = new SimpleObjectProperty<Object>(VALUE_1);
+        final ObjectProperty<Object> v1 = new SimpleObjectProperty<>(VALUE_1);
         assertEquals(DEFAULT_BEAN, v1.getBean());
         assertEquals(DEFAULT_NAME, v1.getName());
         assertEquals(VALUE_1, v1.get());
 
-        final ObjectProperty<Object> v2 = new SimpleObjectProperty<Object>(DEFAULT_VALUE);
+        final ObjectProperty<Object> v2 = new SimpleObjectProperty<>(DEFAULT_VALUE);
         assertEquals(DEFAULT_BEAN, v2.getBean());
         assertEquals(DEFAULT_NAME, v2.getName());
         assertEquals(DEFAULT_VALUE, v2.get());
@@ -64,12 +64,12 @@ public class SimpleObjectPropertyTest {
     public void testConstructor_Bean_Name() {
         final Object bean = new Object();
         final String name = "My name";
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(bean, name);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(bean, name);
         assertEquals(bean, v.getBean());
         assertEquals(name, v.getName());
         assertEquals(DEFAULT_VALUE, v.get());
 
-        final ObjectProperty<Object> v2 = new SimpleObjectProperty<Object>(bean, null);
+        final ObjectProperty<Object> v2 = new SimpleObjectProperty<>(bean, null);
         assertEquals(bean, v2.getBean());
         assertEquals(DEFAULT_NAME, v2.getName());
         assertEquals(DEFAULT_VALUE, v2.get());
@@ -79,22 +79,22 @@ public class SimpleObjectPropertyTest {
     public void testConstructor_Bean_Name_InitialValue() {
         final Object bean = new Object();
         final String name = "My name";
-        final ObjectProperty<Object> v1 = new SimpleObjectProperty<Object>(bean, name, VALUE_1);
+        final ObjectProperty<Object> v1 = new SimpleObjectProperty<>(bean, name, VALUE_1);
         assertEquals(bean, v1.getBean());
         assertEquals(name, v1.getName());
         assertEquals(VALUE_1, v1.get());
 
-        final ObjectProperty<Object> v2 = new SimpleObjectProperty<Object>(bean, name, DEFAULT_VALUE);
+        final ObjectProperty<Object> v2 = new SimpleObjectProperty<>(bean, name, DEFAULT_VALUE);
         assertEquals(bean, v2.getBean());
         assertEquals(name, v2.getName());
         assertEquals(DEFAULT_VALUE, v2.get());
 
-        final ObjectProperty<Object> v3 = new SimpleObjectProperty<Object>(bean, null, VALUE_1);
+        final ObjectProperty<Object> v3 = new SimpleObjectProperty<>(bean, null, VALUE_1);
         assertEquals(bean, v3.getBean());
         assertEquals(DEFAULT_NAME, v3.getName());
         assertEquals(VALUE_1, v3.get());
 
-        final ObjectProperty<Object> v4 = new SimpleObjectProperty<Object>(bean, null, DEFAULT_VALUE);
+        final ObjectProperty<Object> v4 = new SimpleObjectProperty<>(bean, null, DEFAULT_VALUE);
         assertEquals(bean, v4.getBean());
         assertEquals(DEFAULT_NAME, v4.getName());
         assertEquals(DEFAULT_VALUE, v4.get());

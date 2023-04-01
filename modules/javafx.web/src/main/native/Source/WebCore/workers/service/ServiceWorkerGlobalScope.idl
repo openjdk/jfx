@@ -27,13 +27,14 @@
     Global=(Worker,ServiceWorker),
     Exposed=ServiceWorker,
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=ServiceWorker,
+    EnabledBySetting=ServiceWorkersEnabled,
     JSCustomMarkFunction,
     IsImmutablePrototypeExoticObject,
     IsImmutablePrototypeExoticObjectOnPrototype,
 ] interface ServiceWorkerGlobalScope : WorkerGlobalScope {
     [SameObject] readonly attribute ServiceWorkerClients clients;
     [SameObject] readonly attribute ServiceWorkerRegistration registration;
+    [SameObject] readonly attribute ServiceWorker serviceWorker;
 
     [NewObject] Promise<undefined> skipWaiting();
 
@@ -44,4 +45,7 @@
     // event
     attribute EventHandler onmessage;
     attribute EventHandler onmessageerror;
+
+    [Conditional=NOTIFICATION_EVENT, EnabledByDeprecatedGlobalSetting=NotificationEventEnabled] attribute EventHandler onnotificationclick;
+    [Conditional=NOTIFICATION_EVENT, EnabledByDeprecatedGlobalSetting=NotificationEventEnabled] attribute EventHandler onnotificationclose;
 };

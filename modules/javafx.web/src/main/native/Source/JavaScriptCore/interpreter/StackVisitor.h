@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,11 @@
 
 #include "BytecodeIndex.h"
 #include "CalleeBits.h"
+#include "SourceID.h"
 #include "WasmIndexOrName.h"
 #include <wtf/Function.h>
 #include <wtf/Indenter.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -87,7 +89,7 @@ public:
         JS_EXPORT_PRIVATE String sourceURL() const;
         JS_EXPORT_PRIVATE String toString() const;
 
-        JS_EXPORT_PRIVATE intptr_t sourceID();
+        JS_EXPORT_PRIVATE SourceID sourceID();
 
         CodeType codeType() const;
         bool hasLineAndColumnInfo() const;
@@ -99,6 +101,8 @@ public:
 
         ClonedArguments* createArguments(VM&);
         CallFrame* callFrame() const { return m_callFrame; }
+
+        JS_EXPORT_PRIVATE bool isImplementationVisibilityPrivate() const;
 
         void dump(PrintStream&, Indenter = Indenter()) const;
         void dump(PrintStream&, Indenter, WTF::Function<void(PrintStream&)> prefix) const;
@@ -129,13 +133,8 @@ public:
         friend class StackVisitor;
     };
 
-    enum Status {
-        Continue = 0,
-        Done = 1
-    };
-
     // StackVisitor::visit() expects a Functor that implements the following method:
-    //     Status operator()(StackVisitor&) const;
+    //     IterationStatus operator()(StackVisitor&) const;
 
     enum EmptyEntryFrameAction {
         ContinueIfTopEntryFrameIsEmpty,
@@ -149,8 +148,8 @@ public:
         if (action == TerminateIfTopEntryFrameIsEmpty && visitor.topEntryFrameIsEmpty())
             return;
         while (visitor->callFrame()) {
-            Status status = functor(visitor);
-            if (status != Continue)
+            IterationStatus status = functor(visitor);
+            if (status != IterationStatus::Continue)
                 break;
             visitor.gotoNextFrame();
         }
@@ -187,15 +186,15 @@ public:
 
     CallFrame* callerFrame() const { return m_callerFrame; }
 
-    StackVisitor::Status operator()(StackVisitor& visitor) const
+    IterationStatus operator()(StackVisitor& visitor) const
     {
         if (!m_hasSkippedFirstFrame) {
             m_hasSkippedFirstFrame = true;
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         }
 
         m_callerFrame = visitor->callFrame();
-        return StackVisitor::Done;
+        return IterationStatus::Done;
     }
 
 private:

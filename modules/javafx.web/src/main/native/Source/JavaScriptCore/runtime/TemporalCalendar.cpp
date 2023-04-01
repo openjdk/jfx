@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-const ClassInfo TemporalCalendar::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalCalendar) };
+const ClassInfo TemporalCalendar::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalCalendar) };
 
 namespace TemporalCalendarInternal {
 static constexpr bool verbose = false;
@@ -39,7 +39,7 @@ static constexpr bool verbose = false;
 
 TemporalCalendar* TemporalCalendar::create(VM& vm, Structure* structure, CalendarID identifier)
 {
-    TemporalCalendar* format = new (NotNull, allocateCell<TemporalCalendar>(vm.heap)) TemporalCalendar(vm, structure, identifier);
+    TemporalCalendar* format = new (NotNull, allocateCell<TemporalCalendar>(vm)) TemporalCalendar(vm, structure, identifier);
     format->finishCreation(vm);
     return format;
 }

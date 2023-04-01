@@ -31,6 +31,7 @@ class CachedResource;
 class ResourceRequest;
 class ResourceResponse;
 class ResourceTiming;
+class SharedBuffer;
 
 class CachedRawResourceClient : public CachedResourceClient {
 public:
@@ -46,7 +47,7 @@ public:
     }
 
     virtual bool shouldCacheResponse(CachedResource&, const ResourceResponse&) { return true; }
-    virtual void dataReceived(CachedResource&, const uint8_t* /* data */, int /* length */) { }
+    virtual void dataReceived(CachedResource&, const SharedBuffer&) { }
     virtual void redirectReceived(CachedResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTFMove(request)); }
     virtual void finishedTimingForWorkerLoad(CachedResource&, const ResourceTiming&) { }
 
@@ -55,4 +56,6 @@ public:
 #endif
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE_CLIENT(CachedRawResourceClient, RawResourceType);

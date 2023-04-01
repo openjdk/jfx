@@ -548,9 +548,12 @@ typedef enum
  *        the data item is not passed upstream. In both cases, no other probes
  *        are called for this item and %GST_FLOW_OK or %TRUE is returned to the
  *        caller.
- * @GST_PAD_PROBE_REMOVE: remove this probe.
+ * @GST_PAD_PROBE_REMOVE: remove this probe, passing the data. For blocking probes
+ *        this will cause data flow to unblock, unless there are also other
+ *        blocking probes installed.
  * @GST_PAD_PROBE_PASS: pass the data item in the block probe and block on the
- *        next item.
+ *        next item. Note, that if there are multiple pad probes installed and
+ *        any probe returns PASS, the data will be passed.
  * @GST_PAD_PROBE_HANDLED: Data has been handled in the probe and will not be
  *        forwarded further. For events and buffers this is the same behaviour as
  *        %GST_PAD_PROBE_DROP (except that in this case you need to unref the buffer

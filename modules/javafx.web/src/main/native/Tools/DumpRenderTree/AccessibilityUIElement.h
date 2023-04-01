@@ -31,6 +31,10 @@
 #include <wtf/Platform.h>
 #include <wtf/Vector.h>
 
+#if PLATFORM(MAC)
+OBJC_CLASS NSString;
+#endif
+
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 #elif PLATFORM(WIN)
@@ -39,10 +43,6 @@
 #include <WebCore/COMPtr.h>
 #include <oleacc.h>
 typedef COMPtr<IAccessible> PlatformUIElement;
-#elif HAVE(ACCESSIBILITY) && PLATFORM(GTK)
-#include "AccessibilityNotificationHandlerAtk.h"
-#include <atk/atk.h>
-typedef AtkObject* PlatformUIElement;
 #else
 typedef void* PlatformUIElement;
 #endif
@@ -72,6 +72,12 @@ public:
     void getDocumentLinks(Vector<AccessibilityUIElement>&);
     void getChildren(Vector<AccessibilityUIElement>&);
     void getChildrenWithRange(Vector<AccessibilityUIElement>&, unsigned location, unsigned length);
+
+    bool hasDocumentRoleAncestor() const;
+    bool hasWebApplicationAncestor() const;
+    bool isInDescriptionListDetail() const;
+    bool isInDescriptionListTerm() const;
+    bool isInCell() const;
 
     AccessibilityUIElement elementAtPoint(int x, int y);
     AccessibilityUIElement getChildAtIndex(unsigned);
@@ -105,6 +111,11 @@ public:
     void uiElementArrayAttributeValue(JSStringRef attribute, Vector<AccessibilityUIElement>& elements) const;
     AccessibilityUIElement uiElementAttributeValue(JSStringRef attribute) const;
     bool boolAttributeValue(JSStringRef attribute);
+#if PLATFORM(MAC)
+    bool boolAttributeValue(NSString *attribute) const;
+    JSRetainPtr<JSStringRef> stringAttributeValue(NSString *attribute) const;
+    double numberAttributeValue(NSString *attribute) const;
+#endif
     void setBoolAttributeValue(JSStringRef attribute, bool value);
     bool isAttributeSupported(JSStringRef attribute);
     bool isAttributeSettable(JSStringRef attribute);
@@ -122,6 +133,8 @@ public:
     JSRetainPtr<JSStringRef> accessibilityValue() const;
     void setValue(JSStringRef);
     JSRetainPtr<JSStringRef> helpText() const;
+    JSRetainPtr<JSStringRef> liveRegionRelevant() const;
+    JSRetainPtr<JSStringRef> liveRegionStatus() const;
     JSRetainPtr<JSStringRef> orientation() const;
     double x();
     double y();
@@ -134,6 +147,8 @@ public:
     JSRetainPtr<JSStringRef> valueDescription();
     int insertionPointLineNumber();
     JSRetainPtr<JSStringRef> selectedTextRange();
+    bool isAtomicLiveRegion() const;
+    bool isBusy() const;
     bool isEnabled();
     bool isRequired() const;
 
@@ -169,6 +184,7 @@ public:
     JSRetainPtr<JSStringRef> documentURI();
     JSRetainPtr<JSStringRef> url();
     JSRetainPtr<JSStringRef> classList() const;
+    JSRetainPtr<JSStringRef> domIdentifier() const;
 
     // CSS3-speech properties.
     JSRetainPtr<JSStringRef> speakAs();
@@ -235,14 +251,11 @@ public:
     bool hasContainedByFieldsetTrait();
     AccessibilityUIElement fieldsetAncestorElement();
     JSRetainPtr<JSStringRef> attributedStringForElement();
-#endif
 
-#if PLATFORM(GTK)
-    // Text-specific
-    JSRetainPtr<JSStringRef> characterAtOffset(int offset);
-    JSRetainPtr<JSStringRef> wordAtOffset(int offset);
-    JSRetainPtr<JSStringRef> lineAtOffset(int offset);
-    JSRetainPtr<JSStringRef> sentenceAtOffset(int offset);
+    bool isDeletion();
+    bool isInsertion();
+    bool isFirstItemInSuggestion();
+    bool isLastItemInSuggestion();
 #endif
 
     // Table-specific
@@ -340,9 +353,5 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<id> m_element;
     RetainPtr<id> m_notificationHandler;
-#endif
-
-#if HAVE(ACCESSIBILITY) && PLATFORM(GTK)
-    RefPtr<AccessibilityNotificationHandler> m_notificationHandler;
 #endif
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,6 @@ import javafx.css.PseudoClass;
 
 import javafx.css.converter.EnumConverter;
 import javafx.scene.control.skin.SeparatorSkin;
-import javafx.scene.layout.VBox;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -111,7 +110,7 @@ public class Separator extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
 
         // initialize pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, orientation != Orientation.VERTICAL);
@@ -251,8 +250,8 @@ public class Separator extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<Separator,Orientation> ORIENTATION =
-                new CssMetaData<Separator,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+                new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
@@ -273,8 +272,8 @@ public class Separator extends Control {
         };
 
         private static final CssMetaData<Separator,HPos> HALIGNMENT =
-                new CssMetaData<Separator,HPos>("-fx-halignment",
-                new EnumConverter<HPos>(HPos.class),
+                new CssMetaData<>("-fx-halignment",
+                new EnumConverter<>(HPos.class),
                 HPos.CENTER) {
 
             @Override
@@ -289,8 +288,8 @@ public class Separator extends Control {
         };
 
         private static final CssMetaData<Separator,VPos> VALIGNMENT =
-                new CssMetaData<Separator,VPos>("-fx-valignment",
-                new EnumConverter<VPos>(VPos.class),
+                new CssMetaData<>("-fx-valignment",
+                new EnumConverter<>(VPos.class),
                 VPos.CENTER){
 
             @Override
@@ -307,7 +306,7 @@ public class Separator extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             styleables.add(HALIGNMENT);
             styleables.add(VALIGNMENT);

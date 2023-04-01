@@ -33,6 +33,7 @@
 #include "HTMLOutputElement.h"
 
 #include "DOMTokenList.h"
+#include "Document.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -59,7 +60,7 @@ Ref<HTMLOutputElement> HTMLOutputElement::create(Document& document)
 
 const AtomString& HTMLOutputElement::formControlType() const
 {
-    static MainThreadNeverDestroyed<const AtomString> output("output", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> output("output"_s);
     return output;
 }
 
@@ -86,10 +87,10 @@ String HTMLOutputElement::value() const
     return textContent();
 }
 
-void HTMLOutputElement::setValue(const String& value)
+void HTMLOutputElement::setValue(String&& value)
 {
     m_defaultValueOverride = defaultValue();
-    stringReplaceAll(value);
+    stringReplaceAll(WTFMove(value));
 }
 
 String HTMLOutputElement::defaultValue() const
@@ -97,12 +98,12 @@ String HTMLOutputElement::defaultValue() const
     return m_defaultValueOverride.isNull() ? textContent() : m_defaultValueOverride;
 }
 
-void HTMLOutputElement::setDefaultValue(const String& value)
+void HTMLOutputElement::setDefaultValue(String&& value)
 {
     if (m_defaultValueOverride.isNull())
-        stringReplaceAll(value);
+        stringReplaceAll(WTFMove(value));
     else
-        m_defaultValueOverride = value;
+        m_defaultValueOverride = WTFMove(value);
 }
 
 DOMTokenList& HTMLOutputElement::htmlFor()

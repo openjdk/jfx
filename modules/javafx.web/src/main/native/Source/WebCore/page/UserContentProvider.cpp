@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "Page.h"
 
@@ -67,7 +68,7 @@ void UserContentProvider::registerForUserMessageHandlerInvalidation(UserContentP
 {
     ASSERT(!m_userMessageHandlerInvalidationClients.contains(invalidationClient));
 
-    m_userMessageHandlerInvalidationClients.add(&invalidationClient);
+    m_userMessageHandlerInvalidationClients.add(invalidationClient);
 }
 
 void UserContentProvider::unregisterForUserMessageHandlerInvalidation(UserContentProviderInvalidationClient& invalidationClient)

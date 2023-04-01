@@ -25,6 +25,7 @@
 #include "CounterNode.h"
 #include "Document.h"
 #include "Element.h"
+#include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLNames.h"
 #include "HTMLOListElement.h"
@@ -57,15 +58,33 @@ static CounterMaps& counterMaps()
     return staticCounterMaps;
 }
 
+static Element* ancestorStyleContainmentObject(const Element& element)
+{
+    Element* ancestor = is<PseudoElement>(element) ? downcast<PseudoElement>(element).hostElement() : element.parentElement();
+    while (ancestor) {
+        if (auto* style = ancestor->existingComputedStyle()) {
+            if (style->containsStyle())
+                break;
+        }
+        // FIXME: this should use parentInComposedTree but for now matches the rest of RenderCounter.
+        ancestor = ancestor->parentElement();
+    }
+    return ancestor;
+}
+
 // This function processes the renderer tree in the order of the DOM tree
 // including pseudo elements as defined in CSS 2.1.
 static RenderElement* previousInPreOrder(const RenderElement& renderer)
 {
     ASSERT(renderer.element());
     Element* previous = ElementTraversal::previousIncludingPseudo(*renderer.element());
+    Element* styleContainAncestor = ancestorStyleContainmentObject(*renderer.element());
+
     while (previous && !previous->renderer())
-        previous = ElementTraversal::previousIncludingPseudo(*previous);
-    return previous ? previous->renderer() : 0;
+        previous = ElementTraversal::previousIncludingPseudo(*previous, styleContainAncestor);
+    if (!previous)
+        return nullptr;
+    return previous->renderer();
 }
 
 static inline Element* parentOrPseudoHostElement(const RenderElement& renderer)
@@ -96,6 +115,8 @@ static Element* previousSiblingOrParentElement(const Element& element)
     auto* parent = element.parentElement();
     if (parent && !parent->renderer())
         parent = previousSiblingOrParentElement(*parent);
+    if (parent && parent->renderer() && parent->renderer()->style().containsStyle())
+        return nullptr;
     return parent;
 }
 
@@ -178,7 +199,7 @@ static std::optional<CounterPlan> planCounter(RenderElement& renderer, const Ato
     if (auto map = style.counterDirectives())
         directives = map->get(identifier);
 
-    if (identifier == "list-item") {
+    if (identifier == "list-item"_s) {
         auto itemDirectives = listItemCounterDirectives(renderer);
         if (!directives.resetValue)
             directives.resetValue = itemDirectives.resetValue;
@@ -336,7 +357,7 @@ static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& i
     maps.add(&renderer, makeUnique<CounterMap>()).iterator->value->add(identifier, newNode.copyRef());
     renderer.setHasCounterNodeMap(true);
 
-    if (newNode->parent())
+    if (newNode->parent() || renderer.shouldApplyStyleContainment())
         return newNode.ptr();
 
     // Check if some nodes that were previously root nodes should become children of this node now.
@@ -344,7 +365,7 @@ static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& i
     auto* stayWithin = parentOrPseudoHostElement(renderer);
     bool skipDescendants = false;
     while ((currentRenderer = nextInPreOrder(*currentRenderer, stayWithin, skipDescendants))) {
-        skipDescendants = false;
+        skipDescendants = currentRenderer->shouldApplyStyleContainment();
         if (!currentRenderer->hasCounterNodeMap())
             continue;
         auto* currentCounter = maps.find(currentRenderer)->value->get(identifier);
@@ -385,9 +406,9 @@ void RenderCounter::willBeDestroyed()
     RenderText::willBeDestroyed();
 }
 
-const char* RenderCounter::renderName() const
+ASCIILiteral RenderCounter::renderName() const
 {
-    return "RenderCounter";
+    return "RenderCounter"_s;
 }
 
 bool RenderCounter::isCounter() const
@@ -550,8 +571,14 @@ void RenderCounter::rendererSubtreeAttached(RenderElement& renderer)
         element = renderer.generatingElement();
     if (element && !element->renderer())
         return; // No need to update if the parent is not attached yet
+
+    bool crossedStyleContainmentBoundary = false;
     for (RenderObject* descendant = &renderer; descendant; descendant = descendant->nextInPreOrder(&renderer)) {
-        if (is<RenderElement>(*descendant))
+        if (!is<RenderElement>(descendant))
+            continue;
+
+        crossedStyleContainmentBoundary = crossedStyleContainmentBoundary || downcast<RenderElement>(*descendant).shouldApplyStyleContainment();
+        if (crossedStyleContainmentBoundary)
             updateCounters(downcast<RenderElement>(*descendant));
     }
 }
@@ -610,7 +637,7 @@ void showCounterRendererTree(const WebCore::RenderObject* renderer, const char* 
     while (root->parent())
         root = root->parent();
 
-    AtomString identifier(counterName);
+    auto identifier = AtomString::fromLatin1(counterName);
     for (auto* current = root; current; current = current->nextInPreOrder()) {
         if (!is<WebCore::RenderElement>(*current))
             continue;

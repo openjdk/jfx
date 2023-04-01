@@ -23,30 +23,28 @@
  * questions.
  */
 
-struct ObjectPsIn {
-    float2  texD    : texcoord0;
-    float4  ambient : texcoord1;
-};
+static const int numLights = 3;
 
-struct LocalBump {
+/*
+ * The output of the vertex shader is the input of the pixel shader.
+ */
+typedef struct PsInput {
 
-    static const float nLights = 3;
+    // projection space = homogeneous clip space
+    float4 projPos : position; // must be outputed even if unused
 
-    float3 eye                : texcoord2;
-    float4 lights[nLights]    : texcoord3; // 3, 4, 5 [6]
-    float4 lightDirs[nLights] : texcoord7; // 7, 8, 9 [10]
-//  float3 debug              : texcoord11;
-};
+//  needed for pixel lighting
+//  float3 worldPos           : texcoord1;
 
-struct LocalBumpOut {
-    float4  pos  : position;
-    float   oFog : fog;
+    float3 worldVecToEye                 : texcoord2;
+    float3 worldVecsToLights[numLights]  : texcoord3; // 3, 4, 5
+    float3 worldNormLightDirs[numLights] : texcoord6; // 6, 7, 8
 
-    LocalBump lBump;
-};
+//  needed for pixel lighting
+//  float3 worldNormals[3] : texcoord3; // 3, 4, 5
 
+    float2 texD : texcoord0;
 
-struct ObjVsOutput {
-    LocalBumpOut light;
-    ObjectPsIn   objAttr;
-};
+//  float  oFog  : fog;
+//  float3 debug : texcoord11;
+} VsOutput;

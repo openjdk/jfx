@@ -31,6 +31,7 @@
 #include "Page.h"
 #include "RenderMeter.h"
 #include "RenderTheme.h"
+#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "UserAgentStyleSheets.h"
 #include <wtf/IsoMallocInlines.h>
@@ -58,7 +59,7 @@ Ref<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Doc
 
 RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    if (!RenderTheme::singleton().supportsMeter(style.appearance(), *this))
+    if (!RenderTheme::singleton().supportsMeter(style.effectiveAppearance(), *this))
         return RenderElement::createFor(*this, WTFMove(style));
 
     return createRenderer<RenderMeter>(*this, WTFMove(style));
@@ -189,16 +190,16 @@ static void setValueClass(HTMLElement& element, HTMLMeterElement::GaugeRegion ga
 {
     switch (gaugeRegion) {
     case HTMLMeterElement::GaugeRegionOptimum:
-        element.setAttribute(HTMLNames::classAttr, "optimum");
-        element.setPseudo("-webkit-meter-optimum-value");
+        element.setAttribute(HTMLNames::classAttr, "optimum"_s);
+        element.setPseudo(ShadowPseudoIds::webkitMeterOptimumValue());
         return;
     case HTMLMeterElement::GaugeRegionSuboptimal:
-        element.setAttribute(HTMLNames::classAttr, "suboptimum");
-        element.setPseudo("-webkit-meter-suboptimum-value");
+        element.setAttribute(HTMLNames::classAttr, "suboptimum"_s);
+        element.setPseudo(ShadowPseudoIds::webkitMeterSuboptimumValue());
         return;
     case HTMLMeterElement::GaugeRegionEvenLessGood:
-        element.setAttribute(HTMLNames::classAttr, "even-less-good");
-        element.setPseudo("-webkit-meter-even-less-good-value");
+        element.setAttribute(HTMLNames::classAttr, "even-less-good"_s);
+        element.setPseudo(ShadowPseudoIds::webkitMeterEvenLessGoodValue());
         return;
     default:
         ASSERT_NOT_REACHED();
@@ -228,22 +229,22 @@ void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(meterElementShadowUserAgentStyleSheet, sizeof(meterElementShadowUserAgentStyleSheet)));
 
     auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
-    style->setTextContent(shadowStyle);
-    root.appendChild(style);
+    style->setTextContent(String { shadowStyle });
+    root.appendChild(WTFMove(style));
 
     // Pseudos are set to allow author styling.
     auto inner = HTMLDivElement::create(document());
-    inner->setIdAttribute("inner");
-    inner->setPseudo("-webkit-meter-inner-element");
+    inner->setIdAttribute("inner"_s);
+    inner->setPseudo(ShadowPseudoIds::webkitMeterInnerElement());
     root.appendChild(inner);
 
     auto bar = HTMLDivElement::create(document());
-    bar->setIdAttribute("bar");
-    bar->setPseudo("-webkit-meter-bar");
+    bar->setIdAttribute("bar"_s);
+    bar->setPseudo(ShadowPseudoIds::webkitMeterBar());
     inner->appendChild(bar);
 
     m_value = HTMLDivElement::create(document());
-    m_value->setIdAttribute("value");
+    m_value->setIdAttribute("value"_s);
     bar->appendChild(*m_value);
 
     didElementStateChange();

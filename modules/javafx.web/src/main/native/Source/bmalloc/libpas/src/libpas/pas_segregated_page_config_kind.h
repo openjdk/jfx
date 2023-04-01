@@ -30,7 +30,9 @@
 
 PAS_BEGIN_EXTERN_C;
 
+struct pas_page_base_config;
 struct pas_segregated_page_config;
+typedef struct pas_page_base_config pas_page_base_config;
 typedef struct pas_segregated_page_config pas_segregated_page_config;
 
 enum pas_segregated_page_config_kind {
@@ -42,43 +44,22 @@ enum pas_segregated_page_config_kind {
 
 typedef enum pas_segregated_page_config_kind pas_segregated_page_config_kind;
 
-#define PAS_SEGREGATED_PAGE_CONFIG_KIND_NUM_BITS 4u
-#define PAS_SEGREGATED_PAGE_CONFIG_KIND_MASK ((1u << PAS_SEGREGATED_PAGE_CONFIG_KIND_NUM_BITS) - 1u)
-
-#define PAS_DEFINE_SEGREGATED_PAGE_CONFIG_KIND(name, value) \
-    _Static_assert(pas_segregated_page_config_kind_ ## name <= PAS_SEGREGATED_PAGE_CONFIG_KIND_MASK, \
-                   "Kind doesn't fit in kind bits");
-#include "pas_segregated_page_config_kind.def"
-#undef PAS_DEFINE_SEGREGATED_PAGE_CONFIG_KIND
-
-static inline const char*
-pas_segregated_page_config_kind_get_string(pas_segregated_page_config_kind kind)
-{
-    switch (kind) {
-#define PAS_DEFINE_SEGREGATED_PAGE_CONFIG_KIND(name, value) \
-    case pas_segregated_page_config_kind_ ## name: \
-        return #name;
-#include "pas_segregated_page_config_kind.def"
-#undef PAS_DEFINE_SEGREGATED_PAGE_CONFIG_KIND
-    }
-    PAS_ASSERT(!"Invalid kind");
-    return NULL;
-}
+PAS_API const char* pas_segregated_page_config_kind_get_string(pas_segregated_page_config_kind kind);
 
 typedef bool (*pas_segregated_page_config_kind_callback)(pas_segregated_page_config_kind kind,
-                                                         pas_segregated_page_config* config,
+                                                         const pas_segregated_page_config* config,
                                                          void* arg);
 
 PAS_API bool pas_segregated_page_config_kind_for_each(
     pas_segregated_page_config_kind_callback callback,
     void *arg);
 
-PAS_API extern pas_segregated_page_config* pas_segregated_page_config_kind_for_config_table[];
+PAS_API extern const pas_page_base_config* pas_segregated_page_config_kind_for_config_table[];
 
-static inline pas_segregated_page_config* pas_segregated_page_config_kind_get_config(
+static inline const pas_segregated_page_config* pas_segregated_page_config_kind_get_config(
     pas_segregated_page_config_kind kind)
 {
-    return pas_segregated_page_config_kind_for_config_table[kind];
+    return (const pas_segregated_page_config*)pas_segregated_page_config_kind_for_config_table[kind];
 }
 
 PAS_END_EXTERN_C;

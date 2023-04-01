@@ -53,11 +53,11 @@ public:
 
     WEBCORE_EXPORT unsigned length() const;
     HTMLElement* item(unsigned index);
-    std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
+    std::optional<std::variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
     Vector<AtomString> supportedPropertyNames() const;
 
     String enctype() const { return m_attributes.encodingType(); }
-    WEBCORE_EXPORT void setEnctype(const String&);
+    WEBCORE_EXPORT void setEnctype(const AtomString&);
 
     bool shouldAutocomplete() const;
 
@@ -97,13 +97,15 @@ public:
     void setAcceptCharset(const String&);
 
     WEBCORE_EXPORT String action() const;
-    WEBCORE_EXPORT void setAction(const String&);
+    WEBCORE_EXPORT void setAction(const AtomString&);
 
     WEBCORE_EXPORT String method() const;
-    WEBCORE_EXPORT void setMethod(const String&);
+    WEBCORE_EXPORT void setMethod(const AtomString&);
 
-    String target() const final;
-    String effectiveTarget(const Event*, HTMLFormControlElement* submitter) const;
+    DOMTokenList& relList();
+
+    AtomString target() const final;
+    AtomString effectiveTarget(const Event*, HTMLFormControlElement* submitter) const;
 
     bool wasUserSubmitted() const;
 
@@ -125,9 +127,7 @@ public:
 
     static HTMLFormElement* findClosestFormAncestor(const Element&);
 
-    enum class IsMultipartForm : bool { No, Yes };
-
-    RefPtr<DOMFormData> constructEntryList(Ref<DOMFormData>&&, StringPairVector*, IsMultipartForm);
+    RefPtr<DOMFormData> constructEntryList(RefPtr<HTMLFormControlElement>&&, Ref<DOMFormData>&&, StringPairVector*);
 
 private:
     HTMLFormElement(const QualifiedName&, Document&);
@@ -146,7 +146,7 @@ private:
 
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
-    void submit(Event*, bool activateSubmitButton, bool processingUserGesture, FormSubmissionTrigger, HTMLFormControlElement* submitter = nullptr);
+    void submit(Event*, bool processingUserGesture, FormSubmissionTrigger, HTMLFormControlElement* submitter = nullptr);
 
     void submitDialog(Ref<FormSubmission>&&);
 
@@ -186,6 +186,7 @@ private:
     Vector<WeakPtr<HTMLImageElement>> m_imageElements;
     WeakHashSet<HTMLFormControlElement> m_invalidAssociatedFormControls;
     WeakPtr<FormSubmission> m_plannedFormSubmission;
+    std::unique_ptr<DOMTokenList> m_relList;
 
     bool m_wasUserSubmitted { false };
     bool m_isSubmittingOrPreparingForSubmission { false };

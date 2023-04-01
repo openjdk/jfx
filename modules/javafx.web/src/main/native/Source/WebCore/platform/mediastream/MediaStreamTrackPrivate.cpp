@@ -38,7 +38,7 @@
 
 #if PLATFORM(COCOA)
 #include "MediaStreamTrackAudioSourceProviderCocoa.h"
-#elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 #include "AudioSourceProviderGStreamer.h"
 #else
 #include "WebAudioSourceProvider.h"
@@ -48,7 +48,7 @@ namespace WebCore {
 
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source)
 {
-    return create(WTFMove(logger), WTFMove(source), createCanonicalUUIDString());
+    return create(WTFMove(logger), WTFMove(source), createVersion4UUIDString());
 }
 
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source, String&& id)
@@ -85,7 +85,7 @@ void MediaStreamTrackPrivate::forEachObserver(const Function<void(Observer&)>& a
 {
     ASSERT(isMainThread());
     ASSERT(!m_observers.hasNullReferences());
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
     m_observers.forEach(apply);
 }
 
@@ -173,11 +173,6 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     return clonedMediaStreamTrackPrivate;
 }
 
-RealtimeMediaSource::Type MediaStreamTrackPrivate::type() const
-{
-    return m_source->type();
-}
-
 const RealtimeMediaSourceSettings& MediaStreamTrackPrivate::settings() const
 {
     return m_source->settings();
@@ -199,7 +194,7 @@ RefPtr<WebAudioSourceProvider> MediaStreamTrackPrivate::createAudioSourceProvide
 
 #if PLATFORM(COCOA)
     return MediaStreamTrackAudioSourceProviderCocoa::create(*this);
-#elif USE(LIBWEBRTC) && USE(GSTREAMER)
+#elif USE(GSTREAMER)
     return AudioSourceProviderGStreamer::create(*this);
 #else
     return nullptr;

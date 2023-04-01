@@ -26,6 +26,9 @@
 
 #pragma once
 
+#include "CompositeOperation.h"
+#include "FloatPoint.h"
+#include "FloatSize.h"
 #include <array>
 #include <optional>
 #include <wtf/FastMalloc.h>
@@ -33,11 +36,6 @@
 
 #if USE(CG)
 typedef struct CGAffineTransform CGAffineTransform;
-#endif
-
-#if PLATFORM(WIN)
-struct D2D_MATRIX_3X2_F;
-typedef D2D_MATRIX_3X2_F D2D1_MATRIX_3X2_F;
 #endif
 
 namespace WTF {
@@ -59,15 +57,11 @@ class TransformationMatrix;
 class AffineTransform {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT AffineTransform();
-    WEBCORE_EXPORT AffineTransform(double a, double b, double c, double d, double e, double f);
+    constexpr AffineTransform();
+    constexpr AffineTransform(double a, double b, double c, double d, double e, double f);
 
 #if USE(CG)
     WEBCORE_EXPORT AffineTransform(const CGAffineTransform&);
-#endif
-
-#if PLATFORM(WIN)
-    AffineTransform(const D2D1_MATRIX_3X2_F&);
 #endif
 
     void setMatrix(double a, double b, double c, double d, double e, double f);
@@ -131,10 +125,10 @@ public:
     WEBCORE_EXPORT double xScale() const;
     WEBCORE_EXPORT double yScale() const;
 
-    bool isInvertible() const; // If you call this this, you're probably doing it wrong.
+    bool isInvertible() const; // If you call this, you're probably doing it wrong.
     WEBCORE_EXPORT std::optional<AffineTransform> inverse() const;
 
-    WEBCORE_EXPORT void blend(const AffineTransform& from, double progress);
+    WEBCORE_EXPORT void blend(const AffineTransform& from, double progress, CompositeOperation = CompositeOperation::Replace);
 
     WEBCORE_EXPORT TransformationMatrix toTransformationMatrix() const;
 
@@ -158,14 +152,24 @@ public:
         return (m_transform[1] == 0 && m_transform[2] == 0) || (m_transform[0] == 0 && m_transform[3] == 0);
     }
 
-    bool operator== (const AffineTransform& m2) const
+    bool isEssentiallyEqualTo(const AffineTransform& m2) const
+    {
+        return (WTF::areEssentiallyEqual(m_transform[0], m2.m_transform[0])
+            && WTF::areEssentiallyEqual(m_transform[1], m2.m_transform[1])
+            && WTF::areEssentiallyEqual(m_transform[2], m2.m_transform[2])
+            && WTF::areEssentiallyEqual(m_transform[3], m2.m_transform[3])
+            && WTF::areEssentiallyEqual(m_transform[4], m2.m_transform[4])
+            && WTF::areEssentiallyEqual(m_transform[5], m2.m_transform[5]));
+    }
+
+    bool operator==(const AffineTransform& m2) const
     {
         return (m_transform[0] == m2.m_transform[0]
-             && m_transform[1] == m2.m_transform[1]
-             && m_transform[2] == m2.m_transform[2]
-             && m_transform[3] == m2.m_transform[3]
-             && m_transform[4] == m2.m_transform[4]
-             && m_transform[5] == m2.m_transform[5]);
+            && m_transform[1] == m2.m_transform[1]
+            && m_transform[2] == m2.m_transform[2]
+            && m_transform[3] == m2.m_transform[3]
+            && m_transform[4] == m2.m_transform[4]
+            && m_transform[5] == m2.m_transform[5]);
     }
 
     bool operator!=(const AffineTransform& other) const { return !(*this == other); }
@@ -188,13 +192,22 @@ public:
     WEBCORE_EXPORT operator CGAffineTransform() const;
 #endif
 
-#if PLATFORM(WIN)
-    operator D2D1_MATRIX_3X2_F() const;
-#endif
-
-    static AffineTransform translation(double x, double y)
+    static AffineTransform makeTranslation(FloatSize delta)
     {
-        return AffineTransform(1, 0, 0, 1, x, y);
+        return AffineTransform(1, 0, 0, 1, delta.width(), delta.height());
+    }
+
+    static AffineTransform makeScale(FloatSize scale)
+    {
+        return AffineTransform(scale.width(), 0, 0, scale.height(), 0, 0);
+    }
+
+    static AffineTransform makeRotation(double angleInDegrees, FloatPoint center = { })
+    {
+        auto matrix = makeTranslation(toFloatSize(center));
+        matrix.rotate(angleInDegrees);
+        matrix.translate(-toFloatSize(center));
+        return matrix;
     }
 
     // decompose the matrix into its component parts
@@ -215,5 +228,17 @@ private:
 WEBCORE_EXPORT AffineTransform makeMapBetweenRects(const FloatRect& source, const FloatRect& dest);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const AffineTransform&);
+
+constexpr AffineTransform::AffineTransform()
+    : m_transform { { 1, 0, 0, 1, 0, 0 } }
+{
+}
+
+constexpr AffineTransform::AffineTransform(double a, double b, double c, double d, double e, double f)
+    : m_transform { { a, b, c, d, e, f } }
+{
+}
+
+static constexpr inline AffineTransform identity;
 
 }

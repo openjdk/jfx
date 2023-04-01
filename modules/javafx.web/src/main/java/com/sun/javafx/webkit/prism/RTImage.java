@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,25 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             PlatformLogger.getLogger(RTImage.class.getName());
 
     RTImage(int w, int h, float pixelScale) {
+        if (Float.isNaN(pixelScale) || pixelScale <= 0 ||
+                Math.ceil(pixelScale) >= Integer.MAX_VALUE) {
+
+            throw new IllegalArgumentException("pixelScale out of range");
+        }
+
+        if (w <= 0 || h <= 0) {
+            throw new IllegalArgumentException("image size must be positive");
+        }
+
+        final int ps = (int) Math.ceil(pixelScale);
+
+        final int scale = Math.max(ps, 4);
+        final int maxSize = Integer.MAX_VALUE / scale;
+
+        if (maxSize / w <= h) {
+            throw new IllegalArgumentException("image size out of range");
+        }
+
         width = w;
         height = h;
         this.pixelScale = pixelScale;
@@ -227,6 +246,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     @Override
     protected void drawPixelBuffer() {
         PrismInvoker.invokeOnRenderThread(new Runnable() {
+            @Override
             public void run() {
                 //[g] field can be null if it is the first paint
                 //from synthetic ImageData or if the resource factory is disposed

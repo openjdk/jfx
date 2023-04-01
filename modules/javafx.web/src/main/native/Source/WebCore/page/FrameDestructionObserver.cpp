@@ -42,17 +42,12 @@ FrameDestructionObserver::~FrameDestructionObserver()
 
 }
 
-Frame* FrameDestructionObserver::frame() const
-{
-    return m_frame.get();
-}
-
 void FrameDestructionObserver::observeFrame(Frame* frame)
 {
     if (m_frame)
         m_frame->removeDestructionObserver(*this);
 
-    m_frame = makeWeakPtr(frame);
+    m_frame = frame;
 
     if (m_frame)
         m_frame->addDestructionObserver(*this);

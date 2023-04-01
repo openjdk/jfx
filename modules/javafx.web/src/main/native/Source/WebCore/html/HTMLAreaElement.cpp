@@ -23,6 +23,7 @@
 #include "HTMLAreaElement.h"
 
 #include "AffineTransform.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "HTMLImageElement.h"
 #include "HTMLMapElement.h"
@@ -55,11 +56,11 @@ Ref<HTMLAreaElement> HTMLAreaElement::create(const QualifiedName& tagName, Docum
 void HTMLAreaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == shapeAttr) {
-        if (equalLettersIgnoringASCIICase(value, "default"))
+        if (equalLettersIgnoringASCIICase(value, "default"_s))
             m_shape = Default;
-        else if (equalLettersIgnoringASCIICase(value, "circle") || equalLettersIgnoringASCIICase(value, "circ"))
+        else if (equalLettersIgnoringASCIICase(value, "circle"_s) || equalLettersIgnoringASCIICase(value, "circ"_s))
             m_shape = Circle;
-        else if (equalLettersIgnoringASCIICase(value, "poly") || equalLettersIgnoringASCIICase(value, "polygon"))
+        else if (equalLettersIgnoringASCIICase(value, "poly"_s) || equalLettersIgnoringASCIICase(value, "polygon"_s))
             m_shape = Poly;
         else {
             // The missing value default is the rectangle state.
@@ -210,7 +211,7 @@ bool HTMLAreaElement::isMouseFocusable() const
 bool HTMLAreaElement::isFocusable() const
 {
     RefPtr<HTMLImageElement> image = imageElement();
-    if (!image || !image->isVisibleWithoutResolvingFullStyle())
+    if (!image || !image->isFocusableWithoutResolvingFullStyle())
         return false;
 
     return supportsFocus() && tabIndexSetExplicitly().value_or(0) >= 0;
@@ -249,7 +250,7 @@ bool HTMLAreaElement::supportsFocus() const
     return isLink();
 }
 
-String HTMLAreaElement::target() const
+AtomString HTMLAreaElement::target() const
 {
     return attributeWithoutSynchronization(targetAttr);
 }

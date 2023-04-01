@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,6 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLHandshakeException;
@@ -620,7 +619,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         twkDidSendData(totalBytesSent, totalBytesToBeSent, data);
     }
 
-    private void willSendRequest(URLConnection c) throws InterruptedException
+    private void willSendRequest(URLConnection c)
     {
         final int status = extractStatus(c);
         final String contentType = c.getContentType();

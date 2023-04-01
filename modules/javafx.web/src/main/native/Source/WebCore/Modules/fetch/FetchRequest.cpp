@@ -37,6 +37,7 @@
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
 
@@ -60,7 +61,7 @@ static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, cons
     if (!referrerURL.isValid())
         return Exception { TypeError, "Referrer is not a valid URL."_s };
 
-    if (referrerURL.protocolIsAbout() && referrerURL.path() == "client")
+    if (referrerURL.protocolIsAbout() && referrerURL.path() == "client"_s)
         return "client"_str;
 
     if (!(context.securityOrigin() && context.securityOrigin()->canRequest(referrerURL)))
@@ -124,7 +125,7 @@ static std::optional<Exception> buildOptions(FetchOptions& options, ResourceRequ
 
 static bool methodCanHaveBody(const ResourceRequest& request)
 {
-    return request.httpMethod() != "GET" && request.httpMethod() != "HEAD";
+    return request.httpMethod() != "GET"_s && request.httpMethod() != "HEAD"_s;
 }
 
 ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
@@ -137,7 +138,7 @@ ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
 
     if (m_options.mode == FetchOptions::Mode::NoCors) {
         const String& method = m_request.httpMethod();
-        if (method != "GET" && method != "POST" && method != "HEAD")
+        if (method != "GET"_s && method != "POST"_s && method != "HEAD"_s)
             return Exception { TypeError, "Method must be GET, POST or HEAD in no-cors mode."_s };
         m_headers->setGuard(FetchHeaders::Guard::RequestNoCors);
     }
@@ -170,7 +171,6 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
     m_options.credentials = Credentials::SameOrigin;
     m_referrer = "client"_s;
     m_request.setURL(requestURL);
-    m_request.setRequester(ResourceRequest::Requester::Fetch);
     m_request.setInitiatorIdentifier(scriptExecutionContext()->resourceRequestIdentifier());
 
     auto optionsResult = initializeOptions(init);
@@ -198,6 +198,9 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
             return setBodyResult.releaseException();
     }
 
+    if (requestURL.protocolIsBlob())
+        m_requestBlobURLLifetimeExtender = requestURL;
+
     updateContentType();
     return { };
 }
@@ -205,6 +208,8 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 {
     m_request = input.m_request;
+    m_navigationPreloadIdentifier = input.navigationPreloadIdentifier();
+
     m_options = input.m_options;
     m_referrer = input.m_referrer;
 
@@ -233,6 +238,9 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
     auto setBodyResult = init.body ? setBody(WTFMove(*init.body)) : setBody(input);
     if (setBodyResult.hasException())
         return setBodyResult;
+
+    if (m_request.url().protocolIsBlob())
+        m_requestBlobURLLifetimeExtender = m_request.url();
 
     updateContentType();
     return { };
@@ -273,14 +281,15 @@ ExceptionOr<void> FetchRequest::setBody(FetchRequest& request)
 
 ExceptionOr<Ref<FetchRequest>> FetchRequest::create(ScriptExecutionContext& context, Info&& input, Init&& init)
 {
-    auto request = adoptRef(*new FetchRequest(context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
+    auto request = adoptRef(*new FetchRequest(&context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
+    request->suspendIfNeeded();
 
-    if (WTF::holds_alternative<String>(input)) {
-        auto result = request->initializeWith(WTF::get<String>(input), WTFMove(init));
+    if (std::holds_alternative<String>(input)) {
+        auto result = request->initializeWith(std::get<String>(input), WTFMove(init));
         if (result.hasException())
             return result.releaseException();
     } else {
-        auto result = request->initializeWith(*WTF::get<RefPtr<FetchRequest>>(input), WTFMove(init));
+        auto result = request->initializeWith(*std::get<RefPtr<FetchRequest>>(input), WTFMove(init));
         if (result.hasException())
             return result.releaseException();
     }
@@ -288,11 +297,18 @@ ExceptionOr<Ref<FetchRequest>> FetchRequest::create(ScriptExecutionContext& cont
     return request;
 }
 
+Ref<FetchRequest> FetchRequest::create(ScriptExecutionContext& context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers, ResourceRequest&& request, FetchOptions&& options, String&& referrer)
+{
+    auto result = adoptRef(*new FetchRequest(&context, WTFMove(body), WTFMove(headers), WTFMove(request), WTFMove(options), WTFMove(referrer)));
+    result->suspendIfNeeded();
+    return result;
+}
+
 String FetchRequest::referrer() const
 {
-    if (m_referrer == "no-referrer")
+    if (m_referrer == "no-referrer"_s)
         return String();
-    if (m_referrer == "client")
+    if (m_referrer == "client"_s)
         return "about:client"_s;
     return m_referrer;
 }
@@ -317,20 +333,33 @@ ResourceRequest FetchRequest::resourceRequest() const
     return request;
 }
 
-ExceptionOr<Ref<FetchRequest>> FetchRequest::clone(ScriptExecutionContext& context)
+ExceptionOr<Ref<FetchRequest>> FetchRequest::clone()
 {
     if (isDisturbedOrLocked())
         return Exception { TypeError, "Body is disturbed or locked"_s };
 
-    auto clone = adoptRef(*new FetchRequest(context, std::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options}, String { m_referrer }));
+    auto clone = adoptRef(*new FetchRequest(scriptExecutionContext(), std::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options }, String { m_referrer }));
+    clone->suspendIfNeeded();
     clone->cloneBody(*this);
+    clone->setNavigationPreloadIdentifier(m_navigationPreloadIdentifier);
     clone->m_signal->signalFollow(m_signal);
     return clone;
+}
+
+void FetchRequest::stop()
+{
+    m_requestBlobURLLifetimeExtender.clear();
+    FetchBodyOwner::stop();
 }
 
 const char* FetchRequest::activeDOMObjectName() const
 {
     return "Request";
+}
+
+WebCoreOpaqueRoot root(FetchRequest* request)
+{
+    return WebCoreOpaqueRoot { request };
 }
 
 } // namespace WebCore

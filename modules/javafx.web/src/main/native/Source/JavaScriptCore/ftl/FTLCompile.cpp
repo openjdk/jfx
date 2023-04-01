@@ -58,7 +58,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
     if (shouldDumpDisassembly() || vm.m_perBytecodeProfiler)
         state.proc->code().setDisassembler(makeUnique<B3::Air::Disassembler>());
 
-    if (!shouldDumpDisassembly() && !Options::asyncDisassembly() && !graph.compilation() && !state.proc->needsPCToOriginMap())
+    if (!shouldDumpDisassembly() && !verboseCompilationEnabled() && !Options::asyncDisassembly() && !graph.compilation() && !state.proc->needsPCToOriginMap())
         graph.freeDFGIRAfterLowering();
 
     {
@@ -77,7 +77,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
     RegisterAtOffsetList registerOffsets = state.proc->calleeSaveRegisterAtOffsetList();
     if (shouldDumpDisassembly())
         dataLog(tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", registerOffsets, "\n");
-    codeBlock->setCalleeSaveRegisters(WTFMove(registerOffsets));
+    state.jitCode->m_calleeSaveRegisters = RegisterAtOffsetList(WTFMove(registerOffsets));
     ASSERT(!(state.proc->frameSize() % sizeof(EncodedJSValue)));
     state.jitCode->common.frameRegisterCount = state.proc->frameSize() / sizeof(EncodedJSValue);
 
@@ -128,24 +128,12 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     // Emit the exception handler.
     *state.exceptionHandler = jit.label();
-#if ENABLE(EXTRA_CTI_THUNKS)
     CCallHelpers::Jump handler = jit.jump();
     VM* vmPtr = &vm;
     jit.addLinkTask(
         [=] (LinkBuffer& linkBuffer) {
             linkBuffer.link(handler, CodeLocationLabel(vmPtr->getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
         });
-#else
-    jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
-    jit.move(MacroAssembler::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
-    jit.prepareCallOperation(vm);
-    CCallHelpers::Call call = jit.call(OperationPtrTag);
-    jit.jumpToExceptionHandler(vm);
-    jit.addLinkTask(
-        [=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link(call, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler));
-        });
-#endif // ENABLE(EXTRA_CTI_THUNKS)
 
     state.finalizer->b3CodeLinkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationCanFail);
 
@@ -156,7 +144,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     if (vm.shouldBuilderPCToCodeOriginMapping()) {
         B3::PCToOriginMap originMap = state.proc->releasePCToOriginMap();
-        codeBlock->setPCToCodeOriginMap(makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(vm, WTFMove(originMap)), *state.finalizer->b3CodeLinkBuffer));
+        state.jitCode->common.m_pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder::JSCodeOriginMap, vm, WTFMove(originMap)), *state.finalizer->b3CodeLinkBuffer);
     }
 
     CodeLocationLabel<JSEntryPtrTag> label = state.finalizer->b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(state.proc->code().entrypointLabel(0));

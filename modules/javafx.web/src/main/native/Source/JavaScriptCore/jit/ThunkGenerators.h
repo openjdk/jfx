@@ -25,31 +25,29 @@
 
 #pragma once
 
+#if ENABLE(JIT)
+
+#include "CallMode.h"
 #include "CodeSpecializationKind.h"
 #include "JSCPtrTag.h"
 
-#if ENABLE(JIT)
 namespace JSC {
 
 class CallLinkInfo;
+enum class CallMode;
 template<PtrTag> class MacroAssemblerCodeRef;
 class VM;
-
-#if ENABLE(EXTRA_CTI_THUNKS)
 
 MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> popThunkStackPreservesAndHandleExceptionGenerator(VM&);
-
-#endif // ENABLE(EXTRA_CTI_THUNKS)
-
 
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallSlowPathGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> linkCallThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> linkPolymorphicCallThunkGenerator(VM&);
 
-MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunkFor(VM&, CallLinkInfo&);
+MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunkFor(VM&, CallMode);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeCallGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeConstructGenerator(VM&);
@@ -79,9 +77,9 @@ MacroAssemblerCodeRef<JITThunkPtrTag> truncThunkGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM&);
 
-#if ENABLE(EXTRA_CTI_THUNKS)
+MacroAssemblerCodeRef<JITThunkPtrTag> remoteFunctionCallGenerator(VM&);
+
 MacroAssemblerCodeRef<JITThunkPtrTag> checkExceptionGenerator(VM&);
-#endif
 
 } // namespace JSC
 #endif // ENABLE(JIT)

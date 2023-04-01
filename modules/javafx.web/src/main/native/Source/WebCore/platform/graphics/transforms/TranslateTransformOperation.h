@@ -58,6 +58,12 @@ public:
     Length y() const { return m_y; }
     Length z() const { return m_z; }
 
+    void setX(Length newX) { m_x = newX; }
+    void setY(Length newY) { m_y = newY; }
+    void setZ(Length newZ) { m_z = newZ; }
+
+    OperationType primitiveType() const final { return isRepresentableIn2D() ? TRANSLATE : TRANSLATE_3D; }
+
     bool apply(TransformationMatrix& transform, const FloatSize& borderBoxSize) const final
     {
         transform.translate3d(xAsFloat(borderBoxSize), yAsFloat(borderBoxSize), zAsFloat());
@@ -66,6 +72,7 @@ public:
 
     bool isIdentity() const final { return !floatValueForLength(m_x, 1) && !floatValueForLength(m_y, 1) && !floatValueForLength(m_z, 1); }
 
+    bool operator==(const TranslateTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
     bool operator==(const TransformOperation&) const final;
 
     Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) final;

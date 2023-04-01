@@ -45,11 +45,13 @@ public:
 private:
     ScrollingTreeOverflowScrollingNodeNicosia(ScrollingTree&, ScrollingNodeID);
 
-    void commitStateAfterChildren(const ScrollingStateNode&) override;
     FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
     void repositionScrollingLayers() override;
     WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
-    void stopScrollAnimations() override;
+
+    bool startAnimatedScrollToPosition(FloatPoint) override;
+    void stopAnimatedScroll() override;
+    void serviceScrollAnimation(MonotonicTime) final;
 
     ScrollingTreeScrollingNodeDelegateNicosia m_delegate;
 };

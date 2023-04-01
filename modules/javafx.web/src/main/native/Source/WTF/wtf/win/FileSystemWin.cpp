@@ -169,7 +169,7 @@ static String storageDirectory(DWORD pathIdentifier)
     buffer.shrink(wcslen(wcharFrom(buffer.data())));
     String directory = String::adopt(WTFMove(buffer));
 
-    directory = pathByAppendingComponent(directory, "Apple Computer\\" + bundleName());
+    directory = pathByAppendingComponent(directory, makeString("Apple Computer\\", bundleName()));
     if (!makeAllDirectories(directory))
         return String();
 
@@ -211,7 +211,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
 
         ASSERT(wcslen(tempFile) == WTF_ARRAY_LENGTH(tempFile) - 1);
 
-        proposedPath = pathByAppendingComponent(tempPath, tempFile);
+        proposedPath = pathByAppendingComponent(String(tempPath), String(tempFile));
         if (proposedPath.isEmpty())
             break;
     } while (!action(proposedPath));
@@ -219,7 +219,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     return proposedPath;
 }
 
-String openTemporaryFile(const String&, PlatformFileHandle& handle, const String& suffix)
+String openTemporaryFile(StringView, PlatformFileHandle& handle, StringView suffix)
 {
     // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
@@ -303,6 +303,12 @@ bool truncateFile(PlatformFileHandle handle, long long offset)
     return SetFileInformationByHandle(handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
 }
 
+bool flushFile(PlatformFileHandle handle)
+{
+    // Not implemented.
+    return false;
+}
+
 int writeToFile(PlatformFileHandle handle, const void* data, int length)
 {
     if (!isHandleValid(handle))
@@ -339,9 +345,9 @@ String roamingUserSpecificStorageDirectory()
     return cachedStorageDirectory(CSIDL_APPDATA);
 }
 
-std::optional<int32_t> getFileDeviceId(const CString& fsFile)
+std::optional<int32_t> getFileDeviceId(const String& fsFile)
 {
-    auto handle = openFile(fsFile.data(), FileOpenMode::Read);
+    auto handle = openFile(fsFile, FileOpenMode::Read);
     if (!isHandleValid(handle))
         return std::nullopt;
 

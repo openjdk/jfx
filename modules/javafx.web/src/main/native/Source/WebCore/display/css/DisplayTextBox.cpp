@@ -36,10 +36,10 @@ namespace Display {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TextBox);
 
-TextBox::TextBox(Tree& tree, UnadjustedAbsoluteFloatRect borderBox, Style&& displayStyle, const Layout::Run& lineRun)
+TextBox::TextBox(Tree& tree, UnadjustedAbsoluteFloatRect borderBox, Style&& displayStyle, const InlineDisplay::Box& box)
     : Box(tree, borderBox, WTFMove(displayStyle), { TypeFlags::TextBox })
-    , m_expansion(lineRun.expansion())
-    , m_text(lineRun.text().value())
+    , m_expansion(box.expansion())
+    , m_text(box.text().value())
 {
 }
 
@@ -53,12 +53,12 @@ String TextBox::debugDescription() const
     TextStream stream;
 
     stream << boxName() << " " << absoluteBoxRect() << " (" << this << ")";
-    auto textContent = text().originalContent().substring(text().start(), text().length());
-    textContent.replaceWithLiteral('\\', "\\\\");
-    textContent.replaceWithLiteral('\n', "\\n");
+    auto textContent = text().originalContent().substring(text().start(), text().length()).toString();
+    textContent = makeStringByReplacingAll(textContent, '\\', "\\\\"_s);
+    textContent = makeStringByReplacingAll(textContent, '\n', "\\n"_s);
     const size_t maxPrintedLength = 80;
     if (textContent.length() > maxPrintedLength) {
-        auto substring = textContent.substring(0, maxPrintedLength);
+        auto substring = StringView(textContent).left(maxPrintedLength);
         stream << " \"" << substring << "\"…";
     } else
         stream << " \"" << textContent << "\"";

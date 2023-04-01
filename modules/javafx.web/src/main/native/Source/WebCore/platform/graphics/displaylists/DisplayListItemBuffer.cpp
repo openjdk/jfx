@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "DisplayListItemBufferIdentifier.h"
 #include "DisplayListItems.h"
+#include "Filter.h"
 #include <wtf/FastMalloc.h>
 
 namespace WebCore {
@@ -66,9 +67,6 @@ void ItemHandle::apply(GraphicsContext& context)
     case ItemType::SetCTM:
         get<SetCTM>().apply(context);
         return;
-    case ItemType::SetInlineFillGradient:
-        get<SetInlineFillGradient>().apply(context);
-        return;
     case ItemType::SetInlineFillColor:
         get<SetInlineFillColor>().apply(context);
         return;
@@ -103,7 +101,7 @@ void ItemHandle::apply(GraphicsContext& context)
         get<ClipOut>().apply(context);
         return;
     case ItemType::ClipToImageBuffer:
-        get<ClipToImageBuffer>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::ClipOutToPath:
         get<ClipOutToPath>().apply(context);
@@ -111,23 +109,26 @@ void ItemHandle::apply(GraphicsContext& context)
     case ItemType::ClipPath:
         get<ClipPath>().apply(context);
         return;
-    case ItemType::BeginClipToDrawingCommands:
-        ASSERT_NOT_REACHED();
-        return;
-    case ItemType::EndClipToDrawingCommands:
+    case ItemType::DrawFilteredImageBuffer:
         ASSERT_NOT_REACHED();
         return;
     case ItemType::DrawGlyphs:
         ASSERT_NOT_REACHED();
         return;
+    case ItemType::DrawDecomposedGlyphs:
+        ASSERT_NOT_REACHED();
+        return;
     case ItemType::DrawImageBuffer:
-        get<DrawImageBuffer>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::DrawNativeImage:
-        get<DrawNativeImage>().apply(context);
+        ASSERT_NOT_REACHED();
+        return;
+    case ItemType::DrawSystemImage:
+        get<DrawSystemImage>().apply(context);
         return;
     case ItemType::DrawPattern:
-        get<DrawPattern>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::DrawRect:
         get<DrawRect>().apply(context);
@@ -191,20 +192,9 @@ void ItemHandle::apply(GraphicsContext& context)
     case ItemType::FillEllipse:
         get<FillEllipse>().apply(context);
         return;
-    case ItemType::FlushContext:
-        get<FlushContext>().apply(context);
-        return;
-    case ItemType::MetaCommandChangeDestinationImageBuffer:
-    case ItemType::MetaCommandChangeItemBuffer:
-        return;
-    case ItemType::GetPixelBuffer:
-    case ItemType::PutPixelBuffer:
-        // Should already be handled by the delegate.
-        ASSERT_NOT_REACHED();
-        return;
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
-        get<PaintFrameForMedia>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
 #endif
     case ItemType::StrokeRect:
@@ -262,6 +252,9 @@ void ItemHandle::destroy()
     case ItemType::ClipPath:
         get<ClipPath>().~ClipPath();
         return;
+    case ItemType::DrawFilteredImageBuffer:
+        get<DrawFilteredImageBuffer>().~DrawFilteredImageBuffer();
+        return;
     case ItemType::DrawFocusRingPath:
         get<DrawFocusRingPath>().~DrawFocusRingPath();
         return;
@@ -271,6 +264,9 @@ void ItemHandle::destroy()
     case ItemType::DrawGlyphs:
         get<DrawGlyphs>().~DrawGlyphs();
         return;
+    case ItemType::DrawDecomposedGlyphs:
+        get<DrawDecomposedGlyphs>().~DrawDecomposedGlyphs();
+        break;
     case ItemType::DrawLinesForText:
         get<DrawLinesForText>().~DrawLinesForText();
         return;
@@ -295,12 +291,6 @@ void ItemHandle::destroy()
     case ItemType::FillRoundedRect:
         get<FillRoundedRect>().~FillRoundedRect();
         return;
-    case ItemType::GetPixelBuffer:
-        get<GetPixelBuffer>().~GetPixelBuffer();
-        return;
-    case ItemType::PutPixelBuffer:
-        get<PutPixelBuffer>().~PutPixelBuffer();
-        return;
     case ItemType::SetLineDash:
         get<SetLineDash>().~SetLineDash();
         return;
@@ -321,9 +311,6 @@ void ItemHandle::destroy()
         static_assert(std::is_trivially_destructible<ApplyStrokePattern>::value);
         return;
 #endif
-    case ItemType::BeginClipToDrawingCommands:
-        get<BeginClipToDrawingCommands>().~BeginClipToDrawingCommands();
-        return;
     case ItemType::BeginTransparencyLayer:
         static_assert(std::is_trivially_destructible<BeginTransparencyLayer>::value);
         return;
@@ -357,6 +344,9 @@ void ItemHandle::destroy()
     case ItemType::DrawNativeImage:
         static_assert(std::is_trivially_destructible<DrawNativeImage>::value);
         return;
+    case ItemType::DrawSystemImage:
+        get<DrawSystemImage>().~DrawSystemImage();
+        return;
     case ItemType::DrawPattern:
         static_assert(std::is_trivially_destructible<DrawPattern>::value);
         return;
@@ -365,9 +355,6 @@ void ItemHandle::destroy()
         return;
     case ItemType::DrawRect:
         static_assert(std::is_trivially_destructible<DrawRect>::value);
-        return;
-    case ItemType::EndClipToDrawingCommands:
-        static_assert(std::is_trivially_destructible<EndClipToDrawingCommands>::value);
         return;
     case ItemType::EndTransparencyLayer:
         static_assert(std::is_trivially_destructible<EndTransparencyLayer>::value);
@@ -392,15 +379,6 @@ void ItemHandle::destroy()
     case ItemType::FillRect:
         static_assert(std::is_trivially_destructible<FillRect>::value);
         return;
-    case ItemType::FlushContext:
-        static_assert(std::is_trivially_destructible<FlushContext>::value);
-        return;
-    case ItemType::MetaCommandChangeDestinationImageBuffer:
-        static_assert(std::is_trivially_destructible<MetaCommandChangeDestinationImageBuffer>::value);
-        return;
-    case ItemType::MetaCommandChangeItemBuffer:
-        static_assert(std::is_trivially_destructible<MetaCommandChangeItemBuffer>::value);
-        return;
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
         static_assert(std::is_trivially_destructible<PaintFrameForMedia>::value);
@@ -423,9 +401,6 @@ void ItemHandle::destroy()
         return;
     case ItemType::SetInlineFillColor:
         static_assert(std::is_trivially_destructible<SetInlineFillColor>::value);
-        return;
-    case ItemType::SetInlineFillGradient:
-        static_assert(std::is_trivially_destructible<SetInlineFillGradient>::value);
         return;
     case ItemType::SetInlineStrokeColor:
         static_assert(std::is_trivially_destructible<SetInlineStrokeColor>::value);
@@ -506,18 +481,24 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<ClipOutToPath>(itemOffset, *this);
     case ItemType::ClipPath:
         return copyInto<ClipPath>(itemOffset, *this);
+    case ItemType::DrawFilteredImageBuffer:
+        return copyInto<DrawFilteredImageBuffer>(itemOffset, *this);
     case ItemType::DrawFocusRingPath:
         return copyInto<DrawFocusRingPath>(itemOffset, *this);
     case ItemType::DrawFocusRingRects:
         return copyInto<DrawFocusRingRects>(itemOffset, *this);
     case ItemType::DrawGlyphs:
         return copyInto<DrawGlyphs>(itemOffset, *this);
+    case ItemType::DrawDecomposedGlyphs:
+        return copyInto<DrawDecomposedGlyphs>(itemOffset, *this);
     case ItemType::DrawImageBuffer:
         return copyInto<DrawImageBuffer>(itemOffset, *this);
     case ItemType::DrawLinesForText:
         return copyInto<DrawLinesForText>(itemOffset, *this);
     case ItemType::DrawNativeImage:
         return copyInto<DrawNativeImage>(itemOffset, *this);
+    case ItemType::DrawSystemImage:
+        return copyInto<DrawSystemImage>(itemOffset, *this);
     case ItemType::DrawPattern:
         return copyInto<DrawPattern>(itemOffset, *this);
     case ItemType::DrawPath:
@@ -534,10 +515,6 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<FillRectWithRoundedHole>(itemOffset, *this);
     case ItemType::FillRoundedRect:
         return copyInto<FillRoundedRect>(itemOffset, *this);
-    case ItemType::GetPixelBuffer:
-        return copyInto<GetPixelBuffer>(itemOffset, *this);
-    case ItemType::PutPixelBuffer:
-        return copyInto<PutPixelBuffer>(itemOffset, *this);
     case ItemType::SetLineDash:
         return copyInto<SetLineDash>(itemOffset, *this);
     case ItemType::SetState:
@@ -552,8 +529,6 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
     case ItemType::ApplyStrokePattern:
         return copyInto<ApplyStrokePattern>(itemOffset, *this);
 #endif
-    case ItemType::BeginClipToDrawingCommands:
-        return copyInto<BeginClipToDrawingCommands>(itemOffset, *this);
     case ItemType::BeginTransparencyLayer:
         return copyInto<BeginTransparencyLayer>(itemOffset, *this);
     case ItemType::ClearRect:
@@ -576,8 +551,6 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<DrawLine>(itemOffset, *this);
     case ItemType::DrawRect:
         return copyInto<DrawRect>(itemOffset, *this);
-    case ItemType::EndClipToDrawingCommands:
-        return copyInto<EndClipToDrawingCommands>(itemOffset, *this);
     case ItemType::EndTransparencyLayer:
         return copyInto<EndTransparencyLayer>(itemOffset, *this);
     case ItemType::FillEllipse:
@@ -594,12 +567,6 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
 #endif
     case ItemType::FillRect:
         return copyInto<FillRect>(itemOffset, *this);
-    case ItemType::FlushContext:
-        return copyInto<FlushContext>(itemOffset, *this);
-    case ItemType::MetaCommandChangeDestinationImageBuffer:
-        return copyInto<MetaCommandChangeDestinationImageBuffer>(itemOffset, *this);
-    case ItemType::MetaCommandChangeItemBuffer:
-        return copyInto<MetaCommandChangeItemBuffer>(itemOffset, *this);
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
         return copyInto<PaintFrameForMedia>(itemOffset, *this);
@@ -616,8 +583,6 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<SetCTM>(itemOffset, *this);
     case ItemType::SetInlineFillColor:
         return copyInto<SetInlineFillColor>(itemOffset, *this);
-    case ItemType::SetInlineFillGradient:
-        return copyInto<SetInlineFillGradient>(itemOffset, *this);
     case ItemType::SetInlineStrokeColor:
         return copyInto<SetInlineStrokeColor>(itemOffset, *this);
     case ItemType::SetLineCap:
@@ -650,7 +615,7 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
 
 bool safeCopy(ItemHandle destination, const DisplayListItem& source)
 {
-    return WTF::visit([&](const auto& source) {
+    return std::visit([&](const auto& source) {
         using DisplayListItemType = typename WTF::RemoveCVAndReference<decltype(source)>::type;
         constexpr auto itemType = DisplayListItemType::itemType;
         destination.data[0] = static_cast<uint8_t>(itemType);
@@ -733,14 +698,12 @@ void ItemBuffer::shrinkToFit()
 
 DidChangeItemBuffer ItemBuffer::swapWritableBufferIfNeeded(size_t numberOfBytes)
 {
-    auto sizeForBufferSwitchItem = paddedSizeOfTypeAndItemInBytes(ItemType::MetaCommandChangeItemBuffer);
-    if (m_writtenNumberOfBytes + numberOfBytes + sizeForBufferSwitchItem <= m_writableBuffer.capacity)
+    if (m_writtenNumberOfBytes + numberOfBytes <= m_writableBuffer.capacity)
         return DidChangeItemBuffer::No;
 
-    auto nextBuffer = createItemBuffer(numberOfBytes + sizeForBufferSwitchItem);
+    auto nextBuffer = createItemBuffer(numberOfBytes);
     bool hadPreviousBuffer = m_writableBuffer && m_writableBuffer.identifier != nextBuffer.identifier;
     if (hadPreviousBuffer) {
-        uncheckedAppend<MetaCommandChangeItemBuffer>(DidChangeItemBuffer::No, nextBuffer.identifier);
         m_writableBuffer.capacity = m_writtenNumberOfBytes;
         m_readOnlyBuffers.append(m_writableBuffer);
     }
@@ -752,7 +715,7 @@ DidChangeItemBuffer ItemBuffer::swapWritableBufferIfNeeded(size_t numberOfBytes)
 void ItemBuffer::append(const DisplayListItem& temporaryItem)
 {
     auto requiredSizeForItem = m_writingClient->requiredSizeForItem(temporaryItem);
-    RefPtr<SharedBuffer> outOfLineItem;
+    RefPtr<FragmentedSharedBuffer> outOfLineItem;
     if (!requiredSizeForItem) {
         outOfLineItem = m_writingClient->encodeItemOutOfLine(temporaryItem);
         if (!outOfLineItem)

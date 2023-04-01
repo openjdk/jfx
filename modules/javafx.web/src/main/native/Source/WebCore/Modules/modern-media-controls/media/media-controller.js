@@ -34,15 +34,15 @@ class MediaController
 
         this.fullscreenChangeEventType = media.webkitSupportsPresentationMode ? "webkitpresentationmodechanged" : "webkitfullscreenchange";
 
-        this.hasPlayed = false;
+        this.hasPlayed = !media.paused || !!media.played.length;
 
         this.container = shadowRoot.appendChild(document.createElement("div"));
-        this.container.className = "media-controls-container";
 
         this._updateControlsIfNeeded();
         this._usesLTRUserInterfaceLayoutDirection = false;
 
         if (host) {
+            this.container.className = host.mediaControlsContainerClassName;
             host.controlsDependOnPageScaleFactor = this.layoutTraits.controlsDependOnPageScaleFactor();
             this.container.insertBefore(host.textTrackContainer, this.controls.element);
             if (host.isInMediaDocument)
@@ -110,7 +110,7 @@ class MediaController
 
     togglePlayback()
     {
-        if (this.media.paused)
+        if (this.media.paused || !this.hasPlayed)
             this.media.play().catch(e => {});
         else
             this.media.pause();
@@ -213,7 +213,12 @@ class MediaController
         if (overridenSupportingObjectClasses)
             return overridenSupportingObjectClasses;
 
-        return [AirplaySupport, AudioSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
+        let classes = [AudioSupport, CloseSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
+
+        if (this.layoutTraits.supportsAirPlay())
+            classes.push(AirplaySupport);
+
+        return classes;
     }
 
     _updateControlsIfNeeded()

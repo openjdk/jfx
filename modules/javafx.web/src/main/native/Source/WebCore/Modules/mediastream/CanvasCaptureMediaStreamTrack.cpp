@@ -25,12 +25,13 @@
 #include "config.h"
 #include "CanvasCaptureMediaStreamTrack.h"
 
+#if ENABLE(MEDIA_STREAM)
+
 #include "GraphicsContext.h"
 #include "HTMLCanvasElement.h"
+#include "VideoFrame.h"
 #include "WebGLRenderingContextBase.h"
 #include <wtf/IsoMallocInlines.h>
-
-#if ENABLE(MEDIA_STREAM)
 
 namespace WebCore {
 
@@ -89,6 +90,7 @@ void CanvasCaptureMediaStreamTrack::Source::startProducingData()
     if (!m_canvas)
         return;
     m_canvas->addObserver(*this);
+    m_canvas->addDisplayBufferObserver(*this);
 
     if (!m_frameRequestRate)
         return;
@@ -104,6 +106,7 @@ void CanvasCaptureMediaStreamTrack::Source::stopProducingData()
     if (!m_canvas)
         return;
     m_canvas->removeObserver(*this);
+    m_canvas->removeDisplayBufferObserver(*this);
 }
 
 void CanvasCaptureMediaStreamTrack::Source::requestFrameTimerFired()
@@ -152,24 +155,28 @@ void CanvasCaptureMediaStreamTrack::Source::canvasResized(CanvasBase& canvas)
 void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase& canvas, const std::optional<FloatRect>&)
 {
     ASSERT_UNUSED(canvas, m_canvas == &canvas);
-
 #if ENABLE(WEBGL)
-    // FIXME: We need to preserve drawing buffer as we are currently grabbing frames asynchronously.
-    // We should instead add an anchor point for both 2d and 3d contexts where canvas will actually paint.
-    // And call canvas observers from that point.
-    if (is<WebGLRenderingContextBase>(canvas.renderingContext())) {
-        auto& context = downcast<WebGLRenderingContextBase>(*canvas.renderingContext());
-        if (!context.isPreservingDrawingBuffer()) {
-            canvas.scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Turning drawing buffer preservation for the WebGL canvas being captured"_s);
-            context.enablePreserveDrawingBuffer();
-        }
-    }
+    if (m_canvas->renderingContext() && m_canvas->renderingContext()->needsPreparationForDisplay())
+        return;
 #endif
+    scheduleCaptureCanvas();
+}
 
+void CanvasCaptureMediaStreamTrack::Source::scheduleCaptureCanvas()
+{
     // FIXME: We should try to generate the frame at the time the screen is being updated.
     if (m_captureCanvasTimer.isActive())
         return;
     m_captureCanvasTimer.startOneShot(0_s);
+}
+
+void CanvasCaptureMediaStreamTrack::Source::canvasDisplayBufferPrepared(CanvasBase& canvas)
+{
+    ASSERT_UNUSED(canvas, m_canvas == &canvas);
+    // FIXME: Here we should capture the image instead.
+    // However, submitting the sample to the receiver might cause layout,
+    // and currently the display preparation is done after layout.
+    scheduleCaptureCanvas();
 }
 
 void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
@@ -188,11 +195,13 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
     if (!m_canvas->originClean())
         return;
 
-    auto sample = m_canvas->toMediaSample();
-    if (!sample)
+    auto videoFrame = m_canvas->toVideoFrame();
+    if (!videoFrame)
         return;
 
-    videoSampleAvailable(*sample);
+    VideoFrameTimeMetadata metadata;
+    metadata.captureTime = MonotonicTime::now().secondsSinceEpoch();
+    videoFrameAvailable(*videoFrame, metadata);
 }
 
 RefPtr<MediaStreamTrack> CanvasCaptureMediaStreamTrack::clone()

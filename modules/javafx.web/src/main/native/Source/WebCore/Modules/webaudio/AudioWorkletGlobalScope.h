@@ -32,6 +32,8 @@
 #include "AudioWorkletThread.h"
 #include "MessagePort.h"
 #include "WorkletGlobalScope.h"
+#include <wtf/RobinHoodHashMap.h>
+#include <wtf/WeakHashSet.h>
 
 namespace JSC {
 class VM;
@@ -54,6 +56,8 @@ public:
 
     ExceptionOr<void> registerProcessor(String&& name, Ref<JSAudioWorkletProcessorConstructor>&&);
     RefPtr<AudioWorkletProcessor> createProcessor(const String& name, TransferredMessagePort, Ref<SerializedScriptValue>&& options);
+    void processorIsNoLongerNeeded(AudioWorkletProcessor&);
+    void visitProcessors(JSC::AbstractSlotVisitor&);
 
     size_t currentFrame() const { return m_currentFrame; }
 
@@ -78,7 +82,9 @@ private:
 
     size_t m_currentFrame { 0 };
     const float m_sampleRate;
-    HashMap<String, RefPtr<JSAudioWorkletProcessorConstructor>> m_processorConstructorMap;
+    MemoryCompactRobinHoodHashMap<String, RefPtr<JSAudioWorkletProcessorConstructor>> m_processorConstructorMap;
+    Lock m_processorsLock;
+    WeakHashSet<AudioWorkletProcessor, WTF::EmptyCounter, EnableWeakPtrThreadingAssertions::No> m_processors WTF_GUARDED_BY_LOCK(m_processorsLock);
     std::unique_ptr<AudioWorkletProcessorConstructionData> m_pendingProcessorConstructionData;
     std::optional<JSC::JSLockHolder> m_lockDuringRendering;
 };

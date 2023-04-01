@@ -22,10 +22,10 @@
 
 #if ENABLE(WEBXR) && USE(OPENXR)
 
+#include "GraphicsContextGL.h"
 #include "OpenXRExtensions.h"
 #include "OpenXRInput.h"
 #include "OpenXRInputSource.h"
-
 #include <wtf/NeverDestroyed.h>
 #include <wtf/threads/BinarySemaphore.h>
 
@@ -53,10 +53,12 @@ OpenXRDevice::OpenXRDevice(XrInstance instance, XrSystemId system, Ref<WorkQueue
 {
 }
 
+OpenXRDevice::~OpenXRDevice() = default;
+
 void OpenXRDevice::initialize(CompletionHandler<void()>&& callback)
 {
     ASSERT(isMainThread());
-    m_queue.dispatch([this, protectedThis = makeRef(*this), callback = WTFMove(callback)]() mutable {
+    m_queue.dispatch([this, protectedThis = Ref { *this }, callback = WTFMove(callback)]() mutable {
         auto systemProperties = createStructure<XrSystemProperties, XR_TYPE_SYSTEM_PROPERTIES>();
         auto result = xrGetSystemProperties(m_instance, m_systemId, &systemProperties);
         if (XR_SUCCEEDED(result))
@@ -83,9 +85,9 @@ WebCore::IntSize OpenXRDevice::recommendedResolution(SessionMode mode)
     return Device::recommendedResolution(mode);
 }
 
-void OpenXRDevice::initializeTrackingAndRendering(SessionMode mode)
+void OpenXRDevice::initializeTrackingAndRendering(const WebCore::SecurityOriginData&, SessionMode mode, const Device::FeatureList&)
 {
-    m_queue.dispatch([this, protectedThis = makeRef(*this), mode]() {
+    m_queue.dispatch([this, protectedThis = Ref { *this }, mode]() {
         ASSERT(m_instance != XR_NULL_HANDLE);
         ASSERT(m_session == XR_NULL_HANDLE);
         ASSERT(m_extensions.methods().xrGetOpenGLGraphicsRequirementsKHR);
@@ -114,7 +116,7 @@ void OpenXRDevice::initializeTrackingAndRendering(SessionMode mode)
         attributes.stencil = false;
         attributes.antialias = false;
 
-        m_gl = GraphicsContextGL::create(attributes, nullptr);
+        m_gl = createWebProcessGraphicsContextGL(attributes);
         if (!m_gl) {
             LOG(XR, "Failed to create a valid GraphicsContextGL");
             return;
@@ -144,7 +146,7 @@ void OpenXRDevice::initializeTrackingAndRendering(SessionMode mode)
 
 void OpenXRDevice::shutDownTrackingAndRendering()
 {
-    m_queue.dispatch([this, protectedThis = makeRef(*this)]() {
+    m_queue.dispatch([this, protectedThis = Ref { *this }]() {
         if (m_session == XR_NULL_HANDLE)
             return;
 
@@ -170,7 +172,7 @@ void OpenXRDevice::initializeReferenceSpace(PlatformXR::ReferenceSpaceType space
 
 void OpenXRDevice::requestFrame(RequestFrameCallback&& callback)
 {
-    m_queue.dispatch([this, protectedThis = makeRef(*this), callback = WTFMove(callback)]() mutable {
+    m_queue.dispatch([this, protectedThis = Ref { *this }, callback = WTFMove(callback)]() mutable {
         pollEvents();
         if (!isSessionReady(m_sessionState)) {
             callOnMainThread([callback = WTFMove(callback)]() mutable {
@@ -260,7 +262,7 @@ void OpenXRDevice::requestFrame(RequestFrameCallback&& callback)
 
 void OpenXRDevice::submitFrame(Vector<Device::Layer>&& layers)
 {
-    m_queue.dispatch([this, protectedThis = makeRef(*this), layers = WTFMove(layers)]() mutable {
+    m_queue.dispatch([this, protectedThis = Ref { *this }, layers = WTFMove(layers)]() mutable {
         ASSERT(m_frameState.shouldRender);
         Vector<const XrCompositionLayerBaseHeader*> frameEndLayers;
         if (m_frameState.shouldRender) {
@@ -342,19 +344,19 @@ Device::FeatureList OpenXRDevice::collectSupportedFeatures() const
 
     // https://www.khronos.org/registry/OpenXR/specs/1.0/man/html/XrReferenceSpaceType.html
     // OpenXR runtimes must support Viewer and Local spaces.
-    features.append(ReferenceSpaceType::Viewer);
-    features.append(ReferenceSpaceType::Local);
+    features.append(PlatformXR::SessionFeature::ReferenceSpaceTypeViewer);
+    features.append(PlatformXR::SessionFeature::ReferenceSpaceTypeLocal);
 
     // Mark LocalFloor as supported regardless if XR_REFERENCE_SPACE_TYPE_STAGE is available.
     // The spec uses a estimated height if we don't provide a floor transform in frameData.
-    features.append(ReferenceSpaceType::LocalFloor);
+    features.append(PlatformXR::SessionFeature::ReferenceSpaceTypeLocalFloor);
 
     // Mark BoundedFloor as supported regardless if XR_REFERENCE_SPACE_TYPE_STAGE is available.
     // The spec allows reporting an empty array if xrGetReferenceSpaceBoundsRect fails.
-    features.append(ReferenceSpaceType::BoundedFloor);
+    features.append(PlatformXR::SessionFeature::ReferenceSpaceTypeBoundedFloor);
 
     if (m_extensions.isExtensionSupported(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME))
-        features.append(ReferenceSpaceType::Unbounded);
+        features.append(PlatformXR::SessionFeature::ReferenceSpaceTypeUnbounded);
 
     return features;
 }
@@ -498,7 +500,7 @@ void OpenXRDevice::endSession()
         return;
 
     // Notify did end event
-    callOnMainThread([this, weakThis = makeWeakPtr(*this)]() {
+    callOnMainThread([this, weakThis = WeakPtr { *this }]() {
         if (!weakThis)
             return;
         if (m_trackingAndRenderingClient)
@@ -544,7 +546,7 @@ void OpenXRDevice::waitUntilStopping()
     pollEvents();
     if (m_sessionState >= XR_SESSION_STATE_STOPPING)
         return;
-    m_queue.dispatch([this, protectedThis = makeRef(*this)]() {
+    m_queue.dispatch([this, protectedThis = Ref { *this }]() {
         waitUntilStopping();
     });
 }
@@ -587,7 +589,7 @@ void OpenXRDevice::updateInteractionProfile()
 
     didNotifyInputInitialization = true;
     auto inputSources = m_input->collectInputSources(m_frameState);
-    callOnMainThread([this, weakThis = makeWeakPtr(*this), inputSources = WTFMove(inputSources)]() mutable {
+    callOnMainThread([this, weakThis = WeakPtr { *this }, inputSources = WTFMove(inputSources)]() mutable {
         if (!weakThis)
             return;
         if (m_trackingAndRenderingClient)

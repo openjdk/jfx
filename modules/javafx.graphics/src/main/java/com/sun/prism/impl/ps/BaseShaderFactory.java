@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,21 +50,25 @@ public abstract class BaseShaderFactory extends BaseResourceFactory
         super(clampTexCache, repeatTexCache, mipmapTexCache);
     }
 
+    @Override
     public ShapeRep createPathRep() {
         return PrismSettings.cacheComplexShapes ?
                 new CachingShapeRep() : new BasicShapeRep();
     }
 
+    @Override
     public ShapeRep createRoundRectRep() {
         return PrismSettings.cacheSimpleShapes ?
             new CachingRoundRectRep() : new BasicRoundRectRep();
     }
 
+    @Override
     public ShapeRep createEllipseRep() {
         return PrismSettings.cacheSimpleShapes ?
             new CachingEllipseRep() : new BasicEllipseRep();
     }
 
+    @Override
     public ShapeRep createArcRep() {
         return PrismSettings.cacheComplexShapes ?
             new CachingShapeRep() : new BasicShapeRep();

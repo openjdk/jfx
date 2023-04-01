@@ -260,7 +260,7 @@ g_timer_is_active (GTimer *timer)
  * Pauses the current thread for the given number of microseconds.
  *
  * There are 1 million microseconds per second (represented by the
- * #G_USEC_PER_SEC macro). g_usleep() may have limited precision,
+ * %G_USEC_PER_SEC macro). g_usleep() may have limited precision,
  * depending on hardware and operating system; don't rely on the exact
  * length of the sleep.
  */
@@ -294,7 +294,9 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void
 g_time_val_add (GTimeVal *time_, glong microseconds)
 {
-  g_return_if_fail (time_->tv_usec >= 0 && time_->tv_usec < G_USEC_PER_SEC);
+  g_return_if_fail (time_ != NULL &&
+                    time_->tv_usec >= 0 &&
+                    time_->tv_usec < G_USEC_PER_SEC);
 
   if (microseconds >= 0)
     {
@@ -603,7 +605,9 @@ g_time_val_to_iso8601 (GTimeVal *time_)
 #endif
   time_t secs;
 
-  g_return_val_if_fail (time_->tv_usec >= 0 && time_->tv_usec < G_USEC_PER_SEC, NULL);
+  g_return_val_if_fail (time_ != NULL &&
+                        time_->tv_usec >= 0 &&
+                        time_->tv_usec < G_USEC_PER_SEC, NULL);
 
   secs = time_->tv_sec;
 #ifdef _WIN32

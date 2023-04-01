@@ -260,7 +260,13 @@ static FloatPointGraph::Polygon edgesForRect(FloatRect rect, FloatPointGraph& gr
 static Vector<FloatPointGraph::Polygon> polygonsForRect(const Vector<FloatRect>& rects, FloatPointGraph& graph)
 {
     Vector<FloatRect> sortedRects = rects;
-    std::sort(sortedRects.begin(), sortedRects.end(), [](FloatRect a, FloatRect b) { return b.y() > a.y(); });
+    // FIXME: Replace it with 2 dimensional sort.
+    std::sort(sortedRects.begin(), sortedRects.end(), [](FloatRect a, FloatRect b) {
+        return a.x() < b.x();
+    });
+    std::sort(sortedRects.begin(), sortedRects.end(), [](FloatRect a, FloatRect b) {
+        return a.y() < b.y();
+    });
 
     Vector<FloatPointGraph::Polygon> rectPolygons;
     rectPolygons.reserveInitialCapacity(sortedRects.size());
@@ -284,17 +290,14 @@ static Vector<FloatPointGraph::Polygon> polygonsForRect(const Vector<FloatRect>&
 
 Vector<Path> PathUtilities::pathsWithShrinkWrappedRects(const Vector<FloatRect>& rects, float radius)
 {
-    Vector<Path> paths;
-
     if (rects.isEmpty())
-        return paths;
+        return { };
 
     if (rects.size() > 20) {
         Path path;
         for (const auto& rect : rects)
             path.addRoundedRect(rect, FloatSize(radius, radius));
-        paths.append(path);
-        return paths;
+        return { WTFMove(path) };
     }
 
     FloatPointGraph graph;
@@ -303,10 +306,11 @@ Vector<Path> PathUtilities::pathsWithShrinkWrappedRects(const Vector<FloatRect>&
         Path path;
         for (const auto& rect : rects)
             path.addRoundedRect(rect, FloatSize(radius, radius));
-        paths.append(path);
-        return paths;
+        return { WTFMove(path) };
     }
 
+    Vector<Path> paths;
+    paths.reserveInitialCapacity(polys.size());
     for (auto& poly : polys) {
         Path path;
         for (unsigned i = 0; i < poly.size(); ++i) {
@@ -338,7 +342,7 @@ Vector<Path> PathUtilities::pathsWithShrinkWrappedRects(const Vector<FloatRect>&
             path.addArcTo(*fromEdge.second, *toEdge.first + toOffset, clampedRadius);
         }
         path.closeSubpath();
-        paths.append(path);
+        paths.uncheckedAppend(WTFMove(path));
     }
     return paths;
 }
@@ -537,13 +541,14 @@ Path PathUtilities::pathWithShrinkWrappedRectsForOutline(const Vector<FloatRect>
     bottomLeftRadius = firstLineRadii.bottomLeft();
     topRightRadius = lastLineRadii.topRight();
     bottomRightRadius = lastLineRadii.bottomRight();
-    Vector<FloatPoint> corners;
     // physical topLeft/topRight/bottomRight/bottomLeft
     auto isHorizontal = isHorizontalWritingMode(writingMode);
-    corners.append(firstLineRect.minXMinYCorner());
-    corners.append(isHorizontal ? lastLineRect.maxXMinYCorner() : firstLineRect.maxXMinYCorner());
-    corners.append(lastLineRect.maxXMaxYCorner());
-    corners.append(isHorizontal ? firstLineRect.minXMaxYCorner() : lastLineRect.minXMaxYCorner());
+    auto corners = Vector<FloatPoint>::from(
+        firstLineRect.minXMinYCorner(),
+        isHorizontal ? lastLineRect.maxXMinYCorner() : firstLineRect.maxXMinYCorner(),
+        lastLineRect.maxXMaxYCorner(),
+        isHorizontal ? firstLineRect.minXMaxYCorner() : lastLineRect.minXMaxYCorner()
+    );
 
     for (unsigned i = 0; i < poly.size(); ++i) {
         auto moveOrAddLineTo = [i, &path] (const FloatPoint& startPoint)

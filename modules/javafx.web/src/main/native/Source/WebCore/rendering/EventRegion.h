@@ -26,15 +26,19 @@
 #pragma once
 
 #include "AffineTransform.h"
+#include "InteractionRegion.h"
+#include "Node.h"
 #include "Region.h"
 #include "RenderStyleConstants.h"
 #include "TouchAction.h"
 #include <wtf/OptionSet.h>
+#include <wtf/Ref.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class EventRegion;
+class RenderObject;
 class RenderStyle;
 
 class EventRegionContext {
@@ -47,13 +51,53 @@ public:
     void pushClip(const IntRect&);
     void popClip();
 
-    void unite(const Region&, const RenderStyle&, bool overrideUserModifyIsEditable = false);
+    void unite(const Region&, RenderObject&, const RenderStyle&, bool overrideUserModifyIsEditable = false);
     bool contains(const IntRect&) const;
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    void uniteInteractionRegions(const Region&, RenderObject&);
+    void copyInteractionRegionsToEventRegion();
+#endif
 
 private:
     EventRegion& m_eventRegion;
     Vector<AffineTransform> m_transformStack;
     Vector<IntRect> m_clipStack;
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    HashMap<ElementIdentifier, InteractionRegion> m_interactionRegionsByElement;
+#endif
+};
+
+class EventRegionContextStateSaver {
+public:
+    EventRegionContextStateSaver(EventRegionContext* context)
+        : m_context(context)
+    {
+    }
+
+    ~EventRegionContextStateSaver()
+    {
+        if (!m_context)
+            return;
+
+        if (m_pushedClip)
+            m_context->popClip();
+    }
+
+    void pushClip(const IntRect& clipRect)
+    {
+        ASSERT(!m_pushedClip);
+        if (m_context)
+            m_context->pushClip(clipRect);
+        m_pushedClip = true;
+    }
+
+    EventRegionContext* context() const { return m_context; }
+
+private:
+    EventRegionContext* m_context;
+    bool m_pushedClip { false };
 };
 
 class EventRegion {
@@ -100,6 +144,11 @@ public:
 
     void dump(TextStream&) const;
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    const Vector<InteractionRegion>& interactionRegions() const { return m_interactionRegions; }
+    void uniteInteractionRegions(const Vector<InteractionRegion>&);
+#endif
+
 private:
 #if ENABLE(TOUCH_ACTION_REGIONS)
     void uniteTouchActions(const Region&, OptionSet<TouchAction>);
@@ -116,6 +165,9 @@ private:
 #endif
 #if ENABLE(EDITABLE_REGION)
     std::optional<Region> m_editableRegion;
+#endif
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    Vector<InteractionRegion> m_interactionRegions;
 #endif
 };
 
@@ -134,6 +186,9 @@ void EventRegion::encode(Encoder& encoder) const
 #endif
 #if ENABLE(EDITABLE_REGION)
     encoder << m_editableRegion;
+#endif
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    encoder << m_interactionRegions;
 #endif
 }
 
@@ -179,6 +234,14 @@ std::optional<EventRegion> EventRegion::decode(Decoder& decoder)
     if (!editableRegion)
         return std::nullopt;
     eventRegion.m_editableRegion = WTFMove(*editableRegion);
+#endif
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    std::optional<Vector<InteractionRegion>> interactionRegions;
+    decoder >> interactionRegions;
+    if (!interactionRegions)
+        return std::nullopt;
+    eventRegion.m_interactionRegions = WTFMove(*interactionRegions);
 #endif
 
     return eventRegion;

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014, 2015 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -103,6 +103,9 @@ class BuiltinsSeparateImplementationGenerator(BuiltinsGenerator):
             ),
             (["JavaScriptCore", "WebCore"],
                 ("JavaScriptCore", "runtime/IdentifierInlines.h"),
+            ),
+            (["JavaScriptCore", "WebCore"],
+                ("JavaScriptCore", "runtime/ImplementationVisibility.h"),
             ),
             (["JavaScriptCore", "WebCore"],
                 ("JavaScriptCore", "runtime/Intrinsic.h"),

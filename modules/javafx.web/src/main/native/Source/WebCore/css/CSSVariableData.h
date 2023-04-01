@@ -47,7 +47,7 @@ public:
         return adoptRef(*new CSSVariableData(range));
     }
 
-    CSSParserTokenRange tokenRange() { return m_tokens; }
+    CSSParserTokenRange tokenRange() const { return m_tokens; }
 
     const Vector<CSSParserToken>& tokens() const { return m_tokens; }
 
@@ -59,8 +59,6 @@ private:
 
     String m_backingString;
     Vector<CSSParserToken> m_tokens;
-
-    // FIXME-NEWPARSER: We want to cache StyleProperties once we support @apply.
 };
 
 } // namespace WebCore

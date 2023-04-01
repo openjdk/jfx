@@ -53,7 +53,7 @@ static double networkLoadTimeToDOMHighResTimeStamp(MonotonicTime timeOrigin, Mon
 
 static double fetchStart(MonotonicTime timeOrigin, const ResourceTiming& resourceTiming)
 {
-    if (auto fetchStart = resourceTiming.networkLoadMetrics().fetchStart)
+    if (auto fetchStart = resourceTiming.networkLoadMetrics().fetchStart; fetchStart && !resourceTiming.networkLoadMetrics().failsTAOCheck)
         return networkLoadTimeToDOMHighResTimeStamp(timeOrigin, fetchStart);
 
     // fetchStart is a required property.
@@ -107,13 +107,18 @@ const String& PerformanceResourceTiming::nextHopProtocol() const
 
 double PerformanceResourceTiming::workerStart() const
 {
-    // FIXME: <https://webkit.org/b/179377> Implement PerformanceResourceTiming.workerStart in ServiceWorkers
-    return 0.0;
+    if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+        return 0.0;
+
+    return networkLoadTimeToDOMHighResTimeStamp(m_timeOrigin, m_resourceTiming.networkLoadMetrics().workerStart);
 }
 
 double PerformanceResourceTiming::redirectStart() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+        return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
         return 0.0;
 
     if (!m_resourceTiming.networkLoadMetrics().redirectCount)
@@ -125,6 +130,9 @@ double PerformanceResourceTiming::redirectStart() const
 double PerformanceResourceTiming::redirectEnd() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
+        return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
         return 0.0;
 
     if (!m_resourceTiming.networkLoadMetrics().redirectCount)
@@ -145,6 +153,9 @@ double PerformanceResourceTiming::domainLookupStart() const
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
 
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
+
     if (!m_resourceTiming.networkLoadMetrics().domainLookupStart)
         return fetchStart();
 
@@ -155,6 +166,9 @@ double PerformanceResourceTiming::domainLookupEnd() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
 
     if (!m_resourceTiming.networkLoadMetrics().domainLookupEnd)
         return domainLookupStart();
@@ -167,6 +181,9 @@ double PerformanceResourceTiming::connectStart() const
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
 
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
+
     if (!m_resourceTiming.networkLoadMetrics().connectStart)
         return domainLookupEnd();
 
@@ -177,6 +194,9 @@ double PerformanceResourceTiming::connectEnd() const
 {
     if (m_resourceTiming.networkLoadMetrics().failsTAOCheck)
         return 0.0;
+
+    if (m_resourceTiming.isLoadedFromServiceWorker())
+        return fetchStart();
 
     if (!m_resourceTiming.networkLoadMetrics().connectEnd)
         return connectStart();
@@ -224,8 +244,11 @@ double PerformanceResourceTiming::responseStart() const
 
 double PerformanceResourceTiming::responseEnd() const
 {
-    // responseEnd is a required property.
-    ASSERT(m_resourceTiming.networkLoadMetrics().isComplete() || m_resourceTiming.resourceLoadTiming().endTime());
+    // responseEnd is a required property, but PerformanceNavigationTiming
+    // can be queried before the document load is complete
+    ASSERT(m_resourceTiming.networkLoadMetrics().isComplete()
+        || m_resourceTiming.resourceLoadTiming().endTime()
+        || performanceEntryType() == Type::Navigation);
 
     if (m_resourceTiming.networkLoadMetrics().isComplete()) {
         if (m_resourceTiming.networkLoadMetrics().responseEnd)

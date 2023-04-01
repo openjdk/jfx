@@ -39,8 +39,15 @@
 namespace bmalloc { namespace api {
 
 #if BUSE(LIBPAS)
-pas_primitive_heap_ref gigacageHeaps[Gigacage::NumberOfKinds] =
-    {[0 ... Gigacage::NumberOfKinds - 1] = BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER};
+namespace {
+static const bmalloc_type primitiveGigacageType = BMALLOC_TYPE_INITIALIZER(1, 1, "Primitive Gigacage");
+static const bmalloc_type jsValueGigacageType = BMALLOC_TYPE_INITIALIZER(1, 1, "JSValue Gigacage");
+} // anonymous namespace
+
+pas_primitive_heap_ref gigacageHeaps[Gigacage::NumberOfKinds] = {
+    BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&primitiveGigacageType),
+    BMALLOC_AUXILIARY_HEAP_REF_INITIALIZER(&jsValueGigacageType)
+};
 #endif
 
 void* mallocOutOfLine(size_t size, HeapKind kind)
@@ -153,7 +160,7 @@ bool isEnabled(HeapKind)
 void setScavengerThreadQOSClass(qos_class_t overrideClass)
 {
 #if BENABLE(LIBPAS)
-    pas_scavenger_requested_qos_class = overrideClass;
+    pas_scavenger_set_requested_qos_class(overrideClass);
 #endif
 #if !BUSE(LIBPAS)
     if (!DebugHeap::tryGet()) {
@@ -192,16 +199,16 @@ void enableMiniMode()
 {
 #if BENABLE(LIBPAS)
     // Speed up the scavenger.
-    pas_scavenger_period_in_milliseconds = 10.;
-    pas_scavenger_max_epoch_delta = 10ll * 1000ll * 1000ll;
+    pas_scavenger_period_in_milliseconds = 5.;
+    pas_scavenger_max_epoch_delta = 5ll * 1000ll * 1000ll;
 
     // Do eager scavenging anytime pages are allocated or committed.
     pas_physical_page_sharing_pool_balancing_enabled = true;
     pas_physical_page_sharing_pool_balancing_enabled_for_utility = true;
 
     // Switch to bitfit allocation for anything that isn't isoheaped.
-    bmalloc_intrinsic_primitive_runtime_config.base.max_segregated_object_size = 0;
-    bmalloc_intrinsic_primitive_runtime_config.base.max_bitfit_object_size = UINT_MAX;
+    bmalloc_intrinsic_runtime_config.base.max_segregated_object_size = 0;
+    bmalloc_intrinsic_runtime_config.base.max_bitfit_object_size = UINT_MAX;
     bmalloc_primitive_runtime_config.base.max_segregated_object_size = 0;
     bmalloc_primitive_runtime_config.base.max_bitfit_object_size = UINT_MAX;
 #endif

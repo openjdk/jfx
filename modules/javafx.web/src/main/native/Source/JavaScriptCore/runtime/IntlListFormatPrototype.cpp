@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ static JSC_DECLARE_HOST_FUNCTION(intlListFormatPrototypeFuncResolvedOptions);
 
 namespace JSC {
 
-const ClassInfo IntlListFormatPrototype::s_info = { "Intl.ListFormat", &Base::s_info, &listFormatPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlListFormatPrototype) };
+const ClassInfo IntlListFormatPrototype::s_info = { "Intl.ListFormat"_s, &Base::s_info, &listFormatPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlListFormatPrototype) };
 
 /* Source for IntlListFormatPrototype.lut.h
 @begin listFormatPrototypeTable
@@ -53,7 +53,7 @@ const ClassInfo IntlListFormatPrototype::s_info = { "Intl.ListFormat", &Base::s_
 
 IntlListFormatPrototype* IntlListFormatPrototype::create(VM& vm, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<IntlListFormatPrototype>(vm.heap)) IntlListFormatPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<IntlListFormatPrototype>(vm)) IntlListFormatPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -71,7 +71,7 @@ IntlListFormatPrototype::IntlListFormatPrototype(VM& vm, Structure* structure)
 void IntlListFormatPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -81,7 +81,7 @@ JSC_DEFINE_HOST_FUNCTION(intlListFormatPrototypeFuncFormat, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* listFormat = jsDynamicCast<IntlListFormat*>(vm, callFrame->thisValue());
+    auto* listFormat = jsDynamicCast<IntlListFormat*>(callFrame->thisValue());
     if (!listFormat)
         return throwVMTypeError(globalObject, scope, "Intl.ListFormat.prototype.format called on value that's not a ListFormat"_s);
 
@@ -94,7 +94,7 @@ JSC_DEFINE_HOST_FUNCTION(intlListFormatPrototypeFuncFormatToParts, (JSGlobalObje
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* listFormat = jsDynamicCast<IntlListFormat*>(vm, callFrame->thisValue());
+    auto* listFormat = jsDynamicCast<IntlListFormat*>(callFrame->thisValue());
     if (!listFormat)
         return throwVMTypeError(globalObject, scope, "Intl.ListFormat.prototype.formatToParts called on value that's not a ListFormat"_s);
 
@@ -107,7 +107,7 @@ JSC_DEFINE_HOST_FUNCTION(intlListFormatPrototypeFuncResolvedOptions, (JSGlobalOb
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* listFormat = jsDynamicCast<IntlListFormat*>(vm, callFrame->thisValue());
+    auto* listFormat = jsDynamicCast<IntlListFormat*>(callFrame->thisValue());
     if (!listFormat)
         return throwVMTypeError(globalObject, scope, "Intl.ListFormat.prototype.resolvedOptions called on value that's not a ListFormat"_s);
 

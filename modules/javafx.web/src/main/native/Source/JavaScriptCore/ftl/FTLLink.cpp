@@ -52,14 +52,6 @@ void link(State& state)
 
     graph.registerFrozenValues();
 
-#if ASSERT_ENABLED
-    {
-        ConcurrentJSLocker locker(codeBlock->m_lock);
-        ASSERT(codeBlock->ensureJITData(locker).m_stringSwitchJumpTables.isEmpty());
-        ASSERT(codeBlock->ensureJITData(locker).m_switchJumpTables.isEmpty());
-    }
-#endif
-
     // Create the entrypoint. Note that we use this entrypoint totally differently
     // depending on whether we're doing OSR entry or not.
     CCallHelpers jit(codeBlock);
@@ -67,7 +59,7 @@ void link(State& state)
     std::unique_ptr<LinkBuffer> linkBuffer;
 
     CCallHelpers::Address frame = CCallHelpers::Address(
-        CCallHelpers::stackPointerRegister, -static_cast<int32_t>(AssemblyHelpers::prologueStackPointerDelta()));
+        CCallHelpers::stackPointerRegister, -static_cast<int32_t>(prologueStackPointerDelta()));
 
     switch (graph.m_plan.mode()) {
     case JITCompilationMode::FTL: {
@@ -86,17 +78,7 @@ void link(State& state)
             jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
             CCallHelpers::Call callArityCheck = jit.call(OperationPtrTag);
 
-#if ENABLE(EXTRA_CTI_THUNKS)
             auto jumpToExceptionHandler = jit.branch32(CCallHelpers::LessThan, GPRInfo::returnValueGPR, CCallHelpers::TrustedImm32(0));
-#else
-            auto noException = jit.branch32(CCallHelpers::GreaterThanOrEqual, GPRInfo::returnValueGPR, CCallHelpers::TrustedImm32(0));
-            jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
-            jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
-            jit.prepareCallOperation(vm);
-            CCallHelpers::Call callLookupExceptionHandlerFromCallerFrame = jit.call(OperationPtrTag);
-            jit.jumpToExceptionHandler(vm);
-            noException.link(&jit);
-#endif // ENABLE(EXTRA_CTI_THUNKS)
 
             if (ASSERT_ENABLED) {
                 jit.load64(vm.addressOfException(), GPRInfo::regT1);
@@ -119,11 +101,7 @@ void link(State& state)
                 return;
             }
             linkBuffer->link(callArityCheck, FunctionPtr<OperationPtrTag>(codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck));
-#if ENABLE(EXTRA_CTI_THUNKS)
             linkBuffer->link(jumpToExceptionHandler, CodeLocationLabel(vm.getCTIStub(handleExceptionWithCallFrameRollbackGenerator).retaggedCode<NoPtrTag>()));
-#else
-            linkBuffer->link(callLookupExceptionHandlerFromCallerFrame, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame));
-#endif
             linkBuffer->link(callArityFixup, FunctionPtr<JITThunkPtrTag>(vm.getCTIStub(arityFixupGenerator).code()));
             linkBuffer->link(mainPathJumps, state.generatedFunction);
         }
@@ -172,6 +150,7 @@ void link(State& state)
 
         state.jitCode->initializeB3Code(b3CodeRef);
         state.jitCode->initializeArityCheckEntrypoint(arityCheckCodeRef);
+        state.jitCode->common.m_jumpReplacements = WTFMove(state.jumpReplacements);
     }
 
     state.finalizer->entrypointLinkBuffer = WTFMove(linkBuffer);

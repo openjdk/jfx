@@ -40,11 +40,11 @@ CachedSpecialPropertyAdaptiveStructureWatchpoint::CachedSpecialPropertyAdaptiveS
     RELEASE_ASSERT(!key.watchingRequiresReplacementWatchpoint());
 }
 
-void CachedSpecialPropertyAdaptiveStructureWatchpoint::install(VM& vm)
+void CachedSpecialPropertyAdaptiveStructureWatchpoint::install(VM&)
 {
-    RELEASE_ASSERT(m_key.isWatchable());
+    RELEASE_ASSERT(m_key.isWatchable(PropertyCondition::MakeNoChanges));
 
-    m_key.object()->structure(vm)->addTransitionWatchpoint(this);
+    m_key.object()->structure()->addTransitionWatchpoint(this);
 }
 
 void CachedSpecialPropertyAdaptiveStructureWatchpoint::fireInternal(VM& vm, const FireDetail&)
@@ -64,6 +64,8 @@ void CachedSpecialPropertyAdaptiveStructureWatchpoint::fireInternal(VM& vm, cons
         key = CachedSpecialPropertyKey::ToString;
     else if (m_key.uid() == vm.propertyNames->valueOf.impl())
         key = CachedSpecialPropertyKey::ValueOf;
+    else if (m_key.uid() == vm.propertyNames->toJSON.impl())
+        key = CachedSpecialPropertyKey::ToJSON;
     else {
         ASSERT(m_key.uid() == vm.propertyNames->toPrimitiveSymbol.impl());
         key = CachedSpecialPropertyKey::ToPrimitive;

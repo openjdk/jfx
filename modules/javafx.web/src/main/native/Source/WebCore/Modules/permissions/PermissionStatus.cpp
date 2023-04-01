@@ -28,8 +28,10 @@
 
 #include "ClientOrigin.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "PermissionController.h"
+#include "SecurityOrigin.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -66,6 +68,9 @@ PermissionStatus::~PermissionStatus()
 void PermissionStatus::stateChanged(PermissionState newState)
 {
     if (m_state == newState)
+        return;
+
+    if (auto* document = dynamicDowncast<Document>(scriptExecutionContext()); !document->isFullyActive())
         return;
 
     m_state = newState;

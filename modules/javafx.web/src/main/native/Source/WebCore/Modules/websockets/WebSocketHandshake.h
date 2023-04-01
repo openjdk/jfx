@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc.  All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -48,7 +49,7 @@ public:
     enum Mode {
         Incomplete, Normal, Failed, Connected
     };
-    WebSocketHandshake(const URL&, const String& protocol, const String& userAgent, const String& clientOrigin, bool allowCookies);
+    WebSocketHandshake(const URL&, const String& protocol, const String& userAgent, const String& clientOrigin, bool allowCookies, bool isAppInitiated);
     ~WebSocketHandshake();
 
     const URL& url() const;
@@ -87,7 +88,7 @@ public:
 
 private:
 
-    int readStatusLine(const uint8_t* header, size_t headerLength, int& statusCode, String& statusText);
+    int readStatusLine(const uint8_t* header, size_t headerLength, int& statusCode, AtomString& statusText);
 
     // Reads all headers except for the two predefined ones.
     const uint8_t* readHTTPHeaders(const uint8_t* start, const uint8_t* end);
@@ -102,6 +103,7 @@ private:
     String m_userAgent;
     String m_clientOrigin;
     bool m_allowCookies;
+    bool m_isAppInitiated;
 
     ResourceResponse m_serverHandshakeResponse;
 

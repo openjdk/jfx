@@ -89,18 +89,21 @@ public:
     constexpr bool canIgnoreScalingConstraints() const { return m_canIgnoreScalingConstraints; }
 
     WEBCORE_EXPORT bool setMinimumEffectiveDeviceWidthWhenIgnoringScalingConstraints(double);
-    WEBCORE_EXPORT bool setMinimumEffectiveDeviceWidth(double);
+    WEBCORE_EXPORT bool setMinimumEffectiveDeviceWidthForShrinkToFit(double);
     constexpr double minimumEffectiveDeviceWidth() const
     {
-        if (shouldIgnoreMinimumEffectiveDeviceWidth())
-            return 0;
-        return m_canIgnoreScalingConstraints ? m_minimumEffectiveDeviceWidthWhenIgnoringScalingConstraints : m_minimumEffectiveDeviceWidth;
+        double minimumEffectiveDeviceWidth = m_minimumEffectiveDeviceWidthForView;
+
+        if (!shouldIgnoreMinimumEffectiveDeviceWidthForShrinkToFit())
+            minimumEffectiveDeviceWidth = std::max(minimumEffectiveDeviceWidth, m_canIgnoreScalingConstraints ? m_minimumEffectiveDeviceWidthWhenIgnoringScalingConstraints : m_minimumEffectiveDeviceWidthForShrinkToFit);
+
+        return minimumEffectiveDeviceWidth;
     }
 
     constexpr bool isKnownToLayOutWiderThanViewport() const { return m_isKnownToLayOutWiderThanViewport; }
     WEBCORE_EXPORT bool setIsKnownToLayOutWiderThanViewport(bool value);
 
-    constexpr bool shouldIgnoreMinimumEffectiveDeviceWidth() const
+    constexpr bool shouldIgnoreMinimumEffectiveDeviceWidthForShrinkToFit() const
     {
         if (shouldShrinkToFitMinimumEffectiveDeviceWidthWhenIgnoringScalingConstraints())
             return false;
@@ -124,6 +127,8 @@ public:
 
     void setForceAlwaysUserScalable(bool forceAlwaysUserScalable) { m_forceAlwaysUserScalable = forceAlwaysUserScalable; }
     double layoutSizeScaleFactor() const { return m_layoutSizeScaleFactor; }
+
+    void setPrefersHorizontalScrollingBelowDesktopViewportWidths(bool value) { m_prefersHorizontalScrollingBelowDesktopViewportWidths = value; }
 
     WEBCORE_EXPORT IntSize layoutSize() const;
     WEBCORE_EXPORT int layoutWidth() const;
@@ -200,11 +205,13 @@ private:
     OptionSet<DisabledAdaptations> m_disabledAdaptations;
 
     double m_layoutSizeScaleFactor { 1 };
-    double m_minimumEffectiveDeviceWidth { 0 };
+    double m_minimumEffectiveDeviceWidthForView { 0 };
+    double m_minimumEffectiveDeviceWidthForShrinkToFit { 0 };
     double m_minimumEffectiveDeviceWidthWhenIgnoringScalingConstraints { 0 };
     bool m_canIgnoreScalingConstraints;
     bool m_forceAlwaysUserScalable;
     bool m_isKnownToLayOutWiderThanViewport { false };
+    bool m_prefersHorizontalScrollingBelowDesktopViewportWidths { false };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const ViewportConfiguration::Parameters&);

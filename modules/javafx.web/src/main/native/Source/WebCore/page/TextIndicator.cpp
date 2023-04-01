@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "Editor.h"
 #include "Element.h"
+#include "ElementAncestorIterator.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameSnapshotting.h"
@@ -69,30 +70,44 @@ Ref<TextIndicator> TextIndicator::create(const TextIndicatorData& data)
 
 RefPtr<TextIndicator> TextIndicator::createWithRange(const SimpleRange& range, OptionSet<TextIndicatorOption> options, TextIndicatorPresentationTransition presentationTransition, FloatSize margin)
 {
-    auto frame = makeRefPtr(range.startContainer().document().frame());
+    auto rangeToUse = range;
+    if (options.contains(TextIndicatorOption::UseUserSelectAllCommonAncestor)) {
+        if (auto* commonAncestor = commonInclusiveAncestor<ComposedTree>(range)) {
+            Ref indicatorNode = *commonAncestor;
+
+            for (auto& ancestorElement : ancestorsOfType<Element>(*commonAncestor)) {
+                if (auto* renderer = ancestorElement.renderer(); renderer && renderer->style().effectiveUserSelect() == UserSelect::All)
+                    indicatorNode = ancestorElement;
+            }
+
+            rangeToUse = makeRangeSelectingNodeContents(indicatorNode.get());
+        }
+    }
+
+    RefPtr frame = rangeToUse.startContainer().document().frame();
     if (!frame)
         return nullptr;
 
-    auto document = makeRefPtr(frame->document());
+    RefPtr document = frame->document();
     if (!document)
         return nullptr;
 
-    bool indicatesCurrentSelection = range == document->selection().selection().toNormalizedRange();
+    bool indicatesCurrentSelection = rangeToUse == document->selection().selection().toNormalizedRange();
 
     OptionSet<TemporarySelectionOption> temporarySelectionOptions;
     temporarySelectionOptions.add(TemporarySelectionOption::DoNotSetFocus);
-#if PLATFORM(IOS_FAMILY)
     temporarySelectionOptions.add(TemporarySelectionOption::IgnoreSelectionChanges);
+#if PLATFORM(IOS_FAMILY)
     temporarySelectionOptions.add(TemporarySelectionOption::EnableAppearanceUpdates);
 #endif
-    TemporarySelectionChange selectionChange(*document, { range }, temporarySelectionOptions);
+    TemporarySelectionChange selectionChange(*document, { rangeToUse }, temporarySelectionOptions);
 
     TextIndicatorData data;
 
     data.presentationTransition = presentationTransition;
     data.options = options;
 
-    if (!initializeIndicator(data, *frame, range, margin, indicatesCurrentSelection))
+    if (!initializeIndicator(data, *frame, rangeToUse, margin, indicatesCurrentSelection))
         return nullptr;
 
     return TextIndicator::create(data);
@@ -119,7 +134,7 @@ static bool hasNonInlineOrReplacedElements(const SimpleRange& range)
 {
     for (auto& node : intersectingNodes(range)) {
         auto renderer = node.renderer();
-        if (renderer && (!renderer->isInline() || renderer->isReplaced()))
+        if (renderer && (!renderer->isInline() || renderer->isReplacedOrInlineBlock()))
             return true;
     }
     return false;
@@ -175,11 +190,6 @@ static bool takeSnapshots(TextIndicatorData& data, Frame& frame, IntRect snapsho
     return true;
 }
 
-static bool styleContainsComplexBackground(const RenderStyle& style)
-{
-    return style.hasBlendMode() || style.hasBackgroundImage() || style.hasBackdropFilter();
-}
-
 static HashSet<Color> estimatedTextColorsForRange(const SimpleRange& range)
 {
     HashSet<Color> colors;
@@ -201,42 +211,6 @@ static FloatRect absoluteBoundingRectForRange(const SimpleRange& range)
         RenderObject::BoundingRectBehavior::UseVisibleBounds,
         RenderObject::BoundingRectBehavior::IgnoreTinyRects,
     }));
-}
-
-static Color estimatedBackgroundColorForRange(const SimpleRange& range, const Frame& frame)
-{
-    auto estimatedBackgroundColor = frame.view() ? frame.view()->documentBackgroundColor() : Color::transparentBlack;
-
-    RenderElement* renderer = nullptr;
-    auto commonAncestor = commonInclusiveAncestor<ComposedTree>(range);
-    while (commonAncestor) {
-        if (is<RenderElement>(commonAncestor->renderer())) {
-            renderer = downcast<RenderElement>(commonAncestor->renderer());
-            break;
-        }
-        commonAncestor = commonAncestor->parentOrShadowHostElement();
-    }
-
-    auto boundingRectForRange = enclosingIntRect(absoluteBoundingRectForRange(range));
-    Vector<Color> parentRendererBackgroundColors;
-    for (; !!renderer; renderer = renderer->parent()) {
-        auto absoluteBoundingBox = renderer->absoluteBoundingBoxRect();
-        auto& style = renderer->style();
-        if (!absoluteBoundingBox.contains(boundingRectForRange) || !style.hasBackground())
-            continue;
-
-        if (styleContainsComplexBackground(style))
-            return estimatedBackgroundColor;
-
-        auto visitedDependentBackgroundColor = style.visitedDependentColor(CSSPropertyBackgroundColor);
-        if (visitedDependentBackgroundColor != Color::transparentBlack)
-            parentRendererBackgroundColors.append(visitedDependentBackgroundColor);
-    }
-    parentRendererBackgroundColors.reverse();
-    for (const auto& backgroundColor : parentRendererBackgroundColors)
-        estimatedBackgroundColor = blendSourceOver(estimatedBackgroundColor, backgroundColor);
-
-    return estimatedBackgroundColor;
 }
 
 static bool hasAnyIllegibleColors(TextIndicatorData& data, const Color& backgroundColor, HashSet<Color>&& textColors)
@@ -269,7 +243,7 @@ static bool containsOnlyWhiteSpaceText(const SimpleRange& range)
         if (!is<RenderText>(node.renderer()))
             return false;
     }
-    return plainTextReplacingNoBreakSpace(range).stripWhiteSpace().isEmpty();
+    return plainTextReplacingNoBreakSpace(range).find(isNotSpaceOrNewline) == notFound;
 }
 
 static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const SimpleRange& range, FloatSize margin, bool indicatesCurrentSelection)
@@ -361,17 +335,16 @@ static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const Sim
         textBoundingRectInRootViewCoordinates.unite(textRectInRootViewCoordinates);
     }
 
-    Vector<FloatRect> textRectsInBoundingRectCoordinates;
-    for (auto rect : textRectsInRootViewCoordinates) {
+    auto textRectsInBoundingRectCoordinates = textRectsInRootViewCoordinates.map([&](auto rect) {
         rect.moveBy(-textBoundingRectInRootViewCoordinates.location());
-        textRectsInBoundingRectCoordinates.append(rect);
-    }
+        return rect;
+    });
 
     // Store the selection rect in window coordinates, to be used subsequently
     // to determine if the indicator and selection still precisely overlap.
     data.selectionRectInRootViewCoordinates = frame.view()->contentsToRootView(enclosingIntRect(frame.selection().selectionBounds(FrameSelection::ClipToVisibleContent::No)));
     data.textBoundingRectInRootViewCoordinates = textBoundingRectInRootViewCoordinates;
-    data.textRectsInBoundingRectCoordinates = textRectsInBoundingRectCoordinates;
+    data.textRectsInBoundingRectCoordinates = WTFMove(textRectsInBoundingRectCoordinates);
 
     return takeSnapshots(data, frame, enclosingIntRect(textBoundingRectInDocumentCoordinates), clippedTextRectsInDocumentCoordinates);
 }

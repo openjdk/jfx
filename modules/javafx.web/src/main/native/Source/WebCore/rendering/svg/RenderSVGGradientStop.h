@@ -22,11 +22,11 @@
 #pragma once
 
 #include "RenderElement.h"
-#include "SVGStopElement.h"
 
 namespace WebCore {
 
 class SVGGradientElement;
+class SVGStopElement;
 
 // This class exists mostly so we can hear about gradient stop style changes
 class RenderSVGGradientStop final : public RenderElement {
@@ -35,7 +35,7 @@ public:
     RenderSVGGradientStop(SVGStopElement&, RenderStyle&&);
     virtual ~RenderSVGGradientStop();
 
-    SVGStopElement& element() const { return downcast<SVGStopElement>(RenderObject::nodeForNonAnonymous()); }
+    inline SVGStopElement& element() const;
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -52,7 +52,7 @@ private:
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint&, HitTestAction) override { return false; }
 
     bool isSVGGradientStop() const override { return true; }
-    const char* renderName() const override { return "RenderSVGGradientStop"; }
+    ASCIILiteral renderName() const override { return "RenderSVGGradientStop"_s; }
 
     bool canHaveChildren() const override { return false; }
     void paint(PaintInfo&, const LayoutPoint&) override { }

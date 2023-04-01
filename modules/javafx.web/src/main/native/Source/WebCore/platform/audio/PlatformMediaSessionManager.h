@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,6 +60,8 @@ public:
     WEBCORE_EXPORT static bool vorbisDecoderEnabled();
     WEBCORE_EXPORT static void setOpusDecoderEnabled(bool);
     WEBCORE_EXPORT static bool opusDecoderEnabled();
+    WEBCORE_EXPORT static void setAlternateWebMPlayerEnabled(bool);
+    WEBCORE_EXPORT static bool alternateWebMPlayerEnabled();
 
 #if ENABLE(VP9)
     WEBCORE_EXPORT static void setShouldEnableVP9Decoder(bool);
@@ -131,7 +133,7 @@ public:
     virtual void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying);
     virtual void sessionStateChanged(PlatformMediaSession&);
     virtual void sessionDidEndRemoteScrubbing(PlatformMediaSession&) { };
-    virtual void clientCharacteristicsChanged(PlatformMediaSession&) { }
+    virtual void clientCharacteristicsChanged(PlatformMediaSession&, bool) { }
     virtual void sessionCanProduceAudioChanged();
 
 #if PLATFORM(IOS_FAMILY)
@@ -157,7 +159,7 @@ public:
 
     WEBCORE_EXPORT void processDidReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&);
 
-    bool isInterrupted() const { return m_interrupted; }
+    bool isInterrupted() const { return !!m_currentInterruption; }
     bool hasNoSession() const;
 
     virtual void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType) { };
@@ -168,6 +170,9 @@ public:
     WEBCORE_EXPORT void processSystemDidWake();
 
     virtual void resetHaveEverRegisteredAsNowPlayingApplicationForTesting() { };
+    virtual void resetSessionState() { };
+
+    bool isApplicationInBackground() const { return m_isApplicationInBackground; }
 
 protected:
     friend class PlatformMediaSession;
@@ -181,7 +186,6 @@ protected:
     void forEachSessionInGroup(MediaSessionGroupIdentifier, const Function<void(PlatformMediaSession&)>&);
     bool anyOfSessions(const Function<bool(const PlatformMediaSession&)>&) const;
 
-    bool isApplicationInBackground() const { return m_isApplicationInBackground; }
     void maybeDeactivateAudioSession();
     bool maybeActivateAudioSession();
 
@@ -207,7 +211,7 @@ private:
     SessionRestrictions m_restrictions[static_cast<unsigned>(PlatformMediaSession::MediaType::WebAudio) + 1];
     mutable Vector<WeakPtr<PlatformMediaSession>> m_sessions;
 
-    bool m_interrupted { false };
+    std::optional<PlatformMediaSession::InterruptionType> m_currentInterruption;
     mutable bool m_isApplicationInBackground { false };
     bool m_willIgnoreSystemInterruptions { false };
     bool m_processIsSuspended { false };
@@ -223,11 +227,14 @@ private:
 #if ENABLE(WEBM_FORMAT_READER)
     static bool m_webMFormatReaderEnabled;
 #endif
-#if ENABLE(VORBIS) && PLATFORM(MAC)
+#if ENABLE(VORBIS)
     static bool m_vorbisDecoderEnabled;
 #endif
-#if ENABLE(OPUS) && PLATFORM(MAC)
+#if ENABLE(OPUS)
     static bool m_opusDecoderEnabled;
+#endif
+#if ENABLE(ALTERNATE_WEBM_PLAYER)
+    static bool m_alternateWebMPlayerEnabled;
 #endif
 
 #if ENABLE(VP9)

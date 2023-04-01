@@ -22,6 +22,7 @@
 #include "config.h"
 #include "Animation.h"
 
+#include "CommonAtomStrings.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/TextStream.h>
 
@@ -36,6 +37,7 @@ Animation::Animation()
     , m_direction(initialDirection())
     , m_fillMode(static_cast<unsigned>(initialFillMode()))
     , m_playState(static_cast<unsigned>(initialPlayState()))
+    , m_compositeOperation(static_cast<unsigned>(initialCompositeOperation()))
     , m_delaySet(false)
     , m_directionSet(false)
     , m_durationSet(false)
@@ -45,7 +47,17 @@ Animation::Animation()
     , m_playStateSet(false)
     , m_propertySet(false)
     , m_timingFunctionSet(false)
+    , m_compositeOperationSet(false)
     , m_isNone(false)
+    , m_delayFilled(false)
+    , m_directionFilled(false)
+    , m_durationFilled(false)
+    , m_fillModeFilled(false)
+    , m_iterationCountFilled(false)
+    , m_playStateFilled(false)
+    , m_propertyFilled(false)
+    , m_timingFunctionFilled(false)
+    , m_compositeOperationFilled(false)
 {
 }
 
@@ -61,6 +73,7 @@ Animation::Animation(const Animation& o)
     , m_direction(o.m_direction)
     , m_fillMode(o.m_fillMode)
     , m_playState(o.m_playState)
+    , m_compositeOperation(o.m_compositeOperation)
     , m_delaySet(o.m_delaySet)
     , m_directionSet(o.m_directionSet)
     , m_durationSet(o.m_durationSet)
@@ -70,35 +83,18 @@ Animation::Animation(const Animation& o)
     , m_playStateSet(o.m_playStateSet)
     , m_propertySet(o.m_propertySet)
     , m_timingFunctionSet(o.m_timingFunctionSet)
+    , m_compositeOperationSet(o.m_compositeOperationSet)
     , m_isNone(o.m_isNone)
+    , m_delayFilled(o.m_delayFilled)
+    , m_directionFilled(o.m_directionFilled)
+    , m_durationFilled(o.m_durationFilled)
+    , m_fillModeFilled(o.m_fillModeFilled)
+    , m_iterationCountFilled(o.m_iterationCountFilled)
+    , m_playStateFilled(o.m_playStateFilled)
+    , m_propertyFilled(o.m_propertyFilled)
+    , m_timingFunctionFilled(o.m_timingFunctionFilled)
+    , m_compositeOperationFilled(o.m_compositeOperationFilled)
 {
-}
-
-Animation& Animation::operator=(const Animation& o)
-{
-    m_name = o.m_name;
-    m_iterationCount = o.m_iterationCount;
-    m_delay = o.m_delay;
-    m_duration = o.m_duration;
-    m_timingFunction = o.m_timingFunction;
-    m_nameStyleScopeOrdinal = o.m_nameStyleScopeOrdinal;
-    m_property = o.m_property;
-    m_direction = o.m_direction;
-    m_fillMode = o.m_fillMode;
-    m_playState = o.m_playState;
-
-    m_delaySet = o.m_delaySet;
-    m_directionSet = o.m_directionSet;
-    m_durationSet = o.m_durationSet;
-    m_fillModeSet = o.m_fillModeSet;
-    m_iterationCountSet = o.m_iterationCountSet;
-    m_nameSet = o.m_nameSet;
-    m_playStateSet = o.m_playStateSet;
-    m_propertySet = o.m_propertySet;
-    m_timingFunctionSet = o.m_timingFunctionSet;
-    m_isNone = o.m_isNone;
-
-    return *this;
 }
 
 Animation::~Animation() = default;
@@ -107,6 +103,7 @@ bool Animation::animationsMatch(const Animation& other, bool matchProperties) co
 {
     bool result = m_name.string == other.m_name.string
         && m_playState == other.m_playState
+        && m_compositeOperation == other.m_compositeOperation
         && m_playStateSet == other.m_playStateSet
         && m_iterationCount == other.m_iterationCount
         && m_delay == other.m_delay
@@ -122,6 +119,7 @@ bool Animation::animationsMatch(const Animation& other, bool matchProperties) co
         && m_iterationCountSet == other.m_iterationCountSet
         && m_nameSet == other.m_nameSet
         && m_timingFunctionSet == other.m_timingFunctionSet
+        && m_compositeOperationSet == other.m_compositeOperationSet
         && m_isNone == other.m_isNone;
 
     if (!result)
@@ -132,7 +130,7 @@ bool Animation::animationsMatch(const Animation& other, bool matchProperties) co
 
 auto Animation::initialName() -> const Name&
 {
-    static NeverDestroyed<Name> initialValue { Name { MAKE_STATIC_STRING_IMPL("none"), true } };
+    static NeverDestroyed<Name> initialValue { Name { noneAtom(), true } };
     return initialValue;
 }
 

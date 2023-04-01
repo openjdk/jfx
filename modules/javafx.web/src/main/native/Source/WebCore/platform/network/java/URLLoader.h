@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ public:
                                  long totalBytesToBeSent) = 0;
         virtual bool willSendRequest(const ResourceResponse& response) = 0;
         virtual void didReceiveResponse(const ResourceResponse& response) = 0;
-        virtual void didReceiveData(const uint8_t* data, int length) = 0;
+        virtual void didReceiveData(const SharedBuffer* data, int length) = 0;
         virtual void didFinishLoading() = 0;
         virtual void didFail(const ResourceError& error) = 0;
         virtual ~Target();
@@ -79,7 +79,7 @@ private:
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
         bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
-        void didReceiveData(const uint8_t* data, int length) final;
+        void didReceiveData(const SharedBuffer* data, int length) final;
         void didFinishLoading() final;
         void didFail(const ResourceError& error) final;
     private:
@@ -96,7 +96,7 @@ private:
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
         bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
-        void didReceiveData(const uint8_t* data, int length) final;
+        void didReceiveData(const SharedBuffer* data, int length) final;
         void didFinishLoading() final;
         void didFail(const ResourceError& error) final;
     private:

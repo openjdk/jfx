@@ -27,6 +27,7 @@
 #include "RenderSVGResource.h"
 #include "RenderSVGText.h"
 #include "SVGAltGlyphElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGTRefElement.h"
 #include "SVGTSpanElement.h"
@@ -105,9 +106,8 @@ void SVGTextPositioningElement::svgAttributeChanged(const QualifiedName& attrNam
         if (auto renderer = this->renderer()) {
             if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*renderer))
                 textAncestor->setNeedsPositioningValuesUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         }
-
+        updateSVGRendererForElementChange();
         return;
     }
 

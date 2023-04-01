@@ -48,6 +48,12 @@ OBJC_CLASS UIScreen;
 typedef struct CGColorSpace *CGColorSpaceRef;
 #endif
 
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
+#endif
+
 namespace WebCore {
 
 class DestinationColorSpace;
@@ -57,11 +63,7 @@ class Widget;
 
 using PlatformDisplayID = uint32_t;
 
-#if PLATFORM(MAC)
-
-using IORegistryGPUID = int64_t; // Global IOKit I/O registryID that can match a GPU across process boundaries.
-
-#endif
+using PlatformGPUID = uint64_t; // On MAC, MACCATALYST, global IOKit registryID that can identify a GPU across process boundaries.
 
 int screenDepth(Widget*);
 int screenDepthPerComponent(Widget*);
@@ -130,11 +132,11 @@ WEBCORE_EXPORT void setShouldOverrideScreenSupportsHighDynamicRange(bool shouldO
 uint32_t primaryOpenGLDisplayMask();
 uint32_t displayMaskForDisplay(PlatformDisplayID);
 
-IORegistryGPUID primaryGPUID();
-IORegistryGPUID gpuIDForDisplay(PlatformDisplayID);
-IORegistryGPUID gpuIDForDisplayMask(uint32_t);
+PlatformGPUID primaryGPUID();
+PlatformGPUID gpuIDForDisplay(PlatformDisplayID);
+PlatformGPUID gpuIDForDisplayMask(uint32_t);
 
-WEBCORE_EXPORT FloatRect screenRectAvoidingMenuBar(NSScreen *);
+WEBCORE_EXPORT FloatRect safeScreenFrame(NSScreen *);
 
 #endif // !PLATFORM(MAC)
 

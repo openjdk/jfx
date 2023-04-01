@@ -1024,7 +1024,7 @@ g_value_get_double (const GValue *value)
  * @value: a valid #GValue of type %G_TYPE_STRING
  * @v_string: (nullable): caller-owned string to be duplicated for the #GValue
  *
- * Set the contents of a %G_TYPE_STRING #GValue to @v_string.
+ * Set the contents of a %G_TYPE_STRING #GValue to a copy of @v_string.
  */
 void
 g_value_set_string (GValue  *value,

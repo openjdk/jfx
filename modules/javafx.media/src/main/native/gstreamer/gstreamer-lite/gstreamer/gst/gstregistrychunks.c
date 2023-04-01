@@ -42,6 +42,7 @@
 #include <gst/gstinfo.h>
 #include <gst/gstenumtypes.h>
 #include <gst/gstpadtemplate.h>
+#include "glib-compat-private.h"
 
 #include <gst/gstregistrychunks.h>
 
@@ -97,7 +98,7 @@ _strnlen (const gchar * str, gint maxlen)
   gint _len = _strnlen (inptr, (endptr-inptr)); \
   if (_len == -1) \
     goto error_label; \
-  outptr = g_memdup ((gconstpointer)inptr, _len + 1); \
+  outptr = g_memdup2 ((gconstpointer)inptr, _len + 1); \
   inptr += _len + 1; \
 }G_STMT_END
 

@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "IntSize.h"
 #include "MediaQueryExpression.h"
 #include <wtf/WeakPtr.h>
 
@@ -55,6 +56,10 @@ struct MediaQueryDynamicResults {
     bool isEmpty() const { return viewport.isEmpty() && appearance.isEmpty() && accessibilitySettings.isEmpty(); }
 };
 
+using MediaQueryViewportState = std::tuple<IntSize, float, bool>;
+
+MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
+
 // Some of the constructors are used for cases where the device characteristics are not known.
 // These  can be used to prune the loading of stylesheets to only those which are not already known to not match.
 
@@ -72,7 +77,7 @@ public:
     WEBCORE_EXPORT MediaQueryEvaluator(const String& acceptedMediaType, const Document&, const RenderStyle*);
 
     bool mediaTypeMatch(const String& mediaTypeToMatch) const;
-    bool mediaTypeMatchSpecific(const char* mediaTypeToMatch) const;
+    bool mediaTypeMatchSpecific(ASCIILiteral mediaTypeToMatch) const;
 
     // Evaluates media query subexpression, ie "and (media-feature: value)" part.
     bool evaluate(const MediaQueryExpression&) const;

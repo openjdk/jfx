@@ -45,7 +45,7 @@ public:
 private:
     const AtomString& formControlType() const final;
     bool isFormDataAppendable() const final;
-    bool appendFormData(DOMFormData&, bool) const final;
+    bool appendFormData(DOMFormData&) const final;
     RenderPtr<RenderElement> createInputRenderer(RenderStyle&&) final;
     void handleDOMActivateEvent(Event&) final;
     void attributeChanged(const QualifiedName&) final;
@@ -61,3 +61,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(ImageInputType, Type::Image)

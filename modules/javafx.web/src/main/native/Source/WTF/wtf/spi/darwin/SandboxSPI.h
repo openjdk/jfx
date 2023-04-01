@@ -62,6 +62,7 @@ extern const enum sandbox_filter_type SANDBOX_CHECK_NO_REPORT;
 
 extern const uint32_t SANDBOX_EXTENSION_NO_REPORT;
 extern const uint32_t SANDBOX_EXTENSION_CANONICAL;
+extern const uint32_t SANDBOX_EXTENSION_USER_INTENT;
 
 char *sandbox_extension_issue_file(const char *extension_class, const char *path, uint32_t flags);
 char *sandbox_extension_issue_generic(const char *extension_class, uint32_t flags);
@@ -84,6 +85,8 @@ int sandbox_apply(sandbox_profile_t);
 
 char *sandbox_extension_issue_iokit_registry_entry_class_to_process(const char *extension_class, const char *registry_entry_class, uint32_t flags, audit_token_t);
 char *sandbox_extension_issue_iokit_registry_entry_class(const char *extension_class, const char *registry_entry_class, uint32_t flags);
+
+bool sandbox_enable_state_flag(const char *varname, audit_token_t);
 
 WTF_EXTERN_C_END
 

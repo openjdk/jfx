@@ -29,15 +29,15 @@
 
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "TextCodec.h"
-#include "TextEncodingRegistry.h"
+#include <pal/text/TextCodec.h>
+#include <pal/text/TextEncodingRegistry.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
 HTMLMetaCharsetParser::HTMLMetaCharsetParser()
-    : m_codec(newTextCodec(Latin1Encoding()))
+    : m_codec(newTextCodec(PAL::Latin1Encoding()))
 {
 }
 
@@ -45,7 +45,7 @@ static StringView extractCharset(const String& value)
 {
     unsigned length = value.length();
     for (size_t pos = 0; pos < length; ) {
-        pos = value.findIgnoringASCIICase("charset", pos);
+        pos = value.findIgnoringASCIICase("charset"_s, pos);
         if (pos == notFound)
             break;
 
@@ -85,29 +85,26 @@ static StringView extractCharset(const String& value)
 
 bool HTMLMetaCharsetParser::processMeta(HTMLToken& token)
 {
-    AttributeList attributes;
-    for (auto& attribute : token.attributes()) {
-        String attributeName = StringImpl::create8BitIfPossible(attribute.name);
-        String attributeValue = StringImpl::create8BitIfPossible(attribute.value);
-        attributes.append(std::make_pair(attributeName, attributeValue));
-    }
+    auto attributes = token.attributes().map([](auto& attribute) {
+        return std::pair { AtomString(attribute.name), AtomString(attribute.value) };
+    });
 
     m_encoding = encodingFromMetaAttributes(attributes);
     return m_encoding.isValid();
 }
 
-TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(const AttributeList& attributes)
+PAL::TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(const AttributeList& attributes)
 {
     bool gotPragma = false;
     enum { None, Charset, Pragma } mode = None;
     StringView charset;
 
     for (auto& attribute : attributes) {
-        const String& attributeName = attribute.first;
-        const String& attributeValue = attribute.second;
+        auto& attributeName = attribute.first;
+        auto& attributeValue = attribute.second;
 
         if (attributeName == http_equivAttr) {
-            if (equalLettersIgnoringASCIICase(attributeValue, "content-type"))
+            if (equalLettersIgnoringASCIICase(attributeValue, "content-type"_s))
                 gotPragma = true;
         } else if (attributeName == charsetAttr) {
             charset = attributeValue;
@@ -122,9 +119,9 @@ TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(const AttributeLi
     }
 
     if (mode == Charset || (mode == Pragma && gotPragma))
-        return TextEncoding(stripLeadingAndTrailingHTMLSpaces(charset.toStringWithoutCopying()));
+        return PAL::TextEncoding(charset.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>));
 
-    return TextEncoding();
+    return PAL::TextEncoding();
 }
 
 bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)
@@ -158,8 +155,8 @@ bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)
     m_input.append(m_codec->decode(data, length, false, false, ignoredSawErrorFlag));
 
     while (auto token = m_tokenizer.nextToken(m_input)) {
-        bool isEnd = token->type() == HTMLToken::EndTag;
-        if (isEnd || token->type() == HTMLToken::StartTag) {
+        bool isEnd = token->type() == HTMLToken::Type::EndTag;
+        if (isEnd || token->type() == HTMLToken::Type::StartTag) {
             AtomString tagName(token->name());
             if (!isEnd) {
                 m_tokenizer.updateStateFor(tagName);

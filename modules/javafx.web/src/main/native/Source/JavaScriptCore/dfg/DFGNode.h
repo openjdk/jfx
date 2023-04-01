@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,8 +124,8 @@ struct NewArrayBufferData {
         uint64_t asQuadWord;
     };
 };
-static_assert(sizeof(IndexingType) <= sizeof(unsigned), "");
-static_assert(sizeof(NewArrayBufferData) == sizeof(uint64_t), "");
+static_assert(sizeof(IndexingType) <= sizeof(unsigned));
+static_assert(sizeof(NewArrayBufferData) == sizeof(uint64_t));
 
 struct DataViewData {
     union {
@@ -138,7 +138,7 @@ struct DataViewData {
         uint64_t asQuadWord;
     };
 };
-static_assert(sizeof(DataViewData) == sizeof(uint64_t), "");
+static_assert(sizeof(DataViewData) == sizeof(uint64_t));
 
 struct BranchTarget {
     BranchTarget()
@@ -823,6 +823,7 @@ public:
 
     void convertToRegExpExecNonGlobalOrStickyWithoutChecks(FrozenValue* regExp);
     void convertToRegExpMatchFastGlobalWithoutChecks(FrozenValue* regExp);
+    void convertToRegExpTestInline(FrozenValue* globalObject, FrozenValue* regExp);
 
     void convertToSetRegExpObjectLastIndex()
     {
@@ -910,11 +911,11 @@ public:
     }
 
     template<typename T>
-    T dynamicCastConstant(VM& vm)
+    T dynamicCastConstant()
     {
         if (!isCellConstant())
             return nullptr;
-        return jsDynamicCast<T>(vm, asCell());
+        return jsDynamicCast<T>(asCell());
     }
 
     bool hasLazyJSValue()
@@ -1800,6 +1801,7 @@ public:
         case RegExpExec:
         case RegExpExecNonGlobalOrSticky:
         case RegExpTest:
+        case RegExpTestInline:
         case RegExpMatchFast:
         case RegExpMatchFastGlobal:
         case GetGlobalVar:
@@ -1896,6 +1898,18 @@ public:
         case DirectTailCallInlinedCaller:
         case RegExpExecNonGlobalOrSticky:
         case RegExpMatchFastGlobal:
+        case RegExpTestInline:
+            return true;
+
+        default:
+            return false;
+        }
+    }
+
+    bool hasCellOperand2()
+    {
+        switch (op()) {
+        case RegExpTestInline:
             return true;
         default:
             return false;
@@ -1906,6 +1920,12 @@ public:
     {
         ASSERT(hasCellOperand());
         return m_opInfo.as<FrozenValue*>();
+    }
+
+    FrozenValue* cellOperand2()
+    {
+        ASSERT(hasCellOperand2());
+        return m_opInfo2.as<FrozenValue*>();
     }
 
     template<typename T>
@@ -1945,9 +1965,6 @@ public:
     bool hasStorageChild() const
     {
         switch (op()) {
-        case StringCharAt:
-        case StringCharCodeAt:
-        case StringCodePointAt:
         case EnumeratorGetByVal:
         case GetByVal:
         case PutByValDirect:
@@ -1965,6 +1982,7 @@ public:
         case ArrayPush:
         case ArrayPop:
         case GetArrayLength:
+        case GetTypedArrayLengthAsInt52:
         case HasIndexedProperty:
         case EnumeratorNextUpdateIndexAndMode:
         case ArrayIndexOf:
@@ -1979,9 +1997,6 @@ public:
     {
         ASSERT(hasStorageChild());
         switch (op()) {
-        case StringCharAt:
-        case StringCharCodeAt:
-        case StringCodePointAt:
         case EnumeratorGetByVal:
         case GetByVal:
             return 2;
@@ -2004,6 +2019,7 @@ public:
 
         case ArrayPop:
         case GetArrayLength:
+        case GetTypedArrayLengthAsInt52:
             return 2;
 
         case HasIndexedProperty:
@@ -2276,6 +2292,7 @@ public:
         switch (op()) {
         case GetIndexedPropertyStorage:
         case GetArrayLength:
+        case GetTypedArrayLengthAsInt52:
         case GetVectorLength:
         case InByVal:
         case PutByValDirect:
@@ -2888,6 +2905,11 @@ public:
         return isNeitherDoubleNorHeapBigIntNorStringSpeculation(prediction());
     }
 
+    bool shouldSpeculateNeitherDoubleNorHeapBigInt()
+    {
+        return isNeitherDoubleNorHeapBigIntSpeculation(prediction());
+    }
+
     bool shouldSpeculateUntypedForArithmetic()
     {
         return isUntypedSpeculationForArithmetic(prediction());
@@ -3267,10 +3289,10 @@ public:
         }
     }
 
-    OptionSet<JSPropertyNameEnumerator::Mode> enumeratorMetadata()
+    OptionSet<JSPropertyNameEnumerator::Flag> enumeratorMetadata()
     {
         ASSERT(hasEnumeratorMetadata());
-        return OptionSet<JSPropertyNameEnumerator::Mode>::fromRaw(m_opInfo2.as<unsigned>());
+        return OptionSet<JSPropertyNameEnumerator::Flag>::fromRaw(m_opInfo2.as<unsigned>());
     }
 
     void dumpChildren(PrintStream& out)

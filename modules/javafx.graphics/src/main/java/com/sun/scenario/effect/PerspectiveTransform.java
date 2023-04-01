@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -223,8 +223,8 @@ public class PerspectiveTransform extends CoreEffect<RenderState> {
         Effect input = getDefaultedInput(0, defaultInput);
         p = input.transform(p, defaultInput);
         BaseBounds b = input.getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput);
-        float sx = (float) ((p.x - b.getMinX()) / b.getWidth());
-        float sy = (float) ((p.y - b.getMinY()) / b.getHeight());
+        float sx = (p.x - b.getMinX()) / b.getWidth();
+        float sy = (p.y - b.getMinY()) / b.getHeight();
         float dx = tx[0][0] * sx + tx[0][1] * sy + tx[0][2];
         float dy = tx[1][0] * sx + tx[1][1] * sy + tx[1][2];
         float dw = tx[2][0] * sx + tx[2][1] * sy + tx[2][2];
@@ -236,8 +236,8 @@ public class PerspectiveTransform extends CoreEffect<RenderState> {
     public Point2D untransform(Point2D p, Effect defaultInput) {
         setupTransforms(BaseTransform.IDENTITY_TRANSFORM);
         Effect input = getDefaultedInput(0, defaultInput);
-        float dx = (float) p.x;
-        float dy = (float) p.y;
+        float dx = p.x;
+        float dy = p.y;
         float itx[][] = state.getITX();
         float sx = itx[0][0] * dx + itx[0][1] * dy + itx[0][2];
         float sy = itx[1][0] * dx + itx[1][1] * dy + itx[1][2];
@@ -282,7 +282,7 @@ public class PerspectiveTransform extends CoreEffect<RenderState> {
         DirtyRegionContainer drc = regionPool.checkOut();
 
         //RT-28197 - Dirty regions could be computed in more efficient way
-        drc.deriveWithNewRegion((RectBounds) getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput));
+        drc.deriveWithNewRegion(getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput));
 
         return drc;
     }

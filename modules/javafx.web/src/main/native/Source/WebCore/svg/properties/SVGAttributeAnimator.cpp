@@ -28,11 +28,11 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyParser.h"
-#include "SVGElement.h"
+#include "SVGElementInlines.h"
 
 namespace WebCore {
 
-bool SVGAttributeAnimator::isAnimatedStylePropertyAniamtor(const SVGElement& targetElement) const
+bool SVGAttributeAnimator::isAnimatedStylePropertyAnimator(const SVGElement& targetElement) const
 {
     return targetElement.isAnimatedStyleAttribute(m_attributeName);
 }
@@ -40,7 +40,7 @@ bool SVGAttributeAnimator::isAnimatedStylePropertyAniamtor(const SVGElement& tar
 void SVGAttributeAnimator::invalidateStyle(SVGElement& targetElement)
 {
     SVGElement::InstanceInvalidationGuard guard(targetElement);
-    targetElement.invalidateSVGPresentationalHintStyle();
+    targetElement.setPresentationalHintStyleIsDirty();
 }
 
 void SVGAttributeAnimator::applyAnimatedStylePropertyChange(SVGElement& element, CSSPropertyID id, const String& value)

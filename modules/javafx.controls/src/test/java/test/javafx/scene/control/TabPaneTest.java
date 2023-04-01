@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import javafx.scene.control.SelectionModel;
-import javafx.scene.control.Skin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -62,7 +61,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -102,7 +100,10 @@ public class TabPaneTest {
     private StackPane root;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         tabPane = new TabPane();
         tab1 = new Tab("one");
         tab2 = new Tab("two");
@@ -195,7 +196,7 @@ public class TabPaneTest {
     }
 
     @Test public void checkSidePropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Side>(Side.BOTTOM);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Side.BOTTOM);
         tabPane.sideProperty().bind(objPr);
         assertSame("side cannot be bound", tabPane.sideProperty().getValue(), Side.BOTTOM);
         objPr.setValue(Side.RIGHT);
@@ -203,7 +204,7 @@ public class TabPaneTest {
     }
 
     @Test public void checkTabClosingPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<TabPane.TabClosingPolicy>(TabPane.TabClosingPolicy.UNAVAILABLE);
+        ObjectProperty objPr = new SimpleObjectProperty<>(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.tabClosingPolicyProperty().bind(objPr);
         assertSame("side cannot be bound", tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.UNAVAILABLE);
         objPr.setValue(TabPane.TabClosingPolicy.ALL_TABS);
@@ -1172,7 +1173,6 @@ public class TabPaneTest {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;

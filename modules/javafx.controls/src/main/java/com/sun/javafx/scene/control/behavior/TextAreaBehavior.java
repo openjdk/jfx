@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,16 +26,12 @@
 package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.scene.control.Properties;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.TextArea;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.input.ContextMenuEvent;
@@ -52,7 +48,6 @@ import java.util.function.Predicate;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
-import com.sun.javafx.stage.WindowHelper;
 import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import static javafx.scene.control.skin.TextInputControlSkin.Direction;
 import static javafx.scene.input.KeyCode.*;

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -41,7 +41,7 @@ public:
 
     static ObjectConstructor* create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ObjectPrototype* objectPrototype)
     {
-        ObjectConstructor* constructor = new (NotNull, allocateCell<ObjectConstructor>(vm.heap)) ObjectConstructor(vm, structure);
+        ObjectConstructor* constructor = new (NotNull, allocateCell<ObjectConstructor>(vm)) ObjectConstructor(vm, structure);
         constructor->finishCreation(vm, globalObject, objectPrototype);
         return constructor;
     }
@@ -67,14 +67,13 @@ inline JSFinalObject* constructEmptyObject(VM& vm, Structure* structure)
 inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject, JSObject* prototype, unsigned inlineCapacity)
 {
     VM& vm = getVM(globalObject);
-    StructureCache& structureCache = vm.structureCache;
-    Structure* structure = structureCache.emptyObjectStructureForPrototype(globalObject, prototype, inlineCapacity);
+    Structure* structure = globalObject->structureCache().emptyObjectStructureForPrototype(globalObject, prototype, inlineCapacity);
     return constructEmptyObject(vm, structure);
 }
 
 inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject, JSObject* prototype)
 {
-    return constructEmptyObject(globalObject, prototype, JSFinalObject::defaultInlineCapacity());
+    return constructEmptyObject(globalObject, prototype, JSFinalObject::defaultInlineCapacity);
 }
 
 inline JSFinalObject* constructEmptyObject(JSGlobalObject* globalObject)
@@ -103,7 +102,7 @@ static constexpr PropertyOffset accessorPropertyDescriptorConfigurablePropertyOf
 
 inline Structure* createDataPropertyDescriptorObjectStructure(VM& vm, JSGlobalObject& globalObject)
 {
-    Structure* structure = vm.structureCache.emptyObjectStructureForPrototype(&globalObject, globalObject.objectPrototype(), JSFinalObject::defaultInlineCapacity());
+    Structure* structure = globalObject.structureCache().emptyObjectStructureForPrototype(&globalObject, globalObject.objectPrototype(), JSFinalObject::defaultInlineCapacity);
     PropertyOffset offset;
     structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->value, 0, offset);
     RELEASE_ASSERT(offset == dataPropertyDescriptorValuePropertyOffset);
@@ -118,7 +117,7 @@ inline Structure* createDataPropertyDescriptorObjectStructure(VM& vm, JSGlobalOb
 
 inline Structure* createAccessorPropertyDescriptorObjectStructure(VM& vm, JSGlobalObject& globalObject)
 {
-    Structure* structure = vm.structureCache.emptyObjectStructureForPrototype(&globalObject, globalObject.objectPrototype(), JSFinalObject::defaultInlineCapacity());
+    Structure* structure = globalObject.structureCache().emptyObjectStructureForPrototype(&globalObject, globalObject.objectPrototype(), JSFinalObject::defaultInlineCapacity);
     PropertyOffset offset;
     structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->get, 0, offset);
     RELEASE_ASSERT(offset == accessorPropertyDescriptorGetPropertyOffset);
@@ -139,19 +138,19 @@ inline JSObject* constructObjectFromPropertyDescriptor(JSGlobalObject* globalObj
     if (descriptor.enumerablePresent() && descriptor.configurablePresent()) {
         if (descriptor.value() && descriptor.writablePresent()) {
             JSObject* result = constructEmptyObject(vm, globalObject->dataPropertyDescriptorObjectStructure());
-            result->putDirect(vm, dataPropertyDescriptorValuePropertyOffset, descriptor.value());
-            result->putDirect(vm, dataPropertyDescriptorWritablePropertyOffset, jsBoolean(descriptor.writable()));
-            result->putDirect(vm, dataPropertyDescriptorEnumerablePropertyOffset, jsBoolean(descriptor.enumerable()));
-            result->putDirect(vm, dataPropertyDescriptorConfigurablePropertyOffset, jsBoolean(descriptor.configurable()));
+            result->putDirectOffset(vm, dataPropertyDescriptorValuePropertyOffset, descriptor.value());
+            result->putDirectOffset(vm, dataPropertyDescriptorWritablePropertyOffset, jsBoolean(descriptor.writable()));
+            result->putDirectOffset(vm, dataPropertyDescriptorEnumerablePropertyOffset, jsBoolean(descriptor.enumerable()));
+            result->putDirectOffset(vm, dataPropertyDescriptorConfigurablePropertyOffset, jsBoolean(descriptor.configurable()));
             return result;
         }
 
         if (descriptor.getterPresent() && descriptor.setterPresent()) {
             JSObject* result = constructEmptyObject(vm, globalObject->accessorPropertyDescriptorObjectStructure());
-            result->putDirect(vm, accessorPropertyDescriptorGetPropertyOffset, descriptor.getter());
-            result->putDirect(vm, accessorPropertyDescriptorSetPropertyOffset, descriptor.setter());
-            result->putDirect(vm, accessorPropertyDescriptorEnumerablePropertyOffset, jsBoolean(descriptor.enumerable()));
-            result->putDirect(vm, accessorPropertyDescriptorConfigurablePropertyOffset, jsBoolean(descriptor.configurable()));
+            result->putDirectOffset(vm, accessorPropertyDescriptorGetPropertyOffset, descriptor.getter());
+            result->putDirectOffset(vm, accessorPropertyDescriptorSetPropertyOffset, descriptor.setter());
+            result->putDirectOffset(vm, accessorPropertyDescriptorEnumerablePropertyOffset, jsBoolean(descriptor.enumerable()));
+            result->putDirectOffset(vm, accessorPropertyDescriptorConfigurablePropertyOffset, jsBoolean(descriptor.configurable()));
             return result;
         }
     }

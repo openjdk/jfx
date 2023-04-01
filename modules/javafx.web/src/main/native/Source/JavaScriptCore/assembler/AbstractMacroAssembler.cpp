@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,17 +30,31 @@
 
 #include <wtf/PrintStream.h>
 
+namespace JSC {
+
+void AbstractMacroAssemblerBase::initializeRandom()
+{
+    // No strong cryptographic characteristics are necessary.
+    static std::once_flag onceKey;
+    static uint32_t globalCounter;
+    std::call_once(onceKey, [&] {
+        globalCounter = cryptographicallyRandomNumber();
+    });
+    ASSERT(!m_randomSource);
+    m_randomSource.emplace(globalCounter++);
+}
+
+}
+
 namespace WTF {
 
-using namespace JSC;
-
-void printInternal(PrintStream& out, AbstractMacroAssemblerBase::StatusCondition condition)
+void printInternal(PrintStream& out, JSC::AbstractMacroAssemblerBase::StatusCondition condition)
 {
     switch (condition) {
-    case AbstractMacroAssemblerBase::Success:
+    case JSC::AbstractMacroAssemblerBase::Success:
         out.print("Success");
         return;
-    case AbstractMacroAssemblerBase::Failure:
+    case JSC::AbstractMacroAssemblerBase::Failure:
         out.print("Failure");
         return;
     }

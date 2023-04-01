@@ -31,6 +31,7 @@
 #include "Logging.h"
 #include "MediaList.h"
 #include "Node.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGStyleElement.h"
 #include "SecurityOrigin.h"
 #include "StyleResolver.h"
@@ -91,6 +92,9 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, CSSImportRule* 
     : m_contents(WTFMove(contents))
     , m_ownerRule(ownerRule)
 {
+    if (auto* parent = parentStyleSheet())
+        m_styleScope = parent->styleScope();
+
     m_contents->registerClient(this);
 }
 
@@ -98,6 +102,7 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Node& ownerNode
     : m_contents(WTFMove(contents))
     , m_isInlineStylesheet(isInlineStylesheet)
     , m_isOriginClean(isOriginClean)
+    , m_styleScope(Style::Scope::forNode(ownerNode))
     , m_ownerNode(&ownerNode)
     , m_startPosition(startPosition)
 {
@@ -150,7 +155,7 @@ void CSSStyleSheet::didMutateRuleFromCSSStyleDeclaration()
     didMutate();
 }
 
-void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContentsWereClonedForMutation contentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule)
+void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContentsWereClonedForMutation contentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule, const String& modifiedKeyframesRuleName)
 {
     ASSERT(m_contents->isMutable());
     ASSERT(m_contents->hasOneClient());
@@ -167,6 +172,11 @@ void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContent
         }
         scope->didChangeActiveStyleSheetCandidates();
         return;
+    }
+
+    if (mutationType == KeyframesRuleMutation) {
+        if (auto* ownerDocument = this->ownerDocument())
+            ownerDocument->keyframesRuleDidChange(modifiedKeyframesRuleName);
     }
 
     scope->didChangeStyleSheetContents();
@@ -211,7 +221,6 @@ void CSSStyleSheet::setMediaQueries(Ref<MediaQuerySet>&& mediaQueries)
     m_mediaQueries = WTFMove(mediaQueries);
     if (m_mediaCSSOMWrapper && m_mediaQueries)
         m_mediaCSSOMWrapper->reattach(m_mediaQueries.get());
-    reportMediaQueryWarningIfNeeded(ownerDocument(), m_mediaQueries.get());
 }
 
 unsigned CSSStyleSheet::length() const
@@ -262,7 +271,7 @@ ExceptionOr<unsigned> CSSStyleSheet::insertRule(const String& ruleString, unsign
     if (!rule)
         return Exception { SyntaxError };
 
-    RuleMutationScope mutationScope(this, RuleInsertion, is<StyleRuleKeyframes>(*rule) ? downcast<StyleRuleKeyframes>(rule.get()) : nullptr);
+    RuleMutationScope mutationScope(this, RuleInsertion, dynamicDowncast<StyleRuleKeyframes>(*rule));
 
     bool success = m_contents.get().wrapperInsertRule(rule.releaseNonNull(), index);
     if (!success)
@@ -373,10 +382,7 @@ Document* CSSStyleSheet::ownerDocument() const
 
 Style::Scope* CSSStyleSheet::styleScope()
 {
-    auto* ownerNode = rootStyleSheet().ownerNode();
-    if (!ownerNode)
-        return nullptr;
-    return &Style::Scope::forNode(*ownerNode);
+    return m_styleScope.get();
 }
 
 void CSSStyleSheet::clearChildRuleCSSOMWrappers()
@@ -400,9 +406,10 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSStyleSheet* sheet, RuleMu
 
 CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
     : m_styleSheet(rule ? rule->parentStyleSheet() : nullptr)
-    , m_mutationType(OtherMutation)
+    , m_mutationType(is<CSSKeyframesRule>(rule) ? KeyframesRuleMutation : OtherMutation)
     , m_contentsWereClonedForMutation(ContentsWereNotClonedForMutation)
     , m_insertedKeyframesRule(nullptr)
+    , m_modifiedKeyframesRuleName(is<CSSKeyframesRule>(rule) ? downcast<CSSKeyframesRule>(*rule).name() : emptyAtom())
 {
     if (m_styleSheet)
         m_contentsWereClonedForMutation = m_styleSheet->willMutateRules();
@@ -411,7 +418,7 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
 CSSStyleSheet::RuleMutationScope::~RuleMutationScope()
 {
     if (m_styleSheet)
-        m_styleSheet->didMutateRules(m_mutationType, m_contentsWereClonedForMutation, m_insertedKeyframesRule);
+        m_styleSheet->didMutateRules(m_mutationType, m_contentsWereClonedForMutation, m_insertedKeyframesRule.get(), m_modifiedKeyframesRuleName);
 }
 
 }

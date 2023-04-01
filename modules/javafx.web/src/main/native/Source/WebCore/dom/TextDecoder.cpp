@@ -26,8 +26,8 @@
 #include "TextDecoder.h"
 
 #include "HTMLParserIdioms.h"
-#include "TextCodec.h"
-#include "TextEncodingRegistry.h"
+#include <pal/text/TextCodec.h>
+#include <pal/text/TextEncodingRegistry.h>
 
 namespace WebCore {
 
@@ -81,7 +81,7 @@ ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType>
 
 String TextDecoder::encoding() const
 {
-    return String(m_textEncoding.name()).convertToASCIILowercase();
+    return makeString(asASCIILowercase(StringView::fromLatin1(m_textEncoding.name())));
 }
 
 }

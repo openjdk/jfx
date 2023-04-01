@@ -36,7 +36,7 @@ public:
 
     Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
-    const char* renderName() const override;
+    ASCIILiteral renderName() const override;
 
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
 
@@ -45,7 +45,6 @@ public:
     void layoutVerticalBox(bool relayoutChildren);
 
     bool isStretchingChildren() const { return m_stretchingChildren; }
-    void setIsStretchingChildren(bool isStretching) { m_stretchingChildren = isStretching; }
 
     bool avoidsFloats() const override { return true; }
     bool canDropAnonymousBlockChild() const override { return false; }

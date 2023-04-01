@@ -43,7 +43,10 @@
 #include "ScriptExecutionContext.h"
 #include "SharedBuffer.h"
 #include "ThreadableBlobRegistry.h"
+#include "WebCoreOpaqueRoot.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/Lock.h>
+#include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/CString.h>
@@ -54,21 +57,55 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Blob);
 
 class BlobURLRegistry final : public URLRegistry {
 public:
-    void registerURL(ScriptExecutionContext&, const URL&, URLRegistrable&) final;
+    void registerURL(const ScriptExecutionContext&, const URL&, URLRegistrable&) final;
     void unregisterURL(const URL&) final;
+    void unregisterURLsForContext(const ScriptExecutionContext&) final;
 
     static URLRegistry& registry();
+
+    Lock m_urlsPerContextLock;
+    HashMap<ScriptExecutionContextIdentifier, HashSet<URL>> m_urlsPerContext WTF_GUARDED_BY_LOCK(m_urlsPerContextLock);
 };
 
-void BlobURLRegistry::registerURL(ScriptExecutionContext& context, const URL& publicURL, URLRegistrable& blob)
+void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const URL& publicURL, URLRegistrable& blob)
 {
     ASSERT(&blob.registry() == this);
+    {
+        Locker locker { m_urlsPerContextLock };
+        m_urlsPerContext.add(context.identifier(), HashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
+    }
     ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, static_cast<Blob&>(blob).url());
 }
 
 void BlobURLRegistry::unregisterURL(const URL& url)
 {
+    bool isURLRegistered = false;
+    {
+        Locker locker { m_urlsPerContextLock };
+        for (auto& [contextIdentifier, urls] : m_urlsPerContext) {
+            if (!urls.remove(url))
+                continue;
+            if (urls.isEmpty())
+                m_urlsPerContext.remove(contextIdentifier);
+            isURLRegistered = true;
+            break;
+        }
+    }
+    if (!isURLRegistered)
+        return;
+
     ThreadableBlobRegistry::unregisterBlobURL(url);
+}
+
+void BlobURLRegistry::unregisterURLsForContext(const ScriptExecutionContext& context)
+{
+    HashSet<URL> urlsForContext;
+    {
+        Locker locker { m_urlsPerContextLock };
+        urlsForContext = m_urlsPerContext.take(context.identifier());
+    }
+    for (auto& url : urlsForContext)
+        ThreadableBlobRegistry::unregisterBlobURL(url);
 }
 
 URLRegistry& BlobURLRegistry::registry()
@@ -154,13 +191,14 @@ Blob::Blob(ScriptExecutionContext* context, const URL& srcURL, long long start, 
 
 Blob::~Blob()
 {
+    ThreadableBlobRegistry::unregisterBlobURL(m_internalURL);
     while (!m_blobLoaders.isEmpty())
         (*m_blobLoaders.begin())->cancel();
 }
 
-Ref<Blob> Blob::slice(ScriptExecutionContext& context, long long start, long long end, const String& contentType) const
+Ref<Blob> Blob::slice(long long start, long long end, const String& contentType) const
 {
-    auto blob = adoptRef(*new Blob(&context, m_internalURL, start, end, contentType));
+    auto blob = adoptRef(*new Blob(scriptExecutionContext(), m_internalURL, start, end, contentType));
     blob->suspendIfNeeded();
     return blob;
 }
@@ -195,22 +233,22 @@ String Blob::normalizedContentType(const String& contentType)
     return contentType.convertToASCIILowercase();
 }
 
-void Blob::loadBlob(ScriptExecutionContext& context, FileReaderLoader::ReadType readType, CompletionHandler<void(BlobLoader&)>&& completionHandler)
+void Blob::loadBlob(FileReaderLoader::ReadType readType, CompletionHandler<void(BlobLoader&)>&& completionHandler)
 {
     auto blobLoader = makeUnique<BlobLoader>([this, pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
         completionHandler(blobLoader);
         m_blobLoaders.take(&blobLoader);
     });
 
-    blobLoader->start(*this, &context, readType);
+    blobLoader->start(*this, scriptExecutionContext(), readType);
 
     if (blobLoader->isLoading())
         m_blobLoaders.add(WTFMove(blobLoader));
 }
 
-void Blob::text(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
+void Blob::text(Ref<DeferredPromise>&& promise)
 {
-    loadBlob(context, FileReaderLoader::ReadAsText, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
+    loadBlob(FileReaderLoader::ReadAsText, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
         if (auto optionalErrorCode = blobLoader.errorCode()) {
             promise->reject(Exception { *optionalErrorCode });
             return;
@@ -219,9 +257,9 @@ void Blob::text(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
     });
 }
 
-void Blob::arrayBuffer(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
+void Blob::arrayBuffer(Ref<DeferredPromise>&& promise)
 {
-    loadBlob(context, FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
+    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
         if (auto optionalErrorCode = blobLoader.errorCode()) {
             promise->reject(Exception { *optionalErrorCode });
             return;
@@ -235,12 +273,12 @@ void Blob::arrayBuffer(ScriptExecutionContext& context, Ref<DeferredPromise>&& p
     });
 }
 
-ExceptionOr<Ref<ReadableStream>> Blob::stream(ScriptExecutionContext& scriptExecutionContext)
+ExceptionOr<Ref<ReadableStream>> Blob::stream()
 {
     class BlobStreamSource : public FileReaderLoaderClient, public ReadableStreamSource {
     public:
         BlobStreamSource(ScriptExecutionContext& scriptExecutionContext, Blob& blob)
-            : m_loader(makeUniqueRef<FileReaderLoader>(FileReaderLoader::ReadType::ReadAsArrayBuffer, this))
+            : m_loader(makeUniqueRef<FileReaderLoader>(FileReaderLoader::ReadType::ReadAsBinaryChunks, this))
         {
             m_loader->start(&scriptExecutionContext, blob);
         }
@@ -264,19 +302,11 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream(ScriptExecutionContext& scriptExec
 
         // FileReaderLoaderClient
         void didStartLoading() final { }
-        void didReceiveData() final
+        void didReceiveData() final { }
+        void didReceiveBinaryChunk(const SharedBuffer& buffer) final
         {
-            auto result = m_loader->arrayBufferResult();
-            if (!result)
-                return;
-
-            if (m_loader->isCompleted() && !m_bytesRead)
-                controller().enqueue(WTFMove(result));
-            else {
-                auto bytesLoaded = m_loader->bytesLoaded();
-                controller().enqueue(result->slice(m_bytesRead, bytesLoaded));
-                m_bytesRead = bytesLoaded;
-            }
+            if (!controller().enqueue(buffer.tryCreateArrayBuffer()))
+                doCancel();
         }
         void didFinishLoading() final
         {
@@ -293,15 +323,15 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream(ScriptExecutionContext& scriptExec
         }
 
         UniqueRef<FileReaderLoader> m_loader;
-        size_t m_bytesRead { 0 };
         bool m_isStarted { false };
         std::optional<Exception> m_exception;
     };
 
-    auto* globalObject = scriptExecutionContext.globalObject();
+    auto* context = scriptExecutionContext();
+    auto* globalObject = context ? context->globalObject() : nullptr;
     if (!globalObject)
         return Exception { InvalidStateError };
-    return ReadableStream::create(*globalObject, adoptRef(*new BlobStreamSource(scriptExecutionContext, *this)));
+    return ReadableStream::create(*globalObject, adoptRef(*new BlobStreamSource(*context, *this)));
 }
 
 #if ASSERT_ENABLED
@@ -346,6 +376,11 @@ const char* Blob::activeDOMObjectName() const
 BlobURLHandle Blob::handle() const
 {
     return BlobURLHandle { m_internalURL };
+}
+
+WebCoreOpaqueRoot root(Blob* blob)
+{
+    return WebCoreOpaqueRoot { blob };
 }
 
 } // namespace WebCore

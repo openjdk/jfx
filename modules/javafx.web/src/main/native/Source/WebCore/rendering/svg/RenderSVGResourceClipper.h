@@ -20,7 +20,6 @@
 #pragma once
 
 #include "RenderSVGResourceContainer.h"
-#include "SVGClipPathElement.h"
 #include "SVGUnitTypes.h"
 
 #include <wtf/HashMap.h>
@@ -29,6 +28,37 @@ namespace WebCore {
 
 class GraphicsContext;
 class ImageBuffer;
+class SVGClipPathElement;
+
+struct ClipperData {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+    struct Inputs {
+        bool operator==(const Inputs& other) const
+        {
+            return std::tie(objectBoundingBox, clippedContentBounds, scale, effectiveZoom) == std::tie(other.objectBoundingBox, other.clippedContentBounds, other.scale, other.effectiveZoom);
+        }
+
+        bool operator!=(const Inputs& other) const { return !(*this == other); }
+
+        FloatRect objectBoundingBox;
+        FloatRect clippedContentBounds;
+        FloatSize scale;
+        float effectiveZoom = 1;
+    };
+
+    bool invalidate(const Inputs& inputs)
+    {
+        if (this->inputs != inputs) {
+            imageBuffer = nullptr;
+            this->inputs = inputs;
+        }
+        return !imageBuffer;
+    }
+
+    RefPtr<ImageBuffer> imageBuffer;
+    Inputs inputs;
+};
 
 class RenderSVGResourceClipper final : public RenderSVGResourceContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceClipper);
@@ -36,7 +66,7 @@ public:
     RenderSVGResourceClipper(SVGClipPathElement&, RenderStyle&&);
     virtual ~RenderSVGResourceClipper();
 
-    SVGClipPathElement& clipPathElement() const { return downcast<SVGClipPathElement>(nodeForNonAnonymous()); }
+    inline SVGClipPathElement& clipPathElement() const;
 
     void removeAllClientsFromCache(bool markForInvalidation = true) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
@@ -45,49 +75,32 @@ public:
     // clipPath can be clipped too, but don't have a boundingBox or repaintRect. So we can't call
     // applyResource directly and use the rects from the object, since they are empty for RenderSVGResources
     // FIXME: We made applyClippingToContext public because we cannot call applyResource on HTML elements (it asserts on RenderObject::objectBoundingBox)
-    bool applyClippingToContext(GraphicsContext&, RenderElement&, const FloatRect&, float effectiveZoom = 1);
+    // objectBoundingBox ia used to compute clip path geometry when clipPathUnits="objectBoundingBox".
+    // clippedContentBounds is the bounds of the content to which clipping is being applied.
+    bool applyClippingToContext(GraphicsContext&, RenderElement&, const FloatRect& objectBoundingBox, const FloatRect& clippedContentBounds, float effectiveZoom = 1);
     FloatRect resourceBoundingBox(const RenderObject&) override;
 
     RenderSVGResourceType resourceType() const override { return ClipperResourceType; }
 
     bool hitTestClipContent(const FloatRect&, const FloatPoint&);
 
-    SVGUnitTypes::SVGUnitType clipPathUnits() const { return clipPathElement().clipPathUnits(); }
+    inline SVGUnitTypes::SVGUnitType clipPathUnits() const;
 
 private:
-    bool selfNeedsClientInvalidation() const override { return (everHadLayout() || m_clipper.size()) && selfNeedsLayout(); }
-
-    struct ClipperData {
-        FloatRect objectBoundingBox;
-        AffineTransform absoluteTransform;
-        RefPtr<ImageBuffer> imageBuffer;
-
-        ClipperData() = default;
-        ClipperData(RefPtr<ImageBuffer>&& buffer, const FloatRect& boundingBox, const AffineTransform& transform)
-            : objectBoundingBox(boundingBox)
-            , absoluteTransform(transform)
-            , imageBuffer(WTFMove(buffer))
-        {
-        }
-
-        bool isValidForGeometry(const FloatRect& boundingBox, const AffineTransform& transform) const
-        {
-            return imageBuffer && objectBoundingBox == boundingBox && absoluteTransform == transform;
-        }
-    };
+    bool selfNeedsClientInvalidation() const override { return (everHadLayout() || m_clipperMap.size()) && selfNeedsLayout(); }
 
     void element() const = delete;
 
-    const char* renderName() const override { return "RenderSVGResourceClipper"; }
+    ASCIILiteral renderName() const override { return "RenderSVGResourceClipper"_s; }
     bool isSVGResourceClipper() const override { return true; }
 
+    ClipperData::Inputs computeInputs(RenderElement&, const FloatRect& objectBoundingBox, const FloatRect& clippedContentBounds, float effectiveZoom);
     bool pathOnlyClipping(GraphicsContext&, const AffineTransform&, const FloatRect&, float effectiveZoom);
     bool drawContentIntoMaskImage(ImageBuffer&, const FloatRect& objectBoundingBox, float effectiveZoom);
     void calculateClipContentRepaintRect();
-    ClipperData& addRendererToClipper(const RenderObject&);
 
     FloatRect m_clipBoundaries;
-    HashMap<const RenderObject*, ClipperData> m_clipper;
+    HashMap<const RenderObject*, std::unique_ptr<ClipperData>> m_clipperMap;
 };
 
 }

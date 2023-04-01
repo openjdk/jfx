@@ -34,6 +34,8 @@
 
 namespace JSC { namespace B3 {
 
+class Procedure;
+
 extern const char* const tierName;
 
 enum B3CompilationMode {
@@ -41,7 +43,7 @@ enum B3CompilationMode {
     AirMode
 };
 
-JS_EXPORT_PRIVATE bool shouldDumpIR(B3CompilationMode);
+JS_EXPORT_PRIVATE bool shouldDumpIR(Procedure&, B3CompilationMode);
 bool shouldDumpIRAtEachPhase(B3CompilationMode);
 bool shouldValidateIR();
 bool shouldValidateIRAtEachPhase();
@@ -154,6 +156,26 @@ static IntType chillUMod(IntType numerator, IntType denominator)
     return unsignedNumerator % unsignedDenominator;
 }
 
+template<typename FloatType>
+static FloatType fMax(FloatType a, FloatType b)
+{
+    if (std::isnan(a) || std::isnan(b))
+        return a + b;
+    if (a == static_cast<FloatType>(0.0) && b == static_cast<FloatType>(0.0) && std::signbit(a) != std::signbit(b))
+        return static_cast<FloatType>(0.0);
+    return std::max(a, b);
+}
+
+template<typename FloatType>
+static FloatType fMin(FloatType a, FloatType b)
+{
+    if (std::isnan(a) || std::isnan(b))
+        return a + b;
+    if (a == static_cast<FloatType>(0.0) && b == static_cast<FloatType>(0.0) && std::signbit(a) != std::signbit(b))
+        return static_cast<FloatType>(-0.0);
+    return std::min(a, b);
+}
+
 template<typename IntType>
 static IntType rotateRight(IntType value, int32_t shift)
 {
@@ -183,7 +205,7 @@ inline unsigned defaultOptLevel()
     return Options::defaultB3OptLevel();
 }
 
-std::optional<GPRReg> pinnedExtendedOffsetAddrRegister();
+GPRReg extendedOffsetAddrRegister();
 
 } } // namespace JSC::B3
 

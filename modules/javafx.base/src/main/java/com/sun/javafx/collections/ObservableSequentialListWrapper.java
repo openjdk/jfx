@@ -33,12 +33,11 @@ import java.util.NoSuchElementException;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ModifiableObservableListBase;
-import javafx.collections.ObservableList;
 import javafx.util.Callback;
 
-public class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements ObservableList<E>, SortableList<E>{
+public class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E>{
     private final List<E> backingList;
-    private final ElementObserver elementObserver;
+    private final ElementObserver<E> elementObserver;
     private SortHelper helper;
 
     public ObservableSequentialListWrapper(List<E> list) {
@@ -48,7 +47,7 @@ public class ObservableSequentialListWrapper<E> extends ModifiableObservableList
 
     public ObservableSequentialListWrapper(List<E> list, Callback<E, Observable[]> extractor) {
         backingList = list;
-        this.elementObserver = new ElementObserver(extractor, new Callback<E, InvalidationListener>() {
+        this.elementObserver = new ElementObserver<>(extractor, new Callback<E, InvalidationListener>() {
 
             @Override
             public InvalidationListener call(final E e) {
@@ -96,7 +95,7 @@ public class ObservableSequentialListWrapper<E> extends ModifiableObservableList
 
     @Override
     public ListIterator<E> listIterator(final int index) {
-        return new ListIterator<E>() {
+        return new ListIterator<>() {
 
             private final ListIterator<E> backingIt = backingList.listIterator(index);
             private E lastReturned;
@@ -239,13 +238,8 @@ public class ObservableSequentialListWrapper<E> extends ModifiableObservableList
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void sort() {
-        if (backingList.isEmpty()) {
-            return;
-        }
-        int[] perm = getSortHelper().sort((List<? extends Comparable>)backingList);
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(0, size(), perm, this));
+        sort(null);
     }
 
     @Override
@@ -253,8 +247,11 @@ public class ObservableSequentialListWrapper<E> extends ModifiableObservableList
         if (backingList.isEmpty()) {
             return;
         }
-        int[] perm = getSortHelper().sort(backingList, comparator);
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(0, size(), perm, this));
+
+        @SuppressWarnings("unchecked")
+        int[] perm = comparator == null ? getSortHelper().sort((List<? extends Comparable<Object>>) backingList)
+                : getSortHelper().sort(backingList, comparator);
+        fireChange(new NonIterableChange.SimplePermutationChange<>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {

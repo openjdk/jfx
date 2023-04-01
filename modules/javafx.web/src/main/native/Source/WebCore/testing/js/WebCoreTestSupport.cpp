@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InternalSettings.h"
 #include "Internals.h"
 #include "JSDocument.h"
@@ -51,7 +52,6 @@
 
 #if PLATFORM(COCOA)
 #include "UTIRegistry.h"
-#include "VersionChecks.h"
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
@@ -151,7 +151,7 @@ void setAllowsAnySSLCertificate(bool allowAnySSLCertificate)
 void setLinkedOnOrAfterEverythingForTesting()
 {
 #if PLATFORM(COCOA)
-    setApplicationSDKVersion(std::numeric_limits<uint32_t>::max());
+    enableAllSDKAlignedBehaviors();
 #endif
 }
 
@@ -180,7 +180,7 @@ void disconnectMockGamepad(unsigned gamepadIndex)
 #endif
 }
 
-void setMockGamepadDetails(unsigned gamepadIndex, const WTF::String& gamepadID, const WTF::String& mapping, unsigned axisCount, unsigned buttonCount)
+void setMockGamepadDetails(unsigned gamepadIndex, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount)
 {
 #if ENABLE(GAMEPAD)
     MockGamepadProvider::singleton().setMockGamepadDetails(gamepadIndex, gamepadID, mapping, axisCount, buttonCount);
@@ -228,7 +228,7 @@ void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier)
         auto& vm = globalObject.vm();
         JSLockHolder locker(vm);
         auto* contextWrapper = script->globalScopeWrapper();
-        contextWrapper->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(&globalObject, contextWrapper, ServiceWorkerInternals::create(identifier)));
+        contextWrapper->putDirect(vm, Identifier::fromString(vm, Internals::internalsId), toJS(&globalObject, contextWrapper, ServiceWorkerInternals::create(globalScope, identifier)));
     });
 #else
     UNUSED_PARAM(serviceWorkerIdentifier);
@@ -236,15 +236,18 @@ void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier)
 }
 
 #if PLATFORM(COCOA)
-void setAdditionalSupportedImageTypesForTesting(const WTF::String& imageTypes)
+void setAdditionalSupportedImageTypesForTesting(const String& imageTypes)
 {
     WebCore::setAdditionalSupportedImageTypesForTesting(imageTypes);
 }
 #endif
 
+#if ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY)
+
+extern const JSC::JITOperationAnnotation startOfJITOperationsInWebCoreTestSupport __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const JSC::JITOperationAnnotation endOfJITOperationsInWebCoreTestSupport __asm("section$end$__DATA_CONST$__jsc_ops");
+
 #if ENABLE(JIT_OPERATION_VALIDATION)
-extern const uintptr_t startOfJITOperationsInWebCoreTestSupport __asm("section$start$__DATA_CONST$__jsc_ops");
-extern const uintptr_t endOfJITOperationsInWebCoreTestSupport __asm("section$end$__DATA_CONST$__jsc_ops");
 
 void populateJITOperations()
 {
@@ -252,7 +255,23 @@ void populateJITOperations()
     std::call_once(onceKey, [] {
         JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInWebCoreTestSupport, &endOfJITOperationsInWebCoreTestSupport);
     });
+#if ENABLE(JIT_OPERATION_DISASSEMBLY)
+    if (UNLIKELY(JSC::Options::needDisassemblySupport()))
+        populateDisassemblyLabels();
+#endif
 }
 #endif // ENABLE(JIT_OPERATION_VALIDATION)
 
+#if ENABLE(JIT_OPERATION_DISASSEMBLY)
+void populateDisassemblyLabels()
+{
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [] {
+        JSC::JITOperationList::populateDisassemblyLabelsInEmbedder(&startOfJITOperationsInWebCoreTestSupport, &endOfJITOperationsInWebCoreTestSupport);
+    });
 }
+#endif // ENABLE(JIT_OPERATION_DISASSEMBLY)
+
+#endif // ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY)
+
+} // namespace WebCoreTestSupport

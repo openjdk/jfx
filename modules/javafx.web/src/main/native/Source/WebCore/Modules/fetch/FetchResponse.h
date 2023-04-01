@@ -53,18 +53,19 @@ public:
 
     struct Init {
         unsigned short status { 200 };
-        String statusText;
+        AtomString statusText;
         std::optional<FetchHeaders::Init> headers;
     };
 
-    WEBCORE_EXPORT static Ref<FetchResponse> create(ScriptExecutionContext&, std::optional<FetchBody>&&, FetchHeaders::Guard, ResourceResponse&&);
+    WEBCORE_EXPORT static Ref<FetchResponse> create(ScriptExecutionContext*, std::optional<FetchBody>&&, FetchHeaders::Guard, ResourceResponse&&);
 
     static ExceptionOr<Ref<FetchResponse>> create(ScriptExecutionContext&, std::optional<FetchBody::Init>&&, Init&&);
     static Ref<FetchResponse> error(ScriptExecutionContext&);
     static ExceptionOr<Ref<FetchResponse>> redirect(ScriptExecutionContext&, const String& url, int status);
 
-    using NotificationCallback = WTF::Function<void(ExceptionOr<FetchResponse&>&&)>;
-    static void fetch(ScriptExecutionContext&, FetchRequest&, NotificationCallback&&);
+    using NotificationCallback = Function<void(ExceptionOr<Ref<FetchResponse>>&&)>;
+    static void fetch(ScriptExecutionContext&, FetchRequest&, NotificationCallback&&, const String& initiator);
+    static Ref<FetchResponse> createFetchResponse(ScriptExecutionContext&, FetchRequest&, NotificationCallback&&);
 
     void startConsumingStream(unsigned);
     void consumeChunk(Ref<JSC::Uint8Array>&&);
@@ -79,13 +80,13 @@ public:
 
     const FetchHeaders& headers() const { return m_headers; }
     FetchHeaders& headers() { return m_headers; }
-    ExceptionOr<Ref<FetchResponse>> clone(ScriptExecutionContext&);
+    ExceptionOr<Ref<FetchResponse>> clone();
 
     void consumeBodyAsStream() final;
     void feedStream() final;
     void cancel() final;
 
-    using ResponseData = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
+    using ResponseData = std::variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
     ResponseData consumeBody();
     void setBodyData(ResponseData&&, uint64_t bodySizeWithPadding);
 
@@ -96,6 +97,7 @@ public:
 
     using ConsumeDataByChunkCallback = Function<void(ExceptionOr<Span<const uint8_t>*>&&)>;
     void consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&&);
+    void cancelStream();
 
     WEBCORE_EXPORT ResourceResponse resourceResponse() const;
     ResourceResponse::Tainting tainting() const { return m_internalResponse.tainting(); }
@@ -111,14 +113,23 @@ public:
     bool isCORSSameOrigin() const;
     bool hasWasmMIMEType() const;
 
+    const NetworkLoadMetrics& networkLoadMetrics() const { return m_networkLoadMetrics; }
+    void setReceivedInternalResponse(const ResourceResponse&, FetchOptions::Credentials);
+    void startLoader(ScriptExecutionContext&, FetchRequest&, const String& initiator);
+
+    void setIsNavigationPreload(bool isNavigationPreload) { m_isNavigationPreload = isNavigationPreload; }
+    bool isAvailableNavigationPreload() const { return m_isNavigationPreload && m_bodyLoader && !m_bodyLoader->hasLoader() && !hasReadableStreamBody(); }
+    void markAsUsedForPreload();
+    bool isUsedForPreload() const { return m_isUsedForPreload; }
+
 private:
-    FetchResponse(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);
+    FetchResponse(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);
 
     void stop() final;
     const char* activeDOMObjectName() const final;
 
     const ResourceResponse& filteredResponse() const;
-
+    void setNetworkLoadMetrics(const NetworkLoadMetrics& metrics) { m_networkLoadMetrics = metrics; }
     void closeStream();
 
     void addAbortSteps(Ref<AbortSignal>&&);
@@ -129,21 +140,23 @@ private:
         BodyLoader(FetchResponse&, NotificationCallback&&);
         ~BodyLoader();
 
-        bool start(ScriptExecutionContext&, const FetchRequest&);
+        bool start(ScriptExecutionContext&, const FetchRequest&, const String& initiator);
         void stop();
 
         void consumeDataByChunk(ConsumeDataByChunkCallback&&);
 
-        RefPtr<SharedBuffer> startStreaming();
+        bool hasLoader() const { return !!m_loader; }
+
+        RefPtr<FragmentedSharedBuffer> startStreaming();
         NotificationCallback takeNotificationCallback() { return WTFMove(m_responseCallback); }
         ConsumeDataByChunkCallback takeConsumeDataCallback() { return WTFMove(m_consumeDataCallback); }
 
     private:
         // FetchLoaderClient API
-        void didSucceed() final;
+        void didSucceed(const NetworkLoadMetrics&) final;
         void didFail(const ResourceError&) final;
         void didReceiveResponse(const ResourceResponse&) final;
-        void didReceiveData(const uint8_t*, size_t) final;
+        void didReceiveData(const SharedBuffer&) final;
 
         FetchResponse& m_response;
         NotificationCallback m_responseCallback;
@@ -151,6 +164,7 @@ private:
         std::unique_ptr<FetchLoader> m_loader;
         Ref<PendingActivity<FetchResponse>> m_pendingActivity;
         FetchOptions::Credentials m_credentials;
+        bool m_shouldStartStreaming { false };
     };
 
     mutable std::optional<ResourceResponse> m_filteredResponse;
@@ -161,6 +175,10 @@ private:
     uint64_t m_bodySizeWithPadding { 0 };
     uint64_t m_opaqueLoadIdentifier { 0 };
     RefPtr<AbortSignal> m_abortSignal;
+    NetworkLoadMetrics m_networkLoadMetrics;
+    bool m_hasInitializedInternalResponse { false };
+    bool m_isNavigationPreload { false };
+    bool m_isUsedForPreload { false };
 };
 
 } // namespace WebCore

@@ -71,6 +71,7 @@ if (APPLE)
         cocoa/WorkQueueCocoa.cpp
         text/cf/StringCF.cpp
         text/cf/StringImplCF.cpp
+	text/cocoa/ASCIILiteralCocoa.mm
         text/cocoa/StringImplCocoa.mm
     )
 
@@ -86,8 +87,9 @@ elseif (UNIX)
         generic/WorkQueueGeneric.cpp
         linux/CurrentProcessMemoryStatus.cpp
         linux/MemoryFootprintLinux.cpp
-        linux/MemoryPressureHandlerLinux.cpp
         unix/LanguageUnix.cpp
+        unix/MemoryPressureHandlerUnix.cpp
+        linux/RealTimeThreads.cpp
     )
     list(APPEND WTF_LIBRARIES rt)
 elseif (WIN32)

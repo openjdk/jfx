@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -139,17 +139,23 @@ void NetworkStorageSession::setCookies(const Vector<Cookie>&, const URL&, const 
     // FIXME: Implement for WebKit to use.
 }
 
+void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& hostnames, IncludeHttpOnlyCookies includeHttpOnlyCookies, ScriptWrittenCookiesOnly, CompletionHandler<void()>&& completionHandler)
+{
+     // FIXME: Implement for WebKit to use.
+    completionHandler();
+}
+
 void NetworkStorageSession::setCookie(const Cookie&)
 {
     // FIXME: Implement for WebKit to use.
 }
 
-void NetworkStorageSession::deleteCookie(const Cookie&)
+void NetworkStorageSession::deleteCookie(const Cookie&, CompletionHandler<void()>&&)
 {
     // FIXME: Implement for WebKit to use.
 }
 
-void NetworkStorageSession::deleteCookie(const URL&, const String&) const
+void NetworkStorageSession::deleteCookie(const URL&, const String&,CompletionHandler<void()>&&) const
 {
     // FIXME: Implement for WebKit to use.
 }
@@ -166,10 +172,10 @@ Vector<Cookie> NetworkStorageSession::getCookies(const URL&)
     return { };
 }
 
-void NetworkStorageSession::flushCookieStore()
+/*void NetworkStorageSession::flushCookieStore()
 {
     // FIXME: Implement for WebKit to use.
-}
+}*/
 
 } // namespace WebCore
 

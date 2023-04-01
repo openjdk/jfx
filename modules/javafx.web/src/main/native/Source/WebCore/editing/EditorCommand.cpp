@@ -35,6 +35,7 @@
 #include "DocumentFragment.h"
 #include "Editing.h"
 #include "EditorClient.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "FormatBlockCommand.h"
@@ -108,14 +109,14 @@ static bool applyCommandToFrame(Frame& frame, EditorCommandSource source, EditAc
         return true;
     case CommandFromDOM:
     case CommandFromDOMWithUserInterface:
-        frame.editor().applyStyle(WTFMove(style), EditAction::Unspecified, Editor::ColorFilterMode::UseOriginalColor);
+        frame.editor().applyStyle(WTFMove(style), action, Editor::ColorFilterMode::UseOriginalColor);
         return true;
     }
     ASSERT_NOT_REACHED();
     return false;
 }
 
-static bool isStylePresent(Editor& editor, CSSPropertyID propertyID, const char* onValue)
+static bool isStylePresent(Editor& editor, CSSPropertyID propertyID, ASCIILiteral onValue)
 {
     // Style is considered present when
     // Mac: present at the beginning of selection
@@ -135,7 +136,7 @@ static bool executeApplyStyle(Frame& frame, EditorCommandSource source, EditActi
     return applyCommandToFrame(frame, source, action, EditingStyle::create(propertyID, propertyValue));
 }
 
-static bool executeToggleStyle(Frame& frame, EditorCommandSource source, EditAction action, CSSPropertyID propertyID, const char* offValue, const char* onValue)
+static bool executeToggleStyle(Frame& frame, EditorCommandSource source, EditAction action, CSSPropertyID propertyID, ASCIILiteral offValue, ASCIILiteral onValue)
 {
     bool styleIsPresent = isStylePresent(frame.editor(), propertyID, onValue);
     return applyCommandToFrame(frame, source, action, EditingStyle::create(propertyID, styleIsPresent ? offValue : onValue));
@@ -190,7 +191,7 @@ static bool expandSelectionToGranularity(Frame& frame, TextGranularity granulari
     return true;
 }
 
-static TriState stateStyle(Frame& frame, CSSPropertyID propertyID, const char* desiredValue)
+static TriState stateStyle(Frame& frame, CSSPropertyID propertyID, ASCIILiteral desiredValue)
 {
     if (frame.editor().behavior().shouldToggleStyleBasedOnStartOfSelection())
         return frame.editor().selectionStartHasStyle(propertyID, desiredValue) ? TriState::True : TriState::False;
@@ -241,6 +242,12 @@ static bool executeCopy(Frame& frame, Event*, EditorCommandSource source, const 
     return true;
 }
 
+static bool executeCopyFont(Frame& frame, Event*, EditorCommandSource source, const String&)
+{
+    frame.editor().copyFont(source == CommandFromMenuOrKeyBinding ? Editor::FromMenuOrKeyBinding::Yes : Editor::FromMenuOrKeyBinding::No);
+    return true;
+}
+
 static bool executeCreateLink(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
     // FIXME: If userInterface is true, we should display a dialog box to let the user enter a URL.
@@ -269,9 +276,9 @@ static bool executeClearText(Frame& frame, Event*, EditorCommandSource, const St
 
 static bool executeDefaultParagraphSeparator(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    if (equalLettersIgnoringASCIICase(value, "div"))
+    if (equalLettersIgnoringASCIICase(value, "div"_s))
         frame.editor().setDefaultParagraphSeparator(EditorParagraphSeparatorIsDiv);
-    else if (equalLettersIgnoringASCIICase(value, "p"))
+    else if (equalLettersIgnoringASCIICase(value, "p"_s))
         frame.editor().setDefaultParagraphSeparator(EditorParagraphSeparatorIsP);
 
     return true;
@@ -401,9 +408,12 @@ static bool executeForeColor(Frame& frame, Event*, EditorCommandSource source, c
 
 static bool executeFormatBlock(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    String tagName = value.convertToASCIILowercase();
-    if (tagName[0] == '<' && tagName[tagName.length() - 1] == '>')
-        tagName = tagName.substring(1, tagName.length() - 2);
+    String lowercaseValue = value.convertToASCIILowercase();
+    AtomString tagName;
+    if (lowercaseValue[0] == '<' && lowercaseValue[lowercaseValue.length() - 1] == '>')
+        tagName = StringView(lowercaseValue).substring(1, lowercaseValue.length() - 2).toAtomString();
+    else
+        tagName = AtomString { WTFMove(lowercaseValue) };
 
     auto qualifiedTagName = Document::parseQualifiedName(xhtmlNamespaceURI, tagName);
     if (qualifiedTagName.hasException())
@@ -455,7 +465,7 @@ static bool executeInsertHorizontalRule(Frame& frame, Event*, EditorCommandSourc
 {
     Ref<HTMLHRElement> rule = HTMLHRElement::create(*frame.document());
     if (!value.isEmpty())
-        rule->setIdAttribute(value);
+        rule->setIdAttribute(AtomString { value });
     return executeInsertNode(frame, WTFMove(rule));
 }
 
@@ -469,7 +479,7 @@ static bool executeInsertImage(Frame& frame, Event*, EditorCommandSource, const 
     // FIXME: If userInterface is true, we should display a dialog box and let the user choose a local image.
     Ref<HTMLImageElement> image = HTMLImageElement::create(*frame.document());
     if (!value.isEmpty())
-        image->setSrc(value);
+        image->setSrc(AtomString { value });
     return executeInsertNode(frame, WTFMove(image));
 }
 
@@ -905,6 +915,21 @@ static bool executePaste(Frame& frame, Event*, EditorCommandSource source, const
     return true;
 }
 
+static bool executePasteFont(Frame& frame, Event*, EditorCommandSource source, const String&)
+{
+    if (source == CommandFromMenuOrKeyBinding) {
+        UserTypingGestureIndicator typingGestureIndicator(frame);
+        frame.editor().pasteFont(Editor::FromMenuOrKeyBinding::Yes);
+        return true;
+    }
+
+    if (!frame.requestDOMPasteAccess(DOMPasteAccessCategory::Fonts))
+        return false;
+
+    frame.editor().pasteFont();
+    return true;
+}
+
 #if PLATFORM(GTK)
 
 static bool executePasteGlobalSelection(Frame& frame, Event*, EditorCommandSource source, const String&)
@@ -988,32 +1013,38 @@ static bool executeRemoveFormat(Frame& frame, Event*, EditorCommandSource, const
 
 static bool executeScrollPageBackward(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionBackward, ScrollByPage);
+    if (frame.eventHandler().shouldUseSmoothKeyboardScrollingForFocusedScrollableArea())
+        return frame.eventHandler().keyboardScrollRecursively(ScrollDirection::ScrollUp, ScrollGranularity::Page, nullptr);
+
+    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionBackward, ScrollGranularity::Page);
 }
 
 static bool executeScrollPageForward(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionForward, ScrollByPage);
+    if (frame.eventHandler().shouldUseSmoothKeyboardScrollingForFocusedScrollableArea())
+        return frame.eventHandler().keyboardScrollRecursively(ScrollDirection::ScrollDown, ScrollGranularity::Page, nullptr);
+
+    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionForward, ScrollGranularity::Page);
 }
 
 static bool executeScrollLineUp(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.eventHandler().scrollRecursively(ScrollUp, ScrollByLine);
+    return frame.eventHandler().scrollRecursively(ScrollUp, ScrollGranularity::Line);
 }
 
 static bool executeScrollLineDown(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.eventHandler().scrollRecursively(ScrollDown, ScrollByLine);
+    return frame.eventHandler().scrollRecursively(ScrollDown, ScrollGranularity::Line);
 }
 
 static bool executeScrollToBeginningOfDocument(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionBackward, ScrollByDocument);
+    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionBackward, ScrollGranularity::Document);
 }
 
 static bool executeScrollToEndOfDocument(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionForward, ScrollByDocument);
+    return frame.eventHandler().logicalScrollRecursively(ScrollBlockDirectionForward, ScrollGranularity::Document);
 }
 
 static bool executeSelectAll(Frame& frame, Event*, EditorCommandSource, const String&)
@@ -1063,7 +1094,7 @@ static bool executeSetMark(Frame& frame, Event*, EditorCommandSource, const Stri
     return true;
 }
 
-static TextDecorationChange textDecorationChangeForToggling(Editor& editor, CSSPropertyID propertyID, const char* onValue)
+static TextDecorationChange textDecorationChangeForToggling(Editor& editor, CSSPropertyID propertyID, ASCIILiteral onValue)
 {
     return isStylePresent(editor, propertyID, onValue) ? TextDecorationChange::Remove : TextDecorationChange::Add;
 }
@@ -1077,13 +1108,13 @@ static bool executeStrikethrough(Frame& frame, Event*, EditorCommandSource sourc
 
 static bool executeStyleWithCSS(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    frame.editor().setShouldStyleWithCSS(!equalLettersIgnoringASCIICase(value, "false"));
+    frame.editor().setShouldStyleWithCSS(!equalLettersIgnoringASCIICase(value, "false"_s));
     return true;
 }
 
 static bool executeUseCSS(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    frame.editor().setShouldStyleWithCSS(equalLettersIgnoringASCIICase(value, "false"));
+    frame.editor().setShouldStyleWithCSS(equalLettersIgnoringASCIICase(value, "false"_s));
     return true;
 }
 
@@ -1613,6 +1644,7 @@ static const CommandMap& createCommandMap()
         { "Bold"_s, { executeToggleBold, supported, enabledInRichlyEditableText, stateBold, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "ClearText"_s, { executeClearText, supported, enabledClearText, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabled } },
         { "Copy"_s, { executeCopy, supportedCopyCut, enabledCopy, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledCopyCut } },
+        { "CopyFont"_s, { executeCopyFont, supportedCopyCut, enabledCopy, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledCopyCut } },
         { "CreateLink"_s, { executeCreateLink, supported, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Cut"_s, { executeCut, supportedCopyCut, enabledCut, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledCopyCut } },
         { "DefaultParagraphSeparator"_s, { executeDefaultParagraphSeparator, supported, enabled, stateNone, valueDefaultParagraphSeparator, notTextInsertion, doNotAllowExecutionWhenDisabled} },
@@ -1628,9 +1660,9 @@ static const CommandMap& createCommandMap()
         { "DeleteWordBackward"_s, { executeDeleteWordBackward, supportedFromMenuOrKeyBinding, enabledInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "DeleteWordForward"_s, { executeDeleteWordForward, supportedFromMenuOrKeyBinding, enabledInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "FindString"_s, { executeFindString, supported, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "FontName"_s, { executeFontName, supported, enabledInEditableText, stateNone, valueFontName, notTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "FontSize"_s, { executeFontSize, supported, enabledInEditableText, stateNone, valueFontSize, notTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "FontSizeDelta"_s, { executeFontSizeDelta, supported, enabledInEditableText, stateNone, valueFontSizeDelta, notTextInsertion, doNotAllowExecutionWhenDisabled } },
+        { "FontName"_s, { executeFontName, supported, enabledInRichlyEditableText, stateNone, valueFontName, notTextInsertion, doNotAllowExecutionWhenDisabled } },
+        { "FontSize"_s, { executeFontSize, supported, enabledInRichlyEditableText, stateNone, valueFontSize, notTextInsertion, doNotAllowExecutionWhenDisabled } },
+        { "FontSizeDelta"_s, { executeFontSizeDelta, supported, enabledInRichlyEditableText, stateNone, valueFontSizeDelta, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "ForeColor"_s, { executeForeColor, supported, enabledInRichlyEditableText, stateNone, valueForeColor, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "FormatBlock"_s, { executeFormatBlock, supported, enabledInRichlyEditableText, stateNone, valueFormatBlock, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "ForwardDelete"_s, { executeForwardDelete, supported, enabledInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
@@ -1712,6 +1744,7 @@ static const CommandMap& createCommandMap()
         { "PasteAndMatchStyle"_s, { executePasteAndMatchStyle, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledPaste } },
         { "PasteAsPlainText"_s, { executePasteAsPlainText, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledPaste } },
         { "PasteAsQuotation"_s, { executePasteAsQuotation, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledPaste } },
+        { "PasteFont"_s, { executePasteFont, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledPaste } },
         { "Print"_s, { executePrint, supported, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Redo"_s, { executeRedo, supported, enabledRedo, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "RemoveFormat"_s, { executeRemoveFormat, supported, enabledRangeInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },

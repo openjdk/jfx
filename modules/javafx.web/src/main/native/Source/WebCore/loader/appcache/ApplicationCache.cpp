@@ -54,7 +54,7 @@ ApplicationCache::~ApplicationCache()
 void ApplicationCache::setGroup(ApplicationCacheGroup* group)
 {
     ASSERT(!m_group || group == m_group);
-    m_group = makeWeakPtr(group);
+    m_group = group;
 }
 
 bool ApplicationCache::isComplete()
@@ -77,7 +77,7 @@ void ApplicationCache::setManifestResource(Ref<ApplicationCacheResource>&& manif
     ASSERT(!m_manifest);
     ASSERT(manifest->type() & ApplicationCacheResource::Manifest);
 
-    m_manifest = makeWeakPtr(manifest.get());
+    m_manifest = manifest;
 
     addResource(WTFMove(manifest));
 }
@@ -110,7 +110,7 @@ ApplicationCacheResource* ApplicationCache::resourceForURL(const String& url)
 
 bool ApplicationCache::requestIsHTTPOrHTTPSGet(const ResourceRequest& request)
 {
-    return request.url().protocolIsInHTTPFamily() && equalLettersIgnoringASCIICase(request.httpMethod(), "get");
+    return request.url().protocolIsInHTTPFamily() && equalLettersIgnoringASCIICase(request.httpMethod(), "get"_s);
 }
 
 ApplicationCacheResource* ApplicationCache::resourceForRequest(const ResourceRequest& request)

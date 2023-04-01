@@ -29,9 +29,11 @@
 
 #include "CDATASection.h"
 #include "Comment.h"
+#include "CommonAtomStrings.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLTemplateElement.h"
@@ -231,19 +233,7 @@ void MarkupAccumulator::serializeNodesWithNamespaces(Node& targetNode, Serialize
 
 String MarkupAccumulator::resolveURLIfNeeded(const Element& element, const String& urlString) const
 {
-    switch (m_resolveURLs) {
-    case ResolveURLs::Yes:
-        return element.document().completeURL(urlString).string();
-
-    case ResolveURLs::YesExcludingLocalFileURLsForPrivacy:
-        if (!element.document().url().isLocalFile())
-            return element.document().completeURL(urlString).string();
-        break;
-
-    case ResolveURLs::No:
-        break;
-    }
-    return urlString;
+    return element.resolveURLStringIfNeeded(urlString, m_resolveURLs);
 }
 
 void MarkupAccumulator::startAppendingNode(const Node& node, Namespaces* namespaces)
@@ -288,7 +278,7 @@ void MarkupAccumulator::appendQuotedURLAttributeValue(StringBuilder& result, con
         // minimal escaping for javascript urls
         if (resolvedURLString.contains('"')) {
             if (resolvedURLString.contains('\''))
-                resolvedURLString.replaceWithLiteral('"', "&quot;");
+                resolvedURLString = makeStringByReplacingAll(resolvedURLString, '"', "&quot;"_s);
             else
                 quoteChar = '\'';
         }
@@ -308,7 +298,7 @@ static bool shouldAddNamespaceElement(const Element& element)
     auto& prefix = element.prefix();
     if (prefix.isEmpty())
         return !element.hasAttribute(xmlnsAtom());
-    return !element.hasAttribute("xmlns:" + prefix);
+    return !element.hasAttribute(makeAtomString("xmlns:"_s, prefix));
 }
 
 static bool shouldAddNamespaceAttribute(const Attribute& attribute, Namespaces& namespaces)
@@ -465,7 +455,7 @@ void MarkupAccumulator::generateUniquePrefix(QualifiedName& prefixedName, const 
     AtomString name;
     do {
         // FIXME: We should create makeAtomString, which would be more efficient.
-        name = makeString("NS", ++m_prefixLevel);
+        name = makeAtomString("NS"_s, ++m_prefixLevel);
     } while (namespaces.get(name.impl()));
     prefixedName.setPrefix(name);
 }
@@ -484,7 +474,7 @@ static String htmlAttributeSerialization(const Attribute& attribute)
             return xmlnsAtom();
         prefixedName.setPrefix(xmlnsAtom());
     } else if (attribute.namespaceURI() == XLinkNames::xlinkNamespaceURI)
-        prefixedName.setPrefix(AtomString("xlink", AtomString::ConstructFromLiteral));
+        prefixedName.setPrefix(AtomString("xlink"_s));
     return prefixedName.toString();
 }
 

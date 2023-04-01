@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,6 +109,7 @@ public class PrismTextLayout implements TextLayout {
      *                                                                         *
      **************************************************************************/
 
+    @Override
     public boolean setContent(TextSpan[] spans) {
         if (spans == null && this.spans == null) return false;
         if (spans != null && this.spans != null) {
@@ -131,6 +132,7 @@ public class PrismTextLayout implements TextLayout {
         return true;
     }
 
+    @Override
     public boolean setContent(String text, Object font) {
         reset();
         this.spans = null;
@@ -146,6 +148,7 @@ public class PrismTextLayout implements TextLayout {
         return true;
     }
 
+    @Override
     public boolean setDirection(int direction) {
         if ((flags & DIRECTION_MASK) == direction) return false;
         flags &= ~DIRECTION_MASK;
@@ -154,6 +157,7 @@ public class PrismTextLayout implements TextLayout {
         return true;
     }
 
+    @Override
     public boolean setBoundsType(int type) {
         if ((flags & BOUNDS_MASK) == type) return false;
         flags &= ~BOUNDS_MASK;
@@ -162,6 +166,7 @@ public class PrismTextLayout implements TextLayout {
         return true;
     }
 
+    @Override
     public boolean setAlignment(int alignment) {
         int align = ALIGN_LEFT;
         switch (alignment) {
@@ -180,6 +185,7 @@ public class PrismTextLayout implements TextLayout {
         return true;
     }
 
+    @Override
     public boolean setWrapWidth(float newWidth) {
         if (Float.isInfinite(newWidth)) newWidth = 0;
         if (Float.isNaN(newWidth)) newWidth = 0;
@@ -211,6 +217,7 @@ public class PrismTextLayout implements TextLayout {
         return needsLayout;
     }
 
+    @Override
     public boolean setLineSpacing(float spacing) {
         if (this.spacing == spacing) return false;
         this.spacing = spacing;
@@ -224,11 +231,13 @@ public class PrismTextLayout implements TextLayout {
         }
     }
 
+    @Override
     public com.sun.javafx.scene.text.TextLine[] getLines() {
         ensureLayout();
         return lines;
     }
 
+    @Override
     public GlyphList[] getRuns() {
         ensureLayout();
         GlyphList[] result = new GlyphList[runCount];
@@ -242,11 +251,13 @@ public class PrismTextLayout implements TextLayout {
         return result;
     }
 
+    @Override
     public BaseBounds getBounds() {
         ensureLayout();
         return logicalBounds;
     }
 
+    @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
         ensureLayout();
         float left = Float.POSITIVE_INFINITY;
@@ -299,6 +310,7 @@ public class PrismTextLayout implements TextLayout {
         return bounds.deriveWithNewBounds(left, top, 0, right, bottom, 0);
     }
 
+    @Override
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y) {
         ensureLayout();
@@ -407,6 +419,7 @@ public class PrismTextLayout implements TextLayout {
         return result;
     }
 
+    @Override
     public Hit getHitInfo(float x, float y) {
         int charIndex = -1;
         boolean leading = false;
@@ -446,11 +459,12 @@ public class PrismTextLayout implements TextLayout {
         return new Hit(charIndex, -1, leading);
     }
 
+    @Override
     public PathElement[] getRange(int start, int end, int type,
                                   float x, float y) {
         ensureLayout();
         int lineCount = getLineCount();
-        ArrayList<PathElement> result = new ArrayList<PathElement>();
+        ArrayList<PathElement> result = new ArrayList<>();
         float lineY = 0;
 
         for  (int lineIndex = 0; lineIndex < lineCount; lineIndex++) {
@@ -575,6 +589,7 @@ public class PrismTextLayout implements TextLayout {
         return result.toArray(new PathElement[result.size()]);
     }
 
+    @Override
     public Shape getShape(int type, TextSpan filter) {
         ensureLayout();
         boolean text = (type & TYPE_TEXT) != 0;
@@ -980,7 +995,7 @@ public class PrismTextLayout implements TextLayout {
          * elements inside of the list are shared among threads and cannot be
          * modified. Each reused element has to be cloned.*/
         runCount = 0;
-        int index = 0;;
+        int index = 0;
         while (index < runs.length) {
             TextRun run = runs[index];
             if (run == null) break;
@@ -1073,7 +1088,7 @@ public class PrismTextLayout implements TextLayout {
         float lineWidth = 0;
         int startIndex = 0;
         int startOffset = 0;
-        ArrayList<TextLine> linesList = new ArrayList<TextLine>();
+        ArrayList<TextLine> linesList = new ArrayList<>();
         for (int i = 0; i < runCount; i++) {
             TextRun run = runs[i];
             shape(run, chars, layout);

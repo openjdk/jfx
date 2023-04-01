@@ -568,6 +568,9 @@ public:
 
         switch (other.m_kind) {
         case Equal:
+            if (differenceOverflows<int>(otherEffectiveRight, thisRight))
+                return *this;
+
             // Return a version of *this that is Equal to other's constant.
             return Relationship(m_left, m_right, Equal, otherEffectiveRight - thisRight);
 
@@ -745,6 +748,9 @@ private:
             // Therefore we'd like to return:
             //
             //     @a < @b + max(C, D + 1)
+
+            if (sumOverflows<int32_t>(other.m_offset, 1))
+                return Relationship();
 
             int bestOffset = std::max(m_offset, other.m_offset + 1);
 
@@ -1344,7 +1350,7 @@ public:
 
                     if (nonNegative && lessThanLength) {
                         executeNode(block->at(nodeIndex));
-                        if (UNLIKELY(Options::validateBoundsCheckElimination()))
+                        if (UNLIKELY(Options::validateBoundsCheckElimination()) && node->op() == CheckInBounds)
                             m_insertionSet.insertNode(nodeIndex, SpecNone, AssertInBounds, node->origin, node->child1(), node->child2());
                         // We just need to make sure we are a value-producing node.
                         node->convertToIdentityOn(node->child1().node());

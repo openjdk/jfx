@@ -29,6 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "WebCoreOpaqueRoot.h"
 #include <wtf/HashMap.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -38,6 +39,7 @@ namespace WebCore {
 class DeferredPromise;
 class HTMLMediaElement;
 class MediaPlaybackTarget;
+class Node;
 class RemotePlaybackAvailabilityCallback;
 
 class RemotePlayback final : public RefCounted<RemotePlayback>, public ActiveDOMObject, public EventTargetWithInlineData {
@@ -68,7 +70,7 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
-    void* opaqueRootConcurrently() const;
+    WebCoreOpaqueRoot opaqueRootConcurrently() const;
     Node* ownerNode() const;
 
 private:

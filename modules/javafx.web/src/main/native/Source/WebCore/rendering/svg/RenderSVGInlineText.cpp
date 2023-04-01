@@ -28,10 +28,11 @@
 #include "FloatConversion.h"
 #include "FloatQuad.h"
 #include "InlineRunAndOffset.h"
+#include "LegacyRenderSVGRoot.h"
 #include "RenderBlock.h"
-#include "RenderSVGRoot.h"
 #include "RenderSVGText.h"
-#include "SVGInlineTextBox.h"
+#include "SVGElementTypeHelpers.h"
+#include "SVGInlineTextBoxInlines.h"
 #include "SVGRenderingContext.h"
 #include "SVGRootInlineBox.h"
 #include "StyleFontSizeFunctions.h"
@@ -51,9 +52,9 @@ static String applySVGWhitespaceRules(const String& string, bool preserveWhiteSp
         // copy of the original character data content. It will convert all newline and tab
         // characters into space characters. Then, it will draw all space characters, including
         // leading, trailing and multiple contiguous space characters.
-        newString.replace('\t', ' ');
-        newString.replace('\n', ' ');
-        newString.replace('\r', ' ');
+        newString = makeStringByReplacingAll(newString, '\t', ' ');
+        newString = makeStringByReplacingAll(newString, '\n', ' ');
+        newString = makeStringByReplacingAll(newString, '\r', ' ');
         return newString;
     }
 
@@ -62,9 +63,9 @@ static String applySVGWhitespaceRules(const String& string, bool preserveWhiteSp
     // characters. Then it will convert all tab characters into space characters.
     // Then, it will strip off all leading and trailing space characters.
     // Then, all contiguous space characters will be consolidated.
-    newString.replace('\n', emptyString());
-    newString.replace('\r', emptyString());
-    newString.replace('\t', ' ');
+    newString = makeStringByReplacingAll(newString, '\n', ""_s);
+    newString = makeStringByReplacingAll(newString, '\r', ""_s);
+    newString = makeStringByReplacingAll(newString, '\t', ' ');
     return newString;
 }
 
@@ -154,7 +155,7 @@ VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point, 
     if (!firstTextBox() || text().isEmpty())
         return createVisiblePosition(0, Affinity::Downstream);
 
-    float baseline = m_scaledFont.fontMetrics().floatAscent();
+    float baseline = m_scaledFont.metricsOfPrimaryFont().floatAscent();
 
     RenderBlock* containingBlock = this->containingBlock();
     ASSERT(containingBlock);

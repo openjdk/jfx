@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,6 +64,7 @@ bool JITFinalizer::finalize()
     CodeBlock* codeBlock = m_plan.codeBlock();
 
     codeBlock->setJITCode(m_jitCode.copyRef());
+    codeBlock->setDFGJITData(m_plan.finalizeJITData(m_jitCode.get()));
 
 #if ENABLE(FTL_JIT)
     m_jitCode->optimizeAfterWarmUp(codeBlock);
@@ -77,7 +78,7 @@ bool JITFinalizer::finalize()
 
     // The codeBlock is now responsible for keeping many things alive (e.g. frozen values)
     // that were previously kept alive by the plan.
-    vm.heap.writeBarrier(codeBlock);
+    vm.writeBarrier(codeBlock);
 
     return true;
 }
@@ -85,4 +86,3 @@ bool JITFinalizer::finalize()
 } } // namespace JSC::DFG
 
 #endif // ENABLE(DFG_JIT)
-

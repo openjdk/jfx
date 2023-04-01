@@ -112,7 +112,7 @@ void RemoteInspector::stopInternal(StopSource)
 
     updateHasActiveDebugSession();
 
-    m_automaticInspectionPaused = false;
+    m_pausedAutomaticInspectionCandidates.clear();
 }
 
 TargetListing RemoteInspector::listingForInspectionTarget(const RemoteInspectionTarget& target) const
@@ -188,12 +188,10 @@ void RemoteInspector::pushListingsSoon()
     });
 }
 
-void RemoteInspector::sendAutomaticInspectionCandidateMessage()
+void RemoteInspector::sendAutomaticInspectionCandidateMessage(TargetID)
 {
     ASSERT(m_enabled);
     ASSERT(m_automaticInspectionEnabled);
-    ASSERT(m_automaticInspectionPaused);
-    ASSERT(m_automaticInspectionCandidateTargetIdentifier);
     // FIXME: Implement automatic inspection.
 }
 
@@ -263,18 +261,9 @@ String RemoteInspector::backendCommands() const
     if (m_backendCommandsPath.isEmpty())
         return { };
 
-    auto handle = FileSystem::openFile(m_backendCommandsPath, FileSystem::FileOpenMode::Read);
-    if (!FileSystem::isHandleValid(handle))
-        return { };
+    auto contents = FileSystem::readEntireFile(m_backendCommandsPath);
 
-    String result;
-    if (auto size = FileSystem::fileSize(handle)) {
-        Vector<LChar> buffer(*size);
-        if (FileSystem::readFromFile(handle, buffer.data(), *size) == *size)
-            result = String::adopt(WTFMove(buffer));
-    }
-    FileSystem::closeFile(handle);
-    return result;
+    return contents ? String::adopt(WTFMove(*contents)) : emptyString();
 }
 
 // RemoteInspectorConnectionClient handlers
@@ -354,7 +343,7 @@ void RemoteInspector::sendMessageToBackend(const Event& event)
             return;
     }
 
-    connectionToTarget->sendMessageToTarget(event.message.value());
+    connectionToTarget->sendMessageToTarget(String { event.message.value() });
 }
 
 void RemoteInspector::startAutomationSession(const Event& event)
@@ -376,8 +365,8 @@ void RemoteInspector::startAutomationSession(const Event& event)
     auto capability = clientCapabilities();
 
     auto message = JSON::Object::create();
-    message->setString("browserName"_s, capability ? capability->browserName : "");
-    message->setString("browserVersion"_s, capability ? capability->browserVersion : "");
+    message->setString("browserName"_s, capability ? capability->browserName : emptyString());
+    message->setString("browserVersion"_s, capability ? capability->browserVersion : emptyString());
     sendEvent->setString("message"_s, message->toJSONString());
     sendWebInspectorEvent(sendEvent->toJSONString());
 

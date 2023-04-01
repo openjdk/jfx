@@ -230,7 +230,7 @@ static String buildPolygonString(const WindRule& windRule, const Vector<String>&
     char evenOddOpening[] = "polygon(evenodd, ";
     char nonZeroOpening[] = "polygon(";
     char commaSeparator[] = ", ";
-    COMPILE_ASSERT(sizeof(evenOddOpening) >= sizeof(nonZeroOpening), polygon_evenodd_is_longest_string_opening);
+    static_assert(sizeof(evenOddOpening) >= sizeof(nonZeroOpening), "polygon evenodd is longest string opening");
 
     // Compute the required capacity in advance to reduce allocations.
     size_t length = sizeof(evenOddOpening) - 1;
@@ -261,13 +261,10 @@ static String buildPolygonString(const WindRule& windRule, const Vector<String>&
 
 String CSSBasicShapePolygon::cssText() const
 {
-    Vector<String> points;
-    points.reserveInitialCapacity(m_values.size());
-
-    for (auto& shapeValue : m_values)
-        points.uncheckedAppend(shapeValue->cssText());
-
-    return buildPolygonString(m_windRule, points);
+    auto points = m_values.map([](auto& shapeValue) {
+        return shapeValue->cssText();
+    });
+    return buildPolygonString(m_windRule, WTFMove(points));
 }
 
 bool CSSBasicShapePolygon::equals(const CSSBasicShape& shape) const
@@ -292,7 +289,7 @@ static bool buildInsetRadii(Vector<String>& radii, const String& topLeftRadius, 
     if (showBottomLeft)
         radii.append(bottomLeftRadius);
 
-    return radii.size() == 1 && radii[0] == "0px";
+    return radii.size() == 1 && radii[0] == "0px"_s;
 }
 
 static String buildInsetString(const String& top, const String& right, const String& bottom, const String& left,
@@ -397,4 +394,3 @@ bool CSSBasicShapeInset::equals(const CSSBasicShape& shape) const
 }
 
 } // namespace WebCore
-

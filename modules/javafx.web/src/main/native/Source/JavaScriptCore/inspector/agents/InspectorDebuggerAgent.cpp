@@ -38,6 +38,7 @@
 #include "InjectedScriptManager.h"
 #include "JSJavaScriptCallFrame.h"
 #include "JavaScriptCallFrame.h"
+#include "Microtask.h"
 #include "RegularExpression.h"
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
@@ -49,7 +50,7 @@
 
 namespace Inspector {
 
-const char* const InspectorDebuggerAgent::backtraceObjectGroup = "backtrace";
+const ASCIILiteral InspectorDebuggerAgent::backtraceObjectGroup = "backtrace"_s;
 
 // Objects created and retained by evaluating breakpoint actions are put into object groups
 // according to the breakpoint action identifier assigned by the frontend. A breakpoint may
@@ -62,7 +63,7 @@ static String objectGroupForBreakpointAction(JSC::BreakpointActionID id)
 
 static bool isWebKitInjectedScript(const String& sourceURL)
 {
-    return sourceURL.startsWith("__InjectedScript_") && sourceURL.endsWith(".js");
+    return sourceURL.startsWith("__InjectedScript_"_s) && sourceURL.endsWith(".js"_s);
 }
 
 static std::optional<JSC::Breakpoint::Action::Type> breakpointActionTypeForString(Protocol::ErrorString& errorString, const String& typeString)
@@ -104,7 +105,7 @@ static T parseBreakpointOptions(Protocol::ErrorString& errorString, RefPtr<JSON:
 
         auto actionsPayload = options->getArray(Protocol::Debugger::BreakpointOptions::actionsKey);
         if (auto count = actionsPayload ? actionsPayload->length() : 0) {
-            actions.reserveCapacity(count);
+            actions.reserveInitialCapacity(count);
 
             for (unsigned i = 0; i < count; ++i) {
                 auto actionObject = actionsPayload->get(i)->asObject();
@@ -133,7 +134,7 @@ static T parseBreakpointOptions(Protocol::ErrorString& errorString, RefPtr<JSON:
 
                 action.emulateUserGesture = actionObject->getBoolean(Protocol::Debugger::BreakpointAction::emulateUserGestureKey).value_or(false);
 
-                actions.append(WTFMove(action));
+                actions.uncheckedAppend(WTFMove(action));
             }
         }
 
@@ -431,8 +432,8 @@ void InspectorDebuggerAgent::didScheduleAsyncCall(JSC::JSGlobalObject* globalObj
         return;
 
     RefPtr<AsyncStackTrace> parentStackTrace;
-    if (m_currentAsyncCallIdentifier) {
-        auto it = m_pendingAsyncCalls.find(m_currentAsyncCallIdentifier.value());
+    if (!m_currentAsyncCallIdentifierStack.isEmpty()) {
+        auto it = m_pendingAsyncCalls.find(m_currentAsyncCallIdentifierStack.last());
         ASSERT(it != m_pendingAsyncCalls.end());
         parentStackTrace = it->value;
     }
@@ -456,7 +457,7 @@ void InspectorDebuggerAgent::didCancelAsyncCall(AsyncCallType asyncCallType, int
     auto& asyncStackTrace = it->value;
     asyncStackTrace->didCancelAsyncCall();
 
-    if (m_currentAsyncCallIdentifier && m_currentAsyncCallIdentifier.value() == identifier)
+    if (m_currentAsyncCallIdentifierStack.contains(identifier))
         return;
 
     m_pendingAsyncCalls.remove(identifier);
@@ -465,9 +466,6 @@ void InspectorDebuggerAgent::didCancelAsyncCall(AsyncCallType asyncCallType, int
 void InspectorDebuggerAgent::willDispatchAsyncCall(AsyncCallType asyncCallType, int callbackId)
 {
     if (!m_asyncStackTraceDepth)
-        return;
-
-    if (m_currentAsyncCallIdentifier)
         return;
 
     // A call can be scheduled before the Inspector is opened, or while async stack
@@ -480,28 +478,40 @@ void InspectorDebuggerAgent::willDispatchAsyncCall(AsyncCallType asyncCallType, 
     auto& asyncStackTrace = it->value;
     asyncStackTrace->willDispatchAsyncCall(m_asyncStackTraceDepth);
 
-    m_currentAsyncCallIdentifier = identifier;
+    ASSERT(!m_currentAsyncCallIdentifierStack.contains(identifier));
+    m_currentAsyncCallIdentifierStack.append(WTFMove(identifier));
 }
 
-void InspectorDebuggerAgent::didDispatchAsyncCall()
+void InspectorDebuggerAgent::didDispatchAsyncCall(AsyncCallType asyncCallType, int callbackId)
 {
     if (!m_asyncStackTraceDepth)
         return;
 
-    if (!m_currentAsyncCallIdentifier)
+    if (m_currentAsyncCallIdentifierStack.isEmpty())
         return;
 
-    auto identifier = m_currentAsyncCallIdentifier.value();
+    auto identifier = asyncCallIdentifier(asyncCallType, callbackId);
     auto it = m_pendingAsyncCalls.find(identifier);
-    ASSERT(it != m_pendingAsyncCalls.end());
+    if (it == m_pendingAsyncCalls.end())
+        return;
 
     auto& asyncStackTrace = it->value;
     asyncStackTrace->didDispatchAsyncCall();
 
-    m_currentAsyncCallIdentifier = std::nullopt;
+    m_currentAsyncCallIdentifierStack.removeLast(identifier);
+    ASSERT(!m_currentAsyncCallIdentifierStack.contains(identifier));
 
     if (!asyncStackTrace->isPending())
         m_pendingAsyncCalls.remove(identifier);
+}
+
+AsyncStackTrace* InspectorDebuggerAgent::currentParentStackTrace() const
+{
+    if (m_currentAsyncCallIdentifierStack.isEmpty())
+        return nullptr;
+
+    auto identifier = m_currentAsyncCallIdentifierStack.last();
+    return m_pendingAsyncCalls.get(identifier);
 }
 
 static Ref<Protocol::Debugger::Location> buildDebuggerLocation(const JSC::Breakpoint& debuggerBreakpoint)
@@ -741,7 +751,7 @@ Protocol::ErrorStringOr<String> InspectorDebuggerAgent::getScriptSource(const Pr
 {
     auto it = m_scripts.find(parseIntegerAllowingTrailingJunk<JSC::SourceID>(scriptId).value_or(0));
     if (it == m_scripts.end())
-        return makeUnexpected("Missing script for given scriptId");
+        return makeUnexpected("Missing script for given scriptId"_s);
 
     return it->value.source;
 }
@@ -939,15 +949,15 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setPauseOnExceptions(const
     RefPtr<JSC::Breakpoint> allExceptionsBreakpoint;
     RefPtr<JSC::Breakpoint> uncaughtExceptionsBreakpoint;
 
-    if (stateString == "all") {
+    if (stateString == "all"_s) {
         allExceptionsBreakpoint = debuggerBreakpointFromPayload(errorString, WTFMove(options));
         if (!allExceptionsBreakpoint)
             return makeUnexpected(errorString);
-    } else if (stateString == "uncaught") {
+    } else if (stateString == "uncaught"_s) {
         uncaughtExceptionsBreakpoint = debuggerBreakpointFromPayload(errorString, WTFMove(options));
         if (!uncaughtExceptionsBreakpoint)
             return makeUnexpected(errorString);
-    } else if (stateString != "none")
+    } else if (stateString != "none"_s)
         return makeUnexpected(makeString("Unknown state: "_s, stateString));
 
     m_debugger.setPauseOnAllExceptionsBreakpoint(WTFMove(allExceptionsBreakpoint));
@@ -992,16 +1002,23 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setPauseOnMicrotasks(bool 
     return { };
 }
 
-Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> InspectorDebuggerAgent::evaluateOnCallFrame(const Protocol::Debugger::CallFrameId& callFrameId, const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&&  /* emulateUserGesture */)
+Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> InspectorDebuggerAgent::evaluateOnCallFrame(const Protocol::Debugger::CallFrameId& callFrameId, const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture)
 {
+    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(callFrameId);
+    if (injectedScript.hasNoValue())
+        return makeUnexpected("Missing injected script for given callFrameId"_s);
+
+    return evaluateOnCallFrame(injectedScript, callFrameId, expression, objectGroup, WTFMove(includeCommandLineAPI), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(saveResult), WTFMove(emulateUserGesture));
+}
+
+Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> InspectorDebuggerAgent::evaluateOnCallFrame(InjectedScript& injectedScript, const Protocol::Debugger::CallFrameId& callFrameId, const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& /* emulateUserGesture */)
+{
+    ASSERT(!injectedScript.hasNoValue());
+
     Protocol::ErrorString errorString;
 
     if (!assertPaused(errorString))
         return makeUnexpected(errorString);
-
-    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(callFrameId);
-    if (injectedScript.hasNoValue())
-        return makeUnexpected("Missing injected script for given callFrameId"_s);
 
     JSC::Debugger::TemporarilyDisableExceptionBreakpoints temporarilyDisableExceptionBreakpoints(m_debugger);
 
@@ -1069,6 +1086,13 @@ bool InspectorDebuggerAgent::shouldBlackboxURL(const String& url) const
     return false;
 }
 
+Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setBlackboxBreakpointEvaluations(bool blackboxBreakpointEvaluations)
+{
+    m_debugger.setBlackboxBreakpointEvaluations(blackboxBreakpointEvaluations);
+
+    return { };
+}
+
 void InspectorDebuggerAgent::scriptExecutionBlockedByCSP(const String& directiveText)
 {
     if (m_debugger.needsExceptionCallbacks())
@@ -1113,7 +1137,7 @@ JSC::JSObject* InspectorDebuggerAgent::debuggerScopeExtensionObject(JSC::Debugge
     if (injectedScript.hasNoValue())
         return JSC::Debugger::Client::debuggerScopeExtensionObject(debugger, globalObject, debuggerCallFrame);
 
-    auto* debuggerGlobalObject = debuggerCallFrame.scope()->globalObject();
+    auto* debuggerGlobalObject = debuggerCallFrame.scope(globalObject->vm())->globalObject();
     auto callFrame = toJS(debuggerGlobalObject, debuggerGlobalObject, JavaScriptCallFrame::create(debuggerCallFrame).ptr());
     return injectedScript.createCommandLineAPIObject(callFrame);
 }
@@ -1162,26 +1186,42 @@ void InspectorDebuggerAgent::failedToParseSource(const String& url, const String
     m_frontendDispatcher->scriptFailedToParse(url, data, firstLine, errorLine, errorMessage);
 }
 
-void InspectorDebuggerAgent::willRunMicrotask()
+void InspectorDebuggerAgent::didQueueMicrotask(JSC::JSGlobalObject* globalObject, const JSC::Microtask& microtask)
 {
     if (!breakpointsActive())
         return;
 
-    if (!m_pauseOnMicrotasksBreakpoint)
-        return;
+    int identifier = m_nextMicrotaskIdentifier++;
+    auto result = m_identifierForMicrotask.set(&microtask, identifier);
+    ASSERT_UNUSED(result, result.isNewEntry);
 
-    schedulePauseForSpecialBreakpoint(*m_pauseOnMicrotasksBreakpoint, DebuggerFrontendDispatcher::Reason::Microtask);
+    didScheduleAsyncCall(globalObject, InspectorDebuggerAgent::AsyncCallType::Microtask, identifier, true);
 }
 
-void InspectorDebuggerAgent::didRunMicrotask()
+void InspectorDebuggerAgent::willRunMicrotask(JSC::JSGlobalObject*, const JSC::Microtask& microtask)
 {
-    if (!breakpointsActive())
-        return;
+    auto it = m_identifierForMicrotask.find(&microtask);
+    if (it != m_identifierForMicrotask.end()) {
+        auto identifier = it->value;
+        willDispatchAsyncCall(AsyncCallType::Microtask, identifier);
+    }
 
-    if (!m_pauseOnMicrotasksBreakpoint)
-        return;
+    if (breakpointsActive() && m_pauseOnMicrotasksBreakpoint)
+        schedulePauseForSpecialBreakpoint(*m_pauseOnMicrotasksBreakpoint, DebuggerFrontendDispatcher::Reason::Microtask);
+}
 
-    cancelPauseForSpecialBreakpoint(*m_pauseOnMicrotasksBreakpoint);
+void InspectorDebuggerAgent::didRunMicrotask(JSC::JSGlobalObject*, const JSC::Microtask& microtask)
+{
+    auto it = m_identifierForMicrotask.find(&microtask);
+    if (it != m_identifierForMicrotask.end()) {
+        auto identifier = it->value;
+        didDispatchAsyncCall(AsyncCallType::Microtask, identifier);
+
+        m_identifierForMicrotask.remove(it);
+    }
+
+    if (breakpointsActive() && m_pauseOnMicrotasksBreakpoint)
+        cancelPauseForSpecialBreakpoint(*m_pauseOnMicrotasksBreakpoint);
 }
 
 void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::DebuggerCallFrame& debuggerCallFrame, JSC::JSValue exceptionOrCaughtValue)
@@ -1189,7 +1229,7 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
     ASSERT(!m_pausedGlobalObject);
     m_pausedGlobalObject = globalObject;
 
-    auto* debuggerGlobalObject = debuggerCallFrame.scope()->globalObject();
+    auto* debuggerGlobalObject = debuggerCallFrame.scope(globalObject->vm())->globalObject();
     m_currentCallStack = { m_pausedGlobalObject->vm(), toJS(debuggerGlobalObject, debuggerGlobalObject, JavaScriptCallFrame::create(debuggerCallFrame).ptr()) };
 
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(m_pausedGlobalObject);
@@ -1260,8 +1300,8 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
     m_enablePauseWhenIdle = false;
 
     RefPtr<Protocol::Console::StackTrace> asyncStackTrace;
-    if (m_currentAsyncCallIdentifier) {
-        auto it = m_pendingAsyncCalls.find(m_currentAsyncCallIdentifier.value());
+    if (!m_currentAsyncCallIdentifierStack.isEmpty()) {
+        auto it = m_pendingAsyncCalls.find(m_currentAsyncCallIdentifierStack.last());
         if (it != m_pendingAsyncCalls.end())
             asyncStackTrace = it->value->buildInspectorObject();
     }
@@ -1321,6 +1361,11 @@ void InspectorDebuggerAgent::didContinue()
         m_frontendDispatcher->resumed();
 }
 
+void InspectorDebuggerAgent::didDeferBreakpointPause(JSC::BreakpointID breakpointId)
+{
+    updatePauseReasonAndData(DebuggerFrontendDispatcher::Reason::Breakpoint, buildBreakpointPauseReason(breakpointId));
+}
+
 void InspectorDebuggerAgent::breakProgram(DebuggerFrontendDispatcher::Reason reason, RefPtr<JSON::Object>&& data, RefPtr<JSC::Breakpoint>&& specialBreakpoint)
 {
     updatePauseReasonAndData(reason, WTFMove(data));
@@ -1378,6 +1423,12 @@ void InspectorDebuggerAgent::didClearGlobalObject()
     m_frontendDispatcher->globalObjectCleared();
 }
 
+void InspectorDebuggerAgent::didClearAsyncStackTraceData()
+{
+    m_identifierForMicrotask.clear();
+    m_nextMicrotaskIdentifier = 1;
+}
+
 bool InspectorDebuggerAgent::assertPaused(Protocol::ErrorString& errorString)
 {
     if (!m_pausedGlobalObject) {
@@ -1404,7 +1455,7 @@ void InspectorDebuggerAgent::clearExceptionValue()
 void InspectorDebuggerAgent::clearAsyncStackTraceData()
 {
     m_pendingAsyncCalls.clear();
-    m_currentAsyncCallIdentifier = std::nullopt;
+    m_currentAsyncCallIdentifierStack.clear();
 
     didClearAsyncStackTraceData();
 }

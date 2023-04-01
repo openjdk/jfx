@@ -32,9 +32,7 @@
 #include <wtf/Hasher.h>
 #include <wtf/text/WTFString.h>
 
-namespace WebCore {
-
-namespace ContentExtensions {
+namespace WebCore::ContentExtensions {
 
 // A ContentExtensionRule is the smallest unit in a ContentExtension.
 //
@@ -44,52 +42,54 @@ namespace ContentExtensions {
 struct Trigger {
     String urlFilter;
     bool urlFilterIsCaseSensitive { false };
-    bool topURLConditionIsCaseSensitive { false };
+    bool topURLFilterIsCaseSensitive { false };
+    bool frameURLFilterIsCaseSensitive { false };
     ResourceFlags flags { 0 };
     Vector<String> conditions;
-    enum class ConditionType {
-        None,
-        IfDomain,
-        UnlessDomain,
-        IfTopURL,
-        UnlessTopURL,
-    };
-    ConditionType conditionType { ConditionType::None };
 
-    WEBCORE_EXPORT Trigger isolatedCopy() const;
+    WEBCORE_EXPORT Trigger isolatedCopy() const &;
+    WEBCORE_EXPORT Trigger isolatedCopy() &&;
 
-    ~Trigger()
+    void checkValidity()
     {
-        ASSERT(conditions.isEmpty() == (conditionType == ConditionType::None));
-        if (topURLConditionIsCaseSensitive)
-            ASSERT(conditionType == ConditionType::IfTopURL || conditionType == ConditionType::UnlessTopURL);
+        auto actionCondition = static_cast<ActionCondition>(flags & ActionConditionMask);
+        ASSERT_UNUSED(actionCondition, conditions.isEmpty() == (actionCondition == ActionCondition::None));
+        if (topURLFilterIsCaseSensitive)
+            ASSERT(actionCondition == ActionCondition::IfTopURL || actionCondition == ActionCondition::UnlessTopURL);
+        if (frameURLFilterIsCaseSensitive)
+            ASSERT(actionCondition == ActionCondition::IfFrameURL);
     }
 
     bool isEmpty() const
     {
         return urlFilter.isEmpty()
             && !urlFilterIsCaseSensitive
-            && !topURLConditionIsCaseSensitive
+            && !topURLFilterIsCaseSensitive
+            && !frameURLFilterIsCaseSensitive
             && !flags
-            && conditions.isEmpty()
-            && conditionType == ConditionType::None;
+            && conditions.isEmpty();
     }
 
     bool operator==(const Trigger& other) const
     {
         return urlFilter == other.urlFilter
             && urlFilterIsCaseSensitive == other.urlFilterIsCaseSensitive
-            && topURLConditionIsCaseSensitive == other.topURLConditionIsCaseSensitive
+            && topURLFilterIsCaseSensitive == other.topURLFilterIsCaseSensitive
+            && frameURLFilterIsCaseSensitive == other.frameURLFilterIsCaseSensitive
             && flags == other.flags
-            && conditions == other.conditions
-            && conditionType == other.conditionType;
+            && conditions == other.conditions;
     }
 };
+
+inline void add(Hasher& hasher, const Trigger& trigger)
+{
+    add(hasher, trigger.urlFilterIsCaseSensitive, trigger.urlFilter, trigger.flags, trigger.conditions);
+}
 
 struct TriggerHash {
     static unsigned hash(const Trigger& trigger)
     {
-        return computeHash(trigger.urlFilterIsCaseSensitive, trigger.urlFilter, trigger.flags, trigger.conditions, trigger.conditionType);
+        return computeHash(trigger);
     }
     static bool equal(const Trigger& a, const Trigger& b)
     {
@@ -99,8 +99,8 @@ struct TriggerHash {
 };
 
 struct TriggerHashTraits : public WTF::CustomHashTraits<Trigger> {
-    static const bool emptyValueIsZero = false;
-    static const bool hasIsEmptyValueFunction = true;
+    static constexpr bool emptyValueIsZero = false;
+    static constexpr bool hasIsEmptyValueFunction = true;
 
     static void constructDeletedValue(Trigger& trigger)
     {
@@ -124,43 +124,33 @@ struct TriggerHashTraits : public WTF::CustomHashTraits<Trigger> {
 };
 
 struct Action {
-    Action(ActionType type, const String& stringArgument, uint32_t actionID = std::numeric_limits<uint32_t>::max())
-        : m_type(type)
-        , m_actionID(actionID)
-        , m_stringArgument(stringArgument)
-    {
-        ASSERT(hasStringArgument(type));
-    }
+    Action(ActionData&& data)
+        : m_data(WTFMove(data)) { }
 
-    Action(ActionType type, uint32_t actionID = std::numeric_limits<uint32_t>::max())
-        : m_type(type)
-        , m_actionID(actionID)
-    {
-        ASSERT(!hasStringArgument(type));
-    }
-    Action(Action&&) = default;
+    bool operator==(const Action& other) const { return m_data == other.m_data; }
+    bool operator!=(const Action& other) const { return !(*this == other); }
 
-    bool operator==(const Action& other) const
-    {
-        return m_type == other.m_type
-            && m_actionID == other.m_actionID
-            && m_stringArgument == other.m_stringArgument;
-    }
+    const ActionData& data() const { return m_data; }
 
-    static Action deserialize(const SerializedActionByte* actions, const uint32_t actionsLength, uint32_t location);
-    static ActionType deserializeType(const SerializedActionByte* actions, const uint32_t actionsLength, uint32_t location);
-    static uint32_t serializedLength(const SerializedActionByte* actions, const uint32_t actionsLength, uint32_t location);
-
-    ActionType type() const { return m_type; }
-    uint32_t actionID() const { return m_actionID; }
-    const String& stringArgument() const { return m_stringArgument; }
-
-    WEBCORE_EXPORT Action isolatedCopy() const;
+    WEBCORE_EXPORT Action isolatedCopy() const &;
+    WEBCORE_EXPORT Action isolatedCopy() &&;
 
 private:
-    ActionType m_type;
-    uint32_t m_actionID;
-    String m_stringArgument;
+    ActionData m_data;
+};
+
+struct DeserializedAction : public Action {
+    static DeserializedAction deserialize(Span<const uint8_t>, uint32_t location);
+    static size_t serializedLength(Span<const uint8_t>, uint32_t location);
+
+    uint32_t actionID() const { return m_actionID; }
+
+private:
+    DeserializedAction(uint32_t actionID, ActionData&& data)
+        : Action(WTFMove(data))
+        , m_actionID(actionID) { }
+
+    const uint32_t m_actionID;
 };
 
 class ContentExtensionRule {
@@ -170,10 +160,8 @@ public:
     const Trigger& trigger() const { return m_trigger; }
     const Action& action() const { return m_action; }
 
-    ContentExtensionRule isolatedCopy() const
-    {
-        return { m_trigger.isolatedCopy(), m_action.isolatedCopy() };
-    }
+    ContentExtensionRule isolatedCopy() const & { return { m_trigger.isolatedCopy(), m_action.isolatedCopy() }; }
+    ContentExtensionRule isolatedCopy() && { return { WTFMove(m_trigger).isolatedCopy(), WTFMove(m_action).isolatedCopy() }; }
     bool operator==(const ContentExtensionRule& other) const
     {
         return m_trigger == other.m_trigger && m_action == other.m_action;
@@ -184,7 +172,6 @@ private:
     Action m_action;
 };
 
-} // namespace ContentExtensions
-} // namespace WebCore
+} // namespace WebCore::ContentExtensions
 
 #endif // ENABLE(CONTENT_EXTENSIONS)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,31 +42,31 @@ public class WindowEvent extends Event {
      * Common supertype for all window event types.
      */
     public static final EventType<WindowEvent> ANY =
-            new EventType<WindowEvent>(Event.ANY, "WINDOW");
+            new EventType<>(Event.ANY, "WINDOW");
 
     /**
      * This event occurs on window just before it is shown.
      */
     public static final EventType<WindowEvent> WINDOW_SHOWING =
-            new EventType<WindowEvent>(WindowEvent.ANY, "WINDOW_SHOWING");
+            new EventType<>(WindowEvent.ANY, "WINDOW_SHOWING");
 
     /**
      * This event occurs on window just after it is shown.
      */
     public static final EventType<WindowEvent> WINDOW_SHOWN =
-            new EventType<WindowEvent>(WindowEvent.ANY, "WINDOW_SHOWN");
+            new EventType<>(WindowEvent.ANY, "WINDOW_SHOWN");
 
     /**
      * This event occurs on window just before it is hidden.
      */
     public static final EventType<WindowEvent> WINDOW_HIDING =
-            new EventType<WindowEvent>(WindowEvent.ANY, "WINDOW_HIDING");
+            new EventType<>(WindowEvent.ANY, "WINDOW_HIDING");
 
     /**
      * This event occurs on window just after it is hidden.
      */
     public static final EventType<WindowEvent> WINDOW_HIDDEN =
-            new EventType<WindowEvent>(WindowEvent.ANY, "WINDOW_HIDDEN");
+            new EventType<>(WindowEvent.ANY, "WINDOW_HIDDEN");
 
     /**
      * This event is delivered to a
@@ -75,7 +75,7 @@ public class WindowEvent extends Event {
      * handler for this event closes the corresponding window.
      */
     public static final EventType<WindowEvent> WINDOW_CLOSE_REQUEST =
-            new EventType<WindowEvent>(WindowEvent.ANY, "WINDOW_CLOSE_REQUEST");
+            new EventType<>(WindowEvent.ANY, "WINDOW_CLOSE_REQUEST");
 
     /**
      * Construct a new {@code Event} with the specified event source, target

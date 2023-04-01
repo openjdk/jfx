@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "FilterEffectGeometry.h"
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceFilterPrimitive.h"
 #include "SVGElement.h"
@@ -31,17 +32,11 @@ namespace WebCore {
 
 class Filter;
 class FilterEffect;
-class SVGFilterBuilder;
+class SVGFilter;
 
 class SVGFilterPrimitiveStandardAttributes : public SVGElement {
     WTF_MAKE_ISO_ALLOCATED(SVGFilterPrimitiveStandardAttributes);
 public:
-    void setStandardAttributes(FilterEffect*) const;
-
-    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) const = 0;
-    // Returns true, if the new value is different from the old one.
-    virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&);
-
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFilterPrimitiveStandardAttributes, SVGElement>;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
@@ -56,6 +51,18 @@ public:
     SVGAnimatedLength& heightAnimated() { return m_height; }
     SVGAnimatedString& resultAnimated() { return m_result; }
 
+    OptionSet<FilterEffectGeometry::Flags> effectGeometryFlags() const;
+
+    virtual Vector<AtomString> filterEffectInputsNames() const { return { }; }
+    virtual bool isIdentity() const { return false; }
+    virtual IntOutsets outsets(const FloatRect&, SVGUnitTypes::SVGUnitType) const { return { }; }
+    RefPtr<FilterEffect> filterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext);
+
+    void primitiveAttributeChanged(const QualifiedName&);
+    void markFilterEffectForRebuild();
+
+    static void invalidateFilterPrimitiveParent(SVGElement*);
+
 protected:
     SVGFilterPrimitiveStandardAttributes(const QualifiedName&, Document&);
 
@@ -63,8 +70,8 @@ protected:
     void svgAttributeChanged(const QualifiedName&) override;
     void childrenChanged(const ChildChange&) override;
 
-    void invalidate();
-    void primitiveAttributeChanged(const QualifiedName& attributeName);
+    virtual bool setFilterEffectAttribute(FilterEffect&, const QualifiedName&) { return false; }
+    virtual RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const = 0;
 
 private:
     bool isFilterEffect() const override { return true; }
@@ -73,28 +80,16 @@ private:
     bool rendererIsNeeded(const RenderStyle&) override;
     bool childShouldCreateRenderer(const Node&) const override { return false; }
 
+    RefPtr<FilterEffect> m_effect;
+
     // Spec: If the x/y attribute is not specified, the effect is as if a value of "0%" were specified.
     // Spec: If the width/height attribute is not specified, the effect is as if a value of "100%" were specified.
-    Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width, "0%") };
-    Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height, "0%") };
-    Ref<SVGAnimatedLength> m_width { SVGAnimatedLength::create(this, SVGLengthMode::Width, "100%") };
-    Ref<SVGAnimatedLength> m_height { SVGAnimatedLength::create(this, SVGLengthMode::Height, "100%") };
+    Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width, "0%"_s) };
+    Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height, "0%"_s) };
+    Ref<SVGAnimatedLength> m_width { SVGAnimatedLength::create(this, SVGLengthMode::Width, "100%"_s) };
+    Ref<SVGAnimatedLength> m_height { SVGAnimatedLength::create(this, SVGLengthMode::Height, "100%"_s) };
     Ref<SVGAnimatedString> m_result { SVGAnimatedString::create(this) };
 };
-
-void invalidateFilterPrimitiveParent(SVGElement*);
-
-inline void SVGFilterPrimitiveStandardAttributes::invalidate()
-{
-    if (auto* primitiveRenderer = renderer())
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*primitiveRenderer);
-}
-
-inline void SVGFilterPrimitiveStandardAttributes::primitiveAttributeChanged(const QualifiedName& attribute)
-{
-    if (auto* primitiveRenderer = renderer())
-        static_cast<RenderSVGResourceFilterPrimitive*>(primitiveRenderer)->primitiveAttributeChanged(attribute);
-}
 
 } // namespace WebCore
 

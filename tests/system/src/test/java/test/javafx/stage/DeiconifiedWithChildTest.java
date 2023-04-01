@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,24 +24,24 @@
  */
 package test.javafx.stage;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.fail;
+import test.util.Util;
 
 public class DeiconifiedWithChildTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Stage stage;
     static Stage childStage;
 
@@ -73,15 +73,12 @@ public class DeiconifiedWithChildTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown(childStage, stage);
     }
 
     @Test
@@ -100,12 +97,5 @@ public class DeiconifiedWithChildTest {
         Thread.sleep(200);
         Assert.assertEquals("Child window was moved", x, childStage.getX(), 0.1);
         Assert.assertEquals("Child window was moved", y, childStage.getY(), 0.1);
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.runLater(childStage::hide);
-        Platform.runLater(stage::hide);
-        Platform.exit();
     }
 }

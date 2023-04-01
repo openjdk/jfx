@@ -43,13 +43,15 @@
 
 namespace WebCore {
 
+static constexpr std::array<const char *, 3> databaseFileSuffixes { "", "-shm", "-wal" };
+
 SQLiteFileSystem::SQLiteFileSystem()
 {
 }
 
-String SQLiteFileSystem::appendDatabaseFileNameToPath(const String& path, const String& fileName)
+String SQLiteFileSystem::appendDatabaseFileNameToPath(StringView path, StringView fileName)
 {
-    return FileSystem::pathByAppendingComponent(path, fileName);
+   return FileSystem::pathByAppendingComponent(path, fileName);
 }
 
 bool SQLiteFileSystem::ensureDatabaseDirectoryExists(const String& path)
@@ -57,6 +59,7 @@ bool SQLiteFileSystem::ensureDatabaseDirectoryExists(const String& path)
     if (path.isEmpty())
         return false;
     return FileSystem::makeAllDirectories(path);
+    return false;
 }
 
 bool SQLiteFileSystem::ensureDatabaseFileExists(const String& fileName, bool checkPathOnly)
@@ -70,6 +73,7 @@ bool SQLiteFileSystem::ensureDatabaseFileExists(const String& fileName, bool che
     }
 
     return FileSystem::fileExists(fileName);
+    return false;
 }
 
 bool SQLiteFileSystem::deleteEmptyDatabaseDirectory(const String& path)
@@ -77,39 +81,41 @@ bool SQLiteFileSystem::deleteEmptyDatabaseDirectory(const String& path)
     return FileSystem::deleteEmptyDirectory(path);
 }
 
-bool SQLiteFileSystem::deleteDatabaseFile(const String& fileName)
+bool SQLiteFileSystem::deleteDatabaseFile(const String& filePath)
 {
-    auto walFileName = makeString(fileName, "-wal"_s);
-    auto shmFileName = makeString(fileName, "-shm"_s);
+    bool fileExists = false;
+    for (const auto* suffix : databaseFileSuffixes) {
+        String path = filePath + suffix;
+        FileSystem::deleteFile(path);
+        fileExists |= FileSystem::fileExists(path);
+    }
 
-    // Try to delete all three files whether or not they are there.
-    FileSystem::deleteFile(fileName);
-    FileSystem::deleteFile(walFileName);
-    FileSystem::deleteFile(shmFileName);
-
-    // If any of the wal or shm files remain after the delete attempt, the overall delete operation failed.
-    return !FileSystem::fileExists(fileName) && !FileSystem::fileExists(walFileName) && !FileSystem::fileExists(shmFileName);
+    return !fileExists;
 }
 
-#if PLATFORM(IOS_FAMILY)
+bool SQLiteFileSystem::moveDatabaseFile(const String& oldFilePath, const String& newFilePath)
+{
+    bool allMoved = true;
+    for (const auto* suffix : databaseFileSuffixes)
+        allMoved &= FileSystem::moveFile(makeString(oldFilePath, suffix), makeString(newFilePath, suffix));
+
+    return allMoved;
+}
+
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(JAVA)
 bool SQLiteFileSystem::truncateDatabaseFile(sqlite3* database)
 {
     return sqlite3_file_control(database, 0, SQLITE_TRUNCATE_DATABASE, 0) == SQLITE_OK;
 }
 #endif
 
-uint64_t SQLiteFileSystem::databaseFileSize(const String& fileName)
+uint64_t SQLiteFileSystem::databaseFileSize(const String& filePath)
 {
     uint64_t totalSize = 0;
-
-    if (auto fileSize = FileSystem::fileSize(fileName))
-        totalSize += *fileSize;
-
-    if (auto fileSize = FileSystem::fileSize(makeString(fileName, "-wal"_s)))
-        totalSize += *fileSize;
-
-    if (auto fileSize = FileSystem::fileSize(makeString(fileName, "-shm"_s)))
-        totalSize += *fileSize;
+    for (const auto* suffix : databaseFileSuffixes) {
+        if (auto fileSize = FileSystem::fileSize(filePath + suffix))
+            totalSize += *fileSize;
+    }
 
     return totalSize;
 }
@@ -124,7 +130,7 @@ std::optional<WallTime> SQLiteFileSystem::databaseModificationTime(const String&
     return FileSystem::fileModificationTime(fileName);
 }
 
-String SQLiteFileSystem::computeHashForFileName(const String& fileName)
+String SQLiteFileSystem::computeHashForFileName(StringView fileName)
 {
     auto cryptoDigest = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto utf8FileName = fileName.utf8();

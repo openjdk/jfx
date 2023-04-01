@@ -29,6 +29,10 @@
 #include <string.h>
 #include <wtf/CheckedArithmetic.h>
 
+#if OS(DARWIN)
+#include <malloc/malloc.h>
+#endif
+
 #if OS(WINDOWS)
 #include <windows.h>
 #else
@@ -145,7 +149,7 @@ TryMallocReturnValue tryFastZeroedMalloc(size_t n)
 
 } // namespace WTF
 
-#if defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#if USE(SYSTEM_MALLOC)
 
 #include <wtf/OSAllocator.h>
 
@@ -315,7 +319,7 @@ void fastMallocDumpMallocStats() { }
 
 } // namespace WTF
 
-#else // defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#else // USE(SYSTEM_MALLOC)
 
 #include <bmalloc/bmalloc.h>
 
@@ -686,4 +690,4 @@ void fastDisableScavenger()
 
 } // namespace WTF
 
-#endif // defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#endif // USE(SYSTEM_MALLOC)

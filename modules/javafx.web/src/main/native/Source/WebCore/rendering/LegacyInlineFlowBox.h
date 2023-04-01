@@ -51,6 +51,7 @@ public:
         , m_hasAnnotationsAfter(false)
         , m_isFirstAfterPageBreak(false)
         , m_isForTrailingFloats(false)
+        , m_hasSelfPaintInlineBox(false)
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
         , m_hasBadChildList(false)
 #endif
@@ -93,9 +94,6 @@ public:
     LegacyInlineBox* firstLeafDescendant() const;
     LegacyInlineBox* lastLeafDescendant() const;
 
-    typedef void (*CustomInlineBoxRangeReverse)(void* userData, Vector<LegacyInlineBox*>::iterator first, Vector<LegacyInlineBox*>::iterator last);
-    void collectLeafBoxesInLogicalOrder(Vector<LegacyInlineBox*>&, CustomInlineBoxRangeReverse customReverseImplementation = nullptr, void* userData = nullptr) const;
-
     void setConstructed() final
     {
         LegacyInlineBox::setConstructed();
@@ -115,15 +113,8 @@ public:
 
     void clearTruncation() override;
 
-    void paintBoxDecorations(PaintInfo&, const LayoutPoint&);
-    void paintMask(PaintInfo&, const LayoutPoint&);
-    void paintFillLayers(const PaintInfo&, const Color&, const FillLayer&, const LayoutRect&, CompositeOperator = CompositeOperator::SourceOver);
-    void paintFillLayer(const PaintInfo&, const Color&, const FillLayer&, const LayoutRect&, CompositeOperator = CompositeOperator::SourceOver);
-    void paintBoxShadow(const PaintInfo&, const RenderStyle&, ShadowStyle, const LayoutRect&);
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
-
-    bool boxShadowCanBeAppliedToBackground(const FillLayer&) const;
 
     // logicalLeft = left in a horizontal line and top in a vertical line.
     LayoutUnit marginBorderPaddingLogicalLeft() const { return LayoutUnit(marginLogicalLeft() + borderLogicalLeft() + paddingLogicalLeft()); }
@@ -191,7 +182,7 @@ public:
         bool strictMode, GlyphOverflowAndFallbackFontsMap&, FontBaseline, VerticalPositionCache&);
     void adjustMaxAscentAndDescent(LayoutUnit& maxAscent, LayoutUnit& maxDescent,
         LayoutUnit maxPositionTop, LayoutUnit maxPositionBottom);
-    void placeBoxesInBlockDirection(LayoutUnit logicalTop, LayoutUnit maxHeight, int maxAscent, bool strictMode, LayoutUnit& lineTop, LayoutUnit& lineBottom, bool& setLineTop,
+    void placeBoxesInBlockDirection(LayoutUnit logicalTop, LayoutUnit maxHeight, LayoutUnit maxAscent, bool strictMode, LayoutUnit& lineTop, LayoutUnit& lineBottom, bool& setLineTop,
         LayoutUnit& lineTopIncludingMargins, LayoutUnit& lineBottomIncludingMargins, bool& hasAnnotationsBefore, bool& hasAnnotationsAfter, FontBaseline);
     void flipLinesInBlockDirection(LayoutUnit lineTop, LayoutUnit lineBottom);
     bool requiresIdeographicBaseline(const GlyphOverflowAndFallbackFontsMap&) const;
@@ -203,7 +194,7 @@ public:
 
     void removeChild(LegacyInlineBox* child);
 
-    RenderObject::HighlightState selectionState() override;
+    RenderObject::HighlightState selectionState() const override;
 
     bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const final;
     float placeEllipsisBox(bool ltr, float blockLeftEdge, float blockRightEdge, float ellipsisWidth, float &truncatedWidth, bool&) override;
@@ -296,6 +287,8 @@ public:
 
     void computeReplacedAndTextLineTopAndBottom(LayoutUnit& lineTop, LayoutUnit& lineBottom) const;
 
+    bool hasSelfPaintInlineBox() const { return m_hasSelfPaintInlineBox; }
+
 private:
     bool isInlineFlowBox() const final { return true; }
     void boxModelObject() const = delete;
@@ -305,7 +298,6 @@ private:
     void addTextBoxVisualOverflow(LegacyInlineTextBox&, GlyphOverflowAndFallbackFontsMap&, LayoutRect& logicalVisualOverflow);
     void addOutlineVisualOverflow(LayoutRect& logicalVisualOverflow);
     void addReplacedChildOverflow(const LegacyInlineBox*, LayoutRect& logicalLayoutOverflow, LayoutRect& logicalVisualOverflow);
-    void constrainToLineTopAndBottomIfNeeded(LayoutRect&) const;
 
 private:
     unsigned m_includeLogicalLeftEdge : 1;
@@ -331,6 +323,7 @@ protected:
 
     unsigned m_isFirstAfterPageBreak : 1;
     unsigned m_isForTrailingFloats : 1;
+    unsigned m_hasSelfPaintInlineBox : 1;
 
     // End of RootInlineBox-specific members.
 

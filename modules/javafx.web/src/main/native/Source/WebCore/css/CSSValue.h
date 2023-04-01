@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -35,6 +35,7 @@ class CSSCustomPropertyValue;
 class CSSStyleDeclaration;
 class CachedResource;
 class DeprecatedCSSOMValue;
+class Document;
 class StyleSheetContents;
 
 enum CSSPropertyID : uint16_t;
@@ -77,7 +78,7 @@ public:
     }
 
     Type cssValueType() const;
-    String cssText() const;
+    String cssText(Document* = nullptr) const;
     ASCIILiteral separatorCSSText() const;
 
     bool isPrimitiveValue() const { return m_classType == PrimitiveClass; }
@@ -89,6 +90,7 @@ public:
 
     bool isAspectRatioValue() const { return m_classType == AspectRatioClass; }
     bool isBorderImageSliceValue() const { return m_classType == BorderImageSliceClass; }
+    bool isBorderImageWidthValue() const { return m_classType == BorderImageWidthClass; }
     bool isCanvasValue() const { return m_classType == CanvasClass; }
     bool isCrossfadeValue() const { return m_classType == CrossfadeClass; }
     bool isCursorImageValue() const { return m_classType == CursorImageClass; }
@@ -97,6 +99,7 @@ public:
     bool isFontFeatureValue() const { return m_classType == FontFeatureClass; }
     bool isFontVariationValue() const { return m_classType == FontVariationClass; }
     bool isFontFaceSrcValue() const { return m_classType == FontFaceSrcClass; }
+    bool isFontPaletteValuesOverrideColorsValue() const { return m_classType == FontPaletteValuesOverrideColorsClass; }
     bool isFontValue() const { return m_classType == FontClass; }
     bool isFontStyleValue() const { return m_classType == FontStyleClass; }
     bool isFontStyleRangeValue() const { return m_classType == FontStyleRangeClass; }
@@ -106,11 +109,12 @@ public:
     bool isImageSetValue() const { return m_classType == ImageSetClass; }
     bool isImageValue() const { return m_classType == ImageClass; }
     bool isImplicitInitialValue() const;
-    bool isInheritedValue() const { return m_classType == InheritedClass; }
-    bool isInitialValue() const { return m_classType == InitialClass; }
-    bool isUnsetValue() const { return m_classType == UnsetClass; }
-    bool isRevertValue() const { return m_classType == RevertClass; }
-    bool isGlobalKeyword() const { return isInheritedValue() || isInitialValue() || isUnsetValue() || isRevertValue(); }
+    bool isInheritValue() const;
+    bool isInitialValue() const;
+    bool isUnsetValue() const;
+    bool isRevertValue() const;
+    bool isRevertLayerValue() const;
+    bool isCSSWideKeyword() const;
     bool treatAsInitialValue(CSSPropertyID) const;
     bool treatAsInheritedValue(CSSPropertyID) const;
     bool isLinearGradientValue() const { return m_classType == LinearGradientClass; }
@@ -132,16 +136,20 @@ public:
     bool isGridIntegerRepeatValue() const { return m_classType == GridIntegerRepeatClass; }
     bool isGridTemplateAreasValue() const { return m_classType == GridTemplateAreasClass; }
     bool isGridLineNamesValue() const { return m_classType == GridLineNamesClass; }
+    bool isSubgridValue() const { return m_classType == SubgridClass; }
     bool isUnicodeRangeValue() const { return m_classType == UnicodeRangeClass; }
 
     bool isVariableReferenceValue() const { return m_classType == VariableReferenceClass; }
     bool isPendingSubstitutionValue() const { return m_classType == PendingSubstitutionValueClass; }
 
+    bool isOffsetRotateValue() const { return m_classType == OffsetRotateClass; }
+    bool isRayValue() const { return m_classType == RayClass; }
+
     bool hasVariableReferences() const { return isVariableReferenceValue() || isPendingSubstitutionValue(); }
 
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
 
     // What properties does this value rely on (eg, font-size for em units)
     void collectDirectComputationalDependencies(HashSet<CSSPropertyID>&) const;
@@ -150,6 +158,10 @@ public:
 
     bool equals(const CSSValue&) const;
     bool operator==(const CSSValue& other) const { return equals(other); }
+
+    // https://www.w3.org/TR/css-values-4/#local-urls
+    // Empty URLs and fragment-only URLs should not be resolved relative to the base URL.
+    static bool isCSSLocalURL(StringView relativeURL);
 
 protected:
 
@@ -181,18 +193,15 @@ protected:
         // Other class types.
         AspectRatioClass,
         BorderImageSliceClass,
+        BorderImageWidthClass,
         FontFeatureClass,
         FontVariationClass,
         FontClass,
         FontStyleClass,
         FontStyleRangeClass,
         FontFaceSrcClass,
+        FontPaletteValuesOverrideColorsClass,
         FunctionClass,
-
-        InheritedClass,
-        InitialClass,
-        UnsetClass,
-        RevertClass,
 
         ReflectClass,
         ShadowClass,
@@ -208,6 +217,9 @@ protected:
         VariableReferenceClass,
         PendingSubstitutionValueClass,
 
+        OffsetRotateClass,
+        RayClass,
+
         // List class types must appear after ValueListClass. Note CSSFunctionValue
         // is deliberately excluded, since we don't want it exposed to the CSS OM
         // as a list.
@@ -216,6 +228,7 @@ protected:
         GridLineNamesClass,
         GridAutoRepeatClass,
         GridIntegerRepeatClass,
+        SubgridClass,
         // Do not append non-list class types here.
     };
 
@@ -235,6 +248,8 @@ protected:
         : m_primitiveUnitType(0)
         , m_hasCachedCSSText(false)
         , m_valueSeparator(SpaceSeparator)
+        , m_isImplicit(false)
+        , m_cachedCSSTextUsesLegacyPrecision(false)
         , m_classType(classType)
     {
     }
@@ -261,6 +276,8 @@ protected:
     mutable unsigned m_hasCachedCSSText : 1;
 
     unsigned m_valueSeparator : ValueSeparatorBits;
+    unsigned m_isImplicit : 1;
+    mutable unsigned m_cachedCSSTextUsesLegacyPrecision : 1;
 
 private:
     unsigned m_classType : ClassTypeBits; // ClassType

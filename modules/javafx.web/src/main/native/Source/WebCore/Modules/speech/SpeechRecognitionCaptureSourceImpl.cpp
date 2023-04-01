@@ -57,10 +57,6 @@ SpeechRecognitionCaptureSourceImpl::SpeechRecognitionCaptureSourceImpl(SpeechRec
     , m_stateUpdateCallback(WTFMove(stateUpdateCallback))
     , m_source(WTFMove(source))
 {
-    m_source->addAudioSampleObserver(*this);
-    m_source->addObserver(*this);
-    m_source->start();
-
 #if !RELEASE_LOG_DISABLED
     if (!nullLogger().get()) {
         nullLogger() = Logger::create(this);
@@ -70,7 +66,11 @@ SpeechRecognitionCaptureSourceImpl::SpeechRecognitionCaptureSourceImpl(SpeechRec
     m_source->setLogger(*nullLogger(), nextLogIdentifier());
 #endif
 
-    auto weakThis = makeWeakPtr(this);
+    m_source->addAudioSampleObserver(*this);
+    m_source->addObserver(*this);
+    m_source->start();
+
+    initializeWeakPtrFactory();
 }
 
 SpeechRecognitionCaptureSourceImpl::~SpeechRecognitionCaptureSourceImpl()
@@ -90,17 +90,17 @@ bool SpeechRecognitionCaptureSourceImpl::updateDataSource(const CAAudioStreamDes
 
     auto dataSource = AudioSampleDataSource::create(audioDescription.sampleRate() * 1, m_source.get());
     if (dataSource->setInputFormat(audioDescription)) {
-        callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+        callOnMainThread([this, weakThis = WeakPtr { *this }] {
             if (weakThis)
-                m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Unable to set input format" }));
+                m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Unable to set input format"_s }));
         });
         return false;
     }
 
     if (dataSource->setOutputFormat(audioDescription)) {
-        callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+        callOnMainThread([this, weakThis = WeakPtr { *this }] {
             if (weakThis)
-                m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Unable to set output format" }));
+                m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Unable to set output format"_s }));
         });
         return false;
     }
@@ -113,7 +113,7 @@ void SpeechRecognitionCaptureSourceImpl::pullSamplesAndCallDataCallback(const Me
 {
     ASSERT(isMainThread());
 
-    auto data = WebAudioBufferList { audioDescription, static_cast<uint32_t>(sampleCount) };
+    auto data = WebAudioBufferList { audioDescription, sampleCount };
     {
         Locker locker { m_dataSourceLock };
         m_dataSource->pullSamples(*data.list(), sampleCount, time.timeValue(), 0, AudioSampleDataSource::Copy);
@@ -138,7 +138,7 @@ void SpeechRecognitionCaptureSourceImpl::audioSamplesAvailable(const MediaTime& 
 
     m_dataSource->pushSamples(time, data, sampleCount);
 
-    callOnMainThread([weakThis = makeWeakPtr(this), time, audioDescription, sampleCount] {
+    callOnMainThread([weakThis = WeakPtr { *this }, time, audioDescription, sampleCount] {
         if (weakThis)
             weakThis->pullSamplesAndCallDataCallback(time, audioDescription, sampleCount);
     });
@@ -157,13 +157,13 @@ void SpeechRecognitionCaptureSourceImpl::sourceStopped()
 {
     ASSERT(isMainThread());
     ASSERT(m_source->captureDidFail());
-    m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Source is stopped" }));
+    m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Source is stopped"_s }));
 }
 
 void SpeechRecognitionCaptureSourceImpl::sourceMutedChanged()
 {
     ASSERT(isMainThread());
-    m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Source is muted" }));
+    m_stateUpdateCallback(SpeechRecognitionUpdate::createError(m_clientIdentifier, SpeechRecognitionError { SpeechRecognitionErrorType::AudioCapture, "Source is muted"_s }));
 }
 
 void SpeechRecognitionCaptureSourceImpl::mute()

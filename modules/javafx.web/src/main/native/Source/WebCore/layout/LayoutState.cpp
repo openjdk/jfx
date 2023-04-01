@@ -36,7 +36,6 @@
 #include "LayoutBoxGeometry.h"
 #include "LayoutContainerBox.h"
 #include "RenderBox.h"
-#include "RuntimeEnabledFeatures.h"
 #include "TableFormattingState.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -45,8 +44,9 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutState);
 
-LayoutState::LayoutState(const Document& document, const ContainerBox& rootContainer)
-    : m_rootContainer(makeWeakPtr(rootContainer))
+LayoutState::LayoutState(const Document& document, const ContainerBox& rootContainer, std::optional<FormattingContextIntegrationType> formattingContextIntegrationType)
+    : m_rootContainer(rootContainer)
+    , m_formattingContextIntegrationType(formattingContextIntegrationType)
 {
     // It makes absolutely no sense to construct a dedicated layout state for a non-formatting context root (layout would be a no-op).
     ASSERT(root().establishesFormattingContext());
@@ -85,7 +85,7 @@ BoxGeometry& LayoutState::ensureGeometryForBoxSlow(const Box& layoutBox)
 
 FormattingState& LayoutState::formattingStateForBox(const Box& layoutBox) const
 {
-    return establishedFormattingState(layoutBox.formattingContextRoot());
+    return formattingStateForFormattingContext(layoutBox.formattingContextRoot());
 }
 
 bool LayoutState::hasFormattingState(const ContainerBox& formattingContextRoot) const
@@ -97,73 +97,69 @@ bool LayoutState::hasFormattingState(const ContainerBox& formattingContextRoot) 
         || m_flexFormattingStates.contains(&formattingContextRoot);
 }
 
-FormattingState& LayoutState::establishedFormattingState(const ContainerBox& formattingContextRoot) const
+FormattingState& LayoutState::formattingStateForFormattingContext(const ContainerBox& formattingContextRoot) const
 {
-    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled()) {
-        ASSERT(&formattingContextRoot == m_rootContainer.get());
+    ASSERT(formattingContextRoot.establishesFormattingContext());
+
+    if (isInlineFormattingContextIntegration()) {
+        ASSERT(&formattingContextRoot == m_rootContainer.ptr());
         return *m_rootInlineFormattingStateForIntegration;
     }
 
-    if (auto* formattingState = m_inlineFormattingStates.get(&formattingContextRoot))
-        return *formattingState;
-
-    if (auto* formattingState = m_blockFormattingStates.get(&formattingContextRoot))
-        return *formattingState;
-
-    if (auto* formattingState = m_tableFormattingStates.get(&formattingContextRoot))
-        return *formattingState;
-
-    if (auto* formattingState = m_flexFormattingStates.get(&formattingContextRoot))
-        return *formattingState;
-
-    CRASH();
-}
-
-InlineFormattingState& LayoutState::establishedInlineFormattingState(const ContainerBox& formattingContextRoot) const
-{
-    ASSERT(formattingContextRoot.establishesInlineFormattingContext());
-
-    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled()) {
-        ASSERT(&formattingContextRoot == m_rootContainer.get());
-        return *m_rootInlineFormattingStateForIntegration;
+    if (isFlexFormattingContextIntegration()) {
+        ASSERT(&formattingContextRoot == m_rootContainer.ptr());
+        return *m_rootFlexFormattingStateForIntegration;
     }
 
-    return *m_inlineFormattingStates.get(&formattingContextRoot);
-}
-
-BlockFormattingState& LayoutState::establishedBlockFormattingState(const ContainerBox& formattingContextRoot) const
-{
-    ASSERT(formattingContextRoot.establishesBlockFormattingContext());
-    return *m_blockFormattingStates.get(&formattingContextRoot);
-}
-
-TableFormattingState& LayoutState::establishedTableFormattingState(const ContainerBox& formattingContextRoot) const
-{
-    ASSERT(formattingContextRoot.establishesTableFormattingContext());
-    return *m_tableFormattingStates.get(&formattingContextRoot);
-}
-
-FlexFormattingState& LayoutState::establishedFlexFormattingState(const ContainerBox& formattingContextRoot) const
-{
-    ASSERT(formattingContextRoot.establishesFlexFormattingContext());
-    return *m_flexFormattingStates.get(&formattingContextRoot);
-}
-
-FormattingState& LayoutState::ensureFormattingState(const ContainerBox& formattingContextRoot)
-{
     if (formattingContextRoot.establishesInlineFormattingContext())
-        return ensureInlineFormattingState(formattingContextRoot);
+        return formattingStateForInlineFormattingContext(formattingContextRoot);
 
     if (formattingContextRoot.establishesBlockFormattingContext())
-        return ensureBlockFormattingState(formattingContextRoot);
+        return formattingStateForBlockFormattingContext(formattingContextRoot);
 
     if (formattingContextRoot.establishesTableFormattingContext())
-        return ensureTableFormattingState(formattingContextRoot);
+        return formattingStateForTableFormattingContext(formattingContextRoot);
 
     if (formattingContextRoot.establishesFlexFormattingContext())
-        return ensureFlexFormattingState(formattingContextRoot);
+        return formattingStateForFlexFormattingContext(formattingContextRoot);
 
     CRASH();
+}
+
+InlineFormattingState& LayoutState::formattingStateForInlineFormattingContext(const ContainerBox& inlineFormattingContextRoot) const
+{
+    ASSERT(inlineFormattingContextRoot.establishesInlineFormattingContext());
+
+    if (isInlineFormattingContextIntegration()) {
+        ASSERT(&inlineFormattingContextRoot == m_rootContainer.ptr());
+        return *m_rootInlineFormattingStateForIntegration;
+    }
+
+    return *m_inlineFormattingStates.get(&inlineFormattingContextRoot);
+}
+
+BlockFormattingState& LayoutState::formattingStateForBlockFormattingContext(const ContainerBox& blockFormattingContextRoot) const
+{
+    ASSERT(blockFormattingContextRoot.establishesBlockFormattingContext());
+    return *m_blockFormattingStates.get(&blockFormattingContextRoot);
+}
+
+TableFormattingState& LayoutState::formattingStateForTableFormattingContext(const ContainerBox& tableFormattingContextRoot) const
+{
+    ASSERT(tableFormattingContextRoot.establishesTableFormattingContext());
+    return *m_tableFormattingStates.get(&tableFormattingContextRoot);
+}
+
+FlexFormattingState& LayoutState::formattingStateForFlexFormattingContext(const ContainerBox& flexFormattingContextRoot) const
+{
+    ASSERT(flexFormattingContextRoot.establishesFlexFormattingContext());
+
+    if (isFlexFormattingContextIntegration()) {
+        ASSERT(&flexFormattingContextRoot == m_rootContainer.ptr());
+        return *m_rootFlexFormattingStateForIntegration;
+    }
+
+    return *m_flexFormattingStates.get(&flexFormattingContextRoot);
 }
 
 InlineFormattingState& LayoutState::ensureInlineFormattingState(const ContainerBox& formattingContextRoot)
@@ -179,14 +175,15 @@ InlineFormattingState& LayoutState::ensureInlineFormattingState(const ContainerB
 
         // Otherwise, the formatting context inherits the floats from the parent formatting context.
         // Find the formatting state in which this formatting root lives, not the one it creates and use its floating state.
-        auto& parentFormattingState = ensureFormattingState(formattingContextRoot.formattingContextRoot());
+        ASSERT(formattingContextRoot.formattingContextRoot().establishesBlockFormattingContext());
+        auto& parentFormattingState = formattingStateForBlockFormattingContext(formattingContextRoot.formattingContextRoot());
         auto& parentFloatingState = parentFormattingState.floatingState();
         return makeUnique<InlineFormattingState>(parentFloatingState, *this);
     };
 
-    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled()) {
+    if (isInlineFormattingContextIntegration()) {
         if (!m_rootInlineFormattingStateForIntegration) {
-            ASSERT(&formattingContextRoot == m_rootContainer.get());
+            ASSERT(&formattingContextRoot == m_rootContainer.ptr());
             m_rootInlineFormattingStateForIntegration = create();
         }
         return *m_rootInlineFormattingStateForIntegration;
@@ -227,35 +224,43 @@ FlexFormattingState& LayoutState::ensureFlexFormattingState(const ContainerBox& 
         return makeUnique<FlexFormattingState>(FloatingState::create(*this, formattingContextRoot), *this);
     };
 
+    if (isFlexFormattingContextIntegration()) {
+        if (!m_rootFlexFormattingStateForIntegration) {
+            ASSERT(&formattingContextRoot == m_rootContainer.ptr());
+            m_rootFlexFormattingStateForIntegration = create();
+        }
+        return *m_rootFlexFormattingStateForIntegration;
+    }
+
     return *m_flexFormattingStates.ensure(&formattingContextRoot, create).iterator->value;
 }
 
 void LayoutState::setViewportSize(const LayoutSize& viewportSize)
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled());
+    ASSERT(isInlineFormattingContextIntegration());
     m_viewportSize = viewportSize;
 }
 
 LayoutSize LayoutState::viewportSize() const
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled());
+    ASSERT(isInlineFormattingContextIntegration());
     return m_viewportSize;
 }
 
 void LayoutState::setIsIntegratedRootBoxFirstChild(bool value)
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled());
+    ASSERT(isInlineFormattingContextIntegration());
     m_isIntegratedRootBoxFirstChild = value ? IsIntegratedRootBoxFirstChild::Yes : IsIntegratedRootBoxFirstChild::No;
 }
 
 bool LayoutState::shouldIgnoreTrailingLetterSpacing() const
 {
-    return RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled();
+    return isInlineFormattingContextIntegration();
 }
 
 bool LayoutState::shouldNotSynthesizeInlineBlockBaseline() const
 {
-    return RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled();
+    return isInlineFormattingContextIntegration();
 }
 
 }

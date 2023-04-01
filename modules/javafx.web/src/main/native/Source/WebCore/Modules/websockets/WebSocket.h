@@ -33,10 +33,8 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "Timer.h"
 #include <wtf/URL.h>
 #include "WebSocketChannelClient.h"
-#include <wtf/Deque.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 
@@ -53,7 +51,7 @@ class ThreadableWebSocketChannel;
 class WebSocket final : public RefCounted<WebSocket>, public EventTargetWithInlineData, public ActiveDOMObject, private WebSocketChannelClient {
     WTF_MAKE_ISO_ALLOCATED(WebSocket);
 public:
-    static const char* subprotocolSeparator();
+    static ASCIILiteral subprotocolSeparator();
 
     static ExceptionOr<Ref<WebSocket>> create(ScriptExecutionContext&, const String& url);
     static ExceptionOr<Ref<WebSocket>> create(ScriptExecutionContext&, const String& url, const String& protocol);
@@ -101,9 +99,7 @@ public:
 private:
     explicit WebSocket(ScriptExecutionContext&);
 
-    void resumeTimerFired();
-    void dispatchOrQueueErrorEvent();
-    void dispatchOrQueueEvent(Ref<Event>&&);
+    void dispatchErrorEventIfNeeded();
 
     void contextDestroyed() final;
     void suspend(ReasonForSuspension) final;
@@ -117,9 +113,9 @@ private:
     void derefEventTarget() final { deref(); }
 
     void didConnect() final;
-    void didReceiveMessage(const String& message) final;
+    void didReceiveMessage(String&& message) final;
     void didReceiveBinaryData(Vector<uint8_t>&&) final;
-    void didReceiveMessageError() final;
+    void didReceiveMessageError(String&& reason) final;
     void didUpdateBufferedAmount(unsigned bufferedAmount) final;
     void didStartClosingHandshake() final;
     void didClose(unsigned unhandledBufferedAmount, ClosingHandshakeCompletionStatus, unsigned short code, const String& reason) final;
@@ -142,9 +138,6 @@ private:
     String m_subprotocol;
     String m_extensions;
 
-    Timer m_resumeTimer;
-    bool m_shouldDelayEventFiring { false };
-    Deque<Ref<Event>> m_pendingEvents;
     bool m_dispatchedErrorEvent { false };
     RefPtr<PendingActivity<WebSocket>> m_pendingActivity;
 };

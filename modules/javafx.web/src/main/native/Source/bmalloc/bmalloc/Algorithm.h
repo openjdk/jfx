@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Algorithm_h
-#define Algorithm_h
+#pragma once
 
 #include "BAssert.h"
 #include <algorithm>
@@ -68,7 +67,7 @@ template<typename T> constexpr bool test(T value, uintptr_t mask)
 template <typename T>
 constexpr bool isPowerOfTwo(T size)
 {
-    static_assert(std::is_integral<T>::value, "");
+    static_assert(std::is_integral<T>::value);
     return size && !(size & (size - 1));
 }
 
@@ -300,5 +299,3 @@ constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
 }
 
 } // namespace bmalloc
-
-#endif // Algorithm_h

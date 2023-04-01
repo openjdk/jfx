@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventHandler;
-import javafx.event.EventTarget;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
@@ -81,7 +80,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
     private static final int GAP = 6;
 
     private List<List<Key>> currentBoard;
-    private static HashMap<String, List<List<Key>>> boardMap = new HashMap<String, List<List<Key>>>();
+    private static HashMap<String, List<List<Key>>> boardMap = new HashMap<>();
     private int numCols;
 
     private boolean capsDown = false;
@@ -567,7 +566,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
 
             Key tmpKey;
-            List<List<Key>> rows = new ArrayList<List<Key>>(2);
+            List<List<Key>> rows = new ArrayList<>(2);
 
             for (int i = 0; i < nRows; i++) {
                 int start = i * nKeysPerRow;
@@ -575,7 +574,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
                 if (start >= end)
                     break;
 
-                List<Key> keys = new ArrayList<Key>(nKeysPerRow);
+                List<Key> keys = new ArrayList<>(nKeysPerRow);
                 for (int j = start; j < end; j++) {
                     tmpKey = new CharKey(secondaryVK.chars[j], null, null);
                     tmpKey.col= (j - start) * 2;
@@ -731,8 +730,10 @@ public class FXVKSkin extends SkinBase<FXVK> {
     private class TextInputKey extends Key {
         String chars = "";
 
+        @Override
         protected void press() {
         }
+        @Override
         protected void release() {
             if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing()) {
                 return;
@@ -746,10 +747,8 @@ public class FXVKSkin extends SkinBase<FXVK> {
 
         protected void sendKeyEvents() {
             Node target = fxvk.getAttachedNode();
-            if (target instanceof EventTarget) {
-                if (chars != null) {
-                    target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
-                }
+            if (target != null && chars != null) {
+                target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
             }
         }
     }
@@ -780,6 +779,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             this(letter, alt, moreChars, null);
         }
 
+        @Override
         protected void press() {
             super.press();
             if (letterChars.equals(altChars) && moreChars == null) {
@@ -792,6 +792,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             }
         }
 
+        @Override
         protected void release() {
             super.release();
             if (letterChars.equals(altChars) && moreChars == null) {
@@ -851,9 +852,11 @@ public class FXVKSkin extends SkinBase<FXVK> {
             }
         }
 
+        @Override
         protected void sendKeyEvents() {
             Node target = fxvk.getAttachedNode();
-            if (target instanceof EventTarget) {
+
+            if (target != null) {
                 target.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
                 target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
                 target.fireEvent(new KeyEvent(KeyEvent.KEY_RELEASED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
@@ -906,7 +909,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             }
 
             secondaryVK.chars=null;
-            ArrayList<String> secondaryList = new ArrayList<String>();
+            ArrayList<String> secondaryList = new ArrayList<>();
 
             // Add primary character
             if (!isSymbol) {
@@ -1008,8 +1011,8 @@ public class FXVKSkin extends SkinBase<FXVK> {
 
         String boardFileName = type.substring(0,1).toUpperCase() + type.substring(1).toLowerCase() + "Board.txt";
         try {
-            tmpBoard = new ArrayList<List<Key>>(5);
-            List<Key> keys = new ArrayList<Key>(20);
+            tmpBoard = new ArrayList<>(5);
+            List<Key> keys = new ArrayList<>(20);
 
             InputStream boardFile = FXVKSkin.class.getResourceAsStream(boardFileName);
             BufferedReader reader = new BufferedReader(new InputStreamReader(boardFile, "UTF-8"));
@@ -1024,7 +1027,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             // Whether the "chars" is an identifier, like $shift or $SymbolBoard, etc.
             boolean identifier = false;
             // The textual content of the Key
-            List<String> charsList = new ArrayList<String>(10);
+            List<String> charsList = new ArrayList<>(10);
 
             while ((line = reader.readLine()) != null) {
                 if (line.length() == 0 || line.charAt(0) == '#') {
@@ -1040,7 +1043,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
                     } else if (ch == '[') {
                         // Start of a key
                         col = c;
-                        charsList = new ArrayList<String>(10);
+                        charsList = new ArrayList<>(10);
                         identifier = false;
                     } else if (ch == ']') {
                         String chars = "";
@@ -1211,7 +1214,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
                 c = 0;
                 col = 0;
                 tmpBoard.add(keys);
-                keys = new ArrayList<Key>(20);
+                keys = new ArrayList<>(20);
             }
             reader.close();
             boardMap.put(type, tmpBoard);

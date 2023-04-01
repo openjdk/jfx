@@ -1314,6 +1314,72 @@ pb_utils_get_file_extension_from_caps (const GstCaps * caps)
   return ext;
 }
 
+/**
+ * gst_pb_utils_get_file_extension_from_caps:
+ * @caps: the (fixed) #GstCaps for which a file extension is needed
+ *
+ * Returns a possible file extension for the given caps, if known.
+ *
+ * Returns: (nullable): a newly-allocated file extension string, or NULL on error. Free
+ *          string with g_free() when not needed any longer.
+ *
+ * Since: 1.20
+ */
+gchar *
+gst_pb_utils_get_file_extension_from_caps (const GstCaps * caps)
+{
+  return g_strdup (pb_utils_get_file_extension_from_caps (caps));
+}
+
+/**
+ * gst_pb_utils_get_caps_description_flags:
+ * @caps: the (fixed) #GstCaps for which flags are requested
+ *
+ * Returns flags that describe the format of the caps if known. No flags are
+ * set for unknown caps.
+ *
+ * Returns: #GstPbUtilsCapsDescriptionFlags that describe @caps, or no flags
+ *          if the caps are unknown.
+ *
+ * Since: 1.20
+ */
+GstPbUtilsCapsDescriptionFlags
+gst_pb_utils_get_caps_description_flags (const GstCaps * caps)
+{
+  GstCaps *tmp;
+  const FormatInfo *info;
+  GstPbUtilsCapsDescriptionFlags flags = 0;
+
+  g_return_val_if_fail (caps != NULL, 0);
+  g_return_val_if_fail (GST_IS_CAPS (caps), 0);
+  tmp = copy_and_clean_caps (caps);
+  g_return_val_if_fail (gst_caps_is_fixed (tmp), 0);
+
+  info = find_format_info (tmp);
+  /* A separate flags type is used because internally more flags are needed
+   * for filtering purposes, e.g. the SYSTEMSTREAM flag */
+  if (info) {
+    if ((info->flags | FLAG_CONTAINER))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_CONTAINER;
+    if ((info->flags | FLAG_AUDIO))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_AUDIO;
+    if ((info->flags | FLAG_VIDEO))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_VIDEO;
+    if ((info->flags | FLAG_IMAGE))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_IMAGE;
+    if ((info->flags | FLAG_SUB))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_SUBTITLE;
+    if ((info->flags | FLAG_TAG))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_TAG;
+    if ((info->flags | FLAG_GENERIC))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_GENERIC;
+  }
+
+  gst_caps_unref (tmp);
+
+  return flags;
+}
+
 gboolean
 pb_utils_is_tag (const GstCaps * caps)
 {

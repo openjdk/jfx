@@ -53,15 +53,16 @@ private:
     ScrollingTreeFrameScrollingNodeNicosia(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
-    void commitStateAfterChildren(const ScrollingStateNode&) override;
 
+    bool startAnimatedScrollToPosition(FloatPoint) override;
+    void stopAnimatedScroll() override;
+    void serviceScrollAnimation(MonotonicTime) final;
 
     WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
     void stopScrollAnimations() override;
 
     FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
     void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction) override;
-    void stopScrollAnimations() override;
     void repositionScrollingLayers() override;
     void repositionRelatedLayers() override;
 
