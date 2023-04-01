@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,10 +27,13 @@ package test.com.sun.javafx.collections;
 
 import com.sun.javafx.collections.ObservableSetWrapper;
 import org.junit.jupiter.api.Test;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ObservableSetWrapperTest {
 
@@ -56,6 +59,32 @@ public class ObservableSetWrapperTest {
                 throw new AssertionError("contains() was not elided");
             }
         });
+    }
+
+    @Test
+    public void testRemoveAllWithNullArgumentThrowsNPE() {
+        var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
+        assertThrows(NullPointerException.class, () -> set.removeAll((Collection<?>) null));
+    }
+
+    @Test
+    public void testRemoveAllWithEmptyListArgumentWorksCorrectly() {
+        var set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
+        assertFalse(set.removeAll(Set.of()));
+        assertEquals(Set.of("a", "b", "c"), set);
+    }
+
+    @Test
+    public void testRetainAllWithNullArgumentThrowsNPE() {
+        var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
+        assertThrows(NullPointerException.class, () -> set.retainAll((Collection<?>) null));
+    }
+
+    @Test
+    public void testRetainAllWithEmptyListArgumentWorksCorrectly() {
+        var set = new ObservableSetWrapper<>(new HashSet<>(Set.of("a", "b", "c")));
+        assertTrue(set.retainAll(Set.of()));
+        assertTrue(set.isEmpty());
     }
 
 }

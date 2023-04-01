@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,14 +28,17 @@ package test.com.sun.javafx.collections;
 import com.sun.javafx.collections.ObservableListWrapper;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ObservableListWrapperTest {
 
     @Test
     public void testRemoveAllWithEmptyArgumentDoesNotEnumerateBackingList() {
-        ObservableListWrapper<String> list = new ObservableListWrapper<>(new ArrayList<>(List.of("a", "b", "c")) {
+        var list = new ObservableListWrapper<>(new ArrayList<>(List.of("a", "b", "c")) {
             @Override
             public String get(int index) {
                 throw new AssertionError("get() was not elided");
@@ -47,7 +50,7 @@ public class ObservableListWrapperTest {
 
     @Test
     public void testRetainAllWithEmptyArgumentDoesNotCallContains() {
-        ObservableListWrapper<String> list = new ObservableListWrapper<>(new ArrayList<>(List.of("a", "b", "c")));
+        var list = new ObservableListWrapper<>(new ArrayList<>(List.of("a", "b", "c")));
 
         list.retainAll(new ArrayList<String>() {
             @Override
@@ -55,6 +58,32 @@ public class ObservableListWrapperTest {
                 throw new AssertionError("contains() was not elided");
             }
         });
+    }
+
+    @Test
+    public void testRemoveAllWithNullArgumentThrowsNPE() {
+        var list = new ObservableListWrapper<>(List.of("a", "b", "c"));
+        assertThrows(NullPointerException.class, () -> list.removeAll((Collection<?>) null));
+    }
+
+    @Test
+    public void testRemoveAllWithEmptyListArgumentWorksCorrectly() {
+        var list = new ObservableListWrapper<>(new ArrayList<>(List.of("a", "b", "c")));
+        assertFalse(list.removeAll(List.of()));
+        assertEquals(List.of("a", "b", "c"), list);
+    }
+
+    @Test
+    public void testRetainAllWithNullArgumentThrowsNPE() {
+        var list = new ObservableListWrapper<>(List.of("a", "b", "c"));
+        assertThrows(NullPointerException.class, () -> list.retainAll((Collection<?>) null));
+    }
+
+    @Test
+    public void testRetainAllWithEmptyListArgumentWorksCorrectly() {
+        var list = new ObservableListWrapper<>(new ArrayList<>(List.of("a", "b", "c")));
+        assertTrue(list.retainAll(List.of()));
+        assertTrue(list.isEmpty());
     }
 
 }

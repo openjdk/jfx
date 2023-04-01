@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -673,13 +673,11 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
-            if (backingMap.isEmpty()) {
-                return false;
-            }
-
-            if (c.isEmpty()) {
+            if (c.isEmpty() && !backingMap.isEmpty()) {
                 clear();
                 return true;
+            } else if (backingMap.isEmpty()) {
+                return false;
             }
 
             return removeRetain(c, false);
@@ -702,7 +700,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
-            if (backingMap.isEmpty() || c.isEmpty()) {
+            if (c.isEmpty() || backingMap.isEmpty()) {
                 return false;
             }
 
