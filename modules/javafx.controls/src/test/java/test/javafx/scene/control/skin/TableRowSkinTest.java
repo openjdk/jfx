@@ -32,6 +32,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Skin;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -39,7 +40,6 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TableRowSkin;
-import javafx.scene.layout.Region;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -248,7 +248,8 @@ public class TableRowSkinTest {
     }
 
     /**
-     * When we make an invisible column visible we expect the underlying cells to be visible, e.g. as width > 0.
+     * When we set a fixed cell size and make an invisible column visible we expect the underlying cells to be visible,
+     * e.g. width > 0.
      * See also: JDK-8305248
      */
     @Test
@@ -264,9 +265,11 @@ public class TableRowSkinTest {
         Toolkit.getToolkit().firePulse();
 
         IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 0);
-        for (Node cellNode : row.getChildrenUnmodifiable()) {
-            double width = ((Region) cellNode).getWidth();
-            assertNotEquals(0.0, width);
+        for (Node node : row.getChildrenUnmodifiable()) {
+            if (node instanceof TableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
         }
     }
 
@@ -274,6 +277,7 @@ public class TableRowSkinTest {
     public void testMakeVisibleColumnInvisible() {
         tableView.setFixedCellSize(24);
         TableColumn<Person, ?> firstColumn = tableView.getColumns().get(0);
+        assertTrue(firstColumn.isVisible());
 
         tableView.refresh();
         Toolkit.getToolkit().firePulse();
@@ -282,9 +286,11 @@ public class TableRowSkinTest {
         Toolkit.getToolkit().firePulse();
 
         IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 0);
-        for (Node cellNode : row.getChildrenUnmodifiable()) {
-            double width = ((Region) cellNode).getWidth();
-            assertNotEquals(0.0, width);
+        for (Node node : row.getChildrenUnmodifiable()) {
+            if (node instanceof TableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
         }
     }
 

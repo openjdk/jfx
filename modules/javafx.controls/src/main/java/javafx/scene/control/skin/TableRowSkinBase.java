@@ -353,8 +353,8 @@ public abstract class TableRowSkinBase<T,
                 if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
-                // Note: We have to determine the pref width here because the add operation above may trigger the skin
-                // creation first, which is what makes it possible to get a correct value here in the first place.
+                // Note: prefWidth() has to be called only after the tableCell is added to the tableRow, if it wasn't
+                // already. Otherwise, it might not have its skin yet, and its pref width is therefore 0.
                 width = tableCell.prefWidth(height);
 
                 // Added for RT-32700, and then updated for RT-34074.
