@@ -687,15 +687,7 @@ void WindowContextBase::set_background(float r, float g, float b) {
 }
 
 WindowContextBase::~WindowContextBase() {
-//    if (xim.ic) {
-//        XDestroyIC(xim.ic);
-//        xim.ic = NULL;
-//    }
-//    if (xim.im) {
-//        XCloseIM(xim.im);
-//        xim.im = NULL;
-//    }
-
+    disableIME();
     gtk_widget_destroy(gtk_widget);
 }
 
