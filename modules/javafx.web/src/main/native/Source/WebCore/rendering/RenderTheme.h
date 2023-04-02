@@ -92,9 +92,6 @@ public:
     virtual String mediaControlsFormattedStringForDuration(double) { return String(); }
 #endif // ENABLE(MODERN_MEDIA_CONTROLS)
 #endif // ENABLE(VIDEO)
-#if ENABLE(FULLSCREEN_API)
-    virtual String extraFullScreenStyleSheet() { return String(); }
-#endif
 #if ENABLE(ATTACHMENT_ELEMENT)
     virtual String attachmentStyleSheet() const;
 #endif
@@ -370,6 +367,11 @@ protected:
 
     virtual void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const;
     virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
+
+#if PLATFORM(JAVA)
+    virtual bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+#endif
 
 public:
     void updateControlStatesForRenderer(const RenderBox&, ControlStates&) const;

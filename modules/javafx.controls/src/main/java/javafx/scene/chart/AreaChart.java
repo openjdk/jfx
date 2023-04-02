@@ -69,8 +69,9 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS ------------------------------------------
 
-    /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
+    /** A multiplier for the Y values that we store for each series, it is used to animate in a new series */
     private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
+    private Timeline timeline;
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
@@ -410,8 +411,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         seriesYMultiplierMap.remove(series);
         // remove all symbol nodes
         if (shouldAnimate()) {
-            Timeline tl = new Timeline(createSeriesRemoveTimeLine(series, 400));
-            tl.play();
+            timeline = new Timeline(createSeriesRemoveTimeLine(series, 400));
+            timeline.play();
         } else {
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
@@ -552,6 +553,18 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         legendItem.getSymbol().getStyleClass().addAll("chart-area-symbol", "series" + seriesIndex,
                 "area-legend-symbol", series.defaultColorStyleClass);
         return legendItem;
+    }
+
+    /** {@inheritDoc} */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (timeline != null) {
+            timeline.setOnFinished(null);
+            timeline.stop();
+            timeline = null;
+            getPlotChildren().remove(series.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
     }
 
     // -------------- STYLESHEET HANDLING --------------------------------------

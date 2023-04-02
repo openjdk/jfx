@@ -51,6 +51,8 @@ import com.sun.javafx.charts.Legend.LegendItem;
  */
 public class BubbleChart<X,Y> extends XYChart<X,Y> {
 
+    private ParallelTransition parallelTransition;
+
     // -------------- CONSTRUCTORS ----------------------------------------------
 
     /**
@@ -195,8 +197,8 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
         // remove all bubble nodes
         if (shouldAnimate()) {
-            ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(event -> {
+            parallelTransition = new ParallelTransition();
+            parallelTransition.setOnFinished(event -> {
                 removeSeriesFromDisplay(series);
             });
             for (XYChart.Data<X,Y> d : series.getData()) {
@@ -208,9 +210,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                     getPlotChildren().remove(bubble);
                     bubble.setOpacity(1.0);
                 });
-                pt.getChildren().add(ft);
+                parallelTransition.getChildren().add(ft);
             }
-            pt.play();
+            parallelTransition.play();
         } else {
             for (XYChart.Data<X,Y> d : series.getData()) {
                 final Node bubble = d.getNode();
@@ -219,6 +221,18 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
             removeSeriesFromDisplay(series);
         }
 
+    }
+
+    /** {@inheritDoc} */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (parallelTransition != null) {
+            parallelTransition.setOnFinished(null);
+            parallelTransition.stop();
+            parallelTransition = null;
+            getPlotChildren().remove(series.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
     }
 
     /**

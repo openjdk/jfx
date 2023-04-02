@@ -418,6 +418,7 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& docum
     , m_scanTimer(*this, &HTMLMediaElement::scanTimerFired)
     , m_playbackControlsManagerBehaviorRestrictionsTimer(*this, &HTMLMediaElement::playbackControlsManagerBehaviorRestrictionsTimerFired)
     , m_seekToPlaybackPositionEndedTimer(*this, &HTMLMediaElement::seekToPlaybackPositionEndedTimerFired)
+    , m_currentIdentifier(MediaUniqueIdentifier::generate())
     , m_lastTimeUpdateEventMovieTime(MediaTime::positiveInfiniteTime())
     , m_firstTimePlaying(true)
     , m_playing(false)
@@ -1193,6 +1194,10 @@ void HTMLMediaElement::prepareForLoad()
 
     m_loadState = WaitingForSource;
     m_currentSourceNode = nullptr;
+
+#if ENABLE(ENCRYPTED_MEDIA)
+    m_playbackBlockedWaitingForKey = false;
+#endif
 
     if (!document().hasBrowsingContext())
         return;
@@ -3267,9 +3272,9 @@ void HTMLMediaElement::seekTask()
         noSeekRequired = true;
 
 #if ENABLE(MEDIA_SOURCE)
-    // Always notify the media engine of a seek if the source is not closed. This ensures that the source is
-    // always in a flushed state when the 'seeking' event fires.
-    if (m_mediaSource && !m_mediaSource->isClosed())
+    // Always notify the media engine of a seek if the source is not closed and there is seekable ranges.
+    // This ensures that the source is always in a flushed state when the 'seeking' event fires.
+    if (m_mediaSource && !m_mediaSource->isClosed() && seekableRanges->length())
         noSeekRequired = false;
 #endif
 
@@ -4604,8 +4609,6 @@ void HTMLMediaElement::configureTextTrackGroup(const TrackGroup& group)
         if (!webkitClosedCaptionsVisible() && closedCaptionsVisible() && displayMode == CaptionUserPreferences::AlwaysOn)
             m_webkitLegacyClosedCaptionOverride = true;
     }
-
-    m_processingPreferenceChange = false;
 }
 
 static JSC::JSValue controllerJSValue(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, HTMLMediaElement& media)
@@ -4725,6 +4728,9 @@ void HTMLMediaElement::layoutSizeChanged()
     auto task = [this] {
             if (auto root = userAgentShadowRoot())
             root->dispatchEvent(Event::create(eventNames().resizeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+
+        if (m_mediaControlsHost)
+            m_mediaControlsHost->updateCaptionDisplaySizes();
         };
     queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, WTFMove(task));
 
@@ -4863,6 +4869,8 @@ void HTMLMediaElement::configureTextTracks()
         configureTextTrackGroup(metadataTracks);
     if (otherTracks.tracks.size())
         configureTextTrackGroup(otherTracks);
+
+    m_processingPreferenceChange = false;
 
     updateCaptionContainer();
     configureTextTrackDisplay();
@@ -5877,8 +5885,7 @@ void HTMLMediaElement::userCancelledLoad()
     m_readyState = HAVE_NOTHING;
     updateMediaController();
 
-    auto* context = scriptExecutionContext();
-    if (!context || context->activeDOMObjectsAreStopped())
+    if (isSuspended())
         return; // Document is about to be destructed. Avoid updating layout in updateActiveTextTrackCues.
 
     updateActiveTextTrackCues(MediaTime::zeroTime());
@@ -6476,7 +6483,7 @@ void HTMLMediaElement::exitFullscreen()
         }
     }
 
-    if (document().activeDOMObjectsAreSuspended() || document().activeDOMObjectsAreStopped()) {
+    if (isSuspended()) {
         setFullscreenMode(VideoFullscreenModeNone);
         document().page()->chrome().client().exitVideoFullscreenToModeWithoutAnimation(downcast<HTMLVideoElement>(*this), VideoFullscreenModeNone);
     } else if (document().page()->chrome().client().supportsVideoFullscreen(oldVideoFullscreenMode)) {
@@ -6724,7 +6731,7 @@ void HTMLMediaElement::configureTextTrackDisplay(TextTrackVisibilityCheckType ch
     if (m_processingPreferenceChange)
         return;
 
-    if (document().activeDOMObjectsAreStopped())
+    if (isSuspended())
         return;
 
     bool haveVisibleTextTrack = false;
@@ -7817,7 +7824,7 @@ void HTMLMediaElement::updateMediaControlsAfterPresentationModeChange()
 {
     // Don't execute script if the controls script hasn't been injected yet, or we have
     // stopped/suspended the object.
-    if (!m_mediaControlsHost || document().activeDOMObjectsAreSuspended() || document().activeDOMObjectsAreStopped())
+    if (!m_mediaControlsHost || isSuspended())
         return;
 
 #if !ENABLE(MODERN_MEDIA_CONTROLS)

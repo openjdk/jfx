@@ -1,0 +1,9 @@
+// Policy file for SandboxAppTest.testFXWebApp test
+// Use as follows: -Djava.security.policy=empty.policy
+
+// No permissions to read resource files are granted
+// FX permission to access the window list is only granted for
+// the purpose of the test
+grant {
+    permission javafx.util.FXPermission "accessWindowList";
+};

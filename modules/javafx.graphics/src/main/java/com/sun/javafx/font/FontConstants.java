@@ -40,6 +40,8 @@ public interface FontConstants {
     public static final int nameTag = 0x6E616D65; // 'name'
     public static final int os_2Tag = 0x4F532F32; // 'OS/2'
     public static final int postTag = 0x706F7374; // 'post'
+    public static final int colrTag = 0x434F4C52; // 'COLR'
+    public static final int sbixTag = 0x73626978; // 'sbix'
 
     /* sizes, in bytes, of TT/TTC header records */
     public static final int TTCHEADERSIZE = 12;

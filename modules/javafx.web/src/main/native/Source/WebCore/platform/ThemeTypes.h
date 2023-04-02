@@ -48,6 +48,34 @@ enum ControlPart {
     ProgressBarPart,
     SliderHorizontalPart,
     SliderVerticalPart,
+#if PLATFORM(JAVA)
+    SliderThumbHorizontalPart,
+    SliderThumbVerticalPart,
+    MediaControlsBackgroundPart,
+    MediaControlsDarkBarBackgroundPart,
+    MediaControlsFullscreenBackground,
+    MediaControlsLightBarBackgroundPart,
+    MediaCurrentTimePart,
+    MediaEnterFullscreenButtonPart,
+    MediaExitFullscreenButtonPart,
+    MediaFullScreenVolumeSliderPart,
+    MediaFullScreenVolumeSliderThumbPart,
+    MediaMuteButtonPart,
+    MediaOverlayPlayButtonPart,
+    MediaPlayButtonPart,
+    MediaReturnToRealtimeButtonPart,
+    MediaRewindButtonPart,
+    MediaSeekBackButtonPart,
+    MediaSeekForwardButtonPart,
+    MediaSliderPart,
+    MediaSliderThumbPart,
+    MediaTimeRemainingPart,
+    MediaToggleClosedCaptionsButtonPart,
+    MediaVolumeSliderPart,
+    MediaVolumeSliderContainerPart,
+    MediaVolumeSliderMuteButtonPart,
+    MediaVolumeSliderThumbPart,
+#endif
     SearchFieldPart,
 #if ENABLE(APPLE_PAY)
     ApplePayButtonPart,
@@ -74,8 +102,10 @@ enum ControlPart {
     SearchFieldResultsDecorationPart,
     SearchFieldResultsButtonPart,
     SearchFieldCancelButtonPart,
+#if !PLATFORM(JAVA)
     SliderThumbHorizontalPart,
     SliderThumbVerticalPart
+#endif
 };
 
 #if ENABLE(SERVICE_CONTROLS)

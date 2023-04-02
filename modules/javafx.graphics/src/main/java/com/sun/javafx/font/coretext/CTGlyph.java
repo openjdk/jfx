@@ -86,8 +86,6 @@ class CTGlyph implements Glyph {
         xAdvance = size.width;
         yAdvance = -size.height;   /*Inverted coordinates system */
 
-        if (drawShapes) return;
-
         /* Avoid CTFontGetBoundingRectsForGlyphs as it is too slow */
 //        bounds = OS.CTFontGetBoundingRectsForGlyphs(fontRef, orientation, (short)glyphCode, null, 1);
 
@@ -154,6 +152,41 @@ class CTGlyph implements Glyph {
         return cachedContextRef;
     }
 
+    private synchronized byte[] getColorImage(double x, double y, int w, int h) {
+
+        if (w == 0 || h == 0) return new byte[0];
+
+        long fontRef = strike.getFontRef();
+        CGAffineTransform matrix = strike.matrix;
+        long context = createContext(true, w, h);
+        if (context == 0) return new byte[0];
+
+        double drawX = 0, drawY = 0;
+        if (matrix != null) {
+            OS.CGContextTranslateCTM(context, -x, -y);
+        } else {
+            drawX = x;
+            drawY = y;
+        }
+
+        OS.CTFontDrawGlyphs(fontRef, (short)glyphCode, -drawX, -drawY, context);
+
+        if (matrix != null) {
+            OS.CGContextTranslateCTM(context, x, y);
+        }
+
+        byte[] imageData = OS.CGImageContextGetData(context, w, h, 32);
+        if (imageData == null) {
+            bounds = new CGRect();
+            imageData = new byte[0];
+        }
+
+        OS.CGContextRelease(context);
+
+        return imageData;
+    }
+
+
     private synchronized byte[] getImage(double x, double y, int w, int h, int subPixel) {
 
         if (w == 0 || h == 0) return new byte[0];
@@ -213,8 +246,14 @@ class CTGlyph implements Glyph {
 
     @Override public byte[] getPixelData(int subPixel) {
         checkBounds();
-        return getImage(bounds.origin.x, bounds.origin.y,
-                        (int)bounds.size.width, (int)bounds.size.height, subPixel);
+        if (isColorGlyph()) {
+            return getColorImage(bounds.origin.x, bounds.origin.y,
+                                 (int)bounds.size.width, (int)bounds.size.height);
+        } else {
+            return getImage(bounds.origin.x, bounds.origin.y,
+                            (int)bounds.size.width, (int)bounds.size.height,
+                            subPixel);
+        }
     }
 
     @Override public float getAdvance() {
@@ -236,7 +275,11 @@ class CTGlyph implements Glyph {
     @Override public int getWidth() {
         checkBounds();
         int w = (int)bounds.size.width;
-        return isLCDGlyph() ? w * 3 : w;
+        if (isColorGlyph()) {
+            return (w * 4); // has alpha
+        } else {
+            return isLCDGlyph() ? w * 3 : w;
+        }
     }
 
     @Override public int getHeight() {
@@ -254,6 +297,11 @@ class CTGlyph implements Glyph {
         int h = (int)bounds.size.height;
         int y = (int)bounds.origin.y;
         return -h - y; /*Inverted coordinates system */
+    }
+
+    public boolean isColorGlyph() {
+        CTFontFile fontResource = strike.getFontResource();
+        return fontResource.isColorGlyph(glyphCode);
     }
 
     @Override public boolean isLCDGlyph() {

@@ -49,8 +49,8 @@ public class ContentBinding {
     public static <E> Object bind(List<E> list1, ObservableList<? extends E> list2) {
         checkParameters(list1, list2);
         final ListContentBinding<E> contentBinding = new ListContentBinding<>(list1);
-        if (list1 instanceof ObservableList) {
-            ((ObservableList) list1).setAll(list2);
+        if (list1 instanceof ObservableList<E> observableList) {
+            observableList.setAll(list2);
         } else {
             list1.clear();
             list1.addAll(list2);
@@ -82,12 +82,21 @@ public class ContentBinding {
 
     public static void unbind(Object obj1, Object obj2) {
         checkParameters(obj1, obj2);
-        if ((obj1 instanceof List) && (obj2 instanceof ObservableList)) {
-            ((ObservableList)obj2).removeListener(new ListContentBinding((List)obj1));
-        } else if ((obj1 instanceof Set) && (obj2 instanceof ObservableSet)) {
-            ((ObservableSet)obj2).removeListener(new SetContentBinding((Set)obj1));
-        } else if ((obj1 instanceof Map) && (obj2 instanceof ObservableMap)) {
-            ((ObservableMap)obj2).removeListener(new MapContentBinding((Map)obj1));
+        if ((obj1 instanceof List<?> list1) && (obj2 instanceof ObservableList<?> list2)) {
+            @SuppressWarnings("unchecked")
+            ListContentBinding<Object> binding = new ListContentBinding<>((List<Object>) list1);
+
+            list2.removeListener(binding);
+        } else if ((obj1 instanceof Set<?> set1) && (obj2 instanceof ObservableSet<?> set2)) {
+            @SuppressWarnings("unchecked")
+            SetContentBinding<Object> binding = new SetContentBinding<>((Set<Object>) set1);
+
+            set2.removeListener(binding);
+        } else if ((obj1 instanceof Map<?, ?> map1) && (obj2 instanceof ObservableMap<?, ?> map2)) {
+            @SuppressWarnings("unchecked")
+            MapContentBinding<Object, Object> binding = new MapContentBinding<>((Map<Object, Object>) map1);
+
+            map2.removeListener(binding);
         }
     }
 

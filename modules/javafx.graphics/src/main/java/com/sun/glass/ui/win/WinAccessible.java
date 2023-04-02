@@ -105,6 +105,8 @@ final class WinAccessible extends Accessible {
     private static final int UIA_ToggleToggleStatePropertyId     = 30086;
     private static final int UIA_AriaRolePropertyId              = 30101;
     private static final int UIA_ProviderDescriptionPropertyId   = 30107;
+    private static final int UIA_PositionInSetPropertyId         = 30152;
+    private static final int UIA_SizeOfSetPropertyId             = 30153;
     private static final int UIA_IsDialogPropertyId              = 30174;
 
     /* Control Pattern Identifiers */
@@ -834,6 +836,33 @@ final class WinAccessible extends Accessible {
                 variant = new WinVariant();
                 variant.vt = WinVariant.VT_BOOL;
                 variant.boolVal = focus != null ? focus : false;
+                break;
+            }
+            case UIA_SizeOfSetPropertyId: {
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                if (role == AccessibleRole.LIST_ITEM) {
+                    Accessible listAccessible = getContainer();
+                    if (listAccessible != null) {
+                        Integer count = (Integer)listAccessible.getAttribute(ITEM_COUNT);
+                        if (count != 0) {
+                            // Narrator misreads if count is 0; It reads two items at a time.
+                            // Default value of UIA_SizeOfSetPropertyId is 0,  so anyways
+                            // returning 0 can be skipped.
+                            variant = new WinVariant();
+                            variant.vt = WinVariant.VT_I4;
+                            variant.lVal = count;
+                        }
+                    }
+                }
+                break;
+            }
+            case UIA_PositionInSetPropertyId: {
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                if (role == AccessibleRole.LIST_ITEM) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_I4;
+                    variant.lVal = (Integer)(getAttribute(INDEX)) + 1;
+                }
                 break;
             }
             case UIA_IsDialogPropertyId: {

@@ -26,19 +26,15 @@
 package javafx.beans.binding;
 
 import com.sun.javafx.binding.StringFormatter;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.value.ObservableSetValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
-import javafx.collections.SetChangeListener;
 
-import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
  * {@code SetExpression} is an
@@ -61,59 +57,6 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
      * Creates a default {@code SetExpression}.
      */
     public SetExpression() {
-    }
-
-    private static final ObservableSet EMPTY_SET = new EmptyObservableSet();
-
-    private static class EmptyObservableSet<E> extends AbstractSet<E> implements ObservableSet<E> {
-
-        private static final Iterator iterator = new Iterator() {
-            @Override
-            public boolean hasNext() {
-                return false;
-            }
-
-            @Override
-            public Object next() {
-                throw new NoSuchElementException();
-            }
-
-            @Override
-            public void remove() {
-                throw new UnsupportedOperationException();
-
-            }
-        };
-
-        @Override
-        public Iterator<E> iterator() {
-            return iterator;
-        }
-
-        @Override
-        public int size() {
-            return 0;
-        }
-
-        @Override
-        public void addListener(SetChangeListener<? super E> setChangeListener) {
-            // no-op
-        }
-
-        @Override
-        public void removeListener(SetChangeListener<? super E> setChangeListener) {
-            // no-op
-        }
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            // no-op
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            // no-op
-        }
     }
 
     @Override
@@ -244,84 +187,72 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
 
     @Override
     public int size() {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.size() : set.size();
+        return getNonNull().size();
     }
 
     @Override
     public boolean isEmpty() {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.isEmpty() : set.isEmpty();
+        return getNonNull().isEmpty();
     }
 
     @Override
     public boolean contains(Object obj) {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.contains(obj) : set.contains(obj);
+        return getNonNull().contains(obj);
     }
 
     @Override
     public Iterator<E> iterator() {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.iterator() : set.iterator();
+        return getNonNull().iterator();
     }
 
     @Override
     public Object[] toArray() {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.toArray() : set.toArray();
+        return getNonNull().toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] array) {
-        final ObservableSet<E> set = get();
-        return (set == null)? (T[]) EMPTY_SET.toArray(array) : set.toArray(array);
+        return getNonNull().toArray(array);
      }
 
     @Override
     public boolean add(E element) {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.add(element) : set.add(element);
+        return getNonNull().add(element);
     }
 
     @Override
     public boolean remove(Object obj) {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.remove(obj) : set.remove(obj);
+        return getNonNull().remove(obj);
     }
 
     @Override
     public boolean containsAll(Collection<?> objects) {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.contains(objects) : set.containsAll(objects);
+        return getNonNull().containsAll(objects);
     }
 
     @Override
     public boolean addAll(Collection<? extends E> elements) {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.addAll(elements) : set.addAll(elements);
+        return getNonNull().addAll(elements);
     }
 
     @Override
     public boolean removeAll(Collection<?> objects) {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.removeAll(objects) : set.removeAll(objects);
+        return getNonNull().removeAll(objects);
     }
 
     @Override
     public boolean retainAll(Collection<?> objects) {
-        final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.retainAll(objects) : set.retainAll(objects);
+        return getNonNull().retainAll(objects);
     }
 
     @Override
     public void clear() {
-        final ObservableSet<E> set = get();
-        if (set == null) {
-            EMPTY_SET.clear();
-        } else {
-            set.clear();
-        }
+        getNonNull().clear();
     }
 
+    private ObservableSet<E> getNonNull() {
+        ObservableSet<E> set = get();
+
+        return set == null ? FXCollections.emptyObservableSet() : set;
+    }
 }

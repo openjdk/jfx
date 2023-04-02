@@ -1017,7 +1017,7 @@ void RenderLayer::recursiveUpdateLayerPositions(RenderGeometryMap* geometryMap, 
     m_hasFixedContainingBlockAncestor = flags.contains(SeenFixedContainingBlockLayer);
     m_hasTransformedAncestor = flags.contains(SeenTransformedLayer);
     m_has3DTransformedAncestor = flags.contains(Seen3DTransformedLayer);
-    m_behavesAsFixed = flags.contains(SeenFixedLayer);
+    setBehavesAsFixed(flags.contains(SeenFixedLayer));
     setHasCompositedScrollingAncestor(flags.contains(SeenCompositedScrollingLayer));
 
     // Update the reflection's position and size.
@@ -1041,7 +1041,7 @@ void RenderLayer::recursiveUpdateLayerPositions(RenderGeometryMap* geometryMap, 
 
     // Fixed inside transform behaves like absolute (per spec).
     if (renderer().isFixedPositioned() && !m_hasFixedContainingBlockAncestor) {
-        m_behavesAsFixed = true;
+        setBehavesAsFixed(true);
         flags.add(SeenFixedLayer);
     }
 
@@ -1493,6 +1493,14 @@ void RenderLayer::updatePagination()
             return;
         }
     }
+}
+
+void RenderLayer::setBehavesAsFixed(bool behavesAsFixed)
+{
+    if (m_behavesAsFixed != behavesAsFixed && renderer().isFixedPositioned())
+        setNeedsCompositingConfigurationUpdate();
+
+    m_behavesAsFixed = behavesAsFixed;
 }
 
 void RenderLayer::setHasVisibleContent()
@@ -3254,7 +3262,7 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
 
         // Now walk the sorted list of children with negative z-indices.
         if ((isPaintingScrollingContent && isPaintingOverflowContents) || (!isPaintingScrollingContent && isPaintingCompositedBackground))
-            paintList(negativeZOrderLayers(), currentContext, localPaintingInfo, localPaintFlags);
+            paintList(negativeZOrderLayers(), currentContext, paintingInfo, localPaintFlags);
 
         if (isPaintingCompositedForeground) {
             if (shouldPaintContent) {
@@ -3271,7 +3279,7 @@ void RenderLayer::paintLayerContents(GraphicsContext& context, const LayerPainti
 
         if (isPaintingCompositedForeground) {
             // Paint any child layers that have overflow.
-            paintList(normalFlowLayers(), currentContext, localPaintingInfo, localPaintFlags);
+            paintList(normalFlowLayers(), currentContext, paintingInfo, localPaintFlags);
 
             // Now walk the sorted list of children with positive z-indices.
             paintList(positiveZOrderLayers(), currentContext, localPaintingInfo, localPaintFlags);
@@ -5304,7 +5312,7 @@ void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle
 #if ENABLE(CSS_COMPOSITING)
     updateBlendMode();
 #endif
-    updateFiltersAfterStyleChange();
+    updateFiltersAfterStyleChange(diff, oldStyle);
 
     compositor().layerStyleChanged(diff, *this, oldStyle);
 
@@ -5426,7 +5434,7 @@ void RenderLayer::clearLayerScrollableArea()
     }
 }
 
-void RenderLayer::updateFiltersAfterStyleChange()
+void RenderLayer::updateFiltersAfterStyleChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     if (!hasFilter()) {
         clearLayerFilters();
@@ -5440,6 +5448,9 @@ void RenderLayer::updateFiltersAfterStyleChange()
         m_filters->updateReferenceFilterClients(renderer().style().filter());
     } else if (m_filters)
         m_filters->removeReferenceFilterClients();
+
+    if (diff >= StyleDifference::RepaintLayer && oldStyle && oldStyle->filter() != renderer().style().filter())
+        clearLayerFilters();
 }
 
 void RenderLayer::updateLayerScrollableArea()
