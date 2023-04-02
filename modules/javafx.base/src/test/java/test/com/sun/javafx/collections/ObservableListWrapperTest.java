@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,7 +41,7 @@ public class ObservableListWrapperTest {
         @Test
         public void testNullArgumentThrowsNPE() {
             var list = new ObservableListWrapper<>(List.of("a", "b", "c"));
-            assertThrows(NullPointerException.class, () -> list.removeAll((Collection<?>) null));
+            assertThrows(NullPointerException.class, () -> list.removeAll((Collection<String>) null));
         }
 
         @Test
@@ -54,7 +53,7 @@ public class ObservableListWrapperTest {
                 }
             });
 
-            list.removeAll(Collections.<String>emptyList());
+            list.removeAll(List.of());
         }
 
         @Test
@@ -70,7 +69,7 @@ public class ObservableListWrapperTest {
         @Test
         public void testNullArgumentThrowsNPE() {
             var list = new ObservableListWrapper<>(List.of("a", "b", "c"));
-            assertThrows(NullPointerException.class, () -> list.retainAll((Collection<?>) null));
+            assertThrows(NullPointerException.class, () -> list.retainAll((Collection<String>) null));
         }
 
         @Test

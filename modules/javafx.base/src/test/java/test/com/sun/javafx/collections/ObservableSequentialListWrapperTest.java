@@ -29,7 +29,6 @@ import com.sun.javafx.collections.ObservableSequentialListWrapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -40,7 +39,7 @@ public class ObservableSequentialListWrapperTest {
 
     @Test
     public void testAddAllWithEmptyCollectionArgumentDoesNotEnumerateCollection() {
-        var list = new ObservableSequentialListWrapper<String>(Collections.emptyList()) {
+        var list = new ObservableSequentialListWrapper<String>(List.of()) {
             @Override
             public Iterator<String> iterator() {
                 throw new AssertionError("iterator() was not elided");
@@ -52,20 +51,19 @@ public class ObservableSequentialListWrapperTest {
             }
         };
 
-        assertDoesNotThrow(() -> list.addAll(Collections.emptyList()));
-        assertDoesNotThrow(() -> list.addAll(0, Collections.emptyList()));
+        assertDoesNotThrow(() -> list.addAll(0, List.of()));
     }
 
     @Test
     public void testAddAllWithInvalidIndexThrowsIOOBE() {
         var nonEmptyList = new ObservableSequentialListWrapper<>(new ArrayList<>(List.of("a", "b", "c")));
-        assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(-1, Collections.emptyList()));
-        assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(4, Collections.emptyList()));
+        assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(-1, List.of()));
+        assertThrows(IndexOutOfBoundsException.class, () -> nonEmptyList.addAll(4, List.of()));
         assertDoesNotThrow(() -> nonEmptyList.addAll(3, List.of("d", "e")));
 
         var emptyList = new ObservableSequentialListWrapper<>(new ArrayList<>());
-        assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(-1, Collections.emptyList()));
-        assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(1, Collections.emptyList()));
+        assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(-1, List.of()));
+        assertThrows(IndexOutOfBoundsException.class, () -> emptyList.addAll(1, List.of()));
         assertDoesNotThrow(() -> emptyList.addAll(0, List.of("d", "e")));
     }
 

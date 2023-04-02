@@ -28,8 +28,6 @@ package test.com.sun.javafx.collections;
 import com.sun.javafx.collections.ObservableSetWrapper;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -43,7 +41,7 @@ public class ObservableSetWrapperTest {
         @Test
         public void testNullArgumentThrowsNPE() {
             var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
-            assertThrows(NullPointerException.class, () -> set.removeAll((Collection<?>) null));
+            assertThrows(NullPointerException.class, () -> set.removeAll(null));
         }
 
         @Test
@@ -55,7 +53,7 @@ public class ObservableSetWrapperTest {
                 }
             });
 
-            set.removeAll(Collections.<String>emptySet());
+            set.removeAll(Set.of());
         }
 
         @Test
@@ -71,7 +69,7 @@ public class ObservableSetWrapperTest {
         @Test
         public void testNullArgumentThrowsNPE() {
             var set = new ObservableSetWrapper<>(Set.of("a", "b", "c"));
-            assertThrows(NullPointerException.class, () -> set.retainAll((Collection<?>) null));
+            assertThrows(NullPointerException.class, () -> set.retainAll(null));
         }
 
         @Test
