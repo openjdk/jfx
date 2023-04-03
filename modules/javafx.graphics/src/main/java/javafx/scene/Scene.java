@@ -744,7 +744,7 @@ public class Scene implements EventTarget {
         if (!cleanupAdded
                 && (window.get() == null || !window.get().isShowing())
                 && dirtyNodesSize > 0) {
-            Toolkit.getToolkit().addCleanupTaskx(cleanupListener);
+            Toolkit.getToolkit().addCleanupTask(cleanupListener);
             cleanupAdded = true;
         }
     }
