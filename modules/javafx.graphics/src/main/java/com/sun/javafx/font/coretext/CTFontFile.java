@@ -102,8 +102,8 @@ class CTFontFile extends PrismFontFile {
     public boolean isBold() {
         // Need to do this until we add font variation support into the super-class
         return fullName.equals("System Font Bold");
-    } 
-       
+    }
+ 
     public static boolean registerFont(String fontfile) {
         if (fontfile == null) return false;
         long alloc = OS.kCFAllocatorDefault();
