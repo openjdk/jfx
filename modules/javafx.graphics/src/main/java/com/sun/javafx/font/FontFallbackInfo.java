@@ -60,7 +60,7 @@ public class FontFallbackInfo {
    public String[] getFontFiles() {
       return linkedFontFiles.toArray(new String[0]);
    }
-  
+
    public FontResource[] getFonts() {
       return linkedFonts.toArray(new FontResource[0]);
    }
