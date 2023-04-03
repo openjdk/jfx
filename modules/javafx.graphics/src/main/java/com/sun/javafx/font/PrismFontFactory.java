@@ -955,8 +955,6 @@ public abstract class PrismFontFactory implements FontFactory {
     private static String userFontDir = null;
 
     private static native byte[] getFontPath();
-    private static native String regReadFontLink(String searchfont);
-    private static native String getEUDCFontFile();
 
     private static void getPlatformFontDirs() {
 
