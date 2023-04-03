@@ -82,8 +82,8 @@ class CTFontFile extends PrismFontFile {
         // as used by the macOS "System Font"
         // So when we see a font from this family, we need to use the original name
         // passed in here as the full name.
-        // No question, this isn't robust against Apple changing the name of the font
-        // but I think it fairly unlikely.
+        // This isn't robust against Apple changing the name of the font
+        // but I think it sufficient until we add support for font variations.
 
         if (name != null) {
             String family = getFamilyName();
@@ -99,6 +99,12 @@ class CTFontFile extends PrismFontFile {
         }
     }
 
+    @Override
+    public boolean isBold() {
+        // Need to do this until we add font variation support into the super-class
+        return fullName.equals("System Font Bold");
+    } 
+       
     public static boolean registerFont(String fontfile) {
         if (fontfile == null) return false;
         long alloc = OS.kCFAllocatorDefault();
@@ -235,7 +241,6 @@ class CTFontFile extends PrismFontFile {
       if (isEmbeddedFont()) {
           if (cgFontRef != 0) {
              retRef = OS.CTFontCreateWithGraphicsFont(cgFontRef, size, matrix, 0);
-             //OS.CFRetain(cgFontRef);
           }
       } else if (ctFontRef != 0) {
            retRef = OS.CTFontCreateCopyWithAttributes(ctFontRef, size, matrix, 0);

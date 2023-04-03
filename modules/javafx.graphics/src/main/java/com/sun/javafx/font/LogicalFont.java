@@ -420,10 +420,6 @@ public class LogicalFont implements CompositeFontResource {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
         FontResource slotResource = getSlotResource(slot);
-        if (slotResource == null) {
-            float[] arr = { 0f, 0f, 10f, 10f };
-            return arr;
-        }
         return slotResource.getGlyphBoundingBox(slotglyphCode, size, retArr);
    }
 

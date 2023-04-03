@@ -184,9 +184,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_javafx_font_MacFontFinder_getFontDat
 
     /* Also add the EmphasizedSystemFont as it might make the bold version
      * for the system font available to JavaFX.
-     * NOTE: Seems to be the exact same font, so this isn't useful.
-     * I think we need to ask for the system font with bold trait.
-     * However Apple is reporting its name as "System Font Bold" !?!?
+     * NOTE: macOS is using font variations for the system font,
+     * so System Font and System Font Bold are in the same .ttf.
      */
     font = CTFontCreateUIFontForLanguage(kCTFontUIFontEmphasizedSystem, 0, NULL);
     fd = CTFontCopyFontDescriptor(font);
