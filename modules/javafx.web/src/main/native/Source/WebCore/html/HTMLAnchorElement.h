@@ -26,13 +26,13 @@
 #include "Document.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
+#include "PrivateClickMeasurement.h"
 #include "SharedStringHash.h"
 #include "URLDecomposition.h"
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
 
-class PrivateClickMeasurement;
 class DOMTokenList;
 
 enum class ReferrerPolicy : uint8_t;
@@ -60,11 +60,11 @@ public:
     WEBCORE_EXPORT String origin() const;
 
     WEBCORE_EXPORT String text();
-    void setText(const String&);
+    void setText(String&&);
 
     bool isLiveLink() const;
 
-    bool willRespondToMouseClickEvents() final;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     bool hasRel(Relation) const;
 
@@ -90,19 +90,23 @@ private:
     bool isMouseFocusable() const override;
     bool isKeyboardFocusable(KeyboardEvent*) const override;
     void defaultEventHandler(Event&) final;
-    void setActive(bool active, bool pause, Style::InvalidationScope) final;
+    void setActive(bool active, Style::InvalidationScope) final;
     bool isURLAttribute(const Attribute&) const final;
     bool canStartSelection() const final;
-    String target() const override;
+    AtomString target() const override;
     int defaultTabIndex() const final;
     bool draggable() const final;
     bool isInteractiveContent() const final;
 
-    String effectiveTarget() const;
+    AtomString effectiveTarget() const;
 
     void sendPings(const URL& destinationURL);
 
-    std::optional<PrivateClickMeasurement> parsePrivateClickMeasurement() const;
+    std::optional<URL> attributionDestinationURLForPCM() const;
+    std::optional<RegistrableDomain> mainDocumentRegistrableDomainForPCM() const;
+    std::optional<PrivateClickMeasurement::EphemeralNonce> attributionSourceNonceForPCM() const;
+    std::optional<PrivateClickMeasurement> parsePrivateClickMeasurementForSKAdNetwork(const URL&) const;
+    std::optional<PrivateClickMeasurement> parsePrivateClickMeasurement(const URL&) const;
 
     void handleClick(Event&);
 
@@ -119,7 +123,7 @@ private:
     void clearRootEditableElementForSelectionOnMouseDown();
 
     URL fullURL() const final { return href(); }
-    void setFullURL(const URL& fullURL) final { setHref(fullURL.string()); }
+    void setFullURL(const URL& fullURL) final { setHref(AtomString { fullURL.string() }); }
 
     bool m_hasRootEditableElementForSelectionOnMouseDown { false };
     bool m_wasShiftKeyDownOnMouseDown { false };

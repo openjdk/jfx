@@ -36,6 +36,7 @@
 #include "Page.h"
 #include "RenderBox.h"
 #include "RenderTheme.h"
+#include "ScriptDisallowedScope.h"
 #include "ScrollbarTheme.h"
 #include "ShadowPseudoIds.h"
 #include "WheelEvent.h"
@@ -62,6 +63,7 @@ inline SpinButtonElement::SpinButtonElement(Document& document, SpinButtonOwner&
 Ref<SpinButtonElement> SpinButtonElement::create(Document& document, SpinButtonOwner& spinButtonOwner)
 {
     auto element = adoptRef(*new SpinButtonElement(document, spinButtonOwner));
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
     element->setPseudo(ShadowPseudoIds::webkitInnerSpinButton());
     return element;
 }
@@ -172,7 +174,7 @@ void SpinButtonElement::forwardEvent(Event& event)
     event.setDefaultHandled();
 }
 
-bool SpinButtonElement::willRespondToMouseMoveEvents()
+bool SpinButtonElement::willRespondToMouseMoveEvents() const
 {
     if (renderBox() && shouldRespondToMouseEvents())
         return true;
@@ -180,12 +182,12 @@ bool SpinButtonElement::willRespondToMouseMoveEvents()
     return HTMLDivElement::willRespondToMouseMoveEvents();
 }
 
-bool SpinButtonElement::willRespondToMouseClickEvents()
+bool SpinButtonElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
     if (renderBox() && shouldRespondToMouseEvents())
         return true;
 
-    return HTMLDivElement::willRespondToMouseClickEvents();
+    return HTMLDivElement::willRespondToMouseClickEventsWithEditability(editability);
 }
 
 void SpinButtonElement::doStepAction(int amount)
@@ -256,7 +258,7 @@ void SpinButtonElement::setHovered(bool flag, Style::InvalidationScope invalidat
     HTMLDivElement::setHovered(flag, invalidationScope, request);
 }
 
-bool SpinButtonElement::shouldRespondToMouseEvents()
+bool SpinButtonElement::shouldRespondToMouseEvents() const
 {
     return !m_spinButtonOwner || m_spinButtonOwner->shouldSpinButtonRespondToMouseEvents();
 }

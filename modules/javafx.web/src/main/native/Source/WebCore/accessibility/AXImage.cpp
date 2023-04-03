@@ -33,6 +33,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DocumentInlines.h"
+#include "TextRecognitionOptions.h"
 
 namespace WebCore {
 
@@ -57,7 +58,7 @@ AccessibilityRole AXImage::roleValue() const
 
 std::optional<AXCoreObject::AccessibilityChildrenVector> AXImage::imageOverlayElements()
 {
-    AXTRACE("AXImage::imageOverlayElements");
+    AXTRACE("AXImage::imageOverlayElements"_s);
 
     auto& children = this->children();
     if (children.size())

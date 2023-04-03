@@ -116,4 +116,7 @@ public interface FontResource {
     public void setPeer(Object peer);
 
     public boolean isEmbeddedFont();
+
+    public boolean isColorGlyph(int gc);
+
 }

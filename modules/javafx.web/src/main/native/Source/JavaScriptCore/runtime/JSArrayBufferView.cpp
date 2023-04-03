@@ -37,7 +37,7 @@
 namespace JSC {
 
 const ClassInfo JSArrayBufferView::s_info = {
-    "ArrayBufferView", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSArrayBufferView)
+    "ArrayBufferView"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSArrayBufferView)
 };
 
 JSArrayBufferView::ConstructionContext::ConstructionContext(
@@ -137,7 +137,7 @@ JSArrayBufferView::JSArrayBufferView(VM& vm, ConstructionContext& context)
 void JSArrayBufferView::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(jsDynamicCast<JSArrayBufferView*>(vm, this));
+    ASSERT(jsDynamicCast<JSArrayBufferView*>(this));
     switch (m_mode) {
     case FastTypedArray:
         return;
@@ -196,7 +196,7 @@ JSArrayBuffer* JSArrayBufferView::unsharedJSBuffer(JSGlobalObject* globalObject)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (ArrayBuffer* buffer = unsharedBuffer())
-        return vm.m_typedArrayController->toJS(globalObject, this->globalObject(vm), buffer);
+        return vm.m_typedArrayController->toJS(globalObject, this->globalObject(), buffer);
     scope.throwException(globalObject, createOutOfMemoryError(globalObject));
     return nullptr;
 }
@@ -206,7 +206,7 @@ JSArrayBuffer* JSArrayBufferView::possiblySharedJSBuffer(JSGlobalObject* globalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (ArrayBuffer* buffer = possiblySharedBuffer())
-        return vm.m_typedArrayController->toJS(globalObject, this->globalObject(vm), buffer);
+        return vm.m_typedArrayController->toJS(globalObject, this->globalObject(), buffer);
     scope.throwException(globalObject, createOutOfMemoryError(globalObject));
     return nullptr;
 }
@@ -220,23 +220,9 @@ void JSArrayBufferView::detach()
     m_vector.clear();
 }
 
-static const constexpr size_t ElementSizeData[] = {
-#define FACTORY(type) sizeof(typename type ## Adaptor::Type),
-    FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
-#undef FACTORY
-    1, // DataViewType
-};
-
-#define FACTORY(type) static_assert(std::is_final<JS ## type ## Array>::value, "");
+#define FACTORY(type) static_assert(std::is_final<JS ## type ## Array>::value);
 FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
 #undef FACTORY
-
-static inline size_t elementSize(JSType type)
-{
-    ASSERT(type >= Int8ArrayType && type <= DataViewType);
-    static_assert(BigUint64ArrayType + 1 == DataViewType);
-    return ElementSizeData[type - Int8ArrayType];
-}
 
 size_t JSArrayBufferView::byteLength() const
 {
@@ -270,8 +256,8 @@ ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
     VM& vm = heap->vm();
     DeferGCForAWhile deferGC(vm);
 
-    RELEASE_ASSERT(!hasIndexingHeader(vm));
-    Structure* structure = this->structure(vm);
+    RELEASE_ASSERT(!hasIndexingHeader());
+    Structure* structure = this->structure();
 
     RefPtr<ArrayBuffer> buffer;
     size_t byteLength = this->byteLength();
@@ -349,7 +335,7 @@ JSArrayBufferView* validateTypedArray(JSGlobalObject* globalObject, JSValue type
     }
 
     JSCell* typedArrayCell = typedArrayValue.asCell();
-    if (!isTypedView(typedArrayCell->classInfo(vm)->typedArrayStorageType)) {
+    if (!isTypedView(typedArrayCell->type())) {
         throwTypeError(globalObject, scope, "Argument needs to be a typed array."_s);
         return nullptr;
     }
@@ -360,6 +346,32 @@ JSArrayBufferView* validateTypedArray(JSGlobalObject* globalObject, JSValue type
         return nullptr;
     }
     return typedArray;
+}
+
+bool JSArrayBufferView::isIteratorProtocolFastAndNonObservable()
+{
+    // Excluding DataView.
+    if (!isTypedArrayType(type()))
+        return false;
+
+    JSGlobalObject* globalObject = this->globalObject();
+    TypedArrayType typedArrayType = JSC::typedArrayType(type());
+    if (!globalObject->isTypedArrayPrototypeIteratorProtocolFastAndNonObservable(typedArrayType))
+        return false;
+
+    VM& vm = globalObject->vm();
+    Structure* structure = this->structure();
+    // This is the fast case. Many TypedArrays will be an original typed array structure.
+    if (globalObject->isOriginalTypedArrayStructure(structure))
+        return true;
+
+    if (getPrototypeDirect() != globalObject->typedArrayPrototype(typedArrayType))
+        return false;
+
+    if (getDirectOffset(vm, vm.propertyNames->iteratorSymbol) != invalidOffset)
+        return false;
+
+    return true;
 }
 
 } // namespace JSC

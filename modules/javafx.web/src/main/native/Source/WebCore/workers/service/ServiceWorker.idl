@@ -29,9 +29,9 @@
 [
     ActiveDOMObject,
     SecureContext,
-    Exposed=(Window,ServiceWorker),
+    Exposed=(Window,Worker),
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=ServiceWorkerEnabled,
+    EnabledBySetting=ServiceWorkersEnabled,
     ExportMacro=WEBCORE_EXPORT
 ] interface ServiceWorker : EventTarget {
     readonly attribute USVString scriptURL;

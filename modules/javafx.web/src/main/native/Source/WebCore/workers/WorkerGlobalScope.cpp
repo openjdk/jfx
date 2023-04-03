@@ -35,6 +35,7 @@
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
 #include "Crypto.h"
+#include "DeprecatedGlobalSettings.h"
 #include "FontCustomPlatformData.h"
 #include "FontFaceSet.h"
 #include "IDBConnectionProxy.h"
@@ -43,11 +44,12 @@
 #include "JSDOMExceptionHandling.h"
 #include "Performance.h"
 #include "RTCDataChannelRemoteHandlerConnection.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScheduledAction.h"
 #include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
+#include "ServiceWorker.h"
+#include "ServiceWorkerClientData.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "SocketProvider.h"
 #include "WorkerCacheStorageConnection.h"
@@ -91,8 +93,9 @@ static WorkQueue& sharedFileSystemStorageQueue()
 WTF_MAKE_ISO_ALLOCATED_IMPL(WorkerGlobalScope);
 
 WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, WorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider)
-    : WorkerOrWorkletGlobalScope(type, isMainThread() ? Ref { commonVM() } : JSC::VM::create(), &thread)
+    : WorkerOrWorkletGlobalScope(type, params.sessionID, isMainThread() ? Ref { commonVM() } : JSC::VM::create(), &thread, params.clientIdentifier)
     , m_url(params.scriptURL)
+    , m_ownerURL(params.ownerURL)
     , m_inspectorIdentifier(params.inspectorIdentifier)
     , m_userAgent(params.userAgent)
     , m_isOnline(params.isOnline)
@@ -116,6 +119,7 @@ WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParamete
     if (m_topOrigin->needsStorageAccessFromFileURLsQuirk())
         origin->grantStorageAccessFromFileURLsQuirk();
 
+    setStorageBlockingPolicy(m_settingsValues.storageBlockingPolicy);
     setSecurityOriginPolicy(SecurityOriginPolicy::create(WTFMove(origin)));
     setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { m_url }, *this));
     setCrossOriginEmbedderPolicy(params.crossOriginEmbedderPolicy);
@@ -149,6 +153,11 @@ void WorkerGlobalScope::prepareForDestruction()
 {
     WorkerOrWorkletGlobalScope::prepareForDestruction();
 
+#if ENABLE(SERVICE_WORKER)
+    if (settingsValues().serviceWorkersEnabled)
+        swClientConnection().unregisterServiceWorkerClient(identifier());
+#endif
+
     stopIndexedDatabase();
 
     if (m_cacheStorageConnection)
@@ -170,10 +179,10 @@ void WorkerGlobalScope::removeAllEventListeners()
 
 bool WorkerGlobalScope::isSecureContext() const
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().secureContextChecksEnabled())
+    if (!DeprecatedGlobalSettings::secureContextChecksEnabled())
         return true;
 
-    return securityOrigin() && securityOrigin()->isPotentiallyTrustworthy();
+    return m_topOrigin->isPotentiallyTrustworthy();
 }
 
 void WorkerGlobalScope::applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders)
@@ -227,10 +236,20 @@ void WorkerGlobalScope::suspend()
 {
     if (m_connectionProxy)
         m_connectionProxy->setContextSuspended(*this, true);
+
+#if ENABLE(SERVICE_WORKER)
+    if (settingsValues().serviceWorkersEnabled)
+        swClientConnection().unregisterServiceWorkerClient(identifier());
+#endif
 }
 
 void WorkerGlobalScope::resume()
 {
+#if ENABLE(SERVICE_WORKER)
+    if (settingsValues().serviceWorkersEnabled)
+        updateServiceWorkerClientData();
+#endif
+
     if (m_connectionProxy)
         m_connectionProxy->setContextSuspended(*this, false);
 }
@@ -385,6 +404,9 @@ ExceptionOr<void> WorkerGlobalScope::importScripts(const FixedVector<String>& ur
         if (auto exception = scriptLoader->loadSynchronously(this, url, WorkerScriptLoader::Source::ClassicWorkerImport, FetchOptions::Mode::NoCors, cachePolicy, cspEnforcement, resourceRequestIdentifier()))
             return WTFMove(*exception);
 
+        // https://html.spec.whatwg.org/multipage/webappapis.html#fetch-a-classic-worker-imported-script (step 7).
+        bool mutedErrors = scriptLoader->responseTainting() == ResourceResponse::Tainting::Opaque || scriptLoader->responseTainting() == ResourceResponse::Tainting::Opaqueredirect;
+
         InspectorInstrumentation::scriptImported(*this, scriptLoader->identifier(), scriptLoader->script().toString());
 
         WeakPtr<ScriptBufferSourceProvider> sourceProvider;
@@ -394,6 +416,8 @@ ExceptionOr<void> WorkerGlobalScope::importScripts(const FixedVector<String>& ur
             sourceProvider = static_cast<ScriptBufferSourceProvider&>(sourceCode.provider());
             script()->evaluate(sourceCode, exception);
             if (exception) {
+                if (mutedErrors)
+                    return Exception { NetworkError, "Network response is CORS-cross-origin"_s };
                 script()->setException(exception);
                 return { };
             }
@@ -651,5 +675,17 @@ void WorkerGlobalScope::updateSourceProviderBuffers(const ScriptBuffer& mainScri
             sourceProvider.tryReplaceScriptBuffer(pair.value);
     }
 }
+
+#if ENABLE(SERVICE_WORKER)
+void WorkerGlobalScope::updateServiceWorkerClientData()
+{
+    if (!settingsValues().serviceWorkersEnabled)
+        return;
+
+    ASSERT(type() == WebCore::WorkerGlobalScope::Type::DedicatedWorker || type() == WebCore::WorkerGlobalScope::Type::SharedWorker);
+    auto controllingServiceWorkerRegistrationIdentifier = activeServiceWorker() ? std::make_optional<ServiceWorkerRegistrationIdentifier>(activeServiceWorker()->registrationIdentifier()) : std::nullopt;
+    swClientConnection().registerServiceWorkerClient(clientOrigin(), ServiceWorkerClientData::from(*this), controllingServiceWorkerRegistrationIdentifier, String { m_userAgent });
+}
+#endif
 
 } // namespace WebCore

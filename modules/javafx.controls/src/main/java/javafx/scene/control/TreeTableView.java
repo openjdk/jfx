@@ -38,8 +38,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
-
+import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.scene.control.ConstrainedColumnResize;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnComparatorBase;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
+import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -273,6 +283,84 @@ import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
  *
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
+ *
+ * <h4>Warning: Nodes should not be inserted directly into the TreeTableView cells</h4>
+ * {@code TreeTableView} allows for it's cells to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the TreeTableView cells is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ *
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code TreeTableView} cells or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link TreeTableColumn#cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link TreeTableColumn#cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code TreeTableView} containing {@code Node}s:
+ * <pre> {@code
+ *  class ColorModel {
+ *    private SimpleObjectProperty<Color> color;
+ *    private StringProperty name;
+ *
+ *    public ColorModel (String name, Color col) {
+ *      this.color = new SimpleObjectProperty<Color>(col);
+ *      this.name = new SimpleStringProperty(name);
+ *    }
+ *
+ *    public Color getColor() { return color.getValue(); }
+ *    public void setColor(Color c) { color.setValue(c); }
+ *    public SimpleObjectProperty<Color> colorProperty() { return color; }
+ *
+ *    public String getName() { return name.getValue(); }
+ *    public void setName(String s) { name.setValue(s); }
+ *    public StringProperty nameProperty() { return name; }
+ *  }
+ *
+ *  ColorModel rootModel = new ColorModel("Color", Color.WHITE);
+ *  TreeItem<ColorModel> treeRoot = new TreeItem<ColorModel>(rootModel);
+ *  treeRoot.setExpanded(true);
+ *  treeRoot.getChildren().addAll(
+ *      new TreeItem<ColorModel>(new ColorModel("Red", Color.RED)),
+ *      new TreeItem<ColorModel>(new ColorModel("Green", Color.GREEN)),
+ *      new TreeItem<ColorModel>(new ColorModel("Blue", Color.BLUE)));
+ *
+ *  TreeTableView<ColorModel> treeTable = new TreeTableView<ColorModel>(treeRoot);
+ *
+ *  TreeTableColumn<ColorModel, String> nameCol = new TreeTableColumn<>("Color Name");
+ *  TreeTableColumn<ColorModel, Color> colorCol = new TreeTableColumn<>("Color");
+ *
+ *  treeTable.getColumns().setAll(nameCol, colorCol);
+ *
+ *  colorCol.setCellValueFactory(p -> p.getValue().getValue().colorProperty());
+ *  nameCol.setCellValueFactory(p -> p.getValue().getValue().nameProperty());
+ *
+ *  colorCol.setCellFactory(p -> {
+ *      return new TreeTableCell<ColorModel, Color> () {
+ *          private final Rectangle rectangle;
+ *          {
+ *              setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *              rectangle = new Rectangle(10, 10);
+ *          }
+ *
+ *          @Override
+ *          protected void updateItem(Color item, boolean empty) {
+ *              super.updateItem(item, empty);
+ *
+ *              if (item == null || empty) {
+ *                  setGraphic(null);
+ *              } else {
+ *                  rectangle.setFill(item);
+ *                  setGraphic(rectangle);
+ *              }
+ *          }
+ *      };
+ *  });}</pre>
+ *
+ * <p> This example has an anonymous custom {@code TreeTableCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code TreeTableCell} class and updated/used in its {@code updateItem} method.
  *
  * <h3>Editing</h3>
  * <p>This control supports inline editing of values, and this section attempts to
@@ -532,6 +620,86 @@ public class TreeTableView<S> extends Control {
     };
 
     /**
+     * A resize policy that adjusts other columns in order to fit the tree table width.
+     * During UI adjustment, proportionately resizes all columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
+
+    /**
+     * A resize policy that adjusts the last column in order to fit the tree table width.
+     * During UI adjustment, resizes the last column only to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_LAST_COLUMN =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
+
+    /**
+     * A resize policy that adjusts the next column in order to fit the tree table width.
+     * During UI adjustment, resizes the next column the opposite way.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
+
+    /**
+     * A resize policy that adjusts subsequent columns in order to fit the tree table width.
+     * During UI adjustment, proportionally resizes subsequent columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+
+    /**
+     * A resize policy that adjusts columns, starting with the next one, in order to fit the tree table width.
+     * During UI adjustment, resizes the next column to preserve the total width.  When the next column
+     * cannot be further resized due to a constraint, the following column gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
+
+    /**
+     * A resize policy that adjusts columns, starting with the last one, in order to fit the table width.
+     * During UI adjustment, resizes the last column to preserve the total width.  When the last column
+     * cannot be further resized due to a constraint, the column preceding the last one gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN =
+        ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
+
+    /**
      * <p>Simple policy that ensures the width of all visible leaf columns in
      * this table sum up to equal the width of the table itself.
      *
@@ -542,27 +710,12 @@ public class TreeTableView<S> extends Control {
      * rightmost column until it reaches minimum width and so on. When all right
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
+     *
+     * @deprecated Use {@link #CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN} instead.
      */
+    @Deprecated(since="20")
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
-            new Callback<>() {
-
-        private boolean isFirstRun = true;
-
-        @Override public String toString() {
-            return "constrained-resize";
-        }
-
-        @Override public Boolean call(TreeTableView.ResizeFeatures prop) {
-            TreeTableView<?> table = prop.getTable();
-            List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
-            Boolean result = TableUtil.constrainedResize(prop,
-                                               isFirstRun,
-                                               table.contentWidth,
-                                               visibleLeafColumns);
-            isFirstRun = ! isFirstRun ? false : ! result;
-            return result;
-        }
-    };
+        CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN;
 
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TreeTableView
@@ -2203,6 +2356,16 @@ public class TreeTableView<S> extends Control {
          * @return the TreeTableView upon which the resize operation is occurring
          */
         public TreeTableView<S> getTable() { return treeTable; }
+
+        @Override
+        public Control getTableControl() {
+            return treeTable;
+        }
+
+        @Override
+        public double getContentWidth() {
+            return treeTable.contentWidth;
+        }
     }
 
 
@@ -2424,8 +2587,6 @@ public class TreeTableView<S> extends Control {
      */
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
-
-        private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
         private TreeTableView<S> treeTableView = null;
 
@@ -2925,7 +3086,7 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void selectIndices(int row, int... rows) {
-            if (rows == null) {
+            if (rows == null || rows.length == 0) {
                 select(row);
                 return;
             }
@@ -3406,7 +3567,7 @@ public class TreeTableView<S> extends Control {
                 return;
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, Function.identity(), selectedCellsSeq));
         }
     }
 

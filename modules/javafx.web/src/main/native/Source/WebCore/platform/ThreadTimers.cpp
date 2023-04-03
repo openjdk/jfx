@@ -26,7 +26,9 @@
 
 #include "config.h"
 #include "ThreadTimers.h"
-
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaEnv.h>
+#endif
 #include "MainThreadSharedTimer.h"
 #include "SharedTimer.h"
 #include "ThreadGlobalData.h"
@@ -63,7 +65,11 @@ void ThreadTimers::setSharedTimer(SharedTimer* sharedTimer)
 
     m_sharedTimer = sharedTimer;
 
+#if PLATFORM(JAVA)
+    if (sharedTimer && !g_ShuttingDown) {
+#else
     if (sharedTimer) {
+#endif
         m_sharedTimer->setFiredFunction([] { threadGlobalData().threadTimers().sharedTimerFiredInternal(); });
         updateSharedTimer();
     }

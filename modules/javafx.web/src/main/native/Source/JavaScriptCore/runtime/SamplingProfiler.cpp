@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -468,7 +468,7 @@ void SamplingProfiler::processUnverifiedStackTraces()
     // This function needs to be called from the JSC execution thread.
     RELEASE_ASSERT(m_lock.isLocked());
 
-    TinyBloomFilter filter = m_vm.heap.objectSpace().blocks().filter();
+    TinyBloomFilter<uintptr_t> filter = m_vm.heap.objectSpace().blocks().filter();
 
     for (UnprocessedStackTrace& unprocessedStackTrace : m_unprocessedStackTraces) {
         m_stackTraces.append(StackTrace());
@@ -543,7 +543,7 @@ void SamplingProfiler::processUnverifiedStackTraces()
             auto setFallbackFrameType = [&] {
                 ASSERT(!alreadyHasExecutable);
                 FrameType result = FrameType::Unknown;
-                auto callData = getCallData(m_vm, calleeCell);
+                auto callData = JSC::getCallData(calleeCell);
                 if (callData.type == CallData::Type::Native)
                     result = FrameType::Host;
 
@@ -557,7 +557,7 @@ void SamplingProfiler::processUnverifiedStackTraces()
             };
 
             if (calleeCell->type() != JSFunctionType) {
-                if (JSObject* object = jsDynamicCast<JSObject*>(calleeCell->vm(), calleeCell))
+                if (JSObject* object = jsDynamicCast<JSObject*>(calleeCell))
                     addCallee(object);
 
                 if (!alreadyHasExecutable)
@@ -779,7 +779,7 @@ String SamplingProfiler::StackFrame::nameFromCallee(VM& vm)
 
     DeferTermination deferScope(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
-    JSGlobalObject* globalObject = callee->globalObject(vm);
+    JSGlobalObject* globalObject = callee->globalObject();
     auto getPropertyIfPureOperation = [&] (const Identifier& ident) -> String {
         PropertySlot slot(callee, PropertySlot::InternalMethodType::VMInquiry, &vm);
         PropertyName propertyName(ident);
@@ -816,7 +816,7 @@ String SamplingProfiler::StackFrame::displayName(VM& vm)
         if (frameType == FrameType::C) {
             auto demangled = WTF::StackTrace::demangle(const_cast<void*>(cCodePC));
             if (demangled)
-                return String(demangled->demangledName() ? demangled->demangledName() : demangled->mangledName());
+                return String::fromLatin1(demangled->demangledName() ? demangled->demangledName() : demangled->mangledName());
             WTF::dataLog("couldn't get a name");
         }
 #endif
@@ -1196,7 +1196,7 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
                 description.print(":");
                 if (wasmOffset) {
                     uintptr_t offset = wasmOffset.offset();
-                    description.print(RawPointer(bitwise_cast<void*>(offset)));
+                    description.print(RawHex(offset));
                 } else
                     description.print("nil");
                 return description.toString();
@@ -1259,7 +1259,7 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
                 }
 
                 if (frame.executable) {
-                    if (auto* executable = jsDynamicCast<FunctionExecutable*>(m_vm, frame.executable)) {
+                    if (auto* executable = jsDynamicCast<FunctionExecutable*>(frame.executable)) {
                         if (executable->isBuiltinFunction())
                             tierCounts.add(builtin, 0).iterator->value++;
                     }

@@ -42,8 +42,10 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "InspectorInstrumentation.h"
+#include "InspectorNetworkAgent.h"
 #include "LegacySchemeRegistry.h"
 #include "LoaderStrategy.h"
 #include "MixedContentChecker.h"
@@ -54,7 +56,6 @@
 #include "ResourceRequest.h"
 #include "ResourceTiming.h"
 #include "RuntimeApplicationChecks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
@@ -136,7 +137,7 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
 
     if (document.settings().disallowSyncXHRDuringPageDismissalEnabled() && !m_async && (!document.page() || !document.page()->areSynchronousLoadsAllowed())) {
         document.didRejectSyncXHRDuringPageDismissal();
-        logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, request.url(), "Synchronous loads are not allowed at this time"));
+        logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, request.url(), "Synchronous loads are not allowed at this time"_s));
         return;
     }
 
@@ -156,7 +157,7 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
     if (shouldSetHTTPHeadersToKeep())
         m_options.httpHeadersToKeep = httpHeadersToKeepFromCleaning(request.httpHeaderFields());
 
-    bool shouldDisableCORS = document.isRunningUserScripts() && LegacySchemeRegistry::isUserExtensionScheme(request.url().protocol().toStringWithoutCopying());
+    bool shouldDisableCORS = document.isRunningUserScripts() && LegacySchemeRegistry::isUserExtensionScheme(request.url().protocol());
     if (auto* page = document.page())
         shouldDisableCORS |= page->shouldDisableCorsForRequestTo(request.url());
 
@@ -179,7 +180,7 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
     }
 
     if (m_options.mode == FetchOptions::Mode::SameOrigin) {
-        logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, request.url(), "Cross origin requests are not allowed when using same-origin fetch mode."));
+        logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, request.url(), "Cross origin requests are not allowed when using same-origin fetch mode."_s));
         return;
     }
 
@@ -189,8 +190,8 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
 bool DocumentThreadableLoader::checkURLSchemeAsCORSEnabled(const URL& url)
 {
     // Cross-origin requests are only allowed for HTTP and registered schemes. We would catch this when checking response headers later, but there is no reason to send a request that's guaranteed to be denied.
-    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(url.protocol().toStringWithoutCopying())) {
-        logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, url, "Cross origin requests are only supported for HTTP.", ResourceError::Type::AccessControl));
+    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(url.protocol())) {
+        logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, url, "Cross origin requests are only supported for HTTP."_s, ResourceError::Type::AccessControl));
         return false;
     }
     return true;
@@ -201,7 +202,7 @@ void DocumentThreadableLoader::makeCrossOriginAccessRequest(ResourceRequest&& re
     ASSERT(m_options.mode == FetchOptions::Mode::Cors);
 
 #if PLATFORM(IOS_FAMILY)
-    bool needsPreflightQuirk = IOSApplication::isMoviStarPlus() && !linkedOnOrAfter(SDKVersion::FirstWithoutMoviStarPlusCORSPreflightQuirk) && (m_options.preflightPolicy == PreflightPolicy::Consider || m_options.preflightPolicy == PreflightPolicy::Force);
+    bool needsPreflightQuirk = IOSApplication::isMoviStarPlus() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoMoviStarPlusCORSPreflightQuirk) && (m_options.preflightPolicy == PreflightPolicy::Consider || m_options.preflightPolicy == PreflightPolicy::Force);
 #else
     bool needsPreflightQuirk = false;
 #endif
@@ -264,7 +265,7 @@ void DocumentThreadableLoader::cancel()
     // Cancel can re-enter and m_resource might be null here as a result.
     if (m_client && m_resource) {
         // FIXME: This error is sent to the client in didFail(), so it should not be an internal one. Use FrameLoaderClient::cancelledError() instead.
-        ResourceError error(errorDomainWebKitInternal, 0, m_resource->url(), "Load cancelled", ResourceError::Type::Cancellation);
+        ResourceError error(errorDomainWebKitInternal, 0, m_resource->url(), "Load cancelled"_s, ResourceError::Type::Cancellation);
         m_client->didFail(error);
     }
     clearResource();
@@ -580,7 +581,7 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
 
         request.setAllowCookies(m_options.storedCredentialsPolicy == StoredCredentialsPolicy::Use);
         CachedResourceRequest newRequest(WTFMove(request), options);
-        newRequest.setInitiator(m_options.initiator);
+        newRequest.setInitiator(AtomString { m_options.initiator });
         newRequest.setOrigin(securityOrigin());
 
         ASSERT(!m_resource);
@@ -631,7 +632,7 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
     }
 
     if (response.containsInvalidHTTPHeaders()) {
-        didFail(identifier, ResourceError(errorDomainWebKitInternal, 0, request.url(), "Response contained invalid HTTP headers", ResourceError::Type::General));
+        didFail(identifier, ResourceError(errorDomainWebKitInternal, 0, request.url(), "Response contained invalid HTTP headers"_s, ResourceError::Type::General));
         return;
     }
 
@@ -754,7 +755,7 @@ void DocumentThreadableLoader::reportIntegrityMetadataError(const CachedResource
 void DocumentThreadableLoader::logErrorAndFail(const ResourceError& error)
 {
     if (m_shouldLogError == ShouldLogError::Yes) {
-        if (error.isAccessControl() && !error.localizedDescription().isEmpty())
+        if (error.isAccessControl() && error.domain() != InspectorNetworkAgent::errorDomain() && !error.localizedDescription().isEmpty())
             m_document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, error.localizedDescription());
         logError(m_document, error, m_options.initiator);
     }

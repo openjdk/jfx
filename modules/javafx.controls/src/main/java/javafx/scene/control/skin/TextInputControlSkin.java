@@ -326,8 +326,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                 }
             });
         }
-
-        control.addEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
     }
 
     @Override
@@ -335,6 +333,11 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         super.install();
 
         TextInputControl control = getSkinnable();
+
+        // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
+        if (control.getOnInputMethodTextChanged() == null) {
+            control.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
+        }
 
         if (control.getInputMethodRequests() == null) {
             inputMethodRequests = new ExtendedInputMethodRequests() {
@@ -402,11 +405,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             return;
         }
 
-        getSkinnable().removeEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
-
         if (getSkinnable().getInputMethodRequests() == inputMethodRequests) {
             getSkinnable().setInputMethodRequests(null);
         }
+
+        if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
+            getSkinnable().setOnInputMethodTextChanged(null);
+        }
+
         super.dispose();
     }
 

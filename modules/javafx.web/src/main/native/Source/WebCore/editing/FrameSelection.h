@@ -191,7 +191,7 @@ public:
     void debugRenderer(RenderObject*, bool selected) const;
 
     void nodeWillBeRemoved(Node&);
-    void textWasReplaced(CharacterData*, unsigned offset, unsigned oldLength, unsigned newLength);
+    void textWasReplaced(CharacterData&, unsigned offset, unsigned oldLength, unsigned newLength);
 
     void setCaretVisible(bool caretIsVisible) { setCaretVisibility(caretIsVisible ? Visible : Hidden, ShouldUpdateAppearance::Yes); }
     void paintCaret(GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect);
@@ -245,7 +245,7 @@ public:
     void clearTypingStyle();
 
     enum class ClipToVisibleContent : uint8_t { No, Yes };
-    WEBCORE_EXPORT FloatRect selectionBounds(ClipToVisibleContent = ClipToVisibleContent::Yes) const;
+    WEBCORE_EXPORT FloatRect selectionBounds(ClipToVisibleContent = ClipToVisibleContent::Yes);
 
     enum class TextRectangleHeight { TextHeight, SelectionHeight };
     WEBCORE_EXPORT void getClippedVisibleTextRectangles(Vector<FloatRect>&, TextRectangleHeight = TextRectangleHeight::SelectionHeight) const;
@@ -267,12 +267,13 @@ public:
     void updateFromAssociatedLiveRange();
 
 private:
+    void updateSelectionAppearanceNow();
     void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent);
     void updateDataDetectorsForSelection();
 
     bool setSelectionWithoutUpdatingAppearance(const VisibleSelection&, OptionSet<SetSelectionOption>, CursorAlignOnScroll, TextGranularity);
 
-    void respondToNodeModification(Node&, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved);
+    void respondToNodeModification(Node&, bool anchorRemoved, bool focusRemoved, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved);
     TextDirection directionOfEnclosingBlock();
     TextDirection directionOfSelection();
 
@@ -348,6 +349,7 @@ private:
     bool m_caretPaint : 1;
     bool m_isCaretBlinkingSuspended : 1;
     bool m_focused : 1;
+    bool m_isActive : 1;
     bool m_shouldShowBlockCursor : 1;
     bool m_pendingSelectionUpdate : 1;
     bool m_alwaysAlignCursorOnScrollWhenRevealingSelection : 1;
@@ -378,7 +380,7 @@ inline void FrameSelection::clearTypingStyle()
     m_typingStyle = nullptr;
 }
 
-#if !(ENABLE(ACCESSIBILITY) && (PLATFORM(COCOA) || USE(ATK) || USE(ATSPI)))
+#if !(ENABLE(ACCESSIBILITY) && (PLATFORM(COCOA) || USE(ATSPI)))
 
 inline void FrameSelection::notifyAccessibilityForSelectionChange(const AXTextStateChangeIntent&)
 {

@@ -24,10 +24,10 @@
 */
 
 [
-    Exposed=(Window,Worker),
+    Exposed=*,
     JSCustomMarkFunction,
 ] interface PromiseRejectionEvent : Event {
-    constructor(DOMString type, PromiseRejectionEventInit eventInitDict);
+    constructor([AtomString] DOMString type, PromiseRejectionEventInit eventInitDict);
 
     readonly attribute Promise<any> promise;
     readonly attribute any reason;

@@ -83,7 +83,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getDirImpl(JN
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setDirImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setDir(String(env, value));
+    IMPL->setDir(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getDesignModeImpl(JNIEnv* env, jclass, jlong peer)
@@ -95,7 +95,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getDesignMode
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setDesignModeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setDesignMode(String(env, value));
+    IMPL->setDesignMode(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getCompatModeImpl(JNIEnv* env, jclass, jlong peer)
@@ -113,7 +113,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getBgColorImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setBgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setBgColor(String(env, value));
+    IMPL->setBgColor(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getFgColorImpl(JNIEnv* env, jclass, jlong peer)
@@ -125,7 +125,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getFgColorImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setFgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setFgColor(String(env, value));
+    IMPL->setFgColor(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getAlinkColorImpl(JNIEnv* env, jclass, jlong peer)
@@ -137,7 +137,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getAlinkColor
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setAlinkColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAlinkColor(String(env, value));
+    IMPL->setAlinkColor(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getLinkColorImpl(JNIEnv* env, jclass, jlong peer)
@@ -149,7 +149,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getLinkColorI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setLinkColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setLinkColorForBindings(String(env, value));
+    IMPL->setLinkColorForBindings(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getVlinkColorImpl(JNIEnv* env, jclass, jlong peer)
@@ -161,7 +161,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getVlinkColor
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setVlinkColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setVlinkColor(String(env, value));
+    IMPL->setVlinkColor(AtomString {String(env, value)});
 }
 
 

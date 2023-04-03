@@ -24,7 +24,14 @@
 
 #include "ConstructData.h"
 #include "JSCast.h"
+#include <wtf/CompactPtr.h>
 #include <wtf/PtrTag.h>
+
+#if HAVE(36BIT_ADDRESS)
+#define CLASS_INFO_ALIGNMENT alignas(16)
+#else
+#define CLASS_INFO_ALIGNMENT
+#endif
 
 namespace WTF {
 class PrintStream;
@@ -169,14 +176,13 @@ struct MethodTable {
         &ClassName::visitOutputConstraints, \
         &ClassName::visitOutputConstraints, \
     }, \
-    ClassName::TypedArrayStorageType, \
     sizeof(ClassName),
 
-struct ClassInfo {
+struct CLASS_INFO_ALIGNMENT ClassInfo {
     using CheckJSCastSnippetFunctionPtr = Ref<Snippet> (*)(void);
 
     // A string denoting the class name. Example: "Window".
-    const char* className;
+    ASCIILiteral className;
     // Pointer to the class information of the base class.
     // nullptrif there is none.
     const ClassInfo* parentClass;
@@ -184,7 +190,6 @@ struct ClassInfo {
     CheckJSCastSnippetFunctionPtr checkSubClassSnippet;
     const std::optional<JSTypeRange> inheritsJSTypeRange; // This is range of JSTypes for doing inheritance checking. Has the form: [firstJSType, lastJSType] (inclusive).
     MethodTable methodTable;
-    const TypedArrayType typedArrayStorageType;
     const unsigned staticClassSize;
 
     static ptrdiff_t offsetOfParentClass()

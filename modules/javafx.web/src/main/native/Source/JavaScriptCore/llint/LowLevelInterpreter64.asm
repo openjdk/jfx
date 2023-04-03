@@ -39,20 +39,36 @@ macro getOperandNarrow(opcodeStruct, fieldName, dst)
     loadbsq constexpr %opcodeStruct%_%fieldName%_index + OpcodeIDNarrowSize[PB, PC, 1], dst
 end
 
-macro getuOperandWide16(opcodeStruct, fieldName, dst)
-    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16Size[PB, PC, 1], dst
+macro getuOperandWide16JS(opcodeStruct, fieldName, dst)
+    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeJS[PB, PC, 1], dst
 end
 
-macro getOperandWide16(opcodeStruct, fieldName, dst)
-    loadhsq constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16Size[PB, PC, 1], dst
+macro getuOperandWide16Wasm(opcodeStruct, fieldName, dst)
+    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeWasm[PB, PC, 1], dst
 end
 
-macro getuOperandWide32(opcodeStruct, fieldName, dst)
-    loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32Size[PB, PC, 1], dst
+macro getOperandWide16JS(opcodeStruct, fieldName, dst)
+    loadhsq constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeJS[PB, PC, 1], dst
 end
 
-macro getOperandWide32(opcodeStruct, fieldName, dst)
-    loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32Size[PB, PC, 1], dst
+macro getOperandWide16Wasm(opcodeStruct, fieldName, dst)
+    loadhsq constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeWasm[PB, PC, 1], dst
+end
+
+macro getuOperandWide32JS(opcodeStruct, fieldName, dst)
+    loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeJS[PB, PC, 1], dst
+end
+
+macro getuOperandWide32Wasm(opcodeStruct, fieldName, dst)
+    loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeWasm[PB, PC, 1], dst
+end
+
+macro getOperandWide32JS(opcodeStruct, fieldName, dst)
+    loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeJS[PB, PC, 1], dst
+end
+
+macro getOperandWide32Wasm(opcodeStruct, fieldName, dst)
+    loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeWasm[PB, PC, 1], dst
 end
 
 macro makeReturn(get, dispatch, fn)
@@ -725,10 +741,14 @@ macro writeBarrierOnGlobalLexicalEnvironment(size, get, valueFieldName)
 end
 
 macro structureIDToStructureWithScratch(structureIDThenStructure, scratch)
-    andq constexpr structureIDMask, structureIDThenStructure
-    leap JSCConfig + constexpr JSC::offsetOfJSCConfigStartOfStructureHeap, scratch
-    loadp [scratch], scratch
-    addp scratch, structureIDThenStructure
+    if STRUCTURE_ID_WITH_SHIFT
+        lshiftp (constexpr StructureID::encodeShiftAmount), structureIDThenStructure
+    elsif ADDRESS64
+        andq (constexpr StructureID::structureIDMask), structureIDThenStructure
+        leap JSCConfig + constexpr JSC::offsetOfJSCConfigStartOfStructureHeap, scratch
+        loadp [scratch], scratch
+        addp scratch, structureIDThenStructure
+    end
 end
 
 macro loadStructureWithScratch(cell, structure, scratch)
@@ -2467,7 +2487,10 @@ macro callHelper(opcodeName, slowPath, opcodeStruct, valueProfileName, dstVirtua
 
 .notPolymorphic:
     bqneq t0, t1, .opCallSlow
-    prepareCall(t2, t3, t4, t1)
+    prepareCall(t2, t3, t4, t1, macro(address)
+        loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+        storep t2, address
+    end)
 
 .goPolymorphic:
     loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], t5
@@ -2545,7 +2568,10 @@ macro doCallVarargs(opcodeName, size, get, opcodeStruct, valueProfileName, dstVi
 
         .notPolymorphic:
             bqneq t0, t1, .opCallSlow
-            prepareCall(t2, t3, t4, t1)
+            prepareCall(t2, t3, t4, t1, macro(address)
+                loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+                storep t2, address
+            end)
 
         .goPolymorphic:
             loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], t5

@@ -30,6 +30,7 @@
 #include "ContentSecurityPolicyDirectiveNames.h"
 #include "Document.h"
 #include "Frame.h"
+#include "HTTPParsers.h"
 #include "ParsingUtilities.h"
 #include "SecurityContext.h"
 #include <wtf/text/StringParsingBuffer.h>
@@ -246,7 +247,8 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     if (checkHashes(operativeDirective, hashes)
         || checkNonParserInsertedScripts(operativeDirective, parserInserted)
         || checkNonce(operativeDirective, nonce)
-        || checkSource(operativeDirective, url))
+        || (checkSource(operativeDirective, url) && !strictDynamicIncluded())
+        || (url.isEmpty() && checkInline(operativeDirective)))
         return nullptr;
     return operativeDirective;
 }
@@ -407,12 +409,12 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
 
 const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForScript(const URL& url, bool didReceiveRedirectResponse, const Vector<ResourceCryptographicDigest>& subResourceIntegrityDigests, const String& nonce) const
 {
-    auto* operativeDirective = this->operativeDirective(m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrcElem);
+    auto* operativeDirective = this->operativeDirectiveScript(m_scriptSrcElem.get(), ContentSecurityPolicyDirectiveNames::scriptSrcElem);
 
     if (!operativeDirective
         || operativeDirective->containsAllHashes(subResourceIntegrityDigests)
         || checkNonce(operativeDirective, nonce)
-        || checkSource(operativeDirective, url, didReceiveRedirectResponse))
+        || (checkSource(operativeDirective, url, didReceiveRedirectResponse) && !strictDynamicIncluded()))
         return nullptr;
 
     return operativeDirective;
@@ -432,7 +434,15 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
 //
 void ContentSecurityPolicyDirectiveList::parse(const String& policy, ContentSecurityPolicy::PolicyFrom policyFrom)
 {
+    // A meta tag delievered CSP could contain invalid HTTP header values depending on how it was formatted in the document.
+    // We want to store the CSP as a valid HTTP header for e.g. blob URL inheritance.
+    if (policyFrom == ContentSecurityPolicy::PolicyFrom::HTTPEquivMeta) {
+        m_header = stripLeadingAndTrailingHTTPSpaces(policy).removeCharacters([](auto c) {
+            return c == 0x00 || c == '\r' || c == '\n';
+        });
+    } else
     m_header = policy;
+
     if (policy.isEmpty())
         return;
 
@@ -662,7 +672,7 @@ void ContentSecurityPolicyDirectiveList::addDirective(ParsedDirective&& directiv
         m_policy.reportUnsupportedDirective(WTFMove(directive.name));
 }
 
-bool ContentSecurityPolicyDirectiveList::strictDynamicIncluded()
+bool ContentSecurityPolicyDirectiveList::strictDynamicIncluded() const
 {
     ContentSecurityPolicySourceListDirective* directive = this->operativeDirectiveScript(m_scriptSrcElem.get(), ContentSecurityPolicyDirectiveNames::scriptSrc);
     return directive && directive->allowNonParserInsertedScripts();
@@ -671,9 +681,9 @@ bool ContentSecurityPolicyDirectiveList::strictDynamicIncluded()
 bool ContentSecurityPolicyDirectiveList::shouldReportSample(const String& violatedDirective) const
 {
     ContentSecurityPolicySourceListDirective* directive = nullptr;
-    if (violatedDirective.startsWith(ContentSecurityPolicyDirectiveNames::styleSrc))
+    if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::styleSrc }))
         directive = m_styleSrc.get();
-    else if (violatedDirective.startsWith(ContentSecurityPolicyDirectiveNames::scriptSrc))
+    else if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::scriptSrc }))
         directive = m_scriptSrc.get();
 
     return directive && directive->shouldReportSample();

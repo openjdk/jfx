@@ -63,28 +63,13 @@ static std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBacke
     if (!page)
         return nullptr;
 
-    page->libWebRTCProvider().setEnableWebRTCEncryption(page->settings().webRTCEncryptionEnabled());
+    auto& webRTCProvider = static_cast<LibWebRTCProvider&>(page->webRTCProvider());
+    webRTCProvider.setEnableWebRTCEncryption(page->settings().webRTCEncryptionEnabled());
 
-    return makeUnique<LibWebRTCPeerConnectionBackend>(peerConnection, page->libWebRTCProvider());
+    return makeUnique<LibWebRTCPeerConnectionBackend>(peerConnection, webRTCProvider);
 }
 
 CreatePeerConnectionBackend PeerConnectionBackend::create = createLibWebRTCPeerConnectionBackend;
-
-std::optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptExecutionContext& context, const String& kind)
-{
-    auto* page = downcast<Document>(context).page();
-    if (!page)
-        return { };
-    return page->libWebRTCProvider().receiverCapabilities(kind);
-}
-
-std::optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(ScriptExecutionContext& context, const String& kind)
-{
-    auto* page = downcast<Document>(context).page();
-    if (!page)
-        return { };
-    return page->libWebRTCProvider().senderCapabilities(kind);
-}
 
 LibWebRTCPeerConnectionBackend::LibWebRTCPeerConnectionBackend(RTCPeerConnection& peerConnection, LibWebRTCProvider& provider)
     : PeerConnectionBackend(peerConnection)
@@ -198,7 +183,8 @@ bool LibWebRTCPeerConnectionBackend::setConfiguration(MediaEndpointConfiguration
     if (!page)
         return false;
 
-    return m_endpoint->setConfiguration(page->libWebRTCProvider(), configurationFromMediaEndpointConfiguration(WTFMove(configuration)));
+    auto& webRTCProvider = reinterpret_cast<LibWebRTCProvider&>(page->webRTCProvider());
+    return m_endpoint->setConfiguration(webRTCProvider, configurationFromMediaEndpointConfiguration(WTFMove(configuration)));
 }
 
 void LibWebRTCPeerConnectionBackend::gatherDecoderImplementationName(Function<void(String&&)>&& callback)
@@ -260,7 +246,7 @@ void LibWebRTCPeerConnectionBackend::doCreateOffer(RTCOfferOptions&& options)
 void LibWebRTCPeerConnectionBackend::doCreateAnswer(RTCAnswerOptions&&)
 {
     if (!m_isRemoteDescriptionSet) {
-        createAnswerFailed(Exception { InvalidStateError, "No remote description set" });
+        createAnswerFailed(Exception { InvalidStateError, "No remote description set"_s });
         return;
     }
     m_endpoint->doCreateAnswer();

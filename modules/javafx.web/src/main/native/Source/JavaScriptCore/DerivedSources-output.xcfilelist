@@ -21,7 +21,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/GeneratedWasmOps.asm
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/GeneratorPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/InitBytecodes.asm
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/InitWasm.asm
-$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/InjectedScriptSource.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlCollatorConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlCollatorPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlDateTimeFormatConstructor.lut.h
@@ -42,6 +41,7 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlSegmentIteratorPrototype
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlSegmenterConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlSegmenterPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlSegmentsPrototype.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSCBuiltins.cpp
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSCBuiltins.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSDataViewPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSGlobalObject.lut.h
@@ -54,14 +54,12 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSWebAssembly.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JavaScriptCore_BUILTINS_DEPENDENCIES_LIST
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/KeywordLookup.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/Lexer.lut.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/MapPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/NumberConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/NumberPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/ObjectConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/ReflectObject.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/RegExpConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/RegExpJitTables.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/SetPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/ShadowRealmObject.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/ShadowRealmPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/StringConstructor.lut.h

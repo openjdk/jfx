@@ -43,6 +43,6 @@ namespace WebCore {
 #endif
         // Plugin -------------------------------------------------------------
         static void plugins(bool refresh, Vector<PluginInfo>*);
-        static String computedDefaultLanguage() { return "en"; }
+        static String computedDefaultLanguage() { return "en"_s; }
     };
 }

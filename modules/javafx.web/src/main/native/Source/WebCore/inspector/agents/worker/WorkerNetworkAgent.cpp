@@ -66,9 +66,23 @@ void WorkerNetworkAgent::setResourceCachingDisabledInternal(bool disabled)
         workerDebuggerProxy->setResourceCachingDisabledByWebInspector(disabled);
 }
 
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
+bool WorkerNetworkAgent::setEmulatedConditionsInternal(std::optional<int>&& /* bytesPerSecondLimit */)
+{
+    return false;
+}
+
+#endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
 ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Protocol::ErrorString&, const Protocol::Network::FrameId&)
 {
     return &m_globalScope;
+}
+
+void WorkerNetworkAgent::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
+{
+    m_globalScope.addConsoleMessage(WTFMove(message));
 }
 
 } // namespace WebCore

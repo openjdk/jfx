@@ -122,9 +122,9 @@ PatternData* RenderSVGResourcePattern::buildPattern(RenderElement& renderer, Opt
 
     // Account for text drawing resetting the context to non-scaled, see SVGInlineTextBox::paintTextWithShadows.
     if (resourceMode.contains(RenderSVGResourceMode::ApplyToText)) {
-        AffineTransform additionalTextTransformation;
-        if (shouldTransformOnTextPainting(renderer, additionalTextTransformation))
-            patternData->transform *= additionalTextTransformation;
+        auto textScale = computeTextPaintingScale(renderer);
+        if (textScale != 1)
+            patternData->transform.scale(textScale);
     }
 
     // Build pattern.
@@ -243,7 +243,7 @@ RefPtr<ImageBuffer> RenderSVGResourcePattern::createTileImage(GraphicsContext& c
     auto tileSize = roundedUnscaledImageBufferSize(size, scale);
 
     // FIXME: Use createImageBuffer(rect, scale), delete the above calculations and fix 'tileImageTransform'
-    auto tileImage = context.createImageBuffer(tileSize, scale);
+    auto tileImage = context.createScaledImageBuffer(tileSize, scale);
     if (!tileImage)
         return nullptr;
 

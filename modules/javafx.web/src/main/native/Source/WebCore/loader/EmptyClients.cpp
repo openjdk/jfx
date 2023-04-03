@@ -51,7 +51,6 @@
 #include "EditorClient.h"
 #include "EmptyAttachmentElementClient.h"
 #include "EmptyFrameLoaderClient.h"
-#include "FileChooser.h"
 #include "FormState.h"
 #include "Frame.h"
 #include "FrameLoaderClient.h"
@@ -61,7 +60,6 @@
 #include "IDBConnectionToServer.h"
 #include "InspectorClient.h"
 #include "LibWebRTCAudioModule.h"
-#include "LibWebRTCProvider.h"
 #include "MediaRecorderPrivate.h"
 #include "MediaRecorderProvider.h"
 #include "ModalContainerTypes.h"
@@ -82,7 +80,7 @@
 #include "ThreadableWebSocketChannel.h"
 #include "UserContentProvider.h"
 #include "VisitedLinkStore.h"
-#include "WebLockRegistry.h"
+#include "WebRTCProvider.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
@@ -104,12 +102,13 @@ namespace WebCore {
 class UserMessageHandlerDescriptor;
 
 class EmptyBackForwardClient final : public BackForwardClient {
-    void addItem(Ref<HistoryItem>&&) final { }
-    void goToItem(HistoryItem&) final { }
-    RefPtr<HistoryItem> itemAtIndex(int) final { return nullptr; }
-    unsigned backListCount() const final { return 0; }
-    unsigned forwardListCount() const final { return 0; }
-    void close() final { }
+    void addItem(Ref<HistoryItem>&&) { }
+    void goToItem(HistoryItem&) { }
+    RefPtr<HistoryItem> itemAtIndex(int) { return nullptr; }
+    unsigned backListCount() const { return 0; }
+    unsigned forwardListCount() const { return 0; }
+    bool containsItem(const HistoryItem&) const  { return false; }
+    void close() { }
 };
 
 #if ENABLE(CONTEXT_MENUS)
@@ -145,7 +144,7 @@ class EmptyContextMenuClient final : public ContextMenuClient {
 #endif
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-    bool supportsCopyCroppedImage() final { return false; }
+    bool supportsCopySubject() final { return false; }
 #endif
 };
 
@@ -212,7 +211,7 @@ class EmptyDatabaseProvider final : public DatabaseProvider {
         void establishTransaction(uint64_t, const IDBTransactionInfo&) final { }
         void databaseConnectionPendingClose(uint64_t) final { }
         void databaseConnectionClosed(uint64_t) final { }
-        void abortOpenAndUpgradeNeeded(uint64_t, const IDBResourceIdentifier&) final { }
+        void abortOpenAndUpgradeNeeded(uint64_t, const std::optional<IDBResourceIdentifier>&) final { }
         void didFireVersionChangeEvent(uint64_t, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
         void openDBRequestCancelled(const IDBRequestData&) final { }
         void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&) final { }
@@ -305,12 +304,12 @@ private:
     void handleKeyboardEvent(KeyboardEvent&) final { }
     void handleInputMethodKeydown(KeyboardEvent&) final { }
 
-    void textFieldDidBeginEditing(Element*) final { }
-    void textFieldDidEndEditing(Element*) final { }
-    void textDidChangeInTextField(Element*) final { }
-    bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) final { return false; }
-    void textWillBeDeletedInTextField(Element*) final { }
-    void textDidChangeInTextArea(Element*) final { }
+    void textFieldDidBeginEditing(Element&) final { }
+    void textFieldDidEndEditing(Element&) final { }
+    void textDidChangeInTextField(Element&) final { }
+    bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) final { return false; }
+    void textWillBeDeletedInTextField(Element&) final { }
+    void textDidChangeInTextArea(Element&) final { }
     void overflowScrollPositionChanged() final { }
     void subFrameScrollPositionChanged() final { }
 
@@ -366,14 +365,11 @@ private:
     void willSetInputMethodState() final { }
     void setInputMethodState(Element*) final { }
 
-    bool canShowFontPanel() const final { return false; }
-
     class EmptyTextCheckerClient final : public TextCheckerClient {
         bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const final { return true; }
         void ignoreWordInSpellDocument(const String&) final { }
         void learnWord(const String&) final { }
         void checkSpellingOfString(StringView, int*, int*) final { }
-        String getAutoCorrectSuggestionForMisspelledWord(const String&) final { return { }; }
         void checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*) final { }
 
 #if USE(UNIFIED_TEXT_CHECKING)
@@ -484,9 +480,9 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
         unsigned length() final { return 0; }
         String key(unsigned) final { return { }; }
         String item(const String&) final { return { }; }
-        void setItem(Frame*, const String&, const String&, bool&) final { }
-        void removeItem(Frame*, const String&) final { }
-        void clear(Frame*) final { }
+        void setItem(Frame&, const String&, const String&, bool&) final { }
+        void removeItem(Frame&, const String&) final { }
+        void clear(Frame&) final { }
         bool contains(const String&) final { return false; }
         StorageType storageType() const final { return StorageType::Local; }
         size_t memoryBytesUsedByCache() final { return 0; }
@@ -627,12 +623,12 @@ Ref<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(const ResourceR
     return DocumentLoader::create(request, substituteData);
 }
 
-RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const String&, HTMLFrameOwnerElement&)
+RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const AtomString&, HTMLFrameOwnerElement&)
 {
     return nullptr;
 }
 
-RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool)
+RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool)
 {
     return nullptr;
 }
@@ -951,12 +947,12 @@ bool EmptyFrameLoaderClient::canShowMIMETypeAsHTML(const String&) const
     return false;
 }
 
-bool EmptyFrameLoaderClient::representationExistsForURLScheme(const String&) const
+bool EmptyFrameLoaderClient::representationExistsForURLScheme(StringView) const
 {
     return false;
 }
 
-String EmptyFrameLoaderClient::generatedMIMETypeForURLScheme(const String&) const
+String EmptyFrameLoaderClient::generatedMIMETypeForURLScheme(StringView) const
 {
     return emptyString();
 }
@@ -1187,23 +1183,9 @@ public:
 private:
     EmptyBroadcastChannelRegistry() = default;
 
-    void registerChannel(const ClientOrigin&, const String&, BroadcastChannelIdentifier) final { }
-    void unregisterChannel(const ClientOrigin&, const String&, BroadcastChannelIdentifier) final { }
-    void postMessage(const ClientOrigin&, const String&, BroadcastChannelIdentifier, Ref<SerializedScriptValue>&&, CompletionHandler<void()>&&) final { }
-};
-
-class EmptyWebLockRegistry final : public WebLockRegistry {
-public:
-    static Ref<EmptyWebLockRegistry> create()
-    {
-        return adoptRef(*new EmptyWebLockRegistry);
-    }
-private:
-    void requestLock(const ClientOrigin&, WebLockIdentifier, ScriptExecutionContextIdentifier, const String&, WebLockMode, bool, bool, Function<void(bool)>&&, Function<void()>&&) { }
-    void releaseLock(const ClientOrigin&, WebLockIdentifier, ScriptExecutionContextIdentifier, const String&) final { }
-    void abortLockRequest(const ClientOrigin&, WebLockIdentifier, ScriptExecutionContextIdentifier, const String&, CompletionHandler<void(bool)>&&) final { }
-    void snapshot(const ClientOrigin&, CompletionHandler<void(WebLockManagerSnapshot&&)>&&) { }
-    void clientIsGoingAway(const ClientOrigin&, ScriptExecutionContextIdentifier) { }
+    void registerChannel(const PartitionedSecurityOrigin&, const String&, BroadcastChannelIdentifier) final { }
+    void unregisterChannel(const PartitionedSecurityOrigin&, const String&, BroadcastChannelIdentifier) final { }
+    void postMessage(const PartitionedSecurityOrigin&, const String&, BroadcastChannelIdentifier, Ref<SerializedScriptValue>&&, CompletionHandler<void()>&&) final { }
 };
 
 PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
@@ -1212,7 +1194,7 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         sessionID,
         makeUniqueRef<EmptyEditorClient>(),
         SocketProvider::create(),
-        LibWebRTCProvider::create(),
+        WebRTCProvider::create(),
         CacheStorageProvider::create(),
         adoptRef(*new EmptyUserContentProvider),
         adoptRef(*new EmptyBackForwardClient),
@@ -1222,7 +1204,6 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         makeUniqueRef<DummySpeechRecognitionProvider>(),
         makeUniqueRef<EmptyMediaRecorderProvider>(),
         EmptyBroadcastChannelRegistry::create(),
-        EmptyWebLockRegistry::create(),
         DummyPermissionController::create(),
         makeUniqueRef<DummyStorageProvider>(),
         makeUniqueRef<DummyModelPlayerProvider>()

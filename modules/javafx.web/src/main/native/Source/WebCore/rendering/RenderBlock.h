@@ -194,19 +194,19 @@ public:
     }
 
     static TextRun constructTextRun(StringView, const RenderStyle&,
-        ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
+        ExpansionBehavior = ExpansionBehavior::defaultBehavior(), TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const String&, const RenderStyle&,
-        ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
+        ExpansionBehavior = ExpansionBehavior::defaultBehavior(), TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const AtomString&, const RenderStyle&,
-        ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
+        ExpansionBehavior = ExpansionBehavior::defaultBehavior(), TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const RenderText&, const RenderStyle&,
-        ExpansionBehavior = DefaultExpansion);
+        ExpansionBehavior = ExpansionBehavior::defaultBehavior());
     static TextRun constructTextRun(const RenderText&, unsigned offset, unsigned length, const RenderStyle&,
-        ExpansionBehavior = DefaultExpansion);
+        ExpansionBehavior = ExpansionBehavior::defaultBehavior());
     static TextRun constructTextRun(const LChar* characters, unsigned length, const RenderStyle&,
-        ExpansionBehavior = DefaultExpansion);
+        ExpansionBehavior = ExpansionBehavior::defaultBehavior());
     static TextRun constructTextRun(const UChar* characters, unsigned length, const RenderStyle&,
-        ExpansionBehavior = DefaultExpansion);
+        ExpansionBehavior = ExpansionBehavior::defaultBehavior());
 
     LayoutUnit paginationStrut() const;
     void setPaginationStrut(LayoutUnit);
@@ -228,9 +228,9 @@ public:
     LayoutUnit borderBefore() const override;
     LayoutUnit adjustBorderBoxLogicalHeightForBoxSizing(LayoutUnit height) const override;
     LayoutUnit adjustContentBoxLogicalHeightForBoxSizing(std::optional<LayoutUnit> height) const override;
+    LayoutUnit adjustIntrinsicLogicalHeightForBoxSizing(LayoutUnit height) const override;
     void paintExcludedChildrenInBorder(PaintInfo&, const LayoutPoint&);
 
-    LayoutSize clientLogicalRightAndBottomAfterRepositioning() const;
     // Accessors for logical width/height and margins in the containing block's block-flow direction.
     enum ApplyLayoutDeltaMode { ApplyLayoutDelta, DoNotApplyLayoutDelta };
     LayoutUnit logicalWidthForChild(const RenderBox& child) const { return isHorizontalWritingMode() ? child.width() : child.height(); }
@@ -320,6 +320,8 @@ public:
 
     static String updateSecurityDiscCharacters(const RenderStyle&, String&&);
 
+    virtual bool hasLineIfEmpty() const;
+
 protected:
     RenderFragmentedFlow* locateEnclosingFragmentedFlow() const override;
     void willBeDestroyed() override;
@@ -369,13 +371,13 @@ protected:
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    virtual bool hasLineIfEmpty() const;
-
     virtual bool canPerformSimplifiedLayout() const;
     bool simplifiedLayout();
     virtual void simplifiedNormalFlowLayout();
 
     bool childBoxIsUnsplittableForFragmentation(const RenderBox& child) const;
+
+    static LayoutUnit layoutOverflowLogicalBottom(const RenderBlock&);
 
 public:
     virtual void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false);
@@ -383,9 +385,6 @@ public:
 
     // Adjust from painting offsets to the local coords of this renderer
     void offsetForContents(LayoutPoint&) const;
-    // Obtains the nearest enclosing block (including this block) that contributes a first-line style to our inline
-    // children.
-    RenderBlock* firstLineBlock() const override;
 
     enum FieldsetFindLegendOption { FieldsetIgnoreFloatingOrOutOfFlow, FieldsetIncludeFloatingOrOutOfFlow };
     RenderBox* findFieldsetLegend(FieldsetFindLegendOption = FieldsetIgnoreFloatingOrOutOfFlow) const;
@@ -438,7 +437,7 @@ private:
     LayoutUnit adjustLogicalRightOffsetForLine(LayoutUnit offsetFromFloats, bool applyTextIndent) const;
     LayoutUnit adjustLogicalLeftOffsetForLine(LayoutUnit offsetFromFloats, bool applyTextIndent) const;
 
-    const char* renderName() const override;
+    ASCIILiteral renderName() const override;
 
     bool isSelfCollapsingBlock() const override;
     virtual bool childrenPreventSelfCollapsing() const;

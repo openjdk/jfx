@@ -272,7 +272,7 @@ static bool compileToBytecode(CombinedURLFilters&& filters, UniversalActionSet&&
 std::error_code compileRuleList(ContentExtensionCompilationClient& client, String&& ruleJSON, Vector<ContentExtensionRule>&& parsedRuleList)
 {
 #if ASSERT_ENABLED
-    callOnMainThread([ruleJSON = ruleJSON.isolatedCopy(), parsedRuleList = parsedRuleList.isolatedCopy()] {
+    callOnMainThread([ruleJSON = ruleJSON.isolatedCopy(), parsedRuleList = crossThreadCopy(parsedRuleList)] {
         ASSERT(parseRuleList(ruleJSON).value() == parsedRuleList);
     });
 #endif
@@ -317,7 +317,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
             status = URLFilterParser::Ok;
         }
         if (status != URLFilterParser::Ok) {
-            dataLogF("Error while parsing %s: %s\n", trigger.urlFilter.utf8().data(), URLFilterParser::statusString(status).utf8().data());
+            dataLogF("Error while parsing %s: %s\n", trigger.urlFilter.utf8().data(), URLFilterParser::statusString(status).characters());
             return ContentExtensionError::JSONInvalidRegex;
         }
 
@@ -334,7 +334,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
                     status = URLFilterParser::Ok;
                 }
                 if (status != URLFilterParser::Ok) {
-                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).utf8().data());
+                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).characters());
                     return ContentExtensionError::JSONInvalidRegex;
                 }
                 break;
@@ -345,7 +345,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
                     status = URLFilterParser::Ok;
                 }
                 if (status != URLFilterParser::Ok) {
-                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).utf8().data());
+                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).characters());
                     return ContentExtensionError::JSONInvalidRegex;
                 }
                 break;

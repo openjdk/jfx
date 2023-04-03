@@ -144,7 +144,7 @@ void RenderListBox::updateFromElement()
             if (text.isEmpty())
                 continue;
             text = applyTextTransform(style(), text, ' ');
-            auto textRun = constructTextRun(text, style(), AllowRightExpansion);
+            auto textRun = constructTextRun(text, style(), ExpansionBehavior::allowRightOnly());
             width = std::max(width, selectFont().width(textRun));
         }
         // FIXME: Is ceiling right here, or should we be doing some kind of rounding instead?
@@ -206,7 +206,7 @@ void RenderListBox::scrollToRevealSelection()
 
 void RenderListBox::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    maxLogicalWidth = shouldApplySizeContainment(*this) ? 2 * optionsSpacingHorizontal : m_optionsWidth + 2 * optionsSpacingHorizontal;
+    maxLogicalWidth = shouldApplySizeContainment() ? 2 * optionsSpacingHorizontal : m_optionsWidth + 2 * optionsSpacingHorizontal;
     if (m_vBar)
         maxLogicalWidth += m_vBar->width();
     if (!style().width().isPercentOrCalculated())
@@ -271,7 +271,7 @@ RenderBox::LogicalExtentComputedValues RenderListBox::computeLogicalHeight(Layou
 LayoutUnit RenderListBox::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode lineDirection, LinePositionMode linePositionMode) const
 {
     auto baseline = RenderBox::baselinePosition(baselineType, firstLine, lineDirection, linePositionMode);
-    if (!shouldApplyLayoutContainment(*this))
+    if (!shouldApplyLayoutContainment())
         baseline -= baselineAdjustment;
     return baseline;
 }
@@ -395,9 +395,11 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     const Vector<HTMLElement*>& listItems = selectElement().listItems();
     HTMLElement* listItemElement = listItems[listIndex];
 
-    auto& itemStyle = *listItemElement->computedStyle();
+    auto itemStyle = listItemElement->computedStyle();
+    if (!itemStyle)
+        return;
 
-    if (itemStyle.visibility() == Visibility::Hidden)
+    if (itemStyle->visibility() == Visibility::Hidden)
         return;
 
     String itemText;
@@ -411,7 +413,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     if (itemText.isNull())
         return;
 
-    Color textColor = itemStyle.visitedDependentColorWithColorFilter(CSSPropertyColor);
+    Color textColor = itemStyle->visitedDependentColorWithColorFilter(CSSPropertyColor);
     if (isOptionElement && downcast<HTMLOptionElement>(*listItemElement).selected()) {
         if (frame().selection().isFocusedAndActive() && document().focusedElement() == &selectElement())
             textColor = theme().activeListBoxSelectionForegroundColor(styleColorOptions());
@@ -422,10 +424,10 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
 
     paintInfo.context().setFillColor(textColor);
 
-    TextRun textRun(itemText, 0, 0, AllowRightExpansion, itemStyle.direction(), isOverride(itemStyle.unicodeBidi()), true);
+    TextRun textRun(itemText, 0, 0, ExpansionBehavior::allowRightOnly(), itemStyle->direction(), isOverride(itemStyle->unicodeBidi()), true);
     FontCascade itemFont = style().fontCascade();
     LayoutRect r = itemBoundingBoxRect(paintOffset, listIndex);
-    r.move(itemOffsetForAlignment(textRun, &itemStyle, itemFont, r));
+    r.move(itemOffsetForAlignment(textRun, itemStyle, itemFont, r));
 
     if (is<HTMLOptGroupElement>(*listItemElement)) {
         auto description = itemFont.fontDescription();
@@ -442,7 +444,9 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
 {
     const Vector<HTMLElement*>& listItems = selectElement().listItems();
     HTMLElement* listItemElement = listItems[listIndex];
-    auto& itemStyle = *listItemElement->computedStyle();
+    auto itemStyle = listItemElement->computedStyle();
+    if (!itemStyle)
+        return;
 
     Color backColor;
     if (is<HTMLOptionElement>(*listItemElement) && downcast<HTMLOptionElement>(*listItemElement).selected()) {
@@ -451,10 +455,10 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
         else
             backColor = theme().inactiveListBoxSelectionBackgroundColor(styleColorOptions());
     } else
-        backColor = itemStyle.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
+        backColor = itemStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
 
     // Draw the background for this list box item
-    if (itemStyle.visibility() == Visibility::Hidden)
+    if (itemStyle->visibility() == Visibility::Hidden)
         return;
 
     LayoutRect itemRect = itemBoundingBoxRect(paintOffset, listIndex);

@@ -69,7 +69,7 @@ LayoutUnit RenderSlider::baselinePosition(FontBaseline, bool /*firstLine*/, Line
 
 void RenderSlider::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    if (shouldApplySizeContainment(*this))
+    if (shouldApplySizeContainment())
         return;
     maxLogicalWidth = defaultTrackLength * style().effectiveZoom();
     if (!style().width().isPercentOrCalculated())
@@ -91,6 +91,7 @@ void RenderSlider::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
+#if PLATFORM(JAVA)
 void RenderSlider::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
@@ -102,6 +103,7 @@ void RenderSlider::layout()
 
     RenderFlexibleBox::layout();
 }
+#endif
 
 bool RenderSlider::inDragMode() const
 {

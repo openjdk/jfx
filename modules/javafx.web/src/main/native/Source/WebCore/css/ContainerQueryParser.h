@@ -34,11 +34,11 @@ class CSSParserTokenRange;
 
 class ContainerQueryParser {
 public:
-    static std::optional<ContainerQuery> consumeContainerQuery(CSSParserTokenRange&, const CSSParserContext&);
+    static std::optional<CQ::ContainerQuery> consumeContainerQuery(CSSParserTokenRange&, const CSSParserContext&);
 
 private:
     std::optional<CQ::ContainerQuery> consumeContainerQuery(CSSParserTokenRange&);
-    std::optional<CQ::SizeQuery> consumeSizeQuery(CSSParserTokenRange&);
+    std::optional<CQ::QueryInParens> consumeQueryInParens(CSSParserTokenRange&);
     template<typename ConditionType> std::optional<ConditionType> consumeCondition(CSSParserTokenRange&);
     std::optional<CQ::SizeFeature> consumeSizeFeature(CSSParserTokenRange&);
     std::optional<CQ::SizeFeature> consumePlainSizeFeature(CSSParserTokenRange&);
@@ -49,6 +49,8 @@ private:
         : m_context(context) { }
 
     const CSSParserContext m_context;
+
+    OptionSet<CQ::Axis> m_requiredAxes;
 };
 
 }

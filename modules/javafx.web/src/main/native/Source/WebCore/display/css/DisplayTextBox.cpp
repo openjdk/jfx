@@ -54,11 +54,11 @@ String TextBox::debugDescription() const
 
     stream << boxName() << " " << absoluteBoxRect() << " (" << this << ")";
     auto textContent = text().originalContent().substring(text().start(), text().length()).toString();
-    textContent.replaceWithLiteral('\\', "\\\\");
-    textContent.replaceWithLiteral('\n', "\\n");
+    textContent = makeStringByReplacingAll(textContent, '\\', "\\\\"_s);
+    textContent = makeStringByReplacingAll(textContent, '\n', "\\n"_s);
     const size_t maxPrintedLength = 80;
     if (textContent.length() > maxPrintedLength) {
-        auto substring = textContent.substring(0, maxPrintedLength);
+        auto substring = StringView(textContent).left(maxPrintedLength);
         stream << " \"" << substring << "\"…";
     } else
         stream << " \"" << textContent << "\"";

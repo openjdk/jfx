@@ -157,7 +157,7 @@ public:
     virtual void scrollingTreeNodeDidEndScroll(ScrollingNodeID) { }
 #endif
 
-    WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(const AtomString& eventName, IntPoint);
+    WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(EventTrackingRegions::EventType, IntPoint);
 
     virtual WheelEventTestMonitor* wheelEventTestMonitor() { return nullptr; }
 
@@ -233,8 +233,10 @@ public:
 
     WEBCORE_EXPORT void willProcessWheelEvent();
 
-    void addPendingScrollUpdate(ScrollUpdate&&);
-    Vector<ScrollUpdate> takePendingScrollUpdates();
+    WEBCORE_EXPORT void addPendingScrollUpdate(ScrollUpdate&&);
+    WEBCORE_EXPORT Vector<ScrollUpdate> takePendingScrollUpdates();
+    WEBCORE_EXPORT bool hasPendingScrollUpdates();
+
     virtual void removePendingScrollAnimationForNode(ScrollingNodeID) { }
 
 protected:

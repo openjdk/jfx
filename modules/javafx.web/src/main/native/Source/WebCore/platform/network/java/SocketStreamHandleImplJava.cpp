@@ -48,7 +48,7 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, Page* page,
     , m_storageSessionProvider(provider)
 {
     String host = url.host().toString();
-    bool ssl = url.protocolIs("wss");
+    bool ssl = url.protocolIs("wss"_s);
     int port = url.port().value_or(ssl ? 443 : 80);
 
     JNIEnv* env = WTF::GetJavaEnv();

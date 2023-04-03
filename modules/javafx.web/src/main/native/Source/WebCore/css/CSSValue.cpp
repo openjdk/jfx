@@ -31,6 +31,7 @@
 
 #include "CSSAspectRatioValue.h"
 #include "CSSBorderImageSliceValue.h"
+#include "CSSBorderImageWidthValue.h"
 #include "CSSCalcValue.h"
 #include "CSSCanvasValue.h"
 #include "CSSContentDistributionValue.h"
@@ -81,7 +82,7 @@ struct SameSizeAsCSSValue {
     uint32_t bitfields;
 };
 
-COMPILE_ASSERT(sizeof(CSSValue) == sizeof(SameSizeAsCSSValue), CSS_value_should_stay_small);
+static_assert(sizeof(CSSValue) == sizeof(SameSizeAsCSSValue), "CSS value should stay small");
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
 
@@ -145,6 +146,8 @@ bool CSSValue::equals(const CSSValue& other) const
             return compareCSSValues<CSSAspectRatioValue>(*this, other);
         case BorderImageSliceClass:
             return compareCSSValues<CSSBorderImageSliceValue>(*this, other);
+        case BorderImageWidthClass:
+            return compareCSSValues<CSSBorderImageWidthValue>(*this, other);
         case CanvasClass:
             return compareCSSValues<CSSCanvasValue>(*this, other);
         case NamedImageClass:
@@ -243,13 +246,15 @@ bool CSSValue::isCSSLocalURL(StringView relativeURL)
     return relativeURL.isEmpty() || relativeURL.startsWith('#');
 }
 
-String CSSValue::cssText() const
+String CSSValue::cssText(Document* document) const
 {
     switch (classType()) {
     case AspectRatioClass:
         return downcast<CSSAspectRatioValue>(*this).customCSSText();
     case BorderImageSliceClass:
         return downcast<CSSBorderImageSliceValue>(*this).customCSSText();
+    case BorderImageWidthClass:
+        return downcast<CSSBorderImageWidthValue>(*this).customCSSText();
     case CanvasClass:
         return downcast<CSSCanvasValue>(*this).customCSSText();
     case NamedImageClass:
@@ -273,7 +278,7 @@ String CSSValue::cssText() const
     case FontVariationClass:
         return downcast<CSSFontVariationValue>(*this).customCSSText();
     case FunctionClass:
-        return downcast<CSSFunctionValue>(*this).customCSSText();
+        return downcast<CSSFunctionValue>(*this).customCSSText(document);
     case LinearGradientClass:
         return downcast<CSSLinearGradientValue>(*this).customCSSText();
     case RadialGradientClass:
@@ -295,7 +300,7 @@ String CSSValue::cssText() const
     case GridTemplateAreasClass:
         return downcast<CSSGridTemplateAreasValue>(*this).customCSSText();
     case PrimitiveClass:
-        return downcast<CSSPrimitiveValue>(*this).customCSSText();
+        return downcast<CSSPrimitiveValue>(*this).customCSSText(document);
     case ReflectClass:
         return downcast<CSSReflectValue>(*this).customCSSText();
     case ShadowClass:
@@ -309,7 +314,7 @@ String CSSValue::cssText() const
     case UnicodeRangeClass:
         return downcast<CSSUnicodeRangeValue>(*this).customCSSText();
     case ValueListClass:
-        return downcast<CSSValueList>(*this).customCSSText();
+        return downcast<CSSValueList>(*this).customCSSText(document);
     case ValuePairClass:
         return downcast<CSSValuePair>(*this).customCSSText();
     case LineBoxContainClass:
@@ -363,6 +368,9 @@ void CSSValue::destroy()
         return;
     case BorderImageSliceClass:
         delete downcast<CSSBorderImageSliceValue>(this);
+        return;
+    case BorderImageWidthClass:
+        delete downcast<CSSBorderImageWidthValue>(this);
         return;
     case CanvasClass:
         delete downcast<CSSCanvasValue>(this);

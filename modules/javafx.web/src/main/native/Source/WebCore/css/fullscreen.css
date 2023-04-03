@@ -25,7 +25,6 @@
 #if defined(ENABLE_FULLSCREEN_API) && ENABLE_FULLSCREEN_API
 
 :-webkit-full-screen {
-    background-color: white;
     z-index: 2147483647 !important;
     width: 100%;
     height: 100%;
@@ -40,13 +39,13 @@
     position: static !important;
     opacity: 1 !important;
     transform: none !important;
-    -webkit-mask: none !important;
+    mask: none !important;
     clip: none !important;
     filter: none !important;
     transition: none !important;
     -webkit-box-reflect: none !important;
     perspective: none !important;
-    -webkit-transform-style: flat !important;
+    transform-style: flat !important;
     overflow: visible !important;
     contain: none !important;
 }

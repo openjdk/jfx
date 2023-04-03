@@ -92,7 +92,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSStyleSheetImpl_addRuleImpl(JNI
 {
     WebCore::JSMainThreadNullState state;
     return raiseOnDOMError(env, IMPL->addRule(String(env, selector)
-            , String(env, style)
+            , AtomString{String(env, style)}
             , index));
 }
 

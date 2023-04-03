@@ -34,6 +34,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "CommonAtomStrings.h"
 #include "DataCue.h"
 #include "Document.h"
 #include "Event.h"
@@ -50,51 +51,39 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrack);
 
-const AtomString& TextTrack::subtitlesKeyword()
-{
-    static MainThreadNeverDestroyed<const AtomString> subtitles("subtitles", AtomString::ConstructFromLiteral);
-    return subtitles;
-}
-
-static const AtomString& captionsKeyword()
-{
-    static MainThreadNeverDestroyed<const AtomString> captions("captions", AtomString::ConstructFromLiteral);
-    return captions;
-}
-
 static const AtomString& descriptionsKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> descriptions("descriptions", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> descriptions("descriptions"_s);
     return descriptions;
 }
 
 static const AtomString& chaptersKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> chapters("chapters", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> chapters("chapters"_s);
     return chapters;
 }
 
 static const AtomString& metadataKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> metadata("metadata", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> metadata("metadata"_s);
     return metadata;
 }
 
 static const AtomString& forcedKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> forced("forced", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> forced("forced"_s);
     return forced;
 }
 
 TextTrack& TextTrack::captionMenuOffItem()
 {
-    static TextTrack& off = TextTrack::create(nullptr, "off menu item", emptyAtom(), emptyAtom(), emptyAtom()).leakRef();
+    static TextTrack& off = TextTrack::create(nullptr, "off menu item"_s, emptyAtom(), emptyAtom(), emptyAtom()).leakRef();
     return off;
 }
 
 TextTrack& TextTrack::captionMenuAutomaticItem()
 {
-    static TextTrack& automatic = TextTrack::create(nullptr, "automatic menu item", emptyAtom(), emptyAtom(), emptyAtom()).leakRef();
+    static TextTrack& automatic = TextTrack::create(nullptr, "automatic menu item"_s, emptyAtom(), emptyAtom(), emptyAtom()).leakRef();
     return automatic;
 }
 
@@ -103,7 +92,7 @@ TextTrack::TextTrack(ScriptExecutionContext* context, const AtomString& kind, co
     , ActiveDOMObject(context)
     , m_trackType(type)
 {
-    if (kind == captionsKeyword())
+    if (kind == captionsAtom())
         m_kind = Kind::Captions;
     else if (kind == chaptersKeyword())
         m_kind = Kind::Chapters;
@@ -167,9 +156,9 @@ bool TextTrack::enabled() const
 
 bool TextTrack::isValidKindKeyword(const AtomString& value)
 {
-    if (value == subtitlesKeyword())
+    if (value == subtitlesAtom())
         return true;
-    if (value == captionsKeyword())
+    if (value == captionsAtom())
         return true;
     if (value == descriptionsKeyword())
         return true;
@@ -187,7 +176,7 @@ const AtomString& TextTrack::kindKeyword() const
 {
     switch (m_kind) {
     case Kind::Captions:
-        return captionsKeyword();
+        return captionsAtom();
     case Kind::Chapters:
         return chaptersKeyword();
     case Kind::Descriptions:
@@ -197,10 +186,10 @@ const AtomString& TextTrack::kindKeyword() const
     case Kind::Metadata:
         return metadataKeyword();
     case Kind::Subtitles:
-        return subtitlesKeyword();
+        return subtitlesAtom();
     }
     ASSERT_NOT_REACHED();
-    return subtitlesKeyword();
+    return subtitlesAtom();
 }
 
 void TextTrack::setKind(Kind newKind)
@@ -236,17 +225,17 @@ void TextTrack::setKindKeywordIgnoringASCIICase(StringView keyword)
         setKind(Kind::Subtitles);
         return;
     }
-    if (equalLettersIgnoringASCIICase(keyword, "captions"))
+    if (equalLettersIgnoringASCIICase(keyword, "captions"_s))
         setKind(Kind::Captions);
-    else if (equalLettersIgnoringASCIICase(keyword, "chapters"))
+    else if (equalLettersIgnoringASCIICase(keyword, "chapters"_s))
         setKind(Kind::Chapters);
-    else if (equalLettersIgnoringASCIICase(keyword, "descriptions"))
+    else if (equalLettersIgnoringASCIICase(keyword, "descriptions"_s))
         setKind(Kind::Descriptions);
-    else if (equalLettersIgnoringASCIICase(keyword, "forced"))
+    else if (equalLettersIgnoringASCIICase(keyword, "forced"_s))
         setKind(Kind::Forced);
-    else if (equalLettersIgnoringASCIICase(keyword, "metadata"))
+    else if (equalLettersIgnoringASCIICase(keyword, "metadata"_s))
         setKind(Kind::Metadata);
-    else if (equalLettersIgnoringASCIICase(keyword, "subtitles"))
+    else if (equalLettersIgnoringASCIICase(keyword, "subtitles"_s))
         setKind(Kind::Subtitles);
     else {
         // The invalid value default is the metadata state.
@@ -537,13 +526,13 @@ int TextTrack::trackIndexRelativeToRenderedTracks()
     return m_renderedTrackIndex.value();
 }
 
-bool TextTrack::hasCue(TextTrackCue& cue, TextTrackCue::CueMatchRules match)
+RefPtr<TextTrackCue> TextTrack::matchCue(TextTrackCue& cue, TextTrackCue::CueMatchRules match)
 {
     if (cue.startMediaTime() < MediaTime::zeroTime() || cue.endMediaTime() < MediaTime::zeroTime())
-        return false;
+        return nullptr;
 
     if (!m_cues || !m_cues->length())
-        return false;
+        return nullptr;
 
     size_t searchStart = 0;
     size_t searchEnd = m_cues->length();
@@ -557,7 +546,7 @@ bool TextTrack::hasCue(TextTrackCue& cue, TextTrackCue::CueMatchRules match)
         // Cues in the TextTrackCueList are maintained in start time order.
         if (searchStart == searchEnd) {
             if (!searchStart)
-                return false;
+                return nullptr;
 
             // If there is more than one cue with the same start time, back up to first one so we
             // consider all of them.
@@ -570,17 +559,17 @@ bool TextTrack::hasCue(TextTrackCue& cue, TextTrackCue::CueMatchRules match)
                     ++searchStart;
                 firstCompare = false;
                 if (searchStart > m_cues->length())
-                    return false;
+                    return nullptr;
 
                 existingCue = m_cues->item(searchStart - 1);
                 if (!existingCue)
-                    return false;
+                    return nullptr;
 
                 if (cue.startMediaTime() > (existingCue->startMediaTime() + startTimeVariance()))
-                    return false;
+                    return nullptr;
 
                 if (existingCue->isEqual(cue, match))
-                    return true;
+                    return existingCue;
             }
         }
 
@@ -593,7 +582,7 @@ bool TextTrack::hasCue(TextTrackCue& cue, TextTrackCue::CueMatchRules match)
     }
 
     ASSERT_NOT_REACHED();
-    return false;
+    return nullptr;
 }
 
 bool TextTrack::isMainProgramContent() const

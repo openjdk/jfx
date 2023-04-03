@@ -31,11 +31,11 @@
 #include "ImageData.h"
 #include "MIMETypeRegistry.h"
 #include "PlatformContextJava.h"
-
+#include "GraphicsContextJava.h"
 namespace WebCore {
 
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
-    const Parameters& parameters, const HostWindow*)
+    const Parameters& parameters, const ImageBuffer::CreationContext&)
 {
     IntSize backendSize = ImageBufferBackend::calculateBackendSize(parameters);
     if (backendSize.isEmpty())
@@ -106,6 +106,37 @@ JLObject ImageBufferJavaBackend::getWCImage() const
     return m_image->getImage()->cloneLocalCopy();
 }
 
+Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::optional<double>)
+{
+    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
+        // RenderQueue need to be processed before pixel buffer extraction.
+        // For that purpose it has to be in actual state.
+        context().platformContext()->rq().flushBuffer();
+
+        JNIEnv* env = WTF::GetJavaEnv();
+
+        static jmethodID midToData = env->GetMethodID(
+                PG_GetImageClass(env),
+                "toData",
+                "(Ljava/lang/String;)[B");
+        ASSERT(midToData);
+
+        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
+                getWCImage(),
+                midToData,
+                (jstring) JLString(mimeType.toJavaString(env))));
+
+        if (!WTF::CheckAndClearException(env) && jdata) {
+            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
+            Vector<uint8_t> data;
+            data.append(dataArray, env->GetArrayLength(jdata));
+            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
+            return data;
+        }
+    }
+    return { };
+}
+
 void *ImageBufferJavaBackend::getData() const
 {
     JNIEnv* env = WTF::GetJavaEnv();
@@ -162,91 +193,13 @@ RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) co
     return NativeImage::create((m_image.get()));
 }
 
-RefPtr<Image> ImageBufferJavaBackend::copyImage(BackingStoreCopy, PreserveResolution) const
-{
-    return BufferImage::create(m_image);
-}
-
-void ImageBufferJavaBackend::draw(GraphicsContext& context, const FloatRect& destRect,
-    const FloatRect& srcRect, const ImagePaintingOptions& options)
-{
-    RefPtr<Image> imageCopy = copyImage();
-    context.drawImage(*imageCopy, destRect, srcRect, options);
-}
-
-void ImageBufferJavaBackend::drawPattern(GraphicsContext& context, const FloatRect& destRect,
-    const FloatRect& srcRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
-{
-    RefPtr<Image> imageCopy = copyImage();
-    imageCopy->drawPattern(context, destRect, srcRect, patternTransform, phase, spacing, options);
-}
-
-String ImageBufferJavaBackend::toDataURL(const String& mimeType, std::optional<double>, PreserveResolution) const
-{
-    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
-        // RenderQueue need to be processed before pixel buffer extraction.
-        // For that purpose it has to be in actual state.
-        context().platformContext()->rq().flushBuffer();
-
-        JNIEnv* env = WTF::GetJavaEnv();
-
-        static jmethodID midToDataURL = env->GetMethodID(
-                PG_GetImageClass(env),
-                "toDataURL",
-                "(Ljava/lang/String;)Ljava/lang/String;");
-        ASSERT(midToDataURL);
-
-        JLString data((jstring) env->CallObjectMethod(
-                getWCImage(),
-                midToDataURL,
-                (jstring) JLString(mimeType.toJavaString(env))));
-
-        if (!WTF::CheckAndClearException(env) && data) {
-            return String(env, data);
-        }
-    }
-    return "data:,";
-}
-
-Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, std::optional<double>) const
-{
-    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
-        // RenderQueue need to be processed before pixel buffer extraction.
-        // For that purpose it has to be in actual state.
-        context().platformContext()->rq().flushBuffer();
-
-        JNIEnv* env = WTF::GetJavaEnv();
-
-        static jmethodID midToData = env->GetMethodID(
-                PG_GetImageClass(env),
-                "toData",
-                "(Ljava/lang/String;)[B");
-        ASSERT(midToData);
-
-        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
-                getWCImage(),
-                midToData,
-                (jstring) JLString(mimeType.toJavaString(env))));
-
-        if (!WTF::CheckAndClearException(env) && jdata) {
-            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
-            Vector<uint8_t> data;
-            data.append(dataArray, env->GetArrayLength(jdata));
-            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
-            return data;
-        }
-    }
-    return { };
-}
-
-std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const
+RefPtr<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
 {
     void *data = getData();
     if (!data)
-        return std::nullopt;
+        return nullptr;
 
-    return getPixelBuffer(outputFormat, srcRect, data);
+    return getPixelBuffer(outputFormat, srcRect, data,allocator);
 }
 
 void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
@@ -260,9 +213,9 @@ void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer
     update();
 }
 
-std::optional<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data) const
+RefPtr<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data, const ImageBufferAllocator& allocator) const
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, data);
+    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, data, allocator);
 }
 
 void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,

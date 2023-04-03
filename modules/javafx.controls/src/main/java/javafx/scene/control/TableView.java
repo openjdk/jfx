@@ -35,17 +35,23 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
-
+import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.scene.control.ConstrainedColumnResize;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-
-import javafx.beans.*;
+import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -66,20 +72,15 @@ import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.SizeConverter;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import javafx.scene.control.skin.TableViewSkin;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -256,6 +257,73 @@ import javafx.scene.control.skin.TableViewSkin;
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
+ * <h4>Warning: Nodes should not be inserted directly into the TableView cells</h4>
+ * {@code TableView} allows for it's cells to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the TableView cells is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ *
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code TableView} cells or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link TableColumn#cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link TableColumn#cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code TableView} containing {@code Node}s:
+ * <pre> {@code
+ *  class CustomColor {
+ *    private SimpleObjectProperty<Color> color;
+ *
+ *    CustomColor(Color col) {
+ *      this.color = new SimpleObjectProperty<Color>(col);
+ *    }
+ *    public Color getColor() { return color.getValue(); }
+ *    public void setColor(Color c) { color.setValue(c); }
+ *    public SimpleObjectProperty<Color> colorProperty() { return color; }
+ *  }
+ *
+ *  TableView<CustomColor> tableview = new TableView<CustomColor>();
+ *
+ *  ObservableList<CustomColor> colorList = FXCollections.observableArrayList();
+ *  colorList.addAll(
+ *      new CustomColor(Color.RED),
+ *      new CustomColor(Color.GREEN),
+ *      new CustomColor(Color.BLUE));
+ *
+ *  TableColumn<CustomColor, Color> col = new TableColumn<CustomColor, Color>("Color");
+ *  col.setCellValueFactory(data -> data.getValue().colorProperty());
+ *
+ *  col.setCellFactory(p -> {
+ *    return new TableCell<CustomColor, Color> () {
+ *        private final Rectangle rectangle;
+ *        {
+ *            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *            rectangle = new Rectangle(10, 10);
+ *        }
+ *
+ *        @Override
+ *        protected void updateItem(Color item, boolean empty) {
+ *          super.updateItem(item, empty);
+ *
+ *          if (item == null || empty) {
+ *              setGraphic(null);
+ *          } else {
+ *              rectangle.setFill(item);
+ *              setGraphic(rectangle);
+ *          }
+ *        }
+ *     };
+ *  });
+ *
+ *  tableview.getColumns().add(col);
+ *  tableview.setItems(colorList); }</pre>
+ *
+ * <p> This example has an anonymous custom {@code TableCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code TableCell} class and updated/used in its {@code updateItem} method.
+ *
  * <h3>Sorting</h3>
  * <p>Prior to JavaFX 8.0, the TableView control would treat the
  * {@link #getItems() items} list as the view model, meaning that any changes to
@@ -396,6 +464,86 @@ public class TableView<S> extends Control {
     };
 
     /**
+     * A resize policy that adjusts other columns in order to fit the table width.
+     * During UI adjustment, proportionately resizes all columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
+
+    /**
+     * A resize policy that adjusts the last column in order to fit the table width.
+     * During UI adjustment, resizes the last column only to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_LAST_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
+
+    /**
+     * A resize policy that adjusts the next column in order to fit the table width.
+     * During UI adjustment, resizes the next column the opposite way.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
+
+    /**
+     * A resize policy that adjusts subsequent columns in order to fit the table width.
+     * During UI adjustment, proportionally resizes subsequent columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+
+    /**
+     * A resize policy that adjusts columns, starting with the next one, in order to fit the table width.
+     * During UI adjustment, resizes the next column to preserve the total width.  When the next column
+     * cannot be further resized due to a constraint, the following column gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
+
+    /**
+     * A resize policy that adjusts columns, starting with the last one, in order to fit the table width.
+     * During UI adjustment, resizes the last column to preserve the total width.  When the last column
+     * cannot be further resized due to a constraint, the column preceding the last one gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
+
+    /**
      * <p>Simple policy that ensures the width of all visible leaf columns in
      * this table sum up to equal the width of the table itself.
      *
@@ -406,26 +554,12 @@ public class TableView<S> extends Control {
      * rightmost column until it reaches minimum width and so on. When all right
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
+     *
+     * @deprecated Use {@link #CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN} instead.
      */
-    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY = new Callback<>() {
-
-        private boolean isFirstRun = true;
-
-        @Override public String toString() {
-            return "constrained-resize";
-        }
-
-        @Override public Boolean call(ResizeFeatures prop) {
-            TableView<?> table = prop.getTable();
-            List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
-            Boolean result = TableUtil.constrainedResize(prop,
-                                               isFirstRun,
-                                               table.contentWidth,
-                                               visibleLeafColumns);
-            isFirstRun = ! isFirstRun ? false : ! result;
-            return result;
-        }
-    };
+    @Deprecated(since="20")
+    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
+        CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN;
 
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TableView
@@ -437,7 +571,8 @@ public class TableView<S> extends Control {
      * @since JavaFX 8.0
      */
     public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<>() {
-        @Override public Boolean call(TableView table) {
+        @Override
+        public Boolean call(TableView table) {
             try {
                 ObservableList<?> itemsList = table.getItems();
                 if (itemsList instanceof SortedList) {
@@ -1871,6 +2006,16 @@ public class TableView<S> extends Control {
         public TableView<S> getTable() {
             return table;
         }
+
+        @Override
+        public Control getTableControl() {
+            return table;
+        }
+
+        @Override
+        public double getContentWidth() {
+            return table.contentWidth;
+        }
     }
 
 
@@ -2101,8 +2246,6 @@ public class TableView<S> extends Control {
     static class TableViewArrayListSelectionModel<S> extends TableViewSelectionModel<S> {
 
         private int itemCount = 0;
-
-        private final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
         /* *********************************************************************
          *                                                                     *
@@ -2565,7 +2708,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void selectIndices(int row, int... rows) {
-            if (rows == null) {
+            if (rows == null || rows.length == 0) {
                 select(row);
                 return;
             }
@@ -3045,7 +3188,7 @@ public class TableView<S> extends Control {
                 return;
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, Function.identity(), selectedCellsSeq));
         }
     }
 

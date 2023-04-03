@@ -39,7 +39,7 @@ JSTypedArrayViewConstructor::JSTypedArrayViewConstructor(VM& vm, Structure* stru
 {
 }
 
-const ClassInfo JSTypedArrayViewConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTypedArrayViewConstructor) };
+const ClassInfo JSTypedArrayViewConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTypedArrayViewConstructor) };
 
 void JSTypedArrayViewConstructor::finishCreation(VM& vm, JSGlobalObject* globalObject, JSTypedArrayViewPrototype* prototype, GetterSetter* speciesSymbol)
 {
@@ -49,6 +49,7 @@ void JSTypedArrayViewConstructor::finishCreation(VM& vm, JSGlobalObject* globalO
 
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->of, typedArrayConstructorOfCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->from, typedArrayConstructorFromCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    globalObject->installTypedArrayConstructorSpeciesWatchpoint(this);
 }
 
 Structure* JSTypedArrayViewConstructor::createStructure(

@@ -109,7 +109,7 @@ void LegacyRenderSVGModelObject::styleDidChange(StyleDifference diff, const Rend
             setNeedsTransformUpdate();
     }
     RenderElement::styleDidChange(diff, oldStyle);
-    SVGResourcesCache::clientStyleChanged(*this, diff, style());
+    SVGResourcesCache::clientStyleChanged(*this, diff, oldStyle, style());
 }
 
 bool LegacyRenderSVGModelObject::nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction)
@@ -169,7 +169,7 @@ void LegacyRenderSVGModelObject::absoluteFocusRingQuads(Vector<FloatQuad>& quads
 
 bool LegacyRenderSVGModelObject::checkIntersection(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style().pointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;
@@ -182,7 +182,7 @@ bool LegacyRenderSVGModelObject::checkIntersection(RenderElement* renderer, cons
 
 bool LegacyRenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRect& rect)
 {
-    if (!renderer || renderer->style().pointerEvents() == PointerEvents::None)
+    if (!renderer || renderer->style().effectivePointerEvents() == PointerEvents::None)
         return false;
     if (!isGraphicsElement(*renderer))
         return false;

@@ -32,6 +32,7 @@
 #include "DocumentLoader.h"
 #include "EventLoop.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLDocument.h"
 #include "HTMLParserScheduler.h"
 #include "HTMLPreloadScanner.h"
@@ -161,12 +162,14 @@ inline bool HTMLDocumentParser::shouldDelayEnd() const
 
 void HTMLDocumentParser::didBeginYieldingParser()
 {
-    m_parserScheduler->didBeginYieldingParser();
+    if (m_parserScheduler)
+        m_parserScheduler->didBeginYieldingParser();
 }
 
 void HTMLDocumentParser::didEndYieldingParser()
 {
-    m_parserScheduler->didEndYieldingParser();
+    if (m_parserScheduler)
+        m_parserScheduler->didEndYieldingParser();
 }
 
 bool HTMLDocumentParser::isParsingFragment() const
@@ -227,7 +230,8 @@ void HTMLDocumentParser::runScriptsForPausedTreeBuilder()
 
             CustomElementReactionStack reactionStack(document()->globalObject());
             auto& elementInterface = constructionData->elementInterface.get();
-            auto newElement = elementInterface.constructElementWithFallback(*document(), constructionData->name);
+            auto newElement = elementInterface.constructElementWithFallback(*document(), constructionData->name,
+                m_scriptRunner && !m_scriptRunner->isExecutingScript() ? ParserConstructElementWithEmptyStack::Yes : ParserConstructElementWithEmptyStack::No);
             m_treeBuilder->didCreateCustomOrFallbackElement(WTFMove(newElement), *constructionData);
         }
         return;
@@ -343,7 +347,7 @@ void HTMLDocumentParser::constructTreeFromHTMLToken(HTMLTokenizer::TokenPtr& raw
     // FIXME: Stop clearing the rawToken once we start running the parser off
     // the main thread or once we stop allowing synchronous JavaScript
     // execution from parseAttribute.
-    if (rawToken->type() != HTMLToken::Character) {
+    if (rawToken->type() != HTMLToken::Type::Character) {
         // Clearing the TokenPtr makes sure we don't clear the HTMLToken a second time
         // later when the TokenPtr is destroyed.
         rawToken.clear();

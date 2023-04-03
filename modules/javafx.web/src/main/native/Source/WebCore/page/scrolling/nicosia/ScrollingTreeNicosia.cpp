@@ -82,13 +82,12 @@ static bool collectDescendantLayersAtPoint(Vector<RefPtr<CompositionLayer>>& lay
     bool existsOnLayer = false;
     bool existsOnDescendent = false;
 
-    parent->accessPending([&](const CompositionLayer::LayerState& state) {
-        if (FloatRect(FloatPoint(), state.size).contains(point))
-            existsOnLayer = !!state.scrollingNodeID;
+    parent->accessCommitted([&](const CompositionLayer::LayerState& state) {
+        existsOnLayer = !!state.scrollingNodeID && FloatRect({ }, state.size).contains(point) && state.eventRegion.contains(roundedIntPoint(point));
 
         for (auto child : state.children) {
             FloatPoint transformedPoint(point);
-            child->accessPending([&](const CompositionLayer::LayerState& childState) {
+            child->accessCommitted([&](const CompositionLayer::LayerState& childState) {
                 if (!childState.transform.isInvertible())
                     return;
                 float originX = childState.anchorPoint.x() * childState.size.width();
@@ -116,7 +115,7 @@ RefPtr<ScrollingTreeNode> ScrollingTreeNicosia::scrollingNodeForPoint(FloatPoint
     if (!rootScrollingNode)
         return nullptr;
 
-    LayerTreeHitTestLocker layerLocker(m_scrollingCoordinator.get());
+    Locker layerLocker { m_layerHitTestMutex };
 
     auto rootContentsLayer = static_cast<ScrollingTreeFrameScrollingNodeNicosia*>(rootScrollingNode)->rootContentsLayer();
     Vector<RefPtr<CompositionLayer>> layersAtPoint;

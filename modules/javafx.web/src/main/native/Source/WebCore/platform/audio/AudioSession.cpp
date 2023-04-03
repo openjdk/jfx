@@ -28,6 +28,7 @@
 
 #if USE(AUDIO_SESSION)
 
+#include "Logging.h"
 #include "NotImplemented.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -100,6 +101,14 @@ bool AudioSession::tryToSetActive(bool active)
         return false;
 
     m_active = active;
+    if (m_isInterrupted && m_active) {
+        callOnMainThread([] {
+            auto& session = sharedSession();
+            if (session.m_isInterrupted && session.m_active)
+                session.endInterruption(MayResume::Yes);
+        });
+    }
+
     return true;
 }
 
@@ -115,12 +124,23 @@ void AudioSession::removeInterruptionObserver(InterruptionObserver& observer)
 
 void AudioSession::beginInterruption()
 {
+    if (m_isInterrupted) {
+        RELEASE_LOG_ERROR(WebRTC, "AudioSession::beginInterruption but session is already interrupted!");
+        return;
+    }
+    m_isInterrupted = true;
     for (auto& observer : m_interruptionObservers)
         observer.beginAudioSessionInterruption();
 }
 
 void AudioSession::endInterruption(MayResume mayResume)
 {
+    if (!m_isInterrupted) {
+        RELEASE_LOG_ERROR(WebRTC, "AudioSession::endInterruption but session is already uninterrupted!");
+        return;
+    }
+    m_isInterrupted = false;
+
     for (auto& observer : m_interruptionObservers)
         observer.endAudioSessionInterruption(mayResume);
 }
