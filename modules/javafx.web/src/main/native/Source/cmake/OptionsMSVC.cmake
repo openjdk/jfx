@@ -122,7 +122,7 @@ if (NOT WTF_CPU_X86)
 
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
-    endif() 
+    endif()
 endif ()
 
 # We do not use exceptions
