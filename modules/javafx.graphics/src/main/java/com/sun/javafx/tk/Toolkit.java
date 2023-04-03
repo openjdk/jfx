@@ -494,8 +494,10 @@ public abstract class Toolkit {
      * The provided listener is called only ones. It works similar to runLater.
      */
     public void addCleanupTask(TKPulseListener listener) {
-        AccessControlContext acc = AccessController.getContext();
-        cleanupListeners.put(listener,acc);
+        synchronized (this) {
+            AccessControlContext acc = AccessController.getContext();
+            cleanupListeners.put(listener,acc);
+        }
     }
 
     public void addTkListener(TKListener listener) {
