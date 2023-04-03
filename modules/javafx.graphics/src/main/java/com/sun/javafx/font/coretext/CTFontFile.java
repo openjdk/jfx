@@ -70,7 +70,6 @@ class CTFontFile extends PrismFontFile {
            throw new InternalError("Zero fontref");
         }
         ctFontRef = fontRef;
-        //OS.CFRetain(ctFontRef);
         Disposer.addRecord(this, new SelfDisposerRecord(ctFontRef));
     }
 
