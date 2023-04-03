@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ public class LocalTimeStringConverter extends StringConverter<LocalTime> {
      * user's {@link Locale}.
      */
     public LocalTimeStringConverter() {
-        ldtConverter = new LdtConverter<LocalTime>(LocalTime.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalTime.class, null, null,
                                                   null, null, null, null);
     }
 
@@ -65,7 +65,7 @@ public class LocalTimeStringConverter extends StringConverter<LocalTime> {
      * formatter and parser. If null then {@link FormatStyle#SHORT} will be used.
      */
     public LocalTimeStringConverter(FormatStyle timeStyle) {
-        ldtConverter = new LdtConverter<LocalTime>(LocalTime.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalTime.class, null, null,
                                                   null, timeStyle, null, null);
     }
 
@@ -81,7 +81,7 @@ public class LocalTimeStringConverter extends StringConverter<LocalTime> {
      * {@code Locale.getDefault(Locale.Category.FORMAT)} will be used.
      */
     public LocalTimeStringConverter(FormatStyle timeStyle, Locale locale) {
-        ldtConverter = new LdtConverter<LocalTime>(LocalTime.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalTime.class, null, null,
                                                   null, timeStyle, locale, null);
     }
 
@@ -108,7 +108,7 @@ public class LocalTimeStringConverter extends StringConverter<LocalTime> {
      * used.
      */
     public LocalTimeStringConverter(DateTimeFormatter formatter, DateTimeFormatter parser) {
-        ldtConverter = new LdtConverter<LocalTime>(LocalTime.class, formatter, parser,
+        ldtConverter = new LdtConverter<>(LocalTime.class, formatter, parser,
                                                    null, null, null, null);
     }
 

@@ -373,7 +373,8 @@ void AsyncScrollingCoordinator::applyPendingScrollUpdates()
 
 void AsyncScrollingCoordinator::scheduleRenderingUpdate()
 {
-    m_page->scheduleRenderingUpdate(RenderingUpdateStep::ScrollingTreeUpdate);
+    if (m_page)
+        m_page->scheduleRenderingUpdate(RenderingUpdateStep::ScrollingTreeUpdate);
 }
 
 FrameView* AsyncScrollingCoordinator::frameViewForScrollingNode(ScrollingNodeID scrollingNodeID) const
@@ -442,8 +443,10 @@ void AsyncScrollingCoordinator::animatedScrollDidEndForNode(ScrollingNodeID scro
         return;
     }
 
-    if (auto* scrollableArea = frameView->scrollableAreaForScrollingNodeID(scrollingNodeID))
+    if (auto* scrollableArea = frameView->scrollableAreaForScrollingNodeID(scrollingNodeID)) {
         scrollableArea->setScrollAnimationStatus(ScrollAnimationStatus::NotAnimating);
+        scrollableArea->animatedScrollDidEnd();
+    }
 }
 
 void AsyncScrollingCoordinator::updateScrollPositionAfterAsyncScroll(ScrollingNodeID scrollingNodeID, const FloatPoint& scrollPosition, std::optional<FloatPoint> layoutViewportOrigin, ScrollingLayerPositionAction scrollingLayerPositionAction, ScrollType scrollType)
@@ -946,7 +949,7 @@ String AsyncScrollingCoordinator::scrollingStateTreeAsText(OptionSet<ScrollingSt
     if (m_scrollingStateTree->rootStateNode()) {
         if (m_eventTrackingRegionsDirty)
             m_scrollingStateTree->rootStateNode()->setEventTrackingRegions(absoluteEventTrackingRegions());
-        return m_scrollingStateTree->rootStateNode()->scrollingStateTreeAsText(behavior);
+        return m_scrollingStateTree->scrollingStateTreeAsText(behavior);
     }
 
     return emptyString();

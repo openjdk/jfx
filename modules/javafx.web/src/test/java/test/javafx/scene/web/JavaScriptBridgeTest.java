@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ public class JavaScriptBridgeTest extends TestBase {
         parent.setMember(name, javaObject);
     }
 
-    public @Test void testJSBridge1() throws InterruptedException {
+    public @Test void testJSBridge1() {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         final WebEngine web = getEngine();
 
@@ -121,7 +121,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testJSBridge2() throws InterruptedException {
+    public @Test void testJSBridge2() {
         submit(() -> {
             JSObject strO = (JSObject)
                     getEngine().executeScript("new String('test me')");
@@ -135,7 +135,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testJSBridge3() throws InterruptedException {
+    public @Test void testJSBridge3() {
         //final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         final WebEngine web = getEngine();
 
@@ -143,7 +143,7 @@ public class JavaScriptBridgeTest extends TestBase {
             Object wino = web.executeScript("parent.parent");
             assertTrue(wino instanceof JSObject);
             JSObject win = (JSObject) wino;
-            java.util.Stack<Object> st = new java.util.Stack<Object>();
+            java.util.Stack<Object> st = new java.util.Stack<>();
             bind("myStack", st);
             win.setMember("myStack2", st);
             web.executeScript("myStack.push(\"abc\")");
@@ -157,7 +157,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testJSBridge4() throws InterruptedException {
+    public @Test void testJSBridge4() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -207,7 +207,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    @Test public void testJSBridge5() throws InterruptedException {
+    @Test public void testJSBridge5() {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         final WebEngine web = getEngine();
 
@@ -223,7 +223,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    @Test public void testJSCall1() throws InterruptedException {
+    @Test public void testJSCall1() {
         final WebEngine web = getEngine();
         submit(() -> {
             assertEquals("123.7", web.executeScript("123.67.toFixed(1)"));
@@ -237,7 +237,7 @@ public class JavaScriptBridgeTest extends TestBase {
          });
     }
 
-    @Test public void testNullMemberName() throws InterruptedException {
+    @Test public void testNullMemberName() {
         submit(() -> {
             JSObject parent = (JSObject) getEngine().executeScript("parent");
 
@@ -299,7 +299,7 @@ public class JavaScriptBridgeTest extends TestBase {
         }
     }
 
-    public @Test void testCallStatic() throws InterruptedException {
+    public @Test void testCallStatic() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -541,7 +541,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testBridgeExplicitOverloading() throws InterruptedException {
+    public @Test void testBridgeExplicitOverloading() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -572,7 +572,7 @@ public class JavaScriptBridgeTest extends TestBase {
             web.executeScript("sb['append(char[],int,int)'](carr, 1, 2)");
             assertEquals("123 5 5.5 abc 987 klmlm", sb.toString());
 
-            java.util.List<Integer> alist = new java.util.ArrayList<Integer>();
+            java.util.List<Integer> alist = new java.util.ArrayList<>();
             alist.add(98);
             alist.add(87);
             alist.add(76);
@@ -600,7 +600,7 @@ public class JavaScriptBridgeTest extends TestBase {
         executeShouldFail(web, expression, "is not a function");
     }
 
-    public @Test void testThrowJava() throws InterruptedException {
+    public @Test void testThrowJava() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -619,7 +619,7 @@ public class JavaScriptBridgeTest extends TestBase {
     }
 
     // RT-37859
-    public @Test void testThrowJava2() throws InterruptedException {
+    public @Test void testThrowJava2() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -652,7 +652,7 @@ public class JavaScriptBridgeTest extends TestBase {
     }
 
 
-    public @Test void testBridgeArray1() throws InterruptedException {
+    public @Test void testBridgeArray1() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -665,7 +665,7 @@ public class JavaScriptBridgeTest extends TestBase {
          });
     }
 
-    public @Test void testBridgeBadOverloading() throws InterruptedException {
+    public @Test void testBridgeBadOverloading() {
         final WebEngine web = getEngine();
 
         submit(() -> {

@@ -40,7 +40,6 @@
 #include "DOMPromiseProxy.h"
 #include "Document.h"
 #include "JSFontFace.h"
-#include "Quirks.h"
 #include "StyleProperties.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/ArrayBufferView.h>
@@ -76,6 +75,7 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
         return result;
     }
 
+    bool allowDownloading = context.settingsValues().downloadableBinaryFontsEnabled;
     auto sourceConversionResult = WTF::switchOn(source,
         [&] (String& string) -> ExceptionOr<void> {
             auto value = CSSPropertyParserWorkerSafe::parseFontFaceSrc(string, is<Document>(context) ? CSSParserContext(downcast<Document>(context)) : HTMLStandardMode);
@@ -84,11 +84,17 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
             CSSFontFace::appendSources(result->backing(), *value, &context, false);
             return { };
         },
-        [&] (RefPtr<ArrayBufferView>& arrayBufferView) -> ExceptionOr<void> {
+        [&, allowDownloading] (RefPtr<ArrayBufferView>& arrayBufferView) -> ExceptionOr<void> {
+            if (!allowDownloading)
+                return { };
+
             dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), arrayBufferView.releaseNonNull());
             return { };
         },
-        [&] (RefPtr<ArrayBuffer>& arrayBuffer) -> ExceptionOr<void> {
+        [&, allowDownloading] (RefPtr<ArrayBuffer>& arrayBuffer) -> ExceptionOr<void> {
+            if (!allowDownloading)
+                return { };
+
             unsigned byteLength = arrayBuffer->byteLength();
             auto arrayBufferView = JSC::Uint8Array::create(WTFMove(arrayBuffer), 0, byteLength);
             dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), WTFMove(arrayBufferView));
@@ -175,16 +181,10 @@ ExceptionOr<void> FontFace::setFamily(ScriptExecutionContext& context, const Str
     if (family.isEmpty())
         return Exception { SyntaxError };
 
-    String familyNameToUse = family;
-    // FIXME: Quirks currently aren't present on Workers, but should likely be inherited
-    //        from the parent Document where applicable.
-    if (familyNameToUse.contains('\'') && is<Document>(context) && downcast<Document>(context).quirks().shouldStripQuotationMarkInFontFaceSetFamily())
-        familyNameToUse = family.removeCharacters([](auto character) { return character == '\''; });
-
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=196381 Don't use a list here.
     // See consumeFontFamilyDescriptor() in CSSPropertyParser.cpp for why we're using it.
     auto list = CSSValueList::createCommaSeparated();
-    list->append(context.cssValuePool().createFontFamilyValue(familyNameToUse));
+    list->append(context.cssValuePool().createFontFamilyValue(family));
     bool success = m_backing->setFamilies(list);
     if (!success)
         return Exception { SyntaxError };
@@ -375,7 +375,7 @@ String FontFace::unicodeRange() const
     m_backing->updateStyleIfNeeded();
     const auto& rangesWrapped = m_backing->ranges();
     if (!rangesWrapped)
-        return "U+0-10FFFF";
+        return "U+0-10FFFF"_s;
     auto ranges = rangesWrapped.value();
     if (!ranges.size())
         return "U+0-10FFFF"_s;
@@ -405,7 +405,7 @@ String FontFace::display(ScriptExecutionContext& context) const
     m_backing->updateStyleIfNeeded();
     const auto& loadingBehaviorWrapped = m_backing->loadingBehavior();
     if (!loadingBehaviorWrapped)
-        return "auto"_s;
+        return autoAtom();
     return context.cssValuePool().createValue(loadingBehaviorWrapped.value())->cssText();
 }
 

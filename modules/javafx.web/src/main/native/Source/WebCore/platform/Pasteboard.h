@@ -172,7 +172,7 @@ public:
     virtual bool readWebArchive(SharedBuffer&) = 0;
     virtual bool readRTFD(SharedBuffer&) = 0;
     virtual bool readRTF(SharedBuffer&) = 0;
-    virtual bool readDataBuffer(SharedBuffer&, const String& type, const String& name, PresentationSize preferredPresentationSize = { }) = 0;
+    virtual bool readDataBuffer(SharedBuffer&, const String& type, const AtomString& name, PresentationSize preferredPresentationSize = { }) = 0;
 #endif
 };
 
@@ -260,7 +260,7 @@ public:
     WEBCORE_EXPORT static std::unique_ptr<Pasteboard> createForDragAndDrop(std::unique_ptr<PasteboardContext>&&);
     WEBCORE_EXPORT static std::unique_ptr<Pasteboard> create(const DragData&);
 
-    virtual void setDragImage(DragImage, const IntPoint& hotSpot);
+    WEBCORE_EXPORT virtual void setDragImage(DragImage, const IntPoint& hotSpot);
 #endif
 
 #if PLATFORM(WIN) || PLATFORM(JAVA)
@@ -393,9 +393,9 @@ extern NSString *UIColorPboardType;
 #endif
 
 #if PLATFORM(MAC)
-extern const char* const WebArchivePboardType;
-extern const char* const WebURLNamePboardType;
-extern const char* const WebURLsWithTitlesPboardType;
+extern const ASCIILiteral WebArchivePboardType;
+extern const ASCIILiteral WebURLNamePboardType;
+extern const ASCIILiteral WebURLsWithTitlesPboardType;
 #endif
 
 #if !PLATFORM(GTK)

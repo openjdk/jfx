@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,18 @@
 
 package test.com.sun.glass.ui;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
+
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import test.util.Util;
 
 public class DefaultExceptionHandlerTest {
 
@@ -60,8 +64,13 @@ public class DefaultExceptionHandlerTest {
             System.out.println("Exception caught: " + e);
             System.out.flush();
         });
-        new Thread(() -> Application.launch(TestApp.class)).start();
-        startupLatch.await();
+
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown();
     }
 
     @Test
@@ -80,5 +89,4 @@ public class DefaultExceptionHandlerTest {
             throw new RuntimeException("Test FAILED: unexpected exception is caught: " + exception);
         }
     }
-
 }

@@ -161,7 +161,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
 
     if (!isRenderingMask) {
         m_filter = resources->filter();
-        if (m_filter) {
+        if (m_filter && !m_filter->isIdentity()) {
             m_savedContext = &m_paintInfo->context();
             m_savedPaintRect = m_paintInfo->rect;
             // Return with false here may mean that we don't need to draw the content
@@ -282,7 +282,7 @@ bool SVGRenderingContext::bufferForeground(RefPtr<ImageBuffer>& imageBuffer)
 
     // Create a new buffer and paint the foreground into it.
     if (!imageBuffer) {
-        imageBuffer = m_paintInfo->context().createCompatibleImageBuffer(expandedIntSize(boundingBox.size()));
+        imageBuffer = m_paintInfo->context().createAlignedImageBuffer(expandedIntSize(boundingBox.size()));
         if (!imageBuffer)
             return false;
     }

@@ -34,6 +34,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -172,7 +173,7 @@ public class MultipleSelectionModelImplTest {
             if (modelClass.equals(ListViewShim.get_ListViewBitSetSelectionModel_class())) {
                 // recreate the selection model
                 model = MultipleSelectionModelShim.newInstance_from_class(modelClass, ListView.class, listView);
-                listView.setSelectionModel((MultipleSelectionModel<String>)model);
+                listView.setSelectionModel(model);
 
                 // create a new focus model
                 focusModel = ListViewShim.getListViewFocusModel(listView);
@@ -180,7 +181,7 @@ public class MultipleSelectionModelImplTest {
                 currentControl = listView;
             } else if (modelClass.equals(TreeViewShim.get_TreeViewBitSetSelectionModel_class())) {
                 model = MultipleSelectionModelShim.newInstance_from_class(modelClass, TreeView.class, treeView);
-                treeView.setSelectionModel((MultipleSelectionModel<String>)model);
+                treeView.setSelectionModel(model);
                 focusModel = treeView.getFocusModel();
 
                 // create a new focus model
@@ -1444,5 +1445,68 @@ public class MultipleSelectionModelImplTest {
         model.clearSelection(2);
 
         assertEquals(2, model.getSelectedIndices().size());
+    }
+
+
+    @Test
+    public void testSelectedIndicesChangeEvents() throws InterruptedException {
+
+        testSelectedIndicesChangeEventsFactory(0, new int[]{2,3}, 1, new int[]{5,7},
+                new int[][]{new int[]{1}, new int[]{5,7}});
+
+        testSelectedIndicesChangeEventsFactory(1, new int[]{3,4}, 0, new int[]{5,7},
+                new int[][]{new int[]{0}, new int[]{5,7}});
+
+        testSelectedIndicesChangeEventsFactory(0, new int[]{1, 3,4, 5, 7}, 6, new int[]{8,9},
+                new int[][]{new int[]{6}, new int[]{8,9}});
+
+        testSelectedIndicesChangeEventsFactory(5, new int[]{6, 7}, 2, new int[]{1,0},
+                new int[][]{new int[]{0,1,2}});
+
+        testSelectedIndicesChangeEventsFactory(2, new int[]{3, 6,7}, 0, new int[]{1,4,5,8,9},
+                new int[][]{new int[]{0,1},new int[]{4,5},new int[]{8,9}});
+    }
+
+    public ListView createListViewWithMultipleSelection() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll(
+                "item-0",
+                "item-1",
+                "item-2",
+                "item-3",
+                "item-4",
+                "item-5",
+                "item-6",
+                "item-7",
+                "item-8",
+                "item-9",
+                "item-10"
+        );
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        return listView;
+    }
+
+    public void testSelectedIndicesChangeEventsFactory(int initialSelected, int[] initialSelectedI, int selected, int[] selectedI, int[][] expected) throws InterruptedException {
+        ListView<String> listView = createListViewWithMultipleSelection();
+        listView.getSelectionModel().selectIndices(initialSelected,initialSelectedI);
+        testSelectedIndicesChangeHelper(listView, selected, selectedI, expected);
+    }
+    public void testSelectedIndicesChangeHelper(ListView listView, int selected, int[] selectedI, int[][] expected) {
+        List<int[]> expectedEntries = new LinkedList<>(Arrays.asList(expected));
+        MultipleSelectionModel<String> selectionModel = listView.getSelectionModel();
+        selectionModel.getSelectedIndices().addListener((ListChangeListener<? super Integer>) c -> {
+            while (c.next()) {
+                try {
+                    assertEquals(Arrays.stream(expectedEntries.get(0)).boxed().collect(Collectors.toList()), c.getAddedSubList());
+                    expectedEntries.remove(0);
+                } catch (IndexOutOfBoundsException e) {
+                    fail(e.getMessage());
+                }
+            }
+        });
+
+        selectionModel.selectIndices(selected, selectedI);
+
+        assertTrue("A ListEvent was missing: " + Arrays.deepToString(expectedEntries.toArray()), expectedEntries.isEmpty());
     }
 }

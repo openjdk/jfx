@@ -29,9 +29,11 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "FontCascade.h"
+#include "InlineFormattingGeometry.h"
+#include "InlineTextBoxStyle.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutInitialContainingBlock.h"
-#include "RuntimeEnabledFeatures.h"
+#include "LayoutListMarkerBox.h"
 #include "TextUtil.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/Range.h>
@@ -81,8 +83,8 @@ static inline OptionSet<InlineDisplay::Box::PositionWithinInlineLevelBox> isFirs
     return positionWithinInlineLevelBox;
 }
 
-InlineDisplayContentBuilder::InlineDisplayContentBuilder(const ContainerBox& formattingContextRoot, InlineFormattingState& formattingState)
-    : m_formattingContextRoot(formattingContextRoot)
+InlineDisplayContentBuilder::InlineDisplayContentBuilder(const InlineFormattingContext& formattingContext, InlineFormattingState& formattingState)
+    : m_formattingContext(formattingContext)
     , m_formattingState(formattingState)
 {
 }
@@ -103,23 +105,55 @@ DisplayBoxes InlineDisplayContentBuilder::build(const LineBuilder::LineContent& 
     else
         processNonBidiContent(lineContent, lineBox, displayLine, boxes);
     processOverflownRunsForEllipsis(boxes, displayLine.right());
+    collectInkOverflowForTextDecorations(boxes, displayLine);
     collectInkOverflowForInlineBoxes(boxes);
     return boxes;
 }
 
-static inline bool computeBoxShadowInkOverflow(const RenderStyle& style, FloatRect& inkOverflow)
+static inline bool computeInkOverflowForInlineLevelBox(const RenderStyle& style, FloatRect& inkOverflow)
 {
-    auto topBoxShadow = LayoutUnit { };
-    auto bottomBoxShadow = LayoutUnit { };
-    style.getBoxShadowBlockDirectionExtent(topBoxShadow, bottomBoxShadow);
+    auto hasVisualOverflow = false;
 
-    auto leftBoxShadow = LayoutUnit { };
-    auto rightBoxShadow = LayoutUnit { };
-    style.getBoxShadowInlineDirectionExtent(leftBoxShadow, rightBoxShadow);
-    if (!topBoxShadow && !bottomBoxShadow && !leftBoxShadow && !rightBoxShadow)
-        return false;
-    inkOverflow.inflate(leftBoxShadow.toFloat(), topBoxShadow.toFloat(), rightBoxShadow.toFloat(), bottomBoxShadow.toFloat());
-    return true;
+    auto inflateWithOutline = [&] {
+        if (!style.hasOutlineInVisualOverflow())
+            return;
+        inkOverflow.inflate(style.outlineSize());
+        hasVisualOverflow = true;
+    };
+    inflateWithOutline();
+
+    auto inflateWithBoxShadow = [&] {
+        auto topBoxShadow = LayoutUnit { };
+        auto bottomBoxShadow = LayoutUnit { };
+        style.getBoxShadowBlockDirectionExtent(topBoxShadow, bottomBoxShadow);
+
+        auto leftBoxShadow = LayoutUnit { };
+        auto rightBoxShadow = LayoutUnit { };
+        style.getBoxShadowInlineDirectionExtent(leftBoxShadow, rightBoxShadow);
+        if (!topBoxShadow && !bottomBoxShadow && !leftBoxShadow && !rightBoxShadow)
+            return;
+        inkOverflow.inflate(leftBoxShadow.toFloat(), topBoxShadow.toFloat(), rightBoxShadow.toFloat(), bottomBoxShadow.toFloat());
+        hasVisualOverflow = true;
+    };
+    inflateWithBoxShadow();
+
+    return hasVisualOverflow;
+}
+
+static inline bool computeInkOverflowForInlineBox(const InlineLevelBox& inlineBox, const RenderStyle& style, FloatRect& inkOverflow)
+{
+    ASSERT(inlineBox.isInlineBox());
+    auto hasVisualOverflow = computeInkOverflowForInlineLevelBox(style, inkOverflow);
+
+    auto inflateWithAnnotation = [&] {
+        if (!inlineBox.hasAnnotation())
+            return;
+        inkOverflow.inflate(0.f, inlineBox.annotationAbove().value_or(0.f), 0.f, inlineBox.annotationUnder().value_or(0.f));
+        hasVisualOverflow = true;
+    };
+    inflateWithAnnotation();
+
+    return hasVisualOverflow;
 }
 
 void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun, const InlineRect& textRunRect, DisplayBoxes& boxes)
@@ -130,23 +164,28 @@ void InlineDisplayContentBuilder::appendTextDisplayBox(const Line::Run& lineRun,
     auto& style = !m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style();
 
     auto inkOverflow = [&] {
-        auto initialContaingBlockSize = RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled()
+        auto initialContaingBlockSize = formattingState().layoutState().isInlineFormattingContextIntegration()
             ? formattingState().layoutState().viewportSize()
             : formattingState().layoutState().geometryForBox(layoutBox.initialContainingBlock()).contentBox().size();
         auto strokeOverflow = ceilf(style.computedStrokeWidth(ceiledIntSize(initialContaingBlockSize)));
         auto inkOverflow = textRunRect;
+
         inkOverflow.inflate(strokeOverflow);
         auto letterSpacing = style.fontCascade().letterSpacing();
         if (letterSpacing < 0) {
             // Last letter's negative spacing shrinks logical rect. Push it to ink overflow.
             inkOverflow.expand(-letterSpacing, { });
         }
+
+        auto textShadow = style.textShadowExtent();
+        inkOverflow.inflate(-textShadow.top(), textShadow.right(), textShadow.bottom(), -textShadow.left());
+
         return inkOverflow;
     };
-    auto content = downcast<InlineTextBox>(layoutBox).content();
-    auto text = lineRun.textContent();
+    auto& content = downcast<InlineTextBox>(layoutBox).content();
+    auto& text = lineRun.textContent();
     auto adjustedContentToRender = [&] {
-        return text->needsHyphen ? makeString(content.substring(text->start, text->length), style.hyphenString()) : String();
+        return text->needsHyphen ? makeString(StringView(content).substring(text->start, text->length), style.hyphenString()) : String();
     };
     boxes.append({ m_lineIndex
         , lineRun.isWordSeparator() ? InlineDisplay::Box::Type::WordSeparator : InlineDisplay::Box::Type::Text
@@ -205,7 +244,7 @@ void InlineDisplayContentBuilder::appendAtomicInlineLevelDisplayBox(const Line::
     auto& layoutBox = lineRun.layoutBox();
     auto inkOverflow = [&] {
         auto inkOverflow = FloatRect { borderBoxRect };
-        computeBoxShadowInkOverflow(!m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow);
+        computeInkOverflowForInlineLevelBox(!m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow);
         // Atomic inline box contribute to their inline box parents ink overflow at all times (e.g. <span><img></span>).
         m_contentHasInkOverflow = m_contentHasInkOverflow || &layoutBox.parent() != &root();
         return inkOverflow;
@@ -244,6 +283,7 @@ void InlineDisplayContentBuilder::setInlineBoxGeometry(const Box& layoutBox, con
 void InlineDisplayContentBuilder::appendInlineBoxDisplayBox(const Line::Run& lineRun, const InlineLevelBox& inlineBox, const InlineRect& inlineBoxBorderBox, bool linehasContent, DisplayBoxes& boxes)
 {
     ASSERT(lineRun.layoutBox().isInlineBox());
+    ASSERT(inlineBox.isInlineBox());
 
     auto& layoutBox = lineRun.layoutBox();
 
@@ -255,10 +295,9 @@ void InlineDisplayContentBuilder::appendInlineBoxDisplayBox(const Line::Run& lin
 
     auto inkOverflow = [&] {
         auto inkOverflow = FloatRect { inlineBoxBorderBox };
-        m_contentHasInkOverflow = computeBoxShadowInkOverflow(!m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow) || m_contentHasInkOverflow;
+        m_contentHasInkOverflow = computeInkOverflowForInlineBox(inlineBox, !m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow) || m_contentHasInkOverflow;
         return inkOverflow;
     };
-    ASSERT(inlineBox.isInlineBox());
     ASSERT(inlineBox.isFirstBox());
     boxes.append({ m_lineIndex
         , InlineDisplay::Box::Type::NonRootInlineBox
@@ -278,11 +317,12 @@ void InlineDisplayContentBuilder::appendInlineBoxDisplayBox(const Line::Run& lin
 void InlineDisplayContentBuilder::appendSpanningInlineBoxDisplayBox(const Line::Run& lineRun, const InlineLevelBox& inlineBox, const InlineRect& inlineBoxBorderBox, DisplayBoxes& boxes)
 {
     ASSERT(lineRun.layoutBox().isInlineBox());
+    ASSERT(inlineBox.isInlineBox());
 
     auto& layoutBox = lineRun.layoutBox();
     auto inkOverflow = [&] {
         auto inkOverflow = FloatRect { inlineBoxBorderBox };
-        m_contentHasInkOverflow = computeBoxShadowInkOverflow(!m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow) || m_contentHasInkOverflow;
+        m_contentHasInkOverflow = computeInkOverflowForInlineBox(inlineBox, !m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow) || m_contentHasInkOverflow;
         return inkOverflow;
     };
     ASSERT(!inlineBox.isFirstBox());
@@ -320,7 +360,7 @@ void InlineDisplayContentBuilder::processNonBidiContent(const LineBuilder::LineC
 #ifndef NDEBUG
     auto hasContent = false;
     for (auto& lineRun : lineContent.runs)
-        hasContent = hasContent || lineRun.isText() || lineRun.isBox();
+        hasContent = hasContent || lineRun.isContentful();
     ASSERT(lineContent.inlineBaseDirection == TextDirection::LTR || !hasContent);
 #endif
     auto writingMode = root().style().writingMode();
@@ -353,6 +393,14 @@ void InlineDisplayContentBuilder::processNonBidiContent(const LineBuilder::LineC
             appendAtomicInlineLevelDisplayBox(lineRun
                 , visualRectRelativeToRoot(lineBox.logicalBorderBoxForAtomicInlineLevelBox(layoutBox, formattingState().boxGeometry(layoutBox)))
                 , boxes);
+            continue;
+        }
+        if (lineRun.isListMarker()) {
+            auto& listMarker = downcast<ListMarkerBox>(layoutBox);
+            auto visualRect = visualRectRelativeToRoot(lineBox.logicalBorderBoxForAtomicInlineLevelBox(layoutBox, formattingState().boxGeometry(layoutBox)));
+            if (listMarker.isOutside())
+                WebCore::isHorizontalWritingMode(writingMode) ? visualRect.setLeft(outsideListMarkerVisualPosition(listMarker, displayLine)) : visualRect.setTop(outsideListMarkerVisualPosition(listMarker, displayLine));
+            appendAtomicInlineLevelDisplayBox(lineRun, visualRect, boxes);
             continue;
         }
         if (lineRun.isInlineBoxStart()) {
@@ -525,15 +573,16 @@ void InlineDisplayContentBuilder::adjustVisualGeometryForDisplayBox(size_t displ
     };
     afterInlineBoxContent();
 
+    auto& inlineBox = lineBox.inlineLevelBoxForLayoutBox(layoutBox);
     auto computeInkOverflow = [&] {
-        auto inkOverflow = FloatRect { displayBox.rect() };
-        m_contentHasInkOverflow = computeBoxShadowInkOverflow(!m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow) || m_contentHasInkOverflow;
+        auto inkOverflow = FloatRect { displayBox.visualRectIgnoringBlockDirection() };
+        m_contentHasInkOverflow = computeInkOverflowForInlineBox(inlineBox, !m_lineIndex ? layoutBox.firstLineStyle() : layoutBox.style(), inkOverflow) || m_contentHasInkOverflow;
         displayBox.adjustInkOverflow(inkOverflow);
     };
     computeInkOverflow();
 
-    setInlineBoxGeometry(layoutBox, displayBox.rect(), isFirstBox);
-    if (lineBox.inlineLevelBoxForLayoutBox(layoutBox).hasContent())
+    setInlineBoxGeometry(layoutBox, displayBox.visualRectIgnoringBlockDirection(), isFirstBox);
+    if (inlineBox.hasContent())
         displayBox.setHasContent();
 }
 
@@ -605,14 +654,19 @@ void InlineDisplayContentBuilder::processBidiContent(const LineBuilder::LineCont
                 displayBoxTree.append(parentDisplayBoxNodeIndex, boxes.size() - 1);
                 continue;
             }
-            if (lineRun.isBox()) {
+            if (lineRun.isBox() || lineRun.isListMarker()) {
+                auto isLeftToRightDirection = layoutBox.parent().style().isLeftToRightDirection();
                 auto& boxGeometry = formattingState().boxGeometry(layoutBox);
                 auto logicalRect = lineBox.logicalBorderBoxForAtomicInlineLevelBox(layoutBox, boxGeometry);
                 auto visualRect = visualRectRelativeToRoot(logicalRect);
-
-                auto isLeftToRightDirection = layoutBox.parent().style().isLeftToRightDirection();
                 auto boxMarginLeft = marginLeftInInlineDirection(boxGeometry, isLeftToRightDirection);
-                isHorizontalWritingMode ? visualRect.moveHorizontally(boxMarginLeft) : visualRect.moveVertically(boxMarginLeft);
+
+                if (is<ListMarkerBox>(layoutBox) && downcast<ListMarkerBox>(layoutBox).isOutside()) {
+                    auto& listMarker = downcast<ListMarkerBox>(layoutBox);
+                    isHorizontalWritingMode ? visualRect.setLeft(outsideListMarkerVisualPosition(listMarker, displayLine)) : visualRect.setTop(outsideListMarkerVisualPosition(listMarker, displayLine));
+                } else
+                    isHorizontalWritingMode ? visualRect.moveHorizontally(boxMarginLeft) : visualRect.moveVertically(boxMarginLeft);
+
                 appendAtomicInlineLevelDisplayBox(lineRun, visualRect, boxes);
                 contentRightInInlineDirectionVisualOrder += boxMarginLeft + logicalRect.width() + marginRightInInlineDirection(boxGeometry, isLeftToRightDirection);
                 displayBoxTree.append(parentDisplayBoxNodeIndex, boxes.size() - 1);
@@ -676,6 +730,24 @@ void InlineDisplayContentBuilder::processBidiContent(const LineBuilder::LineCont
         adjustVisualGeometryWithInlineBoxes();
     };
     handleInlineBoxes();
+
+    auto handleTrailingOpenInlineBoxes = [&] {
+        for (auto& lineRun : makeReversedRange(lineContent.runs)) {
+            if (!lineRun.isInlineBoxStart() || lineRun.bidiLevel() != InlineItem::opaqueBidiLevel)
+                break;
+            // These are trailing inline box start runs (without the closing inline box end <span> <-line breaks here</span>).
+            // They don't participate in visual reordering (see createDisplayBoxesInVisualOrder above) as they we don't find them
+            // empty at inline building time (see setBidiLevelForOpaqueInlineItems) due to trailing whitespace.
+            // Non-empty inline boxes are normally get their display boxes generated when we process their content runs, but
+            // these trailing runs have their content on the subsequent line(s).
+            appendInlineBoxDisplayBox(lineRun
+                , lineBox.inlineLevelBoxForLayoutBox(lineRun.layoutBox())
+                , boxes.last().visualRectIgnoringBlockDirection()
+                , lineBox.hasContent()
+                , boxes);
+        }
+    };
+    handleTrailingOpenInlineBoxes();
 }
 
 void InlineDisplayContentBuilder::processOverflownRunsForEllipsis(DisplayBoxes& boxes, InlineLayoutUnit lineBoxRight)
@@ -751,7 +823,7 @@ void InlineDisplayContentBuilder::collectInkOverflowForInlineBoxes(DisplayBoxes&
     for (size_t index = boxes.size(); index--;) {
         auto& displayBox = boxes[index];
 
-        auto mayHaveInkOverflow = displayBox.isAtomicInlineLevelBox() || displayBox.isGenericInlineLevelBox() || displayBox.isNonRootInlineBox();
+        auto mayHaveInkOverflow = displayBox.isText() || displayBox.isAtomicInlineLevelBox() || displayBox.isGenericInlineLevelBox() || displayBox.isNonRootInlineBox();
         if (!mayHaveInkOverflow)
             continue;
         if (displayBox.isNonRootInlineBox() && !accumulatedInkOverflowRect.isEmpty())
@@ -765,6 +837,74 @@ void InlineDisplayContentBuilder::collectInkOverflowForInlineBoxes(DisplayBoxes&
             accumulatedInkOverflowRect = displayBox.inkOverflow();
         else
             accumulatedInkOverflowRect.expandToContain(displayBox.inkOverflow());
+    }
+}
+
+static float logicalBottomForTextDecorationContent(const DisplayBoxes& boxes, bool isHorizontalWritingMode)
+{
+    auto logicalBottom = std::optional<float> { };
+    for (auto& displayBox : boxes) {
+        if (displayBox.isRootInlineBox())
+            continue;
+        if (!displayBox.style().textDecorationsInEffect().contains(TextDecorationLine::Underline))
+            continue;
+        if (displayBox.isText() || displayBox.style().textDecorationSkipInk() == TextDecorationSkipInk::None) {
+            auto contentLogicalBottom = isHorizontalWritingMode ? displayBox.bottom() : displayBox.right();
+            logicalBottom = logicalBottom ? std::max(*logicalBottom, contentLogicalBottom) : contentLogicalBottom;
+        }
+    }
+    // This function is not called unless there's at least one run on the line with TextDecorationLine::Underline.
+    ASSERT(logicalBottom);
+    return logicalBottom.value_or(0.f);
+}
+
+void InlineDisplayContentBuilder::collectInkOverflowForTextDecorations(DisplayBoxes& boxes, const InlineDisplay::Line& displayLine)
+{
+    auto logicalBottomForTextDecoration = std::optional<float> { };
+    auto writingMode = root().style().writingMode();
+    auto isHorizontalWritingMode = WebCore::isHorizontalWritingMode(writingMode);
+
+    for (auto& displayBox : boxes) {
+        if (!displayBox.isText())
+            continue;
+
+        auto& style = displayBox.style();
+        auto textDecorations = style.textDecorationsInEffect();
+        if (!textDecorations)
+            continue;
+
+        auto decorationOverflow = [&] {
+            if (!textDecorations.contains(TextDecorationLine::Underline))
+                return visualOverflowForDecorations(style);
+
+            if (!logicalBottomForTextDecoration)
+                logicalBottomForTextDecoration = logicalBottomForTextDecorationContent(boxes, isHorizontalWritingMode);
+            auto textRunLogicalOffsetFromLineBottom = *logicalBottomForTextDecoration - (isHorizontalWritingMode ? displayBox.bottom() : displayBox.right());
+            return visualOverflowForDecorations(style, { displayLine.baselineType(), displayBox.height(), textRunLogicalOffsetFromLineBottom });
+        }();
+
+        if (!decorationOverflow.isEmpty()) {
+            m_contentHasInkOverflow = true;
+            auto inflatedVisualOverflowRect = [&] {
+                auto inkOverflowRect = displayBox.inkOverflow();
+                switch (writingMode) {
+                case WritingMode::TopToBottom:
+                    inkOverflowRect.inflate(decorationOverflow.left, decorationOverflow.top, decorationOverflow.right, decorationOverflow.bottom);
+                    break;
+                case WritingMode::LeftToRight:
+                    inkOverflowRect.inflate(decorationOverflow.bottom, decorationOverflow.right, decorationOverflow.top, decorationOverflow.left);
+                    break;
+                case WritingMode::RightToLeft:
+                    inkOverflowRect.inflate(decorationOverflow.top, decorationOverflow.right, decorationOverflow.bottom, decorationOverflow.left);
+                    break;
+                default:
+                    ASSERT_NOT_REACHED();
+                    break;
+                }
+                return inkOverflowRect;
+            };
+            displayBox.adjustInkOverflow(inflatedVisualOverflowRect());
+        }
     }
 }
 
@@ -899,6 +1039,20 @@ InlineLayoutPoint InlineDisplayContentBuilder::movePointHorizontallyForWritingMo
         break;
     }
     return visualPoint;
+}
+
+InlineLayoutUnit InlineDisplayContentBuilder::outsideListMarkerVisualPosition(const ListMarkerBox& listMarker, const InlineDisplay::Line& displayLine) const
+{
+    ASSERT(listMarker.isOutside());
+    auto& boxGeometry = formattingState().boxGeometry(listMarker);
+    auto isLeftToRightDirection = listMarker.parent().style().isLeftToRightDirection();
+    auto isHorizontalWritingMode = WebCore::isHorizontalWritingMode(root().style().writingMode());
+    auto lineBoxOffset = formattingContext().formattingGeometry().computedTextIndent(InlineFormattingGeometry::IsIntrinsicWidthMode::No, { }, displayLine.lineBoxRect().width());
+    auto boxMarginLeft = marginLeftInInlineDirection(boxGeometry, isLeftToRightDirection);
+
+    if (isHorizontalWritingMode)
+        return isLeftToRightDirection ? displayLine.left() - lineBoxOffset + boxMarginLeft : displayLine.right() + lineBoxOffset + boxMarginLeft;
+    return isLeftToRightDirection ? displayLine.top() - lineBoxOffset + boxMarginLeft : displayLine.bottom() + lineBoxOffset + boxMarginLeft;
 }
 
 }

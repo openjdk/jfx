@@ -27,6 +27,7 @@
 #include "FrameViewLayoutContext.h"
 
 #include "DebugPageOverlays.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "FrameView.h"
 #include "InspectorInstrumentation.h"
@@ -35,7 +36,6 @@
 #include "RenderElement.h"
 #include "RenderLayoutState.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "StyleScope.h"
@@ -56,7 +56,7 @@ namespace WebCore {
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 void FrameViewLayoutContext::layoutUsingFormattingContext()
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled())
+    if (!DeprecatedGlobalSettings::layoutFormattingContextEnabled())
         return;
     // FrameView::setContentsSize temporary disables layout.
     if (m_disableSetNeedsLayoutCount)
@@ -169,6 +169,29 @@ void FrameViewLayoutContext::layout()
 {
     LOG_WITH_STREAM(Layout, stream << "FrameView " << &view() << " FrameViewLayoutContext::layout() with size " << view().layoutSize());
 
+    Ref<FrameView> protectView(view());
+
+    performLayout();
+
+    if (view().hasOneRef())
+        return;
+
+    Style::Scope::QueryContainerUpdateContext queryContainerUpdateContext;
+    while (document() && document()->styleScope().updateQueryContainerState(queryContainerUpdateContext)) {
+        document()->updateStyleIfNeeded();
+
+        if (!needsLayout())
+            break;
+
+        performLayout();
+
+        if (view().hasOneRef())
+            return;
+    }
+}
+
+void FrameViewLayoutContext::performLayout()
+{
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!frame().document()->inRenderTreeUpdate());
     ASSERT(LayoutDisallowedScope::isLayoutAllowed());
     ASSERT(!view().isPainting());
@@ -181,7 +204,6 @@ void FrameViewLayoutContext::layout()
         return;
     }
 
-    Ref<FrameView> protectView(view());
     LayoutScope layoutScope(*this);
     TraceScope tracingScope(LayoutStart, LayoutEnd);
     InspectorInstrumentation::willLayout(view().frame());
@@ -202,9 +224,9 @@ void FrameViewLayoutContext::layout()
         return;
 
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
 
-        if (!frame().document()->isResolvingContainerQueries()) {
+        if (!frame().document()->isResolvingContainerQueriesForSelfOrAncestor()) {
             // If this is a new top-level layout and there are any remaining tasks from the previous layout, finish them now.
             if (!isLayoutNested() && m_asynchronousTasksTimer.isActive() && !view().isInChildFrameWithFrameFlattening())
                 runAsynchronousTasks();
@@ -225,7 +247,7 @@ void FrameViewLayoutContext::layout()
         m_firstLayout = false;
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         SubtreeLayoutStateMaintainer subtreeLayoutStateMaintainer(subtreeLayoutRoot());
         RenderView::RepaintRegionAccumulator repaintRegionAccumulator(renderView());
@@ -243,10 +265,10 @@ void FrameViewLayoutContext::layout()
         clearSubtreeLayoutRoot();
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InViewSizeAdjust);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InViewSizeAdjust);
         if (is<RenderView>(layoutRoot) && !renderView()->printing()) {
             // This is to protect m_needsFullRepaint's value when layout() is getting re-entered through adjustViewSize().
-            SetForScope<bool> needsFullRepaint(m_needsFullRepaint);
+            SetForScope needsFullRepaint(m_needsFullRepaint);
             view().adjustViewSize();
             // FIXME: Firing media query callbacks synchronously on nested frames could produced a detached FrameView here by
             // navigating away from the current document (see webkit.org/b/173329).
@@ -255,7 +277,7 @@ void FrameViewLayoutContext::layout()
         }
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InPostLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPostLayout);
         if (m_needsFullRepaint)
             renderView()->repaintRootContents();
         ASSERT(!layoutRoot->needsLayout());
@@ -306,7 +328,7 @@ void FrameViewLayoutContext::runAsynchronousTasks()
     m_asynchronousTasksTimer.stop();
     if (m_inAsynchronousTasks)
         return;
-    SetForScope<bool> inAsynchronousTasks(m_inAsynchronousTasks, true);
+    SetForScope inAsynchronousTasks(m_inAsynchronousTasks, true);
     view().performPostLayoutTasks();
 }
 
@@ -408,7 +430,7 @@ void FrameViewLayoutContext::unscheduleLayout()
 
 #if !LOG_DISABLED
     if (!frame().document()->ownerElement())
-        LOG(Layout, "FrameView %p layout timer unscheduled at %.3fs", this, frame().document()->timeSinceDocumentCreation().value());
+        LOG_WITH_STREAM(Layout, stream << "FrameViewLayoutContext for FrameView " << frame().view() << " layout timer unscheduled at " << frame().document()->timeSinceDocumentCreation().value());
 #endif
 
     m_layoutTimer.stop();
@@ -472,7 +494,7 @@ void FrameViewLayoutContext::layoutTimerFired()
 {
 #if !LOG_DISABLED
     if (!frame().document()->ownerElement())
-        LOG(Layout, "FrameView %p layout timer fired at %.3fs", this, frame().document()->timeSinceDocumentCreation().value());
+        LOG_WITH_STREAM(Layout, stream << "FrameViewLayoutContext for FrameView " << frame().view() << " layout timer fired at " << frame().document()->timeSinceDocumentCreation().value());
 #endif
     layout();
 }

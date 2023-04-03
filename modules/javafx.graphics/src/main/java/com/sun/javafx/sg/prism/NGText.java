@@ -290,6 +290,18 @@ public class NGText extends NGShape {
         g.setNodeBounds(null);
     }
 
+    /*
+     * drawAsShapes() is used for large glyphs to avoid blowing the cache.
+     * But emojis aren't (currently) cached and may not be available as shapes.
+     * So the drawAsShapes path results in blank space instead of a large emoji
+     * This check is used in renderText() where we would otherwise use shapes
+     * to prevent that.
+     */
+    private boolean isEmojiRun(TextRun run, FontStrike strike) {
+        FontResource res = strike.getFontResource();
+        return strike.drawAsShapes() && res.isColorGlyph(run.getGlyphCode(0));
+    }
+
     private void renderText(Graphics g, FontStrike strike, BaseBounds clipBds,
                             Color selectionColor, int op) {
         for (int i = 0; i < runs.length; i++) {
@@ -307,7 +319,7 @@ public class NGText extends NGShape {
             y -= lineBounds.getMinY();
 
             if ((op & TEXT) != 0 && run.getGlyphCount() > 0) {
-                if ((op & FILL) != 0) {
+                if (((op & FILL) != 0) || isEmojiRun(run, strike)) {
                     int start = run.getStart();
                     g.drawString(run, strike, x, y,
                                  selectionColor,

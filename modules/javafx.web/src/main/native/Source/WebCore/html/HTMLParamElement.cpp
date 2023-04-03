@@ -45,21 +45,21 @@ Ref<HTMLParamElement> HTMLParamElement::create(const QualifiedName& tagName, Doc
     return adoptRef(*new HTMLParamElement(tagName, document));
 }
 
-String HTMLParamElement::name() const
+AtomString HTMLParamElement::name() const
 {
     if (hasName())
         return getNameAttribute();
     return document().isHTMLDocument() ? emptyAtom() : getIdAttribute();
 }
 
-String HTMLParamElement::value() const
+AtomString HTMLParamElement::value() const
 {
     return attributeWithoutSynchronization(valueAttr);
 }
 
 bool HTMLParamElement::isURLParameter(const String& name)
 {
-    return equalLettersIgnoringASCIICase(name, "data") || equalLettersIgnoringASCIICase(name, "movie") || equalLettersIgnoringASCIICase(name, "src");
+    return equalLettersIgnoringASCIICase(name, "data"_s) || equalLettersIgnoringASCIICase(name, "movie"_s) || equalLettersIgnoringASCIICase(name, "src"_s);
 }
 
 bool HTMLParamElement::isURLAttribute(const Attribute& attribute) const

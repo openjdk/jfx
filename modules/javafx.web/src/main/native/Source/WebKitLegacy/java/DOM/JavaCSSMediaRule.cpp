@@ -65,7 +65,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSMediaRuleImpl_insertRuleImpl(J
     , jint index)
 {
     WebCore::JSMainThreadNullState state;
-    return raiseOnDOMError(env, IMPL->insertRule(String(env, rule)
+    return raiseOnDOMError(env, IMPL->insertRule(AtomString{String(env, rule)}
             , index));
 }
 

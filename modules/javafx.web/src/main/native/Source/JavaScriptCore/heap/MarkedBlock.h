@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -169,6 +169,8 @@ public:
         size_t markCount();
         size_t size();
 
+        size_t backingStorageSize() { return bitwise_cast<uintptr_t>(end()) - bitwise_cast<uintptr_t>(pageStart()); }
+
         bool isAllocated();
 
         bool isLive(HeapVersion markingVersion, HeapVersion newlyAllocatedVersion, bool isMarking, const HeapCell*);
@@ -202,6 +204,7 @@ public:
         void* end() const { return &m_block->atoms()[m_endAtom]; }
         void* atomAt(size_t i) const { return &m_block->atoms()[i]; }
         bool contains(void* p) const { return start() <= p && p < end(); }
+        void* pageStart() const { return &m_block->atoms()[0]; }
 
         void dumpState(PrintStream&);
 
@@ -236,7 +239,7 @@ public:
         BlockDirectory* m_directory { nullptr };
         WeakSet m_weakSet;
 
-        MarkedBlock* m_block { nullptr };
+        MarkedBlock* const m_block { nullptr };
     };
 
 private:
@@ -259,7 +262,7 @@ public:
         Handle& m_handle;
         // m_vm must remain a pointer (instead of a reference) because JSCLLIntOffsetsExtractor
         // will fail otherwise.
-        VM* m_vm;
+        VM* const m_vm;
         Subspace* m_subspace;
 
         CountingLock m_lock;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,21 +26,15 @@
 package test.javafx.scene.web;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.List;
 import java.io.File;
-import java.net.MalformedURLException;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.web.WebHistory;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import java.util.Date;
 
-import java.util.concurrent.Callable;
-import javafx.scene.web.WebHistory;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -81,6 +75,7 @@ public class HistoryTest extends TestBase {
         // check the list update
         //
         history.getEntries().addListener(new ListChangeListener<WebHistory.Entry>() {
+            @Override
             public void onChanged(ListChangeListener.Change<? extends WebHistory.Entry> c) {
                 c.next();
                 assertTrue("entries: change is wrong", c.wasAdded());
@@ -123,6 +118,7 @@ public class HistoryTest extends TestBase {
         try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
 
         history.currentIndexProperty().addListener(new ChangeListener<Number>() {
+            @Override
             public void changed(ObservableValue<? extends java.lang.Number> observable, Number oldValue, Number newValue) {
                 assertEquals("currentIndexProperty: old index is wrong", 2, oldValue);
                 assertEquals("currentIndexProperty: new index is wrong", 1, newValue);
@@ -289,6 +285,7 @@ public class HistoryTest extends TestBase {
         return new ChangeListener<Date>() {
             long startTime = System.currentTimeMillis();
 
+            @Override
             public void changed(ObservableValue<? extends Date> observable, Date oldValue, Date newValue) {
                 long curTime = System.currentTimeMillis();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,6 +108,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             return "size";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -138,6 +139,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             return "empty";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -324,7 +326,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         private final WeakReference<ListPropertyBase<E>> wref;
 
         public Listener(ListPropertyBase<E> ref) {
-            this.wref = new WeakReference<ListPropertyBase<E>>(ref);
+            this.wref = new WeakReference<>(ref);
         }
 
         @Override

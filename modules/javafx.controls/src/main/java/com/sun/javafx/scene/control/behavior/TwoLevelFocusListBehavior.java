@@ -32,7 +32,6 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 
 import javafx.scene.Scene;
-import javafx.scene.control.skin.ComboBoxPopupControl;
 import javafx.scene.input.KeyEvent;
 
 import javafx.beans.value.ChangeListener;
@@ -61,6 +60,7 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
      * Invoked by the behavior when it is disposed, so that any listeners installed by
      * the TwoLevelFocusBehavior can also be uninstalled
      */
+    @Override
     public void dispose() {
         tlNode.removeEventHandler(KeyEvent.ANY, keyEventListener);
         tlNode.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseEventListener);

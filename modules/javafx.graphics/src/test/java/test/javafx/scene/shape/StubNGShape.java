@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,10 +48,12 @@ public class StubNGShape extends NGShape {
         return fill;
     }
 
+    @Override
     public boolean isSmooth() {
         return smooth;
     }
 
+    @Override
     public NGShape.Mode getMode() {
         return mode;
     }
@@ -84,6 +86,7 @@ public class StubNGShape extends NGShape {
         return pgStrokeLineJoin;
     }
 
+    @Override
     public void setMode(NGShape.Mode mode) {
         this.mode = mode;
     }

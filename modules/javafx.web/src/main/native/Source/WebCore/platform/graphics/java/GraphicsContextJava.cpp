@@ -64,7 +64,7 @@
 namespace WebCore {
 
 static void setGradient(Gradient &gradient,
-    AffineTransform& gradientSpaceTransformation, PlatformGraphicsContext* context, jint id)
+    const AffineTransform& gradientSpaceTransformation, PlatformGraphicsContext* context, jint id)
 {
     const Vector<GradientColorStop, 2> stops = gradient.stops().stops();
     int nStops = stops.size();
@@ -241,20 +241,20 @@ void GraphicsContextJava::fillRect(const FloatRect& rect)
     if (paintingDisabled())
         return;
 
-    if (m_state.fillPattern) {
-        auto image = m_state.fillPattern->tileNativeImage()->platformImage();
+    if (fillPattern()) {
+        auto image = fillPattern()->tileNativeImage()->platformImage();
 
         FloatRect destRect(rect.x(), rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : image->size().width(),
-            m_state.fillPattern->repeatY() ? rect.height() : image->size().height());
+            fillPattern()->repeatX() ? rect.width() : image->size().width(),
+            fillPattern()->repeatY() ? rect.height() : image->size().height());
         drawPlatformPattern(image, destRect,
             FloatRect(0., 0., image->size().width(), image->size().height()),
-            m_state.fillPattern->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
+            fillPattern()->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
     } else {
-        if (m_state.fillGradient) {
+        if (fillGradient()) {
             setGradient(
-                *m_state.fillGradient,
-                m_state.fillGradientSpaceTransform,
+                *fillGradient(),
+                fillGradientSpaceTransform(),
                 platformContext(),
                 com_sun_webkit_graphics_GraphicsDecoder_SET_FILL_GRADIENT);
         }
@@ -610,8 +610,10 @@ bool GraphicsContextJava::supportsTransparencyLayers() const
     return true;
 }
 
-void GraphicsContextJava::beginPlatformTransparencyLayer(float opacity)
+void GraphicsContextJava::beginTransparencyLayer(float opacity)
 {
+    GraphicsContext::beginTransparencyLayer(opacity);
+
     if (paintingDisabled())
       return;
 
@@ -620,13 +622,15 @@ void GraphicsContextJava::beginPlatformTransparencyLayer(float opacity)
     << opacity;
 }
 
-void GraphicsContextJava::endPlatformTransparencyLayer()
+void GraphicsContextJava::endTransparencyLayer()
 {
     if (paintingDisabled())
       return;
 
     platformContext()->rq().freeSpace(4)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_ENDTRANSPARENCYLAYER;
+
+    GraphicsContext::endTransparencyLayer();
 }
 
 void GraphicsContextJava::clearRect(const FloatRect& rect)
@@ -645,10 +649,10 @@ void GraphicsContextJava::strokeRect(const FloatRect& rect, float lineWidth)
     if (paintingDisabled())
         return;
 
-    if (m_state.strokeGradient) {
+    if (strokeGradient()) {
         setGradient(
-            *m_state.strokeGradient,
-            m_state.strokeGradientSpaceTransform,
+            *strokeGradient(),
+            strokeGradientSpaceTransform(),
             platformContext(),
             com_sun_webkit_graphics_GraphicsDecoder_SET_STROKE_GRADIENT);
     }
@@ -738,10 +742,10 @@ void GraphicsContextJava::strokePath(const Path& path)
     if (paintingDisabled())
         return;
 
-    if (m_state.strokeGradient) {
+    if (strokeGradient()) {
         setGradient(
-            *m_state.strokeGradient,
-            m_state.strokeGradientSpaceTransform,
+            *strokeGradient(),
+            strokeGradientSpaceTransform(),
             platformContext(),
             com_sun_webkit_graphics_GraphicsDecoder_SET_STROKE_GRADIENT);
     }
@@ -865,26 +869,26 @@ void GraphicsContextJava::fillPath(const Path& path)
     if (paintingDisabled())
         return;
 
-    if (m_state.fillPattern) {
+    if (fillPattern()) {
         savePlatformState(); //fake clip isolation
-        clipPath(path, m_state.fillRule);
+        clipPath(path, fillRule());
         FloatRect rect(path.boundingRect());
 
-        auto image = m_state.fillPattern->tileNativeImage()->platformImage();
+        auto image = fillPattern()->tileNativeImage()->platformImage();
 
         FloatRect destRect(rect.x(), rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : image->size().width(),
-            m_state.fillPattern->repeatY() ? rect.height() : image->size().height());
+            fillPattern()->repeatX() ? rect.width() : image->size().width(),
+            fillPattern()->repeatY() ? rect.height() : image->size().height());
         drawPlatformPattern(image, destRect,
             FloatRect(0., 0., image->size().width(), image->size().height()),
-            m_state.fillPattern->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
+            fillPattern()->patternSpaceTransform(), FloatPoint(), FloatSize(), CompositeOperator::Copy);
 
         restorePlatformState();
     } else {
-        if (m_state.fillGradient) {
+        if (fillGradient()) {
             setGradient(
-                *m_state.fillGradient,
-                m_state.fillGradientSpaceTransform,
+                *fillGradient(),
+                fillGradientSpaceTransform(),
                 platformContext(),
                 com_sun_webkit_graphics_GraphicsDecoder_SET_FILL_GRADIENT);
         }
@@ -989,37 +993,37 @@ AffineTransform GraphicsContextJava::getCTM(IncludeDeviceScale) const
     return m_state.transform;
 }
 
-void GraphicsContextJava::didUpdateState(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
+void GraphicsContextJava::didUpdateState(GraphicsContextState& state)
 {
-    if (flags & GraphicsContextState::StrokeThicknessChange) {
-        setPlatformStrokeThickness(state.strokeThickness);
+    if (state.changes() & GraphicsContextState::Change::StrokeThickness) {
+        setPlatformStrokeThickness(strokeThickness());
     }
 
-    if (flags & GraphicsContextState::StrokeStyleChange) {
-        setPlatformStrokeStyle(state.strokeStyle);
+    if (state.changes() & GraphicsContextState::Change::StrokeStyle) {
+        setPlatformStrokeStyle(strokeStyle());
     }
 
-    if (flags & GraphicsContextState::TextDrawingModeChange){
-        setPlatformTextDrawingMode(state.textDrawingMode);
+    if (state.changes() & GraphicsContextState::Change::TextDrawingMode){
+        setPlatformTextDrawingMode(textDrawingMode());
     }
 
-    if (flags & GraphicsContextState::ShadowChange) {
-        setPlatformShadow(state.shadowOffset, state.shadowBlur, state.shadowColor);
+    if (state.changes() & GraphicsContextState::Change::DropShadow) {
+        setPlatformShadow(shadowOffset(),shadowBlur(), shadowColor());
     }
 
-    if (flags & GraphicsContextState::CompositeOperationChange) {
-        setPlatformCompositeOperation(state.compositeOperator, state.blendMode);
+    if (state.changes() & GraphicsContextState::Change::CompositeMode) {
+        setPlatformCompositeOperation(compositeOperation(), blendMode());
     }
 
-    if (flags & GraphicsContextState::StrokeColorChange) {
+    if (state.changes() & GraphicsContextState::Change::StrokeBrush) {
         setPlatformStrokeColor(strokeColor());
     }
 
-    if (flags & GraphicsContextState::AlphaChange) {
+    if (state.changes() & GraphicsContextState::Change::Alpha) {
         setPlatformAlpha(alpha());
     }
 
-    if (flags & GraphicsContextState::FillColorChange) {
+    if (state.changes() & GraphicsContextState::Change::FillBrush) {
         setPlatformFillColor(fillColor());
     }
 }
@@ -1032,6 +1036,8 @@ void GraphicsContextJava::fillRoundedRectImpl(const FloatRoundedRect& rect, cons
 void GraphicsContextJava::drawNativeImage(NativeImage& image, const FloatSize& selfSize, const FloatRect& destRect,
                             const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
+    /* flush ImageRq  to decode previous recorded  command buffer */
+    flushImageRQ(platformContext(), image.platformImage());
     drawPlatformImage(image.platformImage(), selfSize, destRect, srcRect, options);
 }
 

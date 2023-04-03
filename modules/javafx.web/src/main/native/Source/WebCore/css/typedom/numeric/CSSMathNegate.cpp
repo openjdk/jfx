@@ -31,20 +31,60 @@
 #if ENABLE(CSS_TYPED_OM)
 
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathNegate);
 
-Ref<CSSMathNegate> CSSMathNegate::create(CSSNumberish&& numberish)
+static CSSNumericType copyType(const CSSNumberish& numberish)
 {
-    return adoptRef(*new CSSMathNegate(WTFMove(numberish)));
+    return WTF::switchOn(numberish,
+        [] (double) { return CSSNumericType(); },
+        [] (const RefPtr<CSSNumericValue>& value) {
+            if (!value)
+                return CSSNumericType();
+            return value->type();
+        }
+    );
 }
 
 CSSMathNegate::CSSMathNegate(CSSNumberish&& numberish)
-    : CSSMathValue(CSSMathOperator::Negate)
-    , m_value(CSSNumericValue::rectifyNumberish(WTFMove(numberish)))
+    : CSSMathValue(copyType(numberish))
+    , m_value(rectifyNumberish(WTFMove(numberish)))
 {
+}
+
+void CSSMathNegate::serialize(StringBuilder& builder, OptionSet<SerializationArguments> arguments) const
+{
+    // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
+    if (!arguments.contains(SerializationArguments::WithoutParentheses))
+        builder.append(arguments.contains(SerializationArguments::Nested) ? "(" : "calc(");
+    builder.append('-');
+    m_value->serialize(builder, arguments);
+    if (!arguments.contains(SerializationArguments::WithoutParentheses))
+        builder.append(')');
+}
+
+auto CSSMathNegate::toSumValue() const -> std::optional<SumValue>
+{
+    // https://drafts.css-houdini.org/css-typed-om/#create-a-sum-value
+    auto values = m_value->toSumValue();
+    if (!values)
+        return std::nullopt;
+    for (auto& value : *values)
+        value.value = value.value * -1;
+    return values;
+}
+
+bool CSSMathNegate::equals(const CSSNumericValue& other) const
+{
+    // https://drafts.css-houdini.org/css-typed-om/#equal-numeric-value
+    auto* otherNegate = dynamicDowncast<CSSMathNegate>(other);
+    if (!otherNegate)
+        return false;
+    return m_value->equals(otherNegate->value());
+
 }
 
 } // namespace WebCore

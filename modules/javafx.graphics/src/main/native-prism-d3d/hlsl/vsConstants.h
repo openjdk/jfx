@@ -33,28 +33,25 @@ static const int MAX_BONES = 70;
 
 static const int isSkinned = Skin;
 
-struct Light {
-    float4 pos;
-    float4 color;
-};
+static const int maxLights = 3;
 
 // See D3DPhongShader.h for register assignments
 
 // camera
-float4x4    mViewProj   : register(c0);
-float4      gCameraPos  : register(c4);
+float4x4 mViewProj   : register(c0);
+float4   gCameraPos  : register(c4);
 
-
-float4      gReserved5[5] : register(c5);
+float4   gReserved5[5] : register(c5);
 
 // lighting
-Light       sLights[5]        : register(c10);
-float4      gLightsNormDir[5] : register(c20);
-float4      gAmbinet          : register(c25);
-float4      gAmbinetData[10]  : register(c25);
+float4   gLightsPos[maxLights]     : register(c10);
+//float4   13-19 reserved
+float4   gLightsNormDir[maxLights] : register(c20);
+//float4 gAmbinetLightColor        : register(c25);
+//float4 gAmbinetData[10]          : register(c25);
 
 // world
-float4x3    mWorld            : register(c35);
-float4x3    mBones[MAX_BONES] : register(c35);
+float4x3 mWorld            : register(c35);
+float4x3 mBones[MAX_BONES] : register(c35);
 
-float4      gReserved245[11] : register(c245);
+float4   gReserved245[11] : register(c245);

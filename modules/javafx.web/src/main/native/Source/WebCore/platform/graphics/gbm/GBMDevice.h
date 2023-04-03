@@ -26,7 +26,9 @@
 
 #pragma once
 
-#if USE(ANGLE) && USE(NICOSIA)
+#if USE(LIBGBM)
+
+#include <wtf/Noncopyable.h>
 
 struct gbm_device;
 
@@ -36,7 +38,7 @@ class GBMDevice {
     WTF_MAKE_NONCOPYABLE(GBMDevice);
     WTF_MAKE_FAST_ALLOCATED();
 public:
-    static const GBMDevice& get();
+    static const GBMDevice& singleton();
 
     GBMDevice();
     ~GBMDevice();
@@ -44,9 +46,10 @@ public:
     struct gbm_device* device() const { return m_device; }
 
 private:
+    int m_fd { -1 };
     struct gbm_device* m_device { nullptr };
 };
 
 } // namespace WebCore
 
-#endif // USE(ANGLE) && USE(NICOSIA)
+#endif // USE(LIBGBM)

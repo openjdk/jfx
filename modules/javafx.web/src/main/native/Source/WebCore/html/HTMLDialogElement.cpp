@@ -26,13 +26,15 @@
 #include "config.h"
 #include "HTMLDialogElement.h"
 
+#include "CSSSelector.h"
 #include "DocumentInlines.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FocusOptions.h"
-#include "GCReachableRef.h"
 #include "HTMLNames.h"
+#include "PseudoClassChangeInvalidation.h"
 #include "RenderElement.h"
+#include "ScopedEventQueue.h"
 #include "TypedElementDescendantIterator.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -70,9 +72,12 @@ ExceptionOr<void> HTMLDialogElement::showModal()
     if (!isConnected())
         return Exception { InvalidStateError };
 
+    // setBooleanAttribute will dispatch a DOMSubtreeModified event.
+    // Postpone callback execution that can potentially make the dialog disconnected.
+    EventQueueScope scope;
     setBooleanAttribute(openAttr, true);
 
-    m_isModal = true;
+    setIsModal(true);
 
     if (!isInTopLayer())
         addToTopLayer();
@@ -91,7 +96,7 @@ void HTMLDialogElement::close(const String& result)
 
     setBooleanAttribute(openAttr, false);
 
-    m_isModal = false;
+    setIsModal(false);
 
     if (!result.isNull())
         m_returnValue = result;
@@ -105,38 +110,23 @@ void HTMLDialogElement::close(const String& result)
         element->focus(options);
     }
 
-    document().eventLoop().queueTask(TaskSource::UserInteraction, [protectedThis = GCReachableRef { *this }] {
-        protectedThis->dispatchEvent(Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
-    });
+    queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void HTMLDialogElement::queueCancelTask()
 {
-    document().eventLoop().queueTask(TaskSource::UserInteraction, [protectedThis = GCReachableRef { *this }] {
+    queueTaskKeepingThisNodeAlive(TaskSource::UserInteraction, [this] {
         auto cancelEvent = Event::create(eventNames().cancelEvent, Event::CanBubble::No, Event::IsCancelable::Yes);
-        protectedThis->dispatchEvent(cancelEvent);
+        dispatchEvent(cancelEvent);
         if (!cancelEvent->defaultPrevented())
-            protectedThis->close(nullString());
+            close(nullString());
     });
 }
 
 // https://html.spec.whatwg.org/multipage/interactive-elements.html#dialog-focusing-steps
 void HTMLDialogElement::runFocusingSteps()
 {
-    RefPtr<Element> control;
-    for (auto& element : descendantsOfType<Element>(*this)) {
-        if (!element.isFocusable())
-            continue;
-
-        if (element.hasAttribute(autofocusAttr)) {
-            control = &element;
-            break;
-        }
-
-        // FIXME: Potentially remove this and adjust related WPTs after https://github.com/whatwg/html/pull/4184.
-        if (!control)
-            control = &element;
-    }
+    RefPtr control = findFocusDelegate();
 
     if (!control)
         control = this;
@@ -157,7 +147,15 @@ void HTMLDialogElement::runFocusingSteps()
 void HTMLDialogElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-    m_isModal = false;
+    setIsModal(false);
+}
+
+void HTMLDialogElement::setIsModal(bool newValue)
+{
+    if (m_isModal == newValue)
+        return;
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassModal, newValue);
+    m_isModal = newValue;
 }
 
 }

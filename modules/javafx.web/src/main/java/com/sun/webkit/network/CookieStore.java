@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ final class CookieStore {
      * by another cookie with the same name, domain, and path.
      */
     private final Map<String,Map<Cookie,Cookie>> buckets =
-            new HashMap<String,Map<Cookie,Cookie>>();
+            new HashMap<>();
 
     /**
      * The total number of cookies currently in the store.
@@ -110,7 +110,7 @@ final class CookieStore {
                     hostname, path, secureProtocol, httpApi});
         }
 
-        ArrayList<Cookie> result = new ArrayList<Cookie>();
+        ArrayList<Cookie> result = new ArrayList<>();
 
         String domain = hostname;
         while (domain.length() > 0) {
@@ -198,7 +198,7 @@ final class CookieStore {
     void put(Cookie cookie) {
         Map<Cookie,Cookie> bucket = buckets.get(cookie.getDomain());
         if (bucket == null) {
-            bucket = new LinkedHashMap<Cookie,Cookie>(20);
+            bucket = new LinkedHashMap<>(20);
             buckets.put(cookie.getDomain(), bucket);
         }
         if (cookie.hasExpired()) {
@@ -258,7 +258,7 @@ final class CookieStore {
     private void purge() {
         logger.finest("Purging store");
 
-        Queue<Cookie> removalQueue = new PriorityQueue<Cookie>(totalCount / 2,
+        Queue<Cookie> removalQueue = new PriorityQueue<>(totalCount / 2,
                 new RemovalComparator());
 
         for (Map.Entry<String,Map<Cookie,Cookie>> entry : buckets.entrySet()) {

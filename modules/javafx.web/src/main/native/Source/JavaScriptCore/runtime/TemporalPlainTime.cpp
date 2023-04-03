@@ -38,7 +38,7 @@ namespace TemporalPlainTimeInternal {
 static constexpr bool verbose = false;
 }
 
-const ClassInfo TemporalPlainTime::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalPlainTime) };
+const ClassInfo TemporalPlainTime::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalPlainTime) };
 
 TemporalPlainTime* TemporalPlainTime::create(VM& vm, Structure* structure, ISO8601::PlainTime&& plainTime)
 {
@@ -61,12 +61,12 @@ TemporalPlainTime::TemporalPlainTime(VM& vm, Structure* structure, ISO8601::Plai
 void TemporalPlainTime::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     m_calendar.initLater(
         [] (const auto& init) {
             VM& vm = init.vm;
             auto* plainTime = jsCast<TemporalPlainTime*>(init.owner);
-            auto* globalObject = plainTime->globalObject(vm);
+            auto* globalObject = plainTime->globalObject();
             auto* calendar = TemporalCalendar::create(vm, globalObject->calendarStructure(), iso8601CalendarID());
             init.set(calendar);
         });
@@ -221,6 +221,8 @@ static ISO8601::Duration roundTime(ISO8601::PlainTime plainTime, double incremen
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
+
+    return ISO8601::Duration();
 }
 
 ISO8601::PlainTime TemporalPlainTime::round(JSGlobalObject* globalObject, JSValue optionsValue) const
@@ -228,14 +230,32 @@ ISO8601::PlainTime TemporalPlainTime::round(JSGlobalObject* globalObject, JSValu
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* options = intlGetOptionsObject(globalObject, optionsValue);
-    RETURN_IF_EXCEPTION(scope, { });
+    JSObject* options = nullptr;
+    std::optional<TemporalUnit> smallest;
+    if (optionsValue.isString()) {
+        auto string = optionsValue.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
 
-    auto smallest = temporalSmallestUnit(globalObject, options, { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week, TemporalUnit::Day });
-    RETURN_IF_EXCEPTION(scope, { });
-    if (!smallest) {
-        throwRangeError(globalObject, scope, "Cannot round without a smallestUnit option"_s);
-        return { };
+        smallest = temporalUnitType(string);
+        if (!smallest) {
+            throwRangeError(globalObject, scope, "smallestUnit is an invalid Temporal unit"_s);
+            return { };
+        }
+
+        if (smallest.value() <= TemporalUnit::Day) {
+            throwRangeError(globalObject, scope, "smallestUnit is a disallowed unit"_s);
+            return { };
+        }
+    } else {
+        options = intlGetOptionsObject(globalObject, optionsValue);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        smallest = temporalSmallestUnit(globalObject, options, { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week, TemporalUnit::Day });
+        RETURN_IF_EXCEPTION(scope, { });
+        if (!smallest) {
+            throwRangeError(globalObject, scope, "Cannot round without a smallestUnit option"_s);
+            return { };
+        }
     }
     TemporalUnit smallestUnit = smallest.value();
 
@@ -283,6 +303,7 @@ static ISO8601::Duration toTemporalTimeRecord(JSGlobalObject* globalObject, JSOb
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     ISO8601::Duration duration { };
+    auto hasRelevantProperty = false;
     for (TemporalUnit unit : temporalUnitsInTableOrder) {
         if (unit < TemporalUnit::Hour)
             continue;
@@ -290,13 +311,10 @@ static ISO8601::Duration toTemporalTimeRecord(JSGlobalObject* globalObject, JSOb
         JSValue value = temporalTimeLike->get(globalObject, name);
         RETURN_IF_EXCEPTION(scope, { });
 
-        // We are throwing an error here, but probably this is a spec bug.
-        // Tracked in https://github.com/tc39/proposal-temporal/issues/1803.
-        if (value.isUndefined()) {
-            throwTypeError(globalObject, scope, makeString('"', StringView(name.uid()), "\" field is missing"_s));
-            return { };
-        }
+        if (value.isUndefined())
+            continue;
 
+        hasRelevantProperty = true;
         double integer = value.toIntegerOrInfinity(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
         if (!std::isfinite(integer)) {
@@ -305,6 +323,12 @@ static ISO8601::Duration toTemporalTimeRecord(JSGlobalObject* globalObject, JSOb
         }
         duration[unit] = integer;
     }
+
+    if (!hasRelevantProperty) {
+        throwTypeError(globalObject, scope, "Object must contain at least one Temporal time unit property"_s);
+        return { };
+    }
+
     return duration;
 }
 
@@ -351,9 +375,9 @@ static ISO8601::PlainTime constrainTime(ISO8601::Duration&& duration)
         constrainToRange(duration.hours(), 0, 23),
         constrainToRange(duration.minutes(), 0, 59),
         constrainToRange(duration.seconds(), 0, 59),
-        constrainToRange(duration.milliseconds(), 0, 1000),
-        constrainToRange(duration.microseconds(), 0, 1000),
-        constrainToRange(duration.nanoseconds(), 0, 1000));
+        constrainToRange(duration.milliseconds(), 0, 999),
+        constrainToRange(duration.microseconds(), 0, 999),
+        constrainToRange(duration.nanoseconds(), 0, 999));
 }
 
 static ISO8601::PlainTime regulateTime(JSGlobalObject* globalObject, ISO8601::Duration&& duration, TemporalOverflow overflow)
@@ -379,7 +403,7 @@ static JSObject* getTemporalCalendarWithISODefault(JSGlobalObject* globalObject,
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (itemValue.inherits<TemporalPlainTime>(vm))
+    if (itemValue.inherits<TemporalPlainTime>())
         return jsCast<TemporalPlainTime*>(itemValue)->calendar();
 
     JSValue calendar = itemValue.get(globalObject, vm.propertyNames->calendar);
@@ -396,7 +420,7 @@ TemporalPlainTime* TemporalPlainTime::from(JSGlobalObject* globalObject, JSValue
     auto overflow = overflowValue.value_or(TemporalOverflow::Constrain);
 
     if (itemValue.isObject()) {
-        if (itemValue.inherits<TemporalPlainTime>(vm))
+        if (itemValue.inherits<TemporalPlainTime>())
             return jsCast<TemporalPlainTime*>(itemValue);
         JSObject* calendar = getTemporalCalendarWithISODefault(globalObject, itemValue);
         RETURN_IF_EXCEPTION(scope, { });
@@ -513,7 +537,7 @@ ISO8601::PlainTime TemporalPlainTime::with(JSGlobalObject* globalObject, JSObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (temporalTimeLike->inherits<TemporalPlainTime>(vm)) {
+    if (temporalTimeLike->inherits<TemporalPlainTime>()) {
         throwTypeError(globalObject, scope, "argument object must not carry calendar"_s);
         return { };
     }
@@ -624,6 +648,12 @@ ISO8601::Duration TemporalPlainTime::since(JSGlobalObject* globalObject, Tempora
 
     auto [smallestUnit, largestUnit, roundingMode, increment] = extractDifferenceOptions(globalObject, optionsValue);
     RETURN_IF_EXCEPTION(scope, { });
+
+    // https://tc39.es/proposal-temporal/#sec-temporal-negatetemporalroundingmode
+    if (roundingMode == RoundingMode::Ceil)
+        roundingMode = RoundingMode::Floor;
+    else if (roundingMode == RoundingMode::Floor)
+        roundingMode = RoundingMode::Ceil;
 
     auto result = differenceTime(other->plainTime(), plainTime());
     result = -result;

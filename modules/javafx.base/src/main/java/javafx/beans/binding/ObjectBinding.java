@@ -63,6 +63,13 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     private T value;
     private boolean valid = false;
+
+    /**
+     * Invalidation listener used for observing dependencies.  This
+     * is never cleared once created as there is no way to determine
+     * when all dependencies that were previously bound were removed
+     * in one or more calls to {@link #unbind(Observable...)}.
+     */
     private BindingHelperObserver observer;
     private ExpressionHelper<T> helper = null;
 
@@ -121,7 +128,6 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             for (final Observable dep : dependencies) {
                 dep.removeListener(observer);
             }
-            observer = null;
         }
     }
 

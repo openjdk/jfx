@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -182,189 +182,6 @@ class TableUtil {
          COLUMN_COMPARATOR_CHANGE
      }
 
-
-
-
-
-    /**
-     * The constrained resize algorithm used by TableView and TreeTableView.
-     * @param prop
-     * @param isFirstRun
-     * @param tableWidth
-     * @param visibleLeafColumns
-     * @return
-     */
-    static boolean constrainedResize(ResizeFeaturesBase prop,
-                                     boolean isFirstRun,
-                                     double tableWidth,
-                                     List<? extends TableColumnBase<?,?>> visibleLeafColumns) {
-        TableColumnBase<?,?> column = prop.getColumn();
-        double delta = prop.getDelta();
-
-        /*
-         * There are two phases to the constrained resize policy:
-         *   1) Ensuring internal consistency (i.e. table width == sum of all visible
-         *      columns width). This is often called when the table is resized.
-         *   2) Resizing the given column by __up to__ the given delta.
-         *
-         * It is possible that phase 1 occur and there be no need for phase 2 to
-         * occur.
-         */
-
-        boolean isShrinking;
-        double target;
-        double totalLowerBound = 0;
-        double totalUpperBound = 0;
-
-        if (tableWidth == 0) return false;
-
-        /*
-         * PHASE 1: Check to ensure we have internal consistency. Based on the
-         *          Swing JTable implementation.
-         */
-        // determine the width of all visible columns, and their preferred width
-        double colWidth = 0;
-        for (TableColumnBase<?,?> col : visibleLeafColumns) {
-            colWidth += col.getWidth();
-        }
-
-        if (Math.abs(colWidth - tableWidth) > EPSILON) {
-            isShrinking = colWidth > tableWidth;
-            target = tableWidth;
-
-            if (isFirstRun) {
-                // if we are here we have an inconsistency - these two values should be
-                // equal when this resizing policy is being used.
-                for (TableColumnBase<?,?> col : visibleLeafColumns) {
-                    totalLowerBound += col.getMinWidth();
-                    totalUpperBound += col.getMaxWidth();
-                }
-
-                // We run into trouble if the numbers are set to infinity later on
-                totalUpperBound = totalUpperBound == Double.POSITIVE_INFINITY ?
-                    Double.MAX_VALUE :
-                    (totalUpperBound == Double.NEGATIVE_INFINITY ? Double.MIN_VALUE : totalUpperBound);
-
-                for (TableColumnBase col : visibleLeafColumns) {
-                    double lowerBound = col.getMinWidth();
-                    double upperBound = col.getMaxWidth();
-
-                    // Check for zero. This happens when the distribution of the delta
-                    // finishes early due to a series of "fixed" entries at the end.
-                    // In this case, lowerBound == upperBound, for all subsequent terms.
-                    double newSize;
-                    if (Math.abs(totalLowerBound - totalUpperBound) < EPSILON) {
-                        newSize = lowerBound;
-                    } else {
-                        double f = (target - totalLowerBound) / (totalUpperBound - totalLowerBound);
-                        newSize = Math.round(lowerBound + f * (upperBound - lowerBound));
-                    }
-
-                    double remainder = resize(col, newSize - col.getWidth());
-
-                    target -= newSize + remainder;
-                    totalLowerBound -= lowerBound;
-                    totalUpperBound -= upperBound;
-                }
-
-                isFirstRun = false;
-            } else {
-                double actualDelta = tableWidth - colWidth;
-                List<? extends TableColumnBase<?,?>> cols = visibleLeafColumns;
-                resizeColumns(cols, actualDelta);
-            }
-        }
-
-        // At this point we can be happy in the knowledge that we have internal
-        // consistency, i.e. table width == sum of the width of all visible
-        // leaf columns.
-
-        /*
-         * Column may be null if we just changed the resize policy, and we
-         * just wanted to enforce internal consistency, as mentioned above.
-         */
-        if (column == null) {
-            return false;
-        }
-
-        /*
-         * PHASE 2: Handling actual column resizing (by the user). Based on my own
-         *          implementation (based on the UX spec).
-         */
-
-        isShrinking = delta < 0;
-
-        // need to find the last leaf column of the given column - it is this
-        // column that we actually resize from. If this column is a leaf, then we
-        // use it.
-        TableColumnBase<?,?> leafColumn = column;
-        while (leafColumn.getColumns().size() > 0) {
-            leafColumn = leafColumn.getColumns().get(leafColumn.getColumns().size() - 1);
-        }
-
-        int colPos = visibleLeafColumns.indexOf(leafColumn);
-        int endColPos = visibleLeafColumns.size() - 1;
-
-        // we now can split the observableArrayList into two subobservableArrayLists, representing all
-        // columns that should grow, and all columns that should shrink
-        //    var growingCols = if (isShrinking)
-        //        then table.visibleLeafColumns[colPos+1..endColPos]
-        //        else table.visibleLeafColumns[0..colPos];
-        //    var shrinkingCols = if (isShrinking)
-        //        then table.visibleLeafColumns[0..colPos]
-        //        else table.visibleLeafColumns[colPos+1..endColPos];
-
-
-        double remainingDelta = delta;
-        while (endColPos > colPos && remainingDelta != 0) {
-            TableColumnBase<?,?> resizingCol = visibleLeafColumns.get(endColPos);
-            endColPos--;
-
-            // if the column width is fixed, break out and try the next column
-            if (! resizingCol.isResizable()) continue;
-
-            // for convenience we discern between the shrinking and growing columns
-            TableColumnBase<?,?> shrinkingCol = isShrinking ? leafColumn : resizingCol;
-            TableColumnBase<?,?> growingCol = !isShrinking ? leafColumn : resizingCol;
-
-            //        (shrinkingCol.width == shrinkingCol.minWidth) or (growingCol.width == growingCol.maxWidth)
-
-            if (growingCol.getWidth() > growingCol.getPrefWidth()) {
-                // growingCol is willing to be generous in this case - it goes
-                // off to find a potentially better candidate to grow
-                List<? extends TableColumnBase> seq = visibleLeafColumns.subList(colPos + 1, endColPos + 1);
-                for (int i = seq.size() - 1; i >= 0; i--) {
-                    TableColumnBase<?,?> c = seq.get(i);
-                    if (c.getWidth() < c.getPrefWidth()) {
-                        growingCol = c;
-                        break;
-                    }
-                }
-            }
-            //
-            //        if (shrinkingCol.width < shrinkingCol.prefWidth) {
-            //            for (c in reverse table.visibleLeafColumns[colPos+1..endColPos]) {
-            //                if (c.width > c.prefWidth) {
-            //                    shrinkingCol = c;
-            //                    break;
-            //                }
-            //            }
-            //        }
-
-
-
-            double sdiff = Math.min(Math.abs(remainingDelta), shrinkingCol.getWidth() - shrinkingCol.getMinWidth());
-
-//                System.out.println("\tshrinking " + shrinkingCol.getText() + " and growing " + growingCol.getText());
-//                System.out.println("\t\tMath.min(Math.abs("+remainingDelta+"), "+shrinkingCol.getWidth()+" - "+shrinkingCol.getMinWidth()+") = " + sdiff);
-
-            double delta1 = resize(shrinkingCol, -sdiff);
-            double delta2 = resize(growingCol, sdiff);
-            remainingDelta += isShrinking ? sdiff : -sdiff;
-        }
-        return remainingDelta == 0;
-    }
-
     // function used to actually perform the resizing of the given column,
     // whilst ensuring it stays within the min and max bounds set on the column.
     // Returns the remaining delta if it could not all be applied.
@@ -401,7 +218,7 @@ class TableUtil {
             return Collections.emptyList();
         }
 
-        List<TableColumnBase<?,?>> tablecolumns = new ArrayList<TableColumnBase<?,?>>();
+        List<TableColumnBase<?,?>> tablecolumns = new ArrayList<>();
         for (TableColumnBase c : column.getColumns()) {
             if (! c.isVisible()) continue;
             if (! c.isResizable()) continue;
@@ -465,5 +282,4 @@ class TableUtil {
         // see isClean above for why this is done
         return isClean ? 0.0 : remainingDelta;
     }
-
 }

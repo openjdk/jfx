@@ -66,14 +66,8 @@ void RenderVideo::willBeDestroyed()
 {
     visibleInViewportStateChanged();
 
-#if ENABLE(VIDEO_PRESENTATION_MODE)
-    auto player = videoElement().player();
-    if (player && videoElement().webkitPresentationMode() != HTMLVideoElement::VideoPresentationMode::PictureInPicture)
-        player->setPageIsVisible(false);
-#else
     if (auto player = videoElement().player())
-        player->setPageIsVisible(false);
-#endif
+        player->renderVideoWillBeDestroyed();
 
     RenderMedia::willBeDestroyed();
 }
@@ -123,7 +117,7 @@ bool RenderVideo::updateIntrinsicSize()
 
 LayoutSize RenderVideo::calculateIntrinsicSize()
 {
-    if (shouldApplySizeContainment(*this))
+    if (shouldApplySizeContainment())
         return LayoutSize();
 
     // Spec text from 4.8.6
@@ -230,14 +224,29 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
     if (clip)
         context.clip(contentRect);
 
-    if (displayingPoster)
+    if (displayingPoster) {
         paintIntoRect(paintInfo, rect);
-    else if (!videoElement().isFullscreen() || !videoElement().supportsAcceleratedRendering()) {
-        if (paintInfo.paintBehavior.contains(PaintBehavior::FlattenCompositingLayers))
-            context.paintFrameForMedia(*mediaPlayer, rect);
-        else
-            mediaPlayer->paint(context, rect);
+        return;
     }
+
+    if (!mediaPlayer)
+        return;
+
+    // Painting contents during fullscreen playback causes stutters on iOS when the device is rotated.
+    // https://bugs.webkit.org/show_bug.cgi?id=142097
+    if (videoElement().supportsAcceleratedRendering() && videoElement().isFullscreen())
+        return;
+
+    // Avoid unnecessary paints by skipping software painting if
+    // the renderer is accelerated, and the paint operation does
+    // not flatten compositing layers and is not snapshotting.
+    if (hasAcceleratedCompositing()
+        && videoElement().supportsAcceleratedRendering()
+        && !paintInfo.paintBehavior.contains(PaintBehavior::FlattenCompositingLayers)
+        && !paintInfo.paintBehavior.contains(PaintBehavior::Snapshotting))
+        return;
+
+    context.paintFrameForMedia(*mediaPlayer, rect);
 }
 
 void RenderVideo::layout()
@@ -272,18 +281,10 @@ void RenderVideo::updatePlayer()
     if (!mediaPlayer)
         return;
 
-    if (!videoElement().inActiveDocument()) {
-        mediaPlayer->setPageIsVisible(false);
-        return;
-    }
+    if (videoElement().inActiveDocument())
+        contentChanged(VideoChanged);
 
-    contentChanged(VideoChanged);
-
-    IntRect videoBounds = videoBox();
-    mediaPlayer->setSize(IntSize(videoBounds.width(), videoBounds.height()));
-    mediaPlayer->setPageIsVisible(!videoElement().elementIsHidden());
-    mediaPlayer->setVisibleInViewport(videoElement().isVisibleInViewport());
-    mediaPlayer->setShouldMaintainAspectRatio(style().objectFit() != ObjectFit::Fill);
+    videoElement().updateMediaPlayer(videoBox().size(), style().objectFit() != ObjectFit::Fill);
 }
 
 LayoutUnit RenderVideo::computeReplacedLogicalWidth(ShouldComputePreferred shouldComputePreferred) const

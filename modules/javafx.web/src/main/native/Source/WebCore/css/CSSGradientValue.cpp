@@ -30,6 +30,7 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
 #include "ColorInterpolation.h"
+#include "GeometryUtilities.h"
 #include "GradientImage.h"
 #include "NodeRenderStyle.h"
 #include "Pair.h"
@@ -815,9 +816,7 @@ static void endPointsFromAngle(float angleDeg, const FloatSize& size, FloatPoint
     if (type == CSSPrefixedLinearGradient)
         angleDeg = 90 - angleDeg;
 
-    angleDeg = fmodf(angleDeg, 360);
-    if (angleDeg < 0)
-        angleDeg += 360;
+    angleDeg = toPositiveAngle(angleDeg);
 
     if (!angleDeg) {
         firstPoint.set(0, size.height());
@@ -884,7 +883,7 @@ Ref<Gradient> CSSLinearGradientValue::createGradient(RenderElement& renderer, co
     if (auto* documentElement = renderer.document().documentElement())
         rootStyle = documentElement->renderStyle();
 
-    CSSToLengthConversionData conversionData(&renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view());
+    CSSToLengthConversionData conversionData(renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view(), renderer.generatingElement());
 
     FloatPoint firstPoint;
     FloatPoint secondPoint;
@@ -1142,7 +1141,7 @@ Ref<Gradient> CSSRadialGradientValue::createGradient(RenderElement& renderer, co
     if (auto* documentElement = renderer.document().documentElement())
         rootStyle = documentElement->renderStyle();
 
-    CSSToLengthConversionData conversionData(&renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view());
+    CSSToLengthConversionData conversionData(renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view(), renderer.generatingElement());
 
     FloatPoint firstPoint = computeEndPoint(firstX(), firstY(), conversionData, size);
     if (!firstX())
@@ -1335,7 +1334,7 @@ Ref<Gradient> CSSConicGradientValue::createGradient(RenderElement& renderer, con
     if (auto* documentElement = renderer.document().documentElement())
         rootStyle = documentElement->renderStyle();
 
-    CSSToLengthConversionData conversionData(&renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view());
+    CSSToLengthConversionData conversionData(renderer.style(), rootStyle, renderer.parentStyle(), &renderer.view(), renderer.generatingElement());
 
     FloatPoint centerPoint = computeEndPoint(firstX(), firstY(), conversionData, size);
     if (!firstX())

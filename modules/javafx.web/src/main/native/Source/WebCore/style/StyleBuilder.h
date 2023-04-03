@@ -39,11 +39,12 @@ public:
     ~Builder();
 
     void applyAllProperties();
+    void applyTopPriorityProperties();
     void applyHighPriorityProperties();
-    void applyLowPriorityProperties();
+    void applyNonHighPriorityProperties();
 
     void applyProperty(CSSPropertyID propertyID) { applyProperties(propertyID, propertyID); }
-    void applyCustomProperty(const String& name);
+    void applyCustomProperty(const AtomString& name);
 
     BuilderState& state() { return m_state; }
 
@@ -65,8 +66,8 @@ private:
     const PropertyCascade* ensureRollbackCascadeForRevert();
     const PropertyCascade* ensureRollbackCascadeForRevertLayer();
 
-    using RollbackCascadeKey = std::pair<unsigned, unsigned>;
-    RollbackCascadeKey makeRollbackCascadeKey(CascadeLevel, CascadeLayerPriority);
+    using RollbackCascadeKey = std::tuple<unsigned, unsigned, unsigned>;
+    RollbackCascadeKey makeRollbackCascadeKey(CascadeLevel, ScopeOrdinal = ScopeOrdinal::Element, CascadeLayerPriority = 0);
 
     const PropertyCascade m_cascade;
     // Rollback cascades are build on demand to resolve 'revert' and 'revert-layer' keywords.

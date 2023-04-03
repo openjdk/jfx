@@ -123,7 +123,7 @@ public:
     static void willRemoveDOMNode(Document&, Node&);
     static void didRemoveDOMNode(Document&, Node&);
     static void willDestroyDOMNode(Node&);
-    static void nodeLayoutContextChanged(Node&, RenderObject*);
+    static void didChangeRendererForDOMNode(Node&);
     static void willModifyDOMAttr(Document&, Element&, const AtomString& oldValue, const AtomString& newValue);
     static void didModifyDOMAttr(Document&, Element&, const AtomString& name, const AtomString& value);
     static void didRemoveDOMAttr(Document&, Element&, const AtomString& name);
@@ -194,11 +194,11 @@ public:
     static void flexibleBoxRendererBeganLayout(const RenderObject&);
     static void flexibleBoxRendererWrappedToNextLine(const RenderObject&, size_t lineStartItemIndex);
 
-    static void willSendRequest(Frame*, ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*);
+    static void willSendRequest(Frame*, ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*, ResourceLoader*);
     static void didLoadResourceFromMemoryCache(Page&, DocumentLoader*, CachedResource*);
     static void didReceiveResourceResponse(Frame&, ResourceLoaderIdentifier, DocumentLoader*, const ResourceResponse&, ResourceLoader*);
     static void didReceiveThreadableLoaderResponse(DocumentThreadableLoader&, ResourceLoaderIdentifier);
-    static void didReceiveData(Frame*, ResourceLoaderIdentifier, const SharedBuffer&, int encodedDataLength);
+    static void didReceiveData(Frame*, ResourceLoaderIdentifier, const SharedBuffer*, int encodedDataLength);
     static void didFinishLoading(Frame*, DocumentLoader*, ResourceLoaderIdentifier, const NetworkLoadMetrics&, ResourceLoader*);
     static void didFailLoading(Frame*, DocumentLoader*, ResourceLoaderIdentifier, const ResourceError&);
 
@@ -238,7 +238,7 @@ public:
     static void willDestroyCachedResource(CachedResource&);
 
     static bool willIntercept(const Frame*, const ResourceRequest&);
-    static bool shouldInterceptRequest(const Frame&, const ResourceRequest&);
+    static bool shouldInterceptRequest(const ResourceLoader&);
     static bool shouldInterceptResponse(const Frame&, const ResourceResponse&);
     static void interceptRequest(ResourceLoader&, Function<void(const ResourceRequest&)>&&);
     static void interceptResponse(const Frame&, const ResourceResponse&, ResourceLoaderIdentifier, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&&);
@@ -267,7 +267,7 @@ public:
     static void didRequestAnimationFrame(Document&, int callbackId);
     static void didCancelAnimationFrame(Document&, int callbackId);
     static void willFireAnimationFrame(Document&, int callbackId);
-    static void didFireAnimationFrame(Document&);
+    static void didFireAnimationFrame(Document&, int callbackId);
 
     static void willFireObserverCallback(ScriptExecutionContext&, const String& callbackType);
     static void didFireObserverCallback(ScriptExecutionContext&);
@@ -345,7 +345,7 @@ private:
     static void willRemoveDOMNodeImpl(InstrumentingAgents&, Node&);
     static void didRemoveDOMNodeImpl(InstrumentingAgents&, Node&);
     static void willDestroyDOMNodeImpl(InstrumentingAgents&, Node&);
-    static void nodeLayoutContextChangedImpl(InstrumentingAgents&, Node&, RenderObject*);
+    static void didChangeRendererForDOMNodeImpl(InstrumentingAgents&, Node&);
     static void willModifyDOMAttrImpl(InstrumentingAgents&, Element&, const AtomString& oldValue, const AtomString& newValue);
     static void didModifyDOMAttrImpl(InstrumentingAgents&, Element&, const AtomString& name, const AtomString& value);
     static void didRemoveDOMAttrImpl(InstrumentingAgents&, Element&, const AtomString& name);
@@ -389,8 +389,8 @@ private:
     static void willRemoveEventListenerImpl(InstrumentingAgents&, EventTarget&, const AtomString& eventType, EventListener&, bool capture);
     static bool isEventListenerDisabledImpl(InstrumentingAgents&, EventTarget&, const AtomString& eventType, EventListener&, bool capture);
     static void willDispatchEventImpl(InstrumentingAgents&, Document&, const Event&);
-    static void willHandleEventImpl(InstrumentingAgents&, Event&, const RegisteredEventListener&);
-    static void didHandleEventImpl(InstrumentingAgents&, Event&, const RegisteredEventListener&);
+    static void willHandleEventImpl(InstrumentingAgents&, ScriptExecutionContext&, Event&, const RegisteredEventListener&);
+    static void didHandleEventImpl(InstrumentingAgents&, ScriptExecutionContext&, Event&, const RegisteredEventListener&);
     static void didDispatchEventImpl(InstrumentingAgents&, const Event&);
     static void willDispatchEventOnWindowImpl(InstrumentingAgents&, const Event&, DOMWindow&);
     static void didDispatchEventOnWindowImpl(InstrumentingAgents&, const Event&);
@@ -416,13 +416,13 @@ private:
     static void flexibleBoxRendererBeganLayoutImpl(InstrumentingAgents&, const RenderObject&);
     static void flexibleBoxRendererWrappedToNextLineImpl(InstrumentingAgents&, const RenderObject&, size_t lineStartItemIndex);
 
-    static void willSendRequestImpl(InstrumentingAgents&, ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*);
+    static void willSendRequestImpl(InstrumentingAgents&, ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse, const CachedResource*, ResourceLoader*);
     static void willSendRequestOfTypeImpl(InstrumentingAgents&, ResourceLoaderIdentifier, DocumentLoader*, ResourceRequest&, LoadType);
     static void markResourceAsCachedImpl(InstrumentingAgents&, ResourceLoaderIdentifier);
     static void didLoadResourceFromMemoryCacheImpl(InstrumentingAgents&, DocumentLoader*, CachedResource*);
     static void didReceiveResourceResponseImpl(InstrumentingAgents&, ResourceLoaderIdentifier, DocumentLoader*, const ResourceResponse&, ResourceLoader*);
     static void didReceiveThreadableLoaderResponseImpl(InstrumentingAgents&, DocumentThreadableLoader&, ResourceLoaderIdentifier);
-    static void didReceiveDataImpl(InstrumentingAgents&, ResourceLoaderIdentifier, const SharedBuffer&, int encodedDataLength);
+    static void didReceiveDataImpl(InstrumentingAgents&, ResourceLoaderIdentifier, const SharedBuffer*, int encodedDataLength);
     static void didFinishLoadingImpl(InstrumentingAgents&, ResourceLoaderIdentifier, DocumentLoader*, const NetworkLoadMetrics&, ResourceLoader*);
     static void didFailLoadingImpl(InstrumentingAgents&, ResourceLoaderIdentifier, DocumentLoader*, const ResourceError&);
     static void willLoadXHRSynchronouslyImpl(InstrumentingAgents&);
@@ -446,7 +446,7 @@ private:
     static void willDestroyCachedResourceImpl(CachedResource&);
 
     static bool willInterceptImpl(InstrumentingAgents&, const ResourceRequest&);
-    static bool shouldInterceptRequestImpl(InstrumentingAgents&, const ResourceRequest&);
+    static bool shouldInterceptRequestImpl(InstrumentingAgents&, const ResourceLoader&);
     static bool shouldInterceptResponseImpl(InstrumentingAgents&, const ResourceResponse&);
     static void interceptRequestImpl(InstrumentingAgents&, ResourceLoader&, Function<void(const ResourceRequest&)>&&);
     static void interceptResponseImpl(InstrumentingAgents&, const ResourceResponse&, ResourceLoaderIdentifier, CompletionHandler<void(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>)>&&);
@@ -470,7 +470,7 @@ private:
     static void didRequestAnimationFrameImpl(InstrumentingAgents&, int callbackId, Document&);
     static void didCancelAnimationFrameImpl(InstrumentingAgents&, int callbackId, Document&);
     static void willFireAnimationFrameImpl(InstrumentingAgents&, int callbackId, Document&);
-    static void didFireAnimationFrameImpl(InstrumentingAgents&);
+    static void didFireAnimationFrameImpl(InstrumentingAgents&, int callbackId);
 
     static void willFireObserverCallbackImpl(InstrumentingAgents&, const String&, ScriptExecutionContext&);
     static void didFireObserverCallbackImpl(InstrumentingAgents&);
@@ -598,11 +598,11 @@ inline void InspectorInstrumentation::willDestroyDOMNode(Node& node)
         willDestroyDOMNodeImpl(*agents, node);
 }
 
-inline void InspectorInstrumentation::nodeLayoutContextChanged(Node& node, RenderObject* newRenderer)
+inline void InspectorInstrumentation::didChangeRendererForDOMNode(Node& node)
 {
-    FAST_RETURN_IF_NO_FRONTENDS(void());
+    ASSERT(InspectorInstrumentationPublic::hasFrontends());
     if (auto* agents = instrumentingAgents(node.document()))
-        nodeLayoutContextChangedImpl(*agents, node, newRenderer);
+        didChangeRendererForDOMNodeImpl(*agents, node);
 }
 
 inline void InspectorInstrumentation::willModifyDOMAttr(Document& document, Element& element, const AtomString& oldValue, const AtomString& newValue)
@@ -892,14 +892,14 @@ inline void InspectorInstrumentation::willHandleEvent(ScriptExecutionContext& co
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(context))
-        return willHandleEventImpl(*agents, event, listener);
+        return willHandleEventImpl(*agents, context, event, listener);
 }
 
 inline void InspectorInstrumentation::didHandleEvent(ScriptExecutionContext& context, Event& event, const RegisteredEventListener& listener)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(context))
-        return didHandleEventImpl(*agents, event, listener);
+        return didHandleEventImpl(*agents, context, event, listener);
 }
 
 inline void InspectorInstrumentation::willDispatchEventOnWindow(Frame* frame, const Event& event, DOMWindow& window)
@@ -1060,17 +1060,17 @@ inline void InspectorInstrumentation::flexibleBoxRendererWrappedToNextLine(const
         flexibleBoxRendererWrappedToNextLineImpl(*agents, renderer, lineStartItemIndex);
 }
 
-inline void InspectorInstrumentation::willSendRequest(Frame* frame, ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, const ResourceResponse& redirectResponse, const CachedResource* cachedResource)
+inline void InspectorInstrumentation::willSendRequest(Frame* frame, ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, const ResourceResponse& redirectResponse, const CachedResource* cachedResource, ResourceLoader* resourceLoader)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(frame))
-        willSendRequestImpl(*agents, identifier, loader, request, redirectResponse, cachedResource);
+        willSendRequestImpl(*agents, identifier, loader, request, redirectResponse, cachedResource, resourceLoader);
 }
 
 inline void InspectorInstrumentation::willSendRequest(WorkerOrWorkletGlobalScope& globalScope, ResourceLoaderIdentifier identifier, ResourceRequest& request)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    willSendRequestImpl(instrumentingAgents(globalScope), identifier, nullptr, request, ResourceResponse { }, nullptr);
+    willSendRequestImpl(instrumentingAgents(globalScope), identifier, nullptr, request, ResourceResponse { }, nullptr, nullptr);
 }
 
 inline void InspectorInstrumentation::willSendRequestOfType(Frame* frame, ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, LoadType loadType)
@@ -1104,7 +1104,7 @@ inline void InspectorInstrumentation::didReceiveThreadableLoaderResponse(Documen
         didReceiveThreadableLoaderResponseImpl(*agents, documentThreadableLoader, identifier);
 }
 
-inline void InspectorInstrumentation::didReceiveData(Frame* frame, ResourceLoaderIdentifier identifier, const SharedBuffer& buffer, int encodedDataLength)
+inline void InspectorInstrumentation::didReceiveData(Frame* frame, ResourceLoaderIdentifier identifier, const SharedBuffer* buffer, int encodedDataLength)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(frame))
@@ -1114,7 +1114,7 @@ inline void InspectorInstrumentation::didReceiveData(Frame* frame, ResourceLoade
 inline void InspectorInstrumentation::didReceiveData(WorkerOrWorkletGlobalScope& globalScope, ResourceLoaderIdentifier identifier, const SharedBuffer& buffer)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    didReceiveDataImpl(instrumentingAgents(globalScope), identifier, buffer, buffer.size());
+    didReceiveDataImpl(instrumentingAgents(globalScope), identifier, &buffer, buffer.size());
 }
 
 inline void InspectorInstrumentation::didFinishLoading(Frame* frame, DocumentLoader* loader, ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& networkLoadMetrics, ResourceLoader* resourceLoader)
@@ -1288,11 +1288,11 @@ inline bool InspectorInstrumentation::willIntercept(const Frame* frame, const Re
     return false;
 }
 
-inline bool InspectorInstrumentation::shouldInterceptRequest(const Frame& frame, const ResourceRequest& request)
+inline bool InspectorInstrumentation::shouldInterceptRequest(const ResourceLoader& loader)
 {
     ASSERT(InspectorInstrumentationPublic::hasFrontends());
-    if (auto* agents = instrumentingAgents(frame))
-        return shouldInterceptRequestImpl(*agents, request);
+    if (auto* agents = instrumentingAgents(loader.frame()))
+        return shouldInterceptRequestImpl(*agents, loader);
     return false;
 }
 
@@ -1306,7 +1306,7 @@ inline bool InspectorInstrumentation::shouldInterceptResponse(const Frame& frame
 
 inline void InspectorInstrumentation::interceptRequest(ResourceLoader& loader, Function<void(const ResourceRequest&)>&& handler)
 {
-    ASSERT(InspectorInstrumentation::shouldInterceptRequest(*loader.frame(), loader.request()));
+    ASSERT(InspectorInstrumentation::shouldInterceptRequest(loader));
     if (auto* agents = instrumentingAgents(loader.frame()))
         interceptRequestImpl(*agents, loader, WTFMove(handler));
 }
@@ -1661,11 +1661,11 @@ inline void InspectorInstrumentation::willFireAnimationFrame(Document& document,
         willFireAnimationFrameImpl(*agents, callbackId, document);
 }
 
-inline void InspectorInstrumentation::didFireAnimationFrame(Document& document)
+inline void InspectorInstrumentation::didFireAnimationFrame(Document& document, int callbackId)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(document))
-        didFireAnimationFrameImpl(*agents);
+        didFireAnimationFrameImpl(*agents, callbackId);
 }
 
 inline void InspectorInstrumentation::willFireObserverCallback(ScriptExecutionContext& context, const String& callbackType)

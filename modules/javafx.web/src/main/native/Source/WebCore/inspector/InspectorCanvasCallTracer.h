@@ -69,6 +69,7 @@ class WebGLTransformFeedback;
 class WebGLUniformLocation;
 class WebGLVertexArrayObject;
 struct DOMMatrix2DInit;
+struct DOMPointInit;
 struct ImageDataSettings;
 enum class RecordingSwizzleType : int;
 enum class CanvasDirection;
@@ -121,7 +122,6 @@ enum ImageSmoothingQuality;
     macro(WebGLSync*) \
     macro(WebGLTexture*) \
     macro(WebGLUniformLocation*) \
-    macro(WebGLVertexArrayObject*) \
 // end of FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_WEBGL_ARGUMENT
 #else
 #define FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_WEBGL_ARGUMENT(macro)
@@ -131,6 +131,7 @@ enum ImageSmoothingQuality;
 #define FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_WEBGL2_ARGUMENT(macro) \
     macro(WebGLTransformFeedback*) \
     macro(WebGL2RenderingContext::Uint32List::VariantType&) \
+    macro(WebGLVertexArrayObject*) \
 // end of FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_WEBGL2_ARGUMENT
 #else
 #define FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_WEBGL2_ARGUMENT(macro)
@@ -142,6 +143,7 @@ enum ImageSmoothingQuality;
     macro(CanvasImageSource&) \
     macro(CanvasLineCap) \
     macro(CanvasLineJoin) \
+    macro(CanvasPath::RadiusVariant&) \
     macro(CanvasRenderingContext2DBase::StyleVariant&) \
     macro(CanvasTextAlign) \
     macro(CanvasTextBaseline) \
@@ -172,6 +174,7 @@ enum ImageSmoothingQuality;
     macro(Vector<double>&) \
     macro(Vector<uint32_t>&) \
     macro(Vector<int32_t>&) \
+    macro(Vector<CanvasPath::RadiusVariant>&) \
     macro(double) \
     macro(float) \
     macro(uint64_t) \

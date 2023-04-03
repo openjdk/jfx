@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,7 +212,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<Menu> parentMenuPropertyImpl() {
         if (parentMenu == null) {
-            parentMenu = new ReadOnlyObjectWrapper<Menu>(this, "parentMenu");
+            parentMenu = new ReadOnlyObjectWrapper<>(this, "parentMenu");
         }
         return parentMenu;
     }
@@ -238,7 +238,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<ContextMenu> parentPopupPropertyImpl() {
         if (parentPopup == null) {
-            parentPopup = new ReadOnlyObjectWrapper<ContextMenu>(this, "parentPopup");
+            parentPopup = new ReadOnlyObjectWrapper<>(this, "parentPopup");
         }
         return parentPopup;
     }
@@ -284,7 +284,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new SimpleObjectProperty<Node>(this, "graphic");
+            graphic = new SimpleObjectProperty<>(this, "graphic");
         }
         return graphic;
     }
@@ -309,7 +309,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() {
         if (onAction == null) {
-            onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+            onAction = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(ActionEvent.ACTION, get());
                 }
@@ -332,7 +332,7 @@ public class MenuItem implements EventTarget, Styleable {
      * <p>Called when a accelerator for the Menuitem is invoked</p>
      * @since JavaFX 2.2
      */
-    public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>
+    public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<>
             (Event.ANY, "MENU_VALIDATION_EVENT");
 
     /**
@@ -353,7 +353,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final ObjectProperty<EventHandler<Event>> onMenuValidationProperty() {
         if (onMenuValidation == null) {
-            onMenuValidation = new ObjectPropertyBase<EventHandler<Event>>() {
+            onMenuValidation = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(MENU_VALIDATION_EVENT, get());
                 }
@@ -411,7 +411,7 @@ public class MenuItem implements EventTarget, Styleable {
     }
     public final ObjectProperty<KeyCombination> acceleratorProperty() {
         if (accelerator == null) {
-            accelerator = new SimpleObjectProperty<KeyCombination>(this, "accelerator");
+            accelerator = new SimpleObjectProperty<>(this, "accelerator");
         }
         return accelerator;
     }
@@ -531,7 +531,7 @@ public class MenuItem implements EventTarget, Styleable {
      */
     public ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }

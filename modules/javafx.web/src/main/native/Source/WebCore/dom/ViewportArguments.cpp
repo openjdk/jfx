@@ -30,6 +30,7 @@
 
 #include "Document.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "IntSize.h"
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
@@ -320,10 +321,10 @@ static float findSizeValue(StringView key, StringView value, const InternalViewp
     if (valueWasExplicit)
         *valueWasExplicit = true;
 
-    if (equalLettersIgnoringASCIICase(value, "device-width"))
+    if (equalLettersIgnoringASCIICase(value, "device-width"_s))
         return ViewportArguments::ValueDeviceWidth;
 
-    if (equalLettersIgnoringASCIICase(value, "device-height"))
+    if (equalLettersIgnoringASCIICase(value, "device-height"_s))
         return ViewportArguments::ValueDeviceHeight;
 
     float sizeValue = numericPrefix(key, value, errorHandler);
@@ -345,13 +346,13 @@ static float findScaleValue(StringView key, StringView value, const InternalView
     // 4) device-width and device-height are translated to 10.0.
     // 5) no and unknown values are translated to 0.0
 
-    if (equalLettersIgnoringASCIICase(value, "yes"))
+    if (equalLettersIgnoringASCIICase(value, "yes"_s))
         return 1;
-    if (equalLettersIgnoringASCIICase(value, "no"))
+    if (equalLettersIgnoringASCIICase(value, "no"_s))
         return 0;
-    if (equalLettersIgnoringASCIICase(value, "device-width"))
+    if (equalLettersIgnoringASCIICase(value, "device-width"_s))
         return 10;
-    if (equalLettersIgnoringASCIICase(value, "device-height"))
+    if (equalLettersIgnoringASCIICase(value, "device-height"_s))
         return 10;
 
     float numericValue = numericPrefix(key, value, errorHandler);
@@ -371,24 +372,24 @@ static bool findBooleanValue(StringView key, StringView value, const InternalVie
     // Numbers >= 1, numbers <= -1, device-width and device-height are mapped to yes.
     // Numbers in the range <-1, 1>, and unknown values, are mapped to no.
 
-    if (equalLettersIgnoringASCIICase(value, "yes"))
+    if (equalLettersIgnoringASCIICase(value, "yes"_s))
         return true;
-    if (equalLettersIgnoringASCIICase(value, "no"))
+    if (equalLettersIgnoringASCIICase(value, "no"_s))
         return false;
-    if (equalLettersIgnoringASCIICase(value, "device-width"))
+    if (equalLettersIgnoringASCIICase(value, "device-width"_s))
         return true;
-    if (equalLettersIgnoringASCIICase(value, "device-height"))
+    if (equalLettersIgnoringASCIICase(value, "device-height"_s))
         return true;
     return std::abs(numericPrefix(key, value, errorHandler)) >= 1;
 }
 
 static ViewportFit parseViewportFitValue(StringView key, StringView value, const InternalViewportErrorHandler& errorHandler)
 {
-    if (equalLettersIgnoringASCIICase(value, "auto"))
+    if (equalLettersIgnoringASCIICase(value, "auto"_s))
         return ViewportFit::Auto;
-    if (equalLettersIgnoringASCIICase(value, "contain"))
+    if (equalLettersIgnoringASCIICase(value, "contain"_s))
         return ViewportFit::Contain;
-    if (equalLettersIgnoringASCIICase(value, "cover"))
+    if (equalLettersIgnoringASCIICase(value, "cover"_s))
         return ViewportFit::Cover;
 
     errorHandler(UnrecognizedViewportArgumentValueError, value, key);
@@ -396,13 +397,13 @@ static ViewportFit parseViewportFitValue(StringView key, StringView value, const
     return ViewportFit::Auto;
 }
 
-static const char* viewportErrorMessageTemplate(ViewportErrorCode errorCode)
+static ASCIILiteral viewportErrorMessageTemplate(ViewportErrorCode errorCode)
 {
-    static const char* const errors[] = {
-        "Viewport argument key \"%replacement1\" not recognized and ignored.",
-        "Viewport argument value \"%replacement1\" for key \"%replacement2\" is invalid, and has been ignored.",
-        "Viewport argument value \"%replacement1\" for key \"%replacement2\" was truncated to its numeric prefix.",
-        "Viewport maximum-scale cannot be larger than 10.0. The maximum-scale will be set to 10.0."
+    static constexpr ASCIILiteral errors[] = {
+        "Viewport argument key \"%replacement1\" not recognized and ignored."_s,
+        "Viewport argument value \"%replacement1\" for key \"%replacement2\" is invalid, and has been ignored."_s,
+        "Viewport argument value \"%replacement1\" for key \"%replacement2\" was truncated to its numeric prefix."_s,
+        "Viewport maximum-scale cannot be larger than 10.0. The maximum-scale will be set to 10.0."_s
     };
 
     return errors[errorCode];
@@ -427,13 +428,13 @@ static String viewportErrorMessage(ViewportErrorCode errorCode, StringView repla
 {
     String message = viewportErrorMessageTemplate(errorCode);
     if (!replacement1.isNull())
-        message.replace("%replacement1", replacement1.toStringWithoutCopying());
+        message = makeStringByReplacingAll(message, "%replacement1"_s, replacement1);
     // FIXME: This will do the wrong thing if replacement1 contains the substring "%replacement2".
     if (!replacement2.isNull())
-        message.replace("%replacement2", replacement2.toStringWithoutCopying());
+        message = makeStringByReplacingAll(message, "%replacement2"_s, replacement2);
 
     if ((errorCode == UnrecognizedViewportArgumentValueError || errorCode == TruncatedViewportArgumentValueError) && replacement1.contains(';'))
-        message.append(" Note that ';' is not a separator in viewport values. The list should be comma-separated.");
+        message = makeString(message, " Note that ';' is not a separator in viewport values. The list should be comma-separated."_s);
 
     return message;
 }
@@ -448,33 +449,33 @@ static void reportViewportWarning(Document& document, ViewportErrorCode errorCod
     document.addConsoleMessage(MessageSource::Rendering, viewportErrorMessageLevel(errorCode), message);
 }
 
-void setViewportFeature(ViewportArguments& arguments, StringView key, StringView value, bool viewportFitEnabled, const ViewportErrorHandler& errorHandler)
+void setViewportFeature(ViewportArguments& arguments, StringView key, StringView value, const ViewportErrorHandler& errorHandler)
 {
     InternalViewportErrorHandler internalErrorHandler = [&errorHandler] (ViewportErrorCode errorCode, StringView replacement1, StringView replacement2) {
         errorHandler(errorCode, viewportErrorMessage(errorCode, replacement1, replacement2));
     };
 
-    if (equalLettersIgnoringASCIICase(key, "width"))
+    if (equalLettersIgnoringASCIICase(key, "width"_s))
         arguments.width = findSizeValue(key, value, internalErrorHandler, &arguments.widthWasExplicit);
-    else if (equalLettersIgnoringASCIICase(key, "height"))
+    else if (equalLettersIgnoringASCIICase(key, "height"_s))
         arguments.height = findSizeValue(key, value, internalErrorHandler);
-    else if (equalLettersIgnoringASCIICase(key, "initial-scale"))
+    else if (equalLettersIgnoringASCIICase(key, "initial-scale"_s))
         arguments.zoom = findScaleValue(key, value, internalErrorHandler);
-    else if (equalLettersIgnoringASCIICase(key, "minimum-scale"))
+    else if (equalLettersIgnoringASCIICase(key, "minimum-scale"_s))
         arguments.minZoom = findScaleValue(key, value, internalErrorHandler);
-    else if (equalLettersIgnoringASCIICase(key, "maximum-scale"))
+    else if (equalLettersIgnoringASCIICase(key, "maximum-scale"_s))
         arguments.maxZoom = findScaleValue(key, value, internalErrorHandler);
-    else if (equalLettersIgnoringASCIICase(key, "user-scalable"))
+    else if (equalLettersIgnoringASCIICase(key, "user-scalable"_s))
         arguments.userZoom = findBooleanValue(key, value, internalErrorHandler);
 #if PLATFORM(IOS_FAMILY)
-    else if (equalLettersIgnoringASCIICase(key, "minimal-ui")) {
+    else if (equalLettersIgnoringASCIICase(key, "minimal-ui"_s)) {
         // FIXME: Ignore silently for now. This code should eventually be removed
         // so we start giving the warning in the web inspector as for other unimplemented keys.
     }
 #endif
-    else if (equalLettersIgnoringASCIICase(key, "shrink-to-fit"))
+    else if (equalLettersIgnoringASCIICase(key, "shrink-to-fit"_s))
         arguments.shrinkToFit = findBooleanValue(key, value, internalErrorHandler);
-    else if (equalLettersIgnoringASCIICase(key, "viewport-fit") && viewportFitEnabled)
+    else if (equalLettersIgnoringASCIICase(key, "viewport-fit"_s))
         arguments.viewportFit = parseViewportFitValue(key, value, internalErrorHandler);
     else
         internalErrorHandler(UnrecognizedViewportArgumentKeyError, key, { });
@@ -482,7 +483,7 @@ void setViewportFeature(ViewportArguments& arguments, StringView key, StringView
 
 void setViewportFeature(ViewportArguments& arguments, Document& document, StringView key, StringView value)
 {
-    setViewportFeature(arguments, key, value, document.settings().viewportFitEnabled(), [&](ViewportErrorCode errorCode, const String& message) {
+    setViewportFeature(arguments, key, value, [&](ViewportErrorCode errorCode, const String& message) {
         reportViewportWarning(document, errorCode, message);
     });
 }

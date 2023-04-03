@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,7 +83,7 @@ public class ImageCursor extends Cursor {
 
     private ObjectPropertyImpl<Image> imagePropertyImpl() {
         if (image == null) {
-            image = new ObjectPropertyImpl<Image>("image");
+            image = new ObjectPropertyImpl<>("image");
         }
 
         return image;
@@ -314,7 +314,7 @@ public class ImageCursor extends Cursor {
             currentCursorFrame = firstCursorFrame;
         } else {
             if (otherCursorFrames == null) {
-                otherCursorFrames = new HashMap<Object, ImageCursorFrame>();
+                otherCursorFrames = new HashMap<>();
             }
 
             currentCursorFrame = otherCursorFrames.get(cursorPlatformImage);

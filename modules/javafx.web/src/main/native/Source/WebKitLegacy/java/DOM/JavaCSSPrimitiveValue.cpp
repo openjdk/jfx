@@ -79,7 +79,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_setStringVa
 {
     WebCore::JSMainThreadNullState state;
     raiseOnDOMError(env, IMPL->setStringValue(stringType
-            , String(env, stringValue)));
+            , AtomString{String(env, stringValue)}));
 }
 
 

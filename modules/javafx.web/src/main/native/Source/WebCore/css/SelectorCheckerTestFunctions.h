@@ -169,7 +169,7 @@ ALWAYS_INLINE bool containslanguageSubtagMatchingRange(StringView language, Stri
 {
     unsigned languageSubtagsStartIndex = position;
     unsigned languageSubtagsEndIndex = languageLength;
-    bool isAsteriskRange = range == "*";
+    bool isAsteriskRange = range == "*"_s;
     do {
         if (languageSubtagsStartIndex > 0)
             languageSubtagsStartIndex += 1;
@@ -216,7 +216,7 @@ ALWAYS_INLINE bool matchesLangPseudoClass(const Element& element, const Vector<A
         if (range.isEmpty())
             continue;
 
-        if (range == "*")
+        if (range == "*"_s)
             return true;
 
         StringView rangeStringView = range.string();
@@ -245,6 +245,25 @@ ALWAYS_INLINE bool matchesLangPseudoClass(const Element& element, const Vector<A
         if (matchedRange)
             return true;
     }
+    return false;
+}
+
+ALWAYS_INLINE bool matchesDirPseudoClass(const Element& element, const AtomString& argument)
+{
+    if (!is<HTMLElement>(element))
+        return false;
+
+    if (!element.document().settings().dirPseudoEnabled())
+        return false;
+
+    // FIXME: Add support for non-HTML elements.
+    switch (downcast<HTMLElement>(element).computeDirectionality()) {
+    case TextDirection::LTR:
+        return equalIgnoringASCIICase(argument, "ltr"_s);
+    case TextDirection::RTL:
+        return equalIgnoringASCIICase(argument, "rtl"_s);
+    }
+
     return false;
 }
 
@@ -531,7 +550,7 @@ ALWAYS_INLINE bool matchesFocusWithinPseudoClass(const Element& element)
     return element.hasFocusWithin() && isFrameFocused(element);
 }
 
-ALWAYS_INLINE bool matchesModalDialogPseudoClass(const Element& element)
+ALWAYS_INLINE bool matchesModalPseudoClass(const Element& element)
 {
     if (is<HTMLDialogElement>(element))
         return downcast<HTMLDialogElement>(element).isModal();

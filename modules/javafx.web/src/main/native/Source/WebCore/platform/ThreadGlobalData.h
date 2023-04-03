@@ -102,9 +102,12 @@ public:
         return *m_fontCache;
     }
 
+    FontCache* fontCacheIfExists() { return m_fontCache.get(); }
     FontCache* fontCacheIfNotDestroyed() { return m_destroyed ? nullptr : &fontCache(); }
 
 private:
+    bool m_destroyed { false };
+
     WEBCORE_EXPORT void initializeCachedResourceRequestInitiators();
     WEBCORE_EXPORT void initializeEventNames();
     WEBCORE_EXPORT void initializeQualifiedNameCache();
@@ -124,7 +127,6 @@ private:
 #endif
 
     bool m_isInRemoveAllEventListeners { false };
-    bool m_destroyed { false };
 
     WEBCORE_EXPORT friend ThreadGlobalData& threadGlobalData();
 };

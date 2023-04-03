@@ -806,6 +806,8 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ValueBitRShift:
         // FIXME: this use of single-argument isBinaryUseKind would prevent us from specializing (for example) for a HeapBigInt left-operand and a BigInt32 right-operand.
         if (node->isBinaryUseKind(AnyBigIntUse) || node->isBinaryUseKind(BigInt32Use) || node->isBinaryUseKind(HeapBigIntUse)) {
+            read(World);
+            write(SideState);
             def(PureValue(node));
             return;
         }
@@ -1338,12 +1340,13 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case GetIndexedPropertyStorage:
-        if (node->arrayMode().type() == Array::String) {
-            def(PureValue(node, node->arrayMode().asWord()));
-            return;
-        }
+        ASSERT(node->arrayMode().type() != Array::String);
         read(MiscFields);
         def(HeapLocation(IndexedPropertyStorageLoc, MiscFields, node->child1()), LazyNode(node));
+        return;
+
+    case ResolveRope:
+        def(PureValue(node));
         return;
 
     case GetTypedArrayByteOffset:
@@ -1974,6 +1977,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case WeakSetAdd: {
         Edge& mapEdge = node->child1();
         Edge& keyEdge = node->child2();
+        if (keyEdge.useKind() != ObjectUse) {
+            read(World);
+            write(SideState);
+        }
         write(JSWeakSetFields);
         def(HeapLocation(WeakMapGetLoc, JSWeakSetFields, mapEdge, keyEdge), LazyNode(keyEdge.node()));
         return;
@@ -1983,6 +1990,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         Edge& mapEdge = graph.varArgChild(node, 0);
         Edge& keyEdge = graph.varArgChild(node, 1);
         Edge& valueEdge = graph.varArgChild(node, 2);
+        if (keyEdge.useKind() != ObjectUse) {
+            read(World);
+            write(SideState);
+        }
         write(JSWeakMapFields);
         def(HeapLocation(WeakMapGetLoc, JSWeakMapFields, mapEdge, keyEdge), LazyNode(valueEdge.node()));
         return;

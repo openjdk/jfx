@@ -26,6 +26,7 @@
 
 #include "ContainerQuery.h"
 #include "SelectorMatchingState.h"
+#include "StyleScopeOrdinal.h"
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -38,21 +39,24 @@ enum class EvaluationResult : uint8_t { False, True, Unknown };
 
 class ContainerQueryEvaluator {
 public:
-    ContainerQueryEvaluator(const Element&, PseudoId, SelectorMatchingState*);
+    enum class SelectionMode : bool { Element, PseudoElement };
+    ContainerQueryEvaluator(const Element&, SelectionMode, ScopeOrdinal, SelectorMatchingState*);
 
-    bool evaluate(const FilteredContainerQuery&) const;
+    bool evaluate(const CQ::ContainerQuery&) const;
+
+    static const Element* selectContainer(OptionSet<CQ::Axis>, const String& name, const Element&, SelectionMode = SelectionMode::Element, ScopeOrdinal = ScopeOrdinal::Element, const CachedQueryContainers* = nullptr);
 
 private:
-    struct ResolvedContainer;
-    std::optional<ResolvedContainer> resolveContainer(const FilteredContainerQuery&) const;
+    struct SelectedContainer;
+    std::optional<SelectedContainer> selectContainer(const CQ::ContainerQuery&) const;
 
-    EvaluationResult evaluateQuery(const CQ::ContainerQuery&, const ResolvedContainer&) const;
-    EvaluationResult evaluateQuery(const CQ::SizeQuery&, const ResolvedContainer&) const;
-    template<typename ConditionType> EvaluationResult evaluateCondition(const ConditionType&, const ResolvedContainer&) const;
-    EvaluationResult evaluateSizeFeature(const CQ::SizeFeature&, const ResolvedContainer&) const;
+    EvaluationResult evaluateQueryInParens(const CQ::QueryInParens&, const SelectedContainer&) const;
+    template<typename ConditionType> EvaluationResult evaluateCondition(const ConditionType&, const SelectedContainer&) const;
+    EvaluationResult evaluateSizeFeature(const CQ::SizeFeature&, const SelectedContainer&) const;
 
     const Ref<const Element> m_element;
-    const PseudoId m_pseudoId;
+    const SelectionMode m_selectionMode;
+    const ScopeOrdinal m_scopeOrdinal;
     SelectorMatchingState* m_selectorMatchingState;
 };
 

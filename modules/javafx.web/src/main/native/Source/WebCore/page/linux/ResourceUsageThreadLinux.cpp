@@ -201,7 +201,7 @@ static void collectCPUUsage(float period)
 
     struct dirent* dp;
     while ((dp = readdir(dir))) {
-        auto id = parseInteger<pid_t>(dp->d_name);
+        auto id = parseInteger<pid_t>(StringView::fromLatin1(dp->d_name));
         if (!id)
             continue;
 
@@ -268,7 +268,7 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
             return true;
 
         // The bmalloc scavenger thread is below WTF. Detect it by its name.
-        if (name == "BMScavenger")
+        if (name == "BMScavenger"_s)
             return true;
 
         return false;
@@ -312,6 +312,10 @@ void ResourceUsageThread::platformCollectMemoryData(JSC::VM* vm, ResourceUsageDa
     data.categories[MemoryCategory::GCHeap].dirtySize = currentGCHeapCapacity;
     data.categories[MemoryCategory::GCOwned].dirtySize = currentGCOwnedExtra - currentGCOwnedExternal;
     data.categories[MemoryCategory::GCOwned].externalSize = currentGCOwnedExternal;
+    size_t categoriesTotalSize = 0;
+    for (auto& category : data.categories)
+        categoriesTotalSize += category.totalSize();
+    data.categories[MemoryCategory::Other].dirtySize = data.totalDirtySize - categoriesTotalSize;
 
     data.totalExternalSize = currentGCOwnedExternal;
 

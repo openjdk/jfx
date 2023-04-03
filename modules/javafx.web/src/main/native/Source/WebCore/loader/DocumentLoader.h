@@ -55,6 +55,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RobinHoodHashMap.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(APPLICATION_MANIFEST)
@@ -159,7 +161,7 @@ class DocumentLoader
     : public RefCounted<DocumentLoader>
     , public FrameDestructionObserver
     , public ContentSecurityPolicyClient
-#if ENABLE(CONTENT_FILTERING) && !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#if ENABLE(CONTENT_FILTERING)
     , public ContentFilterClient
 #endif
     , private CachedRawResourceClient {
@@ -203,7 +205,7 @@ public:
     const String& responseMIMEType() const;
 #if PLATFORM(IOS_FAMILY)
     // FIXME: This method seems to violate the encapsulation of this class.
-    WEBCORE_EXPORT void setResponseMIMEType(const String&);
+    WEBCORE_EXPORT void setResponseMIMEType(const AtomString&);
 #endif
     const String& currentContentType() const;
     void replaceRequestURLForSameDocumentNavigation(const URL&);
@@ -402,13 +404,15 @@ public:
     ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicyToPropagate() const;
 
 #if ENABLE(CONTENT_FILTERING)
-#if !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    void setBlockedPageURL(const URL& blockedPageURL) { m_blockedPageURL = blockedPageURL; }
+    void setSubstituteDataFromContentFilter(SubstituteData&& substituteDataFromContentFilter) { m_substituteDataFromContentFilter = WTFMove(substituteDataFromContentFilter); }
+#endif // ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     ContentFilter* contentFilter() const { return m_contentFilter.get(); }
     void ref() const final { RefCounted<DocumentLoader>::ref(); }
     void deref() const final { RefCounted<DocumentLoader>::deref(); }
-#endif
+
     WEBCORE_EXPORT ResourceError handleContentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript);
-    WEBCORE_EXPORT void handleContentFilterProvisionalLoadFailure(const URL& blockedPageURL, const SubstituteData&);
 #endif
 
     void startIconLoading();
@@ -425,11 +429,8 @@ public:
     WEBCORE_EXPORT void setCustomHeaderFields(Vector<CustomHeaderFields>&&);
     const Vector<CustomHeaderFields>& customHeaderFields() const { return m_customHeaderFields; }
 
-    void setAllowsWebArchiveForMainFrame(bool allowsWebArchiveForMainFrame) { m_allowsWebArchiveForMainFrame = allowsWebArchiveForMainFrame; }
-    bool allowsWebArchiveForMainFrame() const { return m_allowsWebArchiveForMainFrame; }
-
-    void setAllowsDataURLsForMainFrame(bool allowsDataURLsForMainFrame) { m_allowsDataURLsForMainFrame = allowsDataURLsForMainFrame; }
-    bool allowsDataURLsForMainFrame() const { return m_allowsDataURLsForMainFrame; }
+    bool allowsWebArchiveForMainFrame() const { return m_isRequestFromClientOrUserInput; }
+    bool allowsDataURLsForMainFrame() const { return m_isRequestFromClientOrUserInput; }
 
     const AtomString& downloadAttribute() const { return m_triggeringAction.downloadAttribute(); }
 
@@ -455,6 +456,10 @@ public:
     bool isContinuingLoadAfterProvisionalLoadStarted() const { return m_isContinuingLoadAfterProvisionalLoadStarted; }
     void setIsContinuingLoadAfterProvisionalLoadStarted(bool isContinuingLoadAfterProvisionalLoadStarted) { m_isContinuingLoadAfterProvisionalLoadStarted = isContinuingLoadAfterProvisionalLoadStarted; }
 
+    bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
+    void setIsRequestFromClientOrUserInput(bool isRequestFromClientOrUserInput) { m_isRequestFromClientOrUserInput = isRequestFromClientOrUserInput; }
+
+    bool isInFinishedLoadingOfEmptyDocument() const { return m_isInFinishedLoadingOfEmptyDocument; }
 #if ENABLE(CONTENT_FILTERING)
     bool contentFilterWillHandleProvisionalLoadFailure(const ResourceError&);
     void contentFilterHandleProvisionalLoadFailure(const ResourceError&);
@@ -499,6 +504,10 @@ private:
     void clearArchiveResources();
 #endif
 
+#if ENABLE(WEB_ARCHIVE)
+    bool isLoadingRemoteArchive() const;
+#endif
+
     void willSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
     void finishedLoading();
     void mainReceivedError(const ResourceError&);
@@ -512,9 +521,9 @@ private:
 
     void responseReceived(const ResourceResponse&, CompletionHandler<void()>&&);
 
-#if ENABLE(CONTENT_FILTERING) && !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#if ENABLE(CONTENT_FILTERING)
     // ContentFilterClient
-    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const SharedBuffer&) final;
+    WEBCORE_EXPORT void dataReceivedThroughContentFilter(const SharedBuffer&, size_t) final;
     WEBCORE_EXPORT ResourceError contentFilterDidBlock(ContentFilterUnblockHandler, String&& unblockRequestDeniedScript) final;
     WEBCORE_EXPORT void cancelMainResourceLoadForContentFilter(const ResourceError&) final;
     WEBCORE_EXPORT void handleProvisionalLoadFailureFromContentFilter(const URL& blockedPageURL, SubstituteData&) final;
@@ -596,6 +605,7 @@ private:
     bool m_isClientRedirect { false };
     bool m_isLoadingMultipartContent { false };
     bool m_isContinuingLoadAfterProvisionalLoadStarted { false };
+    bool m_isInFinishedLoadingOfEmptyDocument { false };
 
     // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadDispatched are roughly the same
     // and should be merged.
@@ -631,7 +641,7 @@ private:
     RefPtr<SharedBuffer> m_parsedArchiveData;
 #endif
 
-    HashSet<String> m_resourcesClientKnowsAbout;
+    MemoryCompactRobinHoodHashSet<String> m_resourcesClientKnowsAbout;
     Vector<ResourceRequest> m_resourcesLoadedFromMemoryCacheForClientNotification;
 
     String m_clientRedirectSourceForHistory;
@@ -664,21 +674,22 @@ private:
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
 
 #if ENABLE(CONTENT_FILTERING)
-#if !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     std::unique_ptr<ContentFilter> m_contentFilter;
-#else
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     bool m_blockedByContentFilter { false };
     ResourceError m_blockedError;
-#endif
-#endif
+    URL m_blockedPageURL;
+    SubstituteData m_substituteDataFromContentFilter;
+#endif // ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+#endif // ENABLE(CONTENT_FILTERING)
 
 #if USE(QUICK_LOOK)
     RefPtr<PreviewConverter> m_previewConverter;
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    HashMap<String, RefPtr<StyleSheetContents>> m_pendingNamedContentExtensionStyleSheets;
-    HashMap<String, Vector<std::pair<String, uint32_t>>> m_pendingContentExtensionDisplayNoneSelectors;
+    MemoryCompactRobinHoodHashMap<String, RefPtr<StyleSheetContents>> m_pendingNamedContentExtensionStyleSheets;
+    MemoryCompactRobinHoodHashMap<String, Vector<std::pair<String, uint32_t>>> m_pendingContentExtensionDisplayNoneSelectors;
 #endif
     String m_customUserAgent;
     String m_customUserAgentAsSiteSpecificQuirks;
@@ -686,7 +697,7 @@ private:
     bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
     String m_customNavigatorPlatform;
     bool m_userContentExtensionsEnabled { true };
-    HashMap<String, Vector<UserContentURLPattern>> m_activeContentRuleListActionPatterns;
+    MemoryCompactRobinHoodHashMap<String, Vector<UserContentURLPattern>> m_activeContentRuleListActionPatterns;
 #if ENABLE(DEVICE_ORIENTATION)
     DeviceOrientationOrMotionPermissionState m_deviceOrientationAndMotionAccessState { DeviceOrientationOrMotionPermissionState::Prompt };
 #endif
@@ -703,6 +714,7 @@ private:
 
 #if ENABLE(SERVICE_WORKER)
     std::optional<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
+    bool m_canUseServiceWorkers { true };
 #endif
     ScriptExecutionContextIdentifier m_resultingClientId;
 
@@ -710,9 +722,7 @@ private:
     bool m_hasEverBeenAttached { false };
 #endif
 
-    bool m_allowsWebArchiveForMainFrame { false };
-    bool m_allowsDataURLsForMainFrame { false };
-
+    bool m_isRequestFromClientOrUserInput { false };
     bool m_lastNavigationWasAppInitiated { true };
 };
 
@@ -794,7 +804,7 @@ inline void DocumentLoader::didTellClientAboutLoad(const String& url)
 {
 #if !PLATFORM(COCOA)
     // Don't include data URLs here, as if a lot of data is loaded that way, we hold on to the (large) URL string for too long.
-    if (protocolIs(url, "data"))
+    if (protocolIs(url, "data"_s))
         return;
 #endif
     if (!url.isEmpty())

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,12 +36,11 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Iterator;
-import java.util.Locale;
 import java.util.ResourceBundle;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
-    static float   overrideUIScale;
+
+    static float overrideUIScale;
     private static final String BASE_NAME = "com/sun/glass/ui/win/themes";
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
@@ -86,6 +85,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override
             public Void run() {
                 verbose = Boolean.getBoolean("javafx.verbose");
                 if (PrismSettings.allowHiDPIScaling) {
@@ -112,6 +112,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
+
     WinApplication() {
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -127,7 +128,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private static boolean verbose;
 
-    // returng toolkit window HWND
+    // returning toolkit window HWND
     private native long _init(int awarenessRequested);
     private native void _setClassLoader(ClassLoader classLoader);
     private native void _runLoop(Runnable launchable);
@@ -363,6 +364,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override native protected boolean _supportsUnifiedWindows();
 
+    @Override
     public String getDataDirectory() {
         checkEventThread();
         @SuppressWarnings("removal")

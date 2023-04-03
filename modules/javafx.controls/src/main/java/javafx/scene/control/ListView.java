@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -146,7 +145,50 @@ import javafx.util.Pair;
  * default {@link #cellFactoryProperty() cell factory}. A cell factory is used to
  * generate {@link ListCell} instances, which are used to represent an item in the
  * ListView. See the {@link Cell} class documentation for a more complete
- * description of how to write custom Cells.
+ * description of how to write custom Cells.</p>
+ *
+ * <h3>Warning: Nodes should not be inserted directly into the items list</h3>
+ * {@code ListView} allows for the items list to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the items list is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the items list or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link #cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code ListView} containing {@code Node}s:
+ *
+ * <pre>{@code   ListView<Color> lv = new ListView<>();
+ *  lv.getItems().addAll(Color.RED, Color.GREEN, Color.BLUE);
+ *
+ *  lv.setCellFactory(p -> {
+ *    return new ListCell<>() {
+ *        private final Rectangle rectangle;
+ *        {
+ *            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *            rectangle = new Rectangle(10, 10);
+ *        }
+ *
+ *        @Override
+ *        protected void updateItem(Color item, boolean empty) {
+ *            super.updateItem(item, empty);
+ *
+ *            if (item == null || empty) {
+ *                setGraphic(null);
+ *            } else {
+ *                rectangle.setFill(item);
+ *                setGraphic(rectangle);
+ *            }
+ *         }
+ *     };
+ * });}</pre>
+ * <p> This example has an anonymous custom {@code ListCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code ListCell} class and updated/used in its {@code updateItem} method.
  *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
@@ -337,10 +379,10 @@ public class ListView<T> extends Control {
 
         // Install default....
         // ...selection model
-        setSelectionModel(new ListView.ListViewBitSetSelectionModel<T>(this));
+        setSelectionModel(new ListView.ListViewBitSetSelectionModel<>(this));
 
         // ...focus model
-        setFocusModel(new ListView.ListViewFocusModel<T>(this));
+        setFocusModel(new ListView.ListViewFocusModel<>(this));
 
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
@@ -420,33 +462,33 @@ public class ListView<T> extends Control {
         return items;
     }
 
-
-    // --- Placeholder Node
-    private ObjectProperty<Node> placeholder;
     /**
-     * This Node is shown to the user when the listview has no content to show.
-     * This may be the case because the table model has no data in the first
-     * place or that a filter has been applied to the list model, resulting
-     * in there being nothing to show the user..
-     * @return the placeholder property for this ListView
+     * The {@code Node} to show to the user when the {@code ListView} has no content to show.
+     * This happens when the list model has no data or when a filter has been applied to the list model, resulting in
+     * there being nothing to show the user.
+     *
      * @since JavaFX 8.0
      */
+    private ObjectProperty<Node> placeholder;
+
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
-            placeholder = new SimpleObjectProperty<Node>(this, "placeholder");
+            placeholder = new SimpleObjectProperty<>(this, "placeholder");
         }
         return placeholder;
     }
+
     public final void setPlaceholder(Node value) {
         placeholderProperty().set(value);
     }
+
     public final Node getPlaceholder() {
         return placeholder == null ? null : placeholder.get();
     }
 
 
     // --- Selection Model
-    private ObjectProperty<MultipleSelectionModel<T>> selectionModel = new SimpleObjectProperty<MultipleSelectionModel<T>>(this, "selectionModel");
+    private ObjectProperty<MultipleSelectionModel<T>> selectionModel = new SimpleObjectProperty<>(this, "selectionModel");
 
     /**
      * Sets the {@link MultipleSelectionModel} to be used in the ListView.
@@ -507,7 +549,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<FocusModel<T>> focusModelProperty() {
         if (focusModel == null) {
-            focusModel = new SimpleObjectProperty<FocusModel<T>>(this, "focusModel");
+            focusModel = new SimpleObjectProperty<>(this, "focusModel");
         }
         return focusModel;
     }
@@ -523,7 +565,7 @@ public class ListView<T> extends Control {
      */
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
-    };
+    }
 
     /**
      * Returns the current orientation of the ListView, which dictates whether
@@ -603,7 +645,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<ListView<T>, ListCell<T>>>(this, "cellFactory");
+            cellFactory = new SimpleObjectProperty<>(this, "cellFactory");
         }
         return cellFactory;
     }
@@ -771,7 +813,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
+            onEditStart = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editStartEvent(), get());
                 }
@@ -830,7 +872,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
+            onEditCommit = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editCommitEvent(), get());
                 }
@@ -878,7 +920,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
+            onEditCancel = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editCancelEvent(), get());
                 }
@@ -967,7 +1009,7 @@ public class ListView<T> extends Control {
 
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
-            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+            onScrollTo = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
@@ -986,7 +1028,7 @@ public class ListView<T> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ListViewSkin<T>(this);
+        return new ListViewSkin<>(this);
     }
 
     /**
@@ -1022,8 +1064,8 @@ public class ListView<T> extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<ListView<?>,Orientation> ORIENTATION =
-            new CssMetaData<ListView<?>,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+            new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.VERTICAL) {
 
             @Override
@@ -1045,7 +1087,7 @@ public class ListView<T> extends Control {
         };
 
         private static final CssMetaData<ListView<?>,Number> FIXED_CELL_SIZE =
-            new CssMetaData<ListView<?>,Number>("-fx-fixed-cell-size",
+            new CssMetaData<>("-fx-fixed-cell-size",
                                                 SizeConverter.getInstance(),
                                                 Region.USE_COMPUTED_SIZE) {
 
@@ -1058,14 +1100,14 @@ public class ListView<T> extends Control {
                 }
 
                 @Override public StyleableProperty<Number> getStyleableProperty(ListView<?> n) {
-                    return (StyleableProperty<Number>)(WritableValue<Number>)n.fixedCellSizeProperty();
+                    return (StyleableProperty<Number>)n.fixedCellSizeProperty();
                 }
             };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             styleables.add(FIXED_CELL_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
@@ -1252,7 +1294,7 @@ public class ListView<T> extends Control {
         }
 
         // watching for changes to the items list content
-        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
+        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<>() {
             @Override public void onChanged(Change<? extends T> c) {
                 updateItemCount();
 
@@ -1382,20 +1424,20 @@ public class ListView<T> extends Control {
 
                     // (1)
                     int length = c.getTo() - c.getFrom();
-                    HashMap<Integer, Integer> pMap = new HashMap<Integer, Integer>(length);
+                    HashMap<Integer, Integer> pMap = new HashMap<>(length);
                     for (int i = c.getFrom(); i < c.getTo(); i++) {
                         pMap.put(i, c.getPermutation(i));
                     }
 
                     // (2)
-                    List<Integer> selectedIndices = new ArrayList<Integer>(getSelectedIndices());
+                    List<Integer> selectedIndices = new ArrayList<>(getSelectedIndices());
 
 
                     // (3)
                     clearSelection();
 
                     // (4)
-                    List<Integer> newIndices = new ArrayList<Integer>(getSelectedIndices().size());
+                    List<Integer> newIndices = new ArrayList<>(getSelectedIndices().size());
 
                     // (5)
                     for (int i = 0; i < selectedIndices.size(); i++) {
@@ -1622,7 +1664,7 @@ public class ListView<T> extends Control {
         };
 
         private WeakListChangeListener<T> weakItemsContentListener
-                = new WeakListChangeListener<T>(itemsContentListener);
+                = new WeakListChangeListener<>(itemsContentListener);
 
         @Override protected int getItemCount() {
             return itemCount;

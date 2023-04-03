@@ -82,39 +82,8 @@ if (hasProperty('toolchainDir')) {
     toolchainDir = ""
 }
 
-def gtk2CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
-def gtk2LinkFlags = [ ];
 def gtk3LinkFlags = [ ];
-
-// Create $buildDir/linux_tools.properties file and load props from it
-setupTools("linux_gtk2",
-    { propFile ->
-        ByteArrayOutputStream results1 = new ByteArrayOutputStream();
-        exec {
-            commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst")
-            setStandardOutput(results1);
-        }
-        propFile << "cflagsGTK2=" << results1.toString().trim() << "\n";
-
-        ByteArrayOutputStream results3 = new ByteArrayOutputStream();
-        exec {
-            commandLine("${toolchainDir}pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst")
-            setStandardOutput(results3);
-        }
-        propFile << "libsGTK2=" << results3.toString().trim()  << "\n";
-    },
-    { properties ->
-        def cflagsGTK2 = properties.getProperty("cflagsGTK2")
-        def libsGTK2 = properties.getProperty("libsGTK2")
-        if (cflagsGTK2 && libsGTK2) {
-            gtk2CCFlags.addAll(cflagsGTK2.split(" "))
-            gtk2LinkFlags.addAll(libsGTK2.split(" "))
-        } else {
-            throw new IllegalStateException("GTK2 development packages not found. If GTK2 packages are installed, please remove the build directory and try again.")
-        }
-    }
-)
 
 setupTools("linux_gtk3",
     { propFile ->
@@ -216,7 +185,7 @@ LINUX.strip = "${toolchainDir}strip"
 LINUX.stripArgs = [ "-x" ]
 
 LINUX.glass = [:]
-LINUX.glass.variants = ["glass", "glassgtk2", "glassgtk3"]
+LINUX.glass.variants = ["glass", "glassgtk3"]
 
 FileTree ft_gtk_launcher = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
     include("**/launcher.c")
@@ -233,16 +202,6 @@ LINUX.glass.glass.ccFlags = [cppFlags, "-Werror"].flatten()
 LINUX.glass.glass.linker = linker
 LINUX.glass.glass.linkFlags = IS_STATIC_BUILD? linkFlags : [linkFlags, "-lX11", "-ldl"].flatten()
 LINUX.glass.glass.lib = "glass"
-
-LINUX.glass.glassgtk2 = [:]
-LINUX.glass.glassgtk2.nativeSource =  ft_gtk.getFiles()
-LINUX.glass.glassgtk2.compiler = compiler
-LINUX.glass.glassgtk2.ccFlags = IS_STATIC_BUILD ?
-        ["-fno-threadsafe-statics", cppFlags, gtk2CCFlags].flatten() :
-        [cppFlags, gtk2CCFlags, "-Werror"].flatten()
-LINUX.glass.glassgtk2.linker = linker
-LINUX.glass.glassgtk2.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk2LinkFlags].flatten()
-LINUX.glass.glassgtk2.lib = "glassgtk2"
 
 LINUX.glass.glassgtk3 = [:]
 LINUX.glass.glassgtk3.nativeSource =  ft_gtk.getFiles()

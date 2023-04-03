@@ -29,33 +29,45 @@
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 
+struct WGPURenderPipelineImpl {
+};
+
 namespace WebGPU {
 
 class BindGroupLayout;
+class Device;
 
-class RenderPipeline : public RefCounted<RenderPipeline> {
+// https://gpuweb.github.io/gpuweb/#gpurenderpipeline
+class RenderPipeline : public WGPURenderPipelineImpl, public RefCounted<RenderPipeline> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RenderPipeline> create(id <MTLRenderPipelineState> renderPipelineState)
+    static Ref<RenderPipeline> create(id<MTLRenderPipelineState> renderPipelineState, Device& device)
     {
-        return adoptRef(*new RenderPipeline(renderPipelineState));
+        return adoptRef(*new RenderPipeline(renderPipelineState, device));
+    }
+    static Ref<RenderPipeline> createInvalid(Device& device)
+    {
+        return adoptRef(*new RenderPipeline(device));
     }
 
     ~RenderPipeline();
 
-    Ref<BindGroupLayout> getBindGroupLayout(uint32_t groupIndex);
-    void setLabel(const char*);
+    BindGroupLayout* getBindGroupLayout(uint32_t groupIndex);
+    void setLabel(String&&);
 
-    id <MTLRenderPipelineState> renderPipelineState() const { return m_renderPipelineState; }
+    bool isValid() const { return m_renderPipelineState; }
+
+    id<MTLRenderPipelineState> renderPipelineState() const { return m_renderPipelineState; }
+
+    Device& device() const { return m_device; }
 
 private:
-    RenderPipeline(id <MTLRenderPipelineState>);
+    RenderPipeline(id<MTLRenderPipelineState>, Device&);
+    RenderPipeline(Device&);
 
-    id <MTLRenderPipelineState> m_renderPipelineState { nil };
+    const id<MTLRenderPipelineState> m_renderPipelineState { nil };
+
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-struct WGPURenderPipelineImpl {
-    Ref<WebGPU::RenderPipeline> renderPipeline;
-};

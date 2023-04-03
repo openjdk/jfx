@@ -58,17 +58,18 @@ public:
 
 private:
     SliderThumbElement(Document&);
-
+    bool isSliderThumbElement() const final { return true; }
+#if PLATFORM(JAVA)
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+#endif
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
     bool isDisabledFormControl() const final;
     bool matchesReadWritePseudoClass() const final;
-    RefPtr<Element> focusDelegate() final;
 
     void defaultEventHandler(Event&) final;
-    bool willRespondToMouseMoveEvents() final;
-    bool willRespondToMouseClickEvents() final;
+    bool willRespondToMouseMoveEvents() const final;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
 #if ENABLE(IOS_TOUCH_EVENTS)
     void didAttachRenderers() final;
@@ -76,7 +77,9 @@ private:
     void willDetachRenderers() final;
 
     std::optional<Style::ElementStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
+#if PLATFORM(JAVA)
     const AtomString& shadowPseudoId() const final;
+#endif
 
     void startDragging();
     void stopDragging();
@@ -107,13 +110,7 @@ private:
 #endif
 };
 
-inline Ref<SliderThumbElement> SliderThumbElement::create(Document& document)
-{
-    return adoptRef(*new SliderThumbElement(document));
-}
-
-// --------------------------------
-
+#if PLATFORM(JAVA)
 class RenderSliderThumb final : public RenderBlockFlow {
     WTF_MAKE_ISO_ALLOCATED(RenderSliderThumb);
 public:
@@ -123,6 +120,7 @@ public:
 private:
     bool isSliderThumb() const final;
 };
+#endif
 
 // --------------------------------
 
@@ -134,14 +132,22 @@ public:
 private:
     SliderContainerElement(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+#if PLATFORM(JAVA)
     std::optional<Style::ElementStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
     const AtomString& shadowPseudoId() const final;
+#endif
     bool isSliderContainerElement() const final { return true; }
-
+#if PLATFORM(JAVA)
     AtomString m_shadowPseudoId;
+#endif
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SliderThumbElement)
+    static bool isType(const WebCore::Element& element) { return element.isSliderThumbElement(); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SliderContainerElement)
     static bool isType(const WebCore::Element& element) { return element.isSliderContainerElement(); }

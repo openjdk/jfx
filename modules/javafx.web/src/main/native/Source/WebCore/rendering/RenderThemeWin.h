@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Kenneth Rohde Christiansen
  *
  * This library is free software; you can redistribute it and/or
@@ -138,9 +138,6 @@ private:
 
     RenderThemeWin();
     virtual ~RenderThemeWin();
-
-    // System fonts.
-    void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
 
     void addIntrinsicMargins(RenderStyle&) const;
     void close();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getNam
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
@@ -106,7 +106,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_setCustom
     , jstring error)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setCustomValidity(String(env, error));
+    IMPL->setCustomValidity(AtomString {String(env, error)});
 }
 
 

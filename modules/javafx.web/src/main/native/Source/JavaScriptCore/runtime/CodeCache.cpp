@@ -43,7 +43,7 @@ void CodeCacheMap::pruneSlowCase()
     while (m_size > m_capacity || !canPruneQuickly()) {
         MapType::iterator it = m_map.begin();
 
-        writeCodeBlock(it->value.cell->vm(), it->key, it->value);
+        writeCodeBlock(it->key, it->value);
 
         m_size -= it->key.length();
         m_map.remove(it);
@@ -77,7 +77,7 @@ UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& s
     bool isInsideOrdinaryFunction = executable && executable->isInsideOrdinaryFunction();
 
     std::unique_ptr<RootNode> rootNode = parse<RootNode>(
-        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin, strictMode, scriptMode, CacheTypes<UnlinkedCodeBlockType>::parseMode, SuperBinding::NotNeeded, error, nullptr, ConstructorKind::None, derivedContextType, evalContextType, nullptr, privateNameEnvironment, nullptr, isInsideOrdinaryFunction);
+        vm, source, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin, strictMode, scriptMode, CacheTypes<UnlinkedCodeBlockType>::parseMode, SuperBinding::NotNeeded, error, nullptr, ConstructorKind::None, derivedContextType, evalContextType, nullptr, privateNameEnvironment, nullptr, isInsideOrdinaryFunction);
 
     if (!rootNode)
         return nullptr;
@@ -233,7 +233,7 @@ UnlinkedFunctionExecutable* CodeCache::getUnlinkedGlobalFunctionExecutable(VM& v
     StatementNode* funcDecl = program->singleStatement();
     if (UNLIKELY(!funcDecl)) {
         JSToken token;
-        error = ParserError(ParserError::SyntaxError, ParserError::SyntaxErrorIrrecoverable, token, "Parser error", -1);
+        error = ParserError(ParserError::SyntaxError, ParserError::SyntaxErrorIrrecoverable, token, "Parser error"_s, -1);
         return nullptr;
     }
     ASSERT(funcDecl->isFuncDeclNode());
@@ -265,15 +265,15 @@ void CodeCache::updateCache(const UnlinkedFunctionExecutable* executable, const 
     parentSource.provider()->updateCache(executable, parentSource, kind, codeBlock);
 }
 
-void CodeCache::write(VM& vm)
+void CodeCache::write()
 {
     for (auto& it : m_sourceCode)
-        writeCodeBlock(vm, it.key, it.value);
+        writeCodeBlock(it.key, it.value);
 }
 
-void writeCodeBlock(VM& vm, const SourceCodeKey& key, const SourceCodeValue& value)
+void writeCodeBlock(const SourceCodeKey& key, const SourceCodeValue& value)
 {
-    UnlinkedCodeBlock* codeBlock = jsDynamicCast<UnlinkedCodeBlock*>(vm, value.cell.get());
+    UnlinkedCodeBlock* codeBlock = jsDynamicCast<UnlinkedCodeBlock*>(value.cell.get());
     if (!codeBlock)
         return;
 

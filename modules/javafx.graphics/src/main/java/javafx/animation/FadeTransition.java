@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ public final class FadeTransition extends Transition {
 
     public final ObjectProperty<Node> nodeProperty() {
         if (node == null) {
-            node = new SimpleObjectProperty<Node>(this, "node", DEFAULT_NODE);
+            node = new SimpleObjectProperty<>(this, "node", DEFAULT_NODE);
         }
         return node;
     }

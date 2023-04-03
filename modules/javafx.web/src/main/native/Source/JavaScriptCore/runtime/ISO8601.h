@@ -56,7 +56,7 @@ public:
 
 #define JSC_DEFINE_ISO8601_DURATION_FIELD(name, capitalizedName) \
     double name##s() const { return m_data[static_cast<uint8_t>(TemporalUnit::capitalizedName)]; } \
-    void set##capitalizedName##s(double value) { m_data[static_cast<uint8_t>(TemporalUnit::capitalizedName)] = value; }
+    void set##capitalizedName##s(double value) { m_data[static_cast<uint8_t>(TemporalUnit::capitalizedName)] = !value ? 0 : value; }
     JSC_TEMPORAL_UNITS(JSC_DEFINE_ISO8601_DURATION_FIELD);
 #undef JSC_DEFINE_ISO8601_DURATION_FIELD
 
@@ -71,8 +71,10 @@ public:
     Duration operator-() const
     {
         Duration result(*this);
-        for (auto& value : result.m_data)
-            value = -value;
+        for (auto& value : result.m_data) {
+            if (value)
+                value = -value;
+        }
         return result;
     }
 
@@ -264,8 +266,8 @@ public:
 
 private:
     int32_t m_year : 21; // ECMAScript max / min date's year can be represented <= 20 bits.
-    int32_t m_month : 5;
-    int32_t m_day : 6;
+    int32_t m_month : 5; // Starts with 1.
+    int32_t m_day : 6; // Starts with 1.
 };
 #if COMPILER(GCC_COMPATIBLE)
 static_assert(sizeof(PlainDate) == sizeof(int32_t));
@@ -296,10 +298,16 @@ std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(St
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView);
 std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>>> parseDateTime(StringView);
 std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarDateTime(StringView);
+uint8_t dayOfWeek(PlainDate);
+uint16_t dayOfYear(PlainDate);
+uint8_t weeksInYear(int32_t year);
+uint8_t weekOfYear(PlainDate);
+uint8_t daysInMonth(int32_t year, uint8_t month);
+uint8_t daysInMonth(uint8_t month);
 String formatTimeZoneOffsetString(int64_t);
 String temporalTimeToString(PlainTime, std::tuple<Precision, unsigned> precision);
 String temporalDateToString(PlainDate);
-unsigned daysInMonth(int32_t year, unsigned month);
+String monthCode(uint32_t);
 
 bool isValidDuration(const Duration&);
 

@@ -28,11 +28,11 @@
     readonly attribute DOMString? prefix;
     readonly attribute DOMString localName;
     readonly attribute DOMString name;
-    [CEReactions] attribute DOMString value;
+    [CEReactions] attribute [AtomString] DOMString value;
 
     readonly attribute Element? ownerElement;
 
     readonly attribute boolean specified; // Useless; always returns true.
 
-    [EnabledAtRuntime=AttrStyleEnabled] readonly attribute CSSStyleDeclaration style;
+    [EnabledByDeprecatedGlobalSetting=AttrStyleEnabled] readonly attribute CSSStyleDeclaration style;
 };

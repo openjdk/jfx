@@ -77,29 +77,17 @@ bool GraphicsLayer::supportsLayerType(Type type)
 {
     switch (type) {
     case Type::Normal:
+    case Type::Structural:
     case Type::PageTiledBacking:
     case Type::ScrollContainer:
     case Type::ScrolledContents:
+    case Type::TiledBacking:
         return true;
     case Type::Shape:
         return false;
     }
     ASSERT_NOT_REACHED();
     return false;
-}
-
-bool GraphicsLayer::supportsRoundedClip()
-{
-    return false;
-}
-
-bool GraphicsLayer::supportsBackgroundColorContent()
-{
-#if USE(TEXTURE_MAPPER)
-    return true;
-#else
-    return false;
-#endif
 }
 
 bool GraphicsLayer::supportsSubpixelAntialiasedLayerText()
@@ -135,7 +123,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_beingDestroyed(false)
     , m_contentsOpaque(false)
     , m_supportsSubpixelAntialiasedText(false)
-    , m_preserves3D(false)
+    , m_preserves3D(type == Type::Structural)
     , m_backfaceVisibility(true)
     , m_masksToBounds(false)
     , m_drawsContent(false)
@@ -143,7 +131,9 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_contentsRectClipsDescendants(false)
     , m_acceleratesDrawing(false)
     , m_usesDisplayListDrawing(false)
+    , m_allowsTiling(true)
     , m_appliesPageScale(false)
+    , m_appliesDeviceScale(true)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
     , m_isMaskLayer(false)
@@ -351,6 +341,24 @@ void GraphicsLayer::removeFromParentInternal()
     }
 }
 
+void GraphicsLayer::setPreserves3D(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, b);
+    m_preserves3D = b;
+}
+
+void GraphicsLayer::setMasksToBounds(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, false);
+    m_masksToBounds = b;
+}
+
+void GraphicsLayer::setDrawsContent(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, false);
+    m_drawsContent = b;
+}
+
 const TransformationMatrix& GraphicsLayer::transform() const
 {
     return m_transform ? *m_transform : TransformationMatrix::identity;
@@ -377,6 +385,19 @@ void GraphicsLayer::setChildrenTransform(const TransformationMatrix& matrix)
         m_childrenTransform = makeUnique<TransformationMatrix>(matrix);
 }
 
+bool GraphicsLayer::setFilters(const FilterOperations& filters)
+{
+    ASSERT(m_type != Type::Structural);
+    m_filters = filters;
+    return true;
+}
+
+void GraphicsLayer::setOpacity(float opacity)
+{
+    ASSERT(m_type != Type::Structural);
+    m_opacity = opacity;
+}
+
 void GraphicsLayer::removeFromParent()
 {
     // removeFromParentInternal is nonvirtual, for use in willBeDestroyed,
@@ -399,11 +420,6 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
     }
 
     m_maskLayer = WTFMove(layer);
-}
-
-void GraphicsLayer::setMasksToBoundsRect(const FloatRoundedRect& roundedRect)
-{
-    m_masksToBoundsRect = roundedRect;
 }
 
 Path GraphicsLayer::shapeLayerPath() const
@@ -518,6 +534,7 @@ void GraphicsLayer::setSize(const FloatSize& size)
 
 void GraphicsLayer::setBackgroundColor(const Color& color)
 {
+    ASSERT(m_type != Type::Structural);
     m_backgroundColor = color;
 }
 
@@ -532,11 +549,13 @@ void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase
 
 void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
 {
-    FloatSize offset = offsetFromRenderer() - toFloatSize(scrollOffset());
-    context.translate(-offset);
+    auto offset = offsetFromRenderer() - toFloatSize(scrollOffset());
+    auto clipRect = clip;
 
-    FloatRect clipRect(clip);
-    clipRect.move(offset);
+    if (!offset.isZero()) {
+        context.translate(-offset);
+        clipRect.move(offset);
+    }
 
     client().paintContents(this, context, clipRect, layerPaintBehavior);
 }
@@ -710,37 +729,6 @@ int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
     return firstIndex;
 }
 
-static inline const TransformOperations& operationsAt(const KeyframeValueList& valueList, size_t index)
-{
-    return static_cast<const TransformAnimationValue&>(valueList.at(index)).value();
-}
-
-// A sequence of keyframes with a list of transforms can be represented without matrix interpolation
-// if each transform is compatible with all other transforms at the same index in other keyframes.
-// Two transforms are compatible if they share a primitive defined by the CSS Transforms Level 2
-// specification. For instance, the shared primitive of a translateX and translate3D operation is
-// TransformOperation::TRANSLATE_3D. This function returns true if the TransformOperations in each
-// keyframe share a primitive operation type and stores the compatible OperationTypes in
-// sharedPrimitives. If the keyframes do not share a list of compatible primitives, false is
-// returned.
-bool GraphicsLayer::getSharedPrimitivesForTransformKeyframes(const KeyframeValueList& valueList, Vector<TransformOperation::OperationType>& sharedPrimitives)
-{
-    ASSERT(animatedPropertyIsTransformOrRelated(valueList.property()));
-
-    if (valueList.size() < 2)
-        return false;
-
-    sharedPrimitives.clear();
-    sharedPrimitives.reserveInitialCapacity(operationsAt(valueList, 0).size());
-
-    for (size_t i = 0; i < valueList.size(); ++i) {
-        if (!operationsAt(valueList, i).updateSharedPrimitives(sharedPrimitives))
-            return false;
-    }
-
-    return true;
-}
-
 double GraphicsLayer::backingStoreMemoryEstimate() const
 {
     if (!drawsContent())
@@ -763,11 +751,9 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     FloatRect largestRepaintRect(FloatPoint(), m_size);
     largestRepaintRect.intersect(repaintRect);
     RepaintMap::iterator repaintIt = repaintRectMap().find(this);
-    if (repaintIt == repaintRectMap().end()) {
-        Vector<FloatRect> repaintRects;
-        repaintRects.append(largestRepaintRect);
-        repaintRectMap().set(this, repaintRects);
-    } else {
+    if (repaintIt == repaintRectMap().end())
+        repaintRectMap().set(this, Vector { WTFMove(largestRepaintRect) });
+    else {
         Vector<FloatRect>& repaintRects = repaintIt->value;
         repaintRects.append(largestRepaintRect);
     }
@@ -1013,8 +999,6 @@ TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& cu
     case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
     case GraphicsLayer::CustomAppearance::ScrollingOverhang: ts << "scrolling-overhang"; break;
     case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
-    case GraphicsLayer::CustomAppearance::LightBackdrop: ts << "light-backdrop"; break;
-    case GraphicsLayer::CustomAppearance::DarkBackdrop: ts << "dark-backdrop"; break;
     }
     return ts;
 }

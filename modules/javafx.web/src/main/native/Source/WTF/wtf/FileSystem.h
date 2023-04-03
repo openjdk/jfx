@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Collabora, Ltd. All rights reserved.
  * Copyright (C) 2015 Canon Inc. All rights reserved.
  *
@@ -124,6 +124,7 @@ WTF_EXPORT_PRIVATE std::optional<WallTime> fileModificationTime(const String&);
 WTF_EXPORT_PRIVATE bool updateFileModificationTime(const String& path); // Sets modification time to now.
 WTF_EXPORT_PRIVATE std::optional<WallTime> fileCreationTime(const String&); // Not all platforms store file creation time.
 WTF_EXPORT_PRIVATE bool isHiddenFile(const String&);
+WTF_EXPORT_PRIVATE String pathByAppendingComponent(StringView path, StringView component);
 WTF_EXPORT_PRIVATE String pathByAppendingComponent(const String& path, const String& component);
 WTF_EXPORT_PRIVATE String pathByAppendingComponents(StringView path, const Vector<StringView>& components);
 WTF_EXPORT_PRIVATE String lastComponentOfPathIgnoringTrailingSlash(const String& path);
@@ -132,7 +133,7 @@ WTF_EXPORT_PRIVATE String pathFileName(const String&);
 WTF_EXPORT_PRIVATE String parentPath(const String&);
 WTF_EXPORT_PRIVATE std::optional<uint64_t> volumeFreeSpace(const String&);
 WTF_EXPORT_PRIVATE std::optional<uint32_t> volumeFileBlockSize(const String&);
-WTF_EXPORT_PRIVATE std::optional<int32_t> getFileDeviceId(const CString&);
+WTF_EXPORT_PRIVATE std::optional<int32_t> getFileDeviceId(const String&);
 WTF_EXPORT_PRIVATE bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath);
 WTF_EXPORT_PRIVATE String createTemporaryZipArchive(const String& directory);
 
@@ -141,7 +142,7 @@ WTF_EXPORT_PRIVATE std::optional<FileType> fileType(const String&);
 WTF_EXPORT_PRIVATE std::optional<FileType> fileTypeFollowingSymlinks(const String&);
 
 WTF_EXPORT_PRIVATE void setMetadataURL(const String& path, const String& urlString, const String& referrer = { });
-WTF_EXPORT_PRIVATE bool excludeFromBackup(const String&); // Returns true if successful.
+WTF_EXPORT_PRIVATE bool setExcludedFromBackup(const String&, bool); // Returns true if successful.
 
 WTF_EXPORT_PRIVATE Vector<String> listDirectory(const String& path); // Returns file names, not full paths.
 
@@ -156,7 +157,7 @@ WTF_EXPORT_PRIVATE std::optional<Vector<uint8_t>> readEntireFile(PlatformFileHan
 WTF_EXPORT_PRIVATE std::optional<Vector<uint8_t>> readEntireFile(const String& path);
 
 // Prefix is what the filename should be prefixed with, not the full path.
-WTF_EXPORT_PRIVATE String openTemporaryFile(const String& prefix, PlatformFileHandle&, const String& suffix = { });
+WTF_EXPORT_PRIVATE String openTemporaryFile(StringView prefix, PlatformFileHandle&, StringView suffix = { });
 WTF_EXPORT_PRIVATE PlatformFileHandle openFile(const String& path, FileOpenMode, FileAccessPermission = FileAccessPermission::All, bool failIfFileExists = false);
 WTF_EXPORT_PRIVATE void closeFile(PlatformFileHandle&);
 // Returns the resulting offset from the beginning of the file if successful, -1 otherwise.
@@ -199,6 +200,8 @@ WTF_EXPORT_PRIVATE RetainPtr<CFURLRef> pathAsURL(const String&);
 WTF_EXPORT_PRIVATE String filenameForDisplay(const String&);
 WTF_EXPORT_PRIVATE CString currentExecutablePath();
 WTF_EXPORT_PRIVATE CString currentExecutableName();
+WTF_EXPORT_PRIVATE String userCacheDirectory();
+WTF_EXPORT_PRIVATE String userDataDirectory();
 #endif
 
 #if OS(WINDOWS)
@@ -209,6 +212,7 @@ WTF_EXPORT_PRIVATE String createTemporaryDirectory();
 
 #if PLATFORM(COCOA)
 WTF_EXPORT_PRIVATE NSString *createTemporaryDirectory(NSString *directoryPrefix);
+WTF_EXPORT_PRIVATE NSString *systemDirectoryPath();
 
 // Allow reading cloud files with no local copy.
 enum class PolicyScope : uint8_t { Process, Thread };
@@ -216,12 +220,17 @@ WTF_EXPORT_PRIVATE bool setAllowsMaterializingDatalessFiles(bool, PolicyScope);
 WTF_EXPORT_PRIVATE std::optional<bool> allowsMaterializingDatalessFiles(PolicyScope);
 #endif
 
+// Impl for systems that do not already have createTemporaryDirectory
+#if !OS(WINDOWS) && !PLATFORM(COCOA) && !PLATFORM(PLAYSTATION)
+WTF_EXPORT_PRIVATE String createTemporaryDirectory();
+#endif
+
 WTF_EXPORT_PRIVATE bool deleteNonEmptyDirectory(const String&);
 
 WTF_EXPORT_PRIVATE String realPath(const String&);
 
 WTF_EXPORT_PRIVATE bool isSafeToUseMemoryMapForPath(const String&);
-WTF_EXPORT_PRIVATE void makeSafeToUseMemoryMapForPath(const String&);
+WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool makeSafeToUseMemoryMapForPath(const String&);
 
 class MappedFileData {
     WTF_MAKE_FAST_ALLOCATED;

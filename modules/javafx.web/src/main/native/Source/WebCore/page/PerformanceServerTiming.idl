@@ -29,8 +29,8 @@
 typedef double DOMHighResTimeStamp;
 
 [
-    Exposed=(Window,Worker),
-    EnabledAtRuntime=ServerTimingEnabled
+    Exposed=*,
+    EnabledByDeprecatedGlobalSetting=ServerTimingEnabled
 ] interface PerformanceServerTiming {
     readonly attribute DOMString name;
     readonly attribute DOMHighResTimeStamp duration;

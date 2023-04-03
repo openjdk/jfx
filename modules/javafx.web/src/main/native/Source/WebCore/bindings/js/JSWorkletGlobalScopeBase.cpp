@@ -39,7 +39,7 @@ namespace WebCore {
 
 using namespace JSC;
 
-const ClassInfo JSWorkletGlobalScopeBase::s_info = { "WorkletGlobalScope", &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScopeBase) };
+const ClassInfo JSWorkletGlobalScopeBase::s_info = { "WorkletGlobalScope"_s, &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScopeBase) };
 
 const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTable = {
     &supportsRichSourceInfo,
@@ -79,7 +79,7 @@ void JSWorkletGlobalScopeBase::finishCreation(VM& vm, JSProxy* proxy)
     m_proxy.set(vm, this, proxy);
 
     Base::finishCreation(vm, m_proxy.get());
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>

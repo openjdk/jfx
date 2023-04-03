@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,19 +67,19 @@ typedef struct _VideoDecoderClass VideoDecoderClass;
 struct _VideoDecoder {
     BaseDecoder parent;
 
-    gint        width;
-    gint        height;
-    int         frame_finished;
-    gboolean    discont;
+    gint         width;
+    gint         height;
+    int          frame_finished;
+    gboolean     discont;
 
-    int         frame_size;     // in bytes
-    int         u_offset;
-    int         v_offset;
-    int         uv_blocksize;
+    unsigned int frame_size;     // in bytes
+    unsigned int u_offset;
+    unsigned int v_offset;
+    unsigned int uv_blocksize;
 
-    AVPacket    packet;
+    AVPacket     packet;
 
-    gint        codec_id;
+    gint         codec_id;
 
 #if HEVC_SUPPORT
     struct SwsContext *sws_context;

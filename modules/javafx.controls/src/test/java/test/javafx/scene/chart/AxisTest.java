@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -116,7 +116,7 @@ public class AxisTest {
      ********************************************************************/
 
     @Test public void checkSidePropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Side>(Side.TOP);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Side.TOP);
         axis.sideProperty().bind(objPr);
         assertSame("side cannot be bound", axis.sideProperty().getValue(), Side.TOP);
         objPr.setValue(Side.BOTTOM);
@@ -164,7 +164,7 @@ public class AxisTest {
     }
 
     @Test public void checkTickLabelFillPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Color>(Color.WHEAT);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Color.WHEAT);
         axis.tickLabelFillProperty().bind(objPr);
         assertSame("tickLabelFillProperty cannot be bound", axis.tickLabelFillProperty().getValue(), Color.WHEAT);
         objPr.setValue(Color.BLUE);
@@ -322,7 +322,7 @@ public class AxisTest {
     @Test public void whenSideIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.sideProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
-        ObjectProperty<Side> other = new SimpleObjectProperty<Side>(Side.LEFT);
+        ObjectProperty<Side> other = new SimpleObjectProperty<>(Side.LEFT);
         axis.sideProperty().bind(other);
         assertFalse(styleable.isSettable(axis));
     }
@@ -394,7 +394,7 @@ public class AxisTest {
     @Test public void whenTickLabelFontIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.tickLabelFontProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
-        ObjectProperty<Font> other = new SimpleObjectProperty<Font>(Font.getDefault());
+        ObjectProperty<Font> other = new SimpleObjectProperty<>(Font.getDefault());
         axis.tickLabelFontProperty().bind(other);
         assertFalse(styleable.isSettable(axis));
     }
@@ -412,7 +412,7 @@ public class AxisTest {
     @Test public void whenTickLabelFillIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.tickLabelFillProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
-        ObjectProperty<Color> other = new SimpleObjectProperty<Color>(Color.BROWN);
+        ObjectProperty<Color> other = new SimpleObjectProperty<>(Color.BROWN);
         axis.tickLabelFillProperty().bind(other);
         assertFalse(styleable.isSettable(axis));
     }

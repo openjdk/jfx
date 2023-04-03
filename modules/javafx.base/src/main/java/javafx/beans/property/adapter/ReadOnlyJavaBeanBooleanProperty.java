@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,17 +82,17 @@ import java.security.PrivilegedAction;
  */
 public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanPropertyBase implements ReadOnlyJavaBeanProperty<Boolean> {
 
-    private final ReadOnlyPropertyDescriptor descriptor;
-    private final ReadOnlyPropertyDescriptor.ReadOnlyListener<Boolean> listener;
+    private final ReadOnlyPropertyDescriptor<Boolean> descriptor;
+    private final ReadOnlyPropertyDescriptor<Boolean>.ReadOnlyListener listener;
 
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    ReadOnlyJavaBeanBooleanProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
+    ReadOnlyJavaBeanBooleanProperty(ReadOnlyPropertyDescriptor<Boolean> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new ReadOnlyListener<Boolean>(bean, this);
+        this.listener = descriptor.new ReadOnlyListener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,8 +50,8 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
     protected final String method;
     protected final String outboundContent;
     protected int fileSize;
-    private Map<String, String> headers = new HashMap<String, String>();
-    private Map<String, List<String>> responseHeaders = new HashMap<String, List<String>>();
+    private Map<String, String> headers = new HashMap<>();
+    private Map<String, List<String>> responseHeaders = new HashMap<>();
 
     protected AbstractRemoteResource(String url, AsyncOperationListener<T> listener) {
         this(url, "GET", listener);
@@ -70,6 +70,7 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
 
     protected abstract T processStream(InputStream stream) throws IOException;
 
+    @Override
     public T call() throws IOException {
         URL u = new URL(url);
         InputStream stream = null;

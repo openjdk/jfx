@@ -68,7 +68,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMStringListImpl_containsImp
     , jstring string)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->contains(String(env, string));
+    return IMPL->contains(AtomString {String(env, string)});
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -897,7 +897,7 @@ public class GridPane extends Pane {
      * If not set, row sizing and layout behavior will be computed based on content.
      *
      */
-    private final ObservableList<RowConstraints> rowConstraints = new TrackableObservableList<RowConstraints>() {
+    private final ObservableList<RowConstraints> rowConstraints = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<RowConstraints> c) {
             while (c.next()) {
@@ -931,7 +931,7 @@ public class GridPane extends Pane {
      * sizing and layout behavior.
      * If not set, column sizing and layout behavior will be computed based on content.
      */
-    private final ObservableList<ColumnConstraints> columnConstraints = new TrackableObservableList<ColumnConstraints>() {
+    private final ObservableList<ColumnConstraints> columnConstraints = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<ColumnConstraints> c) {
             while(c.next()) {
@@ -2405,7 +2405,7 @@ public class GridPane extends Pane {
      private static class StyleableProperties {
 
          private static final CssMetaData<GridPane,Boolean> GRID_LINES_VISIBLE =
-             new CssMetaData<GridPane,Boolean>("-fx-grid-lines-visible",
+             new CssMetaData<>("-fx-grid-lines-visible",
                  BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -2421,7 +2421,7 @@ public class GridPane extends Pane {
          };
 
          private static final CssMetaData<GridPane,Number> HGAP =
-             new CssMetaData<GridPane,Number>("-fx-hgap",
+             new CssMetaData<>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -2437,8 +2437,8 @@ public class GridPane extends Pane {
          };
 
          private static final CssMetaData<GridPane,Pos> ALIGNMENT =
-             new CssMetaData<GridPane,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT) {
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class), Pos.TOP_LEFT) {
 
             @Override
             public boolean isSettable(GridPane node) {
@@ -2453,7 +2453,7 @@ public class GridPane extends Pane {
          };
 
          private static final CssMetaData<GridPane,Number> VGAP =
-             new CssMetaData<GridPane,Number>("-fx-vgap",
+             new CssMetaData<>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -2472,7 +2472,7 @@ public class GridPane extends Pane {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                    new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(GRID_LINES_VISIBLE);
             styleables.add(HGAP);
             styleables.add(ALIGNMENT);

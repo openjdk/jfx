@@ -55,19 +55,19 @@ class WatchOSLayoutTraits extends LayoutTraits
         return false;
     }
 
-    knobStyleForScrubber()
-    {
-        return Slider.KnobStyle.Circle;
-    }
-
     supportsDurationTimeLabel()
     {
         return false;
     }
 
-    playPauseButtonScaleFactor()
+    supportsAirPlay()
     {
-        return 1;
+        return true;
+    }
+
+    supportsPiP()
+    {
+        return true;
     }
 
     controlsDependOnPageScaleFactor()
@@ -75,7 +75,17 @@ class WatchOSLayoutTraits extends LayoutTraits
         return false;
     }
 
+    skipDuration()
+    {
+        return 15;
+    }
+
     promoteSubMenusWhenShowingMediaControlsContextMenu()
+    {
+        return false;
+    }
+
+    inheritsBorderRadius()
     {
         return false;
     }

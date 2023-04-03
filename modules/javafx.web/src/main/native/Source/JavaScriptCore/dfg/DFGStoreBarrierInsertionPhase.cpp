@@ -30,6 +30,7 @@
 
 #include "DFGAbstractInterpreterInlines.h"
 #include "DFGBlockMapInlines.h"
+#include "DFGClobberize.h"
 #include "DFGDoesGC.h"
 #include "DFGGraph.h"
 #include "DFGInPlaceAbstractState.h"
@@ -205,6 +206,8 @@ private:
 
         bool result = true;
 
+        HashMap<AbstractHeap, Node*> potentialStackEscapes;
+
         for (m_nodeIndex = 0; m_nodeIndex < block->size(); ++m_nodeIndex) {
             m_node = block->at(m_nodeIndex);
 
@@ -356,8 +359,10 @@ private:
                 break;
             }
 
-            if (doesGC(m_graph, m_node))
+            if (doesGC(m_graph, m_node)) {
                 m_currentEpoch.bump();
+                potentialStackEscapes.clear();
+            }
 
             switch (m_node->op()) {
             case NewObject:
@@ -403,6 +408,102 @@ private:
                 break;
             }
 
+            {
+                // We need to consider nodes that might leak objects we've allocated into the heap.
+                // Once an object is leaked, we can no longer elide barriers on it.
+                // Let's motivate this requirement with an example:
+                // D@30: JSConstant(Int32: 42)
+                // D@35: GetStack(arg1)
+                // D@21: CheckStructure(Cell:D@35, [%ED:Object])
+                // D@23: GetStack(arg2)
+                // D@25: NewObject()
+                // D@33: PutByOffset(KnownCell:D@25, KnownCell:D@25, Check:Untyped:Kill:D@30, id0{x})
+                // D@34: PutStructure(KnownCell:D@25, %DN:Object -> %Ch:Object)
+                // D@40: PutByOffset(KnownCell:D@35, KnownCell:D@35, Check:Untyped:D@25, id1{p})
+                // D@45: FencedStoreBarrier(Check:KnownCell:Kill:D@35)
+                // <-- P1
+                // D@41: PutByOffset(KnownCell:D@25, KnownCell:D@25, Check:Untyped:Kill:D@23, id2{y})
+                // <-- P2
+                //
+                // Let's say at the program point P1, the barrier @45 didn't fire because @35 is already grey.
+                // Because @35 is grey, at P1, let's say the concurrent marker marks and traces @35, and also
+                // marks and traces @25. So at P1, the concurrent marker blackens @35 and @25.
+                // Now, let's consider program point P2.
+                // If we didn't barrier @25 at P2, we will never see that @25 points to @23, because @25 is already
+                // black. This is because after @25 was allocated, it escaped into the heap (at @40). Once an allocation
+                // escapes into the heap, it can be blackened at any point by the concurrent marker.
+                // So this analysis must mark an allocation that escapes to the heap as being part of the primordial
+                // epoch.
+
+                auto readFunc = [&] (const AbstractHeap& heap) {
+                    if (!heap.overlaps(Stack))
+                        return;
+                    potentialStackEscapes.removeIf([&] (const auto& entry) {
+                        if (entry.key.overlaps(heap)) {
+                            entry.value->setEpoch(Epoch());
+                            return true;
+                        }
+                        return false;
+                    });
+                };
+
+                bool wroteHeapOrStack = false;
+                unsigned numberOfPreciseStackWrites = 0;
+                AbstractHeap preciseStackWrite;
+                auto writeFunc = [&] (const AbstractHeap& heap) {
+                    wroteHeapOrStack |= heap.overlaps(Heap) || heap.overlaps(Stack);
+                    if (heap.kind() == Stack && !heap.payload().isTop()) {
+                        ++numberOfPreciseStackWrites;
+                        preciseStackWrite = heap;
+                    }
+                };
+                clobberize(m_graph, m_node, readFunc, writeFunc, NoOpClobberize());
+
+                if (wroteHeapOrStack) {
+                    auto escape = [&] (Node* node) {
+                        node->setEpoch(Epoch());
+                    };
+
+                    auto escapeToTheStack = [&] (Node* node) {
+                        if (node->epoch() == m_currentEpoch) {
+                            RELEASE_ASSERT(!!preciseStackWrite);
+                            RELEASE_ASSERT(numberOfPreciseStackWrites == 1);
+                            potentialStackEscapes.set(preciseStackWrite, node);
+                        }
+                    };
+
+                    switch (m_node->op()) {
+                    case PutStructure:
+                    case MultiDeleteByOffset:
+                        break;
+                    case PutInternalField:
+                        escape(m_node->child2().node());
+                        break;
+                    case PutByOffset:
+                        escape(m_node->child3().node());
+                        break;
+                    case MultiPutByOffset:
+                        escape(m_node->child2().node());
+                        break;
+                    case PutClosureVar:
+                        escape(m_node->child2().node());
+                        break;
+                    case NukeStructureAndSetButterfly:
+                        escape(m_node->child2().node());
+                        break;
+                    case SetLocal:
+                    case PutStack:
+                        escapeToTheStack(m_node->child1().node());
+                        break;
+                    default:
+                        m_graph.doToChildren(m_node, [&] (Edge edge) {
+                            escape(edge.node());
+                        });
+                        break;
+                    }
+                }
+            }
+
             if (DFGStoreBarrierInsertionPhaseInternal::verbose) {
                 dataLog(
                     "    ", m_currentEpoch, ": Done with node ", m_node, " (", m_node->epoch(),
@@ -422,6 +523,12 @@ private:
                     break;
                 }
             }
+        }
+
+        {
+            for (auto* node : potentialStackEscapes.values())
+                node->setEpoch(Epoch());
+            potentialStackEscapes.clear();
         }
 
         if (mode == PhaseMode::Global)

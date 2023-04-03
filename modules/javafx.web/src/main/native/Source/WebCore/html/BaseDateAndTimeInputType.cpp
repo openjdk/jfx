@@ -49,6 +49,7 @@
 #include "KeyboardEvent.h"
 #include "Page.h"
 #include "PlatformLocale.h"
+#include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
@@ -242,7 +243,7 @@ bool BaseDateAndTimeInputType::shouldRespectListAttribute()
 bool BaseDateAndTimeInputType::valueMissing(const String& value) const
 {
     ASSERT(element());
-    return !element()->isDisabledOrReadOnly() && element()->isRequired() && value.isEmpty();
+    return element()->isMutable() && element()->isRequired() && value.isEmpty();
 }
 
 bool BaseDateAndTimeInputType::isKeyboardFocusable(KeyboardEvent*) const
@@ -277,9 +278,9 @@ bool BaseDateAndTimeInputType::shouldHaveMillisecondField(const DateComponents& 
         || !stepRange.step().remainder(msecPerSecond).isZero();
 }
 
-void BaseDateAndTimeInputType::setValue(const String& value, bool valueChanged, TextFieldEventBehavior eventBehavior)
+void BaseDateAndTimeInputType::setValue(const String& value, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
-    InputType::setValue(value, valueChanged, eventBehavior);
+    InputType::setValue(value, valueChanged, eventBehavior, selection);
     if (valueChanged)
         updateInnerTextValue();
 }
@@ -287,7 +288,7 @@ void BaseDateAndTimeInputType::setValue(const String& value, bool valueChanged, 
 void BaseDateAndTimeInputType::handleDOMActivateEvent(Event&)
 {
     ASSERT(element());
-    if (element()->isDisabledOrReadOnly() || !element()->renderer() || !UserGestureIndicator::processingUserGesture())
+    if (!element()->isMutable() || !element()->renderer() || !UserGestureIndicator::processingUserGesture())
         return;
 
     if (m_dateTimeChooser)
@@ -314,13 +315,15 @@ void BaseDateAndTimeInputType::createShadowSubtree()
     auto& element = *this->element();
     auto& document = element.document();
 
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element.userAgentShadowRoot() };
+
     if (document.settings().dateTimeInputsEditableComponentsEnabled()) {
         m_dateTimeEditElement = DateTimeEditElement::create(document, *this);
         element.userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, *m_dateTimeEditElement);
     } else {
         auto valueContainer = HTMLDivElement::create(document);
-        valueContainer->setPseudo(ShadowPseudoIds::webkitDateAndTimeValue());
         element.userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, valueContainer);
+        valueContainer->setPseudo(ShadowPseudoIds::webkitDateAndTimeValue());
     }
     updateInnerTextValue();
 }
@@ -346,7 +349,7 @@ void BaseDateAndTimeInputType::updateInnerTextValue()
             // Need to put something to keep text baseline.
             displayValue = " "_s;
         }
-        downcast<HTMLElement>(*node).setInnerText(displayValue);
+        downcast<HTMLElement>(*node).setInnerText(WTFMove(displayValue));
         return;
     }
 
@@ -470,7 +473,7 @@ void BaseDateAndTimeInputType::didBlurFromControl()
 void BaseDateAndTimeInputType::didChangeValueFromControl()
 {
     String value = sanitizeValue(m_dateTimeEditElement->value());
-    InputType::setValue(value, value != element()->value(), DispatchInputAndChangeEvent);
+    InputType::setValue(value, value != element()->value(), DispatchInputAndChangeEvent, DoNotSet);
 
     DateTimeChooserParameters parameters;
     if (!setupDateTimeChooserParameters(parameters))
@@ -525,7 +528,7 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     parameters.required = element.isRequired();
 
     if (!document.settings().langAttributeAwareFormControlUIEnabled())
-        parameters.locale = defaultLanguage();
+        parameters.locale = AtomString { defaultLanguage() };
     else {
         AtomString computedLocale = element.computeInheritedLanguage();
         parameters.locale = computedLocale.isEmpty() ? AtomString(defaultLanguage()) : computedLocale;

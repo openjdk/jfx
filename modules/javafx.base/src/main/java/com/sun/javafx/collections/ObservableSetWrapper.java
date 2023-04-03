@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -203,8 +203,8 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      * @return an iterator over the elements in this set
      */
     @Override
-    public Iterator iterator() {
-        return new Iterator<E>() {
+    public Iterator<E> iterator() {
+        return new Iterator<>() {
 
             private final Iterator<E> backingIt = backingSet.iterator();
             private E lastElement;

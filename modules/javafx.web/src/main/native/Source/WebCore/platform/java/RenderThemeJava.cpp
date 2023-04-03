@@ -355,69 +355,6 @@ static float systemFontSizeForControlSize(JavaControlSize controlSize)
 
     return sizes[controlSize];
 }
-
-void RenderThemeJava::updateCachedSystemFontDescription(CSSValueID propId, FontCascadeDescription& fontDescription) const
-{
-    // This logic owes much to RenderThemeSafari.cpp.
-    static FontCascadeDescription systemFont;
-    static FontCascadeDescription smallSystemFont;
-    static FontCascadeDescription menuFont;
-    static FontCascadeDescription labelFont;
-    static FontCascadeDescription miniControlFont;
-    static FontCascadeDescription smallControlFont;
-    static FontCascadeDescription controlFont;
-
-    FontCascadeDescription* cachedDesc;
-    float fontSize = 0;
-    switch (propId) {
-        case CSSValueSmallCaption:
-            cachedDesc = &smallSystemFont;
-            if (!smallSystemFont.isAbsoluteSize())
-                fontSize = systemFontSizeForControlSize(JavaSmallControlSize);
-            break;
-        case CSSValueMenu:
-            cachedDesc = &menuFont;
-            if (!menuFont.isAbsoluteSize())
-                fontSize = systemFontSizeForControlSize(JavaRegularControlSize);
-            break;
-        case CSSValueStatusBar:
-            cachedDesc = &labelFont;
-            if (!labelFont.isAbsoluteSize())
-                fontSize = 10.0f;
-            break;
-        case CSSValueWebkitMiniControl:
-            cachedDesc = &miniControlFont;
-            if (!miniControlFont.isAbsoluteSize())
-                fontSize = systemFontSizeForControlSize(JavaMiniControlSize);
-            break;
-        case CSSValueWebkitSmallControl:
-            cachedDesc = &smallControlFont;
-            if (!smallControlFont.isAbsoluteSize())
-                fontSize = systemFontSizeForControlSize(JavaSmallControlSize);
-            break;
-        case CSSValueWebkitControl:
-            cachedDesc = &controlFont;
-            if (!controlFont.isAbsoluteSize())
-                fontSize = systemFontSizeForControlSize(JavaRegularControlSize);
-            break;
-        default:
-            cachedDesc = &systemFont;
-            if (!systemFont.isAbsoluteSize())
-                fontSize = 13.0f;
-    }
-
-    if (fontSize) {
-        cachedDesc->setIsAbsoluteSize(true);
-        // cachedDesc->setGenericFamily(FontCascadeDescription::NoFamily);
-        //cachedDesc->setOneFamily("Lucida Grande");
-        cachedDesc->setOneFamily("Tahoma");
-        cachedDesc->setSpecifiedSize(fontSize);
-        cachedDesc->setWeight(normalWeightValue());
-        cachedDesc->setItalic(normalItalicValue());
-    }
-    fontDescription = *cachedDesc;
-}
-
 void RenderThemeJava::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
 {
     //utatodo: we need to measure the control in Java theme.
@@ -566,27 +503,21 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 {
+#if ENABLE(MODERN_MEDIA_CONTROLS)
+    return { String(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
+#else
     return { String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript)) };
+#endif
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
 {
+#if ENABLE(MODERN_MEDIA_CONTROLS)
+    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+#else
     return String(mediaControlsAdwaitaUserAgentStyleSheet, sizeof(mediaControlsAdwaitaUserAgentStyleSheet));
+#endif
 }
-
-String RenderThemeJava::formatMediaControlsCurrentTime(float, float) const
-{
-    return "";
-}
-
-String RenderThemeJava::formatMediaControlsRemainingTime(float currentTime, float duration) const
-{
-    return formatMediaControlsTime(currentTime) + "/" + formatMediaControlsTime(duration);
-}
-
-/*
-bool RenderThemeJava::paintMediaFullscreenButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
-*/
 
 static RefPtr<HTMLMediaElement> parentMediaElement(const Node* node)
 {
@@ -599,41 +530,6 @@ static RefPtr<HTMLMediaElement> parentMediaElement(const Node* node)
         return nullptr;
     return downcast<HTMLMediaElement>(mediaNode.get());
 }
-
-bool RenderThemeJava::paintMediaPlayButton(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
-{
-    auto mediaElement = parentMediaElement(renderObject.node());
-    if (mediaElement == nullptr)
-        return false;
-
-    // readyState can be NETWORK_EMPTY if preload is NONE
-    jint type = mediaElement->readyState() == HTMLMediaElementEnums::ReadyState::HAVE_NOTHING
-                    ? JNI_EXPAND_MEDIA(DISABLED_PLAY_BUTTON)
-                    : mediaElement->paused()
-                        ? JNI_EXPAND_MEDIA(PLAY_BUTTON)
-                        : JNI_EXPAND_MEDIA(PAUSE_BUTTON);
-    return paintMediaControl(type, renderObject, paintInfo, r);
-}
-
-bool RenderThemeJava::paintMediaMuteButton(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
-{
-    auto mediaElement = parentMediaElement(renderObject.node());
-    if (mediaElement == nullptr)
-        return false;
-
-    jint type = !mediaElement->hasAudio()
-                    ? JNI_EXPAND_MEDIA(DISABLED_MUTE_BUTTON)
-                    : mediaElement->muted()
-                        ? JNI_EXPAND_MEDIA(UNMUTE_BUTTON)
-                        : JNI_EXPAND_MEDIA(MUTE_BUTTON);
-    return paintMediaControl(type, renderObject, paintInfo, r);
-}
-
-/*
-bool RenderThemeJava::paintMediaSeekBackButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
-bool RenderThemeJava::paintMediaSeekForwardButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
-*/
-
 bool RenderThemeJava::paintMediaSliderTrack(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
     auto mediaElement = parentMediaElement(renderObject.node());
@@ -663,61 +559,10 @@ bool RenderThemeJava::paintMediaSliderTrack(const RenderObject& renderObject, co
     << (jint)r.x() <<  (jint)r.y() << (jint)r.width() << (jint)r.height();
     return true;
 }
-
 bool RenderThemeJava::paintMediaSliderThumb(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
     return paintMediaControl(JNI_EXPAND_MEDIA(TIME_SLIDER_THUMB), renderObject, paintInfo, r);
 }
-
-bool RenderThemeJava::paintMediaVolumeSliderContainer(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_CONTAINER), renderObject, paintInfo, r);
-}
-
-bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
-{
-    auto mediaElement = parentMediaElement(renderObject.node());
-    if (mediaElement == nullptr)
-        return false;
-
-    paintInfo.context().platformContext()->rq().freeSpace(28)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIA_VOLUMETRACK
-    << (jfloat)mediaElement->volume()
-    << (jint)(mediaElement->hasAudio() && !mediaElement->muted() ? 0 : 1)   // muted
-    << (jint)r.x() <<  (jint)r.y() << (jint)r.width() << (jint)r.height();
-    return true;
-
-}
-
-bool RenderThemeJava::paintMediaVolumeSliderThumb(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& rect)
-{
-    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_THUMB), renderObject, paintInfo, rect);
-}
-
-/*
-bool RenderThemeJava::paintMediaRewindButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
-bool RenderThemeJava::paintMediaReturnToRealtimeButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
-bool RenderThemeJava::paintMediaToggleClosedCaptionsButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
-*/
-
-bool RenderThemeJava::paintMediaControlsBackground(const RenderObject&, const PaintInfo&, const IntRect&)
-{
-//    return paintMediaControl(JNI_EXPAND_MEDIA(BACKGROUND), o, paintInfo, r);
-    return true;
-}
-
-bool RenderThemeJava::paintMediaCurrentTime(const RenderObject&, const PaintInfo&, const IntRect&)
-{
-//    return paintMediaControl(JNI_EXPAND_MEDIA(CURRENT_TIME), o, paintInfo, r);
-    return true;
-}
-
-bool RenderThemeJava::paintMediaTimeRemaining(const RenderObject&, const PaintInfo&, const IntRect&)
-{
-//    return paintMediaControl(JNI_EXPAND_MEDIA(REMAINING_TIME), o, paintInfo, r);
-    return true;
-}
-
 bool RenderThemeJava::paintMediaControl(jint type, const RenderObject&, const PaintInfo& paintInfo, const IntRect& r)
 {
     paintInfo.context().platformContext()->rq().freeSpace(24)

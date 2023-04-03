@@ -891,7 +891,7 @@ public class ScrollPaneSkinTest {
 
         for (int i = 0; i < 10; i++) {
             ScrollPane sp = new ScrollPane(content);
-            refs.add(new WeakReference<ScrollPane>(sp));
+            refs.add(new WeakReference<>(sp));
             bp.setCenter(sp);
 
             Toolkit.getToolkit().firePulse();

@@ -39,9 +39,9 @@
 #include "FloatSize.h"
 #include "MediaStreamTrackPrivate.h"
 #include <wtf/Function.h>
-#include <wtf/HashMap.h>
 #include <wtf/MediaTime.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/UUID.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
@@ -133,15 +133,13 @@ private:
     WeakHashSet<Observer> m_observers;
     String m_id;
     MediaStreamTrackPrivate* m_activeVideoTrack { nullptr };
-    HashMap<String, RefPtr<MediaStreamTrackPrivate>> m_trackSet;
+    MemoryCompactRobinHoodHashMap<String, Ref<MediaStreamTrackPrivate>> m_trackSet;
     bool m_isActive { false };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif
 };
-
-typedef Vector<RefPtr<MediaStreamPrivate>> MediaStreamPrivateVector;
 
 } // namespace WebCore
 

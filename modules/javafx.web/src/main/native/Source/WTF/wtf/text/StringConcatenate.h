@@ -25,15 +25,21 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstring>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/StringView.h>
 
-// This macro is helpful for testing how many intermediate Strings are created while evaluating an
+#if defined(NDEBUG)
+#define WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING() do { } while (0)
+#else
+#define WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING() do { ++WTF::Detail::wtfStringCopyCount; } while (0)
+namespace WTF::Detail {
+// This variable is helpful for testing how many intermediate Strings are created while evaluating an
 // expression containing operator+.
-#ifndef WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING
-#define WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING() ((void)0)
+WTF_EXPORT_PRIVATE extern std::atomic<int> wtfStringCopyCount;
+}
 #endif
 
 namespace WTF {
@@ -246,7 +252,7 @@ public:
 
 template<typename... StringTypes> class StringTypeAdapter<std::tuple<StringTypes...>, void> {
 public:
-    StringTypeAdapter(std::tuple<StringTypes...> tuple)
+    StringTypeAdapter(const std::tuple<StringTypes...>& tuple)
         : m_tuple { tuple }
         , m_length { std::apply(computeLength, tuple) }
         , m_is8Bit { std::apply(computeIs8Bit, tuple) }
@@ -257,27 +263,26 @@ public:
     bool is8Bit() const { return m_is8Bit; }
     template<typename CharacterType> void writeTo(CharacterType* destination) const
     {
-        std::apply([&](StringTypes... strings) {
+        std::apply([&](const StringTypes&... strings) {
             unsigned offset = 0;
             (..., (
-                StringTypeAdapter<StringTypes>(strings).writeTo(destination + (offset * sizeof(CharacterType))),
+                StringTypeAdapter<StringTypes>(strings).writeTo(destination + offset),
                 offset += StringTypeAdapter<StringTypes>(strings).length()
             ));
         }, m_tuple);
     }
 
 private:
-    static unsigned computeLength(StringTypes... strings)
+    static unsigned computeLength(const StringTypes&... strings)
     {
         return (... + StringTypeAdapter<StringTypes>(strings).length());
     }
 
-    static bool computeIs8Bit(StringTypes... strings)
+    static bool computeIs8Bit(const StringTypes&... strings)
     {
         return (... && StringTypeAdapter<StringTypes>(strings).is8Bit());
     }
-
-    std::tuple<StringTypes...> m_tuple;
+    const std::tuple<StringTypes...>& m_tuple;
     unsigned m_length;
     bool m_is8Bit;
 };
@@ -377,12 +382,12 @@ struct ASCIICaseConverter {
     StringView string;
 };
 
-inline ASCIICaseConverter lowercase(StringView stringView)
+inline ASCIICaseConverter asASCIILowercase(StringView stringView)
 {
     return { StringView::CaseConvertType::Lower, stringView };
 }
 
-inline ASCIICaseConverter uppercase(StringView stringView)
+inline ASCIICaseConverter asASCIIUppercase(StringView stringView)
 {
     return { StringView::CaseConvertType::Upper, stringView };
 }
@@ -431,20 +436,14 @@ inline void stringTypeAdapterAccumulator(ResultType* result, Adapter adapter, Ad
 }
 
 template<typename StringTypeAdapter, typename... StringTypeAdapters>
-String tryMakeStringFromAdapters(StringTypeAdapter adapter, StringTypeAdapters ...adapters)
+RefPtr<StringImpl> tryMakeStringImplFromAdaptersInternal(unsigned length, bool areAllAdapters8Bit, StringTypeAdapter adapter, StringTypeAdapters ...adapters)
 {
-    static_assert(String::MaxLength == std::numeric_limits<int32_t>::max(), "");
-    auto sum = checkedSum<int32_t>(adapter.length(), adapters.length()...);
-    if (sum.hasOverflowed())
-        return String();
-
-    unsigned length = sum;
     ASSERT(length <= String::MaxLength);
-    if (are8Bit(adapter, adapters...)) {
+    if (areAllAdapters8Bit) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return String();
+            return nullptr;
 
         if (buffer)
             stringTypeAdapterAccumulator(buffer, adapter, adapters...);
@@ -455,12 +454,30 @@ String tryMakeStringFromAdapters(StringTypeAdapter adapter, StringTypeAdapters .
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return String();
+        return nullptr;
 
     if (buffer)
         stringTypeAdapterAccumulator(buffer, adapter, adapters...);
 
     return resultImpl;
+}
+
+template<typename Func, typename... StringTypes>
+auto handleWithAdapters(Func&& func, StringTypes&& ...strings) -> decltype(auto)
+{
+    return func(StringTypeAdapter<StringTypes>(std::forward<StringTypes>(strings))...);
+}
+
+template<typename StringTypeAdapter, typename... StringTypeAdapters>
+String tryMakeStringFromAdapters(StringTypeAdapter adapter, StringTypeAdapters ...adapters)
+{
+    static_assert(String::MaxLength == std::numeric_limits<int32_t>::max());
+    auto sum = checkedSum<int32_t>(adapter.length(), adapters.length()...);
+    if (sum.hasOverflowed())
+        return String();
+
+    bool areAllAdapters8Bit = are8Bit(adapter, adapters...);
+    return tryMakeStringImplFromAdaptersInternal(sum, areAllAdapters8Bit, adapter, adapters...);
 }
 
 template<typename... StringTypes>
@@ -478,14 +495,63 @@ String makeString(StringTypes... strings)
     return result;
 }
 
+template<typename StringTypeAdapter, typename... StringTypeAdapters>
+AtomString tryMakeAtomStringFromAdapters(StringTypeAdapter adapter, StringTypeAdapters ...adapters)
+{
+    static_assert(String::MaxLength == std::numeric_limits<int32_t>::max());
+    auto sum = checkedSum<int32_t>(adapter.length(), adapters.length()...);
+    if (sum.hasOverflowed())
+        return AtomString();
+
+    unsigned length = sum;
+    ASSERT(length <= String::MaxLength);
+
+    bool areAllAdapters8Bit = are8Bit(adapter, adapters...);
+    constexpr size_t maxLengthToUseStackVariable = 64;
+    if (length < maxLengthToUseStackVariable) {
+        if (areAllAdapters8Bit) {
+            LChar buffer[maxLengthToUseStackVariable];
+            stringTypeAdapterAccumulator(buffer, adapter, adapters...);
+            return AtomString { buffer, length };
+        }
+        UChar buffer[maxLengthToUseStackVariable];
+        stringTypeAdapterAccumulator(buffer, adapter, adapters...);
+        return AtomString { buffer, length };
+    }
+    return tryMakeStringImplFromAdaptersInternal(length, areAllAdapters8Bit, adapter, adapters...).get();
+}
+
+template<typename... StringTypes>
+AtomString tryMakeAtomString(StringTypes ...strings)
+{
+    return tryMakeAtomStringFromAdapters(StringTypeAdapter<StringTypes>(strings)...);
+}
+
+template<typename... StringTypes>
+AtomString makeAtomString(StringTypes... strings)
+{
+    AtomString result = tryMakeAtomString(strings...);
+    if (result.isNull())
+        CRASH();
+    return result;
+}
+
+inline String WARN_UNUSED_RETURN makeStringByInserting(StringView originalString, StringView stringToInsert, unsigned position)
+{
+    return makeString(originalString.left(position), stringToInsert, originalString.substring(position));
+}
+
 } // namespace WTF
 
 using WTF::Indentation;
 using WTF::IndentationScope;
+using WTF::makeAtomString;
 using WTF::makeString;
+using WTF::makeStringByInserting;
 using WTF::pad;
-using WTF::lowercase;
+using WTF::asASCIILowercase;
+using WTF::asASCIIUppercase;
 using WTF::tryMakeString;
-using WTF::uppercase;
+using WTF::tryMakeAtomString;
 
 #include <wtf/text/StringOperators.h>

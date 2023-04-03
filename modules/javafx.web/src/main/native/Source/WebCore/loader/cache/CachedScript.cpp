@@ -28,7 +28,6 @@
 #include "CachedScript.h"
 
 #include "CachedResourceClient.h"
-#include "CachedResourceClientWalker.h"
 #include "CachedResourceRequest.h"
 #include "RuntimeApplicationChecks.h"
 #include "SharedBuffer.h"
@@ -51,7 +50,7 @@ void CachedScript::setEncoding(const String& chs)
 
 String CachedScript::encoding() const
 {
-    return m_decoder->encoding().name();
+    return String::fromLatin1(m_decoder->encoding().name());
 }
 
 StringView CachedScript::script()

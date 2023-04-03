@@ -31,6 +31,7 @@
 #include "ExecutableInfo.h"
 #include "ExpressionRangeInfo.h"
 #include "Identifier.h"
+#include "ImplementationVisibility.h"
 #include "Intrinsic.h"
 #include "JSCast.h"
 #include "ParserModes.h"
@@ -152,6 +153,7 @@ public:
     static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
+    ImplementationVisibility implementationVisibility() const { return static_cast<ImplementationVisibility>(m_implementationVisibility); }
     bool isBuiltinFunction() const { return m_isBuiltinFunction; }
     ConstructAbility constructAbility() const { return static_cast<ConstructAbility>(m_constructAbility); }
     JSParserScriptMode scriptMode() const { return static_cast<JSParserScriptMode>(m_scriptMode); }
@@ -281,7 +283,8 @@ private:
     unsigned m_features : 14;
     unsigned m_constructorKind : 2;
     SourceParseMode m_sourceParseMode;
-    unsigned m_lexicalScopeFeatures : 4;
+    unsigned m_implementationVisibility : bitWidthOfImplementationVisibility;
+    unsigned m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
     unsigned m_functionMode : 2; // FunctionMode
     unsigned m_derivedContextType: 2;
 
@@ -319,5 +322,9 @@ public:
 
     DECLARE_EXPORT_INFO;
 };
+
+#if COMPILER(CLANG) && !ASSERT_ENABLED
+static_assert(sizeof(UnlinkedFunctionExecutable) <= 96, "UnlinkedFunctionExecutable needs to be small");
+#endif
 
 } // namespace JSC
