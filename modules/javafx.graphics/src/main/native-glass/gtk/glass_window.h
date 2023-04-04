@@ -106,7 +106,7 @@ public:
     virtual bool hasIME() = 0;
     virtual bool filterIME(GdkEvent *) = 0;
     virtual void enableOrResetIME() = 0;
-    virtual void updateCurPos(int) = 0;
+    virtual void updateCaretPos() = 0;
     virtual void disableIME() = 0;
     virtual void paint(void* data, jint width, jint height) = 0;
     virtual WindowFrameExtents get_frame_extents() = 0;
@@ -216,7 +216,7 @@ public:
     bool hasIME();
     bool filterIME(GdkEvent *);
     void enableOrResetIME();
-    void updateCurPos(int);
+    void updateCaretPos();
     void disableIME();
     void paint(void*, jint, jint);
     GdkWindow *get_gdk_window();

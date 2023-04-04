@@ -59,10 +59,9 @@ void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     g_print("on_preedit_changed\n");
     gchar *preedit_text;
     WindowContext *ctx = (WindowContext *) user_data;
-    int offset;
 
-    gtk_im_context_get_preedit_string(im_context, &preedit_text, NULL, &offset);
-    ctx->updateCurPos(offset);
+    gtk_im_context_get_preedit_string(im_context, &preedit_text, NULL, NULL);
+    ctx->updateCaretPos();
 
     jstring jstr = mainEnv->NewStringUTF(preedit_text);
     EXCEPTION_OCCURED(mainEnv);
@@ -96,21 +95,23 @@ void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
     LOG_EXCEPTION(mainEnv)
 }
 
-void WindowContextBase::updateCurPos(int offset) {
+void WindowContextBase::updateCaretPos() {
     double *nativePos;
 
     jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(get_jview(),
-                                                               jViewNotifyInputMethodCandidatePosRequest,
-                                                               offset);
+                                      jViewNotifyInputMethodCandidatePosRequest,
+                                      0);
 
     nativePos = mainEnv->GetDoubleArrayElements(pos, NULL);
 
     GdkRectangle rect;
     if (nativePos) {
-        rect.x = (int)nativePos[0];
-        rect.y  = (int)nativePos[1];
+        rect.x = (int) nativePos[0];
+        rect.y = (int) nativePos[1];
+        rect.width = 0;
+        rect.height = 0;
 
-        g_print("caret pos: %d, %d\n", rect.x, rect.y);
+        g_print("Pos: x = %d, y = %d\ns", rect.x, rect.y);
 
         mainEnv->ReleaseDoubleArrayElements(pos, nativePos, 0);
         gtk_im_context_set_cursor_location(im_ctx.ctx, &rect);

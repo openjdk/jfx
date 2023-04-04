@@ -114,10 +114,8 @@ final class GtkView extends View {
 
         var w = getWindow();
         //On Linux values are relative
-        if (pos != null) {
-            pos[0] -= w.getX();
-            pos[1] -= w.getY();
-        }
+        pos[0] -= (pos[0] > 0) ? w.getX() + getX() : 0;
+        pos[1] -= (pos[1] > 0) ? w.getY() + getY() : 0;
 
         return pos;
     }
