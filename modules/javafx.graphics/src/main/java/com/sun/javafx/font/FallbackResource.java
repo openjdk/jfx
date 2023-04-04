@@ -369,14 +369,14 @@ public class FallbackResource implements CompositeFontResource {
     public String toString() {
         int ns = getNumSlots();
         String s = "Fallback resource:\n";
-        for (int i=0;i<ns;i++) {
-          if ((getSlotResource(i)==null)) {
-           s+= "Slot " + i + "=null\n";
-          } else {
-          s += "Slot " + i + "="+getSlotResource(i).getFullName()+"\n";
-          }
+        for (int i=0; i<ns; i++) {
+            if ((getSlotResource(i) == null)) {
+                s += "Slot " + i + "=null\n";
+            } else {
+                s += "Slot " + i + "=" + getSlotResource(i).getFullName()+"\n";
+            }
         }
         s+= "\n";
-       return s;
+        return s;
     }
 }

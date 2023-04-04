@@ -29,9 +29,9 @@ import java.util.ArrayList;
 
 public class FontFallbackInfo {
 
-   ArrayList<String> linkedFontFiles;
-   ArrayList<String> linkedFontNames;
-   ArrayList<FontResource> linkedFonts;
+   private ArrayList<String> linkedFontFiles;
+   private ArrayList<String> linkedFontNames;
+   private ArrayList<FontResource> linkedFonts;
 
    public FontFallbackInfo() {
       linkedFontFiles = new ArrayList<String>();
