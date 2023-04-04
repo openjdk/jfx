@@ -111,8 +111,6 @@ void WindowContextBase::updateCaretPos() {
         rect.width = 0;
         rect.height = 0;
 
-        g_print("Pos: x = %d, y = %d\ns", rect.x, rect.y);
-
         mainEnv->ReleaseDoubleArrayElements(pos, nativePos, 0);
         gtk_im_context_set_cursor_location(im_ctx.ctx, &rect);
     }
@@ -125,7 +123,6 @@ void WindowContextBase::enableOrResetIME() {
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
         g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
         g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
-        g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
         g_signal_connect(im_ctx.ctx, "commit", G_CALLBACK(on_commit), this);
     }
 
