@@ -26,9 +26,13 @@
 package test.com.sun.javafx.binding;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.javafx.binding.ListenerList;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -68,6 +72,21 @@ public class ExpressionHelperUtility {
             return Collections.emptyList();
         }
         final Class helperClass = helper.getClass();
+
+        if(helper instanceof InvalidationListener il) {
+            return List.of(il);
+        }
+        if(helper instanceof ListenerList list) {
+            List<InvalidationListener> listeners = new ArrayList<>();
+
+            for(int i = 0; i < list.size(); i++) {
+                if(list.get(i) instanceof InvalidationListener il) {
+                    listeners.add(il);
+                }
+            }
+
+            return listeners;
+        }
 
         try {
             final Class clazz = Class.forName(EXPRESSION_HELPER_SINGLE_INVALIDATION);
@@ -135,6 +154,31 @@ public class ExpressionHelperUtility {
         if (helper == null) {
             return Collections.emptyList();
         }
+
+        if(helper instanceof ChangeListener) {
+            try {
+                Field field = Class.forName("com.sun.javafx.binding.OldValueCachingListenerHelper$ChangeListenerWrapper").getDeclaredField("listener");
+
+                field.setAccessible(true);
+
+                return List.of((ChangeListener<T>) field.get(helper));
+            }
+            catch(Exception e) {}
+
+            return List.of((ChangeListener<T>) helper);
+        }
+        if(helper instanceof ListenerList list) {
+            List<ChangeListener<? super T>> listeners = new ArrayList<>();
+
+            for(int i = 0; i < list.size(); i++) {
+                if(list.get(i) instanceof ChangeListener<?> cl) {
+                    listeners.add((ChangeListener<T>) cl);
+                }
+            }
+
+            return listeners;
+        }
+
         final Class helperClass = helper.getClass();
 
         try {
@@ -322,7 +366,15 @@ public class ExpressionHelperUtility {
                 final Field field = clazz.getDeclaredField("helper");
                 field.setAccessible(true);
                 return field.get(bean);
-            } catch (Exception ex) { }
+            } catch (Exception ex) {
+                try {
+                    Field field = clazz.getDeclaredField("listenerData");
+                    field.setAccessible(true);
+                    return field.get(bean);
+                }
+                catch(Exception ex2) {
+                }
+            }
             clazz = clazz.getSuperclass();
         }
         return null;

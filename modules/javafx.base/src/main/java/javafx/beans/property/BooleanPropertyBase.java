@@ -32,7 +32,8 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerHelper;
+
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
 
@@ -53,7 +54,7 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
     private ObservableBooleanValue observable = null;
     private InvalidationListener listener = null;
     private boolean valid = true;
-    private ExpressionHelper<Boolean> helper = null;
+    private Object listenerData;
 
     /**
      * The constructor of the {@code BooleanPropertyBase}.
@@ -73,22 +74,22 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
     }
 
     /**
@@ -101,7 +102,9 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        boolean topLevel = OldValueCachingListenerHelper.fireValueChanged(listenerData, this);
+
+        OldValueCachingListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
     }
 
     private void markInvalid() {

@@ -25,14 +25,14 @@
 
 package javafx.beans.binding;
 
+import com.sun.javafx.binding.BindingHelperObserver;
+import com.sun.javafx.binding.ListenerHelper;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-
-import com.sun.javafx.binding.BindingHelperObserver;
-import com.sun.javafx.binding.ExpressionHelper;
 
 /**
  * Base class that provides most of the functionality needed to implement a
@@ -71,7 +71,7 @@ public abstract class LongBinding extends LongExpression implements
      * in one or more calls to {@link #unbind(Observable...)}.
      */
     private BindingHelperObserver observer;
-    private ExpressionHelper<Number> helper = null;
+    private Object listenerData;
 
     /**
      * Creates a default {@code LongBinding}.
@@ -81,22 +81,24 @@ public abstract class LongBinding extends LongExpression implements
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = ListenerHelper.addListener(listenerData, listener);
+        get();  // adding an invalidation listener requires that the binding becomes valid (according to tests)
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = ListenerHelper.removeListener(listenerData, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = ListenerHelper.addListener(listenerData, listener);
+        get();  // adding a change listener requires that the binding becomes valid
     }
 
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = ListenerHelper.removeListener(listenerData, listener);
     }
 
     /**
@@ -177,9 +179,14 @@ public abstract class LongBinding extends LongExpression implements
     @Override
     public final void invalidate() {
         if (valid) {
+            long oldValue = value;
+
             valid = false;
             onInvalidating();
-            ExpressionHelper.fireValueChangedEvent(helper);
+
+            boolean topLevel = ListenerHelper.fireValueChanged(listenerData, this, oldValue);
+
+            ListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
         }
     }
 

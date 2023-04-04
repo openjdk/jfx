@@ -25,7 +25,8 @@
 
 package javafx.beans.value;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerHelper;
+
 import javafx.beans.InvalidationListener;
 
 /**
@@ -41,7 +42,7 @@ import javafx.beans.InvalidationListener;
  */
 public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 
-    private ExpressionHelper<T> helper;
+    private Object listenerData;
 
     /**
      * Creates a default {@code ObservableValueBase}.
@@ -54,7 +55,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
     }
 
     /**
@@ -62,7 +63,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
     }
 
     /**
@@ -70,7 +71,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
     }
 
     /**
@@ -78,7 +79,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
     }
 
     /**
@@ -89,6 +90,8 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      * the following call to fireValueChangedEvent.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        boolean topLevel = OldValueCachingListenerHelper.fireValueChanged(listenerData, this);
+
+        OldValueCachingListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
     }
 }

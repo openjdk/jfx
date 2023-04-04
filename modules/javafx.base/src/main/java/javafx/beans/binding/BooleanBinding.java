@@ -32,7 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.binding.BindingHelperObserver;
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.ListenerHelper;
 
 /**
  * Base class that provides most of the functionality needed to implement a
@@ -75,26 +75,28 @@ public abstract class BooleanBinding extends BooleanExpression implements
      * in one or more calls to {@link #unbind(Observable...)}.
      */
     private BindingHelperObserver observer;
-    private ExpressionHelper<Boolean> helper = null;
+    private Object listenerData;
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = ListenerHelper.addListener(listenerData, listener);
+        get();  // adding an invalidation listener requires that the binding becomes valid (according to tests)
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = ListenerHelper.removeListener(listenerData, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        listenerData = ListenerHelper.addListener(listenerData, listener);
+        get();  // adding a change listener requires that the binding becomes valid
     }
 
     @Override
     public void removeListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        listenerData = ListenerHelper.removeListener(listenerData, listener);
     }
 
     /**
@@ -175,9 +177,14 @@ public abstract class BooleanBinding extends BooleanExpression implements
     @Override
     public final void invalidate() {
         if (valid) {
+            boolean oldValue = value;
+
             valid = false;
             onInvalidating();
-            ExpressionHelper.fireValueChangedEvent(helper);
+
+            boolean topLevel = ListenerHelper.fireValueChanged(listenerData, this, oldValue);
+
+            ListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
         }
     }
 
