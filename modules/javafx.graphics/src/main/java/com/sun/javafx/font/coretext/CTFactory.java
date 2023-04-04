@@ -52,10 +52,10 @@ public class CTFactory extends PrismFontFactory {
         String filename = OS.CTFontCopyURLAttribute(fontRef);
         // macOS 13 Ventura reports ".ThonburiUI Regular Regular" as the name
         // of font used for Thai. Per inspection of the font this is incorrect.
-        // Need to do fix up here. I 
+        // Need to do fix up here.
         if (name.endsWith(" Regular Regular")) {
-            System.err.println("Fix up double use of Regular in name : " + name);
             if (debugFonts) {
+                System.err.println("Fix up double use of Regular in name : " + name);
             }
             name = name.replaceFirst(" Regular Regular", " Regular");
         }
