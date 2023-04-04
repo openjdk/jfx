@@ -62,6 +62,7 @@ jmethodID jViewNotifyDragDrop;
 jmethodID jViewNotifyDragLeave;
 jmethodID jViewNotifyScroll;
 jmethodID jViewNotifyInputMethod;
+jmethodID jViewNotifyInputMethodCandidatePosRequest;
 jmethodID jViewNotifyMenu;
 jfieldID  jViewPtr;
 
@@ -208,6 +209,8 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jViewNotifyScroll = env->GetMethodID(clazz, "notifyScroll", "(IIIIDDIIIIIDD)V");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethod = env->GetMethodID(clazz, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jViewNotifyInputMethodCandidatePosRequest = env->GetMethodID(clazz, "notifyInputMethodCandidatePosRequest", "(I)[D");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyMenu = env->GetMethodID(clazz, "notifyMenu", "(IIIIZ)V");
     if (env->ExceptionCheck()) return JNI_ERR;

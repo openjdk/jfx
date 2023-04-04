@@ -66,10 +66,12 @@ final class GtkView extends View {
     protected native void _scheduleRepaint(long ptr);
 
     @Override
-    protected void _begin(long ptr) {}
+    protected void _begin(long ptr) {
+    }
 
     @Override
-    protected void _end(long ptr) {}
+    protected void _end(long ptr) {
+    }
 
     @Override
     protected void _uploadPixels(long ptr, Pixels pixels) {
@@ -78,10 +80,10 @@ final class GtkView extends View {
             _uploadPixelsDirect(ptr, data, pixels.getWidth(), pixels.getHeight());
         } else if (data.hasArray() == true) {
             if (pixels.getBytesPerComponent() == 1) {
-                ByteBuffer bytes = (ByteBuffer)data;
+                ByteBuffer bytes = (ByteBuffer) data;
                 _uploadPixelsByteArray(ptr, bytes.array(), bytes.arrayOffset(), pixels.getWidth(), pixels.getHeight());
             } else {
-                IntBuffer ints = (IntBuffer)data;
+                IntBuffer ints = (IntBuffer) data;
                 _uploadPixelsIntArray(ptr, ints.array(), ints.arrayOffset(), pixels.getWidth(), pixels.getHeight());
             }
         } else {
@@ -89,8 +91,11 @@ final class GtkView extends View {
             _uploadPixelsDirect(ptr, pixels.asByteBuffer(), pixels.getWidth(), pixels.getHeight());
         }
     }
+
     private native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height);
+
     private native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height);
+
     private native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height);
 
     @Override
@@ -102,5 +107,18 @@ final class GtkView extends View {
     @Override
     protected void _finishInputMethodComposition(long ptr) {
         //nothing
+    }
+
+    protected double[] notifyInputMethodCandidatePosRequest(int offset) {
+        double[] pos = super.notifyInputMethodCandidatePosRequest(offset);
+
+        var w = getWindow();
+        //On Linux values are relative
+        if (pos != null) {
+            pos[0] -= w.getX();
+            pos[1] -= w.getY();
+        }
+
+        return pos;
     }
 }
