@@ -284,7 +284,7 @@ public abstract class PrismFontFactory implements FontFactory {
              PrismFontFile fr = createFontFile(null, filename, 0, false, false, false, false);
 
              int cnt = fr.getFontCount();
-             if (cnt == 1) {
+             if (cnt == 1 || fr.getFullName().equalsIgnoreCase(targetName)) {
                  return 0;
              }
              int index = 1;
