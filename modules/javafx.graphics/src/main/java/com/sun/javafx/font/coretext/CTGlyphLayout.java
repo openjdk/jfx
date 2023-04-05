@@ -79,6 +79,15 @@ class CTGlyphLayout extends GlyphLayout {
         if (fontName == null) return -1;
         if (!fontName.equalsIgnoreCase(name)) {
             if (fr == null) return -1;
+            // macOS 13 Ventura reports ".ThonburiUI Regular Regular" as the name
+            // of font used for Thai. Per inspection of the font this is incorrect.
+            // Need to do fix up here.
+            if (fontName.endsWith(" Regular Regular")) {
+                if (PrismFontFactory.debugFonts) {
+                    System.err.println("Fix up double use of Regular in name : " + fontName);
+                }
+                fontName = fontName.replaceFirst(" Regular Regular", " Regular");
+            }
             slot = fr.getSlotForFont(fontName);
             if (slot == -1) {
                  CTFontFile newFont = null;
