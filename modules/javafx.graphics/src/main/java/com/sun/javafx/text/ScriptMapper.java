@@ -157,16 +157,16 @@ public class ScriptMapper {
         else if (code <= 0x13ff) { // U+13A0 - U+13FF Cherokee
             return true;
         }
-        else if (code < 0x1c50) {
-            return false;
-        }
-        else if (code <= 0x1c7f) { // U+1C50 - U+1C7F Ol Chiki / Santali
-            return true;
-        }
         else if (code < 0x1780) {
             return false;
         }
         else if (code <= 0x17ff) { // 1780 - 17FF Khmer
+            return true;
+        }
+        else if (code < 0x1c50) {
+            return false;
+        }
+        else if (code <= 0x1c7f) { // U+1C50 - U+1C7F Ol Chiki / Santali
             return true;
         }
         else if (code < 0x200c) {
