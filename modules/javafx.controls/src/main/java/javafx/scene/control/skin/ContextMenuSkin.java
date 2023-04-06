@@ -201,6 +201,9 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     @Override public void dispose() {
         root.idProperty().unbind();
         root.styleProperty().unbind();
+        if(root instanceof ContextMenuContent) {
+            ((ContextMenuContent)root).disposeListeners();
+        }
         if (tlFocus != null) tlFocus.dispose();
     }
 
