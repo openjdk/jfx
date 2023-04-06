@@ -26,6 +26,7 @@
 package com.sun.javafx.webkit.prism;
 
 import com.sun.glass.ui.Screen;
+import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PGFont;
@@ -921,13 +922,66 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     @Override
     public void drawString(final WCFont f, final int[] glyphs,
-                           final float[] advances, final float x, final float y)
+                           final float[] advances, float x, final float y)
     {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format(
                     "Drawing %d glyphs @(%.1f, %.1f)",
                     glyphs.length, x, y));
         }
+        PGFont font = (PGFont)f.getPlatformFont();
+        final FontStrike strike = font.getStrike(getTransformNoClone(), getFontSmoothingType());
+        final FontResource fontResource = font.getFontResource();
+        boolean isColorGlyph = false;
+        for (int i=0; i<glyphs.length; i++) {
+           if (fontResource.isColorGlyph(glyphs[i])) {
+               isColorGlyph = true;
+               break;
+           }
+        }
+        if (!isColorGlyph || glyphs.length <= 1) {
+            drawStringInternal(f, glyphs, advances, x, y);
+            return;
+        }
+        int[] emoji_glyphs = new int[1];
+        float[] emoji_advances = new float[1];
+        int[] char_glyphs;
+        float[] char_advances;
+        int chars_start = 0;
+        int pos = 0;
+        int len = glyphs.length;
+        while (pos < len) {
+            int gcode = glyphs[pos];
+            float adv = advances[pos];
+            isColorGlyph = fontResource.isColorGlyph(gcode);
+            if (isColorGlyph || (pos == (len-1))) {
+                if (chars_start < pos) { // emit non-emoji run
+                    int run_len = pos-chars_start;
+                    char_glyphs = new int[run_len];
+                    char_advances = new float[run_len];
+                    System.arraycopy(glyphs, chars_start, char_glyphs, 0, run_len);
+                    System.arraycopy(advances, chars_start, char_advances, 0, run_len);
+                    drawStringInternal(f, char_glyphs, char_advances, x, y);
+                    for (int i=0; i<char_advances.length; i++) {
+                        x += char_advances[i];
+                    }
+                }
+                if (isColorGlyph) { // emit emoji
+                    emoji_glyphs[0] = gcode;
+                    emoji_advances[0] = adv;
+                    drawStringInternal(f, emoji_glyphs, emoji_advances, x, y); // emit emoji
+                    x += adv;
+                    chars_start = pos+1;
+                }
+            }
+            pos++;
+        }
+
+    }
+
+    private void drawStringInternal(final WCFont f, final int[] glyphs,
+                           final float[] advances, final float x, final float y) {
+
         PGFont font = (PGFont)f.getPlatformFont();
         TextRun gl = TextUtilities.createGlyphList(glyphs, advances, x, y);
 
