@@ -58,6 +58,7 @@ import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
@@ -628,14 +629,19 @@ if (sourceDateEpoch != null) {
     def epochSeconds = Long.parseLong(sourceDateEpoch)
     buildInstant = Instant.ofEpochSecond(epochSeconds)
 }
-// Creates the timestamp in UTC using the ISO 8601 date and time format
+// Creates the timestamp in UTC using the ISO 8601 extended format
 def buildTimestamp = buildInstant.toString()
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
 def relSuffix = ""
 def relOpt = ""
 if (HUDSON_JOB_NAME == "not_hudson") {
+    // The version OPT field matches the regular expression "([-a-zA-Z0-9.]+)".
+    // For the ISO 8601 basic format, use the pattern "yyyyMMdd'T'HHmmssX".
+    def zonedTime = ZonedDateTime.ofInstant(buildInstant, ZoneOffset.UTC)
+    def formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
+    String versionTimestamp = zonedTime.format(formatter)
     relSuffix = "-internal"
-    relOpt = "-${buildTimestamp}"
+    relOpt = "-${versionTimestamp}"
 } else {
     relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
 }
