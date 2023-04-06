@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -633,11 +633,11 @@ final class MacAccessible extends Accessible {
     /* The native peer associated with the instance */
     private long peer;
 
-    /* Creates a GlassAccessible linked to the caller (GlobalRef) */
-    private native long _createGlassAccessible();
+    /* Creates a native accessible peer linked to the caller (GlobalRef) */
+    private native long _createAccessiblePeer(String forRole);
 
-    /* Releases the GlassAccessible and deletes the GlobalRef */
-    private native void _destroyGlassAccessible(long accessible);
+    /* Releases the native accessible peer and deletes the GlobalRef */
+    private native void _destroyAccessiblePeer(long accessible);
 
     private static native String getString(long nsString);
     private static native boolean isEqualToString(long nsString1, long nsString);
@@ -655,10 +655,6 @@ final class MacAccessible extends Accessible {
     private static final int kAXMenuItemModifierNoCommand    = (1 << 3);
 
     MacAccessible() {
-        this.peer = _createGlassAccessible();
-        if (this.peer == 0L) {
-            throw new RuntimeException("could not create platform accessible");
-        }
     }
 
     @Override
@@ -667,7 +663,7 @@ final class MacAccessible extends Accessible {
             if (getView() == null) {
                 NSAccessibilityPostNotification(peer, MacNotification.NSAccessibilityUIElementDestroyedNotification.ptr);
             }
-            _destroyGlassAccessible(peer);
+            _destroyAccessiblePeer(peer);
             peer = 0L;
         }
         super.dispose();
@@ -806,6 +802,15 @@ final class MacAccessible extends Accessible {
 
     @Override
     protected long getNativeAccessible() {
+        if (this.peer == 0L) {
+            AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+            if (role == null) role = AccessibleRole.NODE;
+            this.peer = _createAccessiblePeer(role.toString());
+            if (this.peer == 0L) {
+                throw new RuntimeException("could not create platform accessible");
+            }
+        }
+
         return peer;
     }
 
@@ -964,6 +969,11 @@ final class MacAccessible extends Accessible {
     }
 
     /* NSAccessibility Protocol - JNI entry points */
+
+    private long accessibilityAttributeRole() {
+        return -1;
+    }
+
     private long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);

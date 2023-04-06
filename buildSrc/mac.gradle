@@ -184,7 +184,8 @@ MAC.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/mac/*"]
-MAC.glass.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/mac")
+MAC.glass.nativeSource = [file("${project("graphics").projectDir}/src/main/native-glass/mac"),
+        file("${project("graphics").projectDir}/src/main/native-glass/mac/a11y")]
 MAC.glass.compiler = compiler
 MAC.glass.ccFlags = [ccFlags,
     "-DMACOS_MIN_VERSION_MAJOR=$macOSMinVersionMajor",
