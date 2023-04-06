@@ -181,6 +181,32 @@ file(GLOB JavaScriptCore_SCRIPTS_SOURCES ${JavaScriptCore_SCRIPTS_SOURCES_PATHS}
 
 foreach (_file ${JavaScriptCore_SCRIPTS_SOURCES})
     get_filename_component(_script "${_file}" NAME)
+    #the copy_if_different  is failing on Mac OSX 11 platform if build using -j12
+    #Introducing sleep for 1 s and retry file copy 10 times, to prevent copy failing error
+    if (PORT STREQUAL "Java")
+    # introduce one second delay to prevent any lock
+    execute_process(COMMAND ${CMAKE_COMMAND} -E sleep 1)
+    set(copy_success FALSE)
+    set(copy_attempts 0)
+    while(NOT copy_success AND copy_attempts LESS 10)
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${_file} ${JavaScriptCore_SCRIPTS_DIR}/${_script}
+            RESULT_VARIABLE copy_result
+            OUTPUT_VARIABLE copy_output
+        )
+        if(copy_result)
+            message(WARNING "Failed to copy ${_file} to ${JavaScriptCore_SCRIPTS_DIR}/${_script}: ${copy_output}")
+            # retry the copy after a delay of one second
+            execute_process(COMMAND ${CMAKE_COMMAND} -E sleep 1)
+        else()
+            set(copy_success TRUE)
+        endif()
+        math(EXPR copy_attempts "${copy_attempts}+1")
+    endwhile()
+    if(NOT copy_success)
+        message(FATAL_ERROR "Failed to copy ${_file} after multiple attempts")
+    endif()
+    endif() # end for port "Java"
     add_custom_command(
         OUTPUT ${JavaScriptCore_SCRIPTS_DIR}/${_script}
         MAIN_DEPENDENCY ${_file}
