@@ -273,7 +273,7 @@ class CTFontFile extends PrismFontFile {
         if (PrismFontFactory.debugFonts) {
             System.err.println("Cascading list for " + getFullName());
         }
-        for (int i=0; i<stringInfo.length;i+=2) {
+        for (int i=0; i<stringInfo.length; i+=2) {
             String name = stringInfo[i];
             String file = stringInfo[i+1];
             if (PrismFontFactory.debugFonts) {

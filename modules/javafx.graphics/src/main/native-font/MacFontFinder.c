@@ -253,6 +253,11 @@ Java_com_sun_javafx_font_MacFontFinder_getCascadeListRefs
         return NULL;
     }
     jlong *refArr = calloc(cnt, sizeof(jlong));
+    if (refArr == NULL) {
+        CFRelease(fds);
+        (*env)->DeleteLocalRef(env, refs); // not strictly needed.
+        return NULL;
+    }
     for (CFIndex i=0; i<cnt; i++) {
         CTFontDescriptorRef descRef = CFArrayGetValueAtIndex(fds, i);
         CTFontRef ref = CTFontCreateWithFontDescriptor(descRef, 0.0, NULL);
