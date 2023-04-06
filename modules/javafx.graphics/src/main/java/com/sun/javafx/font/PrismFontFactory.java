@@ -242,7 +242,7 @@ public abstract class PrismFontFactory implements FontFactory {
          * macOS: we need to load unique fonts for regular and bold.
          * Probably this should be handled elsewhere
          */
-        if (isMacOSX && name.startsWith("System ")) {
+        if (isMacOSX && (name != null) && name.startsWith("System ")) {
             key += name;
         }
         PrismFontFile fr = fileNameToFontResourceMap.get(key);
