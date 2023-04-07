@@ -713,7 +713,7 @@ Java_com_sun_javafx_font_PrismFontFactory_populateFontFileNameMap
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_sun_javafx_font_PrismFontFactory_regReadFontLink(JNIEnv *env, jclass obj, jstring lpFontName)
+Java_com_sun_javafx_font_directwrite_DWFactory_regReadFontLink(JNIEnv *env, jclass obj, jstring lpFontName)
 {
     LONG lResult;
     BYTE* buf;
@@ -780,7 +780,7 @@ static const wchar_t EUDCKEY_DEFAULT[] = L"EUDC\\1252";
 
 
 JNIEXPORT jstring JNICALL
-Java_com_sun_javafx_font_PrismFontFactory_getEUDCFontFile(JNIEnv *env, jclass cl) {
+Java_com_sun_javafx_font_directwrite_DWFactory_getEUDCFontFile(JNIEnv *env, jclass cl) {
     int    rc;
     HKEY   key;
     DWORD  type;
