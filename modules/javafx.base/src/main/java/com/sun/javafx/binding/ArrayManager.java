@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
 package com.sun.javafx.binding;
 
 import java.util.Arrays;
@@ -9,13 +34,13 @@ import java.util.Objects;
  *
  * To use this class, store an instance of this class in a static field,
  * supplying the {@link Accessor} for a specific array and size. Then just call
- * methods on the array manager supplying the instance each time.<p>
+ * methods on the array manager supplying the instance each time.
  */
 public class ArrayManager<I, E> {
 
     /**
-     * The minimum array size (3 is a good number considering it would fit exactly 24 bytes
-     * with compressed oops).
+     * The minimum array size. (3 is a good number considering it would use exactly 24 bytes
+     * with compressed oops with wasted space due to alignment issues).
      */
     private static final int MINIMUM_SIZE = 3;
 
@@ -269,8 +294,8 @@ public class ArrayManager<I, E> {
         return max;
     }
 
-    // note: must be the exact inverse of increase, so the array size always
-    // has the same set of values.
+    // note: must be the exact inverse of increase, so the array sizes used
+    // are always the same values.
     private static int decrease(int size) {
         return (int)(((size - MINIMUM_SIZE) * 2L + 2) / 3);
     }
