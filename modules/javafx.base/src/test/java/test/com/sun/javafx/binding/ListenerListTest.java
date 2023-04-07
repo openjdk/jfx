@@ -26,6 +26,7 @@
 package test.com.sun.javafx.binding;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -33,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +50,8 @@ import javafx.beans.value.ObservableValue;
 public class ListenerListTest {
     private final InvalidationListener il1 = obs -> {};
     private final ChangeListener<?> cl1 = (obs, o, n) -> {};
+    private final InvalidationListener il2 = obs -> {};
+    private final ChangeListener<?> cl2 = (obs, o, n) -> {};
 
     private final ListenerList list = new ListenerList(cl1, il1);
 
@@ -69,6 +74,32 @@ public class ListenerListTest {
     }
 
     @Test
+    void shouldRejectUnlockedWhenNotLocked() {
+        assertThrows(IllegalStateException.class, () -> list.unlock());
+    }
+
+    @Test
+    void hasChangeListenersShouldReturnCorrectState() {
+        assertTrue(list.hasChangeListeners());
+
+        ListenerList list2 = new ListenerList(il1, il2);
+
+        assertFalse(list2.hasChangeListeners());
+    }
+
+    @Test
+    void shouldOnlyLockOnce() {
+        list.setProgress(1);  // locks list
+        list.setProgress(2);  // doesn't nested lock
+        list.setProgress(3);
+
+        list.unlock();  // unlocks
+
+        // verify another unlock is not needed:
+        assertThrows(IllegalStateException.class, () -> list.unlock());
+    }
+
+    @Test
     void shouldKeepInvalidationAndChangeListenersSeparated() {
         Random rnd = new Random(1);
 
@@ -77,28 +108,19 @@ public class ListenerListTest {
         }
 
         assertEquals(10002, list.size());
-
-        boolean foundChange = false;
-
-        for(int i = 0; i < list.size(); i++) {
-            if(list.get(i) instanceof ChangeListener) {
-                foundChange = true;
-            }
-            else if(foundChange) {
-                fail("Found an invalidation listener at index " + i + " after a change listener was seen");
-            }
-        }
+        assertListenerSeparation(list);
     }
 
     @Test
-    void shouldKeepInvalidationAndChangeListenersSeparatedWhenSomeAreRemovedOrExpired() {
+    void shouldKeepInvalidationAndChangeListenersSeparatedAndInOrderWhenSomeAreRemovedOrExpired() {
         Random rnd = new Random(1);
         List<Object> addedListeners = new ArrayList<>();
+        ListenerList list = new ListenerList(new WeakInvalidationListener("0"), new WeakChangeListener("1"));
 
-        addedListeners.add(il1);
-        addedListeners.add(cl1);
+        addedListeners.add(list.get(0));
+        addedListeners.add(list.get(1));
 
-        for(int i = 0; i < 10000; i++) {
+        for(int i = 2; i < 10000; i++) {
             Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
 
             addedListeners.add(listener);
@@ -119,19 +141,213 @@ public class ListenerListTest {
         // the exact size is not known, as it would depend on how many listeners have expired and
         // when the last resize was done to clean expired elements
 
-        boolean foundChange = false;
+        assertListenerSeparation(list);
+
+        List<Object> separatedListeners =
+            Stream.concat(
+                addedListeners.stream().filter(InvalidationListener.class::isInstance),
+                addedListeners.stream().filter(ChangeListener.class::isInstance)
+            )
+            .toList();
 
         for(int i = 0; i < list.size(); i++) {
             Object listener = list.get(i);
 
-            if(listener instanceof ChangeListener) {
-                foundChange = true;
+            assertTrue(separatedListeners.contains(listener));
+
+            // assert that all indices are smaller than the ones in the separated added listeners, as some
+            // may have been garbage collected
+            assertTrue(i <= separatedListeners.indexOf(listener), i + " should be <= " + separatedListeners.indexOf(listener));
+        }
+    }
+
+    @Test
+    void shouldKeepInvalidationAndChangeListenersSeparatedAndInOrderWhileLockedAndWhenSomeAreRemoved() {
+        Random rnd = new Random(1);
+        List<Object> addedListeners = new ArrayList<>();
+        ListenerList list = new ListenerList(new WeakInvalidationListener("0"), new WeakChangeListener("1"));
+
+        addedListeners.add(list.get(0));
+        addedListeners.add(list.get(1));
+
+        // Add some listeners first before the lock:
+        for(int i = 2; i < 1000; i++) {
+            Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
+
+            addedListeners.add(listener);
+            list.add(listener);
+        }
+
+        list.setProgress(10);  // lock
+
+        for(int i = 1000; i < 10000; i++) {
+            Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
+
+            addedListeners.add(listener);
+            list.add(listener);
+
+            double nextDouble = rnd.nextDouble();
+
+            if(nextDouble < 0.05) {
+                list.remove(addedListeners.remove(rnd.nextInt(addedListeners.size())));
             }
-            else if(foundChange) {
-                fail("Found " + listener + " at index " + i + " after a change listener was seen");
+            else if(nextDouble < 0.15) {
+                if(addedListeners.get(rnd.nextInt(addedListeners.size())) instanceof SettableWeakListener swl) {
+                    swl.setGarbageCollected(true);
+                }
+            }
+        }
+
+        list.unlock();
+
+        // the exact size is not known, as it would depend on how many listeners have expired and
+        // when the last resize was done to clean expired elements
+
+        assertListenerSeparation(list);
+
+        List<Object> separatedListeners =
+            Stream.concat(
+                addedListeners.stream().filter(InvalidationListener.class::isInstance),
+                addedListeners.stream().filter(ChangeListener.class::isInstance)
+            )
+            .toList();
+
+        int skips = 0;
+
+        for(int i = 0; i < list.size(); i++) {
+            Object listener = list.get(i);
+
+            if (listener == null) {
+                skips++;
+                continue;
             }
 
-            assertTrue(addedListeners.contains(listener));
+            assertTrue(separatedListeners.contains(listener), "expected " + listener + " to be have been added before");
+
+            // assert that all indices are smaller than the ones in the separated added listeners, as some
+            // may have been garbage collected; don't count nulls
+            assertTrue(i - skips <= separatedListeners.indexOf(listener), i + " - " + skips + " should be <= " + separatedListeners.indexOf(listener));
+        }
+
+        // Add some more listeners after unlock to trigger compaction:
+        for(int i = 10000; i < 20000; i++) {
+            Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
+
+            addedListeners.add(listener);
+            list.add(listener);
+        }
+
+        assertListenerSeparation(list);
+
+        separatedListeners =
+            Stream.concat(
+                addedListeners.stream().filter(InvalidationListener.class::isInstance),
+                addedListeners.stream().filter(ChangeListener.class::isInstance)
+            )
+            .filter(l -> l instanceof WeakListener wl && !wl.wasGarbageCollected())
+            .collect(Collectors.toCollection(ArrayList::new));  // going to modify it in a bit
+
+        // after compaction, can now assert exact order and contents:
+        assertListeners(list, separatedListeners);
+
+        // remove many listeners to trigger a shrink:
+        for(int i = 0; i < 10000; i++) {
+            list.remove(separatedListeners.remove(rnd.nextInt(separatedListeners.size())));
+        }
+
+        // verify again:
+        assertListeners(list, separatedListeners);
+    }
+
+    @Test
+    void additionsShouldNotShowUpWhileLocked() {
+        assertEquals(2, list.size());
+
+        list.setProgress(10);  // locks list
+
+        list.add(il2);
+        list.add(cl2);
+
+        assertEquals(2, list.size());
+        assertEquals(il1, list.get(0));
+        assertEquals(cl1, list.get(1));
+        assertThrows(IndexOutOfBoundsException.class, () -> list.get(2));  // reject attempts to bypass lock
+
+        list.unlock();
+
+        assertTrue(list.size() >= 4);  // at least 4 elements now, possibly more with nulls
+
+        assertListeners(list, List.of(il1, il2, cl1, cl2));
+    }
+
+    @Test
+    void removealsShouldBecomeNullsWhileLocked() {
+        assertEquals(2, list.size());
+
+        list.add(il2);
+        list.add(cl2);
+
+        assertListeners(list, List.of(il1, il2, cl1, cl2));
+
+        list.setProgress(10);  // locks list
+
+        assertListeners(list, List.of(il1, il2, cl1, cl2));
+
+        list.remove(il1);
+
+        assertListeners(list, List.of(il2, cl1, cl2));
+
+        list.remove(cl1);
+
+        assertListeners(list, List.of(il2, cl2));
+
+        assertEquals(null, list.get(0));
+        assertEquals(il2, list.get(1));
+        assertEquals(null, list.get(2));
+        assertEquals(cl2, list.get(3));
+
+        list.unlock();
+
+        assertListeners(list, List.of(il2, cl2));
+    }
+
+    private void assertListenerSeparation(ListenerList list) {
+        boolean foundChange = false;
+
+        for(int i = 0; i < list.size(); i++) {
+            if(list.get(i) instanceof ChangeListener) {
+                foundChange = true;
+            }
+            else if(foundChange && list.get(i) != null) {
+                fail("Found an invalidation listener at index " + i + " after a change listener was seen");
+            }
+        }
+    }
+
+    private void assertListeners(ListenerList list, List<Object> expectedListeners) {
+        assertListenerSeparation(list);
+
+        int j = 0;
+        int x = 0;
+
+        for(int i = 0; i < list.size(); i++) {
+            Object listener = list.get(i);
+
+            if(listener == null) {
+                x++;
+                continue;
+            }
+
+            if(j >= expectedListeners.size()) {
+                fail("Listener at index " + i + " (with " + x + " nulls skipped) is listener " + (i - x) + ", but only " + expectedListeners.size() + " were expected: " + listener);
+            }
+
+            assertEquals(expectedListeners.get(j), listener, "Listener at index " + i + " (with " + x + " nulls skipped) did not match listener at index " + j);
+            j++;
+        }
+
+        if(j != expectedListeners.size()) {
+            fail("Only " + j + " listeners were found, but " + expectedListeners.size() + " were expected");
         }
     }
 
