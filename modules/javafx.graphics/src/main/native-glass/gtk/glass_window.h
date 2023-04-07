@@ -90,80 +90,7 @@ struct WindowGeometry {
     WindowFrameExtents extents;
 };
 
-class WindowContextTop;
-
 class WindowContext {
-public:
-    virtual bool isEnabled() = 0;
-    virtual bool hasIME() = 0;
-    virtual bool filterIME(GdkEvent *) = 0;
-    virtual void enableOrResetIME() = 0;
-    virtual void disableIME() = 0;
-    virtual void paint(void* data, jint width, jint height) = 0;
-    virtual WindowFrameExtents get_frame_extents() = 0;
-
-    virtual void enter_fullscreen() = 0;
-    virtual void exit_fullscreen() = 0;
-    virtual void show_or_hide_children(bool) = 0;
-    virtual void set_visible(bool) = 0;
-    virtual bool is_visible() = 0;
-    virtual void set_bounds(int, int, bool, bool, int, int, int, int, float, float) = 0;
-    virtual void set_resizable(bool) = 0;
-    virtual void request_focus() = 0;
-    virtual void set_focusable(bool)= 0;
-    virtual bool grab_focus() = 0;
-    virtual bool grab_mouse_drag_focus() = 0;
-    virtual void ungrab_focus() = 0;
-    virtual void ungrab_mouse_drag_focus() = 0;
-    virtual void set_title(const char*) = 0;
-    virtual void set_alpha(double) = 0;
-    virtual void set_enabled(bool) = 0;
-    virtual void set_minimum_size(int, int) = 0;
-    virtual void set_maximum_size(int, int) = 0;
-    virtual void set_minimized(bool) = 0;
-    virtual void set_maximized(bool) = 0;
-    virtual void set_icon(GdkPixbuf*) = 0;
-    virtual void to_front() = 0;
-    virtual void to_back() = 0;
-    virtual void set_cursor(GdkCursor*) = 0;
-    virtual void set_modal(bool, WindowContext* parent = NULL) = 0;
-    virtual void set_level(int) = 0;
-    virtual void set_background(float, float, float) = 0;
-
-    virtual void process_property_notify(GdkEventProperty*) = 0;
-    virtual void process_configure(GdkEventConfigure*) = 0;
-    virtual void process_focus(GdkEventFocus*) = 0;
-    virtual void process_destroy() = 0;
-    virtual void process_delete() = 0;
-    virtual void process_expose(GdkEventExpose*) = 0;
-    virtual void process_mouse_button(GdkEventButton*) = 0;
-    virtual void process_mouse_motion(GdkEventMotion*) = 0;
-    virtual void process_mouse_scroll(GdkEventScroll*) = 0;
-    virtual void process_mouse_cross(GdkEventCrossing*) = 0;
-    virtual void process_key(GdkEventKey*) = 0;
-    virtual void process_state(GdkEventWindowState*) = 0;
-
-    virtual void notify_state(jint) = 0;
-    virtual void notify_on_top(bool) {}
-
-    virtual void add_child(WindowContextTop* child) = 0;
-    virtual void remove_child(WindowContextTop* child) = 0;
-    virtual bool set_view(jobject) = 0;
-
-    virtual GdkWindow *get_gdk_window() = 0;
-    virtual GtkWindow *get_gtk_window() = 0;
-    virtual jobject get_jview() = 0;
-    virtual jobject get_jwindow() = 0;
-
-    virtual void increment_events_counter() = 0;
-    virtual void decrement_events_counter() = 0;
-    virtual size_t get_events_count() = 0;
-    virtual bool is_dead() = 0;
-    virtual ~WindowContext() {}
-};
-
-class WindowContextBase: public WindowContext {
-
     struct _XIM {
         XIM im;
         XIC ic;
@@ -172,18 +99,38 @@ class WindowContextBase: public WindowContext {
 
     size_t events_processing_cnt;
     bool can_be_deleted;
-protected:
-    std::set<WindowContextTop*> children;
-    jobject jwindow;
-    jobject jview;
-    GtkWidget* gtk_widget;
-    GdkWindow* gdk_window;
-    GdkWMFunction gdk_windowManagerFunctions;
 
+    jlong screen;
+    WindowFrameType frame_type;
+    WindowType window_type;
+    struct WindowContext *owner;
+    WindowGeometry geometry;
+    struct _Resizable {// we can't use set/get gtk_window_resizable function
+        _Resizable(): value(true),
+                minw(-1), minh(-1), maxw(-1), maxh(-1) {}
+        bool value; //actual value of resizable for a window
+        int minw, minh, maxw, maxh; //minimum and maximum window width/height;
+    } resizable;
+
+    bool map_received;
+    bool on_top;
+    bool is_fullscreen;
     bool is_iconified;
     bool is_maximized;
     bool is_mouse_entered;
     bool is_disabled;
+
+    static WindowFrameExtents normal_extents;
+    static WindowFrameExtents utility_extents;
+
+    WindowManager wmanager;
+    std::set<WindowContext*> children;
+    jobject jwindow;
+    jobject jview;
+
+    GtkWidget* gtk_widget;
+    GdkWindow* gdk_window;
+    GdkWMFunction gdk_windowManagerFunctions;
 
     /*
      * sm_grab_window points to WindowContext holding a mouse grab.
@@ -203,30 +150,31 @@ protected:
      * should be reported during this drag.
      */
     static WindowContext* sm_mouse_drag_window;
+
 public:
-    bool isEnabled();
+    WindowContext(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
+
     bool hasIME();
     bool filterIME(GdkEvent *);
     void enableOrResetIME();
     void disableIME();
-    void paint(void*, jint, jint);
     GdkWindow *get_gdk_window();
     jobject get_jwindow();
     jobject get_jview();
+    bool isEnabled();
+    WindowFrameExtents get_frame_extents();
+    GtkWindow *get_gtk_window();
 
-    void add_child(WindowContextTop*);
-    void remove_child(WindowContextTop*);
+    void paint(void*, jint, jint);
+    void add_child(WindowContext*);
+    void remove_child(WindowContext*);
     void show_or_hide_children(bool);
-    void set_visible(bool);
     bool is_visible();
     bool set_view(jobject);
     bool grab_focus();
     bool grab_mouse_drag_focus();
     void ungrab_focus();
     void ungrab_mouse_drag_focus();
-    void set_cursor(GdkCursor*);
-    void set_level(int) {}
-    void set_background(float, float, float);
 
     void process_focus(GdkEventFocus*);
     void process_destroy();
@@ -238,57 +186,18 @@ public:
     void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
     void process_state(GdkEventWindowState*);
+    void process_property_notify(GdkEventProperty*);
+    void process_configure(GdkEventConfigure*);
 
     void notify_state(jint);
-
-    void increment_events_counter();
-    void decrement_events_counter();
-    size_t get_events_count();
-    bool is_dead();
-
-    ~WindowContextBase();
-protected:
-    virtual void applyShapeMask(void*, uint width, uint height) = 0;
-private:
-    bool im_filter_keypress(GdkEventKey*);
-};
-
-class WindowContextTop: public WindowContextBase {
-    jlong screen;
-    WindowFrameType frame_type;
-    WindowType window_type;
-    struct WindowContext *owner;
-    WindowGeometry geometry;
-    struct _Resizable {// we can't use set/get gtk_window_resizable function
-        _Resizable(): value(true),
-                minw(-1), minh(-1), maxw(-1), maxh(-1) {}
-        bool value; //actual value of resizable for a window
-        int minw, minh, maxw, maxh; //minimum and maximum window width/height;
-    } resizable;
-
-    bool map_received;
-    bool on_top;
-    bool is_fullscreen;
-
-    static WindowFrameExtents normal_extents;
-    static WindowFrameExtents utility_extents;
-
-    WindowManager wmanager;
-public:
-    WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
-    void process_property_notify(GdkEventProperty*);
-    void process_state(GdkEventWindowState*);
-    void process_configure(GdkEventConfigure*);
-    void process_destroy();
     void work_around_compiz_state();
 
-    WindowFrameExtents get_frame_extents();
-
+    void set_cursor(GdkCursor*);
+    void set_background(float, float, float);
     void set_minimized(bool);
     void set_maximized(bool);
     void set_bounds(int, int, bool, bool, int, int, int, int, float, float);
     void set_resizable(bool);
-    void request_focus();
     void set_focusable(bool);
     void set_title(const char*);
     void set_alpha(double);
@@ -296,23 +205,30 @@ public:
     void set_minimum_size(int, int);
     void set_maximum_size(int, int);
     void set_icon(GdkPixbuf*);
-    void to_front();
-    void to_back();
     void set_modal(bool, WindowContext* parent = NULL);
     void set_level(int);
     void set_visible(bool);
+    void set_owner(WindowContext*);
+    void to_front();
+    void to_back();
+    void request_focus();
+
     void notify_on_top(bool);
 
     void enter_fullscreen();
     void exit_fullscreen();
 
-    void set_owner(WindowContext*);
-
-    GtkWindow *get_gtk_window();
     void detach_from_java();
+    void increment_events_counter();
+    void decrement_events_counter();
+    size_t get_events_count();
+    bool is_dead();
+
+    ~WindowContext();
 protected:
     void applyShapeMask(void*, uint width, uint height);
 private:
+    bool im_filter_keypress(GdkEventKey*);
     void request_frame_extents();
     void update_frame_extents();
     void set_cached_extents(WindowFrameExtents ex);
@@ -324,8 +240,8 @@ private:
     bool effective_on_top();
     void notify_window_move();
     void notify_window_resize();
-    WindowContextTop(WindowContextTop&);
-    WindowContextTop& operator= (const WindowContextTop&);
+    WindowContext(WindowContext&);
+    WindowContext& operator= (const WindowContext&);
 };
 
 void destroy_and_delete_ctx(WindowContext* ctx);

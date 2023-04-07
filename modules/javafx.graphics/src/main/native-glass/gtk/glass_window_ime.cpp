@@ -30,7 +30,7 @@
 #include <cstring>
 #include <cstdlib>
 
-bool WindowContextBase::hasIME() {
+bool WindowContext::hasIME() {
     return xim.enabled;
 }
 
@@ -51,7 +51,7 @@ static XKeyPressedEvent convert_event(GdkEventKey *event) {
     return result;
 }
 
-bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
+bool WindowContext::im_filter_keypress(GdkEventKey* event) {
     static size_t buf_len = 12;
     static char *buffer = NULL;
 
@@ -107,7 +107,7 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
     return TRUE;
 }
 
-bool WindowContextBase::filterIME(GdkEvent * event) {
+bool WindowContext::filterIME(GdkEvent * event) {
     if (!hasIME()) {
         return false;
     }
@@ -220,7 +220,7 @@ static XIMStyle get_best_supported_style(XIM im_xim)
     return result;
 }
 
-void WindowContextBase::enableOrResetIME() {
+void WindowContext::enableOrResetIME() {
     Display *display = gdk_x11_display_get_xdisplay(gdk_window_get_display(gdk_window));
     if (xim.im == NULL || xim.ic == NULL) {
         xim.im = XOpenIM(display, NULL, NULL, NULL);
@@ -268,7 +268,7 @@ void WindowContextBase::enableOrResetIME() {
     xim.enabled = TRUE;
 }
 
-void WindowContextBase::disableIME() {
+void WindowContext::disableIME() {
     if (xim.ic != NULL) {
         XUnsetICFocus(xim.ic);
     }

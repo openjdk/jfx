@@ -84,7 +84,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
 
     WindowContext* parent = JLONG_TO_WINDOW_CTX(owner);
 
-    WindowContext* ctx = new WindowContextTop(obj,
+    WindowContext* ctx = new WindowContext(obj,
             parent,
             screen,
             glass_mask_to_window_frame_type(mask),
