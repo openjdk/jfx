@@ -43,6 +43,15 @@ public class ArrayManager<I, E> {
         this.accessor = Objects.requireNonNull(accessor);
     }
 
+    /**
+     * Adds an element at the end of the array, growing the arrow if necessary.
+     * If the array needs to be grown, this function will call {@link #compact(Object, Object[])}
+     * first to reclaim any space before deciding to grow the array.
+     *
+     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param element an element to add, can be {@code null}
+     * @throws NullPointerException when the given instance was {@code null}
+     */
     public void add(I instance, E element) {
         E[] array = accessor.getArray(instance);
         int occupiedSlots = accessor.getOccupiedSlots(instance);
