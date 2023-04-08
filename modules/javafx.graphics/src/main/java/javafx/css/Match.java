@@ -27,6 +27,8 @@ package javafx.css;
 
 import static javafx.geometry.NodeOrientation.INHERIT;
 
+import java.util.Collections;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -39,24 +41,26 @@ import java.util.Set;
  */
 public final class Match implements Comparable<Match> {
 
-    final Selector selector;
-    final Set<PseudoClass> pseudoClasses;
-    final int idCount;
+    private final Selector selector;
+    private final Set<PseudoClass> pseudoClasses;
+
     final int styleClassCount;
+    final int idCount;
 
     // CSS3 spec gives weight to id count, then style class count,
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
     Match(final Selector selector, Set<PseudoClass> pseudoClasses, int idCount, int styleClassCount) {
-        assert selector != null;
+        Objects.requireNonNull(selector);
+        Objects.requireNonNull(pseudoClasses);
+
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
-        this.pseudoClasses = pseudoClasses;
-        int nPseudoClasses = pseudoClasses != null ? pseudoClasses.size() : 0;
-        if (selector instanceof SimpleSelector) {
-            final SimpleSelector simple = (SimpleSelector)selector;
+        this.pseudoClasses = Collections.unmodifiableSet(pseudoClasses);
+        int nPseudoClasses = pseudoClasses.size();
+        if (selector instanceof SimpleSelector simple) {
             if (simple.getNodeOrientation() != INHERIT) {
                 nPseudoClasses += 1;
             }
@@ -66,15 +70,17 @@ public final class Match implements Comparable<Match> {
 
     /**
      * Gets the {@code Selector}.
-     * @return the {@code Selector}
+     *
+     * @return the {@code Selector}, never {@code null}
      */
     public Selector getSelector() {
         return selector;
     }
 
     /**
-     * Gets the pseudo class state.
-     * @return the pseudo class state
+     * Gets the pseudo class states as an immutable set.
+     *
+     * @return the pseudo class state, never {@code null}
      */
     public Set<PseudoClass> getPseudoClasses() {
         return pseudoClasses;

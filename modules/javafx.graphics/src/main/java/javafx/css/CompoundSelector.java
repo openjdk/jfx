@@ -97,11 +97,6 @@ final public class CompoundSelector extends Selector {
                 : Collections.EMPTY_LIST;
     }
 
-    private CompoundSelector() {
-        this(null, null);
-    }
-
-
     @Override public Match createMatch() {
         final PseudoClassState allPseudoClasses = new PseudoClassState();
         int idCount = 0;
@@ -110,7 +105,7 @@ final public class CompoundSelector extends Selector {
         for(int n=0, nMax=selectors.size(); n<nMax; n++) {
             Selector sel = selectors.get(n);
             Match match = sel.createMatch();
-            allPseudoClasses.addAll(match.pseudoClasses);
+            allPseudoClasses.addAll(match.getPseudoClasses());
             idCount += match.idCount;
             styleClassCount += match.styleClassCount;
         }
