@@ -70,22 +70,6 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * Gets an immutable list of style-classes of the {@code Selector}.
-     * @return an immutable list of style-classes of the {@code Selector}
-     */
-    public List<String> getStyleClasses() {
-
-        final List<String> names = new ArrayList<>();
-
-        Iterator<StyleClass> iter = styleClassSet.iterator();
-        while (iter.hasNext()) {
-            names.add(iter.next().getStyleClassName());
-        }
-
-        return Collections.unmodifiableList(names);
-    }
-
-    /**
      * Gets the immutable {@code Set} of {@code StyleClass}es of the {@code Selector}.
      * @return the {@code Set} of {@code StyleClass}es
      */
@@ -113,28 +97,6 @@ final public class SimpleSelector extends Selector {
 
     Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
-    }
-
-    /**
-     * Gets an immutable list of {@code String}s of pseudo classes of the {@code Selector}
-     * @return an immutable list of {@code String}s
-     */
-    List<String> getPseudoclasses() {
-
-        final List<String> names = new ArrayList<>();
-
-        Iterator<PseudoClass> iter = pseudoClassState.iterator();
-        while (iter.hasNext()) {
-            names.add(iter.next().getPseudoClassName());
-        }
-
-        if (nodeOrientation == RIGHT_TO_LEFT) {
-            names.add("dir(rtl)");
-        } else if (nodeOrientation == LEFT_TO_RIGHT) {
-            names.add("dir(ltr)");
-        }
-
-        return Collections.unmodifiableList(names);
     }
 
     // true if name is not a wildcard
