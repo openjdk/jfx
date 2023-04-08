@@ -131,7 +131,10 @@ final class CssStyleHelper {
                 node.styleHelper.cacheContainer.fontSizeCache.clear();
             }
             node.styleHelper.cacheContainer.forceSlowpath = true;
-            node.styleHelper.triggerStates.addAll(triggerStates[0]);
+
+            if (triggerStates[0] != null) {
+                node.styleHelper.triggerStates.addAll(triggerStates[0]);
+            }
 
             updateParentTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
@@ -171,7 +174,10 @@ final class CssStyleHelper {
         }
 
         final CssStyleHelper helper = new CssStyleHelper();
-        helper.triggerStates.addAll(triggerStates[0]);
+
+        if (triggerStates[0] != null) {
+            helper.triggerStates.addAll(triggerStates[0]);
+        }
 
         updateParentTriggerStates(node, depth, triggerStates);
 
