@@ -60,12 +60,6 @@ out/
 .idea/sonarlint/
 #IntelliJ Idea End
 
-#Crash log
-hs_err*.log,
-
-#mac folder
-.DS_Store
-
 # Ignore the following file suffixes
 *.vcxproj.user
 *.orig
