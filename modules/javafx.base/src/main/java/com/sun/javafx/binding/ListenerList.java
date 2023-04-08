@@ -110,7 +110,7 @@ public class ListenerList {
     private static class CompactingArrayManager extends ArrayManager<ListenerList, Object> {
 
         CompactingArrayManager(Accessor<ListenerList, Object> accessor) {
-            super(accessor);
+            super(accessor, Object.class);
         }
 
         @Override

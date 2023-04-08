@@ -25,8 +25,10 @@
 
 package com.sun.javafx.binding;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 /**
  * Helper to manage an array as a data and size field in order to save
@@ -45,6 +47,7 @@ public class ArrayManager<I, E> {
     private static final int MINIMUM_SIZE = 3;
 
     private final Accessor<I, E> accessor;
+    private final Class<E> elementType;
 
     /**
      * Provides access to two fields to manage an array with.
@@ -63,8 +66,11 @@ public class ArrayManager<I, E> {
      * Constructs a new instance.
      *
      * @param accessor an {@link Accessor}, cannot be {@code null}
+     * @param elementType the type of the elements in the array, cannot be {@code null}
+     * @throws NullPointerException when any of the parameters are {@code null}
      */
-    public ArrayManager(Accessor<I, E> accessor) {
+    public ArrayManager(Accessor<I, E> accessor, Class<E> elementType) {
+        this.elementType = Objects.requireNonNull(elementType);
         this.accessor = Objects.requireNonNull(accessor);
     }
 
@@ -82,7 +88,7 @@ public class ArrayManager<I, E> {
         int occupiedSlots = accessor.getOccupiedSlots(instance);
 
         if (array == null) {
-            accessor.setArray(instance, array = (E[]) new Object[MINIMUM_SIZE]);
+            accessor.setArray(instance, array = (E[]) Array.newInstance(elementType, MINIMUM_SIZE));
             accessor.setOccupiedSlots(instance, occupiedSlots + 1);
 
             array[0] = element;
@@ -166,7 +172,7 @@ public class ArrayManager<I, E> {
             accessor.setArray(instance, null);
         }
         else {
-            E[] newArray = (E[])new Object[newSize];
+            E[] newArray = (E[]) Array.newInstance(elementType, newSize);
 
             System.arraycopy(array, 0, newArray, 0, index);
 
@@ -222,6 +228,58 @@ public class ArrayManager<I, E> {
         array[index] = element;
 
         return oldElement;
+    }
+
+    /**
+     * Removes all of the elements of the array provided by the given instance
+     * that satisfy the given predicate. If the predicate throws errors or
+     * exceptions, these are relayed to the caller, and the state of the array
+     * will be undefined.
+     *
+     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param filter a predicate which returns {@code true} for elements to be removed
+     * @return {@code true} if any elements were removed
+     * @throws NullPointerException if the specified filter is null
+     */
+    public boolean removeIf(I instance, Predicate<E> filter) {
+        Objects.requireNonNull(filter);
+        E[] array = accessor.getArray(instance);
+
+        if (array == null) {
+            return false;
+        }
+
+        int occupiedSlots = accessor.getOccupiedSlots(instance);
+
+        int shift = 0;
+
+        for (int i = 0; i < occupiedSlots; i++) {
+            if (filter.test(array[i])) {
+                shift++;
+            }
+            else if (shift > 0) {
+                array[i - shift] = array[i];
+                array[i] = null;
+            }
+        }
+
+        int newLength = calculateOptimalSize(array.length, occupiedSlots - shift);
+
+        if (newLength == 0) {
+            accessor.setArray(instance, null);
+            accessor.setOccupiedSlots(instance, 0);
+        }
+        else if (newLength != array.length) {
+            array = Arrays.copyOf(array, newLength);
+
+            accessor.setArray(instance, array);
+            accessor.setOccupiedSlots(instance, occupiedSlots - shift);
+        }
+        else {
+            accessor.setOccupiedSlots(instance, occupiedSlots - shift);
+        }
+
+        return shift > 0;
     }
 
     /**
