@@ -122,7 +122,8 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
             window_type(type),
             owner(_owner),
             geometry(),
-            resizable() {
+            resizable(),
+            jview(NULL) {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
     gtk_widget = gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);
