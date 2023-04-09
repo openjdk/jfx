@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -37,11 +38,21 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableValue;
 
 public class ObservableValueWhenTest {
 
     @Nested
     class WhenNotObserved {
+
+        /*
+         * For these cases, we don't expect a downstream function to be called
+         * at all because when the complete binding is not observed, no listeners
+         * will be registered on any of the upstream functions either.
+         *
+         * This test merely ensures that this is indeed the case, no matter what
+         * state the when binding might be in initially or changed to.
+         */
 
         @Nested
         class AndConditionStartsFalse {
@@ -124,6 +135,7 @@ public class ObservableValueWhenTest {
 
     @Nested
     class WhenObserved {
+
         @Nested
         class AndConditionStartsFalse {
             BooleanProperty condition = new SimpleBooleanProperty(false);
@@ -219,6 +231,126 @@ public class ObservableValueWhenTest {
 
                 assertEquals(List.of("a", "b", "c", "d"), observedMappings);
                 assertEquals(List.of("a -> b", "b -> c", "c -> d"), observedChanges);
+            }
+        }
+    }
+
+    @Nested
+    class WhenObservedDirectlyForInvalidations {
+
+        @Nested
+        class AndConditionStartsFalse {
+            BooleanProperty condition = new SimpleBooleanProperty(false);
+
+            @Test
+            void shouldOnlyInvalidateWhenAbsolutelyNeeded() {
+                StringProperty property = new SimpleStringProperty("a");
+                AtomicInteger observedInvalidations = new AtomicInteger();
+
+                ObservableValue<String> when = property.when(condition);
+
+                when.addListener(obs -> observedInvalidations.addAndGet(1));
+
+                assertEquals(0, observedInvalidations.get());
+
+                property.set("b");
+
+                assertEquals(0, observedInvalidations.get());
+
+                when.getValue();  // would make no difference, inactive when bindings are always valid
+                property.set("b2");
+
+                assertEquals(0, observedInvalidations.get());
+
+                condition.set(true);  // as inactive when's are always valid, when it becomes active and the value has changed, it must invalidate
+
+                assertEquals(1, observedInvalidations.get());
+
+                property.set("c");
+
+                assertEquals(1, observedInvalidations.get());
+
+                property.get();  // should not matter, as it is the observable resulting from when that isn't valid
+                property.set("d");
+
+                assertEquals(1, observedInvalidations.get());
+
+                when.getValue();  // this will make the when valid, and so we can expect a new invalidation
+                property.set("e");
+
+                assertEquals(2, observedInvalidations.get());
+
+                condition.set(false);  // this will make the when valid (it is always valid when inactive), but it can't change now
+
+                assertEquals(2, observedInvalidations.get());
+
+                property.set("d");
+
+                assertEquals(2, observedInvalidations.get());
+
+                condition.set(true);  // when becoming active again, it was valid, and it has changed, so expect invalidation
+
+                assertEquals(3, observedInvalidations.get());
+            }
+        }
+
+        @Nested
+        class AndConditionStartsTrue {
+            BooleanProperty condition = new SimpleBooleanProperty(true);
+
+            @Test
+            void shouldOnlyInvalidateWhenAbsolutelyNeeded() {
+                StringProperty property = new SimpleStringProperty("a");
+                AtomicInteger observedInvalidations = new AtomicInteger();
+
+                ObservableValue<String> when = property.when(condition);
+
+                when.addListener(obs -> observedInvalidations.addAndGet(1));
+
+                assertEquals(0, observedInvalidations.get());
+
+                property.set("b");
+
+                assertEquals(1, observedInvalidations.get());
+
+                property.set("c");
+
+                assertEquals(1, observedInvalidations.get());
+
+                property.get();  // should not matter, as it is the observable resulting from when that isn't valid
+                property.set("d");
+
+                assertEquals(1, observedInvalidations.get());
+
+                when.getValue();  // this will make the when valid, and so we can expect a new invalidation
+                property.set("e");
+
+                assertEquals(2, observedInvalidations.get());
+
+                condition.set(false);  // this will make the when valid (it is always valid when inactive), but it can't change now
+
+                assertEquals(2, observedInvalidations.get());
+
+                property.set("f");
+
+                assertEquals(2, observedInvalidations.get());
+
+                when.getValue();  // would make no difference, inactive when bindings are always valid
+                property.set("f2");
+
+                assertEquals(2, observedInvalidations.get());
+
+                condition.set(true);  // when becoming active again, it was valid, and it has changed, so expect invalidation
+
+                assertEquals(3, observedInvalidations.get());
+
+                property.set("g");
+
+                assertEquals(3, observedInvalidations.get());
+
+                condition.set(false);
+
+                assertEquals(3, observedInvalidations.get());
             }
         }
     }
