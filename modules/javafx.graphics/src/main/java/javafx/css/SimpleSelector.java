@@ -128,7 +128,7 @@ final public class SimpleSelector extends Selector {
         this.name = name == null ? "*" : name;
         // if name is not null and not empty or wildcard,
         // then match needs to check name
-        this.matchOnName = !("".equals(name)) && !("*".equals(name));
+        this.matchOnName = (name != null && !("".equals(name)) && !("*".equals(name)));
 
         Set<StyleClass> scs = new StyleClassSet();
 
@@ -169,7 +169,7 @@ final public class SimpleSelector extends Selector {
         this.nodeOrientation = dir;
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
-        this.matchOnId = !("".equals(id));
+        this.matchOnId = (id != null && !("".equals(id)));
 
     }
 
