@@ -92,7 +92,7 @@ public class BitSetShim<T> {
         this.delegate = delegate;
     }
 
-    // Generated delegate methods:
+    // These delegate methods were generated automatically by an IDE.
 
     public void forEach(Consumer<? super T> action) {
         delegate.forEach(action);
