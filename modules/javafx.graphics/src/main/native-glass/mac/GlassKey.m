@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -183,7 +183,8 @@ static const int gKeyMapSize = sizeof(gKeyMap) / sizeof(struct KeyMapEntry);
 static BOOL macKeyCodeIsLayoutSensitive(unsigned int keyCode)
 {
     // Mac key codes that generate different characters based on the keyboard layout
-    // lie in two ranges with a few exceptions.
+    // lie in two ranges with a few exceptions. Details can be found in the Events.h
+    // header in the HIToolbox framework inside the Carbon framework.
     switch (keyCode)
     {
         case 0x24: // Enter
@@ -192,9 +193,13 @@ static BOOL macKeyCodeIsLayoutSensitive(unsigned int keyCode)
             return NO;
     }
 
+    // kVK_ANSI_A through kVK_ANSI_Grave
     if (keyCode >= 0x00 && keyCode <= 0x32)
         return YES;
 
+    // kVK_JIS_Yen through kVK_JIS_KeypadComma. The other JIS keys (0x66 and
+    // 0x68) were commented out of the table above so they are not included
+    // here.
     if (keyCode >= 0x5D && keyCode <= 0x5F)
         return YES;
 
@@ -241,6 +246,8 @@ static jint getJavaCodeForASCII(UniChar ascii)
         case L'`': return com_sun_glass_events_KeyEvent_VK_BACK_QUOTE;
         case L'{': return com_sun_glass_events_KeyEvent_VK_BRACELEFT;
         case L'}': return com_sun_glass_events_KeyEvent_VK_BRACERIGHT;
+        case 0x00A1: return com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION;
+        case 0x20A0: return com_sun_glass_events_KeyEvent_VK_EURO_SIGN;
     }
 
     return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
@@ -327,7 +334,7 @@ static jint getJavaCodeForMacKey(unsigned short keyCode)
 
         // A handful of keyboards (Azeri, Turkmen, and Sami variants) can only access
         // critical letters like Q by using the Option key in conjunction with Cmd.
-        // In this API the Cmd flag suppresses the Option flag so we ommit Cmd.
+        // In this API the Cmd flag suppresses the Option flag so we omit Cmd.
         if (!isLetterOrDigit(result))
         {
             jint trial = getJavaCodeForMacKeyAndModifiers(keyboard, keyCode, optionKey);
@@ -470,7 +477,7 @@ BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
 
     // If the QWERTY key is in the layout sensitive area search the other keys in that
     // area. We may not find a key so returning NO is possible.
-    for (unsigned short trialKey = 0x00; trialKey <= 0x7E; ++trialKey)
+    for (unsigned short trialKey = 0x00; trialKey <= 0x5F; ++trialKey)
     {
         if (macKeyCodeIsLayoutSensitive(trialKey))
         {

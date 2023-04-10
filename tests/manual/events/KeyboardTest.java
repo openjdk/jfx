@@ -52,10 +52,10 @@ import javafx.stage.Stage;
  * KeyEvents are generated.
  *
  * To provide thorough coverage a test has to be targeted at a specific layout.
- * Currently there are tests for U.S. (QWERTY), French (AZERTY), and German
- * (QWERTZ) on Mac, Windows, and Linux. Since there's no way for JavaFX to force
- * the layout or verify which layout is currently active it is up to the tester
- * to configure the correct layout before running the test.
+ * Currently there are tests for U.S. (QWERTY), French (AZERTY), German (QWERTZ)
+ * and Spanish (QWERTY) on Mac, Windows, and Linux. Since there's no way for
+ * JavaFX to force the layout or verify which layout is currently active it is
+ * up to the tester to configure the correct layout before running the test.
  *
  * Each language-specific test must be run against the default layout for that
  * language. For example, the German test is designed to work with the layout
@@ -63,8 +63,8 @@ import javafx.stage.Stage;
  *
  * There is also a generic test for Latin layouts which verifies that KeyCodes A
  * through Z are reachable and generate the letters 'a' through 'z'. An even
- * more generic test is available for non-Latin layouts which verifies that
- * KeyCodes A through Z generate characters.
+ * more generic test is available for non-Latin, non-IME layouts which verifies
+ * that KeyCodes A through Z generate characters.
  *
  * None of these tests cover the top-row function keys or the Caps Lock key.
  * They also do not cover dead keys or keys which generate accented characters
@@ -74,6 +74,10 @@ import javafx.stage.Stage;
  * character (if any). They can optionally check that KeyCharacterCombinations
  * match for characters on that key. This option is disabled by default since
  * KeyCharacterCombinations don't work reliably on most platforms (for now).
+ *
+ * Mac users will need to grant permission for the Terminal application to use
+ * accessibility features. Add Terminal to the list of applications in
+ * System Settings > Privacy & Security > Accessibility.
  */
 
 public class KeyboardTest extends Application {
@@ -144,6 +148,9 @@ public class KeyboardTest extends Application {
         private static final String C_CEDILLA    = "\u00E7";
         private static final String DEGREE_SIGN  = "\u00B0";
         private static final String POUND_SIGN   = "\u00A3";
+        private static final String MIDDLE_DOT   = "\u00B7";
+        private static final String INV_EXCLAMATION_MARK = "\u00A1";
+        private static final String INV_QUESTION_MARK    = "\u00BF";
 
         /* Add a key with unshifted and shifted characters */
         private void add(KeyCode cd, String base, String shifted) {
@@ -420,6 +427,40 @@ public class KeyboardTest extends Application {
             return builder.getList();
         }
 
+        /* Spanish QWERTY */
+        public static KeyList spanishKeys() {
+            KeyListBuilder builder = new KeyListBuilder();
+            builder.addCommon();
+            builder.addLetters();
+
+            final String decimalCharacter = (onMac ? "," : ".");
+
+            builder.add(KeyCode.DIGIT0, "0", "=");
+            builder.add(KeyCode.DIGIT1, "1", "!");
+            builder.add(KeyCode.DIGIT2, "2", DOUBLE_QUOTE);
+            builder.add(KeyCode.DIGIT3, "3", MIDDLE_DOT);
+            builder.add(KeyCode.DIGIT4, "4", "$");
+            builder.add(KeyCode.DIGIT5, "5", "%");
+            builder.add(KeyCode.DIGIT6, "6", "&");
+            builder.add(KeyCode.DIGIT7, "7", "/");
+            builder.add(KeyCode.DIGIT8, "8", "(");
+            builder.add(KeyCode.DIGIT9, "9", ")");
+
+            builder.add(KeyCode.QUOTE,        QUOTE, "?");
+            builder.add(KeyCode.INVERTED_EXCLAMATION_MARK, INV_EXCLAMATION_MARK, INV_QUESTION_MARK);
+            builder.add(KeyCode.PLUS,         "+", "*", "]");
+            builder.add(KeyCode.LESS,         "<", ">");
+            builder.add(KeyCode.COMMA,        ",", ";");
+            builder.add(KeyCode.PERIOD,       ".", ":");
+            builder.add(KeyCode.MINUS,        "-", "_");
+
+            builder.add(KeyCode.DECIMAL,      decimalCharacter);
+
+            builder.addAbsent(KeyCode.EQUALS);
+
+            return builder.getList();
+        }
+
         /*
          * A generic Latin layout. No digits since layouts derived from French
          * won't generate digit characters and may not even be encoded as digits
@@ -433,9 +474,9 @@ public class KeyboardTest extends Application {
         }
 
         /*
-         * For non-Latin layouts (Greek, Cyrillic) we should be able to access
-         * the letter KeyCodes though we have no idea what characters they
-         * generate.
+         * For non-Latin layouts that do not use an IME (Greek, Cyrillic) we
+         * should be able to access the letter KeyCodes though we have no idea
+         * what characters they generate.
          */
         public static KeyList nonLatinKeys() {
             KeyListBuilder builder = new KeyListBuilder();
@@ -454,6 +495,7 @@ public class KeyboardTest extends Application {
         US_ENGLISH("U.S. English", KeyListBuilder.usEnglishKeys()),
         FRENCH("French", KeyListBuilder.frenchKeys()),
         GERMAN("German", KeyListBuilder.germanKeys()),
+        SPANISH("Spanish", KeyListBuilder.spanishKeys()),
         LATIN("Latin", KeyListBuilder.latinKeys()),
         NON_LATIN("non-Latin", KeyListBuilder.nonLatinKeys());
 
@@ -674,7 +716,8 @@ public class KeyboardTest extends Application {
 
             KeyCharacterCombination combo = new KeyCharacterCombination(comboString);
             if (!combo.match(event)) {
-                fail("code " + event.getCode().getName() + " did not match combination " + combo.getName());
+                fail("code " + event.getCode().getName() + " did not match combination "
+                    + toPrintable(combo.getCharacter()));
             }
         }
 
