@@ -24,8 +24,7 @@
  */
 
 [
-    Exposed=(Window,Worker),
-    ImplementationLacksVTable,
+    Exposed=*,
 ] interface URLSearchParams {
     constructor(optional (sequence<sequence<USVString>> or record<USVString, USVString> or USVString) init = "");
 

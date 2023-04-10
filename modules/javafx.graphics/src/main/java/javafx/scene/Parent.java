@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -211,7 +211,7 @@ public abstract class Parent extends Node {
      **********************************************************************/
 
     // Used to check for duplicate nodes
-    private final Set<Node> childSet = new HashSet<Node>();
+    private final Set<Node> childSet = new HashSet<>();
 
     // starting child index from which we need to send the children to the PGGroup
     private int startIdx = 0;
@@ -318,6 +318,7 @@ public abstract class Parent extends Node {
     private final ObservableList<Node> children = new VetoableListDecorator<Node>(new TrackableObservableList<Node>() {
 
 
+        @Override
         protected void onChanged(Change<Node> c) {
             // proceed with updating the scene graph
             unmodifiableManagedChildren = null;
@@ -384,7 +385,7 @@ public abstract class Parent extends Node {
                 // populate it.
                 if (dirtyChildren == null && children.size() > DIRTY_CHILDREN_THRESHOLD) {
                     dirtyChildren
-                            = new ArrayList<Node>(2 * DIRTY_CHILDREN_THRESHOLD);
+                            = new ArrayList<>(2 * DIRTY_CHILDREN_THRESHOLD);
                     // only bother populating children if geom has
                     // changed, otherwise there is no need
                     if (dirtyChildrenCount > 0) {
@@ -466,7 +467,7 @@ public abstract class Parent extends Node {
 
     }) {
         @Override
-        protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
+        protected void onProposedChange(final List<Node> newNodes, int... toBeRemoved) {
             final Scene scene = getScene();
             if (scene != null) {
                 Window w = scene.getWindow();
@@ -580,7 +581,7 @@ public abstract class Parent extends Node {
             // parent and scene. Add to them also to removed list for further
             // dirty regions calculation.
             if (removed == null) {
-                removed = new ArrayList<Node>();
+                removed = new ArrayList<>();
             }
             if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD || !isTreeVisible()) {
                 //do not populate too many children in removed list
@@ -693,7 +694,7 @@ public abstract class Parent extends Node {
      */
     protected <E extends Node> List<E> getManagedChildren() {
         if (unmodifiableManagedChildren == null) {
-            unmodifiableManagedChildren = new ArrayList<Node>();
+            unmodifiableManagedChildren = new ArrayList<>();
             for (int i=0, max=children.size(); i<max; i++) {
                 Node e = children.get(i);
                 if (e.isManaged()) {
@@ -1274,7 +1275,7 @@ public abstract class Parent extends Node {
      * scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
      */
-    private final ObservableList<String> stylesheets = new TrackableObservableList<String>() {
+    private final ObservableList<String> stylesheets = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<String> c) {
             final Scene scene = getScene();
@@ -1339,7 +1340,7 @@ public abstract class Parent extends Node {
 
         if (stylesheets != null && stylesheets.isEmpty() == false) {
             if (list == null) {
-                list = new ArrayList<String>(stylesheets.size());
+                list = new ArrayList<>(stylesheets.size());
             }
             for (int n=0,nMax=stylesheets.size(); n<nMax; n++) {
                 list.add(stylesheets.get(n));
@@ -1653,12 +1654,12 @@ public abstract class Parent extends Node {
         }
     }
 
-    private final int LEFT_INVALID = 1;
-    private final int TOP_INVALID = 1 << 1;
-    private final int NEAR_INVALID = 1 << 2;
-    private final int RIGHT_INVALID = 1 << 3;
-    private final int BOTTOM_INVALID = 1 << 4;
-    private final int FAR_INVALID = 1 << 5;
+    private static final int LEFT_INVALID = 1;
+    private static final int TOP_INVALID = 1 << 1;
+    private static final int NEAR_INVALID = 1 << 2;
+    private static final int RIGHT_INVALID = 1 << 3;
+    private static final int BOTTOM_INVALID = 1 << 4;
+    private static final int FAR_INVALID = 1 << 5;
 
     private boolean updateCachedBounds(final List<Node> dirtyNodes,
                                        int remainingDirtyNodes) {
@@ -1916,6 +1917,7 @@ public abstract class Parent extends Node {
         }
     }
 
+    @Override
     void releaseAccessible() {
         for (int i=0, max=children.size(); i<max; i++) {
             final Node node = children.get(i);

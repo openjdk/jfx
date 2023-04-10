@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,8 +62,8 @@ public class ReadOnlyIntegerWrapperTest {
         readOnlyProperty = property.getReadOnlyProperty();
         internalInvalidationListener = new InvalidationListenerMock();
         publicInvalidationListener = new InvalidationListenerMock();
-        internalChangeListener = new ChangeListenerMock<Number>(UNDEFINED);
-        publicChangeListener = new ChangeListenerMock<Number>(UNDEFINED);
+        internalChangeListener = new ChangeListenerMock<>(UNDEFINED);
+        publicChangeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListeners() {
@@ -441,7 +441,7 @@ public class ReadOnlyIntegerWrapperTest {
     @Test
     public void testLazyBind_generic() {
         attachInvalidationListeners();
-        final ObservableObjectValueStub<Integer> v = new ObservableObjectValueStub<Integer>(VALUE_1);
+        final ObservableObjectValueStub<Integer> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -481,7 +481,7 @@ public class ReadOnlyIntegerWrapperTest {
     @Test
     public void testInternalEagerBind_generic() {
         attachInternalChangeListener();
-        final ObservableObjectValueStub<Integer> v = new ObservableObjectValueStub<Integer>(VALUE_1);
+        final ObservableObjectValueStub<Integer> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -517,7 +517,7 @@ public class ReadOnlyIntegerWrapperTest {
     @Test
     public void testPublicEagerBind_generic() {
         attachPublicChangeListener();
-        final ObservableObjectValueStub<Integer> v = new ObservableObjectValueStub<Integer>(VALUE_1);
+        final ObservableObjectValueStub<Integer> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());

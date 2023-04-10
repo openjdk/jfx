@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,7 +109,7 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverter<Strin
                 }
             }
 
-            if (converters == null) converters = new HashMap<String,StyleConverter<?,?>>();
+            if (converters == null) converters = new HashMap<>();
             converters.put(ename, converter);
             return converter;
         }
@@ -129,59 +129,59 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverter<Strin
 
         switch (ename) {
         case "com.sun.javafx.cursor.CursorType" :
-            converter = new EnumConverter<com.sun.javafx.cursor.CursorType>(com.sun.javafx.cursor.CursorType.class);
+            converter = new EnumConverter<>(com.sun.javafx.cursor.CursorType.class);
             break;
         case "javafx.scene.layout.BackgroundRepeat" :
         case "com.sun.javafx.scene.layout.region.Repeat" :
-            converter = new EnumConverter<javafx.scene.layout.BackgroundRepeat>(javafx.scene.layout.BackgroundRepeat.class);
+            converter = new EnumConverter<>(javafx.scene.layout.BackgroundRepeat.class);
             break;
         case "javafx.geometry.HPos" :
-            converter = new EnumConverter<javafx.geometry.HPos>(javafx.geometry.HPos.class);
+            converter = new EnumConverter<>(javafx.geometry.HPos.class);
             break;
         case "javafx.geometry.Orientation" :
-            converter = new EnumConverter<javafx.geometry.Orientation>(javafx.geometry.Orientation.class);
+            converter = new EnumConverter<>(javafx.geometry.Orientation.class);
             break;
         case "javafx.geometry.Pos" :
-            converter = new EnumConverter<javafx.geometry.Pos>(javafx.geometry.Pos.class);
+            converter = new EnumConverter<>(javafx.geometry.Pos.class);
             break;
         case "javafx.geometry.Side" :
-            converter = new EnumConverter<javafx.geometry.Side>(javafx.geometry.Side.class);
+            converter = new EnumConverter<>(javafx.geometry.Side.class);
             break;
         case "javafx.geometry.VPos" :
-            converter = new EnumConverter<javafx.geometry.VPos>(javafx.geometry.VPos.class);
+            converter = new EnumConverter<>(javafx.geometry.VPos.class);
             break;
         case "javafx.scene.effect.BlendMode" :
-            converter = new EnumConverter<javafx.scene.effect.BlendMode>(javafx.scene.effect.BlendMode.class);
+            converter = new EnumConverter<>(javafx.scene.effect.BlendMode.class);
             break;
         case "javafx.scene.effect.BlurType" :
-            converter = new EnumConverter<javafx.scene.effect.BlurType>(javafx.scene.effect.BlurType.class);
+            converter = new EnumConverter<>(javafx.scene.effect.BlurType.class);
             break;
         case "javafx.scene.paint.CycleMethod" :
-            converter = new EnumConverter<javafx.scene.paint.CycleMethod>(javafx.scene.paint.CycleMethod.class);
+            converter = new EnumConverter<>(javafx.scene.paint.CycleMethod.class);
             break;
         case "javafx.scene.shape.ArcType" :
-            converter = new EnumConverter<javafx.scene.shape.ArcType>(javafx.scene.shape.ArcType.class);
+            converter = new EnumConverter<>(javafx.scene.shape.ArcType.class);
             break;
         case "javafx.scene.shape.StrokeLineCap" :
-            converter = new EnumConverter<javafx.scene.shape.StrokeLineCap>(javafx.scene.shape.StrokeLineCap.class);
+            converter = new EnumConverter<>(javafx.scene.shape.StrokeLineCap.class);
             break;
         case "javafx.scene.shape.StrokeLineJoin" :
-            converter = new EnumConverter<javafx.scene.shape.StrokeLineJoin>(javafx.scene.shape.StrokeLineJoin.class);
+            converter = new EnumConverter<>(javafx.scene.shape.StrokeLineJoin.class);
             break;
         case "javafx.scene.shape.StrokeType" :
-            converter = new EnumConverter<javafx.scene.shape.StrokeType>(javafx.scene.shape.StrokeType.class);
+            converter = new EnumConverter<>(javafx.scene.shape.StrokeType.class);
             break;
         case "javafx.scene.text.FontPosture" :
-            converter = new EnumConverter<javafx.scene.text.FontPosture>(javafx.scene.text.FontPosture.class);
+            converter = new EnumConverter<>(javafx.scene.text.FontPosture.class);
             break;
         case "javafx.scene.text.FontSmoothingType" :
-            converter = new EnumConverter<javafx.scene.text.FontSmoothingType>(javafx.scene.text.FontSmoothingType.class);
+            converter = new EnumConverter<>(javafx.scene.text.FontSmoothingType.class);
             break;
         case "javafx.scene.text.FontWeight" :
-            converter = new EnumConverter<javafx.scene.text.FontWeight>(javafx.scene.text.FontWeight.class);
+            converter = new EnumConverter<>(javafx.scene.text.FontWeight.class);
             break;
         case "javafx.scene.text.TextAlignment" :
-            converter = new EnumConverter<javafx.scene.text.TextAlignment>(javafx.scene.text.TextAlignment.class);
+            converter = new EnumConverter<>(javafx.scene.text.TextAlignment.class);
             break;
 
         default :

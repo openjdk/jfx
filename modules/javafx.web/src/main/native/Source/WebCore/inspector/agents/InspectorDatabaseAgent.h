@@ -32,8 +32,7 @@
 #include "InspectorWebAgentBase.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
-#include <wtf/HashMap.h>
-#include <wtf/Optional.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -72,7 +71,7 @@ private:
     std::unique_ptr<Inspector::DatabaseFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::DatabaseBackendDispatcher> m_backendDispatcher;
 
-    HashMap<String, RefPtr<InspectorDatabaseResource>> m_resources;
+    MemoryCompactRobinHoodHashMap<String, RefPtr<InspectorDatabaseResource>> m_resources;
 };
 
 } // namespace WebCore

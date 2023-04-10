@@ -26,14 +26,12 @@
 #include "config.h"
 #include "WorkerAuditAgent.h"
 
-#include "ScriptState.h"
+#include "JSDOMGlobalObject.h"
 #include "WorkerOrWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/Ref.h>
-#include <wtf/RefPtr.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -48,14 +46,16 @@ WorkerAuditAgent::WorkerAuditAgent(WorkerAgentContext& context)
 
 WorkerAuditAgent::~WorkerAuditAgent() = default;
 
-InjectedScript WorkerAuditAgent::injectedScriptForEval(Protocol::ErrorString& errorString, Optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
+InjectedScript WorkerAuditAgent::injectedScriptForEval(Protocol::ErrorString& errorString, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (executionContextId) {
         errorString = "executionContextId is not supported for workers as there is only one execution context"_s;
         return InjectedScript();
     }
 
-    return injectedScriptManager().injectedScriptFor(globalObject(m_globalScope));
+    // FIXME: What guarantees m_globalScope.script() is non-null?
+    // FIXME: What guarantees globalScopeWrapper() is non-null?
+    return injectedScriptManager().injectedScriptFor(m_globalScope.script()->globalScopeWrapper());
 }
 
 } // namespace WebCore

@@ -34,19 +34,26 @@ namespace WebCore {
 // Must follow CSSValueKeywords.in order
 enum ControlPart {
     NoControlPart,
+    AutoPart,
     CheckboxPart,
     RadioPart,
     PushButtonPart,
     SquareButtonPart,
     ButtonPart,
-    ButtonBevelPart,
     DefaultButtonPart,
-    InnerSpinButtonPart,
     ListboxPart,
-    ListItemPart,
+    MenulistPart,
+    MenulistButtonPart,
+    MeterPart,
+    ProgressBarPart,
+    SliderHorizontalPart,
+    SliderVerticalPart,
+#if PLATFORM(JAVA)
+    SliderThumbHorizontalPart,
+    SliderThumbVerticalPart,
     MediaControlsBackgroundPart,
     MediaControlsDarkBarBackgroundPart,
-    MediaControlsFullscreenBackgroundPart,
+    MediaControlsFullscreenBackground,
     MediaControlsLightBarBackgroundPart,
     MediaCurrentTimePart,
     MediaEnterFullscreenButtonPart,
@@ -68,44 +75,45 @@ enum ControlPart {
     MediaVolumeSliderContainerPart,
     MediaVolumeSliderMuteButtonPart,
     MediaVolumeSliderThumbPart,
-    MenulistPart,
-    MenulistButtonPart,
-    MenulistTextPart,
-    MenulistTextFieldPart,
-    MeterPart,
-    ProgressBarPart,
-    ProgressBarValuePart,
-    SliderHorizontalPart,
-    SliderVerticalPart,
-    SliderThumbHorizontalPart,
-    SliderThumbVerticalPart,
-    CaretPart,
+#endif
     SearchFieldPart,
-    SearchFieldDecorationPart,
-    SearchFieldResultsDecorationPart,
-    SearchFieldResultsButtonPart,
-    SearchFieldCancelButtonPart,
-    TextFieldPart,
-    RelevancyLevelIndicatorPart,
-    ContinuousCapacityLevelIndicatorPart,
-    DiscreteCapacityLevelIndicatorPart,
-    RatingLevelIndicatorPart,
 #if ENABLE(APPLE_PAY)
     ApplePayButtonPart,
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
-    ColorWellPart,
-#endif
-#if ENABLE(DATALIST_ELEMENT)
-    ListButtonPart,
-#endif
-    TextAreaPart,
 #if ENABLE(ATTACHMENT_ELEMENT)
     AttachmentPart,
     BorderlessAttachmentPart,
 #endif
-    CapsLockIndicatorPart
+    TextAreaPart,
+    TextFieldPart,
+    // Internal-only Values
+    CapsLockIndicatorPart,
+#if ENABLE(INPUT_TYPE_COLOR)
+    ColorWellPart,
+#endif
+#if ENABLE(SERVICE_CONTROLS)
+    ImageControlsButtonPart,
+#endif
+    InnerSpinButtonPart,
+#if ENABLE(DATALIST_ELEMENT)
+    ListButtonPart,
+#endif
+    SearchFieldDecorationPart,
+    SearchFieldResultsDecorationPart,
+    SearchFieldResultsButtonPart,
+    SearchFieldCancelButtonPart,
+#if !PLATFORM(JAVA)
+    SliderThumbHorizontalPart,
+    SliderThumbVerticalPart
+#endif
 };
+
+#if ENABLE(SERVICE_CONTROLS)
+constexpr ControlPart largestControlPart = ImageControlsButtonPart;
+#else
+constexpr ControlPart largestControlPart = CapsLockIndicatorPart;
+#endif
+
 
 enum SelectionPart {
     SelectionBackground,

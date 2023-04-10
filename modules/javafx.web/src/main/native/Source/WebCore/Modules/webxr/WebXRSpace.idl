@@ -23,9 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://immersive-web.github.io/webxr/#xrspace
 [
-    EnabledAtRuntime=WebXR,
     Conditional=WEBXR,
+    EnabledBySetting=WebXREnabled,
+    CustomToJSObject,
     SecureContext,
     Exposed=Window,
     InterfaceName=XRSpace

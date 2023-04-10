@@ -32,6 +32,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/Hasher.h>
 #include <wtf/MemoryPressureHandler.h>
+#include <wtf/text/StringCommon.h>
 
 namespace WebCore {
 
@@ -103,7 +104,7 @@ private:
         static const bool safeToCompareToEmptyOrDeleted = true; // Empty and deleted values have lengths that are not equal to any valid length.
     };
 
-    struct SmallStringKeyHashTraits : WTF::SimpleClassHashTraits<SmallStringKey> {
+    struct SmallStringKeyHashTraits : SimpleClassHashTraits<SmallStringKey> {
         static const bool hasIsEmptyValueFunction = true;
         static bool isEmptyValue(const SmallStringKey& key) { return key.isHashTableEmptyValue(); }
         static const int minimumTableSize = 16;
@@ -221,11 +222,26 @@ private:
     Map m_map;
 };
 
+#if PLATFORM(JAVA)
+inline bool check_equal(const UChar* a, const UChar* b, unsigned length)
+{
+    for (unsigned i = 0; i < length; ++i) {
+        if (a[i] != b[i])
+            return false;
+    }
+    return true;
+}
+#endif
+
 inline bool operator==(const WidthCache::SmallStringKey& a, const WidthCache::SmallStringKey& b)
 {
     if (a.length() != b.length())
         return false;
-    return WTF::equal(a.characters(), b.characters(), a.length());
+#if PLATFORM(JAVA)
+    return check_equal(a.characters(), b.characters(), a.length());
+#else
+    return equal(a.characters(), b.characters(), a.length());
+#endif
 }
 
 } // namespace WebCore

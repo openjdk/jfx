@@ -181,11 +181,11 @@ SVGLengthValue::SVGLengthValue(const SVGLengthContext& context, float value, SVG
     setValue(context, value);
 }
 
-Optional<SVGLengthValue> SVGLengthValue::construct(SVGLengthMode lengthMode, StringView valueAsString)
+std::optional<SVGLengthValue> SVGLengthValue::construct(SVGLengthMode lengthMode, StringView valueAsString)
 {
     SVGLengthValue length { lengthMode };
     if (length.setValueAsString(valueAsString).hasException())
-        return WTF::nullopt;
+        return std::nullopt;
     return length;
 }
 
@@ -214,13 +214,13 @@ SVGLengthValue SVGLengthValue::blend(const SVGLengthValue& from, const SVGLength
     if (from.lengthType() == SVGLengthType::Percentage || to.lengthType() == SVGLengthType::Percentage) {
         auto fromPercent = from.valueAsPercentage() * 100;
         auto toPercent = to.valueAsPercentage() * 100;
-        return { WebCore::blend(fromPercent, toPercent, progress), SVGLengthType::Percentage };
+        return { WebCore::blend(fromPercent, toPercent, { progress }), SVGLengthType::Percentage };
     }
 
     if (from.lengthType() == to.lengthType() || from.isZero() || to.isZero() || from.isRelative()) {
         auto fromValue = from.valueInSpecifiedUnits();
         auto toValue = to.valueInSpecifiedUnits();
-        return { WebCore::blend(fromValue, toValue, progress), to.isZero() ? from.lengthType() : to.lengthType() };
+        return { WebCore::blend(fromValue, toValue, { progress }), to.isZero() ? from.lengthType() : to.lengthType() };
     }
 
     SVGLengthContext nonRelativeLengthContext(nullptr);
@@ -233,7 +233,7 @@ SVGLengthValue SVGLengthValue::blend(const SVGLengthValue& from, const SVGLength
         return { };
 
     float toValue = to.valueInSpecifiedUnits();
-    return { WebCore::blend(fromValue.releaseReturnValue(), toValue, progress), to.lengthType() };
+    return { WebCore::blend(fromValue.releaseReturnValue(), toValue, { progress }), to.lengthType() };
 }
 
 SVGLengthValue SVGLengthValue::fromCSSPrimitiveValue(const CSSPrimitiveValue& value)
@@ -267,6 +267,11 @@ float SVGLengthValue::value(const SVGLengthContext& context) const
 String SVGLengthValue::valueAsString() const
 {
     return makeString(m_valueInSpecifiedUnits, lengthTypeToString(m_lengthType));
+}
+
+AtomString SVGLengthValue::valueAsAtomString() const
+{
+    return makeAtomString(m_valueInSpecifiedUnits, lengthTypeToString(m_lengthType));
 }
 
 ExceptionOr<float> SVGLengthValue::valueForBindings(const SVGLengthContext& context) const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,6 +125,7 @@ public class GaussianShadow extends AbstractShadow {
      *
      * @return the input for this {@code Effect}
      */
+    @Override
     public final Effect getInput() {
         return getInputs().get(0);
     }
@@ -135,6 +136,7 @@ public class GaussianShadow extends AbstractShadow {
      *
      * @param input the input for this {@code Effect}
      */
+    @Override
     public void setInput(Effect input) {
         setInput(0, input);
     }
@@ -225,6 +227,7 @@ public class GaussianShadow extends AbstractShadow {
      *
      * @return the spread of the shadow effect
      */
+    @Override
     public float getSpread() {
         return state.getSpread();
     }
@@ -251,6 +254,7 @@ public class GaussianShadow extends AbstractShadow {
      * @throws IllegalArgumentException if {@code spread} is outside the
      * allowable range
      */
+    @Override
     public void setSpread(float spread) {
         float old = state.getSpread();
         state.setSpread(spread);
@@ -261,6 +265,7 @@ public class GaussianShadow extends AbstractShadow {
      *
      * @return the shadow color
      */
+    @Override
     public Color4f getColor() {
         return state.getShadowColor();
     }
@@ -277,39 +282,48 @@ public class GaussianShadow extends AbstractShadow {
      * @param color the shadow color
      * @throws IllegalArgumentException if {@code color} is null
      */
+    @Override
     public void setColor(Color4f color) {
         Color4f old = state.getShadowColor();
         state.setShadowColor(color);
     }
 
+    @Override
     public float getGaussianRadius() {
         return getRadius();
     }
 
+    @Override
     public float getGaussianWidth() {
         return getHRadius() * 2.0f + 1.0f;
     }
 
+    @Override
     public float getGaussianHeight() {
         return getVRadius() * 2.0f + 1.0f;
     }
 
+    @Override
     public void setGaussianRadius(float r) {
         setRadius(r);
     }
 
+    @Override
     public void setGaussianWidth(float w) {
         setHRadius(w < 1.0f ? 0.0f : ((w - 1.0f) / 2.0f));
     }
 
+    @Override
     public void setGaussianHeight(float h) {
         setVRadius(h < 1.0f ? 0.0f : ((h - 1.0f) / 2.0f));
     }
 
+    @Override
     public ShadowMode getMode() {
         return ShadowMode.GAUSSIAN;
     }
 
+    @Override
     public AbstractShadow implFor(ShadowMode mode) {
         int passes = 0;
         switch (mode) {

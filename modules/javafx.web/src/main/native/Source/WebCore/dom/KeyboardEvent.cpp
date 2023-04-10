@@ -108,11 +108,11 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
     , m_underlyingPlatformEvent(makeUnique<PlatformKeyboardEvent>(key))
     , m_key(key.key())
     , m_code(key.code())
-    , m_keyIdentifier(key.keyIdentifier())
+    , m_keyIdentifier(AtomString { key.keyIdentifier() })
     , m_location(keyLocationCode(key))
     , m_repeat(key.isAutoRepeat())
     , m_isComposing(view && is<DOMWindow>(view->window()) && downcast<DOMWindow>(*view->window()).frame() && downcast<DOMWindow>(*view->window()).frame()->editor().hasComposition())
-#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS)
+#if USE(APPKIT) || PLATFORM(IOS_FAMILY)
     , m_handledByInputMethod(key.handledByInputMethod())
 #endif
 #if USE(APPKIT)
@@ -153,7 +153,7 @@ Ref<KeyboardEvent> KeyboardEvent::create(const AtomString& type, const Init& ini
 }
 
 void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view,
-    const String& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
+    const AtomString& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
 {
     if (isBeingDispatched())
         return;
@@ -165,12 +165,12 @@ void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bo
 
     setModifierKeys(ctrlKey, altKey, shiftKey, metaKey, altGraphKey);
 
-    m_charCode = WTF::nullopt;
+    m_charCode = std::nullopt;
     m_isComposing = false;
-    m_keyCode = WTF::nullopt;
+    m_keyCode = std::nullopt;
     m_repeat = false;
     m_underlyingPlatformEvent = nullptr;
-    m_which = WTF::nullopt;
+    m_which = std::nullopt;
     m_code = { };
     m_key = { };
 

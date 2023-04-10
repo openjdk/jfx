@@ -60,7 +60,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMapElementImpl_getNameImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMapElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString{String(env, value)});
 }
 
 }

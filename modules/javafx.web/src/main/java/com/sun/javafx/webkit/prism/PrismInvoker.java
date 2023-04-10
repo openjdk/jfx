@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,7 @@ public final class PrismInvoker extends Invoker {
         if (Thread.currentThread().getName().startsWith("QuantumRenderer")) {
             r.run();
         } else {
-            FutureTask<Void> f = new FutureTask<Void>(r, null);
+            FutureTask<Void> f = new FutureTask<>(r, null);
             Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete

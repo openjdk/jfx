@@ -34,30 +34,16 @@
 
 namespace WTF {
 
-bool FileSystem::deleteEmptyDirectory(const String& path)
-{
-    auto fileManager = adoptNS([[NSFileManager alloc] init]);
-
-    if (NSArray *directoryContents = [fileManager contentsOfDirectoryAtPath:path error:nullptr]) {
-        // Explicitly look for and delete .DS_Store files.
-        if (directoryContents.count == 1 && [directoryContents.firstObject isEqualToString:@".DS_Store"])
-            [fileManager removeItemAtPath:[path stringByAppendingPathComponent:directoryContents.firstObject] error:nullptr];
-    }
-
-    // rmdir(...) returns 0 on successful deletion of the path and non-zero in any other case (including invalid permissions or non-existent file)
-    return !rmdir(FileSystem::fileSystemRepresentation(path).data());
-}
-
 void FileSystem::setMetadataURL(const String& path, const String& metadataURLString, const String& referrer)
 {
     String urlString;
-    if (NSURL *url = URLWithUserTypedString(metadataURLString, nil))
-        urlString = WTF::userVisibleString(WTF::URLByRemovingUserInfo(url));
+    if (NSURL *url = URLWithUserTypedString(metadataURLString))
+        urlString = userVisibleString(URLByRemovingUserInfo(url));
     else
         urlString = metadataURLString;
 
     // Call Metadata API on a background queue because it can take some time.
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [path = path.isolatedCopy(), urlString = urlString.isolatedCopy(), referrer = referrer.isolatedCopy()] {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [path = path.isolatedCopy(), urlString = WTFMove(urlString).isolatedCopy(), referrer = referrer.isolatedCopy()] {
         auto item = adoptCF(MDItemCreate(kCFAllocatorDefault, path.createCFString().get()));
         if (!item)
             return;
@@ -69,18 +55,6 @@ void FileSystem::setMetadataURL(const String& path, const String& metadataURLStr
         MDItemSetAttribute(item.get(), kMDItemWhereFroms, (__bridge CFArrayRef)whereFromAttribute.get());
         MDItemSetAttribute(item.get(), kMDItemDownloadedDate, (__bridge CFArrayRef)@[ [NSDate date] ]);
     });
-}
-
-bool FileSystem::canExcludeFromBackup()
-{
-    return true;
-}
-
-bool FileSystem::excludeFromBackup(const String& path)
-{
-    // It is critical to pass FALSE for excludeByPath because excluding by path requires root privileges.
-    CSBackupSetItemExcluded(FileSystem::pathAsURL(path).get(), TRUE, FALSE);
-    return true;
 }
 
 } // namespace WTF

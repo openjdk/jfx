@@ -47,11 +47,11 @@ public:
 
 private:
     bool isRenderMathMLFraction() const final { return true; }
-    const char* renderName() const final { return "RenderMathMLFraction"; }
+    ASCIILiteral renderName() const final { return "RenderMathMLFraction"_s; }
 
     void computePreferredLogicalWidths() final;
     void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
-    Optional<int> firstLineBaseline() const final;
+    std::optional<LayoutUnit> firstLineBaseline() const final;
     void paint(PaintInfo&, const LayoutPoint&) final;
     RenderMathMLOperator* unembellishedOperator() const final;
 

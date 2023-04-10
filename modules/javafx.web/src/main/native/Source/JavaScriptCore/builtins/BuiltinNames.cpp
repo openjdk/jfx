@@ -53,10 +53,10 @@ SymbolImpl::StaticSymbolImpl polyProtoPrivateName { "PolyProto", SymbolImpl::s_f
 
 } // namespace Symbols
 
-#define INITIALIZE_BUILTIN_NAMES_IN_JSC(name) , m_##name(JSC::Identifier::fromString(vm, #name))
+#define INITIALIZE_BUILTIN_NAMES_IN_JSC(name) , m_##name(JSC::Identifier::fromString(vm, #name ""_s))
 #define INITIALIZE_BUILTIN_SYMBOLS_IN_JSC(name) \
     , m_##name##Symbol(JSC::Identifier::fromUid(vm, &static_cast<SymbolImpl&>(JSC::Symbols::name##Symbol))) \
-    , m_##name##SymbolPrivateIdentifier(JSC::Identifier::fromString(vm, #name))
+    , m_##name##SymbolPrivateIdentifier(JSC::Identifier::fromString(vm, #name ""_s))
 
 #define INITIALIZE_PUBLIC_TO_PRIVATE_ENTRY(name) \
     do { \
@@ -79,7 +79,7 @@ BuiltinNames::BuiltinNames(VM& vm, CommonIdentifiers* commonIdentifiers)
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_BUILTIN_NAMES_IN_JSC)
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(INITIALIZE_BUILTIN_SYMBOLS_IN_JSC)
     , m_intlLegacyConstructedSymbol(JSC::Identifier::fromUid(vm, &static_cast<SymbolImpl&>(Symbols::intlLegacyConstructedSymbol)))
-    , m_dollarVMName(Identifier::fromString(vm, "$vm"))
+    , m_dollarVMName(Identifier::fromString(vm, "$vm"_s))
     , m_dollarVMPrivateName(Identifier::fromUid(vm, &static_cast<SymbolImpl&>(Symbols::dollarVMPrivateName)))
     , m_polyProtoPrivateName(Identifier::fromUid(vm, &static_cast<SymbolImpl&>(Symbols::polyProtoPrivateName)))
 {
@@ -113,7 +113,7 @@ struct CharBufferSeacher {
 };
 
 template<typename CharacterType>
-static PrivateSymbolImpl* lookUpPrivateNameImpl(const HashSet<String>& set, const WTF::HashTranslatorCharBuffer<CharacterType>& buffer)
+static PrivateSymbolImpl* lookUpPrivateNameImpl(const BuiltinNames::PrivateNameSet& set, const WTF::HashTranslatorCharBuffer<CharacterType>& buffer)
 {
     auto iterator = set.find<CharBufferSeacher<CharacterType>>(buffer);
     if (iterator == set.end())
@@ -126,7 +126,7 @@ static PrivateSymbolImpl* lookUpPrivateNameImpl(const HashSet<String>& set, cons
 }
 
 template<typename CharacterType>
-static SymbolImpl* lookUpWellKnownSymbolImpl(const HashMap<String, SymbolImpl*>& map, const WTF::HashTranslatorCharBuffer<CharacterType>& buffer)
+static SymbolImpl* lookUpWellKnownSymbolImpl(const BuiltinNames::WellKnownSymbolMap& map, const WTF::HashTranslatorCharBuffer<CharacterType>& buffer)
 {
     auto iterator = map.find<CharBufferSeacher<CharacterType>>(buffer);
     if (iterator == map.end())

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,13 +29,11 @@ import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Random;
 import javafx.event.Event;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.event.EventHandler;
 import javafx.geometry.Point3D;
 import javafx.scene.ParentShim;
 import javafx.scene.input.PickResult;

@@ -31,7 +31,6 @@
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "Node.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -103,7 +102,7 @@ Protocol::ErrorStringOr<void> PageDOMDebuggerAgent::setDOMBreakpoint(Protocol::D
     }
 
     ASSERT_NOT_REACHED();
-    return makeUnexpected("Not supported");
+    return makeUnexpected("Not supported"_s);
 }
 
 Protocol::ErrorStringOr<void> PageDOMDebuggerAgent::removeDOMBreakpoint(Protocol::DOM::NodeId nodeId, Protocol::DOMDebugger::DOMBreakpointType type)
@@ -136,7 +135,7 @@ Protocol::ErrorStringOr<void> PageDOMDebuggerAgent::removeDOMBreakpoint(Protocol
     }
 
     ASSERT_NOT_REACHED();
-    return makeUnexpected("Not supported");
+    return makeUnexpected("Not supported"_s);
 }
 
 void PageDOMDebuggerAgent::mainFrameNavigated()
@@ -158,7 +157,7 @@ void PageDOMDebuggerAgent::frameDocumentUpdated(Frame& frame)
 }
 
 
-static Optional<size_t> calculateDistance(Node& child, Node& ancestor)
+static std::optional<size_t> calculateDistance(Node& child, Node& ancestor)
 {
     size_t distance = 0;
 
@@ -168,7 +167,7 @@ static Optional<size_t> calculateDistance(Node& child, Node& ancestor)
 
         current = InspectorDOMAgent::innerParentNode(current);
         if (!current)
-            return WTF::nullopt;
+            return std::nullopt;
     }
 
     return distance;
@@ -182,7 +181,7 @@ void PageDOMDebuggerAgent::willInsertDOMNode(Node& parent)
     if (m_domSubtreeModifiedBreakpoints.isEmpty())
         return;
 
-    Optional<size_t> closestDistance;
+    std::optional<size_t> closestDistance;
     RefPtr<JSC::Breakpoint> closestBreakpoint;
     Node* closestBreakpointOwner = nullptr;
 
@@ -204,7 +203,7 @@ void PageDOMDebuggerAgent::willInsertDOMNode(Node& parent)
     ASSERT(closestBreakpointOwner);
 
     auto pauseData = buildPauseDataForDOMBreakpoint(Protocol::DOMDebugger::DOMBreakpointType::SubtreeModified, *closestBreakpointOwner);
-    pauseData->setBoolean("insertion", true);
+    pauseData->setBoolean("insertion"_s, true);
     // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
     // Include the new child node ID so the frontend can show the node that's about to be inserted.
     m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTFMove(pauseData), WTFMove(closestBreakpoint));
@@ -218,9 +217,9 @@ void PageDOMDebuggerAgent::willRemoveDOMNode(Node& node)
     if (m_domNodeRemovedBreakpoints.isEmpty() && m_domSubtreeModifiedBreakpoints.isEmpty())
         return;
 
-    Optional<size_t> closestDistance;
+    std::optional<size_t> closestDistance;
     RefPtr<JSC::Breakpoint> closestBreakpoint;
-    Optional<Protocol::DOMDebugger::DOMBreakpointType> closestBreakpointType;
+    std::optional<Protocol::DOMDebugger::DOMBreakpointType> closestBreakpointType;
     Node* closestBreakpointOwner = nullptr;
 
     for (auto [breakpointOwner, breakpoint] : m_domNodeRemovedBreakpoints) {
@@ -261,7 +260,7 @@ void PageDOMDebuggerAgent::willRemoveDOMNode(Node& node)
     if (auto* domAgent = m_instrumentingAgents.persistentDOMAgent()) {
         if (&node != closestBreakpointOwner) {
             if (auto targetNodeId = domAgent->pushNodeToFrontend(&node))
-                pauseData->setInteger("targetNodeId", targetNodeId);
+                pauseData->setInteger("targetNodeId"_s, targetNodeId);
         }
     }
     m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTFMove(pauseData), WTFMove(closestBreakpoint));
@@ -275,6 +274,13 @@ void PageDOMDebuggerAgent::didRemoveDOMNode(Node& node)
     m_domSubtreeModifiedBreakpoints.removeIf(nodeContainsBreakpointOwner);
     m_domAttributeModifiedBreakpoints.removeIf(nodeContainsBreakpointOwner);
     m_domNodeRemovedBreakpoints.removeIf(nodeContainsBreakpointOwner);
+}
+
+void PageDOMDebuggerAgent::willDestroyDOMNode(Node& node)
+{
+    // This can be called in response to GC.
+    // DOM Node destruction should be treated as if the node was removed from the DOM tree.
+    didRemoveDOMNode(node);
 }
 
 void PageDOMDebuggerAgent::willModifyDOMAttr(Element& element)
@@ -344,10 +350,10 @@ Ref<JSON::Object> PageDOMDebuggerAgent::buildPauseDataForDOMBreakpoint(Protocol:
     ASSERT(m_domSubtreeModifiedBreakpoints.contains(&breakpointOwner) || m_domAttributeModifiedBreakpoints.contains(&breakpointOwner) || m_domNodeRemovedBreakpoints.contains(&breakpointOwner));
 
     auto pauseData = JSON::Object::create();
-    pauseData->setString("type", Protocol::Helpers::getEnumConstantValue(breakpointType));
+    pauseData->setString("type"_s, Protocol::Helpers::getEnumConstantValue(breakpointType));
     if (auto* domAgent = m_instrumentingAgents.persistentDOMAgent()) {
         if (auto breakpointOwnerNodeId = domAgent->pushNodeToFrontend(&breakpointOwner))
-            pauseData->setInteger("nodeId", breakpointOwnerNodeId);
+            pauseData->setInteger("nodeId"_s, breakpointOwnerNodeId);
     }
     return pauseData;
 }

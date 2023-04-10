@@ -45,6 +45,9 @@ class WorkerOrWorkletGlobalScope : public ScriptExecutionContext, public RefCoun
 public:
     virtual ~WorkerOrWorkletGlobalScope();
 
+    using ScriptExecutionContext::weakPtrFactory;
+    using WeakValueType = ScriptExecutionContext::WeakValueType;
+
     bool isClosing() const { return m_isClosing; }
     WorkerOrWorkletThread* workerOrWorkletThread() const { return m_thread; }
 
@@ -54,14 +57,17 @@ public:
     JSC::VM& vm() final;
     WorkerInspectorController& inspectorController() const { return *m_inspectorController; }
 
-    unsigned long createUniqueIdentifier() { return m_uniqueIdentifier++; }
-
     ScriptModuleLoader& moduleLoader() { return *m_moduleLoader; }
 
     // ScriptExecutionContext.
     EventLoopTaskGroup& eventLoop() final;
     bool isContextThread() const final;
     void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
+    std::optional<PAL::SessionID> sessionID() const final { return m_sessionID; }
+
+    // Defined specifcially for WorkerOrWorkletGlobalScope for cooperation with
+    // WorkerEventLoop and WorkerRunLoop, not part of ScriptExecutionContext.
+    void postTaskForMode(Task&&, const String&);
 
     virtual void prepareForDestruction();
 
@@ -74,7 +80,7 @@ public:
     virtual FetchOptions::Destination destination() const = 0;
 
 protected:
-    WorkerOrWorkletGlobalScope(WorkerThreadType, Ref<JSC::VM>&&, WorkerOrWorkletThread*);
+    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, WorkerOrWorkletThread*, ScriptExecutionContextIdentifier = { });
 
     // ScriptExecutionContext.
     bool isJSExecutionForbidden() const final;
@@ -93,13 +99,17 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+#if ENABLE(NOTIFICATIONS)
+    NotificationClient* notificationClient() override { return nullptr; }
+#endif
+
     std::unique_ptr<WorkerOrWorkletScriptController> m_script;
     std::unique_ptr<ScriptModuleLoader> m_moduleLoader;
     WorkerOrWorkletThread* m_thread;
     RefPtr<WorkerEventLoop> m_eventLoop;
     std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
     std::unique_ptr<WorkerInspectorController> m_inspectorController;
-    unsigned long m_uniqueIdentifier { 1 };
+    PAL::SessionID m_sessionID;
     bool m_isClosing { false };
 };
 

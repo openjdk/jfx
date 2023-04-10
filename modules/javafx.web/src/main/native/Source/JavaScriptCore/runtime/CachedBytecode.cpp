@@ -46,7 +46,7 @@ void CachedBytecode::addFunctionUpdate(const UnlinkedFunctionExecutable* executa
     ptrdiff_t offset = it->value.base();
     ASSERT(offset);
     copyLeafExecutables(bytecode.get());
-    m_updates.append(CacheUpdate::FunctionUpdate { offset, kind, { executable->features(), executable->hasCapturedVariables() }, WTFMove(bytecode->m_payload) });
+    m_updates.append(CacheUpdate::FunctionUpdate { offset, kind, { executable->features(), executable->lexicalScopeFeatures(), executable->hasCapturedVariables() }, WTFMove(bytecode->m_payload) });
 }
 
 void CachedBytecode::copyLeafExecutables(const CachedBytecode& bytecode)
@@ -72,7 +72,7 @@ void CachedBytecode::commitUpdates(const ForEachUpdateCallback& callback) const
                 ptrdiff_t kindOffset = functionUpdate.m_kind == CodeForCall ? CachedFunctionExecutableOffsets::codeBlockForCallOffset() : CachedFunctionExecutableOffsets::codeBlockForConstructOffset();
                 ptrdiff_t codeBlockOffset = functionUpdate.m_base + kindOffset + CachedWriteBarrierOffsets::ptrOffset() + CachedPtrOffsets::offsetOffset();
                 ptrdiff_t offsetPayload = static_cast<ptrdiff_t>(offset) - codeBlockOffset;
-                static_assert(std::is_same<decltype(VariableLengthObjectBase::m_offset), ptrdiff_t>::value, "");
+                static_assert(std::is_same<decltype(VariableLengthObjectBase::m_offset), ptrdiff_t>::value);
                 callback(codeBlockOffset, &offsetPayload, sizeof(ptrdiff_t));
             }
 

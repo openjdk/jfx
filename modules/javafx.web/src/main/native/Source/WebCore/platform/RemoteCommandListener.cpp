@@ -26,12 +26,12 @@
 #include "config.h"
 #include "RemoteCommandListener.h"
 
-#if PLATFORM(MAC)
-#include "RemoteCommandListenerMac.h"
+#if PLATFORM(COCOA)
+#include "RemoteCommandListenerCocoa.h"
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-#include "RemoteCommandListenerIOS.h"
+#if USE(GLIB)
+#include "RemoteCommandListenerGLib.h"
 #endif
 
 namespace WebCore {
@@ -50,12 +50,13 @@ void RemoteCommandListener::setCreationFunction(CreationFunction&& function)
 void RemoteCommandListener::resetCreationFunction()
 {
     remoteCommandListenerCreationFunction() = [] (RemoteCommandListenerClient& client) {
-#if PLATFORM(MAC)
-        return RemoteCommandListenerMac::create(client);
-#elif PLATFORM(IOS_FAMILY)
-        return RemoteCommandListenerIOS::create(client);
+#if PLATFORM(COCOA)
+        return RemoteCommandListenerCocoa::create(client);
+#elif USE(GLIB) && ENABLE(MEDIA_SESSION)
+        return RemoteCommandListenerGLib::create(client);
 #else
-        return RemoteCommandListener::create(client);
+        UNUSED_PARAM(client);
+        return nullptr;
 #endif
     };
 }
@@ -77,7 +78,7 @@ RemoteCommandListener::~RemoteCommandListener() = default;
 
 void RemoteCommandListener::scheduleSupportedCommandsUpdate()
 {
-    if (!m_updateCommandsTask.hasPendingTask()) {
+    if (!m_updateCommandsTask.isPending()) {
         m_updateCommandsTask.scheduleTask([this] ()  {
             updateSupportedCommands();
         });
@@ -95,14 +96,35 @@ void RemoteCommandListener::setSupportsSeeking(bool supports)
 
 void RemoteCommandListener::addSupportedCommand(PlatformMediaSession::RemoteControlCommandType command)
 {
-    m_registeredCommands.add(command);
+    m_supportedCommands.add(command);
     scheduleSupportedCommandsUpdate();
 }
 
 void RemoteCommandListener::removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType command)
 {
-    m_registeredCommands.remove(command);
+    m_supportedCommands.remove(command);
     scheduleSupportedCommandsUpdate();
+}
+
+void RemoteCommandListener::setSupportedCommands(const RemoteCommandsSet& commands)
+{
+    m_supportedCommands = commands;
+    scheduleSupportedCommandsUpdate();
+}
+
+void RemoteCommandListener::updateSupportedCommands()
+{
+    ASSERT_NOT_REACHED();
+}
+
+const RemoteCommandListener::RemoteCommandsSet& RemoteCommandListener::supportedCommands() const
+{
+    return m_supportedCommands;
+}
+
+bool RemoteCommandListener::supportsSeeking() const
+{
+    return m_supportsSeeking;
 }
 
 }

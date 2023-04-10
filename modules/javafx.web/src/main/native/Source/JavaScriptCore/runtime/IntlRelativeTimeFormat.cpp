@@ -35,14 +35,14 @@
 
 namespace JSC {
 
-const ClassInfo IntlRelativeTimeFormat::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlRelativeTimeFormat) };
+const ClassInfo IntlRelativeTimeFormat::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlRelativeTimeFormat) };
 
 namespace IntlRelativeTimeFormatInternal {
 }
 
 IntlRelativeTimeFormat* IntlRelativeTimeFormat::create(VM& vm, Structure* structure)
 {
-    auto* format = new (NotNull, allocateCell<IntlRelativeTimeFormat>(vm.heap)) IntlRelativeTimeFormat(vm, structure);
+    auto* format = new (NotNull, allocateCell<IntlRelativeTimeFormat>(vm)) IntlRelativeTimeFormat(vm, structure);
     format->finishCreation(vm);
     return format;
 }
@@ -60,7 +60,7 @@ IntlRelativeTimeFormat::IntlRelativeTimeFormat(VM& vm, Structure* structure)
 void IntlRelativeTimeFormat::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>
@@ -89,14 +89,14 @@ void IntlRelativeTimeFormat::initializeRelativeTimeFormat(JSGlobalObject* global
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, locales);
     RETURN_IF_EXCEPTION(scope, void());
 
-    Optional<JSObject&> options = intlCoerceOptionsToObject(globalObject, optionsValue);
+    JSObject* options = intlCoerceOptionsToObject(globalObject, optionsValue);
     RETURN_IF_EXCEPTION(scope, void());
 
     ResolveLocaleOptions localeOptions;
     LocaleMatcher localeMatcher = intlOption<LocaleMatcher>(globalObject, options, vm.propertyNames->localeMatcher, { { "lookup"_s, LocaleMatcher::Lookup }, { "best fit"_s, LocaleMatcher::BestFit } }, "localeMatcher must be either \"lookup\" or \"best fit\""_s, LocaleMatcher::BestFit);
     RETURN_IF_EXCEPTION(scope, void());
 
-    String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, nullptr, nullptr);
+    String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, { }, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!numberingSystem.isNull()) {
         if (!isUnicodeLocaleIdentifierType(numberingSystem)) {
@@ -106,7 +106,7 @@ void IntlRelativeTimeFormat::initializeRelativeTimeFormat(JSGlobalObject* global
         localeOptions[static_cast<unsigned>(RelevantExtensionKey::Nu)] = numberingSystem;
     }
 
-    const HashSet<String>& availableLocales = intlRelativeTimeFormatAvailableLocales();
+    const auto& availableLocales = intlRelativeTimeFormatAvailableLocales();
     auto resolved = resolveLocale(globalObject, availableLocales, requestedLocales, localeMatcher, localeOptions, { RelevantExtensionKey::Nu }, localeData);
     m_locale = resolved.locale;
     if (m_locale.isEmpty()) {
@@ -185,7 +185,7 @@ ASCIILiteral IntlRelativeTimeFormat::styleString(Style style)
         return "narrow"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 // https://tc39.es/ecma402/#sec-intl.relativetimeformat.prototype.resolvedoptions
@@ -203,32 +203,32 @@ JSObject* IntlRelativeTimeFormat::resolvedOptions(JSGlobalObject* globalObject) 
 static StringView singularUnit(StringView unit)
 {
     // Plurals are allowed, but thankfully they're all just a simple -s.
-    return unit.endsWith("s") ? unit.left(unit.length() - 1) : unit;
+    return unit.endsWith('s') ? unit.left(unit.length() - 1) : unit;
 }
 
 // https://tc39.es/ecma402/#sec-singularrelativetimeunit
-static Optional<URelativeDateTimeUnit> relativeTimeUnitType(StringView unit)
+static std::optional<URelativeDateTimeUnit> relativeTimeUnitType(StringView unit)
 {
     StringView singular = singularUnit(unit);
 
-    if (singular == "second")
+    if (singular == "second"_s)
         return UDAT_REL_UNIT_SECOND;
-    if (singular == "minute")
+    if (singular == "minute"_s)
         return UDAT_REL_UNIT_MINUTE;
-    if (singular == "hour")
+    if (singular == "hour"_s)
         return UDAT_REL_UNIT_HOUR;
-    if (singular == "day")
+    if (singular == "day"_s)
         return UDAT_REL_UNIT_DAY;
-    if (singular == "week")
+    if (singular == "week"_s)
         return UDAT_REL_UNIT_WEEK;
-    if (singular == "month")
+    if (singular == "month"_s)
         return UDAT_REL_UNIT_MONTH;
-    if (singular == "quarter")
+    if (singular == "quarter"_s)
         return UDAT_REL_UNIT_QUARTER;
-    if (singular == "year")
+    if (singular == "year"_s)
         return UDAT_REL_UNIT_YEAR;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 String IntlRelativeTimeFormat::formatInternal(JSGlobalObject* globalObject, double value, StringView unit) const
@@ -270,7 +270,7 @@ JSValue IntlRelativeTimeFormat::format(JSGlobalObject* globalObject, double valu
     String result = formatInternal(globalObject, value, unit);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return jsString(vm, result);
+    return jsString(vm, WTFMove(result));
 }
 
 // https://tc39.es/ecma402/#sec-FormatRelativeTimeToParts
@@ -318,7 +318,7 @@ JSValue IntlRelativeTimeFormat::formatToParts(JSGlobalObject* globalObject, doub
         }
 
         IntlFieldIterator fieldIterator(*iterator.get());
-        IntlNumberFormat::formatToPartsInternal(globalObject, IntlNumberFormat::Style::Decimal, absValue, formattedNumber, fieldIterator, parts, jsString(vm, singularUnit(unit).toString()));
+        IntlNumberFormat::formatToPartsInternal(globalObject, IntlNumberFormat::Style::Decimal, std::signbit(absValue), IntlMathematicalValue::numberTypeFromDouble(absValue), formattedNumber, fieldIterator, parts, nullptr, jsString(vm, singularUnit(unit)));
         RETURN_IF_EXCEPTION(scope, { });
     }
 

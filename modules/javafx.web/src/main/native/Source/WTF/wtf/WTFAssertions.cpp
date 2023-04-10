@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #include <wtf/Bag.h>
 #include <wtf/Platform.h>
-#include <wtf/RefCountedArray.h>
 #include <wtf/RefPtr.h>
 
 #if OS(DARWIN)
@@ -42,16 +41,15 @@ namespace {
 struct DummyStruct { };
 }
 
-static_assert(sizeof(Bag<DummyStruct>) == sizeof(void*), "");
+static_assert(sizeof(Bag<DummyStruct>) == sizeof(void*));
 
-static_assert(sizeof(Ref<DummyStruct>) == sizeof(DummyStruct*), "");
+static_assert(sizeof(Ref<DummyStruct>) == sizeof(DummyStruct*));
 
-static_assert(sizeof(RefPtr<DummyStruct>) == sizeof(DummyStruct*), "");
-
-static_assert(sizeof(RefCountedArray<DummyStruct>) == sizeof(void*), "");
+static_assert(sizeof(RefPtr<DummyStruct>) == sizeof(DummyStruct*));
 
 #if OS(DARWIN) && CPU(ADDRESS64)
-static_assert(MACH_VM_MAX_ADDRESS <= ((1ULL << OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH)) - 1));
+// NaN boxing encoding relies on this.
+static_assert(MACH_VM_MAX_ADDRESS <= (1ull << 48));
 #endif
 
 } // namespace WTF

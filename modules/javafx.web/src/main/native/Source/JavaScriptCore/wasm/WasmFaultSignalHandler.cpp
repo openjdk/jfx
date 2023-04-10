@@ -50,8 +50,6 @@ static constexpr bool verbose = false;
 }
 }
 
-static bool fastHandlerInstalled { false };
-
 #if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 
 static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegisters& context)
@@ -83,8 +81,8 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
                 if (LLInt::isWasmLLIntPC(faultingInstruction))
                     return true;
                 auto& calleeRegistry = CalleeRegistry::singleton();
-                auto locker = holdLock(calleeRegistry.getLock());
-                for (auto* callee : calleeRegistry.allCallees(locker)) {
+                Locker locker { calleeRegistry.getLock() };
+                for (auto* callee : calleeRegistry.allCallees()) {
                     auto [start, end] = callee->range();
                     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "function start: ", RawPointer(start), " end: ", RawPointer(end));
                     if (start <= faultingInstruction && faultingInstruction < end) {
@@ -107,12 +105,7 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
 
 #endif // ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 
-bool fastMemoryEnabled()
-{
-    return fastHandlerInstalled;
-}
-
-void enableFastMemory()
+void activateSignalingMemory()
 {
 #if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     static std::once_flag once;
@@ -124,13 +117,11 @@ void enableFastMemory()
             return;
 
         activateSignalHandlersFor(Signal::AccessFault);
-
-        fastHandlerInstalled = true;
     });
-#endif
+#endif // ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 }
 
-void prepareFastMemory()
+void prepareSignalingMemory()
 {
 #if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     static std::once_flag once;

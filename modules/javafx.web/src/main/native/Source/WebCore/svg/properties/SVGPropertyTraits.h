@@ -24,6 +24,7 @@
 #include "CSSParser.h"
 #include "Color.h"
 #include "ColorSerialization.h"
+#include "CommonAtomStrings.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "QualifiedName.h"
@@ -37,20 +38,20 @@ struct SVGPropertyTraits { };
 template<>
 struct SVGPropertyTraits<bool> {
     static bool initialValue() { return false; }
-    static bool fromString(const String& string) { return string == "true"; }
-    static Optional<bool> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
-    static String toString(bool type) { return type ? "true" : "false"; }
+    static bool fromString(const String& string) { return string == "true"_s; }
+    static std::optional<bool> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
+    static String toString(bool type) { return type ? trueAtom() : falseAtom(); }
 };
 
 template<>
 struct SVGPropertyTraits<Color> {
     static Color initialValue() { return Color(); }
-    static Color fromString(const String& string) { return CSSParser::parseColor(string.stripWhiteSpace()); }
-    static Optional<Color> parse(const QualifiedName&, const String& string)
+    static Color fromString(const String& string) { return CSSParser::parseColorWithoutContext(string.stripWhiteSpace()); }
+    static std::optional<Color> parse(const QualifiedName&, const String& string)
     {
-        Color color = CSSParser::parseColor(string.stripWhiteSpace());
+        Color color = CSSParser::parseColorWithoutContext(string.stripWhiteSpace());
         if (!color.isValid())
-            return WTF::nullopt;
+            return std::nullopt;
         return color;
     }
     static String toString(const Color& type) { return serializationForHTML(type); }
@@ -59,15 +60,15 @@ struct SVGPropertyTraits<Color> {
 template<>
 struct SVGPropertyTraits<unsigned> {
     static unsigned initialValue() { return 0; }
-    static Optional<unsigned> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
+    static std::optional<unsigned> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
     static String toString(unsigned type) { return String::number(type); }
 };
 
 template<>
 struct SVGPropertyTraits<int> {
     static int initialValue() { return 0; }
-    static int fromString(const String&string) { return string.toIntStrict(); }
-    static Optional<int> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
+    static int fromString(const String&);
+    static std::optional<int> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
     static String toString(int type) { return String::number(type); }
 };
 
@@ -81,7 +82,7 @@ struct SVGPropertyTraits<std::pair<int, int>> {
             return { };
         return std::make_pair(static_cast<int>(std::round(result->first)), static_cast<int>(std::round(result->second)));
     }
-    static Optional<std::pair<int, int>> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
+    static std::optional<std::pair<int, int>> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
     static String toString(std::pair<int, int>) { ASSERT_NOT_REACHED(); return emptyString(); }
 };
 
@@ -90,9 +91,9 @@ struct SVGPropertyTraits<float> {
     static float initialValue() { return 0; }
     static float fromString(const String& string)
     {
-        return parseNumber(string).valueOr(0);
+        return parseNumber(string).value_or(0);
     }
-    static Optional<float> parse(const QualifiedName&, const String& string)
+    static std::optional<float> parse(const QualifiedName&, const String& string)
     {
         return parseNumber(string);
     }
@@ -104,9 +105,9 @@ struct SVGPropertyTraits<std::pair<float, float>> {
     static std::pair<float, float> initialValue() { return { }; }
     static std::pair<float, float> fromString(const String& string)
     {
-        return parseNumberOptionalNumber(string).valueOr(std::pair<float, float> { });
+        return valueOrDefault(parseNumberOptionalNumber(string));
     }
-    static Optional<std::pair<float, float>> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
+    static std::optional<std::pair<float, float>> parse(const QualifiedName&, const String&) { ASSERT_NOT_REACHED(); return initialValue(); }
     static String toString(std::pair<float, float>) { ASSERT_NOT_REACHED(); return emptyString(); }
 };
 
@@ -115,9 +116,9 @@ struct SVGPropertyTraits<FloatPoint> {
     static FloatPoint initialValue() { return FloatPoint(); }
     static FloatPoint fromString(const String& string)
     {
-        return parsePoint(string).valueOr(FloatPoint { });
+        return valueOrDefault(parsePoint(string));
     }
-    static Optional<FloatPoint> parse(const QualifiedName&, const String& string)
+    static std::optional<FloatPoint> parse(const QualifiedName&, const String& string)
     {
         return parsePoint(string);
     }
@@ -132,9 +133,9 @@ struct SVGPropertyTraits<FloatRect> {
     static FloatRect initialValue() { return FloatRect(); }
     static FloatRect fromString(const String& string)
     {
-        return parseRect(string).valueOr(FloatRect { });
+        return valueOrDefault(parseRect(string));
     }
-    static Optional<FloatRect> parse(const QualifiedName&, const String& string)
+    static std::optional<FloatRect> parse(const QualifiedName&, const String& string)
     {
         return parseRect(string);
     }
@@ -148,7 +149,7 @@ template<>
 struct SVGPropertyTraits<String> {
     static String initialValue() { return String(); }
     static String fromString(const String& string) { return string; }
-    static Optional<String> parse(const QualifiedName&, const String& string) { return string; }
+    static std::optional<String> parse(const QualifiedName&, const String& string) { return string; }
     static String toString(const String& string) { return string; }
 };
 

@@ -26,9 +26,12 @@
 class MediaControls extends LayoutNode
 {
 
-    constructor({ width = 300, height = 150, layoutTraits = LayoutTraits.Unknown } = {})
+    constructor({ width = 300, height = 150, layoutTraits = null } = {})
     {
         super(`<div class="media-controls"></div>`);
+
+        if (layoutTraits?.inheritsBorderRadius())
+            this.element.classList.add("inherits-border-radius");
 
         this._scaleFactor = 1;
         this._shouldCenterControlsVertically = false;
@@ -38,7 +41,6 @@ class MediaControls extends LayoutNode
         this.layoutTraits = layoutTraits;
 
         this.playPauseButton = new PlayPauseButton(this);
-        this.airplayButton = new AirplayButton(this);
         this.pipButton = new PiPButton(this);
         this.fullscreenButton = new FullscreenButton(this);
         this.muteButton = new MuteButton(this);
@@ -48,8 +50,6 @@ class MediaControls extends LayoutNode
         this.statusLabel = new StatusLabel(this);
         this.timeControl = new TimeControl(this);
 
-        this.tracksPanel = new TracksPanel;
-
         this.bottomControlsBar = new ControlsBar("bottom");
 
         this.autoHideController = new AutoHideController(this);
@@ -57,9 +57,21 @@ class MediaControls extends LayoutNode
         this.autoHideController.hasSecondaryUIAttached = false;
 
         this._placard = null;
-        this.airplayPlacard = new AirplayPlacard(this);
         this.invalidPlacard = new InvalidPlacard(this);
-        this.pipPlacard = new PiPPlacard(this);
+
+        // FIXME: Adwaita layout doesn't have an icon for pip-placard.
+        if (this.layoutTraits?.supportsPiP())
+            this.pipPlacard = new PiPPlacard(this);
+        else
+            this.pipPlacard = null;
+
+        if (this.layoutTraits?.supportsAirPlay()) {
+            this.airplayButton = new AirplayButton(this);
+            this.airplayPlacard = new AirplayPlacard(this);
+        } else {
+            this.airplayButton = null;
+            this.airplayPlacard = null;
+        }
 
         this.element.addEventListener("focusin", this);
         window.addEventListener("dragstart", this, true);
@@ -170,38 +182,6 @@ class MediaControls extends LayoutNode
         return this._placard && this._placard !== this.airplayPlacard;
     }
 
-    showTracksPanel()
-    {
-        this.element.classList.add("shows-tracks-panel");
-
-        this.tracksButton.on = true;
-        this.tracksButton.element.blur();
-        this.autoHideController.hasSecondaryUIAttached = true;
-        this.tracksPanel.presentInParent(this);
-
-        const controlsBounds = this.element.getBoundingClientRect();
-        const controlsBarBounds = this.bottomControlsBar.element.getBoundingClientRect();
-        const tracksButtonBounds = this.tracksButton.element.getBoundingClientRect();
-        this.tracksPanel.rightX = this.width - (tracksButtonBounds.right - controlsBounds.left);
-        this.tracksPanel.bottomY = this.height - (controlsBarBounds.top - controlsBounds.top) + 1;
-        this.tracksPanel.maxHeight = this.height - this.tracksPanel.bottomY - 10;
-    }
-
-    hideTracksPanel()
-    {
-        this.element.classList.remove("shows-tracks-panel");
-
-        let shouldFadeControlsBar = true;
-        if (window.event instanceof MouseEvent)
-            shouldFadeControlsBar = !this.isPointInControls(new DOMPoint(event.clientX, event.clientY), true);
-
-        this.tracksButton.on = false;
-        this.tracksButton.element.focus();
-        this.autoHideController.hasSecondaryUIAttached = false;
-        this.faded = this.autoHideController.fadesWhileIdle && shouldFadeControlsBar;
-        this.tracksPanel.hide();
-    }
-
     fadeIn()
     {
         this.element.classList.add("fade-in");
@@ -268,5 +248,4 @@ class MediaControls extends LayoutNode
         else
             super.commitProperty(propertyName);
     }
-
 }

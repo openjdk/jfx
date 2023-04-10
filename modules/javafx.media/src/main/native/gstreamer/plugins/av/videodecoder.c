@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -172,10 +172,8 @@ static void videodecoder_init(VideoDecoder *decoder)
     gst_element_add_pad(GST_ELEMENT(decoder), base->srcpad);
 }
 
-static void videodecoder_dispose(GObject* object)
+void videodecoder_close_decoder(VideoDecoder *decoder)
 {
-    VideoDecoder *decoder = VIDEODECODER(object);
-
 #if HEVC_SUPPORT
     if (decoder->dest_frame)
     {
@@ -195,6 +193,13 @@ static void videodecoder_dispose(GObject* object)
         decoder->swscale_module = NULL;
     }
 #endif // HEVC_SUPPORT
+}
+
+static void videodecoder_dispose(GObject* object)
+{
+    VideoDecoder *decoder = VIDEODECODER(object);
+
+    basedecoder_close_decoder(decoder);
 
     G_OBJECT_CLASS(parent_class)->dispose(object);
 }
@@ -379,14 +384,29 @@ static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps
 {
     BaseDecoder *base = BASEDECODER(decoder);
     const gchar *mimetype = NULL;
-
-    if (base->is_initialized)
-        return TRUE;
+    gint width = 0;
+    gint height = 0;
 
     if(gst_caps_get_size(sink_caps) < 1)
         return FALSE;
 
     GstStructure *s = gst_caps_get_structure(sink_caps, 0);
+
+    // Reload decoder if input resolution changed.
+    if (gst_structure_get_int(s, "width", &width) && gst_structure_get_int(s, "height", &height))
+    {
+        if (decoder->width != 0 && decoder->height != 0 &&
+                (decoder->width != width || decoder->height != height))
+        {
+            videodecoder_state_reset(decoder);
+            basedecoder_close_decoder(BASEDECODER(decoder));
+            videodecoder_close_decoder(decoder);
+            videodecoder_init_state(decoder);
+        }
+    }
+
+    if (base->is_initialized)
+        return TRUE;
 
     // Pass stencil context to init against if there is one.
     basedecoder_set_codec_data(base, s);
@@ -660,6 +680,8 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
     gboolean       unmap_buf = FALSE;
     gboolean       set_frame_values = TRUE;
     int64_t        reordered_opaque = AV_NOPTS_VALUE;
+    unsigned int   out_buf_size = 0;
+    gboolean       copy_error = FALSE;
     uint8_t*       data0 = NULL;
     uint8_t*       data1 = NULL;
     uint8_t*       data2 = NULL;
@@ -693,8 +715,25 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                 base->context->reordered_opaque = GST_BUFFER_TIMESTAMP(buf);
             else
                 base->context->reordered_opaque = AV_NOPTS_VALUE;
+#if USE_SEND_RECEIVE
+            num_dec = avcodec_send_packet(base->context, &decoder->packet);
+            if (num_dec == 0)
+            {
+                num_dec = avcodec_receive_frame(base->context, base->frame);
+                if (num_dec == 0)
+                    decoder->frame_finished = 1;
+                else
+                    decoder->frame_finished = 0;
+            }
+#else
             num_dec = avcodec_decode_video2(base->context, base->frame, &decoder->frame_finished, &decoder->packet);
+#endif
+
+#if PACKET_UNREF
+            av_packet_unref(&decoder->packet);
+#else
             av_free_packet(&decoder->packet);
+#endif
         }
         else
         {
@@ -712,7 +751,19 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
         else
             base->context->reordered_opaque = AV_NOPTS_VALUE;
 
+#if USE_SEND_RECEIVE
+        num_dec = avcodec_send_packet(base->context, &decoder->packet);
+        if (num_dec == 0)
+        {
+            num_dec = avcodec_receive_frame(base->context, base->frame);
+            if (num_dec == 0)
+                decoder->frame_finished = 1;
+            else
+                decoder->frame_finished = 0;
+        }
+#else
         num_dec = avcodec_decode_video2(base->context, base->frame, &decoder->frame_finished, &decoder->packet);
+#endif
     }
 
     if (num_dec < 0)
@@ -791,11 +842,58 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                 }
 
                 // Copy image by parts from different arrays.
-                memcpy(info2.data,                     data0, decoder->u_offset);
-                memcpy(info2.data + decoder->u_offset, data1, decoder->uv_blocksize);
-                memcpy(info2.data + decoder->v_offset, data2, decoder->uv_blocksize);
+                if (decoder->frame_size > (unsigned int)info2.maxsize) // maxsize should be same or more due to alignment
+                {
+                    gst_buffer_unmap(outbuf, &info2);
+                    // INLINE - gst_buffer_unref()
+                    gst_buffer_unref(outbuf);
+                    gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
+                                     g_strdup("Wrong buffer size"), NULL, ("videodecoder.c"), ("videodecoder_chain"), 0);
+                    goto _exit;
+                }
+
+                out_buf_size = decoder->frame_size;
+                if (out_buf_size >= decoder->u_offset)
+                {
+                    memcpy(info2.data, data0, decoder->u_offset);
+                    out_buf_size -= decoder->u_offset;
+                    if (out_buf_size >= decoder->uv_blocksize &&
+                        decoder->uv_blocksize <= decoder->frame_size &&
+                        decoder->u_offset <= (decoder->frame_size - decoder->uv_blocksize))
+                    {
+                        memcpy(info2.data + decoder->u_offset, data1, decoder->uv_blocksize);
+                        out_buf_size -= decoder->uv_blocksize;
+                        if (out_buf_size >= decoder->uv_blocksize &&
+                            decoder->uv_blocksize <= decoder->frame_size &&
+                            decoder->v_offset <= (decoder->frame_size - decoder->uv_blocksize))
+                        {
+                            memcpy(info2.data + decoder->v_offset, data2, decoder->uv_blocksize);
+                        }
+                        else
+                        {
+                            copy_error = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        copy_error = TRUE;
+                    }
+                }
+                else
+                {
+                    copy_error = TRUE;
+                }
 
                 gst_buffer_unmap(outbuf, &info2);
+
+                if (copy_error)
+                {
+                    // INLINE - gst_buffer_unref()
+                    gst_buffer_unref(outbuf);
+                    gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
+                                     g_strdup("Copy data failed"), NULL, ("videodecoder.c"), ("videodecoder_chain"), 0);
+                    goto _exit;
+                }
 
                 GST_BUFFER_OFFSET_END(outbuf) = GST_BUFFER_OFFSET_NONE;
 

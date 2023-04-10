@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +56,30 @@ struct Config {
         basePtrs[kind] = ptr;
     }
 
+    void* allocBasePtr(Kind kind) const
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        return allocBasePtrs[kind];
+    }
+
+    void setAllocBasePtr(Kind kind, void* ptr)
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        allocBasePtrs[kind] = ptr;
+    }
+
+    size_t allocSize(Kind kind) const
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        return allocSizes[kind];
+    }
+
+    void setAllocSize(Kind kind, size_t size)
+    {
+        RELEASE_BASSERT(kind < NumberOfKinds);
+        allocSizes[kind] = size;
+    }
+
     // All the fields in this struct should be chosen such that their
     // initial value is 0 / null / falsy because Config is instantiated
     // as a global singleton.
@@ -74,19 +98,22 @@ struct Config {
     void* start;
     size_t totalSize;
     void* basePtrs[NumberOfKinds];
+    void* allocBasePtrs[NumberOfKinds];
+    size_t allocSizes[NumberOfKinds];
 };
 
 #if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
-constexpr size_t startSlotOfGigacageConfig = 0;
+// The first 2 slots are reserved for the use of the ExecutableAllocator.
+constexpr size_t startSlotOfGigacageConfig = 2;
 constexpr size_t startOffsetOfGigacageConfig = startSlotOfGigacageConfig * sizeof(WebConfig::Slot);
 
-constexpr size_t reservedSlotsForGigacageConfig = 6;
+constexpr size_t reservedSlotsForGigacageConfig = 12;
 constexpr size_t reservedBytesForGigacageConfig = reservedSlotsForGigacageConfig * sizeof(WebConfig::Slot);
 
 constexpr size_t alignmentOfGigacageConfig = std::alignment_of<Gigacage::Config>::value;
 
-static_assert(sizeof(Gigacage::Config) <= reservedBytesForGigacageConfig);
+static_assert(sizeof(Gigacage::Config) + startOffsetOfGigacageConfig <= reservedBytesForGigacageConfig);
 static_assert(bmalloc::roundUpToMultipleOf<alignmentOfGigacageConfig>(startOffsetOfGigacageConfig) == startOffsetOfGigacageConfig);
 
 #define g_gigacageConfig (*bmalloc::bitwise_cast<Gigacage::Config*>(&WebConfig::g_config[Gigacage::startSlotOfGigacageConfig]))

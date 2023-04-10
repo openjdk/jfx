@@ -32,14 +32,24 @@
 namespace WebCore {
 using namespace JSC;
 
-static inline String stringToByteString(JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, String&& string)
+String identifierToString(JSGlobalObject& lexicalGlobalObject, const Identifier& identifier)
 {
-    if (!string.isAllLatin1()) {
-        throwTypeError(&lexicalGlobalObject, scope);
+    if (UNLIKELY(identifier.isSymbol())) {
+        auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
+        throwTypeError(&lexicalGlobalObject, scope, SymbolCoercionError);
         return { };
     }
 
-    return WTFMove(string);
+    return identifier.string();
+}
+
+static inline bool throwIfInvalidByteString(JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const String& string)
+{
+    if (UNLIKELY(!string.isAllLatin1())) {
+        throwTypeError(&lexicalGlobalObject, scope);
+        return true;
+    }
+    return false;
 }
 
 String identifierToByteString(JSGlobalObject& lexicalGlobalObject, const Identifier& identifier)
@@ -47,8 +57,11 @@ String identifierToByteString(JSGlobalObject& lexicalGlobalObject, const Identif
     VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = identifier.string();
-    return stringToByteString(lexicalGlobalObject, scope, WTFMove(string));
+    auto string = identifierToString(lexicalGlobalObject, identifier);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (UNLIKELY(throwIfInvalidByteString(lexicalGlobalObject, scope, string)))
+        return { };
+    return string;
 }
 
 String valueToByteString(JSGlobalObject& lexicalGlobalObject, JSValue value)
@@ -59,33 +72,28 @@ String valueToByteString(JSGlobalObject& lexicalGlobalObject, JSValue value)
     auto string = value.toWTFString(&lexicalGlobalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return stringToByteString(lexicalGlobalObject, scope, WTFMove(string));
+    if (UNLIKELY(throwIfInvalidByteString(lexicalGlobalObject, scope, string)))
+        return { };
+    return string;
 }
 
-static inline String stringToUSVString(String&& string)
+AtomString valueToByteAtomString(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
 {
-    // Fast path for the case where there are no unpaired surrogates.
-    if (!hasUnpairedSurrogate(string))
-        return WTFMove(string);
+    VM& vm = lexicalGlobalObject.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    // Slow path: http://heycam.github.io/webidl/#dfn-obtain-unicode
-    // Replaces unpaired surrogates with the replacement character.
-    StringBuilder result;
-    result.reserveCapacity(string.length());
-    StringView view { string };
-    for (auto codePoint : view.codePoints()) {
-        if (U_IS_SURROGATE(codePoint))
-            result.append(replacementCharacter);
-        else
-            result.appendCharacter(codePoint);
-    }
-    return result.toString();
+    auto string = value.toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (UNLIKELY(throwIfInvalidByteString(lexicalGlobalObject, scope, string.string())))
+        return nullAtom();
+
+    return string;
 }
 
-String identifierToUSVString(JSGlobalObject&, const Identifier& identifier)
+String identifierToUSVString(JSGlobalObject& lexicalGlobalObject, const Identifier& identifier)
 {
-    auto string = identifier.string();
-    return stringToUSVString(WTFMove(string));
+    return replaceUnpairedSurrogatesWithReplacementCharacter(identifierToString(lexicalGlobalObject, identifier));
 }
 
 String valueToUSVString(JSGlobalObject& lexicalGlobalObject, JSValue value)
@@ -96,7 +104,18 @@ String valueToUSVString(JSGlobalObject& lexicalGlobalObject, JSValue value)
     auto string = value.toWTFString(&lexicalGlobalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return stringToUSVString(WTFMove(string));
+    return replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(string));
+}
+
+AtomString valueToUSVAtomString(JSGlobalObject& lexicalGlobalObject, JSValue value)
+{
+    VM& vm = lexicalGlobalObject.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto string = value.toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    return replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(string));
 }
 
 } // namespace WebCore

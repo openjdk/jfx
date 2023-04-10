@@ -1,6 +1,6 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -43,7 +43,7 @@ TextBreakIteratorCache& TextBreakIteratorCache::singleton()
 
 #if !PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
 
-static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomString& locale)
+static std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomString& locale)
 {
     switch (mode) {
     case TextBreakIterator::Mode::Line:
@@ -51,6 +51,8 @@ static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBacking
     case TextBreakIterator::Mode::Caret:
         return TextBreakIteratorICU(string, TextBreakIteratorICU::Mode::Character, locale.string().utf8().data());
     case TextBreakIterator::Mode::Delete:
+        return TextBreakIteratorICU(string, TextBreakIteratorICU::Mode::Character, locale.string().utf8().data());
+    case TextBreakIterator::Mode::Character:
         return TextBreakIteratorICU(string, TextBreakIteratorICU::Mode::Character, locale.string().utf8().data());
     default:
         ASSERT_NOT_REACHED();

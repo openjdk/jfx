@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -116,7 +116,7 @@ public class HelloProgressIndicator extends Application {
         root.getChildren().add(pInd6);
 
         // busy indicator - indeterminate and spin are enabled by default
-        // See https://wiki.openjdk.java.net/display/OpenJFX/ProgressIndicator+User+Experience+Documentation
+        // See https://wiki.openjdk.org/display/OpenJFX/ProgressIndicator+User+Experience+Documentation
         ProgressIndicator pInd7 = new ProgressIndicator();
         pInd7.setLayoutX(300);
         pInd7.setLayoutY(250);

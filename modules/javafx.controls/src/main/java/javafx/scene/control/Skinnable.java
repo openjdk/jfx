@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,29 +36,23 @@ import javafx.beans.property.ObjectProperty;
  */
 public interface Skinnable {
     /**
-     * Skin is responsible for rendering this {@code Control}. From the
-     * perspective of the {@code Control}, the {@code Skin} is a black box.
-     * It listens and responds to changes in state in a {@code Control}.
+     * The {@code Skin} responsible for rendering this {@code Skinnable}. From the
+     * perspective of the {@code Skinnable}, the {@code Skin} is a black box.
+     * It listens and responds to changes in state of its {@code Skinnable}.
      * <p>
-     * There is a one-to-one relationship between a {@code Control} and its
-     * {@code Skin}. Every {@code Skin} maintains a back reference to the
-     * {@code Control}.
+     * Some implementations of {@code Skinnable} define a one-to-one relationship between {@code Skinnable}
+     * and its {@code Skin}. Every {@code Skin} maintains a back reference to the
+     * {@code Skinnable}.  When required, this relationship is enforced when the {@code Skin} is set,
+     * throwing an {@code IllegalArgumentException} if the return value of {@link Skin#getSkinnable()}
+     * is not the same as this {@code Skinnable}.
      * <p>
      * A skin may be null.
      *
-     * @return the skin property for this control
+     * @return the skin property for this Skinnable
      */
     public ObjectProperty<Skin<?>> skinProperty();
 
-    /**
-     * Sets the skin that will render this {@link Control}
-     * @param value the skin value for this control
-     */
     public void setSkin(Skin<?> value);
 
-    /**
-     * Returns the skin that renders this {@link Control}
-     * @return the skin for this control
-     */
     public Skin<?> getSkin();
 }

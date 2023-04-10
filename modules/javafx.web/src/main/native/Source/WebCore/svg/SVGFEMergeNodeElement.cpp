@@ -60,9 +60,10 @@ void SVGFEMergeNodeElement::parseAttribute(const QualifiedName& name, const Atom
 
 void SVGFEMergeNodeElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::inAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::inAttr);
         InstanceInvalidationGuard guard(*this);
-        invalidateFilterPrimitiveParent(this);
+        SVGFilterPrimitiveStandardAttributes::invalidateFilterPrimitiveParent(this);
         return;
     }
 

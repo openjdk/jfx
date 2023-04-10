@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "ButterflyInlines.h"
+#include "CacheableIdentifierInlines.h"
 #include "DFGClobberize.h"
 #include "DFGClobbersExitState.h"
 #include "DFGDominators.h"
@@ -138,7 +139,7 @@ public:
                     m_myRefCounts.find(edge.node())->value++;
 
                     validateEdgeWithDoubleResultIfNecessary(node, edge);
-                    VALIDATE((node, edge), edge->hasInt52Result() == (edge.useKind() == Int52RepUse));
+                    validateEdgeWithInt52ResultIfNecessary(node, edge);
 
                     if (m_graph.m_form == SSA) {
                         // In SSA, all edges must hasResult().
@@ -235,6 +236,11 @@ public:
                         VALIDATE((node), !node->child2());
                 }
 
+                if (node->hasCacheableIdentifier()) {
+                    auto* uid = node->cacheableIdentifier().uid();
+                    VALIDATE((node), uid->isSymbol() || !parseIndex(*uid));
+                }
+
                 switch (node->op()) {
                 case Identity:
                 case IdentityWithProfile:
@@ -312,15 +318,15 @@ public:
                     break;
                 case MultiPutByOffset:
                     for (unsigned i = node->multiPutByOffsetData().variants.size(); i--;) {
-                        const PutByIdVariant& variant = node->multiPutByOffsetData().variants[i];
-                        if (variant.kind() != PutByIdVariant::Transition)
+                        const PutByVariant& variant = node->multiPutByOffsetData().variants[i];
+                        if (variant.kind() != PutByVariant::Transition)
                             continue;
                         VALIDATE((node), !variant.oldStructureForTransition()->dfgShouldWatch());
                     }
                     break;
                 case MultiDeleteByOffset:
                     for (unsigned i = node->multiDeleteByOffsetData().variants.size(); i--;) {
-                        const DeleteByIdVariant& variant = node->multiDeleteByOffsetData().variants[i];
+                        const DeleteByVariant& variant = node->multiDeleteByOffsetData().variants[i];
                         VALIDATE((node), !variant.newStructure() || !variant.oldStructure()->dfgShouldWatch());
                     }
                     break;
@@ -329,8 +335,8 @@ public:
                         // This only supports structures that are JSFinalObject or JSArray.
                         VALIDATE(
                             (node),
-                            structure->classInfo() == JSFinalObject::info()
-                            || structure->classInfo() == JSArray::info());
+                            structure->classInfoForCells() == JSFinalObject::info()
+                            || structure->classInfoForCells() == JSArray::info());
 
                         // We only support certain indexing shapes.
                         VALIDATE((node), !hasAnyArrayStorage(structure->indexingType()));
@@ -376,6 +382,9 @@ public:
                         VALIDATE((node), inlineCallFrame->isVarargs());
                     break;
                 }
+                case GetIndexedPropertyStorage:
+                    VALIDATE((node), node->arrayMode().type() != Array::String);
+                    break;
                 case NewArray:
                     VALIDATE((node), node->vectorLengthHint() >= node->numChildren());
                     break;
@@ -395,6 +404,15 @@ public:
                     default:
                         break;
                     }
+                    break;
+                case WeakMapGet:
+                    VALIDATE((node), node->child2().useKind() == CellUse || node->child2().useKind() == ObjectUse || node->child2().useKind() == SymbolUse);
+                    break;
+                case WeakSetAdd:
+                    VALIDATE((node), node->child2().useKind() == CellUse || node->child2().useKind() == ObjectUse);
+                    break;
+                case WeakMapSet:
+                    VALIDATE((node), m_graph.varArgChild(node, 1).useKind() == CellUse || m_graph.varArgChild(node, 1).useKind() == ObjectUse);
                     break;
                 default:
                     break;
@@ -640,6 +658,7 @@ private:
                 case Upsilon:
                 case AssertInBounds:
                 case CheckInBounds:
+                case CheckInBoundsInt52:
                 case PhantomNewObject:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
@@ -968,6 +987,14 @@ private:
             return;
 
         VALIDATE((node, edge), edge.useKind() == DoubleRepUse || edge.useKind() == DoubleRepRealUse || edge.useKind() == DoubleRepAnyIntUse);
+    }
+
+    void validateEdgeWithInt52ResultIfNecessary(Node* node, Edge edge)
+    {
+        if (m_graph.m_planStage < PlanStage::AfterFixup)
+            return;
+
+        VALIDATE((node, edge), edge->hasInt52Result() == (edge.useKind() == Int52RepUse));
     }
 
     void checkOperand(

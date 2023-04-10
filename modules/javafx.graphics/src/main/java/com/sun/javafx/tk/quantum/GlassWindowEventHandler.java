@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -162,7 +162,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
             AccessControlContext acc = stage.getAccessControlContext();
             return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
                 stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
-                return (Void)null;
+                return null;
             } , acc);
         });
     }
@@ -195,7 +195,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
             AccessControlContext acc = stage.getAccessControlContext();
             return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
                 stage.stageListener.changedScreen(oldScreen, newScreen);
-                return (Void)null;
+                return null;
             } , acc);
         });
     }

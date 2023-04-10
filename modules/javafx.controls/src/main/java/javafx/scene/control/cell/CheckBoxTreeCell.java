@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -220,7 +220,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty,
             final StringConverter<TreeItem<T>> converter) {
-        return tree -> new CheckBoxTreeCell<T>(getSelectedProperty, converter);
+        return tree -> new CheckBoxTreeCell<>(getSelectedProperty, converter);
     }
 
 
@@ -356,7 +356,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<TreeItem<T>>> converter =
-            new SimpleObjectProperty<StringConverter<TreeItem<T>>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -387,7 +387,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     // --- selected state callback property
     private ObjectProperty<Callback<TreeItem<T>, ObservableValue<Boolean>>>
             selectedStateCallback =
-            new SimpleObjectProperty<Callback<TreeItem<T>, ObservableValue<Boolean>>>(
+            new SimpleObjectProperty<>(
             this, "selectedStateCallback");
 
     /**
@@ -431,6 +431,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
         if (empty) {
             setText(null);
             setGraphic(null);
+            checkBox.setGraphic(null); // release the graphic so it will serve only one CheckBox
         } else {
             StringConverter<TreeItem<T>> c = getConverter();
 

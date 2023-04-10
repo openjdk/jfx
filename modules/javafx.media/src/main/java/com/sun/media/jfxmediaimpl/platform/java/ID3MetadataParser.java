@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,7 @@ final class ID3MetadataParser extends MetadataParserImpl {
         super(locator);
     }
 
+    @Override
     protected void parse() {
         try {
             // We will need ISO-8859-1
@@ -73,7 +74,7 @@ final class ID3MetadataParser extends MetadataParserImpl {
             //
 
             byte[] buf = getBytes(10);
-            version = (int)(buf[3] & 0xFF);
+            version = buf[3] & 0xFF;
             if (buf[0] == 0x49 && buf[1] == 0x44 && buf[2] == 0x33 &&
                     (version >= ID3_VERSION_MIN && version <= ID3_VERSION_MAX)) {
                 int flags = buf[5] & 0xFF;

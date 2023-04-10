@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (C) 2016-2017 Apple Inc. All rights reserved.
 #
@@ -53,12 +53,22 @@ def cppMacro(wasmOpcode, value, b3, inc, *extraArgs):
 def typeMacroizer():
     inc = 0
     for ty in wasm.types:
-        yield cppMacro(ty, wasm.types[ty]["value"], wasm.types[ty]["b3type"], inc)
+        yield cppMacro(ty, wasm.types[ty]["value"], wasm.types[ty]["b3type"], inc, ty)
         inc += 1
+
+
+def typeMacroizerFiltered(filter):
+    for t in typeMacroizer():
+        if not filter(t):
+            yield t
 
 type_definitions = ["#define FOR_EACH_WASM_TYPE(macro)"]
 type_definitions.extend([t for t in typeMacroizer()])
 type_definitions = "".join(type_definitions)
+
+type_definitions_except_funcref_externref = ["#define FOR_EACH_WASM_TYPE_EXCEPT_FUNCREF_AND_EXTERNREF(macro)"]
+type_definitions_except_funcref_externref.extend([t for t in typeMacroizerFiltered(lambda x: x == "funcref" or x == "externref")])
+type_definitions_except_funcref_externref = "".join(type_definitions_except_funcref_externref)
 
 
 def opcodeMacroizer(filter, opcodeField="value", modifier=None):
@@ -116,7 +126,7 @@ def atomicBinaryRMWMacroizer():
 
 
 defines = ["#define FOR_EACH_WASM_SPECIAL_OP(macro)"]
-defines.extend([op for op in opcodeMacroizer(lambda op: not (isUnary(op) or isBinary(op) or op["category"] == "control" or op["category"] == "memory" or op["value"] == 0xfc or isAtomic(op)))])
+defines.extend([op for op in opcodeMacroizer(lambda op: not (isUnary(op) or isBinary(op) or op["category"] == "control" or op["category"] == "memory" or op["value"] == 0xfc or op["category"] == "gc" or isAtomic(op)))])
 defines.append("\n\n#define FOR_EACH_WASM_CONTROL_FLOW_OP(macro)")
 defines.extend([op for op in opcodeMacroizer(lambda op: op["category"] == "control")])
 defines.append("\n\n#define FOR_EACH_WASM_SIMPLE_UNARY_OP(macro)")
@@ -143,6 +153,8 @@ defines.append("\n\n#define FOR_EACH_WASM_EXT_ATOMIC_BINARY_RMW_OP(macro)")
 defines.extend([op for op in atomicBinaryRMWMacroizer()])
 defines.append("\n\n#define FOR_EACH_WASM_EXT_ATOMIC_OTHER_OP(macro)")
 defines.extend([op for op in opcodeMacroizer(lambda op: isAtomic(op) and (not isAtomicLoad(op) and not isAtomicStore(op) and not isAtomicBinaryRMW(op)), opcodeField="extendedOp")])
+defines.append("\n\n#define FOR_EACH_WASM_GC_OP(macro)")
+defines.extend([op for op in opcodeMacroizer(lambda op: (op["category"] == "gc"), opcodeField="extendedOp")])
 defines.append("\n\n")
 
 defines = "".join(defines)
@@ -194,6 +206,7 @@ contents = wasm.header + """
 #if ENABLE(WEBASSEMBLY)
 
 #include <cstdint>
+#include <wtf/PrintStream.h>
 
 #if ENABLE(WEBASSEMBLY_B3JIT)
 #include "B3Type.h"
@@ -205,16 +218,58 @@ static constexpr unsigned expectedVersionNumber = """ + wasm.expectedVersionNumb
 
 static constexpr unsigned numTypes = """ + str(len(types)) + """;
 
-""" + type_definitions + """
+""" + type_definitions + "\n" + """
+""" + type_definitions_except_funcref_externref + """
 #define CREATE_ENUM_VALUE(name, id, ...) name = id,
-enum Type : int8_t {
+enum class TypeKind : int8_t {
     FOR_EACH_WASM_TYPE(CREATE_ENUM_VALUE)
 };
 #undef CREATE_ENUM_VALUE
 
+enum class Nullable : bool {
+  No = false,
+  Yes = true,
+};
+
+using TypeIndex = uintptr_t;
+
+struct Type {
+    TypeKind kind;
+    Nullable nullable;
+    TypeIndex index;
+
+    bool operator==(const Type& other) const
+    {
+        return other.kind == kind && other.nullable == nullable && other.index == index;
+    }
+
+    bool operator!=(const Type& other) const
+    {
+        return !(other == *this);
+    }
+
+    bool isNullable() const
+    {
+        return static_cast<bool>(nullable);
+    }
+
+    // Use Wasm::isFuncref and Wasm::isExternref instead because they check againts all kind of representations of function referenes and external references.
+
+    #define CREATE_PREDICATE(name, ...) bool is ## name() const { return kind == TypeKind::name; }
+    FOR_EACH_WASM_TYPE_EXCEPT_FUNCREF_AND_EXTERNREF(CREATE_PREDICATE)
+    #undef CREATE_PREDICATE
+};
+
+namespace Types
+{
+#define CREATE_CONSTANT(name, id, ...) constexpr Type name = Type{TypeKind::name, Nullable::Yes, 0u};
+FOR_EACH_WASM_TYPE(CREATE_CONSTANT)
+#undef CREATE_CONSTANT
+} // namespace Types
+
 #define CREATE_CASE(name, id, ...) case id: return true;
 template <typename Int>
-inline bool isValidType(Int i)
+inline bool isValidTypeKind(Int i)
 {
     switch (i) {
     default: return false;
@@ -226,10 +281,10 @@ inline bool isValidType(Int i)
 #undef CREATE_CASE
 
 #if ENABLE(WEBASSEMBLY_B3JIT)
-#define CREATE_CASE(name, id, b3type, ...) case name: return b3type;
+#define CREATE_CASE(name, id, b3type, ...) case TypeKind::name: return b3type;
 inline B3::Type toB3Type(Type type)
 {
-    switch (type) {
+    switch (type.kind) {
     FOR_EACH_WASM_TYPE(CREATE_CASE)
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -238,10 +293,10 @@ inline B3::Type toB3Type(Type type)
 #undef CREATE_CASE
 #endif
 
-#define CREATE_CASE(name, ...) case name: return #name;
-inline const char* makeString(Type type)
+#define CREATE_CASE(name, ...) case TypeKind::name: return #name;
+inline const char* makeString(TypeKind kind)
 {
-    switch (type) {
+    switch (kind) {
     FOR_EACH_WASM_TYPE(CREATE_CASE)
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -249,10 +304,10 @@ inline const char* makeString(Type type)
 }
 #undef CREATE_CASE
 
-#define CREATE_CASE(name, id, b3type, inc, ...) case id: return inc;
-inline int linearizeType(Type type)
+#define CREATE_CASE(name, id, b3type, inc, ...) case TypeKind::name: return inc;
+inline int linearizeType(TypeKind kind)
 {
-    switch (type) {
+    switch (kind) {
     FOR_EACH_WASM_TYPE(CREATE_CASE)
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -260,14 +315,14 @@ inline int linearizeType(Type type)
 }
 #undef CREATE_CASE
 
-#define CREATE_CASE(name, id, b3type, inc, ...) case inc: return name;
-inline Type linearizedToType(int i)
+#define CREATE_CASE(name, id, b3type, inc, ...) case inc: return TypeKind::name;
+inline TypeKind linearizedToType(int i)
 {
     switch (i) {
     FOR_EACH_WASM_TYPE(CREATE_CASE)
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return Void;
+    return TypeKind::Void;
 }
 #undef CREATE_CASE
 
@@ -281,6 +336,7 @@ inline Type linearizedToType(int i)
     FOR_EACH_WASM_MEMORY_LOAD_OP(macro) \\
     FOR_EACH_WASM_MEMORY_STORE_OP(macro) \\
     macro(Ext1,  0xFC, Oops, 0) \\
+    macro(GCPrefix,  0xFB, Oops, 0) \\
     macro(ExtAtomic, 0xFE, Oops, 0)
 
 #define CREATE_ENUM_VALUE(name, id, ...) name = id,
@@ -316,6 +372,10 @@ enum class StoreOpType : uint8_t {
 enum class Ext1OpType : uint8_t {
     FOR_EACH_WASM_TABLE_OP(CREATE_ENUM_VALUE)
     FOR_EACH_WASM_TRUNC_SATURATED_OP(CREATE_ENUM_VALUE)
+};
+
+enum class GCOpType : uint8_t {
+    FOR_EACH_WASM_GC_OP(CREATE_ENUM_VALUE)
 };
 
 enum class ExtAtomicOpType : uint8_t {
@@ -404,9 +464,9 @@ inline const char* makeString(OpType op)
 
 namespace WTF {
 
-inline void printInternal(PrintStream& out, JSC::Wasm::Type type)
+inline void printInternal(PrintStream& out, JSC::Wasm::TypeKind kind)
 {
-    out.print(JSC::Wasm::makeString(type));
+    out.print(JSC::Wasm::makeString(kind));
 }
 
 inline void printInternal(PrintStream& out, JSC::Wasm::OpType op)

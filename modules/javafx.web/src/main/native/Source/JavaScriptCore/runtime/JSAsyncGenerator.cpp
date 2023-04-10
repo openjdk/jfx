@@ -31,11 +31,11 @@
 
 namespace JSC {
 
-const ClassInfo JSAsyncGenerator::s_info = { "AsyncGenerator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSAsyncGenerator) };
+const ClassInfo JSAsyncGenerator::s_info = { "AsyncGenerator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSAsyncGenerator) };
 
 JSAsyncGenerator* JSAsyncGenerator::create(VM& vm, Structure* structure)
 {
-    JSAsyncGenerator* generator = new (NotNull, allocateCell<JSAsyncGenerator>(vm.heap)) JSAsyncGenerator(vm, structure);
+    JSAsyncGenerator* generator = new (NotNull, allocateCell<JSAsyncGenerator>(vm)) JSAsyncGenerator(vm, structure);
     generator->finishCreation(vm);
     return generator;
 }

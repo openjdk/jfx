@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,24 +32,25 @@
 #include "CCallHelpers.h"
 #include "CalleeBits.h"
 #include "JITCompilation.h"
+#include "JITOpaqueByproducts.h"
 #include "JSToWasm.h"
 #include "LLIntThunks.h"
 #include "LinkBuffer.h"
 #include "WasmCallee.h"
 #include "WasmLLIntGenerator.h"
-#include "WasmSignatureInlines.h"
+#include "WasmTypeDefinitionInlines.h"
 
 namespace JSC { namespace Wasm {
 
-LLIntPlan::LLIntPlan(Context* context, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(context, WTFMove(source), compilerMode, WTFMove(task))
+LLIntPlan::LLIntPlan(VM& vm, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(vm, WTFMove(source), compilerMode, WTFMove(task))
 {
     if (parseAndValidateModule(m_source.data(), m_source.size()))
         prepare();
 }
 
-LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, const Ref<LLIntCallee>* callees, CompletionTask&& task)
-    : Base(context, WTFMove(info), CompilerMode::FullCompile, WTFMove(task))
+LLIntPlan::LLIntPlan(VM& vm, Ref<ModuleInformation> info, const Ref<LLIntCallee>* callees, CompletionTask&& task)
+    : Base(vm, WTFMove(info), CompilerMode::FullCompile, WTFMove(task))
     , m_callees(callees)
 {
     ASSERT(m_callees || !m_moduleInformation->functions.size());
@@ -57,8 +58,8 @@ LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, const Ref<LL
     m_currentIndex = m_moduleInformation->functions.size();
 }
 
-LLIntPlan::LLIntPlan(Context* context, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(context, WTFMove(info), compilerMode, WTFMove(task))
+LLIntPlan::LLIntPlan(VM& vm, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(vm, WTFMove(info), compilerMode, WTFMove(task))
 {
     prepare();
     m_currentIndex = m_moduleInformation->functions.size();
@@ -78,19 +79,19 @@ bool LLIntPlan::prepareImpl()
 void LLIntPlan::compileFunction(uint32_t functionIndex)
 {
     const auto& function = m_moduleInformation->functions[functionIndex];
-    SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
-    const Signature& signature = SignatureInformation::get(signatureIndex);
+    TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
+    const TypeDefinition& signature = TypeInformation::get(typeIndex);
     unsigned functionIndexSpace = m_wasmToWasmExitStubs.size() + functionIndex;
-    ASSERT_UNUSED(functionIndexSpace, m_moduleInformation->signatureIndexFromFunctionIndexSpace(functionIndexSpace) == signatureIndex);
+    ASSERT_UNUSED(functionIndexSpace, m_moduleInformation->typeIndexFromFunctionIndexSpace(functionIndexSpace) == typeIndex);
 
     m_unlinkedWasmToWasmCalls[functionIndex] = Vector<UnlinkedWasmToWasmCall>();
-    Expected<std::unique_ptr<FunctionCodeBlock>, String> parseAndCompileResult = parseAndCompileBytecode(function.data.data(), function.data.size(), signature, m_moduleInformation.get(), functionIndex);
+    Expected<std::unique_ptr<FunctionCodeBlockGenerator>, String> parseAndCompileResult = parseAndCompileBytecode(function.data.data(), function.data.size(), signature, m_moduleInformation.get(), functionIndex);
 
     if (UNLIKELY(!parseAndCompileResult)) {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
-            fail(locker, makeString(parseAndCompileResult.error(), ", in function at index ", String::number(functionIndex))); // FIXME make this an Expected.
+            fail(makeString(parseAndCompileResult.error(), ", in function at index ", String::number(functionIndex))); // FIXME make this an Expected.
         }
         m_currentIndex = m_moduleInformation->functions.size();
         return;
@@ -99,7 +100,7 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
 }
 
-void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
+void LLIntPlan::didCompleteCompilation()
 {
     unsigned functionCount = m_wasmInternalFunctions.size();
     if (!m_callees && functionCount) {
@@ -114,22 +115,25 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             if (UNLIKELY(Options::dumpGeneratedWasmBytecodes()))
                 BytecodeDumper::dumpBlock(m_wasmInternalFunctions[i].get(), m_moduleInformation, WTF::dataFile());
 
-            m_calleesVector[i] = LLIntCallee::create(WTFMove(m_wasmInternalFunctions[i]), functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
+            m_calleesVector[i] = LLIntCallee::create(*m_wasmInternalFunctions[i], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
             entrypoints[i] = jit.label();
 #if CPU(X86_64)
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CPURegister));
-#elif CPU(ARM64)
+#elif CPU(ARM64) || CPU(RISCV64) || CPU(ARM)
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CallerFrameAndPC));
 #else
 #error Unsupported architecture.
 #endif
-            jit.storePtr(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(m_calleesVector[i].ptr())), calleeSlot);
+            jit.storePtr(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(m_calleesVector[i].ptr())), calleeSlot.withOffset(PayloadOffset));
+#if USE(JSVALUE32_64)
+            jit.store32(CCallHelpers::TrustedImm32(JSValue::WasmTag), calleeSlot.withOffset(TagOffset));
+#endif
             jumps[i] = jit.jump();
         }
 
-        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, JITCompilationCanFail);
+        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
         if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-            Base::fail(locker, "Out of executable memory in Wasm LLInt entry thunks");
+            Base::fail("Out of executable memory in Wasm LLInt entry thunks"_s);
             return;
         }
 
@@ -147,16 +151,16 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
 
     for (uint32_t functionIndex = 0; functionIndex < m_moduleInformation->functions.size(); functionIndex++) {
         if (m_exportedFunctionIndices.contains(functionIndex) || m_moduleInformation->referencedFunctions().contains(functionIndex)) {
-            SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
-            const Signature& signature = SignatureInformation::get(signatureIndex);
+            TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
+            const TypeDefinition& signature = TypeInformation::get(typeIndex);
             CCallHelpers jit;
             // The LLInt always bounds checks
             MemoryMode mode = MemoryMode::BoundsChecking;
             std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
 
-            LinkBuffer linkBuffer(jit, nullptr, JITCompilationCanFail);
+            LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
             if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-                Base::fail(locker, makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
+                Base::fail(makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
                 return;
             }
 
@@ -167,8 +171,8 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
             Ref<EmbedderEntrypointCallee> callee = EmbedderEntrypointCallee::create(WTFMove(function->entrypoint));
             // FIXME: remove this repatchPointer - just pass in the callee directly
             // https://bugs.webkit.org/show_bug.cgi?id=166462
-            if (function->calleeMoveLocation)
-                MacroAssembler::repatchPointer(function->calleeMoveLocation, CalleeBits::boxWasm(callee.ptr()));
+            for (auto& moveLocation : function->calleeMoveLocations)
+                MacroAssembler::repatchPointer(moveLocation, CalleeBits::boxWasm(callee.ptr()));
 
             auto result = m_embedderCallees.add(functionIndex, WTFMove(callee));
             ASSERT_UNUSED(result, result.isNewEntry);
@@ -191,20 +195,21 @@ void LLIntPlan::didCompleteCompilation(const AbstractLocker& locker)
 
 void LLIntPlan::completeInStreaming()
 {
-    complete(holdLock(m_lock));
+    Locker locker { m_lock };
+    complete();
 }
 
 void LLIntPlan::didCompileFunctionInStreaming()
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     moveToState(EntryPlan::State::Compiled);
 }
 
 void LLIntPlan::didFailInStreaming(String&& message)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     if (!m_errorMessage)
-        fail(locker, WTFMove(message));
+        fail(WTFMove(message));
 }
 
 void LLIntPlan::work(CompilationEffort effort)

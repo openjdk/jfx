@@ -25,27 +25,31 @@
 
 #pragma once
 
-#if ENABLE(RESIZE_OBSERVER)
-
-#include "ActiveDOMObject.h"
 #include "GCReachableRef.h"
 #include "ResizeObservation.h"
 #include "ResizeObserverCallback.h"
+#include <wtf/Lock.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
+
+namespace JSC {
+
+class AbstractSlotVisitor;
+
+}
 
 namespace WebCore {
 
 class Document;
 class Element;
+struct ResizeObserverOptions;
 
 struct ResizeObserverData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     Vector<WeakPtr<ResizeObserver>> observers;
 };
 
-class ResizeObserver : public RefCounted<ResizeObserver>, public ActiveDOMObject, public CanMakeWeakPtr<ResizeObserver> {
-    WTF_MAKE_FAST_ALLOCATED;
+class ResizeObserver : public RefCounted<ResizeObserver>, public CanMakeWeakPtr<ResizeObserver> {
 public:
     static Ref<ResizeObserver> create(Document&, Ref<ResizeObserverCallback>&&);
     ~ResizeObserver();
@@ -53,7 +57,7 @@ public:
     bool hasObservations() const { return m_observations.size(); }
     bool hasActiveObservations() const { return m_activeObservations.size(); }
 
-    void observe(Element&);
+    void observe(Element&, const ResizeObserverOptions&);
     void unobserve(Element&);
     void disconnect();
     void targetDestroyed(Element&);
@@ -65,14 +69,10 @@ public:
     void setHasSkippedObservations(bool skipped) { m_hasSkippedObservations = skipped; }
 
     ResizeObserverCallback* callbackConcurrently() { return m_callback.get(); }
+    bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
     ResizeObserver(Document&, Ref<ResizeObserverCallback>&&);
-
-    // ActiveDOMObject.
-    bool virtualHasPendingActivity() const override;
-    const char* activeDOMObjectName() const override;
-    void stop() override;
 
     bool removeTarget(Element&);
     void removeAllTargets();
@@ -83,10 +83,8 @@ private:
     Vector<Ref<ResizeObservation>> m_observations;
 
     Vector<Ref<ResizeObservation>> m_activeObservations;
-    Vector<GCReachableRef<Element>> m_pendingTargets;
+    Vector<GCReachableRef<Element>> m_activeObservationTargets;
     bool m_hasSkippedObservations { false };
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(RESIZE_OBSERVER)

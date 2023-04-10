@@ -26,6 +26,7 @@
 #pragma once
 
 #include "LLIntCommon.h"
+#include "StructureID.h"
 #include <wtf/Assertions.h>
 #include <wtf/Gigacage.h>
 
@@ -47,6 +48,7 @@
 #define OFFLINE_ASM_ARMv7k 0
 #define OFFLINE_ASM_ARMv7s 0
 #define OFFLINE_ASM_MIPS 0
+#define OFFLINE_ASM_RISCV64 0
 
 #else // ENABLE(C_LOOP)
 
@@ -115,6 +117,12 @@
 #define OFFLINE_ASM_ARM64E 0
 #endif
 
+#if CPU(RISCV64)
+#define OFFLINE_ASM_RISCV64 1
+#else
+#define OFFLINE_ASM_RISCV64 0
+#endif
+
 #if CPU(MIPS)
 #ifdef WTF_MIPS_PIC
 #define S(x) #x
@@ -142,10 +150,22 @@
 #define OFFLINE_ASM_BIGINT32 0
 #endif
 
+#if USE(LARGE_TYPED_ARRAYS)
+#define OFFLINE_ASM_LARGE_TYPED_ARRAYS 1
+#else
+#define OFFLINE_ASM_LARGE_TYPED_ARRAYS 0
+#endif
+
 #if CPU(ADDRESS64)
 #define OFFLINE_ASM_ADDRESS64 1
 #else
 #define OFFLINE_ASM_ADDRESS64 0
+#endif
+
+#if ENABLE(STRUCTURE_ID_WITH_SHIFT)
+#define OFFLINE_ASM_STRUCTURE_ID_WITH_SHIFT 1
+#else
+#define OFFLINE_ASM_STRUCTURE_ID_WITH_SHIFT 0
 #endif
 
 #if ASSERT_ENABLED
@@ -161,6 +181,12 @@
 #endif
 
 #define OFFLINE_ASM_GIGACAGE_ENABLED GIGACAGE_ENABLED
+
+#if ENABLE(JIT)
+#define OFFLINE_ASM_JIT 1
+#else
+#define OFFLINE_ASM_JIT 0
+#endif
 
 #if ENABLE(WEBASSEMBLY)
 #define OFFLINE_ASM_WEBASSEMBLY 1

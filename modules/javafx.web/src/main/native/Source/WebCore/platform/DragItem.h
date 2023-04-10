@@ -41,13 +41,14 @@ struct DragItem final {
     // Where the image should be positioned relative to the cursor.
     FloatPoint imageAnchorPoint;
 
-    Optional<DragSourceAction> sourceAction;
+    std::optional<DragSourceAction> sourceAction;
     IntPoint eventPositionInContentCoordinates;
     IntPoint dragLocationInContentCoordinates;
     IntPoint dragLocationInWindowCoordinates;
     String title;
     URL url;
     IntRect dragPreviewFrameInRootViewCoordinates;
+    bool containsSelection { false };
 
     PasteboardWriterData data;
     PromisedAttachmentInfo promisedAttachmentInfo;
@@ -62,7 +63,7 @@ void DragItem::encode(Encoder& encoder) const
     // FIXME(173815): We should encode and decode PasteboardWriterData and platform drag image data
     // here too, as part of moving off of the legacy dragging codepath.
     encoder << sourceAction;
-    encoder << imageAnchorPoint << eventPositionInContentCoordinates << dragLocationInContentCoordinates << dragLocationInWindowCoordinates << title << url << dragPreviewFrameInRootViewCoordinates;
+    encoder << imageAnchorPoint << eventPositionInContentCoordinates << dragLocationInContentCoordinates << dragLocationInWindowCoordinates << title << url << dragPreviewFrameInRootViewCoordinates << containsSelection;
     bool hasIndicatorData = image.hasIndicatorData();
     encoder << hasIndicatorData;
     if (hasIndicatorData)
@@ -93,11 +94,13 @@ bool DragItem::decode(Decoder& decoder, DragItem& result)
         return false;
     if (!decoder.decode(result.dragPreviewFrameInRootViewCoordinates))
         return false;
+    if (!decoder.decode(result.containsSelection))
+        return false;
     bool hasIndicatorData;
     if (!decoder.decode(hasIndicatorData))
         return false;
     if (hasIndicatorData) {
-        Optional<TextIndicatorData> indicatorData;
+        std::optional<TextIndicatorData> indicatorData;
         decoder >> indicatorData;
         if (!indicatorData)
             return false;
@@ -107,7 +110,7 @@ bool DragItem::decode(Decoder& decoder, DragItem& result)
     if (!decoder.decode(hasVisiblePath))
         return false;
     if (hasVisiblePath) {
-        Optional<Path> visiblePath;
+        std::optional<Path> visiblePath;
         decoder >> visiblePath;
         if (!visiblePath)
             return false;

@@ -93,6 +93,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
     case ClearCatchLocals:
+    case ToBoolean:
     case LogicalNot:
     case NotifyWrite:
     case PutStructure:
@@ -105,13 +106,16 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case NukeStructureAndSetButterfly:
     case FilterCallLinkStatus:
     case FilterGetByStatus:
-    case FilterPutByIdStatus:
-    case FilterInByIdStatus:
+    case FilterPutByStatus:
+    case FilterInByStatus:
     case FilterDeleteByStatus:
     case FilterCheckPrivateBrandStatus:
     case FilterSetPrivateBrandStatus:
+    case EnumeratorNextExtractMode:
+    case EnumeratorNextExtractIndex:
         break;
 
+    case EnumeratorNextUpdatePropertyName:
     case StrCat:
     case Call:
     case Construct:
@@ -129,11 +133,11 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case NewAsyncFunction:
     case NewAsyncGeneratorFunction:
     case NewStringObject:
-    case NewSymbol:
     case NewInternalFieldObject:
     case NewRegexp:
     case ToNumber:
     case ToNumeric:
+    case ToObject:
     case RegExpExecNonGlobalOrSticky:
     case RegExpMatchFastGlobal:
         result = ExitsForExceptions;

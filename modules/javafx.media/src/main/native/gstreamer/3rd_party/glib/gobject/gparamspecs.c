@@ -52,6 +52,9 @@
  * Parameter names need to start with a letter (a-z or A-Z). Subsequent
  * characters can be letters, numbers or a '-'.
  * All other characters are replaced by a '-' during construction.
+ *
+ * See also #GValue for more information.
+ *
  */
 
 

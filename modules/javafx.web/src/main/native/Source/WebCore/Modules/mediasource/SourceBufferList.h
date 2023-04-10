@@ -34,25 +34,23 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "GenericEventQueue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class SourceBuffer;
+class WebCoreOpaqueRoot;
 
 class SourceBufferList final : public RefCounted<SourceBufferList>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(SourceBufferList);
 public:
-    static Ref<SourceBufferList> create(ScriptExecutionContext* context)
-    {
-        return adoptRef(*new SourceBufferList(context));
-    }
+    static Ref<SourceBufferList> create(ScriptExecutionContext*);
     virtual ~SourceBufferList();
 
-    unsigned long length() const { return m_list.size(); }
-    SourceBuffer* item(unsigned long index) const { return (index < m_list.size()) ? m_list[index].get() : nullptr; }
+    unsigned length() const { return m_list.size(); }
+
+    SourceBuffer* item(unsigned index) const { return (index < m_list.size()) ? m_list[index].get() : nullptr; }
 
     void add(Ref<SourceBuffer>&&);
     void remove(SourceBuffer&);
@@ -60,8 +58,11 @@ public:
     void clear();
     void swap(Vector<RefPtr<SourceBuffer>>&);
 
-    Vector<RefPtr<SourceBuffer>>::iterator begin() { return m_list.begin(); }
-    Vector<RefPtr<SourceBuffer>>::iterator end() { return m_list.end(); }
+    auto begin() { return m_list.begin(); }
+    auto end() { return m_list.end(); }
+    auto begin() const { return m_list.begin(); }
+    auto end() const { return m_list.end(); }
+    size_t size() const { return m_list.size(); }
 
     // EventTarget interface
     EventTargetInterface eventTargetInterface() const final { return SourceBufferListEventTargetInterfaceType; }
@@ -80,10 +81,10 @@ private:
 
     const char* activeDOMObjectName() const final;
 
-    UniqueRef<MainThreadGenericEventQueue> m_asyncEventQueue;
-
     Vector<RefPtr<SourceBuffer>> m_list;
 };
+
+WebCoreOpaqueRoot root(SourceBufferList*);
 
 } // namespace WebCore
 

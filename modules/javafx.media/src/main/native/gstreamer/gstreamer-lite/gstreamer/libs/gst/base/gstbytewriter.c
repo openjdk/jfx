@@ -25,6 +25,8 @@
 #define GST_BYTE_WRITER_DISABLE_INLINES
 #include "gstbytewriter.h"
 
+#include "gst/glib-compat-private.h"
+
 /**
  * SECTION:gstbytewriter
  * @title: GstByteWriter
@@ -236,7 +238,7 @@ gst_byte_writer_reset_and_get_data (GstByteWriter * writer)
 
   data = (guint8 *) writer->parent.data;
   if (!writer->owned)
-    data = g_memdup (data, writer->parent.size);
+    data = g_memdup2 (data, writer->parent.size);
   writer->parent.data = NULL;
   gst_byte_writer_reset (writer);
 

@@ -30,8 +30,8 @@
 namespace WebCore {
 
 struct DOMCSSCustomPropertyDescriptor {
-    String name;
-    String syntax { "*" };
+    AtomString name;
+    String syntax { "*"_s };
     bool inherits;
     String initialValue;
 };

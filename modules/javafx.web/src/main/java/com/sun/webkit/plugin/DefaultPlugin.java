@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,18 +55,24 @@ final class DefaultPlugin implements Plugin {
         g.fillRect(x, y, w, h, new Color(2 / 3.0f, 1.0f, 1.0f, 1 / 15.0f));
     }
 
+    @Override
     public void activate(Object nativeContainer, PluginListener pl) {}
 
+    @Override
     public void destroy() {}
 
+    @Override
     public void setVisible(boolean isVisible) {}
 
+    @Override
     public void setEnabled(boolean enabled) {}
 
     private int x = 0;
     private int y = 0;
     private int w = 0;
     private int h = 0;
+
+    @Override
     public void setBounds(int x, int y, int width, int height) {
         this.x = x;
         this.y = y;
@@ -75,10 +81,12 @@ final class DefaultPlugin implements Plugin {
         //nullComp.setBounds(new Rectangle(x, y, width, height) ) ;
     }
 
+    @Override
     public Object invoke(String subObjectId, String methodName, Object[] args) throws IOError {
         return null;
     }
 
+    @Override
     public boolean handleMouseEvent(
             String type,
             int offsetX,
@@ -96,8 +104,10 @@ final class DefaultPlugin implements Plugin {
         return false;
     }
 
+    @Override
     public void requestFocus() {}
 
+    @Override
     public void setNativeContainerBounds(int x, int y, int width, int height) {}
 }
 

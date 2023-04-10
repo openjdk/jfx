@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ public final class PerfLogger {
     private static Map<PlatformLogger, PerfLogger> loggers;
 
     private final HashMap<String, ProbeStat> probes =
-            new HashMap<String, ProbeStat>();
+            new HashMap<>();
     private final PlatformLogger log;
     private final boolean isEnabled; // needed at shutdown time
 
@@ -50,7 +50,7 @@ public final class PerfLogger {
      */
     public synchronized static PerfLogger getLogger(PlatformLogger log) {
         if (loggers == null) {
-            loggers = new HashMap<PlatformLogger, PerfLogger>();
+            loggers = new HashMap<>();
         }
         PerfLogger l = loggers.get(log);
         if (l == null) {
@@ -156,8 +156,8 @@ public final class PerfLogger {
     }
 
     private final Comparator timeComparator = (arg0, arg1) -> {
-        long t0 = probes.get((String)arg0).totalTime;
-        long t1 = probes.get((String)arg1).totalTime;
+        long t0 = probes.get(arg0).totalTime;
+        long t1 = probes.get(arg1).totalTime;
         if (t0 > t1) {
             return 1;
         } else if (t0 < t1) {
@@ -167,8 +167,8 @@ public final class PerfLogger {
     };
 
     private final Comparator countComparator = (arg0, arg1) -> {
-        long c0 = probes.get((String)arg0).count;
-        long c1 = probes.get((String)arg1).count;
+        long c0 = probes.get(arg0).count;
+        long c1 = probes.get(arg1).count;
         if (c0 > c1) {
             return 1;
         } else if (c0 < c1) {
@@ -272,7 +272,7 @@ public final class PerfLogger {
 
         ProbeStat total = getProbeStat("TOTALTIME");
 
-        ArrayList<String> list = new ArrayList<String>();
+        ArrayList<String> list = new ArrayList<>();
         list.addAll(probes.keySet());
 
         buf.append("\nTime:\n");

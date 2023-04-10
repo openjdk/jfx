@@ -27,42 +27,25 @@
 #include "config.h"
 #include "FontTaggedSettings.h"
 
-#include <wtf/Hasher.h>
-#include <wtf/text/AtomStringHash.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-template <>
-unsigned FontFeatureSettings::hash() const
+TextStream& operator<<(TextStream& ts, const FontTaggedSettings<int>& item)
 {
-    IntegerHasher hasher;
-    for (auto& feature : m_list) {
-        hasher.add(FourCharacterTagHash::hash(feature.tag()));
-        hasher.add(feature.value());
+    for (unsigned i = 0; i < item.size(); ++i) {
+        auto& variation = item.at(i);
+        StringBuilder s;
+        s.append(variation.tag()[0]);
+        s.append(variation.tag()[1]);
+        s.append(variation.tag()[2]);
+        s.append(variation.tag()[3]);
+        ts.dumpProperty(s.toString(), item.at(i).value());
     }
-    return hasher.hash();
+    return ts;
 }
 
-template <>
-unsigned FontVariationSettings::hash() const
-{
-    static_assert(sizeof(float) == sizeof(int), "IntegerHasher needs to accept floats too");
-    union {
-        float f;
-        int i;
-    } floatToInt;
-
-    IntegerHasher hasher;
-    for (auto& variation : m_list) {
-        hasher.add(FourCharacterTagHash::hash(variation.tag()));
-        floatToInt.f = variation.value();
-        hasher.add(floatToInt.i);
-    }
-    return hasher.hash();
-}
-
-TextStream& operator<<(TextStream& ts, const FontVariationSettings& item)
+TextStream& operator<<(TextStream& ts, const FontTaggedSettings<float>& item)
 {
     for (unsigned i = 0; i < item.size(); ++i) {
         auto& variation = item.at(i);

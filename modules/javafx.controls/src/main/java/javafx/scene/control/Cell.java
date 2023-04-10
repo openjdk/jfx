@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.css.PseudoClass;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 /**
@@ -351,7 +350,7 @@ public class Cell<T> extends Labeled {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
 
         /**
@@ -383,7 +382,7 @@ public class Cell<T> extends Labeled {
      **************************************************************************/
 
     // --- item
-    private ObjectProperty<T> item = new SimpleObjectProperty<T>(this, "item");
+    private ObjectProperty<T> item = new SimpleObjectProperty<>(this, "item");
 
     /**
      * The data value associated with this Cell. This value is set by the

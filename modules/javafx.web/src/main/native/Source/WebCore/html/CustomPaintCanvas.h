@@ -53,13 +53,13 @@ public:
     virtual ~CustomPaintCanvas();
     bool isCustomPaintCanvas() const final { return true; }
 
-    ExceptionOr<RefPtr<PaintRenderingContext2D>> getContext();
+    RefPtr<PaintRenderingContext2D> getContext();
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
     GraphicsContext* drawingContext() const final;
     GraphicsContext* existingDrawingContext() const final;
 
-    void didDraw(const FloatRect&) final { }
+    void didDraw(const std::optional<FloatRect>&) final { }
 
     AffineTransform baseTransform() const final { ASSERT(m_destinationGraphicsContext && m_copiedBuffer); return m_copiedBuffer->baseTransform(); }
     Image* copiedImage() const final;

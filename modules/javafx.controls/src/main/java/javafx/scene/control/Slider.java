@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -518,7 +518,7 @@ public class Slider extends Control {
 
     public final ObjectProperty<StringConverter<Double>> labelFormatterProperty() {
         if (labelFormatter == null) {
-            labelFormatter = new SimpleObjectProperty<StringConverter<Double>>(this, "labelFormatter");
+            labelFormatter = new SimpleObjectProperty<>(this, "labelFormatter");
         }
         return labelFormatter;
     }
@@ -652,7 +652,7 @@ public class Slider extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<Slider,Number> BLOCK_INCREMENT =
-            new CssMetaData<Slider,Number>("-fx-block-increment",
+            new CssMetaData<>("-fx-block-increment",
                 SizeConverter.getInstance(), 10.0) {
 
             @Override
@@ -662,12 +662,12 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)n.blockIncrementProperty();
             }
         };
 
         private static final CssMetaData<Slider,Boolean> SHOW_TICK_LABELS =
-            new CssMetaData<Slider,Boolean>("-fx-show-tick-labels",
+            new CssMetaData<>("-fx-show-tick-labels",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -677,12 +677,12 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickLabelsProperty();
+                return (StyleableProperty<Boolean>)n.showTickLabelsProperty();
             }
         };
 
         private static final CssMetaData<Slider,Boolean> SHOW_TICK_MARKS =
-            new CssMetaData<Slider,Boolean>("-fx-show-tick-marks",
+            new CssMetaData<>("-fx-show-tick-marks",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -692,12 +692,12 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickMarksProperty();
+                return (StyleableProperty<Boolean>)n.showTickMarksProperty();
             }
         };
 
         private static final CssMetaData<Slider,Boolean> SNAP_TO_TICKS =
-            new CssMetaData<Slider,Boolean>("-fx-snap-to-ticks",
+            new CssMetaData<>("-fx-snap-to-ticks",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -707,12 +707,12 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.snapToTicksProperty();
+                return (StyleableProperty<Boolean>)n.snapToTicksProperty();
             }
         };
 
         private static final CssMetaData<Slider,Number> MAJOR_TICK_UNIT =
-            new CssMetaData<Slider,Number>("-fx-major-tick-unit",
+            new CssMetaData<>("-fx-major-tick-unit",
                 SizeConverter.getInstance(), 25.0) {
 
             @Override
@@ -722,12 +722,12 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.majorTickUnitProperty();
+                return (StyleableProperty<Number>)n.majorTickUnitProperty();
             }
         };
 
         private static final CssMetaData<Slider,Number> MINOR_TICK_COUNT =
-            new CssMetaData<Slider,Number>("-fx-minor-tick-count",
+            new CssMetaData<>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 3.0) {
 
             @Override
@@ -737,13 +737,13 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickCountProperty();
+                return (StyleableProperty<Number>)n.minorTickCountProperty();
             }
         };
 
         private static final CssMetaData<Slider,Orientation> ORIENTATION =
-            new CssMetaData<Slider,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+            new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
@@ -766,7 +766,7 @@ public class Slider extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(BLOCK_INCREMENT);
             styleables.add(SHOW_TICK_LABELS);
             styleables.add(SHOW_TICK_MARKS);

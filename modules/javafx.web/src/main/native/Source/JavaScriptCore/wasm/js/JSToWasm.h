@@ -32,19 +32,19 @@
 #include "WasmFormat.h"
 #include "WasmMemory.h"
 #include "WasmModuleInformation.h"
-#include "WasmSignature.h"
-#include <wtf/Vector.h>
-
-#include <memory>
+#include "WasmTypeDefinition.h"
+#include <wtf/Forward.h>
 
 namespace JSC {
+
+class CCallHelpers;
 
 namespace Wasm {
 
 struct CallInformation;
 
-void marshallJSResult(CCallHelpers& jit, const Signature&, const CallInformation& wasmFrameConvention, const RegisterAtOffsetList& savedResultRegisters);
-std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers&, const Signature&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t functionIndex);
+void marshallJSResult(CCallHelpers& jit, const TypeDefinition&, const CallInformation& wasmFrameConvention, const RegisterAtOffsetList& savedResultRegisters);
+std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t functionIndex);
 
 } } // namespace JSC::Wasm
 

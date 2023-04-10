@@ -53,13 +53,13 @@ FormControlState HiddenInputType::saveFormControlState() const
     // valueAttributeWasUpdatedAfterParsing() never be true for form controls create by createElement() or cloneNode().
     // It's OK for now because we restore values only to form controls created by parsing.
     ASSERT(element());
-    return element()->valueAttributeWasUpdatedAfterParsing() ? FormControlState { { element()->value() } } : FormControlState { };
+    return element()->valueAttributeWasUpdatedAfterParsing() ? FormControlState { { AtomString { element()->value() } } } : FormControlState { };
 }
 
 void HiddenInputType::restoreFormControlState(const FormControlState& state)
 {
     ASSERT(element());
-    element()->setAttributeWithoutSynchronization(valueAttr, state[0]);
+    element()->setAttributeWithoutSynchronization(valueAttr, AtomString { state[0] });
 }
 
 RenderPtr<RenderElement> HiddenInputType::createInputRenderer(RenderStyle&&)
@@ -83,22 +83,22 @@ bool HiddenInputType::storesValueSeparateFromAttribute()
     return false;
 }
 
-void HiddenInputType::setValue(const String& sanitizedValue, bool, TextFieldEventBehavior)
+void HiddenInputType::setValue(const String& sanitizedValue, bool, TextFieldEventBehavior, TextControlSetValueSelection)
 {
     ASSERT(element());
-    element()->setAttributeWithoutSynchronization(valueAttr, sanitizedValue);
+    element()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
 }
 
-bool HiddenInputType::appendFormData(DOMFormData& formData, bool isMultipartForm) const
+bool HiddenInputType::appendFormData(DOMFormData& formData) const
 {
     ASSERT(element());
     auto name = element()->name();
 
-    if (equalIgnoringASCIICase(name, "_charset_")) {
-        formData.append(name, String { formData.encoding().name() });
+    if (equalIgnoringASCIICase(name, "_charset_"_s)) {
+        formData.append(name, String::fromLatin1(formData.encoding().name()));
         return true;
     }
-    return InputType::appendFormData(formData, isMultipartForm);
+    return InputType::appendFormData(formData);
 }
 
 bool HiddenInputType::shouldRespectHeightAndWidthAttributes()

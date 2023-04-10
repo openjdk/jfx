@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,11 +22,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://gpuweb.github.io/gpuweb
+
+// https://gpuweb.github.io/gpuweb/#dictdef-gpubindgrouplayoutdescriptor
 
 [
-    Conditional=WEBGPU,
-    EnabledAtRuntime=WebGPU
-] dictionary GPUBindGroupLayoutDescriptor {
-    required sequence<GPUBindGroupLayoutBinding> bindings;
+    EnabledBySetting=WebGPU
+]
+dictionary GPUBindGroupLayoutDescriptor : GPUObjectDescriptorBase {
+    required sequence<GPUBindGroupLayoutEntry> entries;
 };

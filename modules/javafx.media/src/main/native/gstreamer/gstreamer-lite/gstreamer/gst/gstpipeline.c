@@ -40,8 +40,12 @@
  * methods like gst_bin_add() and gst_bin_remove() (see #GstBin).
  *
  * Before changing the state of the #GstPipeline (see #GstElement) a #GstBus
- * can be retrieved with gst_pipeline_get_bus(). This bus can then be
- * used to receive #GstMessage from the elements in the pipeline.
+ * should be retrieved with gst_pipeline_get_bus(). This #GstBus should then
+ * be used to receive #GstMessage from the elements in the pipeline. Listening
+ * to the #GstBus is necessary for retrieving error messages from the
+ * #GstPipeline and otherwise the #GstPipeline might stop without any
+ * indication, why. Furthermore, the #GstPipeline posts messages even if
+ * nobody listens on the #GstBus, which will pile up and use up memory.
  *
  * By default, a #GstPipeline will automatically flush the pending #GstBus
  * messages when going to the NULL state to ensure that no circular

@@ -29,12 +29,23 @@
 
 G_BEGIN_DECLS
 
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_mini_object_type;
+#else // GSTREAMER_LITE
+GST_EXPORT GType _gst_mini_object_type;
+#endif // GSTREAMER_LITE
+
+#define GST_TYPE_MINI_OBJECT               (_gst_mini_object_type)
+
 #define GST_IS_MINI_OBJECT_TYPE(obj,type)  ((obj) && GST_MINI_OBJECT_TYPE(obj) == (type))
 #define GST_MINI_OBJECT_CAST(obj)          ((GstMiniObject*)(obj))
 #define GST_MINI_OBJECT_CONST_CAST(obj)    ((const GstMiniObject*)(obj))
 #define GST_MINI_OBJECT(obj)               (GST_MINI_OBJECT_CAST(obj))
 
 typedef struct _GstMiniObject GstMiniObject;
+
+GST_API
+GType           gst_mini_object_get_type   (void);
 
 /**
  * GstMiniObjectCopyFunction:

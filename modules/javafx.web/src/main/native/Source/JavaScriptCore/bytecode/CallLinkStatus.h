@@ -110,14 +110,13 @@ public:
 
     void merge(const CallLinkStatus&);
 
-    void filter(VM&, JSValue);
+    void filter(JSValue);
 
     void dump(PrintStream&) const;
 
 private:
     void makeClosureCall();
 
-    static CallLinkStatus computeFromLLInt(const ConcurrentJSLocker&, CodeBlock*, BytecodeIndex);
 #if ENABLE(JIT)
     static CallLinkStatus computeFromCallLinkInfo(
         const ConcurrentJSLocker&, CallLinkInfo&);

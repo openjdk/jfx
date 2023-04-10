@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2016 Apple Inc. All rights reserved.
 #
@@ -33,7 +33,7 @@ try:
     from .models import EnumType, ObjectType, ArrayType, AliasedType, PrimitiveType, Frameworks
     from .objc_generator import ObjCGenerator
     from .objc_generator_templates import ObjCGeneratorTemplates as ObjCTemplates
-except ValueError:
+except ImportError:
     from generator import Generator
     from models import EnumType, ObjectType, ArrayType, AliasedType, PrimitiveType, Frameworks
     from objc_generator import ObjCGenerator
@@ -135,7 +135,7 @@ class ObjCProtocolTypeConversionsImplementationGenerator(ObjCGenerator):
         lines.append('{')
         if isinstance(resolved_type, EnumType):
             lines.append('    THROW_EXCEPTION_FOR_BAD_TYPE(payload, [NSString class]);')
-            lines.append('    Optional<%(type)s> result = Inspector::fromProtocolString<%(type)s>(payload);' % {'type': self.objc_name_for_type(resolved_type)})
+            lines.append('    auto result = Inspector::fromProtocolString<%(type)s>((__bridge CFStringRef)payload);' % {'type': self.objc_name_for_type(resolved_type)})
             lines.append('    THROW_EXCEPTION_FOR_BAD_ENUM_VALUE(result, @"%s");' % declaration.type.raw_name())
             lines.append('    *outValue = @(result.value());')
         elif isinstance(resolved_type, (ArrayType, PrimitiveType)):

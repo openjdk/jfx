@@ -28,6 +28,7 @@
 #include "HeapInlines.h"
 #include "WeakGCMap.h"
 #include "WeakInlines.h"
+#include <wtf/IterationStatus.h>
 
 namespace JSC {
 
@@ -35,13 +36,13 @@ template<typename KeyArg, typename ValueArg, typename HashArg, typename KeyTrait
 inline WeakGCMap<KeyArg, ValueArg, HashArg, KeyTraitsArg>::WeakGCMap(VM& vm)
     : m_vm(vm)
 {
-    vm.heap.registerWeakGCMap(this);
+    vm.heap.registerWeakGCHashTable(this);
 }
 
 template<typename KeyArg, typename ValueArg, typename HashArg, typename KeyTraitsArg>
 inline WeakGCMap<KeyArg, ValueArg, HashArg, KeyTraitsArg>::~WeakGCMap()
 {
-    m_vm.heap.unregisterWeakGCMap(this);
+    m_vm.heap.unregisterWeakGCHashTable(this);
 }
 
 template<typename KeyArg, typename ValueArg, typename HashArg, typename KeyTraitsArg>
@@ -72,6 +73,19 @@ NEVER_INLINE void WeakGCMap<KeyArg, ValueArg, HashArg, KeyTraitsArg>::pruneStale
     m_map.removeIf([](typename HashMapType::KeyValuePairType& entry) {
         return !entry.value;
     });
+}
+
+template<typename KeyArg, typename ValueArg, typename HashArg, typename KeyTraitsArg>
+template<typename Func>
+inline void WeakGCMap<KeyArg, ValueArg, HashArg, KeyTraitsArg>::forEach(Func func)
+{
+    ASSERT(m_vm.heap.isDeferred());
+    for (auto& entry : m_map) {
+        if (entry.value) {
+            if (func(entry.value.get()) == IterationStatus::Done)
+                return;
+        }
+    }
 }
 
 } // namespace JSC

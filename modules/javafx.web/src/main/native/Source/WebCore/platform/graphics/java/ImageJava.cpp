@@ -91,6 +91,9 @@ NativeImagePtr ImageFrame::asNewNativeImage() const
             m_bytes,
             width() * height() * sizeof(PixelData)));
     ASSERT(data);
+    if (!data) {
+        return nullptr;
+    }
 
     JLObject frame(env->CallObjectMethod(
         PL_GetGraphicsManager(env),
@@ -99,7 +102,9 @@ NativeImagePtr ImageFrame::asNewNativeImage() const
         height(),
         (jobject)data));
     ASSERT(frame);
-    WTF::CheckAndClearException(env);
+    if (WTF::CheckAndClearException(env) || !frame) {
+        return nullptr;
+    }
 
     return RQRef::create(frame);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,6 +105,7 @@ public abstract class J2DPresentable implements Presentable {
             return false;
         }
 
+        @Override
         public boolean prepare(Rectangle dirty) {
             if (pState.isViewClosed() == false) {
                 /*
@@ -124,24 +125,29 @@ public abstract class J2DPresentable implements Presentable {
             }
         }
 
+        @Override
         public boolean present() {
             pixelSource.enqueuePixels(pixels);
             pState.uploadPixels(pixelSource);
             return true;
         }
 
+        @Override
         public int getContentWidth() {
             return pState.getWidth();
         }
 
+        @Override
         public int getContentHeight() {
             return pState.getHeight();
         }
 
+        @Override
         public void setOpaque(boolean opaque) {
             this.opaque = opaque;
         }
 
+        @Override
         public boolean isOpaque() {
             return opaque;
         }
@@ -164,26 +170,32 @@ public abstract class J2DPresentable implements Presentable {
             return false;
         }
 
+        @Override
         public boolean prepare(Rectangle dirtyregion) {
             throw new UnsupportedOperationException("cannot prepare/present on image");
         }
 
+        @Override
         public boolean present() {
             throw new UnsupportedOperationException("cannot prepare/present on image");
         }
 
+        @Override
         public int getContentWidth() {
             return buffer.getWidth();
         }
 
+        @Override
         public int getContentHeight() {
             return buffer.getHeight();
         }
 
-       public void setOpaque(boolean opaque) {
+        @Override
+        public void setOpaque(boolean opaque) {
             this.opaque = opaque;
         }
 
+        @Override
         public boolean isOpaque() {
             return opaque;
         }
@@ -208,6 +220,7 @@ public abstract class J2DPresentable implements Presentable {
 
     public abstract BufferedImage createBuffer(int w, int h);
 
+    @Override
     public Graphics createGraphics() {
         if (needsResize) {
             int w = getContentWidth();
@@ -243,14 +256,17 @@ public abstract class J2DPresentable implements Presentable {
         return buffer;
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return factory.getScreen();
     }
 
+    @Override
     public int getContentX() {
         return 0;
     }
 
+    @Override
     public int getContentY() {
         return 0;
     }
@@ -265,6 +281,7 @@ public abstract class J2DPresentable implements Presentable {
         return 1.0f;
     }
 
+    @Override
     public int getPhysicalWidth() {
         // If the buffer has not yet been created (typically that means
         // createGraphics() has not yet been called), we will plan to
@@ -272,6 +289,7 @@ public abstract class J2DPresentable implements Presentable {
         return (buffer == null) ? getContentWidth() : buffer.getWidth();
     }
 
+    @Override
     public int getPhysicalHeight() {
         // If the buffer has not yet been created (typically that means
         // createGraphics() has not yet been called), we will plan to

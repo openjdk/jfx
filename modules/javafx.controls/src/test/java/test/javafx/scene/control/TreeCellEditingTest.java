@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -196,13 +196,13 @@ public class TreeCellEditingTest {
     }
 
     @Before public void setup() {
-        cell = new TreeCell<String>();
-        model = FXCollections.observableArrayList(new TreeItem<String>("zero"),
-                new TreeItem<String>("one"), new TreeItem<String>("two"));
+        cell = new TreeCell<>();
+        model = FXCollections.observableArrayList(new TreeItem<>("zero"),
+                new TreeItem<>("one"), new TreeItem<>("two"));
         TreeItem<String> root = new TreeItem<>("root");
         root.getChildren().addAll(model);
         root.setExpanded(true);
-        tree = new TreeView<String>(root);
+        tree = new TreeView<>(root);
         tree.setEditable(true);
         tree.setShowRoot(false);
         // make sure that focus change doesn't interfere with tests

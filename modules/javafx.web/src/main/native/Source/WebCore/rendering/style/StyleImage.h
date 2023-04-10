@@ -62,6 +62,8 @@ public:
     virtual void setContainerContextForRenderer(const RenderElement&, const FloatSize&, float) = 0;
     virtual void addClient(RenderElement&) = 0;
     virtual void removeClient(RenderElement&) = 0;
+    virtual bool hasClient(RenderElement&) const = 0;
+    virtual bool hasImage() const { return false; }
     virtual RefPtr<Image> image(RenderElement*, const FloatSize&) const = 0;
     virtual WrappedImagePtr data() const = 0;
     virtual float imageScaleFactor() const { return 1; }
@@ -76,6 +78,8 @@ public:
     ALWAYS_INLINE bool isImageSet() const { return m_isImageSet; }
 
     bool hasCachedImage() const { return m_isCachedImage || selectedImage()->isCachedImage(); }
+
+    virtual bool usesDataProtocol() const { return false; }
 
 protected:
     StyleImage()

@@ -26,64 +26,34 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include <JavaScriptCore/TypedArrays.h>
 
 namespace WebCore {
 
 class WebGLMultiDraw final : public WebGLExtension {
     WTF_MAKE_ISO_ALLOCATED(WebGLMultiDraw);
 
-private:
-    template <class TypedArray, class DataType>
-    class TypedList {
-    public:
-        using ListTypeOptions = Variant<RefPtr<TypedArray>, Vector<DataType>>;
-
-        TypedList(ListTypeOptions&& variant)
-            : m_variant(WTFMove(variant))
-        {
-        }
-
-        const DataType* data() const
-        {
-            return WTF::switchOn(m_variant,
-                [] (const RefPtr<TypedArray>& typedArray) -> const DataType* { return typedArray->data(); },
-                [] (const Vector<DataType>& vector) -> const DataType* { return vector.data(); }
-            );
-        }
-
-        GCGLsizei length() const
-        {
-            return WTF::switchOn(m_variant,
-                [] (const RefPtr<TypedArray>& typedArray) -> GCGLsizei { return typedArray->length(); },
-                [] (const Vector<DataType>& vector) -> GCGLsizei { return vector.size(); }
-            );
-        }
-
-    private:
-        ListTypeOptions m_variant;
-    };
-
 public:
-    using Int32List = TypedList<Int32Array, int32_t>;
+    using Int32List = WebGLRenderingContextBase::TypedList<Int32Array, int32_t>;
 
     explicit WebGLMultiDraw(WebGLRenderingContextBase&);
     virtual ~WebGLMultiDraw();
 
     ExtensionName getName() const override;
 
-    static bool supported(const WebGLRenderingContextBase&);
+    static bool supported(GraphicsContextGL&);
 
-    void multiDrawArraysWEBGL(GCGLenum mode, Int32List firstsList, GCGLuint firstsOffset, Int32List countsList, GCGLuint countsOffset, GCGLsizei drawcount);
+    void multiDrawArraysWEBGL(GCGLenum mode, Int32List&& firstsList, GCGLuint firstsOffset, Int32List&& countsList, GCGLuint countsOffset, GCGLsizei drawcount);
 
-    void multiDrawElementsWEBGL(GCGLenum mode, Int32List countsList, GCGLuint countsOffset, GCGLenum type, Int32List offsetsList, GCGLuint offsetsOffset, GCGLsizei drawcount);
+    void multiDrawElementsWEBGL(GCGLenum mode, Int32List&& countsList, GCGLuint countsOffset, GCGLenum type, Int32List&& offsetsList, GCGLuint offsetsOffset, GCGLsizei drawcount);
 
-    void multiDrawArraysInstancedWEBGL(GCGLenum mode, Int32List firstsList, GCGLuint firstsOffset, Int32List countsList, GCGLuint countsOffset, Int32List instanceCountsList, GCGLuint instanceCountsOffset, GCGLsizei drawcount);
+    void multiDrawArraysInstancedWEBGL(GCGLenum mode, Int32List&& firstsList, GCGLuint firstsOffset, Int32List&& countsList, GCGLuint countsOffset, Int32List&& instanceCountsList, GCGLuint instanceCountsOffset, GCGLsizei drawcount);
 
-    void multiDrawElementsInstancedWEBGL(GCGLenum mode, Int32List countsList, GCGLuint countsOffset, GCGLenum type, Int32List offsetsList, GCGLuint offsetsOffset, Int32List instanceCountsList, GCGLuint instanceCountsOffset, GCGLsizei drawcount);
+    void multiDrawElementsInstancedWEBGL(GCGLenum mode, Int32List&& countsList, GCGLuint countsOffset, GCGLenum type, Int32List&& offsetsList, GCGLuint offsetsOffset, Int32List&& instanceCountsList, GCGLuint instanceCountsOffset, GCGLsizei drawcount);
 
 private:
-    bool validateDrawcount(const char* functionName, GCGLsizei drawcount);
-    bool validateOffset(const char* functionName, const char* outOfBoundsDescription, GCGLsizei, GCGLuint offset, GCGLsizei drawcount);
+    bool validateDrawcount(WebGLExtensionScopedContext&, const char* functionName, GCGLsizei drawcount);
+    bool validateOffset(WebGLExtensionScopedContext&, const char* functionName, const char* outOfBoundsDescription, GCGLsizei, GCGLuint offset, GCGLsizei drawcount);
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ public class BooleanPropertyBaseTest {
     public void setUp() throws Exception {
         property = new BooleanPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<Boolean>(UNDEFINED);
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListener() {
@@ -275,7 +275,7 @@ public class BooleanPropertyBaseTest {
     @Test
     public void testLazyBind_generic() {
         attachInvalidationListener();
-        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<Boolean>(true);
+        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<>(true);
 
         property.bind(v);
         assertEquals(true, property.get());
@@ -313,7 +313,7 @@ public class BooleanPropertyBaseTest {
     @Test
     public void testEagerBind_generic() {
         attachChangeListener();
-        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<Boolean>(true);
+        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<>(true);
 
         property.bind(v);
         assertEquals(true, property.get());

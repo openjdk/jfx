@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -256,7 +256,7 @@ public class ContextMenuTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
 
 
@@ -654,7 +654,7 @@ public class ContextMenuTest {
         assertEquals(100, cm.getAnchorY(), 0.0);
     }
 
-    @Test public void test_position_showOnTop() throws InterruptedException {
+    @Test public void test_position_showOnTop() {
         ContextMenu cm = createContextMenu(false);
         cm.show(anchorBtn, Side.TOP, 0, 0);
 
@@ -666,7 +666,7 @@ public class ContextMenuTest {
         assertEquals(anchorBounds.getMinY(), cmBounds.getMaxY(), 0.0);
     }
 
-    @Test public void test_position_showOnTopOffset() throws InterruptedException {
+    @Test public void test_position_showOnTopOffset() {
         ContextMenu cm = createContextMenu(false);
         cm.show(anchorBtn, Side.TOP, 3, 5);
 
@@ -678,7 +678,7 @@ public class ContextMenuTest {
         assertEquals(anchorBounds.getMinY() + 5, cmBounds.getMaxY(), 0.0);
     }
 
-    @Test public void test_position_withOrientationTop() throws InterruptedException {
+    @Test public void test_position_withOrientationTop() {
         ContextMenu cm = createContextMenu(false);
         anchorBtn.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         cm.show(anchorBtn, Side.TOP, 0, 0);
@@ -691,7 +691,7 @@ public class ContextMenuTest {
         assertEquals(anchorBounds.getMinY(), cmBounds.getMaxY(), 0.0);
     }
 
-    @Test public void test_position_withOrientationLeft() throws InterruptedException {
+    @Test public void test_position_withOrientationLeft() {
         ContextMenu cm = createContextMenu(false);
         anchorBtn.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         cm.show(anchorBtn, Side.LEFT, 0, 0);
@@ -705,7 +705,7 @@ public class ContextMenuTest {
     }
 
 
-    @Test public void test_position_withCSS() throws InterruptedException {
+    @Test public void test_position_withCSS() {
         anchorBtn.getScene().getStylesheets().add(
             getClass().getResource("test_position_showOnTopWithCSS.css").toExternalForm()
         );

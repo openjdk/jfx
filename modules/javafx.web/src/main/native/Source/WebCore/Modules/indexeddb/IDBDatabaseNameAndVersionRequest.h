@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBActiveDOMObject.h"
 #include "IDBDatabaseNameAndVersion.h"
 #include "IDBResourceIdentifier.h"
@@ -47,7 +45,7 @@ class IDBConnectionProxy;
 class WEBCORE_EXPORT IDBDatabaseNameAndVersionRequest final : public ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>, public IDBActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(IDBDatabaseNameAndVersionRequest);
 public:
-    using InfoCallback = Function<void(Optional<Vector<IDBDatabaseNameAndVersion>>&&)>;
+    using InfoCallback = Function<void(std::optional<Vector<IDBDatabaseNameAndVersion>>&&)>;
 
     static Ref<IDBDatabaseNameAndVersionRequest> create(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, InfoCallback&&);
 
@@ -58,7 +56,7 @@ public:
     using ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>::ref;
     using ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>::deref;
 
-    void complete(Optional<Vector<IDBDatabaseNameAndVersion>>&&);
+    void complete(std::optional<Vector<IDBDatabaseNameAndVersion>>&&);
 
 private:
     IDBDatabaseNameAndVersionRequest(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, InfoCallback&&);
@@ -84,5 +82,3 @@ inline IDBDatabaseNameAndVersionRequest::~IDBDatabaseNameAndVersionRequest()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -38,7 +38,8 @@ class RenderTreeUpdater::GeneratedContent {
 public:
     GeneratedContent(RenderTreeUpdater&);
 
-    void updatePseudoElement(Element&, const Style::ElementUpdates&, PseudoId);
+    void updateBackdropRenderer(RenderElement&);
+    void updatePseudoElement(Element&, const Style::ElementUpdate&, PseudoId);
     void updateRemainingQuotes();
 
     static void removeBeforePseudoElement(Element&, RenderTreeBuilder&);
@@ -47,7 +48,7 @@ public:
 private:
     void updateQuotesUpTo(RenderQuote*);
 
-    bool needsPseudoElement(const Style::ElementUpdate*);
+    bool needsPseudoElement(const RenderStyle*);
 
     RenderTreeUpdater& m_updater;
     WeakPtr<RenderQuote> m_previousUpdatedQuote;

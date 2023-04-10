@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public class LinuxInputDeviceRegistryShim {
 
     static Map<Integer, LinuxAbsoluteInputCapabilities> createAbsCapsMap(Map<Integer, int[]> absCaps) {
         Map<Integer, LinuxAbsoluteInputCapabilities> map
-                = new HashMap<Integer, LinuxAbsoluteInputCapabilities>();
+                = new HashMap<>();
         for (Integer axis : absCaps.keySet()) {
             int[] a = absCaps.get(axis);
             if (a != null) {

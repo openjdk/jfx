@@ -28,6 +28,7 @@
 #include "FrameLoaderTypes.h"
 #include "ReferrerPolicy.h"
 #include "ResourceRequest.h"
+#include "ShouldTreatAsContinuingLoad.h"
 #include "SubstituteData.h"
 #include <wtf/Forward.h>
 
@@ -39,7 +40,7 @@ class SecurityOrigin;
 
 class FrameLoadRequest {
 public:
-    WEBCORE_EXPORT FrameLoadRequest(Document&, SecurityOrigin&, ResourceRequest&&, const String& frameName, InitiatedByMainFrame, const AtomString& downloadAttribute = { }, const SystemPreviewInfo& = { });
+    WEBCORE_EXPORT FrameLoadRequest(Document&, SecurityOrigin&, ResourceRequest&&, const AtomString& frameName, InitiatedByMainFrame, const AtomString& downloadAttribute = { }, const SystemPreviewInfo& = { });
     WEBCORE_EXPORT FrameLoadRequest(Frame&, const ResourceRequest&, const SubstituteData& = SubstituteData());
 
     WEBCORE_EXPORT ~FrameLoadRequest();
@@ -55,14 +56,14 @@ public:
     ResourceRequest& resourceRequest() { return m_resourceRequest; }
     const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
 
-    const String& frameName() const { return m_frameName; }
-    void setFrameName(const String& frameName) { m_frameName = frameName; }
+    const AtomString& frameName() const { return m_frameName; }
+    void setFrameName(const AtomString& frameName) { m_frameName = frameName; }
 
     void setShouldCheckNewWindowPolicy(bool checkPolicy) { m_shouldCheckNewWindowPolicy = checkPolicy; }
     bool shouldCheckNewWindowPolicy() const { return m_shouldCheckNewWindowPolicy; }
 
-    void setShouldTreatAsContinuingLoad(bool value) { m_shouldTreatAsContinuingLoad = value; }
-    bool shouldTreatAsContinuingLoad() const { return m_shouldTreatAsContinuingLoad; }
+    void setShouldTreatAsContinuingLoad(ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad) { m_shouldTreatAsContinuingLoad = shouldTreatAsContinuingLoad; }
+    ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad() const { return m_shouldTreatAsContinuingLoad; }
 
     const SubstituteData& substituteData() const { return m_substituteData; }
     void setSubstituteData(const SubstituteData& data) { m_substituteData = data; }
@@ -108,12 +109,12 @@ private:
     Ref<Document> m_requester;
     Ref<SecurityOrigin> m_requesterSecurityOrigin;
     ResourceRequest m_resourceRequest;
-    String m_frameName;
+    AtomString m_frameName;
     SubstituteData m_substituteData;
     String m_clientRedirectSourceForHistory;
 
     bool m_shouldCheckNewWindowPolicy { false };
-    bool m_shouldTreatAsContinuingLoad { false };
+    ShouldTreatAsContinuingLoad m_shouldTreatAsContinuingLoad { ShouldTreatAsContinuingLoad::No };
     LockHistory m_lockHistory { LockHistory::No };
     LockBackForwardList m_lockBackForwardList { LockBackForwardList::No };
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };

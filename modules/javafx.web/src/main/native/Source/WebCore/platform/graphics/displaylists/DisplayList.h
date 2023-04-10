@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,10 @@
 
 #pragma once
 
+#include "DecomposedGlyphs.h"
 #include "DisplayListItemBuffer.h"
 #include "DisplayListItemType.h"
+#include "DisplayListResourceHeap.h"
 #include "FloatRect.h"
 #include "Font.h"
 #include "GraphicsContext.h"
@@ -45,16 +47,9 @@ namespace WebCore {
 
 namespace DisplayList {
 
-enum AsTextFlag {
-    None                            = 0,
-    IncludesPlatformOperations      = 1 << 0,
-};
-
-typedef unsigned AsTextFlags;
-
 class DisplayList {
     WTF_MAKE_NONCOPYABLE(DisplayList); WTF_MAKE_FAST_ALLOCATED;
-    friend class Recorder;
+    friend class RecorderImpl;
     friend class Replayer;
 public:
     WEBCORE_EXPORT DisplayList();
@@ -71,18 +66,18 @@ public:
     WEBCORE_EXPORT bool isEmpty() const;
     WEBCORE_EXPORT size_t sizeInBytes() const;
 
-    String asText(AsTextFlags) const;
+    String asText(OptionSet<AsTextFlag>) const;
 
-    const ImageBufferHashMap& imageBuffers() const { return m_imageBuffers; }
-    const NativeImageHashMap& nativeImages() const { return m_nativeImages; }
-    const FontRenderingResourceMap& fonts() const { return m_fonts; }
+    const ResourceHeap& resourceHeap() const { return m_resourceHeap; }
 
-    WEBCORE_EXPORT void setItemBufferClient(ItemBufferReadingClient*);
-    WEBCORE_EXPORT void setItemBufferClient(ItemBufferWritingClient*);
+    WEBCORE_EXPORT void setItemBufferReadingClient(ItemBufferReadingClient*);
+    WEBCORE_EXPORT void setItemBufferWritingClient(ItemBufferWritingClient*);
     WEBCORE_EXPORT void prepareToAppend(ItemBufferHandle&&);
 
+    void shrinkToFit();
+
 #if !defined(NDEBUG) || !LOG_DISABLED
-    WTF::CString description() const;
+    CString description() const;
     WEBCORE_EXPORT void dump() const;
 #endif
 
@@ -91,112 +86,39 @@ public:
     template<typename T, class... Args> void append(Args&&... args);
     void append(ItemHandle);
 
-    bool tracksDrawingItemExtents() const { return m_tracksDrawingItemExtents; }
-    WEBCORE_EXPORT void setTracksDrawingItemExtents(bool);
+    class Iterator;
 
-    class iterator {
-    public:
-        enum class ImmediatelyMoveToEnd { No, Yes };
-        iterator(const DisplayList& displayList, ImmediatelyMoveToEnd immediatelyMoveToEnd = ImmediatelyMoveToEnd::No)
-            : m_displayList(displayList)
-        {
-            if (immediatelyMoveToEnd == ImmediatelyMoveToEnd::Yes)
-                moveToEnd();
-            else {
-                moveCursorToStartOfCurrentBuffer();
-                updateCurrentItem();
-            }
-        }
-
-        ~iterator()
-        {
-            clearCurrentItem();
-        }
-
-        bool operator==(const iterator& other) { return &m_displayList == &other.m_displayList && m_cursor == other.m_cursor; }
-        bool operator!=(const iterator& other) { return !(*this == other); }
-        void operator++() { advance(); }
-
-        struct Value {
-            Optional<ItemHandle> item;
-            Optional<FloatRect> extent;
-            size_t itemSizeInBuffer { 0 };
-        };
-
-        Value operator*() const
-        {
-            return {
-                m_isValid ? makeOptional(ItemHandle { m_currentBufferForItem }) : WTF::nullopt,
-                m_currentExtent,
-                m_currentItemSizeInBuffer,
-            };
-        }
-
-    private:
-        static constexpr size_t sizeOfFixedBufferForCurrentItem = 256;
-
-        WEBCORE_EXPORT void moveCursorToStartOfCurrentBuffer();
-        WEBCORE_EXPORT void moveToEnd();
-        WEBCORE_EXPORT void clearCurrentItem();
-        WEBCORE_EXPORT void updateCurrentItem();
-        WEBCORE_EXPORT void advance();
-        bool atEnd() const;
-
-        const DisplayList& m_displayList;
-        uint8_t* m_cursor { nullptr };
-        size_t m_readOnlyBufferIndex { 0 };
-        size_t m_drawingItemIndex { 0 };
-        uint8_t* m_currentEndOfBuffer { nullptr };
-
-        uint8_t m_fixedBufferForCurrentItem[sizeOfFixedBufferForCurrentItem] { 0 };
-        uint8_t* m_currentBufferForItem { nullptr };
-        Optional<FloatRect> m_currentExtent;
-        size_t m_currentItemSizeInBuffer { 0 };
-        bool m_isValid { true };
-    };
-
-    iterator begin() const { return { *this }; }
-    iterator end() const { return { *this, iterator::ImmediatelyMoveToEnd::Yes }; }
+    WEBCORE_EXPORT Iterator begin() const;
+    WEBCORE_EXPORT Iterator end() const;
 
 private:
     ItemBuffer* itemBufferIfExists() const { return m_items.get(); }
     WEBCORE_EXPORT ItemBuffer& itemBuffer();
 
-    void addDrawingItemExtent(Optional<FloatRect>&& extent)
-    {
-        ASSERT(m_tracksDrawingItemExtents);
-        m_drawingItemExtents.append(WTFMove(extent));
-    }
-
     void cacheImageBuffer(WebCore::ImageBuffer& imageBuffer)
     {
-        m_imageBuffers.ensure(imageBuffer.renderingResourceIdentifier(), [&]() {
-            return makeRef(imageBuffer);
-        });
+        m_resourceHeap.add(imageBuffer.renderingResourceIdentifier(), Ref { imageBuffer });
     }
 
     void cacheNativeImage(NativeImage& image)
     {
-        m_nativeImages.ensure(image.renderingResourceIdentifier(), [&]() {
-            return makeRef(image);
-        });
+        m_resourceHeap.add(image.renderingResourceIdentifier(), Ref { image });
     }
 
     void cacheFont(Font& font)
     {
-        m_fonts.ensure(font.renderingResourceIdentifier(), [&]() {
-            return makeRef(font);
-        });
+        m_resourceHeap.add(font.renderingResourceIdentifier(), Ref { font });
     }
 
-    static bool shouldDumpForFlags(AsTextFlags, ItemHandle);
+    void cacheDecomposedGlyphs(WebCore::DecomposedGlyphs& decomposedGlyphs)
+    {
+        m_resourceHeap.add(decomposedGlyphs.renderingResourceIdentifier(), Ref { decomposedGlyphs });
+    }
 
-    ImageBufferHashMap m_imageBuffers;
-    NativeImageHashMap m_nativeImages;
-    FontRenderingResourceMap m_fonts;
+    static bool shouldDumpForFlags(OptionSet<AsTextFlag>, ItemHandle);
+
+    LocalResourceHeap m_resourceHeap;
     std::unique_ptr<ItemBuffer> m_items;
-    Vector<Optional<FloatRect>> m_drawingItemExtents;
-    bool m_tracksDrawingItemExtents { true };
 };
 
 template<typename T, class... Args>
@@ -205,8 +127,8 @@ void DisplayList::append(Args&&... args)
     itemBuffer().append<T>(std::forward<Args>(args)...);
 }
 
-} // DisplayList
+WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList&);
 
-WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList::DisplayList&);
+} // DisplayList
 
 } // WebCore

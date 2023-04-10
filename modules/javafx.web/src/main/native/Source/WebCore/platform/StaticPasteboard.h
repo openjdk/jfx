@@ -26,7 +26,7 @@
 #pragma once
 
 #include "Pasteboard.h"
-#include <wtf/HashMap.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 
@@ -57,8 +57,8 @@ public:
     void clear() final;
     void clear(const String& type) final;
 
-    void read(PasteboardPlainText&, PlainTextURLReadingPolicy = PlainTextURLReadingPolicy::AllowURL, Optional<size_t> = WTF::nullopt) final { }
-    void read(PasteboardWebContentReader&, WebContentReadingPolicy, Optional<size_t> = WTF::nullopt) final { }
+    void read(PasteboardPlainText&, PlainTextURLReadingPolicy = PlainTextURLReadingPolicy::AllowURL, std::optional<size_t> = std::nullopt) final { }
+    void read(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t> = std::nullopt) final { }
 
     void write(const PasteboardURL&) final;
     void write(const PasteboardImage&) final;
@@ -77,7 +77,7 @@ public:
 
 private:
     PasteboardCustomData m_customData;
-    HashSet<String> m_nonDefaultDataTypes;
+    MemoryCompactRobinHoodHashSet<String> m_nonDefaultDataTypes;
     Pasteboard::FileContentState m_fileContentState { Pasteboard::FileContentState::NoFileOrImageData };
 };
 

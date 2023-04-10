@@ -36,7 +36,7 @@ static JSC_DECLARE_HOST_FUNCTION(stringFromCodePoint);
 
 namespace JSC {
 
-const ClassInfo StringConstructor::s_info = { "Function", &InternalFunction::s_info, &stringConstructorTable, nullptr, CREATE_METHOD_TABLE(StringConstructor) };
+const ClassInfo StringConstructor::s_info = { "Function"_s, &InternalFunction::s_info, &stringConstructorTable, nullptr, CREATE_METHOD_TABLE(StringConstructor) };
 
 /* Source for StringConstructor.lut.h
 @begin stringConstructorTable
@@ -140,9 +140,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWithStringConstructor, (JSGlobalObject* global
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->stringObjectStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->stringObjectStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, stringObjectStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     if (!callFrame->argumentCount())

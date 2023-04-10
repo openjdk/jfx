@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -49,9 +49,10 @@
 namespace JSC {
 
 const ASCIILiteral ObjectProtoCalledOnNullOrUndefinedError { "Object.prototype.__proto__ called on null or undefined"_s };
+const ASCIILiteral RestrictedPropertyAccessError { "'arguments', 'callee', and 'caller' cannot be accessed in this context."_s };
 
 template<unsigned charactersCount>
-static Bitmap<256> makeCharacterBitmap(const char (&characters)[charactersCount])
+static constexpr Bitmap<256> makeCharacterBitmap(const char (&characters)[charactersCount])
 {
     static_assert(charactersCount > 0, "Since string literal is null terminated, characterCount is always larger than 0");
     Bitmap<256> bitmap;
@@ -469,12 +470,15 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     if (!x.isString())
         return JSValue::encode(x);
 
+
+    auto codeString = asString(x);
     if (!globalObject->evalEnabled()) {
+        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, codeString);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return JSValue::encode(jsUndefined());
     }
 
-    String s = asString(x)->value(globalObject);
+    String s = codeString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     JSValue parsedObject;
@@ -490,12 +494,12 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
         return JSValue::encode(parsedObject);
 
     SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
-    EvalExecutable* eval = IndirectEvalExecutable::create(globalObject, makeSource(s, sourceOrigin), DerivedContextType::None, false, EvalContextType::None);
+    EvalExecutable* eval = IndirectEvalExecutable::tryCreate(globalObject, makeSource(s, sourceOrigin), DerivedContextType::None, false, EvalContextType::None);
     EXCEPTION_ASSERT(!!scope.exception() == !eval);
     if (!eval)
         return encodedJSValue();
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(vm.interpreter->execute(eval, globalObject, globalObject->globalThis(), globalObject->globalScope())));
+    RELEASE_AND_RETURN(scope, JSValue::encode(vm.interpreter.execute(eval, globalObject, globalObject->globalThis(), globalObject->globalScope())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncParseInt, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -540,7 +544,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseFloat, (JSGlobalObject* globalObject, Ca
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURI, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static Bitmap<256> doNotUnescapeWhenDecodingURI = makeCharacterBitmap(
+    static constexpr auto doNotUnescapeWhenDecodingURI = makeCharacterBitmap(
         "#$&+,/:;=?@"
     );
 
@@ -549,88 +553,88 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURI, (JSGlobalObject* globalObject, Cal
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURIComponent, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static Bitmap<256> emptyBitmap;
+    static constexpr Bitmap<256> emptyBitmap;
     return JSValue::encode(decode(globalObject, callFrame->argument(0), emptyBitmap, true));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURI, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static Bitmap<256> doNotEscapeWhenEncodingURI = makeCharacterBitmap(
+    static constexpr auto doNotEscapeWhenEncodingURI = makeCharacterBitmap(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
         "!#$&'()*+,-./:;=?@_~"
     );
-
     return JSValue::encode(encode(globalObject, callFrame->argument(0), doNotEscapeWhenEncodingURI));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURIComponent, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static Bitmap<256> doNotEscapeWhenEncodingURIComponent = makeCharacterBitmap(
+    static constexpr auto doNotEscapeWhenEncodingURIComponent = makeCharacterBitmap(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
         "!'()*-._~"
     );
-
     return JSValue::encode(encode(globalObject, callFrame->argument(0), doNotEscapeWhenEncodingURIComponent));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static Bitmap<256> doNotEscape = makeCharacterBitmap(
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789"
-        "*+-./@_"
-    );
+    return JSValue::encode(toStringView(globalObject, callFrame->argument(0), [&] (StringView view) -> JSString* {
+        static constexpr auto doNotEscape = makeCharacterBitmap(
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz"
+            "0123456789"
+            "*+-./@_"
+        );
 
-    return JSValue::encode(toStringView(globalObject, callFrame->argument(0), [&] (StringView view) {
         VM& vm = globalObject->vm();
-        StringBuilder builder;
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
         if (view.is8Bit()) {
             const LChar* c = view.characters8();
             for (unsigned k = 0; k < view.length(); k++, c++) {
                 int u = c[0];
                 if (doNotEscape.get(static_cast<LChar>(u)))
                     builder.append(*c);
-                else {
-                    builder.append('%');
-                    builder.append(hex(u, 2));
-                }
+                else
+                    builder.append('%', hex(u, 2));
             }
-            return jsString(vm, builder.toString());
-        }
-
-        const UChar* c = view.characters16();
-        for (unsigned k = 0; k < view.length(); k++, c++) {
-            UChar u = c[0];
-            if (u >= doNotEscape.size()) {
-                builder.appendLiteral("%u");
-                builder.append(hex(static_cast<unsigned char>(u >> 8), 2));
-                builder.append(hex(static_cast<unsigned char>(u & 0xFF), 2));
-            } else if (doNotEscape.get(static_cast<LChar>(u)))
-                builder.append(*c);
-            else {
-                builder.append('%');
-                builder.append(hex(static_cast<unsigned char>(u), 2));
+        } else {
+            const UChar* c = view.characters16();
+            for (unsigned k = 0; k < view.length(); k++, c++) {
+                UChar u = c[0];
+                if (u >= doNotEscape.size())
+                    builder.append("%u", hex(static_cast<uint8_t>(u >> 8), 2), hex(static_cast<uint8_t>(u), 2));
+                else if (doNotEscape.get(static_cast<LChar>(u)))
+                    builder.append(*c);
+                else
+                    builder.append('%', hex(u, 2));
             }
         }
 
+        if (UNLIKELY(builder.hasOverflowed())) {
+            throwOutOfMemoryError(globalObject, scope);
+            return { };
+        }
         return jsString(vm, builder.toString());
     }));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    return JSValue::encode(toStringView(globalObject, callFrame->argument(0), [&] (StringView view) {
+    return JSValue::encode(toStringView(globalObject, callFrame->argument(0), [&] (StringView view) -> JSString* {
         // We use int for k and length intentionally since we would like to evaluate
         // the condition `k <= length -6` even if length is less than 6.
         int k = 0;
         int length = view.length();
 
-        StringBuilder builder;
+        VM& vm = globalObject->vm();
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
         builder.reserveCapacity(length);
 
         if (view.is8Bit()) {
@@ -674,7 +678,11 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
             }
         }
 
-        return jsString(globalObject->vm(), builder.toString());
+        if (UNLIKELY(builder.hasOverflowed())) {
+            throwOutOfMemoryError(globalObject, scope);
+            return { };
+        }
+        return jsString(vm, builder.toString());
     }));
 }
 
@@ -689,13 +697,13 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncThrowTypeErrorArgumentsCalleeAndCaller, (JSGl
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return throwVMTypeError(globalObject, scope, "'arguments', 'callee', and 'caller' cannot be accessed in this context.");
+    return throwVMTypeError(globalObject, scope, RestrictedPropertyAccessError);
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncMakeTypeError, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     Structure* errorStructure = globalObject->errorStructure(ErrorType::TypeError);
-    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, callFrame->argument(0), nullptr, TypeNothing, ErrorType::TypeError, false));
+    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, callFrame->argument(0), jsUndefined(), nullptr, TypeNothing, ErrorType::TypeError, false));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncProtoGetter, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -715,7 +723,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncProtoSetter, (JSGlobalObject* globalObject, C
 
     JSValue value = callFrame->argument(0);
 
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue);
+    JSObject* thisObject = jsDynamicCast<JSObject*>(thisValue);
 
     // Setting __proto__ of a primitive should have no effect.
     if (!thisObject)
@@ -734,7 +742,6 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncProtoSetter, (JSGlobalObject* globalObject, C
 JSC_DEFINE_HOST_FUNCTION(globalFuncSetPrototypeDirect, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue value = callFrame->uncheckedArgument(0);
     if (value.isObject() || value.isNull()) {
@@ -742,8 +749,22 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncSetPrototypeDirect, (JSGlobalObject* globalOb
         object->setPrototypeDirect(vm, value);
     }
 
-    scope.assertNoException();
-    return { };
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncSetPrototypeDirectOrThrow, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue value = callFrame->uncheckedArgument(0);
+    if (!value.isObject() && !value.isNull())
+        return throwVMError(globalObject, scope, createInvalidPrototypeError(globalObject, value));
+
+    JSObject* object = asObject(callFrame->thisValue());
+    object->setPrototypeDirect(vm, value);
+
+    return JSValue::encode(jsUndefined());
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncHostPromiseRejectionTracker, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -754,7 +775,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncHostPromiseRejectionTracker, (JSGlobalObject*
     JSPromise* promise = jsCast<JSPromise*>(callFrame->argument(0));
 
     // InternalPromises should not be exposed to user scripts.
-    if (jsDynamicCast<JSInternalPromise*>(vm, promise))
+    if (jsDynamicCast<JSInternalPromise*>(promise))
         return JSValue::encode(jsUndefined());
 
     JSValue operationValue = callFrame->argument(1);
@@ -801,7 +822,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto sourceOrigin = callFrame->callerSourceOrigin(vm);
-    RELEASE_ASSERT(callFrame->argumentCount() == 1);
+    RELEASE_ASSERT(callFrame->argumentCount() >= 1);
     auto* specifier = callFrame->uncheckedArgument(0).toString(globalObject);
     RETURN_IF_EXCEPTION(scope, JSValue::encode(promise->rejectWithCaughtException(globalObject, scope)));
 
@@ -851,7 +872,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSFinalObject* target = jsCast<JSFinalObject*>(callFrame->thisValue());
-    ASSERT(target->isStructureExtensible(vm));
+    ASSERT(target->isStructureExtensible());
 
     JSValue sourceValue = callFrame->uncheckedArgument(0);
     if (sourceValue.isUndefinedOrNull())
@@ -862,7 +883,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
 
     UnlinkedCodeBlock* unlinkedCodeBlock = nullptr;
     const IdentifierSet* excludedSet = nullptr;
-    Optional<IdentifierSet> newlyCreatedSet;
+    std::optional<IdentifierSet> newlyCreatedSet;
     if (callFrame->argumentCount() > 1) {
         int32_t setIndex = callFrame->uncheckedArgument(1).asUInt32AsAnyInt();
         CodeBlock* codeBlock = getCallerCodeBlock(callFrame);
@@ -888,12 +909,12 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         return excludedSet->contains(propertyName.uid());
     };
 
-    if (!source->staticPropertiesReified(vm)) {
+    if (!source->staticPropertiesReified()) {
         source->reifyAllStaticProperties(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
     }
 
-    if (canPerformFastPropertyEnumerationForCopyDataProperties(source->structure(vm))) {
+    if (canPerformFastPropertyEnumerationForCopyDataProperties(source->structure())) {
         Vector<RefPtr<UniquedStringImpl>, 8> properties;
         MarkedArgumentBuffer values;
 
@@ -904,19 +925,19 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // that ends up transitioning the structure underneath us.
         // https://bugs.webkit.org/show_bug.cgi?id=187837
 
-        source->structure(vm)->forEachProperty(vm, [&] (const PropertyMapEntry& entry) -> bool {
-            PropertyName propertyName(entry.key);
+        source->structure()->forEachProperty(vm, [&] (const PropertyTableEntry& entry) -> bool {
+            PropertyName propertyName(entry.key());
             if (propertyName.isPrivateName())
                 return true;
 
-            if (entry.attributes & PropertyAttribute::DontEnum)
+            if (entry.attributes() & PropertyAttribute::DontEnum)
                 return true;
 
             if (isPropertyNameExcluded(propertyName))
                 return true;
 
-            properties.append(entry.key);
-            values.appendWithCrashOnOverflow(source->getDirect(entry.offset));
+            properties.append(entry.key());
+            values.appendWithCrashOnOverflow(source->getDirect(entry.offset()));
             return true;
         });
 
@@ -929,7 +950,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         }
     } else {
         PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
-        source->methodTable(vm)->getOwnPropertyNames(source, globalObject, propertyNames, DontEnumPropertiesMode::Include);
+        source->methodTable()->getOwnPropertyNames(source, globalObject, propertyNames, DontEnumPropertiesMode::Include);
         RETURN_IF_EXCEPTION(scope, { });
 
         for (const auto& propertyName : propertyNames) {
@@ -937,7 +958,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
                 continue;
 
             PropertySlot slot(source, PropertySlot::InternalMethodType::GetOwnProperty);
-            bool hasProperty = source->methodTable(vm)->getOwnPropertySlot(source, globalObject, propertyName, slot);
+            bool hasProperty = source->methodTable()->getOwnPropertySlot(source, globalObject, propertyName, slot);
             RETURN_IF_EXCEPTION(scope, { });
             if (!hasProperty)
                 continue;

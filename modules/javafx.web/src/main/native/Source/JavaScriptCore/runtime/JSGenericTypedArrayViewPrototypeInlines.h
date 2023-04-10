@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,14 +37,14 @@ JSGenericTypedArrayViewPrototype<ViewClass>::JSGenericTypedArrayViewPrototype(VM
 
 template<typename ViewClass>
 void JSGenericTypedArrayViewPrototype<ViewClass>::finishCreation(
-    VM& vm, JSGlobalObject*)
+    VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
 
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
-    putDirect(vm, vm.propertyNames->BYTES_PER_ELEMENT, jsNumber(ViewClass::elementSize), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete);
-
+    putDirectWithoutTransition(vm, vm.propertyNames->BYTES_PER_ELEMENT, jsNumber(ViewClass::elementSize), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete);
+    globalObject->installTypedArrayIteratorProtocolWatchpoint(this, ViewClass::TypedArrayStorageType);
 }
 
 template<typename ViewClass>
@@ -53,7 +53,7 @@ JSGenericTypedArrayViewPrototype<ViewClass>::create(
     VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
     JSGenericTypedArrayViewPrototype* prototype =
-        new (NotNull, allocateCell<JSGenericTypedArrayViewPrototype>(vm.heap))
+        new (NotNull, allocateCell<JSGenericTypedArrayViewPrototype>(vm))
         JSGenericTypedArrayViewPrototype(vm, structure);
     prototype->finishCreation(vm, globalObject);
     return prototype;

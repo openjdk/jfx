@@ -28,7 +28,7 @@
 
 #include "DoubleRange.h"
 #include "LongRange.h"
-#include <wtf/Variant.h>
+#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -37,48 +37,48 @@ namespace WebCore {
 struct MediaConstraints;
 
 struct ConstrainBooleanParameters {
-    Optional<bool> exact;
-    Optional<bool> ideal;
+    std::optional<bool> exact;
+    std::optional<bool> ideal;
 };
 
 struct ConstrainDOMStringParameters {
-    Optional<Variant<String, Vector<String>>> exact;
-    Optional<Variant<String, Vector<String>>> ideal;
+    std::optional<std::variant<String, Vector<String>>> exact;
+    std::optional<std::variant<String, Vector<String>>> ideal;
 };
 
 struct ConstrainDoubleRange : DoubleRange {
-    Optional<double> exact;
-    Optional<double> ideal;
+    std::optional<double> exact;
+    std::optional<double> ideal;
 };
 
 struct ConstrainLongRange : LongRange {
-    Optional<int> exact;
-    Optional<int> ideal;
+    std::optional<int> exact;
+    std::optional<int> ideal;
 };
 
-using ConstrainBoolean = Variant<bool, ConstrainBooleanParameters>;
-using ConstrainDOMString = Variant<String, Vector<String>, ConstrainDOMStringParameters>;
-using ConstrainDouble = Variant<double, ConstrainDoubleRange>;
-using ConstrainLong = Variant<int, ConstrainLongRange>;
+using ConstrainBoolean = std::variant<bool, ConstrainBooleanParameters>;
+using ConstrainDOMString = std::variant<String, Vector<String>, ConstrainDOMStringParameters>;
+using ConstrainDouble = std::variant<double, ConstrainDoubleRange>;
+using ConstrainLong = std::variant<int, ConstrainLongRange>;
 
 struct MediaTrackConstraintSet {
-    Optional<ConstrainLong> width;
-    Optional<ConstrainLong> height;
-    Optional<ConstrainDouble> aspectRatio;
-    Optional<ConstrainDouble> frameRate;
-    Optional<ConstrainDOMString> facingMode;
-    Optional<ConstrainDouble> volume;
-    Optional<ConstrainLong> sampleRate;
-    Optional<ConstrainLong> sampleSize;
-    Optional<ConstrainBoolean> echoCancellation;
-    Optional<ConstrainDOMString> deviceId;
-    Optional<ConstrainDOMString> groupId;
-    Optional<ConstrainDOMString> displaySurface;
-    Optional<ConstrainBoolean> logicalSurface;
+    std::optional<ConstrainLong> width;
+    std::optional<ConstrainLong> height;
+    std::optional<ConstrainDouble> aspectRatio;
+    std::optional<ConstrainDouble> frameRate;
+    std::optional<ConstrainDOMString> facingMode;
+    std::optional<ConstrainDouble> volume;
+    std::optional<ConstrainLong> sampleRate;
+    std::optional<ConstrainLong> sampleSize;
+    std::optional<ConstrainBoolean> echoCancellation;
+    std::optional<ConstrainDOMString> deviceId;
+    std::optional<ConstrainDOMString> groupId;
+    std::optional<ConstrainDOMString> displaySurface;
+    std::optional<ConstrainBoolean> logicalSurface;
 };
 
 struct MediaTrackConstraints : MediaTrackConstraintSet {
-    Optional<Vector<MediaTrackConstraintSet>> advanced;
+    std::optional<Vector<MediaTrackConstraintSet>> advanced;
 };
 
 MediaConstraints createMediaConstraints(const MediaTrackConstraints&);

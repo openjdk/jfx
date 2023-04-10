@@ -34,6 +34,7 @@
 #include "Timer.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
+#include <wtf/URLHash.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -60,9 +61,10 @@ public:
     void removeRegistration(const ServiceWorkerRegistrationKey&);
 
     // Callbacks from the database
-    void addRegistrationFromDatabase(ServiceWorkerContextData&&);
+    void addRegistrationFromDatabase(ServiceWorkerContextData&&, CompletionHandler<void()>&&);
     void databaseFailedToOpen();
     void databaseOpenedAndRecordsImported();
+    void didSaveWorkerScriptsToDisk(ServiceWorkerIdentifier, ScriptBuffer&& mainScript, MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>&& importedScripts);
 
     SWServer& server() { return m_server; };
 
@@ -74,7 +76,7 @@ private:
     SWServer& m_server;
     Ref<RegistrationDatabase> m_database;
 
-    HashMap<ServiceWorkerRegistrationKey, Optional<ServiceWorkerContextData>> m_updatedRegistrations;
+    HashMap<ServiceWorkerRegistrationKey, std::optional<ServiceWorkerContextData>> m_updatedRegistrations;
     Timer m_databasePushTimer;
 
     bool m_isSuspended { false };

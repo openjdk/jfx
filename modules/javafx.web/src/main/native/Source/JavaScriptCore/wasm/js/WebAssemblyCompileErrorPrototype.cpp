@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 
 namespace JSC {
 
-const ClassInfo WebAssemblyCompileErrorPrototype::s_info = { "WebAssembly.CompileError", &Base::s_info, &prototypeTableWebAssemblyCompileError, nullptr, CREATE_METHOD_TABLE(WebAssemblyCompileErrorPrototype) };
+const ClassInfo WebAssemblyCompileErrorPrototype::s_info = { "WebAssembly.CompileError"_s, &Base::s_info, &prototypeTableWebAssemblyCompileError, nullptr, CREATE_METHOD_TABLE(WebAssemblyCompileErrorPrototype) };
 
 /* Source for WebAssemblyCompileErrorPrototype.lut.h
  @begin prototypeTableWebAssemblyCompileError
@@ -44,7 +44,7 @@ const ClassInfo WebAssemblyCompileErrorPrototype::s_info = { "WebAssembly.Compil
 
 WebAssemblyCompileErrorPrototype* WebAssemblyCompileErrorPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<WebAssemblyCompileErrorPrototype>(vm.heap)) WebAssemblyCompileErrorPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<WebAssemblyCompileErrorPrototype>(vm)) WebAssemblyCompileErrorPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -57,7 +57,7 @@ Structure* WebAssemblyCompileErrorPrototype::createStructure(VM& vm, JSGlobalObj
 void WebAssemblyCompileErrorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     putDirectWithoutTransition(vm, vm.propertyNames->name, jsNontrivialString(vm, "CompileError"_s), static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->message, jsEmptyString(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
 }

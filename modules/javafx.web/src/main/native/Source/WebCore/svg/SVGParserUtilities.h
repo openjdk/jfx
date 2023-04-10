@@ -37,23 +37,23 @@ enum class SuffixSkippingPolicy {
     Skip
 };
 
-Optional<float> parseNumber(StringParsingBuffer<LChar>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
-Optional<float> parseNumber(StringParsingBuffer<UChar>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
-Optional<float> parseNumber(const StringView&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
+std::optional<float> parseNumber(StringParsingBuffer<LChar>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
+std::optional<float> parseNumber(StringParsingBuffer<UChar>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
+std::optional<float> parseNumber(StringView, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
 
-Optional<std::pair<float, float>> parseNumberOptionalNumber(const StringView&);
+std::optional<std::pair<float, float>> parseNumberOptionalNumber(StringView);
 
-Optional<bool> parseArcFlag(StringParsingBuffer<LChar>&);
-Optional<bool> parseArcFlag(StringParsingBuffer<UChar>&);
+std::optional<bool> parseArcFlag(StringParsingBuffer<LChar>&);
+std::optional<bool> parseArcFlag(StringParsingBuffer<UChar>&);
 
-Optional<FloatPoint> parsePoint(const StringView&);
-Optional<FloatRect> parseRect(const StringView&);
+std::optional<FloatPoint> parsePoint(StringView);
+std::optional<FloatRect> parseRect(StringView);
 
-Optional<FloatPoint> parseFloatPoint(StringParsingBuffer<LChar>&);
-Optional<FloatPoint> parseFloatPoint(StringParsingBuffer<UChar>&);
+std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<LChar>&);
+std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<UChar>&);
 
-Optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeString(const StringView&);
-Optional<HashSet<String>> parseGlyphName(const StringView&);
+std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeString(StringView);
+std::optional<HashSet<String>> parseGlyphName(StringView);
 
 
 // SVG allows several different whitespace characters:

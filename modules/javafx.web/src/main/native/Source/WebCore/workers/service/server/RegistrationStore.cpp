@@ -101,7 +101,7 @@ void RegistrationStore::updateRegistration(const ServiceWorkerContextData& data)
 {
     ASSERT(isMainThread());
     ASSERT(!data.registration.key.isEmpty());
-    if (data.registration.key.isEmpty())
+    if (data.registration.key.isEmpty() || data.serviceWorkerPageIdentifier)
         return;
 
     m_updatedRegistrations.set(data.registration.key, data);
@@ -115,17 +115,23 @@ void RegistrationStore::removeRegistration(const ServiceWorkerRegistrationKey& k
     if (key.isEmpty())
         return;
 
-    m_updatedRegistrations.set(key, WTF::nullopt);
+    m_updatedRegistrations.set(key, std::nullopt);
     scheduleDatabasePushIfNecessary();
 }
 
-void RegistrationStore::addRegistrationFromDatabase(ServiceWorkerContextData&& data)
+void RegistrationStore::addRegistrationFromDatabase(ServiceWorkerContextData&& data, CompletionHandler<void()>&& completionHandler)
 {
+    ASSERT(isMainThread());
     ASSERT(!data.registration.key.isEmpty());
     if (data.registration.key.isEmpty())
-        return;
+        return completionHandler();
 
-    m_server.addRegistrationFromStore(WTFMove(data));
+    m_server.addRegistrationFromStore(WTFMove(data), WTFMove(completionHandler));
+}
+
+void RegistrationStore::didSaveWorkerScriptsToDisk(ServiceWorkerIdentifier serviceWorkerIdentifier, ScriptBuffer&& mainScript, MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>&& importedScripts)
+{
+    m_server.didSaveWorkerScriptsToDisk(serviceWorkerIdentifier, WTFMove(mainScript), WTFMove(importedScripts));
 }
 
 void RegistrationStore::databaseFailedToOpen()

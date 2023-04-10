@@ -27,27 +27,32 @@
 
 #include <string>
 #include <wtf/Seconds.h>
+
+#if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 #include <wtf/StdFilesystem.h>
+#endif
 
 namespace WTR {
 
 struct TestCommand {
     std::string pathOrURL;
-#if PLATFORM(JAVA) && OS(MAC_OS_X)
+#if PLATFORM(JAVA)
 // Requires macosx-min-version=10.15
     std::string absolutePath;
 #else
     std::filesystem::path absolutePath;
 #endif
     std::string expectedPixelHash;
+    std::string selfComparisonHeader;
     WTF::Seconds timeout;
     bool shouldDumpPixels { false };
+    bool forceDumpPixels { false };
     bool dumpJSConsoleLogInStdErr { false };
 };
 
 TestCommand parseInputLine(const std::string& inputLine);
 
-#if PLATFORM(JAVA) && OS(MAC_OS_X)
+#if PLATFORM(JAVA)
 std::string testPath(const std::string& pathOrURL);
 #else
 std::filesystem::path testPath(const std::string& pathOrURL);

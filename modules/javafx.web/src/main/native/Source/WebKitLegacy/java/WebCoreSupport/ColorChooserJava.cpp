@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,14 +44,14 @@ ColorChooserJava::ColorChooserJava(JGObject& webPage, ColorChooserClient* client
         "(Lcom/sun/webkit/WebPage;IIIJ)Lcom/sun/webkit/ColorChooser;");
     ASSERT(mid);
 
-
+    auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
     m_colorChooserRef = JGObject(env->CallStaticObjectMethod(
         PG_GetColorChooserClass(env),
         mid,
         (jobject) webPage,
-        color.red,
-        color.green,
-        color.blue,
+        r,
+        g,
+        b,
         ptr_to_jlong(this)));
 
     ASSERT(m_colorChooserClient);
@@ -69,12 +69,14 @@ void ColorChooserJava::reattachColorChooser(const Color& color)
         "(III)V");
     ASSERT(mid);
 
+    auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+
     env->CallVoidMethod(
         m_colorChooserRef,
         mid,
-        color.red,
-        color.green,
-        color.blue);
+        r,
+        g,
+        b);
     WTF::CheckAndClearException(env);
 }
 

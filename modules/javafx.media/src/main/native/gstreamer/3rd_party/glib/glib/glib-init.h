@@ -27,6 +27,7 @@ extern GLogLevelFlags g_log_msg_prefix;
 
 void glib_init (void);
 void g_quark_init (void);
+void g_error_init (void);
 
 #ifdef G_OS_WIN32
 #include <windows.h>
@@ -40,7 +41,9 @@ void g_clock_win32_init (void);
 void g_crash_handler_win32_init (void);
 void g_crash_handler_win32_deinit (void);
 #endif // GSTREAMER_LITE
+gboolean _g_win32_call_rtl_version (OSVERSIONINFOEXW *info);
 extern HMODULE glib_dll;
+gchar *g_win32_find_helper_executable_path (const gchar *process_name, void *dll_handle);
 #endif
 
 #endif /* __GLIB_INIT_H__ */

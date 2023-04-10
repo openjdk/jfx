@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,6 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import com.sun.javafx.embed.swing.Disposer;
-import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
@@ -122,6 +121,7 @@ public class SwingNode extends Node {
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
             public Object run() {
                 isThreadMerged = Boolean.valueOf(
                         System.getProperty("javafx.embed.singleThread"));
@@ -782,7 +782,7 @@ public class SwingNode extends Node {
         private WeakReference<SwingNode> swingNodeRef;
 
         SwingNodeWindowFocusListener(SwingNode swingNode) {
-            this.swingNodeRef = new WeakReference<SwingNode>(swingNode);
+            this.swingNodeRef = new WeakReference<>(swingNode);
         }
 
         @Override

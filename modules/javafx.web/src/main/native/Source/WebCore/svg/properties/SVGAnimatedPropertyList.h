@@ -70,7 +70,7 @@ public:
     // Managing the relationship with the owner.
     void setDirty() override { m_baseVal->setDirty(); }
     bool isDirty() const override { return m_baseVal->isDirty(); }
-    Optional<String> synchronize() override { return m_baseVal->synchronize(); }
+    std::optional<String> synchronize() override { return m_baseVal->synchronize(); }
 
     // Used by RenderSVGElements and DumpRenderTree.
     const ListType& currentValue() const
@@ -99,18 +99,16 @@ public:
     // Controlling the instance animation.
     void instanceStartAnimation(SVGAttributeAnimator& animator, SVGAnimatedProperty& animated) override
     {
-        if (isAnimating())
-            return;
-        m_animVal = static_cast<SVGAnimatedPropertyList&>(animated).animVal();
+        if (!isAnimating())
+            m_animVal = static_cast<SVGAnimatedPropertyList&>(animated).animVal();
         SVGAnimatedProperty::instanceStartAnimation(animator, animated);
     }
 
     void instanceStopAnimation(SVGAttributeAnimator& animator) override
     {
-        if (!isAnimating())
-            return;
-        m_animVal = nullptr;
         SVGAnimatedProperty::instanceStopAnimation(animator);
+        if (!isAnimating())
+            m_animVal = nullptr;
     }
 
     // Visual Studio doesn't seem to see these private constructors from subclasses.

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
@@ -38,7 +36,8 @@ public:
     IndexKey();
     IndexKey(Vector<IDBKeyData>&&);
 
-    IndexKey isolatedCopy() const;
+    IndexKey isolatedCopy() const &;
+    IndexKey isolatedCopy() &&;
 
     IDBKeyData asOneKey() const;
     Vector<IDBKeyData> multiEntry() const;
@@ -52,5 +51,3 @@ private:
 typedef HashMap<uint64_t, IndexKey> IndexIDToIndexKeyMap;
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

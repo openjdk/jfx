@@ -42,7 +42,7 @@ public:
     RenderRubyBase(Document&, RenderStyle&&);
     virtual ~RenderRubyBase();
 
-    const char* renderName() const override { return "RenderRubyBase (anonymous)"; }
+    ASCIILiteral renderName() const override { return "RenderRubyBase (anonymous)"_s; }
 
     RenderRubyRun* rubyRun() const;
 
@@ -59,10 +59,12 @@ public:
 
     void cachePriorCharactersIfNeeded(const LazyLineBreakIterator&) override;
 
+    bool isEmptyOrHasInFlowContent() const;
+
 private:
     bool isRubyBase() const override { return true; }
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
-    Optional<TextAlignMode> overrideTextAlignmentForLine(bool endsWithSoftBreak) const override;
+    std::optional<TextAlignMode> overrideTextAlignmentForLine(bool endsWithSoftBreak) const override;
     void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const override;
 
     float m_initialOffset;

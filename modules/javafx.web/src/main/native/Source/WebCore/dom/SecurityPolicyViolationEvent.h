@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,36 +29,35 @@
 
 namespace WebCore {
 
+enum class SecurityPolicyViolationEventDisposition : bool { Enforce, Report };
+
+struct SecurityPolicyViolationEventInit : EventInit {
+    SecurityPolicyViolationEventInit() { }
+
+    String documentURI;
+    String referrer;
+    String blockedURI;
+    String violatedDirective;
+    String effectiveDirective;
+    String originalPolicy;
+    String sourceFile;
+    String sample;
+    SecurityPolicyViolationEventDisposition disposition { SecurityPolicyViolationEventDisposition::Enforce };
+    unsigned short statusCode { 0 };
+    unsigned lineNumber { 0 };
+    unsigned columnNumber { 0 };
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, SecurityPolicyViolationEventInit&);
+};
+
 class SecurityPolicyViolationEvent final : public Event {
     WTF_MAKE_ISO_ALLOCATED(SecurityPolicyViolationEvent);
 public:
-    static Ref<SecurityPolicyViolationEvent> create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, const String& documentURI, const String& referrer, const String& blockedURI, const String& violatedDirective, const String& effectiveDirective, const String& originalPolicy, const String& sourceFile, unsigned short statusCode, int lineNumber, int columnNumber)
-    {
-        return adoptRef(*new SecurityPolicyViolationEvent(type, canBubble, cancelable, documentURI, referrer, blockedURI, violatedDirective, effectiveDirective, originalPolicy, sourceFile, statusCode, lineNumber, columnNumber));
-    }
+    using Disposition = SecurityPolicyViolationEventDisposition;
+    using Init = SecurityPolicyViolationEventInit;
 
-    static Ref<SecurityPolicyViolationEvent> createForBindings()
-    {
-        return adoptRef(*new SecurityPolicyViolationEvent());
-    }
-
-    struct Init : EventInit {
-        String documentURI;
-        String referrer;
-        String blockedURI;
-        String violatedDirective;
-        String effectiveDirective;
-        String originalPolicy;
-        String sourceFile;
-        unsigned short statusCode { 0 };
-        int lineNumber { 0 };
-        int columnNumber { 0 };
-
-        template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, Init&);
-    };
-
-    static Ref<SecurityPolicyViolationEvent> create(const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<SecurityPolicyViolationEvent> create(const AtomString& type, const Init& initializer = { }, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new SecurityPolicyViolationEvent(type, initializer, isTrusted));
     }
@@ -70,29 +69,16 @@ public:
     const String& effectiveDirective() const { return m_effectiveDirective; }
     const String& originalPolicy() const { return m_originalPolicy; }
     const String& sourceFile() const { return m_sourceFile; }
+    const String& sample() const { return m_sample; }
+    Disposition disposition() const { return m_disposition; }
     unsigned short statusCode() const { return m_statusCode; }
-    int lineNumber() const { return m_lineNumber; }
-    int columnNumber() const { return m_columnNumber; }
+    unsigned lineNumber() const { return m_lineNumber; }
+    unsigned columnNumber() const { return m_columnNumber; }
 
     EventInterface eventInterface() const final { return SecurityPolicyViolationEventInterfaceType; }
 
 private:
     SecurityPolicyViolationEvent()
-    {
-    }
-
-    SecurityPolicyViolationEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, const String& documentURI, const String& referrer, const String& blockedURI, const String& violatedDirective, const String& effectiveDirective, const String& originalPolicy, const String& sourceFile, unsigned short statusCode, int lineNumber, int columnNumber)
-        : Event(type, canBubble, cancelable)
-        , m_documentURI(documentURI)
-        , m_referrer(referrer)
-        , m_blockedURI(blockedURI)
-        , m_violatedDirective(violatedDirective)
-        , m_effectiveDirective(effectiveDirective)
-        , m_originalPolicy(originalPolicy)
-        , m_sourceFile(sourceFile)
-        , m_statusCode(statusCode)
-        , m_lineNumber(lineNumber)
-        , m_columnNumber(columnNumber)
     {
     }
 
@@ -105,6 +91,8 @@ private:
         , m_effectiveDirective(initializer.effectiveDirective)
         , m_originalPolicy(initializer.originalPolicy)
         , m_sourceFile(initializer.sourceFile)
+        , m_sample(initializer.sample)
+        , m_disposition(initializer.disposition)
         , m_statusCode(initializer.statusCode)
         , m_lineNumber(initializer.lineNumber)
         , m_columnNumber(initializer.columnNumber)
@@ -118,13 +106,15 @@ private:
     String m_effectiveDirective;
     String m_originalPolicy;
     String m_sourceFile;
+    String m_sample;
+    Disposition m_disposition { Disposition::Enforce };
     unsigned short m_statusCode;
-    int m_lineNumber;
-    int m_columnNumber;
+    unsigned m_lineNumber;
+    unsigned m_columnNumber;
 };
 
 template<class Encoder>
-void SecurityPolicyViolationEvent::Init::encode(Encoder& encoder) const
+void SecurityPolicyViolationEventInit::encode(Encoder& encoder) const
 {
     encoder << static_cast<const EventInit&>(*this);
     encoder << documentURI;
@@ -134,13 +124,15 @@ void SecurityPolicyViolationEvent::Init::encode(Encoder& encoder) const
     encoder << effectiveDirective;
     encoder << originalPolicy;
     encoder << sourceFile;
+    encoder << sample;
+    encoder << disposition;
     encoder << statusCode;
     encoder << lineNumber;
     encoder << columnNumber;
 }
 
 template<class Decoder>
-bool SecurityPolicyViolationEvent::Init::decode(Decoder& decoder, SecurityPolicyViolationEvent::Init& eventInit)
+bool SecurityPolicyViolationEventInit::decode(Decoder& decoder, SecurityPolicyViolationEventInit& eventInit)
 {
     if (!decoder.decode(static_cast<EventInit&>(eventInit)))
         return false;
@@ -158,6 +150,10 @@ bool SecurityPolicyViolationEvent::Init::decode(Decoder& decoder, SecurityPolicy
         return false;
     if (!decoder.decode(eventInit.sourceFile))
         return false;
+    if (!decoder.decode(eventInit.sample))
+        return false;
+    if (!decoder.decode(eventInit.disposition))
+        return false;
     if (!decoder.decode(eventInit.statusCode))
         return false;
     if (!decoder.decode(eventInit.lineNumber))
@@ -168,3 +164,15 @@ bool SecurityPolicyViolationEvent::Init::decode(Decoder& decoder, SecurityPolicy
 }
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::SecurityPolicyViolationEventDisposition> {
+    using values = EnumValues<
+    WebCore::SecurityPolicyViolationEventDisposition,
+    WebCore::SecurityPolicyViolationEventDisposition::Enforce,
+    WebCore::SecurityPolicyViolationEventDisposition::Report
+    >;
+};
+
+}

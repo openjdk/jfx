@@ -37,8 +37,11 @@ namespace JSC { namespace DFG {
 class AdaptiveStructureWatchpoint final : public Watchpoint {
 public:
     AdaptiveStructureWatchpoint(const ObjectPropertyCondition&, CodeBlock*);
+    AdaptiveStructureWatchpoint();
 
     const ObjectPropertyCondition& key() const { return m_key; }
+
+    void initialize(const ObjectPropertyCondition&, CodeBlock*);
 
     void install(VM&);
 

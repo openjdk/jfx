@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -198,12 +198,12 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
         private final Class<?>           builderClass;
         private final Method             createMethod;
         private final Method             buildMethod;
-        private final Map<String,Method> methods = new HashMap<String, Method>();
-        private final Map<String,Method> getters = new HashMap<String,Method>();
-        private final Map<String,Method> setters = new HashMap<String,Method>();
+        private final Map<String,Method> methods = new HashMap<>();
+        private final Map<String,Method> getters = new HashMap<>();
+        private final Map<String,Method> setters = new HashMap<>();
 
         final class ObjectBuilder extends AbstractMap<String, Object> implements Builder<Object> {
-            private final Map<String,Object> containers = new HashMap<String,Object>();
+            private final Map<String,Object> containers = new HashMap<>();
             private Object                   builder = null;
             private Map<Object,Object>       properties;
 
@@ -361,15 +361,15 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
                 }
 
                 if (ObservableMap.class.isAssignableFrom(type)) {
-                    return FXCollections.observableMap(new HashMap<Object, Object>());
+                    return FXCollections.observableMap(new HashMap<>());
                 } else if (Map.class.isAssignableFrom(type)) {
-                    return new HashMap<Object, Object>();
+                    return new HashMap<>();
                 } else if (ObservableList.class.isAssignableFrom(type)) {
                     return FXCollections.observableArrayList();
                 } else if (List.class.isAssignableFrom(type)) {
-                    return new ArrayList<Object>();
+                    return new ArrayList<>();
                 } else if (Set.class.isAssignableFrom(type)) {
-                    return new HashSet<Object>();
+                    return new HashSet<>();
                 }
                 return null;
             }
@@ -429,7 +429,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
             buildMethod = null;
         }
 
-        ObjectBuilderWrapper(Class<?> builderClass) throws NoSuchMethodException, InstantiationException, IllegalAccessException {
+        ObjectBuilderWrapper(Class<?> builderClass) throws NoSuchMethodException {
             this.builderClass = builderClass;
             createMethod = MethodUtil.getMethod(builderClass, "create", NO_SIG);
             buildMethod = MethodUtil.getMethod(builderClass, "build", NO_SIG);

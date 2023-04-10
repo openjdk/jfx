@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,26 +27,27 @@
 #include "WeakMapPrototype.h"
 
 #include "JSCInlines.h"
-#include "JSWeakMap.h"
+#include "JSWeakMapInlines.h"
 
 namespace JSC {
 
-const ClassInfo WeakMapPrototype::s_info = { "WeakMap", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakMapPrototype) };
+const ASCIILiteral WeakMapInvalidKeyError { "WeakMap keys must be objects or non-registered symbols"_s };
+
+const ClassInfo WeakMapPrototype::s_info = { "WeakMap"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakMapPrototype) };
 
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapDelete);
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapGet);
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapHas);
-static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapSet);
 
 void WeakMapPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deleteKeyword, protoFuncWeakMapDelete, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->get, protoFuncWeakMapGet, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakMapGetIntrinsic);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, protoFuncWeakMapHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakMapHasIntrinsic);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->set, protoFuncWeakMapSet, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, JSWeakMapSetIntrinsic);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deleteKeyword, protoFuncWeakMapDelete, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->get, protoFuncWeakMapGet, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, JSWeakMapGetIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, protoFuncWeakMapHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, JSWeakMapHasIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->set, protoFuncWeakMapSet, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public, JSWeakMapSetIntrinsic);
 
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
@@ -61,7 +62,7 @@ ALWAYS_INLINE static JSWeakMap* getWeakMap(JSGlobalObject* globalObject, JSValue
         return nullptr;
     }
 
-    auto* map = jsDynamicCast<JSWeakMap*>(vm, asObject(value));
+    auto* map = jsDynamicCast<JSWeakMap*>(asObject(value));
     if (LIKELY(map))
         return map;
 
@@ -75,7 +76,9 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapDelete, (JSGlobalObject* globalObject, 
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    return JSValue::encode(jsBoolean(key.isObject() && map->remove(asObject(key))));
+    if (UNLIKELY(!key.isCell()))
+        return JSValue::encode(jsBoolean(false));
+    return JSValue::encode(jsBoolean(map->remove(key.asCell())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapGet, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -84,9 +87,9 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapGet, (JSGlobalObject* globalObject, Cal
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    if (!key.isObject())
+    if (UNLIKELY(!key.isCell()))
         return JSValue::encode(jsUndefined());
-    return JSValue::encode(map->get(asObject(key)));
+    return JSValue::encode(map->get(key.asCell()));
 }
 
 JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapHas, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -95,7 +98,9 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapHas, (JSGlobalObject* globalObject, Cal
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    return JSValue::encode(jsBoolean(key.isObject() && map->has(asObject(key))));
+    if (UNLIKELY(!key.isCell()))
+        return JSValue::encode(jsBoolean(false));
+    return JSValue::encode(jsBoolean(map->has(key.asCell())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapSet, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -108,9 +113,9 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapSet, (JSGlobalObject* globalObject, Cal
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    if (!key.isObject())
-        return JSValue::encode(throwTypeError(globalObject, scope, "Attempted to set a non-object key in a WeakMap"_s));
-    map->set(vm, asObject(key), callFrame->argument(1));
+    if (UNLIKELY(!canBeHeldWeakly(key)))
+        return JSValue::encode(throwTypeError(globalObject, scope, WeakMapInvalidKeyError));
+    map->set(vm, key.asCell(), callFrame->argument(1));
     return JSValue::encode(callFrame->thisValue());
 }
 

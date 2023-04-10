@@ -23,9 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FontGenericFamilies_h
-#define FontGenericFamilies_h
+#pragma once
 
+#include "WebKitFontFamilyNames.h"
 #include <unicode/uscript.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/AtomString.h>
@@ -35,7 +35,7 @@ namespace WebCore {
 
 // UScriptCode uses -1 and 0 for UScriptInvalidCode and UScriptCommon.
 // We need to use -2 and -3 for empty value and deleted value.
-struct UScriptCodeHashTraits : WTF::GenericHashTraits<int> {
+struct UScriptCodeHashTraits : HashTraits<int> {
     static const bool emptyValueIsZero = false;
     static int emptyValue() { return -2; }
     static void constructDeletedValue(int& slot) { slot = -3; }
@@ -49,7 +49,8 @@ class FontGenericFamilies {
 public:
     FontGenericFamilies();
 
-    FontGenericFamilies isolatedCopy() const;
+    FontGenericFamilies isolatedCopy() const &;
+    FontGenericFamilies isolatedCopy() &&;
 
     const String& standardFontFamily(UScriptCode = USCRIPT_COMMON) const;
     const String& fixedFontFamily(UScriptCode = USCRIPT_COMMON) const;
@@ -58,6 +59,8 @@ public:
     const String& cursiveFontFamily(UScriptCode = USCRIPT_COMMON) const;
     const String& fantasyFontFamily(UScriptCode = USCRIPT_COMMON) const;
     const String& pictographFontFamily(UScriptCode = USCRIPT_COMMON) const;
+
+    const String* fontFamily(WebKitFontFamilyNames::FamilyNamesIndex, UScriptCode = USCRIPT_COMMON) const;
 
     bool setStandardFontFamily(const String&, UScriptCode);
     bool setFixedFontFamily(const String&, UScriptCode);
@@ -78,5 +81,3 @@ private:
 };
 
 }
-
-#endif

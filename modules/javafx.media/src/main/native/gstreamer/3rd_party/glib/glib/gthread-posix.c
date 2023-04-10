@@ -72,8 +72,8 @@
 #include <sys/syscall.h>
 #endif
 
-/* clang defines __ATOMIC_SEQ_CST but doesn't support the GCC extension */
-#if defined(HAVE_FUTEX) && defined(__ATOMIC_SEQ_CST) && !defined(__clang__)
+#if defined(HAVE_FUTEX) && \
+    (defined(HAVE_STDATOMIC_H) || defined(__ATOMIC_SEQ_CST))
 #define USE_NATIVE_MUTEX
 #endif
 
@@ -537,9 +537,12 @@ g_rw_lock_clear (GRWLock *rw_lock)
  * g_rw_lock_writer_lock:
  * @rw_lock: a #GRWLock
  *
- * Obtain a write lock on @rw_lock. If any thread already holds
+ * Obtain a write lock on @rw_lock. If another thread currently holds
  * a read or write lock on @rw_lock, the current thread will block
  * until all other threads have dropped their locks on @rw_lock.
+ *
+ * Calling g_rw_lock_writer_lock() while the current thread already
+ * owns a read or write lock on @rw_lock leads to undefined behaviour.
  *
  * Since: 2.32
  */
@@ -556,8 +559,9 @@ g_rw_lock_writer_lock (GRWLock *rw_lock)
  * g_rw_lock_writer_trylock:
  * @rw_lock: a #GRWLock
  *
- * Tries to obtain a write lock on @rw_lock. If any other thread holds
- * a read or write lock on @rw_lock, it immediately returns %FALSE.
+ * Tries to obtain a write lock on @rw_lock. If another thread
+ * currently holds a read or write lock on @rw_lock, it immediately
+ * returns %FALSE.
  * Otherwise it locks @rw_lock and returns %TRUE.
  *
  * Returns: %TRUE if @rw_lock could be locked
@@ -595,13 +599,19 @@ g_rw_lock_writer_unlock (GRWLock *rw_lock)
  * @rw_lock: a #GRWLock
  *
  * Obtain a read lock on @rw_lock. If another thread currently holds
- * the write lock on @rw_lock, the current thread will block. If another thread
- * does not hold the write lock, but is waiting for it, it is implementation
- * defined whether the reader or writer will block. Read locks can be taken
+ * the write lock on @rw_lock, the current thread will block until the
+ * write lock was (held and) released. If another thread does not hold
+ * the write lock, but is waiting for it, it is implementation defined
+ * whether the reader or writer will block. Read locks can be taken
  * recursively.
  *
- * It is implementation-defined how many threads are allowed to
- * hold read locks on the same lock simultaneously. If the limit is hit,
+ * Calling g_rw_lock_reader_lock() while the current thread already
+ * owns a write lock leads to undefined behaviour. Read locks however
+ * can be taken recursively, in which case you need to make sure to
+ * call g_rw_lock_reader_unlock() the same amount of times.
+ *
+ * It is implementation-defined how many read locks are allowed to be
+ * held on the same lock simultaneously. If the limit is hit,
  * or if a deadlock is detected, a critical warning will be emitted.
  *
  * Since: 2.32
@@ -1321,6 +1331,7 @@ g_system_thread_new (GThreadFunc proxy,
     {
       g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN,
                    "Error creating thread: %s", g_strerror (ret));
+      g_free (thread->thread.name);
       g_slice_free (GThreadPosix, thread);
       return NULL;
     }
@@ -1401,6 +1412,23 @@ g_system_thread_set_name (const gchar *name)
  * purposes...
  */
 
+#ifdef HAVE_STDATOMIC_H
+
+#include <stdatomic.h>
+
+#define exchange_acquire(ptr, new) \
+  atomic_exchange_explicit((atomic_uint *) (ptr), (new), __ATOMIC_ACQUIRE)
+#define compare_exchange_acquire(ptr, old, new) \
+  atomic_compare_exchange_strong_explicit((atomic_uint *) (ptr), (old), (new), \
+                                          __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)
+
+#define exchange_release(ptr, new) \
+  atomic_exchange_explicit((atomic_uint *) (ptr), (new), __ATOMIC_RELEASE)
+#define store_release(ptr, new) \
+  atomic_store_explicit((atomic_uint *) (ptr), (new), __ATOMIC_RELEASE)
+
+#else
+
 #define exchange_acquire(ptr, new) \
   __atomic_exchange_4((ptr), (new), __ATOMIC_ACQUIRE)
 #define compare_exchange_acquire(ptr, old, new) \
@@ -1410,6 +1438,8 @@ g_system_thread_set_name (const gchar *name)
   __atomic_exchange_4((ptr), (new), __ATOMIC_RELEASE)
 #define store_release(ptr, new) \
   __atomic_store_4((ptr), (new), __ATOMIC_RELEASE)
+
+#endif
 
 /* Our strategy for the mutex is pretty simple:
  *

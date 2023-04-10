@@ -26,27 +26,21 @@
 #include "config.h"
 #include "IDBKeyRangeData.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKey.h"
 
 namespace WebCore {
 
 IDBKeyRangeData::IDBKeyRangeData(IDBKey* key)
-    : isNull(!key)
-    , lowerKey(key)
+    : lowerKey(key)
     , upperKey(key)
-    , lowerOpen(false)
-    , upperOpen(false)
+    , isNull(!key)
 {
 }
 
 IDBKeyRangeData::IDBKeyRangeData(const IDBKeyData& keyData)
-    : isNull(keyData.isNull())
-    , lowerKey(keyData)
+    : lowerKey(keyData)
     , upperKey(keyData)
-    , lowerOpen(false)
-    , upperOpen(false)
+    , isNull(keyData.isNull())
 {
 }
 
@@ -117,15 +111,11 @@ bool IDBKeyRangeData::isValid() const
 String IDBKeyRangeData::loggingString() const
 {
     auto result = makeString(lowerOpen ? "( " : "[ ", lowerKey.loggingString(), ", ", upperKey.loggingString(), upperOpen ? " )" : " ]");
-    if (result.length() > 400) {
-        result.truncate(397);
-        result.append("..."_s);
-    }
+    if (result.length() > 400)
+        result = makeString(StringView(result).left(397), "..."_s);
 
     return result;
 }
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

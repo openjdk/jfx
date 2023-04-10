@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,13 @@
 #include "StorageAreaSync.h"
 #include "StorageSyncManager.h"
 #include "StorageTracker.h"
+#include <WebCore/DOMWindow.h>
 #include <WebCore/Frame.h>
+#include <WebCore/Page.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/SecurityOriginData.h>
+#include <WebCore/Storage.h>
 #include <WebCore/StorageEventDispatcher.h>
-#include <WebCore/StorageMap.h>
 #include <WebCore/StorageType.h>
 #include <wtf/MainThread.h>
 
@@ -45,29 +47,28 @@ StorageAreaImpl::~StorageAreaImpl()
     ASSERT(isMainThread());
 }
 
-inline StorageAreaImpl::StorageAreaImpl(StorageType storageType, const SecurityOriginData& origin, RefPtr<StorageSyncManager>&& syncManager, unsigned quota)
+inline StorageAreaImpl::StorageAreaImpl(StorageType storageType, const SecurityOrigin& origin, RefPtr<StorageSyncManager>&& syncManager, unsigned quota)
     : m_storageType(storageType)
     , m_securityOrigin(origin)
-    , m_storageMap(StorageMap::create(quota))
+    , m_storageMap(quota)
     , m_storageSyncManager(WTFMove(syncManager))
     , m_accessCount(0)
     , m_closeDatabaseTimer(*this, &StorageAreaImpl::closeDatabaseTimerFired)
 {
     ASSERT(isMainThread());
-    ASSERT(m_storageMap);
 
     // Accessing the shared global StorageTracker when a StorageArea is created
     // ensures that the tracker is properly initialized before anyone actually needs to use it.
     StorageTracker::tracker();
 }
 
-Ref<StorageAreaImpl> StorageAreaImpl::create(StorageType storageType, const SecurityOriginData& origin, RefPtr<StorageSyncManager>&& syncManager, unsigned quota)
+Ref<StorageAreaImpl> StorageAreaImpl::create(StorageType storageType, const SecurityOrigin& origin, RefPtr<StorageSyncManager>&& syncManager, unsigned quota)
 {
     Ref<StorageAreaImpl> area = adoptRef(*new StorageAreaImpl(storageType, origin, WTFMove(syncManager), quota));
     // FIXME: If there's no backing storage for LocalStorage, the default WebKit behavior should be that of private browsing,
     // not silently ignoring it. https://bugs.webkit.org/show_bug.cgi?id=25894
     if (area->m_storageSyncManager) {
-        area->m_storageAreaSync = StorageAreaSync::create(area->m_storageSyncManager.get(), area.copyRef(), area->m_securityOrigin.databaseIdentifier());
+        area->m_storageAreaSync = StorageAreaSync::create(area->m_storageSyncManager.get(), area.copyRef(), area->m_securityOrigin->data().databaseIdentifier());
         ASSERT(area->m_storageAreaSync);
     }
     return area;
@@ -91,7 +92,6 @@ StorageAreaImpl::StorageAreaImpl(const StorageAreaImpl& area)
     , m_closeDatabaseTimer(*this, &StorageAreaImpl::closeDatabaseTimerFired)
 {
     ASSERT(isMainThread());
-    ASSERT(m_storageMap);
     ASSERT(!m_isShutdown);
 }
 
@@ -105,7 +105,7 @@ unsigned StorageAreaImpl::length()
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    return m_storageMap->length();
+    return m_storageMap.length();
 }
 
 String StorageAreaImpl::key(unsigned index)
@@ -113,7 +113,7 @@ String StorageAreaImpl::key(unsigned index)
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    return m_storageMap->key(index);
+    return m_storageMap.key(index);
 }
 
 String StorageAreaImpl::item(const String& key)
@@ -121,20 +121,17 @@ String StorageAreaImpl::item(const String& key)
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    return m_storageMap->getItem(key);
+    return m_storageMap.getItem(key);
 }
 
-void StorageAreaImpl::setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException)
+void StorageAreaImpl::setItem(Frame& sourceFrame, const String& key, const String& value, bool& quotaException)
 {
     ASSERT(!m_isShutdown);
     ASSERT(!value.isNull());
     blockUntilImportComplete();
 
     String oldValue;
-    auto newMap = m_storageMap->setItem(key, value, oldValue, quotaException);
-    if (newMap)
-        m_storageMap = WTFMove(newMap);
-
+    m_storageMap.setItem(key, value, oldValue, quotaException);
     if (quotaException)
         return;
 
@@ -147,16 +144,13 @@ void StorageAreaImpl::setItem(Frame* sourceFrame, const String& key, const Strin
     dispatchStorageEvent(key, oldValue, value, sourceFrame);
 }
 
-void StorageAreaImpl::removeItem(Frame* sourceFrame, const String& key)
+void StorageAreaImpl::removeItem(Frame& sourceFrame, const String& key)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
     String oldValue;
-    auto newMap = m_storageMap->removeItem(key, oldValue);
-    if (newMap)
-        m_storageMap = WTFMove(newMap);
-
+    m_storageMap.removeItem(key, oldValue);
     if (oldValue.isNull())
         return;
 
@@ -166,16 +160,15 @@ void StorageAreaImpl::removeItem(Frame* sourceFrame, const String& key)
     dispatchStorageEvent(key, oldValue, String(), sourceFrame);
 }
 
-void StorageAreaImpl::clear(Frame* sourceFrame)
+void StorageAreaImpl::clear(Frame& sourceFrame)
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    if (!m_storageMap->length())
+    if (!m_storageMap.length())
         return;
 
-    unsigned quota = m_storageMap->quota();
-    m_storageMap = StorageMap::create(quota);
+    m_storageMap.clear();
 
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleClear();
@@ -188,7 +181,7 @@ bool StorageAreaImpl::contains(const String& key)
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    return m_storageMap->contains(key);
+    return m_storageMap.contains(key);
 }
 
 void StorageAreaImpl::importItems(HashMap<String, String>&& items)
@@ -196,7 +189,7 @@ void StorageAreaImpl::importItems(HashMap<String, String>&& items)
     ASSERT(!m_isShutdown);
     ASSERT(!isMainThread());
 
-    m_storageMap->importItems(WTFMove(items));
+    m_storageMap.importItems(WTFMove(items));
 }
 
 void StorageAreaImpl::close()
@@ -214,10 +207,7 @@ void StorageAreaImpl::clearForOriginDeletion()
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
 
-    if (m_storageMap->length()) {
-        unsigned quota = m_storageMap->quota();
-        m_storageMap = StorageMap::create(quota);
-    }
+    m_storageMap.clear();
 
     if (m_storageAreaSync) {
         m_storageAreaSync->scheduleClear();
@@ -282,12 +272,19 @@ void StorageAreaImpl::closeDatabaseIfIdle()
     }
 }
 
-void StorageAreaImpl::dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, Frame* sourceFrame)
+void StorageAreaImpl::dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, Frame& sourceFrame)
 {
+    auto* page = sourceFrame.page();
+    if (!page)
+        return;
+
+    auto isSourceStorage = [&sourceFrame](Storage& storage) {
+        return storage.frame() == &sourceFrame;
+    };
     if (isLocalStorage(m_storageType))
-        StorageEventDispatcher::dispatchLocalStorageEvents(key, oldValue, newValue, m_securityOrigin, sourceFrame);
+        StorageEventDispatcher::dispatchLocalStorageEvents(key, oldValue, newValue, page->group(), m_securityOrigin, sourceFrame.document()->url().string(), WTFMove(isSourceStorage));
     else
-        StorageEventDispatcher::dispatchSessionStorageEvents(key, oldValue, newValue, m_securityOrigin, sourceFrame);
+        StorageEventDispatcher::dispatchSessionStorageEvents(key, oldValue, newValue, *page, m_securityOrigin, sourceFrame.document()->url().string(), WTFMove(isSourceStorage));
 }
 
 void StorageAreaImpl::sessionChanged(bool isNewSessionPersistent)
@@ -297,11 +294,10 @@ void StorageAreaImpl::sessionChanged(bool isNewSessionPersistent)
     // If import is not completed, background storage thread may be modifying m_storageMap.
     blockUntilImportComplete();
 
-    unsigned quota = m_storageMap->quota();
-    m_storageMap = StorageMap::create(quota);
+    m_storageMap.clear();
 
     if (isNewSessionPersistent && !m_storageAreaSync && m_storageSyncManager) {
-        m_storageAreaSync = StorageAreaSync::create(m_storageSyncManager.get(), *this, m_securityOrigin.databaseIdentifier());
+        m_storageAreaSync = StorageAreaSync::create(m_storageSyncManager.get(), *this, m_securityOrigin->data().databaseIdentifier());
         return;
     }
 

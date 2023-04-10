@@ -31,8 +31,7 @@
 #include "config.h"
 #include "PerformanceEntry.h"
 
-#include "RuntimeEnabledFeatures.h"
-#include <wtf/Optional.h>
+#include "DeprecatedGlobalSettings.h"
 
 namespace WebCore {
 
@@ -47,25 +46,25 @@ PerformanceEntry::PerformanceEntry(const String& name, double startTime, double 
 
 PerformanceEntry::~PerformanceEntry() = default;
 
-Optional<PerformanceEntry::Type> PerformanceEntry::parseEntryTypeString(const String& entryType)
+std::optional<PerformanceEntry::Type> PerformanceEntry::parseEntryTypeString(const String& entryType)
 {
-    if (entryType == "navigation")
-        return Optional<Type>(Type::Navigation);
+    if (entryType == "navigation"_s)
+        return std::optional<Type>(Type::Navigation);
 
-    if (entryType == "mark")
-        return Optional<Type>(Type::Mark);
-    if (entryType == "measure")
-        return Optional<Type>(Type::Measure);
+    if (entryType == "mark"_s)
+        return std::optional<Type>(Type::Mark);
+    if (entryType == "measure"_s)
+        return std::optional<Type>(Type::Measure);
 
-    if (entryType == "resource")
-        return Optional<Type>(Type::Resource);
+    if (entryType == "resource"_s)
+        return std::optional<Type>(Type::Resource);
 
-    if (RuntimeEnabledFeatures::sharedFeatures().paintTimingEnabled()) {
-        if (entryType == "paint")
-            return Optional<Type>(Type::Paint);
+    if (DeprecatedGlobalSettings::paintTimingEnabled()) {
+        if (entryType == "paint"_s)
+            return std::optional<Type>(Type::Paint);
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 } // namespace WebCore

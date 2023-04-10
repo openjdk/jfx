@@ -46,9 +46,7 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScr
     , m_reachableContentsSize(stateNode.reachableContentsSize())
     , m_scrollPosition(stateNode.scrollPosition())
     , m_scrollOrigin(stateNode.scrollOrigin())
-#if ENABLE(CSS_SCROLL_SNAP)
     , m_snapOffsetsInfo(stateNode.m_snapOffsetsInfo)
-#endif
 #if PLATFORM(MAC)
     , m_verticalScrollerImp(stateNode.verticalScrollerImp())
     , m_horizontalScrollerImp(stateNode.horizontalScrollerImp())
@@ -93,12 +91,10 @@ OptionSet<ScrollingStateNode::Property> ScrollingStateScrollingNode::applicableP
 #if ENABLE(SCROLLING_THREAD)
         Property::ReasonsForSynchronousScrolling,
 #endif
-#if ENABLE(CSS_SCROLL_SNAP)
         Property::SnapOffsetsInfo,
         Property::CurrentHorizontalSnapOffsetIndex,
         Property::CurrentVerticalSnapOffsetIndex,
         Property::IsMonitoringWheelEvents,
-#endif
         Property::ScrollContainerLayer,
         Property::ScrolledContentsLayer,
         Property::HorizontalScrollbarLayer,
@@ -156,8 +152,7 @@ void ScrollingStateScrollingNode::setScrollOrigin(const IntPoint& scrollOrigin)
     setPropertyChanged(Property::ScrollOrigin);
 }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-void ScrollingStateScrollingNode::setSnapOffsetsInfo(const ScrollSnapOffsetsInfo<float>& info)
+void ScrollingStateScrollingNode::setSnapOffsetsInfo(const FloatScrollSnapOffsetsInfo& info)
 {
     if (m_snapOffsetsInfo.isEqual(info))
         return;
@@ -166,7 +161,7 @@ void ScrollingStateScrollingNode::setSnapOffsetsInfo(const ScrollSnapOffsetsInfo
     setPropertyChanged(Property::SnapOffsetsInfo);
 }
 
-void ScrollingStateScrollingNode::setCurrentHorizontalSnapPointIndex(unsigned index)
+void ScrollingStateScrollingNode::setCurrentHorizontalSnapPointIndex(std::optional<unsigned> index)
 {
     if (m_currentHorizontalSnapPointIndex == index)
         return;
@@ -175,7 +170,7 @@ void ScrollingStateScrollingNode::setCurrentHorizontalSnapPointIndex(unsigned in
     setPropertyChanged(Property::CurrentHorizontalSnapOffsetIndex);
 }
 
-void ScrollingStateScrollingNode::setCurrentVerticalSnapPointIndex(unsigned index)
+void ScrollingStateScrollingNode::setCurrentVerticalSnapPointIndex(std::optional<unsigned> index)
 {
     if (m_currentVerticalSnapPointIndex == index)
         return;
@@ -183,7 +178,6 @@ void ScrollingStateScrollingNode::setCurrentVerticalSnapPointIndex(unsigned inde
     m_currentVerticalSnapPointIndex = index;
     setPropertyChanged(Property::CurrentVerticalSnapOffsetIndex);
 }
-#endif
 
 void ScrollingStateScrollingNode::setScrollableAreaParameters(const ScrollableAreaParameters& parameters)
 {
@@ -210,6 +204,11 @@ void ScrollingStateScrollingNode::setRequestedScrollData(const RequestedScrollDa
     // Scroll position requests are imperative, not stateful, so we can't early return here.
     m_requestedScrollData = scrollData;
     setPropertyChanged(Property::RequestedScrollPosition);
+}
+
+bool ScrollingStateScrollingNode::hasScrollPositionRequest() const
+{
+    return hasChangedProperty(Property::RequestedScrollPosition) && m_requestedScrollData.requestType == ScrollRequestType::PositionUpdate;
 }
 
 void ScrollingStateScrollingNode::setIsMonitoringWheelEvents(bool isMonitoringWheelEvents)
@@ -263,7 +262,7 @@ void ScrollingStateScrollingNode::setScrollerImpsFromScrollbars(Scrollbar*, Scro
 }
 #endif
 
-void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ScrollingStateNode::dumpProperties(ts, behavior);
 
@@ -303,10 +302,12 @@ void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateT
     if (m_requestedScrollData.clamping == ScrollClamping::Unclamped)
         ts.dumpProperty("requested scroll position clamping", m_requestedScrollData.clamping);
 
+    if (m_requestedScrollData.animated == ScrollIsAnimated::Yes)
+        ts.dumpProperty("requested scroll position is animated", true);
+
     if (m_scrollOrigin != IntPoint())
         ts.dumpProperty("scroll origin", m_scrollOrigin);
 
-#if ENABLE(CSS_SCROLL_SNAP)
     if (m_snapOffsetsInfo.horizontalSnapOffsets.size())
         ts.dumpProperty("horizontal snap offsets", m_snapOffsetsInfo.horizontalSnapOffsets);
 
@@ -318,7 +319,6 @@ void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateT
 
     if (m_currentVerticalSnapPointIndex)
         ts.dumpProperty("current vertical snap point index", m_currentVerticalSnapPointIndex);
-#endif
 
     ts.dumpProperty("scrollable area parameters", m_scrollableAreaParameters);
 
@@ -330,7 +330,7 @@ void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateT
     if (m_isMonitoringWheelEvents)
         ts.dumpProperty("expects wheel event test trigger", m_isMonitoringWheelEvents);
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs) {
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs) {
         if (m_scrollContainerLayer.layerID())
             ts.dumpProperty("scroll container layer", m_scrollContainerLayer.layerID());
         if (m_scrolledContentsLayer.layerID())

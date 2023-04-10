@@ -32,6 +32,10 @@
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
+namespace WebAuthn {
+enum class Scope;
+}
+
 namespace WebCore {
 
 class Document;
@@ -54,7 +58,7 @@ public:
 private:
     CredentialsContainer(WeakPtr<Document>&&);
 
-    bool doesHaveSameOriginAsItsAncestors();
+    ScopeAndCrossOriginParent scopeAndCrossOriginParent() const;
 
     WeakPtr<Document> m_document;
 };

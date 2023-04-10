@@ -70,7 +70,7 @@
  *
  * ## Example launch line
  * |[
- * gst-launch-1.0 audiotestsrc ! audio/x-raw, channels=4 ! audioconvert mix-matrix="<<(float)1.0, (float)0.0, (float)0.0, (float)0.0>, <(float)0.0, (float)1.0, (float)0.0, (float)0.0>>" ! audio/x-raw,channels=2 ! autoaudiosink
+ * gst-launch-1.0 audiotestsrc ! audio/x-raw, channels=4 ! audioconvert mix-matrix="<<1.0, 0.0, 0.0, 0.0>, <0.0, 1.0, 0.0, 0.0>>" ! audio/x-raw,channels=2 ! autoaudiosink
  * ]|
  *
  * > If an empty mix matrix is specified, a (potentially truncated)
@@ -165,7 +165,8 @@ enum
 #define gst_audio_convert_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstAudioConvert, gst_audio_convert,
     GST_TYPE_BASE_TRANSFORM, DEBUG_INIT);
-
+GST_ELEMENT_REGISTER_DEFINE (audioconvert, "audioconvert",
+    GST_RANK_PRIMARY, GST_TYPE_AUDIO_CONVERT);
 /*** GSTREAMER PROTOTYPES *****************************************************/
 
 #define STATIC_CAPS \
@@ -849,8 +850,8 @@ gst_audio_convert_transform (GstBaseTransform * base, GstBuffer * inbuf,
     /* Create silence buffer */
     gint i;
     for (i = 0; i < dstabuf.n_planes; i++) {
-      gst_audio_format_fill_silence (this->out_info.finfo, dstabuf.planes[i],
-          GST_AUDIO_BUFFER_PLANE_SIZE (&dstabuf));
+      gst_audio_format_info_fill_silence (this->out_info.finfo,
+          dstabuf.planes[i], GST_AUDIO_BUFFER_PLANE_SIZE (&dstabuf));
     }
   }
   ret = GST_FLOW_OK;

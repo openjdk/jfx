@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -162,9 +162,9 @@ public class TableCellEditingTest {
 
     @Before
     public void setup() {
-        cell = new TableCell<String,String>();
+        cell = new TableCell<>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
-        table = new TableView<String>(model);
+        table = new TableView<>(model);
         table.setEditable(true);
         editingColumn = new TableColumn<>("TEST");
         editingColumn.setCellValueFactory(param -> null);

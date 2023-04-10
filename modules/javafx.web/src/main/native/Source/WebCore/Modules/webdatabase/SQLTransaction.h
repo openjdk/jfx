@@ -61,7 +61,7 @@ public:
     static Ref<SQLTransaction> create(Ref<Database>&&, RefPtr<SQLTransactionCallback>&&, RefPtr<VoidCallback>&& successCallback, RefPtr<SQLTransactionErrorCallback>&&, RefPtr<SQLTransactionWrapper>&&, bool readOnly);
     ~SQLTransaction();
 
-    ExceptionOr<void> executeSql(const String& sqlStatement, Optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&&, RefPtr<SQLStatementErrorCallback>&&);
+    ExceptionOr<void> executeSql(const String& sqlStatement, std::optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&&, RefPtr<SQLStatementErrorCallback>&&);
 
     void lockAcquired();
     void performNextStep();
@@ -138,8 +138,8 @@ private:
     bool m_readOnly { false };
     bool m_hasVersionMismatch { false };
 
-    Lock m_statementMutex;
-    Deque<std::unique_ptr<SQLStatement>> m_statementQueue;
+    Lock m_statementLock;
+    Deque<std::unique_ptr<SQLStatement>> m_statementQueue WTF_GUARDED_BY_LOCK(m_statementLock);
 
     std::unique_ptr<SQLStatement> m_currentStatement;
 

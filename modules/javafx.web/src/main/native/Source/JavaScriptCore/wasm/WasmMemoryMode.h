@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,9 @@ namespace JSC { namespace Wasm {
 // FIXME: We should support other modes. see: https://bugs.webkit.org/show_bug.cgi?id=162693
 enum class MemoryMode : uint8_t {
     BoundsChecking,
+#if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     Signaling
+#endif
 };
 
 static constexpr size_t NumberOfMemoryModes = 2;
@@ -48,5 +50,13 @@ enum class MemorySharingMode : uint8_t {
 JS_EXPORT_PRIVATE const char* makeString(MemorySharingMode);
 
 } } // namespace JSC::Wasm
+
+namespace WTF {
+
+class PrintStream;
+void printInternal(PrintStream&, JSC::Wasm::MemoryMode);
+void printInternal(PrintStream&, JSC::Wasm::MemorySharingMode);
+
+} // namespace WTF
 
 #endif // ENABLE(WEBASSEMBLY)

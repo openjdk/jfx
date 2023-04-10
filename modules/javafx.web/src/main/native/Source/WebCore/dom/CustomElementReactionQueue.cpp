@@ -28,17 +28,14 @@
 
 #include "CustomElementRegistry.h"
 #include "DOMWindow.h"
-#include "Document.h"
-#include "Element.h"
+#include "ElementInlines.h"
 #include "EventLoop.h"
-#include "HTMLNames.h"
 #include "JSCustomElementInterface.h"
 #include "JSDOMBinding.h"
 #include "WindowEventLoop.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/Heap.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
 
@@ -99,7 +96,7 @@ private:
     Type m_type;
     RefPtr<Document> m_oldDocument;
     RefPtr<Document> m_newDocument;
-    Optional<QualifiedName> m_attributeName;
+    std::optional<QualifiedName> m_attributeName;
     AtomString m_oldValue;
     AtomString m_newValue;
 };
@@ -172,10 +169,10 @@ void CustomElementReactionQueue::enqueueConnectedCallbackIfNeeded(Element& eleme
 
 void CustomElementReactionQueue::enqueueDisconnectedCallbackIfNeeded(Element& element)
 {
-    ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.isDefinedCustomElement());
     if (element.document().refCount() <= 0)
         return; // Don't enqueue disconnectedCallback if the entire document is getting destructed.
+    ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.reactionQueue());
     auto& queue = *element.reactionQueue();
     if (!queue.m_interface->hasDisconnectedCallback())
@@ -255,7 +252,7 @@ inline void CustomElementQueue::add(Element& element)
 inline void CustomElementQueue::invokeAll()
 {
     RELEASE_ASSERT(!m_invoking);
-    SetForScope<bool> invoking(m_invoking, true);
+    SetForScope invoking(m_invoking, true);
     unsigned originalSize = m_elements.size();
     // It's possible for more elements to be enqueued if some IDL attributes were missing CEReactions.
     // Invoke callbacks slightly later here instead of crashing / ignoring those cases.

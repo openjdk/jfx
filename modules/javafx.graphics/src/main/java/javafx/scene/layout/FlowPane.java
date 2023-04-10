@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -819,8 +819,8 @@ public class FlowPane extends Pane {
      private static class StyleableProperties {
 
          private static final CssMetaData<FlowPane,Pos> ALIGNMENT =
-             new CssMetaData<FlowPane,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT) {
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class), Pos.TOP_LEFT) {
 
             @Override
             public boolean isSettable(FlowPane node) {
@@ -835,8 +835,8 @@ public class FlowPane extends Pane {
          };
 
          private static final CssMetaData<FlowPane,HPos> COLUMN_HALIGNMENT =
-             new CssMetaData<FlowPane,HPos>("-fx-column-halignment",
-                 new EnumConverter<HPos>(HPos.class), HPos.LEFT) {
+             new CssMetaData<>("-fx-column-halignment",
+                 new EnumConverter<>(HPos.class), HPos.LEFT) {
 
             @Override
             public boolean isSettable(FlowPane node) {
@@ -851,7 +851,7 @@ public class FlowPane extends Pane {
          };
 
          private static final CssMetaData<FlowPane,Number> HGAP =
-             new CssMetaData<FlowPane,Number>("-fx-hgap",
+             new CssMetaData<>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -867,8 +867,8 @@ public class FlowPane extends Pane {
          };
 
          private static final CssMetaData<FlowPane,VPos> ROW_VALIGNMENT =
-             new CssMetaData<FlowPane,VPos>("-fx-row-valignment",
-                 new EnumConverter<VPos>(VPos.class), VPos.CENTER) {
+             new CssMetaData<>("-fx-row-valignment",
+                 new EnumConverter<>(VPos.class), VPos.CENTER) {
 
             @Override
             public boolean isSettable(FlowPane node) {
@@ -883,8 +883,8 @@ public class FlowPane extends Pane {
          };
 
          private static final CssMetaData<FlowPane,Orientation> ORIENTATION =
-             new CssMetaData<FlowPane,Orientation>("-fx-orientation",
-                 new EnumConverter<Orientation>(Orientation.class),
+             new CssMetaData<>("-fx-orientation",
+                 new EnumConverter<>(Orientation.class),
                  Orientation.HORIZONTAL) {
 
             @Override
@@ -906,7 +906,7 @@ public class FlowPane extends Pane {
          };
 
          private static final CssMetaData<FlowPane,Number> VGAP =
-             new CssMetaData<FlowPane,Number>("-fx-vgap",
+             new CssMetaData<>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -925,7 +925,7 @@ public class FlowPane extends Pane {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(COLUMN_HALIGNMENT);
             styleables.add(HGAP);

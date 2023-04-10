@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,7 @@ final class NativeMediaAudioClipPlayer
     private static final int MAX_PLAYER_COUNT = 16;
 
     private static final List<NativeMediaAudioClipPlayer> activePlayers =
-                new ArrayList<NativeMediaAudioClipPlayer>(MAX_PLAYER_COUNT);
+                new ArrayList<>(MAX_PLAYER_COUNT);
     private static final ReentrantLock playerListLock = new ReentrantLock();
 
     public static int getPlayerLimit() {
@@ -94,7 +94,7 @@ final class NativeMediaAudioClipPlayer
     }
 
     private static final LinkedBlockingQueue<SchedulerEntry> schedule =
-            new LinkedBlockingQueue<SchedulerEntry>();
+            new LinkedBlockingQueue<>();
 
     private static void clipScheduler() {
         while (true) {
@@ -362,6 +362,7 @@ final class NativeMediaAudioClipPlayer
         }
     }
 
+    @Override
     public void onReady(PlayerStateEvent evt) {
         playerStateLock.lock();
         try {
@@ -377,19 +378,24 @@ final class NativeMediaAudioClipPlayer
         }
     }
 
+    @Override
     public void onPlaying(PlayerStateEvent evt) {
     }
 
+    @Override
     public void onPause(PlayerStateEvent evt) {
     }
 
+    @Override
     public void onStop(PlayerStateEvent evt) {
         invalidate();
     }
 
+    @Override
     public void onStall(PlayerStateEvent evt) {
     }
 
+    @Override
     public void onFinish(PlayerStateEvent evt) {
         playerStateLock.lock();
         try {
@@ -410,6 +416,7 @@ final class NativeMediaAudioClipPlayer
         }
     }
 
+    @Override
     public void onHalt(PlayerStateEvent evt) {
         invalidate();
     }
@@ -417,6 +424,7 @@ final class NativeMediaAudioClipPlayer
     public void onWarning(Object source, String message) {
     }
 
+    @Override
     public void onError(Object source, int errorCode, String message) {
         if (Logger.canLog(Logger.ERROR)) {
             Logger.logMsg(Logger.ERROR, "Error with AudioClip player: code "+errorCode+" : "+message);
@@ -425,8 +433,8 @@ final class NativeMediaAudioClipPlayer
     }
 
     /*
-     * Override equals for using in a List of clips pended for pllayback.
-     * Equals is used to avoid repetitions. hashCode is not necessary here.
+     * Override equals for using in a List of clips pended for playback.
+     * Equals is used to avoid repetitions.
      */
     @Override
     public boolean equals(Object that) {
@@ -449,6 +457,19 @@ final class NativeMediaAudioClipPlayer
         } else {
             return false;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        int h = NativeMediaAudioClipPlayer.class.hashCode();
+        h = 31 * h + sourceClip.getLocator().getURI().hashCode();
+        h = 31 * h + priority;
+        h = 31 * h + loopCount;
+        h = 31 * h + Double.hashCode(volume);
+        h = 31 * h + Double.hashCode(balance);
+        h = 31 * h + Double.hashCode(rate);
+        h = 31 * h + Double.hashCode(pan);
+        return h;
     }
 
     private static class SchedulerEntry {
@@ -516,6 +537,11 @@ final class NativeMediaAudioClipPlayer
                 }
             }
             return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return player == null ? 0 : player.hashCode();
         }
     }
 }

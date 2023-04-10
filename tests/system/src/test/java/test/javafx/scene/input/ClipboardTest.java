@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,32 +24,34 @@
  */
 package test.javafx.scene.input;
 
-import com.sun.javafx.PlatformUtil;
-import javafx.application.Platform;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.DataFormat;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import test.util.Util;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeTrue;
 
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
 
 import sun.awt.datatransfer.ClipboardTransferable;
 import sun.awt.datatransfer.SunClipboard;
-
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import test.util.Util;
 
 
 public class ClipboardTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Clipboard clipboard;
 
 
@@ -68,18 +70,15 @@ public class ClipboardTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        Platform.startup(() -> {
+        Util.startup(startupLatch, () -> {
             clipboard = Clipboard.getSystemClipboard();
             startupLatch.countDown();
         });
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+    }
+
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown();
     }
 
     @Test
@@ -119,6 +118,68 @@ public class ClipboardTest {
                assertEquals(text, clipboard.getContent(DataFormat.PLAIN_TEXT)));
     }
 
+    private void testClipboard(List<List<Integer>> codePointsLists, boolean checkResults) {
+        codePointsLists.stream().forEach(codePointsList -> {
+            int[] codePoints = codePointsList.stream()
+                    .mapToInt(Integer::intValue)
+                    .toArray();
+            String text = new String(codePoints, 0, codePoints.length);
+            ClipboardContent content = new ClipboardContent();
+            content.put(DataFormat.PLAIN_TEXT, text);
+            Util.runAndWait(() -> clipboard.setContent(content));
+            if (checkResults) {
+                Util.runAndWait(() ->
+                       assertEquals(text, clipboard.getContent(DataFormat.PLAIN_TEXT)));
+            }
+        });
+    }
+
+    /*
+     * @test 8304441
+     *
+     * Test bad strings with mismatched halves of surrogate pairs.
+     */
+    @Test
+    public void testCopyBadSurrogate() {
+        List<List<Integer>> codePointsLists = List.of(
+            List.of(0xD800),             // High
+            List.of(0xDBFF),             // High
+            List.of(0xD83D),             // High
+            List.of(0xDC00),             // Low
+            List.of(0xDFFF),             // Low
+            List.of(0xD800, 0xDBFF),     // High, High
+            List.of(0xDC00, 0xDFFF),     // Low, Low
+            List.of(0xDC00, 0xD800),     // Low, High
+            List.of(0xDFFF, 0xDBFF),     // Low, High
+            List.of(0x1F600, 0xD800),    // High, Low, High
+            List.of(0xD800, 0x1F600),    // High, High, Low
+            List.of(0x41, 0xD83D, 0x5A), // 'A', High, 'Z'
+            List.of(0x41, 0xDDDD, 0x5A)  // 'A', Low, 'Z'
+        );
+
+        testClipboard(codePointsLists, false);
+    }
+
+    /*
+     * @test 8304441
+     *
+     * Test good strings with matched surrogate pairs.
+     */
+    @Test
+    public void testCopyPasteSurrogatePairs() {
+        List<List<Integer>> codePointsLists = List.of(
+            List.of(0xD800, 0xDC00),    // High, Low
+            List.of(0xDBFF, 0xDFFF),    // High, Low
+            List.of(0x1F600),
+            List.of(0x1F603),
+            List.of(0x1F976),
+            List.of(0x1F600, 0x1F603, 0x1F976),
+            List.of(0x41, 0x1F600, 0x1F603, 0x1F976, 0x5A)
+        );
+
+        testClipboard(codePointsLists, true);
+    }
+
     /*
      * @bug 8274929
      */
@@ -136,11 +197,6 @@ public class ClipboardTest {
             boolean hasString = clipboard.hasString();
             assertFalse(hasString);
         });
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.exit();
     }
 
     private static final class CustomClipboard extends SunClipboard {

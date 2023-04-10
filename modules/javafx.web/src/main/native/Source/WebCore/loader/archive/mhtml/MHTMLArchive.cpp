@@ -106,10 +106,10 @@ Ref<MHTMLArchive> MHTMLArchive::create()
     return adoptRef(*new MHTMLArchive);
 }
 
-RefPtr<MHTMLArchive> MHTMLArchive::create(const URL& url, SharedBuffer& data)
+RefPtr<MHTMLArchive> MHTMLArchive::create(const URL& url, FragmentedSharedBuffer& data)
 {
     // For security reasons we only load MHTML pages from local URLs.
-    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol().toString()))
+    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
         return nullptr;
 
     MHTMLParser parser(&data);
@@ -130,7 +130,7 @@ RefPtr<MHTMLArchive> MHTMLArchive::create(const URL& url, SharedBuffer& data)
     return mainArchive;
 }
 
-Ref<SharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
+Ref<FragmentedSharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
 {
     Vector<PageSerializer::Resource> resources;
     PageSerializer pageSerializer(resources);
@@ -162,14 +162,12 @@ Ref<SharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
     // We use utf8() below instead of ascii() as ascii() replaces CRLFs with ?? (we still only have put ASCII characters in it).
     ASSERT(stringBuilder.toString().isAllASCII());
     CString asciiString = stringBuilder.toString().utf8();
-    auto mhtmlData = SharedBuffer::create();
-    mhtmlData->append(asciiString.data(), asciiString.length());
+    SharedBufferBuilder mhtmlData;
+    mhtmlData.append(asciiString.data(), asciiString.length());
 
     for (auto& resource : resources) {
         stringBuilder.clear();
-        stringBuilder.append(endOfResourceBoundary);
-        stringBuilder.append("Content-Type: ");
-        stringBuilder.append(resource.mimeType);
+        stringBuilder.append(endOfResourceBoundary, "Content-Type: ", resource.mimeType);
 
         const char* contentEncoding = nullptr;
         if (MIMETypeRegistry::isSupportedJavaScriptMIMEType(resource.mimeType) || MIMETypeRegistry::isSupportedNonImageMIMEType(resource.mimeType))
@@ -177,43 +175,38 @@ Ref<SharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
         else
             contentEncoding = base64;
 
-        stringBuilder.append("\r\nContent-Transfer-Encoding: ");
-        stringBuilder.append(contentEncoding);
-        stringBuilder.append("\r\nContent-Location: ");
-        stringBuilder.append(resource.url.string());
-        stringBuilder.append("\r\n\r\n");
+        stringBuilder.append("\r\nContent-Transfer-Encoding: ", contentEncoding, "\r\nContent-Location: ", resource.url.string(), "\r\n\r\n");
 
         asciiString = stringBuilder.toString().utf8();
-        mhtmlData->append(asciiString.data(), asciiString.length());
+        mhtmlData.append(asciiString.data(), asciiString.length());
 
         // FIXME: ideally we would encode the content as a stream without having to fetch it all.
-        const char* data = resource.data->data();
+        auto* data = resource.data->data();
         size_t dataLength = resource.data->size();
-        Vector<char> encodedData;
         if (!strcmp(contentEncoding, quotedPrintable)) {
-            quotedPrintableEncode(data, dataLength, encodedData);
-            mhtmlData->append(encodedData.data(), encodedData.size());
-            mhtmlData->append("\r\n", 2);
+            auto encodedData = quotedPrintableEncode(data, dataLength);
+            mhtmlData.append(encodedData.data(), encodedData.size());
+            mhtmlData.append("\r\n", 2);
         } else {
             ASSERT(!strcmp(contentEncoding, base64));
             // We are not specifying insertLFs = true below as it would cut the lines with LFs and MHTML requires CRLFs.
-            base64Encode(data, dataLength, encodedData);
+            auto encodedData = base64EncodeToVector(data, dataLength);
             const size_t maximumLineLength = 76;
             size_t index = 0;
             size_t encodedDataLength = encodedData.size();
             do {
                 size_t lineLength = std::min(encodedDataLength - index, maximumLineLength);
-                mhtmlData->append(encodedData.data() + index, lineLength);
-                mhtmlData->append("\r\n", 2);
+                mhtmlData.append(encodedData.data() + index, lineLength);
+                mhtmlData.append("\r\n", 2);
                 index += maximumLineLength;
             } while (index < encodedDataLength);
         }
     }
 
     asciiString = makeString("--", boundary, "--\r\n").utf8();
-    mhtmlData->append(asciiString.data(), asciiString.length());
+    mhtmlData.append(asciiString.data(), asciiString.length());
 
-    return mhtmlData;
+    return mhtmlData.take();
 }
 
 }

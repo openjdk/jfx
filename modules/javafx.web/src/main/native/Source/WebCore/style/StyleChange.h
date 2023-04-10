@@ -31,10 +31,12 @@ class RenderStyle;
 
 namespace Style {
 
-enum class Change {
+enum class Change : uint8_t {
     None,
     NonInherited,
+    FastPathInherited,
     Inherited,
+    Descendants,
     Renderer
 };
 

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ElementRuleCollector.h"
+#include "MatchResult.h"
 #include "RenderStyle.h"
 #include "Timer.h"
 
@@ -46,12 +46,14 @@ public:
         MatchResult matchResult;
         std::unique_ptr<const RenderStyle> renderStyle;
         std::unique_ptr<const RenderStyle> parentRenderStyle;
+        std::unique_ptr<const RenderStyle> userAgentAppearanceStyle;
 
         bool isUsableAfterHighPriorityProperties(const RenderStyle&) const;
     };
 
     const Entry* find(unsigned hash, const MatchResult&);
-    void add(const RenderStyle&, const RenderStyle& parentStyle, unsigned hash, const MatchResult&);
+    void add(const RenderStyle&, const RenderStyle& parentStyle, const RenderStyle* userAgentAppearanceStyle, unsigned hash, const MatchResult&);
+    void remove(unsigned hash);
 
     // Every N additions to the matched declaration cache trigger a sweep where entries holding
     // the last reference to a style declaration are garbage collected.
@@ -61,7 +63,7 @@ public:
 private:
     void sweep();
 
-    HashMap<unsigned, Entry> m_entries;
+    HashMap<unsigned, Entry, AlreadyHashed> m_entries;
     Timer m_sweepTimer;
     unsigned m_additionsSinceLastSweep { 0 };
 };

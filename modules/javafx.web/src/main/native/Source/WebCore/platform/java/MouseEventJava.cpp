@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,21 @@ MouseButton getWebCoreMouseButton(jint javaButton)
     } else {
         return NoButton;
     }
+}
+
+unsigned short getWebCoreMouseButtons(jint javaButton)
+{
+    unsigned short buttons = NoButtonMask;
+    if (javaButton & com_sun_webkit_event_WCMouseEvent_BUTTON1) {
+        buttons |= LeftButtonMask;
+    }
+    if (javaButton & com_sun_webkit_event_WCMouseEvent_BUTTON2) {
+        buttons |= MiddleButtonMask;
+    }
+    if (javaButton & com_sun_webkit_event_WCMouseEvent_BUTTON3) {
+        buttons |= RightButtonMask;
+    }
+    return buttons;
 }
 
 PlatformEvent::Type getWebCoreMouseEventType(jint eventID)

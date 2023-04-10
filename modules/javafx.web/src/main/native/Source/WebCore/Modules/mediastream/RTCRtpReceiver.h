@@ -33,6 +33,7 @@
 #if ENABLE(WEB_RTC)
 
 #include "MediaStreamTrack.h"
+#include "RTCDtlsTransport.h"
 #include "RTCRtpReceiverBackend.h"
 #include "RTCRtpSynchronizationSource.h"
 #include "RTCRtpTransform.h"
@@ -44,16 +45,21 @@ class DeferredPromise;
 class PeerConnectionBackend;
 struct RTCRtpCapabilities;
 
-class RTCRtpReceiver final : public RefCounted<RTCRtpReceiver>, public ScriptWrappable  {
+class RTCRtpReceiver final : public RefCounted<RTCRtpReceiver>
+    , public ScriptWrappable
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+    {
     WTF_MAKE_ISO_ALLOCATED(RTCRtpReceiver);
 public:
     static Ref<RTCRtpReceiver> create(PeerConnectionBackend& connection, Ref<MediaStreamTrack>&& track, std::unique_ptr<RTCRtpReceiverBackend>&& backend)
     {
         return adoptRef(*new RTCRtpReceiver(connection, WTFMove(track), WTFMove(backend)));
     }
-    ~RTCRtpReceiver();
+    virtual ~RTCRtpReceiver();
 
-    static Optional<RTCRtpCapabilities> getCapabilities(ScriptExecutionContext&, const String& kind);
+    static std::optional<RTCRtpCapabilities> getCapabilities(ScriptExecutionContext&, const String& kind);
 
     void stop();
 
@@ -64,19 +70,34 @@ public:
 
     MediaStreamTrack& track() { return m_track.get(); }
 
+    RTCDtlsTransport* transport() { return m_transport.get(); }
+    void setTransport(RefPtr<RTCDtlsTransport>&& transport) { m_transport = WTFMove(transport); }
+
     RTCRtpReceiverBackend* backend() { return m_backend.get(); }
     void getStats(Ref<DeferredPromise>&&);
 
-    Optional<RTCRtpTransform::Internal> transform();
-    ExceptionOr<void> setTransform(Optional<RTCRtpTransform>&&);
+    std::optional<RTCRtpTransform::Internal> transform();
+    ExceptionOr<void> setTransform(std::unique_ptr<RTCRtpTransform>&&);
 
 private:
     RTCRtpReceiver(PeerConnectionBackend&, Ref<MediaStreamTrack>&&, std::unique_ptr<RTCRtpReceiverBackend>&&);
 
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    const char* logClassName() const final { return "RTCRtpReceiver"; }
+    WTFLogChannel& logChannel() const final;
+#endif
+
     Ref<MediaStreamTrack> m_track;
+    RefPtr<RTCDtlsTransport> m_transport;
     std::unique_ptr<RTCRtpReceiverBackend> m_backend;
     WeakPtr<PeerConnectionBackend> m_connection;
-    Optional<RTCRtpTransform> m_transform;
+    std::unique_ptr<RTCRtpTransform> m_transform;
+#if !RELEASE_LOG_DISABLED
+    Ref<const Logger> m_logger;
+    const void* m_logIdentifier { nullptr };
+#endif
 };
 
 } // namespace WebCore

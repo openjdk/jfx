@@ -24,8 +24,7 @@
  */
 
 [
-    EnabledAtRuntime=HighlightAPI,
-    ImplementationLacksVTable,
+    EnabledByDeprecatedGlobalSetting=HighlightAPIEnabled,
     Exposed=Window
 ] interface Highlight {
     constructor(StaticRange range);

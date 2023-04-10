@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,33 +89,36 @@ public class ScreenAndWindowTest extends TestBase {
      * Checks that no exceptions, crashes etc occur when accessing
      * screen.* and window.* properties from inside a WebEngine.
      */
-    @Test public void test() throws InterruptedException {
-        submit(new Runnable() { public void run() {
-            Node view = getView();
+    @Test public void test() {
+        submit(new Runnable() {
+            @Override
+            public void run() {
+                Node view = getView();
 
-            // test WebView not added to a Scene
-            checkWindowProperties(-1, -1);
+                // test WebView not added to a Scene
+                checkWindowProperties(-1, -1);
 
-            // add WebView to a Scene with no Window
-            Scene scene = new Scene(new Group(view));
-            checkWindowProperties(-1, -1);
+                // add WebView to a Scene with no Window
+                Scene scene = new Scene(new Group(view));
+                checkWindowProperties(-1, -1);
 
-            // add Scene to a 0x0 Window
-            Stage stage = new Stage();
-            stage.setScene(scene);
-            stage.setWidth(0);
-            stage.setHeight(0);
+                // add Scene to a 0x0 Window
+                Stage stage = new Stage();
+                stage.setScene(scene);
+                stage.setWidth(0);
+                stage.setHeight(0);
 
-            Screen screen = Utils.getScreen(view);
-            Rectangle2D screenSize = screen.getBounds();
-            Rectangle2D availSize = screen.getVisualBounds();
+                Screen screen = Utils.getScreen(view);
+                Rectangle2D screenSize = screen.getBounds();
+                Rectangle2D availSize = screen.getVisualBounds();
 
-            checkProperties(screenSize, availSize, 0, 0);
+                checkProperties(screenSize, availSize, 0, 0);
 
-            // resize the Window
-            stage.setWidth(400);
-            stage.setHeight(300);
-            checkProperties(screenSize, availSize, 400, 300);
-        }});
+                // resize the Window
+                stage.setWidth(400);
+                stage.setHeight(300);
+                checkProperties(screenSize, availSize, 400, 300);
+            }
+        });
     }
 }

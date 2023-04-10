@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "CommonSlowPaths.h"
+#include "JIT.h"
 #include "MacroAssemblerCodeRef.h"
+#include "SlowPathFunction.h"
 
 #if ENABLE(JIT)
 
@@ -34,52 +35,19 @@ namespace JSC {
 
 class JITSlowPathCall {
 public:
-    JITSlowPathCall(JIT* jit, const Instruction* pc, SlowPathFunction slowPathFunction)
+    JITSlowPathCall(JIT* jit, SlowPathFunction slowPathFunction)
         : m_jit(jit)
         , m_slowPathFunction(slowPathFunction)
-        , m_pc(pc)
     {
         assertIsCFunctionPtr(slowPathFunction);
     }
 
-    JIT::Call call()
-    {
-#if ENABLE(OPCODE_SAMPLING)
-        if (m_jit->m_bytecodeOffset != std::numeric_limits<unsigned>::max())
-            m_jit->sampleInstruction(&m_jit->m_codeBlock->instructions()[m_jit->m_bytecodeOffset], true);
-#endif
-        m_jit->updateTopCallFrame();
-#if CPU(X86_64) && OS(WINDOWS)
-        m_jit->addPtr(MacroAssembler::TrustedImm32(-16), MacroAssembler::stackPointerRegister);
-        m_jit->move(MacroAssembler::stackPointerRegister, JIT::argumentGPR0);
-        m_jit->move(JIT::callFrameRegister, JIT::argumentGPR1);
-        m_jit->move(JIT::TrustedImmPtr(m_pc), JIT::argumentGPR2);
-#else
-        m_jit->move(JIT::callFrameRegister, JIT::argumentGPR0);
-        m_jit->move(JIT::TrustedImmPtr(m_pc), JIT::argumentGPR1);
-#endif
-        JIT::Call call = m_jit->appendCall(m_slowPathFunction);
-
-#if CPU(X86_64) && OS(WINDOWS)
-        m_jit->pop(JIT::regT0); // vPC
-        m_jit->pop(JIT::regT1); // callFrame register
-        static_assert(JIT::regT0 == GPRInfo::returnValueGPR);
-        static_assert(JIT::regT1 == GPRInfo::returnValueGPR2);
-#endif
-
-#if ENABLE(OPCODE_SAMPLING)
-        if (m_jit->m_bytecodeOffset != std::numeric_limits<unsigned>::max())
-            m_jit->sampleInstruction(&m_jit->m_codeBlock->instructions()[m_jit->m_bytecodeOffset], false);
-#endif
-
-        m_jit->exceptionCheck();
-        return call;
-    }
+    void call();
+    static MacroAssemblerCodeRef<JITThunkPtrTag> generateThunk(VM&, SlowPathFunction);
 
 private:
     JIT* m_jit;
     SlowPathFunction m_slowPathFunction;
-    const Instruction* m_pc;
 };
 
 } // namespace JS

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
 /**
- * Test for https://bugs.openjdk.java.net/browse/JDK-8233040 - F4
+ * Test for https://bugs.openjdk.org/browse/JDK-8233040 - F4
  * must not be consumed by EventFilter in ComboBoxPopupControl.
  * <p>
  * Parameterized in concrete sub of ComboBoxBase and editable.
@@ -66,7 +66,6 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 @RunWith(Parameterized.class)
 public class ComboSpecialKeyTest {
 
-    private Toolkit tk;
     private Scene scene;
     private Stage stage;
     private Pane root;
@@ -159,9 +158,9 @@ public class ComboSpecialKeyTest {
     @Before
     public void setup() {
         ComboBoxPopupControl c;
-        // This step is not needed (Just to make sure StubToolkit is
-        // loaded into VM)
-        tk = (StubToolkit) Toolkit.getToolkit();
+
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         root = new VBox();
         scene = new Scene(root);
         stage = new Stage();

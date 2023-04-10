@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.web;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,14 +32,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
@@ -56,11 +51,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import javafx.scene.web.WebEngineShim;
-import com.sun.webkit.WebPage;
-import com.sun.webkit.WebPageShim;
-import com.sun.webkit.graphics.WCGraphicsContext;
 
 public class MiscellaneousTest extends TestBase {
 
@@ -100,7 +90,7 @@ public class MiscellaneousTest extends TestBase {
                 this.location = location;
             }
         }
-        final ArrayList<Record> records = new ArrayList<Record>();
+        final ArrayList<Record> records = new ArrayList<>();
         ChangeListener<State> listener = (ov, oldValue, newValue) -> {
             if (newValue == State.SUCCEEDED) {
                 records.add(new Record(
@@ -273,7 +263,7 @@ public class MiscellaneousTest extends TestBase {
             assertNotNull(ttfFileContent);
             while (offset < length) {
                 final int available = ttfFileStream.available();
-                ttfFileStream.read(ttfFileContent, (int)offset, available);
+                ttfFileStream.read(ttfFileContent, offset, available);
                 offset += available;
             }
             assertEquals("Offset must equal to file length", length, offset);

@@ -31,18 +31,28 @@
 
 namespace WebCore {
 
-DisplayRefreshMonitorClient::DisplayRefreshMonitorClient()
-{
-}
+DisplayRefreshMonitorClient::DisplayRefreshMonitorClient() = default;
 
 DisplayRefreshMonitorClient::~DisplayRefreshMonitorClient()
 {
     DisplayRefreshMonitorManager::sharedManager().unregisterClient(*this);
 }
 
-void DisplayRefreshMonitorClient::fireDisplayRefreshIfNeeded()
+void DisplayRefreshMonitorClient::setPreferredFramesPerSecond(FramesPerSecond preferredFrameRate)
+{
+    if (preferredFrameRate == m_preferredFramesPerSecond)
+        return;
+
+    m_preferredFramesPerSecond = preferredFrameRate;
+    DisplayRefreshMonitorManager::sharedManager().clientPreferredFramesPerSecondChanged(*this);
+}
+
+void DisplayRefreshMonitorClient::fireDisplayRefreshIfNeeded(const DisplayUpdate& displayUpdate)
 {
     if (!m_scheduled)
+        return;
+
+    if (!displayUpdate.relevantForUpdateFrequency(m_preferredFramesPerSecond))
         return;
 
     m_scheduled = false;

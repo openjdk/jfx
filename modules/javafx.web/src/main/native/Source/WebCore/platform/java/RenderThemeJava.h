@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,29 +73,17 @@ protected:
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     bool supportsFocusRing(const RenderStyle&) const override;
 
-    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
-    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
+    Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformActiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const override;
+    Color platformInactiveSelectionForegroundColor(OptionSet<StyleColorOptions>) const override;
 
 #if ENABLE(VIDEO)
-    String mediaControlsScript() override;
+    virtual Vector<String, 2> mediaControlsScripts() override;
     String extraMediaControlsStyleSheet() override;
 
-    String formatMediaControlsCurrentTime(float currentTime, float duration) const override;
-    String formatMediaControlsRemainingTime(float currentTime, float duration) const override;
-
-    bool paintMediaPlayButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaMuteButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
     bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
     bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderContainer(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaControlsBackground(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaCurrentTime(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaTimeRemaining(const RenderObject&, const PaintInfo&, const IntRect&) override;
-
 #endif
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;
@@ -122,8 +110,6 @@ protected:
 
 
 private:
-    virtual void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
-
     int createWidgetState(const RenderObject& o);
     bool paintWidget(int widgetIndex, const RenderObject& o,
                      const PaintInfo& i, const IntRect& rect);

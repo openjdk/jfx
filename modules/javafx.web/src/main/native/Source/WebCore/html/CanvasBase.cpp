@@ -30,7 +30,10 @@
 #include "CanvasRenderingContext.h"
 #include "Element.h"
 #include "FloatRect.h"
+#include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <atomic>
@@ -56,7 +59,7 @@ CanvasBase::CanvasBase(IntSize size)
 CanvasBase::~CanvasBase()
 {
     ASSERT(m_didNotifyObserversCanvasDestroyed);
-    ASSERT(m_observers.isEmpty());
+    ASSERT(m_observers.computesEmpty());
     ASSERT(!m_imageBuffer);
 }
 
@@ -101,7 +104,7 @@ size_t CanvasBase::memoryCost() const
     // memoryCost() may be invoked concurrently from a GC thread, and we need to be careful
     // about what data we access here and how. We need to hold a lock to prevent m_imageBuffer
     // from being changed while we access it.
-    auto locker = holdLock(m_imageBufferAssignmentLock);
+    Locker locker { m_imageBufferAssignmentLock };
     if (!m_imageBuffer)
         return 0;
     return m_imageBuffer->memoryCost();
@@ -112,7 +115,7 @@ size_t CanvasBase::externalMemoryCost() const
     // externalMemoryCost() may be invoked concurrently from a GC thread, and we need to be careful
     // about what data we access here and how. We need to hold a lock to prevent m_imageBuffer
     // from being changed while we access it.
-    auto locker = holdLock(m_imageBufferAssignmentLock);
+    Locker locker { m_imageBufferAssignmentLock };
     if (!m_imageBuffer)
         return 0;
     return m_imageBuffer->externalMemoryCost();
@@ -120,7 +123,7 @@ size_t CanvasBase::externalMemoryCost() const
 
 void CanvasBase::addObserver(CanvasObserver& observer)
 {
-    m_observers.add(&observer);
+    m_observers.add(observer);
 
     if (is<CSSCanvasValue::CanvasObserverProxy>(observer))
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
@@ -128,36 +131,50 @@ void CanvasBase::addObserver(CanvasObserver& observer)
 
 void CanvasBase::removeObserver(CanvasObserver& observer)
 {
-    m_observers.remove(&observer);
+    m_observers.remove(observer);
 
     if (is<CSSCanvasValue::CanvasObserverProxy>(observer))
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
 }
 
-void CanvasBase::notifyObserversCanvasChanged(const FloatRect& rect)
+void CanvasBase::notifyObserversCanvasChanged(const std::optional<FloatRect>& rect)
 {
     for (auto& observer : m_observers)
-        observer->canvasChanged(*this, rect);
+        observer.canvasChanged(*this, rect);
 }
 
 void CanvasBase::notifyObserversCanvasResized()
 {
     for (auto& observer : m_observers)
-        observer->canvasResized(*this);
+        observer.canvasResized(*this);
 }
 
 void CanvasBase::notifyObserversCanvasDestroyed()
 {
     ASSERT(!m_didNotifyObserversCanvasDestroyed);
 
-    for (auto& observer : copyToVector(m_observers))
-        observer->canvasDestroyed(*this);
-
-    m_observers.clear();
+    for (auto& observer : std::exchange(m_observers, WeakHashSet<CanvasObserver>()))
+        observer.canvasDestroyed(*this);
 
 #if ASSERT_ENABLED
     m_didNotifyObserversCanvasDestroyed = true;
 #endif
+}
+
+void CanvasBase::addDisplayBufferObserver(CanvasDisplayBufferObserver& observer)
+{
+    m_displayBufferObservers.add(observer);
+}
+
+void CanvasBase::removeDisplayBufferObserver(CanvasDisplayBufferObserver& observer)
+{
+    m_displayBufferObservers.remove(observer);
+}
+
+void CanvasBase::notifyObserversCanvasDisplayBufferPrepared()
+{
+    for (auto& observer : m_displayBufferObservers)
+        observer.canvasDisplayBufferPrepared(*this);
 }
 
 HashSet<Element*> CanvasBase::cssCanvasClients() const
@@ -167,7 +184,7 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
         if (!is<CSSCanvasValue::CanvasObserverProxy>(observer))
             continue;
 
-        auto clients = downcast<CSSCanvasValue::CanvasObserverProxy>(observer)->ownerValue().clients();
+        auto clients = downcast<CSSCanvasValue::CanvasObserverProxy>(observer).ownerValue().clients();
         for (auto& entry : clients) {
             if (RefPtr<Element> element = entry.key->element())
                 cssCanvasClients.add(element.get());
@@ -176,23 +193,23 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
     return cssCanvasClients;
 }
 
-bool CanvasBase::callTracingActive() const
+bool CanvasBase::hasActiveInspectorCanvasCallTracer() const
 {
     auto* context = renderingContext();
-    return context && context->callTracingActive();
+    return context && context->hasActiveInspectorCanvasCallTracer();
 }
 
 RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) const
 {
     RefPtr<ImageBuffer> returnBuffer;
     {
-        auto locker = holdLock(m_imageBufferAssignmentLock);
+        Locker locker { m_imageBufferAssignmentLock };
         m_contextStateSaver = nullptr;
         returnBuffer = std::exchange(m_imageBuffer, WTFMove(buffer));
     }
 
-    if (m_imageBuffer && m_size != m_imageBuffer->logicalSize())
-        m_size = m_imageBuffer->logicalSize();
+    if (m_imageBuffer && m_size != m_imageBuffer->truncatedLogicalSize())
+        m_size = m_imageBuffer->truncatedLogicalSize();
 
     size_t previousMemoryCost = m_imageBufferCost;
     m_imageBufferCost = memoryCost();
@@ -229,4 +246,9 @@ void CanvasBase::resetGraphicsContextState() const
     }
 }
 
+WebCoreOpaqueRoot root(CanvasBase* canvas)
+{
+    return WebCoreOpaqueRoot { canvas };
 }
+
+} // namespace WebCore

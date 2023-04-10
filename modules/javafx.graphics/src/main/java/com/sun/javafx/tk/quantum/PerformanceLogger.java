@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2002, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,6 +89,7 @@ public class PerformanceLogger {
         String perfLoggingProp =
             java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
+                        @Override
                         public String run() {
                             return System.getProperty("sun.perflog");
                         }
@@ -101,6 +102,7 @@ public class PerformanceLogger {
             String perfNanoProp =
                 java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
+                        @Override
                         public String run() {
                             return System.getProperty("sun.perflog.nano");
                         }
@@ -118,6 +120,7 @@ public class PerformanceLogger {
                     @SuppressWarnings("removal")
                     var dummy = java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<Void>() {
+                        @Override
                         public Void run() {
                             try {
                                 File logFile = new File(logFileName);
@@ -137,7 +140,7 @@ public class PerformanceLogger {
                 logWriter = new OutputStreamWriter(System.out);
             }
         }
-        times = new Vector<TimeData>(10);
+        times = new Vector<>(10);
         // Reserve predefined slots
         for (int i = 0; i <= LAST_RESERVED; ++i) {
             times.add(new TimeData("Time " + i + " not set", 0));

@@ -52,14 +52,12 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFragmentContainer);
 RenderFragmentContainer::RenderFragmentContainer(Element& element, RenderStyle&& style, RenderFragmentedFlow* fragmentedFlow)
     : RenderBlockFlow(element, WTFMove(style))
     , m_fragmentedFlow(fragmentedFlow)
-    , m_isValid(false)
 {
 }
 
 RenderFragmentContainer::RenderFragmentContainer(Document& document, RenderStyle&& style, RenderFragmentedFlow* fragmentedFlow)
     : RenderBlockFlow(document, WTFMove(style))
     , m_fragmentedFlow(fragmentedFlow)
-    , m_isValid(false)
 {
 }
 
@@ -159,14 +157,14 @@ LayoutRect RenderFragmentContainer::overflowRectForFragmentedFlowPortion(const L
     if (m_fragmentedFlow->isHorizontalWritingMode()) {
         LayoutUnit minY = isFirstPortion ? fragmentedFlowOverflow.y() : fragmentedFlowPortionRect.y();
         LayoutUnit maxY = isLastPortion ? std::max(fragmentedFlowPortionRect.maxY(), fragmentedFlowOverflow.maxY()) : fragmentedFlowPortionRect.maxY();
-        bool clipX = style().overflowX() != Overflow::Visible;
+        bool clipX = effectiveOverflowX() != Overflow::Visible;
         LayoutUnit minX = clipX ? fragmentedFlowPortionRect.x() : std::min(fragmentedFlowPortionRect.x(), fragmentedFlowOverflow.x());
         LayoutUnit maxX = clipX ? fragmentedFlowPortionRect.maxX() : std::max(fragmentedFlowPortionRect.maxX(), fragmentedFlowOverflow.maxX());
         clipRect = LayoutRect(minX, minY, maxX - minX, maxY - minY);
     } else {
         LayoutUnit minX = isFirstPortion ? fragmentedFlowOverflow.x() : fragmentedFlowPortionRect.x();
         LayoutUnit maxX = isLastPortion ? std::max(fragmentedFlowPortionRect.maxX(), fragmentedFlowOverflow.maxX()) : fragmentedFlowPortionRect.maxX();
-        bool clipY = style().overflowY() != Overflow::Visible;
+        bool clipY = effectiveOverflowY() != Overflow::Visible;
         LayoutUnit minY = clipY ? fragmentedFlowPortionRect.y() : std::min(fragmentedFlowPortionRect.y(), fragmentedFlowOverflow.y());
         LayoutUnit maxY = clipY ? fragmentedFlowPortionRect.maxY() : std::max(fragmentedFlowPortionRect.y(), fragmentedFlowOverflow.maxY());
         clipRect = LayoutRect(minX, minY, maxX - minX, maxY - minY);
@@ -195,7 +193,7 @@ bool RenderFragmentContainer::isLastFragment() const
 
 bool RenderFragmentContainer::shouldClipFragmentedFlowContent() const
 {
-    return hasOverflowClip();
+    return hasNonVisibleOverflow();
 }
 
 void RenderFragmentContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -258,6 +256,44 @@ void RenderFragmentContainer::repaintFragmentedFlowContentRectangle(const Layout
 
     // Issue the repaint.
     repaintRectangle(clippedRect);
+}
+
+LayoutRect RenderFragmentContainer::fragmentedFlowContentRectangle(const LayoutRect& rect, const LayoutRect& fragmentedFlowPortionRect, const LayoutPoint& fragmentLocation, const LayoutRect* fragmentedFlowPortionClipRect)
+{
+    auto clippedRect = rect;
+
+    if (fragmentedFlowPortionClipRect) {
+        LayoutRect flippedFragmentedFlowPortionClipRect(*fragmentedFlowPortionClipRect);
+        fragmentedFlow()->flipForWritingMode(flippedFragmentedFlowPortionClipRect);
+        clippedRect.edgeInclusiveIntersect(flippedFragmentedFlowPortionClipRect); // edgeInclusiveIntersect to avoid rects with zero height or width becoming zero-sized.
+    }
+
+    LayoutRect flippedFragmentedFlowPortionRect(fragmentedFlowPortionRect);
+    fragmentedFlow()->flipForWritingMode(flippedFragmentedFlowPortionRect);
+
+    // Put the fragment rect into the fragment's physical coordinate space.
+    clippedRect.setLocation(fragmentLocation + (clippedRect.location() - flippedFragmentedFlowPortionRect.location()));
+
+    // Now switch to the fragment's writing mode coordinate space and let it repaint itself.
+    flipForWritingMode(clippedRect);
+
+    return clippedRect;
+}
+
+Vector<LayoutRect> RenderFragmentContainer::fragmentRectsForFlowContentRect(const LayoutRect& contentRect)
+{
+    auto portionRect = fragmentedFlowPortionRect();
+    auto fragmentLocation = contentBoxRect().location();
+
+    auto fragmentRect = contentRect;
+
+    auto flippedFragmentedFlowPortionRect = portionRect;
+    fragmentedFlow()->flipForWritingMode(flippedFragmentedFlowPortionRect);
+    fragmentRect.setLocation(fragmentLocation + (fragmentRect.location() - flippedFragmentedFlowPortionRect.location()));
+
+    flipForWritingMode(fragmentRect);
+
+    return { fragmentRect };
 }
 
 void RenderFragmentContainer::installFragmentedFlow()
@@ -334,16 +370,16 @@ LayoutUnit RenderFragmentContainer::logicalBottomOfFragmentedFlowContentRect(con
     return fragmentedFlow()->isHorizontalWritingMode() ? rect.maxY() : rect.maxX();
 }
 
-void RenderFragmentContainer::insertedIntoTree()
+void RenderFragmentContainer::insertedIntoTree(IsInternalMove isInternalMove)
 {
     attachFragment();
     if (isValid())
-        RenderBlockFlow::insertedIntoTree();
+        RenderBlockFlow::insertedIntoTree(isInternalMove);
 }
 
-void RenderFragmentContainer::willBeRemovedFromTree()
+void RenderFragmentContainer::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    RenderBlockFlow::willBeRemovedFromTree();
+    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
 
     detachFragment();
 }
@@ -383,6 +419,7 @@ void RenderFragmentContainer::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
+// FIXME: Unused.
 void RenderFragmentContainer::adjustFragmentBoundsFromFragmentedFlowPortionRect(LayoutRect& fragmentBounds) const
 {
     LayoutRect flippedFragmentedFlowPortionRect = fragmentedFlowPortionRect();
@@ -512,7 +549,7 @@ LayoutRect RenderFragmentContainer::layoutOverflowRectForBoxForPropagation(const
     // Only propagate interior layout overflow if we don't clip it.
     LayoutRect rect = box->borderBoxRectInFragment(this);
     rect = rectFlowPortionForBox(box, rect);
-    if (!box->hasOverflowClip())
+    if (!box->hasNonVisibleOverflow())
         rect.unite(layoutOverflowRectForBox(box));
 
     bool hasTransform = box->hasTransform();

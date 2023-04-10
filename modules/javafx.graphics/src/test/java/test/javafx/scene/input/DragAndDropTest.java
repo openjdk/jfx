@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,19 +62,12 @@ import javafx.geometry.Point3D;
 import javafx.scene.SubScene;
 import javafx.scene.image.Image;
 import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.DataFormat;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.DragboardShim;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
-import javafx.scene.input.PickResult;
-import javafx.scene.input.TransferMode;
 import javafx.scene.input.TransferMode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1544,7 +1537,7 @@ public class DragAndDropTest {
             event -> event.setDragDetect(true);
 
     private final EventHandler<MouseEvent> detector =
-            new EventHandler<MouseEvent>() {
+            new EventHandler<>() {
         @Override public void handle(MouseEvent event) {
             detected = true;
         }
@@ -1639,7 +1632,7 @@ public class DragAndDropTest {
 
         @Override
         public Set<DataFormat> getContentTypes() {
-            Set<DataFormat> types = new HashSet<DataFormat>();
+            Set<DataFormat> types = new HashSet<>();
             for (Pair<DataFormat, Object> pair : content) {
                 types.add(pair.getKey());
             }
@@ -1662,7 +1655,7 @@ public class DragAndDropTest {
 
         @Override
         public boolean putContent(Pair<DataFormat, Object>... pairs) {
-            content = new ArrayList<Pair<DataFormat, Object>>();
+            content = new ArrayList<>();
             content.addAll(Arrays.asList(pairs));
             return true;
         }

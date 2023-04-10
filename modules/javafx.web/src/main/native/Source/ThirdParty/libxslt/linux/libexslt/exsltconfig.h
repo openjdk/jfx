@@ -18,7 +18,7 @@ extern "C" {
  *
  * the version string like "1.2.3"
  */
-#define LIBEXSLT_DOTTED_VERSION "1.1.34"
+#define LIBEXSLT_DOTTED_VERSION "0.8.20"
 
 /**
  * LIBEXSLT_VERSION:
@@ -46,7 +46,7 @@ extern "C" {
  *
  * Whether crypto support is configured into exslt
  */
-#if 1
+#if 0
 #define EXSLT_CRYPTO_ENABLED
 #endif
 

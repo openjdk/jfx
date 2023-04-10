@@ -54,38 +54,26 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-#ifdef GSTREAMER_LITE
-  return (gst_element_register (plugin, "audiopanorama", GST_RANK_NONE,
-          GST_TYPE_AUDIO_PANORAMA));
-#else // GSTREAMER_LITE
-  return (gst_element_register (plugin, "audiopanorama", GST_RANK_NONE,
-          GST_TYPE_AUDIO_PANORAMA) &&
-      gst_element_register (plugin, "audioinvert", GST_RANK_NONE,
-          GST_TYPE_AUDIO_INVERT) &&
-      gst_element_register (plugin, "audiokaraoke", GST_RANK_NONE,
-          GST_TYPE_AUDIO_KARAOKE) &&
-      gst_element_register (plugin, "audioamplify", GST_RANK_NONE,
-          GST_TYPE_AUDIO_AMPLIFY) &&
-      gst_element_register (plugin, "audiodynamic", GST_RANK_NONE,
-          GST_TYPE_AUDIO_DYNAMIC) &&
-      gst_element_register (plugin, "audiocheblimit", GST_RANK_NONE,
-          GST_TYPE_AUDIO_CHEB_LIMIT) &&
-      gst_element_register (plugin, "audiochebband", GST_RANK_NONE,
-          GST_TYPE_AUDIO_CHEB_BAND) &&
-      gst_element_register (plugin, "audioiirfilter", GST_RANK_NONE,
-          GST_TYPE_AUDIO_IIR_FILTER) &&
-      gst_element_register (plugin, "audiowsinclimit", GST_RANK_NONE,
-          GST_TYPE_AUDIO_WSINC_LIMIT) &&
-      gst_element_register (plugin, "audiowsincband", GST_RANK_NONE,
-          GST_TYPE_AUDIO_WSINC_BAND) &&
-      gst_element_register (plugin, "audiofirfilter", GST_RANK_NONE,
-          GST_TYPE_AUDIO_FIR_FILTER) &&
-      gst_element_register (plugin, "audioecho", GST_RANK_NONE,
-          GST_TYPE_AUDIO_ECHO) &&
-      gst_element_register (plugin, "scaletempo", GST_RANK_NONE,
-          GST_TYPE_SCALETEMPO) &&
-      gst_element_register (plugin, "stereo", GST_RANK_NONE, GST_TYPE_STEREO));
+  gboolean ret = FALSE;
+
+  ret |= GST_ELEMENT_REGISTER (audiopanorama, plugin);
+#ifndef GSTREAMER_LITE
+  ret |= GST_ELEMENT_REGISTER (audioinvert, plugin);
+  ret |= GST_ELEMENT_REGISTER (audiokaraoke, plugin);
+  ret |= GST_ELEMENT_REGISTER (audioamplify, plugin);
+  ret |= GST_ELEMENT_REGISTER (audiodynamic, plugin);
+  ret |= GST_ELEMENT_REGISTER (audiocheblimit, plugin);
+  ret |= GST_ELEMENT_REGISTER (audiochebband, plugin);
+  ret |= GST_ELEMENT_REGISTER (audioiirfilter, plugin);
+  ret |= GST_ELEMENT_REGISTER (audiowsinclimit, plugin);
+  ret |= GST_ELEMENT_REGISTER (audiowsincband, plugin);
+  ret |= GST_ELEMENT_REGISTER (audiofirfilter, plugin);
+  ret |= GST_ELEMENT_REGISTER (audioecho, plugin);
+  ret |= GST_ELEMENT_REGISTER (scaletempo, plugin);
+  ret |= GST_ELEMENT_REGISTER (stereo, plugin);
 #endif // GSTREAMER_LITE
+
+  return ret;
 }
 
 #ifndef GSTREAMER_LITE

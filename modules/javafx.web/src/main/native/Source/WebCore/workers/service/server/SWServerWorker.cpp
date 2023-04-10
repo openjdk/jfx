@@ -32,6 +32,7 @@
 #include "SWServer.h"
 #include "SWServerRegistration.h"
 #include "SWServerToContextConnection.h"
+#include <cstdint>
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -49,18 +50,21 @@ SWServerWorker* SWServerWorker::existingWorkerForIdentifier(ServiceWorkerIdentif
 }
 
 // FIXME: Use r-value references for script and contentSecurityPolicy
-SWServerWorker::SWServerWorker(SWServer& server, SWServerRegistration& registration, const URL& scriptURL, const String& script, const CertificateInfo& certificateInfo, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicy, String&& referrerPolicy, WorkerType type, ServiceWorkerIdentifier identifier, HashMap<URL, ServiceWorkerContextData::ImportedScript>&& scriptResourceMap)
-    : m_server(makeWeakPtr(server))
+SWServerWorker::SWServerWorker(SWServer& server, SWServerRegistration& registration, const URL& scriptURL, const ScriptBuffer& script, const CertificateInfo& certificateInfo, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicy, const CrossOriginEmbedderPolicy& crossOriginEmbedderPolicy, String&& referrerPolicy, WorkerType type, ServiceWorkerIdentifier identifier, MemoryCompactRobinHoodHashMap<URL, ServiceWorkerContextData::ImportedScript>&& scriptResourceMap)
+    : m_server(server)
     , m_registrationKey(registration.key())
-    , m_registration(makeWeakPtr(registration))
-    , m_data { identifier, scriptURL, ServiceWorkerState::Redundant, type, registration.identifier() }
+    , m_registration(registration)
+    , m_data { identifier, scriptURL, ServiceWorkerState::Parsed, type, registration.identifier() }
     , m_script(script)
     , m_certificateInfo(certificateInfo)
     , m_contentSecurityPolicy(contentSecurityPolicy)
+    , m_crossOriginEmbedderPolicy(crossOriginEmbedderPolicy)
     , m_referrerPolicy(WTFMove(referrerPolicy))
     , m_registrableDomain(m_data.scriptURL)
     , m_scriptResourceMap(WTFMove(scriptResourceMap))
     , m_terminationTimer(*this, &SWServerWorker::terminationTimerFired)
+    , m_terminationIfPossibleTimer(*this, &SWServerWorker::terminationIfPossibleTimerFired)
+    , m_lastNavigationWasAppInitiated(m_server->clientIsAppInitiatedForRegistrableDomain(m_registrableDomain))
 {
     m_data.scriptURL.removeFragmentIdentifier();
 
@@ -85,7 +89,18 @@ ServiceWorkerContextData SWServerWorker::contextData() const
 {
     ASSERT(m_registration);
 
-    return { WTF::nullopt, m_registration->data(), m_data.identifier, m_script, m_certificateInfo, m_contentSecurityPolicy, m_referrerPolicy, m_data.scriptURL, m_data.type, false, m_scriptResourceMap };
+    return { std::nullopt, m_registration->data(), m_data.identifier, m_script, m_certificateInfo, m_contentSecurityPolicy, m_crossOriginEmbedderPolicy, m_referrerPolicy, m_data.scriptURL, m_data.type, false, m_lastNavigationWasAppInitiated, m_scriptResourceMap, m_registration->serviceWorkerPageIdentifier(), m_registration->navigationPreloadState() };
+}
+
+void SWServerWorker::updateAppInitiatedValue(LastNavigationWasAppInitiated lastNavigationWasAppInitiated)
+{
+    m_lastNavigationWasAppInitiated = lastNavigationWasAppInitiated;
+
+    if (!isRunning())
+        return;
+
+    if (auto* connection = contextConnection())
+        connection->updateAppInitiatedValue(identifier(), lastNavigationWasAppInitiated);
 }
 
 void SWServerWorker::terminate(CompletionHandler<void()>&& callback)
@@ -116,7 +131,7 @@ void SWServerWorker::startTermination(CompletionHandler<void()>&& callback)
     auto* contextConnection = this->contextConnection();
     ASSERT(contextConnection);
     if (!contextConnection) {
-        RELEASE_LOG_ERROR(ServiceWorker, "Request to terminate a worker %llu whose context connection does not exist", identifier().toUInt64());
+        RELEASE_LOG_ERROR(ServiceWorker, "Request to terminate a worker %" PRIu64 " whose context connection does not exist", identifier().toUInt64());
         setState(State::NotRunning);
         callback();
         m_server->workerContextTerminated(*this);
@@ -127,6 +142,7 @@ void SWServerWorker::startTermination(CompletionHandler<void()>&& callback)
 
     m_terminationCallbacks.append(WTFMove(callback));
     m_terminationTimer.startOneShot(SWServer::defaultTerminationDelay);
+    m_terminationIfPossibleTimer.stop();
 
     contextConnection->terminateWorker(identifier());
 }
@@ -163,14 +179,14 @@ SWServerToContextConnection* SWServerWorker::contextConnection()
     return m_server ? m_server->contextConnectionForRegistrableDomain(registrableDomain()) : nullptr;
 }
 
-void SWServerWorker::scriptContextFailedToStart(const Optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, const String& message)
+void SWServerWorker::scriptContextFailedToStart(const std::optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, const String& message)
 {
     ASSERT(m_server);
     if (m_server)
         m_server->scriptContextFailedToStart(jobDataIdentifier, *this, message);
 }
 
-void SWServerWorker::scriptContextStarted(const Optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, bool doesHandleFetch)
+void SWServerWorker::scriptContextStarted(const std::optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, bool doesHandleFetch)
 {
     m_shouldSkipHandleFetch = !doesHandleFetch;
     ASSERT(m_server);
@@ -178,7 +194,7 @@ void SWServerWorker::scriptContextStarted(const Optional<ServiceWorkerJobDataIde
         m_server->scriptContextStarted(jobDataIdentifier, *this);
 }
 
-void SWServerWorker::didFinishInstall(const Optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, bool wasSuccessful)
+void SWServerWorker::didFinishInstall(const std::optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, bool wasSuccessful)
 {
     auto state = this->state();
     if (state == ServiceWorkerState::Redundant)
@@ -209,12 +225,28 @@ void SWServerWorker::contextTerminated()
         m_server->workerContextTerminated(*this);
 }
 
-Optional<ServiceWorkerClientData> SWServerWorker::findClientByIdentifier(const ServiceWorkerClientIdentifier& clientId) const
+std::optional<ServiceWorkerClientData> SWServerWorker::findClientByIdentifier(const ScriptExecutionContextIdentifier& clientId) const
 {
     ASSERT(m_server);
     if (!m_server)
         return { };
     return m_server->serviceWorkerClientWithOriginByID(origin(), clientId);
+}
+
+void SWServerWorker::findClientByVisibleIdentifier(const String& clientIdentifier, CompletionHandler<void(std::optional<WebCore::ServiceWorkerClientData>&&)>&& callback)
+{
+    if (!m_server) {
+        callback({ });
+        return;
+    }
+
+    auto internalIdentifier = m_server->clientIdFromVisibleClientId(clientIdentifier);
+    if (!internalIdentifier) {
+        callback({ });
+        return;
+    }
+
+    callback(findClientByIdentifier(internalIdentifier));
 }
 
 void SWServerWorker::matchAll(const ServiceWorkerClientQueryOptions& options, ServiceWorkerClientsMatchAllCallback&& callback)
@@ -236,6 +268,25 @@ String SWServerWorker::userAgent() const
 void SWServerWorker::setScriptResource(URL&& url, ServiceWorkerContextData::ImportedScript&& script)
 {
     m_scriptResourceMap.set(WTFMove(url), WTFMove(script));
+}
+
+void SWServerWorker::didSaveScriptsToDisk(ScriptBuffer&& mainScript, MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>&& importedScripts)
+{
+    // Send mmap'd version of the scripts to the ServiceWorker process so we can save dirty memory.
+    if (auto* contextConnection = this->contextConnection())
+        contextConnection->didSaveScriptsToDisk(identifier(), mainScript, importedScripts);
+
+    // The scripts were saved to disk, replace our scripts with the mmap'd version to save dirty memory.
+    ASSERT(mainScript == m_script); // Do a memcmp to make sure the scripts are identical.
+    m_script = WTFMove(mainScript);
+    for (auto& pair : importedScripts) {
+        auto it = m_scriptResourceMap.find(pair.key);
+        ASSERT(it != m_scriptResourceMap.end());
+        if (it == m_scriptResourceMap.end())
+            continue;
+        ASSERT(it->value.script == pair.value); // Do a memcmp to make sure the scripts are identical.
+        it->value.script = WTFMove(pair.value);
+    }
 }
 
 void SWServerWorker::skipWaiting()
@@ -332,6 +383,80 @@ SWServerRegistration* SWServerWorker::registration() const
 void SWServerWorker::didFailHeartBeatCheck()
 {
     terminate();
+}
+
+WorkerThreadMode SWServerWorker::workerThreadMode() const
+{
+    if ((m_server && m_server->shouldRunServiceWorkersOnMainThreadForTesting()) || serviceWorkerPageIdentifier())
+        return WorkerThreadMode::UseMainThread;
+    return WorkerThreadMode::CreateNewThread;
+}
+
+std::optional<ScriptExecutionContextIdentifier> SWServerWorker::serviceWorkerPageIdentifier() const
+{
+    if (!m_registration)
+        return std::nullopt;
+    return m_registration->serviceWorkerPageIdentifier();
+}
+
+void SWServerWorker::decrementFunctionalEventCounter()
+{
+    ASSERT(m_functionalEventCounter);
+    --m_functionalEventCounter;
+    terminateIfPossible();
+}
+
+void SWServerWorker::setAsInspected(bool isInspected)
+{
+    m_isInspected = isInspected;
+    terminateIfPossible();
+}
+
+bool SWServerWorker::shouldBeTerminated() const
+{
+    return !m_functionalEventCounter && !m_isInspected && m_server && !m_server->hasClientsWithOrigin(origin());
+}
+
+void SWServerWorker::terminateIfPossible()
+{
+    if (!shouldBeTerminated()) {
+        m_terminationIfPossibleTimer.stop();
+        return;
+    }
+
+    m_terminationIfPossibleTimer.startOneShot(SWServer::defaultFunctionalEventDuration);
+}
+
+void SWServerWorker::terminationIfPossibleTimerFired()
+{
+    if (!shouldBeTerminated())
+        return;
+
+    terminate();
+    m_server->removeContextConnectionIfPossible(registrableDomain());
+}
+
+bool SWServerWorker::isClientActiveServiceWorker(ScriptExecutionContextIdentifier clientIdentifier) const
+{
+    if (!m_server)
+        return false;
+    auto registrationIdentifier = m_server->clientIdentifierToControllingRegistration(clientIdentifier);
+    return registrationIdentifier == m_data.registrationIdentifier;
+}
+
+Vector<URL> SWServerWorker::importedScriptURLs() const
+{
+    return copyToVector(m_scriptResourceMap.keys());
+}
+
+bool SWServerWorker::matchingImportedScripts(const Vector<std::pair<URL, ScriptBuffer>>& scripts) const
+{
+    for (auto& script : scripts) {
+        auto iterator = m_scriptResourceMap.find(script.first);
+        if (iterator == m_scriptResourceMap.end() || iterator->value.script != script.second)
+            return false;
+    }
+    return true;
 }
 
 } // namespace WebCore

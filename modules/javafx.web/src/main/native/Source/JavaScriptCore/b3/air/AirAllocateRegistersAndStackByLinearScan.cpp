@@ -49,16 +49,11 @@ namespace JSC { namespace B3 { namespace Air {
 
 namespace {
 
-NO_RETURN_DUE_TO_CRASH NEVER_INLINE void crash()
-{
-    CRASH();
-}
-
 #undef RELEASE_ASSERT
 #define RELEASE_ASSERT(assertion) do { \
     if (!(assertion)) { \
         WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion); \
-        crash(); \
+        CRASH(); \
     } \
 } while (0)
 
@@ -233,7 +228,7 @@ private:
 
     void buildIntervals()
     {
-        TimingScope timingScope("LinearScan::buildIntervals");
+        CompilerTimingScope timingScope("Air", "LinearScan::buildIntervals");
         UnifiedTmpLiveness liveness(m_code);
 
         for (BasicBlock* block : m_code) {

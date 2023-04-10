@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -98,6 +98,7 @@ public:
         HolePunch,
         MediaFoundation,
         MockMSE,
+        CocoaWebM
     };
 
     enum class WirelessPlaybackTargetType : uint8_t {
@@ -113,7 +114,7 @@ public:
     };
 };
 
-String convertEnumerationToString(MediaPlayerEnums::ReadyState);
+WEBCORE_EXPORT String convertEnumerationToString(MediaPlayerEnums::ReadyState);
 String convertEnumerationToString(MediaPlayerEnums::NetworkState);
 String convertEnumerationToString(MediaPlayerEnums::Preload);
 String convertEnumerationToString(MediaPlayerEnums::SupportsType);
@@ -129,7 +130,7 @@ struct LogArgument;
 
 template <>
 struct LogArgument<WebCore::MediaPlayerEnums::ReadyState> {
-    static WTF::String toString(const WebCore::MediaPlayerEnums::ReadyState state)
+    static String toString(const WebCore::MediaPlayerEnums::ReadyState state)
     {
         return convertEnumerationToString(state);
     }
@@ -137,7 +138,7 @@ struct LogArgument<WebCore::MediaPlayerEnums::ReadyState> {
 
 template <>
 struct LogArgument<WebCore::MediaPlayerEnums::NetworkState> {
-    static WTF::String toString(const WebCore::MediaPlayerEnums::NetworkState state)
+    static String toString(const WebCore::MediaPlayerEnums::NetworkState state)
     {
         return convertEnumerationToString(state);
     }
@@ -145,7 +146,7 @@ struct LogArgument<WebCore::MediaPlayerEnums::NetworkState> {
 
 template <>
 struct LogArgument<WebCore::MediaPlayerEnums::BufferingPolicy> {
-    static WTF::String toString(const WebCore::MediaPlayerEnums::BufferingPolicy policy)
+    static String toString(const WebCore::MediaPlayerEnums::BufferingPolicy policy)
     {
         return convertEnumerationToString(policy);
     }
@@ -232,7 +233,8 @@ template<> struct EnumTraits<WebCore::MediaPlayerEnums::MediaEngineIdentifier> {
         WebCore::MediaPlayerEnums::MediaEngineIdentifier::GStreamerMSE,
         WebCore::MediaPlayerEnums::MediaEngineIdentifier::HolePunch,
         WebCore::MediaPlayerEnums::MediaEngineIdentifier::MediaFoundation,
-        WebCore::MediaPlayerEnums::MediaEngineIdentifier::MockMSE
+        WebCore::MediaPlayerEnums::MediaEngineIdentifier::MockMSE,
+        WebCore::MediaPlayerEnums::MediaEngineIdentifier::CocoaWebM
     >;
 };
 

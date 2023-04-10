@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,10 +52,10 @@ import org.junit.Test;
  */
 public class ScrollPaneTest {
     private ScrollPane scrollPane;//Empty string
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         scrollPane = new ScrollPane();
     }
 
@@ -134,7 +134,7 @@ public class ScrollPaneTest {
      ********************************************************************/
 
     @Test public void checkHBarPolicyPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.ALWAYS);
+        ObjectProperty objPr = new SimpleObjectProperty<>(ScrollPane.ScrollBarPolicy.ALWAYS);
         scrollPane.hbarPolicyProperty().bind(objPr);
         assertSame("HBarPolicyProperty cannot be bound", scrollPane.hbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.ALWAYS);
         objPr.setValue(ScrollPane.ScrollBarPolicy.NEVER);
@@ -142,7 +142,7 @@ public class ScrollPaneTest {
     }
 
     @Test public void checkVBarPolicyPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.ALWAYS);
+        ObjectProperty objPr = new SimpleObjectProperty<>(ScrollPane.ScrollBarPolicy.ALWAYS);
         scrollPane.vbarPolicyProperty().bind(objPr);
         assertSame("VBarPolicyProperty cannot be bound", scrollPane.vbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.ALWAYS);
         objPr.setValue(ScrollPane.ScrollBarPolicy.NEVER);
@@ -239,7 +239,7 @@ public class ScrollPaneTest {
 
     @Test public void checkViewportBoundsBind() {
         Bounds b = null;
-        ObjectProperty objPr = new SimpleObjectProperty<Bounds>(b);
+        ObjectProperty objPr = new SimpleObjectProperty<>(b);
         scrollPane.viewportBoundsProperty().bind(objPr);
         assertNull("viewportBoundsProperty cannot be bound", scrollPane.viewportBoundsProperty().getValue());
         b = new BoundingBox(0.0, 0.0, 0.0, 0.0);
@@ -405,7 +405,7 @@ public class ScrollPaneTest {
     @Test public void whenHbarPolicyIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)scrollPane.hbarPolicyProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollPane));
-        ObjectProperty<ScrollPane.ScrollBarPolicy> other = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        ObjectProperty<ScrollPane.ScrollBarPolicy> other = new SimpleObjectProperty<>(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.hbarPolicyProperty().bind(other);
         assertFalse(styleable.isSettable(scrollPane));
     }
@@ -423,7 +423,7 @@ public class ScrollPaneTest {
     @Test public void whenVbarPolicyIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)scrollPane.vbarPolicyProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollPane));
-        ObjectProperty<ScrollPane.ScrollBarPolicy> other = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        ObjectProperty<ScrollPane.ScrollBarPolicy> other = new SimpleObjectProperty<>(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.vbarPolicyProperty().bind(other);
         assertFalse(styleable.isSettable(scrollPane));
     }

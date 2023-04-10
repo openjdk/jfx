@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,6 +125,7 @@ public class QuadCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public RectBounds getBounds() {
         float left   = Math.min(Math.min(x1, x2), ctrlx);
         float top    = Math.min(Math.min(y1, y2), ctrly);
@@ -490,6 +491,7 @@ public class QuadCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y) {
         float x1 = this.x1;
         float y1 = this.y1;
@@ -590,6 +592,7 @@ public class QuadCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(Point2D p) {
         return contains(p.x, p.y);
     }
@@ -690,6 +693,7 @@ public class QuadCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean intersects(float x, float y, float w, float h) {
         // Trivially reject non-existant rectangles
         if (w <= 0 || h <= 0) {
@@ -873,6 +877,7 @@ public class QuadCurve2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y, float w, float h) {
         if (w <= 0 || h <= 0) {
             return false;
@@ -898,6 +903,7 @@ public class QuadCurve2D extends Shape {
      * @return a {@link PathIterator} object that defines the boundary
      *      of the shape.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx) {
         return new QuadIterator(this, tx);
     }
@@ -919,6 +925,7 @@ public class QuadCurve2D extends Shape {
      * @return a <code>PathIterator</code> object that defines the
      *      flattened boundary of the shape.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);
     }

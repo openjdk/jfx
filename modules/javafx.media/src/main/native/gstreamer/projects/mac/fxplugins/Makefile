@@ -12,11 +12,9 @@ GLIB_DIR = $(BASE_DIR)/3rd_party/glib
 SRCBASE_DIR = $(BASE_DIR)/plugins
 OBJBASE_DIR = $(BUILD_DIR)/obj/fxplugins
 
-DIRLIST = audioconverter       \
-          progressbuffer       \
+DIRLIST = progressbuffer       \
           progressbuffer/posix \
-          javasource           \
-          avcdecoder
+          javasource
 
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
@@ -54,21 +52,14 @@ INCLUDES = $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST))   \
 LDFLAGS += -L$(BUILD_DIR) \
            -Wl,-install_name,@rpath/$(TARGET_NAME) \
            -lgstreamer-lite \
-           -lglib-lite \
-           -framework ApplicationServices \
-           -framework QuartzCore \
-           -framework VideoDecodeAcceleration \
-           -framework AudioToolbox \
-           -framework CoreFoundation
+           -lglib-lite
 
 C_SOURCES = fxplugins.c                        \
-            audioconverter/audioconverter.c    \
             progressbuffer/progressbuffer.c    \
             progressbuffer/hlsprogressbuffer.c \
             progressbuffer/posix/filecache.c   \
             javasource/javasource.c            \
-            javasource/marshal.c               \
-            avcdecoder/avcdecoder.c
+            javasource/marshal.c
 
 OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 OBJECTS  = $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES))

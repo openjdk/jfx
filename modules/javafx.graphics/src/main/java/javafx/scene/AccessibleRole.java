@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -822,4 +822,18 @@ public enum AccessibleRole {
      * </ul>
      */
     TREE_VIEW,
+
+    /**
+     * Dialog role.
+     * <p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#ROLE_DESCRIPTION} </li>
+     * <li> {@link AccessibleAttribute#CHILDREN} </li>
+     * </ul>
+     *
+     * @since 20
+     */
+    DIALOG
 }

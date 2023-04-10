@@ -31,20 +31,23 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParser.h"
 #include "CSSStyleSheet.h"
+#include "CSSUnparsedValue.h"
 #include "CSSValuePool.h"
 #include "CachedResource.h"
 #include "ContentSecurityPolicy.h"
 #include "DOMTokenList.h"
+#include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "HTMLElement.h"
+#include "HTMLImageElement.h"
 #include "HTMLParserIdioms.h"
 #include "InspectorInstrumentation.h"
 #include "PropertySetCSSStyleDeclaration.h"
 #include "ScriptableDocumentParser.h"
 #include "StyleProperties.h"
 #include "StylePropertyMap.h"
+#include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
-#include "TypedOMCSSUnparsedValue.h"
 #include <wtf/HashFunctions.h>
 #include <wtf/IsoMallocInlines.h>
 
@@ -52,7 +55,7 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(StyledElement);
 
-COMPILE_ASSERT(sizeof(StyledElement) == sizeof(Element), styledelement_should_remain_same_size_as_element);
+static_assert(sizeof(StyledElement) == sizeof(Element), "styledelement should remain same size as element");
 
 using namespace HTMLNames;
 
@@ -62,7 +65,7 @@ void StyledElement::synchronizeStyleAttributeInternalImpl()
     ASSERT(elementData()->styleAttributeIsDirty());
     elementData()->setStyleAttributeIsDirty(false);
     if (const StyleProperties* inlineStyle = this->inlineStyle())
-        setSynchronizedLazyAttribute(styleAttr, inlineStyle->asText());
+        setSynchronizedLazyAttribute(styleAttr, inlineStyle->asTextAtom());
 }
 
 StyledElement::~StyledElement()
@@ -86,12 +89,36 @@ public:
     }
 
 private:
-    RefPtr<TypedOMCSSStyleValue> get(const String& property) const final
+    ExceptionOr<RefPtr<CSSStyleValue>> get(const AtomString& property) const final
     {
         ASSERT(m_element); // Hitting this assertion would imply a GC bug. Element is collected while this property map is alive.
         if (!m_element)
             return nullptr;
         return extractInlineProperty(property, *m_element);
+    }
+
+    ExceptionOr<Vector<RefPtr<CSSStyleValue>>> getAll(const AtomString&) const final
+    {
+        // FIXME: implement.
+        return Vector<RefPtr<CSSStyleValue>>();
+    }
+
+    unsigned size() const final
+    {
+        // FIXME: implement.
+        return 0;
+    }
+
+    Vector<StylePropertyMapEntry> entries() const final
+    {
+        // FIXME: implement.
+        return { };
+    }
+
+    ExceptionOr<bool> has(const AtomString&) const final
+    {
+        // FIXME: implement.
+        return false;
     }
 
     explicit StyledElementInlineStylePropertyMap(StyledElement& element)
@@ -101,7 +128,7 @@ private:
 
     void clearElement() override { m_element = nullptr; }
 
-    static RefPtr<TypedOMCSSStyleValue> extractInlineProperty(const String& name, StyledElement& element)
+    static RefPtr<CSSStyleValue> extractInlineProperty(const AtomString& name, StyledElement& element)
     {
         if (!element.inlineStyle())
             return nullptr;
@@ -112,6 +139,13 @@ private:
         }
 
         CSSPropertyID propertyID = cssPropertyID(name);
+
+        auto shorthand = shorthandForProperty(propertyID);
+        for (auto longhand : shorthand) {
+            if (auto cssValue = element.inlineStyle()->getPropertyCSSValue(longhand))
+                return StylePropertyMapReadOnly::reifyValue(cssValue.get(), element.document(), &element);
+        }
+
         if (!propertyID)
             return nullptr;
 
@@ -145,8 +179,8 @@ void StyledElement::attributeChanged(const QualifiedName& name, const AtomString
     if (oldValue != newValue) {
         if (name == styleAttr)
             styleAttributeChanged(newValue, reason);
-        else if (isPresentationAttribute(name)) {
-            elementData()->setPresentationAttributeStyleIsDirty(true);
+        else if (hasPresentationalHintsForAttribute(name)) {
+            elementData()->setPresentationalHintStyleIsDirty(true);
             invalidateStyle();
         }
     }
@@ -192,11 +226,11 @@ void StyledElement::setInlineStyleFromString(const AtomString& newStyleString)
 
 void StyledElement::styleAttributeChanged(const AtomString& newStyleString, AttributeModificationReason reason)
 {
-    auto startLineNumber = WTF::OrdinalNumber::beforeFirst();
+    auto startLineNumber = OrdinalNumber::beforeFirst();
     if (document().scriptableDocumentParser() && !document().isInDocumentWrite())
         startLineNumber = document().scriptableDocumentParser()->textPosition().m_line;
 
-    if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, String(), isInUserAgentShadowTree()))
+    if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, newStyleString.string(), CheckUnsafeHashes::Yes, *this, nonce(), isInUserAgentShadowTree()))
         setInlineStyleFromString(newStyleString);
 
     elementData()->setStyleAttributeIsDirty(false);
@@ -219,7 +253,7 @@ void StyledElement::invalidateStyleAttribute()
     if (styleResolver().ruleSets().hasComplexSelectorsForStyleAttribute()) {
         if (auto* inlineStyle = this->inlineStyle()) {
             elementData()->setStyleAttributeIsDirty(false);
-            auto newValue = inlineStyle->asText();
+            auto newValue = inlineStyle->asTextAtom();
             Style::AttributeChangeInvalidation styleInvalidation(*this, styleAttr, attributeWithoutSynchronization(styleAttr), newValue);
             setSynchronizedLazyAttribute(styleAttr, newValue);
         }
@@ -290,30 +324,36 @@ void StyledElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
     });
 }
 
-void StyledElement::rebuildPresentationAttributeStyle()
+void StyledElement::rebuildPresentationalHintStyle()
 {
-    RefPtr<StyleProperties> style = MutableStyleProperties::create(isSVGElement() ? SVGAttributeMode : HTMLQuirksMode);
+    auto style = MutableStyleProperties::create(isSVGElement() ? SVGAttributeMode : HTMLQuirksMode);
     for (const Attribute& attribute : attributesIterator())
-        collectStyleForPresentationAttribute(attribute.name(), attribute.value(), static_cast<MutableStyleProperties&>(*style));
+        collectPresentationalHintsForAttribute(attribute.name(), attribute.value(), style);
+
+    if (is<HTMLImageElement>(*this))
+        collectExtraStyleForPresentationalHints(style);
 
     // ShareableElementData doesn't store presentation attribute style, so make sure we have a UniqueElementData.
     UniqueElementData& elementData = ensureUniqueElementData();
 
-    elementData.setPresentationAttributeStyleIsDirty(false);
-    elementData.m_presentationAttributeStyle = style->isEmpty() ? nullptr : WTFMove(style);
+    elementData.setPresentationalHintStyleIsDirty(false);
+    if (style->isEmpty())
+        elementData.m_presentationalHintStyle = nullptr;
+    else
+        elementData.m_presentationalHintStyle = WTFMove(style);
 }
 
-void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, CSSValueID identifier)
+void StyledElement::addPropertyToPresentationalHintStyle(MutableStyleProperties& style, CSSPropertyID propertyID, CSSValueID identifier)
 {
     style.setProperty(propertyID, CSSValuePool::singleton().createIdentifierValue(identifier));
 }
 
-void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, double value, CSSUnitType unit)
+void StyledElement::addPropertyToPresentationalHintStyle(MutableStyleProperties& style, CSSPropertyID propertyID, double value, CSSUnitType unit)
 {
     style.setProperty(propertyID, CSSValuePool::singleton().createValue(value, unit));
 }
 
-void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& value)
+void StyledElement::addPropertyToPresentationalHintStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& value)
 {
     style.setProperty(propertyID, value, false, CSSParserContext(document()));
 }

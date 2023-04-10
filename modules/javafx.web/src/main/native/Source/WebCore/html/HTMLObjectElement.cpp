@@ -41,7 +41,6 @@
 #include "MIMETypeRegistry.h"
 #include "NodeList.h"
 #include "Page.h"
-#include "PluginViewBase.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderImage.h"
 #include "RenderWidget.h"
@@ -51,6 +50,7 @@
 #include "Widget.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/RobinHoodHashSet.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "RuntimeApplicationChecks.h"
@@ -84,69 +84,74 @@ int HTMLObjectElement::defaultTabIndex() const
     return 0;
 }
 
-bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLObjectElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == borderAttr)
         return true;
-    return HTMLPlugInImageElement::isPresentationAttribute(name);
+    return HTMLPlugInImageElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLObjectElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == borderAttr)
         applyBorderAttributeToStyle(value, style);
     else
-        HTMLPlugInImageElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLObjectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     bool invalidateRenderer = false;
+    bool needsWidgetUpdate = false;
 
     if (name == formAttr)
         formAttributeChanged();
     else if (name == typeAttr) {
         m_serviceType = value.string().left(value.find(';')).convertToASCIILowercase();
         invalidateRenderer = !hasAttributeWithoutSynchronization(classidAttr);
-        setNeedsWidgetUpdate(true);
+        needsWidgetUpdate = true;
     } else if (name == dataAttr) {
         m_url = stripLeadingAndTrailingHTMLSpaces(value);
         invalidateRenderer = !hasAttributeWithoutSynchronization(classidAttr);
-        setNeedsWidgetUpdate(true);
+        needsWidgetUpdate = true;
         updateImageLoaderWithNewURLSoon();
     } else if (name == classidAttr) {
         invalidateRenderer = true;
-        setNeedsWidgetUpdate(true);
+        needsWidgetUpdate = true;
     } else
         HTMLPlugInImageElement::parseAttribute(name, value);
+
+    if (needsWidgetUpdate) {
+        setNeedsWidgetUpdate(true);
+        m_useFallbackContent = false;
+    }
 
     if (!invalidateRenderer || !isConnected() || !renderer())
         return;
 
-    m_useFallbackContent = false;
     scheduleUpdateForAfterStyleResolution();
     invalidateStyleAndRenderersForSubtree();
 }
 
-static void mapDataParamToSrc(Vector<String>& paramNames, Vector<String>& paramValues)
+static void mapDataParamToSrc(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues)
 {
     // Some plugins don't understand the "data" attribute of the OBJECT tag (i.e. Real and WMP require "src" attribute).
     bool foundSrcParam = false;
-    String dataParamValue;
+    AtomString dataParamValue;
     for (unsigned i = 0; i < paramNames.size(); ++i) {
-        if (equalLettersIgnoringASCIICase(paramNames[i], "src"))
+        if (equalLettersIgnoringASCIICase(paramNames[i], "src"_s))
             foundSrcParam = true;
-        else if (equalLettersIgnoringASCIICase(paramNames[i], "data"))
+        else if (equalLettersIgnoringASCIICase(paramNames[i], "data"_s))
             dataParamValue = paramValues[i];
     }
     if (!foundSrcParam && !dataParamValue.isNull()) {
-        paramNames.append("src"_s);
+        paramNames.append(AtomString { "src"_s });
         paramValues.append(WTFMove(dataParamValue));
     }
 }
 
 // FIXME: This function should not deal with url or serviceType!
-void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<String>& paramValues, String& url, String& serviceType)
+void HTMLObjectElement::parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues, String& url, String& serviceType)
 {
     HashSet<StringImpl*, ASCIICaseInsensitiveHash> uniqueParamNames;
     String urlParameter;
@@ -163,10 +168,10 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
         paramValues.append(param.value());
 
         // FIXME: url adjustment does not belong in this function.
-        if (url.isEmpty() && urlParameter.isEmpty() && (equalLettersIgnoringASCIICase(name, "src") || equalLettersIgnoringASCIICase(name, "movie") || equalLettersIgnoringASCIICase(name, "code") || equalLettersIgnoringASCIICase(name, "url")))
+        if (url.isEmpty() && urlParameter.isEmpty() && (equalLettersIgnoringASCIICase(name, "src"_s) || equalLettersIgnoringASCIICase(name, "movie"_s) || equalLettersIgnoringASCIICase(name, "code"_s) || equalLettersIgnoringASCIICase(name, "url"_s)))
             urlParameter = stripLeadingAndTrailingHTMLSpaces(param.value());
         // FIXME: serviceType calculation does not belong in this function.
-        if (serviceType.isEmpty() && equalLettersIgnoringASCIICase(name, "type")) {
+        if (serviceType.isEmpty() && equalLettersIgnoringASCIICase(name, "type"_s)) {
             serviceType = param.value();
             size_t pos = serviceType.find(';');
             if (pos != notFound)
@@ -181,7 +186,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
     // else our Java plugin will misinterpret it. [4004531]
     String codebase;
     if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType)) {
-        codebase = "codebase";
+        codebase = "codebase"_s;
         uniqueParamNames.add(codebase.impl()); // pretend we found it in a PARAM already
     }
 
@@ -190,8 +195,8 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
         for (const Attribute& attribute : attributesIterator()) {
             const AtomString& name = attribute.name().localName();
             if (!uniqueParamNames.contains(name.impl())) {
-                paramNames.append(name.string());
-                paramValues.append(attribute.value().string());
+                paramNames.append(name);
+                paramValues.append(attribute.value());
             }
         }
     }
@@ -225,7 +230,7 @@ bool HTMLObjectElement::hasFallbackContent() const
 
 bool HTMLObjectElement::hasValidClassId()
 {
-    if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType()) && protocolIs(attributeWithoutSynchronization(classidAttr), "java"))
+    if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType()) && protocolIs(attributeWithoutSynchronization(classidAttr), "java"_s))
         return true;
 
     // HTML5 says that fallback content should be rendered if a non-empty
@@ -258,8 +263,8 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
     String serviceType = this->serviceType();
 
     // FIXME: These should be joined into a PluginParameters class.
-    Vector<String> paramNames;
-    Vector<String> paramValues;
+    Vector<AtomString> paramNames;
+    Vector<AtomString> paramValues;
     parametersForPlugin(paramNames, paramValues, url, serviceType);
 
     // Note: url is modified above by parametersForPlugin.
@@ -275,14 +280,11 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
 
     setNeedsWidgetUpdate(false);
 
-    Ref<HTMLObjectElement> protectedThis(*this); // beforeload and plugin loading can make arbitrary DOM mutations.
-    bool beforeLoadAllowedLoad = guardedDispatchBeforeLoadEvent(url);
-    if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
-        return;
+    Ref protectedThis = *this; // Plugin loading can make arbitrary DOM mutations.
 
     // Dispatching a beforeLoad event could have executed code that changed the document.
     // Make sure the URL is still safe to load.
-    bool success = beforeLoadAllowedLoad && hasValidClassId() && canLoadURL(url);
+    bool success = hasValidClassId() && canLoadURL(url);
     if (success)
         success = requestObject(url, serviceType, paramNames, paramValues);
     if (!success && hasFallbackContent())
@@ -320,12 +322,7 @@ void HTMLObjectElement::childrenChanged(const ChildChange& change)
 
 bool HTMLObjectElement::isURLAttribute(const Attribute& attribute) const
 {
-    return attribute.name() == dataAttr || attribute.name() == codebaseAttr || (attribute.name() == usemapAttr && attribute.value().string()[0] != '#') || HTMLPlugInImageElement::isURLAttribute(attribute);
-}
-
-bool HTMLObjectElement::isInteractiveContent() const
-{
-    return hasAttributeWithoutSynchronization(usemapAttr);
+    return attribute.name() == dataAttr || attribute.name() == codebaseAttr || HTMLPlugInImageElement::isURLAttribute(attribute);
 }
 
 const AtomString& HTMLObjectElement::imageSourceURL() const
@@ -360,9 +357,10 @@ void HTMLObjectElement::renderFallbackContent()
 
 static inline bool preventsParentObjectFromExposure(const Element& child)
 {
-    static const auto mostKnownTags = makeNeverDestroyed([] {
-        HashSet<QualifiedName> set;
+    static NeverDestroyed mostKnownTags = [] {
+        MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> set;
         auto* tags = HTMLNames::getHTMLTags();
+        set.reserveInitialCapacity(HTMLNames::HTMLTagsCount);
         for (size_t i = 0; i < HTMLNames::HTMLTagsCount; i++) {
             auto& tag = *tags[i];
             // Only the param element was explicitly mentioned in the HTML specification rule
@@ -381,7 +379,7 @@ static inline bool preventsParentObjectFromExposure(const Element& child)
             set.add(tag);
         }
         return set;
-    }());
+    }();
     return mostKnownTags.get().contains(child.tagQName());
 }
 
@@ -403,7 +401,7 @@ static inline bool shouldBeExposed(const HTMLObjectElement& element)
     // with no children other than param elements, unknown elements and whitespace can be found
     // by name in a document, and other object elements cannot".
 
-    for (auto child = makeRefPtr(element.firstChild()); child; child = child->nextSibling()) {
+    for (RefPtr child = element.firstChild(); child; child = child->nextSibling()) {
         if (preventsParentObjectFromExposure(*child))
             return false;
     }
@@ -441,7 +439,7 @@ bool HTMLObjectElement::containsJavaApplet() const
         return true;
 
     for (auto& child : childrenOfType<Element>(*this)) {
-        if (child.hasTagName(paramTag) && equalLettersIgnoringASCIICase(child.getNameAttribute(), "type")
+        if (child.hasTagName(paramTag) && equalLettersIgnoringASCIICase(child.getNameAttribute(), "type"_s)
             && MIMETypeRegistry::isJavaAppletMIMEType(child.attributeWithoutSynchronization(valueAttr).string()))
             return true;
         if (child.hasTagName(objectTag) && downcast<HTMLObjectElement>(child).containsJavaApplet())
@@ -458,35 +456,12 @@ void HTMLObjectElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) cons
     HTMLPlugInImageElement::addSubresourceAttributeURLs(urls);
 
     addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(dataAttr)));
-
-    // FIXME: Passing a string that starts with "#" to the completeURL function does
-    // not seem like it would work. The image element has similar but not identical code.
-    const AtomString& useMap = attributeWithoutSynchronization(usemapAttr);
-    if (useMap.startsWith('#'))
-        addSubresourceURL(urls, document().completeURL(useMap));
 }
 
 void HTMLObjectElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
     FormAssociatedElement::didMoveToNewDocument(oldDocument);
     HTMLPlugInImageElement::didMoveToNewDocument(oldDocument, newDocument);
-}
-
-bool HTMLObjectElement::appendFormData(DOMFormData& formData, bool)
-{
-    if (name().isEmpty())
-        return false;
-
-    // Use PluginLoadingPolicy::DoNotLoad here or it would fire JS events synchronously
-    // which would not be safe here.
-    auto widget = makeRefPtr(pluginWidget(PluginLoadingPolicy::DoNotLoad));
-    if (!is<PluginViewBase>(widget))
-        return false;
-    String value;
-    if (!downcast<PluginViewBase>(*widget).getFormValue(value))
-        return false;
-    formData.append(name(), value);
-    return true;
 }
 
 bool HTMLObjectElement::canContainRangeEndPoint() const

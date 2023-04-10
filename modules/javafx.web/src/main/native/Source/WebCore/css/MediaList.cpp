@@ -151,7 +151,7 @@ String MediaQuerySet::mediaText() const
     bool needComma = false;
     for (auto& query : m_queries) {
         if (needComma)
-            text.appendLiteral(", ");
+            text.append(", ");
         text.append(query.cssText());
         needComma = true;
     }
@@ -179,13 +179,12 @@ MediaList::MediaList(MediaQuerySet* mediaQueries, CSSRule* parentRule)
 
 MediaList::~MediaList() = default;
 
-ExceptionOr<void> MediaList::setMediaText(const String& value)
+void MediaList::setMediaText(const String& value)
 {
     CSSStyleSheet::RuleMutationScope mutationScope(m_parentRule);
     m_mediaQueries->set(value);
     if (m_parentStyleSheet)
         m_parentStyleSheet->didMutate();
-    return { };
 }
 
 String MediaList::item(unsigned index) const
@@ -223,53 +222,6 @@ void MediaList::reattach(MediaQuerySet* mediaQueries)
     ASSERT(mediaQueries);
     m_mediaQueries = mediaQueries;
 }
-
-#if ENABLE(RESOLUTION_MEDIA_QUERY)
-
-static void addResolutionWarningMessageToConsole(Document& document, const String& serializedExpression, const CSSPrimitiveValue& value)
-{
-    static NeverDestroyed<String> mediaQueryMessage(MAKE_STATIC_STRING_IMPL("Consider using 'dppx' units instead of '%replacementUnits%', as in CSS '%replacementUnits%' means dots-per-CSS-%lengthUnit%, not dots-per-physical-%lengthUnit%, so does not correspond to the actual '%replacementUnits%' of a screen. In media query expression: "));
-    static NeverDestroyed<String> mediaValueDPI(MAKE_STATIC_STRING_IMPL("dpi"));
-    static NeverDestroyed<String> mediaValueDPCM(MAKE_STATIC_STRING_IMPL("dpcm"));
-    static NeverDestroyed<String> lengthUnitInch(MAKE_STATIC_STRING_IMPL("inch"));
-    static NeverDestroyed<String> lengthUnitCentimeter(MAKE_STATIC_STRING_IMPL("centimeter"));
-
-    String message;
-    if (value.isDotsPerInch())
-        message = mediaQueryMessage.get().replace("%replacementUnits%", mediaValueDPI).replace("%lengthUnit%", lengthUnitInch);
-    else if (value.isDotsPerCentimeter())
-        message = mediaQueryMessage.get().replace("%replacementUnits%", mediaValueDPCM).replace("%lengthUnit%", lengthUnitCentimeter);
-    else
-        ASSERT_NOT_REACHED();
-
-    message.append(serializedExpression);
-
-    document.addConsoleMessage(MessageSource::CSS, MessageLevel::Debug, message);
-}
-
-void reportMediaQueryWarningIfNeeded(Document* document, const MediaQuerySet* mediaQuerySet)
-{
-    if (!mediaQuerySet || !document)
-        return;
-
-    for (auto& query : mediaQuerySet->queryVector()) {
-        if (!query.ignored() && !equalLettersIgnoringASCIICase(query.mediaType(), "print")) {
-            auto& expressions = query.expressions();
-            for (auto& expression : expressions) {
-                if (expression.mediaFeature() == MediaFeatureNames::resolution || expression.mediaFeature() == MediaFeatureNames::maxResolution || expression.mediaFeature() == MediaFeatureNames::minResolution) {
-                    auto* value = expression.value();
-                    if (is<CSSPrimitiveValue>(value)) {
-                        auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
-                        if (primitiveValue.isDotsPerInch() || primitiveValue.isDotsPerCentimeter())
-                            addResolutionWarningMessageToConsole(*document, mediaQuerySet->mediaText(), primitiveValue);
-                    }
-                }
-            }
-        }
-    }
-}
-
-#endif
 
 TextStream& operator<<(TextStream& ts, const MediaQuerySet& querySet)
 {

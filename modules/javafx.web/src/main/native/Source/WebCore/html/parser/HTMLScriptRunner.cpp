@@ -32,6 +32,7 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLInputStream.h"
 #include "HTMLNames.h"
 #include "HTMLScriptRunnerHost.h"
@@ -47,7 +48,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 HTMLScriptRunner::HTMLScriptRunner(Document& document, HTMLScriptRunnerHost& host)
-    : m_document(makeWeakPtr(document))
+    : m_document(document)
     , m_host(host)
     , m_scriptNestingLevel(0)
     , m_hasScriptsWaitingForStylesheets(false)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2002, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package com.sun.prism.impl;
+
+import com.sun.javafx.tk.quantum.QuantumToolkit;
 
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
@@ -72,7 +74,7 @@ public class Disposer {
 
     private final ReferenceQueue queue = new ReferenceQueue();
     private final Hashtable records = new Hashtable();
-    private final LinkedList<Record> disposalQueue = new LinkedList<Record>();
+    private final LinkedList<Record> disposalQueue = new LinkedList<>();
 
     /**
      * Private constructor to prevent outside instantiation.
@@ -126,6 +128,10 @@ public class Disposer {
      * thread on which  the resources were created).
      */
     public static void cleanUp() {
+        if (!Thread.currentThread().getName().startsWith("QuantumRenderer")) {
+            QuantumToolkit.runInRenderThreadAndWait(() -> cleanUp());
+            return;
+        }
         disposerInstance.disposeUnreachables();
         disposerInstance.processDisposalQueue();
     }

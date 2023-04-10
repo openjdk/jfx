@@ -31,7 +31,7 @@
 
 [
     Conditional=WEB_RTC,
-    EnabledAtRuntime=PeerConnection,
+    EnabledBySetting=PeerConnectionEnabled,
     ImplementedAs=RTCSdpType
 ] enum RTCSdpType {
     "offer",

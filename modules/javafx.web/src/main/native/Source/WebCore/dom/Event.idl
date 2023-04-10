@@ -24,10 +24,10 @@ typedef double DOMHighResTimeStamp;
     CustomToJSObject,
     DOMJIT,
     ExportToWrappedFunction,
-    Exposed=(Window,Worker),
+    Exposed=*,
     JSCustomHeader,
 ] interface Event {
-    constructor(DOMString type, optional EventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional EventInit eventInitDict);
 
     readonly attribute DOMString type;
     readonly attribute EventTarget? target;
@@ -51,9 +51,9 @@ typedef double DOMHighResTimeStamp;
     readonly attribute boolean composed;
 
     [LegacyUnforgeable] readonly attribute boolean isTrusted;
-    [CallWith=ScriptExecutionContext, ImplementedAs=timeStampForBindings] readonly attribute DOMHighResTimeStamp timeStamp;
+    [CallWith=RelevantScriptExecutionContext, ImplementedAs=timeStampForBindings] readonly attribute DOMHighResTimeStamp timeStamp;
 
-    undefined initEvent(DOMString type, optional boolean bubbles = false, optional boolean cancelable = false); // Historical.
+    undefined initEvent([AtomString] DOMString type, optional boolean bubbles = false, optional boolean cancelable = false); // Historical.
 
     // IE extensions that may get standardized (https://github.com/whatwg/dom/issues/334).
     [ImplementedAs=target] readonly attribute EventTarget srcElement;

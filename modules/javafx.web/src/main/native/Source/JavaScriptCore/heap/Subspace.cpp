@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,9 +40,9 @@ Subspace::Subspace(CString name, Heap& heap)
 {
 }
 
-void Subspace::initialize(HeapCellType* heapCellType, AlignedMemoryAllocator* alignedMemoryAllocator)
+void Subspace::initialize(const HeapCellType& heapCellType, AlignedMemoryAllocator* alignedMemoryAllocator)
 {
-    m_heapCellType = heapCellType;
+    m_heapCellType = &heapCellType;
     m_alignedMemoryAllocator = alignedMemoryAllocator;
     m_directoryForEmptyAllocation = m_alignedMemoryAllocator->firstDirectory();
 
@@ -95,7 +95,7 @@ Ref<SharedTask<BlockDirectory*()>> Subspace::parallelDirectorySource()
 
         BlockDirectory* run() final
         {
-            auto locker = holdLock(m_lock);
+            Locker locker { m_lock };
             BlockDirectory* result = m_directory;
             if (result)
                 m_directory = result->nextDirectoryInSubspace();

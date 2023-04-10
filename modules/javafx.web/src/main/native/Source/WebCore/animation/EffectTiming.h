@@ -25,20 +25,21 @@
 
 #pragma once
 
+#include "CommonAtomStrings.h"
 #include "FillMode.h"
 #include "PlaybackDirection.h"
-#include <wtf/Variant.h>
+#include <variant>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct EffectTiming {
-    Variant<double, String> duration { "auto" };
+    std::variant<double, String> duration { autoAtom() };
     double delay { 0 };
     double endDelay { 0 };
     double iterationStart { 0 };
     double iterations { 1 };
-    String easing { "linear" };
+    String easing { "linear"_s };
     FillMode fill { FillMode::Auto };
     PlaybackDirection direction { PlaybackDirection::Normal };
 };

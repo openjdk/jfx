@@ -60,7 +60,7 @@ bool InsertLineBreakCommand::shouldUseBreakElement(const Position& position)
     // the input element, and in that case we need to check the input element's
     // parent's renderer.
     auto* node = position.parentAnchoredEquivalent().deprecatedNode();
-    return node->renderer() && !node->renderer()->style().preserveNewline();
+    return node && node->renderer() && !node->renderer()->style().preserveNewline();
 }
 
 void InsertLineBreakCommand::doApply()
@@ -81,11 +81,13 @@ void InsertLineBreakCommand::doApply()
     position = positionAvoidingSpecialElementBoundary(position);
     position = positionOutsideTabSpan(position);
 
+    if (!isEditablePosition(position))
+        return;
     RefPtr<Node> nodeToInsert;
     if (shouldUseBreakElement(position))
         nodeToInsert = HTMLBRElement::create(document());
     else
-        nodeToInsert = document().createTextNode("\n");
+        nodeToInsert = document().createTextNode("\n"_s);
 
     // FIXME: Need to merge text nodes when inserting just after or before text.
 
@@ -130,7 +132,7 @@ void InsertLineBreakCommand::doApply()
             if (textNode.isConnected())
                 insertTextIntoNode(textNode, 0, nonBreakingSpaceString());
             else {
-                auto nbspNode = document().createTextNode(nonBreakingSpaceString());
+                auto nbspNode = document().createTextNode(String { nonBreakingSpaceString() });
                 auto* nbspNodePtr = nbspNode.ptr();
                 insertNodeAt(WTFMove(nbspNode), positionBeforeTextNode);
                 endingPosition = firstPositionInNode(nbspNodePtr);
