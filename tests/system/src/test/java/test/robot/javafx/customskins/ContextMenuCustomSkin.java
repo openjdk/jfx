@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.robot.javafx.customSkins;
+package test.robot.javafx.customskins;
 
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.skin.ContextMenuSkin;

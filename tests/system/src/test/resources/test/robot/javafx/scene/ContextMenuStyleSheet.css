@@ -24,5 +24,5 @@
  */
 
 .context-menu {
--fx-skin: "test.robot.javafx.customSkins.ContextMenuCustomSkin";
+-fx-skin: "test.robot.javafx.customskins.ContextMenuCustomSkin";
 }
