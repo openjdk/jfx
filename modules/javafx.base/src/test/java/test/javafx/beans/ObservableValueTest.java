@@ -48,6 +48,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -280,6 +281,170 @@ public class ObservableValueTest {
         valueSetter.accept(value2);
 
         assertConsistentChangeSequence(records, value1, value2);
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldOnlyNotifyNonRemovedChangeListeners(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger calls = new AtomicInteger();
+
+        ChangeListener<T> changeListener = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends T> obs, T old, T current) {
+                calls.addAndGet(1);
+
+                action.removeListener(this);
+                action.removeListener(this);
+                action.addListener(this);
+            }
+        };
+
+        for(int i = 0; i < 100; i++) {
+            action.addListener(changeListener);
+        }
+
+        assertCalls(
+            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            calls,
+            new int[] {50, 25, 13, 6, 3, 2, 1, 1, 1}  // won't reach 0 as a new listener is added each time
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldOnlyNotifyNonRemovedChangeListeners_2(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger calls = new AtomicInteger();
+
+        ChangeListener<T> changeListener = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends T> obs, T old, T current) {
+                if (calls.getAndAdd(1) % 2 == 0) {
+                    action.removeListener(this);
+                }
+            }
+        };
+
+        for(int i = 0; i < 100; i++) {
+            action.addListener(changeListener);
+        }
+
+        assertCalls(
+            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            calls,
+            new int[] {100, 50, 25, 12, 6, 3, 1, 0}
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldOnlyNotifyNonRemovedChangeListeners_3(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger calls = new AtomicInteger();
+
+        ChangeListener<T> changeListener = new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends T> obs, T old, T current) {
+                if (calls.getAndAdd(1) == 0) {
+                    action.removeListener(this);
+                    action.removeListener(this);
+                    action.removeListener(this);
+                }
+            }
+        };
+
+        for(int i = 0; i < 12; i++) {
+            action.addListener(changeListener);
+        }
+
+        assertCalls(
+            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            calls,
+            new int[] {10, 7, 4, 1, 0}
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldOnlyNotifyNonRemovedInvalidationListeners(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger calls = new AtomicInteger();
+
+        InvalidationListener invalidationListener = new InvalidationListener() {
+            @Override
+            public void invalidated(Observable obs) {
+                calls.addAndGet(1);
+
+                action.removeListener(this);
+                action.removeListener(this);
+                action.addListener(this);
+            }
+        };
+
+        for(int i = 0; i < 100; i++) {
+            action.addListener(invalidationListener);
+        }
+
+        assertCalls(
+            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            calls,
+            new int[] {50, 25, 13, 6, 3, 2, 1, 1, 1}  // won't reach 0 as a new listener is added each time
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldOnlyNotifyNonRemovedInvalidationListeners_2(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger calls = new AtomicInteger();
+
+        InvalidationListener invalidationListener = new InvalidationListener() {
+            @Override
+            public void invalidated(Observable obs) {
+                if (calls.getAndAdd(1) % 2 == 0) {
+                    action.removeListener(this);
+                }
+            }
+        };
+
+        for(int i = 0; i < 100; i++) {
+            action.addListener(invalidationListener);
+        }
+
+        assertCalls(
+            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            calls,
+            new int[] {100, 50, 25, 12, 6, 3, 1, 0}
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldOnlyNotifyNonRemovedInvalidationListeners_3(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger calls = new AtomicInteger();
+        InvalidationListener listener = new InvalidationListener() {
+            @Override
+            public void invalidated(Observable obs) {
+                if (calls.getAndAdd(1) == 0) {
+                    action.removeListener(this);
+                    action.removeListener(this);
+                    action.removeListener(this);
+                }
+            }
+        };
+
+        for(int i = 0; i < 12; i++) {
+            action.addListener(listener);
+        }
+
+        assertCalls(
+            i -> valueSetter.accept(action.getValue().equals(value1) ? value2 : value1),
+            calls,
+            new int[] {10, 7, 4, 1, 0}
+        );
+    }
+
+    private void assertCalls(Consumer<Integer> step, AtomicInteger calls, int... expectedCalls) {
+        for(int i = 0; i < expectedCalls.length; i++) {
+            step.accept(i);
+            assertEquals(expectedCalls[i], calls.getAndSet(0));
+        }
     }
 
     static class Action<T> implements ObservableValue<T> {

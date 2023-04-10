@@ -261,7 +261,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         }
 
         if (topLevel && list.isLocked()) {
-            unlock(instance);
+            unlock(instance, list);
         }
     }
 
@@ -292,18 +292,18 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         }
     }
 
-    private void unlock(I instance) {
-        Object data = getData(instance);
+    private void unlock(I instance, OldValueCachingListenerList<?> list) {
+        list.unlock();
 
-        if (data instanceof OldValueCachingListenerList<?> list) {
-            list.unlock();
+        int newSize = list.size();
 
-            if (list.size() == 1) {
-                setData(instance, list.get(0));
-            }
-            else if(list.size() == 0) {
-                setData(instance, null);
-            }
+        if (newSize == 1) {
+            Object listener = list.get(0);
+
+            setData(instance, listener instanceof ChangeListener<?> cl ? new ChangeListenerWrapper<>(cl, list.getLatestValue()) : listener);
+        }
+        else if (newSize == 0) {
+            setData(instance, null);
         }
     }
 

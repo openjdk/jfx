@@ -186,7 +186,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<T>> {
         }
 
         if (topLevel && list.isLocked()) {
-            unlock(instance);
+            unlock(instance, list);
         }
     }
 
@@ -212,20 +212,16 @@ public abstract class ListenerManager<T, I extends ObservableValue<T>> {
         }
     }
 
-    private void unlock(I instance) {
-        Object data = getData(instance);
+    private void unlock(I instance, ListenerList list) {
+        list.unlock();
 
-        if (data instanceof ListenerList list) {
-            list.unlock();
+        int newSize = list.size();
 
-            // TODO need to do something potentially with oldValue here
-            // TODO bugs, we forget to wrap it in ChangeListenerWrapper?
-            if (list.size() == 1) {
-                setData(instance, list.get(0));
-            }
-            else if(list.size() == 0) {
-                setData(instance, null);
-            }
+        if (newSize == 1) {
+            setData(instance, list.get(0));
+        }
+        else if(newSize == 0) {
+            setData(instance, null);
         }
     }
 }
