@@ -157,7 +157,7 @@ public class ExpressionHelperUtility {
 
         if(helper instanceof ChangeListener) {
             try {
-                Field field = Class.forName("com.sun.javafx.binding.OldValueCachingListenerHelper$ChangeListenerWrapper").getDeclaredField("listener");
+                Field field = Class.forName("com.sun.javafx.binding.OldValueCachingListenerManager$ChangeListenerWrapper").getDeclaredField("listener");
 
                 field.setAccessible(true);
 

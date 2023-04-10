@@ -32,7 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.binding.BindingHelperObserver;
-import com.sun.javafx.binding.ListenerHelper;
+import com.sun.javafx.binding.ListenerManager;
 
 /**
  * Base class that provides most of the functionality needed to implement a
@@ -60,6 +60,18 @@ import com.sun.javafx.binding.ListenerHelper;
 public abstract class StringBinding extends StringExpression implements
         Binding<String> {
 
+    private static final ListenerManager<String, StringBinding> LISTENER_MANAGER = new ListenerManager<>() {
+        @Override
+        protected Object getData(StringBinding instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(StringBinding instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
     private String value;
     private boolean valid = false;
 
@@ -80,24 +92,22 @@ public abstract class StringBinding extends StringExpression implements
 
     @Override
     public void addListener(InvalidationListener listener) {
-        listenerData = ListenerHelper.addListener(listenerData, listener);
-        get();  // adding an invalidation listener requires that the binding becomes valid (according to tests)
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        listenerData = ListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super String> listener) {
-        listenerData = ListenerHelper.addListener(listenerData, listener);
-        get();  // adding a change listener requires that the binding becomes valid
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super String> listener) {
-        listenerData = ListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -183,9 +193,7 @@ public abstract class StringBinding extends StringExpression implements
             valid = false;
             onInvalidating();
 
-            boolean topLevel = ListenerHelper.fireValueChanged(listenerData, this, oldValue);
-
-            ListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
+            LISTENER_MANAGER.fireValueChanged(this, oldValue);
         }
     }
 

@@ -30,7 +30,7 @@ import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.OldValueCachingListenerHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
@@ -51,6 +51,18 @@ import javafx.beans.WeakListener;
  * @since JavaFX 2.0
  */
 public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
+
+    private static final OldValueCachingListenerManager<Object, ObjectPropertyBase<Object>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(ObjectPropertyBase<Object> instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(ObjectPropertyBase<Object> instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
 
     private T value;
     private ObservableValue<? extends T> observable = null;
@@ -76,22 +88,22 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener((ObjectPropertyBase<Object>) this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener((ObjectPropertyBase<Object>) this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener((ObjectPropertyBase<Object>) this, (ChangeListener<Object>) listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener((ObjectPropertyBase<Object>) this, listener);
     }
 
     /**
@@ -104,9 +116,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        boolean topLevel = OldValueCachingListenerHelper.fireValueChanged(listenerData, this);
-
-        OldValueCachingListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
+        LISTENER_MANAGER.fireValueChanged((ObjectPropertyBase<Object>) this);
     }
 
     private void markInvalid() {

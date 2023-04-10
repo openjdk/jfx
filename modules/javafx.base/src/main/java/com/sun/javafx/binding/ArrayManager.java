@@ -34,11 +34,11 @@ import java.util.function.Predicate;
  * Helper to manage an array as a data and size field in order to save
  * space overhead introduced by a dedicated class.<p>
  *
- * To use this class, store an instance of this class in a static field,
- * supplying the {@link Accessor} for a specific array and size. Then just call
- * methods on the array manager supplying the instance each time.
+ * To use this class, subclass it and store an instance of this class in a
+ * static field. Then just call methods on the array manager supplying the
+ * instance each time.
  */
-public class ArrayManager<I, E> {
+public abstract class ArrayManager<I, E> {
 
     /**
      * The minimum array size. (3 is a good number considering it would use exactly 24 bytes
@@ -46,21 +46,7 @@ public class ArrayManager<I, E> {
      */
     private static final int MINIMUM_SIZE = 3;
 
-    private final Accessor<I, E> accessor;
     private final Class<E> elementType;
-
-    /**
-     * Provides access to two fields to manage an array with.
-     *
-     * @param <I> the type containing the fields
-     * @param <E> the type of the array elements
-     */
-    public interface Accessor<I, E> {
-        E[] getArray(I instance);
-        void setArray(I instance, E[] array);
-        int getOccupiedSlots(I instance);
-        void setOccupiedSlots(I instance, int occupiedSlots);
-    }
 
     /**
      * Constructs a new instance.
@@ -69,10 +55,41 @@ public class ArrayManager<I, E> {
      * @param elementType the type of the elements in the array, cannot be {@code null}
      * @throws NullPointerException when any of the parameters are {@code null}
      */
-    public ArrayManager(Accessor<I, E> accessor, Class<E> elementType) {
+    public ArrayManager(Class<E> elementType) {
         this.elementType = Objects.requireNonNull(elementType);
-        this.accessor = Objects.requireNonNull(accessor);
     }
+
+    /**
+     * Gets the array under management.
+     *
+     * @param instance the instance it is located in, never {@code null}
+     * @return the array under management, can be {@code null}
+     */
+    protected abstract E[] getArray(I instance);
+
+    /**
+     * Sets the array under management.
+     *
+     * @param instance the instance it is located in, never {@code null}
+     * @param array the array to set, can be {@code null}
+     */
+    protected abstract void setArray(I instance, E[] array);
+
+    /**
+     * Gets the occupied slots of the array under management.
+     *
+     * @param instance the instance it is located in, never {@code null}
+     * @return the occupied slots of the array under management
+     */
+    protected abstract int getOccupiedSlots(I instance);
+
+    /**
+     * Sets the occupied slots of the array under management.
+     *
+     * @param instance the instance it is located in, never {@code null}
+     * @param array the occupied slots of the array to set
+     */
+    protected abstract void setOccupiedSlots(I instance, int occupiedSlots);
 
     /**
      * Adds an element at the end of the array, growing the arrow if necessary.
@@ -84,12 +101,12 @@ public class ArrayManager<I, E> {
      * @throws NullPointerException when the given instance was {@code null}
      */
     public void add(I instance, E element) {
-        E[] array = accessor.getArray(instance);
-        int occupiedSlots = accessor.getOccupiedSlots(instance);
+        E[] array = getArray(instance);
+        int occupiedSlots = getOccupiedSlots(instance);
 
         if (array == null) {
-            accessor.setArray(instance, array = (E[]) Array.newInstance(elementType, MINIMUM_SIZE));
-            accessor.setOccupiedSlots(instance, occupiedSlots + 1);
+            setArray(instance, array = (E[]) Array.newInstance(elementType, MINIMUM_SIZE));
+            setOccupiedSlots(instance, occupiedSlots + 1);
 
             array[0] = element;
 
@@ -106,11 +123,11 @@ public class ArrayManager<I, E> {
             int optimalSize = calculateOptimalSize(array.length, occupiedSlots + 1);
 
             if (optimalSize != array.length) {
-                accessor.setArray(instance, array = Arrays.copyOf(array, optimalSize));
+                setArray(instance, array = Arrays.copyOf(array, optimalSize));
             }
         }
 
-        accessor.setOccupiedSlots(instance, occupiedSlots + 1);
+        setOccupiedSlots(instance, occupiedSlots + 1);
 
         array[occupiedSlots] = element;
     }
@@ -127,8 +144,8 @@ public class ArrayManager<I, E> {
      * @throws NullPointerException when the given instance was {@code null}
      */
     public int indexOf(I instance, E element) {
-        E[] array = accessor.getArray(instance);
-        int occupiedSlots = accessor.getOccupiedSlots(instance);
+        E[] array = getArray(instance);
+        int occupiedSlots = getOccupiedSlots(instance);
 
         for (int i = 0; i < occupiedSlots; i++) {
             if (Objects.equals(element, array[i])) {
@@ -149,8 +166,8 @@ public class ArrayManager<I, E> {
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
     public E remove(I instance, int index) {
-        E[] array = accessor.getArray(instance);
-        int occupiedSlots = accessor.getOccupiedSlots(instance);
+        E[] array = getArray(instance);
+        int occupiedSlots = getOccupiedSlots(instance);
 
         Objects.checkIndex(index, occupiedSlots--);
 
@@ -159,7 +176,7 @@ public class ArrayManager<I, E> {
 
         assert newSize <= array.length : newSize + " <= " + array.length;
 
-        accessor.setOccupiedSlots(instance, occupiedSlots);
+        setOccupiedSlots(instance, occupiedSlots);
 
         if(newSize == array.length) {
             if(index < occupiedSlots) {
@@ -169,7 +186,7 @@ public class ArrayManager<I, E> {
             array[occupiedSlots] = null;
         }
         else if(newSize == 0) {
-            accessor.setArray(instance, null);
+            setArray(instance, null);
         }
         else {
             E[] newArray = (E[]) Array.newInstance(elementType, newSize);
@@ -180,7 +197,7 @@ public class ArrayManager<I, E> {
                 System.arraycopy(array, index + 1, newArray, index, occupiedSlots - index);
             }
 
-            accessor.setArray(instance, newArray);
+            setArray(instance, newArray);
         }
 
         return oldElement;
@@ -198,8 +215,8 @@ public class ArrayManager<I, E> {
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
     public E get(I instance, int index) {
-        E[] array = accessor.getArray(instance);
-        int occupiedSlots = accessor.getOccupiedSlots(instance);
+        E[] array = getArray(instance);
+        int occupiedSlots = getOccupiedSlots(instance);
 
         Objects.checkIndex(index, occupiedSlots);
 
@@ -219,8 +236,8 @@ public class ArrayManager<I, E> {
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
     public E set(I instance, int index, E element) {
-        E[] array = accessor.getArray(instance);
-        int occupiedSlots = accessor.getOccupiedSlots(instance);
+        E[] array = getArray(instance);
+        int occupiedSlots = getOccupiedSlots(instance);
 
         Objects.checkIndex(index, occupiedSlots);
 
@@ -243,13 +260,13 @@ public class ArrayManager<I, E> {
      */
     public boolean removeIf(I instance, Predicate<E> filter) {
         Objects.requireNonNull(filter);
-        E[] array = accessor.getArray(instance);
+        E[] array = getArray(instance);
 
         if (array == null) {
             return false;
         }
 
-        int occupiedSlots = accessor.getOccupiedSlots(instance);
+        int occupiedSlots = getOccupiedSlots(instance);
 
         int shift = 0;
 
@@ -266,17 +283,17 @@ public class ArrayManager<I, E> {
         int newLength = calculateOptimalSize(array.length, occupiedSlots - shift);
 
         if (newLength == 0) {
-            accessor.setArray(instance, null);
-            accessor.setOccupiedSlots(instance, 0);
+            setArray(instance, null);
+            setOccupiedSlots(instance, 0);
         }
         else if (newLength != array.length) {
             array = Arrays.copyOf(array, newLength);
 
-            accessor.setArray(instance, array);
-            accessor.setOccupiedSlots(instance, occupiedSlots - shift);
+            setArray(instance, array);
+            setOccupiedSlots(instance, occupiedSlots - shift);
         }
         else {
-            accessor.setOccupiedSlots(instance, occupiedSlots - shift);
+            setOccupiedSlots(instance, occupiedSlots - shift);
         }
 
         return shift > 0;

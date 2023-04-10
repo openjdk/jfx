@@ -32,7 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.binding.BindingHelperObserver;
-import com.sun.javafx.binding.ListenerHelper;
+import com.sun.javafx.binding.ListenerManager;
 
 /**
  * Base class that provides most of the functionality needed to implement a
@@ -59,6 +59,18 @@ import com.sun.javafx.binding.ListenerHelper;
 public abstract class BooleanBinding extends BooleanExpression implements
         Binding<Boolean> {
 
+    private static final ListenerManager<Boolean, BooleanBinding> LISTENER_MANAGER = new ListenerManager<>() {
+        @Override
+        protected Object getData(BooleanBinding instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(BooleanBinding instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
     /**
      * Creates a default {@code BooleanBinding}.
      */
@@ -79,24 +91,22 @@ public abstract class BooleanBinding extends BooleanExpression implements
 
     @Override
     public void addListener(InvalidationListener listener) {
-        listenerData = ListenerHelper.addListener(listenerData, listener);
-        get();  // adding an invalidation listener requires that the binding becomes valid (according to tests)
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        listenerData = ListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Boolean> listener) {
-        listenerData = ListenerHelper.addListener(listenerData, listener);
-        get();  // adding a change listener requires that the binding becomes valid
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Boolean> listener) {
-        listenerData = ListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -182,9 +192,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
             valid = false;
             onInvalidating();
 
-            boolean topLevel = ListenerHelper.fireValueChanged(listenerData, this, oldValue);
-
-            ListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
+            LISTENER_MANAGER.fireValueChanged(this, oldValue);
         }
     }
 

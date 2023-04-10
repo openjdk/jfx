@@ -31,7 +31,7 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.OldValueCachingListenerHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
@@ -52,6 +52,18 @@ import javafx.beans.value.ObservableNumberValue;
  * @since JavaFX 2.0
  */
 public abstract class IntegerPropertyBase extends IntegerProperty {
+
+    private static final OldValueCachingListenerManager<Number, IntegerPropertyBase> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(IntegerPropertyBase instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(IntegerPropertyBase instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
 
     private int value;
     private ObservableIntegerValue observable = null;
@@ -77,22 +89,22 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -105,9 +117,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        boolean topLevel = OldValueCachingListenerHelper.fireValueChanged(listenerData, this);
-
-        OldValueCachingListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 
     private void markInvalid() {

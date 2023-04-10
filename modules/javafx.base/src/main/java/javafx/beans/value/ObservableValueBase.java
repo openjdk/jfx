@@ -25,7 +25,7 @@
 
 package javafx.beans.value;
 
-import com.sun.javafx.binding.OldValueCachingListenerHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 import javafx.beans.InvalidationListener;
 
@@ -42,6 +42,18 @@ import javafx.beans.InvalidationListener;
  */
 public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 
+    private static final OldValueCachingListenerManager<Object, ObservableValueBase<Object>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(ObservableValueBase<Object> instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(ObservableValueBase<Object> instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
+
     private Object listenerData;
 
     /**
@@ -55,7 +67,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener((ObservableValueBase<Object>) this, listener);
     }
 
     /**
@@ -63,7 +75,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener((ObservableValueBase<Object>) this, (ChangeListener<Object>) listener);
     }
 
     /**
@@ -71,7 +83,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener((ObservableValueBase<Object>) this, listener);
     }
 
     /**
@@ -79,7 +91,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener((ObservableValueBase<Object>) this, listener);
     }
 
     /**
@@ -90,8 +102,6 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      * the following call to fireValueChangedEvent.
      */
     protected void fireValueChangedEvent() {
-        boolean topLevel = OldValueCachingListenerHelper.fireValueChanged(listenerData, this);
-
-        OldValueCachingListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
+        LISTENER_MANAGER.fireValueChanged((ObservableValueBase<Object>) this);
     }
 }

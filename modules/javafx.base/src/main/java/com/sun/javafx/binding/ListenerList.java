@@ -27,8 +27,6 @@ package com.sun.javafx.binding;
 
 import java.util.Objects;
 
-import com.sun.javafx.binding.ArrayManager.Accessor;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
@@ -56,49 +54,6 @@ import javafx.beans.value.ChangeListener;
  * slots from removals that occurred while locked.
  */
 public class ListenerList {
-    private static final Accessor<ListenerList, Object> INVALIDATION_LISTENERS_ACCESSOR = new Accessor<>() {
-        @Override
-        public Object[] getArray(ListenerList instance) {
-            return instance.managedInvalidationListeners;
-        }
-
-        @Override
-        public void setArray(ListenerList instance, Object[] array) {
-            instance.managedInvalidationListeners = array;
-        }
-
-        @Override
-        public int getOccupiedSlots(ListenerList instance) {
-            return instance.managedInvalidationListenersCount;
-        }
-
-        @Override
-        public void setOccupiedSlots(ListenerList instance, int occupiedSlots) {
-            instance.managedInvalidationListenersCount = occupiedSlots;
-        }
-    };
-
-    private static final Accessor<ListenerList, Object> CHANGE_LISTENERS_ACCESSOR = new Accessor<>() {
-        @Override
-        public Object[] getArray(ListenerList instance) {
-            return instance.managedChangeListeners;
-        }
-
-        @Override
-        public void setArray(ListenerList instance, Object[] array) {
-            instance.managedChangeListeners = array;
-        }
-
-        @Override
-        public int getOccupiedSlots(ListenerList instance) {
-            return instance.managedChangeListenersCount;
-        }
-
-        @Override
-        public void setOccupiedSlots(ListenerList instance, int occupiedSlots) {
-            instance.managedChangeListenersCount = occupiedSlots;
-        }
-    };
 
     /**
      * This a variant of {@link ArrayManager} with an implemented {@link #compact(ListenerList, Object[])}
@@ -107,14 +62,14 @@ public class ListenerList {
      * This handles compacting elements that are {@code null}, as well as elements that implement
      * {@link WeakListener} that were garbage collected in the mean time.
      */
-    private static class CompactingArrayManager extends ArrayManager<ListenerList, Object> {
+    private static abstract class CompactingArrayManager<T> extends ArrayManager<ListenerList, T> {
 
-        CompactingArrayManager(Accessor<ListenerList, Object> accessor) {
-            super(accessor, Object.class);
+        CompactingArrayManager(Class<T> elementType) {
+            super(elementType);
         }
 
         @Override
-        protected int compact(ListenerList instance, Object[] array) {
+        protected int compact(ListenerList instance, T[] array) {
             if (instance.isLocked()) {
                 return 0;
             }
@@ -122,7 +77,7 @@ public class ListenerList {
             int shift = 0;
 
             for (int i = 0; i < array.length; i++) {
-                Object element = array[i];
+                T element = array[i];
 
                 if (element == null || (element instanceof WeakListener wl && wl.wasGarbageCollected())) {
                     shift++;
@@ -140,8 +95,49 @@ public class ListenerList {
         }
     }
 
-    private static final ArrayManager<ListenerList, Object> INVALIDATION_LISTENERS = new CompactingArrayManager(INVALIDATION_LISTENERS_ACCESSOR);
-    private static final ArrayManager<ListenerList, Object> CHANGE_LISTENERS = new CompactingArrayManager(CHANGE_LISTENERS_ACCESSOR);
+    private static final ArrayManager<ListenerList, InvalidationListener> INVALIDATION_LISTENERS = new CompactingArrayManager<>(InvalidationListener.class) {
+        @Override
+        protected InvalidationListener[] getArray(ListenerList instance) {
+            return instance.managedInvalidationListeners;
+        }
+
+        @Override
+        protected void setArray(ListenerList instance, InvalidationListener[] array) {
+            instance.managedInvalidationListeners = array;
+        }
+
+        @Override
+        protected int getOccupiedSlots(ListenerList instance) {
+            return instance.managedInvalidationListenersCount;
+        }
+
+        @Override
+        protected void setOccupiedSlots(ListenerList instance, int occupiedSlots) {
+            instance.managedInvalidationListenersCount = occupiedSlots;
+        }
+    };
+
+    private static final ArrayManager<ListenerList, Object> CHANGE_LISTENERS = new CompactingArrayManager<>(Object.class) {
+        @Override
+        protected Object[] getArray(ListenerList instance) {
+            return instance.managedChangeListeners;
+        }
+
+        @Override
+        protected void setArray(ListenerList instance, Object[] array) {
+            instance.managedChangeListeners = array;
+        }
+
+        @Override
+        protected int getOccupiedSlots(ListenerList instance) {
+            return instance.managedChangeListenersCount;
+        }
+
+        @Override
+        protected void setOccupiedSlots(ListenerList instance, int occupiedSlots) {
+            instance.managedChangeListenersCount = occupiedSlots;
+        }
+    };
 
     /*
      * The following four fields are used for tracking invalidation and change listeners. When the
@@ -170,7 +166,7 @@ public class ListenerList {
      * allocation. The current users of this class want to avoid allocations.
      */
 
-    private Object[] managedInvalidationListeners;
+    private InvalidationListener[] managedInvalidationListeners;
     private int managedInvalidationListenersCount;
     private Object[] managedChangeListeners;
     private int managedChangeListenersCount;
@@ -203,27 +199,31 @@ public class ListenerList {
         Objects.requireNonNull(listener1);
         Objects.requireNonNull(listener2);
 
-        if(listener1 instanceof ChangeListener) {
+        if(listener1 instanceof InvalidationListener il) {
+            INVALIDATION_LISTENERS.add(this, il);
+        }
+        else {
             CHANGE_LISTENERS.add(this, listener1);
         }
-        else {
-            INVALIDATION_LISTENERS.add(this, listener1);
-        }
 
-        if(listener2 instanceof ChangeListener) {
-            CHANGE_LISTENERS.add(this, listener2);
+        if(listener2 instanceof InvalidationListener il) {
+            INVALIDATION_LISTENERS.add(this, il);
         }
         else {
-            INVALIDATION_LISTENERS.add(this, listener2);
+            CHANGE_LISTENERS.add(this, listener2);
         }
     }
 
     /**
      * Gets the listener at the given index. This can be {@code null} if the
-     * listener was removed in the mean time.
+     * listener was removed in the mean time.<p>
+     *
+     * This method can be used to retrieve either an invalidation or change listener.
+     * This method will return an invalidation listener if {@code index} is smaller than
+     * {@link #invalidationListenersSize()}, otherwise it returns a change listener.
      *
      * @param index an index, cannot be negative and must be less than {@link #size()}
-     * @return the listener at the given position, or {@code null}
+     * @return the listener at the given index, or {@code null}
      * @throws IndexOutOfBoundsException when the index is out of range
      */
     public Object get(int index) {
@@ -235,6 +235,35 @@ public class ListenerList {
     }
 
     /**
+     * Gets the invalidation listener at the given index. This can be {@code null}
+     * if the listener was removed in the mean time.
+     *
+     * @param index an index, cannot be negative and must be less than {@link #invalidationListenersSize()}
+     * @return the invalidation listener at the given index, or {@code null}
+     * @throws IndexOutOfBoundsException when the index is out of range
+     */
+    public InvalidationListener getInvalidationListener(int index) {
+        // no need to check locked here, as new listeners are only added in the other array
+        return INVALIDATION_LISTENERS.get(this, index);
+    }
+
+    /**
+     * Gets the change listener at the given index. This can be {@code null}
+     * if the listener was removed in the mean time.
+     *
+     * @param index an index, cannot be negative and must be less than {@link #changeListenersSize()}
+     * @return the change listener at the given index, or {@code null}
+     * @throws IndexOutOfBoundsException when the index is out of range
+     */
+    public <T> ChangeListener<T> getChangeListener(int index) {
+        if (isLocked() && index >= lockedOffset - managedInvalidationListenersCount) {
+            throw new IndexOutOfBoundsException(index);
+        }
+
+        return (ChangeListener<T>) CHANGE_LISTENERS.get(this, index);
+    }
+
+    /**
      * Returns the size of this listener list. Note: this is not the number of
      * actual listeners in the list, some elements may be {@code null}.
      *
@@ -242,6 +271,26 @@ public class ListenerList {
      */
     public int size() {
         return isLocked() ? lockedOffset : managedInvalidationListenersCount + managedChangeListenersCount;
+    }
+
+    /**
+     * Returns the size of the invalidation listener list. Note: this is not the number of
+     * actual listeners in the list, some elements may be {@code null}.
+     *
+     * @return the size of the invalidation listener list, never negative
+     */
+    public int invalidationListenersSize() {
+        return managedInvalidationListenersCount;
+    }
+
+    /**
+     * Returns the size of the change listener list. Note: this is not the number of
+     * actual listeners in the list, some elements may be {@code null}.
+     *
+     * @return the size of the change listener list, never negative
+     */
+    public int changeListenersSize() {
+        return lockedOffset - managedInvalidationListenersCount;
     }
 
     /**
@@ -257,7 +306,7 @@ public class ListenerList {
             CHANGE_LISTENERS.add(this, listener);  // even invalidation listeners go into this list when locked!
         }
         else {
-            INVALIDATION_LISTENERS.add(this, listener);
+            INVALIDATION_LISTENERS.add(this, (InvalidationListener) listener);
         }
     }
 
@@ -271,7 +320,7 @@ public class ListenerList {
     public void remove(Object listener) {
         Objects.requireNonNull(listener);
 
-        int index = INVALIDATION_LISTENERS.indexOf(this, listener);
+        int index = listener instanceof InvalidationListener il ? INVALIDATION_LISTENERS.indexOf(this, il) : -1;
 
         if (index >= 0) {
             if (isLocked()) {
@@ -309,8 +358,8 @@ public class ListenerList {
             for (int i = lockedOffset - managedInvalidationListenersCount; i < managedChangeListenersCount; i++) {
                 Object listener = CHANGE_LISTENERS.get(this, i);
 
-                if (listener instanceof InvalidationListener) {
-                    INVALIDATION_LISTENERS.add(this, listener);
+                if (listener instanceof InvalidationListener il) {
+                    INVALIDATION_LISTENERS.add(this, il);
                     CHANGE_LISTENERS.set(this, i, null);
                 }
             }

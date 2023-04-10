@@ -79,12 +79,45 @@ public class ListenerListTest {
     }
 
     @Test
+    void shouldAllowRemovingAllListeners() {
+        ListenerList list = new ListenerList(cl1, il1);
+
+        list.remove(cl1);
+        list.remove(il1);
+
+        assertEquals(0, list.size());
+        assertFalse(list.hasChangeListeners());
+
+        list.remove(cl1);
+        list.remove(il1);
+    }
+
+    @Test
     void hasChangeListenersShouldReturnCorrectState() {
+        ListenerList list = new ListenerList(cl1, il1);
+
         assertTrue(list.hasChangeListeners());
+
+        list.remove(cl1);
+
+        assertFalse(list.hasChangeListeners());
 
         ListenerList list2 = new ListenerList(il1, il2);
 
         assertFalse(list2.hasChangeListeners());
+    }
+
+    @Test
+    void hasChangeListenersShouldReturnCorrectStateWhileLocked_2() {
+        ListenerList list = new ListenerList(il1, il2);
+
+        list.setProgress(1);
+
+        assertFalse(list.hasChangeListeners());  // TODO is this what we want???? This is mainly tracked so we know when to update/clear old value...
+
+        list.add(cl1);
+
+        assertFalse(list.hasChangeListeners());
     }
 
     @Test

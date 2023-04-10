@@ -31,7 +31,7 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.OldValueCachingListenerHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
@@ -52,6 +52,18 @@ import javafx.beans.value.ObservableNumberValue;
  * @since JavaFX 2.0
  */
 public abstract class DoublePropertyBase extends DoubleProperty {
+
+    private static final OldValueCachingListenerManager<Number, DoublePropertyBase> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(DoublePropertyBase instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(DoublePropertyBase instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
 
     private double value;
     private ObservableDoubleValue observable = null;
@@ -77,22 +89,22 @@ public abstract class DoublePropertyBase extends DoubleProperty {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -105,9 +117,7 @@ public abstract class DoublePropertyBase extends DoubleProperty {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        boolean topLevel = OldValueCachingListenerHelper.fireValueChanged(listenerData, this);
-
-        OldValueCachingListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 
     private void markInvalid() {

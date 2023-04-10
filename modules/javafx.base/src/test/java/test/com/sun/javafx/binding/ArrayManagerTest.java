@@ -14,10 +14,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.binding.ArrayManager;
-import com.sun.javafx.binding.ArrayManager.Accessor;
 
 public class ArrayManagerTest {
-    private static final Accessor<ArrayManagerTest, String> ACCESSOR = new Accessor<>() {
+
+    private final ArrayManager<ArrayManagerTest, String> manager = new ArrayManager<>(String.class) {
+        protected int compact(ArrayManagerTest instance, String[] array) {
+            return compacter.apply(instance, array);
+        }
+
         @Override
         public String[] getArray(ArrayManagerTest instance) {
             return instance.array;
@@ -39,20 +43,31 @@ public class ArrayManagerTest {
         }
     };
 
-    private final ArrayManager<ArrayManagerTest, String> manager = new ArrayManager<>(ACCESSOR, String.class) {
-        protected int compact(ArrayManagerTest instance, String[] array) {
-            return compacter.apply(instance, array);
-        }
-    };
-
     private BiFunction<ArrayManagerTest, String[], Integer> compacter = (instance, array) -> 0;
     private String[] array;
     private int size;
 
     @Test
     void constructorShouldRejectNullArguments() {
-        assertThrows(NullPointerException.class, () -> new ArrayManager<>(null, String.class));
-        assertThrows(NullPointerException.class, () -> new ArrayManager<>(ACCESSOR, null));
+        assertThrows(NullPointerException.class, () -> new ArrayManager<>(null) {
+            @Override
+            protected Object[] getArray(Object instance) {
+                return null;
+            }
+
+            @Override
+            protected void setArray(Object instance, Object[] array) {
+            }
+
+            @Override
+            protected int getOccupiedSlots(Object instance) {
+                return 0;
+            }
+
+            @Override
+            protected void setOccupiedSlots(Object instance, int occupiedSlots) {
+            }
+        });
     }
 
     @Nested

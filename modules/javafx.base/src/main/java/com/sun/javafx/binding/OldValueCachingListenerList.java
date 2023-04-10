@@ -1,19 +1,17 @@
 package com.sun.javafx.binding;
 
-public class OldValueCachingListenerList extends ListenerList implements OldValueStore<Object> {
-    private Object value;
+public class OldValueCachingListenerList<T> extends ListenerList {
+    private T value;
 
     public OldValueCachingListenerList(Object listener1, Object listener2) {
         super(listener1, listener2);
     }
 
-    @Override
-    public Object getOldValue() {
+    public T getLatestValue() {
         return value;
     }
 
-    @Override
-    public void putOldValue(Object value) {
+    public void putLatestValue(T value) {
         this.value = value;
     }
 }

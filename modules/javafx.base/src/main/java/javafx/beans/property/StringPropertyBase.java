@@ -30,7 +30,7 @@ import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-import com.sun.javafx.binding.OldValueCachingListenerHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 import java.lang.ref.WeakReference;
 import javafx.beans.WeakListener;
@@ -49,6 +49,18 @@ import javafx.beans.WeakListener;
  * @since JavaFX 2.0
  */
 public abstract class StringPropertyBase extends StringProperty {
+
+    private static final OldValueCachingListenerManager<String, StringPropertyBase> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(StringPropertyBase instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(StringPropertyBase instance, Object data) {
+            instance.listenerData = data;
+        }
+    };
 
     private String value;
     private ObservableValue<? extends String> observable = null;
@@ -74,22 +86,22 @@ public abstract class StringPropertyBase extends StringProperty {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super String> listener) {
-        listenerData = OldValueCachingListenerHelper.addListener(listenerData, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super String> listener) {
-        listenerData = OldValueCachingListenerHelper.removeListener(listenerData, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -102,9 +114,7 @@ public abstract class StringPropertyBase extends StringProperty {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        boolean topLevel = OldValueCachingListenerHelper.fireValueChanged(listenerData, this);
-
-        OldValueCachingListenerHelper.consolidate(listenerData, topLevel);  // don't reorder, field may have changed
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 
     private void markInvalid() {
