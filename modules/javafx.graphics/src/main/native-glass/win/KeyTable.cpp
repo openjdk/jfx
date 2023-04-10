@@ -204,10 +204,10 @@ static constexpr size_t numOEMKeys = sizeof(oemKeys) / sizeof(oemKeys[0]);
 
 static BOOL isOEMKey(UINT vkey)
 {
-    for (size_t i = 0; i < numOEMKeys; ++i)
-    {
-        if (oemKeys[i] == vkey)
+    for (size_t i = 0; i < numOEMKeys; ++i) {
+        if (oemKeys[i] == vkey) {
             return true;
+        }
     }
     return false;
 }
@@ -215,8 +215,7 @@ static BOOL isOEMKey(UINT vkey)
 jint OEMCharToJavaKey(UINT ch, bool deadKey)
 {
     jint jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
-    if (deadKey)
-    {
+    if (deadKey) {
         switch (ch) {
             case L'`':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_GRAVE; break;
             case L'\'':  jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ACUTE; break;
@@ -240,8 +239,7 @@ jint OEMCharToJavaKey(UINT ch, bool deadKey)
             case 0x309C: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_SEMIVOICED_SOUND; break;
         }
     }
-    else
-    {
+    else {
         switch (ch) {
             case L'!':   jKeyCode = com_sun_glass_events_KeyEvent_VK_EXCLAMATION; break;
             case L'"':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE; break;
@@ -283,8 +281,9 @@ void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT& modifiers)
     vkey = 0;
     modifiers = 0;
 
-    if (jkey == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+    if (jkey == com_sun_glass_events_KeyEvent_VK_UNDEFINED) {
         return;
+    }
 
     for (int i = 0; keyMapTable[i].windowsKey; i++) {
         if (keyMapTable[i].javaKey == jkey) {
@@ -301,13 +300,11 @@ void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT& modifiers)
         // layouts. So in these instances we search through the OEM keys
         // looking for the Java code.
         vkey = 0;
-        for (size_t i = 0; i < numOEMKeys; ++i)
-        {
+        for (size_t i = 0; i < numOEMKeys; ++i) {
             UINT ch = ::MapVirtualKey(oemKeys[i], 2);
             bool deadKey = (ch & 0x80000000);
             jint trialCode = OEMCharToJavaKey(LOWORD(ch), deadKey);
-            if (trialCode == jkey)
-            {
+            if (trialCode == jkey) {
                 vkey = oemKeys[i];
                 break;
             }
