@@ -670,7 +670,7 @@ public class ExpressionHelperTest {
 
         p.set("b");
 
-        assertTrue(invalidated.get());  // true because it was added before called
+        assertTrue(invalidated.get());  // true because the invalidation listener was added before called
         assertEquals("b", currentValue.get());
     }
 
@@ -691,7 +691,7 @@ public class ExpressionHelperTest {
 
         p.set("b");
 
-        assertFalse(invalidated.get());  // false because it was removed before called
+        assertFalse(invalidated.get());  // false because the invalidation listener was removed before called
         assertEquals("b", currentValue.get());
     }
 

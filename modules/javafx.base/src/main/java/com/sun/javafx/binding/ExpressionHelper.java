@@ -34,12 +34,23 @@ import java.util.Arrays;
 /**
  * A convenience class for creating implementations of {@link javafx.beans.value.ObservableValue}.
  * It contains all of the infrastructure support for value invalidation- and
- * change event notification.
+ * change event notification.<p>
  *
  * This implementation can handle adding and removing listeners while the
- * observers are being notified, but it is not thread-safe.
+ * observers are being notified, but it is not thread-safe.<p>
  *
+ * This class keeps track of the latest value it has seen to determine if change
+ * listeners should be called when next {@link #fireValueChangedEvent()} is called.
+ * So while this value is usually the current value of the involved observable,
+ * it becomes the "old" value as soon as the observable is changed, until such time
+ * it is updated again (by calling {@link #fireValueChangedEvent()}).<p>
  *
+ * During this brief period, listeners may be added or removed causing the ExpressionHelper
+ * to perhaps switch to a different variant of itself. These different variants must be
+ * made aware of the currently stored latest value, as obtaining this value from the
+ * {@link ObservableValue} would (during that brief period) be a different value. Using
+ * the incorrect latest value would result in change listeners not being fired as they
+ * perform an equality check.
  */
 public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
