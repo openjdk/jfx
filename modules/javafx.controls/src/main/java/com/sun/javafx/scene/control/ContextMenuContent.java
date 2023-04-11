@@ -746,7 +746,7 @@ public class ContextMenuContent extends Region {
     }
 
     public void disposeListeners() {
-        if(contextMenu != null) {
+        if (contextMenu != null) {
             disposeBinds();
             contextMenu.showingProperty().removeListener(weakPopupShowingListener);
         }
