@@ -105,9 +105,9 @@ void IntRect::unite(const IntRect& other)
 void IntRect::uniteIfNonZero(const IntRect& other)
 {
     // Handle empty special cases first.
-    if (!other.width() && !other.height())
+    if (other.isZero())
         return;
-    if (!width() && !height()) {
+    if (isZero()) {
         *this = other;
         return;
     }
@@ -149,7 +149,7 @@ IntSize IntRect::differenceToPoint(const IntPoint& point) const
 
 bool IntRect::isValid() const
 {
-    Checked<int, RecordOverflow> max = m_location.x();
+    CheckedInt32 max = m_location.x();
     max += m_size.width();
     if (max.hasOverflowed())
         return false;

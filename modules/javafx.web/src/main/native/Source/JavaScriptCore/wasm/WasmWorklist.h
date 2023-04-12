@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,16 @@
 #include <queue>
 
 #include <wtf/AutomaticThread.h>
+#include <wtf/PrintStream.h>
 #include <wtf/PriorityQueue.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
 
+class VM;
+
 namespace Wasm {
 
-struct Context;
 class Plan;
 
 class Worklist {
@@ -47,7 +49,7 @@ public:
     ~Worklist();
 
     JS_EXPORT_PRIVATE void enqueue(Ref<Plan>);
-    void stopAllPlansForContext(Context&);
+    void stopAllPlansForContext(VM&);
 
     JS_EXPORT_PRIVATE void completePlanSynchronously(Plan&);
 
@@ -58,6 +60,8 @@ public:
         Preparation
     };
     const char* priorityString(Priority);
+
+    void dump(PrintStream&) const;
 
 private:
     class Thread;

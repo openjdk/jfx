@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -192,7 +192,7 @@ public class TestNodeBase extends Node {
 
     public static class StyleableProperties {
         public final static CssMetaData<TestNodeBase,Boolean> TEST =
-                new CssMetaData<TestNodeBase,Boolean>("-fx-test",
+                new CssMetaData<>("-fx-test",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -207,7 +207,7 @@ public class TestNodeBase extends Node {
         };
 
         public final static CssMetaData<TestNodeBase,String> STRING =
-                new CssMetaData<TestNodeBase,String>("-fx-string",
+                new CssMetaData<>("-fx-string",
                 StringConverter.getInstance(), "init string") {
 
             @Override
@@ -222,7 +222,7 @@ public class TestNodeBase extends Node {
         };
 
         public final static CssMetaData<TestNodeBase,Number> DOUBLE_PROPERTY =
-                new CssMetaData<TestNodeBase,Number>("-fx-double-property",
+                new CssMetaData<>("-fx-double-property",
                 SizeConverter.getInstance(), 0) {
 
             @Override
@@ -239,7 +239,7 @@ public class TestNodeBase extends Node {
         static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             List<CssMetaData<? extends Styleable, ?>> list =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
+                new ArrayList<>(Node.getClassCssMetaData());
             Collections.addAll(list,
                 TEST,
                 STRING,

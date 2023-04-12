@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,10 +27,8 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
-import javafx.util.StringConverter;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -94,7 +92,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<T>() {
+    private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.getRemovedSize() > 0 || c.wasPermutated()) {
@@ -118,7 +116,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
     };
 
     private final WeakListChangeListener<T> weakChoiceBoxItemsListener =
-            new WeakListChangeListener<T>(choiceBoxItemsListener);
+            new WeakListChangeListener<>(choiceBoxItemsListener);
 
     private final InvalidationListener itemsObserver;
 
@@ -260,7 +258,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         double popupWidth = popup.prefWidth(-1);
         if (popupWidth <= 0) { // first time: when the popup has not shown yet
             if (popup.getItems().size() > 0){
-                popupWidth = (new Text(((MenuItem)popup.getItems().get(0)).getText())).prefWidth(-1);
+                popupWidth = (new Text(popup.getItems().get(0).getText())).prefWidth(-1);
             }
         }
         return (popup.getItems().size() == 0) ? 50 : leftInset + Math.max(boxWidth, popupWidth)

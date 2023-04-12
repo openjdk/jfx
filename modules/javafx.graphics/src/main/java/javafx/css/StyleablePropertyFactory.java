@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,12 +121,14 @@ import java.util.function.Function;
  * <pre><code>
  public final class MyButton extends Button {
 
+     private static {@literal CssMetaData<MyButton, Boolean>} SELECTED;
+
      private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY =
          new {@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData()) {
          {
-             createBooleanCssMetaData("-my-selected", s {@literal ->} s.selected, false, false);
+             SELECTED = createBooleanCssMetaData("-my-selected", s {@literal ->} s.selected, false, false);
          }
-     }
+     };
 
 
      MyButton(String labelText) {
@@ -141,7 +143,7 @@ import java.util.function.Function;
 
      // StyleableProperty implementation reduced to one line
      private final {@literal StyleableProperty<Boolean>} selected =
-         new SimpleStyleableBooleanProperty(this, "selected", "my-selected");
+         new SimpleStyleableBooleanProperty(SELECTED, "selected", "my-selected");
 
      public static {@literal List<CssMetaData<? extends Styleable, ?>>} getClassCssMetaData() {
          return FACTORY.getCssMetaData();
@@ -302,7 +304,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
             boolean inherits) {
 
         CssMetaData<S,Color> cssMetaData = createColorCssMetaData(cssProperty, function, initialValue, inherits);
-        return new SimpleStyleableObjectProperty<Color>(cssMetaData, styleable, propertyName, initialValue);
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, initialValue);
     }
 
     /**
@@ -360,7 +362,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,Color> cssMetaData = (CssMetaData<S,Color>)getCssMetaData(Color.class, cssProperty);
-        return new SimpleStyleableObjectProperty<Color>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -388,7 +390,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
             boolean inherits) {
 
         CssMetaData<S,Duration> cssMetaData = createDurationCssMetaData(cssProperty, function, initialValue, inherits);
-        return new SimpleStyleableObjectProperty<Duration>(cssMetaData, styleable, propertyName, initialValue);
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, initialValue);
     }
 
     /**
@@ -446,7 +448,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,Duration> cssMetaData = (CssMetaData<S,Duration>)getCssMetaData(Duration.class, cssProperty);
-        return new SimpleStyleableObjectProperty<Duration>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -475,7 +477,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
             boolean inherits) {
 
         CssMetaData<S,E> cssMetaData = createEffectCssMetaData(cssProperty, function, initialValue, inherits);
-        return new SimpleStyleableObjectProperty<E>(cssMetaData, styleable, propertyName, initialValue);
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, initialValue);
     }
 
     /**
@@ -534,7 +536,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,Effect> cssMetaData = (CssMetaData<S,Effect>)getCssMetaData(Effect.class, cssProperty);
-        return new SimpleStyleableObjectProperty<Effect>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -580,7 +582,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
             boolean inherits) {
 
         CssMetaData<S,E> cssMetaData = createEnumCssMetaData(enumClass, cssProperty, function, initialValue, inherits);
-        return new SimpleStyleableObjectProperty<E>(cssMetaData, styleable, propertyName, initialValue);
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, initialValue);
     }
 
     /**
@@ -673,7 +675,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,E> cssMetaData = (CssMetaData<S,E>)getCssMetaData(enumClass, cssProperty);
-        return new SimpleStyleableObjectProperty<E>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -701,7 +703,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
             boolean inherits) {
 
         CssMetaData<S,Font> cssMetaData = createFontCssMetaData(cssProperty, function, initialValue, inherits);
-        return new SimpleStyleableObjectProperty<Font>(cssMetaData, styleable, propertyName, initialValue);
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, initialValue);
     }
 
     /**
@@ -759,7 +761,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,Font> cssMetaData = (CssMetaData<S,Font>)getCssMetaData(Font.class, cssProperty);
-        return new SimpleStyleableObjectProperty<Font>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -787,7 +789,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
             boolean inherits) {
 
         CssMetaData<S,Insets> cssMetaData = createInsetsCssMetaData(cssProperty, function, initialValue, inherits);
-        return new SimpleStyleableObjectProperty<Insets>(cssMetaData, styleable, propertyName, initialValue);
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, initialValue);
     }
 
     /**
@@ -844,7 +846,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,Insets> cssMetaData = (CssMetaData<S,Insets>)getCssMetaData(Insets.class, cssProperty);
-        return new SimpleStyleableObjectProperty<Insets>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -872,7 +874,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
             boolean inherits) {
 
         CssMetaData<S,Paint> cssMetaData = createPaintCssMetaData(cssProperty, function, initialValue, inherits);
-        return new SimpleStyleableObjectProperty<Paint>(cssMetaData, styleable, propertyName, initialValue);
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, initialValue);
     }
 
     /**
@@ -929,7 +931,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,Paint> cssMetaData = (CssMetaData<S,Paint>)getCssMetaData(Paint.class, cssProperty);
-        return new SimpleStyleableObjectProperty<Paint>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1014,7 +1016,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked")
         CssMetaData<S,Number> cssMetaData = (CssMetaData<S,Number>)getCssMetaData(Number.class, cssProperty);
-        return new SimpleStyleableObjectProperty<Number>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+        return new SimpleStyleableObjectProperty<>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1222,7 +1224,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S, Boolean> cssMetaData =
                 (CssMetaData<S, Boolean>)getCssMetaData(Boolean.class, property, key -> {
                     final StyleConverter<String, Boolean> converter = StyleConverter.getBooleanConverter();
-                    return new SimpleCssMetaData<S, Boolean>(key, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(key, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1284,7 +1286,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S, Color> cssMetaData =
                 (CssMetaData<S, Color>)getCssMetaData(Color.class, property, key -> {
                     final StyleConverter<String,Color> converter = StyleConverter.getColorConverter();
-                    return new SimpleCssMetaData<S, Color>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1346,7 +1348,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
                 CssMetaData<S, Duration> cssMetaData =
                 (CssMetaData<S, Duration>)getCssMetaData(Duration.class, property, key -> {
                     final StyleConverter<?,Duration> converter = StyleConverter.getDurationConverter();
-                    return new SimpleCssMetaData<S, Duration>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1473,7 +1475,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S, E> cssMetaData =
                 (CssMetaData<S, E>)getCssMetaData(enumClass, property, key -> {
                     final EnumConverter<E> converter = new EnumConverter(enumClass);
-                    return new SimpleCssMetaData<S, E>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1537,7 +1539,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,Font> cssMetaData =
                 (CssMetaData<S,Font>)getCssMetaData(Font.class, property, key -> {
                     final StyleConverter<ParsedValue[],Font> converter = StyleConverter.getFontConverter();
-                    return new SimpleCssMetaData<S, Font>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1597,7 +1599,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,Insets> cssMetaData =
                 (CssMetaData<S,Insets>)getCssMetaData(Insets.class, property, key -> {
                     final StyleConverter<ParsedValue[],Insets> converter = StyleConverter.getInsetsConverter();
-                    return new SimpleCssMetaData<S, Insets>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1659,7 +1661,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,Paint> cssMetaData =
                 (CssMetaData<S,Paint>)getCssMetaData(Paint.class, property, key -> {
                     final StyleConverter<ParsedValue<?, Paint>,Paint> converter = StyleConverter.getPaintConverter();
-                    return new SimpleCssMetaData<S, Paint>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1719,7 +1721,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,Number> cssMetaData =
                 (CssMetaData<S,Number>)getCssMetaData(Number.class, property, key -> {
                     final StyleConverter<?,Number> converter = StyleConverter.getSizeConverter();
-                    return new SimpleCssMetaData<S, Number>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1779,7 +1781,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,String> cssMetaData =
                 (CssMetaData<S,String>)getCssMetaData(String.class, property, key -> {
                     final StyleConverter<String,String> converter = StyleConverter.getStringConverter();
-                    return new SimpleCssMetaData<S, String>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1841,7 +1843,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,String> cssMetaData =
                 (CssMetaData<S,String>)getCssMetaData(java.net.URL.class, property, key -> {
                     final StyleConverter<ParsedValue[],String> converter = StyleConverter.getUrlConverter();
-                    return new SimpleCssMetaData<S, String>(property, function, converter, initialValue, inherits);
+                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1897,6 +1899,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         private final Function<S,StyleableProperty<V>> function;
 
+        @Override
         public final boolean isSettable(S styleable) {
             final StyleableProperty<V> prop = getStyleableProperty(styleable);
             if (prop instanceof Property) {

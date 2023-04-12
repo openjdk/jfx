@@ -34,6 +34,7 @@
 #include "HTMLNames.h"
 #include "StyleProperties.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -46,7 +47,7 @@ RemoveFormatCommand::RemoveFormatCommand(Document& document)
 
 static bool isElementForRemoveFormatCommand(const Element* element)
 {
-    static const auto elements = makeNeverDestroyed(HashSet<QualifiedName> {
+    static NeverDestroyed elements = MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> {
         acronymTag,
         bTag,
         bdoTag,
@@ -71,7 +72,7 @@ static bool isElementForRemoveFormatCommand(const Element* element)
         ttTag,
         uTag,
         varTag,
-    });
+    };
     return elements.get().contains(element->tagQName());
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,33 +28,51 @@
 
 #import <wtf/OSObjectPtr.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cf/TypeCastsCF.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
+#import <wtf/text/WTFString.h>
 
 namespace WTF {
 
-static bool hasEntitlement(SecTaskRef task, const char* entitlement)
+static bool hasEntitlement(SecTaskRef task, ASCIILiteral entitlement)
 {
     if (!task)
         return false;
-    auto string = adoptCF(CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, entitlement, kCFStringEncodingASCII, kCFAllocatorNull));
-    auto value = adoptCF(SecTaskCopyValueForEntitlement(task, string.get(), nullptr));
-    return value && CFGetTypeID(value.get()) == CFBooleanGetTypeID() && CFBooleanGetValue(static_cast<CFBooleanRef>(value.get()));
+    auto string = adoptCF(CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, entitlement.characters(), kCFStringEncodingASCII, kCFAllocatorNull));
+    return adoptCF(SecTaskCopyValueForEntitlement(task, string.get(), nullptr)) == kCFBooleanTrue;
 }
 
-bool hasEntitlement(audit_token_t token, const char* entitlement)
+bool hasEntitlement(audit_token_t token, ASCIILiteral entitlement)
 {
     return hasEntitlement(adoptCF(SecTaskCreateWithAuditToken(kCFAllocatorDefault, token)).get(), entitlement);
 }
 
-bool hasEntitlement(xpc_connection_t connection, const char *entitlement)
+bool hasEntitlement(xpc_connection_t connection, StringView entitlement)
 {
-    auto value = adoptOSObject(xpc_connection_copy_entitlement_value(connection, entitlement));
+    auto value = adoptOSObject(xpc_connection_copy_entitlement_value(connection, entitlement.utf8().data()));
     return value && xpc_get_type(value.get()) == XPC_TYPE_BOOL && xpc_bool_get_value(value.get());
 }
 
-bool processHasEntitlement(const char* entitlement)
+bool hasEntitlement(xpc_connection_t connection, ASCIILiteral entitlement)
+{
+    auto value = adoptOSObject(xpc_connection_copy_entitlement_value(connection, entitlement.characters()));
+    return value && xpc_get_type(value.get()) == XPC_TYPE_BOOL && xpc_bool_get_value(value.get());
+}
+
+bool processHasEntitlement(ASCIILiteral entitlement)
 {
     return hasEntitlement(adoptCF(SecTaskCreateFromSelf(kCFAllocatorDefault)).get(), entitlement);
+}
+
+bool hasEntitlementValue(audit_token_t token, ASCIILiteral entitlement, ASCIILiteral value)
+{
+    auto secTaskForToken = adoptCF(SecTaskCreateWithAuditToken(kCFAllocatorDefault, token));
+    if (!secTaskForToken)
+        return { };
+
+    auto string = adoptCF(CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, entitlement.characters(), kCFStringEncodingASCII, kCFAllocatorNull));
+    String entitlementValue = dynamic_cf_cast<CFStringRef>(adoptCF(SecTaskCopyValueForEntitlement(secTaskForToken.get(), string.get(), nullptr)).get());
+    return entitlementValue == value;
 }
 
 } // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -264,16 +264,19 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
     private static final class NullAudioEQ implements AudioEqualizer {
         private boolean enabled = false;
         private Map<Double, EqualizerBand> bands
-                = new HashMap<Double,EqualizerBand>();
+                = new HashMap<>();
 
+        @Override
         public boolean getEnabled() {
             return enabled;
         }
 
+        @Override
         public void setEnabled(boolean bEnable) {
             enabled = bEnable;
         }
 
+        @Override
         public EqualizerBand addBand(double centerFrequency, double bandwidth, double gain) {
             Double key = centerFrequency;
             if (bands.containsKey(key)) {
@@ -285,6 +288,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
             return newBand;
         }
 
+        @Override
         public boolean removeBand(double centerFrequency) {
             Double key = centerFrequency;
             if (bands.containsKey(key)) {
@@ -302,39 +306,48 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
         private int threshold = 60;
         private float[] fakeData;
 
+        @Override
         public boolean getEnabled() {
             return enabled;
         }
 
+        @Override
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
+        @Override
         public int getBandCount() {
             return bandCount;
         }
 
+        @Override
         public void setBandCount(int bands) {
             bandCount = bands;
             fakeData = new float[bandCount];
         }
 
+        @Override
         public double getInterval() {
             return interval;
         }
 
+        @Override
         public void setInterval(double interval) {
             this.interval = interval;
         }
 
+        @Override
         public int getSensitivityThreshold() {
             return threshold;
         }
 
+        @Override
         public void setSensitivityThreshold(int threshold) {
             this.threshold = threshold;
         }
 
+        @Override
         public float[] getMagnitudes(float[] mag) {
             int size = fakeData.length;
             if (mag == null || mag.length < size) {
@@ -344,6 +357,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
             return mag;
         }
 
+        @Override
         public float[] getPhases(float[] phs) {
             int size = fakeData.length;
             if (phs == null || phs.length < size) {
@@ -365,26 +379,32 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
             this.gain = gain;
         }
 
+        @Override
         public double getCenterFrequency() {
             return center;
         }
 
+        @Override
         public void setCenterFrequency(double centerFrequency) {
             center = centerFrequency;
         }
 
+        @Override
         public double getBandwidth() {
             return bandwidth;
         }
 
+        @Override
         public void setBandwidth(double bandwidth) {
             this.bandwidth = bandwidth;
         }
 
+        @Override
         public double getGain() {
             return gain;
         }
 
+        @Override
         public void setGain(double gain) {
             this.gain = gain;
         }

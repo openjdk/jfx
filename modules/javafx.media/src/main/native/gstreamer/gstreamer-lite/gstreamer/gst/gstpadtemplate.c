@@ -42,7 +42,7 @@
  * GST_PAD_TEMPLATE_DIRECTION().
  *
  * The GST_PAD_TEMPLATE_NAME_TEMPLATE () is important for GST_PAD_REQUEST pads
- * because it has to be used as the name in the gst_element_get_request_pad()
+ * because it has to be used as the name in the gst_element_request_pad_simple()
  * call to instantiate a pad from this template.
  *
  * Padtemplates can be created with gst_pad_template_new() or with
@@ -70,7 +70,7 @@
  *   my_method (void)
  *   {
  *     GstPad *pad;
- *     pad = gst_pad_new_from_static_template (&amp;my_template, "sink");
+ *     pad = gst_pad_new_from_static_template (&my_template, "sink");
  *     ...
  *   }
  * ]|
@@ -83,7 +83,7 @@
  *   {
  *     GstElementClass *gstelement_class = GST_ELEMENT_CLASS (klass);
  *
- *     gst_element_class_add_static_pad_template (gstelement_class, &amp;my_template);
+ *     gst_element_class_add_static_pad_template (gstelement_class, &my_template);
  *   }
  * ]|
  */

@@ -32,9 +32,9 @@
 
 // FIXME: There should be a standard way to turn a std::expected into a Optional.
 // Maybe we should put this into the header file for Expected and give it a better name.
-template<typename T, typename E> inline Optional<T> optionalValue(Expected<T, E>&& expected)
+template<typename T, typename E> inline std::optional<T> optionalValue(Expected<T, E>&& expected)
 {
-    return expected ? Optional<T>(WTFMove(expected.value())) : WTF::nullopt;
+    return expected ? std::optional<T>(WTFMove(expected.value())) : std::nullopt;
 }
 
 namespace WebCore {
@@ -59,28 +59,28 @@ Ref<HTMLOListElement> HTMLOListElement::create(const QualifiedName& tagName, Doc
     return adoptRef(*new HTMLOListElement(tagName, document));
 }
 
-bool HTMLOListElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLOListElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == typeAttr)
         return true;
-    return HTMLElement::isPresentationAttribute(name);
+    return HTMLElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLOListElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLOListElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == typeAttr) {
-        if (value == "a")
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyListStyleType, CSSValueLowerAlpha);
-        else if (value == "A")
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyListStyleType, CSSValueUpperAlpha);
-        else if (value == "i")
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyListStyleType, CSSValueLowerRoman);
-        else if (value == "I")
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyListStyleType, CSSValueUpperRoman);
-        else if (value == "1")
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyListStyleType, CSSValueDecimal);
+        if (value == "a"_s)
+            addPropertyToPresentationalHintStyle(style, CSSPropertyListStyleType, CSSValueLowerAlpha);
+        else if (value == "A"_s)
+            addPropertyToPresentationalHintStyle(style, CSSPropertyListStyleType, CSSValueUpperAlpha);
+        else if (value == "i"_s)
+            addPropertyToPresentationalHintStyle(style, CSSPropertyListStyleType, CSSValueLowerRoman);
+        else if (value == "I"_s)
+            addPropertyToPresentationalHintStyle(style, CSSPropertyListStyleType, CSSValueUpperRoman);
+        else if (value == "1"_s)
+            addPropertyToPresentationalHintStyle(style, CSSPropertyListStyleType, CSSValueDecimal);
     } else
-        HTMLElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLOListElement::parseAttribute(const QualifiedName& name, const AtomString& value)

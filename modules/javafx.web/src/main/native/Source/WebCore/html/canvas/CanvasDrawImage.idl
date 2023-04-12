@@ -26,7 +26,7 @@
 // FIXME: This should include SVGImageElement.
 typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap
 #if defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
-    or TypedOMCSSImageValue
+    or CSSStyleImageValue
 #endif
 #if defined(ENABLE_OFFSCREEN_CANVAS) && ENABLE_OFFSCREEN_CANVAS
     or OffscreenCanvas
@@ -38,10 +38,8 @@ typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap
 
 // https://html.spec.whatwg.org/multipage/canvas.html#canvasdrawimage
 interface mixin CanvasDrawImage {
-    // FIXME: All the unrestricted float arguments below should be unrestricted doubles.
-
     // drawing images
-    [MayThrowException] undefined drawImage(CanvasImageSource image, unrestricted double dx, unrestricted double dy);
-    [MayThrowException] undefined drawImage(CanvasImageSource image, unrestricted double dx, unrestricted double dy, unrestricted double dw, unrestricted double dh);
-    [MayThrowException] undefined drawImage(CanvasImageSource image, unrestricted double sx, unrestricted double sy, unrestricted double sw, unrestricted double sh, unrestricted double dx, unrestricted double dy, unrestricted double dw, unrestricted double dh);
+    undefined drawImage(CanvasImageSource image, unrestricted double dx, unrestricted double dy);
+    undefined drawImage(CanvasImageSource image, unrestricted double dx, unrestricted double dy, unrestricted double dw, unrestricted double dh);
+    undefined drawImage(CanvasImageSource image, unrestricted double sx, unrestricted double sy, unrestricted double sw, unrestricted double sh, unrestricted double dx, unrestricted double dy, unrestricted double dw, unrestricted double dh);
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,10 +75,12 @@ public class PPSRenderer extends PrRenderer {
     private final ResourceFactoryListener listener =
         new ResourceFactoryListener()
     {
+        @Override
         public void factoryReset() {
             dispose();
         }
 
+        @Override
         public void factoryReleased() {
             dispose();
         }
@@ -409,8 +411,7 @@ public class PPSRenderer extends PrRenderer {
         if (!validate()) {
             return null;
         }
-        PPSDrawable dst = (PPSDrawable)
-            getCompatibleImage(xformBounds.width, xformBounds.height);
+        PPSDrawable dst = getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {
             Graphics g = dst.createGraphics();
             g.translate(-xformBounds.x, -xformBounds.y);
@@ -431,8 +432,7 @@ public class PPSRenderer extends PrRenderer {
         if (!validate()) {
             return null;
         }
-        PPSDrawable dst = (PPSDrawable)
-            getCompatibleImage(xformBounds.width, xformBounds.height);
+        PPSDrawable dst = getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {
             PPSDrawable orig = (PPSDrawable)original.getUntransformedImage();
             Graphics g = dst.createGraphics();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,7 +125,7 @@ public class ChoiceBoxSelectionTest {
     }
 
     /**
-     * Not quite https://bugs.openjdk.java.net/browse/JDK-8089398
+     * Not quite https://bugs.openjdk.org/browse/JDK-8089398
      * (the issue there is setting value while selectionModel == null)
      *
      * This here throws NPE if selectionModel is null when the skin is attached.

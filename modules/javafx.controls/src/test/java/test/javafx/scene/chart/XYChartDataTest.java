@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ import static org.junit.Assert.assertEquals;
 public class XYChartDataTest {
 
     @Test public void creatingDataShouldSetValuesAndCurrentValues() {
-        XYChart.Data<Number,Number> data = new XYChart.Data<Number,Number>(10, 20);
+        XYChart.Data<Number,Number> data = new XYChart.Data<>(10, 20);
         assertEquals(10, data.getXValue().longValue());
         assertEquals(10, XYChartShim.Data_getCurrentX(data).longValue());
         assertEquals(20, data.getYValue().longValue());
@@ -49,7 +49,7 @@ public class XYChartDataTest {
     }
 
     @Test public void updatingValuesBeforeAddingToASeriesShouldUpdateValuesAndCurrentValues() {
-        XYChart.Data<Number,Number> data = new XYChart.Data<Number,Number>(10, 20);
+        XYChart.Data<Number,Number> data = new XYChart.Data<>(10, 20);
         data.setXValue(100);
         data.setYValue(200);
         assertEquals(100, data.getXValue().longValue());
@@ -67,8 +67,8 @@ public class XYChartDataTest {
                 new XYChart.Data<Number, Number>(3, 3),
                 new XYChart.Data<Number, Number>(2, 2));
 
-        LineChart<Number, Number> lineChart = new LineChart<Number, Number>(xAxis, yAxis);
-        XYChart.Series<Number, Number> series = new XYChart.Series<Number, Number>();
+        LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
+        XYChart.Series<Number, Number> series = new XYChart.Series<>();
         series.setData(list);
 
         lineChart.getData().add(series);
@@ -84,11 +84,11 @@ public class XYChartDataTest {
 
     @Test
     public void testSeriesAddDelete() {
-        XYChart.Series<String, Number> series = new XYChart.Series<String, Number>();
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
         Number value1 = 5;
         Number value2 = 6;
-        XYChart.Data<String, Number> point1 = new XYChart.Data<String, Number>("Something", value1);
-        XYChart.Data<String, Number> point2 = new XYChart.Data<String, Number>("Something", value2);
+        XYChart.Data<String, Number> point1 = new XYChart.Data<>("Something", value1);
+        XYChart.Data<String, Number> point2 = new XYChart.Data<>("Something", value2);
         series.getData().add(point1);
         series.getData().add(point2);
         assertEquals(0, XYChartShim.Series_getDataSize(series));

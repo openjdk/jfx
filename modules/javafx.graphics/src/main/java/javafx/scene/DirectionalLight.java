@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,16 +38,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 
 /**
- * A light that illuminates an object from a specific direction.
- * The direction is defined by the {@link #directionProperty() direction} vector property of the light. The direction
- * can be rotated by setting a rotation transform on the {@code DirectionalLight}. For example, if the direction vector
- * is {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light
- * is rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
+ * A light that illuminates an object from a specific direction. The <a href="LightBase.html#Direction">direction</a>
+ * is defined by the {@link #directionProperty() direction} vector property.
  * <p>
  * {@code DirectionalLight}s can represent strong light sources that are far enough from the objects they illuminate
  * that their light rays appear to be parallel. Because these light sources are considered to be infinitely far, they
- * cannot be attenuated. A decrease in intensity can be achieved by using a darker color. The sun is a common light
- * source that can be simulated with this light type.
+ * cannot be attenuated. The sun is a common light source that can be simulated with this light type.
  *
  * @since 18
  * @see PhongMaterial

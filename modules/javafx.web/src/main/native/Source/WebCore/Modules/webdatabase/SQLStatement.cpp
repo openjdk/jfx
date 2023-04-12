@@ -112,28 +112,26 @@ bool SQLStatement::execute(Database& db)
 
     SQLiteDatabase& database = db.sqliteDatabase();
 
-    SQLiteStatement statement(database, m_statement);
-    int result = statement.prepare();
-
-    if (result != SQLITE_OK) {
-        LOG(StorageAPI, "Unable to verify correctness of statement %s - error %i (%s)", m_statement.ascii().data(), result, database.lastErrorMsg());
-        if (result == SQLITE_INTERRUPT)
-            m_error = SQLError::create(SQLError::DATABASE_ERR, "could not prepare statement", result, "interrupted");
+    auto statement = database.prepareStatementSlow(m_statement);
+    if (!statement) {
+        LOG(StorageAPI, "Unable to verify correctness of statement %s - error %i (%s)", m_statement.ascii().data(), statement.error(), database.lastErrorMsg());
+        if (statement.error() == SQLITE_INTERRUPT)
+            m_error = SQLError::create(SQLError::DATABASE_ERR, "could not prepare statement", statement.error(), "interrupted");
         else
-            m_error = SQLError::create(SQLError::SYNTAX_ERR, "could not prepare statement", result, database.lastErrorMsg());
+            m_error = SQLError::create(SQLError::SYNTAX_ERR, "could not prepare statement", statement.error(), database.lastErrorMsg());
         return false;
     }
 
     // FIXME: If the statement uses the ?### syntax supported by sqlite, the bind parameter count is very likely off from the number of question marks.
     // If this is the case, they might be trying to do something fishy or malicious
-    if (statement.bindParameterCount() != m_arguments.size()) {
+    if (statement->bindParameterCount() != m_arguments.size()) {
         LOG(StorageAPI, "Bind parameter count doesn't match number of question marks");
-        m_error = SQLError::create(SQLError::SYNTAX_ERR, "number of '?'s in statement string does not match argument count");
+        m_error = SQLError::create(SQLError::SYNTAX_ERR, "number of '?'s in statement string does not match argument count"_s);
         return false;
     }
 
     for (unsigned i = 0; i < m_arguments.size(); ++i) {
-        result = statement.bindValue(i + 1, m_arguments[i]);
+        int result = statement->bindValue(i + 1, m_arguments[i]);
         if (result == SQLITE_FULL) {
             setFailureDueToQuota();
             return false;
@@ -149,20 +147,20 @@ bool SQLStatement::execute(Database& db)
     auto resultSet = SQLResultSet::create();
 
     // Step so we can fetch the column names.
-    result = statement.step();
+    int result = statement->step();
     switch (result) {
     case SQLITE_ROW: {
-        int columnCount = statement.columnCount();
+        int columnCount = statement->columnCount();
         auto& rows = resultSet->rows();
 
         for (int i = 0; i < columnCount; i++)
-            rows.addColumn(statement.getColumnName(i));
+            rows.addColumn(statement->columnName(i));
 
         do {
             for (int i = 0; i < columnCount; i++)
-                rows.addResult(statement.getColumnValue(i));
+                rows.addResult(statement->columnValue(i));
 
-            result = statement.step();
+            result = statement->step();
         } while (result == SQLITE_ROW);
 
         if (result != SQLITE_DONE) {
@@ -189,10 +187,10 @@ bool SQLStatement::execute(Database& db)
         return false;
     }
 
-    // FIXME: If the spec allows triggers, and we want to be "accurate" in a different way, we'd use
-    // sqlite3_total_changes() here instead of sqlite3_changed, because that includes rows modified from within a trigger
-    // For now, this seems sufficient
-    resultSet->setRowsAffected(database.lastChanges());
+    // rowsAffected should be 0 for read only statements (e.g. SELECT statement). However, SQLiteDatabase::lastChanges() returns
+    // the number of changes made by the most recent INSERT, UPDATE or DELETE statement.
+    if (!statement->isReadOnly())
+        resultSet->setRowsAffected(database.lastChanges());
 
     m_resultSet = WTFMove(resultSet);
     return true;
@@ -236,19 +234,19 @@ bool SQLStatement::performCallback(SQLTransaction& transaction)
 void SQLStatement::setDatabaseDeletedError()
 {
     ASSERT(!m_error && !m_resultSet);
-    m_error = SQLError::create(SQLError::UNKNOWN_ERR, "unable to execute statement, because the user deleted the database");
+    m_error = SQLError::create(SQLError::UNKNOWN_ERR, "unable to execute statement, because the user deleted the database"_s);
 }
 
 void SQLStatement::setVersionMismatchedError()
 {
     ASSERT(!m_error && !m_resultSet);
-    m_error = SQLError::create(SQLError::VERSION_ERR, "current version of the database and `oldVersion` argument do not match");
+    m_error = SQLError::create(SQLError::VERSION_ERR, "current version of the database and `oldVersion` argument do not match"_s);
 }
 
 void SQLStatement::setFailureDueToQuota()
 {
     ASSERT(!m_error && !m_resultSet);
-    m_error = SQLError::create(SQLError::QUOTA_ERR, "there was not enough remaining storage space, or the storage quota was reached and the user declined to allow more space");
+    m_error = SQLError::create(SQLError::QUOTA_ERR, "there was not enough remaining storage space, or the storage quota was reached and the user declined to allow more space"_s);
 }
 
 void SQLStatement::clearFailureDueToQuota()

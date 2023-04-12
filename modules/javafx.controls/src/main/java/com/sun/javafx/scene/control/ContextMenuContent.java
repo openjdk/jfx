@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -342,6 +342,15 @@ public class ContextMenuContent extends Region {
 
         itemsContainer.resize(w,contentHeight);
         itemsContainer.relocate(x, y);
+
+        if (contentHeight < Math.abs(ty)) {
+            /*
+             ** This condition occurs when context menu with large number of items
+             ** are replaced by smaller number of items.
+             ** Scroll to the top to display the context menu items.
+             */
+            scroll(Math.abs(ty));
+        }
 
         if (isFirstShow && ty == 0) {
             upArrow.setVisible(false);
@@ -806,8 +815,19 @@ public class ContextMenuContent extends Region {
         return submenu;
     }
 
+    // For test purpose only
     Menu getOpenSubMenu() {
         return openSubmenu;
+    }
+
+    // For test purpose only
+    boolean isUpArrowVisible() {
+        return upArrow.isVisible();
+    }
+
+    // For test purpose only
+    boolean isDownArrowVisible() {
+        return downArrow.isVisible();
     }
 
     private void createSubmenu() {
@@ -922,7 +942,7 @@ public class ContextMenuContent extends Region {
         static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes

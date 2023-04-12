@@ -33,6 +33,7 @@
 #include "JSTrackCustom.h"
 #include "JSVTTCue.h"
 #include "TextTrack.h"
+#include "WebCoreOpaqueRoot.h"
 
 
 namespace WebCore {
@@ -43,11 +44,9 @@ bool JSTextTrackCueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> h
     JSTextTrackCue* jsTextTrackCue = jsCast<JSTextTrackCue*>(handle.slot()->asCell());
     TextTrackCue& textTrackCue = jsTextTrackCue->wrapped();
 
-    // If the cue is firing event listeners, its wrapper is reachable because
-    // the wrapper is responsible for marking those event listeners.
-    if (textTrackCue.isFiringEventListeners()) {
+    if (!textTrackCue.isContextStopped() && textTrackCue.hasPendingActivity()) {
         if (UNLIKELY(reason))
-            *reason = "TextTrackCue is firing event listeners";
+            *reason = "TextTrackCue with pending activity";
         return true;
     }
 
@@ -58,7 +57,7 @@ bool JSTextTrackCueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> h
     if (UNLIKELY(reason))
         *reason = "TextTrack is an opaque root";
 
-    return visitor.containsOpaqueRoot(root(textTrackCue.track()));
+    return containsWebCoreOpaqueRoot(visitor, textTrackCue.track());
 }
 
 JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<TextTrackCue>&& cue)
@@ -85,8 +84,8 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObjec
 template<typename Visitor>
 void JSTextTrackCue::visitAdditionalChildren(Visitor& visitor)
 {
-    if (TextTrack* textTrack = wrapped().track())
-        visitor.addOpaqueRoot(root(textTrack));
+    if (auto* textTrack = wrapped().track())
+        addWebCoreOpaqueRoot(visitor, *textTrack);
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSTextTrackCue);

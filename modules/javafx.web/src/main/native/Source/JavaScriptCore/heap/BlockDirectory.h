@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,10 @@
 #include <wtf/SharedTask.h>
 #include <wtf/Vector.h>
 
+namespace WTF {
+class SimpleStats;
+}
+
 namespace JSC {
 
 class GCDeferralContext;
@@ -70,7 +74,7 @@ public:
     void shrink();
     void assertNoUnswept();
     size_t cellSize() const { return m_cellSize; }
-    const CellAttributes& attributes() const { return m_attributes; }
+    CellAttributes attributes() const { return m_attributes; }
     bool needsDestruction() const { return m_attributes.destruction == NeedsDestruction; }
     DestructionMode destruction() const { return m_attributes.destruction; }
     HeapCell::Kind cellKind() const { return m_attributes.cellKind; }
@@ -83,11 +87,13 @@ public:
     RefPtr<SharedTask<MarkedBlock::Handle*()>> parallelNotEmptyBlockSource();
 
     void addBlock(MarkedBlock::Handle*);
-    void removeBlock(MarkedBlock::Handle*);
+    enum class WillDeleteBlock { No, Yes };
+    // If WillDeleteBlock::Yes is passed then the block will be left in an invalid state. We do this, however, to avoid potentially paging in / decompressing old blocks to update their handle just before freeing them.
+    void removeBlock(MarkedBlock::Handle*, WillDeleteBlock = WillDeleteBlock::No);
 
-    bool isPagedOut(MonotonicTime deadline);
+    void updatePercentageOfPagedOutPages(WTF::SimpleStats&);
 
-    Lock& bitvectorLock() { return m_bitvectorLock; }
+    Lock& bitvectorLock() WTF_RETURNS_LOCK(m_bitvectorLock) { return m_bitvectorLock; }
 
 #define BLOCK_DIRECTORY_BIT_ACCESSORS(lowerBitName, capitalBitName)     \
     bool is ## capitalBitName(const AbstractLocker&, size_t index) const { return m_bits.is ## capitalBitName(index); } \

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ public class DataFormat {
      * (or other string based key), and we need to be able to map this back to the FX
      * DataFormat.
      */
-    private static final WeakReferenceQueue<DataFormat> DATA_FORMAT_LIST = new WeakReferenceQueue<DataFormat>();
+    private static final WeakReferenceQueue<DataFormat> DATA_FORMAT_LIST = new WeakReferenceQueue<>();
 
     /**
      * Represents a plain text string.
@@ -138,7 +138,7 @@ public class DataFormat {
                             "' already exists.");
                 }
             }
-            this.identifier = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(ids)));
+            this.identifier = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(ids)));
         } else {
             this.identifier = Collections.<String>emptySet();
         }

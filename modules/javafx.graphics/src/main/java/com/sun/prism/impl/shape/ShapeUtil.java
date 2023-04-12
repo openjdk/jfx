@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,11 @@
 
 package com.sun.prism.impl.shape;
 
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PathConsumer2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.PrismSettings.RasterizerType;
 
 public class ShapeUtil {
 

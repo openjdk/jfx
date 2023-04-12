@@ -59,19 +59,22 @@ bool GCIncomingRefCountedSet<T>::addReference(JSCell* cell, T* object)
 }
 
 template<typename T>
-void GCIncomingRefCountedSet<T>::sweep(VM& vm)
+void GCIncomingRefCountedSet<T>::sweep(VM& vm, CollectionScope collectionScope)
 {
-    for (size_t i = 0; i < m_vector.size(); ++i) {
-        T* object = m_vector[i];
+    size_t preciseBytes = 0;
+    m_vector.removeAllMatching([&](T* object) {
         size_t size = object->gcSizeEstimateInBytes();
         ASSERT(object->isDeferred());
         ASSERT(object->numberOfIncomingReferences());
-        if (!object->filterIncomingReferences([&] (JSCell* cell) { return vm.heap.isMarked(cell); }))
-            continue;
-        m_bytes -= size;
-        m_vector[i--] = m_vector.last();
-        m_vector.removeLast();
-    }
+        if (!object->filterIncomingReferences([&] (JSCell* cell) { return vm.heap.isMarked(cell); })) {
+            preciseBytes += size;
+            return false;
+        }
+        return true;
+    });
+    // Update m_bytes to the precise value when Full-GC happens since Eden-GC only expects that Eden region is collected.
+    if (collectionScope == CollectionScope::Full)
+        m_bytes = preciseBytes;
 }
 
 } // namespace JSC

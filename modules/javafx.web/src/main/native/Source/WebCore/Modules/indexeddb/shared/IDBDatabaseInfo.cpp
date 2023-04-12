@@ -26,11 +26,12 @@
 #include "config.h"
 #include "IDBDatabaseInfo.h"
 
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(INDEXED_DATABASE)
-
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabaseInfo);
 
 IDBDatabaseInfo::IDBDatabaseInfo()
 {
@@ -68,7 +69,7 @@ bool IDBDatabaseInfo::hasObjectStore(const String& name) const
     return false;
 }
 
-IDBObjectStoreInfo IDBDatabaseInfo::createNewObjectStore(const String& name, Optional<IDBKeyPath>&& keyPath, bool autoIncrement)
+IDBObjectStoreInfo IDBDatabaseInfo::createNewObjectStore(const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement)
 {
     IDBObjectStoreInfo info(++m_maxObjectStoreID, name, WTFMove(keyPath), autoIncrement);
     m_objectStoreMap.set(info.identifier(), info);
@@ -135,12 +136,9 @@ void IDBDatabaseInfo::renameObjectStore(uint64_t objectStoreIdentifier, const St
 
 Vector<String> IDBDatabaseInfo::objectStoreNames() const
 {
-    Vector<String> names;
-    names.reserveCapacity(m_objectStoreMap.size());
-    for (auto& objectStore : m_objectStoreMap.values())
-        names.uncheckedAppend(objectStore.name());
-
-    return names;
+    return WTF::map(m_objectStoreMap, [](auto& pair) {
+        return pair.value.name();
+    });
 }
 
 void IDBDatabaseInfo::deleteObjectStore(const String& objectStoreName)
@@ -177,5 +175,3 @@ void IDBDatabaseInfo::setMaxIndexID(uint64_t maxIndexID)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

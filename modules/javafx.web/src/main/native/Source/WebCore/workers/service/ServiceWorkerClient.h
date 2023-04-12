@@ -29,7 +29,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "ExceptionOr.h"
-#include "PostMessageOptions.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerClientData.h"
 #include <JavaScriptCore/Strong.h>
 #include <wtf/RefCounted.h>
@@ -43,14 +43,16 @@ namespace WebCore {
 
 class ServiceWorkerGlobalScope;
 
+struct StructuredSerializeOptions;
+
 class ServiceWorkerClient : public RefCounted<ServiceWorkerClient>, public ContextDestructionObserver {
 public:
-    using Identifier = ServiceWorkerClientIdentifier;
+    using Identifier = ScriptExecutionContextIdentifier;
 
     using Type = ServiceWorkerClientType;
     using FrameType = ServiceWorkerClientFrameType;
 
-    static Ref<ServiceWorkerClient> getOrCreate(ServiceWorkerGlobalScope&, ServiceWorkerClientData&&);
+    static Ref<ServiceWorkerClient> create(ServiceWorkerGlobalScope&, ServiceWorkerClientData&&);
 
     ~ServiceWorkerClient();
 
@@ -61,11 +63,14 @@ public:
 
     Identifier identifier() const { return m_data.identifier; }
 
-    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
+
+    const ServiceWorkerClientData& data() const { return m_data; }
 
 protected:
     ServiceWorkerClient(ServiceWorkerGlobalScope&, ServiceWorkerClientData&&);
 
+private:
     ServiceWorkerClientData m_data;
 };
 

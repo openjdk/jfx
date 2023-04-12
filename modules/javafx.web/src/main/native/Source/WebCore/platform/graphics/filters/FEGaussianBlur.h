@@ -2,6 +2,7 @@
  * Copyright (C) 2004, 2005, 2006, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
+ * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,64 +23,77 @@
 #pragma once
 
 #include "FEConvolveMatrix.h"
-#include "Filter.h"
 #include "FilterEffect.h"
 
 namespace WebCore {
 
 class FEGaussianBlur : public FilterEffect {
 public:
-    static Ref<FEGaussianBlur> create(Filter&, float, float, EdgeModeType);
+    WEBCORE_EXPORT static Ref<FEGaussianBlur> create(float x, float y, EdgeModeType);
 
     float stdDeviationX() const { return m_stdX; }
-    void setStdDeviationX(float);
+    bool setStdDeviationX(float);
 
     float stdDeviationY() const { return m_stdY; }
-    void setStdDeviationY(float);
+    bool setStdDeviationY(float);
 
     EdgeModeType edgeMode() const { return m_edgeMode; }
-    void setEdgeMode(EdgeModeType);
+    bool setEdgeMode(EdgeModeType);
 
     static IntSize calculateKernelSize(const Filter&, FloatSize stdDeviation);
     static IntSize calculateUnscaledKernelSize(FloatSize stdDeviation);
     static IntSize calculateOutsetSize(FloatSize stdDeviation);
 
+    static IntOutsets calculateOutsets(const FloatSize& stdDeviation);
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<Ref<FEGaussianBlur>> decode(Decoder&);
+
 private:
-    FEGaussianBlur(Filter&, float, float, EdgeModeType);
+    FEGaussianBlur(float x, float y, EdgeModeType);
 
-    const char* filterName() const final { return "FEGaussianBlur"; }
+    FloatRect calculateImageRect(const Filter&, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const override;
 
-    static const int s_minimalRectDimension = 100 * 100; // Empirical data limit for parallel jobs
+    bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
 
-    template<typename Type>
-    friend class ParallelJobs;
+    std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
-    struct PlatformApplyParameters {
-        FEGaussianBlur* filter;
-        RefPtr<Uint8ClampedArray> ioPixelArray;
-        RefPtr<Uint8ClampedArray> tmpPixelArray;
-        int width;
-        int height;
-        unsigned kernelSizeX;
-        unsigned kernelSizeY;
-    };
-
-    void platformApplySoftware() override;
-
-    void determineAbsolutePaintRect() override;
-
-    IntOutsets outsets() const override;
-
-    WTF::TextStream& externalRepresentation(WTF::TextStream&, RepresentationType) const override;
-
-    static void platformApplyWorker(PlatformApplyParameters*);
-    void platformApply(Uint8ClampedArray& ioBuffer, Uint8ClampedArray& tempBuffer, unsigned kernelSizeX, unsigned kernelSizeY, IntSize& paintSize);
-    void platformApplyGeneric(Uint8ClampedArray& ioBuffer, Uint8ClampedArray& tempBuffer, unsigned kernelSizeX, unsigned kernelSizeY, IntSize& paintSize);
+    WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
     float m_stdX;
     float m_stdY;
     EdgeModeType m_edgeMode;
 };
 
+template<class Encoder>
+void FEGaussianBlur::encode(Encoder& encoder) const
+{
+    encoder << m_stdX;
+    encoder << m_stdY;
+    encoder << m_edgeMode;
+}
+
+template<class Decoder>
+std::optional<Ref<FEGaussianBlur>> FEGaussianBlur::decode(Decoder& decoder)
+{
+    std::optional<float> stdX;
+    decoder >> stdX;
+    if (!stdX)
+        return std::nullopt;
+
+    std::optional<float> stdY;
+    decoder >> stdY;
+    if (!stdY)
+        return std::nullopt;
+
+    std::optional<EdgeModeType> edgeMode;
+    decoder >> edgeMode;
+    if (!edgeMode)
+        return std::nullopt;
+
+    return FEGaussianBlur::create(*stdX, *stdY, *edgeMode);
+}
+
 } // namespace WebCore
 
+SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEGaussianBlur)

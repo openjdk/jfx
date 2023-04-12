@@ -25,15 +25,13 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBError.h"
 #include "IDBResourceIdentifier.h"
 #include "IDBTransactionInfo.h"
 #include "IndexedDB.h"
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -67,6 +65,7 @@ public:
     void notifyCursorsOfChanges(int64_t objectStoreID);
 
     IDBTransactionMode mode() const { return m_info.mode(); }
+    IDBTransactionDurability durability() const { return m_info.durability(); }
     bool inProgress() const;
 
     SQLiteTransaction* sqliteTransaction() const { return m_sqliteTransaction.get(); }
@@ -89,10 +88,8 @@ private:
     HashMap<IDBResourceIdentifier, std::unique_ptr<SQLiteIDBCursor>> m_cursors;
     HashSet<SQLiteIDBCursor*> m_backingStoreCursors;
     Vector<std::pair<String, String>> m_blobTemporaryAndStoredFilenames;
-    HashSet<String> m_blobRemovedFilenames;
+    MemoryCompactRobinHoodHashSet<String> m_blobRemovedFilenames;
 };
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

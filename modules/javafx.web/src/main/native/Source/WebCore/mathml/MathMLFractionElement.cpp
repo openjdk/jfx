@@ -29,6 +29,7 @@
 
 #if ENABLE(MATHML)
 
+#include "ElementInlines.h"
 #include "RenderMathMLFraction.h"
 #include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
@@ -64,13 +65,13 @@ const MathMLElement::Length& MathMLFractionElement::lineThickness()
     // However, it only states that "thin" and "thick" are respectively thiner and thicker.
     // The MathML in HTML5 implementation note suggests 50% and 200% and these values are also used in Gecko.
     m_lineThickness = Length();
-    if (equalLettersIgnoringASCIICase(thickness, "thin")) {
+    if (equalLettersIgnoringASCIICase(thickness, "thin"_s)) {
         m_lineThickness.value().type = LengthType::UnitLess;
         m_lineThickness.value().value = .5;
-    } else if (equalLettersIgnoringASCIICase(thickness, "medium")) {
+    } else if (equalLettersIgnoringASCIICase(thickness, "medium"_s)) {
         m_lineThickness.value().type = LengthType::UnitLess;
         m_lineThickness.value().value = 1;
-    } else if (equalLettersIgnoringASCIICase(thickness, "thick")) {
+    } else if (equalLettersIgnoringASCIICase(thickness, "thick"_s)) {
         m_lineThickness.value().type = LengthType::UnitLess;
         m_lineThickness.value().value = 2;
     } else
@@ -78,15 +79,15 @@ const MathMLElement::Length& MathMLFractionElement::lineThickness()
     return m_lineThickness.value();
 }
 
-MathMLFractionElement::FractionAlignment MathMLFractionElement::cachedFractionAlignment(const QualifiedName& name, Optional<FractionAlignment>& alignment)
+MathMLFractionElement::FractionAlignment MathMLFractionElement::cachedFractionAlignment(const QualifiedName& name, std::optional<FractionAlignment>& alignment)
 {
     if (alignment)
         return alignment.value();
 
     auto& value = attributeWithoutSynchronization(name);
-    if (equalLettersIgnoringASCIICase(value, "left"))
+    if (equalLettersIgnoringASCIICase(value, "left"_s))
         alignment = FractionAlignmentLeft;
-    else if (equalLettersIgnoringASCIICase(value, "right"))
+    else if (equalLettersIgnoringASCIICase(value, "right"_s))
         alignment = FractionAlignmentRight;
     else
         alignment = FractionAlignmentCenter;
@@ -106,11 +107,11 @@ MathMLFractionElement::FractionAlignment MathMLFractionElement::denominatorAlign
 void MathMLFractionElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == linethicknessAttr)
-        m_lineThickness = WTF::nullopt;
+        m_lineThickness = std::nullopt;
     else if (name == numalignAttr)
-        m_numeratorAlignment = WTF::nullopt;
+        m_numeratorAlignment = std::nullopt;
     else if (name == denomalignAttr)
-        m_denominatorAlignment = WTF::nullopt;
+        m_denominatorAlignment = std::nullopt;
 
     MathMLElement::parseAttribute(name, value);
 }

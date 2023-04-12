@@ -36,7 +36,7 @@ namespace Nicosia {
 
 SceneIntegration::SceneIntegration(Scene& scene, Client& client)
 {
-    m_client.scene = makeRef(scene);
+    m_client.scene = &scene;
     m_client.object = &client;
 }
 
@@ -47,27 +47,27 @@ SceneIntegration::~SceneIntegration()
 
 void SceneIntegration::setClient(Client& client)
 {
-    LockHolder locker(m_client.lock);
+    Locker locker { m_client.lock };
     m_client.object = &client;
 }
 
 void SceneIntegration::invalidate()
 {
-    LockHolder locker(m_client.lock);
+    Locker locker { m_client.lock };
     m_client.scene = nullptr;
     m_client.object = nullptr;
 }
 
 void SceneIntegration::requestUpdate()
 {
-    LockHolder locker(m_client.lock);
+    Locker locker { m_client.lock };
     if (m_client.object)
         m_client.object->requestUpdate();
 }
 
 std::unique_ptr<SceneIntegration::UpdateScope> SceneIntegration::createUpdateScope()
 {
-    return makeUnique<UpdateScope>(makeRef(*this));
+    return makeUnique<UpdateScope>(Ref { *this });
 }
 
 SceneIntegration::Client::~Client() = default;

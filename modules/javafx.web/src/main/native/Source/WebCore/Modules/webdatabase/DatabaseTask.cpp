@@ -41,18 +41,16 @@ DatabaseTaskSynchronizer::DatabaseTaskSynchronizer()
 
 void DatabaseTaskSynchronizer::waitForTaskCompletion()
 {
-    m_synchronousMutex.lock();
+    Locker locker { m_synchronousLock };
     while (!m_taskCompleted)
-        m_synchronousCondition.wait(m_synchronousMutex);
-    m_synchronousMutex.unlock();
+        m_synchronousCondition.wait(m_synchronousLock);
 }
 
 void DatabaseTaskSynchronizer::taskCompleted()
 {
-    m_synchronousMutex.lock();
+    Locker locker { m_synchronousLock };
     m_taskCompleted = true;
     m_synchronousCondition.notifyOne();
-    m_synchronousMutex.unlock();
 }
 
 DatabaseTask::DatabaseTask(Database& database, DatabaseTaskSynchronizer* synchronizer)
@@ -97,7 +95,7 @@ DatabaseOpenTask::DatabaseOpenTask(Database& database, bool setVersionInNewDatab
 
 void DatabaseOpenTask::doPerformTask()
 {
-    m_result = isolatedCopy(database().performOpenAndVerify(m_setVersionInNewDatabase));
+    m_result = crossThreadCopy(database().performOpenAndVerify(m_setVersionInNewDatabase));
 }
 
 #if !LOG_DISABLED

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,33 +63,33 @@ public final class TouchEvent extends InputEvent {
      * Common supertype for all touch event types.
      */
     public static final EventType<TouchEvent> ANY =
-            new EventType<TouchEvent>(InputEvent.ANY, "TOUCH");
+            new EventType<>(InputEvent.ANY, "TOUCH");
 
     /**
      * This event occurs when the touch point is pressed (touched for the
      * first time).
      */
     public static final EventType<TouchEvent> TOUCH_PRESSED =
-            new EventType<TouchEvent>(ANY, "TOUCH_PRESSED");
+            new EventType<>(ANY, "TOUCH_PRESSED");
 
     /**
      * This event occurs when the touch point is moved.
      */
     public static final EventType<TouchEvent> TOUCH_MOVED =
-            new EventType<TouchEvent>(ANY, "TOUCH_MOVED");
+            new EventType<>(ANY, "TOUCH_MOVED");
 
     /**
      * This event occurs when the touch point is released.
      */
     public static final EventType<TouchEvent> TOUCH_RELEASED =
-            new EventType<TouchEvent>(ANY, "TOUCH_RELEASED");
+            new EventType<>(ANY, "TOUCH_RELEASED");
 
     /**
      * This event occurs when the touch point is pressed and still (doesn't
      * move).
      */
     public static final EventType<TouchEvent> TOUCH_STATIONARY =
-            new EventType<TouchEvent>(ANY, "TOUCH_STATIONARY");
+            new EventType<>(ANY, "TOUCH_STATIONARY");
 
     /**
      * Constructs new TouchEvent event.

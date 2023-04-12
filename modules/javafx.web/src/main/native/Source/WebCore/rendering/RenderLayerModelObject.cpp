@@ -29,9 +29,13 @@
 #include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderSVGBlock.h"
+#include "RenderSVGModelObject.h"
 #include "RenderView.h"
+#include "SVGGraphicsElement.h"
 #include "Settings.h"
 #include "StyleScrollSnapPoints.h"
+#include "TransformState.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -42,15 +46,6 @@ bool RenderLayerModelObject::s_wasFloating = false;
 bool RenderLayerModelObject::s_hadLayer = false;
 bool RenderLayerModelObject::s_hadTransform = false;
 bool RenderLayerModelObject::s_layerWasSelfPainting = false;
-
-typedef WTF::HashMap<const RenderLayerModelObject*, RepaintLayoutRects> RepaintLayoutRectsMap;
-static RepaintLayoutRectsMap* gRepaintLayoutRectsMap = nullptr;
-
-RepaintLayoutRects::RepaintLayoutRects(const RenderLayerModelObject& renderer, const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* geometryMap)
-    : m_repaintRect(renderer.clippedOverflowRectForRepaint(repaintContainer))
-    , m_outlineBox(renderer.outlineBoundsForRepaint(repaintContainer, geometryMap))
-{
-}
 
 RenderLayerModelObject::RenderLayerModelObject(Element& element, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
     : RenderElement(element, WTFMove(style), baseTypeFlags | RenderLayerModelObjectFlag)
@@ -80,16 +75,20 @@ void RenderLayerModelObject::willBeDestroyed()
     }
 
     RenderElement::willBeDestroyed();
+}
 
-    clearRepaintLayoutRects();
+void RenderLayerModelObject::willBeRemovedFromTree(IsInternalMove isInternalMove)
+{
+    if (auto* layer = this->layer(); layer && layer->needsFullRepaint() && isInternalMove == IsInternalMove::No)
+        issueRepaint(std::nullopt, ClipRepaintToLayer::No, ForceRepaint::Yes);
+
+    RenderElement::willBeRemovedFromTree(isInternalMove);
 }
 
 void RenderLayerModelObject::destroyLayer()
 {
     ASSERT(!hasLayer());
     ASSERT(m_layer);
-    if (m_layer->isSelfPaintingLayer())
-        clearRepaintLayoutRects();
     m_layer = nullptr;
 }
 
@@ -120,13 +119,6 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
     RenderElement::styleWillChange(diff, newStyle);
 }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-static bool scrollSnapContainerRequiresUpdateForStyleUpdate(const RenderStyle& oldStyle, const RenderStyle& newStyle)
-{
-    return oldStyle.scrollPadding() != newStyle.scrollPadding() || oldStyle.scrollSnapType() != newStyle.scrollSnapType();
-}
-#endif
-
 void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderElement::styleDidChange(diff, oldStyle);
@@ -146,10 +138,14 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             layer()->willRemoveChildWithBlendMode();
 #endif
         setHasTransformRelatedProperty(false); // All transform-related properties force layers, so we know we don't have one or the object doesn't support them.
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        setHasSVGTransform(false); // Same reason as for setHasTransformRelatedProperty().
+#endif
         setHasReflection(false);
+
         // Repaint the about to be destroyed self-painting layer when style change also triggers repaint.
-        if (layer()->isSelfPaintingLayer() && layer()->repaintStatus() == NeedsFullRepaint && hasRepaintLayoutRects())
-            repaintUsingContainer(containerForRepaint(), repaintLayoutRects().m_repaintRect);
+        if (layer()->isSelfPaintingLayer() && layer()->repaintStatus() == NeedsFullRepaint && layer()->repaintRects())
+            repaintUsingContainer(containerForRepaint().renderer, layer()->repaintRects()->clippedOverflowRect);
 
         layer()->removeOnlyThisLayer(RenderLayer::LayerChangeTiming::StyleChange); // calls destroyLayer() which clears m_layer
         if (s_wasFloating && isFloating())
@@ -182,44 +178,16 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             renderLayer->updateScrollbarSteps();
     }
 
-#if ENABLE(CSS_SCROLL_SNAP)
-    if (oldStyle && scrollSnapContainerRequiresUpdateForStyleUpdate(*oldStyle, newStyle)) {
-        if (RenderLayer* renderLayer = layer()) {
-            if (auto* scrollableArea = renderLayer->scrollableArea()) {
-                scrollableArea->updateSnapOffsets();
-                scrollableArea->updateScrollSnapState();
-            }
-        } else if (isBody() || isDocumentElementRenderer()) {
-            FrameView& frameView = view().frameView();
-            frameView.updateSnapOffsets();
-            frameView.updateScrollSnapState();
-            frameView.updateScrollingCoordinatorScrollSnapProperties();
-        }
-    }
-
     bool scrollMarginChanged = oldStyle && oldStyle->scrollMargin() != newStyle.scrollMargin();
     bool scrollAlignChanged = oldStyle && oldStyle->scrollSnapAlign() != newStyle.scrollSnapAlign();
     bool scrollSnapStopChanged = oldStyle && oldStyle->scrollSnapStop() != newStyle.scrollSnapStop();
     if (scrollMarginChanged || scrollAlignChanged || scrollSnapStopChanged) {
-        auto* scrollSnapBox = enclosingScrollableContainerForSnapping();
-        if (scrollSnapBox && scrollSnapBox->layer()) {
-            const RenderStyle& style = scrollSnapBox->style();
-            if (style.scrollSnapType().strictness != ScrollSnapStrictness::None) {
-                if (auto* scrollableArea = scrollSnapBox->layer()->scrollableArea()) {
-                    scrollableArea->updateSnapOffsets();
-                    scrollableArea->updateScrollSnapState();
-                }
-                if (scrollSnapBox->isBody() || scrollSnapBox->isDocumentElementRenderer())
-                    scrollSnapBox->view().frameView().updateSnapOffsets();
-                    scrollSnapBox->view().frameView().updateScrollSnapState();
-                    scrollSnapBox->view().frameView().updateScrollingCoordinatorScrollSnapProperties();
-            }
-        }
+        if (auto* scrollSnapBox = enclosingScrollableContainerForSnapping())
+            scrollSnapBox->setNeedsLayout();
     }
-#endif
 }
 
-bool RenderLayerModelObject::shouldPlaceBlockDirectionScrollbarOnLeft() const
+bool RenderLayerModelObject::shouldPlaceVerticalScrollbarOnLeft() const
 {
 // RTL Scrollbars require some system support, and this system support does not exist on certain versions of OS X. iOS uses a separate mechanism.
 #if PLATFORM(IOS_FAMILY)
@@ -227,46 +195,18 @@ bool RenderLayerModelObject::shouldPlaceBlockDirectionScrollbarOnLeft() const
 #else
     switch (settings().userInterfaceDirectionPolicy()) {
     case UserInterfaceDirectionPolicy::Content:
-        return style().shouldPlaceBlockDirectionScrollbarOnLeft();
+        return style().shouldPlaceVerticalScrollbarOnLeft();
     case UserInterfaceDirectionPolicy::System:
         return settings().systemLayoutDirection() == TextDirection::RTL;
     }
     ASSERT_NOT_REACHED();
-    return style().shouldPlaceBlockDirectionScrollbarOnLeft();
+    return style().shouldPlaceVerticalScrollbarOnLeft();
 #endif
 }
 
-bool RenderLayerModelObject::hasRepaintLayoutRects() const
+std::optional<LayerRepaintRects> RenderLayerModelObject::layerRepaintRects() const
 {
-    return gRepaintLayoutRectsMap && gRepaintLayoutRectsMap->contains(this);
-}
-
-void RenderLayerModelObject::setRepaintLayoutRects(const RepaintLayoutRects& rects)
-{
-    if (!gRepaintLayoutRectsMap)
-        gRepaintLayoutRectsMap = new RepaintLayoutRectsMap();
-    gRepaintLayoutRectsMap->set(this, rects);
-}
-
-void RenderLayerModelObject::clearRepaintLayoutRects()
-{
-    if (gRepaintLayoutRectsMap)
-        gRepaintLayoutRectsMap->remove(this);
-}
-
-RepaintLayoutRects RenderLayerModelObject::repaintLayoutRects() const
-{
-    if (!hasRepaintLayoutRects())
-        return RepaintLayoutRects();
-    return gRepaintLayoutRectsMap->get(this);
-}
-
-void RenderLayerModelObject::computeRepaintLayoutRects(const RenderLayerModelObject* repaintContainer, const RenderGeometryMap* geometryMap)
-{
-    if (!m_layer || !m_layer->isSelfPaintingLayer())
-        clearRepaintLayoutRects();
-    else
-        setRepaintLayoutRects(RepaintLayoutRects(*this, repaintContainer, geometryMap));
+    return hasLayer() ? layer()->repaintRects() : std::nullopt;
 }
 
 bool RenderLayerModelObject::startAnimation(double timeOffset, const Animation& animation, const KeyframeList& keyframes)
@@ -302,6 +242,194 @@ void RenderLayerModelObject::suspendAnimations(MonotonicTime time)
     if (!layer() || !layer()->backing())
         return;
     layer()->backing()->suspendAnimations(time);
+}
+
+TransformationMatrix* RenderLayerModelObject::layerTransform() const
+{
+    if (hasLayer())
+        return layer()->transform();
+    return nullptr;
+}
+
+void RenderLayerModelObject::updateLayerTransform()
+{
+    // Transform-origin depends on box size, so we need to update the layer transform after layout.
+    if (hasLayer())
+        layer()->updateTransform();
+}
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+std::optional<LayoutRect> RenderLayerModelObject::computeVisibleRectInSVGContainer(const LayoutRect& rect, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context) const
+{
+    ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
+    ASSERT(!style().hasInFlowPosition());
+    ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled());
+
+    if (container == this)
+        return rect;
+
+    bool containerIsSkipped;
+    auto* localContainer = this->container(container, containerIsSkipped);
+    if (!localContainer)
+        return rect;
+
+    ASSERT_UNUSED(containerIsSkipped, !containerIsSkipped);
+
+    LayoutRect adjustedRect = rect;
+
+    LayoutSize locationOffset;
+    if (is<RenderSVGModelObject>(this))
+        locationOffset = downcast<RenderSVGModelObject>(*this).locationOffsetEquivalent();
+    else if (is<RenderSVGBlock>(this))
+        locationOffset = downcast<RenderSVGBlock>(*this).locationOffset();
+
+    LayoutPoint topLeft = adjustedRect.location();
+    topLeft.move(locationOffset);
+
+    // We are now in our parent container's coordinate space. Apply our transform to obtain a bounding box
+    // in the parent's coordinate space that encloses us.
+    if (hasLayer() && layer()->transform()) {
+        adjustedRect = layer()->transform()->mapRect(adjustedRect);
+        topLeft = adjustedRect.location();
+        topLeft.move(locationOffset);
+    }
+
+    // FIXME: We ignore the lightweight clipping rect that controls use, since if |o| is in mid-layout,
+    // its controlClipRect will be wrong. For overflow clip we use the values cached by the layer.
+    adjustedRect.setLocation(topLeft);
+    if (localContainer->hasNonVisibleOverflow()) {
+        bool isEmpty = !downcast<RenderLayerModelObject>(*localContainer).applyCachedClipAndScrollPosition(adjustedRect, container, context);
+        if (isEmpty) {
+            if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
+                return std::nullopt;
+            return adjustedRect;
+        }
+    }
+
+    return localContainer->computeVisibleRectInContainer(adjustedRect, container, context);
+}
+
+void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
+{
+    // FIXME: [LBSE] Upstream RenderSVGBlock changes
+    // ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
+    ASSERT(is<RenderSVGModelObject>(this));
+    ASSERT(style().position() == PositionType::Static);
+
+    if (ancestorContainer == this)
+        return;
+
+    ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled());
+
+    bool ancestorSkipped;
+    auto* container = this->container(ancestorContainer, ancestorSkipped);
+    if (!container)
+        return;
+
+    ASSERT_UNUSED(ancestorSkipped, !ancestorSkipped);
+
+    // If this box has a transform, it acts as a fixed position container for fixed descendants,
+    // and may itself also be fixed position. So propagate 'fixed' up only if this box is fixed position.
+    if (hasTransform())
+        mode.remove(IsFixed);
+
+    if (wasFixed)
+        *wasFixed = mode.contains(IsFixed);
+
+    auto containerOffset = offsetFromContainer(*container, LayoutPoint(transformState.mappedPoint()));
+
+    bool preserve3D = mode & UseTransforms && (container->style().preserves3D() || style().preserves3D());
+    if (mode & UseTransforms && shouldUseTransformFromContainer(container)) {
+        TransformationMatrix t;
+        getTransformFromContainer(container, containerOffset, t);
+        transformState.applyTransform(t, preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
+    } else
+        transformState.move(containerOffset.width(), containerOffset.height(), preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
+
+    mode.remove(ApplyContainerFlip);
+
+    container->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
+}
+
+void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, SVGGraphicsElement& graphicsElement, const RenderStyle& style, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption> options) const
+{
+    auto svgTransform = graphicsElement.animatedLocalTransform();
+
+    // This check does not use style.hasTransformRelatedProperty() on purpose -- we only want to know if either the 'transform' property, an
+    // offset path, or the individual transform operations are set (perspective / transform-style: preserve-3d are not relevant here).
+    bool hasCSSTransform = style.hasTransform() || style.rotate() || style.translate() || style.scale();
+    bool hasSVGTransform = !svgTransform.isIdentity() || preApplySVGTransformMatrix || postApplySVGTransformMatrix;
+
+    // Common case: 'viewBox' set on outermost <svg> element -> 'preApplySVGTransformMatrix'
+    // passed by RenderSVGViewportContainer::applyTransform(), the anonymous single child
+    // of RenderSVGRoot, that wraps all direct children from <svg> as present in DOM. All
+    // other transformations are unset (no need to compute transform-origin, etc. in that case).
+    if (!hasCSSTransform && !hasSVGTransform)
+        return;
+
+    auto affectedByTransformOrigin = [&]() {
+        if (preApplySVGTransformMatrix && !preApplySVGTransformMatrix->isIdentityOrTranslation())
+            return true;
+        if (postApplySVGTransformMatrix && !postApplySVGTransformMatrix->isIdentityOrTranslation())
+            return true;
+        if (hasCSSTransform)
+            return style.affectedByTransformOrigin();
+        return !svgTransform.isIdentityOrTranslation();
+    };
+
+    FloatPoint3D originTranslate;
+    if (options.contains(RenderStyle::TransformOperationOption::TransformOrigin) && affectedByTransformOrigin())
+        originTranslate = style.computeTransformOrigin(boundingBox);
+
+    style.applyTransformOrigin(transform, originTranslate);
+
+    if (preApplySVGTransformMatrix)
+        transform.multiplyAffineTransform(preApplySVGTransformMatrix.value());
+
+    // CSS transforms take precedence over SVG transforms.
+    if (hasCSSTransform)
+        style.applyCSSTransform(transform, boundingBox, options);
+    else if (!svgTransform.isIdentity())
+        transform.multiplyAffineTransform(svgTransform);
+
+    if (postApplySVGTransformMatrix)
+        transform.multiplyAffineTransform(postApplySVGTransformMatrix.value());
+
+    style.unapplyTransformOrigin(transform, originTranslate);
+}
+
+void RenderLayerModelObject::updateHasSVGTransformFlags(const SVGGraphicsElement& graphicsElement)
+{
+    bool hasSVGTransform = !graphicsElement.animatedLocalTransform().isIdentity();
+    setHasTransformRelatedProperty(style().hasTransformRelatedProperty() || hasSVGTransform);
+    setHasSVGTransform(hasSVGTransform);
+}
+#endif
+
+bool rendererNeedsPixelSnapping(const RenderLayerModelObject& renderer)
+{
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (renderer.document().settings().layerBasedSVGEngineEnabled() && renderer.isSVGLayerAwareRenderer() && !renderer.isSVGRoot())
+        return false;
+#else
+    UNUSED_PARAM(renderer);
+#endif
+
+    return true;
+}
+
+FloatRect snapRectToDevicePixelsIfNeeded(const LayoutRect& rect, const RenderLayerModelObject& renderer)
+{
+    if (!rendererNeedsPixelSnapping(renderer))
+        return rect;
+    return snapRectToDevicePixels(rect, renderer.document().deviceScaleFactor());
+}
+
+FloatRect snapRectToDevicePixelsIfNeeded(const FloatRect& rect, const RenderLayerModelObject& renderer)
+{
+    if (!rendererNeedsPixelSnapping(renderer))
+        return rect;
+    return snapRectToDevicePixels(LayoutRect { rect }, renderer.document().deviceScaleFactor());
 }
 
 } // namespace WebCore

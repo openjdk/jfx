@@ -32,7 +32,7 @@ namespace WebCore {
 
 RenderSelectionInfoBase::RenderSelectionInfoBase(RenderObject& renderer)
     : m_renderer(renderer)
-    , m_repaintContainer(renderer.containerForRepaint())
+    , m_repaintContainer(renderer.containerForRepaint().renderer)
     , m_state(renderer.selectionState())
 {
 }
@@ -47,7 +47,7 @@ RenderSelectionInfo::RenderSelectionInfo(RenderObject& renderer, bool clipToVisi
 {
     if (renderer.canUpdateSelectionOnRootLineBoxes()) {
         if (is<RenderText>(renderer))
-            m_rect = downcast<RenderText>(renderer).collectSelectionRectsForLineBoxes(m_repaintContainer, clipToVisibleContent, m_collectedSelectionRects);
+            m_rect = downcast<RenderText>(renderer).collectSelectionGeometriesForLineBoxes(m_repaintContainer, clipToVisibleContent, m_collectedSelectionQuads);
         else
             m_rect = renderer.selectionRectForRepaint(m_repaintContainer, clipToVisibleContent);
     }

@@ -79,8 +79,8 @@ UXMLParser::UXMLParser(UErrorCode &status) :
       //       or      "<!DOCTYPE foo [internal dtd]>
       //    TODO:  we don't actually parse the DOCTYPE or internal subsets.
       //           Some internal dtd subsets could confuse this simple-minded
-      //           attempt at skipping over them, specifically, occcurences
-      //           of closeing square brackets.  These could appear in comments,
+      //           attempt at skipping over them, specifically, occurrences
+      //           of closing square brackets.  These could appear in comments,
       //           or in parameter entity declarations, for example.
       mXMLDoctype(UnicodeString(
            "(?s)<!DOCTYPE.*?(>|\\[.*?\\].*?>)", -1, US_INV
@@ -124,7 +124,7 @@ UXMLParser::UXMLParser(UErrorCode &status) :
       //
       //   Note that attributes are scanned twice.  The first time is with
       //        the regex for an entire element start.  There, the attributes
-      //        are checked syntactically, but not separted out one by one.
+      //        are checked syntactically, but not separated out one by one.
       //        Here, we match a single attribute, and make its name and
       //        attribute value available to the parser code.
       mAttrValue(UnicodeString(XML_SPACES "+("  XML_NAME ")"  XML_SPACES "*=" XML_SPACES "*"
@@ -243,7 +243,7 @@ UXMLParser::parseFile(const char *filename, UErrorCode &errorCode) {
                 UnicodeString attValue = mAttrValue.group(2, errorCode);
 
                 // Trim the quotes from the att value.  These are left over from the original regex
-                //   that parsed the attribue, which couldn't conveniently strip them.
+                //   that parsed the attribute, which couldn't conveniently strip them.
                 attValue.remove(0,1);                    // one char from the beginning
                 attValue.truncate(attValue.length()-1);  // and one from the end.
 
@@ -498,11 +498,11 @@ UXMLParser::createElement(RegexMatcher  &mEl, UErrorCode &status) {
         UnicodeString attValue = mAttrValue.group(2, status);
 
         // Trim the quotes from the att value.  These are left over from the original regex
-        //   that parsed the attribue, which couldn't conveniently strip them.
+        //   that parsed the attribute, which couldn't conveniently strip them.
         attValue.remove(0,1);                    // one char from the beginning
         attValue.truncate(attValue.length()-1);  // and one from the end.
 
-        // XML Attribue value normalization.
+        // XML Attribute value normalization.
         // This is one of the really screwy parts of the XML spec.
         // See http://www.w3.org/TR/2004/REC-xml11-20040204/#AVNormalize
         // Note that non-validating parsers must treat all entities as type CDATA
@@ -592,7 +592,7 @@ UXMLParser::replaceCharRefs(UnicodeString &s, UErrorCode &status) {
     mAmps.reset(s);
     // See the initialization for the regex matcher mAmps.
     //    Which entity we've matched is determined by which capture group has content,
-    //      which is flaged by start() of that group not being -1.
+    //      which is flagged by start() of that group not being -1.
     while (mAmps.find()) {
         if (mAmps.start(1, status) != -1) {
             replacement.setTo((UChar)x_AMP);
@@ -658,7 +658,7 @@ UXMLParser::intern(const UnicodeString &s, UErrorCode &errorCode) {
         return (const UnicodeString *)he->key.pointer;
     } else {
         // add this new name and return its hashed key pointer
-        fNames.puti(s, 0, errorCode);
+        fNames.puti(s, 1, errorCode);
         he=fNames.find(s);
         return (const UnicodeString *)he->key.pointer;
     }

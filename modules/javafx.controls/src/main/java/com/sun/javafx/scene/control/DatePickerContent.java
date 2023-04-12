@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,6 +66,7 @@ import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 
 import static com.sun.javafx.PlatformUtil.*;
 import com.sun.javafx.scene.NodeHelper;
@@ -86,9 +87,9 @@ public class DatePickerContent extends VBox {
     protected GridPane gridPane;
 
     private int daysPerWeek;
-    private List<DateCell> dayNameCells = new ArrayList<DateCell>();
-    private List<DateCell> weekNumberCells = new ArrayList<DateCell>();
-    protected List<DateCell> dayCells = new ArrayList<DateCell>();
+    private List<DateCell> dayNameCells = new ArrayList<>();
+    private List<DateCell> weekNumberCells = new ArrayList<>();
+    protected List<DateCell> dayCells = new ArrayList<>();
     private LocalDate[] dayCellDates;
     private DateCell lastFocusedDayCell = null;
 
@@ -166,11 +167,11 @@ public class DatePickerContent extends VBox {
 
         // Add a focus owner listener to Scene when it becomes available.
         final WeakChangeListener<Node> weakFocusOwnerListener =
-            new WeakChangeListener<Node>((ov2, oldFocusOwner, newFocusOwner) -> {
+            new WeakChangeListener<>((ov2, oldFocusOwner, newFocusOwner) -> {
                 if (newFocusOwner == gridPane) {
                     if (oldFocusOwner instanceof DateCell) {
                         // Backwards traversal, skip gridPane.
-                        NodeHelper.traverse(gridPane, Direction.PREVIOUS);
+                        NodeHelper.traverse(gridPane, Direction.PREVIOUS, TraversalMethod.DEFAULT);
                     } else {
                         // Forwards traversal, pass focus to day cell.
                         if (lastFocusedDayCell != null) {
@@ -291,7 +292,7 @@ public class DatePickerContent extends VBox {
     }
 
     private ObjectProperty<YearMonth> displayedYearMonth =
-        new SimpleObjectProperty<YearMonth>(this, "displayedYearMonth");
+        new SimpleObjectProperty<>(this, "displayedYearMonth");
 
     public ObjectProperty<YearMonth> displayedYearMonthProperty() {
         return displayedYearMonth;

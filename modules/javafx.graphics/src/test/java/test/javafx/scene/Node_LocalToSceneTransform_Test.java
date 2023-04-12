@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,7 @@ package test.javafx.scene;
 import test.com.sun.javafx.test.TransformHelper;
 import javafx.scene.transform.Translate;
 import javafx.scene.shape.Rectangle;
-import javafx.beans.Observable;
-import java.lang.reflect.Method;
 import javafx.beans.InvalidationListener;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;

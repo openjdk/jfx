@@ -29,6 +29,8 @@
 #include "ShadowRoot.h"
 
 #include "CSSStyleSheet.h"
+#include "ChildListMutationScope.h"
+#include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
@@ -36,7 +38,6 @@
 #include "NotImplemented.h"
 #endif
 #include "RenderElement.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SlotAssignment.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -54,12 +55,15 @@ struct SameSizeAsShadowRoot : public DocumentFragment, public TreeScope {
     uint8_t mode;
     void* styleScope;
     void* styleSheetList;
-    void* host;
+    WeakPtr<Element> host;
     void* slotAssignment;
-    Optional<HashMap<AtomString, AtomString>> partMappings;
+    std::optional<HashMap<AtomString, AtomString>> partMappings;
 };
 
-COMPILE_ASSERT(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), shadowroot_should_stay_small);
+static_assert(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), "shadowroot should stay small");
+#if !ASSERT_ENABLED
+static_assert(sizeof(WeakPtr<Element>) == sizeof(void*), "WeakPtr should be same size as raw pointer");
+#endif
 
 ShadowRoot::ShadowRoot(Document& document, ShadowRootMode type, DelegatesFocus delegatesFocus)
     : DocumentFragment(document, CreateShadowRoot)
@@ -68,6 +72,8 @@ ShadowRoot::ShadowRoot(Document& document, ShadowRootMode type, DelegatesFocus d
     , m_type(type)
     , m_styleScope(makeUnique<Style::Scope>(*this))
 {
+    if (type == ShadowRootMode::UserAgent)
+        setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
 }
 
 
@@ -78,6 +84,7 @@ ShadowRoot::ShadowRoot(Document& document, std::unique_ptr<SlotAssignment>&& slo
     , m_styleScope(makeUnique<Style::Scope>(*this))
     , m_slotAssignment(WTFMove(slotAssignment))
 {
+    setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
 }
 
 
@@ -173,11 +180,17 @@ StyleSheetList& ShadowRoot::styleSheets()
 
 String ShadowRoot::innerHTML() const
 {
-    return serializeFragment(*this, SerializedNodes::SubtreesOfChildren);
+    return serializeFragment(*this, SerializedNodes::SubtreesOfChildren, nullptr, ResolveURLs::NoExcludingURLsForPrivacy);
 }
 
 ExceptionOr<void> ShadowRoot::setInnerHTML(const String& markup)
 {
+    if (markup.isEmpty()) {
+        ChildListMutationScope mutation(*this);
+        removeChildren();
+        return { };
+    }
+
     auto fragment = createFragmentForInnerOuterHTML(*host(), markup, AllowScriptingContent);
     if (fragment.hasException())
         return fragment.releaseException();
@@ -223,7 +236,7 @@ HTMLSlotElement* ShadowRoot::findAssignedSlot(const Node& node)
     ASSERT(node.parentNode() == host());
     if (!m_slotAssignment)
         return nullptr;
-    return m_slotAssignment->findAssignedSlot(node, *this);
+    return m_slotAssignment->findAssignedSlot(node);
 }
 
 void ShadowRoot::renameSlotElement(HTMLSlotElement& slot, const AtomString& oldName, const AtomString& newName)
@@ -260,7 +273,7 @@ const Vector<WeakPtr<Node>>* ShadowRoot::assignedNodesForSlot(const HTMLSlotElem
     return m_slotAssignment->assignedNodesForSlot(slot, *this);
 }
 
-static Optional<std::pair<AtomString, AtomString>> parsePartMapping(StringView mappingString)
+static std::optional<std::pair<AtomString, AtomString>> parsePartMapping(StringView mappingString)
 {
     const auto end = mappingString.length();
 

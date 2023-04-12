@@ -66,7 +66,7 @@ ICStats::ICStats()
     m_thread = Thread::create(
         "JSC ICStats",
         [this] () {
-            LockHolder locker(m_lock);
+            Locker locker { m_lock };
             for (;;) {
                 m_condition.waitFor(
                     m_lock, Seconds(1), [this] () -> bool { return m_shouldStop; });
@@ -74,9 +74,12 @@ ICStats::ICStats()
                     break;
 
                 dataLog("ICStats:\n");
-                auto list = m_spectrum.buildList();
+                {
+                    Locker spectrumLocker { m_spectrum.getLock() };
+                    auto list = m_spectrum.buildList(spectrumLocker);
                 for (unsigned i = list.size(); i--;)
-                    dataLog("    ", list[i].key, ": ", list[i].count, "\n");
+                        dataLog("    ", *list[i].key, ": ", list[i].count, "\n");
+                }
             }
         });
 }
@@ -84,7 +87,7 @@ ICStats::ICStats()
 ICStats::~ICStats()
 {
     {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         m_shouldStop = true;
         m_condition.notifyAll();
     }

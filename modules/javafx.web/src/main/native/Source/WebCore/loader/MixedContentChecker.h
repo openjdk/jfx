@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
@@ -57,7 +58,7 @@ public:
     static bool canRunInsecureContent(Frame&, SecurityOrigin&, const URL&);
     static void checkFormForMixedContent(Frame&, SecurityOrigin&, const URL&);
     static bool isMixedContent(SecurityOrigin&, const URL&);
-    static Optional<String> checkForMixedContentInFrameTree(const Frame&, const URL&);
+    static std::optional<String> checkForMixedContentInFrameTree(const Frame&, const URL&);
 };
 
 } // namespace WebCore

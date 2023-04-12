@@ -26,8 +26,12 @@
 #include "config.h"
 #include <wtf/Language.h>
 
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
+#include <wtf/Logging.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(CF) && !PLATFORM(WIN)
@@ -36,7 +40,23 @@
 
 namespace WTF {
 
-static Lock userPreferredLanguagesMutex;
+static Lock languagesLock;
+static Vector<String>& cachedFullPlatformPreferredLanguages() WTF_REQUIRES_LOCK(languagesLock)
+{
+    static NeverDestroyed<Vector<String>> languages;
+    return languages;
+}
+static Vector<String>& cachedMinimizedPlatformPreferredLanguages() WTF_REQUIRES_LOCK(languagesLock)
+{
+    static NeverDestroyed<Vector<String>> languages;
+    return languages;
+}
+static Vector<String>& preferredLanguagesOverride() WTF_REQUIRES_LOCK(languagesLock)
+{
+    static NeverDestroyed<Vector<String>> override;
+    return override;
+}
+static std::optional<bool> cachedUserPrefersSimplifiedChinese WTF_GUARDED_BY_LOCK(languagesLock);
 
 typedef HashMap<void*, LanguageChangeObserverFunction> ObserverMap;
 static ObserverMap& observerMap()
@@ -62,61 +82,92 @@ void removeLanguageChangeObserver(void* context)
 
 void languageDidChange()
 {
+    {
+        Locker locker { languagesLock };
+        cachedFullPlatformPreferredLanguages().clear();
+        cachedMinimizedPlatformPreferredLanguages().clear();
+        cachedUserPrefersSimplifiedChinese = std::nullopt;
+    }
+
     for (auto& observer : copyToVector(observerMap())) {
         if (observerMap().contains(observer.key))
             observer.value(observer.key);
     }
 }
 
-String defaultLanguage()
+String defaultLanguage(ShouldMinimizeLanguages shouldMinimizeLanguages)
 {
-    Vector<String> languages = userPreferredLanguages();
-    if (languages.size())
+    auto languages = userPreferredLanguages(shouldMinimizeLanguages);
+    if (languages.size()) {
+        LOG_WITH_STREAM(Language, stream << "defaultLanguage() is returning " << languages[0]);
         return languages[0];
+    }
 
+    LOG(Language, "defaultLanguage() is returning the empty string.");
     return emptyString();
-}
-
-static Vector<String>& preferredLanguagesOverride()
-{
-    static LazyNeverDestroyed<Vector<String>> override;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        override.construct();
-    });
-    return override;
 }
 
 Vector<String> userPreferredLanguagesOverride()
 {
+    Locker locker { languagesLock };
     return preferredLanguagesOverride();
 }
 
-void overrideUserPreferredLanguages(const Vector<String>& override)
+// This returns a reference to a Vector<String> protected by languagesLock.
+// Callers should not let it escape past the lock.
+static Vector<String>& computeUserPreferredLanguages(ShouldMinimizeLanguages shouldMinimizeLanguages) WTF_REQUIRES_LOCK(languagesLock)
 {
-    preferredLanguagesOverride() = override;
-    languageDidChange();
-}
-
-static Vector<String> isolatedCopy(const Vector<String>& strings)
-{
-    Vector<String> copy;
-    copy.reserveInitialCapacity(strings.size());
-    for (auto& language : strings)
-        copy.uncheckedAppend(language.isolatedCopy());
-    return copy;
-}
-
-Vector<String> userPreferredLanguages()
-{
-    {
-        auto locker = holdLock(userPreferredLanguagesMutex);
-        Vector<String>& override = preferredLanguagesOverride();
-        if (!override.isEmpty())
-            return isolatedCopy(override);
+    Vector<String>& override = preferredLanguagesOverride();
+    if (!override.isEmpty()) {
+        LOG_WITH_STREAM(Language, stream << "Languages are overridden: " << override);
+        return override;
     }
 
-    return platformUserPreferredLanguages();
+    auto& languages = shouldMinimizeLanguages == ShouldMinimizeLanguages::Yes ? cachedMinimizedPlatformPreferredLanguages() : cachedFullPlatformPreferredLanguages();
+    if (languages.isEmpty()) {
+        LOG(Language, "userPreferredLanguages() cache miss");
+        languages = platformUserPreferredLanguages(shouldMinimizeLanguages);
+    } else
+        LOG(Language, "userPreferredLanguages() cache hit");
+    return languages;
+}
+
+Vector<String> userPreferredLanguages(ShouldMinimizeLanguages shouldMinimizeLanguages)
+{
+    Locker locker { languagesLock };
+    return crossThreadCopy(computeUserPreferredLanguages(shouldMinimizeLanguages));
+}
+
+static bool computeUserPrefersSimplifiedChinese() WTF_REQUIRES_LOCK(languagesLock)
+{
+    for (const auto& language : computeUserPreferredLanguages(ShouldMinimizeLanguages::Yes)) {
+        if (equalLettersIgnoringASCIICase(language, "zh-tw"_s))
+            return false;
+        if (equalLettersIgnoringASCIICase(language, "zh-cn"_s))
+            return true;
+    }
+    return true;
+}
+
+bool userPrefersSimplifiedChinese()
+{
+    Locker locker { languagesLock };
+    if (!cachedUserPrefersSimplifiedChinese)
+        cachedUserPrefersSimplifiedChinese = computeUserPrefersSimplifiedChinese();
+    return *cachedUserPrefersSimplifiedChinese;
+}
+
+#if !PLATFORM(COCOA)
+
+void overrideUserPreferredLanguages(const Vector<String>& override)
+{
+    LOG_WITH_STREAM(Language, stream << "Languages are being overridden to: " << override);
+    {
+        Locker locker { languagesLock };
+        preferredLanguagesOverride() = override;
+        cachedUserPrefersSimplifiedChinese = std::nullopt;
+    }
+    languageDidChange();
 }
 
 static String canonicalLanguageIdentifier(const String& languageCode)
@@ -124,7 +175,7 @@ static String canonicalLanguageIdentifier(const String& languageCode)
     String lowercaseLanguageCode = languageCode.convertToASCIILowercase();
 
     if (lowercaseLanguageCode.length() >= 3 && lowercaseLanguageCode[2] == '_')
-        lowercaseLanguageCode.replace(2, 1, "-");
+        lowercaseLanguageCode = makeStringByReplacing(lowercaseLanguageCode, 2, 1, "-"_s);
 
     return lowercaseLanguageCode;
 }
@@ -173,6 +224,8 @@ size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<St
 
     return languageList.size();
 }
+
+#endif // !PLATFORM(COCOA)
 
 String displayNameForLanguageLocale(const String& localeName)
 {

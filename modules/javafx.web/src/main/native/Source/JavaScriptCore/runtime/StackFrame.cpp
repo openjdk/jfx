@@ -29,7 +29,7 @@
 #include "CodeBlock.h"
 #include "DebuggerPrimitives.h"
 #include "JSCellInlines.h"
-#include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace JSC {
 
@@ -51,23 +51,29 @@ StackFrame::StackFrame(Wasm::IndexOrName indexOrName)
 {
 }
 
-intptr_t StackFrame::sourceID() const
+SourceID StackFrame::sourceID() const
 {
     if (!m_codeBlock)
         return noSourceID;
     return m_codeBlock->ownerExecutable()->sourceID();
 }
 
-String StackFrame::sourceURL() const
+String StackFrame::sourceURL(VM& vm) const
 {
     if (m_isWasmFrame)
         return "[wasm code]"_s;
 
-    if (!m_codeBlock) {
+    if (!m_codeBlock)
         return "[native code]"_s;
-    }
 
     String sourceURL = m_codeBlock->ownerExecutable()->sourceURL();
+
+    if (vm.clientData && !sourceURL.startsWithIgnoringASCIICase("http"_s)) {
+        String overrideURL = vm.clientData->overrideSourceURL(*this, sourceURL);
+        if (!overrideURL.isNull())
+            return overrideURL;
+    }
+
     if (!sourceURL.isNull())
         return sourceURL;
     return emptyString();
@@ -92,11 +98,13 @@ String StackFrame::functionName(VM& vm) const
             ASSERT_NOT_REACHED();
         }
     }
+
     String name;
     if (m_callee) {
         if (m_callee->isObject())
             name = getCalculatedDisplayName(vm, jsCast<JSObject*>(m_callee.get())).impl();
     }
+
     return name.isNull() ? emptyString() : name;
 }
 
@@ -114,32 +122,22 @@ void StackFrame::computeLineAndColumn(unsigned& line, unsigned& column) const
     m_codeBlock->expressionRangeForBytecodeIndex(m_bytecodeIndex, divot, unusedStartOffset, unusedEndOffset, line, column);
 
     ScriptExecutable* executable = m_codeBlock->ownerExecutable();
-    if (Optional<int> overrideLineNumber = executable->overrideLineNumber(m_codeBlock->vm()))
+    if (std::optional<int> overrideLineNumber = executable->overrideLineNumber(m_codeBlock->vm()))
         line = overrideLineNumber.value();
 }
 
 String StackFrame::toString(VM& vm) const
 {
-    StringBuilder traceBuild;
     String functionName = this->functionName(vm);
-    String sourceURL = this->sourceURL();
-    traceBuild.append(functionName);
-    traceBuild.append('@');
-    if (!sourceURL.isEmpty()) {
-        traceBuild.append(sourceURL);
-        if (hasLineAndColumnInfo()) {
-            unsigned line;
-            unsigned column;
-            computeLineAndColumn(line, column);
+    String sourceURL = this->sourceURL(vm);
 
-            traceBuild.append(':');
-            traceBuild.appendNumber(line);
-            traceBuild.append(':');
-            traceBuild.appendNumber(column);
-        }
-    }
-    return traceBuild.toString().impl();
+    if (sourceURL.isEmpty() || !hasLineAndColumnInfo())
+        return makeString(functionName, '@', sourceURL);
+
+    unsigned line;
+    unsigned column;
+    computeLineAndColumn(line, column);
+    return makeString(functionName, '@', sourceURL, ':', line, ':', column);
 }
 
 } // namespace JSC
-

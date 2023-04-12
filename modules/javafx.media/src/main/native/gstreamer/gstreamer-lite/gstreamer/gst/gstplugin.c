@@ -94,32 +94,28 @@ static gchar **_plugin_loading_whitelist;       /* NULL */
 /* static variables for segfault handling of plugin loading */
 static char *_gst_plugin_fault_handler_filename = NULL;
 
-/* list of valid licenses.
- * One of these must be specified or the plugin won't be loaded
- * Please file a bug to request any additional license be added.
- *
- * GPL: http://www.gnu.org/copyleft/gpl.html
- * LGPL: http://www.gnu.org/copyleft/lesser.html
- * QPL: http://www.trolltech.com/licenses/qpl.html
- * MPL: http://www.opensource.org/licenses/mozilla1.1.php
- * MIT/X11: http://www.opensource.org/licenses/mit-license.php
+/* List of known licenses:
+ * GPL: https://opensource.org/licenses/gpl-license
+ * LGPL: https://opensource.org/licenses/lgpl-license
+ * QPL: https://opensource.org/licenses/QPL-1.0
+ * MPL: https://opensource.org/licenses/MPL-1.1
+ * MPL-2.0: https://opensource.org/licenses/MPL-2.0
+ * MIT/X11: https://opensource.org/licenses/MIT
  * 3-clause BSD: https://opensource.org/licenses/BSD-3-Clause
  * Zero-Clause BSD: https://opensource.org/licenses/0BSD
+ * FIXME: update to use SPDX identifiers, or just remove entirely
  */
-static const gchar valid_licenses[] = "LGPL\000"        /* GNU Lesser General Public License */
+static const gchar known_licenses[] = "LGPL\000"        /* GNU Lesser General Public License */
     "GPL\000"                   /* GNU General Public License */
     "QPL\000"                   /* Trolltech Qt Public License */
     "GPL/QPL\000"               /* Combi-license of GPL + QPL */
     "MPL\000"                   /* MPL 1.1 license */
+    "MPL-2.0\000"               /* MPL 2.0 license */
     "BSD\000"                   /* 3-clause BSD license */
     "MIT/X11\000"               /* MIT/X11 license */
     "0BSD\000"                  /* Zero-Clause BSD */
     "Proprietary\000"           /* Proprietary license */
     GST_LICENSE_UNKNOWN;        /* some other license */
-
-static const guint8 valid_licenses_idx[] = { 0, 5, 9, 13, 21, 25, 29, 37, 42,
-  54
-};
 
 static GstPlugin *gst_plugin_register_func (GstPlugin * plugin,
     const GstPluginDesc * desc, gpointer user_data);
@@ -472,12 +468,13 @@ priv_gst_plugin_loading_get_whitelist_hash (void)
 static gboolean
 gst_plugin_check_license (const gchar * license)
 {
-  gint i;
+  const gchar *l, *end = known_licenses + sizeof (known_licenses);
 
-  for (i = 0; i < G_N_ELEMENTS (valid_licenses_idx); ++i) {
-    if (strcmp (license, valid_licenses + valid_licenses_idx[i]) == 0)
+  for (l = known_licenses; l < end; l += strlen (l) + 1) {
+    if (strcmp (license, l) == 0)
       return TRUE;
   }
+
   return FALSE;
 }
 
@@ -515,9 +512,9 @@ gst_plugin_register_func (GstPlugin * plugin, const GstPluginDesc * desc,
 
   if (!gst_plugin_check_license (desc->license)) {
     if (GST_CAT_DEFAULT)
-      GST_WARNING ("plugin \"%s\" has invalid license \"%s\", not loading",
+      GST_WARNING ("plugin \"%s\" has unknown license \"%s\"",
           GST_STR_NULL (plugin->filename), desc->license);
-    return NULL;
+    /* We still want to load the plugin, it's not our job to validate licenses */
   }
 
   if (GST_CAT_DEFAULT)
@@ -737,6 +734,70 @@ extract_symname (const char *filename)
   return symname;
 }
 
+#ifdef G_OS_WIN32
+/*
+ * It is an extremely common mistake on Windows to have incorrect PATH values
+ * when loading a plugin, and the error message is very confusing in this case:
+ * 'The specified module could not be found.' which implies the plugin itself
+ * could not be found. The actual issue is that a DLL dependency could not be
+ * found. We need to detect this case and print a more useful error message.
+ *
+ * Unfortunately, g_module_open() doesn't actually give us the GetLastError()
+ * code from LoadLibraryW() and only gives us a literal message from
+ * FormatMessageW(). We can't do a string comparison on that because it is
+ * locale-dependent.
+ *
+ * The only way out is for us to try loading the module ourselves on failure and
+ * get the error DWORD again from GetLastError().
+ */
+static char *
+get_better_module_load_error (const char *filename, const char *orig_err_msg)
+{
+  BOOL ret = 0;
+  DWORD mode;
+  wchar_t *wfilename;
+  HMODULE handle;
+  char *err_msg = NULL;
+
+  wfilename = g_utf8_to_utf16 (filename, -1, NULL, NULL, NULL);
+#ifdef GST_WINAPI_ONLY_APP
+  handle = LoadPackagedLibrary (wfilename, 0);
+#else
+  ret = SetThreadErrorMode (SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS,
+      &mode);
+
+  handle = LoadLibraryW (wfilename);
+#endif
+  g_free (wfilename);
+
+  if (handle == NULL) {
+    DWORD err = GetLastError ();
+    char *win32_err_msg = g_win32_error_message (err);
+    if (err == ERROR_MOD_NOT_FOUND) {
+      err_msg = g_strdup_printf ("%s\nThis usually means Windows was unable "
+          "to find a DLL dependency of the plugin. Please check that PATH is "
+          "correct.\nYou can run 'dumpbin -dependents' (provided by the "
+          "Visual Studio developer prompt) to list the DLL deps of any DLL.\n"
+          "There are also some third-party GUIs to list and debug DLL "
+          "dependencies recursively.", win32_err_msg);
+      g_free (win32_err_msg);
+    } else {
+      err_msg = win32_err_msg;
+    }
+  } else {
+    err_msg = g_strdup_printf ("g_module_open() failed on %s with \"%s\" but "
+        "manual loading succeeded; this should be impossible! Please "
+        "report this as a GStreamer bug.", filename, orig_err_msg);
+    FreeLibrary (handle);
+  }
+
+  if (ret > 0)
+    SetThreadErrorMode (mode, NULL);
+
+  return err_msg;
+}
+#endif /* G_OS_WIN32 */
+
 /* Note: The return value is (transfer full) although we work with floating
  * references here. If a new plugin instance is created, it is always sinked
  * in the registry first and a new reference is returned
@@ -812,15 +873,23 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
 
   module = g_module_open (filename, flags);
   if (module == NULL) {
-    GST_CAT_WARNING (GST_CAT_PLUGIN_LOADING, "module_open failed: %s",
-        g_module_error ());
+#ifdef G_OS_WIN32
+    /* flags are meaningless / ignored on Windows */
+    char *err_msg = get_better_module_load_error (filename, g_module_error ());
+#else
+    const char *err_msg = g_module_error ();
+#endif
+    GST_CAT_WARNING (GST_CAT_PLUGIN_LOADING, "module_open failed: %s", err_msg);
     g_set_error (error,
         GST_PLUGIN_ERROR, GST_PLUGIN_ERROR_MODULE, "Opening module failed: %s",
-        g_module_error ());
+        err_msg);
     /* If we failed to open the shared object, then it's probably because a
      * plugin is linked against the wrong libraries. Print out an easy-to-see
      * message in this case. */
-    g_warning ("Failed to load plugin '%s': %s", filename, g_module_error ());
+    g_warning ("Failed to load plugin '%s': %s", filename, err_msg);
+#ifdef G_OS_WIN32
+    g_free (err_msg);
+#endif
     goto return_error;
   }
 

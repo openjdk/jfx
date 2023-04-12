@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ public class SwtRule implements MethodRule {
     public Statement apply(final Statement base, final FrameworkMethod testMethod, final Object target) {
         return new Statement() {
 
+            @Override
             public void evaluate() throws Throwable {
                 Display display = Display.getDefault();
 

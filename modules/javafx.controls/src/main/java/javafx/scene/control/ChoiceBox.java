@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,28 +96,28 @@ public class ChoiceBox<T> extends Control {
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_SHOWING =
-            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_SHOWING");
+            new EventType<>(Event.ANY, "CHOICE_BOX_ON_SHOWING");
 
     /**
      * Called after the ChoiceBox has shown its popup.
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_SHOWN =
-            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_SHOWN");
+            new EventType<>(Event.ANY, "CHOICE_BOX_ON_SHOWN");
 
     /**
      * Called when the ChoiceBox popup <b>will</b> be hidden.
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_HIDING =
-            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_HIDING");
+            new EventType<>(Event.ANY, "CHOICE_BOX_ON_HIDING");
 
     /**
      * Called when the ChoiceBox popup has been hidden.
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_HIDDEN =
-            new EventType<Event>(Event.ANY, "CHOICE_BOX_ON_HIDDEN");
+            new EventType<>(Event.ANY, "CHOICE_BOX_ON_HIDDEN");
 
 
 
@@ -144,7 +144,7 @@ public class ChoiceBox<T> extends Control {
         getStyleClass().setAll("choice-box");
         setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
-        setSelectionModel(new ChoiceBoxSelectionModel<T>(this));
+        setSelectionModel(new ChoiceBoxSelectionModel<>(this));
 
         // listen to the value property, if the value is
         // set to something that exists in the items list, update the
@@ -175,7 +175,7 @@ public class ChoiceBox<T> extends Control {
      * selection to know which item has been chosen.
      */
     private ObjectProperty<SingleSelectionModel<T>> selectionModel =
-            new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel") {
+            new SimpleObjectProperty<>(this, "selectionModel") {
          private SelectionModel<T> oldSM = null;
         @Override protected void invalidated() {
             if (oldSM != null) {
@@ -240,7 +240,7 @@ public class ChoiceBox<T> extends Control {
      * The items to display in the choice box. The selected item (as indicated in the
      * selection model) must always be one of these items.
      */
-    private ObjectProperty<ObservableList<T>> items = new ObjectPropertyBase<ObservableList<T>>() {
+    private ObjectProperty<ObservableList<T>> items = new ObjectPropertyBase<>() {
         ObservableList<T> old;
         @Override protected void invalidated() {
             final ObservableList<T> newItems = get();
@@ -317,7 +317,7 @@ public class ChoiceBox<T> extends Control {
      */
     public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter", null);
+            new SimpleObjectProperty<>(this, "converter", null);
     public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
     public final StringConverter<T> getConverter() {return converterProperty().get(); }
 
@@ -330,7 +330,7 @@ public class ChoiceBox<T> extends Control {
      * @since JavaFX 2.1
      */
     public ObjectProperty<T> valueProperty() { return value; }
-    private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value") {
+    private ObjectProperty<T> value = new SimpleObjectProperty<>(this, "value") {
         @Override protected void invalidated() {
             super.invalidated();
             fireEvent(new ActionEvent());
@@ -359,7 +359,7 @@ public class ChoiceBox<T> extends Control {
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
     public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
     public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
         }
@@ -385,7 +385,7 @@ public class ChoiceBox<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
     public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
     public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWING, get());
         }
@@ -409,7 +409,7 @@ public class ChoiceBox<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
     public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
     public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWN, get());
         }
@@ -433,7 +433,7 @@ public class ChoiceBox<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
     public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
     public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDING, get());
         }
@@ -457,7 +457,7 @@ public class ChoiceBox<T> extends Control {
     public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
     public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
     public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDDEN, get());
         }
@@ -493,7 +493,7 @@ public class ChoiceBox<T> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ChoiceBoxSkin<T>(this);
+        return new ChoiceBoxSkin<>(this);
     }
 
     /* *************************************************************************

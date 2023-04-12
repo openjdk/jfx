@@ -79,6 +79,7 @@ typedef enum /*< skip >*/
   GST_TRACER_QUARK_HOOK_MINI_OBJECT_UNREFFED,
   GST_TRACER_QUARK_HOOK_OBJECT_REFFED,
   GST_TRACER_QUARK_HOOK_OBJECT_UNREFFED,
+  GST_TRACER_QUARK_HOOK_PLUGIN_FEATURE_LOADED,
   GST_TRACER_QUARK_MAX
 } GstTracerQuarkId;
 
@@ -689,9 +690,36 @@ typedef void (*GstTracerHookObjectCreated) (GObject *self, GstClockTime ts,
  */
 typedef void (*GstTracerHookObjectDestroyed) (GObject *self, GstClockTime ts,
     GstObject *object);
+
 #define GST_TRACER_OBJECT_DESTROYED(object) G_STMT_START{ \
   GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_OBJECT_DESTROYED), \
     GstTracerHookObjectDestroyed, (GST_TRACER_ARGS, object)); \
+}G_STMT_END
+
+/**
+ * GstTracerHookPluginFeatureLoaded:
+ * @self: the tracer instance
+ * @ts: the current timestamp
+ * @feature: the plugin feature that was loaded
+ *
+ * Hook called when a GstPluginFeature is loaded named
+ * "plugin-feature-loaded".
+ *
+ * Since: 1.20
+ */
+typedef void (*GstTracerHookPluginFeatureLoaded) (GObject *self, GstClockTime ts,
+    GstPluginFeature *feature);
+/**
+ * GST_TRACER_PLUGIN_FEATURE_LOADED:
+ * @feature: The feature that this tracer is called for
+ *
+ * Add a tracepoint when a plugin feature is loaded.
+ *
+ * Since: 1.20
+ */
+#define GST_TRACER_PLUGIN_FEATURE_LOADED(feature) G_STMT_START{ \
+  GST_TRACER_DISPATCH(GST_TRACER_QUARK(HOOK_PLUGIN_FEATURE_LOADED), \
+    GstTracerHookPluginFeatureLoaded, (GST_TRACER_ARGS, feature)); \
 }G_STMT_END
 
 
@@ -743,6 +771,7 @@ _priv_gst_tracing_deinit (void)
 #define GST_TRACER_OBJECT_DESTROYED(object)
 #define GST_TRACER_OBJECT_REFFED(object, new_refcount)
 #define GST_TRACER_OBJECT_UNREFFED(object, new_refcount)
+#define GST_TRACER_PLUGIN_FEATURE_LOADED(feature)
 
 #endif /* GST_DISABLE_GST_TRACER_HOOKS */
 

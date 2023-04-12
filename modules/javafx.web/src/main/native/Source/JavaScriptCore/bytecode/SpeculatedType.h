@@ -116,6 +116,8 @@ static constexpr SpeculatedType SpecHeapTop                           = SpecCell
 static constexpr SpeculatedType SpecBytecodeTop                       = SpecHeapTop | SpecEmpty; // It can be any of the above, except for SpecInt52Only and SpecDoubleImpureNaN. Corresponds to what could be found in a bytecode local.
 static constexpr SpeculatedType SpecFullTop                           = SpecBytecodeTop | SpecFullNumber; // It can be anything that bytecode could see plus exotic encodings of numbers.
 
+static constexpr SpeculatedType SpecTypeofMightBeFunction             = SpecFunction | SpecObjectOther | SpecProxyObject; // If you don't see these types, you can't be callable, and you can't have typeof produce "function". Inverse is not true, however. If you only see these types, you may produce more things than "function" in typeof, and you might not be callable.
+
 // SpecCellCheck is the type set representing the values that can flow through a cell check.
 // On 64-bit platforms, the empty value passes a cell check. Also, ~SpecCellCheck is the type
 // set that representing the values that flow through when testing that something is not a cell.
@@ -439,6 +441,21 @@ inline bool isNotBooleanSpeculation(SpeculatedType value)
     return value && !(value & SpecBoolean);
 }
 
+inline bool isNotDoubleSpeculation(SpeculatedType type)
+{
+    return !(type & SpecFullDouble);
+}
+
+inline bool isNeitherDoubleNorHeapBigIntNorStringSpeculation(SpeculatedType type)
+{
+    return !(type & (SpecFullDouble | SpecHeapBigInt | SpecString));
+}
+
+inline bool isNeitherDoubleNorHeapBigIntSpeculation(SpeculatedType type)
+{
+    return !(type & (SpecFullDouble | SpecHeapBigInt));
+}
+
 inline bool isOtherSpeculation(SpeculatedType value)
 {
     return value == SpecOther;
@@ -508,7 +525,7 @@ JS_EXPORT_PRIVATE SpeculatedType speculationFromValue(JSValue);
 // If it's an anyInt(), it'll return speculated types from the Int52 lattice.
 // Otherwise, it'll return types from the JSValue lattice.
 JS_EXPORT_PRIVATE SpeculatedType int52AwareSpeculationFromValue(JSValue);
-Optional<SpeculatedType> speculationFromJSType(JSType);
+std::optional<SpeculatedType> speculationFromJSType(JSType);
 
 SpeculatedType speculationFromTypedArrayType(TypedArrayType); // only valid for typed views.
 TypedArrayType typedArrayTypeFromSpeculation(SpeculatedType);

@@ -27,7 +27,7 @@
 #pragma once
 
 #include <memory>
-#include <openssl/evp.h>
+#include <openssl/X509.h>
 
 namespace WebCore {
 
@@ -68,5 +68,96 @@ struct OpenSSLCryptoPtrDeleter<EVP_PKEY> {
 };
 
 using EvpPKeyPtr = OpenSSLCryptoPtr<EVP_PKEY>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<EVP_PKEY_CTX> {
+    void operator()(EVP_PKEY_CTX* ptr) const
+    {
+        EVP_PKEY_CTX_free(ptr);
+    }
+};
+
+using EvpPKeyCtxPtr = OpenSSLCryptoPtr<EVP_PKEY_CTX>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<RSA> {
+    void operator()(RSA* ptr) const
+    {
+        RSA_free(ptr);
+    }
+};
+
+using RSAPtr = OpenSSLCryptoPtr<RSA>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<EC_KEY> {
+    void operator()(EC_KEY* ptr) const
+    {
+        EC_KEY_free(ptr);
+    }
+};
+
+using ECKeyPtr = OpenSSLCryptoPtr<EC_KEY>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<EC_POINT> {
+    void operator()(EC_POINT* ptr) const
+    {
+        EC_POINT_clear_free(ptr);
+    }
+};
+
+using ECPointPtr = OpenSSLCryptoPtr<EC_POINT>;
+
+
+template <>
+struct OpenSSLCryptoPtrDeleter<PKCS8_PRIV_KEY_INFO> {
+    void operator()(PKCS8_PRIV_KEY_INFO* ptr) const
+    {
+        PKCS8_PRIV_KEY_INFO_free(ptr);
+    }
+};
+
+using PKCS8PrivKeyInfoPtr = OpenSSLCryptoPtr<PKCS8_PRIV_KEY_INFO>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<BIGNUM> {
+    void operator()(BIGNUM* ptr) const
+    {
+        BN_clear_free(ptr);
+    }
+};
+
+using BIGNUMPtr = OpenSSLCryptoPtr<BIGNUM>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<BN_CTX> {
+    void operator()(BN_CTX* ptr) const
+    {
+        BN_CTX_free(ptr);
+    }
+};
+
+using BNCtxPtr = OpenSSLCryptoPtr<BN_CTX>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<ECDSA_SIG> {
+    void operator()(ECDSA_SIG* ptr) const
+    {
+        ECDSA_SIG_free(ptr);
+    }
+};
+
+using ECDSASigPtr = OpenSSLCryptoPtr<ECDSA_SIG>;
+
+template <>
+struct OpenSSLCryptoPtrDeleter<ASN1_SEQUENCE_ANY> {
+    void operator()(ASN1_SEQUENCE_ANY* ptr) const
+    {
+        sk_ASN1_TYPE_pop_free(ptr, ASN1_TYPE_free);
+    }
+};
+
+using ASN1SequencePtr = OpenSSLCryptoPtr<ASN1_SEQUENCE_ANY>;
 
 } // namespace WebCore

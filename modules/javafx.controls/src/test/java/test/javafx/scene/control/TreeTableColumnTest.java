@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,7 @@ public class TreeTableColumnTest {
     private TreeItem<Person> root;
 
     @Before public void setup() {
-        root = new TreeItem<Person>(null);
+        root = new TreeItem<>(null);
         root.setExpanded(true);
 
         root.getChildren().setAll(
@@ -86,8 +86,8 @@ public class TreeTableColumnTest {
                 new TreeItem(new Person("Orrin Davies", 30)),
                 new TreeItem(new Person("Emma Wilson", 8)));
 
-        column = new TreeTableColumn<Person,String>("");
-        table = new TreeTableView<Person>(root);
+        column = new TreeTableColumn<>("");
+        table = new TreeTableView<>(root);
     }
 
 
@@ -145,11 +145,11 @@ public class TreeTableColumnTest {
     }
 
     @Test public void whenTableViewIsChangedChildColumnsAreUpdated() {
-        TreeTableColumn<Person,String> child = new TreeTableColumn<Person,String>();
+        TreeTableColumn<Person,String> child = new TreeTableColumn<>();
         column.getColumns().add(child);
         table.getColumns().add(column);
 
-        TreeTableView<Person> other = new TreeTableView<Person>();
+        TreeTableView<Person> other = new TreeTableView<>();
         table.getColumns().clear();
         other.getColumns().add(column);
 
@@ -323,7 +323,7 @@ public class TreeTableColumnTest {
     }
 
     @Test public void childVisibleChangesAccordingToParentVisibleWhenParentVisibleIsBound() {
-        TreeTableColumn<Person,String> child = new TreeTableColumn<Person,String>();
+        TreeTableColumn<Person,String> child = new TreeTableColumn<>();
         column.getColumns().add(child);
         BooleanProperty other = new SimpleBooleanProperty(false);
         column.visibleProperty().bind(other);
@@ -368,7 +368,7 @@ public class TreeTableColumnTest {
 
     @Test public void contextMenuCanBeBound() {
         ContextMenu ctx = new ContextMenu();
-        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<ContextMenu>(ctx);
+        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<>(ctx);
         column.contextMenuProperty().bind(other);
         assertSame(ctx, column.getContextMenu());
         assertSame(ctx, column.contextMenuProperty().get());
@@ -414,7 +414,7 @@ public class TreeTableColumnTest {
     @Test public void cellValueFactoryCanBeBound() {
         CellValueFactory<Person,String> factory = param -> param.getValue().getValue().firstNameProperty();
         ObjectProperty<CellValueFactory<Person,String>> other =
-                new SimpleObjectProperty<CellValueFactory<Person, String>>(factory);
+                new SimpleObjectProperty<>(factory);
         column.cellValueFactoryProperty().bind(other);
         assertSame(factory, column.getCellValueFactory());
         assertSame(factory, column.cellValueFactoryProperty().get());
@@ -453,7 +453,7 @@ public class TreeTableColumnTest {
     @Test public void cellFactoryCanBeBound() {
         CellFactory<Person,String> factory = param -> null;
         ObjectProperty<CellFactory<Person,String>> other =
-                new SimpleObjectProperty<CellFactory<Person, String>>(factory);
+                new SimpleObjectProperty<>(factory);
         column.cellFactoryProperty().bind(other);
         assertSame(factory, column.getCellFactory());
         assertSame(factory, column.cellFactoryProperty().get());
@@ -655,7 +655,7 @@ public class TreeTableColumnTest {
 
     @Test public void sortTypeCanBeBound() {
         ObjectProperty<TreeTableColumn.SortType> other =
-                new SimpleObjectProperty<TreeTableColumn.SortType>(TreeTableColumn.SortType.DESCENDING);
+                new SimpleObjectProperty<>(TreeTableColumn.SortType.DESCENDING);
         column.sortTypeProperty().bind(other);
         assertSame(TreeTableColumn.SortType.DESCENDING, column.getSortType());
         assertSame(TreeTableColumn.SortType.DESCENDING, column.sortTypeProperty().get());
@@ -760,7 +760,7 @@ public class TreeTableColumnTest {
     @Test public void comparatorCanBeBound() {
         Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         ObjectProperty<Comparator<String>> other =
-                new SimpleObjectProperty<Comparator<String>>(comparator);
+                new SimpleObjectProperty<>(comparator);
         column.comparatorProperty().bind(other);
         assertSame(comparator, column.getComparator());
         assertSame(comparator, column.comparatorProperty().get());
@@ -810,7 +810,7 @@ public class TreeTableColumnTest {
                 event -> {
                 };
         ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person,String>>> other =
-                new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person, String>>>(handler);
+                new SimpleObjectProperty<>(handler);
         column.onEditStartProperty().bind(other);
         assertSame(handler, column.getOnEditStart());
         assertSame(handler, column.onEditStartProperty().get());
@@ -860,7 +860,7 @@ public class TreeTableColumnTest {
                 event -> {
                 };
         ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person,String>>> other =
-                new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person, String>>>(handler);
+                new SimpleObjectProperty<>(handler);
         column.onEditCancelProperty().bind(other);
         assertSame(handler, column.getOnEditCancel());
         assertSame(handler, column.onEditCancelProperty().get());
@@ -910,7 +910,7 @@ public class TreeTableColumnTest {
                 event -> {
                 };
         ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person,String>>> other =
-                new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person, String>>>(handler);
+                new SimpleObjectProperty<>(handler);
         column.onEditCommitProperty().bind(other);
         assertSame(handler, column.getOnEditCommit());
         assertSame(handler, column.onEditCommitProperty().get());
@@ -1075,10 +1075,10 @@ public class TreeTableColumnTest {
         table.getColumns().add(column);
         // FIXME: this factory will throw if treeItem has null value - as is the case for root
         column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
-        TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 1, column);
+        TreeTablePosition<Person,String> pos = new TreeTablePosition<>(table, 1, column);
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
-                null, pos, (EventType) eventType, "Richard Bair"));
+        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<>(
+                null, pos, eventType, "Richard Bair"));
     }
 
     @Test
@@ -1086,8 +1086,8 @@ public class TreeTableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
-                table, null, (EventType) eventType, "Richard Bair"));
+        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<>(
+                table, null, eventType, "Richard Bair"));
     }
 //
 //    @Test public void defaultOnEditCommitHandlerDealsWithInvalidTablePosition_indexIsNegative() {
@@ -1220,10 +1220,10 @@ public class TreeTableColumnTest {
 //    }
 
     @Test public void defaultCellFactorySetsGraphicToItemWhenItemIsNode() {
-        TreeTableView<Node> nodeTable = new TreeTableView<Node>();
+        TreeTableView<Node> nodeTable = new TreeTableView<>();
         Rectangle rect = new Rectangle();
         nodeTable.setRoot(new TreeItem<Node>(rect));
-        TreeTableColumn<Node,Node> nodeColumn = new TreeTableColumn<Node,Node>();
+        TreeTableColumn<Node,Node> nodeColumn = new TreeTableColumn<>();
         nodeTable.getColumns().add(nodeColumn);
         TreeTableCell<Node,Node> cell = nodeColumn.getCellFactory().call(nodeColumn);
         cell.updateIndex(0);
@@ -1232,10 +1232,10 @@ public class TreeTableColumnTest {
     }
 
     @Test public void defaultCellFactorySetsTextToNullWhenItemIsNode() {
-        TreeTableView<Node> nodeTable = new TreeTableView<Node>();
+        TreeTableView<Node> nodeTable = new TreeTableView<>();
         Rectangle rect = new Rectangle();
         nodeTable.setRoot(new TreeItem<Node>(rect));
-        TreeTableColumn<Node,Node> nodeColumn = new TreeTableColumn<Node,Node>();
+        TreeTableColumn<Node,Node> nodeColumn = new TreeTableColumn<>();
         nodeTable.getColumns().add(nodeColumn);
         TreeTableCell<Node,Node> cell = nodeColumn.getCellFactory().call(nodeColumn);
         cell.updateIndex(0);

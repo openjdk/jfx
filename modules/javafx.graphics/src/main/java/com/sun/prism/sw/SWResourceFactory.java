@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import com.sun.prism.PhongMaterial;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
-import com.sun.prism.ResourceFactory;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
@@ -49,8 +48,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 final class SWResourceFactory
-    extends BaseResourceFactory
-        implements ResourceFactory {
+    extends BaseResourceFactory {
 
     private static final Map<Image,Texture> clampTexCache = new WeakHashMap<>();
     private static final Map<Image,Texture> repeatTexCache = new WeakHashMap<>();
@@ -68,6 +66,7 @@ final class SWResourceFactory
         this.context = new SWContext(this);
     }
 
+    @Override
     public TextureResourcePool getTextureResourcePool() {
         return SWTexturePool.instance;
     }
@@ -107,10 +106,12 @@ final class SWResourceFactory
         return new SWPresentable(pState, this);
     }
 
+    @Override
     public int getRTTWidth(int w, WrapMode wrapMode) {
         return w;
     }
 
+    @Override
     public int getRTTHeight(int h, WrapMode wrapMode) {
         return h;
     }
@@ -182,14 +183,17 @@ final class SWResourceFactory
         return createTexture(formatHint, usageHint, wrapMode, w, h);
     }
 
+    @Override
     public PhongMaterial createPhongMaterial() {
         throw new UnsupportedOperationException("Not supported yet.");
 }
 
+    @Override
     public MeshView createMeshView(Mesh mesh) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public Mesh createMesh() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

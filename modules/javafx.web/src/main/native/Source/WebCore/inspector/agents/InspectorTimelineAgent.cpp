@@ -36,6 +36,7 @@
 #include "DOMWindow.h"
 #include "Event.h"
 #include "Frame.h"
+#include "FrameSnapshotting.h"
 #include "InspectorAnimationAgent.h"
 #include "InspectorCPUProfilerAgent.h"
 #include "InspectorClient.h"
@@ -44,10 +45,10 @@
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMWindow.h"
+#include "JSExecState.h"
 #include "PageDebugger.h"
 #include "PageHeapAgent.h"
 #include "RenderView.h"
-#include "ScriptState.h"
 #include "TimelineRecordFactory.h"
 #include "WebConsoleAgent.h"
 #include "WebDebuggerAgent.h"
@@ -55,6 +56,7 @@
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/InspectorScriptProfilerAgent.h>
 #include <JavaScriptCore/ScriptArguments.h>
+#include <wtf/SetForScope.h>
 #include <wtf/Stopwatch.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -65,7 +67,6 @@
 #if PLATFORM(COCOA)
 #include "RunLoopObserver.h"
 #endif
-
 
 namespace WebCore {
 
@@ -80,7 +81,7 @@ static CFRunLoopRef currentRunLoop()
     // we still allow this, see <rdar://problem/7403328>. Since the race condition and subsequent
     // crash are especially troublesome for iBooks, we never allow the observer to be added to the
     // main run loop in iBooks.
-    if (IOSApplication::isIBooks())
+    if (CocoaApplication::isIBooks())
         return WebThreadRunLoop();
 #endif
     return CFRunLoopGetCurrent();
@@ -131,7 +132,7 @@ Protocol::ErrorStringOr<void> InspectorTimelineAgent::disable()
     return { };
 }
 
-Protocol::ErrorStringOr<void> InspectorTimelineAgent::start(Optional<int>&& maxCallStackDepth)
+Protocol::ErrorStringOr<void> InspectorTimelineAgent::start(std::optional<int>&& maxCallStackDepth)
 {
     m_trackingFromFrontend = true;
 
@@ -178,7 +179,7 @@ Protocol::ErrorStringOr<void> InspectorTimelineAgent::setInstruments(Ref<JSON::A
     return { };
 }
 
-void InspectorTimelineAgent::internalStart(Optional<int>&& maxCallStackDepth)
+void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDepth)
 {
     if (m_tracking)
         return;
@@ -290,7 +291,13 @@ double InspectorTimelineAgent::timestamp()
     return m_environment.executionStopwatch().elapsedTime().seconds();
 }
 
-void InspectorTimelineAgent::startFromConsole(JSC::JSGlobalObject* exec, const String& title)
+static Frame* frame(JSC::JSGlobalObject* globalObject)
+{
+    auto context = executionContext(globalObject);
+    return is<Document>(context) ? downcast<Document>(*context).frame() : nullptr;
+}
+
+void InspectorTimelineAgent::startFromConsole(JSC::JSGlobalObject* globalObject, const String& title)
 {
     // Allow duplicate unnamed profiles. Disallow duplicate named profiles.
     if (!title.isEmpty()) {
@@ -310,7 +317,7 @@ void InspectorTimelineAgent::startFromConsole(JSC::JSGlobalObject* exec, const S
     if (!m_tracking && m_pendingConsoleProfileRecords.isEmpty())
         startProgrammaticCapture();
 
-    m_pendingConsoleProfileRecords.append(createRecordEntry(TimelineRecordFactory::createConsoleProfileData(title), TimelineRecordType::ConsoleProfile, true, frameFromExecState(exec)));
+    m_pendingConsoleProfileRecords.append(createRecordEntry(TimelineRecordFactory::createConsoleProfileData(title), TimelineRecordType::ConsoleProfile, true, frame(globalObject)));
 }
 
 void InspectorTimelineAgent::stopFromConsole(JSC::JSGlobalObject*, const String& title)
@@ -418,23 +425,31 @@ void InspectorTimelineAgent::didComposite()
     if (m_startedComposite)
         didCompleteCurrentRecord(TimelineRecordType::Composite);
     m_startedComposite = false;
+
+    if (m_instruments.contains(Protocol::Timeline::Instrument::Screenshot))
+        captureScreenshot();
 }
 
 void InspectorTimelineAgent::willPaint(Frame& frame)
 {
+    if (m_isCapturingScreenshot)
+        return;
+
     pushCurrentRecord(JSON::Object::create(), TimelineRecordType::Paint, true, &frame);
 }
 
 void InspectorTimelineAgent::didPaint(RenderObject& renderer, const LayoutRect& clipRect)
 {
+    if (m_isCapturingScreenshot)
+        return;
+
     if (m_recordStack.isEmpty())
         return;
 
     TimelineRecordEntry& entry = m_recordStack.last();
     ASSERT(entry.type == TimelineRecordType::Paint);
-    FloatQuad quad;
-    localToPageQuad(renderer, clipRect, &quad);
-    entry.data = TimelineRecordFactory::createPaintData(quad);
+    auto clipQuadInRootView = renderer.view().frameView().contentsToRootView(renderer.localToAbsoluteQuad({ clipRect }));
+    entry.data = TimelineRecordFactory::createPaintData(clipQuadInRootView);
     didCompleteCurrentRecord(TimelineRecordType::Paint);
 }
 
@@ -574,6 +589,9 @@ void InspectorTimelineAgent::toggleInstruments(InstrumentState state)
         case Protocol::Timeline::Instrument::Animation:
             toggleAnimationInstrument(state);
             break;
+        case Protocol::Timeline::Instrument::Screenshot: {
+            break;
+        }
         }
     }
 }
@@ -630,7 +648,7 @@ void InspectorTimelineAgent::toggleMemoryInstrument(InstrumentState state)
 void InspectorTimelineAgent::toggleTimelineInstrument(InstrumentState state)
 {
     if (state == InstrumentState::Start)
-        internalStart(WTF::nullopt);
+        internalStart(std::nullopt);
     else
         internalStop();
 }
@@ -642,6 +660,20 @@ void InspectorTimelineAgent::toggleAnimationInstrument(InstrumentState state)
             animationAgent->startTracking();
         else
             animationAgent->stopTracking();
+    }
+}
+
+void InspectorTimelineAgent::captureScreenshot()
+{
+    SetForScope isTakingScreenshot(m_isCapturingScreenshot, true);
+
+    auto snapshotStartTime = timestamp();
+    auto& frame = m_inspectedPage.mainFrame();
+    auto viewportRect = m_inspectedPage.mainFrame().view()->unobscuredContentRect();
+    if (auto snapshot = snapshotFrameRect(frame, viewportRect, { { }, PixelFormat::BGRA8, DestinationColorSpace::SRGB() })) {
+        auto snapshotRecord = TimelineRecordFactory::createScreenshotData(snapshot->toDataURL("image/png"_s));
+        pushCurrentRecord(WTFMove(snapshotRecord), TimelineRecordType::Screenshot, false, &frame, snapshotStartTime);
+        didCompleteCurrentRecord(TimelineRecordType::Screenshot);
     }
 }
 
@@ -677,7 +709,7 @@ void InspectorTimelineAgent::didFireObserverCallback()
 
 void InspectorTimelineAgent::breakpointActionProbe(JSC::JSGlobalObject* lexicalGlobalObject, JSC::BreakpointActionID actionID, unsigned /*batchId*/, unsigned sampleId, JSC::JSValue)
 {
-    appendRecord(TimelineRecordFactory::createProbeSampleData(actionID, sampleId), TimelineRecordType::ProbeSample, false, frameFromExecState(lexicalGlobalObject));
+    appendRecord(TimelineRecordFactory::createProbeSampleData(actionID, sampleId), TimelineRecordType::ProbeSample, false, frame(lexicalGlobalObject));
 }
 
 static Protocol::Timeline::EventType toProtocol(TimelineRecordType type)
@@ -733,6 +765,9 @@ static Protocol::Timeline::EventType toProtocol(TimelineRecordType type)
 
     case TimelineRecordType::ObserverCallback:
         return Protocol::Timeline::EventType::ObserverCallback;
+
+    case TimelineRecordType::Screenshot:
+        return Protocol::Timeline::EventType::Screenshot;
     }
 
     return Protocol::Timeline::EventType::TimeStamp;
@@ -809,26 +844,16 @@ void InspectorTimelineAgent::sendEvent(Ref<JSON::Object>&& event)
     m_frontendDispatcher->eventRecorded(WTFMove(recordChecked));
 }
 
-InspectorTimelineAgent::TimelineRecordEntry InspectorTimelineAgent::createRecordEntry(Ref<JSON::Object>&& data, TimelineRecordType type, bool captureCallStack, Frame* frame)
+InspectorTimelineAgent::TimelineRecordEntry InspectorTimelineAgent::createRecordEntry(Ref<JSON::Object>&& data, TimelineRecordType type, bool captureCallStack, Frame* frame, std::optional<double> startTime)
 {
-    Ref<JSON::Object> record = TimelineRecordFactory::createGenericRecord(timestamp(), captureCallStack ? m_maxCallStackDepth : 0);
+    Ref<JSON::Object> record = TimelineRecordFactory::createGenericRecord(startTime.value_or(timestamp()), captureCallStack ? m_maxCallStackDepth : 0);
     setFrameIdentifier(&record.get(), frame);
     return TimelineRecordEntry(WTFMove(record), WTFMove(data), JSON::Array::create(), type);
 }
 
-void InspectorTimelineAgent::pushCurrentRecord(Ref<JSON::Object>&& data, TimelineRecordType type, bool captureCallStack, Frame* frame)
+void InspectorTimelineAgent::pushCurrentRecord(Ref<JSON::Object>&& data, TimelineRecordType type, bool captureCallStack, Frame* frame, std::optional<double> startTime)
 {
-    pushCurrentRecord(createRecordEntry(WTFMove(data), type, captureCallStack, frame));
-}
-
-void InspectorTimelineAgent::localToPageQuad(const RenderObject& renderer, const LayoutRect& rect, FloatQuad* quad)
-{
-    const FrameView& frameView = renderer.view().frameView();
-    FloatQuad absolute = renderer.localToAbsoluteQuad(FloatQuad(rect));
-    quad->setP1(frameView.contentsToRootView(roundedIntPoint(absolute.p1())));
-    quad->setP2(frameView.contentsToRootView(roundedIntPoint(absolute.p2())));
-    quad->setP3(frameView.contentsToRootView(roundedIntPoint(absolute.p3())));
-    quad->setP4(frameView.contentsToRootView(roundedIntPoint(absolute.p4())));
+    pushCurrentRecord(createRecordEntry(WTFMove(data), type, captureCallStack, frame, startTime));
 }
 
 } // namespace WebCore

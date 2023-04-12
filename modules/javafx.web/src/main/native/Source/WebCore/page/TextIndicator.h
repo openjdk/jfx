@@ -30,6 +30,7 @@
 #include <wtf/EnumTraits.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
+#include <wtf/Seconds.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -38,6 +39,25 @@ class Frame;
 class GraphicsContext;
 
 struct SimpleRange;
+
+constexpr float dropShadowBlurRadius = 2;
+constexpr float rimShadowBlurRadius = 1;
+constexpr Seconds bounceAnimationDuration = 0.12_s;
+constexpr Seconds timeBeforeFadeStarts = bounceAnimationDuration + 0.2_s;
+constexpr float midBounceScale = 1.25;
+
+enum class TextIndicatorLifetime : uint8_t {
+    // The TextIndicator should indicate the text until dismissed.
+    Permanent,
+
+    // The TextIndicator should briefly indicate the text and then automatically dismiss.
+    Temporary
+};
+
+enum class TextIndicatorDismissalAnimation : uint8_t {
+    None,
+    FadeOut
+};
 
 // FIXME: Move PresentationTransition to TextIndicatorWindow, because it's about presentation.
 enum class TextIndicatorPresentationTransition : uint8_t {
@@ -97,6 +117,10 @@ enum class TextIndicatorOption : uint16_t {
     // Compute a background color to use when rendering a platter around the content image, falling back to a default if the
     // content's background is too complex to be captured by a single color.
     ComputeEstimatedBackgroundColor = 1 << 11,
+
+    // By default, TextIndicator does not consider the user-select property.
+    // If this option is set, expand the range to include the highest `user-select: all` ancestor.
+    UseUserSelectAllCommonAncestor = 1 << 12,
 };
 
 struct TextIndicatorData {
@@ -163,7 +187,8 @@ template<> struct EnumTraits<WebCore::TextIndicatorOption> {
         WebCore::TextIndicatorOption::DoNotClipToVisibleRect,
         WebCore::TextIndicatorOption::IncludeSnapshotOfAllVisibleContentWithoutSelection,
         WebCore::TextIndicatorOption::UseSelectionRectForSizing,
-        WebCore::TextIndicatorOption::ComputeEstimatedBackgroundColor
+        WebCore::TextIndicatorOption::ComputeEstimatedBackgroundColor,
+        WebCore::TextIndicatorOption::UseUserSelectAllCommonAncestor
     >;
 };
 

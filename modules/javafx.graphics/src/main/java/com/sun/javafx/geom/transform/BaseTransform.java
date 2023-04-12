@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -354,6 +354,7 @@ public abstract class BaseTransform implements CanTransformVec3d{
     public abstract Point2D transform(Point2D src, Point2D dst);
     public abstract Point2D inverseTransform(Point2D src, Point2D dst)
         throws NoninvertibleTransformException;
+    @Override
     public abstract Vec3d transform(Vec3d src, Vec3d dst);
     public abstract Vec3d deltaTransform(Vec3d src, Vec3d dst);
     public abstract Vec3d inverseTransform(Vec3d src, Vec3d dst)

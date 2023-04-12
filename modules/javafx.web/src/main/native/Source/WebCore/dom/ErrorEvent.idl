@@ -30,16 +30,16 @@
  */
 
 [
-    Exposed=(Window,Worker),
+    Exposed=*,
     JSCustomMarkFunction,
 ] interface ErrorEvent : Event {
-    constructor(DOMString type, optional ErrorEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional ErrorEventInit eventInitDict);
 
     readonly attribute DOMString message;
     readonly attribute USVString filename;
     readonly attribute unsigned long lineno;
     readonly attribute unsigned long colno;
-    [CallWith=GlobalObject] readonly attribute any error;
+    [CallWith=CurrentGlobalObject] readonly attribute any error;
 };
 
 dictionary ErrorEventInit : EventInit {
@@ -47,5 +47,5 @@ dictionary ErrorEventInit : EventInit {
     USVString filename = "";
     unsigned long lineno = 0;
     unsigned long colno = 0;
-    any error = null;
+    any error;
 };

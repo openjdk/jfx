@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBResourceIdentifier.h"
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
@@ -72,10 +70,8 @@ public:
     virtual void didCloseFromServer(UniqueIDBDatabaseConnection&, const IDBError&) = 0;
     virtual void notifyOpenDBRequestBlocked(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion) = 0;
 
-    virtual void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const Vector<IDBDatabaseNameAndVersion>&) = 0;
+    virtual void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, Vector<IDBDatabaseNameAndVersion>&&) = 0;
 };
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

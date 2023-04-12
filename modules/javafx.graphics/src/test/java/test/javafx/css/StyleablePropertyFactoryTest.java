@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,6 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -58,6 +57,7 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleablePropertyFactory;
+import javafx.css.SimpleStyleableBooleanProperty;
 
 import static org.junit.Assert.*;
 
@@ -126,7 +126,8 @@ public class StyleablePropertyFactoryTest {
                 },
                 {new Data("myNumber", "-my-number: 2em;", Font.getDefault().getSize()*2)},
                 {new Data("myString", "-my-string: \"yaba daba do\";", "yaba daba do")},
-                {new Data("myUrl", "-my-url: url('http://www.oracle.com');", "http://www.oracle.com")}
+                {new Data("myUrl", "-my-url: url('http://www.oracle.com');", "http://www.oracle.com")},
+                {new Data("mySelected", "-my-selected: false;", Boolean.FALSE)}
         });
 
     }
@@ -204,6 +205,17 @@ public class StyleablePropertyFactoryTest {
         public String getMyUrl() { return myUrl.getValue(); }
         public void setMyUrl(String value) { myUrl.setValue(value); }
         private final StyleableProperty<String> myUrl = fac.createStyleableUrlProperty(this, "myUrl", "-my-url", s -> ((MyStyleable) s).myUrl);
+
+        private static CssMetaData<MyStyleable, Boolean> SELECTED;
+        private static final StyleablePropertyFactory<MyStyleable> FACTORY = new StyleablePropertyFactory<>(null){
+            {
+                SELECTED = createBooleanCssMetaData("-my-selected", s -> ((MyStyleable) s).mySelected, false, false);
+            }
+        };
+        public ObservableValue<Boolean> mySelectedProperty() { return (ObservableValue<Boolean>)mySelected; }
+        public final boolean getMySelected() { return mySelected.getValue(); }
+        public final void setMySelected(boolean isSelected) { mySelected.setValue(isSelected); }
+        private final StyleableProperty<Boolean> mySelected = new SimpleStyleableBooleanProperty(SELECTED, "mySelected", "my-selected");
 
         @Override
         public String getTypeSelector() {

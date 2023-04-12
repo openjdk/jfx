@@ -25,7 +25,6 @@
 
 [
     Conditional=VIDEO,
-    ImplementationLacksVTable,
     Exposed=Window
 ] interface MediaError {
       const unsigned short MEDIA_ERR_ABORTED = 1;
@@ -34,4 +33,5 @@
       const unsigned short MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
       [Conditional=LEGACY_ENCRYPTED_MEDIA] const unsigned short MEDIA_ERR_ENCRYPTED = 5;
       readonly attribute unsigned short code;
+      readonly attribute DOMString message;
 };

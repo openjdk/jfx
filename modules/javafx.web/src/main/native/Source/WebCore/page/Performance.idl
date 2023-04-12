@@ -34,11 +34,10 @@
 typedef double DOMHighResTimeStamp;
 
 [
-    Exposed=(Window,Worker),
+    Exposed=*,
     GenerateIsReachable=ImplScriptExecutionContext,
 ] interface Performance : EventTarget {
     DOMHighResTimeStamp now();
-    // FIXME: Implement 'timeOrigin' - https://webkit.org/b/174862
-    // readonly attribute DOMHighResTimeStamp timeOrigin;
+    readonly attribute DOMHighResTimeStamp timeOrigin;
     [Default] object toJSON();
 };

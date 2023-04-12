@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,6 +58,7 @@ public:
     PageReservation() = default;
 
     using PageBlock::base;
+    using PageBlock::end;
     using PageBlock::size;
     using PageBlock::operator bool;
 
@@ -94,16 +95,34 @@ public:
         return PageReservation(OSAllocator::reserveUncommitted(size, usage, writable, executable, jitCageEnabled, false), size, writable, executable, jitCageEnabled, false);
     }
 
+    static PageReservation tryReserve(size_t size, OSAllocator::Usage usage = OSAllocator::UnknownUsage, bool writable = true, bool executable = false, bool jitCageEnabled = false)
+    {
+        ASSERT(isPageAligned(size));
+        return PageReservation(OSAllocator::tryReserveUncommitted(size, usage, writable, executable, jitCageEnabled, false), size, writable, executable, jitCageEnabled, false);
+    }
+
     static PageReservation reserveWithGuardPages(size_t size, OSAllocator::Usage usage = OSAllocator::UnknownUsage, bool writable = true, bool executable = false, bool jitCageEnabled = false)
     {
         ASSERT(isPageAligned(size));
         return PageReservation(OSAllocator::reserveUncommitted(size + pageSize() * 2, usage, writable, executable, jitCageEnabled, true), size, writable, executable, jitCageEnabled, true);
     }
 
+    static PageReservation tryReserveWithGuardPages(size_t size, OSAllocator::Usage usage = OSAllocator::UnknownUsage, bool writable = true, bool executable = false, bool jitCageEnabled = false)
+    {
+        ASSERT(isPageAligned(size));
+        return PageReservation(OSAllocator::tryReserveUncommitted(size + pageSize() * 2, usage, writable, executable, jitCageEnabled, true), size, writable, executable, jitCageEnabled, true);
+    }
+
     static PageReservation reserveAndCommitWithGuardPages(size_t size, OSAllocator::Usage usage = OSAllocator::UnknownUsage, bool writable = true, bool executable = false, bool jitCageEnabled = false)
     {
         ASSERT(isPageAligned(size));
         return PageReservation(OSAllocator::reserveAndCommit(size + pageSize() * 2, usage, writable, executable, jitCageEnabled, true), size, writable, executable, jitCageEnabled, true);
+    }
+
+    static PageReservation tryReserveAndCommitWithGuardPages(size_t size, OSAllocator::Usage usage = OSAllocator::UnknownUsage, bool writable = true, bool executable = false, bool jitCageEnabled = false)
+    {
+        ASSERT(isPageAligned(size));
+        return PageReservation(OSAllocator::tryReserveAndCommit(size + pageSize() * 2, usage, writable, executable, jitCageEnabled, true), size, writable, executable, jitCageEnabled, true);
     }
 
     void deallocate()

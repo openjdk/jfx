@@ -30,6 +30,7 @@
 
 #include "SecurityOrigin.h"
 #include <wtf/URLHash.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -45,23 +46,19 @@ ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::emptyKey()
     return { };
 }
 
-unsigned ServiceWorkerRegistrationKey::hash() const
-{
-    unsigned hashes[2];
-    hashes[0] = SecurityOriginDataHash::hash(m_topOrigin);
-    hashes[1] = StringHash::hash(m_scope.string());
-
-    return StringHasher::hashMemory(hashes, sizeof(hashes));
-}
-
 bool ServiceWorkerRegistrationKey::operator==(const ServiceWorkerRegistrationKey& other) const
 {
     return m_topOrigin == other.m_topOrigin && m_scope == other.m_scope;
 }
 
-ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const
+ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const &
 {
     return { m_topOrigin.isolatedCopy(), m_scope.isolatedCopy() };
+}
+
+ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() &&
+{
+    return { WTFMove(m_topOrigin).isolatedCopy(), WTFMove(m_scope).isolatedCopy() };
 }
 
 bool ServiceWorkerRegistrationKey::isMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const
@@ -94,40 +91,42 @@ String ServiceWorkerRegistrationKey::toDatabaseKey() const
     return makeString(m_topOrigin.protocol, separatorCharacter, m_topOrigin.host, separatorCharacter, separatorCharacter, m_scope.string());
 }
 
-Optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDatabaseKey(const String& key)
+std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDatabaseKey(const String& key)
 {
     auto first = key.find(separatorCharacter, 0);
+    if (first == notFound)
+        return std::nullopt;
+
     auto second = key.find(separatorCharacter, first + 1);
+    if (second == notFound)
+        return std::nullopt;
+
     auto third = key.find(separatorCharacter, second + 1);
+    if (third == notFound)
+        return std::nullopt;
 
-    if (first == second || second == third)
-        return WTF::nullopt;
-
-    Optional<uint16_t> shortPort;
+    std::optional<uint16_t> shortPort;
 
     // If there's a gap between third and second, we expect to have a port to decode
     if (third - second > 1) {
-        bool ok;
-        unsigned port;
-        if (key.is8Bit())
-            port = charactersToUIntStrict(key.characters8() + second + 1, third - second - 1 , &ok);
-        else
-            port = charactersToUIntStrict(key.characters16() + second + 1, third - second - 1, &ok);
-
-        if (!ok)
-            return WTF::nullopt;
-
-        if (port > std::numeric_limits<uint16_t>::max())
-            return WTF::nullopt;
-
-        shortPort = static_cast<uint16_t>(port);
+        shortPort = parseInteger<uint16_t>(StringView { key }.substring(second + 1, third - second - 1));
+        if (!shortPort)
+            return std::nullopt;
     }
 
-    auto scope = URL { URL(), key.substring(third + 1) };
-    if (!scope.isValid())
-        return WTF::nullopt;
+    auto scheme = StringView(key).left(first);
+    auto host = StringView(key).substring(first + 1, second - first - 1);
 
-    return ServiceWorkerRegistrationKey { { key.substring(0, first), key.substring(first + 1, second - first - 1), shortPort }, WTFMove(scope) };
+    URL topOriginURL { makeString(scheme, "://", host) };
+    if (!topOriginURL.isValid())
+        return std::nullopt;
+
+    URL scope { key.substring(third + 1) };
+    if (!scope.isValid())
+        return std::nullopt;
+
+    SecurityOriginData topOrigin { scheme.toString(), host.toString(), shortPort };
+    return ServiceWorkerRegistrationKey { WTFMove(topOrigin), WTFMove(scope) };
 }
 
 #if !LOG_DISABLED

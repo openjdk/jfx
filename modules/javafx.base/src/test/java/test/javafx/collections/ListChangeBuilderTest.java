@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.collections;
 
-import test.javafx.collections.MockListObserver;
-import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,11 +45,11 @@ public class ListChangeBuilderTest {
 
     @Before
     public void setUp() {
-        observer = new MockListObserver<String>();
-        list = new ArrayList<String>(Arrays.asList("a", "b", "c", "d"));
-        observableList = new ObservableListWrapperShim<String>(list);
+        observer = new MockListObserver<>();
+        list = new ArrayList<>(Arrays.asList("a", "b", "c", "d"));
+        observableList = new ObservableListWrapperShim<>(list);
         observableList.addListener(observer);
-        builder = new ListChangeBuilderShim<String>(observableList);
+        builder = new ListChangeBuilderShim<>(observableList);
     }
 
     @Test

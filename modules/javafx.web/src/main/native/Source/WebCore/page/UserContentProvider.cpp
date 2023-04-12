@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "Page.h"
 
@@ -67,7 +68,7 @@ void UserContentProvider::registerForUserMessageHandlerInvalidation(UserContentP
 {
     ASSERT(!m_userMessageHandlerInvalidationClients.contains(invalidationClient));
 
-    m_userMessageHandlerInvalidationClients.add(&invalidationClient);
+    m_userMessageHandlerInvalidationClients.add(invalidationClient);
 }
 
 void UserContentProvider::unregisterForUserMessageHandlerInvalidation(UserContentProviderInvalidationClient& invalidationClient)
@@ -102,12 +103,12 @@ static bool contentRuleListsEnabled(const DocumentLoader& documentLoader)
     return true;
 }
 
-ContentRuleListResults UserContentProvider::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ContentExtensions::ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader)
+ContentRuleListResults UserContentProvider::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ContentExtensions::ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom)
 {
     if (!contentRuleListsEnabled(initiatingDocumentLoader))
         return { };
 
-    return userContentExtensionBackend().processContentRuleListsForLoad(page, url, resourceType, initiatingDocumentLoader);
+    return userContentExtensionBackend().processContentRuleListsForLoad(page, url, resourceType, initiatingDocumentLoader, redirectFrom);
 }
 #endif
 

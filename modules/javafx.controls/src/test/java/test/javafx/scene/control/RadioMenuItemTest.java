@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,9 @@ package test.javafx.scene.control;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -36,14 +39,18 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyCode;
 import javafx.scene.shape.Rectangle;
 import static org.junit.Assert.*;
 
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -55,10 +62,10 @@ public class RadioMenuItemTest {
     private RadioMenuItem radioMenuItem, rmi;//Empty string
     private RadioMenuItem radioMenuItemTwoArg;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         toggleGroup = new ToggleGroup();
         radioMenuItem = rmi = new RadioMenuItem("one");
@@ -236,17 +243,9 @@ public class RadioMenuItemTest {
         assertNotNull(rmi2.toggleGroupProperty());
     }
 
-    // calling toggleGroupProperty does not ensure the value of toggleGroup
-    // to be non null
-    @Ignore
-    @Test public void unsetToggleGroupButNotNull() {
-        rmi.toggleGroupProperty();
-        assertNotNull(rmi.getToggleGroup());
-    }
-
     @Test public void toggleGroupCanBeBound() {
         ToggleGroup tg = new ToggleGroup();
-        SimpleObjectProperty<ToggleGroup> other = new SimpleObjectProperty<ToggleGroup>(rmi, "toggleGroup", tg);
+        SimpleObjectProperty<ToggleGroup> other = new SimpleObjectProperty<>(rmi, "toggleGroup", tg);
         rmi.toggleGroupProperty().bind(other);
         assertSame(tg, rmi.getToggleGroup());
     }
@@ -304,5 +303,27 @@ public class RadioMenuItemTest {
 
        assertTrue(b1.isSelected());
        assertFalse(result8189677);
+    }
+
+    @Test public void testRadioMenuItemSelectionOnAccelerator() {
+       MenuBar menuBar = new MenuBar();
+       Menu menu = new Menu("Submenu");
+       menuBar.getMenus().add(menu);
+
+       ToggleGroup group = new ToggleGroup();
+       RadioMenuItem radioMenuItem = new RadioMenuItem("ONE");
+       radioMenuItem.setToggleGroup(group);
+       radioMenuItem.setAccelerator(KeyCombination.valueOf("alt+1"));
+       menu.getItems().add(radioMenuItem);
+
+       StageLoader s = new StageLoader(menuBar);
+       Scene scene = s.getStage().getScene();
+       KeyEventFirer keyboard = new KeyEventFirer(radioMenuItem, scene);
+
+       keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+       assertTrue(radioMenuItem.isSelected());
+
+       keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+       assertTrue(radioMenuItem.isSelected());
     }
 }

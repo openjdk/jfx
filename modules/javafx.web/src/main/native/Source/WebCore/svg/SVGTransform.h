@@ -49,6 +49,11 @@ public:
         return adoptRef(*new SVGTransform(value.type(), value.matrix()->value(), value.angle(), value.rotationCenter()));
     }
 
+    static Ref<SVGTransform> create(SVGTransformValue&& value)
+    {
+        return adoptRef(*new SVGTransform(WTFMove(value)));
+    }
+
     template<typename T>
     static ExceptionOr<Ref<SVGTransform>> create(ExceptionOr<T>&& value)
     {
@@ -77,17 +82,17 @@ public:
             return Exception { NoModificationAllowedError };
 
         AffineTransform transform;
-        if (matrixInit.a.hasValue())
+        if (matrixInit.a)
             transform.setA(matrixInit.a.value());
-        if (matrixInit.b.hasValue())
+        if (matrixInit.b)
             transform.setB(matrixInit.b.value());
-        if (matrixInit.c.hasValue())
+        if (matrixInit.c)
             transform.setC(matrixInit.c.value());
-        if (matrixInit.d.hasValue())
+        if (matrixInit.d)
             transform.setD(matrixInit.d.value());
-        if (matrixInit.e.hasValue())
+        if (matrixInit.e)
             transform.setE(matrixInit.e.value());
-        if (matrixInit.f.hasValue())
+        if (matrixInit.f)
             transform.setF(matrixInit.f.value());
         m_value.setMatrix(transform);
         commitChange();
@@ -164,6 +169,12 @@ private:
     SVGTransform(SVGTransformValue::SVGTransformType type, const AffineTransform& transform = { }, float angle = 0, const FloatPoint& rotationCenter = { })
         : Base(SVGTransformValue(type, SVGMatrix::create(this, SVGPropertyAccess::ReadWrite, transform), angle, rotationCenter))
     {
+    }
+
+    SVGTransform(SVGTransformValue&& value)
+        : Base(WTFMove(value))
+    {
+        m_value.matrix()->attach(this, SVGPropertyAccess::ReadWrite);
     }
 
     SVGPropertyOwner* owner() const override { return m_owner; }

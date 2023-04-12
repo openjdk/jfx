@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.image.Image;
@@ -209,6 +210,7 @@ public class DialogPane extends Pane {
      */
     public DialogPane() {
         getStyleClass().add("dialog-pane");
+        setAccessibleRole(AccessibleRole.DIALOG);
 
         headerTextPanel = new GridPane();
         getChildren().add(headerTextPanel);
@@ -252,7 +254,7 @@ public class DialogPane extends Pane {
      **************************************************************************/
 
     // --- graphic
-    private final ObjectProperty<Node> graphicProperty = new StyleableObjectProperty<Node>() {
+    private final ObjectProperty<Node> graphicProperty = new StyleableObjectProperty<>() {
         // The graphic is styleable by css, but it is the
         // imageUrlProperty that handles the style value.
         @Override public CssMetaData getCssMetaData() {
@@ -430,7 +432,7 @@ public class DialogPane extends Pane {
 
 
     // --- header
-    private final ObjectProperty<Node> header = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> header = new SimpleObjectProperty<>(null) {
         WeakReference<Node> headerRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldHeader = headerRef.get();
@@ -524,7 +526,7 @@ public class DialogPane extends Pane {
 
 
     // --- content
-    private final ObjectProperty<Node> content = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> content = new SimpleObjectProperty<>(null) {
         WeakReference<Node> contentRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldContent = contentRef.get();
@@ -608,7 +610,7 @@ public class DialogPane extends Pane {
 
 
     // --- expandable content
-    private final ObjectProperty<Node> expandableContentProperty = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> expandableContentProperty = new SimpleObjectProperty<>(null) {
         WeakReference<Node> expandableContentRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldExpandableContent = expandableContentRef.get();
@@ -617,7 +619,7 @@ public class DialogPane extends Pane {
             }
 
             Node newExpandableContent = getExpandableContent();
-            expandableContentRef = new WeakReference<Node>(newExpandableContent);
+            expandableContentRef = new WeakReference<>(newExpandableContent);
             if (newExpandableContent != null) {
                 newExpandableContent.setVisible(isExpanded());
                 newExpandableContent.setManaged(isExpanded());
@@ -663,6 +665,7 @@ public class DialogPane extends Pane {
 
     // --- expanded
     private final BooleanProperty expandedProperty = new SimpleBooleanProperty(this, "expanded", false) {
+        @Override
         protected void invalidated() {
             final Node expandableContent = getExpandableContent();
 
@@ -1118,16 +1121,15 @@ public class DialogPane extends Pane {
             headerLabel.setMaxHeight(Double.MAX_VALUE);
             headerTextPanel.add(headerLabel, 0, 0);
 
-            // on the right of the header is a graphic, if one is specified
+            // to the right of the header, if any, or to the left of the content area otherwise,
+            // there is a graphic, if one is specified
             graphicContainer.getChildren().clear();
-
-            if (! graphicContainer.getStyleClass().contains("graphic-container")) { //$NON-NLS-1$)
-                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
-            }
+            graphicContainer.getStyleClass().clear();
 
             final Node graphic = getGraphic();
             if (graphic != null) {
                 graphicContainer.getChildren().add(graphic);
+                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
             }
             headerTextPanel.add(graphicContainer, 1, 0);
 
@@ -1195,7 +1197,7 @@ public class DialogPane extends Pane {
     private static class StyleableProperties {
 
         private static final CssMetaData<DialogPane,String> GRAPHIC =
-            new CssMetaData<DialogPane,String>("-fx-graphic",
+            new CssMetaData<>("-fx-graphic",
                 StringConverter.getInstance()) {
 
             @Override

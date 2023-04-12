@@ -29,8 +29,6 @@
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentType.h"
-#include "FileChooser.h"
-#include "FileIconLoader.h"
 #include "FileList.h"
 #include "FloatRect.h"
 #include "Frame.h"
@@ -134,9 +132,14 @@ void Chrome::contentsSizeChanged(Frame& frame, const IntSize& size) const
     m_client.contentsSizeChanged(frame, size);
 }
 
-void Chrome::scrollRectIntoView(const IntRect& rect) const
+void Chrome::scrollContainingScrollViewsToRevealRect(const IntRect& rect) const
 {
-    m_client.scrollRectIntoView(rect);
+    m_client.scrollContainingScrollViewsToRevealRect(rect);
+}
+
+void Chrome::scrollMainFrameToRevealRect(const IntRect& rect) const
+{
+    m_client.scrollMainFrameToRevealRect(rect);
 }
 
 void Chrome::setWindowRect(const FloatRect& rect) const
@@ -216,7 +219,7 @@ void Chrome::runModal() const
 
     // JavaScript that runs within the nested event loop must not be run in the context of the
     // script that called showModalDialog. Null out entryScope to break the connection.
-    SetForScope<JSC::VMEntryScope*> entryScopeNullifier { m_page.mainFrame().document()->vm().entryScope, nullptr };
+    SetForScope entryScopeNullifier { m_page.mainFrame().document()->vm().entryScope, nullptr };
 
     TimerBase::fireTimersInNestedEventLoop();
     m_client.runModal();
@@ -281,9 +284,9 @@ bool Chrome::runBeforeUnloadConfirmPanel(const String& message, Frame& frame)
     return m_client.runBeforeUnloadConfirmPanel(message, frame);
 }
 
-void Chrome::closeWindowSoon()
+void Chrome::closeWindow()
 {
-    m_client.closeWindowSoon();
+    m_client.closeWindow();
 }
 
 void Chrome::runJavaScriptAlert(Frame& frame, const String& message)
@@ -403,7 +406,7 @@ bool Chrome::print(Frame& frame)
     // FIXME: This should have PageGroupLoadDeferrer, like runModal() or runJavaScriptAlert(), because it's no different from those.
 
     if (frame.document()->isSandboxed(SandboxModals)) {
-        frame.document()->domWindow()->printErrorMessage("Use of window.print is not allowed in a sandboxed frame when the allow-modals flag is not set.");
+        frame.document()->domWindow()->printErrorMessage("Use of window.print is not allowed in a sandboxed frame when the allow-modals flag is not set."_s);
         return false;
     }
 
@@ -473,7 +476,7 @@ void Chrome::showShareSheet(ShareDataWithParsedURL& shareData, CompletionHandler
     m_client.showShareSheet(shareData, WTFMove(callback));
 }
 
-void Chrome::showContactPicker(const ContactsRequestData& requestData, CompletionHandler<void(Optional<Vector<ContactInfo>>&&)>&& callback)
+void Chrome::showContactPicker(const ContactsRequestData& requestData, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&& callback)
 {
     m_client.showContactPicker(requestData, WTFMove(callback));
 }
@@ -513,9 +516,9 @@ void Chrome::dispatchViewportPropertiesDidChange(const ViewportArguments& argume
 }
 
 #if ENABLE(APP_HIGHLIGHTS)
-void Chrome::storeAppHighlight(const AppHighlight& highlight) const
+void Chrome::storeAppHighlight(AppHighlight&& highlight) const
 {
-    m_client.storeAppHighlight(highlight);
+    m_client.storeAppHighlight(WTFMove(highlight));
 }
 #endif
 
@@ -529,28 +532,30 @@ void Chrome::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
     m_client.setCursorHiddenUntilMouseMoves(hiddenUntilMouseMoves);
 }
 
-RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, DestinationColorSpace colorSpace, PixelFormat pixelFormat) const
+RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, bool avoidBackendSizeCheck) const
 {
-    return m_client.createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat);
+    return m_client.createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, avoidBackendSizeCheck);
 }
 
 #if ENABLE(WEBGL)
 RefPtr<GraphicsContextGL> Chrome::createGraphicsContextGL(const GraphicsContextGLAttributes& attributes) const
 {
-    return m_client.createGraphicsContextGL(attributes, displayID());
+    return m_client.createGraphicsContextGL(attributes);
 }
 #endif
+
+RefPtr<PAL::WebGPU::GPU> Chrome::createGPUForWebGPU() const
+{
+    return m_client.createGPUForWebGPU();
+}
 
 PlatformDisplayID Chrome::displayID() const
 {
     return m_page.displayID();
 }
 
-void Chrome::windowScreenDidChange(PlatformDisplayID displayID, Optional<unsigned> nominalFrameInterval)
+void Chrome::windowScreenDidChange(PlatformDisplayID displayID, std::optional<FramesPerSecond> nominalFrameInterval)
 {
-    if (displayID == m_page.displayID() && nominalFrameInterval == m_page.displayNominalFramesPerSecond())
-        return;
-
     m_page.windowScreenDidChange(displayID, nominalFrameInterval);
 }
 
@@ -590,7 +595,7 @@ void Chrome::didReceiveDocType(Frame& frame)
         return;
 
     auto* doctype = frame.document()->doctype();
-    m_client.didReceiveMobileDocType(doctype && doctype->publicId().containsIgnoringASCIICase("xhtml mobile"));
+    m_client.didReceiveMobileDocType(doctype && doctype->publicId().containsIgnoringASCIICase("xhtml mobile"_s));
 #endif
 }
 

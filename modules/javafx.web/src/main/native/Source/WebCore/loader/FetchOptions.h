@@ -28,28 +28,30 @@
 
 #pragma once
 
-#include "DocumentIdentifier.h"
+#include "ProcessQualified.h"
 #include "ReferrerPolicy.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include <wtf/Markable.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct FetchOptions {
-    enum class Destination : uint8_t { EmptyString, Audio, Audioworklet, Document, Embed, Font, Image, Manifest, Model, Object, Paintworklet, Report, Script, Serviceworker, Sharedworker, Style, Track, Video, Worker, Xslt };
+    enum class Destination : uint8_t { EmptyString, Audio, Audioworklet, Document, Embed, Font, Image, Iframe, Manifest, Model, Object, Paintworklet, Report, Script, Serviceworker, Sharedworker, Style, Track, Video, Worker, Xslt };
     enum class Mode : uint8_t { Navigate, SameOrigin, NoCors, Cors };
     enum class Credentials : uint8_t { Omit, SameOrigin, Include };
     enum class Cache : uint8_t { Default, NoStore, Reload, NoCache, ForceCache, OnlyIfCached };
     enum class Redirect : uint8_t { Follow, Error, Manual };
 
     FetchOptions() = default;
-    FetchOptions(Destination, Mode, Credentials, Cache, Redirect, ReferrerPolicy, String&&, bool);
-    FetchOptions isolatedCopy() const { return { destination, mode, credentials, cache, redirect, referrerPolicy, integrity.isolatedCopy(), keepAlive }; }
+    FetchOptions(Destination, Mode, Credentials, Cache, Redirect, ReferrerPolicy, String&&, bool, std::optional<ScriptExecutionContextIdentifier>);
+    FetchOptions isolatedCopy() const & { return { destination, mode, credentials, cache, redirect, referrerPolicy, integrity.isolatedCopy(), keepAlive, clientIdentifier }; }
+    FetchOptions isolatedCopy() && { return { destination, mode, credentials, cache, redirect, referrerPolicy, WTFMove(integrity).isolatedCopy(), keepAlive, clientIdentifier }; }
 
     template<class Encoder> void encodePersistent(Encoder&) const;
     template<class Decoder> static WARN_UNUSED_RETURN bool decodePersistent(Decoder&, FetchOptions&);
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<FetchOptions> decode(Decoder&);
+    template<class Decoder> static std::optional<FetchOptions> decode(Decoder&);
 
     Destination destination { Destination::EmptyString };
     Mode mode { Mode::NoCors };
@@ -57,20 +59,21 @@ struct FetchOptions {
     Cache cache { Cache::Default };
     Redirect redirect { Redirect::Follow };
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
-    bool keepAlive { false };
     String integrity;
-    Markable<DocumentIdentifier, DocumentIdentifier::MarkableTraits> clientIdentifier;
+    bool keepAlive { false };
+    std::optional<ScriptExecutionContextIdentifier> clientIdentifier;
 };
 
-inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credentials credentials, Cache cache, Redirect redirect, ReferrerPolicy referrerPolicy, String&& integrity, bool keepAlive)
+inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credentials credentials, Cache cache, Redirect redirect, ReferrerPolicy referrerPolicy, String&& integrity, bool keepAlive, std::optional<ScriptExecutionContextIdentifier> clientIdentifier)
     : destination(destination)
     , mode(mode)
     , credentials(credentials)
     , cache(cache)
     , redirect(redirect)
     , referrerPolicy(referrerPolicy)
-    , keepAlive(keepAlive)
     , integrity(WTFMove(integrity))
+    , keepAlive(keepAlive)
+    , clientIdentifier(clientIdentifier)
 {
 }
 
@@ -80,9 +83,20 @@ inline bool isPotentialNavigationOrSubresourceRequest(FetchOptions::Destination 
         || destination == FetchOptions::Destination::Embed;
 }
 
+// https://fetch.spec.whatwg.org/#navigation-request
+inline bool isNavigationRequest(FetchOptions::Destination destination)
+{
+    return destination == FetchOptions::Destination::Document
+        || destination == FetchOptions::Destination::Iframe
+        || destination == FetchOptions::Destination::Object
+        || destination == FetchOptions::Destination::Embed;
+}
+
+// https://fetch.spec.whatwg.org/#non-subresource-request
 inline bool isNonSubresourceRequest(FetchOptions::Destination destination)
 {
     return destination == FetchOptions::Destination::Document
+        || destination == FetchOptions::Destination::Iframe
         || destination == FetchOptions::Destination::Report
         || destination == FetchOptions::Destination::Serviceworker
         || destination == FetchOptions::Destination::Sharedworker
@@ -95,6 +109,7 @@ inline bool isScriptLikeDestination(FetchOptions::Destination destination)
         || destination == FetchOptions::Destination::Paintworklet
         || destination == FetchOptions::Destination::Script
         || destination == FetchOptions::Destination::Serviceworker
+        || destination == FetchOptions::Destination::Sharedworker
         || destination == FetchOptions::Destination::Worker;
 }
 
@@ -112,6 +127,7 @@ template<> struct EnumTraits<WebCore::FetchOptions::Destination> {
         WebCore::FetchOptions::Destination::Embed,
         WebCore::FetchOptions::Destination::Font,
         WebCore::FetchOptions::Destination::Image,
+        WebCore::FetchOptions::Destination::Iframe,
         WebCore::FetchOptions::Destination::Manifest,
         WebCore::FetchOptions::Destination::Model,
         WebCore::FetchOptions::Destination::Object,
@@ -189,42 +205,42 @@ inline void FetchOptions::encodePersistent(Encoder& encoder) const
 template<class Decoder>
 inline bool FetchOptions::decodePersistent(Decoder& decoder, FetchOptions& options)
 {
-    Optional<FetchOptions::Destination> destination;
+    std::optional<FetchOptions::Destination> destination;
     decoder >> destination;
     if (!destination)
         return false;
 
-    Optional<FetchOptions::Mode> mode;
+    std::optional<FetchOptions::Mode> mode;
     decoder >> mode;
     if (!mode)
         return false;
 
-    Optional<FetchOptions::Credentials> credentials;
+    std::optional<FetchOptions::Credentials> credentials;
     decoder >> credentials;
     if (!credentials)
         return false;
 
-    Optional<FetchOptions::Cache> cache;
+    std::optional<FetchOptions::Cache> cache;
     decoder >> cache;
     if (!cache)
         return false;
 
-    Optional<FetchOptions::Redirect> redirect;
+    std::optional<FetchOptions::Redirect> redirect;
     decoder >> redirect;
     if (!redirect)
         return false;
 
-    Optional<ReferrerPolicy> referrerPolicy;
+    std::optional<ReferrerPolicy> referrerPolicy;
     decoder >> referrerPolicy;
     if (!referrerPolicy)
         return false;
 
-    Optional<String> integrity;
+    std::optional<String> integrity;
     decoder >> integrity;
     if (!integrity)
         return false;
 
-    Optional<bool> keepAlive;
+    std::optional<bool> keepAlive;
     decoder >> keepAlive;
     if (!keepAlive)
         return false;
@@ -245,20 +261,20 @@ template<class Encoder>
 inline void FetchOptions::encode(Encoder& encoder) const
 {
     encodePersistent(encoder);
-    encoder << clientIdentifier.asOptional();
+    encoder << clientIdentifier;
 }
 
 template<class Decoder>
-inline Optional<FetchOptions> FetchOptions::decode(Decoder& decoder)
+inline std::optional<FetchOptions> FetchOptions::decode(Decoder& decoder)
 {
     FetchOptions options;
     if (!decodePersistent(decoder, options))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<DocumentIdentifier>> clientIdentifier;
+    std::optional<std::optional<ScriptExecutionContextIdentifier>> clientIdentifier;
     decoder >> clientIdentifier;
     if (!clientIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
     options.clientIdentifier = WTFMove(clientIdentifier.value());
 
     return options;

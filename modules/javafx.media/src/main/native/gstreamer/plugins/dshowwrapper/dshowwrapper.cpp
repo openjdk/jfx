@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,9 @@ using namespace std;
 #define MP2T_PTS_DEBUG 0
 #define H264_PTS_DEBUG 0
 #define AAC_PTS_DEBUG 0
+#define MP2T_PTS_INPUT_DEBUG 0
+#define H264_PTS_INPUT_DEBUG 0
+#define AAC_PTS_INPUT_DEBUG 0
 #define EOS_DEBUG 0
 
 #define MAX_HEADER_SIZE 256
@@ -356,6 +359,11 @@ static void gst_dshowwrapper_init (GstDShowWrapper *decoder)
     decoder->base_pts = GST_CLOCK_TIME_NONE;
 
     decoder->pending_event = NULL;
+
+    decoder->fragmented = FALSE;
+    decoder->width = 0;
+    decoder->height = 0;
+    decoder->lengthSizeMinusOne = 0;
 }
 
 static void gst_dshowwrapper_dispose(GObject* object)
@@ -748,20 +756,20 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
             if (decoder->eOutputFormat[pUserData->output_index] == MEDIA_FORMAT_VIDEO_H264)
             {
                 if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("JFXMEDIA MP2T H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                    g_print("JFXMEDIA OUTPUT MP2T H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
                 else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("DEBUG MP2T H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                    g_print("JFXMEDIA OUTPUT MP2T H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
                 else
-                    g_print("JFXMEDIA MP2T H264 -1\n");
+                    g_print("JFXMEDIA OUTPUT MP2T H264 -1\n");
             }
             if (decoder->eOutputFormat[pUserData->output_index] == MEDIA_FORMAT_AUDIO_AAC)
             {
                 if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("JFXMEDIA MP2T AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                    g_print("JFXMEDIA OUTPUT MP2T AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
                 else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("JFXMEDIA MP2T AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                    g_print("JFXMEDIA OUTPUT MP2T AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
                 else
-                    g_print("JFXMEDIA MP2T AAC  -1\n");
+                    g_print("JFXMEDIA OUTPUT MP2T AAC  -1\n");
             }
         }
 #endif
@@ -769,22 +777,22 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
         if (decoder->eInputFormat == MEDIA_FORMAT_VIDEO_H264 || decoder->eInputFormat == MEDIA_FORMAT_VIDEO_AVC1)
         {
             if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("JFXMEDIA H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA OUTPUT H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
             else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("JFXMEDIA H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA OUTPUT H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
             else
-                g_print("JFXMEDIA H264 -1\n");
+                g_print("JFXMEDIA OUTPUT H264 -1\n");
         }
 #endif
 #if AAC_PTS_DEBUG
         if (decoder->eInputFormat == MEDIA_FORMAT_AUDIO_AAC)
         {
             if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("JFXMEDIA AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA OUTPUT AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
             else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("JFXMEDIA AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA OUTPUT AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
             else
-                g_print("JFXMEDIA AAC  -1\n");
+                g_print("JFXMEDIA OUTPUT AAC  -1\n");
         }
 #endif
 
@@ -1189,14 +1197,13 @@ static void dshowwrapper_destroy_graph (GstDShowWrapper *decoder)
         CoUninitialize();
 }
 
-gsize dshowwrapper_get_avc_config(void *in, gsize in_size, BYTE *out, gsize out_size, guint *avcProfile, guint *avcLevel, guint *lengthSizeMinusOne)
+gsize dshowwrapper_get_avc_config(void *in, gsize in_size, BYTE *out, gsize out_size, guint *lengthSizeMinusOne)
 {
     guintptr bdata = (guintptr)in;
     AVCCHeader *header = NULL;
     guint ppsCount = 0;
-    guint16 structSize = 0;
+    guint16 nalUnitLength = 0;
     guint ii = 0;
-    gsize size = 0;
     gsize in_bytes_count = 0;
     gsize out_bytes_count = 0;
 
@@ -1208,70 +1215,62 @@ gsize dshowwrapper_get_avc_config(void *in, gsize in_size, BYTE *out, gsize out_
     header->lengthSizeMinusOne &= 0x03;
     header->spsCount &= 0x1F;
 
-    *avcProfile = header->avcProfile;
-    *avcLevel = header->avcLevel;
     *lengthSizeMinusOne = header->lengthSizeMinusOne;
 
     bdata += sizeof(AVCCHeader); // length of first SPS struct, if any
     in_bytes_count += sizeof(AVCCHeader);
 
-    for (ii = 0; ii < header->spsCount; ii++) {
-
+    for (ii = 0; ii < header->spsCount; ii++)
+    {
         if ((in_bytes_count + 2) > in_size)
             return 0;
 
-        structSize = ((guint16)*(guint8*)bdata) << 8;
-        bdata++;
-        structSize |= (guint16)*(guint8*)bdata;
-        bdata++;
+        nalUnitLength = ((guint16)*(guint8*)bdata) << 8;
+        nalUnitLength |= (guint16)*(guint8*)(bdata + 1);
+        nalUnitLength += 2; // Copy nalUnitLength
 
-        out_bytes_count += (structSize + 2);
-        if (out_bytes_count > out_size)
+        if ((out_bytes_count + nalUnitLength) > out_size)
             return 0;
 
-        in_bytes_count += structSize;
-        if (in_bytes_count > in_size)
+        if ((in_bytes_count + nalUnitLength) > in_size)
             return 0;
 
-        memcpy(out, ((guint8*)bdata - 2), structSize + 2);
-        size += structSize + 2;
-        out += size;
-        bdata += structSize;
+        // Copy nal unit
+        memcpy(out, (guint8*)bdata, nalUnitLength);
+        bdata += nalUnitLength; in_bytes_count += nalUnitLength;
+        out += nalUnitLength; out_bytes_count += nalUnitLength;
     }
 
     if ((in_bytes_count + 1) > in_size)
-            return 0;
+        return 0;
 
     ppsCount = *(guint8*)bdata;
     bdata++;
 
     in_bytes_count += 1;
 
-    for (ii = 0; ii < ppsCount; ii++) {
-
+    for (ii = 0; ii < ppsCount; ii++)
+    {
         if ((in_bytes_count + 2) > in_size)
             return 0;
 
-        structSize = ((guint16)*(guint8*)bdata) << 8;
-        bdata++;
-        structSize |= (guint16)*(guint8*)bdata;
-        bdata++;
+        nalUnitLength = ((guint16)*(guint8*)bdata) << 8;
+        nalUnitLength |= (guint16)*(guint8*)(bdata + 1);
+        nalUnitLength += 2; // Copy nalUnitLength
 
-        out_bytes_count += (structSize + 2);
-        if (out_bytes_count > out_size)
+       if ((out_bytes_count + nalUnitLength) > out_size)
             return 0;
 
-        in_bytes_count += structSize;
-        if (in_bytes_count > in_size)
+        if ((in_bytes_count + nalUnitLength) > in_size)
             return 0;
 
-        memcpy(out, ((guint8*)bdata - 2), structSize + 2);
-        size += structSize + 2;
-        out += size;
-        bdata += structSize;
+        // Copy nal unit
+        memcpy(out, (guint8*)bdata, nalUnitLength);
+        bdata += nalUnitLength; in_bytes_count += nalUnitLength;
+        out += nalUnitLength; out_bytes_count += nalUnitLength;
     }
 
-    return size;
+    return out_bytes_count;
 }
 
 static gboolean dshowwrapper_is_decoder_by_codec_id_supported(gint codec_id)
@@ -1308,7 +1307,7 @@ static gboolean dshowwrapper_is_decoder_by_codec_id_supported(gint codec_id)
         }
         break;
     case JFX_CODEC_ID_AVC1:
-        count = sizeof(szAACDecoders)/sizeof(WCHAR*);
+        count = sizeof(szAVCDecoders)/sizeof(WCHAR*);
         decoderCLSID = GUID_NULL;
         for (int i = 0; i < count; i++)
         {
@@ -1463,6 +1462,9 @@ static gboolean dshowwrapper_load_decoder_aac(GstStructure *s, GstDShowWrapper *
     gboolean ret = FALSE;
     gint rate = 48000;
     gint channels = 2;
+
+    if (decoder->pDecoder != NULL)
+        return TRUE;
 
     // Load decoder
     int count = sizeof(szAACDecoders)/sizeof(WCHAR*);
@@ -1645,6 +1647,9 @@ static gboolean dshowwrapper_load_decoder_mp3(GstStructure *s, GstDShowWrapper *
 {
     gboolean ret = FALSE;
     gint layer = 0;
+
+    if (decoder->pDecoder != NULL)
+        return TRUE;
 
     if (!gst_structure_get_int(s, "layer", &layer))
         return FALSE;
@@ -1836,6 +1841,9 @@ static void dshowwrapper_load_decoder_h264(GstDShowWrapper *decoder, JFX_CODEC_I
     HRESULT hr = S_OK;
     CLSID decoderCLSID = GUID_NULL;
 
+    if (decoder->pDecoder != NULL)
+        return;
+
     if (codecID == JFX_CODEC_ID_H264)
     {
         hr = CLSIDFromString(L"{212690FB-83E5-4526-8FD7-74478B7939CD}", &decoderCLSID);
@@ -1931,9 +1939,63 @@ static void dshowwrapper_load_decoder_h264(GstDShowWrapper *decoder, JFX_CODEC_I
     }
 }
 
+static gboolean dshowwrapper_reload_decoder_h264_fragmented(GstDShowWrapper *decoder, sInputFormat *pInputFormat, sOutputFormat *pOutputFormat)
+{
+    HRESULT hr = S_OK;
+    OAFilterState fs = 0;
+    IPin *pOutput = NULL;
+
+    if (decoder->pGraph == NULL)
+        return FALSE;
+
+    if (decoder->pMediaControl)
+    {
+        decoder->pMediaControl->Stop();
+        decoder->pMediaControl->GetState(5000, &fs);
+    }
+
+    if (decoder->pDecoder != NULL)
+    {
+        decoder->pGraph->RemoveFilter(decoder->pDecoder);
+        decoder->pDecoder->Release();
+        decoder->pDecoder = NULL;
+    }
+
+    hr = decoder->pSrc->InitMediaType(pInputFormat);
+    if (FAILED(hr))
+        return FALSE;
+
+    hr = decoder->pSink[0]->InitMediaType(pOutputFormat);
+    if (FAILED(hr))
+        return FALSE;
+
+    dshowwrapper_load_decoder_h264(decoder, JFX_CODEC_ID_AVC1);
+    if (decoder->pDecoder == NULL)
+        return FALSE;
+
+    // Add decoder
+    hr = decoder->pGraph->AddFilter(decoder->pDecoder, L"Decoder");
+    if (FAILED(hr))
+        return FALSE;
+
+    if (!dshowwrapper_connect_filters(decoder, decoder->pISrc, decoder->pDecoder))
+        return FALSE;
+
+    if (!dshowwrapper_connect_filters(decoder, decoder->pDecoder, decoder->pISink[0]))
+        return FALSE;
+
+    if (decoder->pMediaControl)
+        decoder->pMediaControl->Run();
+
+    return TRUE;
+}
+
 static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper *decoder)
 {
     gboolean ret = FALSE;
+    HRESULT hr = S_OK;
+
+    gboolean reloadDecoder = FALSE;
 
     // Init input
     sInputFormat inputFormat;
@@ -1947,14 +2009,15 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
     gint height = 0;
     const GValue *v = NULL;
     GstBuffer *codec_data = NULL;
+    GstMapInfo codec_data_info;
+    BYTE header[MAX_HEADER_SIZE];
+    gint header_size = 0;
+
+    if (!gst_structure_get_boolean(s, "fragmented", &decoder->fragmented))
+        decoder->fragmented = FALSE;
 
     if (gst_structure_get_int(s, "width", &width) && gst_structure_get_int(s, "height", &height))
     {
-        // Load AVC1 decoder
-        dshowwrapper_load_decoder_h264(decoder, JFX_CODEC_ID_AVC1);
-        if (decoder->pDecoder == NULL)
-            return FALSE;
-
         v = gst_structure_get_value(s, "codec_data");
         if (v == NULL)
             return FALSE;
@@ -1962,21 +2025,33 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         codec_data = gst_value_get_buffer(v);
         if (codec_data == NULL)
             return FALSE;
+    }
+
+    if (decoder->pDecoder != NULL)
+    {
+        if (decoder->fragmented &&
+              (decoder->width != width || decoder->height != height) &&
+               decoder->width != 0 && decoder->height != 0)
+            reloadDecoder = TRUE;
+        else
+            return TRUE;
+    }
+
+    if (width != 0 && height != 0)
+    {
+        // Load AVC1 decoder
+        dshowwrapper_load_decoder_h264(decoder, JFX_CODEC_ID_AVC1);
+        if (decoder->pDecoder == NULL)
+            return FALSE;
 
         // GetAVCConfig
-        BYTE header[MAX_HEADER_SIZE];
-        gint header_size = 0;
-        guint avcProfile = 0;
-        guint avcLevel = 0;
-        guint lengthSizeMinusOne = 0;
-        GstMapInfo info;
         if (codec_data != NULL && gst_buffer_get_size(codec_data) <= MAX_HEADER_SIZE)
         {
-            if (gst_buffer_map(codec_data, &info, GST_MAP_READ))
+            if (gst_buffer_map(codec_data, &codec_data_info, GST_MAP_READ))
             {
-                if (info.size <= MAX_HEADER_SIZE)
-                    header_size = dshowwrapper_get_avc_config(info.data, info.size, header, 256, &avcProfile, &avcLevel, &lengthSizeMinusOne);
-                gst_buffer_unmap(codec_data, &info);
+                if (codec_data_info.size <= MAX_HEADER_SIZE)
+                    header_size = dshowwrapper_get_avc_config(codec_data_info.data, codec_data_info.size, header, MAX_HEADER_SIZE, &decoder->lengthSizeMinusOne);
+                gst_buffer_unmap(codec_data, &codec_data_info);
             }
         }
         else
@@ -2018,18 +2093,21 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         pbFormat->hdr.bmiHeader.biPlanes = 1;
 
         // MPEG2VIDEOINFO
-        pbFormat->dwFlags = lengthSizeMinusOne + 1;
+        pbFormat->dwFlags = decoder->lengthSizeMinusOne + 1;
         memcpy(pbFormat->dwSequenceHeader, header, header_size);
         pbFormat->cbSequenceHeader = header_size;
 
         // Enable dynamic format change for MP4 via ReceiveConnection().
         // HLS works fine using QueryAccept without buffer size changes and
         // breaks if dynamic format is enabled, so for now we will use it only
-        // for MP4. It seems we only need it for portrait video or anything
-        // bigger then 1920x1080, so we will enable it only for such resolution.
-        // See JDK-8133841.
-        if ((width < height) || (width > 1920 && height > 1080))
-            outputFormat.bEnableDynamicFormatChanges = 1;
+        // for MP4. It seems we need it for portrait video, anything that has
+        // width > 1920 and/or height > 1080 or any not standard resolutions
+        // such as 1706x854.
+        // See JDK-8133841 and JDK-8283318.
+        outputFormat.bEnableDynamicFormatChanges = 1;
+
+        decoder->width = width;
+        decoder->height = height;
     }
     else
     {
@@ -2065,7 +2143,7 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         hdr->bmiHeader.biCompression = '462H';
     }
 
-    if (!dshowwrapper_create_ds_source(decoder, &inputFormat))
+    if (!reloadDecoder && !dshowwrapper_create_ds_source(decoder, &inputFormat))
         goto exit;
 
     gint framerate_num = 0;
@@ -2176,8 +2254,15 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         goto exit;
     }
 
-    if (!dshowwrapper_create_ds_sink(decoder, &outputFormat, 0, true))
+    if (!reloadDecoder && !dshowwrapper_create_ds_sink(decoder, &outputFormat, 0, true))
         goto exit;
+
+
+    if (reloadDecoder)
+    {
+        if (!dshowwrapper_reload_decoder_h264_fragmented(decoder, &inputFormat, &outputFormat))
+            goto exit;
+    }
 
     ret = TRUE;
 
@@ -2801,6 +2886,40 @@ static GstFlowReturn dshowwrapper_chain (GstPad * pad, GstObject *parent, GstBuf
         return GST_FLOW_OK;
     }
 
+#if MP2T_PTS_INPUT_DEBUG
+    if (decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T)
+    {
+        if (GST_BUFFER_TIMESTAMP_IS_VALID(buf) && GST_BUFFER_DURATION_IS_VALID(buf))
+             g_print("JFXMEDIA INPUT MP2T %I64u %I64u\n", GST_BUFFER_TIMESTAMP(buf), GST_BUFFER_DURATION(buf));
+        else if (GST_BUFFER_TIMESTAMP_IS_VALID(buf) && !GST_BUFFER_DURATION_IS_VALID(buf))
+            g_print("JFXMEDIA INPUT MP2T %I64u -1\n", GST_BUFFER_TIMESTAMP(buf));
+        else
+            g_print("JFXMEDIA INPUT MP2T -1\n");
+    }
+#endif
+#if H264_PTS_INPUT_DEBUG
+    if (decoder->eInputFormat == MEDIA_FORMAT_VIDEO_H264 || decoder->eInputFormat == MEDIA_FORMAT_VIDEO_AVC1)
+    {
+        if (GST_BUFFER_TIMESTAMP_IS_VALID(buf) && GST_BUFFER_DURATION_IS_VALID(buf))
+            g_print("JFXMEDIA INPUT H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(buf), GST_BUFFER_DURATION(buf));
+        else if (GST_BUFFER_TIMESTAMP_IS_VALID(buf) && !GST_BUFFER_DURATION_IS_VALID(buf))
+            g_print("JFXMEDIA INPUT H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(buf));
+        else
+            g_print("JFXMEDIA INPUT H264 -1\n");
+    }
+#endif
+#if AAC_PTS_INPUT_DEBUG
+    if (decoder->eInputFormat == MEDIA_FORMAT_AUDIO_AAC)
+    {
+        if (GST_BUFFER_TIMESTAMP_IS_VALID(buf) && GST_BUFFER_DURATION_IS_VALID(buf))
+            g_print("JFXMEDIA INPUT AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(buf), GST_BUFFER_DURATION(buf));
+        else if (GST_BUFFER_TIMESTAMP_IS_VALID(buf) && !GST_BUFFER_DURATION_IS_VALID(buf))
+            g_print("JFXMEDIA INPUT AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(buf));
+        else
+            g_print("JFXMEDIA INPUT AAC  -1\n");
+    }
+#endif
+
     if (GST_BUFFER_TIMESTAMP_IS_VALID(buf))
     {
         decoder->enable_pts = TRUE;
@@ -2875,9 +2994,9 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent
     switch (GST_EVENT_TYPE (event))
     {
     case GST_EVENT_SEGMENT:
+        gst_event_copy_segment(event, &segment);
         if (decoder->enable_position)
         {
-            gst_event_copy_segment(event, &segment);
             if (segment.format == GST_FORMAT_TIME)
             {
                 decoder->last_stop = segment.position;
@@ -2885,7 +3004,6 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent
         }
         if (decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T) // Resend new segment event with GST_FORMAT_TIME
         {
-            gst_event_copy_segment(event, &segment);
             // INLINE - gst_event_unref()
             gst_event_unref (event);
 
@@ -2914,11 +3032,11 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent
         {
             decoder->is_eos[i] = FALSE;
         }
+
         break;
     case GST_EVENT_FLUSH_START:
         {
             CAutoLock lock(decoder->pDSLock);
-            HRESULT hr = S_OK;
 
             if (decoder->skip_flush)
             {
@@ -2938,7 +3056,6 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent
     case GST_EVENT_FLUSH_STOP:
         {
             CAutoLock lock(decoder->pDSLock);
-            HRESULT hr = S_OK;
 
             if (decoder->skip_flush)
             {

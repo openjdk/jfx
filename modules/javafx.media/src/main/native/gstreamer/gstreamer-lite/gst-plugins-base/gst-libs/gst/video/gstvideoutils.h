@@ -28,6 +28,7 @@
 
 #include <gst/gst.h>
 #include <gst/video/video-prelude.h>
+#include <gst/video/video-hdr.h>
 
 G_BEGIN_DECLS
 #define GST_TYPE_VIDEO_CODEC_STATE \
@@ -47,6 +48,10 @@ typedef struct _GstVideoCodecFrame GstVideoCodecFrame;
  *     'codec_data' field of a stream, or NULL.
  * @allocation_caps: The #GstCaps for allocation query and pool
  *     negotiation. Since: 1.10
+ * @mastering_display_info: Mastering display color volume information
+ *     (HDR metadata) for the stream. Since: 1.20
+ * @content_light_level: Content light level information for the stream.
+ *     Since: 1.20
  *
  * Structure representing the state of an incoming or outgoing video
  * stream for encoders and decoders.
@@ -55,8 +60,22 @@ typedef struct _GstVideoCodecFrame GstVideoCodecFrame;
  * respective @set_format vmethods.
  *
  * Decoders and encoders can set the downstream state, by using the
- * @gst_video_decoder_set_output_state() or
- * @gst_video_encoder_set_output_state() methods.
+ * gst_video_decoder_set_output_state() or
+ * gst_video_encoder_set_output_state() methods.
+ */
+/**
+ * GstVideoCodecState.mastering_display_info:
+ *
+ * Mastering display color volume information (HDR metadata) for the stream.
+ *
+ * Since: 1.20
+ */
+/**
+ * GstVideoCodecState.content_light_level:
+ *
+ * Content light level information for the stream.
+ *
+ * Since: 1.20
  */
 struct _GstVideoCodecState
 {
@@ -72,8 +91,11 @@ struct _GstVideoCodecState
 
   GstCaps *allocation_caps;
 
+  GstVideoMasteringDisplayInfo *mastering_display_info;
+  GstVideoContentLightLevel *content_light_level;
+
   /*< private >*/
-  gpointer padding[GST_PADDING_LARGE - 1];
+  gpointer padding[GST_PADDING_LARGE - 3];
 };
 
 /**
@@ -82,6 +104,7 @@ struct _GstVideoCodecState
  * @GST_VIDEO_CODEC_FRAME_FLAG_SYNC_POINT: is the frame a synchronization point (keyframe)
  * @GST_VIDEO_CODEC_FRAME_FLAG_FORCE_KEYFRAME: should the output frame be made a keyframe
  * @GST_VIDEO_CODEC_FRAME_FLAG_FORCE_KEYFRAME_HEADERS: should the encoder output stream headers
+ * @GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED: the buffer data is corrupted (Since: 1.20)
  *
  * Flags for #GstVideoCodecFrame
  */
@@ -90,7 +113,15 @@ typedef enum
   GST_VIDEO_CODEC_FRAME_FLAG_DECODE_ONLY            = (1<<0),
   GST_VIDEO_CODEC_FRAME_FLAG_SYNC_POINT             = (1<<1),
   GST_VIDEO_CODEC_FRAME_FLAG_FORCE_KEYFRAME         = (1<<2),
-  GST_VIDEO_CODEC_FRAME_FLAG_FORCE_KEYFRAME_HEADERS = (1<<3)
+  GST_VIDEO_CODEC_FRAME_FLAG_FORCE_KEYFRAME_HEADERS = (1<<3),
+  /**
+   * GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED:
+   *
+   * The buffer data is corrupted.
+   *
+   * Since: 1.20
+   */
+  GST_VIDEO_CODEC_FRAME_FLAG_CORRUPTED = (1<<4),
 } GstVideoCodecFrameFlags;
 
 /**
@@ -214,8 +245,8 @@ typedef enum
  *           be kept.
  * @output_buffer: the output #GstBuffer. Implementations should set this either
  *           directly, or by using the
- *           @gst_video_decoder_allocate_output_frame() or
- *           @gst_video_decoder_allocate_output_buffer() methods. The buffer is
+ *           gst_video_decoder_allocate_output_frame() or
+ *           gst_video_decoder_allocate_output_buffer() methods. The buffer is
  *           owned by the frame and references to the frame instead of the
  *           buffer should be kept.
  * @deadline: Running time when the frame will be used.
@@ -260,9 +291,11 @@ struct _GstVideoCodecFrame
 
   union {
     struct {
+      /*< private >*/
       GstClockTime ts;
       GstClockTime ts2;
       guint num_subframes;
+      guint subframes_processed;
     } ABI;
     gpointer padding[GST_PADDING_LARGE];
   } abidata;

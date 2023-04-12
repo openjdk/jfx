@@ -30,6 +30,7 @@
 
 #include "Document.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "Touch.h"
 #include "TouchList.h"
 #include "WindowProxy.h"
@@ -51,7 +52,7 @@ Ref<Touch> DocumentTouch::createTouch(Document& document, RefPtr<WindowProxy>&& 
     return Touch::create(frame, target, identifier, screenX, screenY, pageX, pageY, radiusX, radiusY, rotationAngle, force);
 }
 
-Ref<TouchList> DocumentTouch::createTouchList(Document&, Vector<std::reference_wrapper<Touch>>&& touches)
+Ref<TouchList> DocumentTouch::createTouchList(Document&, FixedVector<std::reference_wrapper<Touch>>&& touches)
 {
     return TouchList::create(WTFMove(touches));
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,9 @@ package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
-import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
-import javafx.scene.Node;
-
 import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
 
@@ -136,7 +133,7 @@ public class MouseEvent extends InputEvent {
      * Common supertype for all mouse event types.
      */
     public static final EventType<MouseEvent> ANY =
-            new EventType<MouseEvent>(InputEvent.ANY, "MOUSE");
+            new EventType<>(InputEvent.ANY, "MOUSE");
 
     /**
      * This event occurs when a mouse button is pressed. This activates a
@@ -144,7 +141,7 @@ public class MouseEvent extends InputEvent {
      * the button is released are delivered to the same node.
      */
     public static final EventType<MouseEvent> MOUSE_PRESSED =
-            new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_PRESSED");
+            new EventType<>(MouseEvent.ANY, "MOUSE_PRESSED");
 
     /**
      * This event occurs when a mouse button is released. It is delivered
@@ -152,7 +149,7 @@ public class MouseEvent extends InputEvent {
      * a press-drag-release gesture.
      */
     public static final EventType<MouseEvent> MOUSE_RELEASED =
-            new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_RELEASED");
+            new EventType<>(MouseEvent.ANY, "MOUSE_RELEASED");
 
     /**
      * This event occurs when a mouse button has been clicked (pressed and
@@ -162,7 +159,7 @@ public class MouseEvent extends InputEvent {
      * pressed and released).
      */
     public static final EventType<MouseEvent> MOUSE_CLICKED =
-            new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_CLICKED");
+            new EventType<>(MouseEvent.ANY, "MOUSE_CLICKED");
 
     /**
      * This event occurs when the mouse enters a node. It's the bubbling variant,
@@ -174,7 +171,7 @@ public class MouseEvent extends InputEvent {
      * @see MouseEvent MouseEvent for more information about mouse entered/exited handling
      */
     public static final EventType<MouseEvent> MOUSE_ENTERED_TARGET =
-            new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_ENTERED_TARGET");
+            new EventType<>(MouseEvent.ANY, "MOUSE_ENTERED_TARGET");
 
     /**
      * This event occurs when the mouse enters a node. This event type is delivered
@@ -184,7 +181,7 @@ public class MouseEvent extends InputEvent {
      * @see MouseEvent MouseEvent for more information about mouse entered/exited handling
      */
     public static final EventType<MouseEvent> MOUSE_ENTERED =
-            new EventType<MouseEvent>(MouseEvent.MOUSE_ENTERED_TARGET, "MOUSE_ENTERED");
+            new EventType<>(MouseEvent.MOUSE_ENTERED_TARGET, "MOUSE_ENTERED");
 
     /**
      * This event occurs when the mouse exits a node. It's the bubbling variant,
@@ -196,7 +193,7 @@ public class MouseEvent extends InputEvent {
      * @see MouseEvent MouseEvent for more information about mouse entered/exited handling
      */
     public static final EventType<MouseEvent> MOUSE_EXITED_TARGET =
-            new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_EXITED_TARGET");
+            new EventType<>(MouseEvent.ANY, "MOUSE_EXITED_TARGET");
 
     /**
      * This event occurs when the mouse exits a node. This event type is delivered
@@ -206,7 +203,7 @@ public class MouseEvent extends InputEvent {
      * @see MouseEvent MouseEvent for more information about mouse entered/exited handling
      */
     public static final EventType<MouseEvent> MOUSE_EXITED =
-            new EventType<MouseEvent>(MouseEvent.MOUSE_EXITED_TARGET, "MOUSE_EXITED");
+            new EventType<>(MouseEvent.MOUSE_EXITED_TARGET, "MOUSE_EXITED");
 
     /**
      * This event occurs when the mouse moves within a node and no buttons
@@ -214,7 +211,7 @@ public class MouseEvent extends InputEvent {
      * occurs instead.
      */
     public static final EventType<MouseEvent> MOUSE_MOVED =
-            new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_MOVED");
+            new EventType<>(MouseEvent.ANY, "MOUSE_MOVED");
 
     /**
      * This event occurs when the mouse moves with a pressed button.
@@ -223,7 +220,7 @@ public class MouseEvent extends InputEvent {
      * regardless of the mouse being within bounds of the node.
      */
     public static final EventType<MouseEvent> MOUSE_DRAGGED =
-            new EventType<MouseEvent>(MouseEvent.ANY, "MOUSE_DRAGGED");
+            new EventType<>(MouseEvent.ANY, "MOUSE_DRAGGED");
 
     /**
      * This event is delivered to a node that is identified as a source of a
@@ -243,7 +240,7 @@ public class MouseEvent extends InputEvent {
      * @see DragEvent DragEvent for more details about drag and drop gestures
      */
     public static final EventType<MouseEvent> DRAG_DETECTED =
-            new EventType<MouseEvent>(MouseEvent.ANY, "DRAG_DETECTED");
+            new EventType<>(MouseEvent.ANY, "DRAG_DETECTED");
 
     /**
      * Fills the given event by this event's coordinates recomputed to the given

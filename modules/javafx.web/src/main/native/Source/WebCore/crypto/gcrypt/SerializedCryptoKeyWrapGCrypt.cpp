@@ -32,12 +32,10 @@
 
 namespace WebCore {
 
-bool getDefaultWebCryptoMasterKey(Vector<uint8_t>& masterKey)
+std::optional<Vector<uint8_t>> defaultWebCryptoMasterKey()
 {
     notImplemented();
-    UNUSED_PARAM(masterKey);
-
-    return false;
+    return std::nullopt;
 }
 
 // Initially these helper functions were intended to perform KEK wrapping and unwrapping,

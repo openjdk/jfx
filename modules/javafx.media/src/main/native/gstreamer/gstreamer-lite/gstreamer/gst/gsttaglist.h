@@ -205,7 +205,7 @@ GST_API
 GstTagList * gst_tag_list_new_empty         (void) G_GNUC_MALLOC;
 
 GST_API
-GstTagList * gst_tag_list_new               (const gchar * tag, ...) G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new               (const gchar * tag, ...) G_GNUC_NULL_TERMINATED G_GNUC_MALLOC;
 
 GST_API
 GstTagList * gst_tag_list_new_valist        (va_list var_args) G_GNUC_MALLOC;

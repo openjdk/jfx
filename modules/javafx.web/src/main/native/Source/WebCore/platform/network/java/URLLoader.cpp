@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,9 @@
 #include "ResourceHandleClient.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SharedBuffer.h"
 #include "URLLoader.h"
+#include "NetworkLoadMetrics.h"
 #include "com_sun_webkit_LoadListenerClient.h"
 #include "com_sun_webkit_network_URLLoaderBase.h"
 #include <wtf/CompletionHandler.h>
@@ -151,7 +153,7 @@ void URLLoader::loadSynchronously(NetworkingContext* context,
                                   const ResourceRequest& request,
                                   ResourceError& error,
                                   ResourceResponse& response,
-                                  Vector<char>& data)
+                                  Vector<uint8_t>& data)
 {
     SynchronousTarget target(request, error, response, data);
     load(false, context, request, &target);
@@ -181,10 +183,11 @@ JLObject URLLoader::load(bool asynchronous,
 
     String headerString;
     for (const auto& header : request.httpHeaderFields()) {
-        headerString.append(header.key);
+        headerString = makeString(headerString, header.key, ": ", header.value, "\n");
+       /* headerString.append(header.key);
         headerString.append(": ");
         headerString.append(header.value);
-        headerString.append("\n");
+        headerString.append("\n");*/
     }
 
     JNIEnv* env = WTF::GetJavaEnv();
@@ -228,7 +231,7 @@ JLObjectArray URLLoader::toJava(const FormData* formData)
     for (size_t i = 0; i < size; i++) {
         JLObject resultElement;
         WTF::switchOn(elements[i].data,
-            [&] (const Vector<char>& data) -> void {
+            [&] (const Vector<uint8_t>& data) -> void {
                 JLByteArray byteArray = env->NewByteArray(data.size());
                 env->SetByteArrayRegion(
                         (jbyteArray) byteArray,
@@ -296,11 +299,11 @@ void URLLoader::AsynchronousTarget::didReceiveResponse(
     }
 }
 
-void URLLoader::AsynchronousTarget::didReceiveData(const char* data, int length)
+void URLLoader::AsynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didReceiveData(m_handle, data, length, 0);
+        client->didReceiveData(m_handle, *data, length);
     }
 }
 
@@ -308,7 +311,7 @@ void URLLoader::AsynchronousTarget::didFinishLoading()
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didFinishLoading(m_handle);
+        client->didFinishLoading(m_handle, {});
     }
 }
 
@@ -323,7 +326,7 @@ void URLLoader::AsynchronousTarget::didFail(const ResourceError& error)
 URLLoader::SynchronousTarget::SynchronousTarget(const ResourceRequest& request,
                                                 ResourceError& error,
                                                 ResourceResponse& response,
-                                                Vector<char>& data)
+                                                Vector<uint8_t>& data)
     : m_request(request)
     , m_error(error)
     , m_response(response)
@@ -348,7 +351,7 @@ bool URLLoader::SynchronousTarget::willSendRequest(const ResourceResponse& respo
                 String(),
                 com_sun_webkit_LoadListenerClient_INVALID_RESPONSE,
                 m_request.url(),
-                "Illegal redirect"));
+                "Illegal redirect"_s));
         return false;
     }
     return true;
@@ -360,9 +363,9 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
     m_response = response;
 }
 
-void URLLoader::SynchronousTarget::didReceiveData(const char* data, int length)
+void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
-    m_data.append(data, length);
+    m_data.append(*data->data());
 }
 
 void URLLoader::SynchronousTarget::didFinishLoading()
@@ -397,19 +400,19 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     // does
     String contentTypeString(env, contentType);
     if (contentTypeString.isEmpty()) {
-        contentTypeString = "text/html";
+        contentTypeString = "text/html"_s;
     }
     if (!contentTypeString.isEmpty()) {
         response.setMimeType(
-                extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale());
+               AtomString{extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale()});
     }
 
     String contentEncodingString(env, contentEncoding);
     if (contentEncodingString.isEmpty() && !contentTypeString.isEmpty()) {
-        contentEncodingString = extractCharsetFromMediaType(contentTypeString);
+        contentEncodingString = extractCharsetFromMediaType(contentTypeString).toString();
     }
     if (!contentEncodingString.isEmpty()) {
-        response.setTextEncodingName(contentEncodingString);
+        response.setTextEncodingName(AtomString{contentEncodingString});
     }
 
     if (contentLength > 0) {
@@ -418,25 +421,25 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     }
 
     String headersString(env, headers);
-    int splitPos = headersString.find("\n");
+    int splitPos = headersString.find("\n"_s);
     while (splitPos != -1) {
         String s = headersString.left(splitPos);
-        int j = s.find(":");
+        int j = s.find(":"_s);
         if (j != -1) {
             String key = s.left(j);
             String val = s.substring(j + 1);
             response.setHTTPHeaderField(key, val);
         }
         headersString = headersString.substring(splitPos + 1);
-        splitPos = headersString.find("\n");
+        splitPos = headersString.find("\n"_s);
     }
 
     URL kurl = URL(URL(), String(env, url));
     response.setURL(kurl);
 
     // Setup mime type for local resources
-    if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file")) {
-        response.setMimeType(MIMETypeRegistry::mimeTypeForPath(kurl.path().toString()));
+    if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file"_s)) {
+        response.setMimeType(AtomString{MIMETypeRegistry::mimeTypeForPath(kurl.path().toString())});
     }
     return response;
 }
@@ -503,9 +506,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveDa
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
-    const char* address =
-            static_cast<const char*>(env->GetDirectBufferAddress(byteBuffer));
-    target->didReceiveData(address + position, remaining);
+    const uint8_t* address =
+            static_cast<const uint8_t*>(env->GetDirectBufferAddress(byteBuffer));
+    Ref<FragmentedSharedBuffer> tmp_buf = FragmentedSharedBuffer::create(address,remaining);
+    target->didReceiveData(tmp_buf->makeContiguous().ptr() + position, remaining);
+    //target->didReceiveData((SharedBuffer*)(address) + position, remaining);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading

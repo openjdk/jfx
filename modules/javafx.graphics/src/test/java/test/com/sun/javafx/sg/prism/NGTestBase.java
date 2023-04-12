@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.prism.NGCircleShim;
 import com.sun.javafx.sg.prism.NGGroupShim;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGRectangleShim;
 import com.sun.javafx.sg.prism.NGRegionShim;
 import com.sun.javafx.sg.prism.NodeEffectInput;

@@ -103,14 +103,27 @@ add_compile_options(
     /wd4996 # Your code uses a function, class member, variable, or typedef that's marked deprecated
 
     /wd5205 # delete of an abstract class 'type-name' that has a non-virtual destructor results in undefined behavior
+
+    /wd5054 # operator 'operator-name': deprecated between enumerations of different types
+
+    /wd5055 # operator 'operator-name': deprecated between enumerations and floating-point types
 )
 
 if (NOT WTF_CPU_X86)
+    if (PORT STREQUAL "Java")
+    # Suppress creation of pdb files for Release builds
+    # FIXME: Need to re-enable the flag for Debug builds
+    #add_compile_options(/Zi /GS)
+
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /OPT:ICF /OPT:REF")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /OPT:ICF /OPT:REF")
+    else()
     # Create pdb files for debugging purposes, also for Release builds
     add_compile_options(/Zi /GS)
 
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
+    endif()
 endif ()
 
 # We do not use exceptions
@@ -125,6 +138,8 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 if (NOT COMPILER_IS_CLANG_CL)
     add_definitions(-D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1)
 endif ()
+
+add_compile_options(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
 
 # Specify the source code encoding
 add_compile_options(/utf-8 /validate-charset)
@@ -206,4 +221,9 @@ if (COMPILER_IS_CLANG_CL)
     # FIXME: Building with clang-cl seemed to fail with 128 bit int support
     set(HAVE_INT128_T OFF)
     list(REMOVE_ITEM _WEBKIT_CONFIG_FILE_VARIABLES HAVE_INT128_T)
+endif ()
+
+# Enable the new lambda processor for better C++ conformance
+if (NOT COMPILER_IS_CLANG_CL AND MSVC_VERSION GREATER_EQUAL 1928)
+    add_compile_options(/Zc:lambda)
 endif ()

@@ -29,8 +29,6 @@
 #include "ScriptExecutionContext.h"
 #include <wtf/Threading.h>
 
-#if ENABLE(INDEXED_DATABASE)
-
 namespace WebCore {
 
 class IDBActiveDOMObject : public ActiveDOMObject {
@@ -63,7 +61,7 @@ public:
         context->postCrossThreadTask(object, method, arguments...);
     }
 
-    void callFunctionOnOriginThread(WTF::Function<void ()>&& function)
+    void callFunctionOnOriginThread(Function<void()>&& function)
     {
         if (canCurrentThreadAccessThreadLocalData(originThread())) {
             function();
@@ -92,5 +90,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

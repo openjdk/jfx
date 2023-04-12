@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -986,6 +986,21 @@ bool CGstAudioPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
                         }
                     }
                 }
+                else if (strstr(mimetype, CONTENT_TYPE_AAC) != NULL)
+                {
+                    gboolean is_supported = FALSE;
+                    g_object_set(m_Elements[AUDIO_DECODER], "codec-id", (gint)JFX_CODEC_ID_AAC, NULL);
+                    g_object_get(m_Elements[AUDIO_DECODER], "is-supported", &is_supported, NULL);
+                    if (is_supported)
+                    {
+                        return TRUE;
+                    }
+                    else
+                    {
+                        m_audioCodecErrorCode = ERROR_MEDIA_AAC_FORMAT_UNSUPPORTED;
+                        return FALSE;
+                    }
+                }
             }
         }
     }
@@ -1819,6 +1834,10 @@ void CGstAudioPlaybackPipeline::SendTrackEvent()
                 encoding = CTrack::AAC;
             else
                 encoding = CTrack::CUSTOM;
+        }
+        else if (m_AudioTrackInfo.mimeType.find(CONTENT_TYPE_AAC))
+        {
+            encoding = CTrack::AAC;
         }
         else
             encoding = CTrack::CUSTOM;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -271,7 +271,7 @@ public class PlatformLogger implements System.Logger {
     private boolean loggingEnabled = true;
     public void enableLogging() {
         loggingEnabled = true;
-    };
+    }
 
     public void disableLogging() {
         loggingEnabled = false;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <oliver@nerget.com>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -50,13 +50,13 @@ struct SVGPropertyTraits<ChannelSelectorType> {
 
     static ChannelSelectorType fromString(const String& value)
     {
-        if (value == "R")
+        if (value == "R"_s)
             return CHANNEL_R;
-        if (value == "G")
+        if (value == "G"_s)
             return CHANNEL_G;
-        if (value == "B")
+        if (value == "B"_s)
             return CHANNEL_B;
-        if (value == "A")
+        if (value == "A"_s)
             return CHANNEL_A;
         return CHANNEL_UNKNOWN;
     }
@@ -90,8 +90,9 @@ private:
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
-    bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
-    RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) const override;
+    bool setFilterEffectAttribute(FilterEffect&, const QualifiedName& attrName) override;
+    Vector<AtomString> filterEffectInputsNames() const override { return { AtomString { in1() }, AtomString { in2() } }; }
+    RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
     PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedString> m_in1 { SVGAnimatedString::create(this) };

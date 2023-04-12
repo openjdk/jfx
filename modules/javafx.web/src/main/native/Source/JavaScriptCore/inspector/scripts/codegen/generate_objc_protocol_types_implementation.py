@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014, 2016 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -34,7 +34,7 @@ try:
     from .models import ObjectType, EnumType, Frameworks
     from .objc_generator import ObjCTypeCategory, ObjCGenerator
     from .objc_generator_templates import ObjCGeneratorTemplates as ObjCTemplates
-except ValueError:
+except ImportError:
     from generator import Generator, ucfirst
     from models import ObjectType, EnumType, Frameworks
     from objc_generator import ObjCTypeCategory, ObjCGenerator
@@ -143,13 +143,13 @@ class ObjCProtocolTypesImplementationGenerator(ObjCGenerator):
             var_name = ObjCGenerator.identifier_to_objc_identifier(member_name)
             conversion_expression = self.payload_to_objc_expression_for_member(declaration, member)
             if isinstance(member.type, EnumType):
-                lines.append('    Optional<%s> %s = %s;' % (objc_type, var_name, conversion_expression))
                 if not member.is_optional:
+                    lines.append('    auto %s = %s;' % (var_name, conversion_expression))
                     lines.append('    THROW_EXCEPTION_FOR_BAD_ENUM_VALUE(%s, @"%s");' % (var_name, member_name))
-                    lines.append('    self.%s = %s.value();' % (var_name, var_name))
+                    lines.append('    self.%s = *%s;' % (var_name, var_name))
                 else:
-                    lines.append('    if (%s)' % var_name)
-                    lines.append('        self.%s = %s.value();' % (var_name, var_name))
+                    lines.append('    if (auto %s = %s)' % (var_name, conversion_expression))
+                    lines.append('        self.%s = *%s;' % (var_name, var_name))
             else:
                 lines.append('    self.%s = %s;' % (var_name, conversion_expression))
 

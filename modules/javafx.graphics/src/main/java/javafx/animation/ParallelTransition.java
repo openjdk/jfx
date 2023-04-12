@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import com.sun.javafx.animation.TickCalculation;
 import static com.sun.javafx.animation.TickCalculation.*;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -121,7 +120,7 @@ public final class ParallelTransition extends Transition {
         }
     };
 
-    private final ChangeListener<Number> rateListener = new ChangeListener<Number>() {
+    private final ChangeListener<Number> rateListener = new ChangeListener<>() {
 
         @Override
         public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
@@ -161,14 +160,14 @@ public final class ParallelTransition extends Transition {
 
     public final ObjectProperty<Node> nodeProperty() {
         if (node == null) {
-            node = new javafx.beans.property.SimpleObjectProperty<Node>(this, "node", DEFAULT_NODE);
+            node = new javafx.beans.property.SimpleObjectProperty<>(this, "node", DEFAULT_NODE);
         }
         return node;
     }
 
-    private final Set<Animation> childrenSet = new HashSet<Animation>();
+    private final Set<Animation> childrenSet = new HashSet<>();
 
-    private final ObservableList<Animation> children = new VetoableListDecorator<Animation>(new TrackableObservableList<Animation>() {
+    private final ObservableList<Animation> children = new VetoableListDecorator<>(new TrackableObservableList<Animation>() {
         @Override
         protected void onChanged(Change<Animation> c) {
             while (c.next()) {

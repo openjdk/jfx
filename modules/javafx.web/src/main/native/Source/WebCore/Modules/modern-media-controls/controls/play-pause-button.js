@@ -33,9 +33,6 @@ class PlayPauseButton extends Button
             iconName: Icons.Play,
             layoutDelegate
         });
-
-        if (this.layoutTraits & LayoutTraits.macOS && this.layoutTraits & LayoutTraits.Fullscreen)
-            this.scaleFactor = 2;
     }
 
     // Public

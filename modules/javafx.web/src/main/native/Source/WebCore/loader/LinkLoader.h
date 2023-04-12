@@ -38,8 +38,6 @@
 #include "LinkRelAttribute.h"
 #include "ReferrerPolicy.h"
 
-#include <wtf/WeakPtr.h>
-
 namespace WebCore {
 
 class Document;
@@ -54,16 +52,17 @@ struct LinkLoadParameters {
     String crossOrigin;
     String imageSrcSet;
     String imageSizes;
+    String nonce;
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
 };
 
-class LinkLoader : private CachedResourceClient, public CanMakeWeakPtr<LinkLoader> {
+class LinkLoader : public CachedResourceClient {
 public:
     explicit LinkLoader(LinkLoaderClient&);
     virtual ~LinkLoader();
 
     void loadLink(const LinkLoadParameters&, Document&);
-    static Optional<CachedResource::Type> resourceTypeFromAsAttribute(const String&, Document&);
+    static std::optional<CachedResource::Type> resourceTypeFromAsAttribute(const String&, Document&);
 
     enum class MediaAttributeCheck { MediaAttributeEmpty, MediaAttributeNotEmpty, SkipMediaAttributeCheck };
     static void loadLinksFromHeader(const String& headerValue, const URL& baseURL, Document&, MediaAttributeCheck);

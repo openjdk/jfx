@@ -31,13 +31,13 @@ class HTMLBaseElement final : public HTMLElement {
 public:
     static Ref<HTMLBaseElement> create(const QualifiedName&, Document&);
 
-    WEBCORE_EXPORT URL href() const;
+    WEBCORE_EXPORT String href() const;
     WEBCORE_EXPORT void setHref(const AtomString&);
 
 private:
     HTMLBaseElement(const QualifiedName&, Document&);
 
-    String target() const final;
+    AtomString target() const final;
     bool isURLAttribute(const Attribute&) const final;
     void parseAttribute(const QualifiedName&, const AtomString&) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;

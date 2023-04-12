@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,8 +45,8 @@ import static org.junit.Assert.*;
 
 /**
  * Testing sync'ing of tab headers with tabs.
- * https://bugs.openjdk.java.net/browse/JDK-8222457
- * https://bugs.openjdk.java.net/browse/JDK-8237602
+ * https://bugs.openjdk.org/browse/JDK-8222457
+ * https://bugs.openjdk.org/browse/JDK-8237602
  *
  * All basically the same issue: the listChangeListener is not correctly
  * updating the tab headers.

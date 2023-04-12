@@ -33,6 +33,7 @@
 #include "DocumentFragment.h"
 #include "DocumentType.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLElementFactory.h"
@@ -48,23 +49,25 @@
 #include "HTMLUnknownElement.h"
 #include "JSCustomElementInterface.h"
 #include "NotImplemented.h"
-#include "SVGElement.h"
+#include "SVGElementInlines.h"
 #include "Text.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-static inline void setAttributes(Element& element, Vector<Attribute>& attributes, ParserContentPolicy parserContentPolicy)
+enum class HasDuplicateAttribute : bool { No, Yes };
+static inline void setAttributes(Element& element, Vector<Attribute>& attributes, HasDuplicateAttribute hasDuplicateAttribute, ParserContentPolicy parserContentPolicy)
 {
     if (!scriptingContentIsAllowed(parserContentPolicy))
         element.stripScriptingAttributes(attributes);
     element.parserSetAttributes(attributes);
+    element.setHasDuplicateAttribute(hasDuplicateAttribute == HasDuplicateAttribute::Yes);
 }
 
-static inline void setAttributes(Element& element, AtomicHTMLToken& token, ParserContentPolicy parserContentPolicy)
+static inline void setAttributes(Element& element, AtomHTMLToken& token, ParserContentPolicy parserContentPolicy)
 {
-    setAttributes(element, token.attributes(), parserContentPolicy);
+    setAttributes(element, token.attributes(), token.hasDuplicateAttribute() ? HasDuplicateAttribute::Yes : HasDuplicateAttribute::No, parserContentPolicy);
 }
 
 static bool hasImpliedEndTag(const HTMLStackItem& item)
@@ -131,10 +134,10 @@ static inline void executeReparentTask(HTMLConstructionSiteTask& task)
     ASSERT(task.operation == HTMLConstructionSiteTask::Reparent);
     ASSERT(!task.nextChild);
 
-    if (auto parent = makeRefPtr(task.child->parentNode()))
+    if (RefPtr parent = task.child->parentNode())
         parent->parserRemoveChild(*task.child);
 
-    if (task.child->parentNode())
+    if (task.child->parentNode() || task.child->contains(task.parent.get()))
         return;
 
     task.parent->parserAppendChild(*task.child);
@@ -147,7 +150,7 @@ static inline void executeInsertAlreadyParsedChildTask(HTMLConstructionSiteTask&
     if (RefPtr<ContainerNode> parent = task.child->parentNode())
         parent->parserRemoveChild(*task.child);
 
-    if (task.child->parentNode())
+    if (task.child->parentNode() || task.child->contains(task.parent.get()))
         return;
 
     if (task.nextChild && task.nextChild->parentNode() != task.parent)
@@ -161,7 +164,7 @@ static inline void executeTakeAllChildrenAndReparentTask(HTMLConstructionSiteTas
     ASSERT(task.operation == HTMLConstructionSiteTask::TakeAllChildrenAndReparent);
     ASSERT(!task.nextChild);
 
-    auto furthestBlock = makeRefPtr(task.oldParent());
+    RefPtr furthestBlock = task.oldParent();
     task.parent->takeAllChildrenFrom(furthestBlock.get());
 
     RELEASE_ASSERT(!task.parent->parentNode());
@@ -234,6 +237,7 @@ HTMLConstructionSite::HTMLConstructionSite(Document& document, ParserContentPoli
     , m_redirectAttachToFosterParent(false)
     , m_maximumDOMTreeDepth(maximumDOMTreeDepth)
     , m_inQuirksMode(document.inQuirksMode())
+    , m_whitespaceCache(document.whitespaceCache())
 {
     ASSERT(m_document.isHTMLDocument() || m_document.isXHTMLDocument());
 }
@@ -246,6 +250,7 @@ HTMLConstructionSite::HTMLConstructionSite(DocumentFragment& fragment, ParserCon
     , m_redirectAttachToFosterParent(false)
     , m_maximumDOMTreeDepth(maximumDOMTreeDepth)
     , m_inQuirksMode(fragment.document().inQuirksMode())
+    , m_whitespaceCache(fragment.document().whitespaceCache())
 {
     ASSERT(m_document.isHTMLDocument() || m_document.isXHTMLDocument());
 }
@@ -269,26 +274,29 @@ void HTMLConstructionSite::dispatchDocumentElementAvailableIfNeeded()
     if (m_isParsingFragment)
         return;
 
-    if (auto frame = makeRefPtr(m_document.frame()))
+    if (RefPtr frame = m_document.frame())
         frame->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 }
 
-void HTMLConstructionSite::insertHTMLHtmlStartTagBeforeHTML(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLHtmlStartTagBeforeHTML(AtomHTMLToken&& token)
 {
     auto element = HTMLHtmlElement::create(m_document);
     setAttributes(element, token, m_parserContentPolicy);
     attachLater(m_attachmentRoot, element.copyRef());
-    m_openElements.pushHTMLHtmlElement(HTMLStackItem::create(element.copyRef(), WTFMove(token)));
+    m_openElements.pushHTMLHtmlElement(HTMLStackItem(element.copyRef(), WTFMove(token)));
 
     executeQueuedTasks();
     element->insertedByParser();
     dispatchDocumentElementAvailableIfNeeded();
 }
 
-void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomicHTMLToken&& token, Element& element)
+void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomHTMLToken&& token, Element& element)
 {
     if (token.attributes().isEmpty())
         return;
+
+    if (!scriptingContentIsAllowed(m_parserContentPolicy))
+        element.stripScriptingAttributes(token.attributes());
 
     for (auto& tokenAttribute : token.attributes()) {
         if (!element.elementData() || !element.findAttributeByName(tokenAttribute.name()))
@@ -296,7 +304,7 @@ void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomicHTMLToken&&
     }
 }
 
-void HTMLConstructionSite::insertHTMLHtmlStartTagInBody(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLHtmlStartTagInBody(AtomHTMLToken&& token)
 {
     // Fragments do not have a root HTML element, so any additional HTML elements
     // encountered during fragment parsing should be ignored.
@@ -306,7 +314,7 @@ void HTMLConstructionSite::insertHTMLHtmlStartTagInBody(AtomicHTMLToken&& token)
     mergeAttributesFromTokenIntoElement(WTFMove(token), m_openElements.htmlElement());
 }
 
-void HTMLConstructionSite::insertHTMLBodyStartTagInBody(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLBodyStartTagInBody(AtomHTMLToken&& token)
 {
     mergeAttributesFromTokenIntoElement(WTFMove(token), m_openElements.bodyElement());
 }
@@ -335,77 +343,77 @@ void HTMLConstructionSite::setCompatibilityModeFromDoctype(const String& name, c
     // No Quirks - no quirks apply. Web pages will obey the specifications to the letter.
 
     // Check for Quirks Mode.
-    if (name != "html"
-        || startsWithLettersIgnoringASCIICase(publicId, "+//silmaril//dtd html pro v0r11 19970101//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//advasoft ltd//dtd html 3.0 aswedit + extensions//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//as//dtd html 3.0 aswedit + extensions//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 level 1//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 level 2//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 strict level 1//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 strict level 2//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 strict//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.1e//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3.2 final//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3.2//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 1//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 2//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 3//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 1//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 2//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 3//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//metrius//dtd metrius presentational//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 2.0 html strict//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 2.0 html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 2.0 tables//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 3.0 html strict//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 3.0 html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 3.0 tables//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//netscape comm. corp.//dtd html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//netscape comm. corp.//dtd strict html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//o'reilly and associates//dtd html 2.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//o'reilly and associates//dtd html extended 1.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//o'reilly and associates//dtd html extended relaxed 1.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//softquad software//dtd hotmetal pro 6.0::19990601::extensions to html 4.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//softquad//dtd hotmetal pro 4.0::19971010::extensions to html 4.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//spyglass//dtd html 2.0 extended//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//sq//dtd html 2.0 hotmetal + extensions//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//sun microsystems corp.//dtd hotjava html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//sun microsystems corp.//dtd hotjava strict html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3 1995-03-24//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2 draft//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2 final//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2s draft//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.0 frameset//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.0 transitional//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html experimental 19960712//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html experimental 970421//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd w3 html//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3o//dtd w3 html 3.0//")
-        || equalLettersIgnoringASCIICase(publicId, "-//w3o//dtd w3 html strict 3.0//en//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//webtechs//dtd mozilla html 2.0//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//webtechs//dtd mozilla html//")
-        || equalLettersIgnoringASCIICase(publicId, "-/w3c/dtd html 4.0 transitional/en")
-        || equalLettersIgnoringASCIICase(publicId, "html")
-        || equalLettersIgnoringASCIICase(systemId, "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd")
-        || (systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 frameset//"))
-        || (systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 transitional//"))) {
+    if (name != "html"_s
+        || startsWithLettersIgnoringASCIICase(publicId, "+//silmaril//dtd html pro v0r11 19970101//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//advasoft ltd//dtd html 3.0 aswedit + extensions//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//as//dtd html 3.0 aswedit + extensions//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 level 1//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 level 2//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 strict level 1//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 strict level 2//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0 strict//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 2.1e//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3.2 final//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3.2//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html 3//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 1//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 2//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html level 3//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 1//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 2//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict level 3//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html strict//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//ietf//dtd html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//metrius//dtd metrius presentational//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 2.0 html strict//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 2.0 html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 2.0 tables//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 3.0 html strict//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 3.0 html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//microsoft//dtd internet explorer 3.0 tables//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//netscape comm. corp.//dtd html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//netscape comm. corp.//dtd strict html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//o'reilly and associates//dtd html 2.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//o'reilly and associates//dtd html extended 1.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//o'reilly and associates//dtd html extended relaxed 1.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//softquad software//dtd hotmetal pro 6.0::19990601::extensions to html 4.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//softquad//dtd hotmetal pro 4.0::19971010::extensions to html 4.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//spyglass//dtd html 2.0 extended//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//sq//dtd html 2.0 hotmetal + extensions//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//sun microsystems corp.//dtd hotjava html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//sun microsystems corp.//dtd hotjava strict html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3 1995-03-24//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2 draft//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2 final//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 3.2s draft//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.0 frameset//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.0 transitional//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html experimental 19960712//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html experimental 970421//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd w3 html//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3o//dtd w3 html 3.0//"_s)
+        || equalLettersIgnoringASCIICase(publicId, "-//w3o//dtd w3 html strict 3.0//en//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//webtechs//dtd mozilla html 2.0//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//webtechs//dtd mozilla html//"_s)
+        || equalLettersIgnoringASCIICase(publicId, "-/w3c/dtd html 4.0 transitional/en"_s)
+        || equalLettersIgnoringASCIICase(publicId, "html"_s)
+        || equalLettersIgnoringASCIICase(systemId, "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd"_s)
+        || (systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 frameset//"_s))
+        || (systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 transitional//"_s))) {
         setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
         return;
     }
 
     // Check for Limited Quirks Mode.
-    if (startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd xhtml 1.0 frameset//")
-        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd xhtml 1.0 transitional//")
-        || (!systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 frameset//"))
-        || (!systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 transitional//"))) {
+    if (startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd xhtml 1.0 frameset//"_s)
+        || startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd xhtml 1.0 transitional//"_s)
+        || (!systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 frameset//"_s))
+        || (!systemId.isEmpty() && startsWithLettersIgnoringASCIICase(publicId, "-//w3c//dtd html 4.01 transitional//"_s))) {
         setCompatibilityMode(DocumentCompatibilityMode::LimitedQuirksMode);
         return;
     }
@@ -419,9 +427,9 @@ void HTMLConstructionSite::finishedParsing()
     m_document.finishedParsing();
 }
 
-void HTMLConstructionSite::insertDoctype(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertDoctype(AtomHTMLToken&& token)
 {
-    ASSERT(token.type() == HTMLToken::DOCTYPE);
+    ASSERT(token.type() == HTMLToken::Type::DOCTYPE);
 
     String publicId = token.publicIdentifier();
     String systemId = token.systemIdentifier();
@@ -443,42 +451,42 @@ void HTMLConstructionSite::insertDoctype(AtomicHTMLToken&& token)
         setCompatibilityModeFromDoctype(token.name(), publicId, systemId);
 }
 
-void HTMLConstructionSite::insertComment(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertComment(AtomHTMLToken&& token)
 {
-    ASSERT(token.type() == HTMLToken::Comment);
-    attachLater(currentNode(), Comment::create(ownerDocumentForCurrentNode(), token.comment()));
+    ASSERT(token.type() == HTMLToken::Type::Comment);
+    attachLater(currentNode(), Comment::create(ownerDocumentForCurrentNode(), WTFMove(token.comment())));
 }
 
-void HTMLConstructionSite::insertCommentOnDocument(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertCommentOnDocument(AtomHTMLToken&& token)
 {
-    ASSERT(token.type() == HTMLToken::Comment);
-    attachLater(m_attachmentRoot, Comment::create(m_document, token.comment()));
+    ASSERT(token.type() == HTMLToken::Type::Comment);
+    attachLater(m_attachmentRoot, Comment::create(m_document, WTFMove(token.comment())));
 }
 
-void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomHTMLToken&& token)
 {
-    ASSERT(token.type() == HTMLToken::Comment);
+    ASSERT(token.type() == HTMLToken::Type::Comment);
     ContainerNode& parent = m_openElements.rootNode();
-    attachLater(parent, Comment::create(parent.document(), token.comment()));
+    attachLater(parent, Comment::create(parent.document(), WTFMove(token.comment())));
 }
 
-void HTMLConstructionSite::insertHTMLHeadElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLHeadElement(AtomHTMLToken&& token)
 {
     ASSERT(!shouldFosterParent());
-    m_head = HTMLStackItem::create(createHTMLElement(token), WTFMove(token));
-    attachLater(currentNode(), m_head->element());
-    m_openElements.pushHTMLHeadElement(*m_head);
+    m_head = HTMLStackItem(createHTMLElement(token), WTFMove(token));
+    attachLater(currentNode(), m_head.element());
+    m_openElements.pushHTMLHeadElement(HTMLStackItem(m_head));
 }
 
-void HTMLConstructionSite::insertHTMLBodyElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLBodyElement(AtomHTMLToken&& token)
 {
     ASSERT(!shouldFosterParent());
     auto body = createHTMLElement(token);
     attachLater(currentNode(), body.copyRef());
-    m_openElements.pushHTMLBodyElement(HTMLStackItem::create(WTFMove(body), WTFMove(token)));
+    m_openElements.pushHTMLBodyElement(HTMLStackItem(WTFMove(body), WTFMove(token)));
 }
 
-void HTMLConstructionSite::insertHTMLFormElement(AtomicHTMLToken&& token, bool isDemoted)
+void HTMLConstructionSite::insertHTMLFormElement(AtomHTMLToken&& token, bool isDemoted)
 {
     auto element = createHTMLElement(token);
     auto& formElement = downcast<HTMLFormElement>(element.get());
@@ -488,38 +496,38 @@ void HTMLConstructionSite::insertHTMLFormElement(AtomicHTMLToken&& token, bool i
         m_form = &formElement;
     formElement.setDemoted(isDemoted);
     attachLater(currentNode(), formElement);
-    m_openElements.push(HTMLStackItem::create(formElement, WTFMove(token)));
+    m_openElements.push(HTMLStackItem(formElement, WTFMove(token)));
 }
 
-void HTMLConstructionSite::insertHTMLElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertHTMLElement(AtomHTMLToken&& token)
 {
     auto element = createHTMLElement(token);
     attachLater(currentNode(), element.copyRef());
-    m_openElements.push(HTMLStackItem::create(WTFMove(element), WTFMove(token)));
+    m_openElements.push(HTMLStackItem(WTFMove(element), WTFMove(token)));
 }
 
-std::unique_ptr<CustomElementConstructionData> HTMLConstructionSite::insertHTMLElementOrFindCustomElementInterface(AtomicHTMLToken&& token)
+std::unique_ptr<CustomElementConstructionData> HTMLConstructionSite::insertHTMLElementOrFindCustomElementInterface(AtomHTMLToken&& token)
 {
     JSCustomElementInterface* elementInterface = nullptr;
-    RefPtr<Element> element = createHTMLElementOrFindCustomElementInterface(token, &elementInterface);
+    auto element = createHTMLElementOrFindCustomElementInterface(token, &elementInterface);
     if (UNLIKELY(elementInterface))
         return makeUnique<CustomElementConstructionData>(*elementInterface, token.name(), WTFMove(token.attributes()));
     attachLater(currentNode(), *element);
-    m_openElements.push(HTMLStackItem::create(element.releaseNonNull(), WTFMove(token)));
+    m_openElements.push(HTMLStackItem(element.releaseNonNull(), WTFMove(token)));
     return nullptr;
 }
 
 void HTMLConstructionSite::insertCustomElement(Ref<Element>&& element, const AtomString& localName, Vector<Attribute>&& attributes)
 {
-    setAttributes(element, attributes, m_parserContentPolicy);
+    setAttributes(element, attributes, HasDuplicateAttribute::No, m_parserContentPolicy);
     attachLater(currentNode(), element.copyRef());
-    m_openElements.push(HTMLStackItem::create(WTFMove(element), localName, WTFMove(attributes)));
+    m_openElements.push(HTMLStackItem(WTFMove(element), localName, WTFMove(attributes)));
     executeQueuedTasks();
 }
 
-void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomHTMLToken&& token)
 {
-    ASSERT(token.type() == HTMLToken::StartTag);
+    ASSERT(token.type() == HTMLToken::Type::StartTag);
     // Normally HTMLElementStack is responsible for calling finishParsingChildren,
     // but self-closing elements are never in the element stack so the stack
     // doesn't get a chance to tell them that we're done parsing their children.
@@ -528,17 +536,17 @@ void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomicHTMLToken&& token)
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#acknowledge-self-closing-flag
 }
 
-void HTMLConstructionSite::insertFormattingElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertFormattingElement(AtomHTMLToken&& token)
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#the-stack-of-open-elements
     // Possible active formatting elements include:
     // a, b, big, code, em, font, i, nobr, s, small, strike, strong, tt, and u.
     ASSERT(isFormattingTag(token.name()));
     insertHTMLElement(WTFMove(token));
-    m_activeFormattingElements.append(currentStackItem());
+    m_activeFormattingElements.append(HTMLStackItem(currentStackItem()));
 }
 
-void HTMLConstructionSite::insertScriptElement(AtomicHTMLToken&& token)
+void HTMLConstructionSite::insertScriptElement(AtomHTMLToken&& token)
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/scripting-1.html#already-started
     // http://html5.org/specs/dom-parsing.html#dom-range-createcontextualfragment
@@ -551,19 +559,19 @@ void HTMLConstructionSite::insertScriptElement(AtomicHTMLToken&& token)
     setAttributes(element, token, m_parserContentPolicy);
     if (scriptingContentIsAllowed(m_parserContentPolicy))
         attachLater(currentNode(), element.copyRef());
-    m_openElements.push(HTMLStackItem::create(WTFMove(element), WTFMove(token)));
+    m_openElements.push(HTMLStackItem(WTFMove(element), WTFMove(token)));
 }
 
-void HTMLConstructionSite::insertForeignElement(AtomicHTMLToken&& token, const AtomString& namespaceURI)
+void HTMLConstructionSite::insertForeignElement(AtomHTMLToken&& token, const AtomString& namespaceURI)
 {
-    ASSERT(token.type() == HTMLToken::StartTag);
+    ASSERT(token.type() == HTMLToken::Type::StartTag);
     notImplemented(); // parseError when xmlns or xmlns:xlink are wrong.
 
     auto element = createElement(token, namespaceURI);
     if (scriptingContentIsAllowed(m_parserContentPolicy) || !isScriptElement(element.get()))
         attachLater(currentNode(), element.copyRef(), token.selfClosing());
     if (!token.selfClosing())
-        m_openElements.push(HTMLStackItem::create(WTFMove(element), WTFMove(token), namespaceURI));
+        m_openElements.push(HTMLStackItem(WTFMove(element), WTFMove(token), namespaceURI));
 }
 
 void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMode whitespaceMode)
@@ -573,10 +581,6 @@ void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMo
 
     if (shouldFosterParent())
         findFosterSite(task);
-
-    // Strings composed entirely of whitespace are likely to be repeated.
-    // Turn them into AtomString so we share a single string for each.
-    bool shouldUseAtomString = whitespaceMode == AllWhitespace || (whitespaceMode == WhitespaceUnknown && isAllWhitespace(characters));
 
     unsigned currentPosition = 0;
     unsigned lengthLimit = shouldUseLengthLimit(*task.parent) ? Text::defaultLengthLimit : std::numeric_limits<unsigned>::max();
@@ -592,11 +596,13 @@ void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMo
     }
 
     while (currentPosition < characters.length()) {
-        auto textNode = Text::createWithLengthLimit(task.parent->document(), shouldUseAtomString ? AtomString(characters).string() : characters, currentPosition, lengthLimit);
+        AtomString charactersAtom = m_whitespaceCache.lookup(characters, whitespaceMode);
+        auto textNode = Text::createWithLengthLimit(task.parent->document(), charactersAtom.isNull() ? characters : charactersAtom.string(), currentPosition, lengthLimit);
         // If we have a whole string of unbreakable characters the above could lead to an infinite loop. Exceeding the length limit is the lesser evil.
         if (!textNode->length()) {
             String substring = characters.substring(currentPosition);
-            textNode = Text::create(task.parent->document(), shouldUseAtomString ? AtomString(substring).string() : substring);
+            AtomString substringAtom = m_whitespaceCache.lookup(substring, whitespaceMode);
+            textNode = Text::create(task.parent->document(), substringAtom.isNull() ? WTFMove(substring) : substringAtom.releaseString());
         }
 
         currentPosition += textNode->length();
@@ -635,7 +641,7 @@ void HTMLConstructionSite::takeAllChildrenAndReparent(HTMLStackItem& newParent, 
     m_taskQueue.append(WTFMove(task));
 }
 
-Ref<Element> HTMLConstructionSite::createElement(AtomicHTMLToken& token, const AtomString& namespaceURI)
+Ref<Element> HTMLConstructionSite::createElement(AtomHTMLToken& token, const AtomString& namespaceURI)
 {
     QualifiedName tagName(nullAtom(), token.name(), namespaceURI);
     auto element = ownerDocumentForCurrentNode().createElement(tagName, true);
@@ -663,7 +669,7 @@ static inline JSCustomElementInterface* findCustomElementInterface(Document& own
     return registry->findInterface(localName);
 }
 
-RefPtr<Element> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterface(AtomicHTMLToken& token, JSCustomElementInterface** customElementInterface)
+RefPtr<HTMLElement> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterface(AtomHTMLToken& token, JSCustomElementInterface** customElementInterface)
 {
     auto& localName = token.name();
     // FIXME: This can't use HTMLConstructionSite::createElement because we
@@ -695,42 +701,43 @@ RefPtr<Element> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterf
 
     // FIXME: This is a hack to connect images to pictures before the image has
     // been inserted into the document. It can be removed once asynchronous image
-    // loading is working.
+    // loading is working. When this hack is removed, the assertion just before
+    // the setPictureElement() call in HTMLImageElement::insertedIntoAncestor
+    // can be simplified.
     if (is<HTMLPictureElement>(currentNode()) && is<HTMLImageElement>(*element))
         downcast<HTMLImageElement>(*element).setPictureElement(&downcast<HTMLPictureElement>(currentNode()));
 
     setAttributes(*element, token, m_parserContentPolicy);
-    ASSERT(element->isHTMLElement());
     return element;
 }
 
-Ref<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken& token)
+Ref<HTMLElement> HTMLConstructionSite::createHTMLElement(AtomHTMLToken& token)
 {
-    RefPtr<Element> element = createHTMLElementOrFindCustomElementInterface(token, nullptr);
+    auto element = createHTMLElementOrFindCustomElementInterface(token, nullptr);
     ASSERT(element);
     return element.releaseNonNull();
 }
 
-Ref<HTMLStackItem> HTMLConstructionSite::createElementFromSavedToken(HTMLStackItem& item)
+HTMLStackItem HTMLConstructionSite::createElementFromSavedToken(const HTMLStackItem& item)
 {
     // NOTE: Moving from item -> token -> item copies the Attribute vector twice!
-    AtomicHTMLToken fakeToken(HTMLToken::StartTag, item.localName(), Vector<Attribute>(item.attributes()));
+    AtomHTMLToken fakeToken(HTMLToken::Type::StartTag, item.localName(), Vector<Attribute>(item.attributes()));
     ASSERT(item.namespaceURI() == HTMLNames::xhtmlNamespaceURI);
     ASSERT(isFormattingTag(item.localName()));
-    return HTMLStackItem::create(createHTMLElement(fakeToken), WTFMove(fakeToken), item.namespaceURI());
+    return HTMLStackItem(createHTMLElement(fakeToken), WTFMove(fakeToken), item.namespaceURI());
 }
 
-Optional<unsigned> HTMLConstructionSite::indexOfFirstUnopenFormattingElement() const
+std::optional<unsigned> HTMLConstructionSite::indexOfFirstUnopenFormattingElement() const
 {
     if (m_activeFormattingElements.isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
     unsigned index = m_activeFormattingElements.size();
     do {
         --index;
         const auto& entry = m_activeFormattingElements.at(index);
         if (entry.isMarker() || m_openElements.contains(entry.element())) {
             unsigned firstUnopenElementIndex = index + 1;
-            return firstUnopenElementIndex < m_activeFormattingElements.size() ? firstUnopenElementIndex : Optional<unsigned>(WTF::nullopt);
+            return firstUnopenElementIndex < m_activeFormattingElements.size() ? firstUnopenElementIndex : std::optional<unsigned>(std::nullopt);
         }
     } while (index);
 
@@ -739,17 +746,17 @@ Optional<unsigned> HTMLConstructionSite::indexOfFirstUnopenFormattingElement() c
 
 void HTMLConstructionSite::reconstructTheActiveFormattingElements()
 {
-    Optional<unsigned> firstUnopenElementIndex = indexOfFirstUnopenFormattingElement();
+    std::optional<unsigned> firstUnopenElementIndex = indexOfFirstUnopenFormattingElement();
     if (!firstUnopenElementIndex)
         return;
 
     ASSERT(firstUnopenElementIndex.value() < m_activeFormattingElements.size());
     for (unsigned unopenEntryIndex = firstUnopenElementIndex.value(); unopenEntryIndex < m_activeFormattingElements.size(); ++unopenEntryIndex) {
         auto& unopenedEntry = m_activeFormattingElements.at(unopenEntryIndex);
-        ASSERT(unopenedEntry.stackItem());
-        auto reconstructed = createElementFromSavedToken(*unopenedEntry.stackItem());
-        attachLater(currentNode(), reconstructed->node());
-        m_openElements.push(reconstructed.copyRef());
+        ASSERT(!unopenedEntry.stackItem().isNull());
+        auto reconstructed = createElementFromSavedToken(unopenedEntry.stackItem());
+        attachLater(currentNode(), reconstructed.node());
+        m_openElements.push(HTMLStackItem(reconstructed));
         unopenedEntry.replaceElement(WTFMove(reconstructed));
     }
 }
@@ -777,7 +784,7 @@ void HTMLConstructionSite::findFosterSite(HTMLConstructionSiteTask& task)
 
     if (auto* lastTableElementRecord = m_openElements.topmost(tableTag->localName())) {
         auto& lastTableElement = lastTableElementRecord->element();
-        auto parent = makeRefPtr(lastTableElement.parentNode());
+        RefPtr parent = lastTableElement.parentNode();
         // When parsing HTML fragments, we skip step 4.2 ("Let root be a new html element with no attributes") for efficiency,
         // and instead use the DocumentFragment as a root node. So we must treat the root node (DocumentFragment) as if it is a html element here.
         bool parentCanBeFosterParent = parent && (parent->isElementNode() || (m_isParsingFragment && parent == &m_openElements.rootNode()));
@@ -807,6 +814,100 @@ void HTMLConstructionSite::fosterParent(Ref<Node>&& node)
     ASSERT(task.parent);
 
     m_taskQueue.append(WTFMove(task));
+}
+
+// Compute a 64 bit code that represents a whitespace-only string's contents.
+//
+// The code format is a sequence of four pairs of an 8 bit whitespace character
+// and an 8 bit count of that character. For example, 0x0A_02_20_08 represents
+// two newlines followed by eight space characters.
+//
+// Returns 0 if any non-whitespace characters are found.
+//
+// Returns -1 if the code would overflow due to finding more than four
+// whitespace character runs.
+template<WhitespaceMode whitespaceMode>
+uint64_t WhitespaceCache::codeForString(const String& string)
+{
+    ASSERT(whitespaceMode != NotAllWhitespace);
+    ASSERT(string.is8Bit());
+    ASSERT(!string.isEmpty());
+    ASSERT(string.length() <= maximumCachedStringLength);
+    static_assert(maximumCachedStringLength <= 0xFF, "Code format requires whitespace run length fit in one byte");
+
+    auto startOfRun = string.characters8();
+
+    if constexpr (whitespaceMode == WhitespaceUnknown) {
+        if (!isHTMLSpace(*startOfRun))
+            return 0;
+    }
+
+    LChar currentWhitespaceCharacter = *startOfRun;
+    auto character = startOfRun + 1;
+    auto end = startOfRun + string.length();
+
+    uint64_t code = 0;
+    int runsRemaining = 4;
+
+    for (;;) {
+        while (character != end && *character == currentWhitespaceCharacter)
+            ++character;
+
+        if constexpr (whitespaceMode == WhitespaceUnknown) {
+            if (character != end && !isHTMLSpace(*character))
+                return 0;
+        }
+
+        code <<= 16;
+        code |= (currentWhitespaceCharacter << 8);
+        code |= (character - startOfRun);
+
+        if (character == end)
+            return code;
+
+        if (!--runsRemaining)
+            return overflowWhitespaceCode;
+
+        startOfRun = character;
+        currentWhitespaceCharacter = *character;
+        ++character;
+
+        ASSERT(isHTMLSpace(currentWhitespaceCharacter));
+    }
+
+    return code;
+}
+
+AtomString WhitespaceCache::lookup(const String& string, WhitespaceMode whitespaceMode)
+{
+    if (whitespaceMode == NotAllWhitespace || !string.is8Bit() || string.isEmpty())
+        return AtomString();
+
+    size_t length = string.length();
+    if (length > maximumCachedStringLength)
+        return whitespaceMode == AllWhitespace || isAllWhitespace(string) ? AtomString(string) : AtomString();
+
+    uint64_t code;
+    if (whitespaceMode == AllWhitespace) {
+        code = codeForString<AllWhitespace>(string);
+        ASSERT(code);
+    } else {
+        code = codeForString<WhitespaceUnknown>(string);
+        if (!code)
+            return AtomString();
+    }
+
+    auto& existingAtom = m_atoms[length - 1];
+    if (existingAtom.code == code) {
+        ASSERT(existingAtom.string == string);
+        return existingAtom.string;
+    }
+
+    if (code == overflowWhitespaceCode)
+        return AtomString(string);
+
+    existingAtom = { AtomString { string }, code };
+    return existingAtom.string;
 }
 
 }

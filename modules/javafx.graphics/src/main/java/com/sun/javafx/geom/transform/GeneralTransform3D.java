@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -164,6 +164,7 @@ public final class GeneralTransform3D implements CanTransformVec3d {
      *
      * @return the transformed point
      */
+    @Override
     public Vec3d transform(Vec3d point, Vec3d pointOut)  {
         if (pointOut == null) {
             pointOut = new Vec3d();

@@ -26,9 +26,11 @@
 #include "config.h"
 #include "JSScriptFetcher.h"
 
+#include "JSCellInlines.h"
+
 namespace JSC {
 
-const ClassInfo JSScriptFetcher::s_info = { "JSScriptFetcher", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSScriptFetcher) };
+const ClassInfo JSScriptFetcher::s_info = { "JSScriptFetcher"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSScriptFetcher) };
 
 void JSScriptFetcher::destroy(JSCell* cell)
 {

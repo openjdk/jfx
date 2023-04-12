@@ -27,7 +27,7 @@
 #include "RenderSVGHiddenContainer.h"
 #include "RenderSVGResourceLinearGradient.h"
 #include "RenderSVGResourceRadialGradient.h"
-#include "SVGNames.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGStopElement.h"
 #include "SVGTransformable.h"
 #include "StyleResolver.h"
@@ -79,8 +79,7 @@ void SVGGradientElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName) || SVGURIReference::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        if (RenderObject* object = renderer())
-            object->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -94,18 +93,17 @@ void SVGGradientElement::childrenChanged(const ChildChange& change)
     if (change.source == ChildChange::Source::Parser)
         return;
 
-    if (RenderObject* object = renderer())
-        object->setNeedsLayout();
+    updateSVGRendererForElementChange();
 }
 
-Gradient::ColorStopVector SVGGradientElement::buildStops()
+GradientColorStops SVGGradientElement::buildStops()
 {
-    Gradient::ColorStopVector stops;
+    GradientColorStops stops;
     float previousOffset = 0.0f;
     for (auto& stop : childrenOfType<SVGStopElement>(*this)) {
         auto monotonicallyIncreasingOffset = std::clamp(stop.offset(), previousOffset, 1.0f);
         previousOffset = monotonicallyIncreasingOffset;
-        stops.append({ monotonicallyIncreasingOffset, stop.stopColorIncludingOpacity() });
+        stops.addColorStop({ monotonicallyIncreasingOffset, stop.stopColorIncludingOpacity() });
     }
     return stops;
 }

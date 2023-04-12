@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InsertNodeBeforeCommand.h"
 
+#include "CompositeEditCommand.h"
 #include "Document.h"
 #include "Editing.h"
 #include "RenderElement.h"
@@ -64,7 +65,7 @@ void InsertNodeBeforeCommand::doUnapply()
 }
 
 #ifndef NDEBUG
-void InsertNodeBeforeCommand::getNodesInCommand(HashSet<Node*>& nodes)
+void InsertNodeBeforeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
 {
     addNodeAndDescendants(m_insertChild.ptr(), nodes);
     addNodeAndDescendants(m_refChild.ptr(), nodes);

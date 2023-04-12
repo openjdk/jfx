@@ -33,7 +33,7 @@
  *
  * ## Example code
  * |[
- * #include &lt;gst/gst.h&gt;
+ * #include <gst/gst.h>
  *
  * ...
  * typedef struct {
@@ -62,7 +62,7 @@
  *
  * ...
  *
- *   for (i = 0; i &lt; 5; i++) {
+ *   for (i = 0; i < 5; i++) {
  *     band = gst_child_proxy_get_child_by_index (GST_CHILD_PROXY (equalizer), i);
  *     g_object_set (G_OBJECT (band), "freq", state[i].freq,
  *         "bandwidth", state[i].width,
@@ -99,7 +99,9 @@ GST_DEBUG_CATEGORY_EXTERN (equalizer_debug);
 #define gst_iir_equalizer_nbands_parent_class parent_class
 G_DEFINE_TYPE (GstIirEqualizerNBands, gst_iir_equalizer_nbands,
     GST_TYPE_IIR_EQUALIZER);
-
+GST_ELEMENT_REGISTER_DEFINE_WITH_CODE (equalizer_nbands, "equalizer-nbands",
+    GST_RANK_NONE, GST_TYPE_IIR_EQUALIZER_NBANDS,
+    equalizer_element_init (plugin));
 /* equalizer implementation */
 
 static void

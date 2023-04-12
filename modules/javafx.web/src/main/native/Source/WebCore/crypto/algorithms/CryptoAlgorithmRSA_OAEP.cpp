@@ -33,17 +33,17 @@
 #include "CryptoAlgorithmRsaOaepParams.h"
 #include "CryptoKeyPair.h"
 #include "CryptoKeyRSA.h"
+#include <variant>
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/Variant.h>
 
 namespace WebCore {
 
 namespace CryptoAlgorithmRSA_OAEPInternal {
-static const char* const ALG1 = "RSA-OAEP";
-static const char* const ALG224 = "RSA-OAEP-224";
-static const char* const ALG256 = "RSA-OAEP-256";
-static const char* const ALG384 = "RSA-OAEP-384";
-static const char* const ALG512 = "RSA-OAEP-512";
+static constexpr auto ALG1 = "RSA-OAEP"_s;
+static constexpr auto ALG224 = "RSA-OAEP-224"_s;
+static constexpr auto ALG256 = "RSA-OAEP-256"_s;
+static constexpr auto ALG384 = "RSA-OAEP-384"_s;
+static constexpr auto ALG512 = "RSA-OAEP-512"_s;
 }
 
 Ref<CryptoAlgorithm> CryptoAlgorithmRSA_OAEP::create()
@@ -111,7 +111,7 @@ void CryptoAlgorithmRSA_OAEP::importKey(CryptoKeyFormat format, KeyData&& data, 
     RefPtr<CryptoKeyRSA> result;
     switch (format) {
     case CryptoKeyFormat::Jwk: {
-        JsonWebKey key = WTFMove(WTF::get<JsonWebKey>(data));
+        JsonWebKey key = WTFMove(std::get<JsonWebKey>(data));
 
         bool isUsagesAllowed = false;
         if (!key.d.isNull()) {
@@ -129,7 +129,7 @@ void CryptoAlgorithmRSA_OAEP::importKey(CryptoKeyFormat format, KeyData&& data, 
             return;
         }
 
-        if (usages && !key.use.isNull() && key.use != "enc") {
+        if (usages && !key.use.isNull() && key.use != "enc"_s) {
             exceptionCallback(DataError);
             return;
         }
@@ -168,7 +168,7 @@ void CryptoAlgorithmRSA_OAEP::importKey(CryptoKeyFormat format, KeyData&& data, 
             return;
         }
         // FIXME: <webkit.org/b/165436>
-        result = CryptoKeyRSA::importSpki(rsaParameters.identifier, rsaParameters.hashIdentifier, WTFMove(WTF::get<Vector<uint8_t>>(data)), extractable, usages);
+        result = CryptoKeyRSA::importSpki(rsaParameters.identifier, rsaParameters.hashIdentifier, WTFMove(std::get<Vector<uint8_t>>(data)), extractable, usages);
         break;
     }
     case CryptoKeyFormat::Pkcs8: {
@@ -177,7 +177,7 @@ void CryptoAlgorithmRSA_OAEP::importKey(CryptoKeyFormat format, KeyData&& data, 
             return;
         }
         // FIXME: <webkit.org/b/165436>
-        result = CryptoKeyRSA::importPkcs8(parameters.identifier, rsaParameters.hashIdentifier, WTFMove(WTF::get<Vector<uint8_t>>(data)), extractable, usages);
+        result = CryptoKeyRSA::importPkcs8(parameters.identifier, rsaParameters.hashIdentifier, WTFMove(std::get<Vector<uint8_t>>(data)), extractable, usages);
         break;
     }
     default:

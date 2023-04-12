@@ -48,7 +48,6 @@
 #include "SQLiteTransaction.h"
 #include "VoidCallback.h"
 #include "WindowEventLoop.h"
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
@@ -73,7 +72,7 @@ SQLTransaction::SQLTransaction(Ref<Database>&& database, RefPtr<SQLTransactionCa
 
 SQLTransaction::~SQLTransaction() = default;
 
-ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, Optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&& callback, RefPtr<SQLStatementErrorCallback>&& callbackError)
+ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, std::optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&& callback, RefPtr<SQLStatementErrorCallback>&& callbackError)
 {
     if (!m_executeSqlAllowed || !m_database->opened())
         return Exception { InvalidStateError };
@@ -84,7 +83,7 @@ ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, Optiona
     else if (m_readOnly)
         permissions |= DatabaseAuthorizer::ReadOnlyMask;
 
-    auto statement = makeUnique<SQLStatement>(m_database, sqlStatement, arguments.valueOr(Vector<SQLValue> { }), WTFMove(callback), WTFMove(callbackError), permissions);
+    auto statement = makeUnique<SQLStatement>(m_database, sqlStatement, valueOrDefault(arguments), WTFMove(callback), WTFMove(callbackError), permissions);
 
     if (m_database->deleted())
         statement->setDatabaseDeletedError();
@@ -138,13 +137,13 @@ void SQLTransaction::callErrorCallbackDueToInterruption()
         return;
 
     m_database->document().eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback)]() mutable {
-        errorCallback->handleEvent(SQLError::create(SQLError::DATABASE_ERR, "the database was closed"));
+        errorCallback->handleEvent(SQLError::create(SQLError::DATABASE_ERR, "the database was closed"_s));
     });
 }
 
 void SQLTransaction::enqueueStatement(std::unique_ptr<SQLStatement> statement)
 {
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     m_statementQueue.append(WTFMove(statement));
 }
 
@@ -190,7 +189,7 @@ void SQLTransaction::checkAndHandleClosedDatabase()
     // If the database was stopped, don't do anything and cancel queued work
     LOG(StorageAPI, "Database was stopped or interrupted - cancelling work for this transaction");
 
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     m_statementQueue.clear();
     m_nextStep = nullptr;
 
@@ -237,7 +236,7 @@ void SQLTransaction::openTransactionAndPreflight()
 
     // If the database was deleted, jump to the error callback
     if (m_database->deleted()) {
-        m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "unable to open a transaction, because the user deleted the database");
+        m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "unable to open a transaction, because the user deleted the database"_s);
 
         handleTransactionError();
         return;
@@ -291,7 +290,7 @@ void SQLTransaction::openTransactionAndPreflight()
         m_database->enableAuthorizer();
         m_transactionError = m_wrapper->sqlError();
         if (!m_transactionError)
-            m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "unknown error occurred during transaction preflight");
+            m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "unknown error occurred during transaction preflight"_s);
 
         handleTransactionError();
         return;
@@ -396,7 +395,7 @@ void SQLTransaction::deliverTransactionCallback()
 
     // Spec 4.3.2 5: If the transaction callback was null or raised an exception, jump to the error callback
     if (shouldDeliverErrorCallback) {
-        m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "the SQLTransactionCallback was null or threw an exception");
+        m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "the SQLTransactionCallback was null or threw an exception"_s);
         return deliverTransactionErrorCallback();
     }
 
@@ -433,7 +432,7 @@ void SQLTransaction::deliverStatementCallback()
     m_executeSqlAllowed = false;
 
     if (result) {
-        m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "the statement callback raised an exception or statement error callback did not return false");
+        m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "the statement callback raised an exception or statement error callback did not return false"_s);
 
         if (m_errorCallbackWrapper.hasCallback())
             return deliverTransactionErrorCallback();
@@ -516,7 +515,7 @@ void SQLTransaction::getNextStatement()
 {
     m_currentStatement = nullptr;
 
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     if (!m_statementQueue.isEmpty())
         m_currentStatement = m_statementQueue.takeFirst();
 }
@@ -569,7 +568,7 @@ void SQLTransaction::handleCurrentStatementError()
 
     m_transactionError = m_currentStatement->sqlError();
     if (!m_transactionError)
-        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "the statement failed to execute");
+        m_transactionError = SQLError::create(SQLError::DATABASE_ERR, "the statement failed to execute"_s);
 
     handleTransactionError();
 }
@@ -595,7 +594,7 @@ void SQLTransaction::postflightAndCommit()
     if (m_wrapper && !m_wrapper->performPostflight(*this)) {
         m_transactionError = m_wrapper->sqlError();
         if (!m_transactionError)
-            m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "unknown error occurred during transaction postflight");
+            m_transactionError = SQLError::create(SQLError::UNKNOWN_ERR, "unknown error occurred during transaction postflight"_s);
 
         handleTransactionError();
         return;

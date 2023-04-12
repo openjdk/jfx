@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,8 @@
 
 package test.javafx.concurrent;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import test.javafx.concurrent.mocks.MythicalEvent;
 import test.javafx.concurrent.mocks.SimpleTask;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -43,7 +40,6 @@ import javafx.concurrent.Task;
 import javafx.concurrent.TaskShim;
 import javafx.concurrent.Worker;
 import javafx.concurrent.WorkerStateEvent;
-import javafx.event.EventType;
 import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;

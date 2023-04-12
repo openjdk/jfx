@@ -24,10 +24,10 @@
  */
 
 [
-    EnabledBySetting=SpeechRecognition,
+    EnabledBySetting=SpeechRecognitionEnabled,
     Exposed=Window
 ] interface SpeechRecognitionErrorEvent : Event {
-    constructor(DOMString type, SpeechRecognitionErrorEventInit eventInitDict);
+    constructor([AtomString] DOMString type, SpeechRecognitionErrorEventInit eventInitDict);
     readonly attribute SpeechRecognitionErrorCode error;
     readonly attribute DOMString message;
 };

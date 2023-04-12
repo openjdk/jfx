@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/Optional.h>
+#include <optional>
 
 namespace WebCore {
 
@@ -34,9 +34,16 @@ struct MediaCapabilitiesInfo {
     bool smooth { false };
     bool powerEfficient { false };
 
+    MediaCapabilitiesInfo isolatedCopy() const;
+
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MediaCapabilitiesInfo> decode(Decoder&);
+    template<class Decoder> static std::optional<MediaCapabilitiesInfo> decode(Decoder&);
 };
+
+inline MediaCapabilitiesInfo MediaCapabilitiesInfo::isolatedCopy() const
+{
+    return *this;
+}
 
 template<class Encoder>
 void MediaCapabilitiesInfo::encode(Encoder& encoder) const
@@ -47,22 +54,22 @@ void MediaCapabilitiesInfo::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<MediaCapabilitiesInfo> MediaCapabilitiesInfo::decode(Decoder& decoder)
+std::optional<MediaCapabilitiesInfo> MediaCapabilitiesInfo::decode(Decoder& decoder)
 {
-    Optional<bool> supported;
+    std::optional<bool> supported;
     decoder >> supported;
     if (!supported)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> smooth;
+    std::optional<bool> smooth;
     decoder >> smooth;
     if (!smooth)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> powerEfficient;
+    std::optional<bool> powerEfficient;
     decoder >> powerEfficient;
     if (!powerEfficient)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return {{
         *supported,

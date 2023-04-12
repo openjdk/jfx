@@ -35,6 +35,7 @@
 #include <sys/resource.h>
 #endif
 #ifdef G_OS_WIN32
+#include <crtdbg.h>
 #include <io.h>
 #include <windows.h>
 #endif
@@ -49,7 +50,6 @@
 #include "gpattern.h"
 #include "grand.h"
 #include "gstrfuncs.h"
-#include "gstrfuncsprivate.h"
 #include "gtimer.h"
 #include "gslice.h"
 #include "gspawn.h"
@@ -310,8 +310,12 @@
  * behaviour, to verify that appropriate warnings are given. It might, in some
  * cases, be useful to turn this off with if running tests under valgrind;
  * in tests that use g_test_init(), the option `-m no-undefined` disables
- * those tests, while `-m undefined` explicitly enables them (the default
- * behaviour).
+ * those tests, while `-m undefined` explicitly enables them (normally
+ * the default behaviour).
+ *
+ * Since GLib 2.68, if GLib was compiled with gcc or clang and
+ * [AddressSanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
+ * is enabled, the default changes to not exercising undefined behaviour.
  *
  * Returns: %TRUE if tests may provoke programming errors
  */
@@ -578,6 +582,30 @@
  */
 
 /**
+ * g_assert_cmpstrv:
+ * @strv1: (nullable): a string array (may be %NULL)
+ * @strv2: (nullable): another string array (may be %NULL)
+ *
+ * Debugging macro to check if two %NULL-terminated string arrays (i.e. 2
+ * #GStrv) are equal. If they are not equal, an error message is logged and the
+ * application is either terminated or the testcase marked as failed.
+ * If both arrays are %NULL, the check passes. If one array is %NULL but the
+ * other is not, an error message is logged.
+ *
+ * The effect of `g_assert_cmpstrv (strv1, strv2)` is the same as
+ * `g_assert_true (g_strv_equal (strv1, strv2))` (if both arrays are not
+ * %NULL). The advantage of this macro is that it can produce a message that
+ * includes how @strv1 and @strv2 are different.
+ *
+ * |[<!-- language="C" -->
+ *   const char *expected[] = { "one", "two", "three", NULL };
+ *   g_assert_cmpstrv (mystrv, expected);
+ * ]|
+ *
+ * Since: 2.68
+ */
+
+/**
  * g_assert_cmpint:
  * @n1: an integer
  * @cmp: The comparison operator to use.
@@ -805,6 +833,7 @@ struct DestroyEntry
 };
 
 /* --- prototypes --- */
+static void     test_cleanup                    (void);
 static void     test_run_seed                   (const gchar *rseed);
 static void     test_trap_clear                 (void);
 static guint8*  g_test_log_dump                 (GTestLogMsg *msg,
@@ -845,7 +874,11 @@ static guint       test_startup_skip_count = 0;
 static GTimer     *test_user_timer = NULL;
 static double      test_user_stamp = 0;
 static GSList     *test_paths = NULL;
+static gboolean    test_prefix = FALSE;
+static gboolean    test_prefix_extended = FALSE;
 static GSList     *test_paths_skipped = NULL;
+static gboolean    test_prefix_skipped = FALSE;
+static gboolean    test_prefix_extended_skipped = FALSE;
 static GTestSuite *test_suite_root = NULL;
 static int         test_trap_last_status = 0;  /* unmodified platform-specific status */
 static GPid        test_trap_last_pid = 0;
@@ -857,10 +890,10 @@ static gboolean    test_debug_log = FALSE;
 static gboolean    test_tap_log = TRUE;  /* default to TAP as of GLib 2.62; see #1619; the non-TAP output mode is deprecated */
 static gboolean    test_nonfatal_assertions = FALSE;
 static DestroyEntry *test_destroy_queue = NULL;
-static char       *test_argv0 = NULL;
-static char       *test_argv0_dirname;
-static const char *test_disted_files_dir;
-static const char *test_built_files_dir;
+static const char *test_argv0 = NULL;           /* (nullable), points into global argv */
+static char       *test_argv0_dirname = NULL;   /* owned by GLib */
+static const char *test_disted_files_dir;       /* points into test_argv0_dirname or an environment variable */
+static const char *test_built_files_dir;        /* points into test_argv0_dirname or an environment variable */
 static char       *test_initial_cwd = NULL;
 static gboolean    test_in_forked_child = FALSE;
 static gboolean    test_in_subprocess = FALSE;
@@ -1007,6 +1040,8 @@ g_test_log (GTestLogType lbit,
             g_print (" # TODO %s\n", string2 ? string2 : "");
           else if (result == G_TEST_RUN_SKIPPED)
             g_print (" # SKIP %s\n", string2 ? string2 : "");
+          else if (result == G_TEST_RUN_FAILURE && string2 != NULL)
+            g_print (" - %s\n", string2);
           else
             g_print ("\n");
         }
@@ -1041,7 +1076,20 @@ g_test_log (GTestLogType lbit,
       break;
     case G_TEST_LOG_MESSAGE:
       if (test_tap_log)
-        g_print ("# %s\n", string1);
+        {
+          if (strstr (string1, "\n") == NULL)
+            g_print ("# %s\n", string1);
+          else
+            {
+              char **lines = g_strsplit (string1, "\n", -1);
+              gsize i;
+
+              for (i = 0; lines[i] != NULL; i++)
+                g_print ("# %s\n", lines[i]);
+
+              g_strfreev (lines);
+            }
+        }
       else if (g_test_verbose ())
         g_print ("(MSG: %s)\n", string1);
       break;
@@ -1090,7 +1138,7 @@ parse_args (gint    *argc_p,
   gchar **argv = *argv_p;
   guint i, e;
 
-  test_argv0 = argv[0];
+  test_argv0 = argv[0];  /* will be NULL iff argc == 0 */
   test_initial_cwd = g_get_current_dir ();
 
   /* parse known args */
@@ -1176,6 +1224,31 @@ parse_args (gint    *argc_p,
               test_paths = g_slist_prepend (test_paths, argv[i]);
             }
           argv[i] = NULL;
+          if (test_prefix_extended) {
+            printf ("do not mix [-r | --run-prefix] with '-p'\n");
+            exit (1);
+          }
+          test_prefix = TRUE;
+        }
+      else if (strcmp ("-r", argv[i]) == 0 ||
+               strncmp ("-r=", argv[i], 3) == 0 ||
+               strcmp ("--run-prefix", argv[i]) == 0 ||
+               strncmp ("--run-prefix=", argv[i], 13) == 0)
+        {
+            gchar *equal = argv[i] + 2;
+            if (*equal == '=')
+              test_paths = g_slist_prepend (test_paths, equal + 1);
+            else if (i + 1 < argc)
+              {
+                argv[i++] = NULL;
+                test_paths = g_slist_prepend (test_paths, argv[i]);
+              }
+            argv[i] = NULL;
+            if (test_prefix) {
+              printf ("do not mix [-r | --run-prefix] with '-p'\n");
+              exit (1);
+            }
+            test_prefix_extended = TRUE;
         }
       else if (strcmp ("-s", argv[i]) == 0 || strncmp ("-s=", argv[i], 3) == 0)
         {
@@ -1188,6 +1261,31 @@ parse_args (gint    *argc_p,
               test_paths_skipped = g_slist_prepend (test_paths_skipped, argv[i]);
             }
           argv[i] = NULL;
+          if (test_prefix_extended_skipped) {
+            printf ("do not mix [-x | --skip-prefix] with '-s'\n");
+            exit (1);
+          }
+          test_prefix_skipped = TRUE;
+        }
+      else if (strcmp ("-x", argv[i]) == 0 ||
+               strncmp ("-x=", argv[i], 3) == 0 ||
+               strcmp ("--skip-prefix", argv[i]) == 0 ||
+               strncmp ("--skip-prefix=", argv[i], 14) == 0)
+        {
+          gchar *equal = argv[i] + 2;
+          if (*equal == '=')
+            test_paths_skipped = g_slist_prepend (test_paths_skipped, equal + 1);
+          else if (i + 1 < argc)
+            {
+              argv[i++] = NULL;
+              test_paths_skipped = g_slist_prepend (test_paths_skipped, argv[i]);
+            }
+          argv[i] = NULL;
+          if (test_prefix_skipped) {
+            printf ("do not mix [-x | --skip-prefix] with '-s'\n");
+            exit (1);
+          }
+          test_prefix_extended_skipped = TRUE;
         }
       else if (strcmp ("-m", argv[i]) == 0 || strncmp ("-m=", argv[i], 3) == 0)
         {
@@ -1263,6 +1361,13 @@ parse_args (gint    *argc_p,
                   "  -m {undefined|no-undefined}    Execute tests according to mode\n"
                   "  -p TESTPATH                    Only start test cases matching TESTPATH\n"
                   "  -s TESTPATH                    Skip all tests matching TESTPATH\n"
+                  "  [-r | --run-prefix] PREFIX     Only start test cases (or suites) matching PREFIX (incompatible with -p).\n"
+                  "                                 Unlike the -p option (which only goes one level deep), this option would \n"
+                  "                                 run all tests path that have PREFIX at the beginning of their name.\n"
+                  "                                 Note that the prefix used should be a valid test path (and not a simple prefix).\n"
+                  "  [-x | --skip-prefix] PREFIX    Skip all tests matching PREFIX (incompatible with -s)\n"
+                  "                                 Unlike the -s option (which only skips the exact TESTPATH), this option will \n"
+                  "                                 skip all the tests that begins with PREFIX).\n"
                   "  --seed=SEEDSTRING              Start tests with random seed SEEDSTRING\n"
                   "  --debug-log                    debug test logging output\n"
                   "  -q, --quiet                    Run tests quietly\n"
@@ -1277,8 +1382,8 @@ parse_args (gint    *argc_p,
   test_paths = g_slist_reverse (test_paths);
 
   /* collapse argv */
-  e = 1;
-  for (i = 1; i < argc; i++)
+  e = 0;
+  for (i = 0; i < argc; i++)
     if (argv[i])
       {
         argv[e++] = argv[i];
@@ -1298,8 +1403,8 @@ rm_rf (const gchar *path)
   dir = g_dir_open (path, 0, NULL);
   if (dir == NULL)
     {
-      /* Assume it's a file. */
-      g_remove (path);
+      /* Assume it’s a file. Ignore failure. */
+      (void) g_remove (path);
       return;
     }
 
@@ -1329,7 +1434,7 @@ test_do_isolate_dirs (GError **error)
 {
   gchar *subdir = NULL;
   gchar *home_dir = NULL, *cache_dir = NULL, *config_dir = NULL;
-  gchar *data_dir = NULL, *runtime_dir = NULL;
+  gchar *state_dir = NULL, *data_dir = NULL, *runtime_dir = NULL;
   gchar *config_dirs[3];
   gchar *data_dirs[3];
 
@@ -1366,6 +1471,7 @@ test_do_isolate_dirs (GError **error)
   cache_dir = g_build_filename (subdir, "cache", NULL);
   config_dir = g_build_filename (subdir, "config", NULL);
   data_dir = g_build_filename (subdir, "data", NULL);
+  state_dir = g_build_filename (subdir, "state", NULL);
 
   config_dirs[0] = g_build_filename (subdir, "system-config1", NULL);
   config_dirs[1] = g_build_filename (subdir, "system-config2", NULL);
@@ -1383,10 +1489,12 @@ test_do_isolate_dirs (GError **error)
                    "XDG_CONFIG_HOME", config_dir,
                    "XDG_DATA_DIRS", data_dirs,
                    "XDG_DATA_HOME", data_dir,
+                   "XDG_STATE_HOME", state_dir,
                    "XDG_RUNTIME_DIR", runtime_dir,
                    NULL);
 
   g_free (runtime_dir);
+  g_free (state_dir);
   g_free (data_dir);
   g_free (config_dir);
   g_free (cache_dir);
@@ -1488,6 +1596,29 @@ void
   g_return_if_fail (argv != NULL);
   g_return_if_fail (g_test_config_vars->test_initialized == FALSE);
   mutable_test_config_vars.test_initialized = TRUE;
+
+#ifdef _GLIB_ADDRESS_SANITIZER
+  mutable_test_config_vars.test_undefined = FALSE;
+#endif
+
+#ifdef G_OS_WIN32
+  // don't open a window for errors (like the "abort() was called one")
+  _CrtSetReportMode (_CRT_ERROR, _CRTDBG_MODE_FILE);
+  _CrtSetReportFile (_CRT_ERROR, _CRTDBG_FILE_STDERR);
+  // while gtest tests tend to use g_assert and friends
+  // if they do use the C standard assert macro we want to
+  // output a message to stderr, not open a popup window
+  _CrtSetReportMode (_CRT_ASSERT, _CRTDBG_MODE_FILE);
+  _CrtSetReportFile (_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+  // in release mode abort() will pop up a windows error
+  // reporting dialog, let's prevent that. Only msvcrxx and
+  // the UCRT have this function, but there's no great way to
+  // detect msvcrxx (that I know of) so only call this when using
+  // the UCRT
+#ifdef _UCRT
+  _set_abort_behavior (0, _CALL_REPORTFAULT);
+#endif
+#endif
 
   va_start (args, argv);
   while ((option = va_arg (args, char *)))
@@ -1601,7 +1732,7 @@ void
   g_log_set_default_handler (gtest_default_log_handler, NULL);
   g_test_log (G_TEST_LOG_START_BINARY, g_get_prgname(), test_run_seedstr, 0, NULL);
 
-  test_argv0_dirname = g_path_get_dirname (test_argv0);
+  test_argv0_dirname = (test_argv0 != NULL) ? g_path_get_dirname (test_argv0) : g_strdup (".");
 
   /* Make sure we get the real dirname that the test was run from */
   if (g_str_has_suffix (test_argv0_dirname, "/.libs"))
@@ -1619,6 +1750,18 @@ void
   test_built_files_dir = g_getenv ("G_TEST_BUILDDIR");
   if (!test_built_files_dir)
     test_built_files_dir = test_argv0_dirname;
+}
+
+static void
+test_cleanup (void)
+{
+  /* Free statically allocated variables */
+
+  g_clear_pointer (&test_run_rand, g_rand_free);
+
+  g_clear_pointer (&test_argv0_dirname, g_free);
+
+  g_clear_pointer (&test_initial_cwd, g_free);
 }
 
 static void
@@ -1780,9 +1923,10 @@ g_test_timer_start (void)
 /**
  * g_test_timer_elapsed:
  *
- * Get the time since the last start of the timer with g_test_timer_start().
+ * Get the number of seconds since the last start of the timer with
+ * g_test_timer_start().
  *
- * Returns: the time since the last start of the timer, as a double
+ * Returns: the time since the last start of the timer in seconds, as a double
  *
  * Since: 2.16
  */
@@ -1908,7 +2052,7 @@ g_test_message (const char *format,
  * case only.
  * Bug URIs are constructed by appending a bug specific URI
  * portion to @uri_pattern, or by replacing the special string
- * '\%s' within @uri_pattern if that is present.
+ * `%s` within @uri_pattern if that is present.
  *
  * If g_test_bug_base() is not called, bug URIs are formed solely
  * from the value provided by g_test_bug().
@@ -1924,14 +2068,18 @@ g_test_bug_base (const char *uri_pattern)
 
 /**
  * g_test_bug:
- * @bug_uri_snippet: Bug specific bug tracker URI portion.
+ * @bug_uri_snippet: Bug specific bug tracker URI or URI portion.
  *
  * This function adds a message to test reports that
  * associates a bug URI with a test case.
+ *
  * Bug URIs are constructed from a base URI set with g_test_bug_base()
  * and @bug_uri_snippet. If g_test_bug_base() has not been called, it is
  * assumed to be the empty string, so a full URI can be provided to
  * g_test_bug() instead.
+ *
+ * Since GLib 2.70, the base URI is not prepended to @bug_uri_snippet if it
+ * is already a valid URI.
  *
  * Since: 2.16
  * See also: g_test_summary()
@@ -1942,6 +2090,13 @@ g_test_bug (const char *bug_uri_snippet)
   const char *c = NULL;
 
   g_return_if_fail (bug_uri_snippet != NULL);
+
+  if (g_str_has_prefix (bug_uri_snippet, "http:") ||
+      g_str_has_prefix (bug_uri_snippet, "https:"))
+    {
+      g_test_message ("Bug Reference: %s", bug_uri_snippet);
+      return;
+    }
 
   if (test_uri_base != NULL)
     c = strstr (test_uri_base, "%s");
@@ -2061,8 +2216,22 @@ g_test_get_root (void)
 int
 g_test_run (void)
 {
-  if (g_test_run_suite (g_test_get_root()) != 0)
-    return 1;
+  int ret;
+  GTestSuite *suite;
+
+  if (atexit (test_cleanup) != 0)
+    {
+      int errsv = errno;
+      g_error ("Unable to register test cleanup to be run at exit: %s",
+               g_strerror (errsv));
+    }
+
+  suite = g_test_get_root ();
+  if (g_test_run_suite (suite) != 0)
+    {
+      ret = 1;
+      goto out;
+    }
 
   /* Clean up the temporary directory. */
   if (test_isolate_dirs_tmpdir != NULL)
@@ -2075,12 +2244,25 @@ g_test_run (void)
   /* 77 is special to Automake's default driver, but not Automake's TAP driver
    * or Perl's prove(1) TAP driver. */
   if (test_tap_log)
-    return 0;
+    {
+      ret = 0;
+      goto out;
+    }
 
   if (test_run_count > 0 && test_run_count == test_skipped_count)
-    return 77;
+    {
+      ret = 77;
+      goto out;
+    }
   else
-    return 0;
+    {
+      ret = 0;
+      goto out;
+    }
+
+out:
+  g_test_suite_free (suite);
+  return ret;
 }
 
 /**
@@ -2250,12 +2432,42 @@ g_test_add_vtable (const char       *testpath,
  *
  * If not called from inside a test, this function does nothing.
  *
+ * Note that unlike g_test_skip() and g_test_incomplete(), this
+ * function does not log a message alongside the test failure.
+ * If details of the test failure are available, either log them with
+ * g_test_message() before g_test_fail(), or use g_test_fail_printf()
+ * instead.
+ *
  * Since: 2.30
  **/
 void
 g_test_fail (void)
 {
   test_run_success = G_TEST_RUN_FAILURE;
+  g_clear_pointer (&test_run_msg, g_free);
+}
+
+/**
+ * g_test_fail_printf:
+ * @format: the format string
+ * @...:    printf-like arguments to @format
+ *
+ * Equivalent to g_test_fail(), but also record a message like
+ * g_test_skip_printf().
+ *
+ * Since: 2.70
+ **/
+void
+g_test_fail_printf (const char *format,
+                    ...)
+{
+  va_list args;
+
+  test_run_success = G_TEST_RUN_FAILURE;
+  va_start (args, format);
+  g_free (test_run_msg);
+  test_run_msg = g_strdup_vprintf (format, args);
+  va_end (args);
 }
 
 /**
@@ -2284,6 +2496,29 @@ g_test_incomplete (const gchar *msg)
 }
 
 /**
+ * g_test_incomplete_printf:
+ * @format: the format string
+ * @...:    printf-like arguments to @format
+ *
+ * Equivalent to g_test_incomplete(), but the explanation is formatted
+ * as if by g_strdup_printf().
+ *
+ * Since: 2.70
+ */
+void
+g_test_incomplete_printf (const char *format,
+                          ...)
+{
+  va_list args;
+
+  test_run_success = G_TEST_RUN_INCOMPLETE;
+  va_start (args, format);
+  g_free (test_run_msg);
+  test_run_msg = g_strdup_vprintf (format, args);
+  va_end (args);
+}
+
+/**
  * g_test_skip:
  * @msg: (nullable): explanation
  *
@@ -2304,6 +2539,29 @@ g_test_skip (const gchar *msg)
   test_run_success = G_TEST_RUN_SKIPPED;
   g_free (test_run_msg);
   test_run_msg = g_strdup (msg);
+}
+
+/**
+ * g_test_skip_printf:
+ * @format: the format string
+ * @...:    printf-like arguments to @format
+ *
+ * Equivalent to g_test_skip(), but the explanation is formatted
+ * as if by g_strdup_printf().
+ *
+ * Since: 2.70
+ */
+void
+g_test_skip_printf (const char *format,
+                    ...)
+{
+  va_list args;
+
+  test_run_success = G_TEST_RUN_SKIPPED;
+  va_start (args, format);
+  g_free (test_run_msg);
+  test_run_msg = g_strdup_vprintf (format, args);
+  va_end (args);
 }
 
 /**
@@ -2606,6 +2864,22 @@ g_test_queue_destroy (GDestroyNotify destroy_func,
   test_destroy_queue = dentry;
 }
 
+static gint
+test_has_prefix (gconstpointer a,
+                 gconstpointer b)
+{
+    const gchar *test_path_skipped_local = (const gchar *)a;
+    const gchar* test_run_name_local = (const gchar*)b;
+    if (test_prefix_extended_skipped)
+      {
+        /* If both are null, we consider that it doesn't match */
+        if (!test_path_skipped_local || !test_run_name_local)
+          return FALSE;
+        return strncmp (test_run_name_local, test_path_skipped_local, strlen (test_path_skipped_local));
+      }
+    return g_strcmp0 (test_run_name_local, test_path_skipped_local);
+}
+
 static gboolean
 test_case_run (GTestCase *tc)
 {
@@ -2633,7 +2907,7 @@ test_case_run (GTestCase *tc)
       test_run_success = G_TEST_RUN_SUCCESS;
       g_clear_pointer (&test_run_msg, g_free);
       g_test_log_set_fatal_handler (NULL, NULL);
-      if (test_paths_skipped && g_slist_find_custom (test_paths_skipped, test_run_name, (GCompareFunc)g_strcmp0))
+      if (test_paths_skipped && g_slist_find_custom (test_paths_skipped, test_run_name, (GCompareFunc)test_has_prefix))
         g_test_skip ("by request (-s option)");
       else
         {
@@ -2751,8 +3025,15 @@ g_test_run_suite_internal (GTestSuite *suite,
       GTestSuite *ts = iter->data;
 
       test_run_name = g_build_path ("/", old_name, ts->name, NULL);
-      if (!path || path_has_prefix (path, test_run_name))
+      if (test_prefix_extended) {
+        if (!path || path_has_prefix (test_run_name, path))
+          n_bad += g_test_run_suite_internal (ts, test_run_name);
+        else if (!path || path_has_prefix (path, test_run_name))
+          n_bad += g_test_run_suite_internal (ts, path);
+      } else if (!path || path_has_prefix (path, test_run_name)) {
         n_bad += g_test_run_suite_internal (ts, path);
+      }
+
       g_free (test_run_name);
     }
 
@@ -2833,6 +3114,41 @@ g_test_run_suite (GTestSuite *suite)
   test_run_name = NULL;
 
   return n_bad;
+}
+
+/**
+ * g_test_case_free:
+ * @test_case: a #GTestCase
+ *
+ * Free the @test_case.
+ *
+ * Since: 2.70
+ */
+void
+g_test_case_free (GTestCase *test_case)
+{
+  g_free (test_case->name);
+  g_slice_free (GTestCase, test_case);
+}
+
+/**
+ * g_test_suite_free:
+ * @suite: a #GTestSuite
+ *
+ * Free the @suite and all nested #GTestSuites.
+ *
+ * Since: 2.70
+ */
+void
+g_test_suite_free (GTestSuite *suite)
+{
+  g_slist_free_full (suite->cases, (GDestroyNotify)g_test_case_free);
+
+  g_free (suite->name);
+
+  g_slist_free_full (suite->suites, (GDestroyNotify)g_test_suite_free);
+
+  g_slice_free (GTestSuite, suite);
 }
 
 static void
@@ -3012,6 +3328,31 @@ g_assertion_message_cmpstr (const char     *domain,
   g_free (t1);
   g_free (t2);
   s = g_strdup_printf ("assertion failed (%s): (%s %s %s)", expr, a1, cmp, a2);
+  g_free (a1);
+  g_free (a2);
+  g_assertion_message (domain, file, line, func, s);
+  g_free (s);
+}
+
+void
+g_assertion_message_cmpstrv (const char         *domain,
+                             const char         *file,
+                             int                 line,
+                             const char         *func,
+                             const char         *expr,
+                             const char * const *arg1,
+                             const char * const *arg2,
+                             gsize               first_wrong_idx)
+{
+  const char *s1 = arg1[first_wrong_idx], *s2 = arg2[first_wrong_idx];
+  char *a1, *a2, *s, *t1 = NULL, *t2 = NULL;
+
+  a1 = g_strconcat ("\"", t1 = g_strescape (s1, NULL), "\"", NULL);
+  a2 = g_strconcat ("\"", t2 = g_strescape (s2, NULL), "\"", NULL);
+  g_free (t1);
+  g_free (t2);
+  s = g_strdup_printf ("assertion failed (%s): first differing element at index %" G_GSIZE_FORMAT ": %s does not equal %s",
+                       expr, first_wrong_idx, a1, a2);
   g_free (a1);
   g_free (a2);
   g_assertion_message (domain, file, line, func, s);
@@ -3486,8 +3827,11 @@ g_test_trap_subprocess (const char           *test_path,
   test_trap_clear ();
   test_trap_last_subprocess = g_strdup (test_path);
 
+  if (test_argv0 == NULL)
+    g_error ("g_test_trap_subprocess() requires argv0 to be passed to g_test_init()");
+
   argv = g_ptr_array_new ();
-  g_ptr_array_add (argv, test_argv0);
+  g_ptr_array_add (argv, (char *) test_argv0);
   g_ptr_array_add (argv, "-q");
   g_ptr_array_add (argv, "-p");
   g_ptr_array_add (argv, (char *)test_path);
@@ -4061,9 +4405,9 @@ g_test_get_dir (GTestFileType file_type)
  * Gets the pathname to a data file that is required for a test.
  *
  * This is the same as g_test_build_filename() with two differences.
- * The first difference is that must only use this function from within
+ * The first difference is that you must only use this function from within
  * a testcase function.  The second difference is that you need not free
- * the return value -- it will be automatically freed when the testcase
+ * the return value — it will be automatically freed when the testcase
  * finishes running.
  *
  * It is safe to use this function from a thread inside of a testcase
@@ -4098,4 +4442,24 @@ g_test_get_filename (GTestFileType  file_type,
   while (!g_atomic_pointer_compare_and_exchange (test_filename_free_list, node->next, node));
 
   return result;
+}
+
+/**
+ * g_test_get_path:
+ *
+ * Gets the test path for the test currently being run.
+ *
+ * In essence, it will be the same string passed as the first argument to
+ * e.g. g_test_add() when the test was added.
+ *
+ * This function returns a valid string only within a test function.
+ *
+ * Returns: the test path for the test currently being run
+ *
+ * Since: 2.68
+ **/
+const char *
+g_test_get_path (void)
+{
+  return test_run_name;
 }

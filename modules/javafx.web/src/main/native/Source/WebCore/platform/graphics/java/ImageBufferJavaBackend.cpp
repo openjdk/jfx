@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,13 +31,13 @@
 #include "ImageData.h"
 #include "MIMETypeRegistry.h"
 #include "PlatformContextJava.h"
-
+#include "GraphicsContextJava.h"
 namespace WebCore {
 
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
-    const Parameters& parameters, const HostWindow*)
+    const Parameters& parameters, const ImageBuffer::CreationContext&)
 {
-    IntSize backendSize = calculateBackendSize(parameters.logicalSize, parameters.resolutionScale);
+    IntSize backendSize = ImageBufferBackend::calculateBackendSize(parameters);
     if (backendSize.isEmpty())
         return nullptr;
 
@@ -49,13 +49,18 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         "(II)Lcom/sun/webkit/graphics/WCImage;");
     ASSERT(midCreateImage);
 
-    auto image = RQRef::create(JLObject(env->CallObjectMethod(
+    jobject imageObj = env->CallObjectMethod(
         PL_GetGraphicsManager(env),
         midCreateImage,
         (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.width()),
         (jint) ceilf(parameters.resolutionScale * parameters.logicalSize.height())
-    )));
-    WTF::CheckAndClearException(env);
+    );
+
+    if (WTF::CheckAndClearException(env) || !imageObj) {
+        return nullptr;
+    }
+
+    auto image = RQRef::create(JLObject(imageObj));
 
     static jmethodID midCreateBufferedContextRQ = env->GetMethodID(
         PG_GetGraphicsManagerClass(env),
@@ -68,9 +73,11 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         midCreateBufferedContextRQ,
         (jobject)(image->cloneLocalCopy())));
     ASSERT(wcRenderQueue);
-    WTF::CheckAndClearException(env);
+    if (WTF::CheckAndClearException(env) || !wcRenderQueue) {
+        return nullptr;
+    }
 
-    auto context = makeUnique<GraphicsContext>(new PlatformContextJava(wcRenderQueue, true));
+    auto context = makeUnique<GraphicsContextJava>(new PlatformContextJava(wcRenderQueue, true));
 
     auto platformImage = ImageJava::create(image, context->platformContext()->rq_ref(),
         backendSize.width(), backendSize.height());
@@ -99,6 +106,37 @@ JLObject ImageBufferJavaBackend::getWCImage() const
     return m_image->getImage()->cloneLocalCopy();
 }
 
+Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::optional<double>)
+{
+    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
+        // RenderQueue need to be processed before pixel buffer extraction.
+        // For that purpose it has to be in actual state.
+        context().platformContext()->rq().flushBuffer();
+
+        JNIEnv* env = WTF::GetJavaEnv();
+
+        static jmethodID midToData = env->GetMethodID(
+                PG_GetImageClass(env),
+                "toData",
+                "(Ljava/lang/String;)[B");
+        ASSERT(midToData);
+
+        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
+                getWCImage(),
+                midToData,
+                (jstring) JLString(mimeType.toJavaString(env))));
+
+        if (!WTF::CheckAndClearException(env) && jdata) {
+            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
+            Vector<uint8_t> data;
+            data.append(dataArray, env->GetArrayLength(jdata));
+            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
+            return data;
+        }
+    }
+    return { };
+}
+
 void *ImageBufferJavaBackend::getData() const
 {
     JNIEnv* env = WTF::GetJavaEnv();
@@ -113,8 +151,11 @@ void *ImageBufferJavaBackend::getData() const
         "()Ljava/nio/ByteBuffer;");
     ASSERT(midGetBGRABytes);
 
-    JLObject byteBuffer(env->CallObjectMethod(getWCImage(), midGetBGRABytes));
-    WTF::CheckAndClearException(env);
+    jobject pixelBuf = env->CallObjectMethod(getWCImage(), midGetBGRABytes);
+    if (WTF::CheckAndClearException(env) || !pixelBuf) {
+        return NULL;
+    }
+    JLObject byteBuffer(pixelBuf);
 
     return env->GetDirectBufferAddress(byteBuffer);
 }
@@ -149,104 +190,57 @@ IntSize ImageBufferJavaBackend::backendSize() const
 
 RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) const
 {
-    return NativeImage::create(makeRefPtr(m_image.get()));
+    return NativeImage::create((m_image.get()));
 }
 
-RefPtr<Image> ImageBufferJavaBackend::copyImage(BackingStoreCopy, PreserveResolution) const
+RefPtr<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
 {
-    return BufferImage::create(m_image);
+    void *data = getData();
+    if (!data)
+        return nullptr;
+
+    return getPixelBuffer(outputFormat, srcRect, data,allocator);
 }
 
-void ImageBufferJavaBackend::draw(GraphicsContext& context, const FloatRect& destRect,
-    const FloatRect& srcRect, const ImagePaintingOptions& options)
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
+    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat)
 {
-    RefPtr<Image> imageCopy = copyImage();
-    context.drawImage(*imageCopy, destRect, srcRect, options);
-}
+    void *data = getData();
+    if (!data)
+        return;
 
-void ImageBufferJavaBackend::drawPattern(GraphicsContext& context, const FloatRect& destRect,
-    const FloatRect& srcRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
-{
-    RefPtr<Image> imageCopy = copyImage();
-    imageCopy->drawPattern(context, destRect, srcRect, patternTransform, phase, spacing, options);
-}
-
-String ImageBufferJavaBackend::toDataURL(const String& mimeType, Optional<double>, PreserveResolution) const
-{
-    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
-        // RenderQueue need to be processed before pixel buffer extraction.
-        // For that purpose it has to be in actual state.
-        context().platformContext()->rq().flushBuffer();
-
-        JNIEnv* env = WTF::GetJavaEnv();
-
-        static jmethodID midToDataURL = env->GetMethodID(
-                PG_GetImageClass(env),
-                "toDataURL",
-                "(Ljava/lang/String;)Ljava/lang/String;");
-        ASSERT(midToDataURL);
-
-        JLString data((jstring) env->CallObjectMethod(
-                getWCImage(),
-                midToDataURL,
-                (jstring) JLString(mimeType.toJavaString(env))));
-
-        WTF::CheckAndClearException(env);
-        if (data) {
-            return String(env, data);
-        }
-    }
-    return "data:,";
-}
-
-Vector<uint8_t> ImageBufferJavaBackend::toData(const String& mimeType, Optional<double>) const
-{
-    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
-        // RenderQueue need to be processed before pixel buffer extraction.
-        // For that purpose it has to be in actual state.
-        context().platformContext()->rq().flushBuffer();
-
-        JNIEnv* env = WTF::GetJavaEnv();
-
-        static jmethodID midToData = env->GetMethodID(
-                PG_GetImageClass(env),
-                "toData",
-                "(Ljava/lang/String;)[B");
-        ASSERT(midToData);
-
-        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
-                getWCImage(),
-                midToData,
-                (jstring) JLString(mimeType.toJavaString(env))));
-
-        WTF::CheckAndClearException(env);
-        if (jdata) {
-            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
-            Vector<uint8_t> data;
-            data.append(dataArray, env->GetArrayLength(jdata));
-            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
-            return data;
-        }
-    }
-    return { };
-}
-
-Vector<uint8_t> ImageBufferJavaBackend::toBGRAData() const
-{
-    return { };
-}
-
-RefPtr<ImageData> ImageBufferJavaBackend::getImageData(AlphaPremultiplication outputFormat, const IntRect& srcRect) const
-{
-    return ImageBufferBackend::getImageData(outputFormat, srcRect, getData());
-}
-
-void ImageBufferJavaBackend::putImageData(AlphaPremultiplication inputFormat, const ImageData& imageData,
-    const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
-{
-    ImageBufferBackend::putImageData(inputFormat, imageData, srcRect, destPoint, destFormat, getData());
+    putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
     update();
+}
+
+RefPtr<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data, const ImageBufferAllocator& allocator) const
+{
+    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, data, allocator);
+}
+
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
+    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat, void* data)
+{
+    ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
+    update();
+}
+
+size_t ImageBufferJavaBackend::calculateMemoryCost(const Parameters& parameters)
+{
+    IntSize backendSize = calculateBackendSize(parameters);
+    return ImageBufferBackend::calculateMemoryCost(backendSize, calculateBytesPerRow(backendSize));
+}
+
+unsigned ImageBufferJavaBackend::calculateBytesPerRow(const IntSize& backendSize)
+{
+    ASSERT(!backendSize.isEmpty());
+    return CheckedUint32(backendSize.width()) * 4;
+}
+
+unsigned ImageBufferJavaBackend::bytesPerRow() const
+{
+    IntSize backendSize = calculateBackendSize(m_parameters);
+    return calculateBytesPerRow(backendSize);
 }
 
 } // namespace WebCore

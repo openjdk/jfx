@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 
 namespace JSC {
 
-const ClassInfo ExecutableBase::s_info = { "Executable", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(ExecutableBase) };
+const ClassInfo ExecutableBase::s_info = { "Executable"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(ExecutableBase) };
 
 void ExecutableBase::destroy(JSCell* cell)
 {
@@ -49,7 +49,7 @@ void ExecutableBase::dump(PrintStream& out) const
     switch (type()) {
     case NativeExecutableType: {
         NativeExecutable* native = jsCast<NativeExecutable*>(realThis);
-        out.print("NativeExecutable:", RawPointer(bitwise_cast<void*>(native->function())), "/", RawPointer(bitwise_cast<void*>(native->constructor())));
+        out.print("NativeExecutable:", RawPointer(native->function().rawPointer()), "/", RawPointer(native->constructor().rawPointer()));
         return;
     }
     case EvalExecutableType: {

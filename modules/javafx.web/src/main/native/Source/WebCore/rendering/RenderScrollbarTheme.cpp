@@ -43,7 +43,7 @@ void RenderScrollbarTheme::buttonSizesAlongTrackAxis(Scrollbar& scrollbar, int& 
     IntRect secondButton = forwardButtonRect(scrollbar, ForwardButtonStartPart);
     IntRect thirdButton = backButtonRect(scrollbar, BackButtonEndPart);
     IntRect fourthButton = forwardButtonRect(scrollbar, ForwardButtonEndPart);
-    if (scrollbar.orientation() == HorizontalScrollbar) {
+    if (scrollbar.orientation() == ScrollbarOrientation::Horizontal) {
         beforeSize = firstButton.width() + secondButton.width();
         afterSize = thirdButton.width() + fourthButton.width();
     } else {
@@ -57,7 +57,7 @@ bool RenderScrollbarTheme::hasButtons(Scrollbar& scrollbar)
     int startSize;
     int endSize;
     buttonSizesAlongTrackAxis(scrollbar, startSize, endSize);
-    return (startSize + endSize) <= (scrollbar.orientation() == HorizontalScrollbar ? scrollbar.width() : scrollbar.height());
+    return (startSize + endSize) <= (scrollbar.orientation() == ScrollbarOrientation::Horizontal ? scrollbar.width() : scrollbar.height());
 }
 
 bool RenderScrollbarTheme::hasThumb(Scrollbar& scrollbar)
@@ -97,7 +97,7 @@ IntRect RenderScrollbarTheme::constrainTrackRectToTrackPieces(Scrollbar& scrollb
     IntRect backRect = downcast<RenderScrollbar>(scrollbar).trackPieceRectWithMargins(BackTrackPart, rect);
     IntRect forwardRect = downcast<RenderScrollbar>(scrollbar).trackPieceRectWithMargins(ForwardTrackPart, rect);
     IntRect result = rect;
-    if (scrollbar.orientation() == HorizontalScrollbar) {
+    if (scrollbar.orientation() == ScrollbarOrientation::Horizontal) {
         result.setX(backRect.x());
         result.setWidth(forwardRect.maxX() - backRect.x());
     } else {
@@ -126,9 +126,9 @@ void RenderScrollbarTheme::didPaintScrollbar(GraphicsContext& context, Scrollbar
     }
 }
 
-void RenderScrollbarTheme::paintScrollCorner(GraphicsContext& context, const IntRect& cornerRect)
+void RenderScrollbarTheme::paintScrollCorner(ScrollableArea& area, GraphicsContext& context, const IntRect& cornerRect)
 {
-    ScrollbarTheme::theme().paintScrollCorner(context, cornerRect);
+    ScrollbarTheme::theme().paintScrollCorner(area, context, cornerRect);
 }
 
 void RenderScrollbarTheme::paintScrollbarBackground(GraphicsContext& context, Scrollbar& scrollbar)

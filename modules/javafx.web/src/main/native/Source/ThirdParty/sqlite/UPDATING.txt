@@ -1,0 +1,26 @@
+Updating SQLite in OpenJFX:
+
+1. Find the current version of the SQLite used in JavaFX from VERSION.txt
+
+2. Check if there are any JavaFX specific changes in SQLite source:
+    - Compare the SQLite source files from JavaFX workspace with the source files
+      corresponding to same version on https://www.sqlite.org/index.html
+    - Currently there are no JavaFX specific changes made in SQLite source.
+      In case you find any changes make sure to retain them with update.
+
+3. Get the source code of required release version of SQLite.
+    - Download the amalgamation code for the release from https://www.sqlite.org
+       - For example, the SQLite 3.37.2 amalgamation is named as "sqlite-amalgamation-3370200.zip".
+    - FYI about amalgamation:
+      - The amalgamation contains everything a library may need to include SQLite.
+      - Over 100 separate source files are concatenated into a single large C file
+        named "sqlite3.c" and referred as "the amalgamation".
+
+4. Update the SQLite source files in JavaFX from the downloaded amalgamation source.
+    - Retain JavaFX changes, if any.
+
+5. Update the new version in VERSION.txt.
+
+6. Perform build and sanity testing.
+
+7. Expand tabs and remove trailing white spaces from source files.

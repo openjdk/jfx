@@ -18,16 +18,16 @@
 
 /* Copy @cmdline into @debugger, and substitute @pid for `%p`
  * and @event for `%e`.
- * If @debugger_size (in bytes) is overflowed, return %FALSE.
+ * If @debugger_size (in wchar_ts) is overflowed, return %FALSE.
  * Also returns %FALSE when `%` is followed by anything other
  * than `e` or `p`.
  */
 static gboolean
-_g_win32_subst_pid_and_event (char       *debugger,
-                              gsize       debugger_size,
-                              const char *cmdline,
-                              DWORD       pid,
-                              guintptr    event)
+_g_win32_subst_pid_and_event_w (wchar_t       *local_debugger,
+                                gsize          debugger_size,
+                                const wchar_t *cmdline,
+                                DWORD          pid,
+                                guintptr       event)
 {
   gsize i = 0, dbg_i = 0;
 /* These are integers, and they can't be longer than 20 characters
@@ -35,42 +35,42 @@ _g_win32_subst_pid_and_event (char       *debugger,
  * Use 30 just to be sure.
  */
 #define STR_BUFFER_SIZE 30
-  char pid_str[STR_BUFFER_SIZE] = {0};
+  wchar_t pid_str[STR_BUFFER_SIZE] = {0};
   gsize pid_str_len;
-  char event_str[STR_BUFFER_SIZE] = {0};
+  wchar_t event_str[STR_BUFFER_SIZE] = {0};
   gsize event_str_len;
 
-  _snprintf_s (pid_str, STR_BUFFER_SIZE, G_N_ELEMENTS (pid_str), "%lu", pid);
+  _snwprintf_s (pid_str, STR_BUFFER_SIZE, G_N_ELEMENTS (pid_str), L"%lu", pid);
   pid_str[G_N_ELEMENTS (pid_str) - 1] = 0;
-  pid_str_len = strlen (pid_str);
-  _snprintf_s (event_str, STR_BUFFER_SIZE, G_N_ELEMENTS (pid_str), "%Iu", event);
+  pid_str_len = wcslen (pid_str);
+  _snwprintf_s (event_str, STR_BUFFER_SIZE, G_N_ELEMENTS (pid_str), L"%Iu", event);
   event_str[G_N_ELEMENTS (pid_str) - 1] = 0;
-  event_str_len = strlen (event_str);
+  event_str_len = wcslen (event_str);
 #undef STR_BUFFER_SIZE
 
   while (cmdline[i] != 0 && dbg_i < debugger_size)
     {
-      if (cmdline[i] != '%')
-        debugger[dbg_i++] = cmdline[i++];
-      else if (cmdline[i + 1] == 'p')
+      if (cmdline[i] != L'%')
+        local_debugger[dbg_i++] = cmdline[i++];
+      else if (cmdline[i + 1] == L'p')
         {
           gsize j = 0;
           while (j < pid_str_len && dbg_i < debugger_size)
-            debugger[dbg_i++] = pid_str[j++];
+            local_debugger[dbg_i++] = pid_str[j++];
           i += 2;
         }
-      else if (cmdline[i + 1] == 'e')
+      else if (cmdline[i + 1] == L'e')
         {
           gsize j = 0;
           while (j < event_str_len && dbg_i < debugger_size)
-            debugger[dbg_i++] = event_str[j++];
+            local_debugger[dbg_i++] = event_str[j++];
           i += 2;
         }
       else
         return FALSE;
     }
   if (dbg_i < debugger_size)
-    debugger[dbg_i] = 0;
+    local_debugger[dbg_i] = 0;
   else
     return FALSE;
 

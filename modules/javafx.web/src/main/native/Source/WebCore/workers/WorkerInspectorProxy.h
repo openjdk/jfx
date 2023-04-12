@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include <wtf/HashSet.h>
+#include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/URL.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
 // All of these methods should be called on the Main Thread.
@@ -40,21 +41,25 @@ class WorkerThread;
 
 enum class WorkerThreadStartMode;
 
-class WorkerInspectorProxy {
+class WorkerInspectorProxy : public RefCounted<WorkerInspectorProxy>, public CanMakeWeakPtr<WorkerInspectorProxy> {
     WTF_MAKE_NONCOPYABLE(WorkerInspectorProxy);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WorkerInspectorProxy(const String& identifier);
+    static Ref<WorkerInspectorProxy> create(const String& identifier)
+    {
+        return adoptRef(*new WorkerInspectorProxy(identifier));
+    }
+
     ~WorkerInspectorProxy();
 
     // A Worker's inspector messages come in and go out through the Page's WorkerAgent.
     class PageChannel {
     public:
         virtual ~PageChannel() = default;
-        virtual void sendMessageFromWorkerToFrontend(WorkerInspectorProxy&, const String&) = 0;
+        virtual void sendMessageFromWorkerToFrontend(WorkerInspectorProxy&, String&&) = 0;
     };
 
-    static HashSet<WorkerInspectorProxy*>& allWorkerInspectorProxies();
+    static WeakHashSet<WorkerInspectorProxy>& allWorkerInspectorProxies();
 
     const URL& url() const { return m_url; }
     const String& name() const { return m_name; }
@@ -69,9 +74,11 @@ public:
     void connectToWorkerInspectorController(PageChannel&);
     void disconnectFromWorkerInspectorController();
     void sendMessageToWorkerInspectorController(const String&);
-    void sendMessageFromWorkerToFrontend(const String&);
+    void sendMessageFromWorkerToFrontend(String&&);
 
 private:
+    explicit WorkerInspectorProxy(const String& identifier);
+
     RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
     RefPtr<WorkerThread> m_workerThread;
     String m_identifier;

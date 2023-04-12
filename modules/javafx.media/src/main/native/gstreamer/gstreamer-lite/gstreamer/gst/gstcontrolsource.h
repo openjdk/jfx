@@ -54,7 +54,7 @@ typedef struct _GstValueArray GstValueArray;
  * @timestamp: timestamp of the value change
  * @value: the corresponding value
  *
- * Structure for saving a timestamp and a value.
+ * Structure for storing a timestamp and a value.
  */
 struct _GstTimedValue
 {
@@ -84,7 +84,7 @@ typedef gboolean (* GstControlSourceGetValue) (GstControlSource *self,
  * @n_values: the number of values
  * @values: array to put control-values in
  *
- * Function for returning an array of values for starting at a given timestamp.
+ * Function for returning an array of values starting at a given timestamp.
  *
  * Returns: %TRUE if the values were successfully calculated.
  *
@@ -94,6 +94,7 @@ typedef gboolean (* GstControlSourceGetValueArray) (GstControlSource *self,
 
 /**
  * GstControlSource:
+ * @parent: the parent structure
  * @get_value: Function for returning a value for a given timestamp
  * @get_value_array: Function for returning a values array for a given timestamp
  *

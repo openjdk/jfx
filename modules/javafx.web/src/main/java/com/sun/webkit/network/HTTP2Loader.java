@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,26 +31,18 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.Invoker;
 import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.WebPage;
-import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.annotation.Native;
 import java.net.ConnectException;
 import java.net.CookieHandler;
-import java.net.HttpRetryException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -64,17 +56,14 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
@@ -83,7 +72,6 @@ import javax.net.ssl.SSLHandshakeException;
 import static com.sun.webkit.network.URLs.newURL;
 import static java.net.http.HttpClient.Redirect;
 import static java.net.http.HttpClient.Version;
-import static java.net.http.HttpResponse.BodyHandlers;
 import static java.net.http.HttpResponse.BodySubscribers;
 
 final class HTTP2Loader extends URLLoaderBase {
@@ -295,7 +283,7 @@ final class HTTP2Loader extends URLLoaderBase {
                 didFail(ex);
             }
         });
-        return new BodySubscriber<Void>() {
+        return new BodySubscriber<>() {
                 @Override
                 public void onComplete() {
                     streamSubscriber.onComplete();

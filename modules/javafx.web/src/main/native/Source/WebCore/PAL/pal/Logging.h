@@ -29,7 +29,7 @@
 
 namespace PAL {
 
-PAL_EXPORT void registerNotifyCallback(const String&, WTF::Function<void()>&&);
+PAL_EXPORT void registerNotifyCallback(ASCIILiteral, Function<void()>&&);
 
 } // namespace PAL
 

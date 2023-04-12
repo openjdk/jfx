@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,6 @@ import org.junit.Test;
 
 import com.sun.javafx.property.PropertyReference;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
-
 import static org.junit.Assert.*;
 
 /**
@@ -53,7 +51,7 @@ public class PropertyReferenceWithInterfacesTest {
     }
 
     public interface Named {
-        public static final PropertyReference<String> NAME = new PropertyReference<String>(Named.class, "name");
+        public static final PropertyReference<String> NAME = new PropertyReference<>(Named.class, "name");
         public String getName();
     }
 

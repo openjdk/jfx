@@ -25,7 +25,6 @@
 
 [
     LegacyNoInterfaceObject,
-    ImplementationLacksVTable,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] interface TypeConversions {
     attribute byte testByte;
@@ -60,6 +59,9 @@
     readonly attribute unrestricted double testImpureNaN2UnrestrictedDouble;
     readonly attribute unrestricted double testQuietNaNUnrestrictedDouble;
     readonly attribute unrestricted double testPureNaNUnrestrictedDouble;
+
+    attribute float testFloat;
+    attribute unrestricted float testUnrestrictedFloat;
 
     attribute DOMString testString;
     attribute ByteString testByteString;

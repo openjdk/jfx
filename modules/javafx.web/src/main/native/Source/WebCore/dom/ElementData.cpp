@@ -27,6 +27,7 @@
 #include "ElementData.h"
 
 #include "Attr.h"
+#include "Element.h"
 #include "HTMLNames.h"
 #include "StyleProperties.h"
 #include "XMLNames.h"
@@ -59,7 +60,7 @@ struct SameSizeAsElementData : public RefCounted<SameSizeAsElementData> {
     void* refPtrs[3];
 };
 
-COMPILE_ASSERT(sizeof(ElementData) == sizeof(SameSizeAsElementData), element_attribute_data_should_stay_small);
+static_assert(sizeof(ElementData) == sizeof(SameSizeAsElementData), "element attribute data should stay small");
 
 static size_t sizeForShareableElementDataWithAttributeCount(unsigned count)
 {
@@ -95,7 +96,7 @@ ShareableElementData::~ShareableElementData()
 ShareableElementData::ShareableElementData(const UniqueElementData& other)
     : ElementData(other, false)
 {
-    ASSERT(!other.m_presentationAttributeStyle);
+    ASSERT(!other.m_presentationalHintStyle);
 
     if (other.m_inlineStyle) {
         ASSERT(!other.m_inlineStyle->hasCSSOMWrapper());
@@ -131,7 +132,7 @@ UniqueElementData::UniqueElementData()
 
 UniqueElementData::UniqueElementData(const UniqueElementData& other)
     : ElementData(other, true)
-    , m_presentationAttributeStyle(other.m_presentationAttributeStyle)
+    , m_presentationalHintStyle(other.m_presentationalHintStyle)
     , m_attributeVector(other.m_attributeVector)
 {
     if (other.m_inlineStyle)
@@ -140,15 +141,11 @@ UniqueElementData::UniqueElementData(const UniqueElementData& other)
 
 UniqueElementData::UniqueElementData(const ShareableElementData& other)
     : ElementData(other, true)
+    , m_attributeVector(other.m_attributeArray, other.length())
 {
     // An ShareableElementData should never have a mutable inline StyleProperties attached.
     ASSERT(!other.m_inlineStyle || !other.m_inlineStyle->isMutable());
     m_inlineStyle = other.m_inlineStyle;
-
-    unsigned otherLength = other.length();
-    m_attributeVector.reserveCapacity(otherLength);
-    for (unsigned i = 0; i < otherLength; ++i)
-        m_attributeVector.uncheckedAppend(other.m_attributeArray[i]);
 }
 
 Ref<UniqueElementData> ElementData::makeUniqueCopy() const

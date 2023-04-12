@@ -45,13 +45,13 @@ XMLHttpRequestProgressEventThrottle::XMLHttpRequestProgressEventThrottle(XMLHttp
 
 XMLHttpRequestProgressEventThrottle::~XMLHttpRequestProgressEventThrottle() = default;
 
-void XMLHttpRequestProgressEventThrottle::dispatchThrottledProgressEvent(bool lengthComputable, unsigned long long loaded, unsigned long long total)
+void XMLHttpRequestProgressEventThrottle::updateProgress(bool isAsync, bool lengthComputable, unsigned long long loaded, unsigned long long total)
 {
     m_lengthComputable = lengthComputable;
     m_loaded = loaded;
     m_total = total;
 
-    if (!m_target.hasEventListeners(eventNames().progressEvent))
+    if (!isAsync || !m_target.hasEventListeners(eventNames().progressEvent))
         return;
 
     if (!m_shouldDeferEventsDueToSuspension && !m_dispatchThrottledProgressEventTimer.isActive()) {
@@ -81,14 +81,14 @@ void XMLHttpRequestProgressEventThrottle::dispatchReadyStateChangeEvent(Event& e
 void XMLHttpRequestProgressEventThrottle::dispatchEventWhenPossible(Event& event)
 {
     if (m_shouldDeferEventsDueToSuspension)
-        m_target.queueTaskToDispatchEvent(m_target, TaskSource::Networking, makeRef(event));
+        m_target.queueTaskToDispatchEvent(m_target, TaskSource::Networking, event);
     else
         m_target.dispatchEvent(event);
 }
 
 void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(const AtomString& type)
 {
-    ASSERT(type == eventNames().loadstartEvent || type == eventNames().progressEvent || type == eventNames().loadEvent || type == eventNames().loadendEvent || type == eventNames().abortEvent || type == eventNames().errorEvent || type == eventNames().timeoutEvent);
+    ASSERT(type == eventNames().loadstartEvent || type == eventNames().progressEvent || type == eventNames().loadEvent || type == eventNames().loadendEvent);
 
     if (type == eventNames().loadstartEvent) {
         m_lengthComputable = false;
@@ -98,6 +98,14 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(const AtomString
 
     if (m_target.hasEventListeners(type))
         dispatchEventWhenPossible(XMLHttpRequestProgressEvent::create(type, m_lengthComputable, m_loaded, m_total));
+}
+
+void XMLHttpRequestProgressEventThrottle::dispatchErrorProgressEvent(const AtomString& type)
+{
+    ASSERT(type == eventNames().loadendEvent || type == eventNames().abortEvent || type == eventNames().errorEvent || type == eventNames().timeoutEvent);
+
+    if (m_target.hasEventListeners(type))
+        dispatchEventWhenPossible(XMLHttpRequestProgressEvent::create(type, false, 0, 0));
 }
 
 void XMLHttpRequestProgressEventThrottle::flushProgressEvent()

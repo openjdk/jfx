@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,17 +24,11 @@
  */
 package com.sun.glass.ui.mac;
 
-import java.nio.ByteBuffer;
-
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuItem.Callback;
 import com.sun.glass.ui.Pixels;
-import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 

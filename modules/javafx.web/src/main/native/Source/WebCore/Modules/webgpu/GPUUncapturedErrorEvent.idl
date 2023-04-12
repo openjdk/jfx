@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,23 +22,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://gpuweb.github.io/gpuweb
 
+// https://gpuweb.github.io/gpuweb/#gpuuncapturederrorevent
+
+// https://bugs.webkit.org/show_bug.cgi?id=232548 This shouldn't need to be here.
 typedef (GPUOutOfMemoryError or GPUValidationError) GPUError;
 
 [
-    Conditional=WEBGPU,
-    EnabledAtRuntime=WebGPU
-] dictionary GPUUncapturedErrorEventInit : EventInit {
-    required GPUError error;
-};
-
-[
-    Conditional=WEBGPU,
-    EnabledAtRuntime=WebGPU,
-    Exposed=Window
-] interface GPUUncapturedErrorEvent : Event {
-    constructor(DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict);
-
+    EnabledBySetting=WebGPU,
+    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    SecureContext
+]
+interface GPUUncapturedErrorEvent : Event {
+    constructor(
+        DOMString type,
+        GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict
+    );
     readonly attribute GPUError error;
 };

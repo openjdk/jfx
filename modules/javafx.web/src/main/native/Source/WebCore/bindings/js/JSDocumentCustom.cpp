@@ -21,10 +21,12 @@
 #include "JSDocument.h"
 
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSDOMWindowCustom.h"
 #include "JSHTMLDocument.h"
 #include "JSXMLDocument.h"
 #include "NodeTraversal.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/HeapAnalyzer.h>
 
 namespace WebCore {
@@ -55,7 +57,7 @@ JSObject* cachedDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobal
     if (!window)
         return nullptr;
 
-    auto* documentGlobalObject = toJSDOMWindow(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
+    auto* documentGlobalObject = toJSDOMGlobalObject<JSDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
     if (!documentGlobalObject)
         return nullptr;
 
@@ -94,7 +96,7 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObjec
 template<typename Visitor>
 void JSDocument::visitAdditionalChildren(Visitor& visitor)
 {
-    visitor.addOpaqueRoot(static_cast<ScriptExecutionContext*>(&wrapped()));
+    addWebCoreOpaqueRoot(visitor, static_cast<ScriptExecutionContext&>(wrapped()));
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSDocument);

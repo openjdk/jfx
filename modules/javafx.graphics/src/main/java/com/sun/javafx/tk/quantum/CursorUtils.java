@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -161,8 +161,8 @@ final class CursorUtils {
                         "QuantumToolkit.createImageCursor: bad image format");
         }
 
-        float xscale = bestWidth / (float)iwidth;
-        float yscale = bestHeight / (float)iheight;
+        float xscale = bestWidth / iwidth;
+        float yscale = bestHeight / iheight;
 
         int scaledHotSpotX = (int) (hotspotX * xscale);
         int scaledHotSpotY = (int) (hotspotY * yscale);

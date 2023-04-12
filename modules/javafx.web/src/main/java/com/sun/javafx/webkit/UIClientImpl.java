@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,6 @@ import javafx.scene.web.PromptData;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebEvent;
 import javafx.scene.web.WebView;
-import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Window;
@@ -144,7 +143,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnVisibilityChanged() != null) {
             dispatchWebEvent(
                     w.getOnVisibilityChanged(),
-                    new WebEvent<Boolean>(w, VISIBILITY_CHANGED, visible));
+                    new WebEvent<>(w, VISIBILITY_CHANGED, visible));
         }
     }
 
@@ -175,7 +174,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnResized() != null) {
             dispatchWebEvent(
                     w.getOnResized(),
-                    new WebEvent<Rectangle2D>(w, RESIZED,
+                    new WebEvent<>(w, RESIZED,
                         new Rectangle2D(r.getX(), r.getY(), r.getWidth(), r.getHeight())));
         }
     }
@@ -185,7 +184,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnStatusChanged() != null) {
             dispatchWebEvent(
                     w.getOnStatusChanged(),
-                    new WebEvent<String>(w, STATUS_CHANGED, text));
+                    new WebEvent<>(w, STATUS_CHANGED, text));
         }
     }
 
@@ -194,7 +193,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnAlert() != null) {
             dispatchWebEvent(
                     w.getOnAlert(),
-                    new WebEvent<String>(w, ALERT, text));
+                    new WebEvent<>(w, ALERT, text));
         }
     }
 

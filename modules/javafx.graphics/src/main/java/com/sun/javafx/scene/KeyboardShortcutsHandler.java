@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
@@ -99,7 +100,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     private void traverse(Event event, Node node, Direction dir) {
-        if (NodeHelper.traverse(node, dir)) {
+        if (NodeHelper.traverse(node, dir, TraversalMethod.KEY)) {
             event.consume();
         }
     }
@@ -394,11 +395,11 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         ObservableList<Mnemonic> mnemonicsList = null;
         if (mnemonics != null) {
             for (Map.Entry<KeyCombination, ObservableList<Mnemonic>> mnemonic: mnemonics.entrySet()) {
-                mnemonicsList = (ObservableList) mnemonic.getValue();
+                mnemonicsList = mnemonic.getValue();
 
                 if (mnemonicsList != null) {
                     for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-                        Node currentNode = (Node)mnemonicsList.get(i).getNode();
+                        Node currentNode = mnemonicsList.get(i).getNode();
                         NodeHelper.setShowMnemonics(currentNode, mnemonicsDisplayEnabled);
                     }
                 }
@@ -458,10 +459,10 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
         @Override
         public Set<Entry<K, V>> entrySet() {
-            return new AbstractSet<Entry<K, V>>() {
+            return new AbstractSet<>() {
                 @Override
                 public Iterator<Entry<K, V>> iterator() {
-                    return new Iterator<Entry<K, V>>() {
+                    return new Iterator<>() {
 
                         private Iterator<Entry<K, V>> backingIt = backingMap.entrySet().iterator();
                         private Map<K, V> backingMapAtCreation = backingMap;

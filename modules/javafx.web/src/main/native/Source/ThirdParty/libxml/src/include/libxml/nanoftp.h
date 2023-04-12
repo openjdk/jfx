@@ -1,7 +1,8 @@
 /*
  * Summary: minimal FTP implementation
  * Description: minimal FTP implementation allowing to fetch resources
- *              like external subset.
+ *              like external subset. This module is DEPRECATED, do not
+ *              use any of its functions.
  *
  * Copy: See Copyright for the status of this software.
  *
@@ -16,7 +17,7 @@
 #ifdef LIBXML_FTP_ENABLED
 
 /* Needed for portability to Windows 64 bits */
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#if defined(_WIN32)
 #include <winsock2.h>
 #else
 /**
@@ -58,11 +59,11 @@ extern "C" {
  * Note that only one of year and day:minute are specified.
  */
 typedef void (*ftpListCallback) (void *userData,
-                             const char *filename, const char *attrib,
-                             const char *owner, const char *group,
-                 unsigned long size, int links, int year,
-                 const char *month, int day, int hour,
-                 int minute);
+                                 const char *filename, const char *attrib,
+                                 const char *owner, const char *group,
+                                 unsigned long size, int links, int year,
+                                 const char *month, int day, int hour,
+                                 int minute);
 /**
  * ftpDataCallback:
  * @userData: the user provided context
@@ -72,89 +73,111 @@ typedef void (*ftpListCallback) (void *userData,
  * A callback for the xmlNanoFTPGet command.
  */
 typedef void (*ftpDataCallback) (void *userData,
-                 const char *data,
-                 int len);
+                                 const char *data,
+                                 int len);
 
 /*
  * Init
  */
+XML_DEPRECATED
 XMLPUBFUN void XMLCALL
-    xmlNanoFTPInit      (void);
+        xmlNanoFTPInit          (void);
+XML_DEPRECATED
 XMLPUBFUN void XMLCALL
-    xmlNanoFTPCleanup   (void);
+        xmlNanoFTPCleanup       (void);
 
 /*
  * Creating/freeing contexts.
  */
+XML_DEPRECATED
 XMLPUBFUN void * XMLCALL
-    xmlNanoFTPNewCtxt   (const char *URL);
+        xmlNanoFTPNewCtxt       (const char *URL);
+XML_DEPRECATED
 XMLPUBFUN void XMLCALL
-    xmlNanoFTPFreeCtxt  (void * ctx);
+        xmlNanoFTPFreeCtxt      (void * ctx);
+XML_DEPRECATED
 XMLPUBFUN void * XMLCALL
-    xmlNanoFTPConnectTo (const char *server,
-                 int port);
+        xmlNanoFTPConnectTo     (const char *server,
+                                 int port);
 /*
  * Opening/closing session connections.
  */
+XML_DEPRECATED
 XMLPUBFUN void * XMLCALL
-    xmlNanoFTPOpen      (const char *URL);
+        xmlNanoFTPOpen          (const char *URL);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPConnect   (void *ctx);
+        xmlNanoFTPConnect       (void *ctx);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPClose     (void *ctx);
+        xmlNanoFTPClose         (void *ctx);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPQuit      (void *ctx);
+        xmlNanoFTPQuit          (void *ctx);
+XML_DEPRECATED
 XMLPUBFUN void XMLCALL
-    xmlNanoFTPScanProxy (const char *URL);
+        xmlNanoFTPScanProxy     (const char *URL);
+XML_DEPRECATED
 XMLPUBFUN void XMLCALL
-    xmlNanoFTPProxy     (const char *host,
-                 int port,
-                 const char *user,
-                 const char *passwd,
-                 int type);
+        xmlNanoFTPProxy         (const char *host,
+                                 int port,
+                                 const char *user,
+                                 const char *passwd,
+                                 int type);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPUpdateURL (void *ctx,
-                 const char *URL);
+        xmlNanoFTPUpdateURL     (void *ctx,
+                                 const char *URL);
 
 /*
  * Rather internal commands.
  */
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPGetResponse   (void *ctx);
+        xmlNanoFTPGetResponse   (void *ctx);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPCheckResponse (void *ctx);
+        xmlNanoFTPCheckResponse (void *ctx);
 
 /*
  * CD/DIR/GET handlers.
  */
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPCwd       (void *ctx,
-                 const char *directory);
+        xmlNanoFTPCwd           (void *ctx,
+                                 const char *directory);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPDele      (void *ctx,
-                 const char *file);
+        xmlNanoFTPDele          (void *ctx,
+                                 const char *file);
 
+XML_DEPRECATED
 XMLPUBFUN SOCKET XMLCALL
-    xmlNanoFTPGetConnection (void *ctx);
+        xmlNanoFTPGetConnection (void *ctx);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPCloseConnection(void *ctx);
+        xmlNanoFTPCloseConnection(void *ctx);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPList      (void *ctx,
-                 ftpListCallback callback,
-                 void *userData,
-                 const char *filename);
+        xmlNanoFTPList          (void *ctx,
+                                 ftpListCallback callback,
+                                 void *userData,
+                                 const char *filename);
+XML_DEPRECATED
 XMLPUBFUN SOCKET XMLCALL
-    xmlNanoFTPGetSocket (void *ctx,
-                 const char *filename);
+        xmlNanoFTPGetSocket     (void *ctx,
+                                 const char *filename);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPGet       (void *ctx,
-                 ftpDataCallback callback,
-                 void *userData,
-                 const char *filename);
+        xmlNanoFTPGet           (void *ctx,
+                                 ftpDataCallback callback,
+                                 void *userData,
+                                 const char *filename);
+XML_DEPRECATED
 XMLPUBFUN int XMLCALL
-    xmlNanoFTPRead      (void *ctx,
-                 void *dest,
-                 int len);
+        xmlNanoFTPRead          (void *ctx,
+                                 void *dest,
+                                 int len);
 
 #ifdef __cplusplus
 }

@@ -39,14 +39,16 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(InbandWebVTTTextTrack);
 
-inline InbandWebVTTTextTrack::InbandWebVTTTextTrack(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
-    : InbandTextTrack(document, client, trackPrivate)
+inline InbandWebVTTTextTrack::InbandWebVTTTextTrack(Document& document, InbandTextTrackPrivate& trackPrivate)
+    : InbandTextTrack(document, trackPrivate)
 {
 }
 
-Ref<InbandTextTrack> InbandWebVTTTextTrack::create(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
+Ref<InbandTextTrack> InbandWebVTTTextTrack::create(Document& document, InbandTextTrackPrivate& trackPrivate)
 {
-    return adoptRef(*new InbandWebVTTTextTrack(document, client, trackPrivate));
+    auto textTrack = adoptRef(*new InbandWebVTTTextTrack(document, trackPrivate));
+    textTrack->suspendIfNeeded();
+    return textTrack;
 }
 
 InbandWebVTTTextTrack::~InbandWebVTTTextTrack() = default;
@@ -58,7 +60,7 @@ WebVTTParser& InbandWebVTTTextTrack::parser()
     return *m_webVTTParser;
 }
 
-void InbandWebVTTTextTrack::parseWebVTTCueData(const char* data, unsigned length)
+void InbandWebVTTTextTrack::parseWebVTTCueData(const uint8_t* data, unsigned length)
 {
     parser().parseBytes(data, length);
 }
@@ -72,12 +74,20 @@ void InbandWebVTTTextTrack::newCuesParsed()
 {
     for (auto& cueData : parser().takeCues()) {
         auto cue = VTTCue::create(document(), cueData);
-        if (hasCue(cue, TextTrackCue::IgnoreDuration)) {
-            INFO_LOG(LOGIDENTIFIER, "ignoring already added cue: ", cue.get());
-            return;
+        auto existingCue = matchCue(cue, TextTrackCue::IgnoreDuration);
+        if (!existingCue) {
+            INFO_LOG(LOGIDENTIFIER, cue.get());
+            addCue(WTFMove(cue));
+            continue;
         }
-        INFO_LOG(LOGIDENTIFIER, cue.get());
-        addCue(WTFMove(cue));
+
+        if (existingCue->endTime() >= cue->endTime()) {
+            INFO_LOG(LOGIDENTIFIER, "ignoring already added cue: ", cue.get());
+            continue;
+        }
+
+        ALWAYS_LOG(LOGIDENTIFIER, "extending endTime of existing cue: ", *existingCue, " to ", cue->endTime());
+        existingCue->setEndTime(cue->endTime());
     }
 }
 

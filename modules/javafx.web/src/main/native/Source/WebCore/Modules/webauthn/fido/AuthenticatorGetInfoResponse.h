@@ -32,6 +32,7 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AuthenticatorSupportedOptions.h"
+#include "AuthenticatorTransport.h"
 #include "FidoConstants.h"
 #include <wtf/StdSet.h>
 
@@ -52,21 +53,24 @@ public:
     AuthenticatorGetInfoResponse& setPinProtocols(Vector<uint8_t>&&);
     AuthenticatorGetInfoResponse& setExtensions(Vector<String>&&);
     AuthenticatorGetInfoResponse& setOptions(AuthenticatorSupportedOptions&&);
+    AuthenticatorGetInfoResponse& setTransports(Vector<WebCore::AuthenticatorTransport>&&);
 
     const StdSet<ProtocolVersion>& versions() const { return m_versions; }
     const Vector<uint8_t>& aaguid() const { return m_aaguid; }
-    const Optional<uint32_t>& maxMsgSize() const { return m_maxMsgSize; }
-    const Optional<Vector<uint8_t>>& pinProtocol() const { return m_pinProtocols; }
-    const Optional<Vector<String>>& extensions() const { return m_extensions; }
+    const std::optional<uint32_t>& maxMsgSize() const { return m_maxMsgSize; }
+    const std::optional<Vector<uint8_t>>& pinProtocol() const { return m_pinProtocols; }
+    const std::optional<Vector<String>>& extensions() const { return m_extensions; }
     const AuthenticatorSupportedOptions& options() const { return m_options; }
+    const std::optional<Vector<WebCore::AuthenticatorTransport>>& transports() const { return m_transports; }
 
 private:
     StdSet<ProtocolVersion> m_versions;
     Vector<uint8_t> m_aaguid;
-    Optional<uint32_t> m_maxMsgSize;
-    Optional<Vector<uint8_t>> m_pinProtocols;
-    Optional<Vector<String>> m_extensions;
+    std::optional<uint32_t> m_maxMsgSize;
+    std::optional<Vector<uint8_t>> m_pinProtocols;
+    std::optional<Vector<String>> m_extensions;
     AuthenticatorSupportedOptions m_options;
+    std::optional<Vector<WebCore::AuthenticatorTransport>> m_transports;
 };
 
 WEBCORE_EXPORT Vector<uint8_t> encodeAsCBOR(const AuthenticatorGetInfoResponse&);

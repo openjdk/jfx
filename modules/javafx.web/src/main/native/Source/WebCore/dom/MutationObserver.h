@@ -36,7 +36,13 @@
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/IsoMalloc.h>
+#include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakHashSet.h>
+
+namespace JSC {
+class AbstractSlotVisitor;
+}
 
 namespace WebCore {
 
@@ -48,42 +54,39 @@ class MutationRecord;
 class Node;
 class WindowEventLoop;
 
-using MutationObserverOptions = unsigned char;
-using MutationRecordDeliveryOptions = unsigned char;
+enum class MutationObserverOptionType : uint8_t {
+    // MutationType
+    ChildList = 1 << 0,
+    Attributes = 1 << 1,
+    CharacterData = 1 << 2,
+
+    // ObservationFlags
+    Subtree = 1 << 3,
+    AttributeFilter = 1 << 4,
+
+    // DeliveryFlags
+    AttributeOldValue = 1 << 5,
+    CharacterDataOldValue = 1 << 6,
+};
+
+using MutationObserverOptions = OptionSet<MutationObserverOptionType>;
+using MutationRecordDeliveryOptions = OptionSet<MutationObserverOptionType>;
 
 class MutationObserver final : public RefCounted<MutationObserver> {
     WTF_MAKE_ISO_ALLOCATED(MutationObserver);
 public:
-    enum MutationType {
-        ChildList = 1 << 0,
-        Attributes = 1 << 1,
-        CharacterData = 1 << 2,
-
-        AllMutationTypes = ChildList | Attributes | CharacterData
-    };
-
-    enum ObservationFlags  {
-        Subtree = 1 << 3,
-        AttributeFilter = 1 << 4
-    };
-
-    enum DeliveryFlags {
-        AttributeOldValue = 1 << 5,
-        CharacterDataOldValue = 1 << 6,
-    };
-
     static Ref<MutationObserver> create(Ref<MutationCallback>&&);
 
     ~MutationObserver();
 
     struct Init {
         bool childList;
-        Optional<bool> attributes;
-        Optional<bool> characterData;
+        std::optional<bool> attributes;
+        std::optional<bool> characterData;
         bool subtree;
-        Optional<bool> attributeOldValue;
-        Optional<bool> characterDataOldValue;
-        Optional<Vector<String>> attributeFilter;
+        std::optional<bool> attributeOldValue;
+        std::optional<bool> characterDataOldValue;
+        std::optional<Vector<AtomString>> attributeFilter;
     };
 
     ExceptionOr<void> observe(Node&, const Init&);
@@ -101,13 +104,18 @@ public:
     void setHasTransientRegistration(Document&);
     bool canDeliver();
 
-    HashSet<Node*> observedNodes() const;
+    bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
     MutationCallback& callback() const { return m_callback.get(); }
 
     static void enqueueSlotChangeEvent(HTMLSlotElement&);
 
     static void notifyMutationObservers(WindowEventLoop&);
+
+    using OptionType = MutationObserverOptionType;
+
+    static constexpr MutationObserverOptions AllMutationTypes { OptionType::ChildList, OptionType::Attributes, OptionType::CharacterData };
+    static constexpr MutationObserverOptions AllDeliveryFlags { OptionType::AttributeOldValue, OptionType::CharacterDataOldValue };
 
 private:
     explicit MutationObserver(Ref<MutationCallback>&&);
@@ -118,7 +126,7 @@ private:
     Ref<MutationCallback> m_callback;
     Vector<Ref<MutationRecord>> m_records;
     HashSet<GCReachableRef<Node>> m_pendingTargets;
-    HashSet<MutationObserverRegistration*> m_registrations;
+    WeakHashSet<MutationObserverRegistration> m_registrations;
     unsigned m_priority;
 };
 

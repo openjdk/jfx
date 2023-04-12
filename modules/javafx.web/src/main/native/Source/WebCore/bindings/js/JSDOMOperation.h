@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "JSDOMCastedThisErrorBehavior.h"
+#include "JSDOMCastThisValue.h"
 #include "JSDOMExceptionHandling.h"
 
 namespace WebCore {
@@ -35,7 +35,15 @@ public:
     using Operation = JSC::EncodedJSValue(JSC::JSGlobalObject*, JSC::CallFrame*, ClassParameter);
     using StaticOperation = JSC::EncodedJSValue(JSC::JSGlobalObject*, JSC::CallFrame*);
 
-    static JSClass* cast(JSC::JSGlobalObject&, JSC::CallFrame&);
+    // FIXME: Remove this after FunctionCallResolveNode is fixed not to pass resolved scope as |this| value.
+    // https://bugs.webkit.org/show_bug.cgi?id=225397
+    static JSClass* cast(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame)
+    {
+        if constexpr (std::is_base_of_v<JSDOMGlobalObject, JSClass>)
+            return castThisValue<JSClass>(lexicalGlobalObject, callFrame.thisValue().toThis(&lexicalGlobalObject, JSC::ECMAMode::strict()));
+        else
+            return castThisValue<JSClass>(lexicalGlobalObject, callFrame.thisValue());
+    }
 
     template<Operation operation, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
     static JSC::EncodedJSValue call(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, const char* operationName)
@@ -43,10 +51,12 @@ public:
         auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
 
         auto* thisObject = cast(lexicalGlobalObject, callFrame);
-        if (shouldThrow != CastedThisErrorBehavior::Assert && UNLIKELY(!thisObject))
-            return throwThisTypeError(lexicalGlobalObject, throwScope, JSClass::info()->className, operationName);
+        if constexpr (shouldThrow != CastedThisErrorBehavior::Assert) {
+            if (UNLIKELY(!thisObject))
+                return throwThisTypeError(lexicalGlobalObject, throwScope, JSClass::info()->className, operationName);
+        } else
+            ASSERT(thisObject);
 
-        ASSERT(thisObject);
         ASSERT_GC_OBJECT_INHERITS(thisObject, JSClass::info());
 
         // FIXME: We should refactor the binding generated code to use references for lexicalGlobalObject and thisObject.

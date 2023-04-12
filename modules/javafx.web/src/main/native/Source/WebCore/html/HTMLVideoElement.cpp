@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
+#include "ElementInlines.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "HTMLImageLoader.h"
@@ -40,6 +41,7 @@
 #include "ImageBuffer.h"
 #include "Logging.h"
 #include "Page.h"
+#include "Performance.h"
 #include "PictureInPictureSupport.h"
 #include "RenderImage.h"
 #include "RenderVideo.h"
@@ -68,7 +70,7 @@ inline HTMLVideoElement::HTMLVideoElement(const QualifiedName& tagName, Document
 {
     ASSERT(hasTagName(videoTag));
     setHasCustomStyleResolveCallbacks();
-    m_defaultPosterURL = document.settings().defaultVideoPosterURL();
+    m_defaultPosterURL = AtomString { document.settings().defaultVideoPosterURL() };
 }
 
 Ref<HTMLVideoElement> HTMLVideoElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -79,7 +81,6 @@ Ref<HTMLVideoElement> HTMLVideoElement::create(const QualifiedName& tagName, Doc
     HTMLVideoElementPictureInPicture::providePictureInPictureTo(videoElement);
 #endif
 
-    videoElement->finishInitialization();
     videoElement->suspendIfNeeded();
     return videoElement;
 }
@@ -112,21 +113,23 @@ void HTMLVideoElement::didAttachRenderers()
     }
 }
 
-void HTMLVideoElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLVideoElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
-    if (name == widthAttr)
+    if (name == widthAttr) {
         addHTMLLengthToStyle(style, CSSPropertyWidth, value);
-    else if (name == heightAttr)
+        applyAspectRatioFromWidthAndHeightAttributesToStyle(value, attributeWithoutSynchronization(heightAttr), style);
+    } else if (name == heightAttr) {
         addHTMLLengthToStyle(style, CSSPropertyHeight, value);
-    else
-        HTMLMediaElement::collectStyleForPresentationAttribute(name, value, style);
+        applyAspectRatioFromWidthAndHeightAttributesToStyle(attributeWithoutSynchronization(widthAttr), value, style);
+    } else
+        HTMLMediaElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
-bool HTMLVideoElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLVideoElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == widthAttr || name == heightAttr)
         return true;
-    return HTMLMediaElement::isPresentationAttribute(name);
+    return HTMLMediaElement::hasPresentationalHintsForAttribute(name);
 }
 
 void HTMLVideoElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -143,17 +146,13 @@ void HTMLVideoElement::parseAttribute(const QualifiedName& name, const AtomStrin
             }
         }
     }
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    else if (name == webkitwirelessvideoplaybackdisabledAttr)
-        mediaSession().setWirelessVideoPlaybackDisabled(true);
-#endif
     else {
         HTMLMediaElement::parseAttribute(name, value);
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(WIRELESS_PLAYBACK_TARGET)
         if (name == webkitairplayAttr) {
             bool disabled = false;
-            if (equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::webkitairplayAttr), "deny"))
+            if (equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::webkitairplayAttr), "deny"_s))
                 disabled = true;
             mediaSession().setWirelessVideoPlaybackDisabled(disabled);
         }
@@ -202,7 +201,6 @@ bool HTMLVideoElement::supportsFullscreen(HTMLMediaElementEnums::VideoFullscreen
     return page->chrome().client().supportsVideoFullscreen(videoFullscreenMode);
 #endif // PLATFORM(IOS_FAMILY)
 }
-
 
 #if ENABLE(FULLSCREEN_API) && PLATFORM(IOS_FAMILY)
 void HTMLVideoElement::webkitRequestFullscreen()
@@ -269,7 +267,7 @@ bool HTMLVideoElement::shouldDisplayPosterImage() const
 
 void HTMLVideoElement::mediaPlayerFirstVideoFrameAvailable()
 {
-    INFO_LOG(LOGIDENTIFIER, "m_showPoster = ", showPosterFlag());
+    ALWAYS_LOG(LOGIDENTIFIER, "m_showPoster = ", showPosterFlag());
 
     if (showPosterFlag())
         return;
@@ -283,11 +281,24 @@ void HTMLVideoElement::mediaPlayerFirstVideoFrameAvailable()
         renderer->updateFromElement();
 }
 
-RefPtr<ImageBuffer> HTMLVideoElement::createBufferForPainting(const FloatSize& size, RenderingMode renderingMode) const
+std::optional<DestinationColorSpace> HTMLVideoElement::colorSpace() const
+{
+    RefPtr<MediaPlayer> player = HTMLMediaElement::player();
+    if (!player)
+        return std::nullopt;
+
+    return player->colorSpace();
+}
+
+RefPtr<ImageBuffer> HTMLVideoElement::createBufferForPainting(const FloatSize& size, RenderingMode renderingMode, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat) const
 {
     auto* hostWindow = document().view() && document().view()->root() ? document().view()->root()->hostWindow() : nullptr;
-    auto shouldUseDisplayList = document().settings().displayListDrawingEnabled() ? ShouldUseDisplayList::Yes : ShouldUseDisplayList::No;
-    return ImageBuffer::create(size, renderingMode, shouldUseDisplayList, RenderingPurpose::MediaPainting, 1, DestinationColorSpace::SRGB, PixelFormat::BGRA8, hostWindow);
+
+    auto bufferOptions = bufferOptionsForRendingMode(renderingMode);
+    if (document().settings().displayListDrawingEnabled())
+        bufferOptions.add(ImageBufferOptions::UseDisplayList);
+
+    return ImageBuffer::create(size, RenderingPurpose::MediaPainting, 1, colorSpace, pixelFormat, bufferOptions, { hostWindow });
 }
 
 void HTMLVideoElement::paintCurrentFrameInContext(GraphicsContext& context, const FloatRect& destRect)
@@ -296,7 +307,10 @@ void HTMLVideoElement::paintCurrentFrameInContext(GraphicsContext& context, cons
     if (!player)
         return;
 
-    player->setVisibleForCanvas(true); // Make player visible or it won't draw.
+    if (!player->isVisibleForCanvas()) {
+        player->setVisibleForCanvas(true); // Make player visible or it won't draw.
+        visibilityStateChanged();
+    }
     context.paintFrameForMedia(*player, destRect);
 }
 
@@ -306,6 +320,14 @@ bool HTMLVideoElement::hasAvailableVideoFrame() const
         return false;
 
     return player()->hasVideo() && player()->hasAvailableVideoFrame();
+}
+
+bool HTMLVideoElement::shouldGetNativeImageForCanvasDrawing() const
+{
+    if (!player())
+        return false;
+
+    return player()->shouldGetNativeImageForCanvasDrawing();
 }
 
 RefPtr<NativeImage> HTMLVideoElement::nativeImageForCurrentTime()
@@ -345,9 +367,6 @@ bool HTMLVideoElement::webkitSupportsFullscreen()
 
 bool HTMLVideoElement::webkitDisplayingFullscreen()
 {
-    if (document().quirks().needsAkamaiMediaPlayerQuirk(*this))
-        return isFullscreen() || isChangingVideoFullscreenMode();
-
     return isFullscreen();
 }
 
@@ -575,6 +594,87 @@ void HTMLVideoElement::exitToFullscreenModeWithoutAnimationIfPossible(HTMLMediaE
         document().page()->chrome().client().exitVideoFullscreenToModeWithoutAnimation(*this, toMode);
 }
 #endif
+
+unsigned HTMLVideoElement::requestVideoFrameCallback(Ref<VideoFrameRequestCallback>&& callback)
+{
+    if (m_videoFrameRequests.isEmpty() && player())
+        player()->startVideoFrameMetadataGathering();
+
+    auto identifier = ++m_nextVideoFrameRequestIndex;
+    m_videoFrameRequests.append(makeUniqueRef<VideoFrameRequest>(identifier, WTFMove(callback)));
+
+    if (auto* page = document().page())
+        page->scheduleRenderingUpdate(RenderingUpdateStep::VideoFrameCallbacks);
+
+    return identifier;
+}
+
+void HTMLVideoElement::cancelVideoFrameCallback(unsigned identifier)
+{
+    // Search first the requests currently being serviced, and mark them as cancelled if found.
+    auto index = m_servicedVideoFrameRequests.findIf([identifier](auto& request) { return request->identifier == identifier; });
+    if (index != notFound) {
+        m_servicedVideoFrameRequests[index]->cancelled = true;
+        return;
+    }
+
+    index = m_videoFrameRequests.findIf([identifier](auto& request) { return request->identifier == identifier; });
+    if (index == notFound)
+        return;
+    m_videoFrameRequests.remove(index);
+
+    if (m_videoFrameRequests.isEmpty() && player())
+        player()->stopVideoFrameMetadataGathering();
+}
+
+static void processVideoFrameMetadataTimestamps(VideoFrameMetadata& metadata, Performance& performance)
+{
+    metadata.presentationTime = performance.relativeTimeFromTimeOriginInReducedResolution(MonotonicTime::fromRawSeconds(metadata.presentationTime));
+    metadata.expectedDisplayTime = performance.relativeTimeFromTimeOriginInReducedResolution(MonotonicTime::fromRawSeconds(metadata.expectedDisplayTime));
+    if (metadata.captureTime)
+        metadata.captureTime = performance.relativeTimeFromTimeOriginInReducedResolution(MonotonicTime::fromRawSeconds(*metadata.captureTime));
+    if (metadata.receiveTime)
+        metadata.receiveTime = performance.relativeTimeFromTimeOriginInReducedResolution(MonotonicTime::fromRawSeconds(*metadata.receiveTime));
+}
+
+void HTMLVideoElement::serviceRequestVideoFrameCallbacks(ReducedResolutionSeconds now)
+{
+    if (!player())
+        return;
+
+    // If the requestVideoFrameCallback is called before the readyState >= HaveCurrentData,
+    // calls to createImageBitmap() with this element will result in a failed promise. Delay
+    // notifying the callback until we reach the HaveCurrentData state.
+    if (readyState() < HAVE_CURRENT_DATA)
+        return;
+
+    auto videoFrameMetadata = player()->videoFrameMetadata();
+    if (!videoFrameMetadata || !document().domWindow())
+        return;
+
+    processVideoFrameMetadataTimestamps(*videoFrameMetadata, document().domWindow()->performance());
+
+    Ref protectedThis { *this };
+
+    m_videoFrameRequests.swap(m_servicedVideoFrameRequests);
+    for (auto& request : m_servicedVideoFrameRequests) {
+        if (!request->cancelled) {
+            request->callback->handleEvent(std::round(now.milliseconds()), *videoFrameMetadata);
+            request->cancelled = true;
+        }
+    }
+    m_servicedVideoFrameRequests.clear();
+
+    if (m_videoFrameRequests.isEmpty() && player())
+        player()->stopVideoFrameMetadataGathering();
+}
+
+void HTMLVideoElement::mediaPlayerEngineUpdated()
+{
+    HTMLMediaElement::mediaPlayerEngineUpdated();
+    if (!m_videoFrameRequests.isEmpty() && player())
+        player()->startVideoFrameMetadataGathering();
+}
 
 }
 

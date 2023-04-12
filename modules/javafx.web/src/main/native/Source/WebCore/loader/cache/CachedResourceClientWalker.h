@@ -24,9 +24,11 @@
 
 #pragma once
 
+#include "CachedResource.h"
 #include "CachedResourceClient.h"
+#include "CachedResourceHandle.h"
+#include <wtf/FixedVector.h>
 #include <wtf/HashCountedSet.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -35,12 +37,12 @@ namespace WebCore {
 template<typename T>
 class CachedResourceClientWalker {
 public:
-    CachedResourceClientWalker(const HashCountedSet<CachedResourceClient*>& clientSet)
-        : m_clientSet(clientSet)
-        , m_clientVector(clientSet.size())
+    CachedResourceClientWalker(const CachedResource& resource)
+        : m_resource(const_cast<CachedResource*>(&resource))
+        , m_clientVector(resource.m_clients.computeSize())
     {
         size_t clientIndex = 0;
-        for (const auto& client : clientSet)
+        for (auto client : resource.m_clients)
             m_clientVector[clientIndex++] = client.key;
     }
 
@@ -48,17 +50,18 @@ public:
     {
         size_t size = m_clientVector.size();
         while (m_index < size) {
-            CachedResourceClient* next = m_clientVector[m_index++];
-            if (m_clientSet.contains(next)) {
+            auto& next = m_clientVector[m_index++];
+            if (next && m_resource->m_clients.contains(*next)) {
                 RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(T::expectedType() == CachedResourceClient::expectedType() || next->resourceClientType() == T::expectedType());
-                return static_cast<T*>(next);
+                return static_cast<T*>(next.get());
             }
         }
         return nullptr;
     }
+
 private:
-    const HashCountedSet<CachedResourceClient*>& m_clientSet;
-    Vector<CachedResourceClient*> m_clientVector;
+    CachedResourceHandle<CachedResource> m_resource;
+    FixedVector<WeakPtr<CachedResourceClient>> m_clientVector;
     size_t m_index { 0 };
 };
 

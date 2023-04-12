@@ -34,9 +34,9 @@ class Text : public CharacterData {
 public:
     static const unsigned defaultLengthLimit = 1 << 16;
 
-    static Ref<Text> create(Document&, const String&);
+    static Ref<Text> create(Document&, String&&);
     static Ref<Text> createWithLengthLimit(Document&, const String&, unsigned positionInString, unsigned lengthLimit = defaultLengthLimit);
-    static Ref<Text> createEditingText(Document&, const String&);
+    static Ref<Text> createEditingText(Document&, String&&);
 
     virtual ~Text();
 
@@ -55,11 +55,12 @@ public:
 
     void updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData);
 
+    String description() const final;
     String debugDescription() const final;
 
 protected:
-    Text(Document& document, const String& data, ConstructionType type)
-        : CharacterData(document, data, type)
+    Text(Document& document, String&& data, ConstructionType type)
+        : CharacterData(document, WTFMove(data), type)
     {
     }
 
@@ -70,7 +71,7 @@ private:
     bool childTypeAllowed(NodeType) const override;
     void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges) final;
 
-    virtual Ref<Text> virtualCreate(const String&);
+    virtual Ref<Text> virtualCreate(String&&);
 };
 
 } // namespace WebCore

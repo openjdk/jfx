@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBKeyRange.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
 #include "IDBKey.h"
 #include "IDBKeyData.h"
@@ -139,7 +137,7 @@ ExceptionOr<bool> IDBKeyRange::includes(JSC::JSGlobalObject& state, JSC::JSValue
     auto key = scriptValueToIDBKey(state, keyValue);
     EXCEPTION_ASSERT_UNUSED(scope, !scope.exception() || !key->isValid());
     if (!key->isValid())
-        return Exception { DataError, "Failed to execute 'includes' on 'IDBKeyRange': The passed-in value is not a valid IndexedDB key." };
+        return Exception { DataError, "Failed to execute 'includes' on 'IDBKeyRange': The passed-in value is not a valid IndexedDB key."_s };
 
     if (m_lower) {
         int compare = m_lower->compare(key.get());
@@ -163,5 +161,3 @@ ExceptionOr<bool> IDBKeyRange::includes(JSC::JSGlobalObject& state, JSC::JSValue
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

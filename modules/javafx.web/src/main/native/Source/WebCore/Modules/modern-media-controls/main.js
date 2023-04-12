@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-const SkipSeconds = 15;
 const MinimumSizeToShowAnyControl = 47;
 const MaximumSizeToShowSmallProminentControl = 88;
 
@@ -34,7 +33,10 @@ function createControls(shadowRoot, media, host)
 {
     if (host) {
         mediaControlsHost = host;
+
+        iconService.shadowRoot = shadowRoot;
         iconService.mediaControlsHost = host;
+
         shadowRoot.appendChild(document.createElement("style")).textContent = host.shadowRootCSSText;
     }
 

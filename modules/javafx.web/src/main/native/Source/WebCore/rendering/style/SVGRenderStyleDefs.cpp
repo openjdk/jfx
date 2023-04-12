@@ -45,7 +45,7 @@ StyleFillData::StyleFillData()
     , paintUri(SVGRenderStyle::initialFillPaintUri())
     , visitedLinkPaintUri(SVGRenderStyle::initialFillPaintUri())
     , paintType(SVGRenderStyle::initialFillPaintType())
-    , visitedLinkPaintType(SVGRenderStyle::initialStrokePaintType())
+    , visitedLinkPaintType(SVGRenderStyle::initialFillPaintType())
 {
 }
 
@@ -216,27 +216,6 @@ Ref<StyleShadowSVGData> StyleShadowSVGData::copy() const
 bool StyleShadowSVGData::operator==(const StyleShadowSVGData& other) const
 {
     return arePointingToEqualData(shadow, other.shadow);
-}
-
-StyleResourceData::StyleResourceData()
-    : masker(SVGRenderStyle::initialMaskerResource())
-{
-}
-
-inline StyleResourceData::StyleResourceData(const StyleResourceData& other)
-    : RefCounted<StyleResourceData>()
-    , masker(other.masker)
-{
-}
-
-Ref<StyleResourceData> StyleResourceData::copy() const
-{
-    return adoptRef(*new StyleResourceData(*this));
-}
-
-bool StyleResourceData::operator==(const StyleResourceData& other) const
-{
-    return masker == other.masker;
 }
 
 StyleInheritedResourceData::StyleInheritedResourceData()
@@ -502,12 +481,6 @@ TextStream& operator<<(TextStream& ts, const StyleShadowSVGData& data)
 {
     if (data.shadow)
         ts.dumpProperty("shadow", *data.shadow);
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, const StyleResourceData& data)
-{
-    ts.dumpProperty("masker", data.masker);
     return ts;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,7 +89,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     Graphics baseGraphics;
     private BaseTransform baseTransform;
 
-    private final List<ContextState> states = new ArrayList<ContextState>();
+    private final List<ContextState> states = new ArrayList<>();
 
     private ContextState state = new ContextState();
 
@@ -163,6 +163,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             : cachedGraphics;
     }
 
+    @Override
     public void saveState()
     {
         state.markAsRestorePoint();
@@ -243,6 +244,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public void restoreState()
     {
         log.fine("restoring state");
@@ -292,6 +294,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
 
+    @Override
     public void dispose() {
         if (!states.isEmpty()) {
             log.fine("Unbalanced saveState/restoreState");
@@ -310,6 +313,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
 
+    @Override
     public void setClip(WCPath path, boolean isOut) {
         Affine3D tr = new Affine3D(state.getTransformNoClone());
         path.transform(
@@ -449,15 +453,18 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public void setClip(int cx, int cy, int cw, int ch) {
         setClip(new Rectangle(cx, cy, cw, ch));
     }
 
+    @Override
     public void setClip(WCRectangle c) {
         setClip(new Rectangle((int)c.getX(), (int)c.getY(),
                               (int)c.getWidth(), (int)c.getHeight()));
     }
 
+    @Override
     public WCRectangle getClip() {
         Rectangle r = state.getClipNoClone();
         return r == null ? null : new WCRectangle(r.x, r.y, r.width, r.height);
@@ -471,6 +478,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         return state.getTransformNoClone();
     }
 
+    @Override
     public void translate(float x, float y) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("translate({0},{1})", new Object[] {x, y});
@@ -481,6 +489,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public void scale(float sx, float sy) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("scale(" + sx + " " + sy + ")");
@@ -491,6 +500,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public void rotate(float radians) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("rotate(" + radians + ")");
@@ -1053,6 +1063,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }.paint();
     }
 
+    @Override
     public void setAlpha(float alpha) {
         log.fine("setAlpha({0})", alpha);
 
@@ -1063,6 +1074,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public float getAlpha() {
         return state.getAlpha();
     }
@@ -1402,8 +1414,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             }
         }
 
-        private double getX() { return (double) bounds.x; }
-        private double getY() { return (double) bounds.y; }
+        private double getX() { return bounds.x; }
+        private double getY() { return bounds.y; }
     }
 
     private final class TransparencyLayer extends Layer {
@@ -1814,12 +1826,14 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    @Override
     public void setPerspectiveTransform(WCTransform tm) {
         final GeneralTransform3D at = new GeneralTransform3D().set(tm.getMatrix());
         state.setPerspectiveTransform(at);
         resetCachedGraphics();
     }
 
+    @Override
     public void setTransform(WCTransform tm) {
         final double m[] = tm.getMatrix();
         final Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));
@@ -1830,6 +1844,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         resetCachedGraphics();
     }
 
+    @Override
     public WCTransform getTransform() {
         Affine3D xf = state.getTransformNoClone();
         return new WCTransform(xf.getMxx(), xf.getMyx(),
@@ -1837,6 +1852,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                                xf.getMxt(), xf.getMyt());
     }
 
+    @Override
     public void concatTransform(WCTransform tm) {
         double m[] = tm.getMatrix();
         Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));

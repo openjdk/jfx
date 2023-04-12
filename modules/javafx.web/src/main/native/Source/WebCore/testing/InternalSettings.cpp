@@ -38,7 +38,6 @@
 #include "PageGroup.h"
 #include "PlatformMediaSessionManager.h"
 #include "RenderTheme.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Supplementable.h"
 #include <wtf/Language.h>
 
@@ -62,11 +61,8 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_forcedPrefersReducedMotionAccessibilityValue(settings.forcedPrefersReducedMotionAccessibilityValue())
     , m_fontLoadTimingOverride(settings.fontLoadTimingOverride())
     , m_frameFlattening(settings.frameFlattening())
-#if ENABLE(WEBGL2)
-    , m_webGL2Enabled(RuntimeEnabledFeatures::sharedFeatures().webGL2Enabled())
-#endif
-    , m_fetchAPIKeepAliveAPIEnabled(RuntimeEnabledFeatures::sharedFeatures().fetchAPIKeepAliveEnabled())
-    , m_customPasteboardDataEnabled(RuntimeEnabledFeatures::sharedFeatures().customPasteboardDataEnabled())
+    , m_fetchAPIKeepAliveAPIEnabled(DeprecatedGlobalSettings::fetchAPIKeepAliveEnabled())
+    , m_customPasteboardDataEnabled(DeprecatedGlobalSettings::customPasteboardDataEnabled())
     , m_originalMockScrollbarsEnabled(DeprecatedGlobalSettings::mockScrollbarsEnabled())
 #if USE(AUDIO_SESSION)
     , m_shouldManageAudioSessionCategory(DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
@@ -74,7 +70,6 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     , m_shouldDeactivateAudioSession(PlatformMediaSessionManager::shouldDeactivateAudioSession())
 #endif
-    , m_shouldMockBoldSystemFontForAccessibility(RenderTheme::singleton().shouldMockBoldSystemFontForAccessibility())
 {
 }
 
@@ -122,11 +117,8 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     settings.setFontLoadTimingOverride(m_fontLoadTimingOverride);
     settings.setFrameFlattening(m_frameFlattening);
 
-#if ENABLE(WEBGL2)
-    RuntimeEnabledFeatures::sharedFeatures().setWebGL2Enabled(m_webGL2Enabled);
-#endif
-    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIKeepAliveEnabled(m_fetchAPIKeepAliveAPIEnabled);
-    RuntimeEnabledFeatures::sharedFeatures().setCustomPasteboardDataEnabled(m_customPasteboardDataEnabled);
+    DeprecatedGlobalSettings::setFetchAPIKeepAliveEnabled(m_fetchAPIKeepAliveAPIEnabled);
+    DeprecatedGlobalSettings::setCustomPasteboardDataEnabled(m_customPasteboardDataEnabled);
 
 #if USE(AUDIO_SESSION)
     DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(m_shouldManageAudioSessionCategory);
@@ -136,11 +128,8 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     PlatformMediaSessionManager::setShouldDeactivateAudioSession(m_shouldDeactivateAudioSession);
 #endif
 
-    RenderTheme::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
-    FontCache::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
-
 #if ENABLE(WEB_AUDIO)
-    AudioContext::setDefaultSampleRateForTesting(WTF::nullopt);
+    AudioContext::setDefaultSampleRateForTesting(std::nullopt);
 #endif
 }
 
@@ -193,10 +182,12 @@ void InternalSettings::resetToConsistentState()
     m_page->setPageScaleFactor(1, { 0, 0 });
     m_page->mainFrame().setPageAndTextZoomFactors(1, 1);
     m_page->setCanStartMedia(true);
-    setUseDarkAppearanceInternal(false);
+    m_page->effectiveAppearanceDidChange(false, false);
 
     m_backup.restoreTo(settings());
     m_backup = Backup { settings() };
+
+    m_page->settings().resetToConsistentState();
 
     InternalSettingsGenerated::resetToConsistentState();
 }
@@ -427,35 +418,11 @@ void InternalSettings::setForcedSupportsHighDynamicRangeValue(InternalSettings::
     settings().setForcedSupportsHighDynamicRangeValue(value);
 }
 
-ExceptionOr<void> InternalSettings::setWebGL2Enabled(bool enabled)
-{
-    if (!m_page)
-        return Exception { InvalidAccessError };
-#if ENABLE(WEBGL2)
-    RuntimeEnabledFeatures::sharedFeatures().setWebGL2Enabled(enabled);
-#else
-    UNUSED_PARAM(enabled);
-#endif
-    return { };
-}
-
-ExceptionOr<void> InternalSettings::setWebGPUEnabled(bool enabled)
-{
-    if (!m_page)
-        return Exception { InvalidAccessError };
-#if ENABLE(WEBGPU)
-    RuntimeEnabledFeatures::sharedFeatures().setWebGPUEnabled(enabled);
-#else
-    UNUSED_PARAM(enabled);
-#endif
-    return { };
-}
-
 ExceptionOr<void> InternalSettings::setFetchAPIKeepAliveEnabled(bool enabled)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIKeepAliveEnabled(enabled);
+    DeprecatedGlobalSettings::setFetchAPIKeepAliveEnabled(enabled);
     return { };
 }
 
@@ -468,11 +435,20 @@ bool InternalSettings::vp9DecoderEnabled() const
 #endif
 }
 
+bool InternalSettings::mediaSourceInlinePaintingEnabled() const
+{
+#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
+    return DeprecatedGlobalSettings::mediaSourceInlinePaintingEnabled();
+#else
+    return false;
+#endif
+}
+
 ExceptionOr<void> InternalSettings::setCustomPasteboardDataEnabled(bool enabled)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    RuntimeEnabledFeatures::sharedFeatures().setCustomPasteboardDataEnabled(enabled);
+    DeprecatedGlobalSettings::setCustomPasteboardDataEnabled(enabled);
     return { };
 }
 
@@ -492,7 +468,7 @@ ExceptionOr<void> InternalSettings::setShouldDisplayTrackKind(TrackKind kind, bo
     if (!m_page)
         return Exception { InvalidAccessError };
 #if ENABLE(VIDEO)
-    auto& captionPreferences = m_page->group().captionPreferences();
+    auto& captionPreferences = m_page->group().ensureCaptionPreferences();
     switch (kind) {
     case TrackKind::Subtitles:
         captionPreferences.setUserPrefersSubtitles(enabled);
@@ -516,7 +492,7 @@ ExceptionOr<bool> InternalSettings::shouldDisplayTrackKind(TrackKind kind)
     if (!m_page)
         return Exception { InvalidAccessError };
 #if ENABLE(VIDEO)
-    auto& captionPreferences = m_page->group().captionPreferences();
+    auto& captionPreferences = m_page->group().ensureCaptionPreferences();
     switch (kind) {
     case TrackKind::Subtitles:
         return captionPreferences.userPrefersSubtitles();
@@ -551,17 +527,19 @@ ExceptionOr<void> InternalSettings::setCanStartMedia(bool enabled)
     return { };
 }
 
-void InternalSettings::setUseDarkAppearanceInternal(bool useDarkAppearance)
-{
-    ASSERT(m_page);
-    m_page->effectiveAppearanceDidChange(useDarkAppearance, m_page->useElevatedUserInterfaceLevel());
-}
-
 ExceptionOr<void> InternalSettings::setUseDarkAppearance(bool useDarkAppearance)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    setUseDarkAppearanceInternal(useDarkAppearance);
+    m_page->effectiveAppearanceDidChange(useDarkAppearance, m_page->useElevatedUserInterfaceLevel());
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setUseElevatedUserInterfaceLevel(bool useElevatedUserInterfaceLevel)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    m_page->effectiveAppearanceDidChange(m_page->useDarkAppearance(), useElevatedUserInterfaceLevel);
     return { };
 }
 
@@ -584,12 +562,16 @@ ExceptionOr<void>  InternalSettings::setShouldDeactivateAudioSession(bool should
     return { };
 }
 
-ExceptionOr<void> InternalSettings::setShouldMockBoldSystemFontForAccessibility(bool requires)
+ExceptionOr<void> InternalSettings::setShouldMockBoldSystemFontForAccessibility(bool should)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    RenderTheme::singleton().setShouldMockBoldSystemFontForAccessibility(requires);
-    FontCache::singleton().setShouldMockBoldSystemFontForAccessibility(requires);
+    FontCache::invalidateAllFontCaches();
+#if PLATFORM(COCOA)
+    setOverrideEnhanceTextLegibility(should);
+#else
+    UNUSED_PARAM(should);
+#endif
     return { };
 }
 
@@ -604,6 +586,48 @@ ExceptionOr<void> InternalSettings::setDefaultAudioContextSampleRate(float sampl
 #endif
     return { };
 }
+
+ExceptionOr<void> InternalSettings::setAllowedMediaContainerTypes(const String& types)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    m_page->settings().setAllowedMediaContainerTypes(types);
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setAllowedMediaCodecTypes(const String& types)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    m_page->settings().setAllowedMediaCodecTypes(types);
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setAllowedMediaVideoCodecIDs(const String& types)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    m_page->settings().setAllowedMediaVideoCodecIDs(types);
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setAllowedMediaAudioCodecIDs(const String& types)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    m_page->settings().setAllowedMediaAudioCodecIDs(types);
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setAllowedMediaCaptionFormatTypes(const String& types)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    m_page->settings().setAllowedMediaCaptionFormatTypes(types);
+    return { };
+}
+
+
 
 // If you add to this class, make sure you are not duplicating functionality in the generated
 // base class InternalSettingsGenerated and that you update the Backup class for test reproducability.

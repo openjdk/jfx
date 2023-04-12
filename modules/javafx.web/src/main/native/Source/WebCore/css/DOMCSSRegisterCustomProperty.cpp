@@ -36,6 +36,7 @@
 #include "StyleBuilder.h"
 #include "StyleBuilderConverter.h"
 #include "StyleResolver.h"
+#include "StyleScope.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -43,22 +44,22 @@ namespace WebCore {
 ExceptionOr<void> DOMCSSRegisterCustomProperty::registerProperty(Document& document, const DOMCSSCustomPropertyDescriptor& descriptor)
 {
     if (!isCustomPropertyName(descriptor.name))
-        return Exception { SyntaxError, "The name of this property is not a custom property name." };
+        return Exception { SyntaxError, "The name of this property is not a custom property name."_s };
 
     RefPtr<CSSCustomPropertyValue> initialValue;
     if (!descriptor.initialValue.isEmpty()) {
         CSSTokenizer tokenizer(descriptor.initialValue);
-        Style::Resolver styleResolver(document);
+        auto styleResolver = Style::Resolver::create(document);
 
         // We need to initialize this so that we can successfully parse computationally dependent values (like em units).
         // We don't actually need the values to be accurate, since they will be rejected later anyway
-        auto style = styleResolver.defaultStyleForElement(nullptr);
+        auto style = styleResolver->defaultStyleForElement(nullptr);
 
         HashSet<CSSPropertyID> dependencies;
         CSSPropertyParser::collectParsedCustomPropertyValueDependencies(descriptor.syntax, false, dependencies, tokenizer.tokenRange(), strictCSSParserContext());
 
         if (!dependencies.isEmpty())
-            return Exception { SyntaxError, "The given initial value must be computationally independent." };
+            return Exception { SyntaxError, "The given initial value must be computationally independent."_s };
 
 
         Style::MatchResult matchResult;
@@ -69,18 +70,18 @@ ExceptionOr<void> DOMCSSRegisterCustomProperty::registerProperty(Document& docum
         initialValue = CSSPropertyParser::parseTypedCustomPropertyValue(descriptor.name, descriptor.syntax, tokenizer.tokenRange(), dummyBuilder.state(), strictCSSParserContext());
 
         if (!initialValue || !initialValue->isResolved())
-            return Exception { SyntaxError, "The given initial value does not parse for the given syntax." };
+            return Exception { SyntaxError, "The given initial value does not parse for the given syntax."_s };
 
         initialValue->collectDirectComputationalDependencies(dependencies);
         initialValue->collectDirectRootComputationalDependencies(dependencies);
 
         if (!dependencies.isEmpty())
-            return Exception { SyntaxError, "The given initial value must be computationally independent." };
+            return Exception { SyntaxError, "The given initial value must be computationally independent."_s };
     }
 
     CSSRegisteredCustomProperty property { descriptor.name, descriptor.syntax, descriptor.inherits, WTFMove(initialValue) };
     if (!document.registerCSSProperty(WTFMove(property)))
-        return Exception { InvalidModificationError, "This property has already been registered." };
+        return Exception { InvalidModificationError, "This property has already been registered."_s };
 
     document.styleScope().didChangeStyleSheetEnvironment();
 

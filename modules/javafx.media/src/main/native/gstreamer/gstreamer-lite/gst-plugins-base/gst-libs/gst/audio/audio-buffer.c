@@ -59,7 +59,7 @@ gst_audio_buffer_unmap (GstAudioBuffer * buffer)
 
 /**
  * gst_audio_buffer_map:
- * @buffer: pointer to a #GstAudioBuffer
+ * @buffer: (out caller-allocates): pointer to a #GstAudioBuffer
  * @info: the audio properties of the buffer
  * @gstbuffer: (transfer none): the #GstBuffer to be mapped
  * @flags: the access mode for the memory

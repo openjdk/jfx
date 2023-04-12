@@ -25,21 +25,26 @@
 
 #include "config.h"
 #include "CSSFontFaceSrcValue.h"
+#include "CSSMarkup.h"
 #include "CachedFont.h"
+#include "CachedFontLoadRequest.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedResourceRequestInitiators.h"
-#include "Document.h"
 #include "FontCustomPlatformData.h"
+#include "FontLoadRequest.h"
 #include "Node.h"
 #include "SVGFontFaceElement.h"
+#include "ScriptExecutionContext.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
+CSSFontFaceSrcValue::~CSSFontFaceSrcValue() = default;
+
 bool CSSFontFaceSrcValue::isSVGFontFaceSrc() const
 {
-    return equalLettersIgnoringASCIICase(m_format, "svg");
+    return equalLettersIgnoringASCIICase(m_format, "svg"_s);
 }
 
 bool CSSFontFaceSrcValue::isSVGFontTarget() const
@@ -53,7 +58,7 @@ bool CSSFontFaceSrcValue::isSupportedFormat() const
     // we will also check to see if the URL ends with .eot. If so, we'll assume that we shouldn't load it.
     if (m_format.isEmpty()) {
         // Check for .eot.
-        if (!protocolIs(m_resource, "data") && m_resource.endsWithIgnoringASCIICase(".eot"))
+        if (!protocolIs(m_resource, "data"_s) && m_resource.endsWithIgnoringASCIICase(".eot"_s))
             return false;
         return true;
     }
@@ -61,34 +66,42 @@ bool CSSFontFaceSrcValue::isSupportedFormat() const
     return FontCustomPlatformData::supportsFormat(m_format) || isSVGFontFaceSrc();
 }
 
-String CSSFontFaceSrcValue::customCSSText() const
+SVGFontFaceElement* CSSFontFaceSrcValue::svgFontFaceElement() const
 {
-    const char* prefix = isLocal() ? "local(" : "url(";
-    if (m_format.isEmpty())
-        return makeString(prefix, m_resource, ')');
-    return makeString(prefix, m_resource, ')', " format(", m_format, ')');
+    return m_svgFontFaceElement.get();
 }
 
-bool CSSFontFaceSrcValue::traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const
+void CSSFontFaceSrcValue::setSVGFontFaceElement(SVGFontFaceElement* element)
+{
+    m_svgFontFaceElement = element;
+}
+
+String CSSFontFaceSrcValue::customCSSText() const
+{
+    // FIXME: URLs should not be absolutized, but instead should be serialized exactly as they were specified.
+    const char* prefix = isLocal() ? "local(" : "url(";
+    if (m_format.isEmpty())
+        return makeString(prefix, serializeString(m_resource), ")");
+    return makeString(prefix, serializeString(m_resource), ")", " format(", serializeString(m_format), ")");
+}
+
+bool CSSFontFaceSrcValue::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     if (!m_cachedFont)
         return false;
     return handler(*m_cachedFont);
 }
 
-CachedFont* CSSFontFaceSrcValue::cachedFont(Document* document, bool isSVG, bool isInitiatingElementInUserAgentShadowTree)
+std::unique_ptr<FontLoadRequest> CSSFontFaceSrcValue::fontLoadRequest(ScriptExecutionContext* context, bool isSVG, bool isInitiatingElementInUserAgentShadowTree)
 {
     if (m_cachedFont)
-        return m_cachedFont.get();
+        return makeUnique<CachedFontLoadRequest>(*m_cachedFont);
 
-    ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    options.contentSecurityPolicyImposition = isInitiatingElementInUserAgentShadowTree ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
-    options.loadedFromOpaqueSource = m_loadedFromOpaqueSource;
+    auto request = context->fontLoadRequest(m_resource, isSVG, isInitiatingElementInUserAgentShadowTree, m_loadedFromOpaqueSource);
+    if (is<CachedFontLoadRequest>(request))
+        m_cachedFont = &downcast<CachedFontLoadRequest>(request.get())->cachedFont();
 
-    CachedResourceRequest request(ResourceRequest(document->completeURL(m_resource)), options);
-    request.setInitiator(cachedResourceRequestInitiators().css);
-    m_cachedFont = document->cachedResourceLoader().requestFont(WTFMove(request), isSVG).value_or(nullptr);
-    return m_cachedFont.get();
+    return request;
 }
 
 bool CSSFontFaceSrcValue::equals(const CSSFontFaceSrcValue& other) const

@@ -55,11 +55,11 @@ public:
         return contextGroup == m_contextGroup;
     }
 
-    void detachContextGroup(const WTF::AbstractLocker&);
+    void detachContextGroup(const AbstractLocker&);
 
     void detachContextGroupWithoutDeletingObject();
 
-    WTF::Lock& objectGraphLockForContext() override;
+    Lock& objectGraphLockForContext() override;
 
 protected:
     WebGLSharedObject(WebGLRenderingContextBase&);

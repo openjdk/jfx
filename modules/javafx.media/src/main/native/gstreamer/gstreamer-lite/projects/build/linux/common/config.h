@@ -55,7 +55,7 @@
 #define GST_EXTRA_MODULE_SUFFIX ".so"
 
 /* macro to use to show function name */
-#undef GST_FUNCTION
+#define GST_FUNCTION __PRETTY_FUNCTION__
 
 /* Defined if gcov is enabled to force a rebuild due to config.h changing */
 #undef GST_GCOV_ENABLED
@@ -470,7 +470,7 @@
 #define PACKAGE_NAME "GStreamer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer 1.18.4"
+#define PACKAGE_STRING "GStreamer 1.20.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gstreamer"
@@ -479,7 +479,7 @@
 #undef PACKAGE_URL
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.18.4"
+#define PACKAGE_VERSION "1.20.1"
 
 /* directory where plugins are located */
 #undef PLUGINDIR
@@ -519,7 +519,7 @@
 #undef USE_POISONING
 
 /* Version number of package */
-#define VERSION "1.18.4"
+#define VERSION "1.20.1"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -163,12 +163,12 @@ class ES2PhongShader {
             };
 
             //TODO: 3D - should be done in state checking?
-            Map<String, Integer> attributes = new HashMap<String, Integer>();
+            Map<String, Integer> attributes = new HashMap<>();
             attributes.put("pos", 0);
             attributes.put("texCoords", 1);
             attributes.put("tangent", 2);
 
-            Map<String, Integer> samplers = new HashMap<String, Integer>();
+            Map<String, Integer> samplers = new HashMap<>();
             samplers.put("diffuseTexture", 0);
             samplers.put("specularMap", 1);
             samplers.put("normalMap", 2);

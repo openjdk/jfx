@@ -1,3 +1,5 @@
+/* do not delete this file on webkit update*/
+
 function createControls(root, video, host)
 {
     return new Controller(root, video, host);

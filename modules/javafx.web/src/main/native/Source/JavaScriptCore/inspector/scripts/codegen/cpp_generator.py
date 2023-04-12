@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014-2018 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -31,7 +31,7 @@ import re
 try:
     from .generator import ucfirst, Generator
     from .models import PrimitiveType, ObjectType, ArrayType, EnumType, AliasedType, Frameworks
-except ValueError:
+except ImportError:
     from generator import ucfirst, Generator
     from models import PrimitiveType, ObjectType, ArrayType, EnumType, AliasedType, Frameworks
 
@@ -200,7 +200,7 @@ class CppGenerator(Generator):
             raise ValueError("unknown type")
 
         if is_optional:
-            cpp_name = 'Optional<%s>&&' % cpp_name
+            cpp_name = 'std::optional<%s>&&' % cpp_name
         return cpp_name
 
     @staticmethod
@@ -244,7 +244,7 @@ class CppGenerator(Generator):
             raise ValueError("unknown type")
 
         if is_optional:
-            cpp_name = 'Optional<%s>' % cpp_name
+            cpp_name = 'std::optional<%s>' % cpp_name
         return cpp_name
 
     @staticmethod
@@ -288,7 +288,7 @@ class CppGenerator(Generator):
             raise ValueError("unknown type")
 
         if is_optional:
-            cpp_name = 'Optional<%s>&&' % cpp_name
+            cpp_name = 'std::optional<%s>&&' % cpp_name
         return cpp_name
 
     @staticmethod
@@ -332,7 +332,7 @@ class CppGenerator(Generator):
             raise ValueError("unknown type")
 
         if is_optional:
-            cpp_name = 'Optional<%s>&&' % cpp_name
+            cpp_name = 'std::optional<%s>&&' % cpp_name
         return cpp_name
 
     @staticmethod

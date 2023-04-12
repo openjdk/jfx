@@ -29,11 +29,11 @@
    DEALINGS IN THE SOFTWARE.
    ----------------------------------------------------------------------- */
 
-/* This defines a Java- and 64-bit specific variant of the raw API. */
-/* It assumes that "raw" argument blocks look like Java stacks on a */
-/* 64-bit machine.  Arguments that can be stored in a single stack  */
-/* stack slots (longs, doubles) occupy 128 bits, but only the first */
-/* 64 bits are actually used.                       */
+/* This defines a Java- and 64-bit specific variant of the raw API.     */
+/* It assumes that "raw" argument blocks look like Java stacks on a     */
+/* 64-bit machine.  Arguments that can be stored in a single stack      */
+/* stack slots (longs, doubles) occupy 128 bits, but only the first     */
+/* 64 bits are actually used.                                           */
 
 #include <ffi.h>
 #include <ffi_common.h>
@@ -58,7 +58,7 @@ ffi_java_raw_size (ffi_cif *cif)
       result += 2 * FFI_SIZEOF_JAVA_RAW;
       break;
     case FFI_TYPE_STRUCT:
-      /* No structure parameters in Java.   */
+      /* No structure parameters in Java.  */
       abort();
     case FFI_TYPE_COMPLEX:
       /* Not supported yet.  */
@@ -319,7 +319,7 @@ void ffi_java_raw_call (ffi_cif *cif, void (*fn)(void), void *rvalue,
   ffi_java_rvalue_to_raw (cif, rvalue);
 }
 
-#if FFI_CLOSURES        /* base system provides closures */
+#if FFI_CLOSURES           /* base system provides closures */
 
 static void
 ffi_java_translate_args (ffi_cif *cif, void *rvalue,

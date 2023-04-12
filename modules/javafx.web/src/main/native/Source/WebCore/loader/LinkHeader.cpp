@@ -81,11 +81,11 @@ static bool isExtensionParameter(LinkHeader::LinkParameterName name)
 // <cat.jpg>; rel=preload
 //          ^            ^
 //          position     end
-template<typename CharacterType> static Optional<String> findURLBoundaries(StringParsingBuffer<CharacterType>& buffer)
+template<typename CharacterType> static std::optional<String> findURLBoundaries(StringParsingBuffer<CharacterType>& buffer)
 {
     skipWhile<isSpaceOrTab>(buffer);
     if (!skipExactly(buffer, '<'))
-        return WTF::nullopt;
+        return std::nullopt;
     skipWhile<isSpaceOrTab>(buffer);
 
     auto urlStart = buffer.position();
@@ -93,7 +93,7 @@ template<typename CharacterType> static Optional<String> findURLBoundaries(Strin
     auto urlEnd = buffer.position();
     skipUntil(buffer, '>');
     if (!skipExactly(buffer, '>'))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return String(urlStart, urlEnd - urlStart);
 }
@@ -135,28 +135,30 @@ template<typename CharacterType> static bool parseParameterDelimiter(StringParsi
 
 static LinkHeader::LinkParameterName paramterNameFromString(StringView name)
 {
-    if (equalLettersIgnoringASCIICase(name, "rel"))
+    if (equalLettersIgnoringASCIICase(name, "rel"_s))
         return LinkHeader::LinkParameterRel;
-    if (equalLettersIgnoringASCIICase(name, "anchor"))
+    if (equalLettersIgnoringASCIICase(name, "anchor"_s))
         return LinkHeader::LinkParameterAnchor;
-    if (equalLettersIgnoringASCIICase(name, "crossorigin"))
+    if (equalLettersIgnoringASCIICase(name, "crossorigin"_s))
         return LinkHeader::LinkParameterCrossOrigin;
-    if (equalLettersIgnoringASCIICase(name, "title"))
+    if (equalLettersIgnoringASCIICase(name, "title"_s))
         return LinkHeader::LinkParameterTitle;
-    if (equalLettersIgnoringASCIICase(name, "media"))
+    if (equalLettersIgnoringASCIICase(name, "media"_s))
         return LinkHeader::LinkParameterMedia;
-    if (equalLettersIgnoringASCIICase(name, "type"))
+    if (equalLettersIgnoringASCIICase(name, "type"_s))
         return LinkHeader::LinkParameterType;
-    if (equalLettersIgnoringASCIICase(name, "rev"))
+    if (equalLettersIgnoringASCIICase(name, "rev"_s))
         return LinkHeader::LinkParameterRev;
-    if (equalLettersIgnoringASCIICase(name, "hreflang"))
+    if (equalLettersIgnoringASCIICase(name, "hreflang"_s))
         return LinkHeader::LinkParameterHreflang;
-    if (equalLettersIgnoringASCIICase(name, "as"))
+    if (equalLettersIgnoringASCIICase(name, "as"_s))
         return LinkHeader::LinkParameterAs;
-    if (equalLettersIgnoringASCIICase(name, "imagesrcset"))
+    if (equalLettersIgnoringASCIICase(name, "imagesrcset"_s))
         return LinkHeader::LinkParameterImageSrcSet;
-    if (equalLettersIgnoringASCIICase(name, "imagesizes"))
+    if (equalLettersIgnoringASCIICase(name, "imagesizes"_s))
         return LinkHeader::LinkParameterImageSizes;
+    if (equalLettersIgnoringASCIICase(name, "nonce"_s))
+        return LinkHeader::LinkParameterNonce;
     return LinkHeader::LinkParameterUnknown;
 }
 
@@ -171,7 +173,7 @@ static LinkHeader::LinkParameterName paramterNameFromString(StringView name)
 // <cat.jpg>; rel=preload
 //                ^      ^
 //            position  end
-template<typename CharacterType> static Optional<LinkHeader::LinkParameterName> parseParameterName(StringParsingBuffer<CharacterType>& buffer)
+template<typename CharacterType> static std::optional<LinkHeader::LinkParameterName> parseParameterName(StringParsingBuffer<CharacterType>& buffer)
 {
     auto nameStart = buffer.position();
     skipWhile<isValidParameterNameChar>(buffer);
@@ -185,7 +187,7 @@ template<typename CharacterType> static Optional<LinkHeader::LinkParameterName> 
     bool validParameterValueEnd = buffer.atEnd() || isParameterValueEnd(*buffer);
     if (validParameterValueEnd && isExtensionParameter(name))
         return name;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 // Before:
@@ -280,6 +282,9 @@ void LinkHeader::setValue(LinkParameterName name, String&& value)
     case LinkParameterImageSizes:
         m_imageSizes = WTFMove(value);
         break;
+    case LinkParameterNonce:
+        m_nonce = WTFMove(value);
+        break;
     case LinkParameterTitle:
     case LinkParameterRev:
     case LinkParameterHreflang:
@@ -299,7 +304,7 @@ template<typename CharacterType> static void findNextHeader(StringParsingBuffer<
 template<typename CharacterType> LinkHeader::LinkHeader(StringParsingBuffer<CharacterType>& buffer)
 {
     auto urlResult = findURLBoundaries(buffer);
-    if (urlResult == WTF::nullopt) {
+    if (urlResult == std::nullopt) {
         m_isValid = false;
         findNextHeader(buffer);
         return;

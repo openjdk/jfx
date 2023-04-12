@@ -92,7 +92,7 @@ private:
 
     ImageDocument& document() const;
 
-    void appendBytes(DocumentWriter&, const char*, size_t) override;
+    void appendBytes(DocumentWriter&, const uint8_t*, size_t) override;
     void finish() override;
 };
 
@@ -116,21 +116,24 @@ private:
 
 inline Ref<ImageDocumentElement> ImageDocumentElement::create(ImageDocument& document)
 {
-    return adoptRef(*new ImageDocumentElement(document));
+    auto image = adoptRef(*new ImageDocumentElement(document));
+    image->suspendIfNeeded();
+    return image;
 }
 
 // --------
 
 HTMLImageElement* ImageDocument::imageElement() const
 {
-    return m_imageElement;
+    return m_imageElement.get();
 }
 
 LayoutSize ImageDocument::imageSize()
 {
-    ASSERT(m_imageElement);
+    RefPtr imageElement = m_imageElement.get();
+    ASSERT(imageElement);
     updateStyleIfNeeded();
-    return m_imageElement->cachedImage()->imageSizeForRenderer(m_imageElement->renderer(), frame() ? frame()->pageZoomFactor() : 1);
+    return imageElement->cachedImage()->imageSizeForRenderer(imageElement->renderer(), frame() ? frame()->pageZoomFactor() : 1);
 }
 
 void ImageDocument::updateDuringParsing()
@@ -141,7 +144,7 @@ void ImageDocument::updateDuringParsing()
     if (!m_imageElement)
         createDocumentStructure();
 
-    if (RefPtr<SharedBuffer> buffer = loader()->mainResourceData())
+    if (RefPtr<FragmentedSharedBuffer> buffer = loader()->mainResourceData())
         m_imageElement->cachedImage()->updateBuffer(*buffer);
 
     imageUpdated();
@@ -151,7 +154,7 @@ void ImageDocument::finishedParsing()
 {
     if (!parser()->isStopped() && m_imageElement) {
         CachedImage& cachedImage = *m_imageElement->cachedImage();
-        RefPtr<SharedBuffer> data = loader()->mainResourceData();
+        RefPtr<FragmentedSharedBuffer> data = loader()->mainResourceData();
 
         // If this is a multipart image, make a copy of the current part, since the resource data
         // will be overwritten by the next part.
@@ -168,7 +171,7 @@ void ImageDocument::finishedParsing()
         if (size.width()) {
             // Compute the title. We use the decoded filename of the resource, falling
             // back on the hostname if there is no path.
-            String name = decodeURLEscapeSequences(url().lastPathComponent());
+            String name = PAL::decodeURLEscapeSequences(url().lastPathComponent());
             if (name.isEmpty())
                 name = url().host().toString();
             setTitle(imageTitle(name, size));
@@ -187,7 +190,7 @@ inline ImageDocument& ImageDocumentParser::document() const
     return downcast<ImageDocument>(*RawDataDocumentParser::document());
 }
 
-void ImageDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
+void ImageDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
 {
     document().updateDuringParsing();
 }
@@ -198,7 +201,7 @@ void ImageDocumentParser::finish()
 }
 
 ImageDocument::ImageDocument(Frame& frame, const URL& url)
-    : HTMLDocument(&frame, frame.settings(), url, ImageDocumentClass)
+    : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Image })
     , m_imageElement(nullptr)
     , m_imageSizeIsKnown(false)
 #if !PLATFORM(IOS_FAMILY)
@@ -228,20 +231,21 @@ void ImageDocument::createDocumentStructure()
     rootElement->appendChild(head);
 
     auto body = HTMLBodyElement::create(*this);
-    body->setAttribute(styleAttr, "margin: 0px");
+    body->setAttribute(styleAttr, "margin: 0px"_s);
     if (MIMETypeRegistry::isPDFMIMEType(document().loader()->responseMIMEType()))
-        body->setInlineStyleProperty(CSSPropertyBackgroundColor, "white");
+        body->setInlineStyleProperty(CSSPropertyBackgroundColor, "white"_s);
     rootElement->appendChild(body);
 
     auto imageElement = ImageDocumentElement::create(*this);
     if (m_shouldShrinkImage)
-        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; display:block; margin:auto; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; display:block; margin:auto; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);"_s);
     else
-        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);"_s);
     imageElement->setLoadManually(true);
-    imageElement->setSrc(url().string());
+    imageElement->setSrc(AtomString { url().string() });
     imageElement->cachedImage()->setResponse(loader()->response());
     body->appendChild(imageElement);
+    imageElement->setLoadManually(false);
 
     if (m_shouldShrinkImage) {
 #if PLATFORM(IOS_FAMILY)
@@ -250,12 +254,12 @@ void ImageDocument::createDocumentStructure()
 #else
         auto listener = ImageEventListener::create(*this);
         if (RefPtr<DOMWindow> window = this->domWindow())
-            window->addEventListener("resize", listener.copyRef(), false);
-        imageElement->addEventListener("click", WTFMove(listener), false);
+            window->addEventListener(eventNames().resizeEvent, listener.copyRef(), false);
+        imageElement->addEventListener(eventNames().clickEvent, WTFMove(listener), false);
 #endif
     }
 
-    m_imageElement = imageElement.ptr();
+    m_imageElement = imageElement.get();
 }
 
 void ImageDocument::imageUpdated()

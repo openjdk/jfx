@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 
 #include "Bytecodes.h"
 #include "LLIntOpcode.h"
+#include "OpcodeSize.h"
 
 #include <algorithm>
 #include <string.h>
@@ -88,10 +89,14 @@ extern const unsigned wasmOpcodeLengths[];
     FOR_EACH_WASM_ID(OPCODE_ID_LENGTHS);
 #undef OPCODE_ID_LENGTHS
 
-static constexpr unsigned maxJSOpcodeLength = /* Opcode */ 1 + /* Wide32 Opcode */ 1 + /* Operands */ (MAX_LENGTH_OF_BYTECODE_IDS - 1) * 4;
-static constexpr unsigned maxWasmOpcodeLength = /* Opcode */ 1 + /* Wide32 Opcode */ 1 + /* Operands */ (MAX_LENGTH_OF_WASM_IDS - 1) * 4;
-static constexpr unsigned maxOpcodeLength = std::max(maxJSOpcodeLength, maxWasmOpcodeLength);
-static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(maxOpcodeLength) + 1;
+static_assert(NUMBER_OF_BYTECODE_IDS < 255);
+static constexpr OpcodeSize maxJSOpcodeIDWidth = OpcodeSize::Narrow;
+static_assert(NUMBER_OF_WASM_IDS < 255);
+static constexpr OpcodeSize maxWasmOpcodeIDWidth = OpcodeSize::Narrow;
+static constexpr unsigned maxJSBytecodeStructLength = /* Opcode */ maxJSOpcodeIDWidth + /* Wide32 Opcode */ 1 + /* Operands */ MAX_LENGTH_OF_BYTECODE_IDS * 4;
+static constexpr unsigned maxWasmBytecodeStructLength = /* Opcode */ maxWasmOpcodeIDWidth + /* Wide32 Opcode */ 1 + /* Operands */ MAX_LENGTH_OF_WASM_IDS * 4;
+static constexpr unsigned maxBytecodeStructLength = std::max(maxJSBytecodeStructLength, maxWasmBytecodeStructLength);
+static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetConstexpr(maxBytecodeStructLength) + 1;
 
 #define FOR_EACH_OPCODE_WITH_VALUE_PROFILE(macro) \
     macro(OpCallVarargs) \
@@ -99,7 +104,7 @@ static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(m
     macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
     macro(OpGetByVal) \
-    macro(OpGetDirectPname) \
+    macro(OpEnumeratorGetByVal) \
     macro(OpGetById) \
     macro(OpGetByIdWithThis) \
     macro(OpTryGetById) \
@@ -124,17 +129,30 @@ static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(m
     macro(OpBitxor) \
     macro(OpLshift) \
     macro(OpRshift) \
+    macro(OpGetPrivateName) \
 
-#define FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(macro) \
-    macro(OpHasEnumerableIndexedProperty) \
+#define FOR_EACH_OPCODE_WITH_CALL_LINK_INFO(macro) \
+    macro(OpCall) \
+    macro(OpTailCall) \
+    macro(OpCallEval) \
+    macro(OpConstruct) \
+    macro(OpIteratorOpen) \
+    macro(OpIteratorNext) \
     macro(OpCallVarargs) \
     macro(OpTailCallVarargs) \
     macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
+
+#define FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(macro) \
     macro(OpGetByVal) \
     macro(OpInByVal) \
     macro(OpPutByVal) \
     macro(OpPutByValDirect) \
+    macro(OpEnumeratorNext) \
+    macro(OpEnumeratorGetByVal) \
+    macro(OpEnumeratorInByVal) \
+    macro(OpEnumeratorHasOwnProperty) \
+    FOR_EACH_OPCODE_WITH_CALL_LINK_INFO(macro) \
 
 #define FOR_EACH_OPCODE_WITH_ARRAY_ALLOCATION_PROFILE(macro) \
     macro(OpNewArray) \
@@ -144,18 +162,21 @@ static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(m
 #define FOR_EACH_OPCODE_WITH_OBJECT_ALLOCATION_PROFILE(macro) \
     macro(OpNewObject) \
 
-#define FOR_EACH_OPCODE_WITH_LLINT_CALL_LINK_INFO(macro) \
-    macro(OpCall) \
-    macro(OpTailCall) \
-    macro(OpCallEval) \
-    macro(OpConstruct) \
-    macro(OpIteratorOpen) \
-    macro(OpIteratorNext) \
+#define FOR_EACH_OPCODE_WITH_BINARY_ARITH_PROFILE(macro) \
+    macro(OpAdd) \
+    macro(OpMul) \
+    macro(OpDiv) \
+    macro(OpSub) \
+
+#define FOR_EACH_OPCODE_WITH_UNARY_ARITH_PROFILE(macro) \
+    macro(OpInc) \
+    macro(OpDec) \
+    macro(OpNegate) \
 
 
 IGNORE_WARNINGS_BEGIN("type-limits")
 
-#define VERIFY_OPCODE_ID(id, size) COMPILE_ASSERT(id <= numOpcodeIDs, ASSERT_THAT_JS_OPCODE_IDS_ARE_VALID);
+#define VERIFY_OPCODE_ID(id, size) static_assert(id <= numOpcodeIDs, "ASSERT that JS Opcode ID is valid");
     FOR_EACH_OPCODE_ID(VERIFY_OPCODE_ID);
 #undef VERIFY_OPCODE_ID
 
@@ -195,6 +216,7 @@ inline bool isBranch(OpcodeID opcodeID)
     case op_jneq_null:
     case op_jundefined_or_null:
     case op_jnundefined_or_null:
+    case op_jeq_ptr:
     case op_jneq_ptr:
     case op_jless:
     case op_jlesseq:

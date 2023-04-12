@@ -21,30 +21,28 @@
 
 #pragma once
 
-#include "InlineTextBox.h"
-#include "RenderSVGInlineText.h"
+#include "LegacyInlineTextBox.h"
 #include "RenderSVGResource.h"
 #include "SVGTextFragment.h"
 
 namespace WebCore {
 
+class RenderSVGInlineText;
 class RenderSVGResource;
 class SVGRootInlineBox;
 
-class SVGInlineTextBox final : public InlineTextBox {
+class SVGInlineTextBox final : public LegacyInlineTextBox {
     WTF_MAKE_ISO_ALLOCATED(SVGInlineTextBox);
 public:
     explicit SVGInlineTextBox(RenderSVGInlineText&);
 
-    RenderSVGInlineText& renderer() const { return downcast<RenderSVGInlineText>(InlineTextBox::renderer()); }
+    inline RenderSVGInlineText& renderer() const;
 
     float virtualLogicalHeight() const override { return m_logicalHeight; }
     void setLogicalHeight(float height) { m_logicalHeight = height; }
 
     int selectionTop() { return top(); }
     int selectionHeight() { return static_cast<int>(ceilf(m_logicalHeight)); }
-    int offsetForPosition(float x, bool includePartialGlyphs = true) const override;
-    float positionForOffset(unsigned offset) const override;
 
     void paintSelectionBackground(PaintInfo&);
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
@@ -70,7 +68,7 @@ public:
     OptionSet<RenderSVGResourceMode> paintingResourceMode() const { return OptionSet<RenderSVGResourceMode>::fromRaw(m_paintingResourceMode); }
     void setPaintingResourceMode(OptionSet<RenderSVGResourceMode> mode) { m_paintingResourceMode = mode.toRaw(); }
 
-    SVGInlineTextBox* nextTextBox() const { return downcast<SVGInlineTextBox>(InlineTextBox::nextTextBox()); }
+    inline SVGInlineTextBox* nextTextBox() const;
 
 private:
     bool isSVGInlineTextBox() const override { return true; }
@@ -83,8 +81,8 @@ private:
     bool prepareGraphicsContextForTextPainting(GraphicsContext*&, float scalingFactor, const RenderStyle&);
     void restoreGraphicsContextAfterTextPainting(GraphicsContext*&);
 
-    void paintDecoration(GraphicsContext&, OptionSet<TextDecoration>, const SVGTextFragment&);
-    void paintDecorationWithStyle(GraphicsContext&, OptionSet<TextDecoration>, const SVGTextFragment&, RenderBoxModelObject& decorationRenderer);
+    void paintDecoration(GraphicsContext&, OptionSet<TextDecorationLine>, const SVGTextFragment&);
+    void paintDecorationWithStyle(GraphicsContext&, OptionSet<TextDecorationLine>, const SVGTextFragment&, RenderBoxModelObject& decorationRenderer);
     void paintTextWithShadows(GraphicsContext&, const RenderStyle&, TextRun&, const SVGTextFragment&, unsigned startPosition, unsigned endPosition);
     void paintText(GraphicsContext&, const RenderStyle&, const RenderStyle& selectionStyle, const SVGTextFragment&, bool hasSelection, bool paintSelectedTextOnly);
 
