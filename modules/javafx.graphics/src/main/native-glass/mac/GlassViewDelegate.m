@@ -973,7 +973,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     // Set up frames for dragging items
     for (NSDraggingItem* item in items)
     {
-        NSPoint dragPoint = [self->nsView convertPoint:[self->lastEvent locationInWindow] fromView:nil];
+        NSPoint dragPoint = [self->nsView convertPoint:[self->lastEvent locationInWindow] fromView:nil];//[self->lastEvent locationInWindow];
         NSImage *image = nil;
         NSRect rect = [item draggingFrame];
 
@@ -1059,7 +1059,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // would be nice to get this info from the Java layer,
             // so that we could adjust the drag image origin based on where in the src it was clicked on
             dragPoint.x -= ([image size].width/2.0f);
-            dragPoint.y += ([image size].height/2.0f);
+            dragPoint.y -= ([image size].height/2.0f);
 
             NSString *offsetString = [pbItem stringForType:DRAG_IMAGE_OFFSET];
             if (offsetString != nil) {
@@ -1075,8 +1075,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                     offset.y = imageHalfY * (offset.y > 0 ? 1 : -1);
                 }
 
-                dragPoint.x += offset.x;
-                dragPoint.y -= offset.y;
+                //dragPoint.x += offset.x;
+                //dragPoint.y -= offset.y;
             }
         }
         else
@@ -1093,11 +1093,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     self->draggingSource = [[GlassDraggingSource alloc] initWithOperation:operation];
 
-    DNDLOG("LKDEBUG Starting dragging sesh");
     NSDraggingSession *session = [self->nsView beginDraggingSessionWithItems:items event:self->lastEvent source:self->draggingSource];
-
-    NSArray<NSPasteboardItem*> *pbItems = [[session draggingPasteboard] pasteboardItems];
-    DNDLOG("Item count after begin: %d", [pbItems count]);
 }
 
 - (void)synthesizeMouseUp:(NSEventType)type

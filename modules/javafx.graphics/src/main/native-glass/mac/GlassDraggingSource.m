@@ -50,22 +50,18 @@
 
 - (void)draggingSession:(NSDraggingSession *)session willBeginAtPoint:(NSPoint)screenPoint
 {
-    LOG("LKDEBUG draggingSession: willBeginAtPoint:");
 }
 
 - (void)draggingSession:(NSDraggingSession *)session movedToPoint:(NSPoint)screenPoint
 {
-    LOG("LKDEBUG draggingSession: movedToPoint:");
 }
 
 - (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation
 {
-    LOG("LKDEBUG draggingSession: endedAtPoint:");
 }
 
 - (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)session
 {
-    LOG("LKDEBUG ignoreModifierKeysForDraggingSession:");
     return NO;
 }
 
