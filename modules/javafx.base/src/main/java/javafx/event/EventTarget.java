@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,4 +54,69 @@ public interface EventTarget {
      * @return the resulting event dispatch chain for this target
      */
     EventDispatchChain buildEventDispatchChain(EventDispatchChain tail);
+
+    /**
+     * Registers an event handler for this target.
+     * <p>
+     * The handler is called when the target receives an {@code Event} of the specified
+     * type during the bubbling phase of event delivery.
+     *
+     * @param <T> the specific event class of the handler
+     * @param eventType the type of the events to receive by the handler
+     * @param eventHandler the handler to register
+     * @throws NullPointerException if the event type or handler is null
+     * @throws UnsupportedOperationException if this target does not support event handlers
+     * @since 21
+     */
+    default <T extends Event> void addEventHandler(EventType<T> eventType, EventHandler<? super T> eventHandler) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Unregisters a previously registered event handler from this target.
+     * One handler might have been registered for different event types, so the caller needs
+     * to specify the particular event type from which to unregister the handler.
+     *
+     * @param <T> the specific event class of the handler
+     * @param eventType the event type from which to unregister
+     * @param eventHandler the handler to unregister
+     * @throws NullPointerException if the event type or handler is null
+     * @throws UnsupportedOperationException if this target does not support event handlers
+     * @since 21
+     */
+    default <T extends Event> void removeEventHandler(EventType<T> eventType, EventHandler<? super T> eventHandler) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Registers an event filter for this target.
+     * The filter is called when the node receives an {@code Event} of the specified
+     * type during the capturing phase of event delivery.
+     *
+     * @param <T> the specific event class of the filter
+     * @param eventType the type of the events to receive by the filter
+     * @param eventFilter the filter to register
+     * @throws NullPointerException if the event type or filter is null
+     * @throws UnsupportedOperationException if this target does not support event filters
+     * @since 21
+     */
+    default <T extends Event> void addEventFilter(EventType<T> eventType, EventHandler<? super T> eventFilter) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Unregisters a previously registered event filter from this target.
+     * One filter might have been registered for different event types, so the caller needs
+     * to specify the particular event type from which to unregister the filter.
+     *
+     * @param <T> the specific event class of the filter
+     * @param eventType the event type from which to unregister
+     * @param eventFilter the filter to unregister
+     * @throws NullPointerException if the event type or filter is null
+     * @throws UnsupportedOperationException if this target does not support event filters
+     * @since 21
+     */
+    default <T extends Event> void removeEventFilter(EventType<T> eventType, EventHandler<? super T> eventFilter) {
+        throw new UnsupportedOperationException();
+    }
 }
