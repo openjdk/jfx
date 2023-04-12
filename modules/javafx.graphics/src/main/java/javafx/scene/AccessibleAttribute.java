@@ -338,6 +338,25 @@ public enum AccessibleAttribute {
     INDETERMINATE(Boolean.class),
 
     /**
+     * Returns toggle state of CheckBox of CheckBoxTreeItem.
+     * <ul>
+     * <li>Used by: CheckBoxTreeItem</li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Integer}
+     *   <ul>
+     *    <li>2: Indeterminate state</li>
+     *    <li>1: Checked state</li>
+     *    <li>0: Unchecked state</li>
+     *   </ul>
+     * </li>
+     * <li>Parameters: </li>
+     * </ul>
+     *
+     * @since 21
+     */
+    TOGGLE_STATE(Integer.class),
+
+    /**
      * Returns the item at the given index.
      * <ul>
      * <li>Used by: TabPane, ListView, and others </li>
