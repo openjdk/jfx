@@ -194,26 +194,31 @@ static BOOL macKeyCodeIsLayoutSensitive(unsigned int keyCode)
     }
 
     // kVK_ANSI_A through kVK_ANSI_Grave
-    if (keyCode >= 0x00 && keyCode <= 0x32)
+    if (keyCode >= 0x00 && keyCode <= 0x32) {
         return YES;
+    }
 
     // kVK_JIS_Yen through kVK_JIS_KeypadComma. The other JIS keys (0x66 and
     // 0x68) were commented out of the table above so they are not included
     // here.
-    if (keyCode >= 0x5D && keyCode <= 0x5F)
+    if (keyCode >= 0x5D && keyCode <= 0x5F) {
         return YES;
+    }
 
     return NO;
 }
 
 static jint getJavaCodeForASCII(UniChar ascii)
 {
-    if (ascii >= L'0' && ascii <= L'9')
+    if (ascii >= L'0' && ascii <= L'9') {
         return ascii;
-    if (ascii >= L'a' && ascii <= L'z')
+    }
+    if (ascii >= L'a' && ascii <= L'z') {
         return ascii + (L'A' - L'a');
-    if (ascii >= L'A' && ascii <= L'Z')
+    }
+    if (ascii >= L'A' && ascii <= L'Z') {
         return ascii;
+    }
 
     switch (ascii)
     {
@@ -258,8 +263,9 @@ static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short key
 {
     CFDataRef uchr = (CFDataRef)TISGetInputSourceProperty(keyboard,
                                                           kTISPropertyUnicodeKeyLayoutData);
-    if (uchr == NULL)
+    if (uchr == NULL) {
         return 0;
+    }
     const UCKeyboardLayout *layout = (const UCKeyboardLayout*)CFDataGetBytePtr(uchr);
 
     UInt32 deadKeyState = 0;
@@ -271,23 +277,27 @@ static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short key
                                      kUCKeyTranslateNoDeadKeysMask, &deadKeyState,
                                      bufferSize, &actualLength,
                                      buffer);
-    if (status != noErr)
+    if (status != noErr) {
         actualLength = 0;
+    }
 
     // The Unicode Hex layout can yield a string of length 1 consisting of a
     // code point of 0.
-    if (actualLength == 1 && buffer[0] == 0)
+    if (actualLength == 1 && buffer[0] == 0) {
         actualLength = 0;
+    }
 
     return actualLength;
 }
 
 static BOOL isLetterOrDigit(jint javaKeyCode)
 {
-    if (javaKeyCode >= '0' && javaKeyCode <= '9')
+    if (javaKeyCode >= '0' && javaKeyCode <= '9') {
         return YES;
-    if (javaKeyCode >= 'A' && javaKeyCode <= 'Z')
+    }
+    if (javaKeyCode >= 'A' && javaKeyCode <= 'Z') {
         return YES;
+    }
     return NO;
 }
 
@@ -297,8 +307,9 @@ static jint getJavaCodeForMacKeyAndModifiers(TISInputSourceRef keyboard, unsigne
     jint result = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     UniChar unicode[8];
     UniCharCount length = queryKeyboard(keyboard, keyCode, modifiers, unicode, 8);
-    if (length == 1)
+    if (length == 1) {
         result = getJavaCodeForASCII(unicode[0]);
+    }
     return result;
 }
 
@@ -307,8 +318,9 @@ static jint getJavaCodeForMacKey(unsigned short keyCode)
 {
     jint result = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     TISInputSourceRef keyboard = TISCopyCurrentKeyboardLayoutInputSource();
-    if (keyboard == NULL)
+    if (keyboard == NULL) {
         return result;
+    }
 
     // Java key codes are used in accelerator processing so we will try to match them
     // the same way Apple handles key equivalents e.g. by asking for the Cmd character.
@@ -324,22 +336,23 @@ static jint getJavaCodeForMacKey(unsigned short keyCode)
     // hit we favor numerals and letters over punctuation. This brings the French
     // keyboard in line with Windows; the digits are shifted but are still considered
     // the canonical key codes.
-    if (!isLetterOrDigit(result))
-    {
+    if (!isLetterOrDigit(result)) {
         jint trial = getJavaCodeForMacKeyAndModifiers(keyboard, keyCode, cmdKey | shiftKey);
-        if (isLetterOrDigit(trial))
+        if (isLetterOrDigit(trial)) {
             result = trial;
-        else if (result == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+        }
+        else if (result == com_sun_glass_events_KeyEvent_VK_UNDEFINED) {
             result = trial;
+        }
 
         // A handful of keyboards (Azeri, Turkmen, and Sami variants) can only access
         // critical letters like Q by using the Option key in conjunction with Cmd.
         // In this API the Cmd flag suppresses the Option flag so we omit Cmd.
-        if (!isLetterOrDigit(result))
-        {
+        if (!isLetterOrDigit(result)) {
             jint trial = getJavaCodeForMacKeyAndModifiers(keyboard, keyCode, optionKey);
-            if (isLetterOrDigit(trial))
+            if (isLetterOrDigit(trial)) {
                 result = trial;
+            }
         }
     }
 
@@ -455,8 +468,9 @@ jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event)
 
 BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
 {
-    if (javaKeyCode == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+    if (javaKeyCode == com_sun_glass_events_KeyEvent_VK_UNDEFINED) {
         return NO;
+    }
 
     BOOL found = NO;
     // Find a key code based on the US QWERTY layout
@@ -472,8 +486,9 @@ BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
 
     // The table only covers US QWERTY so it's missing entries like PLUS that
     // don't appear on that layout.
-    if (found && !macKeyCodeIsLayoutSensitive(*outMacKeyCode))
+    if (found && !macKeyCodeIsLayoutSensitive(*outMacKeyCode)) {
         return YES;
+    }
 
     // If the QWERTY key is in the layout sensitive area search the other keys in that
     // area. We may not find a key so returning NO is possible.
