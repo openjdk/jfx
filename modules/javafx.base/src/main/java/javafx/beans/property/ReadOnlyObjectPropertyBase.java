@@ -28,7 +28,7 @@ package javafx.beans.property;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 
 /**
  * Base class for all readonly properties wrapping an arbitrary {@code Object}. This class provides a default
@@ -40,8 +40,20 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProperty<T> {
+    private static final OldValueCachingListenerManager<Object, ReadOnlyObjectPropertyBase<Object>> LISTENER_MANAGER =
+        new OldValueCachingListenerManager<>() {
+            @Override
+            protected Object getData(ReadOnlyObjectPropertyBase<Object> instance) {
+                return instance.listenerData;
+            }
 
-    ExpressionHelper<T> helper;
+            @Override
+            protected void setData(ReadOnlyObjectPropertyBase<Object> instance, Object data) {
+                instance.listenerData = data;
+            }
+        };
+
+    Object listenerData;
 
     /**
      * Creates a default {@code ReadOnlyObjectPropertyBase}.
@@ -51,22 +63,22 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
 
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener((ReadOnlyObjectPropertyBase<Object>) this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener((ReadOnlyObjectPropertyBase<Object>) this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener((ReadOnlyObjectPropertyBase<Object>) this, (ChangeListener<Object>) listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener((ReadOnlyObjectPropertyBase<Object>) this, listener);
     }
 
     /**
@@ -77,7 +89,7 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
      * This method needs to be called, if the value of this property changes.
      */
     protected void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged((ReadOnlyObjectPropertyBase<Object>) this);
     }
 
 }
