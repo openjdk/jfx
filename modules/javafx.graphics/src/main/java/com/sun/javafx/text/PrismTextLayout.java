@@ -422,6 +422,7 @@ public class PrismTextLayout implements TextLayout {
     @Override
     public Hit getHitInfo(float x, float y) {
         int charIndex = -1;
+        int insertionIndex = -1;
         boolean leading = false;
 
         ensureLayout();
@@ -450,13 +451,23 @@ public class PrismTextLayout implements TextLayout {
                 int[] trailing = new int[1];
                 charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
                 leading = (trailing[0] == 0);
+
+                // Calculate insertion index for surrogate pair text in TextFlow
+                // when leading is false
+                if (run.getTextSpan() != null) {
+                    String txt = run.getTextSpan().getText();
+                    int relIdx = charIndex - run.getStart();
+                    if (Character.isHighSurrogate(txt.charAt(relIdx)) && !leading) {
+                        insertionIndex = charIndex + 2;
+                    }
+                }
             } else {
                 //empty line, set to line break leading
                 charIndex = line.getStart();
                 leading = true;
             }
         }
-        return new Hit(charIndex, -1, leading);
+        return new Hit(charIndex, insertionIndex, leading);
     }
 
     @Override
