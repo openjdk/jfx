@@ -62,7 +62,7 @@ public abstract class ArrayManager<I, E> {
     /**
      * Gets the array under management.
      *
-     * @param instance the instance it is located in, never {@code null}
+     * @param instance the instance it is located in, cannot be {@code null}
      * @return the array under management, can be {@code null}
      */
     protected abstract E[] getArray(I instance);
@@ -70,7 +70,7 @@ public abstract class ArrayManager<I, E> {
     /**
      * Sets the array under management.
      *
-     * @param instance the instance it is located in, never {@code null}
+     * @param instance the instance it is located in, cannot be {@code null}
      * @param array the array to set, can be {@code null}
      */
     protected abstract void setArray(I instance, E[] array);
@@ -78,7 +78,7 @@ public abstract class ArrayManager<I, E> {
     /**
      * Gets the occupied slots of the array under management.
      *
-     * @param instance the instance it is located in, never {@code null}
+     * @param instance the instance it is located in, cannot be {@code null}
      * @return the occupied slots of the array under management
      */
     protected abstract int getOccupiedSlots(I instance);
@@ -86,7 +86,7 @@ public abstract class ArrayManager<I, E> {
     /**
      * Sets the occupied slots of the array under management.
      *
-     * @param instance the instance it is located in, never {@code null}
+     * @param instance the instance it is located in, cannot be {@code null}
      * @param array the occupied slots of the array to set
      */
     protected abstract void setOccupiedSlots(I instance, int occupiedSlots);
@@ -96,7 +96,7 @@ public abstract class ArrayManager<I, E> {
      * If the array needs to be grown, this function will call {@link #compact(Object, Object[])}
      * first to reclaim any space before deciding to grow the array.
      *
-     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param element an element to add, can be {@code null}
      * @throws NullPointerException when the given instance was {@code null}
      */
@@ -138,7 +138,7 @@ public abstract class ArrayManager<I, E> {
      *
      * This method does not modify the array fields.
      *
-     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param element an element to locate, can be {@code null}
      * @return the index of the first occurrence of the given element, or -1 if no such element was present
      * @throws NullPointerException when the given instance was {@code null}
@@ -159,7 +159,7 @@ public abstract class ArrayManager<I, E> {
     /**
      * Removes the element at the given index from the array.
      *
-     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param index an index to remove, cannot be negative, or greater than or equal to the number of occupied slots
      * @returns the element that was removed, can be {@code null} if the element at the given index was {@code null}
      * @throws NullPointerException when the given instance was {@code null}
@@ -208,7 +208,7 @@ public abstract class ArrayManager<I, E> {
      *
      * This method does not modify the array fields.
      *
-     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param index an index, cannot be negative, or greater than or equal to the number of occupied slots
      * @returns the element at the given index, can be {@code null} if the element at the given index was {@code null}
      * @throws NullPointerException when the given instance was {@code null}
@@ -228,7 +228,7 @@ public abstract class ArrayManager<I, E> {
      *
      * This method does not modify the array fields.
      *
-     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param index an index to set, cannot be negative, or greater than or equal to the number of occupied slots
      * @param element an element to set, can be {@code null}
      * @returns the element that was previously at the given index, can be {@code null} if the element at the given index was {@code null}
@@ -253,7 +253,7 @@ public abstract class ArrayManager<I, E> {
      * exceptions, these are relayed to the caller, and the state of the array
      * will be undefined.
      *
-     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param filter a predicate which returns {@code true} for elements to be removed
      * @return {@code true} if any elements were removed
      * @throws NullPointerException if the specified filter is null
@@ -313,7 +313,7 @@ public abstract class ArrayManager<I, E> {
      * By default, no compaction takes place and this method returns
      * 0 to indicate no slots were reclaimed.<p>
      *
-     * @param instance a reference to the instance where the array is stored, never {@code null}
+     * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param array an array to compact, never {@code null}
      * @return the number of slots reclaimed, never negative
      */
