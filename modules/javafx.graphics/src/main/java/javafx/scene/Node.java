@@ -119,7 +119,6 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.PseudoClassState;
@@ -8591,35 +8590,24 @@ public abstract class Node implements EventTarget, Styleable {
         return treeVisibleRO;
     }
 
-    class TreeVisiblePropertyReadOnly extends BooleanExpression {
+    class TreeVisiblePropertyReadOnly extends ReadOnlyBooleanPropertyBase {
 
-        private ExpressionHelper<Boolean> helper;
         private boolean valid;
 
         @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+        public Object getBean() {
+            return Node.this;
         }
 
         @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
+        public String getName() {
+            return "treeVisible";
         }
 
         protected void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 
@@ -9751,37 +9739,15 @@ public abstract class Node implements EventTarget, Styleable {
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
 
     private static abstract class LazyTransformProperty
-            extends ReadOnlyObjectProperty<Transform> {
+            extends ReadOnlyObjectPropertyBase<Transform> {
 
         protected static final int VALID = 0;
         protected static final int INVALID = 1;
         protected static final int VALIDITY_UNKNOWN = 2;
         protected int valid = INVALID;
 
-        private ExpressionHelper<Transform> helper;
-
         private Transform transform;
         private boolean canReuse = false;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Transform> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Transform> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         protected Transform getInternalValue() {
             if (valid == INVALID ||
@@ -9810,7 +9776,7 @@ public abstract class Node implements EventTarget, Styleable {
         public void invalidate() {
             if (valid != INVALID) {
                 valid = INVALID;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 
@@ -9820,31 +9786,10 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private static abstract class LazyBoundsProperty
-            extends ReadOnlyObjectProperty<Bounds> {
-        private ExpressionHelper<Bounds> helper;
+            extends ReadOnlyObjectPropertyBase<Bounds> {
         private boolean valid;
 
         private Bounds bounds;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Bounds> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Bounds> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         @Override
         public Bounds get() {
@@ -9859,7 +9804,7 @@ public abstract class Node implements EventTarget, Styleable {
         public void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 
