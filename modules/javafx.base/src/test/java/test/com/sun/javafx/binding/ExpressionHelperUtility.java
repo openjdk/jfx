@@ -31,7 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import com.sun.javafx.binding.ListenerList;
+import com.sun.javafx.binding.ListenerListBase;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -73,16 +73,14 @@ public class ExpressionHelperUtility {
         }
         final Class helperClass = helper.getClass();
 
-        if(helper instanceof InvalidationListener il) {
+        if (helper instanceof InvalidationListener il) {
             return List.of(il);
         }
-        if(helper instanceof ListenerList list) {
+        if (helper instanceof ListenerListBase list) {
             List<InvalidationListener> listeners = new ArrayList<>();
 
-            for(int i = 0; i < list.size(); i++) {
-                if(list.get(i) instanceof InvalidationListener il) {
-                    listeners.add(il);
-                }
+            for (int i = 0; i < list.invalidationListenersSize(); i++) {
+                listeners.add(list.getInvalidationListener(i));
             }
 
             return listeners;
@@ -155,7 +153,7 @@ public class ExpressionHelperUtility {
             return Collections.emptyList();
         }
 
-        if(helper instanceof ChangeListener) {
+        if (helper instanceof ChangeListener) {
             try {
                 Field field = Class.forName("com.sun.javafx.binding.OldValueCachingListenerManager$ChangeListenerWrapper").getDeclaredField("listener");
 
@@ -167,13 +165,11 @@ public class ExpressionHelperUtility {
 
             return List.of((ChangeListener<T>) helper);
         }
-        if(helper instanceof ListenerList list) {
+        if (helper instanceof ListenerListBase list) {
             List<ChangeListener<? super T>> listeners = new ArrayList<>();
 
-            for(int i = 0; i < list.size(); i++) {
-                if(list.get(i) instanceof ChangeListener<?> cl) {
-                    listeners.add((ChangeListener<T>) cl);
-                }
+            for (int i = 0; i < list.changeListenersSize(); i++) {
+                listeners.add(list.getChangeListener(i));
             }
 
             return listeners;

@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.binding.ListenerList;
+import com.sun.javafx.binding.ListenerListBase;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -47,22 +48,40 @@ import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
-public class ListenerListTest {
+public class ListenerListBaseTest {
     private final InvalidationListener il1 = obs -> {};
     private final ChangeListener<?> cl1 = (obs, o, n) -> {};
     private final InvalidationListener il2 = obs -> {};
     private final ChangeListener<?> cl2 = (obs, o, n) -> {};
 
-    private final ListenerList list = new ListenerList(cl1, il1);
+    private static class AccessibleListenerListBase extends ListenerListBase {
+        AccessibleListenerListBase(Object listener1, Object listener2) {
+            super(listener1, listener2);
+        }
+
+        public void accessibleLock() {
+            lock();
+        }
+
+        public boolean accessibleUnlock() {
+            return unlock();
+        }
+
+        public Object get(int index) {
+            return index < invalidationListenersSize() ? getInvalidationListener(index) : getChangeListener(index - invalidationListenersSize());
+        }
+    }
+
+    private final AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
 
     @Test
     void shouldConstructListWithInvalidationBeforeChangeListeners() {
-        ListenerList list = new ListenerList(cl1, il1);
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
 
         assertEquals(il1, list.get(0));
         assertEquals(cl1, list.get(1));
 
-        list = new ListenerList(il1, cl1);
+        list = new AccessibleListenerListBase(il1, cl1);
 
         assertEquals(il1, list.get(0));
         assertEquals(cl1, list.get(1));
@@ -75,7 +94,22 @@ public class ListenerListTest {
 
     @Test
     void shouldRejectUnlockedWhenNotLocked() {
-        assertThrows(IllegalStateException.class, () -> list.unlock());
+        assertThrows(AssertionError.class, () -> list.accessibleUnlock());
+
+        list.accessibleLock();
+        list.accessibleUnlock();
+
+        assertThrows(AssertionError.class, () -> list.accessibleUnlock());
+    }
+
+    @Test
+    void shouldRejectLockWhenLocked() {
+        list.accessibleLock();
+
+        assertThrows(AssertionError.class, () -> list.accessibleLock());
+
+        list.accessibleUnlock();
+        list.accessibleLock();
     }
 
     @Test
@@ -85,7 +119,8 @@ public class ListenerListTest {
         list.remove(cl1);
         list.remove(il1);
 
-        assertEquals(0, list.size());
+        assertEquals(0, list.invalidationListenersSize());
+        assertEquals(0, list.changeListenersSize());
         assertFalse(list.hasChangeListeners());
 
         list.remove(cl1);
@@ -109,27 +144,15 @@ public class ListenerListTest {
 
     @Test
     void hasChangeListenersShouldReturnCorrectStateWhileLocked_2() {
-        ListenerList list = new ListenerList(il1, il2);
+        AccessibleListenerListBase list = new AccessibleListenerListBase(il1, il2);
 
-        list.setProgress(1);
+        list.accessibleLock();
 
         assertFalse(list.hasChangeListeners());  // TODO is this what we want???? This is mainly tracked so we know when to update/clear old value...
 
         list.add(cl1);
 
         assertFalse(list.hasChangeListeners());
-    }
-
-    @Test
-    void shouldOnlyLockOnce() {
-        list.setProgress(1);  // locks list
-        list.setProgress(2);  // doesn't nested lock
-        list.setProgress(3);
-
-        list.unlock();  // unlocks
-
-        // verify another unlock is not needed:
-        assertThrows(IllegalStateException.class, () -> list.unlock());
     }
 
     @Test
@@ -140,7 +163,7 @@ public class ListenerListTest {
             list.add(rnd.nextBoolean() ? il1 : cl1);
         }
 
-        assertEquals(10002, list.size());
+        assertEquals(10002, list.invalidationListenersSize() + list.changeListenersSize());
         assertListenerSeparation(list);
     }
 
@@ -148,7 +171,7 @@ public class ListenerListTest {
     void shouldKeepInvalidationAndChangeListenersSeparatedAndInOrderWhenSomeAreRemovedOrExpired() {
         Random rnd = new Random(1);
         List<Object> addedListeners = new ArrayList<>();
-        ListenerList list = new ListenerList(new WeakInvalidationListener("0"), new WeakChangeListener("1"));
+        AccessibleListenerListBase list = new AccessibleListenerListBase(new WeakInvalidationListener("0"), new WeakChangeListener("1"));
 
         addedListeners.add(list.get(0));
         addedListeners.add(list.get(1));
@@ -165,7 +188,7 @@ public class ListenerListTest {
                 list.remove(addedListeners.remove(rnd.nextInt(addedListeners.size())));
             }
             else if(nextDouble < 0.15) {
-                if(list.get(rnd.nextInt(list.size())) instanceof SettableWeakListener swl) {
+                if(list.get(rnd.nextInt(list.invalidationListenersSize() + list.changeListenersSize())) instanceof SettableWeakListener swl) {
                     swl.setGarbageCollected(true);
                 }
             }
@@ -183,7 +206,7 @@ public class ListenerListTest {
             )
             .toList();
 
-        for(int i = 0; i < list.size(); i++) {
+        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
             Object listener = list.get(i);
 
             assertTrue(separatedListeners.contains(listener));
@@ -198,7 +221,7 @@ public class ListenerListTest {
     void shouldKeepInvalidationAndChangeListenersSeparatedAndInOrderWhileLockedAndWhenSomeAreRemoved() {
         Random rnd = new Random(1);
         List<Object> addedListeners = new ArrayList<>();
-        ListenerList list = new ListenerList(new WeakInvalidationListener("0"), new WeakChangeListener("1"));
+        AccessibleListenerListBase list = new AccessibleListenerListBase(new WeakInvalidationListener("0"), new WeakChangeListener("1"));
 
         addedListeners.add(list.get(0));
         addedListeners.add(list.get(1));
@@ -211,7 +234,7 @@ public class ListenerListTest {
             list.add(listener);
         }
 
-        list.setProgress(10);  // lock
+        list.accessibleLock();
 
         for(int i = 1000; i < 10000; i++) {
             Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
@@ -231,7 +254,7 @@ public class ListenerListTest {
             }
         }
 
-        list.unlock();
+        list.accessibleUnlock();
 
         // the exact size is not known, as it would depend on how many listeners have expired and
         // when the last resize was done to clean expired elements
@@ -247,7 +270,7 @@ public class ListenerListTest {
 
         int skips = 0;
 
-        for(int i = 0; i < list.size(); i++) {
+        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
             Object listener = list.get(i);
 
             if (listener == null) {
@@ -294,35 +317,39 @@ public class ListenerListTest {
 
     @Test
     void additionsShouldNotShowUpWhileLocked() {
-        assertEquals(2, list.size());
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
 
-        list.setProgress(10);  // locks list
+        list.accessibleLock();
 
         list.add(il2);
         list.add(cl2);
 
-        assertEquals(2, list.size());
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
         assertEquals(il1, list.get(0));
         assertEquals(cl1, list.get(1));
-        assertThrows(IndexOutOfBoundsException.class, () -> list.get(2));  // reject attempts to bypass lock
+        assertThrows(AssertionError.class, () -> list.get(2));  // reject attempts to bypass lock
 
-        list.unlock();
+        list.accessibleUnlock();
 
-        assertTrue(list.size() >= 4);  // at least 4 elements now, possibly more with nulls
+        assertEquals(2, list.invalidationListenersSize());
+        assertEquals(2, list.changeListenersSize());
 
         assertListeners(list, List.of(il1, il2, cl1, cl2));
     }
 
     @Test
     void removealsShouldBecomeNullsWhileLocked() {
-        assertEquals(2, list.size());
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
 
         list.add(il2);
         list.add(cl2);
 
         assertListeners(list, List.of(il1, il2, cl1, cl2));
 
-        list.setProgress(10);  // locks list
+        list.accessibleLock();
 
         assertListeners(list, List.of(il1, il2, cl1, cl2));
 
@@ -339,15 +366,15 @@ public class ListenerListTest {
         assertEquals(null, list.get(2));
         assertEquals(cl2, list.get(3));
 
-        list.unlock();
+        list.accessibleUnlock();
 
         assertListeners(list, List.of(il2, cl2));
     }
 
-    private void assertListenerSeparation(ListenerList list) {
+    private void assertListenerSeparation(AccessibleListenerListBase list) {
         boolean foundChange = false;
 
-        for(int i = 0; i < list.size(); i++) {
+        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
             if(list.get(i) instanceof ChangeListener) {
                 foundChange = true;
             }
@@ -357,13 +384,13 @@ public class ListenerListTest {
         }
     }
 
-    private void assertListeners(ListenerList list, List<Object> expectedListeners) {
+    private void assertListeners(AccessibleListenerListBase list, List<Object> expectedListeners) {
         assertListenerSeparation(list);
 
         int j = 0;
         int x = 0;
 
-        for(int i = 0; i < list.size(); i++) {
+        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
             Object listener = list.get(i);
 
             if(listener == null) {

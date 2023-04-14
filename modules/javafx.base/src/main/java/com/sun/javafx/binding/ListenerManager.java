@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
 package com.sun.javafx.binding;
 
 import java.util.Objects;
@@ -22,23 +47,7 @@ import javafx.beans.value.ObservableValue;
  * @param <T> the type of the values
  * @param <I> the type of the instance providing listener data
  */
-public abstract class ListenerManager<T, I extends ObservableValue<T>> {
-
-    /**
-     * Gets the listener data under management.
-     *
-     * @param instance the instance it is located in, never {@code null}
-     * @return the listener data, can be {@code null}
-     */
-    protected abstract Object getData(I instance);
-
-    /**
-     * Sets the listener data under management.
-     *
-     * @param instance the instance it is located in, never {@code null}
-     * @param data the data to set, can be {@code null}
-     */
-    protected abstract void setData(I instance, Object data);
+public abstract class ListenerManager<T, I extends ObservableValue<T>> extends ListenerManagerBase<T, I> {
 
     /**
      * Adds an invalidation listener.
@@ -108,9 +117,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<T>> {
         else if (data instanceof ListenerList list) {
             list.remove(listener);
 
-            if (list.size() == 1) {
-                setData(instance, list.get(0));
-            }
+            updateAfterRemoval(instance, list);
         }
     }
 
@@ -132,96 +139,36 @@ public abstract class ListenerManager<T, I extends ObservableValue<T>> {
         else if (data instanceof ChangeListener) {
             @SuppressWarnings("unchecked")
             ChangeListener<T> cl = (ChangeListener<T>) data;
+            T newValue = instance.getValue();  // Required as an earlier listener may have changed the value, and current value is always needed
 
-            callChangeListener(instance, cl, oldValue);
+            if (!Objects.equals(newValue, oldValue)) {
+                callChangeListener(instance, cl, oldValue, newValue);
+            }
         }
     }
 
     private void callMultipleListeners(I instance, ListenerList list, T oldValue) {
-        boolean topLevel = !list.isLocked();
+        boolean modified = list.notifyListeners(instance, oldValue);
 
-        // when nested, only notify as many listeners as were already notified:
-        int max = topLevel ? list.size() : list.getProgress() + 1;
-
-        int count = list.invalidationListenersSize();
-        int maxInvalidations = Math.min(count, max);
-
-        for (int i = 0; i < maxInvalidations; i++) {
-            InvalidationListener listener = list.getInvalidationListener(i);
-
-            if (listener == null) {
-                continue;
-            }
-
-            list.setProgress(i);
-
-            callInvalidationListener(instance, listener);
-        }
-
-        if (count < max) {
-            max -= count;
-
-            for (int i = 0; i < max; i++) {
-                ChangeListener<T> listener = list.getChangeListener(i);
-
-                if (listener == null) {
-                    continue;
-                }
-
-                T newValue = instance.getValue();  // Required as an earlier listener may have changed the value, and current value is always needed
-
-                if (Objects.equals(newValue, oldValue)) {
-                    break;
-                }
-
-                list.setProgress(i + count);
-
-                try {
-                    listener.changed(instance, oldValue, newValue);  // Old value must be the same for all listeners in this loop
-                }
-                catch (Exception e) {
-                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                }
-            }
-        }
-
-        if (topLevel && list.isLocked()) {
-            unlock(instance, list);
+        if (modified) {  // if modified, compact the data field if possible
+            updateAfterRemoval(instance, list);
         }
     }
 
-    private void callChangeListener(I instance, ChangeListener<T> changeListener, T oldValue) {
-        T newValue = instance.getValue();  // Required as an earlier listener may have changed the value, and current value is always needed
+    private void updateAfterRemoval(I instance, ListenerList list) {
+        int invalidationListenersSize = list.invalidationListenersSize();
+        int changeListenersSize = list.changeListenersSize();
 
-        if (!Objects.equals(newValue, oldValue)) {
-            try {
-                changeListener.changed(instance, oldValue, newValue);
+        if (invalidationListenersSize + changeListenersSize <= 1) {
+            if (invalidationListenersSize == 1) {
+                setData(instance, list.getInvalidationListener(0));
             }
-            catch (Exception e) {
-                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            else if (changeListenersSize == 1) {
+                setData(instance, list.getChangeListener(0));
             }
-        }
-    }
-
-    private void callInvalidationListener(I instance, InvalidationListener listener) {
-        try {
-            listener.invalidated(instance);
-        }
-        catch (Exception e) {
-            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-        }
-    }
-
-    private void unlock(I instance, ListenerList list) {
-        list.unlock();
-
-        int newSize = list.size();
-
-        if (newSize == 1) {
-            setData(instance, list.get(0));
-        }
-        else if(newSize == 0) {
-            setData(instance, null);
+            else {
+                setData(instance, null);
+            }
         }
     }
 }

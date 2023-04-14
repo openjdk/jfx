@@ -52,23 +52,7 @@ import javafx.beans.value.ObservableValue;
  * @param <T> the type of the values
  * @param <I> the type of the instance providing listener data
  */
-public abstract class OldValueCachingListenerManager<T, I extends ObservableValue<T>> {
-
-    /**
-     * Gets the listener data under management.
-     *
-     * @param instance the instance it is located in, never {@code null}
-     * @return the listener data, can be {@code null}
-     */
-    protected abstract Object getData(I instance);
-
-    /**
-     * Sets the listener data under management.
-     *
-     * @param instance the instance it is located in, never {@code null}
-     * @param data the data to set, can be {@code null}
-     */
-    protected abstract void setData(I instance, Object data);
+public abstract class OldValueCachingListenerManager<T, I extends ObservableValue<T>> extends ListenerManagerBase<T, I> {
 
     /**
      * Adds an invalidation listener.
@@ -165,19 +149,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         else if (data instanceof OldValueCachingListenerList<?> list) {
             list.remove(listener);
 
-            if (list.size() == 1) {
-                Object leftOverListener = list.get(0);
-
-                if (leftOverListener instanceof ChangeListener<?> cl) {
-                    setData(instance, new ChangeListenerWrapper<>(cl, list.getLatestValue()));
-                }
-                else {
-                    setData(instance, leftOverListener);
-                }
-            }
-            else if (!list.hasChangeListeners()) {
-                list.putLatestValue(null);  // clear to avoid references
-            }
+            updateAfterRemoval(instance, list);
         }
     }
 
@@ -207,103 +179,23 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
     }
 
     private void callMultipleListeners(I instance, OldValueCachingListenerList<T> list) {
-        boolean topLevel = !list.isLocked();
+        boolean modified = list.notifyListeners(instance);
 
-        // when nested, only notify as many listeners as were already notified:
-        int max = topLevel ? list.size() : list.getProgress() + 1;
-
-        int count = list.invalidationListenersSize();
-        int maxInvalidations = Math.min(count, max);
-
-        for (int i = 0; i < maxInvalidations; i++) {
-            InvalidationListener listener = list.getInvalidationListener(i);
-
-            if (listener == null) {
-                continue;
-            }
-
-            list.setProgress(i);
-
-            callInvalidationListener(instance, listener);
-        }
-
-        if (count < max) {
-            max -= count;
-
-            T oldValue = list.getLatestValue();
-
-            // Latest value must be store before calling the listener, as nested loop will need to know what the old value was
-            // Latest value should even be stored if it was "equals", as it may be a different reference
-            list.putLatestValue(instance.getValue());
-
-            for (int i = 0; i < max; i++) {
-                ChangeListener<T> listener = list.getChangeListener(i);
-
-                if (listener == null) {
-                    continue;
-                }
-
-                T newValue = list.getLatestValue();
-
-                if (Objects.equals(newValue, oldValue)) {
-                    break;
-                }
-
-                list.setProgress(i + count);
-
-                try {
-                    listener.changed(instance, oldValue, newValue);  // Old value must be the same for all listeners in this loop
-                }
-                catch (Exception e) {
-                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                }
-            }
-        }
-
-        if (topLevel && list.isLocked()) {
-            unlock(instance, list);
+        if (modified) {  // if modified, compact the data field if possible
+            updateAfterRemoval(instance, list);
         }
     }
 
     private void callWrappedChangeListener(I instance, ChangeListenerWrapper<T> changeListenerWrapper) {
         T oldValue = changeListenerWrapper.getLatestValue();
-        T value = instance.getValue();  // Required as an earlier listener may have changed the value, and current value is always needed
+        T newValue = instance.getValue();
 
         // Latest value must be store before calling the listener, as nested loop will need to know what the old value was
         // Latest value should even be stored if it was "equals", as it may be a different reference
-        changeListenerWrapper.putLatestValue(value);
+        changeListenerWrapper.putLatestValue(newValue);
 
-        if (!Objects.equals(value, oldValue)) {
-            try {
-                changeListenerWrapper.changed(instance, oldValue, value);
-            }
-            catch (Exception e) {
-                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-            }
-        }
-    }
-
-    private void callInvalidationListener(I instance, InvalidationListener listener) {
-        try {
-            listener.invalidated(instance);
-        }
-        catch (Exception e) {
-            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-        }
-    }
-
-    private void unlock(I instance, OldValueCachingListenerList<?> list) {
-        list.unlock();
-
-        int newSize = list.size();
-
-        if (newSize == 1) {
-            Object listener = list.get(0);
-
-            setData(instance, listener instanceof ChangeListener<?> cl ? new ChangeListenerWrapper<>(cl, list.getLatestValue()) : listener);
-        }
-        else if (newSize == 0) {
-            setData(instance, null);
+        if (!Objects.equals(newValue, oldValue)) {
+            callChangeListener(instance, changeListenerWrapper, oldValue, newValue);
         }
     }
 
@@ -328,6 +220,26 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         @Override
         public void changed(ObservableValue<? extends T> observable, T oldValue, T newValue) {
             listener.changed(observable, oldValue, newValue);
+        }
+    }
+
+    private void updateAfterRemoval(I instance, OldValueCachingListenerList<?> list) {
+        int invalidationListenersSize = list.invalidationListenersSize();
+        int changeListenersSize = list.changeListenersSize();
+
+        if (invalidationListenersSize + changeListenersSize <= 1) {
+            if (invalidationListenersSize == 1) {
+                setData(instance, list.getInvalidationListener(0));
+            }
+            else if (changeListenersSize == 1) {
+                setData(instance, new ChangeListenerWrapper<>((ChangeListener<?>) list.getChangeListener(0), list.getLatestValue()));
+            }
+            else {
+                setData(instance, null);
+            }
+        }
+        else if (!list.hasChangeListeners()) {
+            list.putLatestValue(null);  // clear to avoid references
         }
     }
 }

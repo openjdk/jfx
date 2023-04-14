@@ -28,165 +28,32 @@ package com.sun.javafx.binding;
 import java.util.Objects;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 /**
- * Manages a mix of invalidation and change listeners as a single list, which
- * can be locked in place for iteration while allowing modifications to take
- * place. Modifications during iteration are visible immediately for removals,
- * and only after unlocking for additions.<p>
- *
- * This list guarantees that, during iteration, invalidation listeners are
- * returned before any change listeners. It is not possible to access newly
- * added listeners while the list is locked for iteration.<p>
- *
- * If removals are allowed during iteration, then care must be taken to skip any
- * returned {@code null} elements.<p>
- *
- * Locking the list is achieved by calling {@link #setProgress(int)}, where the
- * value provided can be any integer. This value serves no purpose within this
- * class, but can be used to record the position of iteration when a nested
- * iteration occurs.<p>
- *
- * When the top-level iteration has finished, the list should be unlocked. This
- * will integrate any additions into the list, as well as removing any empty
- * slots from removals that occurred while locked.
+ * Extension of {@link ListenerListBase} which given an {@link ObservableValue}
+ * and its old value provides the means to notify all contained listeners
+ * with a depth first approach.
  */
-public class ListenerList {
-
-    /**
-     * This a variant of {@link ArrayManager} with an implemented {@link #compact(ListenerList, Object[])}
-     * method. The compaction is only allowed while its associated {@link ListenerList} is unlocked.<p>
-     *
-     * This handles compacting elements that are {@code null}, as well as elements that implement
-     * {@link WeakListener} that were garbage collected in the mean time.
-     */
-    private static abstract class CompactingArrayManager<T> extends ArrayManager<ListenerList, T> {
-
-        CompactingArrayManager(Class<T> elementType) {
-            super(elementType);
-        }
-
-        @Override
-        protected int compact(ListenerList instance, T[] array) {
-            if (instance.isLocked()) {
-                return 0;
-            }
-
-            int shift = 0;
-
-            for (int i = 0; i < array.length; i++) {
-                T element = array[i];
-
-                if (element == null || (element instanceof WeakListener wl && wl.wasGarbageCollected())) {
-                    shift++;
-                    array[i] = null;
-                    continue;
-                }
-
-                if(shift > 0) {
-                    array[i - shift] = element;
-                    array[i] = null;
-                }
-            }
-
-            return shift;
-        }
-    }
-
-    private static final ArrayManager<ListenerList, InvalidationListener> INVALIDATION_LISTENERS = new CompactingArrayManager<>(InvalidationListener.class) {
-        @Override
-        protected InvalidationListener[] getArray(ListenerList instance) {
-            return instance.managedInvalidationListeners;
-        }
-
-        @Override
-        protected void setArray(ListenerList instance, InvalidationListener[] array) {
-            instance.managedInvalidationListeners = array;
-        }
-
-        @Override
-        protected int getOccupiedSlots(ListenerList instance) {
-            return instance.managedInvalidationListenersCount;
-        }
-
-        @Override
-        protected void setOccupiedSlots(ListenerList instance, int occupiedSlots) {
-            instance.managedInvalidationListenersCount = occupiedSlots;
-        }
-    };
-
-    private static final ArrayManager<ListenerList, Object> CHANGE_LISTENERS = new CompactingArrayManager<>(Object.class) {
-        @Override
-        protected Object[] getArray(ListenerList instance) {
-            return instance.managedChangeListeners;
-        }
-
-        @Override
-        protected void setArray(ListenerList instance, Object[] array) {
-            instance.managedChangeListeners = array;
-        }
-
-        @Override
-        protected int getOccupiedSlots(ListenerList instance) {
-            return instance.managedChangeListenersCount;
-        }
-
-        @Override
-        protected void setOccupiedSlots(ListenerList instance, int occupiedSlots) {
-            instance.managedChangeListenersCount = occupiedSlots;
-        }
-    };
-
-    /*
-     * The following four fields are used for tracking invalidation and change listeners. When the
-     * list is unlocked, these arrays hold what you'd expect (InvalidationListeners and ChangeListeners
-     * respectively), with the total size returned by this class being the total number of occupied
-     * slots in the two lists. Indexing into this list first returns invalidation listeners, while
-     * higher indices that exceed the number of invalidation listeners index into the change listener
-     * array. This allows to keep track of how many listeners have been notified as a single index
-     * value, called progress.
-     *
-     * While the list is locked, any new listeners (regardless what kind) are always added to the
-     * change listener array first, in order to not disturb the indices of any listeners that existed
-     * before (the indices remain stable). Any added listeners are invisible, and cannot be obtained
-     * via the public methods of this class (the size of the list remains the same while locked, and
-     * attempting to access an index of an added listener which would exceed the size returned will
-     * result in an IndexOutOfBoundsException).
-     *
-     * Similarly, while the list is locked, any removed listeners do not alter the indices of this
-     * list; instead removed listeners are set to null.
-     *
-     * Only after unlocked are any InvalidationListeners that do not belong in the change listener
-     * array moved to the invalidation listener array, and nulled elements are potentially removed.
-     *
-     * Note: although providing an Iterator (which automatically handles skipping null elements)
-     * would seem like a nice addition, its not currently implemented as it would require an object
-     * allocation. The current users of this class want to avoid allocations.
-     */
-
-    private InvalidationListener[] managedInvalidationListeners;
-    private int managedInvalidationListenersCount;
-    private Object[] managedChangeListeners;
-    private int managedChangeListenersCount;
+public class ListenerList extends ListenerListBase {
 
     /**
      * This field is only used during notifications, and only relevant
-     * when nested notifications occur. It is used to record how many
-     * listeners have been notified already in a higher level loop, so
-     * more deeply nested loops will never notify more listeners than
-     * its previous nesting level.
+     * when nested notifications occur. It is used for communicating
+     * information between the different nesting levels. To deeper
+     * nesting levels it contains the number of listeners that have
+     * been notified in higher level loops, while deeper nesting levels
+     * communicate to higher level loops whether a nested notification
+     * actually occurred.<p>
+     *
+     * When its value is zero or positive, it indicates the number of
+     * listeners notified in a higher level loop (minus one), while
+     * when its negative (-1) it indicates to a higher level loop that
+     * a nested notification occurred, requiring, for example, a refresh
+     * of the current value and a new equals check.
      */
     private int progress;
-
-    /**
-     * Indicates whether the list is locked, and if so, what the size
-     * of the list was at the time of locking. A non-negative value
-     * indicates the list is locked, while -1 indicates the list is
-     * not locked.
-     */
-    private int lockedOffset = -1;
 
     /**
      * Creates a new instance with two listeners.
@@ -196,216 +63,91 @@ public class ListenerList {
      * @throws NullPointerException when any parameter is {@code null}
      */
     public ListenerList(Object listener1, Object listener2) {
-        Objects.requireNonNull(listener1);
-        Objects.requireNonNull(listener2);
-
-        if(listener1 instanceof InvalidationListener il) {
-            INVALIDATION_LISTENERS.add(this, il);
-        }
-        else {
-            CHANGE_LISTENERS.add(this, listener1);
-        }
-
-        if(listener2 instanceof InvalidationListener il) {
-            INVALIDATION_LISTENERS.add(this, il);
-        }
-        else {
-            CHANGE_LISTENERS.add(this, listener2);
-        }
+        super(listener1, listener2);
     }
 
     /**
-     * Gets the listener at the given index. This can be {@code null} if the
-     * listener was removed in the mean time.<p>
+     * Notifies all listeners using the given observable value as source.
      *
-     * This method can be used to retrieve either an invalidation or change listener.
-     * This method will return an invalidation listener if {@code index} is smaller than
-     * {@link #invalidationListenersSize()}, otherwise it returns a change listener.
-     *
-     * @param index an index, cannot be negative and must be less than {@link #size()}
-     * @return the listener at the given index, or {@code null}
-     * @throws IndexOutOfBoundsException when the index is out of range
+     * @param <T> the type of the values the observable provides
+     * @param observableValue an {@link ObservableValue}, cannot be {@code null}
+     * @param oldValue the value held by the observable before it was changed, can be {@code null}
+     * @return {@code true} if the listener list is not locked, and it was modified during
+     *     notification otherwise {@code false}
      */
-    public Object get(int index) {
-        if (isLocked() && index >= lockedOffset) {
-            throw new IndexOutOfBoundsException(index);
+    public <T> boolean notifyListeners(ObservableValue<T> observableValue, T oldValue) {
+        boolean wasLocked = isLocked();
+
+        if (!wasLocked) {
+            lock();
         }
 
-        return index < managedInvalidationListenersCount ? INVALIDATION_LISTENERS.get(this, index) : CHANGE_LISTENERS.get(this, index - managedInvalidationListenersCount);
-    }
+        int invalidationListenersSize = invalidationListenersSize();
+        int maxInvalidations = wasLocked ? Math.min(progress + 1, invalidationListenersSize) : invalidationListenersSize;
 
-    /**
-     * Gets the invalidation listener at the given index. This can be {@code null}
-     * if the listener was removed in the mean time.
-     *
-     * @param index an index, cannot be negative and must be less than {@link #invalidationListenersSize()}
-     * @return the invalidation listener at the given index, or {@code null}
-     * @throws IndexOutOfBoundsException when the index is out of range
-     */
-    public InvalidationListener getInvalidationListener(int index) {
-        // no need to check locked here, as new listeners are only added in the other array
-        return INVALIDATION_LISTENERS.get(this, index);
-    }
+        for (int i = 0; i < maxInvalidations; i++) {
+            InvalidationListener listener = getInvalidationListener(i);
 
-    /**
-     * Gets the change listener at the given index. This can be {@code null}
-     * if the listener was removed in the mean time.
-     *
-     * @param index an index, cannot be negative and must be less than {@link #changeListenersSize()}
-     * @return the change listener at the given index, or {@code null}
-     * @throws IndexOutOfBoundsException when the index is out of range
-     */
-    public <T> ChangeListener<T> getChangeListener(int index) {
-        if (isLocked() && index >= lockedOffset - managedInvalidationListenersCount) {
-            throw new IndexOutOfBoundsException(index);
-        }
-
-        return (ChangeListener<T>) CHANGE_LISTENERS.get(this, index);
-    }
-
-    /**
-     * Returns the size of this listener list. Note: this is not the number of
-     * actual listeners in the list, some elements may be {@code null}.
-     *
-     * @return the size of this listener list, never negative
-     */
-    public int size() {
-        return isLocked() ? lockedOffset : managedInvalidationListenersCount + managedChangeListenersCount;
-    }
-
-    /**
-     * Returns the size of the invalidation listener list. Note: this is not the number of
-     * actual listeners in the list, some elements may be {@code null}.
-     *
-     * @return the size of the invalidation listener list, never negative
-     */
-    public int invalidationListenersSize() {
-        return managedInvalidationListenersCount;
-    }
-
-    /**
-     * Returns the size of the change listener list. Note: this is not the number of
-     * actual listeners in the list, some elements may be {@code null}.
-     *
-     * @return the size of the change listener list, never negative
-     */
-    public int changeListenersSize() {
-        return lockedOffset - managedInvalidationListenersCount;
-    }
-
-    /**
-     * Adds a listener to this list. If the list is locked, this listener won't show
-     * up until unlocked, nor will the lists size change.
-     *
-     * @param listener a listener, cannot be {@code null}
-     */
-    public void add(Object listener) {
-        Objects.requireNonNull(listener);
-
-        if (isLocked() || listener instanceof ChangeListener) {
-            CHANGE_LISTENERS.add(this, listener);  // even invalidation listeners go into this list when locked!
-        }
-        else {
-            INVALIDATION_LISTENERS.add(this, (InvalidationListener) listener);
-        }
-    }
-
-    /**
-     * Removes a listener from this list. If the list is locked, the removed
-     * listener is set to {@code null}. When iterating, {@code null}s must be
-     * skipped.
-     *
-     * @param listener a listener to remove, cannot be {@code null}
-     */
-    public void remove(Object listener) {
-        Objects.requireNonNull(listener);
-
-        int index = listener instanceof InvalidationListener il ? INVALIDATION_LISTENERS.indexOf(this, il) : -1;
-
-        if (index >= 0) {
-            if (isLocked()) {
-                INVALIDATION_LISTENERS.set(this, index, null);
+            if (listener == null) {
+                continue;
             }
-            else {
-                INVALIDATION_LISTENERS.remove(this, index);
-            }
-        }
-        else {
-            index = CHANGE_LISTENERS.indexOf(this, listener);
 
-            if (index >= 0) {
-                if (!isLocked() || index >= lockedOffset - managedInvalidationListenersCount) {
-                    CHANGE_LISTENERS.remove(this, index);  // not locked, or was added during lock, so can just remove directly
-                }
-                else {
-                    CHANGE_LISTENERS.set(this, index, null);
+            // communicate to a lower level loop (if triggered) how many listeners were notified so far:
+            progress = i;
+
+            // call invalidation listener (and perhaps a nested notification):
+            callInvalidationListener(observableValue, listener);
+        }
+
+        int changeListenersSize = changeListenersSize();
+        int maxChanges = wasLocked ? Math.min(progress + 1 - invalidationListenersSize, changeListenersSize) : changeListenersSize;
+
+        T newValue = null;
+
+        for (int i = 0; i < maxChanges; i++) {
+            ChangeListener<T> listener = getChangeListener(i);
+
+            if (listener == null) {
+                continue;
+            }
+
+            // only get the latest value if this is the first loop or a nested notification occurred:
+            if (progress < 0 || i == 0) {
+                newValue = observableValue.getValue();
+
+                if (Objects.equals(newValue, oldValue)) {
+                    break;
                 }
             }
+
+            // communicate to a lower level loop (if triggered) how many listeners were notified so far:
+            progress = i + invalidationListenersSize;
+
+            // call change listener (and perhaps a nested notification):
+            callChangeListener(observableValue, listener, oldValue, newValue);
+        }
+
+        // communicate to a higher level loop that a nested notification occurred:
+        progress = -1;
+
+        return wasLocked ? false : unlock();
+    }
+
+    private void callInvalidationListener(ObservableValue<?> instance, InvalidationListener listener) {
+        try {
+            listener.invalidated(instance);
+        }
+        catch (Exception e) {
+            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
         }
     }
 
-    /**
-     * Unlocks this listener list, making any listeners available that were added
-     * while locked, and possibly removing empty slots from listeners that were removed while
-     * locked.
-     */
-    public void unlock() {
-        if (!isLocked()) {
-            throw new IllegalStateException("wasn't locked");
+    private <T> void callChangeListener(ObservableValue<T> instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
+        try {
+            changeListener.changed(instance, oldValue, newValue);
         }
-
-        if (managedInvalidationListenersCount + managedChangeListenersCount > lockedOffset) {  // if there were additions...
-            for (int i = lockedOffset - managedInvalidationListenersCount; i < managedChangeListenersCount; i++) {
-                Object listener = CHANGE_LISTENERS.get(this, i);
-
-                if (listener instanceof InvalidationListener il) {
-                    INVALIDATION_LISTENERS.add(this, il);
-                    CHANGE_LISTENERS.set(this, i, null);
-                }
-            }
+        catch (Exception e) {
+            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
         }
-
-        lockedOffset = -1;
-    }
-
-    /**
-     * Returns the value previously set progress value.
-     *
-     * @return the progress value
-     */
-    public int getProgress() {
-        return progress;
-    }
-
-    /**
-     * Sets the progress value. If the list was unlocked, also locks the list.
-     *
-     * @param progress a progress value
-     */
-    public void setProgress(int progress) {
-        this.progress = progress;
-
-        if (!isLocked()) {
-            this.lockedOffset = managedInvalidationListenersCount + managedChangeListenersCount;
-        }
-    }
-
-    /**
-     * Checks whether this list is locked.
-     *
-     * @return {@code true} if locked, otherwise {@code false}
-     */
-    public boolean isLocked() {
-        return lockedOffset >= 0;
-    }
-
-    /**
-     * Checks whether this list has any change listeners. Note: this does not
-     * update while locked.
-     *
-     * @return {@code true} if there were change listeners, otherwise {@code false}
-     */
-    public boolean hasChangeListeners() {
-        return size() > managedInvalidationListenersCount;
     }
 }
