@@ -117,12 +117,21 @@ static GdkAtom get_net_frame_extents_atom() {
 
 WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _screen,
         WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf) :
+            events_processing_cnt(0),
             screen(_screen),
             frame_type(_frame_type),
             window_type(type),
             owner(_owner),
             geometry(),
             resizable(),
+            xim(),
+            on_top(false),
+            is_fullscreen(false),
+            is_iconified(false),
+            is_maximized(false),
+            is_mouse_entered(false),
+            is_disabled(false),
+            can_be_deleted(false),
             jview(NULL) {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 

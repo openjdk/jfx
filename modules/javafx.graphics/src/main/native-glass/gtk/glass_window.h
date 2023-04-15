@@ -91,15 +91,7 @@ struct WindowGeometry {
 };
 
 class WindowContext {
-    struct _XIM {
-        XIM im;
-        XIC ic;
-        bool enabled;
-    } xim;
-
     size_t events_processing_cnt;
-    bool can_be_deleted;
-
     jlong screen;
     WindowFrameType frame_type;
     WindowType window_type;
@@ -112,13 +104,20 @@ class WindowContext {
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
     } resizable;
 
-    bool map_received;
+    struct _XIM {
+        _XIM() : im(NULL), ic(NULL), enabled(false) {}
+        XIM im;
+        XIC ic;
+        bool enabled;
+    } xim;
+
     bool on_top;
     bool is_fullscreen;
     bool is_iconified;
     bool is_maximized;
     bool is_mouse_entered;
     bool is_disabled;
+    bool can_be_deleted;
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
