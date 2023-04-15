@@ -340,7 +340,7 @@ public class ListenerListBaseTest {
     }
 
     @Test
-    void removealsShouldBecomeNullsWhileLocked() {
+    void removalsShouldBecomeNullsWhileLocked() {
         assertEquals(1, list.invalidationListenersSize());
         assertEquals(1, list.changeListenersSize());
 

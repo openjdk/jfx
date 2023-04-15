@@ -105,8 +105,9 @@ public class OldValueCachingListenerList<T> extends ListenerListBase {
             lock();
         }
 
+        int initialProgress = progress;  // save as it will be modified soon
         int invalidationListenersSize = invalidationListenersSize();
-        int maxInvalidations = wasLocked ? Math.min(progress + 1, invalidationListenersSize) : invalidationListenersSize;
+        int maxInvalidations = wasLocked ? Math.min(initialProgress + 1, invalidationListenersSize) : invalidationListenersSize;
 
         for (int i = 0; i < maxInvalidations; i++) {
             InvalidationListener listener = getInvalidationListener(i);
@@ -123,7 +124,7 @@ public class OldValueCachingListenerList<T> extends ListenerListBase {
         }
 
         int changeListenersSize = changeListenersSize();
-        int maxChanges = wasLocked ? Math.min(progress + 1 - invalidationListenersSize, changeListenersSize) : changeListenersSize;
+        int maxChanges = wasLocked ? Math.min(initialProgress + 1 - invalidationListenersSize, changeListenersSize) : changeListenersSize;
 
         T oldValue = getLatestValue();
         T newValue = null;
