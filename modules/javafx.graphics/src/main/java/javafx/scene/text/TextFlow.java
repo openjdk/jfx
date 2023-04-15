@@ -59,38 +59,39 @@ import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
 
 /**
- * TextFlow is special layout designed to lay out rich text.
- * It can be used to layout several {@link Text} nodes in a single text flow.
- * The TextFlow uses the text and the font of each {@link Text} node inside of it
+ * A specialized layout for rich text.
+ * It can be used to lay out several {@link Text} nodes in a single text flow.
+ * {@code TextFlow} uses the text and the font of each {@code Text} node inside of it,
  * plus its own width and text alignment to determine the location for each child.
- * A single {@link Text} node can span over several lines due to wrapping, and
- * the visual location of {@link Text} node can differ from the logical location
+ * A single {@code Text} node can span over several lines due to wrapping, and
+ * the visual location of the {@code Text} node can differ from the logical location
  * due to bidi reordering.
  *
  * <p>
- * Any Node, other than Text, will be treated as an embedded object in the
+ * Any {@code Node} other than {@code Text} will be treated as an embedded object in the
  * text layout. It will be inserted in the content using its preferred width,
  * height, and baseline offset.
  *
  * <p>
- * When a {@link Text} node is inside of a TextFlow, some of its properties are ignored.
- * For example, the x and y properties of the {@link Text} node are ignored since
+ * When a {@code Text} node is inside a {@code TextFlow}, some of its properties are ignored.
+ * For example, the {@code x} and {@code y} properties of the {@code Text} node are ignored since
  * the location of the node is determined by the parent. Likewise, the wrapping
- * width in the {@link Text} node is ignored since the width used for wrapping
- * is the TextFlow's width. The value of the <code>pickOnBounds</code> property
- * of a {@link Text} is set to <code>false</code> when it is laid out by the
- * TextFlow. This happens because the content of a single {@link Text} node can
- * divided and placed in the different locations on the TextFlow (usually due to
+ * width in the {@code Text} node is ignored since the width used for wrapping
+ * is the {@code TextFlow}'s width. The value of the {@code pickOnBounds} property
+ * of a {@code Text} node is set to {@code false} when it is laid out by the
+ * {@code TextFlow}. This happens because the content of a single {@code Text} node can be
+ * split and placed in different locations in the {@code TextFlow} (usually due to
  * line breaking and bidi reordering).
  *
  * <p>
  * The wrapping width of the layout is determined by the region's current width.
- * It can be specified by the application by setting the textflow's preferred
+ * It can be specified by the application by setting the {@code TextFlow}'s preferred
  * width. If no wrapping is desired, the application can either set the preferred
- * with to Double.MAX_VALUE or Region.USE_COMPUTED_SIZE.
+ * with to {@code Double.MAX_VALUE} or
+ * {@link javafx.scene.layout.Region#USE_COMPUTED_SIZE Region.USE_COMPUTED_SIZE}.
  *
  * <p>
- * Paragraphs are separated by {@code '\n'} present in any Text child.
+ * Paragraphs are separated by {@code '\n'} present in any {@code Text} child.
  *
  * <p>
  * Example of a TextFlow:
@@ -105,18 +106,18 @@ import javafx.css.StyleableProperty;
  * }</pre>
  *
  * <p>
- * TextFlow lays out each managed child regardless of the child's visible property value;
+ * {@code TextFlow} lays out each managed child regardless of the child's visible property value;
  * unmanaged children are ignored for all layout calculations.</p>
  *
  * <p>
- * TextFlow may be styled with backgrounds and borders using CSS.  See
+ * {@code TextFlow} may be styled with backgrounds and borders using CSS. See its
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
  * <h2>Resizable Range</h2>
  *
  * <p>
- * A textflow's parent will resize the textflow within the textflow's range
- * during layout. By default the textflow computes this range based on its content
+ * A {@code TextFlow}'s parent will resize the {@code TextFlow} within the {@code TextFlow}'s range
+ * during layout. By default, the {@code TextFlow} computes this range based on its content
  * as outlined in the tables below.
  * </p>
  *
@@ -130,24 +131,24 @@ import javafx.css.StyleableProperty;
  * <td>left/right insets plus the width of the text content</td>
  * <td>top/bottom insets plus the height of the text content</td></tr>
  * <tr><th scope="row">maximum</th>
- * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
+ * <td>{@code Double.MAX_VALUE}</td><td>{@code Double.MAX_VALUE}</td></tr>
  * </table>
  * <p>
- * A textflow's unbounded maximum width and height are an indication to the parent that
+ * A {@code TextFlow}'s unbounded maximum width and height are an indication to the parent that
  * it may be resized beyond its preferred size to fill whatever space is assigned to it.
  * <p>
- * TextFlow provides properties for setting the size range directly.  These
- * properties default to the sentinel value Region.USE_COMPUTED_SIZE, however the
+ * {@code TextFlow} provides properties for setting the size range directly. These
+ * properties default to the sentinel value {@code Region.USE_COMPUTED_SIZE}, however the
  * application may set them to other values as needed:
  * <pre><code>
  *     <b>textflow.setMaxWidth(500);</b>
  * </code></pre>
  * Applications may restore the computed values by setting these properties back
- * to Region.USE_COMPUTED_SIZE.
+ * to {@code Region.USE_COMPUTED_SIZE}.
  * <p>
- * TextFlow does not clip its content by default, so it is possible that childrens'
- * bounds may extend outside its own bounds if a child's pref size is larger than
- * the space textflow has to allocate for it.</p>
+ * {@code TextFlow} does not clip its content by default, so it is possible that children's
+ * bounds may extend outside of its own bounds if a child's preferred size is larger than
+ * the space the {@code TextFlow} has to allocate for it.</p>
  *
  * @since JavaFX 8.0
  */

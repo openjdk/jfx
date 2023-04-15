@@ -102,7 +102,7 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
             wrapper->valueChanged(coreObject->valueForRange());
         break;
     case AXInvalidStatusChanged:
-        wrapper->stateChanged("invalid-entry", coreObject->invalidStatus() != "false");
+        wrapper->stateChanged("invalid-entry", coreObject->invalidStatus() != "false"_s);
         break;
     case AXElementBusyChanged:
         wrapper->stateChanged("busy", coreObject->isBusy());
@@ -138,62 +138,10 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
         if (auto* descendant = coreObject->activeDescendant())
             platformHandleFocusedUIElementChanged(nullptr, descendant->node());
         break;
-    case AXAriaRoleChanged:
-        break;
-    case AXAutocorrectionOccured:
-        break;
     case AXChildrenChanged:
         coreObject->updateChildrenIfNecessary();
         break;
-    case AXFocusedUIElementChanged:
-        break;
-    case AXFrameLoadComplete:
-        break;
-    case AXIdAttributeChanged:
-        break;
-    case AXImageOverlayChanged:
-        break;
-    case AXLanguageChanged:
-        break;
-    case AXLayoutComplete:
-        break;
-    case AXLoadComplete:
-        break;
-    case AXNewDocumentLoadComplete:
-        break;
-    case AXPageScrolled:
-        break;
-    case AXSelectedTextChanged:
-        break;
-    case AXScrolledToAnchor:
-        break;
-    case AXLiveRegionCreated:
-        break;
-    case AXLiveRegionChanged:
-        break;
-    case AXMenuClosed:
-        break;
-    case AXMenuOpened:
-        break;
-    case AXRowCountChanged:
-        break;
-    case AXPressDidSucceed:
-        break;
-    case AXPressDidFail:
-        break;
-    case AXSortDirectionChanged:
-        break;
-    case AXTextChanged:
-        break;
-    case AXDraggingStarted:
-        break;
-    case AXDraggingEnded:
-        break;
-    case AXDraggingEnteredDropZone:
-        break;
-    case AXDraggingDropped:
-        break;
-    case AXDraggingExitedDropZone:
+    default:
         break;
     }
 }

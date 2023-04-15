@@ -29,6 +29,7 @@
 #include "FontCascadeDescription.h"
 #include "FontCascadeFonts.h"
 #include "Path.h"
+#include <optional>
 #include <wtf/HashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -91,7 +92,9 @@ struct GlyphOverflow {
 };
 
 #if USE(CORE_TEXT)
+AffineTransform computeBaseOverallTextMatrix(const std::optional<AffineTransform>& syntheticOblique);
 AffineTransform computeOverallTextMatrix(const Font&);
+AffineTransform computeBaseVerticalTextMatrix(const AffineTransform& previousTextMatrix);
 AffineTransform computeVerticalTextMatrix(const Font&, const AffineTransform& previousTextMatrix);
 #endif
 
@@ -175,6 +178,7 @@ public:
     int emphasisMarkAscent(const AtomString&) const;
     int emphasisMarkDescent(const AtomString&) const;
     int emphasisMarkHeight(const AtomString&) const;
+    float floatEmphasisMarkHeight(const AtomString&) const;
 
     const Font& primaryFont() const;
     const FontRanges& fallbackRangesAt(unsigned) const;
@@ -210,6 +214,8 @@ public:
 
     std::unique_ptr<DisplayList::InMemoryDisplayList> displayListForTextRun(GraphicsContext&, const TextRun&, unsigned from = 0, std::optional<unsigned> to = { }, CustomFontNotReadyAction = CustomFontNotReadyAction::DoNotPaintIfFontNotReady) const;
 
+    unsigned generation() const { return m_generation; }
+
 #if PLATFORM(WIN) && USE(CG)
     static void setFontSmoothingLevel(int);
     static uint32_t setFontSmoothingStyle(CGContextRef, bool fontAllowsSmoothing);
@@ -230,6 +236,7 @@ private:
     void adjustSelectionRectForSimpleText(const TextRun&, LayoutRect& selectionRect, unsigned from, unsigned to) const;
 
     std::optional<GlyphData> getEmphasisMarkGlyphData(const AtomString&) const;
+    const Font* fontForEmphasisMark(const AtomString&) const;
 
     static bool canReturnFallbackFontsForComplexText();
     static bool canExpandAroundIdeographsInComplexText();
@@ -332,21 +339,23 @@ private:
     }
 
 #if PLATFORM(WIN) && USE(CG)
-    static double s_fontSmoothingContrast;
-    static uint32_t s_fontSmoothingType;
-    static int s_fontSmoothingLevel;
-    static uint32_t s_systemFontSmoothingType;
-    static bool s_systemFontSmoothingSet;
-    static bool s_systemFontSmoothingEnabled;
+    static Lock s_fontSmoothingLock;
+    static double s_fontSmoothingContrast WTF_GUARDED_BY_LOCK(s_fontSmoothingLock);
+    static uint32_t s_fontSmoothingType WTF_GUARDED_BY_LOCK(s_fontSmoothingLock);
+    static int s_fontSmoothingLevel WTF_GUARDED_BY_LOCK(s_fontSmoothingLock);
+    static uint32_t s_systemFontSmoothingType WTF_GUARDED_BY_LOCK(s_fontSmoothingLock);
+    static bool s_systemFontSmoothingSet WTF_GUARDED_BY_LOCK(s_fontSmoothingLock);
+    static bool s_systemFontSmoothingEnabled WTF_GUARDED_BY_LOCK(s_fontSmoothingLock);
 #endif
 
     FontCascadeDescription m_fontDescription;
     mutable RefPtr<FontCascadeFonts> m_fonts;
     float m_letterSpacing { 0 };
     float m_wordSpacing { 0 };
-    mutable bool m_useBackslashAsYenSymbol { false };
-    mutable bool m_enableKerning { false }; // Computed from m_fontDescription.
-    mutable bool m_requiresShaping { false }; // Computed from m_fontDescription.
+    mutable unsigned m_generation { 0 };
+    bool m_useBackslashAsYenSymbol { false };
+    bool m_enableKerning { false }; // Computed from m_fontDescription.
+    bool m_requiresShaping { false }; // Computed from m_fontDescription.
 };
 
 inline const Font& FontCascade::primaryFont() const

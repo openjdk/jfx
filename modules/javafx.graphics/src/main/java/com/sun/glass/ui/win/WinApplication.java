@@ -39,7 +39,8 @@ import java.security.PrivilegedAction;
 import java.util.ResourceBundle;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
-    static float   overrideUIScale;
+
+    static float overrideUIScale;
     private static final String BASE_NAME = "com/sun/glass/ui/win/themes";
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
@@ -111,6 +112,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
+
     WinApplication() {
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -126,7 +128,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private static boolean verbose;
 
-    // returng toolkit window HWND
+    // returning toolkit window HWND
     private native long _init(int awarenessRequested);
     private native void _setClassLoader(ClassLoader classLoader);
     private native void _runLoop(Runnable launchable);

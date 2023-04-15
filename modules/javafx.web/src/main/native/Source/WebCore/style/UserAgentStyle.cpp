@@ -33,6 +33,7 @@
 #include "ChromeClient.h"
 #include "FullscreenManager.h"
 #include "HTMLAnchorElement.h"
+#include "HTMLAttachmentElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDataListElement.h"
@@ -48,7 +49,6 @@
 #include "MathMLElement.h"
 #include "MediaQueryEvaluator.h"
 #include "Page.h"
-#include "Quirks.h"
 #include "RenderTheme.h"
 #include "RuleSetBuilder.h"
 #include "SVGElement.h"
@@ -78,6 +78,9 @@ StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
 StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
 #endif
 StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
+#if ENABLE(ATTACHMENT_ELEMENT)
+StyleSheetContents* UserAgentStyle::attachmentStyleSheet;
+#endif
 #if ENABLE(DATALIST_ELEMENT)
 StyleSheetContents* UserAgentStyle::dataListStyleSheet;
 #endif
@@ -189,6 +192,12 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
             }
         }
 #endif // ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
+#if ENABLE(ATTACHMENT_ELEMENT)
+        else if (!attachmentStyleSheet && is<HTMLAttachmentElement>(element)) {
+            attachmentStyleSheet = parseUASheet(RenderTheme::singleton().attachmentStyleSheet());
+            addToDefaultStyle(*attachmentStyleSheet);
+        }
+#endif // ENABLE(ATTACHMENT_ELEMENT)
 #if ENABLE(DATALIST_ELEMENT)
         else if (!dataListStyleSheet && is<HTMLDataListElement>(element)) {
             dataListStyleSheet = parseUASheet(RenderTheme::singleton().dataListStyleSheet());
@@ -220,12 +229,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
 
 #if ENABLE(FULLSCREEN_API)
     if (!fullscreenStyleSheet && element.document().fullscreenManager().isFullscreen()) {
-        StringBuilder fullscreenRules;
-        fullscreenRules.appendCharacters(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet));
-        fullscreenRules.append(RenderTheme::singleton().extraFullScreenStyleSheet());
-        if (element.document().quirks().needsBlackFullscreenBackgroundQuirk())
-            fullscreenRules.append(":-webkit-full-screen { background-color: black; }"_s);
-        fullscreenStyleSheet = parseUASheet(fullscreenRules.toString());
+        fullscreenStyleSheet = parseUASheet(StringImpl::createWithoutCopying(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet)));
         addToDefaultStyle(*fullscreenStyleSheet);
     }
 #endif // ENABLE(FULLSCREEN_API)

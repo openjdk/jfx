@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -321,6 +321,16 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() && !backingMap.isEmpty()) {
+                clear();
+                return true;
+            }
+
+            if (backingMap.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, false);
         }
 
@@ -341,6 +351,11 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() || backingMap.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, true);
         }
 
@@ -450,6 +465,11 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() || backingMap.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, true);
         }
 
@@ -470,6 +490,16 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() && !backingMap.isEmpty()) {
+                clear();
+                return true;
+            }
+
+            if (backingMap.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, false);
         }
 
@@ -525,10 +555,9 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public final boolean equals(Object o) {
-            if (!(o instanceof Map.Entry)) {
+            if (!(o instanceof Map.Entry<?, ?> e)) {
                 return false;
             }
-            Map.Entry e = (Map.Entry) o;
             Object k1 = getKey();
             Object k2 = e.getKey();
             if (k1 == k2 || (k1 != null && k1.equals(k2))) {
@@ -647,6 +676,16 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean retainAll(Collection<?> c) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() && !backingMap.isEmpty()) {
+                clear();
+                return true;
+            }
+
+            if (backingMap.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, false);
         }
 
@@ -667,6 +706,11 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public boolean removeAll(Collection<?> c) {
+            // implicit check to ensure c != null
+            if (c.isEmpty() || backingMap.isEmpty()) {
+                return false;
+            }
+
             return removeRetain(c, true);
         }
 

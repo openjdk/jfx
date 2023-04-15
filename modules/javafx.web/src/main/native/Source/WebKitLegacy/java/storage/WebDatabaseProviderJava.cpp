@@ -27,5 +27,5 @@
 
 String WebDatabaseProvider::indexedDatabaseDirectoryPath()
 {
-    return "";
+    return ""_s;
 }

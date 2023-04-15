@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,17 +44,15 @@ class JSWebAssemblyInstance;
 
 namespace Wasm {
 
-struct Context;
 class Instance;
 
 class Instance : public ThreadSafeRefCounted<Instance>, public CanMakeWeakPtr<Instance> {
     friend LLIntOffsetsExtractor;
 
 public:
-    using StoreTopCallFrameCallback = WTF::Function<void(void*)>;
     using FunctionWrapperMap = HashMap<uint32_t, WriteBarrier<Unknown>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
-    static Ref<Instance> create(Context*, Ref<Module>&&, EntryFrame** pointerToTopEntryFrame, void** pointerToActualStackLimit, StoreTopCallFrameCallback&&);
+    static Ref<Instance> create(VM&, Ref<Module>&&);
 
     void setOwner(void* owner)
     {
@@ -68,8 +66,7 @@ public:
 
     size_t extraMemoryAllocated() const;
 
-    Wasm::Context* context() const { return m_context; }
-
+    VM& vm() const { return m_vm; }
     Module& module() const { return m_module.get(); }
     CalleeGroup* calleeGroup() const { return module().calleeGroupFor(memory()->mode()); }
     Memory* memory() const { return m_memory.get(); }
@@ -106,8 +103,22 @@ public:
     void updateCachedMemory()
     {
         if (m_memory != nullptr) {
-            m_cachedMemory = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>(memory()->memory(), memory()->boundsCheckingSize());
-            m_cachedBoundsCheckingSize = memory()->boundsCheckingSize();
+            // Note: In MemoryMode::BoundsChecking, mappedCapacity() == size().
+            // We assert this in the constructor of MemoryHandle.
+#if CPU(ARM)
+            // Shared memory requires signaling memory which is not available
+            // on ARMv7 yet. In order to get more of the test suite to run, we
+            // can still use a shared memory by using bounds checking, by using
+            // the actual size here, but this means we cannot grow the shared
+            // memory safely in case it's used by multiple threads. Once the
+            // signal handler are available, m_cachedBoundsCheckingSize should
+            // be set to use memory()->mappedCapacity() like other platforms,
+            // and at that point growing the shared memory will be safe.
+            m_cachedBoundsCheckingSize = memory()->size();
+#else
+            m_cachedBoundsCheckingSize = memory()->mappedCapacity();
+#endif
+            m_cachedMemory = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>(memory()->memory(), m_cachedBoundsCheckingSize);
             ASSERT(memory()->memory() == cachedMemory());
         }
     }
@@ -132,8 +143,6 @@ public:
         }
         return slot->m_primitive;
     }
-    float loadF32Global(unsigned i) const { return bitwise_cast<float>(loadI32Global(i)); }
-    double loadF64Global(unsigned i) const { return bitwise_cast<double>(loadI64Global(i)); }
     void setGlobal(unsigned i, int64_t bits)
     {
         Global::Value* slot = m_globals.get() + i;
@@ -206,21 +215,21 @@ public:
 
     void storeTopCallFrame(void* callFrame)
     {
-        m_storeTopCallFrame(callFrame);
+        m_vm.topCallFrame = bitwise_cast<CallFrame*>(callFrame);
     }
 
     const Tag& tag(unsigned i) const { return *m_tags[i]; }
     void setTag(unsigned, Ref<const Tag>&&);
 
 private:
-    Instance(Context*, Ref<Module>&&, EntryFrame**, void**, StoreTopCallFrameCallback&&);
+    Instance(VM&, Ref<Module>&&);
 
     static size_t allocationSize(Checked<size_t> numImportFunctions, Checked<size_t> numTables)
     {
         return offsetOfTail() + sizeof(ImportFunctionInfo) * numImportFunctions + sizeof(Table*) * numTables;
     }
     void* m_owner { nullptr }; // In a JS embedding, this is a JSWebAssemblyInstance*.
-    Context* m_context { nullptr };
+    VM& m_vm;
     CagedPtr<Gigacage::Primitive, void, tagCagedPtr> m_cachedMemory;
     size_t m_cachedBoundsCheckingSize { 0 };
     Ref<Module> m_module;
@@ -233,7 +242,6 @@ private:
     EntryFrame** m_pointerToTopEntryFrame { nullptr };
     void** m_pointerToActualStackLimit { nullptr };
     void* m_cachedStackLimit { bitwise_cast<void*>(std::numeric_limits<uintptr_t>::max()) };
-    StoreTopCallFrameCallback m_storeTopCallFrame;
     unsigned m_numImportFunctions { 0 };
     HashMap<uint32_t, Ref<Global>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_linkedGlobals;
     BitVector m_passiveElements;

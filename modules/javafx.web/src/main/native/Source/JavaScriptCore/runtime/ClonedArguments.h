@@ -45,7 +45,7 @@ public:
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        static_assert(!CellType::needsDestruction, "");
+        static_assert(!CellType::needsDestruction);
         return &vm.clonedArgumentsSpace();
     }
 
@@ -82,6 +82,6 @@ private:
     WriteBarrier<JSFunction> m_callee; // Set to nullptr when we materialize all of our special properties.
 };
 
-static const PropertyOffset clonedArgumentsLengthPropertyOffset = 100;
+static constexpr PropertyOffset clonedArgumentsLengthPropertyOffset = firstOutOfLineOffset;
 
 } // namespace JSC

@@ -296,7 +296,7 @@ public:
 
 protected:
     static const int DefaultFontSize;
-    static const char* const DefaultFontFamily;
+    static const ASCIILiteral DefaultFontFamily;
 
     const State& state() const { return m_stateStack.last(); }
     void realizeSaves();
@@ -385,7 +385,6 @@ private:
     bool rectContainsCanvas(const FloatRect&) const;
 
     template<class T> IntRect calculateCompositingBufferRect(const T&, IntSize*);
-    RefPtr<ImageBuffer> createCompositingBuffer(const IntRect&);
     void compositeBuffer(ImageBuffer&, const IntRect&, CompositeOperator);
 
     void inflateStrokeRect(FloatRect&) const;

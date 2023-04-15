@@ -768,6 +768,55 @@ JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyAttributeDisplayName)
     return (*env)->NewString(env, (jchar *)buffer, length);
 }
 
+JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGImageContextGetData)
+    (JNIEnv *env, jclass that, jlong arg0, jint dstWidth, jint dstHeight, jint bpp)
+{
+    jbyteArray result = NULL;
+    if (dstWidth < 0) return NULL;
+    if (dstHeight < 0) return NULL;
+    if (bpp != 32) return NULL;
+
+    CGContextRef context = (CGContextRef)arg0;
+    if (context == NULL) return NULL;
+    jbyte *srcData = (jbyte*)CGBitmapContextGetData(context);
+
+    if (srcData) {
+        size_t srcWidth = CGBitmapContextGetWidth(context);
+        if (srcWidth < dstWidth) return NULL;
+        size_t srcHeight =  CGBitmapContextGetHeight(context);
+        if (srcHeight < dstHeight) return NULL;
+        size_t srcBytesPerRow = CGBitmapContextGetBytesPerRow(context);
+        size_t srcStep = CGBitmapContextGetBitsPerPixel(context) / 8;
+        int srcOffset = (srcHeight - dstHeight) * srcBytesPerRow;
+
+        int dstStep = bpp / 8;
+        size_t size = dstWidth * dstHeight * dstStep;
+        jbyte* data = (jbyte*)calloc(size, sizeof(jbyte));
+        if (data == NULL) return NULL;
+
+        int x, y, sx;
+
+        int dstOffset = 0;
+        for (y = 0; y < dstHeight; y++) {
+            for (x = 0, sx = 0; x < dstWidth; x++, dstOffset += dstStep, sx += srcStep) {
+                /* BGRA to BGRA */
+                data[dstOffset + 0] = srcData[srcOffset + sx + 0];
+                data[dstOffset + 1] = srcData[srcOffset + sx + 1];
+                data[dstOffset + 2] = srcData[srcOffset + sx + 2];
+                data[dstOffset + 3] = srcData[srcOffset + sx + 3];
+            }
+            srcOffset += srcBytesPerRow;
+        }
+
+        result = (*env)->NewByteArray(env, size);
+        if (result) {
+            (*env)->SetByteArrayRegion(env, result, 0, size, data);
+        }
+        free(data);
+    }
+    return result;
+}
+
 JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData)
     (JNIEnv *env, jclass that, jlong arg0, jint dstWidth, jint dstHeight, jint bpp)
 {
@@ -843,6 +892,15 @@ JNIEXPORT void JNICALL OS_NATIVE(CTFontDrawGlyphs)
     CGGlyph glyphs[] = {arg1};
     CGPoint pos[] = {CGPointMake(arg2, arg3)};
     CTFontDrawGlyphs((CTFontRef)arg0, glyphs, pos, 1, (CGContextRef)contextRef);
+}
+
+JNIEXPORT jobject JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphs)
+    (JNIEnv *env, jclass that, jlong arg1, jshort arg2)
+{
+    CTFontRef fontRef = (CTFontRef)arg1;
+    CGGlyph glyphs[] = {arg2};
+    CGRect bb = CTFontGetBoundingRectsForGlyphs(fontRef, (CTFontOrientation)0, glyphs, NULL, 1);
+    return newCGRect(env, &bb);
 }
 
 JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)

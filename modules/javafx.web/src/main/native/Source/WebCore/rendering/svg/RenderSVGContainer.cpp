@@ -35,15 +35,22 @@
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "SVGContainerLayout.h"
+#include "SVGLayerTransformUpdater.h"
 #include "SVGRenderingContext.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGContainer);
+
+RenderSVGContainer::RenderSVGContainer(Document& document, RenderStyle&& style)
+    : RenderSVGModelObject(document, WTFMove(style))
+{
+}
 
 RenderSVGContainer::RenderSVGContainer(SVGElement& element, RenderStyle&& style)
     : RenderSVGModelObject(element, WTFMove(style))
@@ -57,19 +64,21 @@ void RenderSVGContainer::layout()
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
-
-    calculateViewport();
+    LayoutRepainter repainter(*this, checkForRepaintDuringLayout(), RepaintOutlineBounds::No);
 
     // Update layer transform before laying out children (SVG needs access to the transform matrices during layout for on-screen text font-size calculations).
     // Eventually re-update if the transform reference box, relevant for transform-origin, has changed during layout.
+    //
+    // FIXME: LBSE should not repeat the same mistake -- remove the on-screen text font-size hacks that predate the modern solutions to this.
     {
-        // FIXME: [LBSE] Upstream SVGLayerTransformUpdater
-        // SVGLayerTransformUpdater transformUpdater(*this);
+        ASSERT(!m_isLayoutSizeChanged);
+        SetForScope trackLayoutSizeChanges(m_isLayoutSizeChanged, updateLayoutSizeIfNeeded());
+
+        ASSERT(!m_didTransformToRootUpdate);
+        SVGLayerTransformUpdater transformUpdater(*this);
+        SetForScope trackTransformChanges(m_didTransformToRootUpdate, transformUpdater.layerTransformChanged() || SVGContainerLayout::transformToRootChanged(parent()));
         layoutChildren();
     }
-
-    updateLayerInformation();
 
     // Invalidate all resources of this client if our layout changed.
     if (everHadLayout() && needsLayout())
@@ -79,12 +88,6 @@ void RenderSVGContainer::layout()
     clearNeedsLayout();
 }
 
-void RenderSVGContainer::calculateViewport()
-{
-    // FIXME: [LBSE] Upstream SVGLengthContext changes
-    // element().updateLengthContext();
-}
-
 void RenderSVGContainer::layoutChildren()
 {
     SVGContainerLayout containerLayout(*this);
@@ -92,19 +95,18 @@ void RenderSVGContainer::layoutChildren()
 
     SVGBoundingBoxComputation boundingBoxComputation(*this);
     m_objectBoundingBox = boundingBoxComputation.computeDecoratedBoundingBox(SVGBoundingBoxComputation::objectBoundingBoxDecoration, &m_objectBoundingBoxValid);
+
+    if (auto objectBoundingBoxWithoutTransformations = overridenObjectBoundingBoxWithoutTransformations())
+        m_objectBoundingBoxWithoutTransformations = objectBoundingBoxWithoutTransformations.value();
+    else {
+        constexpr auto objectBoundingBoxDecorationWithoutTransformations = SVGBoundingBoxComputation::objectBoundingBoxDecoration | SVGBoundingBoxComputation::DecorationOption::IgnoreTransformations;
+        m_objectBoundingBoxWithoutTransformations = boundingBoxComputation.computeDecoratedBoundingBox(objectBoundingBoxDecorationWithoutTransformations);
+    }
+
     m_strokeBoundingBox = boundingBoxComputation.computeDecoratedBoundingBox(SVGBoundingBoxComputation::strokeBoundingBoxDecoration);
-    setLayoutRect(enclosingLayoutRect(m_objectBoundingBox));
+    setCurrentSVGLayoutRect(enclosingLayoutRect(m_objectBoundingBoxWithoutTransformations));
 
     containerLayout.positionChildrenRelativeToContainer();
-}
-
-void RenderSVGContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
-    RenderSVGModelObject::styleDidChange(diff, oldStyle);
-
-    // FIXME: [LBSE] Upstream RenderLayer changes
-    // if (hasLayer())
-    //     layer()->setIsOpportunisticStackingContext(true);
 }
 
 bool RenderSVGContainer::selfWillPaint()
@@ -138,7 +140,7 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
         return;
     }
 
-    auto adjustedPaintOffset = paintOffset + layoutLocation();
+    auto adjustedPaintOffset = paintOffset + currentSVGLayoutLocation();
     if (paintInfo.phase == PaintPhase::Mask) {
         // FIXME: [LBSE] Upstream SVGRenderSupport changes
         // SVGRenderSupport::paintSVGMask(*this, paintInfo, adjustedPaintOffset);
@@ -158,7 +160,7 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
 
 bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
 {
-    auto adjustedLocation = accumulatedOffset + layoutLocation();
+    auto adjustedLocation = accumulatedOffset + currentSVGLayoutLocation();
 
     auto visualOverflowRect = visualOverflowRectEquivalent();
     visualOverflowRect.moveBy(adjustedLocation);
@@ -166,8 +168,7 @@ bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResul
         return false;
 
     auto localPoint = locationInContainer.point();
-    auto boundingBoxTopLeftCorner = flooredLayoutPoint(objectBoundingBox().minXMinYCorner());
-    auto coordinateSystemOriginTranslation = boundingBoxTopLeftCorner - adjustedLocation;
+    auto coordinateSystemOriginTranslation = nominalSVGLayoutLocation() - adjustedLocation;
     localPoint.move(coordinateSystemOriginTranslation);
 
     if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))

@@ -66,7 +66,7 @@ public:
 private:
     DOMCache(ScriptExecutionContext&, String&& name, uint64_t identifier, Ref<CacheStorageConnection>&&);
 
-    ExceptionOr<Ref<FetchRequest>> requestFromInfo(RequestInfo&&, bool ignoreMethod);
+    ExceptionOr<Ref<FetchRequest>> requestFromInfo(RequestInfo&&, bool ignoreMethod, bool* requestValidationFailed = nullptr);
 
     // ActiveDOMObject
     void stop() final;
@@ -82,7 +82,7 @@ private:
     void batchPutOperation(const FetchRequest&, FetchResponse&, DOMCacheEngine::ResponseBody&&, CompletionHandler<void(ExceptionOr<void>&&)>&&);
     void batchPutOperation(Vector<DOMCacheEngine::Record>&&, CompletionHandler<void(ExceptionOr<void>&&)>&&);
 
-    Vector<Ref<FetchResponse>> cloneResponses(const Vector<DOMCacheEngine::Record>&);
+    Vector<Ref<FetchResponse>> cloneResponses(const Vector<DOMCacheEngine::Record>&, MonotonicTime);
     DOMCacheEngine::Record toConnectionRecord(const FetchRequest&, FetchResponse&, DOMCacheEngine::ResponseBody&&);
 
     String m_name;

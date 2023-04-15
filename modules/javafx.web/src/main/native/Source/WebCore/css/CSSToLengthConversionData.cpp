@@ -34,20 +34,60 @@
 #include "FloatSize.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
+#include "StyleBuilderState.h"
 
 namespace WebCore {
 
+CSSToLengthConversionData::CSSToLengthConversionData(const RenderStyle& style, const Style::BuilderContext& builderContext)
+    : m_style(&style)
+    , m_rootStyle(builderContext.rootElementStyle)
+    , m_parentStyle(&builderContext.parentStyle)
+    , m_renderView(builderContext.document->renderView())
+    , m_elementForContainerUnitResolution(builderContext.element)
+    , m_viewportDependencyDetectionStyle(const_cast<RenderStyle*>(m_style))
+{
+}
+
+CSSToLengthConversionData::CSSToLengthConversionData(const RenderStyle& style, const RenderStyle* rootStyle, const RenderStyle* parentStyle, const RenderView* renderView, const Element* elementForContainerUnitResolution)
+    : m_style(&style)
+    , m_rootStyle(rootStyle)
+    , m_parentStyle(parentStyle)
+    , m_renderView(renderView)
+    , m_elementForContainerUnitResolution(elementForContainerUnitResolution)
+    , m_zoom(1.f)
+    , m_viewportDependencyDetectionStyle(const_cast<RenderStyle*>(m_style))
+{
+}
+
+const FontCascade& CSSToLengthConversionData::fontCascadeForFontUnits() const
+{
+    if (computingFontSize()) {
+        ASSERT(parentStyle());
+        return parentStyle()->fontCascade();
+    }
+    ASSERT(style());
+    return style()->fontCascade();
+}
+
+int CSSToLengthConversionData::computedLineHeightForFontUnits() const
+{
+    if (computingFontSize()) {
+        ASSERT(parentStyle());
+        return parentStyle()->computedLineHeight();
+    }
+    ASSERT(style());
+    return style()->computedLineHeight();
+}
+
 float CSSToLengthConversionData::zoom() const
 {
-    if (!m_zoom)
-        return m_style ? m_style->effectiveZoom() : 1;
-    return *m_zoom;
+    return m_zoom.value_or(m_style ? m_style->effectiveZoom() : 1.f);
 }
 
 FloatSize CSSToLengthConversionData::defaultViewportFactor() const
 {
     if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setHasViewportUnits();
+        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
@@ -58,7 +98,7 @@ FloatSize CSSToLengthConversionData::defaultViewportFactor() const
 FloatSize CSSToLengthConversionData::smallViewportFactor() const
 {
     if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setHasViewportUnits();
+        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
@@ -69,7 +109,7 @@ FloatSize CSSToLengthConversionData::smallViewportFactor() const
 FloatSize CSSToLengthConversionData::largeViewportFactor() const
 {
     if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setHasViewportUnits();
+        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
@@ -80,12 +120,18 @@ FloatSize CSSToLengthConversionData::largeViewportFactor() const
 FloatSize CSSToLengthConversionData::dynamicViewportFactor() const
 {
     if (m_viewportDependencyDetectionStyle)
-        m_viewportDependencyDetectionStyle->setHasViewportUnits();
+        m_viewportDependencyDetectionStyle->setUsesViewportUnits();
 
     if (!m_renderView)
         return { };
 
     return m_renderView->sizeForCSSDynamicViewportUnits() / 100.0;
+}
+
+void CSSToLengthConversionData::setUsesContainerUnits() const
+{
+    if (m_viewportDependencyDetectionStyle)
+        m_viewportDependencyDetectionStyle->setUsesContainerUnits();
 }
 
 } // namespace WebCore

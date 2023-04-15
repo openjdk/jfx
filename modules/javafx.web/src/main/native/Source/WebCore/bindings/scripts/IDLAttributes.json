@@ -176,7 +176,7 @@
             "values": ["*"],
             "supportsConjunction": true
         },
-        "EnabledAtRuntime": {
+        "EnabledByDeprecatedGlobalSetting": {
             "contextsAllowed": ["interface", "namespace", "dictionary", "enum", "attribute", "operation", "constant", "iterable", "includes"],
             "values": ["*"],
             "supportsConjunction": true
@@ -448,7 +448,7 @@
         "ReturnValue": {
             "contextsAllowed": ["argument"]
         },
-        "RuntimeConditionallyReadWrite": {
+        "EnabledConditionallyReadWriteByDeprecatedGlobalSetting": {
             "contextsAllowed": ["attribute"],
             "values": ["*"],
             "supportsConjunction": true
@@ -461,7 +461,7 @@
             "unsupported": true
         },
         "SecureContext": {
-            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
+            "contextsAllowed": ["interface", "namespace", "dictionary", "enum", "attribute", "operation", "constant"],
             "standard": {
                 "url": "https://webidl.spec.whatwg.org/#SecureContext"
             }
@@ -478,10 +478,13 @@
             "values": ["CurrentScriptExecutionContext", "CurrentGlobalObject", "ActiveWindow", "FirstWindow", "PropertyName"],
             "supportsConjunction": true
         },
-        "SettingsConditionallyReadWrite": {
+        "EnabledConditionallyReadWriteBySetting": {
             "contextsAllowed": ["attribute"],
             "values": ["*"],
             "supportsConjunction": true
+        },
+        "SkipCallbackInvokeCheck": {
+            "contextsAllowed": ["operation", "callback-function"]
         },
         "SkipVTableValidation": {
             "contextsAllowed": ["interface"]

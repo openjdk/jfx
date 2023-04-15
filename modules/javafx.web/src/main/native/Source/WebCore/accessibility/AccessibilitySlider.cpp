@@ -57,11 +57,11 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
         return AccessibilityOrientation::Horizontal;
 
     auto ariaOrientation = getAttribute(aria_orientationAttr);
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "horizontal"))
+    if (equalLettersIgnoringASCIICase(ariaOrientation, "horizontal"_s))
         return AccessibilityOrientation::Horizontal;
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "vertical"))
+    if (equalLettersIgnoringASCIICase(ariaOrientation, "vertical"_s))
         return AccessibilityOrientation::Vertical;
-    if (equalLettersIgnoringASCIICase(ariaOrientation, "undefined"))
+    if (equalLettersIgnoringASCIICase(ariaOrientation, "undefined"_s))
         return AccessibilityOrientation::Undefined;
 
     const RenderStyle& style = m_renderer->style();
@@ -70,13 +70,10 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
     switch (styleAppearance) {
     case SliderThumbHorizontalPart:
     case SliderHorizontalPart:
-    case MediaSliderPart:
-    case MediaFullScreenVolumeSliderPart:
         return AccessibilityOrientation::Horizontal;
 
     case SliderThumbVerticalPart:
     case SliderVerticalPart:
-    case MediaVolumeSliderPart:
         return AccessibilityOrientation::Vertical;
 
     default:
@@ -87,10 +84,11 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
 void AccessibilitySlider::addChildren()
 {
     ASSERT(!m_childrenInitialized);
-
     m_childrenInitialized = true;
 
-    AXObjectCache* cache = m_renderer->document().axObjectCache();
+    auto* cache = axObjectCache();
+    if (!cache)
+        return;
 
     auto& thumb = downcast<AccessibilitySliderThumb>(*cache->create(AccessibilityRole::SliderThumb));
     thumb.setParent(this);

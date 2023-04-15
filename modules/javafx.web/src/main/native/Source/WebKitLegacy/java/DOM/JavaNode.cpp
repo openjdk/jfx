@@ -69,7 +69,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_getNodeValueImpl(JNIE
 }
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeImpl_setNodeValueImpl(JNIEnv* env, jclass, jlong peer, jstring value) {
     WebCore::JSMainThreadNullState state;
-    IMPL->setNodeValue(String(env, value));
+    IMPL->setNodeValue(AtomString{String(env, value)});
 }
 
 JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_NodeImpl_getNodeTypeImpl(JNIEnv*, jclass, jlong peer) {
@@ -123,7 +123,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_getPrefixImpl(JNIEnv*
 }
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeImpl_setPrefixImpl(JNIEnv* env, jclass, jlong peer, jstring value) {
     WebCore::JSMainThreadNullState state;
-    IMPL->setPrefix(String(env, value));
+    IMPL->setPrefix(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_getLocalNameImpl(JNIEnv* env, jclass, jlong peer) {
@@ -248,7 +248,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeImpl_isSupportedImpl(JNIE
     , jstring version)
 {
     WebCore::JSMainThreadNullState state;
-    return SVGTests::hasFeatureForLegacyBindings(String(env, feature), String(env, version));
+    return SVGTests::hasFeatureForLegacyBindings(AtomString {String(env, feature)}, AtomString {String(env, version)});
 }
 
 
@@ -279,7 +279,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_lookupPrefixImpl(JNIE
     , jstring namespaceURI)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->lookupPrefix(String(env, namespaceURI)));
+    return JavaReturn<String>(env, IMPL->lookupPrefix(AtomString {String(env, namespaceURI)}));
 }
 
 
@@ -287,7 +287,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeImpl_isDefaultNamespaceIm
     , jstring namespaceURI)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->isDefaultNamespace(String(env, namespaceURI));
+    return IMPL->isDefaultNamespace(AtomString {String(env, namespaceURI)});
 }
 
 
@@ -295,7 +295,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_lookupNamespaceURIImp
     , jstring prefix)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->lookupNamespaceURI(String(env, prefix)));
+    return JavaReturn<String>(env, IMPL->lookupNamespaceURI(AtomString {String(env, prefix)}));
 }
 
 
@@ -323,7 +323,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeImpl_addEventListenerImpl(JNI
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->addEventListenerForBindings(String(env, type)
+    IMPL->addEventListenerForBindings(AtomString {String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }
@@ -335,7 +335,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeImpl_removeEventListenerImpl(
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->removeEventListenerForBindings(String(env, type)
+    IMPL->removeEventListenerForBindings(AtomString {String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }

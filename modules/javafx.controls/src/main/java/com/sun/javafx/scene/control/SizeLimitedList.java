@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ package com.sun.javafx.scene.control;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * A list that has a maximum size. Useful for recording historical data, but not
@@ -64,5 +65,13 @@ public class SizeLimitedList<E> {
 
     public boolean contains(E item) {
         return backingList.contains(item);
+    }
+
+    public void clear() {
+        backingList.clear();
+    }
+
+    public void removeIf(Predicate<? super E> predicate) {
+        backingList.removeIf(predicate);
     }
 }

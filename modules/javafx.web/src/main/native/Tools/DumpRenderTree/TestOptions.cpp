@@ -79,7 +79,6 @@ const TestFeatures& TestOptions::defaults()
             { "GamepadsEnabled", true },
             { "HiddenPageCSSAnimationSuspensionEnabled", false },
             { "InlineMediaPlaybackRequiresPlaysInlineAttribute", false },
-            { "JavaEnabled", false },
             { "JavaScriptCanAccessClipboard", true },
             { "JavaScriptCanOpenWindowsAutomatically", true },
             { "LargeImageAsyncDecodingEnabled", false },
@@ -89,7 +88,6 @@ const TestFeatures& TestOptions::defaults()
             { "MediaDevicesEnabled", true },
             { "MediaPreloadingEnabled", true },
             { "MockScrollbarsEnabled", true },
-            { "NPAPIPlugInsEnabledForTestingInWebKitLegacy", true },
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "OfflineWebApplicationCacheEnabled", true },
             { "RequiresUserGestureForAudioPlayback", false },
@@ -106,21 +104,18 @@ const TestFeatures& TestOptions::defaults()
             { "XSSAuditorEnabled", false },
 
             // FIXME: These experimental features are currently the only ones not enabled for WebKitLegacy, we
-            // should either enable them or stop exposing them (as we do with with preferences like HTTP3Enabled).
+            // should either enable them or stop exposing them (as we do with with preferences).
             // All other experimental features are automatically enabled regardless of their specified defaults.
             { "AsyncClipboardAPIEnabled", false },
             { "CSSOMViewSmoothScrollingEnabled", false },
             { "ContactPickerAPIEnabled", false },
             { "CoreMathMLEnabled", false },
             { "GenericCueAPIEnabled", false },
-            { "IntersectionObserverEnabled", false },
             { "IsLoggedInAPIEnabled", false },
             { "LazyIframeLoadingEnabled", false },
             { "LazyImageLoadingEnabled", false },
             { "RequestIdleCallbackEnabled", false },
-            { "ResizeObserverEnabled", false },
             { "WebAuthenticationEnabled", false },
-            { "WebGPUEnabled", false },
 #elif PLATFORM(WIN)
             // These are WebPreference values that must always be set as they may
             // differ from the default set in the WebPreferences*.yaml configuration.
@@ -135,12 +130,13 @@ const TestFeatures& TestOptions::defaults()
             { "CSSContainmentEnabled", false },
             { "CSSCounterStyleAtRuleImageSymbolsEnabled", false },
             { "CSSCounterStyleAtRulesEnabled", false },
-            { "CSSDisplayContentsAXSupportEnabled", false },
             { "CSSGradientInterpolationColorSpacesEnabled", true },
             { "CSSGradientPremultipliedAlphaInterpolationEnabled", true },
             { "CSSInputSecurityEnabled", true },
             { "CSSLogicalEnabled", false },
             { "CSSOMViewSmoothScrollingEnabled", false },
+            { "CSSTextAlignLastEnabled", true },
+            { "CSSTextJustifyEnabled", true },
             { "CanvasColorSpaceEnabled", true },
             { "ColorFilterEnabled", false },
             { "ContactPickerAPIEnabled", false },
@@ -148,7 +144,6 @@ const TestFeatures& TestOptions::defaults()
             { "DOMPasteAllowed", true },
             { "DeveloperExtrasEnabled", true },
             { "HiddenPageDOMTimerThrottlingEnabled", false },
-            { "InspectorAdditionsEnabled", false },
             { "IntersectionObserverEnabled", false },
             { "JavaScriptCanAccessClipboard", true },
             { "JavaScriptCanOpenWindowsAutomatically", true },
@@ -167,14 +162,12 @@ const TestFeatures& TestOptions::defaults()
             { "PluginsEnabled", true },
             { "PrivateClickMeasurementEnabled", false },
             { "RequestIdleCallbackEnabled", false },
-            { "ResizeObserverEnabled", false },
             { "SelectionAcrossShadowBoundariesEnabled", true },
             { "ShrinksStandaloneImagesToFit", true },
             { "SpatialNavigationEnabled", false },
             { "TabsToLinks", false },
             { "TelephoneNumberParsingEnabled", false },
             { "UsesBackForwardCache", false },
-            { "WebGPUEnabled", false },
             { "XSSAuditorEnabled", false },
 #endif
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)

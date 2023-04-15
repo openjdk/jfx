@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2019 the V8 project authors. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -2443,6 +2443,7 @@ class YarrGenerator final : public YarrJITInfo {
                 // slot, and return. In the case of pattern with a fixed size, we will
                 // not have yet set the value in the first
                 ASSERT(m_regs.index != m_regs.returnRegister);
+                ASSERT(m_regs.output != m_regs.returnRegister);
                 if (m_pattern.m_body->m_hasFixedSize) {
                     if (priorAlternative->m_minimumSize)
                         m_jit.sub32(m_regs.index, MacroAssembler::Imm32(priorAlternative->m_minimumSize), m_regs.returnRegister);
@@ -3595,7 +3596,16 @@ class YarrGenerator final : public YarrJITInfo {
                 lastOp.m_checkAdjust = nestedAlternative->m_minimumSize;
                 if ((term->quantityType == QuantifierType::FixedCount) && (term->type != PatternTerm::Type::ParentheticalAssertion))
                     lastOp.m_checkAdjust -= disjunction->m_minimumSize;
-                lastOp.m_checkedOffset = checkedOffset + lastOp.m_checkAdjust;
+
+                Checked<unsigned, RecordOverflow> checkedOffsetResult(checkedOffset);
+                checkedOffsetResult += lastOp.m_checkAdjust;
+
+                if (UNLIKELY(checkedOffsetResult.hasOverflowed())) {
+                    m_failureReason = JITFailureReason::OffsetTooLarge;
+                    return;
+                }
+
+                lastOp.m_checkedOffset = checkedOffsetResult;
             }
             opCompileAlternative(m_ops[lastOpIndex].m_checkedOffset, nestedAlternative);
 
@@ -4033,6 +4043,7 @@ class YarrGenerator final : public YarrJITInfo {
 #if CPU(X86_64)
 #if OS(WINDOWS)
         // Store the return value in the allocated space pointed by rcx.
+        ASSERT(noOverlap(X86Registers::ecx, m_regs.returnRegister, m_regs.returnRegister2));
         m_jit.pop(X86Registers::ecx);
         m_jit.store64(m_regs.returnRegister, MacroAssembler::Address(X86Registers::ecx));
         m_jit.store64(m_regs.returnRegister2, MacroAssembler::Address(X86Registers::ecx, sizeof(void*)));
@@ -4091,10 +4102,11 @@ class YarrGenerator final : public YarrJITInfo {
     }
 
 public:
-    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrCodeBlock* codeBlock, const YarrJITRegs& regs, YarrPattern& pattern, const String& patternString, CharSize charSize, JITCompileMode compileMode)
+    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrCodeBlock* codeBlock, const YarrJITRegs& regs, YarrPattern& pattern, StringView patternString, CharSize charSize, JITCompileMode compileMode)
         : m_jit(jit)
         , m_vm(vm)
         , m_codeBlock(codeBlock)
+        , m_boyerMooreData(static_cast<YarrBoyerMoyerData*>(codeBlock))
         , m_regs(regs)
         , m_pattern(pattern)
         , m_patternString(patternString)
@@ -4107,10 +4119,9 @@ public:
         , m_parenContextSizes(compileMode == JITCompileMode::IncludeSubpatterns ? m_pattern.m_numSubpatterns : 0, m_pattern.m_body->m_callFrameSize)
 #endif
     {
-        m_boyerMooreData = static_cast<YarrBoyerMoyerData*>(m_codeBlock);
     }
 
-    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrBoyerMoyerData* yarrBMData, const YarrJITRegs& regs, YarrPattern& pattern, const String& patternString, CharSize charSize, JITCompileMode compileMode)
+    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrBoyerMoyerData* yarrBMData, const YarrJITRegs& regs, YarrPattern& pattern, StringView patternString, CharSize charSize, JITCompileMode compileMode)
         : m_jit(jit)
         , m_vm(vm)
         , m_codeBlock(nullptr)
@@ -4643,26 +4654,26 @@ public:
 
 private:
     CCallHelpers& m_jit;
-    const VM* m_vm;
-    YarrCodeBlock* m_codeBlock;
-    YarrBoyerMoyerData* m_boyerMooreData;
+    const VM* const m_vm;
+    YarrCodeBlock* const m_codeBlock;
+    YarrBoyerMoyerData* const m_boyerMooreData;
     const YarrJITRegs& m_regs;
 
     StackCheck* m_compilationThreadStackChecker { nullptr };
     YarrPattern& m_pattern;
-    const String& m_patternString;
+    const StringView m_patternString;
 
-    CharSize m_charSize;
-    JITCompileMode m_compileMode;
+    const CharSize m_charSize;
+    const JITCompileMode m_compileMode;
 
     // Used to detect regular expression constructs that are not currently
     // supported in the JIT; fall back to the interpreter when this is detected.
     std::optional<JITFailureReason> m_failureReason;
 
-    bool m_decodeSurrogatePairs;
-    bool m_unicodeIgnoreCase;
+    const bool m_decodeSurrogatePairs;
+    const bool m_unicodeIgnoreCase;
     bool m_usesT2 { false };
-    CanonicalMode m_canonicalMode;
+    const CanonicalMode m_canonicalMode;
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
     bool m_containsNestedSubpatterns { false };
     ParenContextSizes m_parenContextSizes;
@@ -4719,10 +4730,13 @@ static void dumpCompileFailure(JITFailureReason failure)
     case JITFailureReason::ExecutableMemoryAllocationFailure:
         dataLog("Can't JIT because of failure of allocation of executable memory\n");
         break;
+    case JITFailureReason::OffsetTooLarge:
+        dataLog("Can't JIT because pattern exceeds string length limits\n");
+        break;
     }
 }
 
-void jitCompile(YarrPattern& pattern, String& patternString, CharSize charSize, VM* vm, YarrCodeBlock& codeBlock, JITCompileMode mode)
+void jitCompile(YarrPattern& pattern, StringView patternString, CharSize charSize, VM* vm, YarrCodeBlock& codeBlock, JITCompileMode mode)
 {
     CCallHelpers masm;
 
@@ -4745,10 +4759,12 @@ void jitCompile(YarrPattern& pattern, String& patternString, CharSize charSize, 
 #error "No support for inlined JIT'ing of RegExp.test for this CPU / OS combination."
 #endif
 
-void jitCompileInlinedTest(StackCheck* m_compilationThreadStackChecker, const String& patternString, OptionSet<Yarr::Flags> flags, CharSize charSize, const VM* vm, YarrBoyerMoyerData& boyerMooreData, CCallHelpers& jit, YarrJITRegisters& jitRegisters)
+void jitCompileInlinedTest(StackCheck* m_compilationThreadStackChecker, StringView patternString, OptionSet<Yarr::Flags> flags, CharSize charSize, const VM* vm, YarrBoyerMoyerData& boyerMooreData, CCallHelpers& jit, YarrJITRegisters& jitRegisters)
 {
     Yarr::ErrorCode errorCode;
     Yarr::YarrPattern pattern(patternString, flags, errorCode);
+
+    jitRegisters.validate();
 
     YarrGenerator<YarrJITRegisters> yarrGenerator(jit, vm, &boyerMooreData, jitRegisters, pattern, patternString, charSize, JITCompileMode::InlineTest);
     yarrGenerator.setStackChecker(m_compilationThreadStackChecker);

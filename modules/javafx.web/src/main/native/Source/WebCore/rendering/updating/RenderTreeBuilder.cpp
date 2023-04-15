@@ -79,7 +79,6 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 #include "FrameView.h"
 #include "FrameViewLayoutContext.h"
-#include "RuntimeEnabledFeatures.h"
 #endif
 
 namespace WebCore {
@@ -591,15 +590,57 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
     if (!renderer.parent())
         return;
 
-    auto& parent = *renderer.parent();
-
     bool wasFloating = oldStyle.isFloating();
     bool wasOutOfFlowPositioned = oldStyle.hasOutOfFlowPosition();
     bool isFloating = renderer.style().isFloating();
     bool isOutOfFlowPositioned = renderer.style().hasOutOfFlowPosition();
     bool startsAffectingParent = false;
     bool noLongerAffectsParent = false;
+    auto handleFragmentedFlowStateChange = [&] {
+        if (!renderer.parent())
+            return;
+        // Out of flow children of RenderMultiColumnFlow are not really part of the multicolumn flow. We need to ensure that changes in positioning like this
+        // trigger insertions into the multicolumn flow.
+        if (auto* enclosingFragmentedFlow = renderer.parent()->enclosingFragmentedFlow(); is<RenderMultiColumnFlow>(enclosingFragmentedFlow)) {
+            auto movingIntoMulticolumn = [&] {
+                if (wasOutOfFlowPositioned && !isOutOfFlowPositioned)
+                    return true;
+                if (auto* containingBlock = renderer.containingBlock(); containingBlock && isOutOfFlowPositioned) {
+                    // Sometimes the flow state could change even when the renderer stays out-of-flow (e.g when going from fixed to absolute and
+                    // the containing block is inside a multi-column flow).
+                    return containingBlock->fragmentedFlowState() == RenderObject::InsideInFragmentedFlow
+                        && renderer.fragmentedFlowState() == RenderObject::NotInsideFragmentedFlow;
+                }
+                return false;
+            }();
+            if (movingIntoMulticolumn) {
+                renderer.initializeFragmentedFlowStateOnInsertion();
+                multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*enclosingFragmentedFlow), renderer);
+                return;
+            }
+            auto movingOutOfMulticolumn = !wasOutOfFlowPositioned && isOutOfFlowPositioned;
+            if (movingOutOfMulticolumn) {
+                multiColumnBuilder().restoreColumnSpannersForContainer(renderer, downcast<RenderMultiColumnFlow>(*enclosingFragmentedFlow));
+                return;
+            }
 
+            // Style change may have moved some subtree out of the fragmented flow. Their flow states have already been updated (see adjustFragmentedFlowStateOnContainingBlockChangeIfNeeded)
+            // and here is where we take care of the remaining, spanner tree mutation.
+            WeakHashSet<RenderElement> spannerContainingBlockSet;
+            for (auto& descendant : descendantsOfType<RenderMultiColumnSpannerPlaceholder>(renderer)) {
+                if (auto* containingBlock = descendant.containingBlock(); containingBlock && containingBlock->enclosingFragmentedFlow() != enclosingFragmentedFlow)
+                    spannerContainingBlockSet.add(*containingBlock);
+            }
+            auto oldEnclosingFragmentedFlow = WeakPtr { *enclosingFragmentedFlow };
+            for (auto& containingBlock : spannerContainingBlockSet) {
+                if (!oldEnclosingFragmentedFlow)
+                    break;
+                multiColumnBuilder().restoreColumnSpannersForContainer(containingBlock, downcast<RenderMultiColumnFlow>(*oldEnclosingFragmentedFlow));
+            }
+        }
+    };
+
+    auto& parent = *renderer.parent();
     if (is<RenderBlock>(parent))
         noLongerAffectsParent = (!wasFloating && isFloating) || (!wasOutOfFlowPositioned && isOutOfFlowPositioned);
 
@@ -612,82 +653,34 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
         // We have gone from not affecting the inline status of the parent flow to suddenly
         // having an impact. See if there is a mismatch between the parent flow's
         // childrenInline() state and our state.
-        auto* currentEnclosingFragment = renderer.enclosingFragmentedFlow();
         if (renderer.isInline() != renderer.parent()->childrenInline())
             childFlowStateChangesAndAffectsParentBlock(renderer);
         // WARNING: original parent might be deleted at this point.
-        if (auto* newParent = renderer.parent()) {
-            // FIXME: Merge this with the multicolumn code below webkit.org/b/228024
-            auto newMultiColumnForRenderer = [&]() -> RenderMultiColumnFlow* {
-                // Update the state when the renderer has moved from one multi-column flow to another.
-                auto* newEnclosingFragmentedFlow = newParent->enclosingFragmentedFlow();
-                if (newParent->isMultiColumnBlockFlow()) {
-                    // This renderer is a spanner so it is not in the subtree of the multicolumn renderer. It is parented directly under the block flow so
-                    // enclosingFragmentedFlow() returns the parent enclosing flow.
-                    ASSERT(is<RenderBox>(renderer) && downcast<RenderBlockFlow>(*newParent).multiColumnFlow()->spannerMap().contains(&downcast<RenderBox>(renderer)));
-                    newEnclosingFragmentedFlow = downcast<RenderBlockFlow>(*newParent).multiColumnFlow();
-                }
-                return newEnclosingFragmentedFlow != currentEnclosingFragment ? dynamicDowncast<RenderMultiColumnFlow>(newEnclosingFragmentedFlow) : nullptr;
-            };
-            if (auto* newEnclosingMultiColumn = newMultiColumnForRenderer()) {
-                // Let the fragmented flow know that it has a new in-flow descendant.
-                renderer.initializeFragmentedFlowStateOnInsertion();
-                multiColumnBuilder().multiColumnDescendantInserted(*newEnclosingMultiColumn, renderer);
-            }
-        }
+        handleFragmentedFlowStateChange();
         return;
     }
 
     if (noLongerAffectsParent) {
         childFlowStateChangesAndNoLongerAffectsParentBlock(renderer);
 
-        if (is<RenderBlockFlow>(renderer)) {
+        if (isFloating && is<RenderBlockFlow>(renderer)) {
+            auto clearDescendantFloats = [&] {
+                // These descendent floats can not intrude other, sibling block containers anymore.
+                for (auto& descendant : descendantsOfType<RenderBox>(renderer)) {
+                    if (descendant.isFloatingOrOutOfFlowPositioned())
+                        descendant.removeFloatingOrPositionedChildFromBlockLists();
+                }
+            };
+            clearDescendantFloats();
+            downcast<RenderBlockFlow>(renderer).removeFloatingObjects();
             // Fresh floats need to be reparented if they actually belong to the previous anonymous block.
             // It copies the logic of RenderBlock::addChildIgnoringContinuation
-            if (isFloating && renderer.previousSibling() && renderer.previousSibling()->isAnonymousBlock())
+            if (renderer.previousSibling() && renderer.previousSibling()->isAnonymousBlock())
                 move(downcast<RenderBoxModelObject>(parent), downcast<RenderBoxModelObject>(*renderer.previousSibling()), renderer, RenderTreeBuilder::NormalizeAfterInsertion::No);
         }
     }
 
-    // Out of flow children of RenderMultiColumnFlow are not really part of the multicolumn flow. We need to ensure that changes in positioning like this
-    // trigger insertions into the multicolumn flow.
-    if (auto* enclosingFragmentedFlow = parent.enclosingFragmentedFlow(); is<RenderMultiColumnFlow>(enclosingFragmentedFlow)) {
-        auto movingIntoMulticolumn = [&] {
-            if (wasOutOfFlowPositioned && !isOutOfFlowPositioned)
-                return true;
-            if (auto* containingBlock = renderer.containingBlock(); containingBlock && isOutOfFlowPositioned) {
-                // Sometimes the flow state could change even when the renderer stays out-of-flow (e.g when going from fixed to absolute and
-                // the containing block is inside a multi-column flow).
-                return containingBlock->fragmentedFlowState() == RenderObject::InsideInFragmentedFlow
-                    && renderer.fragmentedFlowState() == RenderObject::NotInsideFragmentedFlow;
-            }
-            return false;
-        }();
-        if (movingIntoMulticolumn) {
-            renderer.initializeFragmentedFlowStateOnInsertion();
-            multiColumnBuilder().multiColumnDescendantInserted(downcast<RenderMultiColumnFlow>(*enclosingFragmentedFlow), renderer);
-            return;
-        }
-        auto movingOutOfMulticolumn = !wasOutOfFlowPositioned && isOutOfFlowPositioned;
-        if (movingOutOfMulticolumn) {
-            multiColumnBuilder().restoreColumnSpannersForContainer(renderer, downcast<RenderMultiColumnFlow>(*enclosingFragmentedFlow));
-            return;
-        }
-
-        // Style change may have moved some subtree out of the fragmented flow. Their flow states have already been updated (see adjustFragmentedFlowStateOnContainingBlockChangeIfNeeded)
-        // and here is where we take care of the remaining, spanner tree mutation.
-        WeakHashSet<RenderElement> spannerContainingBlockSet;
-        for (auto& descendant : descendantsOfType<RenderMultiColumnSpannerPlaceholder>(renderer)) {
-            if (auto* containingBlock = descendant.containingBlock(); containingBlock && containingBlock->enclosingFragmentedFlow() != enclosingFragmentedFlow)
-                spannerContainingBlockSet.add(*containingBlock);
-        }
-        auto oldEnclosingFragmentedFlow = WeakPtr { *enclosingFragmentedFlow };
-        for (auto& containingBlock : spannerContainingBlockSet) {
-            if (!oldEnclosingFragmentedFlow)
-                break;
-            multiColumnBuilder().restoreColumnSpannersForContainer(containingBlock, downcast<RenderMultiColumnFlow>(*oldEnclosingFragmentedFlow));
-        }
-    }
+    handleFragmentedFlowStateChange();
 }
 
 void RenderTreeBuilder::makeChildrenNonInline(RenderBlock& parent, RenderObject* insertionPoint)
@@ -829,6 +822,7 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
     }
 
     RenderObject* next = nullptr;
+    auto internalMoveScope = SetForScope { m_internalMovesType, RenderObject::IsInternalMove::Yes };
     for (auto* current = blockParent.firstChild(); current; current = next) {
         next = current->nextSibling();
         if (current->isAnonymousBlock())
@@ -857,7 +851,7 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& rendere
     }
 
     auto isAnonymousAndSafeToDelete = [] (const auto& renderer) {
-        return renderer.isAnonymous() && !renderer.isRenderView() && !renderer.isRenderFragmentedFlow();
+        return renderer.isAnonymous() && !is<RenderRubyBase>(renderer) && !renderer.isRenderView() && !renderer.isRenderFragmentedFlow() && !renderer.isSVGViewportContainer();
     };
 
     auto destroyRootIncludingAnonymous = [&] () -> RenderObject& {
@@ -959,12 +953,11 @@ RenderPtr<RenderObject> RenderTreeBuilder::detachFromRenderElement(RenderElement
     // that a positioned child got yanked). We also repaint, so that the area exposed when the child
     // disappears gets repainted properly.
     if (!parent.renderTreeBeingDestroyed() && child.everHadLayout()) {
-        child.setNeedsLayoutAndPrefWidthsRecalc();
-        // We only repaint |child| if we have a RenderLayer as its visual overflow may not be tracked by its parent.
         if (child.isBody())
             parent.view().repaintRootContents();
         else
             child.repaint();
+        child.setNeedsLayoutAndPrefWidthsRecalc();
     }
 
     // If we have a line box wrapper, delete it.

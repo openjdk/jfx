@@ -48,7 +48,6 @@
 #include "LayoutReplacedBox.h"
 #include "LayoutState.h"
 #include "Logging.h"
-#include "RuntimeEnabledFeatures.h"
 #include "TextUtil.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -150,7 +149,7 @@ void InlineFormattingContext::layoutInFlowContent(const ConstraintsForInFlowCont
     LOG_WITH_STREAM(FormattingContextLayout, stream << "[End] -> inline formatting context -> formatting root(" << &root() << ")");
 }
 
-void InlineFormattingContext::lineLayoutForIntergration(const ConstraintsForInFlowContent& constraints)
+void InlineFormattingContext::layoutInFlowContentForIntegration(const ConstraintsForInFlowContent& constraints)
 {
     invalidateFormattingState();
     collectContentIfNeeded();
@@ -227,11 +226,11 @@ void InlineFormattingContext::lineLayout(InlineItems& inlineItems, LineBuilder::
                 formattingState.setClearGapAfterLastLine(lineLogicalTop - lineLogicalRect.bottom());
             }
             // When the trailing content is partial, we need to reuse the last InlineTextItem.
-            auto lastInlineItemNeedsPartialLayout = lineContent.partialTrailingContentLength;
+            auto lastInlineItemNeedsPartialLayout = lineContent.partialOverflowingContent.has_value();
             if (lastInlineItemNeedsPartialLayout) {
                 auto lineLayoutHasAdvanced = !previousLine
                     || lineContentRange.end > previousLine->range.end
-                    || (previousLine->overflowContent && previousLine->overflowContent->partialContentLength > lineContent.partialTrailingContentLength);
+                    || (previousLine->partialOverflowingContent && previousLine->partialOverflowingContent->length > lineContent.partialOverflowingContent->length);
                 if (!lineLayoutHasAdvanced) {
                     ASSERT_NOT_REACHED();
                     // Move over to the next run if we are stuck on this partial content (when the overflow content length remains the same).
@@ -240,12 +239,7 @@ void InlineFormattingContext::lineLayout(InlineItems& inlineItems, LineBuilder::
                 }
             }
             needsLayoutRange.start = lastInlineItemNeedsPartialLayout ? lineContentRange.end - 1 : lineContentRange.end;
-            auto overflowContent = std::optional<LineBuilder::PreviousLine::OverflowContent> { };
-            if (lineContent.partialTrailingContentLength)
-                overflowContent = { lineContent.partialTrailingContentLength, lineContent.overflowLogicalWidth };
-            else if (lineContent.overflowLogicalWidth)
-                overflowContent = { { }, *lineContent.overflowLogicalWidth };
-            previousLine = LineBuilder::PreviousLine { lineContentRange, !lineContent.runs.isEmpty() && lineContent.runs.last().isLineBreak(), lineContent.inlineBaseDirection, overflowContent };
+            previousLine = LineBuilder::PreviousLine { lineContentRange, !lineContent.runs.isEmpty() && lineContent.runs.last().isLineBreak(), lineContent.inlineBaseDirection, lineContent.partialOverflowingContent, lineContent.trailingOverflowingContentWidth };
             continue;
         }
         // Floats prevented us placing any content on the line.
@@ -437,9 +431,10 @@ InlineLayoutUnit InlineFormattingContext::computedIntrinsicWidthForConstraint(In
     auto previousLine = std::optional<LineBuilder::PreviousLine> { };
     while (!layoutRange.isEmpty()) {
         auto intrinsicContent = lineBuilder.computedIntrinsicWidth(layoutRange, previousLine);
-        layoutRange.start = intrinsicContent.inlineItemRange.end;
         maximumLineWidth = std::max(maximumLineWidth, intrinsicContent.logicalWidth);
-        previousLine = LineBuilder::PreviousLine { };
+
+        layoutRange.start = !intrinsicContent.partialOverflowingContent ? intrinsicContent.inlineItemRange.end : intrinsicContent.inlineItemRange.end - 1;
+        previousLine = LineBuilder::PreviousLine { intrinsicContent.inlineItemRange, { }, { }, intrinsicContent.partialOverflowingContent };
         // FIXME: Add support for clear.
         for (auto* floatBox : intrinsicContent.floats)
             maximumFloatWidth += geometryForBox(*floatBox).marginBoxWidth();
@@ -548,12 +543,8 @@ InlineRect InlineFormattingContext::computeGeometryForLineContent(const LineBuil
     auto currentLineIndex = formattingState.lines().size();
 
     auto lineBox = LineBoxBuilder { *this }.build(lineContent, currentLineIndex);
-    auto displayLine = InlineDisplayLineBuilder { *this }.build(lineContent, lineBox, lineBox.logicalRect().height());
-    formattingState.addBoxes(InlineDisplayContentBuilder { root(), formattingState }.build(lineContent
-        , lineBox
-        , displayLine
-        , currentLineIndex)
-    );
+    auto displayLine = InlineDisplayLineBuilder { *this }.build(lineContent, lineBox);
+    formattingState.addBoxes(InlineDisplayContentBuilder { *this, formattingState }.build(lineContent, lineBox, displayLine, currentLineIndex));
     formattingState.addLineBox(WTFMove(lineBox));
     formattingState.addLine(displayLine);
 

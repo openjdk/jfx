@@ -92,12 +92,12 @@ public:
     void handleKeyboardEvent(KeyboardEvent&) override;
     void handleInputMethodKeydown(KeyboardEvent&) override;
 
-    void textFieldDidBeginEditing(Element*) override;
-    void textFieldDidEndEditing(Element*) override;
-    void textDidChangeInTextField(Element*) override;
-    bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) override;
-    void textWillBeDeletedInTextField(Element*) override;
-    void textDidChangeInTextArea(Element*) override;
+    void textFieldDidBeginEditing(Element&) override;
+    void textFieldDidEndEditing(Element&) override;
+    void textDidChangeInTextField(Element&) override;
+    bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) override;
+    void textWillBeDeletedInTextField(Element&) override;
+    void textDidChangeInTextArea(Element&) override;
     void overflowScrollPositionChanged() override;
     void subFrameScrollPositionChanged() override;
 
@@ -141,7 +141,6 @@ public:
     void ignoreWordInSpellDocument(const String&) override;
     void learnWord(const String&) override;
     void checkSpellingOfString(StringView, int* misspellingLocation, int* misspellingLength) override;
-    String getAutoCorrectSuggestionForMisspelledWord(const String& misspelledWord) override;
     void checkGrammarOfString(StringView, Vector<GrammarDetail>&, int* badGrammarLocation, int* badGrammarLength) override;
 
 #if USE(UNIFIED_TEXT_CHECKING)
@@ -154,7 +153,7 @@ public:
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
-    bool canShowFontPanel() const final { return false; }
+    bool canShowFontPanel() const  { return false; }
 
 
 protected:

@@ -550,15 +550,13 @@ bool BackForwardList::closed()
     return m_closed;
 }
 
-void BackForwardList::removeItem(HistoryItem* item)
+void BackForwardList::removeItem(HistoryItem& item)
 {
-    if (!item)
-        return;
 
     for (unsigned i = 0; i < m_entries.size(); ++i) {
-        if (m_entries[i].ptr() == item) {
+        if (m_entries[i].ptr() == std::addressof(item)) {
             m_entries.remove(i);
-            m_entryHash.remove(item);
+            m_entryHash.remove(const_cast<HistoryItem*>(&item));
             if (m_current == NoCurrentItemIndex || m_current < i)
                 break;
             if (m_current > i)
@@ -575,7 +573,7 @@ void BackForwardList::removeItem(HistoryItem* item)
     notifyBackForwardListChanged(m_hostObject);
 }
 
-bool BackForwardList::containsItem(HistoryItem* entry)
+bool BackForwardList::containsItem(const HistoryItem& entry) const
 {
-    return m_entryHash.contains(entry);
+    return m_entryHash.contains(const_cast<HistoryItem*>(&entry));
 }

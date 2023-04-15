@@ -47,6 +47,9 @@
 #if PAS_OS(DARWIN)
 #include <mach/thread_act.h>
 #endif
+#if PAS_PLATFORM(PLAYSTATION)
+#include <pthread_np.h>
+#endif
 
 PAS_BEGIN_EXTERN_C;
 
@@ -194,6 +197,7 @@ static void dump_thread_diagnostics(pthread_t thread)
 {
     uint64_t thread_id;
     char thread_name[256];
+    int getname_result;
     PAS_UNUSED_PARAM(thread_id);
 #if PAS_OS(DARWIN)
     if (!pthread_threadid_np(thread, &thread_id))
@@ -201,7 +205,12 @@ static void dump_thread_diagnostics(pthread_t thread)
     else
         pas_log("[%d] thread %p does not have id\n", getpid(), thread);
 #endif
-    if (!pthread_getname_np(thread, thread_name, sizeof(thread_name)))
+#if PAS_PLATFORM(PLAYSTATION)
+    getname_result = pthread_get_name_np(thread, thread_name);
+#else
+    getname_result = pthread_getname_np(thread, thread_name, sizeof(thread_name));
+#endif
+    if (!getname_result)
         pas_log("[%d] thread %p has name %s\n", getpid(), (void*)thread, thread_name);
     else
         pas_log("[%d] thread %p does not have name\n", getpid(), (void*)thread);
@@ -220,7 +229,6 @@ pas_thread_local_cache* pas_thread_local_cache_create(void)
     thread_local_cache = allocate_cache(allocator_index_upper_bound);
 
     thread_local_cache->node = pas_thread_local_cache_node_allocate();
-    thread_local_cache->node->cache = thread_local_cache;
 
     if (verbose) {
         pas_log("[%d] TLC %p created with thread %p\n", getpid(), thread_local_cache, (void*)pthread_self());
@@ -228,6 +236,7 @@ pas_thread_local_cache* pas_thread_local_cache_create(void)
     }
     thread_local_cache->thread = pthread_self();
 
+    pas_compiler_fence();
     thread_local_cache->allocator_index_upper_bound = allocator_index_upper_bound;
 
     pas_local_allocator_construct_unselected(
@@ -236,6 +245,9 @@ pas_thread_local_cache* pas_thread_local_cache_create(void)
 
     for (PAS_THREAD_LOCAL_CACHE_LAYOUT_EACH_ALLOCATOR(layout_node))
         pas_thread_local_cache_layout_node_commit_and_construct(layout_node, thread_local_cache);
+
+    pas_compiler_fence();
+    thread_local_cache->node->cache = thread_local_cache;
 
     pas_thread_local_cache_set(thread_local_cache);
 
@@ -260,7 +272,7 @@ void pas_thread_local_cache_destroy(pas_lock_hold_mode heap_lock_hold_mode)
     destroy(thread_local_cache, heap_lock_hold_mode);
 }
 
-pas_thread_local_cache* pas_thread_local_cache_get_slow(pas_heap_config* config,
+pas_thread_local_cache* pas_thread_local_cache_get_slow(const pas_heap_config* config,
                                                         pas_lock_hold_mode heap_lock_hold_mode)
 {
     pas_thread_local_cache* thread_local_cache;
@@ -474,7 +486,7 @@ void pas_thread_local_cache_ensure_committed(pas_thread_local_cache* thread_loca
 pas_local_allocator_result
 pas_thread_local_cache_get_local_allocator_if_can_set_cache_for_possibly_uninitialized_index_slow(
     unsigned allocator_index,
-    pas_heap_config* heap_config)
+    const pas_heap_config* heap_config)
 {
     if (!pas_thread_local_cache_can_set() || pas_debug_heap_is_enabled(heap_config->kind))
         return pas_local_allocator_result_create_failure();
@@ -1010,7 +1022,8 @@ static void stop_allocator(pas_thread_local_cache* cache,
 }
 
 bool pas_thread_local_cache_for_all(pas_allocator_scavenge_action allocator_action,
-                                    pas_deallocator_scavenge_action deallocator_action)
+                                    pas_deallocator_scavenge_action deallocator_action,
+                                    pas_thread_local_cache_decommit_action thread_local_cache_decommit_action)
 {
     pas_thread_local_cache_node* node;
     bool result;
@@ -1075,8 +1088,6 @@ bool pas_thread_local_cache_for_all(pas_allocator_scavenge_action allocator_acti
             pas_thread_local_cache_layout_segment* segment;
             pas_thread_local_cache_layout_segment* begin_segment;
             uintptr_t start_of_possible_decommit;
-            uintptr_t begin_page_index;
-            uintptr_t end_page_index;
             uintptr_t page_index;
             uintptr_t node_index;
             uintptr_t begin_node_index;
@@ -1094,9 +1105,7 @@ bool pas_thread_local_cache_for_all(pas_allocator_scavenge_action allocator_acti
             node_index = 0;
             for (PAS_THREAD_LOCAL_CACHE_LAYOUT_EACH_ALLOCATOR_WITH_SEGMENT_AND_INDEX(layout_node, segment, node_index)) {
                 pas_allocator_index allocator_index;
-                pas_allocator_index end_allocator_index;
                 pas_local_allocator_scavenger_data* scavenger_data;
-                pas_decommit_exclusion_range decommit_exclusion_range;
 
                 allocator_index =
                     pas_thread_local_cache_layout_node_get_allocator_index_generic(layout_node);
@@ -1104,45 +1113,44 @@ bool pas_thread_local_cache_for_all(pas_allocator_scavenge_action allocator_acti
                 if (allocator_index >= cache->allocator_index_upper_bound)
                     break;
 
-                end_allocator_index =
-                    allocator_index + pas_thread_local_cache_layout_node_num_allocator_indices(layout_node);
-
                 scavenger_data = (pas_local_allocator_scavenger_data*)
                     pas_thread_local_cache_get_local_allocator_direct(cache, allocator_index);
 
-                decommit_exclusion_range = pas_thread_local_cache_compute_decommit_exclusion_range(
-                    cache, allocator_index, end_allocator_index);
-                PAS_ASSERT(start_of_possible_decommit
-                           <= decommit_exclusion_range.start_of_possible_decommit);
-                PAS_ASSERT(start_of_possible_decommit
-                           <= decommit_exclusion_range.end_of_possible_decommit);
-                if (pas_decommit_exclusion_range_is_contiguous(decommit_exclusion_range)) {
-                    stop_allocator(
-                        cache, allocator_action, allocator_index, scavenger_data, &result, &thread_suspend_data);
+                if (thread_local_cache_decommit_action == pas_thread_local_cache_decommit_if_possible_action) {
+                    pas_allocator_index end_allocator_index = allocator_index + pas_thread_local_cache_layout_node_num_allocator_indices(layout_node);
+                    pas_decommit_exclusion_range decommit_exclusion_range = pas_thread_local_cache_compute_decommit_exclusion_range(cache, allocator_index, end_allocator_index);
+                    PAS_ASSERT(start_of_possible_decommit <= decommit_exclusion_range.start_of_possible_decommit);
+                    PAS_ASSERT(start_of_possible_decommit <= decommit_exclusion_range.end_of_possible_decommit);
 
-                    if (pas_local_allocator_scavenger_data_is_stopped(scavenger_data)) {
-                        if (!begin_segment) {
-                            begin_segment = segment;
-                            begin_node_index = node_index;
+                    if (pas_decommit_exclusion_range_is_contiguous(decommit_exclusion_range)) {
+                        stop_allocator(
+                            cache, allocator_action, allocator_index, scavenger_data, &result, &thread_suspend_data);
+
+                        if (pas_local_allocator_scavenger_data_is_stopped(scavenger_data)) {
+                            if (!begin_segment) {
+                                begin_segment = segment;
+                                begin_node_index = node_index;
+                            } else {
+                                PAS_TESTING_ASSERT(
+                                    pas_thread_local_cache_layout_node_get_allocator_index_generic(pas_thread_local_cache_layout_segment_get_node(begin_segment, begin_node_index))
+                                    < allocator_index);
+                            }
                         } else {
-                            PAS_TESTING_ASSERT(
-                                pas_thread_local_cache_layout_node_get_allocator_index_generic(pas_thread_local_cache_layout_segment_get_node(begin_segment, begin_node_index))
-                                < allocator_index);
+                            decommit_exclusion_range =
+                                pas_decommit_exclusion_range_create_inverted(decommit_exclusion_range);
                         }
-                    } else {
-                        decommit_exclusion_range =
-                            pas_decommit_exclusion_range_create_inverted(decommit_exclusion_range);
                     }
-                }
 
-                if (pas_decommit_exclusion_range_is_inverted(decommit_exclusion_range)) {
-                    decommit_allocator_range(
-                        cache, begin_segment, begin_node_index, start_of_possible_decommit,
-                        decommit_exclusion_range.end_of_possible_decommit, segment, node_index);
-                    start_of_possible_decommit = decommit_exclusion_range.start_of_possible_decommit;
-                    begin_segment = NULL;
-                    begin_node_index = 0;
-                }
+                    if (pas_decommit_exclusion_range_is_inverted(decommit_exclusion_range)) {
+                        decommit_allocator_range(
+                            cache, begin_segment, begin_node_index, start_of_possible_decommit,
+                            decommit_exclusion_range.end_of_possible_decommit, segment, node_index);
+                        start_of_possible_decommit = decommit_exclusion_range.start_of_possible_decommit;
+                        begin_segment = NULL;
+                        begin_node_index = 0;
+                    }
+                } else
+                    stop_allocator(cache, allocator_action, allocator_index, scavenger_data, &result, &thread_suspend_data);
             }
 
 #if PAS_OS(DARWIN)
@@ -1150,29 +1158,31 @@ bool pas_thread_local_cache_for_all(pas_allocator_scavenge_action allocator_acti
                 resume(cache, &thread_suspend_data);
 #endif
 
-            begin_page_index =
-                pas_round_up_to_power_of_2(start_of_possible_decommit, page_size)
-                >> page_size_shift;
-            end_page_index =
-                pas_thread_local_cache_size_for_allocator_index_capacity(cache->allocator_index_capacity)
-                >> page_size_shift;
+            if (thread_local_cache_decommit_action == pas_thread_local_cache_decommit_if_possible_action) {
+                uintptr_t begin_page_index =
+                    pas_round_up_to_power_of_2(start_of_possible_decommit, page_size)
+                    >> page_size_shift;
+                uintptr_t end_page_index =
+                    pas_thread_local_cache_size_for_allocator_index_capacity(cache->allocator_index_capacity)
+                    >> page_size_shift;
 
-            for (page_index = begin_page_index; page_index < end_page_index; ++page_index) {
-                if (!pas_bitvector_get(cache->pages_committed, page_index)) {
-                    decommit_allocator_range(
-                        cache, begin_segment, begin_node_index, start_of_possible_decommit,
-                        page_index << page_size_shift,
-                        segment, node_index);
-                    start_of_possible_decommit = (page_index + 1) << page_size_shift;
-                    begin_segment = NULL;
-                    begin_node_index = 0;
+                for (page_index = begin_page_index; page_index < end_page_index; ++page_index) {
+                    if (!pas_bitvector_get(cache->pages_committed, page_index)) {
+                        decommit_allocator_range(
+                            cache, begin_segment, begin_node_index, start_of_possible_decommit,
+                            page_index << page_size_shift,
+                            segment, node_index);
+                        start_of_possible_decommit = (page_index + 1) << page_size_shift;
+                        begin_segment = NULL;
+                        begin_node_index = 0;
+                    }
                 }
-            }
 
-            decommit_allocator_range(
-                cache, begin_segment, begin_node_index, start_of_possible_decommit,
-                pas_thread_local_cache_size_for_allocator_index_capacity(cache->allocator_index_capacity),
-                segment, node_index);
+                decommit_allocator_range(
+                    cache, begin_segment, begin_node_index, start_of_possible_decommit,
+                    pas_thread_local_cache_size_for_allocator_index_capacity(cache->allocator_index_capacity),
+                    segment, node_index);
+            }
         }
 
         pas_lock_unlock(&node->scavenger_lock);

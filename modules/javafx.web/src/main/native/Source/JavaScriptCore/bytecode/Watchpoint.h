@@ -110,6 +110,7 @@ class WatchpointSet;
     macro(FunctionRareDataAllocationProfileClearing, FunctionRareData::AllocationProfileClearingWatchpoint) \
     macro(CachedSpecialPropertyAdaptiveStructure, CachedSpecialPropertyAdaptiveStructureWatchpoint) \
     macro(StructureChainInvalidation, StructureChainInvalidationWatchpoint) \
+    macro(ObjectAdaptiveStructure, ObjectAdaptiveStructureWatchpoint) \
 
 #if ENABLE(JIT)
 #define JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
@@ -132,7 +133,7 @@ class WatchpointSet;
 
 #define JSC_WATCHPOINT_FIELD(type, member) \
     type member; \
-    static_assert(std::is_trivially_destructible<type>::value, ""); \
+    static_assert(std::is_trivially_destructible<type>::value); \
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
 

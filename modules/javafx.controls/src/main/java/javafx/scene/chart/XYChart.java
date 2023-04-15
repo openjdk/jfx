@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package javafx.scene.chart;
 
 
 import com.sun.javafx.charts.Legend;
+
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -37,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -45,10 +48,12 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -130,7 +135,7 @@ public abstract class XYChart<X,Y> extends Chart {
             Set<Series<X, Y>> dupCheck = new HashSet<>(displayedSeries);
             dupCheck.removeAll(c.getRemoved());
             for (Series<X, Y> d : c.getAddedSubList()) {
-                if (!dupCheck.add(d)) {
+                if (!dupCheck.add(d) && !d.setToRemove) {
                     throw new IllegalArgumentException("Duplicate series added");
                 }
             }
@@ -142,12 +147,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
                 final Series<X,Y> s = c.getList().get(i);
-                // add new listener to data
-                s.setChart(XYChart.this);
                 if (s.setToRemove) {
                     s.setToRemove = false;
                     s.getChart().seriesBeingRemovedIsAdded(s);
                 }
+                // add new listener to data
+                s.setChart(XYChart.this);
                 // update linkedList Pointers for series
                 displayedSeries.add(s);
                 // update default color style class
@@ -171,18 +176,62 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final Axis<X> xAxis;
+
+    private ReadOnlyObjectProperty<Axis<X>> xAxisProperty = new ReadOnlyObjectPropertyBase<Axis<X>>() {
+        @Override
+        public Object getBean() {
+            return this;
+        }
+
+        @Override
+        public String getName() {
+            return "xAxis";
+        }
+
+        @Override
+        public Axis<X> get() {
+            return xAxis;
+        }
+    };
+
     /**
      * Get the X axis, by default it is along the bottom of the plot
      * @return the X axis of the chart
      */
     public Axis<X> getXAxis() { return xAxis; }
 
+    private ObservableValue<Axis<X>> xAxisProperty() {
+        return xAxisProperty;
+    }
+
     private final Axis<Y> yAxis;
+
+    private ReadOnlyObjectProperty<Axis<Y>> yAxisProperty = new ReadOnlyObjectPropertyBase<Axis<Y>>() {
+        @Override
+        public Object getBean() {
+            return this;
+        }
+
+        @Override
+        public String getName() {
+            return "yAxis";
+        }
+
+        @Override
+        public Axis<Y> get() {
+            return yAxis;
+        }
+    };
+
     /**
      * Get the Y axis, by default it is along the left of the plot
      * @return the Y axis of this chart
      */
     public Axis<Y> getYAxis() { return yAxis; }
+
+    private ObservableValue<Axis<Y>> yAxisProperty() {
+        return yAxisProperty;
+    }
 
     /** XYCharts data */
     private ObjectProperty<ObservableList<Series<X,Y>>> data = new ObjectPropertyBase<>() {
@@ -1212,8 +1261,10 @@ public abstract class XYChart<X,Y> extends Chart {
         private boolean setToRemove = false;
         /** The series this data belongs to */
         private Series<X,Y> series;
+        private ObjectProperty<Series<X, Y>> seriesProperty = new SimpleObjectProperty<>();
         void setSeries(Series<X,Y> series) {
             this.series = series;
+            this.seriesProperty.set(series);
         }
 
         /** The generic data value to be plotted on the X axis */
@@ -1316,11 +1367,36 @@ public abstract class XYChart<X,Y> extends Chart {
                 Node node = get();
                 if (node != null) {
                     node.accessibleTextProperty().unbind();
+                    ObservableValue<String> seriesLabel = seriesProperty
+                            .flatMap(Series::nameProperty)
+                            .orElse("");
+                    ObservableValue<String> xAxisLabel= seriesProperty
+                            .flatMap(Series::chartProperty)
+                            .flatMap(XYChart::xAxisProperty)
+                            .flatMap(Axis::labelProperty)
+                            .orElse(ControlResources.getString("XYChart.series.xaxis"));
+                    ObservableValue<String> yAxisLabel = seriesProperty
+                            .flatMap(Series::chartProperty)
+                            .flatMap(XYChart::yAxisProperty)
+                            .flatMap(Axis::labelProperty)
+                            .orElse(ControlResources.getString("XYChart.series.yaxis"));
                     node.accessibleTextProperty().bind(new StringBinding() {
-                        {bind(currentXProperty(), currentYProperty());}
+                        {
+                            bind(currentXProperty(),
+                                    currentYProperty(),
+                                    seriesLabel,
+                                    xAxisLabel,
+                                    yAxisLabel);
+                        }
                         @Override protected String computeValue() {
-                            String seriesName = series != null ? series.getName() : "";
-                            return seriesName + " X Axis is " + getCurrentX() + " Y Axis is " + getCurrentY();
+                            String seriesName = seriesLabel.getValue();
+                            String xAxisName = xAxisLabel.getValue();
+                            String yAxisName = yAxisLabel.getValue();
+                            String format = ControlResources.getString("XYChart.series.accessibleText");
+                            MessageFormat mf = new MessageFormat(format);
+                            Object[] args = {seriesName, xAxisName, getCurrentX(), yAxisName, getCurrentY()};
+                            String retVal = mf.format(args);
+                            return retVal;
                         }
                     });
                 }

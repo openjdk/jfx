@@ -450,14 +450,14 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
         break;
     case ConstructorKind::Naked:
         if (!isConstructor()) {
-            emitThrowTypeError("Cannot call a constructor without |new|");
+            emitThrowTypeError("Cannot call a constructor without |new|"_s);
             return;
         }
         break;
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
         if (!isConstructor()) {
-            emitThrowTypeError("Cannot call a class constructor without |new|");
+            emitThrowTypeError("Cannot call a class constructor without |new|"_s);
             return;
         }
         break;
@@ -1729,33 +1729,33 @@ bool BytecodeGenerator::emitEqualityOpImpl(RegisterID* dst, RegisterID* src1, Re
             && src1->isTemporary()
             && src2->virtualRegister().isConstant()
             && m_codeBlock->constantRegister(src2->virtualRegister()).get().isString()) {
-            const String& value = asString(m_codeBlock->constantRegister(src2->virtualRegister()).get())->tryGetValue();
-            if (value == "undefined") {
+            String value = asString(m_codeBlock->constantRegister(src2->virtualRegister()).get())->tryGetValue();
+            if (value == "undefined"_s) {
                 rewind();
                 OpTypeofIsUndefined::emit(this, dst, op.m_value);
                 return true;
             }
-            if (value == "boolean") {
+            if (value == "boolean"_s) {
                 rewind();
                 OpIsBoolean::emit(this, dst, op.m_value);
                 return true;
             }
-            if (value == "number") {
+            if (value == "number"_s) {
                 rewind();
                 OpIsNumber::emit(this, dst, op.m_value);
                 return true;
             }
-            if (value == "string") {
+            if (value == "string"_s) {
                 rewind();
                 OpIsCellWithType::emit(this, dst, op.m_value, StringType);
                 return true;
             }
-            if (value == "symbol") {
+            if (value == "symbol"_s) {
                 rewind();
                 OpIsCellWithType::emit(this, dst, op.m_value, SymbolType);
                 return true;
             }
-            if (value == "bigint") {
+            if (value == "bigint"_s) {
                 rewind();
 #if USE(BIGINT32)
                 OpIsBigInt::emit(this, dst, op.m_value);
@@ -1764,12 +1764,12 @@ bool BytecodeGenerator::emitEqualityOpImpl(RegisterID* dst, RegisterID* src1, Re
 #endif
                 return true;
             }
-            if (value == "object") {
+            if (value == "object"_s) {
                 rewind();
                 OpTypeofIsObject::emit(this, dst, op.m_value);
                 return true;
             }
-            if (value == "function") {
+            if (value == "function"_s) {
                 rewind();
                 OpTypeofIsFunction::emit(this, dst, op.m_value);
                 return true;
@@ -2871,7 +2871,7 @@ RegisterID* BytecodeGenerator::emitHasPrivateBrand(RegisterID* dst, RegisterID* 
     if (isStatic) {
         Ref<Label> isObjectLabel = newLabel();
         emitJumpIfTrue(emitIsObject(newTemporary(), base), isObjectLabel.get());
-        emitThrowTypeError("Cannot access static private method or accessor of a non-Object");
+        emitThrowTypeError("Cannot access static private method or accessor of a non-Object"_s);
         emitLabel(isObjectLabel.get());
         emitEqualityOp<OpStricteq>(dst, base, brand);
     } else
@@ -2884,7 +2884,7 @@ void BytecodeGenerator::emitCheckPrivateBrand(RegisterID* base, RegisterID* bran
     if (isStatic) {
         Ref<Label> brandCheckOkLabel = newLabel();
         emitJumpIfTrue(emitEqualityOp<OpStricteq>(newTemporary(), base, brand), brandCheckOkLabel.get());
-        emitThrowTypeError("Cannot access static private method or accessor");
+        emitThrowTypeError("Cannot access static private method or accessor"_s);
         emitLabel(brandCheckOkLabel.get());
         return;
 
@@ -3334,7 +3334,7 @@ RegisterID* BytecodeGenerator::emitNewClassFieldInitializerFunction(RegisterID* 
     SourceParseMode parseMode = SourceParseMode::ClassFieldInitializerMode;
     ConstructAbility constructAbility = ConstructAbility::CannotConstruct;
 
-    FunctionMetadataNode metadata(parserArena(), JSTokenLocation(), JSTokenLocation(), 0, 0, 0, 0, 0, StrictModeLexicalFeature, ConstructorKind::None, superBinding, 0, parseMode, false);
+    FunctionMetadataNode metadata(parserArena(), JSTokenLocation(), JSTokenLocation(), 0, 0, 0, 0, 0, ImplementationVisibility::Private, StrictModeLexicalFeature, ConstructorKind::None, superBinding, 0, parseMode, false);
     metadata.finishParsing(m_scopeNode->source(), Identifier(), FunctionMode::MethodDefinition);
     auto initializer = UnlinkedFunctionExecutable::create(m_vm, m_scopeNode->source(), &metadata, isBuiltinFunction() ? UnlinkedBuiltinFunction : UnlinkedNormalFunction, constructAbility, scriptMode(), WTFMove(variablesUnderTDZ), WTFMove(parentPrivateNameEnvironment), newDerivedContextType, NeedsClassFieldInitializer::No, PrivateBrandRequirement::None);
     initializer->setClassFieldLocations(WTFMove(classFieldLocations));
@@ -3656,7 +3656,7 @@ RegisterID* BytecodeGenerator::emitReturn(RegisterID* src, ReturnFrom from)
             if (isDerived) {
                 Ref<Label> isUndefinedLabel = newLabel();
                 emitJumpIfTrue(emitIsUndefined(newTemporary(), src), isUndefinedLabel.get());
-                emitThrowTypeError("Cannot return a non-object type in the constructor of a derived class.");
+                emitThrowTypeError("Cannot return a non-object type in the constructor of a derived class."_s);
                 emitLabel(isUndefinedLabel.get());
                 emitTDZCheck(&m_thisRegister);
             }
@@ -4029,12 +4029,12 @@ void BytecodeGenerator::emitThrowStaticError(ErrorTypeWithExtension errorType, c
     OpThrowStaticError::emit(this, addConstantValue(addStringConstant(message)), errorType);
 }
 
-void BytecodeGenerator::emitThrowReferenceError(const String& message)
+void BytecodeGenerator::emitThrowReferenceError(ASCIILiteral message)
 {
     emitThrowStaticError(ErrorTypeWithExtension::ReferenceError, Identifier::fromString(m_vm, message));
 }
 
-void BytecodeGenerator::emitThrowTypeError(const String& message)
+void BytecodeGenerator::emitThrowTypeError(ASCIILiteral message)
 {
     emitThrowStaticError(ErrorTypeWithExtension::TypeError, Identifier::fromString(m_vm, message));
 }
@@ -4735,7 +4735,7 @@ RegisterID* BytecodeGenerator::emitRestParameter(RegisterID* result, unsigned nu
     return result;
 }
 
-void BytecodeGenerator::emitRequireObjectCoercible(RegisterID* value, const String& error)
+void BytecodeGenerator::emitRequireObjectCoercible(RegisterID* value, ASCIILiteral error)
 {
     Ref<Label> target = newLabel();
     OpJnundefinedOrNull::emit(this, value, target->bind(this));

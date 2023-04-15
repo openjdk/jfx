@@ -61,13 +61,14 @@ public:
         ElementType elementType;
     };
 
-    enum BaseTypeFlag : uint8_t {
+    enum BaseTypeFlag {
         BoxFlag                    = 1 << 0,
         InlineTextBoxFlag          = 1 << 1,
         LineBreakBoxFlag           = 1 << 2,
-        ReplacedBoxFlag            = 1 << 3,
-        InitialContainingBlockFlag = 1 << 4,
-        ContainerBoxFlag           = 1 << 5
+        ListMarkerBoxFlag          = 1 << 3,
+        ReplacedBoxFlag            = 1 << 4,
+        InitialContainingBlockFlag = 1 << 5,
+        ContainerBoxFlag           = 1 << 6
     };
 
     virtual ~Box();
@@ -135,7 +136,7 @@ public:
     bool isTableColumn() const { return style().display() == DisplayType::TableColumn; }
     bool isTableCell() const { return style().display() == DisplayType::TableCell; }
     bool isInternalTableBox() const;
-    bool isFlexBox() const { return style().display() == DisplayType::Flex; }
+    bool isFlexBox() const { return style().display() == DisplayType::Flex || style().display() == DisplayType::InlineFlex; }
     bool isFlexItem() const;
     bool isIFrame() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::IFrame; }
     bool isImage() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Image; }
@@ -160,6 +161,7 @@ public:
     bool isInlineTextBox() const { return baseTypeFlags().contains(InlineTextBoxFlag); }
     bool isLineBreakBox() const { return baseTypeFlags().contains(LineBreakBoxFlag); }
     bool isReplacedBox() const { return baseTypeFlags().contains(ReplacedBoxFlag); }
+    bool isListMarkerBox() const { return baseTypeFlags().contains(ListMarkerBoxFlag); }
 
     bool isPaddingApplicable() const;
     bool isOverflowVisible() const;
@@ -227,7 +229,7 @@ private:
     mutable WeakPtr<LayoutState> m_cachedLayoutState;
     mutable std::unique_ptr<BoxGeometry> m_cachedGeometryForLayoutState;
 
-    unsigned m_baseTypeFlags : 6; // OptionSet<BaseTypeFlag>
+    unsigned m_baseTypeFlags : 7; // OptionSet<BaseTypeFlag>
     bool m_hasRareData : 1;
     bool m_isAnonymous : 1;
 };

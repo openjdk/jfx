@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getAltImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setAltImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::altAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::altAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getCoordsImpl(JNIEnv* env, jclass, jlong peer)
@@ -65,7 +65,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getCoordsI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setCoordsImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::coordsAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::coordsAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getNoHrefImpl(JNIEnv*, jclass, jlong peer)
@@ -89,7 +89,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getPingImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setPingImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::pingAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::pingAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getRelImpl(JNIEnv* env, jclass, jlong peer)
@@ -101,7 +101,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getRelImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setRelImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::relAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::relAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getShapeImpl(JNIEnv* env, jclass, jlong peer)
@@ -113,7 +113,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getShapeIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setShapeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::shapeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::shapeAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getTargetImpl(JNIEnv* env, jclass, jlong peer)
@@ -125,7 +125,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getTargetI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setTargetImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::targetAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::targetAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getAccessKeyImpl(JNIEnv* env, jclass, jlong peer)
@@ -137,7 +137,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getAccessK
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHrefImpl(JNIEnv* env, jclass, jlong peer)
@@ -149,7 +149,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHrefImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setHrefImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::hrefAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::hrefAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getOriginImpl(JNIEnv* env, jclass, jlong peer)
@@ -167,7 +167,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getProtoco
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setProtocolImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setProtocol(String(env, value));
+    IMPL->setProtocol(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getUsernameImpl(JNIEnv* env, jclass, jlong peer)
@@ -179,7 +179,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getUsernam
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setUsernameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setUsername(String(env, value));
+    IMPL->setUsername(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getPasswordImpl(JNIEnv* env, jclass, jlong peer)
@@ -191,7 +191,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getPasswor
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setPasswordImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setPassword(String(env, value));
+    IMPL->setPassword(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHostImpl(JNIEnv* env, jclass, jlong peer)
@@ -203,7 +203,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHostImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setHostImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setHost(String(env, value));
+    IMPL->setHost(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHostnameImpl(JNIEnv* env, jclass, jlong peer)
@@ -215,7 +215,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHostnam
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setHostnameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setHostname(String(env, value));
+    IMPL->setHostname(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getPortImpl(JNIEnv* env, jclass, jlong peer)
@@ -227,7 +227,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getPortImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setPortImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setPort(String(env, value));
+    IMPL->setPort(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getPathnameImpl(JNIEnv* env, jclass, jlong peer)
@@ -239,7 +239,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getPathnam
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setPathnameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setPathname(String(env, value));
+    IMPL->setPathname(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getSearchImpl(JNIEnv* env, jclass, jlong peer)
@@ -251,7 +251,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getSearchI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setSearchImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setSearch(String(env, value));
+    IMPL->setSearch(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHashImpl(JNIEnv* env, jclass, jlong peer)
@@ -263,7 +263,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHashImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setHashImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setHash(String(env, value));
+    IMPL->setHash(AtomString {String(env, value)});
 }
 
 }

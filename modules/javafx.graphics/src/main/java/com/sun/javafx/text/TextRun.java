@@ -284,16 +284,12 @@ public class TextRun implements GlyphList {
              * the run excluding the given glyph. Due to performance reshaping
              * should only be used when the run has contextual shaping.
              */
-            /* Not need to check for compact as bidi disables the simple case */
-            int gi = 0;
+            /* No need to check for compact as bidi disables the simple case */
             float runWidth = positions[glyphCount<<1];
-            while (runWidth > width) {
-                float glyphWidth = positions[(gi+1)<<1] - positions[gi<<1];
-                if (runWidth - glyphWidth <= width) {
+            for (int gi = 0; gi < glyphCount; gi++) {
+                if ((runWidth - positions[gi<<1]) <= width) {
                     return getCharOffset(gi);
                 }
-                runWidth -= glyphWidth;
-                gi++;
             }
         }
         return 0;

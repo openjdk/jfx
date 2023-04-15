@@ -24,8 +24,8 @@
  */
 
 [
-    Exposed=(Window,Worker),
-    GenerateAddOpaqueRoot=signal
+    Exposed=*,
+    GenerateAddOpaqueRoot
 ] interface AbortController {
     [CallWith=CurrentScriptExecutionContext] constructor();
 

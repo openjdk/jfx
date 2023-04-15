@@ -65,7 +65,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLOptGroupElementImpl_getLab
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOptGroupElementImpl_setLabelImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::labelAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::labelAttr, AtomString{String(env, value)});
 }
 
 }

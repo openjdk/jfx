@@ -119,16 +119,17 @@ void RegistrationStore::removeRegistration(const ServiceWorkerRegistrationKey& k
     scheduleDatabasePushIfNecessary();
 }
 
-void RegistrationStore::addRegistrationFromDatabase(ServiceWorkerContextData&& data)
+void RegistrationStore::addRegistrationFromDatabase(ServiceWorkerContextData&& data, CompletionHandler<void()>&& completionHandler)
 {
+    ASSERT(isMainThread());
     ASSERT(!data.registration.key.isEmpty());
     if (data.registration.key.isEmpty())
-        return;
+        return completionHandler();
 
-    m_server.addRegistrationFromStore(WTFMove(data));
+    m_server.addRegistrationFromStore(WTFMove(data), WTFMove(completionHandler));
 }
 
-void RegistrationStore::didSaveWorkerScriptsToDisk(ServiceWorkerIdentifier serviceWorkerIdentifier, ScriptBuffer&& mainScript, HashMap<URL, ScriptBuffer>&& importedScripts)
+void RegistrationStore::didSaveWorkerScriptsToDisk(ServiceWorkerIdentifier serviceWorkerIdentifier, ScriptBuffer&& mainScript, MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>&& importedScripts)
 {
     m_server.didSaveWorkerScriptsToDisk(serviceWorkerIdentifier, WTFMove(mainScript), WTFMove(importedScripts));
 }

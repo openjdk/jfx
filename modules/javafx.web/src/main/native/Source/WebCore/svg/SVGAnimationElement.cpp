@@ -31,6 +31,7 @@
 #include "CSSPropertyParser.h"
 #include "Document.h"
 #include "FloatConversion.h"
+#include "HTMLParserIdioms.h"
 #include "RenderObject.h"
 #include "SVGAnimateColorElement.h"
 #include "SVGAnimateElement.h"
@@ -56,11 +57,11 @@ SVGAnimationElement::SVGAnimationElement(const QualifiedName& tagName, Document&
 {
 }
 
-static void parseKeyTimes(const String& parse, Vector<float>& result, bool verifyOrder)
+static void parseKeyTimes(StringView parse, Vector<float>& result, bool verifyOrder)
 {
     result.clear();
     bool isFirst = true;
-    for (StringView timeString : StringView(parse).split(';')) {
+    for (auto timeString : parse.split(';')) {
         bool ok;
         float time = timeString.toFloat(ok);
         if (!ok || time < 0 || time > 1)
@@ -147,15 +148,31 @@ bool SVGAnimationElement::isSupportedAttribute(const QualifiedName& attrName)
     return supportedAttributes.get().contains<SVGAttributeHashTranslator>(attrName);
 }
 
+bool SVGAnimationElement::attributeContainsJavaScriptURL(const Attribute& attribute) const
+{
+    if (attribute.name() == SVGNames::fromAttr || attribute.name() == SVGNames::toAttr)
+        return WTF::protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(attribute.value()));
+
+    if (attribute.name() == SVGNames::valuesAttr) {
+        for (auto innerValue : StringView(attribute.value()).split(';')) {
+            if (WTF::protocolIsJavaScript(innerValue.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>)))
+                return true;
+        }
+        return false;
+    }
+    return Element::attributeContainsJavaScriptURL(attribute);
+}
+
 void SVGAnimationElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::valuesAttr) {
         // Per the SMIL specification, leading and trailing white space,
         // and white space before and after semicolon separators, is allowed and will be ignored.
         // http://www.w3.org/TR/SVG11/animate.html#ValuesAttribute
-        m_values = value.string().split(';');
-        for (auto& value : m_values)
-            value = value.stripWhiteSpace();
+        m_values.clear();
+        value.string().split(';', [this](StringView innerValue) {
+            m_values.append(innerValue.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>).toString());
+        });
 
         updateAnimationMode();
         return;
@@ -275,10 +292,10 @@ void SVGAnimationElement::updateAnimationMode()
 
 void SVGAnimationElement::setCalcMode(const AtomString& calcMode)
 {
-    static MainThreadNeverDestroyed<const AtomString> discrete("discrete", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> linear("linear", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> paced("paced", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> spline("spline", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> discrete("discrete"_s);
+    static MainThreadNeverDestroyed<const AtomString> linear("linear"_s);
+    static MainThreadNeverDestroyed<const AtomString> paced("paced"_s);
+    static MainThreadNeverDestroyed<const AtomString> spline("spline"_s);
     if (calcMode == discrete)
         setCalcMode(CalcMode::Discrete);
     else if (calcMode == linear)
@@ -293,8 +310,8 @@ void SVGAnimationElement::setCalcMode(const AtomString& calcMode)
 
 void SVGAnimationElement::setAttributeType(const AtomString& attributeType)
 {
-    static MainThreadNeverDestroyed<const AtomString> css("CSS", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> xml("XML", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> css("CSS"_s);
+    static MainThreadNeverDestroyed<const AtomString> xml("XML"_s);
     if (attributeType == css)
         m_attributeType = AttributeType::CSS;
     else if (attributeType == xml)
@@ -318,18 +335,22 @@ String SVGAnimationElement::fromValue() const
     return attributeWithoutSynchronization(SVGNames::fromAttr);
 }
 
+static const AtomString& sumAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> sum("sum"_s);
+    return sum;
+}
+
 bool SVGAnimationElement::isAdditive() const
 {
-    static MainThreadNeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
     const AtomString& value = attributeWithoutSynchronization(SVGNames::additiveAttr);
-    return value == sum || animationMode() == AnimationMode::By;
+    return value == sumAtom() || animationMode() == AnimationMode::By;
 }
 
 bool SVGAnimationElement::isAccumulated() const
 {
-    static MainThreadNeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
     const AtomString& value = attributeWithoutSynchronization(SVGNames::accumulateAttr);
-    return value == sum && animationMode() != AnimationMode::To;
+    return value == sumAtom() && animationMode() != AnimationMode::To;
 }
 
 bool SVGAnimationElement::isTargetAttributeCSSProperty(SVGElement* targetElement, const QualifiedName& attributeName)

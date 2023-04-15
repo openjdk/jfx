@@ -127,12 +127,12 @@ public:
     virtual void handleInputMethodKeydown(KeyboardEvent&) = 0;
     virtual void didDispatchInputMethodKeydown(KeyboardEvent&) { }
 
-    virtual void textFieldDidBeginEditing(Element*) = 0;
-    virtual void textFieldDidEndEditing(Element*) = 0;
-    virtual void textDidChangeInTextField(Element*) = 0;
-    virtual bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) = 0;
-    virtual void textWillBeDeletedInTextField(Element*) = 0;
-    virtual void textDidChangeInTextArea(Element*) = 0;
+    virtual void textFieldDidBeginEditing(Element&) = 0;
+    virtual void textFieldDidEndEditing(Element&) = 0;
+    virtual void textDidChangeInTextField(Element&) = 0;
+    virtual bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) = 0;
+    virtual void textWillBeDeletedInTextField(Element&) = 0;
+    virtual void textDidChangeInTextArea(Element&) = 0;
     virtual void overflowScrollPositionChanged() = 0;
     virtual void subFrameScrollPositionChanged() = 0;
 
@@ -190,8 +190,6 @@ public:
     virtual bool supportsGlobalSelection() { return false; }
 
     virtual bool performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove) = 0;
-
-    virtual bool canShowFontPanel() const = 0;
 
     virtual bool shouldAllowSingleClickToChangeSelection(Node&, const VisibleSelection&) const { return true; }
 

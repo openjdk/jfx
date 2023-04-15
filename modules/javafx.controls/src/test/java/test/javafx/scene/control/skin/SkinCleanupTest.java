@@ -1348,6 +1348,37 @@ public class SkinCleanupTest {
     }
 
     /**
+     * Test that both inputMethodRequests and onInputMethodTextChanged properties, required for IME to work
+     * (see Scene:2239) are set by a skin, on replacing a skin, and on uninstalling a skin.
+     */
+    @Test
+    public void testTextInput_BothIME() {
+        TextField t = new TextField();
+        installDefaultSkin(t);
+        InputMethodRequests mr1 = t.getInputMethodRequests();
+        EventHandler<? super InputMethodEvent> tc1 = t.getOnInputMethodTextChanged();
+
+        assertNotNull("InputMethodRequests must be set by a skin", mr1);
+        assertNotNull("onInputMethodTextChanged must be set by a skin", tc1);
+
+        replaceSkin(t);
+        InputMethodRequests mr2 = t.getInputMethodRequests();
+        EventHandler<? super InputMethodEvent> tc2 = t.getOnInputMethodTextChanged();
+
+        assertNotNull("InputMethodRequests must be set by a skin 2", mr2);
+        assertNotNull("onInputMethodTextChanged must be set by a skin 2", tc2);
+
+        assertNotEquals("InputMethodRequests set by an old skin must be replaced by the new skin", mr1, mr2);
+        assertNotEquals("onInputMethodTextChanged set by an old skin must be replaced by the new skin", tc1, tc2);
+
+        t.setSkin(null);
+        InputMethodRequests mr3 = t.getInputMethodRequests();
+        EventHandler<? super InputMethodEvent> tc3 = t.getOnInputMethodTextChanged();
+        assertNull("InputMethodRequests must be cleared by uninstalling a skin", mr3);
+        assertNull("onInputMethodTextChanged must be cleared by uninstalling a skin", tc3);
+    }
+
+    /**
      * Test that the user input method requests is not affected by the skin.
      */
     @Test

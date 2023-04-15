@@ -159,6 +159,8 @@ private:
 
     void bufferASCIICharacter(UChar);
     void bufferCharacter(UChar);
+    template<typename CharacterType> void bufferCharacters(Span<const CharacterType>);
+    void bufferCharacters(ASCIILiteral literal) { bufferCharacters(Span { literal.characters8(), literal.length() }); }
 
     bool emitAndResumeInDataState(SegmentedString&);
     bool emitAndReconsumeInDataState();
@@ -170,7 +172,7 @@ private:
     bool commitToCompleteEndTag(SegmentedString&);
 
     void appendToTemporaryBuffer(UChar);
-    bool temporaryBufferIs(const char*);
+    bool temporaryBufferIs(ASCIILiteral);
 
     // Sometimes we speculatively consume input characters and we don't know whether they represent
     // end tags or RCDATA, etc. These functions help manage these state.

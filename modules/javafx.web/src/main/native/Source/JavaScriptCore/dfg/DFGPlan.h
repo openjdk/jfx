@@ -32,6 +32,7 @@
 #include "DFGDesiredWatchpoints.h"
 #include "DFGDesiredWeakReferences.h"
 #include "DFGFinalizer.h"
+#include "DFGJITCode.h"
 #include "DeferredCompilationCallback.h"
 #include "JITPlan.h"
 #include "Operands.h"
@@ -48,6 +49,7 @@ class CodeBlock;
 namespace DFG {
 
 class ThreadData;
+class JITData;
 
 #if ENABLE(DFG_JIT)
 
@@ -100,6 +102,8 @@ public:
 
     DeferredCompilationCallback* callback() const { return m_callback.get(); }
     void setCallback(Ref<DeferredCompilationCallback>&& callback) { m_callback = WTFMove(callback); }
+
+    std::unique_ptr<JITData> finalizeJITData(const JITCode&);
 
 private:
     CompilationPath compileInThreadImpl() override;

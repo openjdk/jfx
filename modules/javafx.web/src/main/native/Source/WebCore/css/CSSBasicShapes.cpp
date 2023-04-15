@@ -230,7 +230,7 @@ static String buildPolygonString(const WindRule& windRule, const Vector<String>&
     char evenOddOpening[] = "polygon(evenodd, ";
     char nonZeroOpening[] = "polygon(";
     char commaSeparator[] = ", ";
-    COMPILE_ASSERT(sizeof(evenOddOpening) >= sizeof(nonZeroOpening), polygon_evenodd_is_longest_string_opening);
+    static_assert(sizeof(evenOddOpening) >= sizeof(nonZeroOpening), "polygon evenodd is longest string opening");
 
     // Compute the required capacity in advance to reduce allocations.
     size_t length = sizeof(evenOddOpening) - 1;
@@ -289,7 +289,7 @@ static bool buildInsetRadii(Vector<String>& radii, const String& topLeftRadius, 
     if (showBottomLeft)
         radii.append(bottomLeftRadius);
 
-    return radii.size() == 1 && radii[0] == "0px";
+    return radii.size() == 1 && radii[0] == "0px"_s;
 }
 
 static String buildInsetString(const String& top, const String& right, const String& bottom, const String& left,

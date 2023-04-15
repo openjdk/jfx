@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,8 +38,10 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaDeviceInfo.h"
+#include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "RealtimeMediaSourceSettings.h"
 #include "Settings.h"
@@ -55,7 +57,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MediaDevices);
 
 inline MediaDevices::MediaDevices(Document& document)
     : ActiveDOMObject(document)
-    , m_scheduledEventTimer(*this, &MediaDevices::scheduledEventTimerFired)
+    , m_scheduledEventTimer(RunLoop::main(), this, &MediaDevices::scheduledEventTimerFired)
     , m_eventNames(eventNames())
     , m_groupIdHashSalt(createVersion4UUIDString())
 {
@@ -116,7 +118,7 @@ bool MediaDevices::computeUserGesturePriviledge(GestureAllowedRequest requestTyp
     return isUserGesturePriviledged;
 }
 
-void MediaDevices::getUserMedia(const StreamConstraints& constraints, Promise&& promise)
+void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promise)
 {
     auto audioConstraints = createMediaConstraints(constraints.audio);
     auto videoConstraints = createMediaConstraints(constraints.video);
@@ -142,7 +144,7 @@ void MediaDevices::getUserMedia(const StreamConstraints& constraints, Promise&& 
         videoConstraints.setDefaultVideoConstraints();
     }
 
-    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::UserMedia, WTFMove(audioConstraints), WTFMove(videoConstraints), isUserGesturePriviledged }, WTFMove(promise));
+    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::UserMedia, WTFMove(audioConstraints), WTFMove(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTFMove(constraints.audio), WTFMove(constraints.video), WTFMove(promise));
 
     if (!document->settings().getUserMediaRequiresFocus()) {
         request->start();
@@ -225,7 +227,7 @@ static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constrai
     return invalid;
 }
 
-void MediaDevices::getDisplayMedia(const DisplayMediaStreamConstraints& constraints, Promise&& promise)
+void MediaDevices::getDisplayMedia(DisplayMediaStreamConstraints&& constraints, Promise&& promise)
 {
     auto* document = this->document();
     if (!document)
@@ -249,7 +251,7 @@ void MediaDevices::getDisplayMedia(const DisplayMediaStreamConstraints& constrai
         return;
     }
 
-    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::DisplayMedia, { }, WTFMove(videoConstraints), isUserGesturePriviledged }, WTFMove(promise));
+    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::DisplayMedia, { }, WTFMove(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTFMove(constraints.audio), WTFMove(constraints.video), WTFMove(promise));
     request->start();
 }
 

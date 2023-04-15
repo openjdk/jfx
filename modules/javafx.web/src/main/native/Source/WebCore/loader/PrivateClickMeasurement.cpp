@@ -27,7 +27,7 @@
 #include "PrivateClickMeasurement.h"
 
 #include "Logging.h"
-#include "RuntimeEnabledFeatures.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/Expected.h>
 #include <wtf/RandomNumber.h>
@@ -38,10 +38,11 @@
 
 namespace WebCore {
 
-static const char privateClickMeasurementTriggerAttributionPath[] = "/.well-known/private-click-measurement/trigger-attribution/";
+static constexpr auto privateClickMeasurementTriggerAttributionPath = "/.well-known/private-click-measurement/trigger-attribution/"_s;
 static const char privateClickMeasurementTokenSignaturePath[] = "/.well-known/private-click-measurement/sign-unlinkable-token/";
 static const char privateClickMeasurementTokenPublicKeyPath[] = "/.well-known/private-click-measurement/get-token-public-key/";
 static const char privateClickMeasurementReportAttributionPath[] = "/.well-known/private-click-measurement/report-attribution/";
+static constexpr auto privateClickMeasurementToSKAdNetworkURLPrefix = "https://apps.apple.com/app/apple-store/id"_s;
 const size_t privateClickMeasurementAttributionTriggerDataPathSegmentSize = 2;
 const size_t privateClickMeasurementPriorityPathSegmentSize = 2;
 const uint8_t privateClickMeasurementVersion = 3;
@@ -60,53 +61,27 @@ bool PrivateClickMeasurement::isValid() const
         && (m_timesToSend.sourceEarliestTimeToSend || m_timesToSend.destinationEarliestTimeToSend);
 }
 
-PrivateClickMeasurement::SecretToken PrivateClickMeasurement::SecretToken::isolatedCopy() const
-{
-    return {
-        tokenBase64URL.isolatedCopy(),
-        signatureBase64URL.isolatedCopy(),
-        keyIDBase64URL.isolatedCopy(),
-    };
-}
-
-PrivateClickMeasurement::SourceSecretToken PrivateClickMeasurement::SourceSecretToken::isolatedCopy() const
-{
-    return { SecretToken::isolatedCopy() };
-}
-
-PrivateClickMeasurement::DestinationSecretToken PrivateClickMeasurement::DestinationSecretToken::isolatedCopy() const
-{
-    return { SecretToken::isolatedCopy() };
-}
-
-PrivateClickMeasurement::EphemeralNonce PrivateClickMeasurement::EphemeralNonce::isolatedCopy() const
-{
-    return { nonce.isolatedCopy() };
-}
-
-PrivateClickMeasurement::UnlinkableToken PrivateClickMeasurement::UnlinkableToken::isolatedCopy() const
+PrivateClickMeasurement::UnlinkableToken PrivateClickMeasurement::UnlinkableToken::isolatedCopy() const &
 {
     return {
 #if PLATFORM(COCOA)
-        blinder,
-        waitingToken,
-        readyToken,
+        blinder, waitingToken, readyToken,
 #endif
         valueBase64URL.isolatedCopy()
     };
 }
 
-PrivateClickMeasurement::SourceUnlinkableToken PrivateClickMeasurement::SourceUnlinkableToken::isolatedCopy() const
+PrivateClickMeasurement::UnlinkableToken PrivateClickMeasurement::UnlinkableToken::isolatedCopy() &&
 {
-    return { UnlinkableToken::isolatedCopy() };
+    return {
+#if PLATFORM(COCOA)
+        blinder, waitingToken, readyToken,
+#endif
+        WTFMove(valueBase64URL).isolatedCopy()
+    };
 }
 
-PrivateClickMeasurement::DestinationUnlinkableToken PrivateClickMeasurement::DestinationUnlinkableToken::isolatedCopy() const
-{
-    return { UnlinkableToken::isolatedCopy() };
-}
-
-PrivateClickMeasurement PrivateClickMeasurement::isolatedCopy() const
+PrivateClickMeasurement PrivateClickMeasurement::isolatedCopy() const &
 {
     PrivateClickMeasurement copy {
         m_sourceID,
@@ -121,6 +96,24 @@ PrivateClickMeasurement PrivateClickMeasurement::isolatedCopy() const
     copy.m_ephemeralSourceNonce = crossThreadCopy(m_ephemeralSourceNonce);
     copy.m_sourceUnlinkableToken = m_sourceUnlinkableToken.isolatedCopy();
     copy.m_sourceSecretToken = crossThreadCopy(m_sourceSecretToken);
+    return copy;
+}
+
+PrivateClickMeasurement PrivateClickMeasurement::isolatedCopy() &&
+{
+    PrivateClickMeasurement copy {
+        m_sourceID,
+        WTFMove(m_sourceSite).isolatedCopy(),
+        WTFMove(m_destinationSite).isolatedCopy(),
+        WTFMove(m_sourceApplicationBundleID).isolatedCopy(),
+        WTFMove(m_timeOfAdClick).isolatedCopy(),
+        m_isEphemeral,
+    };
+    copy.m_attributionTriggerData = WTFMove(m_attributionTriggerData);
+    copy.m_timesToSend = WTFMove(m_timesToSend);
+    copy.m_ephemeralSourceNonce = crossThreadCopy(WTFMove(m_ephemeralSourceNonce));
+    copy.m_sourceUnlinkableToken = WTFMove(m_sourceUnlinkableToken).isolatedCopy();
+    copy.m_sourceSecretToken = crossThreadCopy(WTFMove(m_sourceSecretToken));
     return copy;
 }
 
@@ -148,20 +141,20 @@ Expected<PrivateClickMeasurement::AttributionTriggerData, String> PrivateClickMe
     EphemeralNonce destinationNonce;
     RegistrableDomain sourceDomain;
     for (auto& parameter : parameters) {
-        if (parameter.key == "attributionSource") {
+        if (parameter.key == "attributionSource"_s) {
             if (parameter.value.isEmpty())
                 return makeUnexpected("[Private Click Measurement] Triggering event was not accepted because the URL's attributionSource query parameter had no value."_s);
             if (!sourceDomain.isEmpty())
                 return makeUnexpected("[Private Click Measurement] Triggering event was not accepted because the URL had multiple attributionSource query parameters."_s);
 
-            auto attributionSourceURL = URL(URL(), parameter.value);
+            URL attributionSourceURL { parameter.value };
             if (!attributionSourceURL.isValid() || (attributionSourceURL.hasPath() && attributionSourceURL.path().length() > 1) || attributionSourceURL.hasCredentials() || attributionSourceURL.hasQuery() || attributionSourceURL.hasFragmentIdentifier())
                 return makeUnexpected("[Private Click Measurement] Triggering event was not accepted because the URL's attributionSource query parameter was not a valid URL or was a URL with a path, credentials, query string, or fragment."_s);
             sourceDomain = RegistrableDomain { attributionSourceURL };
 
             if (sourceDomain.isEmpty())
                 return makeUnexpected("[Private Click Measurement] Triggering event was not accepted because the URL's attributionSource query parameter had no registrable domain."_s);
-        } else if (parameter.key == "attributionDestinationNonce") {
+        } else if (parameter.key == "attributionDestinationNonce"_s) {
             if (parameter.value.isEmpty())
                 return makeUnexpected("[Private Click Measurement] Triggering event was not accepted because the URL's attributionDestinationNonce query parameter had no value."_s);
             if (!destinationNonce.nonce.isEmpty())
@@ -188,7 +181,7 @@ Expected<PrivateClickMeasurement::AttributionTriggerData, String> PrivateClickMe
     if (path.isEmpty() || !path.startsWith(privateClickMeasurementTriggerAttributionPath))
         return makeUnexpected(nullString());
 
-    if (!redirectURL.protocolIs("https") || redirectURL.hasCredentials() || redirectURL.hasFragmentIdentifier())
+    if (!redirectURL.protocolIs("https"_s) || redirectURL.hasCredentials() || redirectURL.hasFragmentIdentifier())
         return makeUnexpected("[Private Click Measurement] Triggering event was not accepted because the URL's protocol is not HTTPS or the URL contains one or more of username, password, and fragment."_s);
 
     auto result = parseAttributionRequestQuery(redirectURL);
@@ -199,7 +192,7 @@ Expected<PrivateClickMeasurement::AttributionTriggerData, String> PrivateClickMe
     }
     auto attributionTriggerData = result.value();
 
-    auto prefixLength = sizeof(privateClickMeasurementTriggerAttributionPath) - 1;
+    auto prefixLength = privateClickMeasurementTriggerAttributionPath.length();
     if (path.length() == prefixLength + privateClickMeasurementAttributionTriggerDataPathSegmentSize) {
         auto attributionTriggerDataUInt64 = parseInteger<uint64_t>(path.substring(prefixLength, privateClickMeasurementAttributionTriggerDataPathSegmentSize));
         if (!attributionTriggerDataUInt64 || *attributionTriggerDataUInt64 > AttributionTriggerData::MaxEntropy)
@@ -270,7 +263,7 @@ bool PrivateClickMeasurement::hasHigherPriorityThan(const PrivateClickMeasuremen
 
 static URL makeValidURL(const RegistrableDomain& domain, const char* path)
 {
-    URL validURL { { }, makeString("https://", domain.string(), path) };
+    URL validURL { makeString("https://", domain.string(), path) };
     return validURL.isValid() ? validURL : URL { };
 }
 
@@ -422,6 +415,14 @@ void PrivateClickMeasurement::setDestinationSecretToken(DestinationSecretToken&&
     if (!token.isValid() || !m_attributionTriggerData)
         return;
     m_attributionTriggerData->destinationSecretToken = WTFMove(token);
+}
+
+std::optional<uint64_t> PrivateClickMeasurement::appStoreURLAdamID(const URL& url)
+{
+    StringView stringView { url.string() };
+    if (!stringView.startsWith(privateClickMeasurementToSKAdNetworkURLPrefix))
+        return std::nullopt;
+    return parseInteger<uint64_t>(stringView.substring(privateClickMeasurementToSKAdNetworkURLPrefix.length()));
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,10 +52,11 @@ class GlyphBuffer;
 class GraphicsContext;
 
 class DrawGlyphsRecorder {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(DrawGlyphsRecorder);
 public:
-    enum class DeconstructDrawGlyphs : bool { No, Yes };
     enum class DeriveFontFromContext : bool { No, Yes };
-    explicit DrawGlyphsRecorder(GraphicsContext&, DeconstructDrawGlyphs = DeconstructDrawGlyphs::No, DeriveFontFromContext = DeriveFontFromContext::No);
+    explicit DrawGlyphsRecorder(GraphicsContext&, float scaleFactor = 1, DeriveFontFromContext = DeriveFontFromContext::No);
 
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode);
 
@@ -67,8 +68,6 @@ public:
     void recordDrawGlyphs(CGRenderingStateRef, CGGStateRef, const CGAffineTransform*, const CGGlyph[], const CGPoint positions[], size_t count);
     void recordDrawImage(CGRenderingStateRef, CGGStateRef, CGRect, CGImageRef);
 #endif
-
-    DeconstructDrawGlyphs deconstructDrawGlyphs() const { return m_deconstructDrawGlyphs; }
 
 private:
 #if USE(CORE_TEXT) && !PLATFORM(WIN)
@@ -82,56 +81,51 @@ private:
     void populateInternalState(const GraphicsContextState&);
     void populateInternalContext(const GraphicsContextState&);
     void prepareInternalContext(const Font&, FontSmoothingMode);
+    void recordInitialColors();
     void concludeInternalContext();
 
-    void updateFillColor(const Color&, Gradient* = nullptr, Pattern* = nullptr);
-    void updateStrokeColor(const Color&, Gradient* = nullptr, Pattern* = nullptr);
+    void updateFillBrush(const SourceBrush&);
+    void updateStrokeBrush(const SourceBrush&);
     void updateCTM(const AffineTransform&);
     enum class ShadowsIgnoreTransforms {
         Unspecified,
         Yes,
         No
     };
-    void updateShadow(const FloatSize& shadowOffset, float shadowBlur, const Color& shadowColor, ShadowsIgnoreTransforms);
+    void updateShadow(const DropShadow&, ShadowsIgnoreTransforms);
 
 #if USE(CORE_TEXT) && !PLATFORM(WIN)
+    void updateFillColor(CGColorRef);
+    void updateStrokeColor(CGColorRef);
     void updateShadow(CGStyleRef);
 #endif
 
     GraphicsContext& m_owner;
-    DeconstructDrawGlyphs m_deconstructDrawGlyphs;
-    DeriveFontFromContext m_deriveFontFromContext;
 
 #if USE(CORE_TEXT) && !PLATFORM(WIN)
     UniqueRef<GraphicsContext> m_internalContext;
 #endif
 
     const Font* m_originalFont { nullptr };
+
+    const DeriveFontFromContext m_deriveFontFromContext;
     FontSmoothingMode m_smoothingMode { FontSmoothingMode::AutoSmoothing };
+
     AffineTransform m_originalTextMatrix;
 
     struct State {
-        struct Style {
-            Color color;
-            RefPtr<Gradient> gradient;
-            AffineTransform gradientSpaceTransform;
-            RefPtr<Pattern> pattern;
-        };
-        Style fillStyle;
-        Style strokeStyle;
-
+        SourceBrush fillBrush;
+        SourceBrush strokeBrush;
         AffineTransform ctm;
-
-        struct ShadowState {
-            FloatSize offset;
-            float blur { 0 };
-            Color color;
-            bool ignoreTransforms { false };
-        };
-        ShadowState shadow;
+        DropShadow dropShadow;
+        bool ignoreTransforms { false };
     };
     State m_originalState;
-    State m_currentState;
+
+#if USE(CORE_TEXT) && !PLATFORM(WIN)
+    RetainPtr<CGColorRef> m_initialFillColor;
+    RetainPtr<CGColorRef> m_initialStrokeColor;
+#endif
 };
 
 } // namespace WebCore

@@ -28,6 +28,7 @@
 #include "AbortReason.h"
 #include "AssemblerBuffer.h"
 #include "AssemblerCommon.h"
+#include "AssemblyComments.h"
 #include "CPU.h"
 #include "CodeLocation.h"
 #include "JSCJSValue.h"
@@ -38,6 +39,7 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/SharedTask.h>
+#include <wtf/StringPrintStream.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakRandom.h>
 
@@ -74,6 +76,19 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
         return Success;
     }
+
+protected:
+    uint32_t random()
+    {
+        if (!m_randomSource)
+            initializeRandom();
+        return m_randomSource->getUint32();
+    }
+
+private:
+    JS_EXPORT_PRIVATE void initializeRandom();
+
+    std::optional<WeakRandom> m_randomSource;
 };
 
 template <class AssemblerType>
@@ -545,8 +560,8 @@ public:
             Linkable = 0x1,
             Near = 0x2,
             Tail = 0x4,
-            LinkableNear = 0x3,
-            LinkableNearTail = 0x7,
+            LinkableNear = Linkable | Near,
+            LinkableNearTail = Linkable | Near | Tail,
         };
 
         Call()
@@ -904,7 +919,7 @@ public:
     {
         switch (nearCall.callMode()) {
         case NearCallMode::Tail:
-            AssemblerType::relinkJump(nearCall.dataLocation(), destination.dataLocation());
+            AssemblerType::relinkTailCall(nearCall.dataLocation(), destination.dataLocation());
             return;
         case NearCallMode::Regular:
             AssemblerType::relinkCall(nearCall.dataLocation(), destination.untaggedExecutableAddress());
@@ -923,16 +938,11 @@ public:
         case NearCallMode::Regular:
             return CodeLocationLabel<destTag>(tagCodePtr<destTag>(AssemblerType::prepareForAtomicRelinkCallConcurrently(nearCall.dataLocation(), destination.untaggedExecutableAddress())));
         }
+        RELEASE_ASSERT_NOT_REACHED();
 #else
         UNUSED_PARAM(nearCall);
         return destination;
 #endif
-    }
-
-    template<PtrTag tag>
-    static void repatchCompact(CodeLocationDataLabelCompact<tag> dataLabelCompact, int32_t value)
-    {
-        AssemblerType::repatchCompact(dataLabelCompact.template dataLocation(), value);
     }
 
     template<PtrTag tag>
@@ -1011,25 +1021,23 @@ public:
     ALWAYS_INLINE void removePtrTag(RegisterID) { }
     ALWAYS_INLINE void validateUntaggedPtr(RegisterID, RegisterID = RegisterID::InvalidGPRReg) { }
 
+    template<typename... Types>
+    void comment(const Types&... values)
+    {
+        if (LIKELY(!Options::dumpDisassembly()))
+            return;
+        StringPrintStream s;
+        s.print(values...);
+        commentImpl(s.toString());
+    }
+
 protected:
     AbstractMacroAssembler()
-        : m_randomSource(0)
-        , m_assembler()
+        : m_assembler()
     {
         invalidateAllTempRegisters();
     }
 
-    uint32_t random()
-    {
-        if (!m_randomSourceIsInitialized) {
-            m_randomSourceIsInitialized = true;
-            m_randomSource.setSeed(cryptographicallyRandomNumber());
-        }
-        return m_randomSource.getUint32();
-    }
-
-    bool m_randomSourceIsInitialized { false };
-    WeakRandom m_randomSource;
 public:
     AssemblerType m_assembler;
 protected:
@@ -1072,7 +1080,7 @@ protected:
 
         ALWAYS_INLINE RegisterID registerIDNoInvalidate() { return m_registerID; }
 
-        bool value(intptr_t& value)
+        WARN_UNUSED_RETURN bool value(intptr_t& value)
         {
             value = m_value;
             return m_masm->isTempRegisterValid(m_validBit);
@@ -1113,11 +1121,15 @@ protected:
         m_tempRegistersValidBits |= registerMask;
     }
 
+    void commentImpl(String&& str) { m_comments.append({ labelIgnoringWatchpoints(), WTFMove(str) }); }
+
     friend class AllowMacroScratchRegisterUsage;
     friend class AllowMacroScratchRegisterUsageIf;
     template<typename T> friend class DisallowMacroScratchRegisterUsage;
     unsigned m_tempRegistersValidBits;
     bool m_allowScratchRegister { true };
+
+    Vector<std::pair<Label, String>> m_comments;
 
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;

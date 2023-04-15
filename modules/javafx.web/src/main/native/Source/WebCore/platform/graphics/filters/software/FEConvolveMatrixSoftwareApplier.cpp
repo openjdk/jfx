@@ -4,7 +4,7 @@
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) 2010 Zoltan Herczeg <zherczeg@webkit.org>
- * Copyright (C) 2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -99,17 +99,17 @@ inline uint8_t FEConvolveMatrixSoftwareApplier::clampRGBAValue(float channel, ui
     return channel;
 }
 
-inline void FEConvolveMatrixSoftwareApplier::setDestinationPixels(const Uint8ClampedArray& sourcePixels, Uint8ClampedArray& destPixels, int& pixel, float* totals, float divisor, float bias, bool preserveAlphaValues)
+inline void FEConvolveMatrixSoftwareApplier::setDestinationPixels(const PixelBuffer& sourcePixelBuffer, PixelBuffer& destinationPixelBuffer, int& pixel, float* totals, float divisor, float bias, bool preserveAlphaValues)
 {
     uint8_t maxAlpha = preserveAlphaValues ? 255 : clampRGBAValue(totals[3] / divisor + bias);
     for (int i = 0; i < 3; ++i)
-        destPixels.set(pixel++, clampRGBAValue(totals[i] / divisor + bias, maxAlpha));
+        destinationPixelBuffer.set(pixel++, clampRGBAValue(totals[i] / divisor + bias, maxAlpha));
 
     if (preserveAlphaValues) {
-        destPixels.set(pixel, sourcePixels.item(pixel));
+        destinationPixelBuffer.set(pixel, sourcePixelBuffer.item(pixel));
         ++pixel;
     } else
-        destPixels.set(pixel++, maxAlpha);
+        destinationPixelBuffer.set(pixel++, maxAlpha);
 }
 
 inline int FEConvolveMatrixSoftwareApplier::getPixelValue(const PaintingData& paintingData, int x, int y)
@@ -170,11 +170,11 @@ inline void FEConvolveMatrixSoftwareApplier::setInteriorPixels(PaintingData& pai
             totals[3] = 0;
 
             while (kernelValue >= 0) {
-                totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(kernelPixel++));
-                totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(kernelPixel++));
-                totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(kernelPixel++));
+                totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
+                totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
+                totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
                 if (!paintingData.preserveAlpha)
-                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(kernelPixel));
+                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel));
                 ++kernelPixel;
                 --kernelValue;
                 if (!--width) {
@@ -183,7 +183,7 @@ inline void FEConvolveMatrixSoftwareApplier::setInteriorPixels(PaintingData& pai
                 }
             }
 
-            setDestinationPixels(paintingData.srcPixelArray, paintingData.dstPixelArray, pixel, totals, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
+            setDestinationPixels(paintingData.sourcePixelBuffer, paintingData.destinationPixelBuffer, pixel, totals, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
             startKernelPixel += 4;
         }
         pixel += xIncrease;
@@ -222,12 +222,12 @@ inline void FEConvolveMatrixSoftwareApplier::setOuterPixels(PaintingData& painti
             while (kernelValue >= 0) {
                 int pixelIndex = getPixelValue(paintingData, kernelPixelX, kernelPixelY);
                 if (pixelIndex >= 0) {
-                    totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(pixelIndex));
-                    totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(pixelIndex + 1));
-                    totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(pixelIndex + 2));
+                    totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex));
+                    totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 1));
+                    totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 2));
                 }
                 if (!paintingData.preserveAlpha && pixelIndex >= 0)
-                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.srcPixelArray.item(pixelIndex + 3));
+                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 3));
                 ++kernelPixelX;
                 --kernelValue;
                 if (!--width) {
@@ -237,13 +237,35 @@ inline void FEConvolveMatrixSoftwareApplier::setOuterPixels(PaintingData& painti
                 }
             }
 
-            setDestinationPixels(paintingData.srcPixelArray, paintingData.dstPixelArray, pixel, totals, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
+            setDestinationPixels(paintingData.sourcePixelBuffer, paintingData.destinationPixelBuffer, pixel, totals, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
             ++startKernelPixelX;
         }
         pixel += xIncrease;
         startKernelPixelX = beginKernelPixelX;
         ++startKernelPixelY;
     }
+}
+
+void FEConvolveMatrixSoftwareApplier::setInteriorPixels(PaintingData& paintingData, int clipRight, int clipBottom)
+{
+    static constexpr int minimalRectDimension = 100 * 100; // Empirical data limit for parallel jobs
+    int stride = 0;
+    if (int iterations = paintingData.width * paintingData.height / minimalRectDimension)
+        stride = clipBottom / iterations;
+
+    if (!stride) {
+        setInteriorPixels(paintingData, clipRight, clipBottom, 0, clipBottom);
+        return;
+    }
+
+        int chunkCount = (clipBottom + stride - 1) / stride;
+
+        ConcurrentWorkQueue::apply(chunkCount, [&](size_t index) {
+        int yStart = stride * index;
+        int yEnd = std::min<int>(yStart + stride, clipBottom);
+
+            setInteriorPixels(paintingData, clipRight, clipBottom, yStart, yEnd);
+        });
 }
 
 void FEConvolveMatrixSoftwareApplier::applyPlatform(PaintingData& paintingData) const
@@ -257,22 +279,7 @@ void FEConvolveMatrixSoftwareApplier::applyPlatform(PaintingData& paintingData) 
         setOuterPixels(paintingData, 0, 0, paintingData.width, paintingData.height);
         return;
     }
-
-    static constexpr int minimalRectDimension = (100 * 100); // Empirical data limit for parallel jobs
-
-    if (int iterations = (paintingData.width * paintingData.height) / minimalRectDimension) {
-        int stride = clipBottom / iterations;
-        int chunkCount = (clipBottom + stride - 1) / stride;
-
-        ConcurrentWorkQueue::apply(chunkCount, [&](size_t index) {
-            int yStart = (stride * index);
-            int yEnd = std::min<int>(stride * (index + 1), clipBottom);
-
-            setInteriorPixels(paintingData, clipRight, clipBottom, yStart, yEnd);
-        });
-    } else
-        setInteriorPixels(paintingData, clipRight, clipBottom, 0, clipBottom);
-
+    setInteriorPixels(paintingData, clipRight, clipBottom);
     clipRight += paintingData.targetOffset.x() + 1;
     clipBottom += paintingData.targetOffset.y() + 1;
 
@@ -300,14 +307,11 @@ bool FEConvolveMatrixSoftwareApplier::apply(const Filter&, const FilterImageVect
     if (!sourcePixelBuffer)
         return false;
 
-    auto& sourcePixelArray = sourcePixelBuffer->data();
-    auto& destinationPixelArray = destinationPixelBuffer->data();
-
     auto paintSize = result.absoluteImageRect().size();
 
     PaintingData paintingData = {
-        sourcePixelArray,
-        destinationPixelArray,
+        *sourcePixelBuffer,
+        *destinationPixelBuffer,
         paintSize.width(),
         paintSize.height(),
         m_effect.kernelSize(),

@@ -61,13 +61,13 @@ public:
     std::optional<unsigned short> maxRetransmits() const { return m_options.maxRetransmits; }
     String protocol() const { return m_options.protocol; }
     bool negotiated() const { return *m_options.negotiated; };
-    std::optional<unsigned short> id() const { return m_options.id; };
+    std::optional<unsigned short> id() const;
     RTCPriorityType priority() const { return m_options.priority; };
     const RTCDataChannelInit& options() const { return m_options; }
 
-    String label() const { return m_label; }
+    const String& label() const { return m_label; }
     RTCDataChannelState readyState() const {return m_readyState; }
-    size_t bufferedAmount() const { return m_bufferedAmount; }
+    size_t bufferedAmount() const final { return m_bufferedAmount; }
     size_t bufferedAmountLowThreshold() const { return m_bufferedAmountLowThreshold; }
     void setBufferedAmountLowThreshold(size_t value) { m_bufferedAmountLowThreshold = value; }
 

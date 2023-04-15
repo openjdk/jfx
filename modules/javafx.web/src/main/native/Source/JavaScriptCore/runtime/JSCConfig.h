@@ -41,14 +41,6 @@ class VM;
 using JITWriteSeparateHeapsFunction = void (*)(off_t, const void*, size_t);
 #endif
 
-#if defined(STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB) && STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB > 0
-constexpr uintptr_t structureHeapAddressSize = STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB * MB;
-#elif PLATFORM(IOS_FAMILY) && CPU(ARM64) && !CPU(ARM64E)
-constexpr uintptr_t structureHeapAddressSize = 512 * MB;
-#else
-constexpr uintptr_t structureHeapAddressSize = 1 * GB;
-#endif
-
 struct Config {
     static Config& singleton();
 
@@ -91,6 +83,7 @@ struct Config {
     void* endExecutableMemory;
     uintptr_t startOfFixedWritableMemoryPool;
     uintptr_t startOfStructureHeap;
+    uintptr_t sizeOfStructureHeap;
 
 #if ENABLE(SEPARATED_WX_HEAP)
     JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
@@ -101,8 +94,8 @@ struct Config {
     void (*shellTimeoutCheckCallback)(VM&);
 
     struct {
-        uint8_t exceptionInstructions[maxOpcodeLength + 1];
-        uint8_t wasmExceptionInstructions[maxOpcodeLength + 1];
+        uint8_t exceptionInstructions[maxBytecodeStructLength + 1];
+        uint8_t wasmExceptionInstructions[maxBytecodeStructLength + 1];
         const void* gateMap[numberOfGates];
     } llint;
 

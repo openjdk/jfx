@@ -97,7 +97,6 @@
 #include <WebCore/RenderTreeAsText.h>
 #include <WebCore/RenderView.h>
 #include <WebCore/ResourceRequest.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/ScriptController.h>
 #include <WebCore/SecurityPolicy.h>
 #include <WebCore/Settings.h>
@@ -691,9 +690,9 @@ static String agentOS()
 {
 #if OS(DARWIN)
 #if CPU(X86) || CPU(X86_64)
-    return "Macintosh; Intel Mac OS X";
+    return "Macintosh; Intel Mac OS X"_s;
 #else
-    return "Macintosh; PPC Mac OS X";
+    return "Macintosh; PPC Mac OS X"_s;
 #endif
 #elif OS(UNIX)
     struct utsname name;
@@ -704,7 +703,7 @@ static String agentOS()
 #else
     notImplemented();
 #endif
-    return "Unknown";
+    return "Unknown"_s;
 }
 
 static String defaultUserAgent()
@@ -917,13 +916,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setInputTypeColorEnabled(true);
     settings.setUserAgent(defaultUserAgent());
     settings.setMaximumHTMLParserDOMTreeDepth(180);
-    settings.setXSSAuditorEnabled(true);
+    //settings.setXSSAuditorEnabled(true);
     settings.setInteractiveFormValidationEnabled(true);
 
     /* Using java logical fonts as defaults */
-    settings.setSerifFontFamily("Serif");
-    settings.setSansSerifFontFamily("SansSerif");
-    settings.setFixedFontFamily("Monospaced");
+    settings.setSerifFontFamily("Serif"_s);
+    settings.setSansSerifFontFamily("SansSerif"_s);
+    settings.setFixedFontFamily("Monospaced"_s);
     page->setDeviceScaleFactor(devicePixelScale);
 
     settings.setLinkPrefetchEnabled(true);
@@ -1135,8 +1134,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     size_t stringLen = (size_t)env->GetStringUTFLength(text);
     RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, (int)stringLen);
 
-    static const URL emptyUrl({ }, "");
-    ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8");
+    static const URL emptyUrl({ }, ""_s);
+    ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8"_s);
     FrameLoadRequest frameLoadRequest(
         *frame,
         ResourceRequest(emptyUrl),
@@ -1277,85 +1276,86 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     String nativePropertyValue(env, propertyValue);
     StringView nativePropertyString(nativePropertyValue);
 
-    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled") {
-        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled") {
-        settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled") {
-        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSColorContrastEnabled") {
-        settings.setCSSColorContrastEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "WebKitTextAreasAreResizable") {
+    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled"_s) {
+        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled"_s) {
+        settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled"_s) {
+        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "CSSColorContrastEnabled"_s) {
+        settings.setCSSColorContrastEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "WebKitTextAreasAreResizable"_s) {
         settings.setTextAreasAreResizable(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitLoadsImagesAutomatically") {
+    } else if (nativePropertyName == "WebKitLoadsImagesAutomatically"_s) {
         settings.setLoadsImagesAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitMinimumFontSize") {
+    } else if (nativePropertyName == "WebKitMinimumFontSize"_s) {
         settings.setMinimumFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitMinimumLogicalFontSize") {
+    } else if (nativePropertyName == "WebKitMinimumLogicalFontSize"_s) {
         settings.setMinimumLogicalFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitAcceleratedCompositingEnabled") {
+    } else if (nativePropertyName == "WebKitAcceleratedCompositingEnabled"_s) {
         settings.setAcceleratedCompositingEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitScriptEnabled") {
+    } else if (nativePropertyName == "WebKitScriptEnabled"_s) {
         settings.setScriptEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically") {
+    } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically"_s) {
         settings.setJavaScriptCanOpenWindowsAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitPluginsEnabled") {
+    } else if (nativePropertyName == "WebKitPluginsEnabled"_s) {
         settings.setPluginsEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitDefaultFixedFontSize") {
+    } else if (nativePropertyName == "WebKitDefaultFixedFontSize"_s) {
         settings.setDefaultFixedFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitContextMenuEnabled") {
+    } else if (nativePropertyName == "WebKitContextMenuEnabled"_s) {
         settings.setContextMenuEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitUserAgent") {
+    } else if (nativePropertyName == "WebKitUserAgent"_s) {
         settings.setUserAgent(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitMaximumHTMLParserDOMTreeDepth") {
+    } else if (nativePropertyName == "WebKitMaximumHTMLParserDOMTreeDepth"_s) {
         settings.setMaximumHTMLParserDOMTreeDepth(parseIntegerAllowingTrailingJunk<uint32_t>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitXSSAuditorEnabled")  {
-        settings.setXSSAuditorEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitSerifFontFamily") {
+    } /*else if (nativePropertyName == "WebKitXSSAuditorEnabled"_s)  {
+       settings.setXSSAuditorEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
+    }*/
+     else if (nativePropertyName == "WebKitSerifFontFamily"_s) {
         settings.setSerifFontFamily(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitSansSerifFontFamily") {
+    } else if (nativePropertyName == "WebKitSansSerifFontFamily"_s) {
         settings.setSansSerifFontFamily(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitFixedFontFamily") {
+    } else if (nativePropertyName == "WebKitFixedFontFamily"_s) {
         settings.setFixedFontFamily(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
+    } else if (nativePropertyName == "WebKitShowsURLsInToolTips"_s) {
         settings.setShowsURLsInToolTips(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "JavaScriptCanAccessClipboard") {
-        settings.setJavaScriptCanAccessClipboard(nativePropertyValue == "true");
-    } else if (nativePropertyName == "allowTopNavigationToDataURLs") {
-        settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true");
-    } else if (nativePropertyName == "UsesBackForwardCache") {
-        settings.setUsesBackForwardCache(nativePropertyValue == "true");
-    } else if (nativePropertyName == "enableColorFilter") {
-        settings.setColorFilterEnabled(nativePropertyValue == "true");
-    } /*else if (nativePropertyName == "KeygenElementEnabled") {
+    } else if (nativePropertyName == "JavaScriptCanAccessClipboard"_s) {
+        settings.setJavaScriptCanAccessClipboard(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "allowTopNavigationToDataURLs"_s) {
+        settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "UsesBackForwardCache"_s) {
+        settings.setUsesBackForwardCache(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "enableColorFilter"_s) {
+        settings.setColorFilterEnabled(nativePropertyValue == "true"_s);
+    } /*else if (nativePropertyName == "KeygenElementEnabled"_s) {
         // removed from Chrome, Firefox, and the HTML specification in 2017.
         // https://trac.webkit.org/changeset/248960/webkit
-        RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
-    } */else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled") {
-        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
-        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "IntersectionObserverEnabled") {
+        DeprecatedGlobalSettings::setKeygenElementEnabled(nativePropertyValue == "true"_s);
+    } */else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled"_s) {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled"_s) {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "IntersectionObserverEnabled"_s) {
 #if ENABLE(INTERSECTION_OBSERVER)
-        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "enableIntersectionObserver") {
+    } else if (nativePropertyName == "enableIntersectionObserver"_s) {
 #if ENABLE(INTERSECTION_OBSERVER)
-        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "ResizeObserverEnabled") {
+    } else if (nativePropertyName == "ResizeObserverEnabled"_s) {
 #if ENABLE(RESIZE_OBSERVER)
-        settings.setResizeObserverEnabled(nativePropertyValue == "true");
+        settings.setResizeObserverEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "RequestIdleCallbackEnabled") {
-        settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "ContactPickerAPIEnabled") {
-        settings.setContactPickerAPIEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "AttachmentElementEnabled") {
+    } else if (nativePropertyName == "RequestIdleCallbackEnabled"_s) {
+        settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "ContactPickerAPIEnabled"_s) {
+        settings.setContactPickerAPIEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "AttachmentElementEnabled"_s) {
 #if ENABLE(ATTACHMENT_ELEMENT)
-        RuntimeEnabledFeatures::sharedFeatures().setAttachmentElementEnabled(nativePropertyValue == "true");
+        DeprecatedGlobalSettings::setAttachmentElementEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "jscOptions" && !nativePropertyValue.isEmpty()) {
+    } else if (nativePropertyName == "jscOptions"_s && !nativePropertyValue.isEmpty()) {
         JSC::Options::setOptions(nativePropertyValue.utf8().data());
     }
 }
@@ -1382,7 +1382,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setDefaultFontSize(16);
     settings.setDefaultFixedFontSize(13);
     settings.setMinimumFontSize(0);
-    settings.setDefaultTextEncodingName("ISO-8859-1");
+    settings.setDefaultTextEncodingName("ISO-8859-1"_s);
     settings.setJavaEnabled(false);
     settings.setFullScreenEnabled(true);
     settings.setScriptEnabled(true);
@@ -1391,7 +1391,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setDOMPasteAllowed(true);
     settings.setShouldPrintBackgrounds(true);
     // settings.setCacheModel(WebCacheModelDocumentBrowser);
-    settings.setXSSAuditorEnabled(false);
+    //settings.setXSSAuditorEnabled(false); //
     settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
     settings.setUsesBackForwardCache(false);
@@ -1423,9 +1423,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     // Async spellcheck: NO
     DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
 
-    RuntimeEnabledFeatures::sharedFeatures().setHighlightAPIEnabled(true);
+    DeprecatedGlobalSettings::setHighlightAPIEnabled(true);
     // RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
-    RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(true);
+    //DeprecatedGlobalSettings::setInspectorAdditionsEnabled(true); // deprecated and not enable
     // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
 
     Frame& coreFrame = page->mainFrame();
@@ -2161,16 +2161,16 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
         setCopyKeyState(ACTION_COPY == javaAction);
         switch(actionId){
         case com_sun_webkit_WebPage_DND_DST_EXIT:
-            dc.dragExited(dragData);
+            dc.dragExited(WTFMove(dragData));
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
-            return dragOperationToDragCursor(dc.dragEntered(dragData));
+            return dragOperationToDragCursor(dc.dragEntered(WTFMove(dragData)));
         case com_sun_webkit_WebPage_DND_DST_OVER:
         case com_sun_webkit_WebPage_DND_DST_CHANGE:
-            return dragOperationToDragCursor(dc.dragUpdated(dragData));
+            return dragOperationToDragCursor(dc.dragUpdated(WTFMove(dragData)));
         case com_sun_webkit_WebPage_DND_DST_DROP:
             {
-                int ret = dc.performDragOperation(dragData) ? 1 : 0;
+                int ret = dc.performDragOperation(WTFMove(dragData)) ? 1 : 0;
                 WebPage::pageFromJLong(pPage)->dragController().dragEnded();
                 return ret;
             }

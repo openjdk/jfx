@@ -28,6 +28,7 @@
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
 #include "DOMWindow.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "Element.h"
 #include "Event.h"
@@ -43,9 +44,9 @@
 #include "JSNode.h"
 #include "Logging.h"
 #include "Page.h"
+#include "Quirks.h"
 #include "RejectedPromiseTracker.h"
 #include "RuntimeApplicationChecks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptController.h"
 #include "ScriptModuleLoader.h"
 #include "SecurityOrigin.h"
@@ -64,11 +65,15 @@
 #include "ChromeClient.h"
 #endif
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 
 namespace WebCore {
 using namespace JSC;
 
-const ClassInfo JSDOMWindowBase::s_info = { "Window", &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMWindowBase) };
+const ClassInfo JSDOMWindowBase::s_info = { "Window"_s, &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMWindowBase) };
 
 const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = {
     &supportsRichSourceInfo,
@@ -121,13 +126,14 @@ SUPPRESS_ASAN inline void JSDOMWindowBase::initStaticGlobals(JSC::VM& vm)
 void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
 {
     Base::finishCreation(vm, proxy);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     initStaticGlobals(vm);
 
     if (m_wrapped && m_wrapped->frame() && m_wrapped->frame()->settings().needsSiteSpecificQuirks())
         setNeedsSiteSpecificQuirks(true);
 
+    if (m_wrapped && ((m_wrapped->frame() && m_wrapped->frame()->settings().showModalDialogEnabled()) || (m_wrapped->document() && m_wrapped->document()->quirks().shouldExposeShowModalDialog())))
     putDirectCustomAccessor(vm, builtinNames(vm).showModalDialogPublicName(), CustomGetterSetter::create(vm, showModalDialogGetter, nullptr), static_cast<unsigned>(PropertyAttribute::CustomValue));
 }
 
@@ -233,7 +239,7 @@ void JSDOMWindowBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC:
     auto& eventLoop = thisObject.scriptExecutionContext()->eventLoop();
     // Propagating media only user gesture for Fetch API's promise chain.
     auto userGestureToken = UserGestureIndicator::currentUserGesture();
-    if (userGestureToken && (!userGestureToken->isPropagatedFromFetch() || !RuntimeEnabledFeatures::sharedFeatures().userGesturePromisePropagationEnabled()))
+    if (userGestureToken && (!userGestureToken->isPropagatedFromFetch() || !DeprecatedGlobalSettings::userGesturePromisePropagationEnabled()))
         userGestureToken = nullptr;
     eventLoop.queueMicrotask([callback = WTFMove(callback), userGestureToken = WTFMove(userGestureToken)]() mutable {
         if (!userGestureToken) {
@@ -272,7 +278,10 @@ void JSDOMWindowBase::reportViolationForUnsafeEval(JSGlobalObject* object, JSStr
     if (!contentSecurityPolicy)
         return;
 
-    contentSecurityPolicy->allowEval(object, LogToConsole::No, source ? source->tryGetValue() : StringView());
+    String sourceString;
+    if (source)
+        sourceString = source->tryGetValue();
+    contentSecurityPolicy->allowEval(object, LogToConsole::No, sourceString);
 }
 
 void JSDOMWindowBase::willRemoveFromWindowProxy()

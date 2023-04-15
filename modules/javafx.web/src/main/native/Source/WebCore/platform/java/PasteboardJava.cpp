@@ -187,13 +187,13 @@ String imageToMarkup(const String& url, const Element& element)
     unsigned length = attrs->length();
     for (unsigned i = 0; i < length; ++i) {
         RefPtr<Attr> attr(static_cast<Attr*>(attrs->item(i).get()));
-        if (attr->name() == "src")
+        if (attr->name() == "src"_s)
             continue;
         markup.append(" ");
         markup.append(attr->name());
         markup.append("=\"");
         String escapedAttr = attr->value();
-        escapedAttr.replace("\"", "&quot;");
+        escapedAttr = makeStringByReplacingAll(escapedAttr,"\""_s, "&quot;"_s);
         markup.append(escapedAttr);
         markup.append("\"");
     }
@@ -263,7 +263,7 @@ void Pasteboard::writeSelection(
     Frame& frame,
     ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
-    String markup = serializePreservingVisualAppearance(selectedRange, nullptr, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingLocalFileURLsForPrivacy);
+    String markup = serializePreservingVisualAppearance(selectedRange, nullptr, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingURLsForPrivacy);
     String plainText = shouldSerializeSelectedTextForDataTransfer == IncludeImageAltTextForDataTransfer
         ? frame.editor().selectedTextForDataTransfer()
         : frame.editor().selectedText();

@@ -42,6 +42,9 @@
 #define GLASS_GTK3
 #endif
 
+#define GTK_3_MIN_MINOR_VERSION 8
+#define GTK_3_MIN_MICRO_VERSION 0
+
 #ifndef GDK_TOUCH_MASK
 #define GDK_TOUCH_MASK (1 << 22)
 #endif

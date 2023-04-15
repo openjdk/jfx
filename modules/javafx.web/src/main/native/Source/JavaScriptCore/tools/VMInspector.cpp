@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,8 @@
 
 namespace JSC {
 
+VM* VMInspector::m_recentVM { nullptr };
+
 VMInspector& VMInspector::instance()
 {
     static VMInspector* manager;
@@ -51,63 +53,77 @@ VMInspector& VMInspector::instance()
 void VMInspector::add(VM* vm)
 {
     Locker locker { m_lock };
+    m_recentVM = vm;
     m_vmList.append(vm);
 }
 
 void VMInspector::remove(VM* vm)
 {
     Locker locker { m_lock };
+    if (m_recentVM == vm)
+        m_recentVM = nullptr;
     m_vmList.remove(vm);
 }
 
 #if ENABLE(JIT)
-static bool ensureIsSafeToLock(Lock& lock)
+static bool ensureIsSafeToLock(Lock& lock) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
     static constexpr unsigned maxRetries = 2;
     unsigned tryCount = 0;
     while (tryCount++ <= maxRetries) {
-        if (lock.tryLock()) {
-            lock.unlock();
+        if (lock.tryLock())
             return true;
-        }
     }
     return false;
 }
 #endif // ENABLE(JIT)
 
-void VMInspector::forEachVM(Function<FunctorStatus(VM&)>&& func)
+bool VMInspector::isValidVMSlow(VM* vm)
+{
+    bool found = false;
+    forEachVM([&] (VM& nextVM) {
+        if (vm == &nextVM) {
+            m_recentVM = vm;
+            found = true;
+            return IterationStatus::Done;
+        }
+        return IterationStatus::Continue;
+    });
+    return found;
+}
+
+void VMInspector::dumpVMs()
+{
+    unsigned i = 0;
+    WTFLogAlways("Registered VMs:");
+    forEachVM([&] (VM& nextVM) {
+        WTFLogAlways("  [%u] VM %p", i++, &nextVM);
+        return IterationStatus::Continue;
+    });
+}
+
+void VMInspector::forEachVM(Function<IterationStatus(VM&)>&& func)
 {
     VMInspector& inspector = instance();
     Locker lock { inspector.getLock() };
     inspector.iterate(func);
 }
 
-auto VMInspector::isValidExecutableMemory(void* machinePC) -> Expected<bool, Error>
+WTF_IGNORES_THREAD_SAFETY_ANALYSIS auto VMInspector::isValidExecutableMemory(void* machinePC) -> Expected<bool, Error>
 {
 #if ENABLE(JIT)
-    bool found = false;
-    bool hasTimeout = false;
-    iterate([&] (VM&) -> FunctorStatus {
-        auto& allocator = ExecutableAllocator::singleton();
-        auto& lock = allocator.getLock();
+    auto& allocator = ExecutableAllocator::singleton();
+    auto& lock = allocator.getLock();
 
-        bool isSafeToLock = ensureIsSafeToLock(lock);
-        if (!isSafeToLock) {
-            hasTimeout = true;
-            return FunctorStatus::Continue; // Skip this VM.
-        }
-
-        Locker executableAllocatorLocker { lock };
-        if (allocator.isValidExecutableMemory(executableAllocatorLocker, machinePC)) {
-            found = true;
-            return FunctorStatus::Done;
-        }
-        return FunctorStatus::Continue;
-    });
-
-    if (!found && hasTimeout)
+    bool isSafeToLock = ensureIsSafeToLock(lock);
+    if (!isSafeToLock)
         return makeUnexpected(Error::TimedOut);
-    return found;
+
+    Locker executableAllocatorLocker { AdoptLock, lock };
+    if (allocator.isValidExecutableMemory(executableAllocatorLocker, machinePC))
+        return true;
+
+    return false;
 #else
     UNUSED_PARAM(machinePC);
     return false;
@@ -119,9 +135,12 @@ auto VMInspector::codeBlockForMachinePC(void* machinePC) -> Expected<CodeBlock*,
 #if ENABLE(JIT)
     CodeBlock* codeBlock = nullptr;
     bool hasTimeout = false;
-    iterate([&] (VM& vm) {
+    iterate([&] (VM& vm) WTF_IGNORES_THREAD_SAFETY_ANALYSIS {
+        if (!vm.isInService())
+            return IterationStatus::Continue;
+
         if (!vm.currentThreadIsHoldingAPILock())
-            return FunctorStatus::Continue;
+            return IterationStatus::Continue;
 
         // It is safe to call Heap::forEachCodeBlockIgnoringJITPlans here because:
         // 1. CodeBlocks are added to the CodeBlockSet from the main thread before
@@ -138,10 +157,10 @@ auto VMInspector::codeBlockForMachinePC(void* machinePC) -> Expected<CodeBlock*,
         bool isSafeToLock = ensureIsSafeToLock(codeBlockSetLock);
         if (!isSafeToLock) {
             hasTimeout = true;
-            return FunctorStatus::Continue; // Skip this VM.
+            return IterationStatus::Continue; // Skip this VM.
         }
 
-        Locker locker { codeBlockSetLock };
+        Locker locker { AdoptLock, codeBlockSetLock };
         vm.heap.forEachCodeBlockIgnoringJITPlans(locker, [&] (CodeBlock* cb) {
             JITCode* jitCode = cb->jitCode().get();
             if (!jitCode) {
@@ -160,8 +179,8 @@ auto VMInspector::codeBlockForMachinePC(void* machinePC) -> Expected<CodeBlock*,
             }
         });
         if (codeBlock)
-            return FunctorStatus::Done;
-        return FunctorStatus::Continue;
+            return IterationStatus::Done;
+        return IterationStatus::Continue;
     });
 
     if (!codeBlock && hasTimeout)
@@ -280,14 +299,14 @@ CodeBlock* VMInspector::codeBlockForFrame(VM* vm, CallFrame* topCallFrame, unsig
         {
         }
 
-        StackVisitor::Status operator()(StackVisitor& visitor) const
+        IterationStatus operator()(StackVisitor& visitor) const
         {
             auto currentFrame = nextFrame++;
             if (currentFrame == targetFrame) {
                 codeBlock = visitor->codeBlock();
-                return StackVisitor::Done;
+                return IterationStatus::Done;
             }
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         }
 
         unsigned targetFrame;
@@ -313,7 +332,7 @@ public:
     {
     }
 
-    StackVisitor::Status operator()(StackVisitor& visitor) const
+    IterationStatus operator()(StackVisitor& visitor) const
     {
         m_currentFrame++;
         if (m_currentFrame > m_framesToSkip) {
@@ -322,8 +341,8 @@ public:
             });
         }
         if (m_action == DumpOne && m_currentFrame > m_framesToSkip)
-            return StackVisitor::Done;
-        return StackVisitor::Continue;
+            return IterationStatus::Done;
+        return IterationStatus::Continue;
     }
 
 private:
@@ -381,9 +400,9 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
             unsigned unusedColumn = 0;
             visitor->computeLineAndColumn(line, unusedColumn);
             dataLogF("[ReturnVPC]                | %10p | %d (line %d)\n", it, visitor->bytecodeIndex().offset(), line);
-            return StackVisitor::Done;
+            return IterationStatus::Done;
         }
-        return StackVisitor::Continue;
+        return IterationStatus::Continue;
     });
 
     --it;
@@ -411,7 +430,7 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
             JSValue v = it->jsValue();
             int registerNumber = it - callFrame->registers();
             String name = (it > endOfCalleeSaves)
-                ? "CalleeSaveReg"
+                ? "CalleeSaveReg"_s
                 : codeBlock->nameForRegister(VirtualRegister(registerNumber));
             dataLogF("[r% 3d %14s]      | %10p | 0x%-16llx %s\n", registerNumber, name.ascii().data(), it, (long long)JSValue::encode(v), valueAsString(v).data());
             --it;
@@ -425,9 +444,9 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
     if (topCallFrame) {
         topCallFrame->iterate(vm, [&] (StackVisitor& visitor) {
             if (callFrame == visitor->callFrame())
-                return StackVisitor::Done;
+                return IterationStatus::Done;
             nextCallFrame = visitor->callFrame();
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         });
     }
 
@@ -490,9 +509,8 @@ private:
 
 void VMInspector::dumpCellMemoryToStream(JSCell* cell, PrintStream& out)
 {
-    VM& vm = cell->vm();
     StructureID structureID = cell->structureID();
-    Structure* structure = cell->structure(vm);
+    Structure* structure = cell->structure();
     IndexingType indexingTypeAndMisc = cell->indexingTypeAndMisc();
     IndexingType indexingType = structure->indexingType();
     IndexingType indexingMode = structure->indexingMode();
@@ -519,7 +537,7 @@ void VMInspector::dumpCellMemoryToStream(JSCell* cell, PrintStream& out)
         out.print("\n");
     };
 
-    out.printf("<%p, %s>\n", cell, cell->className(vm));
+    out.printf("<%p, %s>\n", cell, cell->className().characters());
     IndentationScope scope(indentation);
 
     INDENT dumpSlot(slots, 0, "header");

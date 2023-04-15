@@ -23,6 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+@linkTimeConstant
 function performIteration(iterable)
 {
     "use strict";
@@ -33,7 +34,7 @@ function performIteration(iterable)
     var result = [];
     if (@isUndefinedOrNull(iterable))
         @throwTypeError('Spread syntax requires ...iterable not be null or undefined');
-
+    
     var iteratorMethod = iterable.@@iterator;
     if (!@isCallable(iteratorMethod))
         @throwTypeError('Spread syntax requires ...iterable[Symbol.iterator] to be a function');
@@ -50,4 +51,44 @@ function performIteration(iterable)
             return result;
         @putByValDirect(result, index++, item.value);
     }
+}
+
+@linkTimeConstant
+function wrappedIterator(iterator)
+{
+    let wrapper = @Object.@create(null);
+    wrapper.@@iterator = function() { return iterator; }
+    return wrapper;
+}
+
+@linkTimeConstant
+function builtinSetIterable(set)
+{
+    "use strict";
+    
+    if (!@isSet(set))
+        @throwTypeError("builtinSetIterable called with non-Set object.");
+
+    // Using the private @@iterator only guarantees that the symbol itself has not been modified, but does not protect
+    // against the iterator itself having been replaced. For Sets, `@values` has a copy of the function originally
+    // placed at `Symbol.iterator`.
+    let iteratorFunction = set.@values;
+    
+    return @wrappedIterator(iteratorFunction.@call(set));
+}
+
+@linkTimeConstant
+function builtinMapIterable(map)
+{
+    "use strict";
+    
+    if (!@isMap(map))
+        @throwTypeError("builtinMapIterable called with non-Map object.");
+
+    // Using the private @@iterator only guarantees that the symbol itself has not been modified, but does not protect
+    // against the iterator itself having been replaced. For Maps, `@entries` has a copy of the function originally
+    // placed at `Symbol.iterator`.
+    let iteratorFunction = map.@entries;
+
+    return @wrappedIterator(iteratorFunction.@call(map));
 }
