@@ -8733,7 +8733,6 @@ public abstract class Node implements EventTarget, Styleable {
 
     private NodeEventDispatcher internalEventDispatcher;
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -8742,7 +8741,6 @@ public abstract class Node implements EventTarget, Styleable {
                                     .addEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -8752,7 +8750,6 @@ public abstract class Node implements EventTarget, Styleable {
                 .removeEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -8761,7 +8758,6 @@ public abstract class Node implements EventTarget, Styleable {
                                     .addEventFilter(eventType, eventFilter);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
@@ -8812,16 +8808,8 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private EventDispatcher preprocessMouseEventDispatcher;
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Construct an event dispatch chain for this node. The event dispatch chain
-     * contains all event dispatchers from the stage to this node.
-     *
-     * @param tail the initial chain to build from
-     * @return the resulting event dispatch chain for this node
-     */
     @Override
-    public EventDispatchChain buildEventDispatchChain(
+    public final EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
 
         if (preprocessMouseEventDispatcher == null) {

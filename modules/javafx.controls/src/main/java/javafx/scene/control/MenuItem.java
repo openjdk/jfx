@@ -459,32 +459,8 @@ public class MenuItem implements EventTarget, Styleable {
         Event.fireEvent(this, new ActionEvent(this, this));
     }
 
-    /** {@inheritDoc} */
     @Override
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.removeEventHandler(eventType, eventHandler);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
-        eventHandlerManager.addEventFilter(eventType, eventFilter);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
-        eventHandlerManager.removeEventFilter(eventType, eventFilter);
-    }
-
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         // FIXME review that these are configure properly
         if (getParentPopup() != null) {
             getParentPopup().buildEventDispatchChain(tail);
@@ -495,6 +471,26 @@ public class MenuItem implements EventTarget, Styleable {
         }
 
         return tail.prepend(eventHandlerManager);
+    }
+
+    @Override
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler);
+    }
+
+    @Override
+    public final <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.removeEventHandler(eventType, eventHandler);
+    }
+
+    @Override
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        eventHandlerManager.addEventFilter(eventType, eventFilter);
+    }
+
+    @Override
+    public final <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        eventHandlerManager.removeEventFilter(eventType, eventFilter);
     }
 
     /**

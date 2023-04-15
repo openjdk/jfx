@@ -4235,7 +4235,6 @@ public class Scene implements EventTarget {
         }
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -4244,7 +4243,6 @@ public class Scene implements EventTarget {
                                     .addEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -4254,7 +4252,6 @@ public class Scene implements EventTarget {
                                                         eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -4263,7 +4260,6 @@ public class Scene implements EventTarget {
                                     .addEventFilter(eventType, eventFilter);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
@@ -4356,16 +4352,8 @@ public class Scene implements EventTarget {
                                            .getAccelerators();
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Construct an event dispatch chain for this scene. The event dispatch
-     * chain contains all event dispatchers from the stage to this scene.
-     *
-     * @param tail the initial chain to build from
-     * @return the resulting event dispatch chain for this scene
-     */
     @Override
-    public EventDispatchChain buildEventDispatchChain(
+    public final EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
         if (eventDispatcher != null) {
             final EventDispatcher eventDispatcherValue = eventDispatcher.get();

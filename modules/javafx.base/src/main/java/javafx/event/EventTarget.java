@@ -58,65 +58,68 @@ public interface EventTarget {
     /**
      * Registers an event handler for this target.
      * <p>
-     * The handler is called when the target receives an {@code Event} of the specified
+     * The handler is called when the target receives an {@link Event} of the specified
      * type during the bubbling phase of event delivery.
      *
-     * @param <T> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
+     * @param <E> the event class of the handler
+     * @param eventType the type of the events received by the handler
+     * @param eventHandler the event handler
+     * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event handlers
      * @since 21
      */
-    default <T extends Event> void addEventHandler(EventType<T> eventType, EventHandler<? super T> eventHandler) {
+    default <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Unregisters a previously registered event handler from this target.
-     * One handler might have been registered for different event types, so the caller needs
-     * to specify the particular event type from which to unregister the handler.
+     * <p>
+     * It is possible to register a single {@link EventHandler} instance for different event types,
+     * so the caller needs to specify the event type from which the handler should be unregistered.
      *
-     * @param <T> the specific event class of the handler
+     * @param <E> the event class of the handler
      * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
+     * @param eventHandler the event handler
+     * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event handlers
      * @since 21
      */
-    default <T extends Event> void removeEventHandler(EventType<T> eventType, EventHandler<? super T> eventHandler) {
+    default <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Registers an event filter for this target.
-     * The filter is called when the node receives an {@code Event} of the specified
+     * <p>
+     * The filter is called when the node receives an {@link Event} of the specified
      * type during the capturing phase of event delivery.
      *
-     * @param <T> the specific event class of the filter
-     * @param eventType the type of the events to receive by the filter
-     * @param eventFilter the filter to register
-     * @throws NullPointerException if the event type or filter is null
+     * @param <E> the event class of the filter
+     * @param eventType the type of the events received by the filter
+     * @param eventFilter the event filter
+     * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event filters
      * @since 21
      */
-    default <T extends Event> void addEventFilter(EventType<T> eventType, EventHandler<? super T> eventFilter) {
+    default <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Unregisters a previously registered event filter from this target.
-     * One filter might have been registered for different event types, so the caller needs
-     * to specify the particular event type from which to unregister the filter.
+     * <p>
+     * It is possible to register a single {@link EventHandler} instance for different event types,
+     * so the caller needs to specify the event type from which the filter should be unregistered.
      *
-     * @param <T> the specific event class of the filter
+     * @param <E> the event class of the filter
      * @param eventType the event type from which to unregister
-     * @param eventFilter the filter to unregister
-     * @throws NullPointerException if the event type or filter is null
+     * @param eventFilter the event filter
+     * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event filters
      * @since 21
      */
-    default <T extends Event> void removeEventFilter(EventType<T> eventType, EventHandler<? super T> eventFilter) {
+    default <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         throw new UnsupportedOperationException();
     }
 }

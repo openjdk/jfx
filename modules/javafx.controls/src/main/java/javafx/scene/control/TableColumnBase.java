@@ -726,28 +726,28 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      */
     public abstract ObservableValue<T> getCellObservableValue(S item);
 
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventFilter(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventFilter(eventType, eventHandler);
     }
 

@@ -429,11 +429,6 @@ public class Menu extends MenuItem {
         setShowing(false);
     }
 
-     /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
-        return tail.prepend(eventHandlerManager);
-    }
-
     /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

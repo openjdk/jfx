@@ -895,30 +895,26 @@ public class Dialog<R> implements EventTarget {
 
     private final EventHandlerManager eventHandlerManager = new EventHandlerManager(this);
 
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }
 
-    /** {@inheritDoc} */
     @Override
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         eventHandlerManager.addEventFilter(eventType, eventFilter);
     }
 
-    /** {@inheritDoc} */
     @Override
     public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         eventHandlerManager.removeEventFilter(eventType, eventFilter);

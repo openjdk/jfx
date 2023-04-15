@@ -773,8 +773,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         // To allow for a TreeView (and its skin) to be notified of changes in the
         // tree, this method recursively calls up to the root node, at which point
         // it fires a ROOT_NOTIFICATION_EVENT, which the TreeView may be watching for.
@@ -784,23 +784,23 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return tail.append(eventHandlerManager);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventFilter(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
-    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    @Override
+    public final <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventFilter(eventType, eventHandler);
     }
 

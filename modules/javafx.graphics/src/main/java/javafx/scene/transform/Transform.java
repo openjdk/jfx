@@ -1903,7 +1903,7 @@ public abstract class Transform implements Cloneable, EventTarget {
             onTransformChanged;
 
     @Override
-    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return internalEventDispatcher == null
                 ? tail : tail.append(getInternalEventDispatcher());
     }
@@ -1924,7 +1924,6 @@ public abstract class Transform implements Cloneable, EventTarget {
         validate();
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -1949,7 +1948,6 @@ public abstract class Transform implements Cloneable, EventTarget {
         validate();
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,

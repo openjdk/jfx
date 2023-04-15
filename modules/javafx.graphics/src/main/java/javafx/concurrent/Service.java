@@ -741,7 +741,6 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         return eventHelper;
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -750,7 +749,6 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         getEventHelper().addEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -759,7 +757,6 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         getEventHelper().removeEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -768,7 +765,6 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         getEventHelper().addEventFilter(eventType, eventFilter);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
@@ -814,7 +810,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     }
 
     @Override
-    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         checkThread();
         return getEventHelper().buildEventDispatchChain(tail);
     }

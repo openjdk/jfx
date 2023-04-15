@@ -1248,7 +1248,6 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         return eventHelper;
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -1257,7 +1256,6 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         getEventHelper().addEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -1266,7 +1264,6 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         getEventHelper().removeEventHandler(eventType, eventHandler);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -1275,7 +1272,6 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         getEventHelper().addEventFilter(eventType, eventFilter);
     }
 
-    /** {@inheritDoc} */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
@@ -1321,7 +1317,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     @Override
-    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         checkThread();
         return getEventHelper().buildEventDispatchChain(tail);
     }
