@@ -1317,7 +1317,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         checkThread();
         return getEventHelper().buildEventDispatchChain(tail);
     }

@@ -826,22 +826,22 @@ public class Tab implements EventTarget, Styleable {
     }
 
     @Override
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
     @Override
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public final <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
     @Override
-    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         eventHandlerManager.addEventFilter(eventType, eventFilter);
     }
 
     @Override
-    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+    public final <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         eventHandlerManager.removeEventFilter(eventType, eventFilter);
     }
 

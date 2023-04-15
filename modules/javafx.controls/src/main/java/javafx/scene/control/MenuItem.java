@@ -460,7 +460,7 @@ public class MenuItem implements EventTarget, Styleable {
     }
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         // FIXME review that these are configure properly
         if (getParentPopup() != null) {
             getParentPopup().buildEventDispatchChain(tail);

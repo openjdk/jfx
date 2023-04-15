@@ -774,7 +774,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      **************************************************************************/
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         // To allow for a TreeView (and its skin) to be notified of changes in the
         // tree, this method recursively calls up to the root node, at which point
         // it fires a ROOT_NOTIFICATION_EVENT, which the TreeView may be watching for.

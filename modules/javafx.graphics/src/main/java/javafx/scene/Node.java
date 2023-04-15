@@ -8809,7 +8809,7 @@ public abstract class Node implements EventTarget, Styleable {
     private EventDispatcher preprocessMouseEventDispatcher;
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(
+    public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
 
         if (preprocessMouseEventDispatcher == null) {

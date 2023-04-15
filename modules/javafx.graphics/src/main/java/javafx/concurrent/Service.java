@@ -810,7 +810,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     }
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         checkThread();
         return getEventHelper().buildEventDispatchChain(tail);
     }

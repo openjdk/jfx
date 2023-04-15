@@ -727,7 +727,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public abstract ObservableValue<T> getCellObservableValue(S item);
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }
 

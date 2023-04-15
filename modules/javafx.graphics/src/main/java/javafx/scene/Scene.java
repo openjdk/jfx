@@ -4353,7 +4353,7 @@ public class Scene implements EventTarget {
     }
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(
+    public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
         if (eventDispatcher != null) {
             final EventDispatcher eventDispatcherValue = eventDispatcher.get();
