@@ -738,12 +738,12 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * Note that {@code TableColumnBase} is <b>not</b> a {@link Node}, and therefore no visual events will be fired on it.
      */
     @Override
-    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
     @Override
-    public final <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
@@ -754,12 +754,12 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * Note that {@code TableColumnBase} is <b>not</b> a {@link Node}, and therefore no visual events will be fired on it.
      */
     @Override
-    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventFilter(eventType, eventHandler);
     }
 
     @Override
-    public final <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventFilter(eventType, eventHandler);
     }
 
