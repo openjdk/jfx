@@ -82,7 +82,7 @@ public class ListenerList extends ListenerListBase {
             lock();
         }
 
-        int initialProgress = progress;
+        int initialProgress = progress;  // save as it will be modified soon
         int invalidationListenersSize = invalidationListenersSize();
         int maxInvalidations = wasLocked ? Math.min(initialProgress + 1, invalidationListenersSize) : invalidationListenersSize;
 
