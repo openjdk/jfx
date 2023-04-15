@@ -39,7 +39,6 @@ import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.event.EventDispatchChain;
 
 /**
  * <p>

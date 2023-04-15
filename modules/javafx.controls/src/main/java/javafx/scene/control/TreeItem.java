@@ -784,6 +784,15 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return tail.append(eventHandlerManager);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
+     */
     @Override
     public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
@@ -794,6 +803,15 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
+     */
     @Override
     public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventFilter(eventType, eventHandler);
