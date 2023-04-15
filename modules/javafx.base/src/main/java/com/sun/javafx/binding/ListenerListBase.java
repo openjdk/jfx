@@ -45,7 +45,7 @@ import javafx.beans.value.ChangeListener;
  * listeners in the list, and {@code null} is never returned when getting a listener by
  * index.<p>
  *
- * This class supports {@link WeakListener}s, and can remove any garbage collected
+ * This class supports {@link WeakListener}s, and removes any garbage collected
  * listeners at a time of its choosing.
  */
 public abstract class ListenerListBase {
@@ -98,78 +98,70 @@ public abstract class ListenerListBase {
     private static final ArrayManager<ListenerListBase, InvalidationListener> INVALIDATION_LISTENERS = new CompactingArrayManager<>(InvalidationListener.class) {
         @Override
         protected InvalidationListener[] getArray(ListenerListBase instance) {
-            return instance.managedInvalidationListeners;
+            return instance.invalidationListeners;
         }
 
         @Override
         protected void setArray(ListenerListBase instance, InvalidationListener[] array) {
-            instance.managedInvalidationListeners = array;
+            instance.invalidationListeners = array;
         }
 
         @Override
         protected int getOccupiedSlots(ListenerListBase instance) {
-            return instance.managedInvalidationListenersCount;
+            return instance.invalidationListenersCount;
         }
 
         @Override
         protected void setOccupiedSlots(ListenerListBase instance, int occupiedSlots) {
-            instance.managedInvalidationListenersCount = occupiedSlots;
+            instance.invalidationListenersCount = occupiedSlots;
         }
     };
 
     private static final ArrayManager<ListenerListBase, Object> CHANGE_LISTENERS = new CompactingArrayManager<>(Object.class) {
         @Override
         protected Object[] getArray(ListenerListBase instance) {
-            return instance.managedChangeListeners;
+            return instance.changeListeners;
         }
 
         @Override
         protected void setArray(ListenerListBase instance, Object[] array) {
-            instance.managedChangeListeners = array;
+            instance.changeListeners = array;
         }
 
         @Override
         protected int getOccupiedSlots(ListenerListBase instance) {
-            return instance.managedChangeListenersCount;
+            return instance.changeListenersCount;
         }
 
         @Override
         protected void setOccupiedSlots(ListenerListBase instance, int occupiedSlots) {
-            instance.managedChangeListenersCount = occupiedSlots;
+            instance.changeListenersCount = occupiedSlots;
         }
     };
 
     /*
      * The following four fields are used for tracking invalidation and change listeners. When the
      * list is unlocked, these arrays hold what you'd expect (InvalidationListeners and ChangeListeners
-     * respectively), with the total size returned by this class being the total number of occupied
-     * slots in the two lists. Indexing into this list first returns invalidation listeners, while
-     * higher indices that exceed the number of invalidation listeners index into the change listener
-     * array. This allows to keep track of how many listeners have been notified as a single index
-     * value, called progress.
+     * respectively).
      *
      * While the list is locked, any new listeners (regardless what kind) are always added to the
      * change listener array first, in order to not disturb the indices of any listeners that existed
      * before (the indices remain stable). Any added listeners are invisible, and cannot be obtained
-     * via the public methods of this class (the size of the list remains the same while locked, and
-     * attempting to access an index of an added listener which would exceed the size returned will
-     * result in an IndexOutOfBoundsException).
+     * via the public methods of this class (the sizes of the lists remain the same while locked, and
+     * the result of accessing an index of an added listener which would exceed the size returned is
+     * undefined).
      *
      * Similarly, while the list is locked, any removed listeners do not alter the indices of this
      * list; instead removed listeners are set to null.
      *
-     * Only after unlocked are any InvalidationListeners that do not belong in the change listener
-     * array moved to the invalidation listener array, and nulled elements are potentially removed.
-     *
-     * Note: although providing an Iterator (which automatically handles skipping null elements)
-     * would seem like a nice addition, its not currently implemented as it would require an object
-     * allocation. The current users of this class want to avoid allocations.
+     * Only after unlocking are any InvalidationListeners that do not belong in the change listener
+     * array moved to the invalidation listener array, and nulled elements are removed.
      */
 
-    private InvalidationListener[] managedInvalidationListeners;
-    private int managedInvalidationListenersCount;
-    private Object[] managedChangeListeners;
-    private int managedChangeListenersCount;
+    private InvalidationListener[] invalidationListeners;
+    private int invalidationListenersCount;
+    private Object[] changeListeners;
+    private int changeListenersCount;
 
     /**
      * Indicates whether the list is locked, and if so, what the size
@@ -196,14 +188,14 @@ public abstract class ListenerListBase {
         Objects.requireNonNull(listener1);
         Objects.requireNonNull(listener2);
 
-        if(listener1 instanceof InvalidationListener il) {
+        if (listener1 instanceof InvalidationListener il) {
             INVALIDATION_LISTENERS.add(this, il);
         }
         else {
             CHANGE_LISTENERS.add(this, listener1);
         }
 
-        if(listener2 instanceof InvalidationListener il) {
+        if (listener2 instanceof InvalidationListener il) {
             INVALIDATION_LISTENERS.add(this, il);
         }
         else {
@@ -218,7 +210,7 @@ public abstract class ListenerListBase {
      * @return the number of invalidation listeners, never negative
      */
     public final int invalidationListenersSize() {
-        return managedInvalidationListenersCount;
+        return invalidationListenersCount;
     }
 
     /**
@@ -228,7 +220,7 @@ public abstract class ListenerListBase {
      * @return the number of change listeners, never negative
      */
     public final int changeListenersSize() {
-        return isLocked() ? lockedSize - managedInvalidationListenersCount : managedChangeListenersCount;
+        return isLocked() ? lockedSize - invalidationListenersCount : changeListenersCount;
     }
 
     /**
@@ -236,9 +228,7 @@ public abstract class ListenerListBase {
      * list is locked and the listener was removed in the mean time.<p>
      *
      * Note: the behavior when calling this method with an index outside the valid range is
-     * <b>undefined</b>; this means it may return {@code null}, throw an exception, or even return
-     * an arbitrary listener; furthermore, this behavior may change from one call to the next, or
-     * may depend on JVM settings!
+     * <b>undefined</b>!
      *
      * @param index an index, cannot be negative and must be less than {@link #invalidationListenersSize()}
      * @return the listener at the given index, or {@code null}
@@ -246,7 +236,7 @@ public abstract class ListenerListBase {
     public final InvalidationListener getInvalidationListener(int index) {
         assertInvalidationListenerIndex(index);
 
-        return managedInvalidationListeners[index];
+        return invalidationListeners[index];
     }
 
     /**
@@ -254,9 +244,7 @@ public abstract class ListenerListBase {
      * list is locked and the listener was removed in the mean time.<p>
      *
      * Note: the behavior when calling this method with an index outside the valid range is
-     * <b>undefined</b>; this means it may return {@code null}, throw an exception, or even return
-     * an arbitrary listener; furthermore, this behavior may change from one call to the next, or
-     * may depend on JVM settings!
+     * <b>undefined</b>!
      *
      * @param index an index, cannot be negative and must be less than {@link #changeListenersSize()}
      * @return the listener at the given index, or {@code null}
@@ -264,7 +252,10 @@ public abstract class ListenerListBase {
     public final <T> ChangeListener<T> getChangeListener(int index) {
         assertChangeListenerIndex(index);
 
-        return (ChangeListener<T>) managedChangeListeners[index];
+        @SuppressWarnings("unchecked")
+        ChangeListener<T> cl = (ChangeListener<T>) changeListeners[index];
+
+        return cl;
     }
 
     /**
@@ -310,7 +301,7 @@ public abstract class ListenerListBase {
             index = CHANGE_LISTENERS.indexOf(this, listener);
 
             if (index >= 0) {
-                if (!isLocked() || index >= lockedSize - managedInvalidationListenersCount) {
+                if (!isLocked() || index >= lockedSize - invalidationListenersCount) {
                     CHANGE_LISTENERS.remove(this, index);  // not locked, or was added during lock, so can just remove directly
                 }
                 else {
@@ -332,33 +323,34 @@ public abstract class ListenerListBase {
     protected final boolean unlock() {
         assertLocked();
 
-        if (containsNulls || managedInvalidationListenersCount + managedChangeListenersCount > lockedSize) {  // if there were additions...
-            for (int i = lockedSize - managedInvalidationListenersCount; i < managedChangeListenersCount; i++) {
-                Object listener = CHANGE_LISTENERS.get(this, i);
-
-                if (listener instanceof InvalidationListener il) {
-                    INVALIDATION_LISTENERS.add(this, il);
-                    CHANGE_LISTENERS.set(this, i, null);
-
-                    containsNulls = true;
-                }
-            }
-
-            if (containsNulls) {
-                INVALIDATION_LISTENERS.removeIf(this, INVALIDATION_LISTENER_NULL_OR_COLLECTED);
-                CHANGE_LISTENERS.removeIf(this, NULL_OR_COLLECTED);
-
-                containsNulls = false;
-            }
-
+        // if there were no nulls and no additions...
+        if (!containsNulls && invalidationListenersCount + changeListenersCount <= lockedSize) {
             lockedSize = -1;
 
-            return true;
+            return false;
+        }
+
+        for (int i = lockedSize - invalidationListenersCount; i < changeListenersCount; i++) {
+            Object listener = CHANGE_LISTENERS.get(this, i);
+
+            if (listener instanceof InvalidationListener il) {
+                INVALIDATION_LISTENERS.add(this, il);
+                CHANGE_LISTENERS.set(this, i, null);
+
+                containsNulls = true;
+            }
+        }
+
+        if (containsNulls) {
+            INVALIDATION_LISTENERS.removeIf(this, INVALIDATION_LISTENER_NULL_OR_COLLECTED);
+            CHANGE_LISTENERS.removeIf(this, NULL_OR_COLLECTED);
+
+            containsNulls = false;
         }
 
         lockedSize = -1;
 
-        return false;
+        return true;
     }
 
     /**
@@ -367,7 +359,7 @@ public abstract class ListenerListBase {
     protected final void lock() {
         assertNotLocked();
 
-        this.lockedSize = managedInvalidationListenersCount + managedChangeListenersCount;
+        this.lockedSize = invalidationListenersCount + changeListenersCount;
     }
 
     /**
@@ -386,20 +378,20 @@ public abstract class ListenerListBase {
      * @return {@code true} if there were change listeners, otherwise {@code false}
      */
     public final boolean hasChangeListeners() {
-        return totalSize() > managedInvalidationListenersCount;
+        return totalSize() > invalidationListenersCount;
     }
 
     private int totalSize() {
-        return isLocked() ? lockedSize : managedInvalidationListenersCount + managedChangeListenersCount;
+        return isLocked() ? lockedSize : invalidationListenersCount + changeListenersCount;
     }
 
     private void assertInvalidationListenerIndex(int index) {
-        assert index < managedInvalidationListenersCount : index + " >= " + managedInvalidationListenersCount + ", results would be undefined";
+        assert index < invalidationListenersCount : index + " >= " + invalidationListenersCount + ", results would be undefined";
     }
 
     private void assertChangeListenerIndex(int index) {
-        assert index < (isLocked() ? lockedSize - managedInvalidationListenersCount : managedChangeListenersCount)
-            : index + " >= " + (isLocked() ? lockedSize - managedInvalidationListenersCount : managedChangeListenersCount) + ", results would be undefined";
+        assert index < (isLocked() ? lockedSize - invalidationListenersCount : changeListenersCount)
+            : index + " >= " + (isLocked() ? lockedSize - invalidationListenersCount : changeListenersCount) + ", results would be undefined";
     }
 
     private void assertLocked() {

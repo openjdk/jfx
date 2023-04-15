@@ -46,6 +46,10 @@ public abstract class ArrayManager<I, E> {
      */
     private static final int MINIMUM_SIZE = 3;
 
+    /**
+     * The type of the elements in the array, in order to allocate arrays
+     * of the correct type.
+     */
     private final Class<E> elementType;
 
     /**
@@ -105,7 +109,7 @@ public abstract class ArrayManager<I, E> {
         int occupiedSlots = getOccupiedSlots(instance);
 
         if (array == null) {
-            setArray(instance, array = (E[]) Array.newInstance(elementType, MINIMUM_SIZE));
+            setArray(instance, array = allocateArray(MINIMUM_SIZE));
             setOccupiedSlots(instance, occupiedSlots + 1);
 
             array[0] = element;
@@ -178,22 +182,22 @@ public abstract class ArrayManager<I, E> {
 
         setOccupiedSlots(instance, occupiedSlots);
 
-        if(newSize == array.length) {
-            if(index < occupiedSlots) {
+        if (newSize == array.length) {
+            if (index < occupiedSlots) {
                 System.arraycopy(array, index + 1, array, index, occupiedSlots - index);
             }
 
             array[occupiedSlots] = null;
         }
-        else if(newSize == 0) {
+        else if (newSize == 0) {
             setArray(instance, null);
         }
         else {
-            E[] newArray = (E[]) Array.newInstance(elementType, newSize);
+            E[] newArray = allocateArray(newSize);
 
             System.arraycopy(array, 0, newArray, 0, index);
 
-            if(index < occupiedSlots) {
+            if (index < occupiedSlots) {
                 System.arraycopy(array, index + 1, newArray, index, occupiedSlots - index);
             }
 
@@ -267,7 +271,6 @@ public abstract class ArrayManager<I, E> {
         }
 
         int occupiedSlots = getOccupiedSlots(instance);
-
         int shift = 0;
 
         for (int i = 0; i < occupiedSlots; i++) {
@@ -280,23 +283,24 @@ public abstract class ArrayManager<I, E> {
             }
         }
 
+        if (shift == 0) {
+            return false;
+        }
+
         int newLength = calculateOptimalSize(array.length, occupiedSlots - shift);
 
         if (newLength == 0) {
             setArray(instance, null);
-            setOccupiedSlots(instance, 0);
         }
         else if (newLength != array.length) {
             array = Arrays.copyOf(array, newLength);
 
             setArray(instance, array);
-            setOccupiedSlots(instance, occupiedSlots - shift);
-        }
-        else {
-            setOccupiedSlots(instance, occupiedSlots - shift);
         }
 
-        return shift > 0;
+        setOccupiedSlots(instance, occupiedSlots - shift);
+
+        return true;
     }
 
     /**
@@ -319,6 +323,11 @@ public abstract class ArrayManager<I, E> {
      */
     protected int compact(I instance, E[] array) {
         return 0;  // no compaction took place
+    }
+
+    @SuppressWarnings("unchecked")
+    private E[] allocateArray(int size) {
+        return (E[]) Array.newInstance(elementType, size);
     }
 
     private static int calculateOptimalSize(int size, int needed) {
@@ -372,7 +381,7 @@ public abstract class ArrayManager<I, E> {
     // note: must be the exact inverse of increase, so the array sizes used
     // are always the same values.
     private static int decrease(int size) {
-        return (int)(((size - MINIMUM_SIZE) * 2L + 2) / 3);
+        return (int)(((size - MINIMUM_SIZE) * 2L + (MINIMUM_SIZE - 1)) / 3);
     }
 
     private static int increase(int size) {
