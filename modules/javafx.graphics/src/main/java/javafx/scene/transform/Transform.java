@@ -1903,7 +1903,7 @@ public abstract class Transform implements Cloneable, EventTarget {
             onTransformChanged;
 
     @Override
-    public final EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return internalEventDispatcher == null
                 ? tail : tail.append(getInternalEventDispatcher());
     }
