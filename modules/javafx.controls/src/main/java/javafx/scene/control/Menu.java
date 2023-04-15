@@ -30,6 +30,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
+import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -426,6 +427,11 @@ public class Menu extends MenuItem {
             }
         }
         setShowing(false);
+    }
+
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+        return tail.prepend(eventHandlerManager);
     }
 
     /* *************************************************************************
