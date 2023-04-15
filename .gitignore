@@ -53,9 +53,6 @@ testbin/
 # File-based project format
 *.iws
 
-# IntelliJ
-out/
-
 # SonarLint plugin
 .idea/sonarlint/
 #IntelliJ Idea End
