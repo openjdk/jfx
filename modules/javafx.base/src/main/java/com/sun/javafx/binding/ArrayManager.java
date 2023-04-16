@@ -37,6 +37,9 @@ import java.util.function.Predicate;
  * To use this class, subclass it and store an instance of this class in a
  * static field. Then just call methods on the array manager supplying the
  * instance each time.
+ *
+ * @param <I> the type of the instance providing the array
+ * @param <E> the type of the elements in the array
  */
 public abstract class ArrayManager<I, E> {
 
@@ -55,7 +58,6 @@ public abstract class ArrayManager<I, E> {
     /**
      * Constructs a new instance.
      *
-     * @param accessor an {@link Accessor}, cannot be {@code null}
      * @param elementType the type of the elements in the array, cannot be {@code null}
      * @throws NullPointerException when any of the parameters are {@code null}
      */
@@ -91,7 +93,7 @@ public abstract class ArrayManager<I, E> {
      * Sets the occupied slots of the array under management.
      *
      * @param instance the instance it is located in, cannot be {@code null}
-     * @param array the occupied slots of the array to set
+     * @param occupiedSlots the occupied slots of the array to set
      */
     protected abstract void setOccupiedSlots(I instance, int occupiedSlots);
 
@@ -165,7 +167,7 @@ public abstract class ArrayManager<I, E> {
      *
      * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param index an index to remove, cannot be negative, or greater than or equal to the number of occupied slots
-     * @returns the element that was removed, can be {@code null} if the element at the given index was {@code null}
+     * @return the element that was removed, can be {@code null} if the element at the given index was {@code null}
      * @throws NullPointerException when the given instance was {@code null}
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
@@ -214,7 +216,7 @@ public abstract class ArrayManager<I, E> {
      *
      * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param index an index, cannot be negative, or greater than or equal to the number of occupied slots
-     * @returns the element at the given index, can be {@code null} if the element at the given index was {@code null}
+     * @return the element at the given index, can be {@code null} if the element at the given index was {@code null}
      * @throws NullPointerException when the given instance was {@code null}
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
@@ -235,7 +237,7 @@ public abstract class ArrayManager<I, E> {
      * @param instance a reference to the instance where the array is stored, cannot be {@code null}
      * @param index an index to set, cannot be negative, or greater than or equal to the number of occupied slots
      * @param element an element to set, can be {@code null}
-     * @returns the element that was previously at the given index, can be {@code null} if the element at the given index was {@code null}
+     * @return the element that was previously at the given index, can be {@code null} if the element at the given index was {@code null}
      * @throws NullPointerException when the given instance was {@code null}
      * @throws IndexOutOfBoundsException when the given index was out of range
      */
@@ -370,8 +372,6 @@ public abstract class ArrayManager<I, E> {
         }
 
         while (needed > max) {
-            min = mid;
-            mid = max;
             max = increase(max);
         }
 

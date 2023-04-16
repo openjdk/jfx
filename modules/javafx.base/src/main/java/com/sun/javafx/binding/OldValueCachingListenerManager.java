@@ -190,8 +190,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         T oldValue = changeListenerWrapper.getLatestValue();
         T newValue = instance.getValue();
 
-        // Latest value must be store before calling the listener, as nested loop will need to know what the old value was
-        // Latest value should even be stored if it was "equals", as it may be a different reference
+        // Latest value must be stored even if it was "equals", as it may be a different reference
         changeListenerWrapper.putLatestValue(newValue);
 
         if (!Objects.equals(newValue, oldValue)) {

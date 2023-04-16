@@ -61,6 +61,8 @@ public abstract class ListenerListBase {
      *
      * This handles compacting elements that are {@code null}, as well as elements that implement
      * {@link WeakListener} that were garbage collected in the mean time.
+     *
+     * @param <T> the element type
      */
     private static abstract class CompactingArrayManager<T> extends ArrayManager<ListenerListBase, T> {
 
@@ -240,7 +242,7 @@ public abstract class ListenerListBase {
     }
 
     /**
-     * Gets the {@link ChangeLisener} at the given index. This can be {@code null} if the
+     * Gets the {@link ChangeListener} at the given index. This can be {@code null} if the
      * list is locked and the listener was removed in the mean time.<p>
      *
      * Note: the behavior when calling this method with an index outside the valid range is

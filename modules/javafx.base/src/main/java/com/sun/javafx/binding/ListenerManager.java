@@ -122,7 +122,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<T>> extends L
     }
 
     /**
-     * Notifies the listeners managed in the given instance.<p>
+     * Notifies the listeners managed in the given instance.
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param oldValue the previous value before this change occurred, can be {@code null}

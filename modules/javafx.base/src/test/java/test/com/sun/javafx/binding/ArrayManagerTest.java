@@ -88,7 +88,7 @@ public class ArrayManagerTest {
         }
 
         @Test
-        void setSshouldRejectSettingIllegalIndices() {
+        void setShouldRejectSettingIllegalIndices() {
             assertThrows(IndexOutOfBoundsException.class, () -> manager.set(ArrayManagerTest.this, 0, "A"));
             assertThrows(IndexOutOfBoundsException.class, () -> manager.set(ArrayManagerTest.this, 1, "A"));
             assertThrows(IndexOutOfBoundsException.class, () -> manager.set(ArrayManagerTest.this, -1, "A"));
