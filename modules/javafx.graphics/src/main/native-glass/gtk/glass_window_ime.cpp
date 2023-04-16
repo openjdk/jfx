@@ -47,16 +47,7 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
     return false;
 }
 
-void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
-    g_print("on_preedit_start\n");
-}
-
-void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
-    g_print("on_preedit_end\n");
-}
-
 void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
-    g_print("on_preedit_changed\n");
     gchar *preedit_text;
     WindowContext *ctx = (WindowContext *) user_data;
 
@@ -121,8 +112,6 @@ void WindowContextBase::enableOrResetIME() {
         im_ctx.ctx = gtk_im_multicontext_new();
         gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
-        g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
-        g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
         g_signal_connect(im_ctx.ctx, "commit", G_CALLBACK(on_commit), this);
     }
 
