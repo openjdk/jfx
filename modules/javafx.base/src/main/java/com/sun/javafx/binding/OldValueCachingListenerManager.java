@@ -52,7 +52,7 @@ import javafx.beans.value.ObservableValue;
  * @param <T> the type of the values
  * @param <I> the type of the instance providing listener data
  */
-public abstract class OldValueCachingListenerManager<T, I extends ObservableValue<T>> extends ListenerManagerBase<T, I> {
+public abstract class OldValueCachingListenerManager<T, I extends ObservableValue<? extends T>> extends ListenerManagerBase<T, I> {
 
     /**
      * Adds an invalidation listener.
@@ -146,7 +146,10 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         if (data == null || data.equals(listener) || (data instanceof ChangeListenerWrapper<?> wrapper && wrapper.listener.equals(listener))) {
             setData(instance, null);  // TODO not needed when already null
         }
-        else if (data instanceof OldValueCachingListenerList<?> list) {
+        else if (data instanceof OldValueCachingListenerList) {
+            @SuppressWarnings("unchecked")
+            OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) data;
+
             list.remove(listener);
 
             updateAfterRemoval(instance, list);
@@ -203,9 +206,9 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
 
         private T latestValue;
 
-        ChangeListenerWrapper(ChangeListener<T> listener, Object latestValue) {
+        ChangeListenerWrapper(ChangeListener<T> listener, T latestValue) {
             this.listener = listener;
-            this.latestValue = (T) latestValue;
+            this.latestValue = latestValue;
         }
 
         T getLatestValue() {
@@ -222,7 +225,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         }
     }
 
-    private void updateAfterRemoval(I instance, OldValueCachingListenerList<?> list) {
+    private void updateAfterRemoval(I instance, OldValueCachingListenerList<T> list) {
         int invalidationListenersSize = list.invalidationListenersSize();
         int changeListenersSize = list.changeListenersSize();
 
@@ -231,7 +234,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
                 setData(instance, list.getInvalidationListener(0));
             }
             else if (changeListenersSize == 1) {
-                setData(instance, new ChangeListenerWrapper<>((ChangeListener<?>) list.getChangeListener(0), list.getLatestValue()));
+                setData(instance, new ChangeListenerWrapper<>(list.getChangeListener(0), list.getLatestValue()));
             }
             else {
                 setData(instance, null);

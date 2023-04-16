@@ -98,7 +98,7 @@ public class OldValueCachingListenerList<T> extends ListenerListBase {
      * @return {@code true} if the listener list is not locked, and it was modified during
      *     notification otherwise {@code false}
      */
-    public boolean notifyListeners(ObservableValue<T> observableValue) {
+    public boolean notifyListeners(ObservableValue<? extends T> observableValue) {
         boolean wasLocked = isLocked();
 
         if (!wasLocked) {
@@ -170,7 +170,7 @@ public class OldValueCachingListenerList<T> extends ListenerListBase {
         }
     }
 
-    private void callChangeListener(ObservableValue<T> instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
+    private void callChangeListener(ObservableValue<? extends T> instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
         try {
             changeListener.changed(instance, oldValue, newValue);
         }

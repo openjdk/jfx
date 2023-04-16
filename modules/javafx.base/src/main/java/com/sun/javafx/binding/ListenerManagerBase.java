@@ -38,7 +38,7 @@ import javafx.beans.value.ObservableValue;
  * @param <T> the type of the values
  * @param <I> the type of the instance providing listener data
  */
-public abstract class ListenerManagerBase<T, I extends ObservableValue<T>> {
+public abstract class ListenerManagerBase<T, I extends ObservableValue<? extends T>> {
 
     /**
      * Gets the listener data under management.

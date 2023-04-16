@@ -52,14 +52,14 @@ import javafx.beans.WeakListener;
  */
 public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
-    private static final OldValueCachingListenerManager<Object, ObjectPropertyBase<Object>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+    private static final OldValueCachingListenerManager<Object, ObjectPropertyBase<?>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
         @Override
-        protected Object getData(ObjectPropertyBase<Object> instance) {
+        protected Object getData(ObjectPropertyBase<?> instance) {
             return instance.listenerData;
         }
 
         @Override
-        protected void setData(ObjectPropertyBase<Object> instance, Object data) {
+        protected void setData(ObjectPropertyBase<?> instance, Object data) {
             instance.listenerData = data;
         }
     };
@@ -88,22 +88,22 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
     @Override
     public void addListener(InvalidationListener listener) {
-        LISTENER_MANAGER.addListener((ObjectPropertyBase<Object>) this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        LISTENER_MANAGER.removeListener((ObjectPropertyBase<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.addListener((ObjectPropertyBase<Object>) this, (ChangeListener<Object>) listener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.removeListener((ObjectPropertyBase<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -116,7 +116,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
      * binding becomes invalid.
      */
     protected void fireValueChangedEvent() {
-        LISTENER_MANAGER.fireValueChanged((ObjectPropertyBase<Object>) this);
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 
     private void markInvalid() {

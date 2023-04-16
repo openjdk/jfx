@@ -40,15 +40,15 @@ import com.sun.javafx.binding.OldValueCachingListenerManager;
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProperty<T> {
-    private static final OldValueCachingListenerManager<Object, ReadOnlyObjectPropertyBase<Object>> LISTENER_MANAGER =
+    private static final OldValueCachingListenerManager<Object, ReadOnlyObjectPropertyBase<?>> LISTENER_MANAGER =
         new OldValueCachingListenerManager<>() {
             @Override
-            protected Object getData(ReadOnlyObjectPropertyBase<Object> instance) {
+            protected Object getData(ReadOnlyObjectPropertyBase<?> instance) {
                 return instance.listenerData;
             }
 
             @Override
-            protected void setData(ReadOnlyObjectPropertyBase<Object> instance, Object data) {
+            protected void setData(ReadOnlyObjectPropertyBase<?> instance, Object data) {
                 instance.listenerData = data;
             }
         };
@@ -63,22 +63,22 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
 
     @Override
     public void addListener(InvalidationListener listener) {
-        LISTENER_MANAGER.addListener((ReadOnlyObjectPropertyBase<Object>) this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        LISTENER_MANAGER.removeListener((ReadOnlyObjectPropertyBase<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.addListener((ReadOnlyObjectPropertyBase<Object>) this, (ChangeListener<Object>) listener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.removeListener((ReadOnlyObjectPropertyBase<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -89,7 +89,7 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
      * This method needs to be called, if the value of this property changes.
      */
     protected void fireValueChangedEvent() {
-        LISTENER_MANAGER.fireValueChanged((ReadOnlyObjectPropertyBase<Object>) this);
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 
 }

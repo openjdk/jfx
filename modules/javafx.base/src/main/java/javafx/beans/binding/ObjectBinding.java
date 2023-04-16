@@ -61,14 +61,14 @@ import com.sun.javafx.binding.ListenerManager;
 public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
         Binding<T> {
 
-    private static final ListenerManager<Object, ObjectBinding<Object>> LISTENER_MANAGER = new ListenerManager<>() {
+    private static final ListenerManager<Object, ObjectBinding<?>> LISTENER_MANAGER = new ListenerManager<>() {
         @Override
-        protected Object getData(ObjectBinding<Object> instance) {
+        protected Object getData(ObjectBinding<?> instance) {
             return instance.listenerData;
         }
 
         @Override
-        protected void setData(ObjectBinding<Object> instance, Object data) {
+        protected void setData(ObjectBinding<?> instance, Object data) {
             instance.listenerData = data;
         }
     };
@@ -93,22 +93,22 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     @Override
     public void addListener(InvalidationListener listener) {
-        LISTENER_MANAGER.addListener((ObjectBinding<Object>) this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        LISTENER_MANAGER.removeListener((ObjectBinding<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.addListener((ObjectBinding<Object>) this, (ChangeListener<Object>) listener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.removeListener((ObjectBinding<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -199,7 +199,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             valid = false;
             onInvalidating();
 
-            LISTENER_MANAGER.fireValueChanged((ObjectBinding<Object>) this, oldValue);
+            LISTENER_MANAGER.fireValueChanged(this, oldValue);
 
             /*
              * Cached value should be cleared to avoid a strong reference to stale data,

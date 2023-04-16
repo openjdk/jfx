@@ -47,7 +47,7 @@ import javafx.beans.value.ObservableValue;
  * @param <T> the type of the values
  * @param <I> the type of the instance providing listener data
  */
-public abstract class ListenerManager<T, I extends ObservableValue<T>> extends ListenerManagerBase<T, I> {
+public abstract class ListenerManager<T, I extends ObservableValue<? extends T>> extends ListenerManagerBase<T, I> {
 
     /**
      * Adds an invalidation listener.

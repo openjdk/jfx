@@ -75,7 +75,7 @@ public class ListenerList extends ListenerListBase {
      * @return {@code true} if the listener list is not locked, and it was modified during
      *     notification otherwise {@code false}
      */
-    public <T> boolean notifyListeners(ObservableValue<T> observableValue, T oldValue) {
+    public <T> boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
         boolean wasLocked = isLocked();
 
         if (!wasLocked) {
@@ -143,7 +143,7 @@ public class ListenerList extends ListenerListBase {
         }
     }
 
-    private <T> void callChangeListener(ObservableValue<T> instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
+    private <T> void callChangeListener(ObservableValue<? extends T> instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
         try {
             changeListener.changed(instance, oldValue, newValue);
         }
