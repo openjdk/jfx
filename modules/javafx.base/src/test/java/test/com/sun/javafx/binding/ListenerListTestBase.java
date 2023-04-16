@@ -54,7 +54,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 /**
- * Base test class suitable for testing {@link ListenerList} and {@link OldValueCachingListenerList}.
+ * Base test class suitable for testing {@link ListenerList} and {@link com.sun.javafx.binding.OldValueCachingListenerList}.
  *
  * @param <L> the class to test
  */
@@ -311,6 +311,74 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
             assertConsistentChangeSequence("210");
             assertEquals(700, records.size());  // it should be 280 changes + 420 invalidations; 420 because 210 changes * 2 invalidation listeners
         }
+
+        /**
+         * This test adds a mix of listeners that can't easily agree on their final
+         * value. They're looking for a number divisible by 2, 3, 5 and 7, and will keep
+         * incrementing the value by 1 until they all agree. The final value should be
+         * 210, which matches the above criteria.
+         */
+        @Test
+        void shouldSendChangesThatMakeSense_VariantAMixOfListeners() {
+            LongProperty property = new SimpleLongProperty(1);
+            L list = create(il1, il2);
+
+            list.add((InvalidationListener) obs -> {
+                long v = property.get();  // act as change listener
+
+                records.add("IL3: current value " + v);
+
+                if (v % 5 != 0) {
+                    property.set(v + 1);
+                    notifyListeners(list, property, v);
+                }
+            });
+
+            list.add((InvalidationListener) obs -> {
+                long v = property.get();  // act as change listener
+
+                records.add("IL4: current value " + v);
+
+                if (v % 2 != 0) {
+                    property.set(v + 1);
+                    notifyListeners(list, property, v);
+                }
+            });
+
+            list.add((ChangeListener<Number>) (obs, o, n) -> {
+                long v = n.longValue();
+
+                records.add("CL3: changed from " + o + " to " + n);
+
+                if (v % 3 != 0) {
+                    property.set(v + 1);
+                    notifyListeners(list, property, v);
+                }
+            });
+
+            list.add((ChangeListener<Number>) (obs, o, n) -> {
+                long v = n.longValue();
+
+                records.add("CL4: changed from " + o + " to " + n);
+
+                if (v % 7 != 0) {
+                    property.set(v + 1);
+                    notifyListeners(list, property, v);
+                }
+            });
+
+            notifyListeners(list, property, 0);
+
+            assertConsistentChangeSequence("210");
+
+            /*
+             * The total of 700 comes from:
+             * - 210 changes per invalidation listener for the first two listeners that do nothing (il1, il2)
+             * - 280 changes total for all listeners that trigger nested changes (regardless of listener type)
+             */
+
+            assertEquals(700, records.size());
+        }
     }
 
 
@@ -320,6 +388,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
     }
 
     private Pattern PATTERN = Pattern.compile("(?<listener>.*): changed from (?<old>.*) to (?<new>.*)");
+    private Pattern INVALIDATION_PATTERN = Pattern.compile("(?<listener>.*): current value (?<current>.*)");
 
     /**
      * This method checks that all changes follow the following rules:
@@ -340,13 +409,24 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
                 String o = matcher.group("old");
                 String n = matcher.group("new");
 
-                assertNotEquals(o, n, "Listener " + name + " received an change that wasn't a change: " + record);
+                assertNotEquals(o, n, "Listener " + name + " received a change that wasn't a change: " + record);
 
                 if (oldValues.containsKey(name)) {
                     assertEquals(o, oldValues.get(name), "Listener " + name + " received an incorrect old value; expected " + oldValues.get(name) + " but was: " + record);
                 }
 
                 oldValues.put(name, n);
+            }
+        }
+
+        for (String record : records) {
+            Matcher matcher = INVALIDATION_PATTERN.matcher(record);
+
+            if (matcher.matches()) {
+                String name = matcher.group("listener");
+                String c = matcher.group("current");
+
+                oldValues.put(name, c);
             }
         }
 

@@ -105,6 +105,7 @@ public class OldValueCachingListenerList<T> extends ListenerListBase {
             lock();
         }
 
+        T oldValue = getLatestValue();  // save this value here already as even invalidation listeners can influence it
         int initialProgress = progress;  // save as it will be modified soon
         int invalidationListenersSize = invalidationListenersSize();
         int maxInvalidations = wasLocked ? Math.min(initialProgress + 1, invalidationListenersSize) : invalidationListenersSize;
@@ -126,7 +127,6 @@ public class OldValueCachingListenerList<T> extends ListenerListBase {
         int changeListenersSize = changeListenersSize();
         int maxChanges = wasLocked ? Math.min(initialProgress + 1 - invalidationListenersSize, changeListenersSize) : changeListenersSize;
 
-        T oldValue = getLatestValue();
         T newValue = null;
 
         for (int i = 0; i < maxChanges; i++) {
