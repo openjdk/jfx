@@ -42,14 +42,14 @@ import javafx.beans.InvalidationListener;
  */
 public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 
-    private static final OldValueCachingListenerManager<Object, ObservableValueBase<Object>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+    private static final OldValueCachingListenerManager<Object, ObservableValueBase<?>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
         @Override
-        protected Object getData(ObservableValueBase<Object> instance) {
+        protected Object getData(ObservableValueBase<?> instance) {
             return instance.listenerData;
         }
 
         @Override
-        protected void setData(ObservableValueBase<Object> instance, Object data) {
+        protected void setData(ObservableValueBase<?> instance, Object data) {
             instance.listenerData = data;
         }
     };
@@ -67,7 +67,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        LISTENER_MANAGER.addListener((ObservableValueBase<Object>) this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     /**
@@ -75,7 +75,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.addListener((ObservableValueBase<Object>) this, (ChangeListener<Object>) listener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     /**
@@ -83,7 +83,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(InvalidationListener listener) {
-        LISTENER_MANAGER.removeListener((ObservableValueBase<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -91,7 +91,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      */
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.removeListener((ObservableValueBase<Object>) this, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -102,6 +102,6 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
      * the following call to fireValueChangedEvent.
      */
     protected void fireValueChangedEvent() {
-        LISTENER_MANAGER.fireValueChanged((ObservableValueBase<Object>) this);
+        LISTENER_MANAGER.fireValueChanged(this);
     }
 }
