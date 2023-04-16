@@ -171,7 +171,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
             callMultipleListeners(instance, list);
         }
         else if (data instanceof InvalidationListener il) {
-            callInvalidationListener(instance, il);
+            ListenerListBase.callInvalidationListener(instance, il);
         }
         else if (data instanceof ChangeListenerWrapper) {
             @SuppressWarnings("unchecked")
@@ -197,7 +197,7 @@ public abstract class OldValueCachingListenerManager<T, I extends ObservableValu
         changeListenerWrapper.putLatestValue(newValue);
 
         if (!Objects.equals(newValue, oldValue)) {
-            callChangeListener(instance, changeListenerWrapper, oldValue, newValue);
+            ListenerListBase.callChangeListener(instance, changeListenerWrapper, oldValue, newValue);
         }
     }
 

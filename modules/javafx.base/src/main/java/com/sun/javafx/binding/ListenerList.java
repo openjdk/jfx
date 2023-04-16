@@ -133,22 +133,4 @@ public class ListenerList extends ListenerListBase {
 
         return wasLocked ? false : unlock();
     }
-
-    private void callInvalidationListener(ObservableValue<?> instance, InvalidationListener listener) {
-        try {
-            listener.invalidated(instance);
-        }
-        catch (Exception e) {
-            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-        }
-    }
-
-    private <T> void callChangeListener(ObservableValue<? extends T> instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
-        try {
-            changeListener.changed(instance, oldValue, newValue);
-        }
-        catch (Exception e) {
-            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-        }
-    }
 }

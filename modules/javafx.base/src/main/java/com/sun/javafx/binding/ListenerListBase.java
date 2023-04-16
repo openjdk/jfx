@@ -31,6 +31,7 @@ import java.util.function.Predicate;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 /**
  * Manages a mix of invalidation and change listeners, which can be locked in
@@ -402,5 +403,23 @@ public abstract class ListenerListBase {
 
     private void assertNotLocked() {
         assert !isLocked() : "already locked";
+    }
+
+    static final void callInvalidationListener(ObservableValue<?> instance, InvalidationListener listener) {
+        try {
+            listener.invalidated(instance);
+        }
+        catch (Exception e) {
+            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+        }
+    }
+
+    static final <T> void callChangeListener(ObservableValue<? extends T> instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
+        try {
+            changeListener.changed(instance, oldValue, newValue);
+        }
+        catch (Exception e) {
+            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+        }
     }
 }

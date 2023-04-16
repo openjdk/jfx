@@ -56,21 +56,4 @@ public abstract class ListenerManagerBase<T, I extends ObservableValue<? extends
      */
     protected abstract void setData(I instance, Object data);
 
-    protected final void callInvalidationListener(I instance, InvalidationListener listener) {
-        try {
-            listener.invalidated(instance);
-        }
-        catch (Exception e) {
-            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-        }
-    }
-
-    protected final void callChangeListener(I instance, ChangeListener<T> changeListener, T oldValue, T newValue) {
-        try {
-            changeListener.changed(instance, oldValue, newValue);
-        }
-        catch (Exception e) {
-            Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-        }
-    }
 }

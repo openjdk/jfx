@@ -134,7 +134,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
             callMultipleListeners(instance, list, oldValue);
         }
         else if (data instanceof InvalidationListener il) {
-            callInvalidationListener(instance, il);
+            ListenerListBase.callInvalidationListener(instance, il);
         }
         else if (data instanceof ChangeListener) {
             @SuppressWarnings("unchecked")
@@ -142,7 +142,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
             T newValue = instance.getValue();  // Required as an earlier listener may have changed the value, and current value is always needed
 
             if (!Objects.equals(newValue, oldValue)) {
-                callChangeListener(instance, cl, oldValue, newValue);
+                ListenerListBase.callChangeListener(instance, cl, oldValue, newValue);
             }
         }
     }
