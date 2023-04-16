@@ -167,8 +167,8 @@ public abstract class ListenerListBase {
     private int changeListenersCount;
 
     /**
-     * Indicates whether the list is locked, and if so, what the size
-     * of the list was at the time of locking. A non-negative value
+     * Indicates whether the list is locked, and if so, what the total size
+     * of the two lists was at the time of locking. A non-negative value
      * indicates the list is locked, while -1 indicates the list is
      * not locked.
      */
