@@ -26,6 +26,7 @@
 package com.sun.javafx.binding;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
@@ -72,10 +73,11 @@ public class ListenerList extends ListenerListBase {
      * @param <T> the type of the values the observable provides
      * @param observableValue an {@link ObservableValue}, cannot be {@code null}
      * @param oldValue the value held by the observable before it was changed, can be {@code null}
+     * @param latestValueTracker a {@link Consumer} for the latest value, can be {@code null}
      * @return {@code true} if the listener list is not locked, and it was modified during
      *     notification otherwise {@code false}
      */
-    public <T> boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
+    public <T> boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue, Consumer<T> latestValueTracker) {
         boolean wasLocked = isLocked();
 
         if (!wasLocked) {
@@ -115,6 +117,10 @@ public class ListenerList extends ListenerListBase {
             // only get the latest value if this is the first loop or a nested notification occurred:
             if (progress < 0 || i == 0) {
                 newValue = observableValue.getValue();
+
+                if (latestValueTracker != null) {
+                    latestValueTracker.accept(newValue);
+                }
 
                 if (Objects.equals(newValue, oldValue)) {
                     break;

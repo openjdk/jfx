@@ -38,6 +38,6 @@ public class ListenerListTest extends ListenerListTestBase<ListenerList> {
 
     @Override
     protected <T> void notifyListeners(ListenerList list, ObservableValue<T> property, T oldValue) {
-        list.notifyListeners(property, oldValue);
+        list.notifyListeners(property, oldValue, null);
     }
 }

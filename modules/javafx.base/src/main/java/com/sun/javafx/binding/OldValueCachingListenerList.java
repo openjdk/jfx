@@ -25,14 +25,12 @@
 
 package com.sun.javafx.binding;
 
-import java.util.Objects;
+import java.util.function.Consumer;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 /**
- * Extension of {@link ListenerListBase} which given an {@link ObservableValue}
+ * Extension of {@link ListenerList} which given an {@link ObservableValue}
  * provides the means to notify all contained listeners with a depth first
  * approach.<p>
  *
@@ -42,25 +40,10 @@ import javafx.beans.value.ObservableValue;
  *
  * @param <T> the type of the values the observable provides
  */
-public class OldValueCachingListenerList<T> extends ListenerListBase {
-    private T latestValue;
+public class OldValueCachingListenerList<T> extends ListenerList {
+    private final Consumer<T> latestValueTracker = this::putLatestValue;
 
-    /**
-     * This field is only used during notifications, and only relevant
-     * when nested notifications occur. It is used for communicating
-     * information between the different nesting levels. To deeper
-     * nesting levels it contains the number of listeners that have
-     * been notified in higher level loops, while deeper nesting levels
-     * communicate to higher level loops whether a nested notification
-     * actually occurred.<p>
-     *
-     * When its value is zero or positive, it indicates the number of
-     * listeners notified in a higher level loop (minus one), while
-     * when its negative (-1) it indicates to a higher level loop that
-     * a nested notification occurred, requiring, for example, a refresh
-     * of the current value and a new equals check.
-     */
-    private int progress;
+    private T latestValue;
 
     /**
      * Creates a new instance with two listeners.
@@ -99,65 +82,6 @@ public class OldValueCachingListenerList<T> extends ListenerListBase {
      *     notification otherwise {@code false}
      */
     public boolean notifyListeners(ObservableValue<? extends T> observableValue) {
-        boolean wasLocked = isLocked();
-
-        if (!wasLocked) {
-            lock();
-        }
-
-        T oldValue = getLatestValue();  // save this value here already as even invalidation listeners can influence it
-        int initialProgress = progress;  // save as it will be modified soon
-        int invalidationListenersSize = invalidationListenersSize();
-        int maxInvalidations = wasLocked ? Math.min(initialProgress + 1, invalidationListenersSize) : invalidationListenersSize;
-
-        for (int i = 0; i < maxInvalidations; i++) {
-            InvalidationListener listener = getInvalidationListener(i);
-
-            if (listener == null) {
-                continue;
-            }
-
-            // communicate to a lower level loop (if triggered) how many listeners were notified so far:
-            progress = i;
-
-            // call invalidation listener (and perhaps a nested notification):
-            callInvalidationListener(observableValue, listener);
-        }
-
-        int changeListenersSize = changeListenersSize();
-        int maxChanges = wasLocked ? Math.min(initialProgress + 1 - invalidationListenersSize, changeListenersSize) : changeListenersSize;
-
-        T newValue = null;
-
-        for (int i = 0; i < maxChanges; i++) {
-            ChangeListener<T> listener = getChangeListener(i);
-
-            if (listener == null) {
-                continue;
-            }
-
-            // only get the latest value if this is the first loop or a nested notification occurred:
-            if (progress < 0 || i == 0) {
-                newValue = observableValue.getValue();
-
-                // Latest value should even be stored if it was "equals", as it may be a different reference
-                putLatestValue(newValue);
-
-                if (Objects.equals(newValue, oldValue)) {
-                    break;
-                }
-            }
-
-            // communicate to a lower level loop (if triggered) how many listeners were notified so far:
-            progress = i + invalidationListenersSize;
-
-            // call change listener (and perhaps a nested notification):
-            callChangeListener(observableValue, listener, oldValue, newValue);
-        }
-
-        // communicate to a higher level loop that a nested notification occurred:
-        progress = -1;
-
-        return wasLocked ? false : unlock();
+        return notifyListeners(observableValue, getLatestValue(), latestValueTracker);
     }
 }

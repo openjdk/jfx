@@ -148,7 +148,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
     }
 
     private void callMultipleListeners(I instance, ListenerList list, T oldValue) {
-        boolean modified = list.notifyListeners(instance, oldValue);
+        boolean modified = list.notifyListeners(instance, oldValue, null);
 
         if (modified) {  // if modified, compact the data field if possible
             updateAfterRemoval(instance, list);
