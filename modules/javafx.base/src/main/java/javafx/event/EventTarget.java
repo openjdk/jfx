@@ -75,8 +75,8 @@ public interface EventTarget {
     /**
      * Unregisters a previously registered event handler from this target.
      * <p>
-     * It is possible to register a single {@link EventHandler} instance for different event types,
-     * so the caller needs to specify the event type from which the handler should be unregistered.
+     * Since it is possible to register a single {@link EventHandler} instance for different event types,
+     * the caller needs to specify the event type from which the handler should be unregistered.
      *
      * @param <E> the event class of the handler
      * @param eventType the event type from which to unregister
@@ -92,7 +92,7 @@ public interface EventTarget {
     /**
      * Registers an event filter for this target.
      * <p>
-     * The filter is called when the node receives an {@link Event} of the specified
+     * The filter is called when the target receives an {@link Event} of the specified
      * type during the capturing phase of event delivery.
      *
      * @param <E> the event class of the filter
@@ -109,8 +109,8 @@ public interface EventTarget {
     /**
      * Unregisters a previously registered event filter from this target.
      * <p>
-     * It is possible to register a single {@link EventHandler} instance for different event types,
-     * so the caller needs to specify the event type from which the filter should be unregistered.
+     * Since it is possible to register a single {@link EventHandler} instance for different event types,
+     * the caller needs to specify the event type from which the filter should be unregistered.
      *
      * @param <E> the event class of the filter
      * @param eventType the event type from which to unregister
