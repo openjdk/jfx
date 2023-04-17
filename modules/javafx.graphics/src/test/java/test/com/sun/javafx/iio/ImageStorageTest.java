@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -309,7 +309,7 @@ public class ImageStorageTest {
             @Override public ImageLoader createImageLoader(InputStream input) {
                 return new ImageLoaderImpl(formatWithoutSignature) {
                     @Override public void dispose() {}
-                    @Override public ImageFrame load(int i, int w, int h, boolean p, boolean s) {
+                    @Override public ImageFrame load(int i, double w, double h, boolean p, boolean s, float s0, float s1) {
                         return i == 0 ? expectedImage : null;
                     }
                 };

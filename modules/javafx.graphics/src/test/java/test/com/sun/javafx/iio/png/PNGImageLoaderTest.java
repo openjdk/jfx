@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ public class PNGImageLoaderTest {
 
     private void testImage(InputStream stream) throws IOException {
         PNGImageLoader2 loader = new PNGImageLoader2(stream);
-        loader.load(0, 0, 0, true, true);
+        loader.load(0, 0, 0, true, true, 1, 1);
     }
 
     @Test

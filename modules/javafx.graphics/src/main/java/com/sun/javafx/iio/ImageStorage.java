@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,15 @@ import com.sun.javafx.iio.bmp.BMPImageLoaderFactory;
 import com.sun.javafx.iio.common.ImageTools;
 import com.sun.javafx.iio.gif.GIFImageLoaderFactory;
 import com.sun.javafx.iio.ios.IosImageLoaderFactory;
+import com.sun.javafx.iio.javax.XImageLoader;
+import com.sun.javafx.iio.javax.XImageLoaderFactory;
 import com.sun.javafx.iio.jpeg.JPEGImageLoaderFactory;
 import com.sun.javafx.iio.png.PNGImageLoaderFactory;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.util.DataURI;
 import com.sun.javafx.util.Logging;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -281,15 +284,10 @@ public class ImageStorage {
         ImageFrame[] images = null;
 
         try {
-            if (isIOS) {
-                // no extension/signature recognition done here,
-                // we always want the iOS native loader
-                loader = IosImageLoaderFactory.getInstance().createImageLoader(input);
-            } else {
-                loader = getLoaderBySignature(input, listener);
-            }
+            loader = findImageLoader(input, listener);
+
             if (loader != null) {
-                images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, smooth);
+                images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, 1, smooth);
             } else {
                 throw new ImageStorageException("No loader for image data");
             }
@@ -332,40 +330,64 @@ public class ImageStorage {
 
                     // Find a factory that can load images with the specified MIME type.
                     var factory = loaderFactoriesByMimeSubtype.get(dataUri.getMimeSubtype().toLowerCase());
-                    if (factory == null) {
-                        throw new IllegalArgumentException(
-                            "Unsupported MIME subtype: image/" + dataUri.getMimeSubtype());
-                    }
+                    if (factory != null) {
+                        // We also inspect the image file signature to confirm that it matches the MIME type.
+                        theStream = new ByteArrayInputStream(dataUri.getData());
+                        ImageLoader loaderBySignature = getLoaderBySignature(theStream, listener);
 
-                    // We also inspect the image file signature to confirm that it matches the MIME type.
-                    theStream = new ByteArrayInputStream(dataUri.getData());
-                    ImageLoader loaderBySignature = getLoaderBySignature(theStream, listener);
+                        if (loaderBySignature != null) {
+                            // If the MIME type doesn't agree with the file signature, log a warning and
+                            // continue with the image loader that matches the file signature.
+                            boolean imageTypeMismatch = !factory.getFormatDescription().getFormatName().equals(
+                                loaderBySignature.getFormatDescription().getFormatName());
 
-                    if (loaderBySignature != null) {
-                        // If the MIME type doesn't agree with the file signature, log a warning and
-                        // continue with the image loader that matches the file signature.
-                        boolean imageTypeMismatch = !factory.getFormatDescription().getFormatName().equals(
-                            loaderBySignature.getFormatDescription().getFormatName());
+                            if (imageTypeMismatch) {
+                                var logger = Logging.getJavaFXLogger();
+                                if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
+                                    logger.warning(String.format(
+                                        "Image format '%s' does not match MIME type '%s/%s' in URI '%s'",
+                                        loaderBySignature.getFormatDescription().getFormatName(),
+                                        dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri));
+                                }
+                            }
+
+                            loader = loaderBySignature;
+                        } else {
+                            // We're here because the image format doesn't have a detectable signature.
+                            // In this case, we need to close the input stream (because we already consumed
+                            // parts of it to detect a potential file signature) and create a new input
+                            // stream for the image loader that matches the MIME type.
+                            theStream.close();
+                            theStream = new ByteArrayInputStream(dataUri.getData());
+                            loader = factory.createImageLoader(theStream);
+                        }
+                    } else {
+                        // If we don't have a built-in loader factory we try to find an ImageIO loader
+                        // that can load the content of the data URI.
+                        XImageLoader imageLoader = (XImageLoader)XImageLoaderFactory.getInstance()
+                            .createImageLoader(new ByteArrayInputStream(dataUri.getData()));
+
+                        if (imageLoader == null) {
+                            throw new IllegalArgumentException(
+                                "Unsupported MIME subtype: image/" + dataUri.getMimeSubtype());
+                        }
+
+                        // If the specified MIME type doesn't agree with any of the supported MIME types of
+                        // the XImageLoader, we log a warning but continue to load the image.
+                        boolean imageTypeMismatch = imageLoader.getFormatDescription().getMIMESubtypes().stream()
+                                .noneMatch(dataUri.getMimeSubtype()::equals);
 
                         if (imageTypeMismatch) {
                             var logger = Logging.getJavaFXLogger();
                             if (logger.isLoggable(PlatformLogger.Level.WARNING)) {
                                 logger.warning(String.format(
                                     "Image format '%s' does not match MIME type '%s/%s' in URI '%s'",
-                                    loaderBySignature.getFormatDescription().getFormatName(),
+                                    imageLoader.getFormatDescription().getFormatName(),
                                     dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri));
                             }
                         }
 
-                        loader = loaderBySignature;
-                    } else {
-                        // We're here because the image format doesn't have a detectable signature.
-                        // In this case, we need to close the input stream (because we already consumed
-                        // parts of it to detect a potential file signature) and create a new input
-                        // stream for the image loader that matches the MIME type.
-                        theStream.close();
-                        theStream = new ByteArrayInputStream(dataUri.getData());
-                        loader = factory.createImageLoader(theStream);
+                        loader = imageLoader;
                     }
                 } else {
                     if (devPixelScale >= 1.5f) {
@@ -382,18 +404,14 @@ public class ImageStorage {
                         theStream = ImageTools.createInputStream(input);
                     }
 
-                    if (isIOS) {
-                        loader = IosImageLoaderFactory.getInstance().createImageLoader(theStream);
-                    } else {
-                        loader = getLoaderBySignature(theStream, listener);
-                    }
+                    loader = findImageLoader(theStream, listener);
                 }
             } catch (Exception e) {
                 throw new ImageStorageException(e.getMessage(), e);
             }
 
             if (loader != null) {
-                images = loadAll(loader, width, height, preserveAspectRatio, imgPixelScale, smooth);
+                images = loadAll(loader, width, height, preserveAspectRatio, devPixelScale, imgPixelScale, smooth);
             } else {
                 throw new ImageStorageException("No loader for image data");
             }
@@ -429,16 +447,14 @@ public class ImageStorage {
 
     private ImageFrame[] loadAll(ImageLoader loader,
             double width, double height, boolean preserveAspectRatio,
-            float pixelScale, boolean smooth) throws ImageStorageException {
+            float devPixelScale, float imgPixelScale, boolean smooth) throws ImageStorageException {
         ImageFrame[] images = null;
         ArrayList<ImageFrame> list = new ArrayList<>();
         int imageIndex = 0;
         ImageFrame image = null;
-        int imgw = (int) Math.round(width * pixelScale);
-        int imgh = (int) Math.round(height * pixelScale);
         do {
             try {
-                image = loader.load(imageIndex++, imgw, imgh, preserveAspectRatio, smooth);
+                image = loader.load(imageIndex++, width, height, preserveAspectRatio, smooth, devPixelScale, imgPixelScale);
             } catch (Exception e) {
                 // allow partially loaded animated images
                 if (imageIndex > 1) {
@@ -448,7 +464,6 @@ public class ImageStorage {
                 }
             }
             if (image != null) {
-                image.setPixelScale(pixelScale);
                 list.add(image);
             } else {
                 break;
@@ -460,6 +475,29 @@ public class ImageStorage {
             list.toArray(images);
         }
         return images;
+    }
+
+    private ImageLoader findImageLoader(InputStream stream, ImageLoadListener listener) throws IOException {
+        if (isIOS) {
+            return IosImageLoaderFactory.getInstance().createImageLoader(stream);
+        }
+
+        // We need a stream that supports the mark and reset methods, since XImageLoader
+        // is used as a fallback after our built-in loader selection has already consumed
+        // part of the input stream.
+        if (!stream.markSupported()) {
+            stream = new BufferedInputStream(stream);
+        }
+
+        stream.mark(Integer.MAX_VALUE);
+        ImageLoader loader = getLoaderBySignature(stream, listener);
+
+        if (loader == null) {
+            stream.reset();
+            loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+        }
+
+        return loader;
     }
 
 //    private static ImageLoader getLoaderByExtension(String input, ImageLoadListener listener) {
