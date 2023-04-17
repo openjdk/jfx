@@ -731,12 +731,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         return tail.prepend(eventHandlerManager);
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * The {@code TableColumnBase} class allows registration of listeners which will be notified when editing occurs.
-     * Note that {@code TableColumnBase} is <b>not</b> a {@link Node}, and therefore no visual events will be fired on it.
-     */
     @Override
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
@@ -747,12 +741,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * The {@code TableColumnBase} class allows registration of listeners which will be notified when editing occurs.
-     * Note that {@code TableColumnBase} is <b>not</b> a {@link Node}, and therefore no visual events will be fired on it.
-     */
     @Override
     public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventFilter(eventType, eventHandler);
