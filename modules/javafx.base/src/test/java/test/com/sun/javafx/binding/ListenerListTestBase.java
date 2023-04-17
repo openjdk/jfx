@@ -77,7 +77,7 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
     };
 
     protected abstract L create(Object listener1, Object listener2);
-    protected abstract <T> void notifyListeners(L list, ObservableValue<T> property, T oldValue);
+    protected abstract <T> void notifyListeners(L list, ObservableValue<? extends T> property, T oldValue);
 
     @Test
     void shouldNotifyAllListeners() {

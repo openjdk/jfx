@@ -26,7 +26,6 @@
 package com.sun.javafx.binding;
 
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
@@ -36,8 +35,10 @@ import javafx.beans.value.ObservableValue;
  * Extension of {@link ListenerListBase} which given an {@link ObservableValue}
  * and its old value provides the means to notify all contained listeners
  * with a depth first approach.
+ *
+ * @param <T> the type of the values the observable provides
  */
-public class ListenerList extends ListenerListBase {
+public class ListenerList<T> extends ListenerListBase {
 
     /**
      * This field is only used during notifications, and only relevant
@@ -70,14 +71,12 @@ public class ListenerList extends ListenerListBase {
     /**
      * Notifies all listeners using the given observable value as source.
      *
-     * @param <T> the type of the values the observable provides
      * @param observableValue an {@link ObservableValue}, cannot be {@code null}
      * @param oldValue the value held by the observable before it was changed, can be {@code null}
-     * @param latestValueTracker a {@link Consumer} for the latest value, can be {@code null}
      * @return {@code true} if the listener list is not locked, and it was modified during
      *     notification otherwise {@code false}
      */
-    public <T> boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue, Consumer<T> latestValueTracker) {
+    public boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
         boolean wasLocked = isLocked();
 
         if (!wasLocked) {
@@ -118,9 +117,7 @@ public class ListenerList extends ListenerListBase {
             if (progress < 0 || i == 0) {
                 newValue = observableValue.getValue();
 
-                if (latestValueTracker != null) {
-                    latestValueTracker.accept(newValue);
-                }
+                valueObtained(newValue);
 
                 if (Objects.equals(newValue, oldValue)) {
                     break;
@@ -138,5 +135,16 @@ public class ListenerList extends ListenerListBase {
         progress = -1;
 
         return wasLocked ? false : unlock();
+    }
+
+    /**
+     * Called during notifications when a new value was obtained from the
+     * involved {@link ObservableValue}.<p>
+     *
+     * This is useful when this value needs to be kept track of.
+     *
+     * @param value the value that was obtained, can be {@code null}
+     */
+    protected void valueObtained(T value) {
     }
 }

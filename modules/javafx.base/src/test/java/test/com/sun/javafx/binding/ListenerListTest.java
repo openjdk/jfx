@@ -29,15 +29,15 @@ import com.sun.javafx.binding.ListenerList;
 
 import javafx.beans.value.ObservableValue;
 
-public class ListenerListTest extends ListenerListTestBase<ListenerList> {
+public class ListenerListTest extends ListenerListTestBase<ListenerList<Object>> {
 
     @Override
-    protected ListenerList create(Object listener1, Object listener2) {
-        return new ListenerList(listener1, listener2);
+    protected ListenerList<Object> create(Object listener1, Object listener2) {
+        return new ListenerList<>(listener1, listener2);
     }
 
     @Override
-    protected <T> void notifyListeners(ListenerList list, ObservableValue<T> property, T oldValue) {
-        list.notifyListeners(property, oldValue, null);
+    protected <T> void notifyListeners(ListenerList<Object> list, ObservableValue<? extends T> property, T oldValue) {
+        list.notifyListeners(property, oldValue);
     }
 }

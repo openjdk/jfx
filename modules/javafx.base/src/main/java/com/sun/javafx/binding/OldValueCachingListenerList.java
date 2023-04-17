@@ -25,8 +25,6 @@
 
 package com.sun.javafx.binding;
 
-import java.util.function.Consumer;
-
 import javafx.beans.value.ObservableValue;
 
 /**
@@ -40,9 +38,7 @@ import javafx.beans.value.ObservableValue;
  *
  * @param <T> the type of the values the observable provides
  */
-public class OldValueCachingListenerList<T> extends ListenerList {
-    private final Consumer<T> latestValueTracker = this::putLatestValue;
-
+public class OldValueCachingListenerList<T> extends ListenerList<T> {
     private T latestValue;
 
     /**
@@ -82,6 +78,11 @@ public class OldValueCachingListenerList<T> extends ListenerList {
      *     notification otherwise {@code false}
      */
     public boolean notifyListeners(ObservableValue<? extends T> observableValue) {
-        return notifyListeners(observableValue, getLatestValue(), latestValueTracker);
+        return notifyListeners(observableValue, getLatestValue());
+    }
+
+    @Override
+    protected final void valueObtained(T value) {
+        putLatestValue(value);
     }
 }

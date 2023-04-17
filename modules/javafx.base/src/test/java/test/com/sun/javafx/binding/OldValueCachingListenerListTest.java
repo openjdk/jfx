@@ -37,7 +37,7 @@ public class OldValueCachingListenerListTest extends ListenerListTestBase<OldVal
     }
 
     @Override
-    protected <T> void notifyListeners(OldValueCachingListenerList<?> list, ObservableValue<T> property, T oldValue) {
+    protected <T> void notifyListeners(OldValueCachingListenerList<?> list, ObservableValue<? extends T> property, T oldValue) {
         @SuppressWarnings("unchecked")
         OldValueCachingListenerList<T> oldValueCachingListenerList = (OldValueCachingListenerList<T>) list;
 
