@@ -8550,7 +8550,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private boolean treeVisible = true;
-    private TreeVisiblePropertyReadOnly treeVisibleRO;
+    private TreeVisibleProperty treeVisibleProperty;
 
     final void setTreeVisible(boolean value) {
         if (treeVisible != value) {
@@ -8563,7 +8563,9 @@ public abstract class Node implements EventTarget, Styleable {
             if (treeVisible && !isDirtyEmpty()) {
                 addToSceneDirtyList();
             }
-            ((TreeVisiblePropertyReadOnly) treeVisibleProperty()).invalidate();
+            if (treeVisibleProperty != null) {
+                treeVisibleProperty.invalidate();
+            }
             if (Node.this instanceof Parent parent) {
                 for (Node child : parent.getChildren()) {
                     child.updateTreeVisible(true);
@@ -8583,14 +8585,14 @@ public abstract class Node implements EventTarget, Styleable {
         return treeVisibleProperty().get();
     }
 
-    final BooleanExpression treeVisibleProperty() {
-        if (treeVisibleRO == null) {
-            treeVisibleRO = new TreeVisiblePropertyReadOnly();
+    final ReadOnlyBooleanProperty treeVisibleProperty() {
+        if (treeVisibleProperty == null) {
+            treeVisibleProperty = new TreeVisibleProperty();
         }
-        return treeVisibleRO;
+        return treeVisibleProperty;
     }
 
-    class TreeVisiblePropertyReadOnly extends ReadOnlyBooleanPropertyBase {
+    class TreeVisibleProperty extends ReadOnlyBooleanPropertyBase {
 
         private boolean valid;
 
