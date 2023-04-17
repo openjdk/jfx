@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,7 +204,8 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     }
 
     @Override
-    public ImageFrame load(int imageIndex, int width, int height, boolean preserveAspectRatio, boolean smooth) throws IOException {
+    public ImageFrame load(int imageIndex, double w, double h, boolean preserveAspectRatio, boolean smooth,
+                           float screenPixelScale, float imagePixelScale) throws IOException {
         if (imageIndex != 0) {
             return null;
         }
@@ -212,9 +213,10 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         accessLock.lock();
 
         // Determine output image dimensions.
-        int[] widthHeight = ImageTools.computeDimensions(inWidth, inHeight, width, height, preserveAspectRatio);
-        width = widthHeight[0];
-        height = widthHeight[1];
+        int[] widthHeight = ImageTools.computeDimensions(
+            inWidth, inHeight, (int)(w * imagePixelScale), (int)(h * imagePixelScale), preserveAspectRatio);
+        int width = widthHeight[0];
+        int height = widthHeight[1];
 
         ImageMetadata md = new ImageMetadata(null, true,
                 null, null, null, null, null,
@@ -267,7 +269,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         }
 
         return new ImageFrame(outImageType, buffer,
-                width, height, width * outNumComponents, null, md);
+                width, height, width * outNumComponents, null, imagePixelScale, md);
     }
 
     private static class Lock {

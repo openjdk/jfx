@@ -131,7 +131,7 @@ public class GIFLoaderTest {
 
         // Now try to load the image; it should get an EOFException
         try {
-            loader.load(0, 1, 1, true, true);
+            loader.load(0, 1, 1, true, true, 1, 1);
         } catch (EOFException ex) {
             return; // PASSED
         } catch (IOException ioEx) {
@@ -209,7 +209,7 @@ public class GIFLoaderTest {
         InputStream i = this.getClass().getResourceAsStream(fname);
         InputStream testStream = ImageTestHelper.createStutteringInputStream(i);
         ImageLoader l = new GIFImageLoader2(testStream);
-        ImageFrame f = l.load(0, 0, 0, true, false);
+        ImageFrame f = l.load(0, 0, 0, true, false, 1, 1);
         InputStream i2 = this.getClass().getResourceAsStream(fname);
         BufferedImage bimg = javax.imageio.ImageIO.read(i2);
 
