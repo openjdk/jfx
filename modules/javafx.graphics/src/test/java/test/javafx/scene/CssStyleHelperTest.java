@@ -611,7 +611,7 @@ public class CssStyleHelperTest {
     }
 
     @Test
-    public void initialNodeWithUserSetValueShouldNotResetValuesOnOtherNodesWithoutOverridenValue() throws IOException {
+    public void initialNodeWithUserSetValueShouldNotResetValuesOnOtherNodesWithoutOverriddenValue() throws IOException {
         Stylesheet stylesheet = new CssParser().parse(
             "initialNodeWithUserSetValueShouldNotResetValuesOnOtherNodesWithoutOverridenValue",
             """
