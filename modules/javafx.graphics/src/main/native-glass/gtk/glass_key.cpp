@@ -271,6 +271,14 @@ jint get_glass_key(GdkEventKey* e) {
 
 gint find_gdk_keyval_for_glass_keycode(jint code) {
     gint result = -1;
+
+    // ENTER is assigned to both Enter on the keypad and
+    // Return on the main keyboard. Make sure we always
+    // target the main keyboard.
+    if (code == com_sun_glass_events_KeyEvent_VK_ENTER) {
+        return GDK_KEY_Return;
+    }
+
     GHashTableIter iter;
     gpointer key, value;
     init_keymap();
@@ -284,14 +292,24 @@ gint find_gdk_keyval_for_glass_keycode(jint code) {
     return result;
 }
 
-static int search_keys(GdkKeymapKey* keys, gint n_keys, int search_group)
+static gint search_keys(GdkKeymap* keymap, GdkKeymapKey* keys, gint n_keys, int search_group, bool requires_num_lock)
 {
-    int result = -1;
-    for (gint i = 0; i < n_keys; ++i)
-    {
-        if (keys[i].group == search_group &&
-            keys[i].level == 0)
-        {
+    gint result = -1;
+
+    // Keyvals that require numlock may be presented on a level other than 0.
+    // Keys common to all layouts (e.g. Backspace, keys on the numeric keypad)
+    // may be presented on layout 0 even if that's not the current layout. We
+    // use translate_keyboard_state to find the effective group and level.
+    GdkModifierType state = (GdkModifierType) 0;
+    if (requires_num_lock) {
+        state = GDK_MOD2_MASK;
+    }
+    for (gint i = 0; i < n_keys; ++i) {
+        gint group = search_group;
+        gint level = 0;
+        gdk_keymap_translate_keyboard_state(keymap, keys[i].keycode, state, search_group,
+            nullptr, &group, &level, nullptr);
+        if (keys[i].group == group && keys[i].level == level) {
             result = keys[i].keycode;
             break;
         }
@@ -299,42 +317,70 @@ static int search_keys(GdkKeymapKey* keys, gint n_keys, int search_group)
     return result;
 }
 
-extern "C" {
-    static int get_current_keyboard_group();
+static bool keyval_requires_numlock(gint keyval) {
+    switch (keyval) {
+        case GDK_KEY_KP_Equal:
+        case GDK_KEY_KP_Multiply:
+        case GDK_KEY_KP_Add:
+        case GDK_KEY_KP_Subtract:
+        case GDK_KEY_KP_Decimal:
+        case GDK_KEY_KP_Separator:
+        case GDK_KEY_KP_Divide:
+        case GDK_KEY_KP_0:
+        case GDK_KEY_KP_1:
+        case GDK_KEY_KP_2:
+        case GDK_KEY_KP_3:
+        case GDK_KEY_KP_4:
+        case GDK_KEY_KP_5:
+        case GDK_KEY_KP_6:
+        case GDK_KEY_KP_7:
+        case GDK_KEY_KP_8:
+        case GDK_KEY_KP_9:
+            return true;
+        default:
+            return false;
+    }
 }
 
-int find_gdk_keycode_for_keyval(gint keyval)
+extern "C" {
+    static gint get_current_keyboard_group();
+}
+
+gint find_gdk_keycode_for_keyval(gint keyval)
 {
-    Display *xdisplay = gdk_x11_get_default_xdisplay();
     GdkKeymapKey *keys = nullptr;
     gint n_keys = 0;
-    GdkKeymap* keymap = gdk_keymap_get_default();
+    GdkKeymap* keymap = gdk_keymap_get_for_display(gdk_display_get_default());
 
     // GDK assigns different keyvals to upper and lower case
     // letters. We're looking for the level 0 character that
     // was originally used to assign the code in get_glass_key.
     keyval = gdk_keyval_to_lower(keyval);
-    if (!gdk_keymap_get_entries_for_keyval(keymap, keyval, &keys, &n_keys))
+    if (!gdk_keymap_get_entries_for_keyval(keymap, keyval, &keys, &n_keys)) {
         return -1;
+    }
 
-    int result = -1;
-    if (n_keys == 1)
-    {
+    gint result = -1;
+    if (n_keys == 1) {
         result = keys[0].keycode;
     }
-    else
-    {
-        int group = get_current_keyboard_group();
-        result = search_keys(keys, n_keys, group);
+    else {
+        gint group = get_current_keyboard_group();
+        bool requires_num_lock = keyval_requires_numlock(keyval);
+        result = search_keys(keymap, keys, n_keys, group, requires_num_lock);
 
-        // Java VK codes are Latin which means we might not be able
-        // to find them on non-Latin layouts. The equivalent logic
-        // in get_glass_key just assumes the first layout is Latin.
-        // And for fixed-function keys like Space the GDK API is
-        // likely to return results on group 0 even if it's not the
-        // current group.
-        if (result < 0 && group != 0)
-            result = search_keys(keys, n_keys, 0);
+        if (result < 0 && group != 0) {
+            // Accelerators involving the characters A-Z must work even on
+            // non-Latin layouts. If get_glass_key can't map to a Java key code
+            // on the current layout it switches to layout 0 seeking a Latin
+            // mapping. This is wrong in two ways: layout 0 might not be Latin
+            // and even if it is Latin it should only be used for finding
+            // KeyCodes A-Z. We continue the tradition of using group 0 but only
+            // for A-Z.
+            if (keyval >= GDK_KEY_a && keyval <= GDK_KEY_z) {
+                result = search_keys(keymap, keys, n_keys, 0, requires_num_lock);
+            }
+        }
     }
 
     g_free(keys);
