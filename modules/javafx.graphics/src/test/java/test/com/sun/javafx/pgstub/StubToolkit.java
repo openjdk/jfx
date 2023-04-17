@@ -164,7 +164,7 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public void exit() {
-        System.exit(0);
+        throw new UnsupportedOperationException("This stub method should not be called");
     }
 
     @Override
