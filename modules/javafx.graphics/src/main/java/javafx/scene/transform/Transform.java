@@ -671,8 +671,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * Lazily computed read-only boolean property implementation.
      * Used for type2D and identity properties.
      */
-    private static abstract class LazyBooleanProperty
-            extends ReadOnlyBooleanPropertyBase {
+    private static abstract class LazyBooleanProperty extends ReadOnlyBooleanPropertyBase {
 
         private boolean valid;
         private boolean value;
