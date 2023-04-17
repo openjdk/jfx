@@ -141,7 +141,7 @@ public class ObservableValueWhenTest {
             BooleanProperty condition = new SimpleBooleanProperty(false);
 
             @Test
-            void shouldCallDownstreamMapFunctionOnlyWhenAbsolutelyNecessary() {
+            void shouldCallDownstreamMapFunctionOnlyWhenAbsolutelyNeeded() {
                 StringProperty property = new SimpleStringProperty("a");
                 List<String> observedMappings = new ArrayList<>();
                 List<String> observedChanges = new ArrayList<>();
@@ -190,7 +190,7 @@ public class ObservableValueWhenTest {
             BooleanProperty condition = new SimpleBooleanProperty(true);
 
             @Test
-            void shouldCallDownstreamMapFunctionOnlyWhenAbsolutelyNecessary() {
+            void shouldCallDownstreamMapFunctionOnlyWhenAbsolutelyNeeded() {
                 StringProperty property = new SimpleStringProperty("a");
                 List<String> observedMappings = new ArrayList<>();
                 List<String> observedChanges = new ArrayList<>();
@@ -257,12 +257,15 @@ public class ObservableValueWhenTest {
 
                 assertEquals(0, observedInvalidations.get());
 
-                when.getValue();  // would make no difference, inactive when bindings are always valid
+                // would make no difference, inactive "when" bindings are always valid
+                when.getValue();
+
                 property.set("b2");
 
                 assertEquals(0, observedInvalidations.get());
 
-                condition.set(true);  // as inactive when's are always valid, when it becomes active and the value has changed, it must invalidate
+                // as inactive "when"'s are always valid, when it becomes active and the value has changed, it must invalidate
+                condition.set(true);
 
                 assertEquals(1, observedInvalidations.get());
 
@@ -270,17 +273,20 @@ public class ObservableValueWhenTest {
 
                 assertEquals(1, observedInvalidations.get());
 
-                property.get();  // should not matter, as it is the observable resulting from when that isn't valid
+                // should not matter, as it is the observable resulting from "when" that isn't valid
+                property.get();
                 property.set("d");
 
                 assertEquals(1, observedInvalidations.get());
 
-                when.getValue();  // this will make the when valid, and so we can expect a new invalidation
+                // this will make the "when" valid, and so we can expect a new invalidation
+                when.getValue();
                 property.set("e");
 
                 assertEquals(2, observedInvalidations.get());
 
-                condition.set(false);  // this will make the when valid (it is always valid when inactive), but it can't change now
+                // this will make the "when" valid (it is always valid when inactive), but it can't change now
+                condition.set(false);
 
                 assertEquals(2, observedInvalidations.get());
 
@@ -288,7 +294,8 @@ public class ObservableValueWhenTest {
 
                 assertEquals(2, observedInvalidations.get());
 
-                condition.set(true);  // when becoming active again, it was valid, and it has changed, so expect invalidation
+                // when becoming active again, it was valid, and it has changed, so expect invalidation
+                condition.set(true);
 
                 assertEquals(3, observedInvalidations.get());
             }
@@ -317,17 +324,20 @@ public class ObservableValueWhenTest {
 
                 assertEquals(1, observedInvalidations.get());
 
-                property.get();  // should not matter, as it is the observable resulting from when that isn't valid
+                // should not matter, as it is the observable resulting from "when" that isn't valid
+                property.get();
                 property.set("d");
 
                 assertEquals(1, observedInvalidations.get());
 
-                when.getValue();  // this will make the when valid, and so we can expect a new invalidation
+                // this will make the "when" valid, and so we can expect a new invalidation
+                when.getValue();
                 property.set("e");
 
                 assertEquals(2, observedInvalidations.get());
 
-                condition.set(false);  // this will make the when valid (it is always valid when inactive), but it can't change now
+                // this will make the "when" valid (it is always valid when inactive), but it can't change now
+                condition.set(false);
 
                 assertEquals(2, observedInvalidations.get());
 
@@ -335,12 +345,14 @@ public class ObservableValueWhenTest {
 
                 assertEquals(2, observedInvalidations.get());
 
-                when.getValue();  // would make no difference, inactive when bindings are always valid
+                // would make no difference, inactive "when" bindings are always valid
+                when.getValue();
                 property.set("f2");
 
                 assertEquals(2, observedInvalidations.get());
 
-                condition.set(true);  // when becoming active again, it was valid, and it has changed, so expect invalidation
+                // when becoming active again, it was valid, and it has changed, so expect invalidation
+                condition.set(true);
 
                 assertEquals(3, observedInvalidations.get());
 
