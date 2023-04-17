@@ -58,6 +58,7 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
+import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.ImagePattern;
@@ -630,6 +631,11 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("+ SWG.drawGlyphList, gl.Count: " + gl.getGlyphCount() +
                     ", x: " + x + ", y: " + y +
                     ", selectStart: " + selectStart + ", selectEnd: " + selectEnd);
+        }
+
+        if (strike.getFontResource().isColorGlyph(gl.getGlyphCode(0))) {
+            drawColorGlyph(gl, strike, x, y, selectColor, selectStart, selectEnd);
+            return;
         }
 
         final float bx, by, bw, bh;

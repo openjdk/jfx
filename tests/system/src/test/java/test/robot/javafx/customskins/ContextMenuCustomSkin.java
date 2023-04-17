@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,39 +23,13 @@
  * questions.
  */
 
-package test.com.sun.glass.ui.gtk;
+package test.robot.javafx.customskins;
 
-import com.sun.javafx.PlatformUtil;
-import java.io.ByteArrayOutputStream;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.skin.ContextMenuSkin;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-
-public class Gtk2Deprecation1Test extends Gtk2DeprecationCommon {
-
-    @BeforeClass
-    public static void setup() throws Exception {
-        doSetup(true);
+public class ContextMenuCustomSkin extends ContextMenuSkin {
+    public ContextMenuCustomSkin(ContextMenu menu) {
+        super(menu);
     }
-
-    @AfterClass
-    public static void teardown() {
-        doTeardown();
-    }
-
-    @Test
-    public void testDeprecationMessage() throws Exception {
-        assumeTrue(PlatformUtil.isLinux());
-
-        final String output = out.toString();
-        System.err.println(output);
-        assertTrue("Missing warning message", output.contains("WARNING"));
-        assertTrue("Missing warning message", output.contains("deprecated"));
-        assertTrue("Missing warning message", output.contains("removed"));
-    }
-
 }

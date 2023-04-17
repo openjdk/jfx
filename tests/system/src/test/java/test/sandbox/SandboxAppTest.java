@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,8 +45,8 @@ public class SandboxAppTest {
     private static final String className = SandboxAppTest.class.getName();
     private static final String pkgName = className.substring(0, className.lastIndexOf("."));
 
-    private static String getTestPolicyFile() {
-        return SandboxAppTest.class.getResource("test.policy").toExternalForm();
+    private static String getTestPolicyFile(String policy) {
+        return SandboxAppTest.class.getResource(policy).toExternalForm();
     }
 
     private void runSandboxedApp(String appName) throws Exception {
@@ -54,8 +54,12 @@ public class SandboxAppTest {
     }
 
     private void runSandboxedApp(String appName, int exitCode) throws Exception {
+        runSandboxedApp(appName, exitCode, "test.policy");
+    }
+
+    private void runSandboxedApp(String appName, int exitCode, String policy) throws Exception {
         final String testAppName = pkgName + ".app." + appName;
-        final String testPolicy = getTestPolicyFile();
+        final String testPolicy = getTestPolicyFile(policy);
 
         final ArrayList<String> cmd =
                 test.util.Util.createApplicationLaunchCommand(
@@ -130,4 +134,8 @@ public class SandboxAppTest {
         runSandboxedApp("JFXPanelImplicitExitApp", 0);
     }
 
+    @Test (timeout = 25000)
+    public void testFXWebApp() throws Exception {
+        runSandboxedApp("FXWebApp", ERROR_NONE, "empty.policy");
+    }
 }

@@ -35,6 +35,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
@@ -2246,8 +2247,6 @@ public class TableView<S> extends Control {
 
         private int itemCount = 0;
 
-        private final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
-
         /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
@@ -2709,7 +2708,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void selectIndices(int row, int... rows) {
-            if (rows == null) {
+            if (rows == null || rows.length == 0) {
                 select(row);
                 return;
             }
@@ -3189,7 +3188,7 @@ public class TableView<S> extends Control {
                 return;
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, Function.identity(), selectedCellsSeq));
         }
     }
 

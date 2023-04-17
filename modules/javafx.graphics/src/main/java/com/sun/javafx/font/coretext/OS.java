@@ -59,13 +59,16 @@ class OS {
 
     /* Custom */
     static final native byte[] CGBitmapContextGetData(long c, int width, int height, int bpp);
+    static final native byte[] CGImageContextGetData(long c, int width, int height, int bpp);
     static final native void CGRectApplyAffineTransform(CGRect rect, CGAffineTransform t);
     static final native Path2D CGPathApply(long path);
     static final native CGRect CGPathGetPathBoundingBox(long path);
     static final native long CFStringCreateWithCharacters(long alloc, char[] chars, long start, long numChars);
+    static final native String CTFontCopyURLAttribute(long font);
     static final native String CTFontCopyAttributeDisplayName(long font);
     static final native void CTFontDrawGlyphs(long font, short glyphs, double x, double y, long context);
     static final native double CTFontGetAdvancesForGlyphs(long font, int orientation, short glyphs, CGSize advances);
+    static final native CGRect CTFontGetBoundingRectForGlyphs(long font, short glyph);
     static final native boolean CTFontGetBoundingRectForGlyphUsingTables(long font, short glyphs, short format, int[] retArr);
     static final native int CTRunGetGlyphs(long run, int slotMask, int start, int[] buffer);
     static final native int CTRunGetStringIndices(long run, int start, int[] buffer);
@@ -83,6 +86,7 @@ class OS {
     static final native void CFDictionaryAddValue(long theDict, long key, long value);
     static final native long CFDictionaryCreateMutable(long allocator, long capacity, long keyCallBacks, long valueCallBacks);
     static final native long CFDictionaryGetValue(long theDict, long key);
+    static final native void CFRetain(long cf);
     static final native void CFRelease(long cf);
     static final native long CFStringCreateWithCharacters(long alloc, char[] chars, long numChars);
     static final native long CFURLCreateWithFileSystemPath(long allocator, long filePath, long pathStyle, boolean isDirectory);
@@ -102,7 +106,9 @@ class OS {
     static final native long CGFontCreateWithDataProvider(long dataProvider);
     static final native void CGPathRelease(long path);
     static final native long CTFontCreatePathForGlyph(long font, short glyph, CGAffineTransform matrix);
+    static final native long CTFontCreateCopyWithAttributes(long cgFont, double size, CGAffineTransform matrix, long attributes);
     static final native long CTFontCreateWithGraphicsFont(long cgFont, double size, CGAffineTransform matrix, long attributes);
+    static final native long CTFontCreateUIFontForLanguage(double size, CGAffineTransform matrix, boolean bold);
     static final native long CTFontCreateWithName(long name, double size, CGAffineTransform matrix);
     static final native boolean CTFontManagerRegisterFontsForURL(long fontURL, int scope, long error);
     static final native long CTLineCreateWithAttributedString(long string);

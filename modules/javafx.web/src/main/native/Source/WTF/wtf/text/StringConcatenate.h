@@ -25,15 +25,21 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstring>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/StringView.h>
 
-// This macro is helpful for testing how many intermediate Strings are created while evaluating an
+#if defined(NDEBUG)
+#define WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING() do { } while (0)
+#else
+#define WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING() do { ++WTF::Detail::wtfStringCopyCount; } while (0)
+namespace WTF::Detail {
+// This variable is helpful for testing how many intermediate Strings are created while evaluating an
 // expression containing operator+.
-#ifndef WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING
-#define WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING() ((void)0)
+WTF_EXPORT_PRIVATE extern std::atomic<int> wtfStringCopyCount;
+}
 #endif
 
 namespace WTF {
@@ -246,7 +252,7 @@ public:
 
 template<typename... StringTypes> class StringTypeAdapter<std::tuple<StringTypes...>, void> {
 public:
-    StringTypeAdapter(std::tuple<StringTypes...> tuple)
+    StringTypeAdapter(const std::tuple<StringTypes...>& tuple)
         : m_tuple { tuple }
         , m_length { std::apply(computeLength, tuple) }
         , m_is8Bit { std::apply(computeIs8Bit, tuple) }
@@ -257,27 +263,26 @@ public:
     bool is8Bit() const { return m_is8Bit; }
     template<typename CharacterType> void writeTo(CharacterType* destination) const
     {
-        std::apply([&](StringTypes... strings) {
+        std::apply([&](const StringTypes&... strings) {
             unsigned offset = 0;
             (..., (
-                StringTypeAdapter<StringTypes>(strings).writeTo(destination + (offset * sizeof(CharacterType))),
+                StringTypeAdapter<StringTypes>(strings).writeTo(destination + offset),
                 offset += StringTypeAdapter<StringTypes>(strings).length()
             ));
         }, m_tuple);
     }
 
 private:
-    static unsigned computeLength(StringTypes... strings)
+    static unsigned computeLength(const StringTypes&... strings)
     {
         return (... + StringTypeAdapter<StringTypes>(strings).length());
     }
 
-    static bool computeIs8Bit(StringTypes... strings)
+    static bool computeIs8Bit(const StringTypes&... strings)
     {
         return (... && StringTypeAdapter<StringTypes>(strings).is8Bit());
     }
-
-    std::tuple<StringTypes...> m_tuple;
+    const std::tuple<StringTypes...>& m_tuple;
     unsigned m_length;
     bool m_is8Bit;
 };

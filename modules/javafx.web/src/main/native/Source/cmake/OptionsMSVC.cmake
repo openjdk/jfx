@@ -110,11 +110,20 @@ add_compile_options(
 )
 
 if (NOT WTF_CPU_X86)
+    if (PORT STREQUAL "Java")
+    # Suppress creation of pdb files for Release builds
+    # FIXME: Need to re-enable the flag for Debug builds
+    #add_compile_options(/Zi /GS)
+
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /OPT:ICF /OPT:REF")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /OPT:ICF /OPT:REF")
+    else()
     # Create pdb files for debugging purposes, also for Release builds
     add_compile_options(/Zi /GS)
 
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
+    endif()
 endif ()
 
 # We do not use exceptions

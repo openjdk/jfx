@@ -79,7 +79,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
     public static Object bind(Property<String> stringProperty, Property<?> otherProperty, Format format) {
         checkParameters(stringProperty, otherProperty);
         Objects.requireNonNull(format, "Format cannot be null");
-        final var binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format);
+        final var binding = new StringFormatBidirectionalBinding<>(stringProperty, otherProperty, format);
         stringProperty.setValue(format.format(otherProperty.getValue()));
         stringProperty.getValue();
         stringProperty.addListener(binding);
@@ -854,11 +854,10 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         }
     }
 
-    private static class StringFormatBidirectionalBinding extends StringConversionBidirectionalBinding {
+    private static class StringFormatBidirectionalBinding<T> extends StringConversionBidirectionalBinding<T> {
         private final Format format;
 
-        @SuppressWarnings("unchecked")
-        public StringFormatBidirectionalBinding(Property<String> stringProperty, Property<?> otherProperty, Format format) {
+        public StringFormatBidirectionalBinding(Property<String> stringProperty, Property<T> otherProperty, Format format) {
             super(stringProperty, otherProperty);
             this.format = format;
         }
@@ -868,9 +867,10 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
             return format.format(value);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
-        protected Object fromString(String value) throws ParseException {
-            return format.parseObject(value);
+        protected T fromString(String value) throws ParseException {
+            return (T) format.parseObject(value);  // May result in ClassCastException, this is expected
         }
     }
 

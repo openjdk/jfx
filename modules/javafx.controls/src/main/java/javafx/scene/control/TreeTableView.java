@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
@@ -2587,8 +2588,6 @@ public class TreeTableView<S> extends Control {
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
 
-        private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
-
         private TreeTableView<S> treeTableView = null;
 
         /* *********************************************************************
@@ -3087,7 +3086,7 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void selectIndices(int row, int... rows) {
-            if (rows == null) {
+            if (rows == null || rows.length == 0) {
                 select(row);
                 return;
             }
@@ -3568,7 +3567,7 @@ public class TreeTableView<S> extends Control {
                 return;
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, Function.identity(), selectedCellsSeq));
         }
     }
 

@@ -1757,6 +1757,10 @@ void RenderLayerCompositor::layerStyleChanged(StyleDifference diff, RenderLayer&
             if (styleAffectsLayerGeometry(*oldStyle) || styleAffectsLayerGeometry(newStyle))
                 layer.setNeedsCompositingGeometryUpdate();
         }
+
+        // image rendering mode can determine whether we use device pixel ratio for the backing store.
+        if (oldStyle && oldStyle->imageRendering() != newStyle.imageRendering())
+            layer.setNeedsCompositingConfigurationUpdate();
     }
 
     if (diff >= StyleDifference::RecompositeLayer) {
@@ -2956,6 +2960,25 @@ Vector<CompositedClipData> RenderLayerCompositor::computeAncestorClippingStack(c
         auto backgroundClip = clippedLayer.backgroundClipRect(RenderLayer::ClipRectsContext(&clippingRoot, TemporaryClipRects, options));
         ASSERT(!backgroundClip.affectedByRadius());
         auto clipRect = backgroundClip.rect();
+        if (clipRect.isInfinite())
+            return;
+
+        auto infiniteRect = LayoutRect::infiniteRect();
+        auto renderableInfiniteRect = [] {
+            // Return a infinite-like rect whose values are such that, when converted to float pixel values, they can reasonably represent device pixels.
+            return LayoutRect(LayoutUnit::nearlyMin() / 32, LayoutUnit::nearlyMin() / 32, LayoutUnit::nearlyMax() / 16, LayoutUnit::nearlyMax() / 16);
+        }();
+
+        if (clipRect.width() == infiniteRect.width()) {
+            clipRect.setX(renderableInfiniteRect.x());
+            clipRect.setWidth(renderableInfiniteRect.width());
+        }
+
+        if (clipRect.height() == infiniteRect.height()) {
+            clipRect.setY(renderableInfiniteRect.y());
+            clipRect.setHeight(renderableInfiniteRect.height());
+        }
+
         auto offset = layer.convertToLayerCoords(&clippingRoot, { }, RenderLayer::AdjustForColumns);
         clipRect.moveBy(-offset);
 
@@ -3464,7 +3487,7 @@ bool RenderLayerCompositor::isViewportConstrainedFixedOrStickyLayer(const Render
     if (layer.renderer().isStickilyPositioned())
         return isAsyncScrollableStickyLayer(layer);
 
-    if (!layer.behavesAsFixed())
+    if (!(layer.renderer().isFixedPositioned() && layer.behavesAsFixed()))
         return false;
 
     for (auto* ancestor = layer.parent(); ancestor; ancestor = ancestor->parent()) {
@@ -4302,7 +4325,7 @@ void RenderLayerCompositor::destroyRootLayer()
         GraphicsLayer::unparentAndClear(m_layerForHorizontalScrollbar);
         if (auto* scrollingCoordinator = this->scrollingCoordinator())
             scrollingCoordinator->scrollableAreaScrollbarLayerDidChange(m_renderView.frameView(), ScrollbarOrientation::Horizontal);
-        if (auto* horizontalScrollbar = m_renderView.frameView().verticalScrollbar())
+        if (auto* horizontalScrollbar = m_renderView.frameView().horizontalScrollbar())
             m_renderView.frameView().invalidateScrollbar(*horizontalScrollbar, IntRect(IntPoint(0, 0), horizontalScrollbar->frameRect().size()));
     }
 
@@ -4499,8 +4522,11 @@ FixedPositionViewportConstraints RenderLayerCompositor::computeFixedViewportCons
 {
     ASSERT(layer.isComposited());
 
-    ASSERT(layer.backing()->viewportAnchorLayer());
     auto* anchorLayer = layer.backing()->viewportAnchorLayer();
+    if (!anchorLayer) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 
     FixedPositionViewportConstraints constraints;
     constraints.setLayerPositionAtLastLayout(anchorLayer->position());
@@ -4537,8 +4563,11 @@ StickyPositionViewportConstraints RenderLayerCompositor::computeStickyViewportCo
 
     auto& renderer = downcast<RenderBoxModelObject>(layer.renderer());
 
-    ASSERT(layer.backing()->viewportAnchorLayer());
     auto* anchorLayer = layer.backing()->viewportAnchorLayer();
+    if (!anchorLayer) {
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 
     StickyPositionViewportConstraints constraints;
     renderer.computeStickyPositionConstraints(constraints, renderer.constrainingRectForStickyPosition());
