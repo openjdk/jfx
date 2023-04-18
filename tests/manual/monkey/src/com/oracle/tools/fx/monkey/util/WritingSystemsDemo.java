@@ -108,7 +108,7 @@ public class WritingSystemsDemo {
         }
         return sb.toString();
     }
-    
+
     private static void t(StringBuilder sb, String name, String text) {
         sb.append(name);
         sb.append(": ");
@@ -119,7 +119,7 @@ public class WritingSystemsDemo {
     }
 
     private static void native2ascii(StringBuilder sb, String text) {
-        for (char c : text.toCharArray()) {
+        for (char c: text.toCharArray()) {
             if (c < 0x20) {
                 escape(sb, c);
             } else if (c > 0x7f) {

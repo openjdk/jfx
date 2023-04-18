@@ -61,7 +61,6 @@ public class FxSettings {
 
         provider = p;
 
-        // TODO once, in FX thread - later?
         Window.getWindows().addListener((ListChangeListener.Change<? extends Window> ch) -> {
             while (ch.next()) {
                 if (ch.wasAdded()) {
@@ -81,7 +80,7 @@ public class FxSettings {
         } catch (IOException e) {
             throw new Error(e);
         }
-        
+
         saveTimer = new Timeline(new KeyFrame(SAVE_DELAY, (ev) -> save()));
     }
 
@@ -206,7 +205,7 @@ public class FxSettings {
             saveTimer.play();
         }
     }
-    
+
     private static void save() {
         try {
             save = false;
