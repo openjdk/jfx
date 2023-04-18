@@ -41,10 +41,10 @@ import javafx.util.Duration;
 /**
  * This facility coordinates saving UI settings to and from persistent media.
  * All the calls, excepr useProvider(), are expected to happen in an FX application thread.
- * 
+ *
  * When using {@link FxSettingsFileProvider}, the settings file "ui-settings.properties"
  * is placed in the specified directory in the user home.
- * 
+ *
  * TODO handle i/o errors - set handler?
  */
 public class FxSettings {

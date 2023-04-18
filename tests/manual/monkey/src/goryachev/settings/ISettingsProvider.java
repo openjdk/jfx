@@ -37,18 +37,18 @@ public interface ISettingsProvider {
      * @throws IOException 
      */
     public void load() throws IOException;
-    
+
     /**
      * Saves the settings to persistent media, if needed.
      * @throws IOException 
      */
     public void save() throws IOException;
-    
+
     /**
      * Sets a key-value pair.
      */
     public void set(String key, String value);
-    
+
     /**
      * Sets a key-value pair where value is a SStream.
      */
@@ -58,7 +58,7 @@ public interface ISettingsProvider {
      * Retrieves a String value for the specific key
      */
     public String get(String key);
-    
+
     /**
      * Retrieves a SStream value for the specific key
      */

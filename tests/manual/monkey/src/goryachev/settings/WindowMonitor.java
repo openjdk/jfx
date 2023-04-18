@@ -189,7 +189,7 @@ class WindowMonitor {
         // safeguard measure
         throw new Error("cannot create id: too many windows?");
     }
-    
+
     public static boolean remove(Window w) {
         monitors.remove(w);
         return monitors.size() == 0;

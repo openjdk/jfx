@@ -99,7 +99,6 @@ public class WritingSystemsDemo {
     };
 
     public static String getText() {
-        // better list 
         StringBuilder sb = new StringBuilder();
         for(int i=0; i<PAIRS.length; ) {
             String a = PAIRS[i++];
