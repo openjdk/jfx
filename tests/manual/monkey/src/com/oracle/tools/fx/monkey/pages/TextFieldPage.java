@@ -49,7 +49,7 @@ public class TextFieldPage extends TestPaneBase {
         control.setAlignment(Pos.BASELINE_RIGHT);
 
         textSelector = TextSelector.fromPairs(
-            "textSelector", 
+            "textSelector",
             (t) -> {
                 control.setText(t);
             },

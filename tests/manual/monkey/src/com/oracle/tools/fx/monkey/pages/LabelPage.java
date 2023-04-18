@@ -56,12 +56,12 @@ public class LabelPage extends TestPaneBase {
         Demo(String text) { this.text = text; }
         public String toString() { return text; }
     }
-    
+
     private final ComboBox<Demo> label1Selector;
     private final ComboBox<Demo> label2Selector;
     private final ComboBox<Pos> alignmentSelector;
     private final Image im;
-    
+
     public LabelPage() {
         setId("LabelPage");
 
@@ -161,7 +161,7 @@ public class LabelPage extends TestPaneBase {
             {
                 Label t = new Label("text + graphic text only");
                 t.setGraphic(new ImageView(im));
-                t.setContentDisplay(ContentDisplay.TEXT_ONLY);    
+                t.setContentDisplay(ContentDisplay.TEXT_ONLY);
                 return t;
             }
         case TEXT_GRAPHIC_GRAPHIC_ONLY:

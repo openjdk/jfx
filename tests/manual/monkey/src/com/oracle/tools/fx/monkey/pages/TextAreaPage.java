@@ -46,7 +46,7 @@ public class TextAreaPage extends TestPaneBase {
         control.setPromptText("<prompt>");
 
         textSelector = TextSelector.fromPairs(
-            "textSelector", 
+            "textSelector",
             (t) -> control.setText(t),
             Templates.multiLineTextPairs()
         );

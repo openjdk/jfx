@@ -311,7 +311,7 @@ public class HBoxPage extends TestPaneBase {
         if ((demo == null) || (spec == null)) {
             return new HBox();
         }
-        
+
         HBox b = new HBox();
         Region region = null;
 
@@ -333,7 +333,7 @@ public class HBoxPage extends TestPaneBase {
                         region.setMaxWidth(w);
                     }
                     break;
-                case MIN: 
+                case MIN:
                     {
                         int w = (int)(spec[i++]);
                         region.setMinWidth(w);

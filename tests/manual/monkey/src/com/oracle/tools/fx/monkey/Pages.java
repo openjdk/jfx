@@ -71,7 +71,7 @@ public class Pages {
             new DemoPage("TreeTableView", TreeTableViewPage::new),
             new DemoPage("TreeView", TreeViewPage::new),
             // TODO VBox
-            
+
             // bugs
             //new DemoPage("⚑ Dual Focus JDK-8292933", DualFocusPage::new),
             //new DemoPage("⚑ DatePicker in Alert", DatePickerPage::new),

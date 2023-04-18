@@ -547,7 +547,7 @@ public class TreeTableViewPage extends TestPaneBase {
                         lastColumn.setMaxWidth(w);
                     }
                     break;
-                case MIN: 
+                case MIN:
                     {
                         int w = (int)(spec[i++]);
                         lastColumn.setMinWidth(w);

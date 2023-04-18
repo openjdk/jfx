@@ -32,7 +32,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 /**
- * 
+ * Canvas Page.
  */
 public class CanvasPage extends TestPaneBase {
     private Pane pane;

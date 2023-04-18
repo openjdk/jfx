@@ -57,24 +57,24 @@ public class FX {
         lastMenu(b).getItems().add(mi);
         return mi;
     }
-    
+
     public static MenuItem item(MenuBar b, MenuItem mi) {
         applyMnemonic(mi);
         lastMenu(b).getItems().add(mi);
         return mi;
     }
-    
+
     public static MenuItem item(MenuBar b, String text) {
         MenuItem mi = new MenuItem(text);
         applyMnemonic(mi);
         lastMenu(b).getItems().add(mi);
         return mi;
     }
-    
+
     private static void applyMnemonic(MenuItem m) {
         String text = m.getText();
-        if(text != null) {
-            if(text.contains("_")) {
+        if (text != null) {
+            if (text.contains("_")) {
                 m.setMnemonicParsing(true);
             }
         }
@@ -84,7 +84,7 @@ public class FX {
         List<Menu> ms = b.getMenus();
         return ms.get(ms.size() - 1);
     }
-    
+
     public static SeparatorMenuItem separator(MenuBar b) {
         SeparatorMenuItem s = new SeparatorMenuItem();
         lastMenu(b).getItems().add(s);
@@ -103,11 +103,11 @@ public class FX {
         p.getChildren().add(n);
         GridPane.setConstraints(n, col, row);
     }
-    
+
     public static <T> void select(ComboBox<T> cb, T value) {
         cb.getSelectionModel().select(value);
     }
-    
+
     public static <T> void selectFirst(ComboBox<T> cb) {
         cb.getSelectionModel().selectFirst();
     }

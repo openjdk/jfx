@@ -36,7 +36,7 @@ import javafx.scene.layout.HBox;
 
 /**
  * Test code from CheckBoxTreeEditor, see https://bugs.openjdk.org/browse/JDK-8209017
- * 
+ *
  * FIX don't see checkboxes for some reason!
  */
 public class TreeViewPage extends TestPaneBase {
@@ -53,10 +53,14 @@ public class TreeViewPage extends TestPaneBase {
         selected.setId("selected");
 
         Button add = new Button("Add");
-        add.setOnAction(e -> addChild(indeterminate.isSelected(), selected.isSelected()));
+        add.setOnAction((ev) -> {
+            addChild(indeterminate.isSelected(), selected.isSelected());
+        });
 
         Button remove = new Button("Remove");
-        remove.setOnAction(e -> removeChild());
+        remove.setOnAction((ev) -> {
+            removeChild();
+        });
 
         toolbar().addAll(
             add,

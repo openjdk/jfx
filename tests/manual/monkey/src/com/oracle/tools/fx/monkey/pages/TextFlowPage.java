@@ -84,7 +84,7 @@ public class TextFlowPage extends TestPaneBase {
         caretPath.setManaged(false);
 
         textSelector = TextSelector.fromPairs(
-            "textSelector", 
+            "textSelector",
             (t) -> updateControl(),
             Utils.combine(
                 Templates.multiLineTextPairs(),

@@ -37,14 +37,14 @@ import javafx.scene.text.Font;
 public class FontSelector {
     private final ComboBox<String> fontField = new ComboBox<>();
     private final ComboBox<Integer> sizeField;
-    
+
     public FontSelector(String id, Consumer<Font> client) {
         fontField.setId(id + "_FONT");
         fontField.getItems().setAll(collectFonts());
         fontField.getSelectionModel().selectedItemProperty().addListener((p) -> {
             update(client);
         });
-        
+
         sizeField = new ComboBox<>();
         sizeField.setId(id + "_SIZE");
         sizeField.getItems().setAll(
@@ -58,36 +58,36 @@ public class FontSelector {
             update(client);
         });
     }
-    
+
     protected void update(Consumer<Font> client) {
         Font f = getFont();
         client.accept(f);
     }
-    
+
     public Node fontNode() {
         return fontField;
     }
-    
+
     public Node sizeNode() {
         return sizeField;
     }
-    
+
     public void select(String name) {
         fontField.getSelectionModel().select(name);
     }
-    
+
     public Font getFont() {
         String name = fontField.getSelectionModel().getSelectedItem();
-        if(name == null) {
+        if (name == null) {
             return null;
         }
         Integer size = sizeField.getSelectionModel().getSelectedItem();
-        if(size == null) {
+        if (size == null) {
             size = 12;
         }
         return new Font(name, size);
     }
-    
+
     protected List<String> collectFonts() {
         ArrayList<String> rv = new ArrayList<>(Font.getFontNames());
         //rv.add(0, null);
