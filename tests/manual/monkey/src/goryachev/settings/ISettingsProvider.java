@@ -34,13 +34,13 @@ import java.io.IOException;
 public interface ISettingsProvider {
     /**
      * Loads settings from persistent storage, if needed.
-     * @throws IOException 
+     * @throws IOException
      */
     public void load() throws IOException;
 
     /**
      * Saves the settings to persistent media, if needed.
-     * @throws IOException 
+     * @throws IOException
      */
     public void save() throws IOException;
 
