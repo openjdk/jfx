@@ -1,5 +1,5 @@
 module monkey_tester {
-    exports goryachev.monkey;
+    exports com.oracle.tools.fx.monkey;
 
     requires javafx.base;
     requires javafx.controls;
