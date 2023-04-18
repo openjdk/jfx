@@ -43,11 +43,11 @@ public class PosSelector {
             client.accept(v);
         });
     }
-    
+
     public Node node() {
         return field;
     }
-    
+
     public void select(Pos v) {
         field.getSelectionModel().select(v);
     }

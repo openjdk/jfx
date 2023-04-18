@@ -42,7 +42,7 @@ public class Templates {
             "RTL", "العربية"
         );
     }
-    
+
     public static Object[] multiLineTextPairs() {
         return new Object[] {
             "Long", "<beg-0123456789012345678901234567890123456789-|-0123456789012345678901234567890123456789-end>",
@@ -58,7 +58,7 @@ public class Templates {
             "Tabs", "0123456789012345678901234567890\n0\n\t1\n\t\t2\n\t\t\t3\n\t\t\t\t4\n0\n",
         };
     }
-    
+
     public static Object[] singleLineTextPairs() {
         return new Object[] {
             "Long", "<beg-0123456789012345678901234567890123456789-|-0123456789012345678901234567890123456789-end>",

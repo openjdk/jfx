@@ -37,14 +37,14 @@ public class Native2AsciiPane extends BorderPane {
     private final TextArea nat;
     private final TextArea ascii;
     private boolean ignoreEvent;
-    
+
     public Native2AsciiPane() {
         nat = new TextArea();
         nat.textProperty().addListener((x) -> convert(true));
-        
+
         ascii = new TextArea();
         ascii.textProperty().addListener((x) -> convert(false));
-        
+
         GridPane p = new GridPane();
         p.add(new Label("Native"), 0, 0);
         p.add(nat, 0, 1);
@@ -136,7 +136,7 @@ public class Native2AsciiPane extends BorderPane {
         }
         return sb.toString();
     }
-    
+
     private static char hex(int n) {
         return "0123456789abcdef".charAt(n & 0x0f);
     }

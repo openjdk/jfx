@@ -37,10 +37,10 @@ import javafx.util.StringConverter;
  */
 public class ItemSelector<T> {
     public static record Pair(String display, Object value) { }
-    
+
     private final ComboBox<Pair> field = new ComboBox<>();
-    
-    public ItemSelector(String id, Consumer<T> client, Object ... displayValuePairs) {
+
+    public ItemSelector(String id, Consumer<T> client, Object... displayValuePairs) {
         field.setId("PosSelector");
         field.getItems().setAll(toPairs(displayValuePairs));
         field.setConverter(new StringConverter<Pair>() {
@@ -61,24 +61,24 @@ public class ItemSelector<T> {
         });
         field.getSelectionModel().selectFirst();
     }
-    
+
     private Pair[] toPairs(Object[] pairs) {
         ArrayList<Pair> a = new ArrayList<>();
-        for(int i=0; i<pairs.length; ) {
+        for (int i = 0; i < pairs.length;) {
             String display = (String)pairs[i++];
             T value = (T)pairs[i++];
             a.add(new Pair(display, value));
         }
         return a.toArray(new Pair[a.size()]);
     }
-    
+
     public Node node() {
         return field;
     }
-    
+
     public void select(Object item) {
         int ix = indexOf(item);
-        if(ix >= 0) {
+        if (ix >= 0) {
             field.getSelectionModel().select(ix);
         }
     }
@@ -110,7 +110,7 @@ public class ItemSelector<T> {
     public void selectFirst() {
         field.getSelectionModel().selectFirst();
     }
-    
+
     protected String toDisplay(Object x) {
         if (x == null) {
             return null;
@@ -132,7 +132,7 @@ public class ItemSelector<T> {
     public void add(String display, T value) {
         field.getItems().add(new Pair(display, value));
     }
-    
+
     public void add(String display, Supplier<T> value) {
         field.getItems().add(new Pair(display, value));
     }
