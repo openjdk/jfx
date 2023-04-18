@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,14 +45,14 @@ void CJavaMediaWarningListener::Warning(int warningCode, const char* warningMess
     JNIEnv *pEnv = javaEnv.getEnvironment();
     if (pEnv) {
         jclass mediaUtilsClass = pEnv->FindClass("com/sun/media/jfxmediaimpl/MediaUtils");
-        if (!javaEnv.clearException()) {
+        if (!javaEnv.clearException() && mediaUtilsClass != NULL) {
             jmethodID errorMethodID = pEnv->GetStaticMethodID(mediaUtilsClass,
                                                               "nativeWarning",
                                                               "(ILjava/lang/String;)V");
-            char* message = NULL == warningMessage ? (char*)"" : (char*)warningMessage;
             if (!javaEnv.clearException()) {
+                char* message = NULL == warningMessage ? (char*)"" : (char*)warningMessage;
                 jstring jmessage = pEnv->NewStringUTF(message);
-                if (!javaEnv.clearException()) {
+                if (!javaEnv.clearException() && jmessage != NULL) {
                     pEnv->CallStaticVoidMethod(mediaUtilsClass, errorMethodID,
                                                (jint)warningCode, jmessage);
                     javaEnv.clearException();
