@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.BooleanProperty;
+import javafx.content.ContentParent;
 import javafx.css.CssMetaData;
 import javafx.css.Style;
 import javafx.css.Styleable;
@@ -312,6 +313,10 @@ public abstract class NodeHelper {
         nodeAccessor.requestFocusVisible(node);
     }
 
+    public static void setContentParent(Node node, ContentParent parent) {
+        nodeAccessor.setContentParent(node, parent);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -372,6 +377,7 @@ public abstract class NodeHelper {
         Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
                 Map<StyleableProperty<?>,List<Style>> styleMap);
         void requestFocusVisible(Node node);
+        void setContentParent(Node node, ContentParent parent);
     }
 
 }

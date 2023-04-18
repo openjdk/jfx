@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
 import javafx.collections.ObservableSet;
+import javafx.content.ContentParentBase;
 import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.css.CssMetaData;
@@ -50,6 +51,7 @@ import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.LabeledContentList;
 import javafx.scene.control.skin.ContextMenuSkin;
 import java.util.Collections;
 import java.util.HashMap;
@@ -94,7 +96,7 @@ MenuBar menuBar = new MenuBar(menu);</code></pre>
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public class MenuItem implements EventTarget, Styleable {
+public class MenuItem extends ContentParentBase implements EventTarget, Styleable {
 
     /* *************************************************************************
      *                                                                         *
@@ -130,6 +132,7 @@ public class MenuItem implements EventTarget, Styleable {
         setText(text);
         setGraphic(graphic);
         styleClass.add(DEFAULT_STYLE_CLASS);
+        addContentModel(contentModel);
     }
 
 
@@ -140,6 +143,8 @@ public class MenuItem implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
+    private final LabeledContentList contentModel = new LabeledContentList();
+
     private final ObservableList<String> styleClass = FXCollections.observableArrayList();
 
     final EventHandlerManager eventHandlerManager =
@@ -147,6 +152,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     private Object userData;
     private ObservableMap<Object, Object> properties;
+
 
     /* *************************************************************************
      *                                                                         *
@@ -260,7 +266,12 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final StringProperty textProperty() {
         if (text == null) {
-            text = new SimpleStringProperty(this, "text");
+            text = new SimpleStringProperty(this, "text") {
+                @Override
+                protected void invalidated() {
+                    contentModel.setText(get());
+                }
+            };
         }
         return text;
     }
@@ -284,7 +295,12 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new SimpleObjectProperty<>(this, "graphic");
+            graphic = new SimpleObjectProperty<>(this, "graphic") {
+                @Override
+                protected void invalidated() {
+                    contentModel.setGraphic(get());
+                }
+            };
         }
         return graphic;
     }

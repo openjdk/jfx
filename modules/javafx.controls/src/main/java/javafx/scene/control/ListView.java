@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import com.sun.javafx.scene.control.ReseatableObservableListAdapter;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import javafx.beans.InvalidationListener;
@@ -337,6 +338,7 @@ public class ListView<T> extends Control {
     // for the ComboBox, this is not desirable, so it can be disabled here.
     private boolean selectFirstRowByDefault = true;
 
+    private final ReseatableObservableListAdapter<T> contentModel = new ReseatableObservableListAdapter<>();
 
 
     /* *************************************************************************
@@ -400,6 +402,8 @@ public class ListView<T> extends Control {
         });
 
         pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL, true);
+
+        addContentModel(contentModel);
     }
 
 
@@ -457,7 +461,12 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<ObservableList<T>> itemsProperty() {
         if (items == null) {
-            items = new SimpleObjectProperty<>(this, "items");
+            items = new SimpleObjectProperty<>(this, "items") {
+                @Override
+                protected void invalidated() {
+                    contentModel.changeList(get());
+                }
+            };
         }
         return items;
     }

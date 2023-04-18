@@ -55,6 +55,8 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
+import javafx.content.ContentNode;
+import javafx.content.ContentParent;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.PseudoClass;
@@ -406,7 +408,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget, Styleable {
+public abstract non-sealed class Node implements ContentNode, EventTarget, Styleable {
 
     /*
      * Store the singleton instance of the NodeHelper subclass corresponding
@@ -624,6 +626,11 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public void requestFocusVisible(Node node) {
                 node.requestFocusVisible();
+            }
+
+            @Override
+            public void setContentParent(Node node, ContentParent parent) {
+                node.setContentParent(parent);
             }
         });
     }
@@ -928,6 +935,53 @@ public abstract class Node implements EventTarget, Styleable {
      *
      *                                                                        *
      *************************************************************************/
+
+    private ContentParent contentParent;
+    private ContentParentProperty contentParentProperty;
+
+    public final ReadOnlyObjectProperty<ContentParent> contentParentProperty() {
+        if (contentParentProperty == null) {
+            contentParentProperty = new ContentParentProperty();
+        }
+
+        return contentParentProperty;
+    }
+
+    @Override
+    public final ContentParent getContentParent() {
+        return contentParent;
+    }
+
+    private void setContentParent(ContentParent parent) {
+        if (contentParent != parent) {
+            contentParent = parent;
+
+            if (contentParentProperty != null) {
+                contentParentProperty.notifyValueChanged();
+            }
+        }
+    }
+
+    private class ContentParentProperty extends ReadOnlyObjectPropertyBase<ContentParent> {
+        @Override
+        public Object getBean() {
+            return Node.this;
+        }
+
+        @Override
+        public String getName() {
+            return "contentParent";
+        }
+
+        @Override
+        public ContentParent get() {
+            return contentParent;
+        }
+
+        public void notifyValueChanged() {
+            fireValueChangedEvent();
+        }
+    }
 
     /**
      * The parent of this {@code Node}. If this {@code Node} has not been added

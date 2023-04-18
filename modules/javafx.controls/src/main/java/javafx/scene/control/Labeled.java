@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.LabeledContentList;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.InsetsConverter;
@@ -96,6 +97,8 @@ public abstract class Labeled extends Control {
 
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
 
+    private final LabeledContentList contentModel = new LabeledContentList();
+
 
     /* *************************************************************************
      *                                                                         *
@@ -106,7 +109,9 @@ public abstract class Labeled extends Control {
     /**
      * Creates a Label with no text and graphic
      */
-    public Labeled() { }
+    public Labeled() {
+        addContentModel(contentModel);
+    }
 
     /**
      * Creates a Label with text
@@ -114,6 +119,7 @@ public abstract class Labeled extends Control {
      */
     public Labeled(String text) {
         setText(text);
+        addContentModel(contentModel);
     }
 
     /**
@@ -124,6 +130,7 @@ public abstract class Labeled extends Control {
     public Labeled(String text, Node graphic) {
         setText(text);
         ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(null, graphic);
+        addContentModel(contentModel);
     }
 
     /* *************************************************************************
@@ -139,7 +146,12 @@ public abstract class Labeled extends Control {
      */
     public final StringProperty textProperty() {
         if (text == null) {
-            text = new SimpleStringProperty(this, "text", "");
+            text = new SimpleStringProperty(this, "text", "") {
+                @Override
+                protected void invalidated() {
+                    contentModel.setText(get());
+                }
+            };
         }
         return text;
     }
@@ -439,6 +451,11 @@ public abstract class Labeled extends Control {
                 @Override
                 public String getName() {
                     return "graphic";
+                }
+
+                @Override
+                protected void invalidated() {
+                    contentModel.setGraphic(get());
                 }
             };
         }

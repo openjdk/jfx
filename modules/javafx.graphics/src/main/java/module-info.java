@@ -51,6 +51,7 @@ module javafx.graphics {
     exports javafx.concurrent;
     exports javafx.css;
     exports javafx.css.converter;
+    exports javafx.content;
     exports javafx.geometry;
     exports javafx.print;
     exports javafx.scene;

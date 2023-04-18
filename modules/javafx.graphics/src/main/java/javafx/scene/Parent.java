@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.content.ContentChildrenList;
+import com.sun.javafx.content.ContentNodeHelper;
+import com.sun.javafx.content.ContentParentChangedListener;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -40,6 +43,7 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
+import javafx.content.ContentParent;
 import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
@@ -76,7 +80,7 @@ import javafx.stage.Window;
  *
  * @since JavaFX 2.0
  */
-public abstract class Parent extends Node {
+public abstract non-sealed class Parent extends Node implements ContentParent {
     // package private for testing
     static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
@@ -199,6 +203,52 @@ public abstract class Parent extends Node {
         }
 
         if (Utils.assertionEnabled()) validatePG();
+    }
+
+
+    /* *********************************************************************
+     *                          Content graph                              *
+     *                                                                     *
+     *  Methods to add and remove content to and from the content graph.   *
+     **********************************************************************/
+
+    private final ContentParentChangedListener contentParentChanged = new ContentParentChangedListener(this);
+    private ContentChildrenList contentChildren;
+    private ObservableList<?> contentChildrenUnmodifiable;
+
+    /**
+     * Adds a content model to this node.
+     * <p>
+     * Derived classes should call this method to add their own content model, which may include
+     * any number of objects. The content model is added to the content models that were added
+     * by base classes.
+     * <p>
+     * See {@link javafx.content.ContentNode} for more information about the content graph.
+     *
+     * @param content an {@code ObservableList} that contains the content model
+     */
+    protected final void addContentModel(ObservableList<?> content) {
+        if (contentChildren == null) {
+            contentChildren = new ContentChildrenList(new ObservableList[] { content });
+            contentChildren.addListener(contentParentChanged);
+            ContentNodeHelper.setContentParent(contentChildren, this);
+        } else {
+            contentChildren.addList(content);
+        }
+    }
+
+    @Override
+    public final ObservableList<?> getContentChildren() {
+        if (contentChildrenUnmodifiable == null) {
+            if (contentChildren == null) {
+                contentChildren = new ContentChildrenList(new ObservableList[0]);
+                contentChildren.addListener(contentParentChanged);
+            }
+
+            contentChildrenUnmodifiable = FXCollections.unmodifiableObservableList(contentChildren);
+        }
+
+        return contentChildrenUnmodifiable;
     }
 
 

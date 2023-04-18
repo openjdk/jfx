@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.control;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.collections.ObservableSet;
+import javafx.content.ContentParentBase;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -76,7 +77,7 @@ import javafx.collections.ObservableMap;
  */
 @DefaultProperty("content")
 @IDProperty("id")
-public class Tab implements EventTarget, Styleable {
+public class Tab extends ContentParentBase implements EventTarget, Styleable {
 
     /* *************************************************************************
      *                                                                         *
@@ -305,7 +306,12 @@ public class Tab implements EventTarget, Styleable {
      */
     public final StringProperty textProperty() {
         if (text == null) {
-            text = new SimpleStringProperty(this, "text");
+            text = new SimpleStringProperty(this, "text") {
+                @Override
+                protected void invalidated() {
+
+                }
+            };
         }
         return text;
     }

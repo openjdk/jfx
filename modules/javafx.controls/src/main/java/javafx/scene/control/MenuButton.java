@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -173,6 +173,7 @@ public class MenuButton extends ButtonBase {
             getItems().addAll(items);
         }
 
+        addContentModel(this.items);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
