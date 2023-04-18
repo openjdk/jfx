@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,27 @@
  * questions.
  */
 
-package com.sun.javafx.font;
+package test.com.sun.javafx.binding;
 
+import com.sun.javafx.binding.Logging;
+import org.junit.Test;
+import test.util.memory.JMemoryBuddy;
 
-public interface CompositeFontResource extends FontResource {
+public class TestLogging {
 
-    public FontResource getSlotResource(int slot);
+    @Test
+    public void testExceptionCollectableAfterLogging() {
 
-    public int getNumSlots();
+        JMemoryBuddy.memoryTest(checker -> {
+            Throwable e = new Exception();
 
-    default public int addSlotFont(FontResource font) {
-        return -1;
-    }
+            // This is the value that is used in the application
+            // other test might set it to true
+            Logging.setKeepException(false);
 
-    /**
-     * Returns the slot for the given font name.
-     * Adds fontName as a new fallback font if needed.
-     */
-    public int getSlotForFont(String fontName);
+            Logging.getLogger().warning("test", e);
 
-    default boolean isColorGlyph(int glyphCode) {
-        int slot = (glyphCode >>> 24);
-        int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
-        FontResource slotResource = getSlotResource(slot);
-        return slotResource.isColorGlyph(slotglyphCode);
+            checker.assertCollectable(e);
+        });
     }
 }

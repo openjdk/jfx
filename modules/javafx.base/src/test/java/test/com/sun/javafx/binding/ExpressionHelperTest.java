@@ -25,26 +25,36 @@
 
 package test.com.sun.javafx.binding;
 
-import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.binding.ExpressionHelperShim;
-import javafx.beans.InvalidationListener;
-import test.javafx.beans.InvalidationListenerMock;
-import javafx.beans.Observable;
-import test.javafx.beans.WeakInvalidationListenerMock;
-import javafx.beans.value.ChangeListener;
-import test.javafx.beans.value.ChangeListenerMock;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.ObservableValueStub;
-import test.javafx.beans.value.WeakChangeListenerMock;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.BitSet;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.BitSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.ExpressionHelperShim;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueStub;
+import test.javafx.beans.InvalidationListenerMock;
+import test.javafx.beans.WeakInvalidationListenerMock;
+import test.javafx.beans.value.ChangeListenerMock;
+import test.javafx.beans.value.WeakChangeListenerMock;
+import test.util.memory.JMemoryBuddy;
 
 public class ExpressionHelperTest {
 
@@ -645,4 +655,73 @@ public class ExpressionHelperTest {
         assertEquals(4, called.get());
     }
 
+    @Test
+    public void shouldNotForgetCurrentValueWhenMovingFromSingleChangeToGenericImplementation() {
+        AtomicBoolean invalidated = new AtomicBoolean();
+        AtomicReference<String> currentValue = new AtomicReference<>();
+        StringProperty p = new SimpleStringProperty("a") {
+            @Override
+            protected void invalidated() {
+                addListener(obs -> invalidated.set(true));
+            }
+        };
+
+        p.addListener((obs, old, current) -> currentValue.set(current));
+
+        p.set("b");
+
+        assertTrue(invalidated.get());  // true because the invalidation listener was added before called
+        assertEquals("b", currentValue.get());
+    }
+
+    @Test
+    public void shouldNotForgetCurrentValueWhenMovingFromGenericToSingleChangeImplementation() {
+        AtomicBoolean invalidated = new AtomicBoolean();
+        AtomicReference<String> currentValue = new AtomicReference<>();
+        InvalidationListener invalidationListener = obs -> invalidated.set(true);
+        StringProperty p = new SimpleStringProperty("a") {
+            @Override
+            protected void invalidated() {
+                removeListener(invalidationListener);
+            }
+        };
+
+        p.addListener(invalidationListener);
+        p.addListener((obs, old, current) -> currentValue.set(current));
+
+        p.set("b");
+
+        assertFalse(invalidated.get());  // false because the invalidation listener was removed before called
+        assertEquals("b", currentValue.get());
+    }
+
+    @Test
+    public void shouldNotReferToAnOldValueWhenAllChangeListenersRemoved() {
+        AtomicInteger invalidations = new AtomicInteger();
+        ObjectProperty<List<String>> p = new SimpleObjectProperty<>(List.of("a"));
+
+        // add two invalidation listeners so Generic implementation is used:
+        p.addListener(obs -> invalidations.addAndGet(1));
+        p.addListener(obs -> invalidations.addAndGet(1));
+
+        // add a change listener:
+        ChangeListener<? super List<String>> listener = (obs, old, current) -> {};
+
+        p.addListener(listener);
+
+        JMemoryBuddy.memoryTest(api -> {
+            // trigger a change to a value that should be collectable:
+            List<String> collectable = List.of("b");
+
+            p.set(collectable);
+
+            // remove the last change listener:
+            p.removeListener(listener);
+
+            // change value to something else, it should not be referenced anymore anywhere:
+            p.set(List.of("c"));
+
+            api.assertCollectable(collectable);
+        });
+    }
 }

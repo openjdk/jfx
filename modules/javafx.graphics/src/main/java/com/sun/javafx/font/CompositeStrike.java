@@ -116,14 +116,16 @@ public class CompositeStrike implements FontStrike {
             }
 
             if (slot >= strikeSlots.length) {
-                FontStrike[] tmp = new FontStrike[fontResource.getNumSlots()];
+                FontStrike[] tmp = new FontStrike[slot+1];
                 System.arraycopy(strikeSlots, 0, tmp, 0, strikeSlots.length);
                 strikeSlots = tmp;
             }
             if (strikeSlots[slot] == null) {
                 FontResource slotResource = fontResource.getSlotResource(slot);
-                strikeSlots[slot] = slotResource.getStrike(size, transform,
-                                                           getAAMode());
+                if (slotResource != null) {
+                    strikeSlots[slot] = slotResource.getStrike(size, transform,
+                                                               getAAMode());
+                }
             }
             return strikeSlots[slot];
         }
