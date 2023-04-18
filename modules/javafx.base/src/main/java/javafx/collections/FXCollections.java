@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package javafx.collections;
 
-import com.sun.javafx.collections.ListListenerHelper;
-import com.sun.javafx.collections.MapListenerHelper;
-import com.sun.javafx.collections.SetListenerHelper;
 import java.lang.reflect.Array;
 import java.util.AbstractList;
 import java.util.AbstractMap;
@@ -45,10 +42,13 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.RandomAccess;
 import java.util.Set;
 
-import javafx.beans.InvalidationListener;
-
+import com.sun.javafx.collections.ConcatenatedObservableList;
+import com.sun.javafx.collections.ListListenerHelper;
+import com.sun.javafx.collections.MapListenerHelper;
+import com.sun.javafx.collections.SetListenerHelper;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.collections.ObservableSetWrapper;
@@ -59,7 +59,7 @@ import com.sun.javafx.collections.ObservableSequentialListWrapper;
 import com.sun.javafx.collections.SetAdapterChange;
 import com.sun.javafx.collections.SortableList;
 import com.sun.javafx.collections.SourceAdapterChange;
-import java.util.RandomAccess;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.util.Callback;
 
@@ -370,12 +370,18 @@ public class FXCollections {
     }
 
     /**
-     * Concatenates more observable lists into one. The resulting list
-     * would be backed by an array list.
-     * @param <E> The type of List to be wrapped
+     * Creates a modifiable {@code ObservableList} that contains a concatenated snapshot of the contents
+     * of the specified observable lists. The returned list is backed by an {@link ArrayList} that
+     * contains all of the elements of the source lists.
+     * <p>
+     * In contrast to {@link #concatenatedObservableList(ObservableList[])}, the returned list is not
+     * a view onto the source lists, and is not updated when any of the source lists are changed.
+     *
+     * @param <E> the element type
      * @param lists lists to concatenate
-     * @return new observable array list concatenated from the arguments
+     * @return new observable {@code ArrayList} concatenated from the arguments
      */
+    @SafeVarargs
     public static <E> ObservableList<E> concat(ObservableList<E>... lists) {
         if (lists.length == 0 ) {
             return observableArrayList();
@@ -389,6 +395,33 @@ public class FXCollections {
         }
 
         return observableList(backingList);
+    }
+
+    /**
+     * Returns an unmodifiable {@code ObservableList} that contains the concatenation of the contents
+     * of the specified observable lists. The returned list is a view onto the source lists, which means
+     * that read operations are delegated to the appropriate source list, and attempts to modify the
+     * returned list result in an {@link UnsupportedOperationException}.
+     * <p>
+     * In contrast to {@link #concat(ObservableList[])}, the list returned from this method is updated
+     * when any of the source lists are changed.
+     *
+     * @param lists the source lists
+     * @param <E> the element type
+     * @return an unmodifiable {@code ObservableList} view that contains the concatenation of the source lists
+     * @throws IndexOutOfBoundsException if number of elements contained in all source lists
+     *                                   exceeds {@link Integer#MAX_VALUE}
+     * @since 21
+     */
+    @SafeVarargs
+    public static <E> ObservableList<E> concatenatedObservableList(ObservableList<E>... lists) {
+        if (lists.length == 0) {
+            return emptyObservableList();
+        }
+        if (lists.length == 1) {
+            return unmodifiableObservableList(lists[0]);
+        }
+        return new ConcatenatedObservableList<>(lists);
     }
 
     /**
