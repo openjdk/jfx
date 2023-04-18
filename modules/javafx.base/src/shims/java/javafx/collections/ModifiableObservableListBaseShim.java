@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,17 @@
  * questions.
  */
 
-package com.sun.javafx.font;
+package javafx.collections;
 
+import java.util.List;
 
-public interface CompositeFontResource extends FontResource {
+public abstract class ModifiableObservableListBaseShim<T> extends ModifiableObservableListBase<T> {
 
-    public FontResource getSlotResource(int slot);
-
-    public int getNumSlots();
-
-    default public int addSlotFont(FontResource font) {
-        return -1;
+    @Override
+    public List<T> subList(int fromIndex, int toIndex) {
+        return new SubObservableList(getTestSubList(fromIndex, toIndex));
     }
 
-    /**
-     * Returns the slot for the given font name.
-     * Adds fontName as a new fallback font if needed.
-     */
-    public int getSlotForFont(String fontName);
+    protected abstract List<T> getTestSubList(int fromIndex, int toIndex);
 
-    default boolean isColorGlyph(int glyphCode) {
-        int slot = (glyphCode >>> 24);
-        int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
-        FontResource slotResource = getSlotResource(slot);
-        return slotResource.isColorGlyph(slotglyphCode);
-    }
 }
