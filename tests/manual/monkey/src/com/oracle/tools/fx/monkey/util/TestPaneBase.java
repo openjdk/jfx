@@ -49,17 +49,17 @@ public class TestPaneBase extends BorderPane {
     public TestPaneBase() {
         contentPane = new BorderPane();
         contentPane.setOpacity(1.0);
-        
+
         inScrollBars = usePreferredSize.not();
         inScrollBars.addListener((x) -> {
             updateContent();
         });
         updateContent();
     }
-    
+
     public void updateContent() {
         boolean inScrolls = inScrollBars.get();
-        if(inScrolls) {
+        if (inScrolls) {
             contentPane.setStyle(null);
 
             SplitPane hsplit = new SplitPane(contentPane, pane());
@@ -67,13 +67,13 @@ public class TestPaneBase extends BorderPane {
             hsplit.setBorder(null);
             hsplit.setDividerPositions(0.9);
             hsplit.setOrientation(Orientation.HORIZONTAL);
-            
+
             SplitPane vsplit = new SplitPane(hsplit, pane());
             vsplit.setId("vsplit");
             vsplit.setBorder(null);
             vsplit.setDividerPositions(0.9);
             vsplit.setOrientation(Orientation.VERTICAL);
-            
+
             setCenter(vsplit);
         } else {
             Group g = new Group(contentPane);
@@ -82,53 +82,52 @@ public class TestPaneBase extends BorderPane {
             setCenter(g);
         }
     }
-    
+
     protected static Pane pane() {
         Pane p = new Pane();
         SplitPane.setResizableWithParent(p, false);
         p.setStyle("-fx-background-color:#dddddd;");
         return p;
     }
-    
+
     public Button addButton(String name, Runnable action) {
         Button b = new Button(name);
         b.setOnAction((ev) -> {
             action.run();
         });
-        
+
         toolbar().add(b);
         return b;
     }
-    
+
     public TBar toolbar() {
-        if(getTop() instanceof TBar) {
+        if (getTop() instanceof TBar) {
             return (TBar)getTop();
         }
-        
+
         TBar t = new TBar();
         setTop(t);
         return t;
     }
-    
+
     public Window getWindow() {
         Scene s = getScene();
-        if(s != null) {
+        if (s != null) {
             return s.getWindow();
         }
         return null;
     }
-    
+
     public void setContent(Node content) {
         contentPane.setCenter(content);
         BorderPane.setAlignment(content, Pos.TOP_LEFT);
     }
-    
+
     public void setOptions(Node n) {
         setRight(n);
     }
-    
-    //
-    
+
+    /** Local toolbar */
     public static class TBar extends HBox {
         public TBar() {
             setFillHeight(true);
@@ -142,7 +141,7 @@ public class TestPaneBase extends BorderPane {
         }
 
         public void addAll(Node... nodes) {
-            for (Node n : nodes) {
+            for (Node n: nodes) {
                 add(n);
             }
         }

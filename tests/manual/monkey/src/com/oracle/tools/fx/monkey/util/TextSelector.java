@@ -36,10 +36,10 @@ import javafx.util.StringConverter;
  */
 public class TextSelector {
     public static record Pair(String display, String value) { }
-    
+
     private final ComboBox<Object> field = new ComboBox<>();
-    
-    public TextSelector(String id, Consumer<String> client, Object ... items) {
+
+    public TextSelector(String id, Consumer<String> client, Object... items) {
         field.setId("PosSelector");
         field.getItems().setAll(items);
         field.setConverter(new StringConverter<Object>() {
@@ -58,25 +58,25 @@ public class TextSelector {
             client.accept(text);
         });
     }
-    
-    public static TextSelector fromPairs(String id, Consumer<String> client, Object ... pairs) {
+
+    public static TextSelector fromPairs(String id, Consumer<String> client, Object... pairs) {
         ArrayList<Pair> a = new ArrayList<>();
-        for(int i=0; i<pairs.length; ) {
+        for (int i = 0; i < pairs.length;) {
             String display = (String)pairs[i++];
             String value = (String)pairs[i++];
             a.add(new Pair(display, value));
         }
-        
+
         return new TextSelector(id, client, a.toArray());
     }
-    
+
     public Node node() {
         return field;
     }
-    
+
     public void select(Object item) {
         int ix = indexOf(item);
-        if(ix >= 0) {
+        if (ix >= 0) {
             field.getSelectionModel().select(ix);
         }
     }
@@ -108,7 +108,7 @@ public class TextSelector {
     public void selectFirst() {
         field.getSelectionModel().selectFirst();
     }
-    
+
     protected String toDisplay(Object x) {
         if (x == null) {
             return null;
@@ -132,7 +132,7 @@ public class TextSelector {
     public void addPair(String display, String value) {
         field.getItems().add(new Pair(display, value));
     }
-    
+
     public String getSelectedText() {
         Object v = field.getSelectionModel().getSelectedItem();
         return toValue(v);
