@@ -57,7 +57,7 @@ class DummyResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public TextureResourcePool getTextureResourcePool() {
+    public TextureResourcePool<?> getTextureResourcePool() {
         return DummyTexturePool.instance;
     }
 

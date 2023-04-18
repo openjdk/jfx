@@ -172,7 +172,7 @@ public class PPSRenderer extends PrRenderer {
         // even if new peers are added from another thread while we're executing
         // this on the rendering thread, they won't have any native resources
         // since we're on the rendering thread, so no need to synchronize
-        for (EffectPeer peer : getPeers()) {
+        for (EffectPeer<?> peer : getPeers()) {
             peer.dispose();
         }
         synchronized (this) {
@@ -237,7 +237,7 @@ public class PPSRenderer extends PrRenderer {
             return null;
         }
         Texture prismTex = rf.createFloatTexture(w, h);
-        return new PrTexture(prismTex);
+        return new PrTexture<>(prismTex);
     }
 
     @Override
@@ -249,7 +249,7 @@ public class PPSRenderer extends PrRenderer {
         int w = map.getWidth();
         int h = map.getHeight();
         Image img = Image.fromFloatMapData(buf, w, h);
-        Texture prismTex = ((PrTexture)texture).getTextureObject();
+        Texture prismTex = ((PrTexture<?>) texture).getTextureObject();
         prismTex.update(img);
     }
 
@@ -283,14 +283,14 @@ public class PPSRenderer extends PrRenderer {
      * @param name the name of the effect peer
      * @return a new {@code EffectPeer} instance
      */
-    private EffectPeer createIntrinsicPeer(FilterContext fctx, String name) {
-        Class klass = null;
-        EffectPeer peer;
+    private EffectPeer<?> createIntrinsicPeer(FilterContext fctx, String name) {
+        Class<?> klass = null;
+        EffectPeer<?> peer;
         try {
             klass = Class.forName(rootPkg + ".impl.prism.Pr" + name + "Peer");
-            Constructor ctor = klass.getConstructor(new Class[]
+            Constructor<?> ctor = klass.getConstructor(new Class[]
                 { FilterContext.class, Renderer.class, String.class });
-            peer = (EffectPeer)ctor.newInstance(new Object[]
+            peer = (EffectPeer<?>)ctor.newInstance(new Object[]
                 { fctx, this, name });
         } catch (Exception e) {
             return null;
@@ -307,20 +307,20 @@ public class PPSRenderer extends PrRenderer {
      * @param unrollCount the unroll count
      * @return a new {@code EffectPeer} instance
      */
-    private EffectPeer createPlatformPeer(FilterContext fctx, String name,
+    private EffectPeer<?> createPlatformPeer(FilterContext fctx, String name,
                                           int unrollCount)
     {
-        EffectPeer peer;
+        EffectPeer<?> peer;
 
         String shaderName = name;
         if (unrollCount > 0) {
             shaderName += "_" + unrollCount;
         }
         try {
-            Class klass = Class.forName(rootPkg + ".impl.prism.ps.PPS" + name + "Peer");
-            Constructor ctor = klass.getConstructor(new Class[]
+            Class<?> klass = Class.forName(rootPkg + ".impl.prism.ps.PPS" + name + "Peer");
+            Constructor<?> ctor = klass.getConstructor(new Class[]
                 { FilterContext.class, Renderer.class, String.class });
-            peer = (EffectPeer)ctor.newInstance(new Object[]
+            peer = (EffectPeer<?>) ctor.newInstance(new Object[]
                 { fctx, this, shaderName });
         } catch (Exception e) {
             System.err.println("Error: Prism peer not found for: " + name +
@@ -331,7 +331,7 @@ public class PPSRenderer extends PrRenderer {
     }
 
     @Override
-    protected EffectPeer createPeer(FilterContext fctx, String name,
+    protected EffectPeer<?> createPeer(FilterContext fctx, String name,
                                     int unrollCount)
     {
         if (PrRenderer.isIntrinsicPeer(name)) {
@@ -447,7 +447,7 @@ public class PPSRenderer extends PrRenderer {
     }
 
     private static ShaderSource createShaderSource(String name) {
-        Class klass = null;
+        Class<?> klass = null;
         try {
             klass = Class.forName(name);
             return (ShaderSource)klass.getDeclaredConstructor().newInstance();

@@ -40,7 +40,7 @@ import javafx.css.StyleConverter;
 
 /**
  */
-public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderStrokeStyle> {
+public class BorderStyleConverter  extends StyleConverter<ParsedValue<?, ?>[], BorderStrokeStyle> {
 //    private static final ParsedValue<ParsedValue<?,Size>[],Double[]> DASHED =
 //            new ParsedValue<ParsedValue<?,Size>[],Double[]>(
 //                    new ParsedValue[] {
@@ -62,11 +62,11 @@ public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderS
 //                    }, SizeConverter.SequenceConverter.getInstance());
 
 
-    public static final ParsedValueImpl<ParsedValue[],Number[]> NONE = new ParsedValueImpl<>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> HIDDEN = new ParsedValueImpl<>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> DOTTED = new ParsedValueImpl<>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> DASHED = new ParsedValueImpl<>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> SOLID = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?, ?>[],Number[]> NONE = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?, ?>[],Number[]> HIDDEN = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?, ?>[],Number[]> DOTTED = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?, ?>[],Number[]> DASHED = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?, ?>[],Number[]> SOLID = new ParsedValueImpl<>(null, null);
 
     /**
      * Convert a sequence of values to a BorderStyle.
@@ -82,9 +82,9 @@ public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderS
     private BorderStyleConverter() { }
 
     @Override
-    public BorderStrokeStyle convert(ParsedValue<ParsedValue[],BorderStrokeStyle> value, Font font) {
+    public BorderStrokeStyle convert(ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle> value, Font font) {
 
-        final ParsedValue[] values = value.getValue();
+        final ParsedValue<?, ?>[] values = value.getValue();
 
         // The first value may be some named style, such as DOTTED, DASHED, SOLID, or NONE.
         // However even if named, there might be additional style information such as the

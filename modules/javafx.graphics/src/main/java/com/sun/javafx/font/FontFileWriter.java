@@ -347,7 +347,7 @@ class FontFileWriter implements FontConstants {
                 if (t == null) {
                     // Add a shutdown hook to remove the temp file.
                     java.security.AccessController.doPrivileged(
-                            (java.security.PrivilegedAction) () -> {
+                            (java.security.PrivilegedAction<?>) () -> {
                                 t = new Thread(() -> {
                                     runHooks();
                                 });

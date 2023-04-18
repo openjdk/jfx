@@ -385,7 +385,7 @@ public abstract class PixelFormat<T extends Buffer> {
         int nonprecolors[];
         boolean premult;
 
-        static PixelFormat createByte(int colors[], boolean premult) {
+        static IndexedPixelFormat createByte(int colors[], boolean premult) {
             return new IndexedPixelFormat(Type.BYTE_INDEXED, premult,
                                           Arrays.copyOf(colors, 256));
         }

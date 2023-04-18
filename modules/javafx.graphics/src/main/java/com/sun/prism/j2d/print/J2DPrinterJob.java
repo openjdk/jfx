@@ -119,7 +119,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     private PrintRequestAttributeSet printReqAttrSet;
     private volatile Object elo = null;
 
-    private static Class onTopClass = null;
+    private static Class<?> onTopClass = null;
     @SuppressWarnings("removal")
     PrintRequestAttribute getAlwaysOnTop(final long id) {
         return AccessController.doPrivileged(
@@ -133,7 +133,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 }
                 if (id == 0) {
                     Constructor<PrintRequestAttribute>
-                         cons = onTopClass.getConstructor();
+                         cons = (Constructor<PrintRequestAttribute>) onTopClass.getConstructor();
                     alwaysOnTop = cons.newInstance();
                 } else {
                     alwaysOnTop = getAlwaysOnTop(onTopClass, id);
@@ -145,7 +145,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     }
 
     private static native
-        PrintRequestAttribute getAlwaysOnTop(Class onTopClass, long id);
+        PrintRequestAttribute getAlwaysOnTop(Class<?> onTopClass, long id);
 
     public J2DPrinterJob(javafx.print.PrinterJob fxJob) {
 

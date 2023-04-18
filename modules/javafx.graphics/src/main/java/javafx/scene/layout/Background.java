@@ -30,7 +30,6 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import java.util.Arrays;
@@ -86,7 +85,7 @@ public final class Background {
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    static final CssMetaData<Node,Image[]> BACKGROUND_IMAGE =
+    static final CssMetaData<Node, String[]> BACKGROUND_IMAGE =
             new SubCssMetaData<>("-fx-background-image",
                     URLConverter.SequenceConverter.getInstance());
 
@@ -107,8 +106,7 @@ public final class Background {
                     new BackgroundSize[] { BackgroundSize.DEFAULT } );
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
-            // Unchecked!
-            (List) Collections.unmodifiableList(Arrays.asList(
+            Collections.unmodifiableList(Arrays.asList(
                 BACKGROUND_COLOR,
                 BACKGROUND_INSETS,
                 BACKGROUND_RADIUS,

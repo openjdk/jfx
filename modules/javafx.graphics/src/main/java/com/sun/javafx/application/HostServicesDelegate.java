@@ -49,7 +49,7 @@ public abstract class HostServicesDelegate {
 
         private static HostServicesDelegate instance = null;
 
-        private Class appClass = null;
+        private Class<?> appClass = null;
 
         public static HostServicesDelegate getInstance(Application app) {
             synchronized (StandaloneHostService.class) {

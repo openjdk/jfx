@@ -25,7 +25,9 @@
 
 package com.sun.glass.ui.ios;
 
-import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Java class encapsulating access to native iOS UIPasteboard API.
@@ -195,31 +197,31 @@ final class IosPasteboard {
         return _putItemsFromArray(this.ptr, items, supportedActions);
     }
 
-    private Object[] hashMapToArray(HashMap hashmap) {
+    private Object[] mapToArray(Map<?, ?> map) {
         Object[] array = null;
-        if ((hashmap != null) && (hashmap.size() > 0)) {
-            array = new Object[hashmap.size()];
-            java.util.Set keys = hashmap.keySet();
-            java.util.Iterator iterator = keys.iterator();
+        if ((map != null) && (map.size() > 0)) {
+            array = new Object[map.size()];
+            Set<?> keys = map.keySet();
+            Iterator<?> iterator = keys.iterator();
             int index = 0;
             while (iterator.hasNext() == true) {
                 Object item[] = new Object[2];
                 String utf = (String)iterator.next();
                 item[IosPasteboard.UtfIndex] = utf;
-                item[IosPasteboard.ObjectIndex] = hashmap.get(utf);
+                item[IosPasteboard.ObjectIndex] = map.get(utf);
                 array[index++] = item;
             }
         }
         return array;
     }
 
-    public long putItems(HashMap<String,Object>[] items, int supportedActions) {
+    public long putItems(Map<String, Object>[] items, int supportedActions) {
         assertValid();
         Object array[] = null;
         if (items.length > 0) {
             array = new Object[items.length];
             for (int i=0; i<items.length; i++) {
-                array[i] = hashMapToArray(items[i]);
+                array[i] = mapToArray(items[i]);
             }
         }
         return putItemsFromArray(array, supportedActions);

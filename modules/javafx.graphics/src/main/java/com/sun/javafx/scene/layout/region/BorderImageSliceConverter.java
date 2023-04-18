@@ -34,7 +34,7 @@ import javafx.css.StyleConverter;
 
 /**
  */
-public final class BorderImageSliceConverter extends StyleConverter<ParsedValue[], BorderImageSlices> {
+public final class BorderImageSliceConverter extends StyleConverter<ParsedValue<?, ?>[], BorderImageSlices> {
 
     private static final BorderImageSliceConverter BORDER_IMAGE_SLICE_CONVERTER =
             new BorderImageSliceConverter();
@@ -47,9 +47,9 @@ public final class BorderImageSliceConverter extends StyleConverter<ParsedValue[
     private BorderImageSliceConverter() { }
 
     @Override
-    public BorderImageSlices convert(ParsedValue<ParsedValue[], BorderImageSlices> layer, Font font) {
+    public BorderImageSlices convert(ParsedValue<ParsedValue<?, ?>[], BorderImageSlices> layer, Font font) {
         // Parser sends insets and boolean fill
-        final ParsedValue[] values = layer.getValue();
+        final ParsedValue<?, ?>[] values = layer.getValue();
 
         // value[0] is ParsedValue<Value<?,Size>[],Insets>
         final ParsedValue<?, Size>[] sizes = (ParsedValue<?, Size>[]) values[0].getValue();

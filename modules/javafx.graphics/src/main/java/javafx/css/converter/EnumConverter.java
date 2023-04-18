@@ -213,8 +213,8 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverter<Strin
     @Override
     public boolean equals(Object other) {
         if (other == this) return true;
-        if (other == null || !(other instanceof EnumConverter)) return false;
-        return (enumClass.equals(((EnumConverter)other).enumClass));
+        if (other == null || !(other instanceof EnumConverter<?> ec)) return false;
+        return enumClass.equals(ec.enumClass);
     }
 
     @Override

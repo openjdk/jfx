@@ -154,7 +154,7 @@ public abstract class Shape3D extends Node {
                             }
                         };
                 private final WeakChangeListener<Boolean> weakMaterialChangeListener =
-                        new WeakChangeListener(materialChangeListener);
+                        new WeakChangeListener<>(materialChangeListener);
 
                 @Override protected void invalidated() {
                     if (old != null) {

@@ -33,7 +33,7 @@ import com.sun.prism.impl.ManagedResource;
 import com.sun.prism.impl.PrismTrace;
 import java.nio.Buffer;
 
-class DummyTexture extends BaseTexture  {
+class DummyTexture extends BaseTexture<ManagedResource<?>>  {
     static class DummyManagedResource extends ManagedResource<Object> {
         DummyManagedResource() {
             super(new Object(), DummyTexturePool.instance);

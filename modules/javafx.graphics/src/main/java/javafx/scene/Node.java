@@ -609,7 +609,7 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public List<Style> getMatchingStyles(CssMetaData cssMetaData,
+            public List<Style> getMatchingStyles(CssMetaData<Styleable, ?> cssMetaData,
                     Styleable styleable) {
                 return Node.getMatchingStyles(cssMetaData, styleable);
             }
@@ -1379,7 +1379,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Node, Boolean> getCssMetaData() {
                     return StyleableProperties.VISIBILITY;
                 }
 
@@ -1467,7 +1467,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Node, Number> getCssMetaData() {
                     return StyleableProperties.OPACITY;
                 }
 
@@ -1514,7 +1514,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Node, BlendMode> getCssMetaData() {
                     return StyleableProperties.BLEND_MODE;
                 }
 
@@ -5929,7 +5929,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         class LocalToSceneTransformProperty extends LazyTransformProperty {
             // need this to track number of listeners
-            private List localToSceneListeners;
+            private List<Object> localToSceneListeners;
             // stamps to watch for parent changes when the listeners
             // are not present
             private long stamp, parentStamp;
@@ -6067,7 +6067,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.TRANSLATE_X;
                     }
 
@@ -6098,7 +6098,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.TRANSLATE_Y;
                     }
 
@@ -6129,7 +6129,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.TRANSLATE_Z;
                     }
 
@@ -6160,7 +6160,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.SCALE_X;
                     }
 
@@ -6191,7 +6191,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.SCALE_Y;
                     }
 
@@ -6222,7 +6222,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.SCALE_Z;
                     }
 
@@ -6253,7 +6253,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.ROTATE;
                     }
 
@@ -6452,7 +6452,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Node, NodeOrientation> getCssMetaData() {
                     //TODO - not supported
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
@@ -6732,7 +6732,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Number> getCssMetaData() {
                         return StyleableProperties.VIEW_ORDER;
                     }
 
@@ -6995,7 +6995,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Cursor> getCssMetaData() {
                         return StyleableProperties.CURSOR;
                     }
 
@@ -7125,7 +7125,7 @@ public abstract class Node implements EventTarget, Styleable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Node, Effect> getCssMetaData() {
                         return StyleableProperties.EFFECT;
                     }
 
@@ -8361,7 +8361,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Node, Boolean> getCssMetaData() {
                     return StyleableProperties.FOCUS_TRAVERSABLE;
                 }
 
@@ -8909,7 +8909,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (event instanceof InputEvent) {
             PlatformLogger logger = Logging.getInputLogger();
             if (logger.isLoggable(Level.FINE)) {
-                EventType eventType = event.getEventType();
+                EventType<?> eventType = event.getEventType();
                 if (eventType == MouseEvent.MOUSE_ENTERED ||
                     eventType == MouseEvent.MOUSE_EXITED) {
                     logger.finer(event.toString());
@@ -9311,7 +9311,7 @@ public abstract class Node implements EventTarget, Styleable {
      * list is sorted by descending specificity.
      */
     // SB-dependency: RT-21096 has been filed to track this
-    static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
+    static List<Style> getMatchingStyles(CssMetaData<Styleable, ?> cssMetaData, Styleable styleable) {
          return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
     }
 
@@ -9320,7 +9320,9 @@ public abstract class Node implements EventTarget, Styleable {
                  (ObservableMap<StyleableProperty<?>, List<Style>>)getProperties().get("STYLEMAP");
          Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(map, this);
          if (ret != null) {
-             if (ret instanceof ObservableMap) return (ObservableMap)ret;
+             if (ret instanceof ObservableMap) {
+                 return (ObservableMap<StyleableProperty<?>, List<Style>>)ret;
+             }
              return FXCollections.observableMap(ret);
          }
          return FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();

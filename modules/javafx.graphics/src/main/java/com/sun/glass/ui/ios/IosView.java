@@ -61,7 +61,7 @@ final class IosView extends View {
     @Override protected void _enableInputMethodEvents(long ptr, boolean enable) { }
 
     @Override native protected int _getNativeFrameBuffer(long ptr);
-    @Override native protected long _create(Map caps);
+    @Override native protected long _create(Map<Object, Object> caps);
 
     @Override native protected long _getNativeView(long ptr);
 

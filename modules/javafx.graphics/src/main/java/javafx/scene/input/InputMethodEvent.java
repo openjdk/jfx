@@ -191,13 +191,13 @@ public final class InputMethodEvent extends InputEvent{
 
     private void writeObject(ObjectOutputStream oos) throws IOException {
         oos.defaultWriteObject();
-        oos.writeObject(new ArrayList(composed));
+        oos.writeObject(new ArrayList<>(composed));
     }
 
     private void readObject(ObjectInputStream ois) throws IOException,
             ClassNotFoundException {
         ois.defaultReadObject();
-        ArrayList<InputMethodTextRun> o = (ArrayList)ois.readObject();
+        ArrayList<InputMethodTextRun> o = (ArrayList<InputMethodTextRun>) ois.readObject();
         composed = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(o));
     }
 

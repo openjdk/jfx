@@ -34,6 +34,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * System (copy/paste) UIPasteboard wrapper class.
@@ -64,14 +67,14 @@ class IosSystemClipboard extends SystemClipboard {
 
     @Override
     protected void pushToSystem(HashMap<String, Object> data, int supportedActions) {
-        HashMap<String,Object> itemFirst = null; // used to handle paste as one item if we can
-        HashMap<String,Object> itemList[] = null; // special case: multiple items for handling urls 10.6 style
+        Map<String, Object> itemFirst = null; // used to handle paste as one item if we can
+        Map<String, Object> itemList[] = null; // special case: multiple items for handling urls 10.6 style
 
-        java.util.Set keys = data.keySet();
-        java.util.Iterator iterator = keys.iterator();
+        Set<String> keys = data.keySet();
+        Iterator<String> iterator = keys.iterator();
 
         while (iterator.hasNext() == true) {
-            String mime = (String)iterator.next();
+            String mime = iterator.next();
             Object object = data.get(mime);
 
             if (object != null) {
@@ -102,7 +105,7 @@ class IosSystemClipboard extends SystemClipboard {
                                     utf = IosPasteboard.UtfFileUrl;
                                     uri = createUri(IosSystemClipboard.FILE_SCHEME, uri.getPath(), IosSystemClipboard.BAD_URI_MSG);
                                 }
-                                itemList[count] = new HashMap();
+                                itemList[count] = new HashMap<>();
                                 itemList[count].put(utf, uri.toASCIIString());
                                 count++;
                             }
@@ -111,7 +114,7 @@ class IosSystemClipboard extends SystemClipboard {
                 } else if (mime.equals(RAW_IMAGE_TYPE) == true) {
                     Pixels pixels = (Pixels)object;
                     if (itemFirst == null) {
-                        itemFirst = new HashMap();
+                        itemFirst = new HashMap<>();
                     }
                     itemFirst.put(mimeToUtf(mime), pixels);
                 } else if ((mime.equals(TEXT_TYPE) == true) ||
@@ -120,7 +123,7 @@ class IosSystemClipboard extends SystemClipboard {
                     if (object instanceof String) {
                         String string = (String)object;
                         if (itemFirst == null) {
-                            itemFirst = new HashMap();
+                            itemFirst = new HashMap<>();
                         }
                         itemFirst.put(mimeToUtf(mime), string);
                     } else {
@@ -146,14 +149,14 @@ class IosSystemClipboard extends SystemClipboard {
                                 utf = IosPasteboard.UtfFileUrl;
                                 uri = createUri(IosSystemClipboard.FILE_SCHEME, uri.getPath(), IosSystemClipboard.BAD_URI_MSG);
                             }
-                            itemList[i] = new HashMap();
+                            itemList[i] = new HashMap<>();
                             itemList[i].put(utf, uri.toASCIIString());
                         }
                     }
                 } else {
                     // custom client mime type - pass through (RT-14592)
                     if (itemFirst == null) {
-                        itemFirst = new HashMap();
+                        itemFirst = new HashMap<>();
                     }
                     itemFirst.put(mimeToUtf(mime), serialize(object));
                 }
@@ -165,11 +168,11 @@ class IosSystemClipboard extends SystemClipboard {
                 itemList = new HashMap[1];
                 itemList[0] = itemFirst;
             } else {
-                HashMap temp = itemList[0];
+                Map<String, Object> temp = itemList[0];
                 itemList[0] = itemFirst;
                 iterator = temp.keySet().iterator();
-                while (iterator.hasNext() == true) {
-                    String utf = (String)iterator.next();
+                while (iterator.hasNext()) {
+                    String utf = iterator.next();
                     Object object = temp.get(utf);
                     itemList[0].put(utf, object);
                 }
@@ -307,10 +310,10 @@ class IosSystemClipboard extends SystemClipboard {
         return strings;
     }
 
-    static private HashMap utm = null;
+    private static Map<String, String> utm = null;
     private synchronized String utfToMime(String utf) {
         if (IosSystemClipboard.utm == null) {
-            IosSystemClipboard.utm = new HashMap(6);
+            IosSystemClipboard.utm = new HashMap<>(6);
             IosSystemClipboard.utm.put(IosPasteboard.UtfString, TEXT_TYPE);
             IosSystemClipboard.utm.put(IosPasteboard.UtfHtml, HTML_TYPE);
             IosSystemClipboard.utm.put(IosPasteboard.UtfRtf, RTF_TYPE);
@@ -320,16 +323,16 @@ class IosSystemClipboard extends SystemClipboard {
             IosSystemClipboard.utm.put(IosPasteboard.UtfPng, RAW_IMAGE_TYPE);
         }
         if (IosSystemClipboard.utm.containsKey(utf) == true) {
-            return (String)IosSystemClipboard.utm.get(utf);
+            return IosSystemClipboard.utm.get(utf);
         } else {
             return utf; //utf.replace('.', '/');
         }
     }
 
-    static private HashMap mtu = null;
+    static private Map<String, String> mtu = null;
     private synchronized String mimeToUtf(String mime) {
         if (IosSystemClipboard.mtu == null) {
-            IosSystemClipboard.mtu = new HashMap(4);
+            IosSystemClipboard.mtu = new HashMap<>(4);
             IosSystemClipboard.mtu.put(TEXT_TYPE, IosPasteboard.UtfString);
             IosSystemClipboard.mtu.put(HTML_TYPE, IosPasteboard.UtfHtml);
             IosSystemClipboard.mtu.put(RTF_TYPE, IosPasteboard.UtfRtf);
@@ -338,7 +341,7 @@ class IosSystemClipboard extends SystemClipboard {
             // pass RAW_IMAGE_TYPE through - do NOT substitute with UtfTiff or UtfPng!
         }
         if (IosSystemClipboard.mtu.containsKey(mime) == true) {
-            return (String)IosSystemClipboard.mtu.get(mime);
+            return IosSystemClipboard.mtu.get(mime);
         } else {
             return mime; //mime.replace('/', '.');
         }

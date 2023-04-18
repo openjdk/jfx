@@ -57,7 +57,7 @@ final class GtkView extends View {
     }
 
     @Override
-    protected native long _create(Map caps);
+    protected native long _create(Map<Object, Object> caps);
 
     @Override
     protected native long _getNativeView(long ptr);

@@ -980,7 +980,7 @@ public abstract class Shape extends Node {
 
     void setShapeChangeListener(Runnable listener) {
         if (shapeChangeListener != null) shapeChangeListener.clear();
-        shapeChangeListener = listener != null ? new WeakReference(listener) : null;
+        shapeChangeListener = listener != null ? new WeakReference<>(listener) : null;
     }
 
     /*

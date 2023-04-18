@@ -158,12 +158,12 @@ public abstract class GraphicsPipeline {
         return fontFactory;
     }
 
-    protected Map deviceDetails = null;
+    protected Map<Object, Object> deviceDetails = null;
 
     /*
      * returns optional device dependant details, may be null.
      */
-    public Map getDeviceDetails() {
+    public Map<Object, Object> getDeviceDetails() {
         return deviceDetails;
     }
 
@@ -171,7 +171,7 @@ public abstract class GraphicsPipeline {
      * sets optional device dependant details, may be null.
      * This should be done very early (like at init time) and then not changed.
      */
-    protected void setDeviceDetails(Map details) {
+    protected void setDeviceDetails(Map<Object, Object> details) {
         deviceDetails = details;
     }
 
@@ -215,7 +215,7 @@ public abstract class GraphicsPipeline {
                 if (PrismSettings.verbose) {
                     System.out.println("Prism pipeline name = " + className);
                 }
-                Class klass = Class.forName(className);
+                Class<?> klass = Class.forName(className);
                 if (PrismSettings.verbose) {
                     System.out.println("(X) Got class = " + klass);
                 }

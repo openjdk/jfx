@@ -65,14 +65,14 @@ public class PaintTypeTest {
         return new ParsedValueImpl<>(new Size(value*100, SizeUnits.PERCENT), null);
     }
 
-    ParsedValue<ParsedValue[],Stop> stopValue(Stop stop) {
+    ParsedValue<ParsedValue<?, ?>[], Stop> stopValue(Stop stop) {
         ParsedValue<?,Size> offset = sizeVal((float)stop.getOffset());
         ParsedValue<Color,Color> color = new ParsedValueImpl<>(stop.getColor(), null);
         ParsedValue[] values = new ParsedValue[] { offset, color };
         return new ParsedValueImpl<>(values, StopConverter.getInstance());
     }
 
-    ParsedValue<ParsedValue[],Paint> linearGradientValues(LinearGradient lg) {
+    ParsedValue<ParsedValue<?, ?>[],Paint> linearGradientValues(LinearGradient lg) {
         ParsedValue[] values = new ParsedValue[7];
         int v = 0;
         values[v++] = sizeVal((float) lg.getStartX());
@@ -85,7 +85,7 @@ public class PaintTypeTest {
         return new ParsedValueImpl<>(values, PaintConverter.LinearGradientConverter.getInstance());
     }
 
-    ParsedValue<ParsedValue[],Paint> radialGradientValues(RadialGradient rg) {
+    ParsedValue<ParsedValue<?, ?>[], Paint> radialGradientValues(RadialGradient rg) {
         ParsedValue[] values = new ParsedValue[8];
         int v = 0;
         values[v++] = new ParsedValueImpl<Size,Size>(new Size(rg.getFocusAngle(), SizeUnits.PX), null);

@@ -26,14 +26,15 @@
 package com.sun.scenario.effect.impl.prism.ps;
 
 import com.sun.javafx.geom.Rectangle;
+import com.sun.prism.paint.Color;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderGraphics;
-import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
-public abstract class PPSZeroSamplerPeer extends PPSEffectPeer {
+public abstract class PPSZeroSamplerPeer extends PPSEffectPeer<RenderState> {
 
     private Shader shader;
 

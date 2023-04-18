@@ -33,6 +33,7 @@ import java.security.PrivilegedAction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -306,10 +307,8 @@ public class FontConfigManager {
         return defaultFontFile;
     }
 
-    public static ArrayList<String>
-        getFileNames(FcCompFont font, boolean fallBacksOnly) {
-
-        ArrayList fileList = new ArrayList<String>();
+    public static List<String> getFileNames(FcCompFont font, boolean fallBacksOnly) {
+        List<String> fileList = new ArrayList<>();
 
         if (font.allFonts != null) {
             int start = (fallBacksOnly) ? 1 : 0;
@@ -320,10 +319,9 @@ public class FontConfigManager {
         return fileList;
     }
 
-    public static ArrayList<String>
-        getFontNames(FcCompFont font, boolean fallBacksOnly) {
+    public static List<String> getFontNames(FcCompFont font, boolean fallBacksOnly) {
 
-        ArrayList fontList = new ArrayList<String>();
+        List<String> fontList = new ArrayList<>();
 
         if (font.allFonts != null) {
             int start = (fallBacksOnly) ? 1 : 0;

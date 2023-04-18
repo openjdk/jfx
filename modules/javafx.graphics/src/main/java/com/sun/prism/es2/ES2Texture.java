@@ -69,14 +69,14 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
 
 
     // TODO: We don't handle mipmap in shared texture yet.
-    private ES2Texture(ES2Texture sharedTex, WrapMode newMode) {
+    private ES2Texture(ES2Texture<T> sharedTex, WrapMode newMode) {
         super(sharedTex, newMode, false);
         this.context = sharedTex.context;
     }
 
     @Override
     protected Texture createSharedTexture(WrapMode newMode) {
-        return new ES2Texture(this, newMode);
+        return new ES2Texture<>(this, newMode);
     }
 
     /**
@@ -95,7 +95,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         return i;
     }
 
-    static ES2Texture create(ES2Context context, PixelFormat format,
+    static ES2Texture<?> create(ES2Context context, PixelFormat format,
             WrapMode wrapMode, int w, int h, boolean useMipmap) {
         if (!context.getResourceFactory().isFormatSupported(format)) {
             throw new UnsupportedOperationException(
@@ -212,7 +212,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         ES2TextureData texData =
             new ES2TextureData(context, glCtx.genAndBindTexture(),
                                texWidth, texHeight, size);
-        ES2TextureResource texRes = new ES2TextureResource(texData);
+        ES2TextureResource<?> texRes = new ES2TextureResource<>(texData);
 
         boolean result = uploadPixels(glCtx, GLContext.GL_TEXTURE_2D, null, format,
                                       texWidth, texHeight,
@@ -226,7 +226,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         if (!result) {
             return null;
         }
-        return new ES2Texture(context, texRes, format, wrapMode,
+        return new ES2Texture<>(context, texRes, format, wrapMode,
                               texWidth, texHeight,
                               contentX, contentY,
                               contentW, contentH, useMipmap);
@@ -263,7 +263,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                 }
 
                 // Create using subWidth/subHeight then adjust content afterwards
-                ES2Texture subTex =
+                ES2Texture<?> subTex =
                     create(context, PixelFormat.BYTE_ALPHA, WrapMode.CLAMP_TO_EDGE,
                            subWidth, subHeight, false);
                 if (subTex != null) {
@@ -316,7 +316,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         ES2TextureData texData =
             new ES2TextureData(context, glCtx.genAndBindTexture(),
                                texWidth, texHeight, size);
-        ES2TextureResource texRes = new ES2TextureResource(texData);
+        ES2TextureResource<?> texRes = new ES2TextureResource<>(texData);
 
         boolean result = uploadPixels(context.getGLContext(), GLContext.GL_TEXTURE_2D,
                 frame, texWidth, texHeight, true);
@@ -326,9 +326,9 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         // restore previous texture objects
         glCtx.setBoundTexture(savedTex);
 
-        ES2Texture tex = null;
+        ES2Texture<?> tex = null;
         if (result) {
-            tex = new ES2Texture(context, texRes, format, WrapMode.CLAMP_TO_EDGE,
+            tex = new ES2Texture<>(context, texRes, format, WrapMode.CLAMP_TO_EDGE,
                                  texWidth, texHeight,
                                  0, 0, frame.getWidth(), frame.getHeight(), false);
         }

@@ -112,7 +112,7 @@ public class ByteIndexed {
         }
     }
 
-    static int[] getColors(BytePixelGetter getter, PixelSetter setter) {
+    static int[] getColors(BytePixelGetter getter, PixelSetter<?> setter) {
         ByteIndexed.Getter big = (ByteIndexed.Getter) getter;
         return (setter.getAlphaType() == AlphaType.PREMULTIPLIED)
                 ? big.getPreColors()

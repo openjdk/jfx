@@ -73,7 +73,7 @@ final class WinView extends View {
     @Override native protected void _enableInputMethodEvents(long ptr, boolean enable);
     @Override native protected void _finishInputMethodComposition(long ptr);
 
-    @Override native protected long _create(Map caps);
+    @Override native protected long _create(Map<Object, Object> caps);
     @Override native protected long _getNativeView(long ptr);
     @Override native protected int _getX(long ptr);
     @Override native protected int _getY(long ptr);

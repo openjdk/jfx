@@ -83,7 +83,7 @@ public class URLTypeTest {
     @Test
     public void testConvert() {
         //System.out.println("convert");
-        ParsedValue<ParsedValue[],String>[] urls = new ParsedValue[testPairs.length];
+        ParsedValue<ParsedValue<String, String>[], String>[] urls = new ParsedValue[testPairs.length];
 
         for(int n=0; n<testPairs.length; n++) {
             ParsedValue[] values = new ParsedValue[] {
@@ -93,7 +93,7 @@ public class URLTypeTest {
             urls[n] = new ParsedValueImpl<>(values, URLConverter.getInstance());
         }
 
-        ParsedValue<ParsedValue<ParsedValue[],String>[],String[]> value =
+        ParsedValue<ParsedValue<ParsedValue<String, String>[], String>[], String[]> value =
                 new ParsedValueImpl<>(urls, URLConverter.SequenceConverter.getInstance());
 
         Font font = null;

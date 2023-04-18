@@ -136,7 +136,7 @@ public class ParsedValueTest {
         assertFalse(value1.equals(value3));
         assertFalse(value3.equals(value1));
 
-        ParsedValue<ParsedValue[],Number[]> value4 =
+        ParsedValue<ParsedValue<?, Size>[],Number[]> value4 =
                 new ParsedValueImpl<>(
                     new ParsedValueImpl[] {
                         new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),

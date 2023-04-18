@@ -57,7 +57,7 @@ public interface ResourceFactory extends GraphicsResource {
      */
     public boolean isDeviceReady();
 
-    public TextureResourcePool getTextureResourcePool();
+    public TextureResourcePool<?> getTextureResourcePool();
 
     /**
      * Returns a new {@code Texture} containing the pixels from the given

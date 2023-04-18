@@ -100,7 +100,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
     }
 
     // Wrapper to make StyleHelper's life a little easier
-    public ParsedValue getParsedValue() {
+    public ParsedValue<?, ?> getParsedValue() {
         return style.getDeclaration().getParsedValue();
     }
 

@@ -44,8 +44,8 @@ import java.util.Hashtable;
  * @see DisposerRecord
  */
 public class Disposer implements Runnable {
-    private static final ReferenceQueue queue = new ReferenceQueue();
-    private static final Hashtable records = new Hashtable();
+    private static final ReferenceQueue<Object> queue = new ReferenceQueue<>();
+    private static final Hashtable<Object, DisposerRecord> records = new Hashtable<>();
     private static Disposer disposerInstance;
 
     static {
@@ -54,7 +54,7 @@ public class Disposer implements Runnable {
         ThreadGroup tg = Thread.currentThread().getThreadGroup();
         @SuppressWarnings("removal")
         var dummy = java.security.AccessController.doPrivileged(
-            new java.security.PrivilegedAction() {
+            new java.security.PrivilegedAction<>() {
                 @Override
                 public Object run() {
                     /* The thread must be a member of a thread group
@@ -83,8 +83,8 @@ public class Disposer implements Runnable {
      * @param rec the associated DisposerRecord object
      * @see DisposerRecord
      */
-    public static WeakReference addRecord(Object target, DisposerRecord rec) {
-        WeakReference ref = new WeakReference(target, queue);
+    public static <T> WeakReference<T> addRecord(T target, DisposerRecord rec) {
+        WeakReference<T> ref = new WeakReference<>(target, queue);
         disposerInstance.records.put(ref, rec);
         return ref;
     }
@@ -94,8 +94,8 @@ public class Disposer implements Runnable {
         while (true) {
             try {
                 Object obj = queue.remove();
-                ((Reference)obj).clear();
-                DisposerRecord rec = (DisposerRecord)records.remove(obj);
+                ((Reference<Object>) obj).clear();
+                DisposerRecord rec = records.remove(obj);
                 rec.dispose();
                 obj = null;
                 rec = null;

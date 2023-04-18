@@ -26,12 +26,13 @@
 package com.sun.prism.es2;
 
 import com.sun.prism.impl.DisposerManagedResource;
+import com.sun.prism.impl.ResourcePool;
 
 class ES2TextureResource<T extends ES2TextureData>
     extends DisposerManagedResource<T>
 {
     ES2TextureResource(T resource) {
-        super(resource, ES2VramPool.instance, resource);
+        super(resource, (ResourcePool<T>) ES2VramPool.instance, resource);
     }
 
     @Override

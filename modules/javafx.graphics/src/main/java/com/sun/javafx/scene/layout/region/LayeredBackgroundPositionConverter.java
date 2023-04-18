@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.layout.region;
 
 import javafx.css.ParsedValue;
+import javafx.css.Size;
 import javafx.css.StyleConverter;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.text.Font;
@@ -38,7 +39,7 @@ import javafx.scene.text.Font;
  * ]
  * @see <a href="http://www.w3.org/TR/css3-background/#the-background-position">background-position</a>
  */
-public final class LayeredBackgroundPositionConverter extends StyleConverter<ParsedValue<ParsedValue[], BackgroundPosition>[], BackgroundPosition[]> {
+public final class LayeredBackgroundPositionConverter extends StyleConverter<ParsedValue<ParsedValue<?, Size>[], BackgroundPosition>[], BackgroundPosition[]> {
     private static final LayeredBackgroundPositionConverter LAYERED_BACKGROUND_POSITION_CONVERTER =
             new LayeredBackgroundPositionConverter();
 
@@ -51,8 +52,8 @@ public final class LayeredBackgroundPositionConverter extends StyleConverter<Par
     }
 
     @Override
-    public BackgroundPosition[] convert(ParsedValue<ParsedValue<ParsedValue[], BackgroundPosition>[], BackgroundPosition[]> value, Font font) {
-        ParsedValue<ParsedValue[], BackgroundPosition>[] layers = value.getValue();
+    public BackgroundPosition[] convert(ParsedValue<ParsedValue<ParsedValue<?, Size>[], BackgroundPosition>[], BackgroundPosition[]> value, Font font) {
+        ParsedValue<ParsedValue<?, Size>[], BackgroundPosition>[] layers = value.getValue();
         BackgroundPosition[] positions = new BackgroundPosition[layers.length];
         for (int l = 0; l < layers.length; l++) {
             positions[l] = layers[l].convert(font);

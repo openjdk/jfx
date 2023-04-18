@@ -37,7 +37,7 @@ import javafx.css.StyleConverter;
  * Date: 8/10/12
  * Time: 8:07 PM
  */
-public class BorderImageWidthConverter extends StyleConverter<ParsedValue[], BorderWidths> {
+public class BorderImageWidthConverter extends StyleConverter<ParsedValue<?, Size>[], BorderWidths> {
     private static final BorderImageWidthConverter CONVERTER_INSTANCE = new BorderImageWidthConverter();
 
     public static BorderImageWidthConverter getInstance() {
@@ -47,17 +47,17 @@ public class BorderImageWidthConverter extends StyleConverter<ParsedValue[], Bor
     private BorderImageWidthConverter() { }
 
     @Override
-    public BorderWidths convert(ParsedValue<ParsedValue[], BorderWidths> value, Font font) {
-        ParsedValue[] sides = value.getValue();
+    public BorderWidths convert(ParsedValue<ParsedValue<?, Size>[], BorderWidths> value, Font font) {
+        ParsedValue<?, Size>[] sides = value.getValue();
         assert sides.length == 4;
 
         double top = 1, right = 1, bottom = 1, left = 1;
         boolean topPercent = false, rightPercent = false, bottomPercent = false, leftPercent = false;
-        ParsedValue val = sides[0];
+        ParsedValue<?, Size> val = sides[0];
         if ("auto".equals(val.getValue())) {
             top = BorderWidths.AUTO;
         } else {
-            Size size = (Size)val.convert(font);
+            Size size = val.convert(font);
             top = size.pixels(font);
             topPercent = size.getUnits() == SizeUnits.PERCENT;
         }
@@ -66,7 +66,7 @@ public class BorderImageWidthConverter extends StyleConverter<ParsedValue[], Bor
         if ("auto".equals(val.getValue())) {
             right = BorderWidths.AUTO;
         } else {
-            Size size = (Size)val.convert(font);
+            Size size = val.convert(font);
             right = size.pixels(font);
             rightPercent = size.getUnits() == SizeUnits.PERCENT;
         }
@@ -75,7 +75,7 @@ public class BorderImageWidthConverter extends StyleConverter<ParsedValue[], Bor
         if ("auto".equals(val.getValue())) {
             bottom = BorderWidths.AUTO;
         } else {
-            Size size = (Size)val.convert(font);
+            Size size = val.convert(font);
             bottom = size.pixels(font);
             bottomPercent = size.getUnits() == SizeUnits.PERCENT;
         }
@@ -84,7 +84,7 @@ public class BorderImageWidthConverter extends StyleConverter<ParsedValue[], Bor
         if ("auto".equals(val.getValue())) {
             left = BorderWidths.AUTO;
         } else {
-            Size size = (Size)val.convert(font);
+            Size size = val.convert(font);
             left = size.pixels(font);
             leftPercent = size.getUnits() == SizeUnits.PERCENT;
         }

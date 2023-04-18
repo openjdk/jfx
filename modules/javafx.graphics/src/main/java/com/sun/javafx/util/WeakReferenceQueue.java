@@ -45,13 +45,14 @@ public class WeakReferenceQueue<E> {
     /**
      * Reference queue for cleared weak references
      */
-    private final ReferenceQueue garbage = new ReferenceQueue();
+    private final ReferenceQueue<E> garbage = new ReferenceQueue<>();
 
     /**
      * Strongly referenced list head
      */
-    private Object strongRef = new Object();
-    private ListEntry head = new ListEntry(strongRef, garbage);
+    @SuppressWarnings("unchecked")
+    private E strongRef = (E) new Object();
+    private ListEntry<E> head = new ListEntry<>(strongRef, garbage);
 
     /**
      * Size of the queue
@@ -61,13 +62,13 @@ public class WeakReferenceQueue<E> {
     public void add(E obj) {
         cleanup();
         size++;
-        new ListEntry(obj, garbage).insert(head.prev);
+        new ListEntry<>(obj, garbage).insert(head.prev);
     }
 
     public void remove(E obj) {
         cleanup();
 
-        ListEntry entry = head.next;
+        ListEntry<E> entry = head.next;
         while (entry != head) {
             Object other = entry.get();
             if (other == obj) {
@@ -80,23 +81,23 @@ public class WeakReferenceQueue<E> {
     }
 
     public void cleanup() {
-        ListEntry entry;
-        while ((entry = (ListEntry) garbage.poll()) != null) {
+        ListEntry<?> entry;
+        while ((entry = (ListEntry<?>) garbage.poll()) != null) {
             size--;
             entry.remove();
         }
     }
 
-    public Iterator<? super E> iterator() {
-        return new Iterator() {
-            private ListEntry index = head;
-            private Object next = null;
+    public Iterator<E> iterator() {
+        return new Iterator<>() {
+            private ListEntry<E> index = head;
+            private E next = null;
 
             @Override
             public boolean hasNext() {
                 next = null;
                 while (next == null) {
-                    ListEntry nextIndex = index.prev;
+                    ListEntry<E> nextIndex = index.prev;
                     if (nextIndex == head) {
                         break;
                     }
@@ -111,7 +112,7 @@ public class WeakReferenceQueue<E> {
             }
 
             @Override
-            public Object next() {
+            public E next() {
                 hasNext(); // forces us to clear out crap up to the next
                            // valid spot
                 index = index.prev;
@@ -121,7 +122,7 @@ public class WeakReferenceQueue<E> {
             @Override
             public void remove() {
                 if (index != head) {
-                    ListEntry nextIndex = index.next;
+                    ListEntry<E> nextIndex = index.next;
                     size--;
                     index.remove();
                     index = nextIndex;
@@ -130,16 +131,16 @@ public class WeakReferenceQueue<E> {
         };
     }
 
-    private static class ListEntry extends WeakReference {
-        ListEntry prev, next;
+    private static class ListEntry<E> extends WeakReference<E> {
+        ListEntry<E> prev, next;
 
-        public ListEntry(Object o, ReferenceQueue queue) {
+        public ListEntry(E o, ReferenceQueue<E> queue) {
             super(o, queue);
             prev = this;
             next = this;
         }
 
-        public void insert(ListEntry where) {
+        public void insert(ListEntry<E> where) {
             prev = where;
             next = where.next;
             where.next = this;

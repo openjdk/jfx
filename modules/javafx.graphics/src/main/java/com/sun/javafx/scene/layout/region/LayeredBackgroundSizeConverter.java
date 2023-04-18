@@ -40,7 +40,7 @@ import javafx.scene.text.Font;
  * <bg-size> = [ <size> | auto ]{1,2} | cover | contain
  * @see <a href="http://www.w3.org/TR/css3-background/#the-background-size">background-size</a>
  */
-public final class LayeredBackgroundSizeConverter extends StyleConverter<ParsedValue<ParsedValue[], BackgroundSize>[], BackgroundSize[]> {
+public final class LayeredBackgroundSizeConverter extends StyleConverter<ParsedValue<ParsedValue<?, ?>[], BackgroundSize>[], BackgroundSize[]> {
     private static final LayeredBackgroundSizeConverter LAYERED_BACKGROUND_SIZE_CONVERTER =
             new LayeredBackgroundSizeConverter();
 
@@ -53,8 +53,8 @@ public final class LayeredBackgroundSizeConverter extends StyleConverter<ParsedV
     }
 
     @Override
-    public BackgroundSize[] convert(ParsedValue<ParsedValue<ParsedValue[], BackgroundSize>[], BackgroundSize[]> value, Font font) {
-        ParsedValue<ParsedValue[], BackgroundSize>[] layers = value.getValue();
+    public BackgroundSize[] convert(ParsedValue<ParsedValue<ParsedValue<?, ?>[], BackgroundSize>[], BackgroundSize[]> value, Font font) {
+        ParsedValue<ParsedValue<?, ?>[], BackgroundSize>[] layers = value.getValue();
         BackgroundSize[] sizes = new BackgroundSize[layers.length];
         for (int l = 0; l < layers.length; l++) {
             sizes[l] = layers[l].convert(font);

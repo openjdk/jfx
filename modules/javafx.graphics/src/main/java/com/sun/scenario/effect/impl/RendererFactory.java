@@ -66,7 +66,7 @@ class RendererFactory {
         }
     }
 
-    private static boolean isRSLFriendly(Class klass) {
+    private static boolean isRSLFriendly(Class<?> klass) {
         // can't use reflection here to check for sun.* class when running
         // in sandbox; however, we are allowed to walk up the tree and
         // check names of interfaces loaded by the system
@@ -74,7 +74,7 @@ class RendererFactory {
             return true;
         }
         boolean rsl = false;
-        for (Class iface : klass.getInterfaces()) {
+        for (Class<?> iface : klass.getInterfaces()) {
             if (isRSLFriendly(iface)) {
                 rsl = true;
                 break;
@@ -89,7 +89,7 @@ class RendererFactory {
 
     private static Renderer createRSLRenderer(FilterContext fctx) {
         try {
-            Class klass = Class.forName(rootPkg + ".impl.j2d.rsl.RSLRenderer");
+            Class<?> klass = Class.forName(rootPkg + ".impl.j2d.rsl.RSLRenderer");
             Method m = klass.getMethod("createRenderer",
                                        new Class[] { FilterContext.class });
             return (Renderer)m.invoke(null, new Object[] { fctx });
@@ -101,7 +101,7 @@ class RendererFactory {
     private static Renderer createJOGLRenderer(FilterContext fctx) {
         if (tryJOGL) {
             try {
-                Class klass = Class.forName(rootPkg + ".impl.j2d.jogl.JOGLRenderer");
+                Class<?> klass = Class.forName(rootPkg + ".impl.j2d.jogl.JOGLRenderer");
                 Method m = klass.getMethod("createRenderer",
                                            new Class[] { FilterContext.class });
                 return (Renderer)m.invoke(null, new Object[] { fctx });
@@ -114,7 +114,7 @@ class RendererFactory {
     private static Renderer createPrismRenderer(FilterContext fctx) {
         if (tryPrism) {
             try {
-                Class klass = Class.forName(rootPkg + ".impl.prism.PrRenderer");
+                Class<?> klass = Class.forName(rootPkg + ".impl.prism.PrRenderer");
                 Method m = klass.getMethod("createRenderer",
                                            new Class[] { FilterContext.class });
                 return (Renderer)m.invoke(null, new Object[] { fctx });
@@ -129,7 +129,7 @@ class RendererFactory {
     private static Renderer getSSERenderer() {
         if (trySIMD) {
             try {
-                Class klass = Class.forName(rootPkg + ".impl.j2d.J2DSWRenderer");
+                Class<?> klass = Class.forName(rootPkg + ".impl.j2d.J2DSWRenderer");
                 Method m = klass.getMethod("getSSEInstance", (Class[])null);
                 Renderer sseRenderer = (Renderer)m.invoke(null, (Object[])null);
                 if (sseRenderer != null) {
@@ -144,8 +144,8 @@ class RendererFactory {
 
     private static Renderer getJavaRenderer() {
         try {
-            Class klass = Class.forName(rootPkg + ".impl.prism.sw.PSWRenderer");
-            Class screenClass = Class.forName("com.sun.glass.ui.Screen");
+            Class<?> klass = Class.forName(rootPkg + ".impl.prism.sw.PSWRenderer");
+            Class<?> screenClass = Class.forName("com.sun.glass.ui.Screen");
             Method m = klass.getMethod("createJSWInstance",
                                        new Class[] { screenClass });
             Renderer jswRenderer =
@@ -159,7 +159,7 @@ class RendererFactory {
 
     private static Renderer getJavaRenderer(FilterContext fctx) {
         try {
-            Class klass = Class.forName(rootPkg + ".impl.prism.sw.PSWRenderer");
+            Class<?> klass = Class.forName(rootPkg + ".impl.prism.sw.PSWRenderer");
             Method m = klass.getMethod("createJSWInstance",
                                        new Class[] { FilterContext.class });
             Renderer jswRenderer =

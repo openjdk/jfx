@@ -182,7 +182,7 @@ final class MonocleView extends View {
     }
 
     @Override
-    protected long _create(Map caps) {
+    protected long _create(Map<Object, Object> caps) {
         return 1l;
     }
 

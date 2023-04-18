@@ -87,7 +87,7 @@ class SWArgbPreTexture extends SWTexture {
         this.checkDimensions(dstx+srcw, dsty+srch);
         this.allocate();
 
-        final PixelGetter getter;
+        final PixelGetter<?> getter;
         switch (format) {
             case BYTE_RGB:
                 getter = ByteRgb.getter;
@@ -112,7 +112,8 @@ class SWArgbPreTexture extends SWTexture {
                 throw new UnsupportedOperationException("!!! UNSUPPORTED PIXEL FORMAT: " + format);
         }
 
-        PixelConverter converter = PixelUtils.getConverter(getter, IntArgbPre.setter);
+        @SuppressWarnings("unchecked")
+        PixelConverter<Buffer, IntBuffer> converter = (PixelConverter<Buffer, IntBuffer>) PixelUtils.getConverter(getter, IntArgbPre.setter);
         buffer.position(0);
         converter.convert(buffer, (srcy * srcscan) + srcx, srcscan,
                           IntBuffer.wrap(this.data), (dsty * physicalWidth) + dstx, physicalWidth, srcw, srch);

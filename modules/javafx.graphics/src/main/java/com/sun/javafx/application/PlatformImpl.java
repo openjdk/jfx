@@ -137,7 +137,7 @@ public class PlatformImpl {
      *
      * @param appClass the Application class.
      */
-    public static void setApplicationName(final Class appClass) {
+    public static void setApplicationName(final Class<?> appClass) {
         runLater(() -> com.sun.glass.ui.Application.GetApplication().setName(appClass.getName()));
     }
 
@@ -311,9 +311,9 @@ public class PlatformImpl {
         if (eventProc != 0L) {
             // Set the value for the javafx.embed.eventProc
             // key in the glass Application map
-            Map map = com.sun.glass.ui.Application.getDeviceDetails();
+            Map<Object, Object> map = com.sun.glass.ui.Application.getDeviceDetails();
             if (map == null) {
-                map = new HashMap();
+                map = new HashMap<>();
                 com.sun.glass.ui.Application.setDeviceDetails(map);
             }
             if (map.get(eventProcProperty) == null) {
@@ -397,7 +397,7 @@ public class PlatformImpl {
     private static void invokeSwingFXUtilsMethod(final String methodName) {
         //Use reflection in case we are running compact profile
         try {
-            Class swingFXUtilsClass = Class.forName("com.sun.javafx.embed.swing.SwingFXUtilsImpl");
+            Class<?> swingFXUtilsClass = Class.forName("com.sun.javafx.embed.swing.SwingFXUtilsImpl");
             Method installFwEventQueue = swingFXUtilsClass.getDeclaredMethod(methodName);
 
             waitForStart();
@@ -926,7 +926,7 @@ public class PlatformImpl {
         }
 
         @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
+        var dummy = AccessController.doPrivileged((PrivilegedAction<?>) () -> {
             StyleManager.getInstance().setUserAgentStylesheets(uaStylesheets);
             return null;
         });
@@ -936,13 +936,13 @@ public class PlatformImpl {
     @SuppressWarnings("removal")
     public static void addNoTransparencyStylesheetToScene(final Scene scene) {
         if (PlatformImpl.isCaspian()) {
-            AccessController.doPrivileged((PrivilegedAction) () -> {
+            AccessController.doPrivileged((PrivilegedAction<?>) () -> {
                 StyleManager.getInstance().addUserAgentStylesheet(scene,
                         "com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css");
                 return null;
             });
         } else if (PlatformImpl.isModena()) {
-            AccessController.doPrivileged((PrivilegedAction) () -> {
+            AccessController.doPrivileged((PrivilegedAction<?>) () -> {
                 StyleManager.getInstance().addUserAgentStylesheet(scene,
                         "com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css");
                 return null;

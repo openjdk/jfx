@@ -56,7 +56,7 @@ public class EffectTypeTest {
         return new InnerShadow();
     }
 
-    ParsedValue<ParsedValue[], Effect> getInnerShadowValue(InnerShadow is, boolean colorIsDerived) {
+    ParsedValue<ParsedValue<?, ?>[], Effect> getInnerShadowValue(InnerShadow is, boolean colorIsDerived) {
         Size offsetX = makeSize((float) is.getOffsetX());
         Size offsetY = makeSize((float) is.getOffsetX());
         Size choke = makeSize((float) is.getChoke());
@@ -65,7 +65,7 @@ public class EffectTypeTest {
         ParsedValue<?,Color> colorVal;
 
         if (colorIsDerived) {
-            ParsedValue[] values = new ParsedValue[] {
+            ParsedValue<?, ?>[] values = new ParsedValue[] {
                 new ParsedValueImpl<Color,Color>(is.getColor(),null),
                 new ParsedValueImpl<Size,Size>(makeSize(0.5f),null)
             };
@@ -76,7 +76,7 @@ public class EffectTypeTest {
 
         BlurType blurType = is.getBlurType();
 
-        ParsedValue[] vals = new ParsedValue[] {
+        ParsedValue<?, ?>[] vals = new ParsedValue[] {
             new ParsedValueImpl<BlurType,BlurType>(blurType, null),
             colorVal,
             new ParsedValueImpl<Size,Size>(radius, null),
@@ -92,7 +92,7 @@ public class EffectTypeTest {
         return new DropShadow();
     }
 
-    ParsedValue<ParsedValue[], Effect> getDropShadowValue(DropShadow ds, boolean colorIsDerived) {
+    ParsedValue<ParsedValue<?, ?>[], Effect> getDropShadowValue(DropShadow ds, boolean colorIsDerived) {
         Size offsetX = makeSize((float) ds.getOffsetX());
         Size offsetY = makeSize((float) ds.getOffsetX());
         Size spread = makeSize((float) ds.getSpread());
@@ -101,7 +101,7 @@ public class EffectTypeTest {
         ParsedValue<?,Color> colorVal;
 
         if (colorIsDerived) {
-            ParsedValue[] values = new ParsedValue[] {
+            ParsedValue<?, ?>[] values = new ParsedValue[] {
                 new ParsedValueImpl<Color,Color>(ds.getColor(),null),
                 new ParsedValueImpl<Size,Size>(makeSize(0.5f),null)
             };
@@ -112,7 +112,7 @@ public class EffectTypeTest {
 
         BlurType blurType = ds.getBlurType();
 
-        ParsedValue[] vals = new ParsedValue[] {
+        ParsedValue<?, ?>[] vals = new ParsedValue[] {
             new ParsedValueImpl<BlurType,BlurType>(blurType, null),
             colorVal,
             new ParsedValueImpl<Size,Size>(radius, null),
@@ -157,7 +157,7 @@ public class EffectTypeTest {
         //System.out.println("convert");
         InnerShadow is = getInnerShadow();
         Font font = null;
-        ParsedValue<ParsedValue[], Effect> value = getInnerShadowValue(is, false);
+        ParsedValue<ParsedValue<?, ?>[], Effect> value = getInnerShadowValue(is, false);
         Effect result = value.convert(font);
         checkInnerShadow("convert[1] ",  is, (InnerShadow)result);
 

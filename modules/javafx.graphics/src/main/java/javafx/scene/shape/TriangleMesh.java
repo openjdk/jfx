@@ -139,11 +139,11 @@ public class TriangleMesh extends Mesh {
     private final ObservableFaceArray faces = new ObservableFaceArrayImpl();
     private final ObservableIntegerArray faceSmoothingGroups = FXCollections.observableIntegerArray();
 
-    private final Listener pointsSyncer = new Listener(points);
-    private final Listener normalsSyncer = new Listener(normals);
-    private final Listener texCoordsSyncer = new Listener(texCoords);
-    private final Listener facesSyncer = new Listener(faces);
-    private final Listener faceSmoothingGroupsSyncer = new Listener(faceSmoothingGroups);
+    private final Listener<ObservableFloatArray> pointsSyncer = new Listener<>(points);
+    private final Listener<ObservableFloatArray> normalsSyncer = new Listener<>(normals);
+    private final Listener<ObservableFloatArray> texCoordsSyncer = new Listener<>(texCoords);
+    private final Listener<ObservableIntegerArray> facesSyncer = new Listener<>(faces);
+    private final Listener<ObservableIntegerArray> faceSmoothingGroupsSyncer = new Listener<>(faceSmoothingGroups);
     private final boolean isPredefinedShape;
     private boolean isValidDirty = true;
     private boolean isPointsValid, isNormalsValid, isTexCoordsValid, isFacesValid, isFaceSmoothingGroupValid;

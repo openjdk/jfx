@@ -29,6 +29,8 @@ import com.sun.glass.ui.monocle.GLException;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
+import java.util.Map;
+
 import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.prism.impl.PrismSettings;
 
@@ -90,7 +92,7 @@ class MonocleGLFactory extends GLFactory {
     }
 
     @Override
-    boolean initialize(Class psClass, Attributes attrs) {
+    boolean initialize(Class<?> psClass, Attributes attrs) {
 
         // holds the list of attributes to be translated for native call
         int attrArr[] = new int[GLPixelFormat.Attributes.NUM_ITEMS];
@@ -151,6 +153,6 @@ class MonocleGLFactory extends GLFactory {
     }
 
     @Override
-    void updateDeviceDetails(HashMap deviceDetails) {
+    void updateDeviceDetails(Map<Object, Object> deviceDetails) {
     }
 }

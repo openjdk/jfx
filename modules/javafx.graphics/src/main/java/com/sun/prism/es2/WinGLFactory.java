@@ -27,6 +27,7 @@ package com.sun.prism.es2;
 
 import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
+import java.util.Map;
 
 class WinGLFactory extends GLFactory {
 
@@ -77,7 +78,7 @@ class WinGLFactory extends GLFactory {
     }
 
     @Override
-    boolean initialize(Class psClass, Attributes attrs) {
+    boolean initialize(Class<?> psClass, Attributes attrs) {
 
         // holds the list of attributes to be translated for native call
         int attrArr[] = new int[GLPixelFormat.Attributes.NUM_ITEMS];
@@ -113,7 +114,7 @@ class WinGLFactory extends GLFactory {
     }
 
     @Override
-    void updateDeviceDetails(HashMap deviceDetails) {
+    void updateDeviceDetails(Map<Object, Object> deviceDetails) {
         // This is a NOP on Windows
     }
 }

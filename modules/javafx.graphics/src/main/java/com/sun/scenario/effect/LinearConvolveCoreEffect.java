@@ -79,7 +79,8 @@ public abstract class LinearConvolveCoreEffect
         Renderer r = Renderer.getRenderer(fctx, this, approxW, approxH);
         for (int pass = 0; pass < 2; pass++) {
             src = lcrstate.validatePassInput(src, pass);
-            EffectPeer peer = lcrstate.getPassPeer(r, fctx);
+            @SuppressWarnings("unchecked")
+            EffectPeer<LinearConvolveRenderState> peer = (EffectPeer<LinearConvolveRenderState>) lcrstate.getPassPeer(r, fctx);
             if (peer != null) {
                 peer.setPass(pass);
                 ImageData res = peer.filter(this, lcrstate, transform, filterClip, src);

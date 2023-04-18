@@ -30,7 +30,7 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import java.nio.Buffer;
 
-public abstract class BaseTexture<T extends ManagedResource> implements Texture {
+public abstract class BaseTexture<T extends ManagedResource<?>> implements Texture {
 
     protected final T resource;
 

@@ -94,13 +94,13 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
                     System.err.println(MSG);
                     throw new RuntimeException(MSG);
                 } else {
-                    Map device = GraphicsPipeline.getPipeline().getDeviceDetails();
+                    Map<Object, Object> device = GraphicsPipeline.getPipeline().getDeviceDetails();
                     if (device == null) {
-                        device = new HashMap();
+                        device = new HashMap<>();
                     }
                     device.put(com.sun.glass.ui.View.Capability.kHiDPIAwareKey,
                                PrismSettings.allowHiDPIScaling);
-                    Map map =  Application.getDeviceDetails();
+                    Map<Object, Object> map =  Application.getDeviceDetails();
                     if (map != null) {
                         device.putAll(map);
                     }
@@ -164,7 +164,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
             assert factory != null;
         };
 
-        final RenderJob job = new RenderJob(factoryCreator, createDone);
+        final RenderJob<?> job = new RenderJob<>(factoryCreator, createDone);
 
         submit(job);
 
@@ -187,7 +187,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
 
             final Runnable presentableDisposer = () -> resource.dispose();
 
-            final RenderJob job = new RenderJob(presentableDisposer, null);
+            final RenderJob<?> job = new RenderJob<>(presentableDisposer, null);
 
             submit(job);
         }
@@ -214,10 +214,10 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
     }
 
     @Override protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-        return (RenderJob)runnable;
+        return (RenderJob<T>)runnable;
     }
 
-    protected Future submitRenderJob(RenderJob r) {
+    protected Future<?> submitRenderJob(RenderJob<?> r) {
         return (submit(r));
     }
 

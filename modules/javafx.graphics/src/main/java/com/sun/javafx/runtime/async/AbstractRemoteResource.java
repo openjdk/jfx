@@ -157,7 +157,7 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
         // return a csv of the strings.
         if(list != null) {
             StringBuilder sb = new StringBuilder();
-            Iterator iter = list.iterator();
+            Iterator<String> iter = list.iterator();
             while(iter.hasNext()) {
                 sb.append(iter.next());
                 if(iter.hasNext()) {

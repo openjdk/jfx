@@ -227,7 +227,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
         if (tex == null) {
             int w = image.getWidth();
             int h = image.getHeight();
-            TextureResourcePool pool = getTextureResourcePool();
+            TextureResourcePool<?> pool = getTextureResourcePool();
             // Mipmap will use more memory
             long size = useMipmap ? sizeWithMipMap(w, h, image.getPixelFormat())
                     : pool.estimateTextureSize(w, h, image.getPixelFormat());

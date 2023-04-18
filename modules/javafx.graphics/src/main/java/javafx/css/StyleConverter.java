@@ -146,7 +146,7 @@ public class StyleConverter<F, T> {
      * of an {@code Effect} to an {@code Effect}
      * @see Effect
      */
-    public static StyleConverter<ParsedValue[], Effect> getEffectConverter() {
+    public static StyleConverter<ParsedValue<?, ?>[], Effect> getEffectConverter() {
         return EffectConverter.getInstance();
     }
 
@@ -173,7 +173,7 @@ public class StyleConverter<F, T> {
      * of a {@code Font} to an {@code Font}
      * @see Font#font(java.lang.String, javafx.scene.text.FontWeight, javafx.scene.text.FontPosture, double)
      */
-    public static StyleConverter<ParsedValue[], Font> getFontConverter() {
+    public static StyleConverter<ParsedValue<?, ?>[], Font> getFontConverter() {
         return FontConverter.getInstance();
     }
 
@@ -183,7 +183,7 @@ public class StyleConverter<F, T> {
      * @return A {@code StyleConverter} that converts a {@literal [<length> |
      * <percentage>]}{1,4} to an {@code Insets}
      */
-    public static StyleConverter<ParsedValue[], Insets> getInsetsConverter() {
+    public static StyleConverter<ParsedValue<?, Size>[], Insets> getInsetsConverter() {
         return InsetsConverter.getInstance();
     }
 
@@ -234,7 +234,7 @@ public class StyleConverter<F, T> {
      * @return A {@code StyleConverter} that converts a representation of a
      * CSS URL value to a {@code String}
      */
-    public static StyleConverter<ParsedValue[], String> getUrlConverter() {
+    public static StyleConverter<ParsedValue<String, String>[], String> getUrlConverter() {
         return URLConverter.getInstance();
     }
 
@@ -268,7 +268,7 @@ public class StyleConverter<F, T> {
         os.writeShort(index);
     }
 
-    private static Map<ParsedValue, Object> cache;
+    private static Map<ParsedValue<?, ?>, Object> cache;
 
     /**
      * Clear the cache.
@@ -286,7 +286,7 @@ public class StyleConverter<F, T> {
      * @return the cached value
      * @since 9
      */
-    protected T getCachedValue(ParsedValue key) {
+    protected T getCachedValue(ParsedValue<?, ?> key) {
         if (cache != null) {
             return (T)cache.get(key);
         }
@@ -299,7 +299,7 @@ public class StyleConverter<F, T> {
      * @param value the value
      * @since 9
      */
-    protected void cacheValue(ParsedValue key, Object value) {
+    protected void cacheValue(ParsedValue<?, ?> key, Object value) {
         if (cache == null) cache = new WeakHashMap<>();
         cache.put(key, value);
     }

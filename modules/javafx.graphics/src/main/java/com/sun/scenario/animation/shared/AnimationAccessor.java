@@ -37,7 +37,7 @@ public abstract class AnimationAccessor {
 
         // invokes static initializer of Animation.class
         // that will assign value to the DEFAULT field above
-        Class c = Animation.class;
+        Class<?> c = Animation.class;
         try {
             Class.forName(c.getName());
         } catch (ClassNotFoundException ex) {

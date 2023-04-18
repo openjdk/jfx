@@ -601,7 +601,7 @@ public class Image implements PlatformImage {
 
         public synchronized Pair<Integer, Rectangle> getIdRect() {
             // Called on quantumRenderer-0
-            return new Pair(id, (dirtyRegion == null)? null : new Rectangle(dirtyRegion));
+            return new Pair<>(id, (dirtyRegion == null)? null : new Rectangle(dirtyRegion));
         }
 
         public synchronized void update(Rectangle rect) {
@@ -936,7 +936,7 @@ public class Image implements PlatformImage {
         getSetterIfWritable(javafx.scene.image.PixelFormat<I> theFormat)
     {
         if (theFormat instanceof WritablePixelFormat) {
-            return PixelUtils.getSetter((WritablePixelFormat) theFormat);
+            return PixelUtils.getSetter((WritablePixelFormat<I>) theFormat);
         }
         return null;
     }
@@ -1121,7 +1121,7 @@ public class Image implements PlatformImage {
             ByteBuffer b = theBuffer.duplicate();
             b.position(b.position() + getIndex(dstx, dsty));
             reader.getPixels(srcx, srcy, w, h,
-                             (WritablePixelFormat) theFormat,
+                             (WritablePixelFormat<ByteBuffer>) theFormat,
                              b, scanlineElems);
         }
     }
@@ -1189,7 +1189,7 @@ public class Image implements PlatformImage {
             IntBuffer b = theBuffer.duplicate();
             b.position(b.position() + getIndex(dstx, dsty));
             reader.getPixels(srcx, srcy, w, h,
-                             (WritablePixelFormat) theFormat,
+                             (WritablePixelFormat<IntBuffer>) theFormat,
                              b, scanlineElems);
         }
     }

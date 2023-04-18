@@ -47,7 +47,7 @@ public abstract class ConstraintsBase {
      */
     public static final double CONSTRAIN_TO_PREF = Double.NEGATIVE_INFINITY;
 
-    private WeakReferenceQueue nodes = new WeakReferenceQueue();
+    private WeakReferenceQueue<Parent> nodes = new WeakReferenceQueue<>();
 
     ConstraintsBase() {
     }

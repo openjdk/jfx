@@ -32,7 +32,7 @@ import javafx.css.StyleConverter;
 /**
  * [<size> | <size> <size> <size> <size>] <fill>? [ , [ <size> | <size> <size> <size> <size>] <fill>? ]*
  */
-public final class SliceSequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], BorderImageSlices>[], BorderImageSlices[]> {
+public final class SliceSequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?, ?>[], BorderImageSlices>[], BorderImageSlices[]> {
     private static final SliceSequenceConverter BORDER_IMAGE_SLICE_SEQUENCE_CONVERTER =
             new SliceSequenceConverter();
 
@@ -41,7 +41,7 @@ public final class SliceSequenceConverter extends StyleConverter<ParsedValue<Par
     }
 
     @Override
-    public BorderImageSlices[] convert(ParsedValue<ParsedValue<ParsedValue[], BorderImageSlices>[], BorderImageSlices[]> value, Font font) {
+    public BorderImageSlices[] convert(ParsedValue<ParsedValue<ParsedValue<?, ?>[], BorderImageSlices>[], BorderImageSlices[]> value, Font font) {
         // For 'border-image-slice: 10% fill, 20% 30%', the value arg will be
         // ParsedValue { values: [
         //     ParsedValue { values: [ ParsedValue {parsed: 10%}, ParsedValue {parsed: fill}] } ,
@@ -58,7 +58,7 @@ public final class SliceSequenceConverter extends StyleConverter<ParsedValue<Par
         //
         // If the value arg contains multiple layers, unwind the nested
         // values by one level.
-        ParsedValue<ParsedValue[], BorderImageSlices>[] layers = value.getValue();
+        ParsedValue<ParsedValue<?, ?>[], BorderImageSlices>[] layers = value.getValue();
         BorderImageSlices[] borderImageSlices = new BorderImageSlices[layers.length];
         for (int l = 0; l < layers.length; l++) {
             borderImageSlices[l] = BorderImageSliceConverter.getInstance().convert(layers[l], font);

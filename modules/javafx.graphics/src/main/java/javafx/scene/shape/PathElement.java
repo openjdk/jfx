@@ -30,7 +30,6 @@ import com.sun.javafx.scene.shape.PathElementHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
-import javafx.scene.Node;
 
 import java.util.Iterator;
 
@@ -68,7 +67,7 @@ public abstract class PathElement {
      * Defines the sequence of {@code Path} objects this path element
      * is attached to.
      */
-    WeakReferenceQueue nodes = new WeakReferenceQueue();
+    WeakReferenceQueue<Path> paths = new WeakReferenceQueue<>();
 
     /**
      * Constructor for subclasses to call.
@@ -76,18 +75,18 @@ public abstract class PathElement {
     public PathElement() {
     }
 
-    void addNode(final Node n) {
-        nodes.add(n);
+    void addNode(final Path n) {
+        paths.add(n);
     }
 
-    void removeNode(final Node n) {
-        nodes.remove(n);
+    void removeNode(final Path n) {
+        paths.remove(n);
     }
 
     void u() {
-        final Iterator iterator = nodes.iterator();
+        final Iterator<Path> iterator = paths.iterator();
         while (iterator.hasNext()) {
-            ((Path) iterator.next()).markPathDirty();
+            iterator.next().markPathDirty();
         }
     }
 

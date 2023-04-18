@@ -292,7 +292,7 @@ public class FlowPane extends Pane {
      */
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
-            orientation = new StyleableObjectProperty(HORIZONTAL) {
+            orientation = new StyleableObjectProperty<>(HORIZONTAL) {
                 @Override
                 public void invalidated() {
                     requestLayout();
@@ -658,7 +658,7 @@ public class FlowPane extends Pane {
         if (runs == null || maxRunLength != lastMaxRunLength) {
             computingRuns = true;
             lastMaxRunLength = maxRunLength;
-            runs = new ArrayList();
+            runs = new ArrayList<>();
             double runLength = 0;
             double runOffset = 0;
             Run run = new Run();
@@ -713,7 +713,7 @@ public class FlowPane extends Pane {
     private void normalizeRun(final Run run, double runOffset) {
         if (getOrientation() == HORIZONTAL) {
             // horizontal
-            ArrayList<Node> rownodes = new ArrayList();
+            List<Node> rownodes = new ArrayList<>();
             run.width = (run.rects.size()-1)*snapSpaceX(getHgap());
             for (int i=0, max=run.rects.size(); i<max; i++) {
                 LayoutRect lrect = run.rects.get(i);
@@ -974,7 +974,7 @@ public class FlowPane extends Pane {
     }
 
     private static class Run {
-        ArrayList<LayoutRect> rects = new ArrayList();
+        List<LayoutRect> rects = new ArrayList<>();
         double width;
         double height;
         double baselineOffset;

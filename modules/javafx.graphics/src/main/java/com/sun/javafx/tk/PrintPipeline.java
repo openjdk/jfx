@@ -42,7 +42,7 @@ public abstract class PrintPipeline {
         }
         try {
             String className = "com.sun.prism.j2d.PrismPrintPipeline";
-            Class klass = Class.forName(className);
+            Class<?> klass = Class.forName(className);
             Method m = klass.getMethod("getInstance", (Class[])null);
             ppl = (PrintPipeline)m.invoke(null, (Object[])null);
             return ppl;

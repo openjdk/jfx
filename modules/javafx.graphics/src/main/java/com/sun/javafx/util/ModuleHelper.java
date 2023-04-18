@@ -67,7 +67,7 @@ public class ModuleHelper {
         }
     }
 
-    public static Object getModule(Class clazz) {
+    public static Object getModule(Class<?> clazz) {
         if (getModuleMethod != null) {
             try {
                 return getModuleMethod.invoke(clazz);

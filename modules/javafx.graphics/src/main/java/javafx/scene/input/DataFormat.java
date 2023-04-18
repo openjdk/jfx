@@ -224,9 +224,9 @@ public class DataFormat {
             return null;
         }
 
-        Iterator itr = DATA_FORMAT_LIST.iterator();
+        Iterator<DataFormat> itr = DATA_FORMAT_LIST.iterator();
         while (itr.hasNext()) {
-            DataFormat dataFormat = (DataFormat) itr.next();
+            DataFormat dataFormat = itr.next();
             if (dataFormat.getIdentifiers().contains(mimeType)) {
                 return dataFormat;
             }

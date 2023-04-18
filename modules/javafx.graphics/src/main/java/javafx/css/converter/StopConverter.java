@@ -37,7 +37,7 @@ import javafx.scene.text.Font;
  *
  * @since 9
  */
-public final class StopConverter extends StyleConverter<ParsedValue[], Stop> {
+public final class StopConverter extends StyleConverter<ParsedValue<?, ?>[], Stop> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -57,8 +57,8 @@ public final class StopConverter extends StyleConverter<ParsedValue[], Stop> {
     }
 
     @Override
-    public Stop convert(ParsedValue<ParsedValue[], Stop> value, Font font) {
-        ParsedValue[] values = value.getValue();
+    public Stop convert(ParsedValue<ParsedValue<?, ?>[], Stop> value, Font font) {
+        ParsedValue<?, ?>[] values = value.getValue();
         final Double offset = ((Size) values[0].convert(font)).pixels(font);
         final Color color = (Color) values[1].convert(font);
         return new Stop(offset, color);

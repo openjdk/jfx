@@ -38,7 +38,7 @@ import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.RenderState;
 
-public class PrFloodPeer extends EffectPeer {
+public class PrFloodPeer extends EffectPeer<RenderState> {
 
     public PrFloodPeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);

@@ -329,7 +329,7 @@ public class CssParserTest {
             }
 
             var stylesheet = new CssParser().parse(file.toURI().toURL());
-            ParsedValue<String, ?> parsedValue = stylesheet.getRules().get(0).getDeclarations().get(0).getParsedValue();
+            ParsedValue<?, ?> parsedValue = stylesheet.getRules().get(0).getDeclarations().get(0).getParsedValue();
 
             assertEquals("\u2713", parsedValue.getValue());
         } finally {

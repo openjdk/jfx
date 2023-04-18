@@ -143,7 +143,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         return d3dEnabled;
     }
 
-    private static native boolean nInit(Class psClass, boolean load);
+    private static native boolean nInit(Class<?> psClass, boolean load);
     private static native String nGetErrorMessage();
     private static native void nDispose(boolean unload);
 

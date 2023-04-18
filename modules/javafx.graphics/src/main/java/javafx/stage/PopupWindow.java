@@ -149,7 +149,7 @@ public abstract class PopupWindow extends Window {
         }
     };
 
-    private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
+    private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener<>(changeListener);
     private TreeShowingProperty treeShowingProperty;
 
     /**

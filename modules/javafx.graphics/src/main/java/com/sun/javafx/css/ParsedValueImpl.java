@@ -68,14 +68,10 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         if (obj instanceof Size) {
             containsLookupsFlag = false;
         }
-
-        else if(obj instanceof ParsedValueImpl) {
-            ParsedValueImpl value = (ParsedValueImpl)obj;
+        else if(obj instanceof ParsedValueImpl<?, ?> value) {
             containsLookupsFlag = value.lookup || value.containsLookups;
         }
-
-        else if(obj instanceof ParsedValueImpl[]) {
-            ParsedValueImpl[] values = (ParsedValueImpl[])obj;
+        else if(obj instanceof ParsedValueImpl<?, ?>[] values) {
             for(int v=0;
                 // Bail if value contains lookups
                 // Continue iterating as long as one of the flags is false
@@ -90,8 +86,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                     }
             }
 
-        } else if(obj instanceof ParsedValueImpl[][]) {
-            ParsedValueImpl[][] values = (ParsedValueImpl[][])obj;
+        } else if(obj instanceof ParsedValueImpl<?, ?>[][] values) {
             for(int l=0;
                 l<values.length && !containsLookupsFlag;
                 l++)
@@ -115,7 +110,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         return containsLookupsFlag;
     }
 
-    public static boolean containsFontRelativeSize(ParsedValue parsedValue, boolean percentUnitsAreRelative) {
+    public static boolean containsFontRelativeSize(ParsedValue<?, ?> parsedValue, boolean percentUnitsAreRelative) {
 
         // Assume the value does not need a font for conversion
         boolean needsFont = false;
@@ -129,14 +124,10 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                     ? percentUnitsAreRelative
                     : size.isAbsolute() == false;
         }
-
-        else if(obj instanceof ParsedValue) {
-            ParsedValue value = (ParsedValueImpl)obj;
+        else if(obj instanceof ParsedValue<?, ?> value) {
             needsFont = containsFontRelativeSize(value, percentUnitsAreRelative);
         }
-
-        else if(obj instanceof ParsedValue[]) {
-            ParsedValue[] values = (ParsedValue[])obj;
+        else if(obj instanceof ParsedValue<?, ?>[] values) {
             for(int v=0;
                 v<values.length && !needsFont;
                 v++)
@@ -145,8 +136,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 needsFont = containsFontRelativeSize(values[v], percentUnitsAreRelative);
             }
 
-        } else if(obj instanceof ParsedValueImpl[][]) {
-            ParsedValueImpl[][] values = (ParsedValueImpl[][])obj;
+        } else if(obj instanceof ParsedValueImpl<?, ?>[][] values) {
             for(int l=0;
                 l<values.length && !needsFont;
                 l++)
@@ -232,8 +222,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
     private void appendValue(StringBuilder sbuf, Object value, String tag) {
         final String newline = System.lineSeparator();
-        if (value instanceof ParsedValueImpl[][]) {
-            ParsedValueImpl[][] layers = (ParsedValueImpl[][])value;
+        if (value instanceof ParsedValueImpl<?, ?>[][] layers) {
             sbuf.append(spaces())
                 .append('<')
                 .append(tag)
@@ -242,7 +231,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 .append("\">")
                 .append(newline);
             indent();
-            for (ParsedValueImpl[] layer : layers) {
+            for (ParsedValueImpl<?, ?>[] layer : layers) {
                 sbuf.append(spaces())
                     .append("<layer>")
                     .append(newline);
@@ -251,7 +240,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                     sbuf.append(spaces()).append("null").append(newline);
                     continue;
                 }
-                for(ParsedValueImpl val : layer) {
+                for(ParsedValueImpl<?, ?> val : layer) {
                     if (val == null) {
                         sbuf.append(spaces()).append("null").append(newline);
                     } else {
@@ -266,8 +255,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             outdent();
             sbuf.append(spaces()).append("</").append(tag).append('>').append(newline);
 
-        } else if (value instanceof ParsedValueImpl[]) {
-            ParsedValueImpl[] values = (ParsedValueImpl[])value;
+        } else if (value instanceof ParsedValueImpl<?, ?>[] values) {
             sbuf.append(spaces())
                 .append('<')
                 .append(tag)
@@ -276,7 +264,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 .append("\">")
                 .append(newline);
             indent();
-            for(ParsedValueImpl val : values) {
+            for(ParsedValueImpl<?, ?> val : values) {
                 if (val == null) {
                     sbuf.append(spaces()).append("null").append(newline);
                 } else {
@@ -306,16 +294,13 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             return false;
         }
 
-        final ParsedValueImpl other = (ParsedValueImpl)obj;
+        final ParsedValueImpl<?, ?> other = (ParsedValueImpl<?, ?>) obj;
 
         if (this.hash != other.hash) return false;
 
-        if (this.value instanceof ParsedValueImpl[][]) {
+        if (this.value instanceof ParsedValueImpl<?, ?>[][] thisValues) {
 
-            if (!(other.value instanceof ParsedValueImpl[][])) return false;
-
-            final ParsedValueImpl[][] thisValues = (ParsedValueImpl[][])this.value;
-            final ParsedValueImpl[][] otherValues = (ParsedValueImpl[][])other.value;
+            if (!(other.value instanceof ParsedValueImpl<?, ?>[][] otherValues)) return false;
 
             // this.value and other.value are known to be non-null
             // due to instanceof
@@ -333,8 +318,8 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
                 for (int j = 0; j < thisValues[i].length; j++) {
 
-                    final ParsedValueImpl thisValue = thisValues[i][j];
-                    final ParsedValueImpl otherValue = otherValues[i][j];
+                    final ParsedValueImpl<?, ?> thisValue = thisValues[i][j];
+                    final ParsedValueImpl<?, ?> otherValue = otherValues[i][j];
 
                     if (thisValue != null
                             ? !thisValue.equals(otherValue)
@@ -344,12 +329,9 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             }
             return true;
 
-        } else if (this.value instanceof ParsedValueImpl[]) {
+        } else if (this.value instanceof ParsedValueImpl<?, ?>[] thisValues) {
 
-            if (!(other.value instanceof ParsedValueImpl[])) return false;
-
-            final ParsedValueImpl[] thisValues = (ParsedValueImpl[])this.value;
-            final ParsedValueImpl[] otherValues = (ParsedValueImpl[])other.value;
+            if (!(other.value instanceof ParsedValueImpl<?, ?>[] otherValues)) return false;
 
             // this.value and other.value are known to be non-null
             // due to instanceof
@@ -357,8 +339,8 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
             for (int i = 0; i < thisValues.length; i++) {
 
-                final ParsedValueImpl thisValue = thisValues[i];
-                final ParsedValueImpl otherValue = otherValues[i];
+                final ParsedValueImpl<?, ?> thisValue = thisValues[i];
+                final ParsedValueImpl<?, ?> otherValue = otherValues[i];
 
                 if ((thisValue != null)
                         ? !thisValue.equals(otherValue)
@@ -390,19 +372,17 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     @Override public int hashCode() {
         if (hash == Integer.MIN_VALUE) {
             hash = 17;
-            if (value instanceof ParsedValueImpl[][]) {
-                ParsedValueImpl[][] values = (ParsedValueImpl[][])value;
+            if (value instanceof ParsedValueImpl<?, ?>[][] values) {
                 for (int i = 0; i < values.length; i++) {
                     for (int j = 0; j < values[i].length; j++) {
-                        final ParsedValueImpl val = values[i][j];
+                        final ParsedValueImpl<?, ?> val = values[i][j];
                         hash = 37 * hash + ((val != null && val.value != null) ? val.value.hashCode() : 0);
                     }
                 }
-            } else if (value instanceof ParsedValueImpl[]) {
-                ParsedValueImpl[] values = (ParsedValueImpl[])value;
+            } else if (value instanceof ParsedValueImpl<?, ?>[] values) {
                 for (int i = 0; i < values.length; i++) {
                     if (values[i] == null || values[i].value == null) continue;
-                    final ParsedValueImpl val = values[i];
+                    final ParsedValueImpl<?, ?> val = values[i];
                     hash = 37 * hash + ((val != null && val.value != null) ? val.value.hashCode() : 0);
                 }
             } else {
@@ -442,34 +422,29 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             os.writeBoolean(false);
         }
 
-        if (value instanceof ParsedValue) {
+        if (value instanceof ParsedValue<?, ?> pv) {
             os.writeByte(VALUE);
-            final ParsedValue pv = (ParsedValue)value;
-            if (pv instanceof ParsedValueImpl) {
-                ((ParsedValueImpl)pv).writeBinary(os, stringStore);
+
+            if (pv instanceof ParsedValueImpl<?, ?> pvi) {
+                pvi.writeBinary(os, stringStore);
             } else {
-                final ParsedValueImpl impl = new ParsedValueImpl(pv.getValue(), pv.getConverter());
+                final ParsedValueImpl<?, ?> impl = new ParsedValueImpl<>((Object) pv.getValue(), (StyleConverter<Object, Object>) pv.getConverter());
                 impl.writeBinary(os, stringStore);
             }
 
-        } else if (value instanceof ParsedValue[]) {
+        } else if (value instanceof ParsedValue<?, ?>[] values) {
             os.writeByte(VALUE_ARRAY);
-            final ParsedValue[] values = (ParsedValue[])value;
-            if (values != null) {
-                os.writeByte(VALUE);
-            } else {
-                os.writeByte(NULL_VALUE);
-            }
-            final int nValues = (values != null) ? values.length : 0;
+            os.writeByte(VALUE);
+            final int nValues = values.length;
             os.writeInt(nValues);
             for (int v=0; v<nValues; v++) {
                 if (values[v] != null) {
                     os.writeByte(VALUE);
-                    final ParsedValue pv = values[v];
-                    if (pv instanceof ParsedValueImpl) {
-                        ((ParsedValueImpl)pv).writeBinary(os, stringStore);
+                    final ParsedValue<?, ?> pv = values[v];
+                    if (pv instanceof ParsedValueImpl<?, ?> pvi) {
+                        pvi.writeBinary(os, stringStore);
                     } else {
-                        final ParsedValueImpl impl = new ParsedValueImpl(pv.getValue(), pv.getConverter());
+                        final ParsedValueImpl<?, ?> impl = new ParsedValueImpl<>((Object) pv.getValue(), (StyleConverter<Object, Object>) pv.getConverter());
                         impl.writeBinary(os, stringStore);
                     }
                 } else {
@@ -477,18 +452,13 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 }
             }
 
-        } else if (value instanceof ParsedValue[][]) {
+        } else if (value instanceof ParsedValue<?, ?>[][] layers) {
             os.writeByte(ARRAY_OF_VALUE_ARRAY);
-            final ParsedValue[][] layers = (ParsedValue[][])value;
-            if (layers != null) {
-                os.writeByte(VALUE);
-            } else {
-                os.writeByte(NULL_VALUE);
-            }
-            final int nLayers = (layers != null) ? layers.length : 0;
+            os.writeByte(VALUE);
+            final int nLayers = layers.length;
             os.writeInt(nLayers);
             for (int l=0; l<nLayers; l++) {
-                final ParsedValue[] values = layers[l];
+                final ParsedValue<?, ?>[] values = layers[l];
                 if (values != null) {
                     os.writeByte(VALUE);
                 } else {
@@ -499,11 +469,11 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 for (int v=0; v<nValues; v++) {
                     if (values[v] != null) {
                         os.writeByte(VALUE);
-                        final ParsedValue pv = values[v];
-                        if (pv instanceof ParsedValueImpl) {
-                            ((ParsedValueImpl)pv).writeBinary(os, stringStore);
+                        final ParsedValue<?, ?> pv = values[v];
+                        if (pv instanceof ParsedValueImpl<?, ?> pvi) {
+                            pvi.writeBinary(os, stringStore);
                         } else {
-                            final ParsedValueImpl impl = new ParsedValueImpl(pv.getValue(), pv.getConverter());
+                            final ParsedValueImpl<?, ?> impl = new ParsedValueImpl<>((Object) pv.getValue(), (StyleConverter<Object, Object>) pv.getConverter());
                             impl.writeBinary(os, stringStore);
                         }
                     } else {
@@ -520,9 +490,8 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             os.writeLong(Double.doubleToLongBits(c.getBlue()));
             os.writeLong(Double.doubleToLongBits(c.getOpacity()));
 
-        } else if (value instanceof Enum) {
-            final Enum e = (Enum)value;
-            final int nameIndex = stringStore.addString(e.name());
+        } else if (value instanceof Enum<?> value) {
+            final int nameIndex = stringStore.addString(value.name());
             os.writeByte(ENUM);
             os.writeShort(nameIndex);
 
@@ -560,19 +529,20 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         }
     }
 
-    public static ParsedValueImpl readBinary(int bssVersion, DataInputStream is, String[] strings)
+    public static ParsedValueImpl<?, ?> readBinary(int bssVersion, DataInputStream is, String[] strings)
             throws IOException {
 
         final boolean lookup = is.readBoolean();
         final boolean hasType = is.readBoolean();
 
-        final StyleConverter converter = (hasType) ? StyleConverter.readBinary(is, strings) : null;
+        @SuppressWarnings("unchecked")
+        final StyleConverter<Object, Object> converter = (StyleConverter<Object, Object>) (hasType ? StyleConverter.readBinary(is, strings) : null);
 
         final int valType = is.readByte();
 
         if (valType == VALUE) {
-            final ParsedValueImpl value = ParsedValueImpl.readBinary(bssVersion, is, strings);
-            return new ParsedValueImpl(value, converter, lookup);
+            final ParsedValueImpl<?, ?> value = ParsedValueImpl.readBinary(bssVersion, is, strings);
+            return new ParsedValueImpl<>(value, converter, lookup);
 
         } else if (valType == VALUE_ARRAY) {
             if (bssVersion >= 4) {
@@ -581,7 +551,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 is.readByte();
             }
             final int nVals = is.readInt();
-            final ParsedValueImpl[] values = (nVals > 0)
+            final ParsedValueImpl<?, ?>[] values = (nVals > 0)
                     ? new ParsedValueImpl[nVals]
                     : null;
             for (int v=0; v<nVals; v++) {
@@ -592,7 +562,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                     values[v] = null;
                 }
             }
-            return new ParsedValueImpl(values, converter, lookup);
+            return new ParsedValueImpl<>(values, converter, lookup);
 
         } else if (valType == ARRAY_OF_VALUE_ARRAY) {
             if (bssVersion >= 4) {
@@ -602,7 +572,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             }
 
             final int nLayers = is.readInt();
-            final ParsedValueImpl[][] layers = nLayers > 0 ? new ParsedValueImpl[nLayers][0] : null;
+            final ParsedValueImpl<?, ?>[][] layers = nLayers > 0 ? new ParsedValueImpl[nLayers][0] : null;
 
             for (int l=0; l<nLayers; l++) {
                 if (bssVersion >= 4) {
@@ -625,14 +595,14 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
             }
 
-            return new ParsedValueImpl(layers, converter, lookup);
+            return new ParsedValueImpl<>(layers, converter, lookup);
 
         } else if (valType == COLOR) {
             final double r = Double.longBitsToDouble(is.readLong());
             final double g = Double.longBitsToDouble(is.readLong());
             final double b = Double.longBitsToDouble(is.readLong());
             final double a = Double.longBitsToDouble(is.readLong());
-            return new ParsedValueImpl<Color,Color>(Color.color(r, g, b, a), converter, lookup);
+            return new ParsedValueImpl<>(Color.color(r, g, b, a), converter, lookup);
 
         } else if (valType == ENUM) {
             final int nameIndex = is.readShort();
@@ -656,12 +626,11 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 if (bad >= strings.length) throw new IllegalArgumentException("bad version " + bssVersion);
             }
 
-            ParsedValueImpl value = new ParsedValueImpl(ename, converter, lookup);
-            return value;
+            return new ParsedValueImpl<>(ename, converter, lookup);
 
         } else if (valType == BOOLEAN) {
             Boolean b = is.readBoolean();
-            return new ParsedValueImpl<Boolean,Boolean>(b, converter, lookup);
+            return new ParsedValueImpl<>(b, converter, lookup);
 
         } else if (valType == SIZE) {
             double val = Double.longBitsToDouble(is.readLong());
@@ -674,23 +643,23 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             } catch (NullPointerException npe) {
                 System.err.println(npe.toString());
             }
-            return new ParsedValueImpl<Size,Size>(new Size(val,units), converter, lookup);
+            return new ParsedValueImpl<>(new Size(val, units), converter, lookup);
 
         } else if (valType == STRING) {
             String str = strings[is.readShort()];
-            return new ParsedValueImpl(str, converter, lookup);
+            return new ParsedValueImpl<>(str, converter, lookup);
 
         } else if (valType == URL) {
             String str = strings[is.readShort()];
             try {
                 URL url = new URL(str);
-                return new ParsedValueImpl(url, converter, lookup);
+                return new ParsedValueImpl<>(url, converter, lookup);
             } catch (MalformedURLException malf) {
                 throw new InternalError("Exception in Value.readBinary: " + malf);
             }
 
         } else if (valType == NULL_VALUE) {
-            return new ParsedValueImpl(null, converter, lookup);
+            return new ParsedValueImpl<>(null, converter, lookup);
 
         } else {
             throw new InternalError("unknown type: " + valType);

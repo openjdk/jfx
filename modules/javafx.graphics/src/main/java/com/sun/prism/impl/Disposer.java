@@ -72,8 +72,8 @@ public class Disposer {
         disposerInstance = new Disposer();
     }
 
-    private final ReferenceQueue queue = new ReferenceQueue();
-    private final Hashtable records = new Hashtable();
+    private final ReferenceQueue<Object> queue = new ReferenceQueue<>();
+    private final Hashtable<Object, Disposer.Record> records = new Hashtable<>();
     private final LinkedList<Record> disposalQueue = new LinkedList<>();
 
     /**
@@ -148,13 +148,13 @@ public class Disposer {
         if (target instanceof Disposer.Target) {
             target = ((Disposer.Target)target).getDisposerReferent();
         }
-        Reference ref;
+        Reference<Object> ref;
         if (refType == PHANTOM) {
-            ref = new PhantomReference(target, queue);
+            ref = new PhantomReference<>(target, queue);
         } else if (refType == SOFT) {
-            ref = new SoftReference(target, queue);
+            ref = new SoftReference<>(target, queue);
         } else {
-            ref = new WeakReference(target, queue);
+            ref = new WeakReference<>(target, queue);
         }
         records.put(ref, rec);
     }
@@ -172,8 +172,8 @@ public class Disposer {
         Object obj;
         while ((obj = queue.poll()) != null) {
             try {
-                ((Reference)obj).clear();
-                Disposer.Record rec = (Disposer.Record)records.remove(obj);
+                ((Reference<?>) obj).clear();
+                Disposer.Record rec = records.remove(obj);
                 rec.dispose();
                 obj = null;
                 rec = null;

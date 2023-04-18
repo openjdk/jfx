@@ -41,7 +41,7 @@ import java.util.Map;
  * Converter to convert a string representation of an {@code Effect} to an {@code Effect}.
  * @since 9
  */
-public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
+public class EffectConverter extends StyleConverter<ParsedValue<?, ?>[], Effect> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -57,12 +57,12 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
      * Gets the {@code EffectConverter} instance.
      * @return the {@code EffectConverter} instance
      */
-    public static StyleConverter<ParsedValue[], Effect> getInstance() {
+    public static StyleConverter<ParsedValue<?, ?>[], Effect> getInstance() {
         return Holder.EFFECT_CONVERTER;
     }
 
     @Override
-    public Effect convert(ParsedValue<ParsedValue[], Effect> value, Font font) {
+    public Effect convert(ParsedValue<ParsedValue<?, ?>[], Effect> value, Font font) {
         throw new IllegalArgumentException("Parsed value is not an Effect");
     }
 
@@ -114,12 +114,12 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
         // <number> The shadow offset in the x direction, in pixels.
         // <number> The shadow offset in the y direction, in pixels.
         @Override
-        public Effect convert(ParsedValue<ParsedValue[], Effect> value, Font font) {
+        public Effect convert(ParsedValue<ParsedValue<?, ?>[], Effect> value, Font font) {
 
             Effect effect = super.getCachedValue(value);
             if (effect != null) return effect;
 
-            final ParsedValue[] values = value.getValue();
+            final ParsedValue<?, ?>[] values = value.getValue();
             final BlurType blurType = (BlurType) values[0].convert(font);
             final Color color = (Color) values[1].convert(font);
             final Double radius = ((Size) values[2].convert(font)).pixels(font);
@@ -193,12 +193,12 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
         // <number> The shadow offset in the x direction, in pixels.
         // <number> The shadow offset in the y direction, in pixels.
         @Override
-        public Effect convert(ParsedValue<ParsedValue[], Effect> value, Font font) {
+        public Effect convert(ParsedValue<ParsedValue<?, ?>[], Effect> value, Font font) {
 
             Effect effect = super.getCachedValue(value);
             if (effect != null) return effect;
 
-            final ParsedValue[] values = value.getValue();
+            final ParsedValue<?, ?>[] values = value.getValue();
             final BlurType blurType = (BlurType) values[0].convert(font);
             final Color color = (Color) values[1].convert(font);
             final Double radius = ((Size) values[2].convert(font)).pixels(font);
@@ -236,7 +236,7 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
         }
     }
 
-    private static Map<ParsedValue<ParsedValue[], Effect>, Effect> cache;
+    private static Map<ParsedValue<ParsedValue<?, ?>[], Effect>, Effect> cache;
 
     /**
      * Clears the InnerShadowConverter cache.

@@ -64,7 +64,7 @@ class J2DResourceFactory extends BaseResourceFactory
     }
 
     @Override
-    public TextureResourcePool getTextureResourcePool() {
+    public TextureResourcePool<?> getTextureResourcePool() {
         return J2DTexturePool.instance;
     }
 

@@ -172,7 +172,7 @@ public class PrEffectHelper {
                 // the actual image may be much larger than the region
                 // of interest ("r"), so to improve performance we render
                 // only that subregion here
-                Texture tex = ((PrTexture)res.getUntransformedImage()).getTextureObject();
+                Texture tex = ((PrTexture<?>) res.getUntransformedImage()).getTextureObject();
                 g.setTransform(rendertx);
                 g.transform(res.getTransform());
                 g.drawTexture(tex, r.x, r.y, r.width, r.height);

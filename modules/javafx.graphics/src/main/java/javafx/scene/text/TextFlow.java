@@ -504,7 +504,7 @@ public class TextFlow extends Pane {
             tabSize = new StyleableIntegerProperty(TextLayout.DEFAULT_TAB_SIZE) {
                 @Override public Object getBean() { return TextFlow.this; }
                 @Override public String getName() { return "tabSize"; }
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<TextFlow, Number> getCssMetaData() {
                     return StyleableProperties.TAB_SIZE;
                 }
                 @Override protected void invalidated() {

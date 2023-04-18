@@ -67,7 +67,7 @@ final class SWResourceFactory
     }
 
     @Override
-    public TextureResourcePool getTextureResourcePool() {
+    public TextureResourcePool<?> getTextureResourcePool() {
         return SWTexturePool.instance;
     }
 

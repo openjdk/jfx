@@ -257,7 +257,7 @@ class ES2Context extends BaseShaderContext {
         if (tex == null) {
             glContext.updateBoundTexture(0);
         } else {
-            ES2Texture es2Tex = (ES2Texture)tex;
+            ES2Texture<?> es2Tex = (ES2Texture<?>) tex;
             glContext.updateBoundTexture(es2Tex.getNativeSourceHandle());
             es2Tex.updateWrapState();
             es2Tex.updateFilterState();

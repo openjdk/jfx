@@ -25,16 +25,18 @@
 
 package com.sun.prism.es2;
 
-import com.sun.glass.ui.Screen;
-import com.sun.glass.utils.NativeLibLoader;
-import com.sun.prism.GraphicsPipeline;
-import com.sun.prism.ResourceFactory;
-import com.sun.prism.impl.PrismSettings;
-import com.sun.javafx.PlatformUtil;
-import java.util.List;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.sun.glass.ui.Screen;
+import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.PlatformUtil;
+import com.sun.prism.GraphicsPipeline;
+import com.sun.prism.ResourceFactory;
+import com.sun.prism.impl.PrismSettings;
 
 public class ES2Pipeline extends GraphicsPipeline {
 
@@ -110,7 +112,7 @@ public class ES2Pipeline extends GraphicsPipeline {
     @Override
     public boolean init() {
         if (es2Enabled) {
-            HashMap devDetails = new HashMap();
+            Map<Object, Object> devDetails = new HashMap<>();
             glFactory.updateDeviceDetails(devDetails);
             setDeviceDetails(devDetails);
             if (!PrismSettings.forceGPU) {

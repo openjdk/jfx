@@ -79,7 +79,7 @@ class SysFS {
     }
 
     static Map<String, String> readUEvent(File sysPath) {
-        Map<String, String> uevent = new HashMap();
+        Map<String, String> uevent = new HashMap<>();
         File f = new File(sysPath, "device/uevent");
         try {
             BufferedReader r = new BufferedReader(new FileReader(f));

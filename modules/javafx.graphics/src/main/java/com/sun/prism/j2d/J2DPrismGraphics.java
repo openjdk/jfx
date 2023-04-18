@@ -416,7 +416,7 @@ public class J2DPrismGraphics
                 cleared = 0;
             }
             compFont = J2DFontFactory.getCompositeFont(j2dfont);
-            ref = new WeakReference(compFont);
+            ref = new WeakReference<>(compFont);
             fontMap.put(j2dfont, ref);
         }
         return compFont;

@@ -25,7 +25,7 @@
 
 package com.sun.javafx.font.freetype;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import com.sun.javafx.font.FontConfigManager;
 import com.sun.javafx.font.FontFallbackInfo;
@@ -132,8 +132,8 @@ public class FTFactory extends PrismFontFactory {
         boolean isItalic = primaryResource.isItalic();
         FontConfigManager.FcCompFont font =
             FontConfigManager.getFontConfigFont("sans", isBold, isItalic);
-        ArrayList<String> linkedFontFiles = FontConfigManager.getFileNames(font, false);
-        ArrayList<String> linkedFontNames = FontConfigManager.getFontNames(font, false);
+        List<String> linkedFontFiles = FontConfigManager.getFileNames(font, false);
+        List<String> linkedFontNames = FontConfigManager.getFontNames(font, false);
         FontFallbackInfo info = new FontFallbackInfo();
         for (int i=0; i<linkedFontNames.size(); i++)  {
             info.add(linkedFontNames.get(i), linkedFontFiles.get(i), null);

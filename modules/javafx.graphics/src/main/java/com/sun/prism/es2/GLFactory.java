@@ -30,6 +30,7 @@ import com.sun.javafx.PlatformUtil;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
+import java.util.Map;
 
 abstract class GLFactory {
 
@@ -189,7 +190,7 @@ abstract class GLFactory {
         return isQualified(nativeCtxInfo);
     }
 
-    abstract boolean initialize(Class psClass, GLPixelFormat.Attributes attrs);
+    abstract boolean initialize(Class<?> psClass, GLPixelFormat.Attributes attrs);
 
     GLContext getShareContext() {
         if (shareCtx == null) {
@@ -216,7 +217,7 @@ abstract class GLFactory {
 
     abstract int getAdapterOrdinal(long nativeScreen);
 
-    abstract void updateDeviceDetails(HashMap deviceDetails);
+    abstract void updateDeviceDetails(Map<Object, Object> deviceDetails);
 
     void printDriverInformation(int adapter) {
         /* We are assuming a system with a single or homogeneous GPUs. */

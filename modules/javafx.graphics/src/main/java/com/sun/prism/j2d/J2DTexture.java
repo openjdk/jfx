@@ -49,7 +49,7 @@ import java.nio.IntBuffer;
 
 class J2DTexture extends BaseTexture<J2DTexResource> {
 
-    private final PixelSetter setter;
+    private final PixelSetter<?> setter;
 
     static class J2DTexResource extends ManagedResource<BufferedImage> {
         public J2DTexResource(BufferedImage bimg) {
@@ -64,7 +64,7 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
 
     static J2DTexture create(PixelFormat format, WrapMode wrapMode, int w, int h) {
         int type;
-        PixelSetter setter;
+        PixelSetter<?> setter;
         switch (format) {
             case BYTE_RGB:
                 type = BufferedImage.TYPE_3BYTE_BGR;
@@ -92,7 +92,7 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
     }
 
     J2DTexture(BufferedImage bimg, PixelFormat format,
-               PixelSetter setter, WrapMode wrapMode)
+               PixelSetter<?> setter, WrapMode wrapMode)
     {
         super(new J2DTexResource(bimg), format, wrapMode,
               bimg.getWidth(), bimg.getHeight());
@@ -113,7 +113,7 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
         return resource.getResource();
     }
 
-    private static PixelGetter getGetter(PixelFormat format) {
+    private static PixelGetter<?> getGetter(PixelFormat format) {
         switch (format) {
             case BYTE_RGB:
                 return ByteRgb.getter;
@@ -146,8 +146,9 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
             int srcx, int srcy, int srcw, int srch,
             int srcscan)
     {
-        PixelGetter getter = getGetter(format);
-        PixelConverter converter = PixelUtils.getConverter(getter, setter);
+        PixelGetter<?> getter = getGetter(format);
+        @SuppressWarnings("unchecked")
+        PixelConverter<Buffer, Buffer> converter = (PixelConverter<Buffer, Buffer>) PixelUtils.getConverter(getter, setter);
         if (PrismSettings.debug) {
             System.out.println("src = [" + srcx + ", " + srcy + "] x [" + srcw + ", " + srch + "], dst = [" + dstx + ", " + dsty + "]");
             System.out.println("bimg = " + bimg);

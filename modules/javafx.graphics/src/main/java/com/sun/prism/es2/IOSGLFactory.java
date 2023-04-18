@@ -25,8 +25,10 @@
 
 package com.sun.prism.es2;
 
-import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
+import java.util.Map;
+
+import com.sun.prism.es2.GLPixelFormat.Attributes;
 
 class IOSGLFactory extends GLFactory {
     private static native long nInitialize(int[] attrArr);
@@ -66,7 +68,7 @@ class IOSGLFactory extends GLFactory {
         // NOTE: By Prism design, we should pass in glassCtx to glass. However due to IOS
         // native code was done differently then its MacOS implementation. We will need to pass
         // in prismCtx since we don't have the resources to make the corresponding IOS change.
-        HashMap devDetails = (HashMap) ES2Pipeline.getInstance().getDeviceDetails();
+        Map<Object, Object> devDetails = ES2Pipeline.getInstance().getDeviceDetails();
         devDetails.put("contextPtr", prismCtx.getNativeHandle());
 
         return prismCtx;
@@ -88,7 +90,7 @@ class IOSGLFactory extends GLFactory {
     }
 
     @Override
-    boolean initialize(Class psClass, Attributes attrs) {
+    boolean initialize(Class<?> psClass, Attributes attrs) {
 
         // holds the list of attributes to be translated for native call
         int attrArr[] = new int[GLPixelFormat.Attributes.NUM_ITEMS];
@@ -126,7 +128,7 @@ class IOSGLFactory extends GLFactory {
     }
 
     @Override
-    void updateDeviceDetails(HashMap deviceDetails) {
+    void updateDeviceDetails(Map<Object, Object> deviceDetails) {
            deviceDetails.put("shareContextPtr", getShareContext().getNativeHandle());
     }
 }

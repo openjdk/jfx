@@ -129,7 +129,7 @@ public class MeshView extends Shape3D {
                             }
                         };
                 private final WeakChangeListener<Boolean> weakMeshChangeListener =
-                        new WeakChangeListener(meshChangeListener);
+                        new WeakChangeListener<>(meshChangeListener);
 
                 @Override
                 protected void invalidated() {

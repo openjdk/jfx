@@ -300,7 +300,7 @@ public abstract class NodeHelper {
         return nodeAccessor.isTreeShowing(node);
     }
 
-    public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
+    public static List<Style> getMatchingStyles(CssMetaData<Styleable, ?> cssMetaData, Styleable styleable) {
         return nodeAccessor.getMatchingStyles(cssMetaData, styleable);
     }
 
@@ -368,7 +368,7 @@ public abstract class NodeHelper {
         boolean isTreeVisible(Node node);
         BooleanExpression treeVisibleProperty(Node node);
         boolean isTreeShowing(Node node);
-        List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable);
+        List<Style> getMatchingStyles(CssMetaData<Styleable, ?> cssMetaData, Styleable styleable);
         Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
                 Map<StyleableProperty<?>,List<Style>> styleMap);
         void requestFocusVisible(Node node);

@@ -36,7 +36,7 @@ import javafx.css.StyleConverter;
 /**
  * Given four Sizes from the Parser, this converter will produce a BackgroundPosition object.
  */
-public final class BackgroundPositionConverter extends StyleConverter<ParsedValue[], BackgroundPosition> {
+public final class BackgroundPositionConverter extends StyleConverter<ParsedValue<?, Size>[], BackgroundPosition> {
     private static final BackgroundPositionConverter BACKGROUND_POSITION_CONVERTER =
             new BackgroundPositionConverter();
 
@@ -48,14 +48,14 @@ public final class BackgroundPositionConverter extends StyleConverter<ParsedValu
     private BackgroundPositionConverter() { }
 
     @Override
-    public BackgroundPosition convert(ParsedValue<ParsedValue[], BackgroundPosition> value, Font font) {
-        ParsedValue[] positions = value.getValue();
+    public BackgroundPosition convert(ParsedValue<ParsedValue<?, Size>[], BackgroundPosition> value, Font font) {
+        ParsedValue<?, Size>[] positions = value.getValue();
 
         // The parser gives us 4 values, none of them null
-        final Size top = (Size)positions[0].convert(font);
-        final Size right = (Size)positions[1].convert(font);
-        final Size bottom = (Size)positions[2].convert(font);
-        final Size left = (Size)positions[3].convert(font);
+        final Size top = positions[0].convert(font);
+        final Size right = positions[1].convert(font);
+        final Size bottom = positions[2].convert(font);
+        final Size left = positions[3].convert(font);
 
         boolean verticalEdgeProportional =
                 (bottom.getValue() > 0 && bottom.getUnits() == SizeUnits.PERCENT)

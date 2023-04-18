@@ -55,7 +55,7 @@ public abstract class PPSOneSamplerPeer<T extends RenderState> extends PPSEffect
     @Override
     ImageData filterImpl(ImageData... inputs) {
         Filterable srcF = inputs[0].getUntransformedImage();
-        final PrTexture srcTex = (PrTexture) srcF;
+        final PrTexture<?> srcTex = (PrTexture<?>) srcF;
         final Rectangle srcBounds = inputs[0].getUntransformedBounds();
         final Rectangle dstBounds = getDestBounds();
         final int dstw = dstBounds.width;

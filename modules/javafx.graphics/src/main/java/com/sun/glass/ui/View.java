@@ -421,7 +421,7 @@ public abstract class View {
     }
 
 
-    protected abstract long _create(Map capabilities);
+    protected abstract long _create(Map<Object, Object> capabilities);
     protected View() {
         Application.checkEventThread();
         this.ptr = _create(Application.GetApplication().getDeviceDetails());

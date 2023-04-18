@@ -49,7 +49,7 @@ import java.security.ProtectionDomain;
  *
  * @since 9
  */
-public final class URLConverter extends StyleConverter<ParsedValue[], String> {
+public final class URLConverter extends StyleConverter<ParsedValue<String, String>[], String> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -61,7 +61,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
      * Gets the {@code URLConverter} instance.
      * @return the {@code URLConverter} instance
      */
-    public static StyleConverter<ParsedValue[], String> getInstance() {
+    public static StyleConverter<ParsedValue<String, String>[], String> getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -70,11 +70,11 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
     }
 
     @Override
-    public String convert(ParsedValue<ParsedValue[], String> value, Font font) {
+    public String convert(ParsedValue<ParsedValue<String, String>[], String> value, Font font) {
 
         String url = null;
 
-        ParsedValue[] values = value.getValue();
+        ParsedValue<String, String>[] values = value.getValue();
 
         String resource = values.length > 0 ? StringConverter.getInstance().convert(values[0], font) : null;
         resource = resource != null ? resource.trim() : null;
@@ -254,7 +254,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
      * Converter to convert a sequence of URLs to an array of {@code String}s.
      * @since 9
      */
-    public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], String>[], String[]> {
+    public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue<String, String>[], String>[], String[]> {
 
         /**
          * Gets the {@code SequenceConverter} instance.
@@ -269,8 +269,8 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
         }
 
         @Override
-        public String[] convert(ParsedValue<ParsedValue<ParsedValue[], String>[], String[]> value, Font font) {
-            ParsedValue<ParsedValue[], String>[] layers = value.getValue();
+        public String[] convert(ParsedValue<ParsedValue<ParsedValue<String, String>[], String>[], String[]> value, Font font) {
+            ParsedValue<ParsedValue<String, String>[], String>[] layers = value.getValue();
             String[] urls = new String[layers.length];
             for (int layer = 0; layer < layers.length; layer++) {
                 urls[layer] = URLConverter.getInstance().convert(layers[layer], font);

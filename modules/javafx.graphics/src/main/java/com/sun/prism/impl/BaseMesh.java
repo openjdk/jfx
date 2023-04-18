@@ -136,17 +136,17 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
             float[] texCoords, int[] faces) {
 
         if (point2vbMap == null) {
-            point2vbMap = new HashMap();
+            point2vbMap = new HashMap<>();
         } else {
             point2vbMap.clear();
         }
         if (normal2vbMap == null) {
-            normal2vbMap = new HashMap();
+            normal2vbMap = new HashMap<>();
         } else {
             normal2vbMap.clear();
         }
         if (texCoord2vbMap == null) {
-            texCoord2vbMap = new HashMap();
+            texCoord2vbMap = new HashMap<>();
         } else {
             texCoord2vbMap.clear();
         }

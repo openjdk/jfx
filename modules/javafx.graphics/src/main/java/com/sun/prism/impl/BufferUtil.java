@@ -50,7 +50,7 @@ public class BufferUtil {
     // and Java SE.  The ByteOrder class and order() methods are not supported
     // on CDC; on that platform the initial byte order is the native byte order.
     private static boolean isCDCFP;
-    private static Class byteOrderClass;
+    private static Class<?> byteOrderClass;
     private static Object nativeOrderObject;
     private static Method orderMethod;
 
@@ -62,8 +62,8 @@ public class BufferUtil {
         if (!isCDCFP) {
             try {
                 if (byteOrderClass == null) {
-                    byteOrderClass = (Class) AccessController.doPrivileged(
-                            (PrivilegedExceptionAction) () -> Class.forName("java.nio.ByteOrder", true, null));
+                    byteOrderClass = (Class<?>) AccessController.doPrivileged(
+                            (PrivilegedExceptionAction<?>) () -> Class.forName("java.nio.ByteOrder", true, null));
                     orderMethod = ByteBuffer.class.getMethod("order", new Class[]{byteOrderClass});
                     Method nativeOrderMethod = byteOrderClass.getMethod("nativeOrder", (Class[])null);
                     nativeOrderObject = nativeOrderMethod.invoke(null, (Object[])null);

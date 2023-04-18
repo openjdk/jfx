@@ -88,7 +88,7 @@ import javafx.css.Styleable;
  */
 @SuppressWarnings("unchecked")
 public final class Border {
-    static final CssMetaData<Node,Paint[]> BORDER_COLOR =
+    static final CssMetaData<Node, Paint[][]> BORDER_COLOR =
             new SubCssMetaData<>("-fx-border-color",
                     LayeredBorderPaintConverter.getInstance());
 
@@ -122,10 +122,10 @@ public final class Border {
                     SliceSequenceConverter.getInstance(),
                     new BorderImageSlices[] { BorderImageSlices.DEFAULT});
 
-    static final CssMetaData<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
+    static final CssMetaData<Node, BorderWidths> BORDER_IMAGE_WIDTH =
             new SubCssMetaData<>("-fx-border-image-width",
                     BorderImageWidthConverter.getInstance(),
-                    new BorderWidths[] { BorderWidths.DEFAULT });
+                    BorderWidths.DEFAULT);
 
     static final CssMetaData<Node,Insets[]> BORDER_IMAGE_INSETS =
             new SubCssMetaData<>("-fx-border-image-insets",
@@ -133,8 +133,7 @@ public final class Border {
                     new Insets[] {Insets.EMPTY});
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
-            // Unchecked!
-            (List) Collections.unmodifiableList(Arrays.asList(
+            Collections.unmodifiableList(Arrays.asList(
                 BORDER_COLOR,
                 BORDER_STYLE,
                 BORDER_WIDTH,

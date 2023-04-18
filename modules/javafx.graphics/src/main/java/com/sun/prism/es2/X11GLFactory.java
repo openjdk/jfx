@@ -27,6 +27,7 @@ package com.sun.prism.es2;
 
 import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
+import java.util.Map;
 
 class X11GLFactory extends GLFactory {
 
@@ -130,7 +131,7 @@ class X11GLFactory extends GLFactory {
     }
 
     @Override
-    boolean initialize(Class psClass, Attributes attrs) {
+    boolean initialize(Class<?> psClass, Attributes attrs) {
 
         // holds the list of attributes to be translated for native call
         int attrArr[] = new int[GLPixelFormat.Attributes.NUM_ITEMS];
@@ -166,7 +167,7 @@ class X11GLFactory extends GLFactory {
     }
 
     @Override
-    void updateDeviceDetails(HashMap deviceDetails) {
+    void updateDeviceDetails(Map<Object, Object> deviceDetails) {
         deviceDetails.put("XVisualID", Long.valueOf(nGetVisualID(nativeCtxInfo)));
         deviceDetails.put("XDisplay", Long.valueOf(nGetDisplay(nativeCtxInfo)));
         deviceDetails.put("XScreenID", Integer.valueOf(nGetDefaultScreen(nativeCtxInfo)));

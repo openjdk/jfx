@@ -94,7 +94,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public TextureResourcePool getTextureResourcePool() {
+    public TextureResourcePool<?> getTextureResourcePool() {
         return ES2VramPool.instance;
     }
 
@@ -313,7 +313,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
             InputStream stream =
                     ES2ResourceFactory.class.getResourceAsStream(
                     "glsl/" + name + ".frag");
-            Class klass =
+            Class<?> klass =
                     Class.forName("com.sun.prism.shader." + name + "_Loader");
             if (PrismSettings.verbose) {
                 System.out.println("ES2ResourceFactory: Prism - createStockShader: " + name + ".frag");

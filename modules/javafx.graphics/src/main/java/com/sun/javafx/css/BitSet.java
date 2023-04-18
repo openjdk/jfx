@@ -235,7 +235,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        BitSet other = (BitSet)c;
+        BitSet<?> other = (BitSet<?>) c;
 
         // this contains all of other if both are empty
         if (bits.length == 0 && other.bits.length == 0) {
@@ -266,7 +266,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         boolean modified = false;
 
-        BitSet other = (BitSet)c;
+        BitSet<?> other = (BitSet<?>) c;
 
         final long[] maskOne = this.bits;
         final long[] maskTwo = other.bits;
@@ -338,7 +338,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         boolean modified = false;
 
-        BitSet other = (BitSet)c;
+        BitSet<?> other = (BitSet<?>) c;
 
         final long[] maskOne = this.bits;
         final long[] maskTwo = other.bits;
@@ -420,7 +420,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         boolean modified = false;
 
-        BitSet other = (BitSet)c;
+        BitSet<?> other = (BitSet<?>) c;
 
         final long[] maskOne = bits;
         final long[] maskTwo = other.bits;
@@ -516,7 +516,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        final BitSet other = (BitSet) obj;
+        final BitSet<?> other = (BitSet<?>) obj;
 
         final int a = this.bits != null ? this.bits.length : 0;
         final int b = other.bits != null ? other.bits.length : 0;

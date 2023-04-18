@@ -494,7 +494,7 @@ public class LauncherImpl {
     private static ClassLoader setupJavaFXClassLoader(File appJar, String fxClassPath) {
         try {
             File baseDir = appJar.getParentFile();
-            ArrayList jcpList = new ArrayList();
+            List<URL> jcpList = new ArrayList<>();
 
             // Add in the jars from the JavaFX-Class-Path entry
             // TODO: should check current classpath for duplicate entries and ignore them
@@ -579,7 +579,7 @@ public class LauncherImpl {
     }
 
     private static String[] getAppArguments(Attributes attrs) {
-        List args = new LinkedList();
+        List<String> args = new LinkedList<>();
 
         int idx = 1;
         String argNamePrefix = MF_JAVAFX_ARGUMENT_PREFIX;
@@ -601,7 +601,7 @@ public class LauncherImpl {
             idx++;
         }
 
-        return (String[]) args.toArray(new String[0]);
+        return args.toArray(new String[0]);
     }
 
     // FIXME: needs localization, since these are presented to the user

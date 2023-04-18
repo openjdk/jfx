@@ -44,7 +44,7 @@ public class URLConverterTest {
      */
     @Test
     public void testGetInstance() {
-        StyleConverter<ParsedValue[],String> result = URLConverter.getInstance();
+        StyleConverter<ParsedValue<String, String>[], String> result = URLConverter.getInstance();
         assertNotNull(result);
     }
 

@@ -38,7 +38,7 @@ public class SSERendererDelegate implements RendererDelegate {
 
     static {
         @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
+        var dummy = AccessController.doPrivileged((PrivilegedAction<?>) () -> {
             NativeLibLoader.loadLibrary("decora_sse");
             return null;
         });

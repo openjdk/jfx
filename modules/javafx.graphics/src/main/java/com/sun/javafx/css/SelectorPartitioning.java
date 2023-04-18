@@ -50,11 +50,14 @@ public final class SelectorPartitioning {
      * Wrapper so that we can have Map<ParitionKey, Partition> even though
      * the innards of the key might be a String or long[]
      */
-    private final static class PartitionKey<K> {
+    private final static class PartitionKey {
+        private final Object key;
 
-        private final K key;
+        private PartitionKey(String key) {
+            this.key = key;
+        }
 
-        private PartitionKey(K key) {
+        private PartitionKey(Set<StyleClass> key) {
             this.key = key;
         }
 
@@ -66,7 +69,7 @@ public final class SelectorPartitioning {
             if (getClass() != obj.getClass()) {
                 return false;
             }
-            final PartitionKey<K> other = (PartitionKey<K>) obj;
+            final PartitionKey other = (PartitionKey) obj;
             if (this.key != other.key && (this.key == null || !this.key.equals(other.key))) {
                 return false;
             }
@@ -127,7 +130,7 @@ public final class SelectorPartitioning {
 
             Slot slot = slots.get(id);
             if (slot == null) {
-                Partition partition = getPartition(id,map);
+                Partition partition = getPartition(id, map);
                 slot = new Slot(partition);
                 slots.put(id, slot);
             }
@@ -209,7 +212,7 @@ public final class SelectorPartitioning {
      * Helper to lookup an id in the given map, creating and adding a Partition
      *
      */
-    private static Partition getPartition(PartitionKey id, Map<PartitionKey,Partition> map) {
+    private static Partition getPartition(PartitionKey id, Map<PartitionKey, Partition> map) {
 
         Partition treeNode = map.get(id);
         if (treeNode == null) {
@@ -226,7 +229,7 @@ public final class SelectorPartitioning {
     /* Mask that indicates the selector has a styleclass part, e.g. .label */
     private static final int STYLECLASS_BIT = 1;
     /* If there is no type part, then * is the default. */
-    private static final PartitionKey WILDCARD = new PartitionKey<>("*");
+    private static final PartitionKey WILDCARD = new PartitionKey("*");
 
     /* Place this selector into the partitioning map. Package accessible */
     public void partition(Selector selector) {
@@ -258,7 +261,7 @@ public final class SelectorPartitioning {
         final boolean hasStyleClass =
             (selectorStyleClass != null && selectorStyleClass.size() > 0);
         final PartitionKey styleClassKey = hasStyleClass
-                ? new PartitionKey<>(selectorStyleClass)
+                ? new PartitionKey(selectorStyleClass)
                 : null;
 
         final int c =
@@ -321,7 +324,7 @@ public final class SelectorPartitioning {
         final boolean hasStyleClass =
             (selectorStyleClass != null && selectorStyleClass.size() > 0);
         final PartitionKey styleClassKey = hasStyleClass
-                ? new PartitionKey<>(selectorStyleClass)
+                ? new PartitionKey(selectorStyleClass)
                 : null;
 
         int c =

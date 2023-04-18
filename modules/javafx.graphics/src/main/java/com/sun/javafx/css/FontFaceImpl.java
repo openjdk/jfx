@@ -106,7 +106,7 @@ final public class FontFaceImpl extends FontFace {
     public final static FontFaceImpl readBinary(int bssVersion, DataInputStream is, String[] strings) throws IOException
     {
         int nEntries = is.readShort();
-        Map<String,String> descriptors = new HashMap(nEntries);
+        Map<String, String> descriptors = new HashMap<>(nEntries);
         for (int n=0; n<nEntries; n++) {
             int index = is.readInt();
             String key = strings[index];

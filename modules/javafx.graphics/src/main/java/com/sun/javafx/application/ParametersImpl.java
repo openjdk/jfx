@@ -53,25 +53,6 @@ public class ParametersImpl extends Parameters {
     // Set of parameters for each application
     private static Map<Application, Parameters> params = new HashMap<>();
 
-
-    /**
-     * Constructs an empty Parameters object.
-     */
-    public ParametersImpl() {
-    }
-
-    /**
-     * Constructs an Parameters object from the specified list of arguments.
-     * The list may be null.
-     *
-     * @param args list of command line arguments
-     */
-    public ParametersImpl(List<String> args) {
-        if (args != null) {
-            init(args);
-        }
-    }
-
     /**
      * Constructs an Parameters object from the specified array of unnamed
      * parameters. The array may be null.
@@ -82,17 +63,6 @@ public class ParametersImpl extends Parameters {
         if (args != null) {
             init(Arrays.asList(args));
         }
-    }
-
-    /**
-     * Constructs an Parameters object from the specified map of named
-     * parameters.
-     *
-     * @param params a map of parameters from which to initialize this
-     * object.
-     */
-    public ParametersImpl(Map params, String[] arguments) {
-        init(params, arguments);
     }
 
     /**
@@ -112,33 +82,6 @@ public class ParametersImpl extends Parameters {
     }
 
     /**
-     * Constructs an Parameters object from the specified map of named
-     * parameters.
-     *
-     * @param params a map of parameters from which to initialize this
-     * object.
-     */
-    private void init(Map params, String[] arguments) {
-        for (Object e : params.entrySet()) {
-            Object key = ((Map.Entry)e).getKey();
-            if (validKey(key)) {
-                Object value = params.get(key);
-                if (value instanceof String) {
-                    namedParams.put((String)key, (String)value);
-                }
-            }
-        }
-
-        computeRawArgs();
-        if (arguments != null) {
-            for (String arg : arguments) {
-                unnamedParams.add(arg);
-                rawArgs.add(arg);
-            }
-        }
-    }
-
-    /**
      * Validate the first character of a key. It is valid if it is a letter or
      * an "_" character.
      *
@@ -148,25 +91,6 @@ public class ParametersImpl extends Parameters {
      */
     private boolean validFirstChar(char c) {
         return Character.isLetter(c) || c == '_';
-    }
-
-    /**
-     * Validate the key. A key is valid if it is a String object that starts
-     * with a letter or "_" character and does not contain an "=" character.
-     *
-     * @param key Object representing a potential key
-     *
-     * @return true if key is a valid key, otherwise false
-     */
-    private boolean validKey(Object key) {
-        if (key instanceof String) {
-            String keyStr = (String)key;
-            if (keyStr.length() > 0 && keyStr.indexOf('=') < 0) {
-                return validFirstChar(keyStr.charAt(0));
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -210,21 +134,6 @@ public class ParametersImpl extends Parameters {
                 String value = arg.substring(eqIdx + 1);
                 namedParams.put(key, value);
             }
-        }
-    }
-
-    /**
-     * This method creates string representations of the name,value pairs in
-     * the map for this Parameters object, and appends those strings to the
-     * raw arguments array. The newly added strings are of the form:
-     * "--name=value".
-     */
-    private void computeRawArgs() {
-        ArrayList<String> keys = new ArrayList<>();
-        keys.addAll(namedParams.keySet());
-        Collections.sort(keys);
-        for (String key : keys) {
-            rawArgs.add("--" + key + "=" + namedParams.get(key));
         }
     }
 

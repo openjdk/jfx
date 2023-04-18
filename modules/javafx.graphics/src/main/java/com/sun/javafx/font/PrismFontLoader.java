@@ -264,7 +264,7 @@ public class PrismFontLoader extends FontLoader {
             return installedFontFactory;
         }
         try {
-            Class plc = Class.forName("com.sun.prism.GraphicsPipeline");
+            Class<?> plc = Class.forName("com.sun.prism.GraphicsPipeline");
             Method gpm = plc.getMethod("getPipeline", (Class[])null);
             Object plo = gpm.invoke(null);
             Method gfm = plc.getMethod("getFontFactory", (Class[])null);

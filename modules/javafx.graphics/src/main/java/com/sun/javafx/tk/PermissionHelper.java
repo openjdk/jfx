@@ -46,10 +46,10 @@ public class PermissionHelper {
             // just set it to null
 
             try {
-                Class clazz = Class.forName("java.awt.AWTPermission",
+                Class<?> clazz = Class.forName("java.awt.AWTPermission",
                         false, PermissionHelper.class.getClassLoader());
                 // FIXME JIGSAW: add read edge
-                Constructor c = clazz.getConstructor(String.class);
+                Constructor<?> c = clazz.getConstructor(String.class);
                 awtClipboardPermission = (Permission) c.newInstance("accessClipboard");
             } catch (Exception ex) {
                 awtClipboardPermission = null;

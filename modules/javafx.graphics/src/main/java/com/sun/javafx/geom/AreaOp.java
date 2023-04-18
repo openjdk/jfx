@@ -25,12 +25,18 @@
 
 package com.sun.javafx.geom;
 
-import java.util.Vector;
-import java.util.Enumeration;
-import java.util.Comparator;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.Vector;
+import java.util.function.Consumer;
+
+import javafx.beans.property.SimpleStringProperty;
 
 public abstract class AreaOp {
+
+    private static final Vector<Curve> EMPTY = new Vector<>();
+
     public static abstract class CAGOp extends AreaOp {
         boolean inLeft;
         boolean inRight;
@@ -165,35 +171,38 @@ public abstract class AreaOp {
 
     public abstract int getState();
 
-    public Vector calculate(Vector left, Vector right) {
-        Vector edges = new Vector();
+    public Vector<Curve> calculate(Vector<Curve> left, Vector<Curve> right) {
+        Vector<Edge> edges = new Vector<>();
+
         addEdges(edges, left, AreaOp.CTAG_LEFT);
         addEdges(edges, right, AreaOp.CTAG_RIGHT);
-        edges = pruneEdges(edges);
+
+        Vector<Curve> curves = pruneEdges(edges);
+
         if (false) {
             System.out.println("result: ");
-            int numcurves = edges.size();
-            Curve[] curvelist = (Curve[]) edges.toArray(new Curve[numcurves]);
+            int numcurves = curves.size();
+            Curve[] curvelist = curves.toArray(new Curve[numcurves]);
             for (int i = 0; i < numcurves; i++) {
                 System.out.println("curvelist["+i+"] = "+curvelist[i]);
             }
         }
-        return edges;
+        return curves;
     }
 
-    private static void addEdges(Vector edges, Vector curves, int curvetag) {
-        Enumeration enum_ = curves.elements();
+    private static void addEdges(Vector<Edge> edges, Vector<Curve> curves, int curvetag) {
+        Enumeration<Curve> enum_ = curves.elements();
         while (enum_.hasMoreElements()) {
-            Curve c = (Curve) enum_.nextElement();
+            Curve c = enum_.nextElement();
             if (c.getOrder() > 0) {
                 edges.add(new Edge(c, curvetag));
             }
         }
     }
 
-    private static Comparator YXTopComparator = (o1, o2) -> {
-        Curve c1 = ((Edge) o1).getCurve();
-        Curve c2 = ((Edge) o2).getCurve();
+    private static Comparator<Edge> YXTopComparator = (o1, o2) -> {
+        Curve c1 = o1.getCurve();
+        Curve c2 = o2.getCurve();
         double v1, v2;
         if ((v1 = c1.getYTop()) == (v2 = c2.getYTop())) {
             if ((v1 = c1.getXTop()) == (v2 = c2.getXTop())) {
@@ -206,12 +215,12 @@ public abstract class AreaOp {
         return 1;
     };
 
-    private Vector pruneEdges(Vector edges) {
+    private Vector<Curve> pruneEdges(Vector<Edge> edges) {
         int numedges = edges.size();
         if (numedges < 2) {
-            return edges;
+            return EMPTY;
         }
-        Edge[] edgelist = (Edge[]) edges.toArray(new Edge[numedges]);
+        Edge[] edgelist = edges.toArray(new Edge[numedges]);
         Arrays.sort(edgelist, YXTopComparator);
         if (false) {
             System.out.println("pruning: ");
@@ -225,9 +234,9 @@ public abstract class AreaOp {
         int cur = 0;
         int next = 0;
         double yrange[] = new double[2];
-        Vector subcurves = new Vector();
-        Vector chains = new Vector();
-        Vector links = new Vector();
+        Vector<CurveLink> subcurves = new Vector<>();
+        Vector<ChainEnd> chains = new Vector<>();
+        Vector<CurveLink> links = new Vector<>();
         // Active edges are between left (inclusive) and right (exclusive)
         while (left < numedges) {
             double y = yrange[0];
@@ -396,7 +405,7 @@ public abstract class AreaOp {
             if (false) {
                 System.out.println("new links:");
                 for (int i = 0; i < links.size(); i++) {
-                    CurveLink link = (CurveLink) links.elementAt(i);
+                    CurveLink link = links.elementAt(i);
                     System.out.println("  "+link.getSubCurve());
                 }
             }
@@ -407,10 +416,10 @@ public abstract class AreaOp {
             yrange[0] = yend;
         }
         finalizeSubCurves(subcurves, chains);
-        Vector ret = new Vector();
-        Enumeration enum_ = subcurves.elements();
+        Vector<Curve> ret = new Vector<>();
+        Enumeration<CurveLink> enum_ = subcurves.elements();
         while (enum_.hasMoreElements()) {
-            CurveLink link = (CurveLink) enum_.nextElement();
+            CurveLink link = enum_.nextElement();
             ret.add(link.getMoveto());
             CurveLink nextlink = link;
             while ((nextlink = nextlink.getNext()) != null) {
@@ -424,7 +433,7 @@ public abstract class AreaOp {
         return ret;
     }
 
-    public static void finalizeSubCurves(Vector subcurves, Vector chains) {
+    private static void finalizeSubCurves(Vector<CurveLink> subcurves, Vector<ChainEnd> chains) {
         int numchains = chains.size();
         if (numchains == 0) {
             return;
@@ -448,9 +457,9 @@ public abstract class AreaOp {
     private static final CurveLink[] EmptyLinkList = new CurveLink[2];
     private static final ChainEnd[] EmptyChainList = new ChainEnd[2];
 
-    public static void resolveLinks(Vector subcurves,
-                                    Vector chains,
-                                    Vector links)
+    private static void resolveLinks(Vector<CurveLink> subcurves,
+                                    Vector<ChainEnd> chains,
+                                    Vector<CurveLink> links)
     {
         int numlinks = links.size();
         CurveLink[] linklist;

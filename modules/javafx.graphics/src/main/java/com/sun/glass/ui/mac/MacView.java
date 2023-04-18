@@ -67,7 +67,7 @@ final class MacView extends View {
     }
 
     @Override native protected int _getNativeFrameBuffer(long ptr);
-    @Override native protected long _create(Map caps);
+    @Override native protected long _create(Map<Object, Object> caps);
     @Override native protected int _getX(long ptr);
     @Override native protected int _getY(long ptr);
     @Override native protected void _setParent(long ptr, long parentPtr);

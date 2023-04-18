@@ -36,8 +36,9 @@ import com.sun.scenario.effect.FloatMap;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.prism.PrTexture;
+import com.sun.scenario.effect.impl.state.RenderState;
 
-public abstract class PPSTwoSamplerPeer extends PPSEffectPeer {
+public abstract class PPSTwoSamplerPeer extends PPSEffectPeer<RenderState> {
 
     private Shader shader;
 
@@ -67,7 +68,7 @@ public abstract class PPSTwoSamplerPeer extends PPSEffectPeer {
         setDestNativeBounds(dst.getPhysicalWidth(), dst.getPhysicalHeight());
 
         Filterable src0F = inputs[0].getUntransformedImage();
-        final PrTexture src0Tex = (PrTexture) src0F;
+        final PrTexture<?> src0Tex = (PrTexture<?>) src0F;
         Rectangle src0Bounds = inputs[0].getUntransformedBounds();
         BaseTransform src0Transform = inputs[0].getTransform();
         setInputBounds(0, src0Bounds);
@@ -77,13 +78,13 @@ public abstract class PPSTwoSamplerPeer extends PPSEffectPeer {
         // NOTE: this implementation was done just to get DisplacementMap working
         // (where there are two samplers but only one input); need to
         // generalize this...
-        final PrTexture src1Tex;
+        final PrTexture<?> src1Tex;
         final float[] src1Rect = new float[8];
         int src1Coords;
         if (inputs.length > 1) {
             // sampler comes from inputs[1]
             Filterable src1F = inputs[1].getUntransformedImage();
-            src1Tex = (PrTexture) src1F;
+            src1Tex = (PrTexture<?>) src1F;
             if (src1Tex == null) {
                 renderer.markLost();
                 return new ImageData(getFilterContext(), dst, dstBounds);
@@ -102,7 +103,7 @@ public abstract class PPSTwoSamplerPeer extends PPSEffectPeer {
         } else {
             // sampler comes from user param
             FloatMap map = (FloatMap)getSamplerData(1);
-            src1Tex = (PrTexture)map.getAccelData(getFilterContext());
+            src1Tex = (PrTexture<?>) map.getAccelData(getFilterContext());
             if (src1Tex == null) {
                 renderer.markLost();
                 return new ImageData(getFilterContext(), dst, dstBounds);
