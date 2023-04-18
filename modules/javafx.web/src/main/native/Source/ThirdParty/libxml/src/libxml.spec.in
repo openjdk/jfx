@@ -99,7 +99,7 @@ at parse time or later once the document has been modified.
 
 mkdir py3doc
 cp doc/*.py py3doc
-sed -i 's|#!/usr/bin/python |#!%{__python3} |' py3doc/*.py
+sed -i 's|#!/usr/bin/env python|#!/usr/bin/env %{__python3}|' py3doc/*.py
 
 %build
 %configure
@@ -144,7 +144,6 @@ rm -fr %{buildroot}
 %doc NEWS README.md Copyright TODO
 %doc %{_mandir}/man1/xmllint.1*
 %doc %{_mandir}/man1/xmlcatalog.1*
-%doc %{_mandir}/man3/libxml.3*
 
 %{_libdir}/lib*.so.*
 %{_bindir}/xmllint

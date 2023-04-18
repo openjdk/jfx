@@ -849,6 +849,34 @@ meter
 progress-bar
 slider-horizontal
 slider-vertical
+// if platform JAVA
+sliderthumb-horizontal
+sliderthumb-vertical
+media-controls-background
+media-controls-dark-bar-background
+media-controls-fullscreen-background
+media-controls-light-bar-background
+media-current-time-display
+media-enter-fullscreen-button
+media-exit-fullscreen-button
+media-fullscreen-volume-slider
+media-fullscreen-volume-slider-thumb
+media-mute-button
+media-overlay-play-button
+media-play-button
+media-return-to-realtime-button
+media-rewind-button
+media-seek-back-button
+media-seek-forward-button
+media-slider
+media-sliderthumb
+media-time-remaining-display
+media-toggle-closed-captions-button
+media-volume-slider
+media-volume-slider-container
+media-volume-slider-mute-button
+media-volume-sliderthumb
+// end platform JAVA
 searchfield
 #if defined(ENABLE_APPLE_PAY) && ENABLE_APPLE_PAY
 -apple-pay-button

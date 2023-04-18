@@ -91,6 +91,20 @@ void RenderSlider::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
+#if PLATFORM(JAVA)
+void RenderSlider::layout()
+{
+    StackStats::LayoutCheckPoint layoutCheckPoint;
+
+    // FIXME: Find a way to cascade appearance. http://webkit.org/b/62535
+    RenderBox* thumbBox = element().sliderThumbElement()->renderBox();
+    if (thumbBox && thumbBox->isSliderThumb())
+        static_cast<RenderSliderThumb*>(thumbBox)->updateAppearance(&style());
+
+    RenderFlexibleBox::layout();
+}
+#endif
+
 bool RenderSlider::inDragMode() const
 {
     return element().sliderThumbElement()->active();

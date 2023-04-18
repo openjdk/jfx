@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
@@ -41,6 +42,7 @@ import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.control.skin.LabelSkinBaseShim;
 import javafx.scene.control.skin.LabeledSkinBaseShim;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -2090,6 +2092,48 @@ public class LabelSkinTest {
         skin.updateDisplayedText();
         assertEquals("foo __bar", LabelSkinBaseShim.getText(label).getText());
     }
+
+    /*********************************************************************
+     *
+     * Tests for bug reports                                             *
+     *
+     ********************************************************************/
+
+    //Test for JDK-8172849
+    @Test
+    public void testBaselineAlignmentWhenTextIsSetAndGraphicIsSet() {
+        Label label1 = new Label("Label1");
+        LabelSkinMock label1Skin = new LabelSkinMock(label1);
+        label1.setSkin(label1Skin);
+
+        Label label2 = new Label("Label2");
+        LabelSkinMock label2Skin = new LabelSkinMock(label2);
+        label2.setSkin(label2Skin);
+
+        Rectangle r = new Rectangle(15, 5);
+        label2.setGraphic(r);
+
+        Toolkit tk = Toolkit.getToolkit();
+        HBox hBox = new HBox(label1, label2);
+        hBox.setAlignment(Pos.BASELINE_LEFT);
+        StageLoader sl = new StageLoader(hBox);
+        tk.firePulse();
+
+        double label2Height = label2.getHeight();
+        assertEquals(label1.getBaselineOffset(), label2.getBaselineOffset(), 0);
+        r.setHeight(50);
+        tk.firePulse();
+        assertEquals(label1.getBaselineOffset(), (label2.getBaselineOffset() - (r.getHeight()-label2Height)/2), 0);
+        sl.dispose();
+    }
+
+
+    /********************************************************************************
+     *                                                                              *
+     * Custom skin class implemntation to fetch default skin field values and       *
+     * monitor change in label properties.                                          *
+     *                                                                              *
+     *******************************************************************************/
 
     public static final class LabelSkinMock extends LabelSkin {
         boolean propertyChanged = false;

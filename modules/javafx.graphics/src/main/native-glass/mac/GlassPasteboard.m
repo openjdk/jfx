@@ -31,6 +31,12 @@
 #import "GlassPasteboard.h"
 #import "GlassDragSource.h"
 
+// UTF-16 code points for surrogate pairs
+#define HIGH_SURROGATE_START 0xD800
+#define HIGH_SURROGATE_END 0xDBFF
+#define LOW_SURROGATE_START 0xDC00
+#define LOW_SURROGATE_END 0xDFFF
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -39,6 +45,40 @@
 #endif
 
 static NSInteger lastDragSesionNumber = 0;
+
+// Validate the string. Returns false if the string is nil or if
+// it contains invalid partial surrogate pairs: a high surrogate
+// without an immediately following low surrogate, or conversely,
+// a low surrogate without an immediately preceding high surrogate.
+static BOOL validate(NSString *data)
+{
+    if (data == nil) {
+        return NO;
+    }
+
+    BOOL prevHiSurrogate = NO;
+    NSUInteger i;
+    for (i = 0; i < [data length]; i++) {
+        BOOL hiSurrogate = NO;
+        BOOL loSurrogate = NO;
+        NSUInteger c = [data characterAtIndex:i];
+        if (c >= HIGH_SURROGATE_START && c <= HIGH_SURROGATE_END) {
+            hiSurrogate = YES;
+        } else if (c >= LOW_SURROGATE_START && c <= LOW_SURROGATE_END) {
+            loSurrogate = YES;
+        }
+
+        if (loSurrogate && !prevHiSurrogate) {
+            return NO;
+        }
+        if (prevHiSurrogate && !loSurrogate) {
+            return NO;
+        }
+
+        prevHiSurrogate = hiSurrogate;
+    }
+    return !prevHiSurrogate;
+}
 
 // Dock puts the data to a custom pasteboard, so dragging from it does not work.
 // Copy the contents of the sender PBoard to the DraggingPBoard
@@ -213,8 +253,11 @@ static inline void SetNSPasteboardItemValueForUtf(JNIEnv *env, NSPasteboardItem 
             string = [NSString stringWithCharacters:(UniChar *)chars length:(NSUInteger)(*env)->GetStringLength(env, jValue)];
             (*env)->ReleaseStringChars(env, jValue, chars);
         }
-        [item setString:string forType:utf];
+
         //NSLog(@"                SetValue(string): %@, ForUtf: %@", string, utf);
+        if (validate(string)) {
+            [item setString:string forType:utf];
+        }
     }
     else
     {
@@ -286,7 +329,14 @@ static inline NSPasteboardItem *NSPasteboardItemFromArray(JNIEnv *env, jobjectAr
                         }
                         (*env)->ReleaseStringChars(env, jUtf, chars);
                     }
-                    SetNSPasteboardItemValueForUtf(env, item, jObject, utf);
+                    // Setting pasteboard can throw exception. It shouldn't
+                    // happen if we validate the data, but in case it does,
+                    // we will catch the exception and log a warning
+                    @try {
+                        SetNSPasteboardItemValueForUtf(env, item, jObject, utf);
+                    } @catch (NSException *exception) {
+                        NSLog(@"WARNING: %@: %@ ",exception.name, exception.reason);
+                    }
                 }
                 else
                 {

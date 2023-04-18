@@ -2123,6 +2123,10 @@ public class Scene implements EventTarget {
         if (windowFocused && accessible != null) {
             accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
         }
+
+        if (!windowFocused) {
+            getInternalEventDispatcher().getKeyboardShortcutsHandler().setMnemonicsDisplayEnabled(false);
+        }
     }
 
     /**
@@ -3274,7 +3278,7 @@ public class Scene implements EventTarget {
 
         private void processDropEnd(DragEvent de) {
             if (source == null) {
-                System.out.println("Scene.DnDGesture.processDropEnd() - UNEXPECTD - source is NULL");
+                System.out.println("Scene.DnDGesture.processDropEnd() - UNEXPECTED - source is NULL");
                 return;
             }
 

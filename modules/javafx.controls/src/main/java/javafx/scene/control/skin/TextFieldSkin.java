@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -802,25 +802,40 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                 // empty), then we align the Text node so that the caret will
                 // appear at the left of the centered prompt.
                 newX = midPoint - promptNode.getLayoutBounds().getWidth() / 2;
-                promptNode.setLayoutX(newX);
+                if (newX > 0) {
+                    promptNode.setLayoutX(newX);
+                } else {
+                    // Align to left when prompt text length is more than text field width
+                    promptNode.setLayoutX(caretWidth / 2);
+                }
             } else {
                 newX = midPoint - textNodeWidth / 2;
-            }
-            // Update if there is space on the right
-            if (newX + textNodeWidth <= textRight.get()) {
-                textTranslateX.set(newX);
+                // Update if there is space on the right
+                if (newX + textNodeWidth <= textRight.get() - caretWidth / 2) {
+                    textTranslateX.set(newX);
+                } else if (newX < 0 && oldX > caretWidth / 2) {
+                    textTranslateX.set(caretWidth / 2);
+                }
             }
             break;
 
           case RIGHT:
-            newX = textRight.get() - textNodeWidth - caretWidth / 2;
-            // Update if there is space on the right
-            if (newX > oldX || newX > 0) {
-                textTranslateX.set(newX);
-            }
             if (usePromptText.get()) {
-                promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
-                                      caretWidth / 2);
+                newX = textRight.get() - promptNode.getLayoutBounds().getWidth() - caretWidth / 2;
+                if (newX > 0) {
+                    promptNode.setLayoutX(newX);
+                } else {
+                    // Align to left when prompt text length is more than text field width
+                    promptNode.setLayoutX(caretWidth / 2);
+                }
+            } else {
+                newX = textRight.get() - textNodeWidth - caretWidth / 2;
+                // Update if there is space on the right
+                if (newX > oldX || newX > 0) {
+                  textTranslateX.set(newX);
+                } else if (newX < 0 && oldX > caretWidth / 2) {
+                  textTranslateX.set(caretWidth / 2);
+                }
             }
             break;
 
@@ -883,38 +898,17 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         final Bounds clipBounds = clip.getBoundsInParent();
         final Bounds caretBounds = caretPath.getLayoutBounds();
 
-        switch (getHAlignment()) {
-          case RIGHT:
-            if (textBounds.getMaxX() > clipBounds.getMaxX()) {
-                double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
-                if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
-                    if (textMaxXOld <= clipBounds.getMaxX()) {
-                        delta = textMaxXOld - textBounds.getMaxX();
-                    } else {
-                        delta = clipBounds.getMaxX() - textBounds.getMaxX();
-                    }
-                }
-                textTranslateX.set(textTranslateX.get() + delta);
-            } else {
-                updateTextPos();
-            }
-            break;
-
-          case LEFT:
-          case CENTER:
-          default:
-            if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
+        if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
                 textBounds.getMaxX() <= clipBounds.getMaxX()) {
-                double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
-                if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
-                    if (textMaxXOld <= clipBounds.getMaxX()) {
-                        delta = textMaxXOld - textBounds.getMaxX();
-                    } else {
-                        delta = clipBounds.getMaxX() - textBounds.getMaxX();
-                    }
+            double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
+            if (textBounds.getMaxX() + delta < clipBounds.getMaxX()) {
+                if (textMaxXOld <= clipBounds.getMaxX()) {
+                    delta = textMaxXOld - textBounds.getMaxX();
+                } else {
+                    delta = clipBounds.getMaxX() - textBounds.getMaxX();
                 }
-                textTranslateX.set(textTranslateX.get() + delta);
             }
+            textTranslateX.set(textTranslateX.get() + delta);
         }
 
         updateCaretOff();
