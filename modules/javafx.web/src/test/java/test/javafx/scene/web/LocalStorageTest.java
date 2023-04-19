@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
@@ -40,18 +41,15 @@ import javafx.scene.web.WebEngine;
 
 public class LocalStorageTest extends TestBase {
 
-    private static final File LOCAL_STORAGE_DIR = new File("LocalStorageDir");
+    private static final File LOCAL_STORAGE_DIR_PATH = new File("build/");
+    private static final File LOCAL_STORAGE_DIR = new File("build/localstorage");
 
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
             for (File f : file.listFiles()) {
                 deleteRecursively(f);
+                f.delete();
             }
-        }
-        if (!file.delete()) {
-            // If WebKit takes time to close the file, better
-            // delete it during VM shutdown.
-            file.deleteOnExit();
         }
     }
 
@@ -69,6 +67,11 @@ public class LocalStorageTest extends TestBase {
         });
     }
 
+    @BeforeClass
+    public static void beforeClass() throws IOException {
+        deleteRecursively(LOCAL_STORAGE_DIR);
+    }
+
     @AfterClass
     public static void afterClass() throws IOException {
         deleteRecursively(LOCAL_STORAGE_DIR);
@@ -78,8 +81,9 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStorage() throws Exception {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
         checkLocalStorageAfterWindowClose(webEngine);
+        webEngine.setUserDataDirectory(null);
     }
 
     /* test localstorage set data before window.close and check data after window.close */
@@ -87,7 +91,7 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStorageData() {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
@@ -96,6 +100,7 @@ public class LocalStorageTest extends TestBase {
             //get data
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
             assertEquals("1001", s);
+            webEngine.setUserDataDirectory(null);
         });
     }
 
@@ -103,13 +108,14 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStorageSet() {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
             view.getEngine().executeScript("test_local_storage_set();");
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
             assertEquals("1001", s);
+            webEngine.setUserDataDirectory(null);
         });
     }
 
@@ -117,7 +123,7 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStoargeClear() {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
@@ -126,6 +132,7 @@ public class LocalStorageTest extends TestBase {
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
             boolean res = (s == null || s.length() == 0);
             assertTrue(res);
+            webEngine.setUserDataDirectory(null);
         });
     }
 }
