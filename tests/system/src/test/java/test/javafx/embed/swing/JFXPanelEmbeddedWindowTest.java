@@ -41,19 +41,6 @@ public class JFXPanelEmbeddedWindowTest {
     private static JFXPanel jfxPanel;
     private static Throwable th;
 
-    public static void main(String[] args) throws Exception {
-        init();
-        try {
-            new JFXPanelEmbeddedWindowTest().testShowThenRemove();
-            teardown();
-        } catch (Throwable th) {
-            th.printStackTrace();
-            System.exit(1);
-        } finally {
-            System.exit(0);
-        }
-    }
-
     @BeforeClass
     public static void init() throws Exception {
         CountDownLatch initLatch = new CountDownLatch(1);
