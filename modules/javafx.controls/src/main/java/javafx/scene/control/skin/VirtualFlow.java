@@ -1994,8 +1994,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             double height = Math.max(getMaxPrefBreadth(), getViewportBreadth());
             cell.resize(fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefWidth(height), cell.minWidth(height), cell.maxWidth(height)), height);
         }
-        // when a cell is resized, our estimate needs to be updated.
-        recalculateAndImproveEstimatedSize(0);
     }
 
     /**
@@ -3079,19 +3077,21 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     void updateCellSize(T cell) {
         int cellIndex = cell.getIndex();
-        int currentIndex = computeCurrentIndex();
-        double oldOffset = computeViewportOffset(getPosition());
-
 
         if (itemSizeCache.size() > cellIndex) {
             Double oldSize = itemSizeCache.get(cellIndex);
             double newSize = isVertical() ? cell.getLayoutBounds().getHeight() : cell.getLayoutBounds().getWidth();
             itemSizeCache.set(cellIndex, newSize);
-            if ((cellIndex == currentIndex) && (oldSize != null) && (oldOffset != 0)) {
-                oldOffset = oldOffset + newSize - oldSize;
+            if ((oldSize != null) && !oldSize.equals(newSize)) {
+                int currentIndex = computeCurrentIndex();
+                double oldOffset = computeViewportOffset(getPosition());
+                if ((cellIndex == currentIndex) && (oldOffset != 0)) {
+                    oldOffset = oldOffset + newSize - oldSize;
+                }
+                recalculateAndImproveEstimatedSize(0, currentIndex, oldOffset);
+
             }
         }
-        recalculateAndImproveEstimatedSize(0, currentIndex, oldOffset);
     }
 
     /**
