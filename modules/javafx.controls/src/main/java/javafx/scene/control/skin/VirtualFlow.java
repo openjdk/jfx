@@ -855,11 +855,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         private int oldCount = 0;
 
         @Override protected void invalidated() {
+            int oldIndex = computeCurrentIndex();
+            double oldOffset = computeViewportOffset(getPosition());
             int cellCount = get();
             resetSizeEstimates();
             recalculateEstimatedSize();
 
             boolean countChanged = oldCount != cellCount;
+            double boff = computeBaseOffset(oldIndex);
+            absoluteOffset = boff + oldOffset;
             oldCount = cellCount;
 
             // ensure that the virtual scrollbar adjusts in size based on the current
@@ -2976,6 +2980,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         setPosition(newPosition);
         return absoluteOffset - origAbsoluteOffset;
 
+    }
+
+    private double computeBaseOffset(int index) {
+        double baseOffset = 0d;
+        int currentCellCount = getCellCount();
+        double estSize = estimatedSize / currentCellCount;
+        for (int i = 0; i < index; i++) {
+            double nextSize = getCellSize(i);
+            if (nextSize < 0) nextSize = estSize;
+            baseOffset += nextSize;
+        }
+        return baseOffset;
     }
 
     private int computeCurrentIndex() {
