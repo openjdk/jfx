@@ -28,28 +28,30 @@ package test.javafx.scene.web;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import java.io.File;
 import java.io.IOException;
-
 import javafx.scene.web.WebView;
 import javafx.scene.web.WebEngine;
 
-
 public class LocalStorageTest extends TestBase {
 
-    private static final File LOCAL_STORAGE_DIR_PATH = new File("build/");
     private static final File LOCAL_STORAGE_DIR = new File("build/localstorage");
 
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
             for (File f : file.listFiles()) {
                 deleteRecursively(f);
-                f.delete();
             }
+        }
+
+        if (!file.delete()) {
+            // If WebKit takes time to close the file, better
+            // delete it during VM shutdown.
+            file.deleteOnExit();
         }
     }
 
@@ -81,7 +83,7 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStorage() throws Exception {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         checkLocalStorageAfterWindowClose(webEngine);
         webEngine.setUserDataDirectory(null);
     }
@@ -91,7 +93,7 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStorageData() {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
@@ -108,7 +110,7 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStorageSet() {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
@@ -123,7 +125,7 @@ public class LocalStorageTest extends TestBase {
     public void testLocalStoargeClear() {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
-        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR_PATH);
+        webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         load(new File("src/test/resources/test/html/localstorage.html"));
         submit(() -> {
             WebView view = getView();
