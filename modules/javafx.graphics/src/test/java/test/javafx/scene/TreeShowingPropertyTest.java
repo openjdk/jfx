@@ -24,7 +24,7 @@
  */
 package test.javafx.scene;
 
-import com.sun.javafx.scene.TreeShowingExpression;
+import com.sun.javafx.scene.TreeShowingProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.Node;
@@ -48,10 +48,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-public class TreeShowingExpressionTest {
+public class TreeShowingPropertyTest {
     private final Parent root;
     private final Node node;
-    private final TreeShowingExpression expression;
+    private final TreeShowingProperty property;
 
     @Parameters
     public static Collection<Object[]> parameters() {
@@ -78,39 +78,39 @@ public class TreeShowingExpressionTest {
         Node nodeToTest;
     }
 
-    public TreeShowingExpressionTest(Supplier<RootAndNodeToTest> nodeSupplier) {
+    public TreeShowingPropertyTest(Supplier<RootAndNodeToTest> nodeSupplier) {
         RootAndNodeToTest nodes = nodeSupplier.get();
 
         this.root = nodes.root;
         this.node = nodes.nodeToTest;
-        this.expression = new TreeShowingExpression(this.node);
+        this.property = new TreeShowingProperty(this.node);
     }
 
     @Test
     public void nodeNotAttachedToSceneShouldNotBeShowing() {
-        assertFalse(expression.get());
+        assertFalse(property.get());
     }
 
     @Test
     public void getShouldTrackChangesInShowingStateForGivenNode() {
-        assertFalse(expression.get());  // not showing initially as not attached to a Scene
+        assertFalse(property.get());  // not showing initially as not attached to a Scene
 
         Scene scene = new Scene(root);
 
-        assertFalse(expression.get());  // not showing because Scene is not attached to a Window
+        assertFalse(property.get());  // not showing because Scene is not attached to a Window
 
         Stage stage = new Stage();
         stage.setScene(scene);
 
-        assertFalse(expression.get());  // not showing as Window is not shown
+        assertFalse(property.get());  // not showing as Window is not shown
 
         stage.show();
 
-        assertTrue(expression.get());  // showing as Window is shown
+        assertTrue(property.get());  // showing as Window is shown
 
         stage.hide();
 
-        assertFalse(expression.get());  // not showing again as Window is hidden
+        assertFalse(property.get());  // not showing again as Window is hidden
     }
 
     @Test
@@ -118,7 +118,7 @@ public class TreeShowingExpressionTest {
         AtomicReference<Boolean> state = new AtomicReference<>();
         ChangeListener<Boolean> listener = (obs, old, current) -> state.set(current);
 
-        expression.addListener(listener);
+        property.addListener(listener);
 
         assertNull(state.getAndSet(null));  // no change fired so far
 
@@ -128,7 +128,7 @@ public class TreeShowingExpressionTest {
 
         assertTrue(state.getAndSet(null));  // expect a change indicating the node is showing now
 
-        expression.removeListener(listener);
+        property.removeListener(listener);
 
         stage.hide();
 
@@ -140,7 +140,7 @@ public class TreeShowingExpressionTest {
         AtomicReference<Boolean> state = new AtomicReference<>();
         InvalidationListener listener = obs -> state.set(true);
 
-        expression.addListener(listener);
+        property.addListener(listener);
 
         assertNull(state.getAndSet(null));  // no invalidation fired so far
 
@@ -150,8 +150,8 @@ public class TreeShowingExpressionTest {
 
         assertTrue(state.getAndSet(null));  // expect an invalidation as node is showing now
 
-        expression.get();  // make valid again
-        expression.removeListener(listener);
+        property.get();  // make valid again
+        property.removeListener(listener);
 
         stage.hide();
 
@@ -162,7 +162,7 @@ public class TreeShowingExpressionTest {
     public void changeListenerShouldTrackShowingState() {
         AtomicReference<Boolean> state = new AtomicReference<>();
 
-        expression.addListener((obs, old, current) -> state.set(current));
+        property.addListener((obs, old, current) -> state.set(current));
 
         assertNull(state.getAndSet(null));  // no change fired so far
 
@@ -220,7 +220,7 @@ public class TreeShowingExpressionTest {
     public void invalidationListenerShouldNotifyOfChangesInShowingState() {
         AtomicReference<Boolean> state = new AtomicReference<>();
 
-        expression.addListener(obs -> state.set(true));
+        property.addListener(obs -> state.set(true));
 
         assertNull(state.getAndSet(null));  // no invalidation fired so far
 
@@ -239,12 +239,12 @@ public class TreeShowingExpressionTest {
 
         assertTrue(state.getAndSet(null));  // expect an invalidation as the node is showing now
 
-        expression.get();  // make valid
+        property.get();  // make valid
         stage.setScene(null);
 
         assertTrue(state.getAndSet(null));  // detaching stage from scene should fire invalidation
 
-        expression.get();  // make valid
+        property.get();  // make valid
         stage.setScene(scene);
 
         assertTrue(state.getAndSet(null));  // reattaching stage should fire invalidation
@@ -255,7 +255,7 @@ public class TreeShowingExpressionTest {
         assertNull(state.getAndSet(null));  // expect nothing as expression still invalid
 
         stage.show();
-        expression.get();  // make valid
+        property.get();  // make valid
         stage.hide();
 
         assertTrue(state.getAndSet(null));  // expect an invalidation as the node is no longer showing now
@@ -264,24 +264,24 @@ public class TreeShowingExpressionTest {
         stage2.setWidth(100);
         stage2.setHeight(100);
         stage2.show();
-        expression.get();  // make valid
+        property.get();  // make valid
         stage2.setScene(scene);
 
         assertTrue(state.getAndSet(null));  // switching between invisible/visible Scene should trigger invalidation
 
-        expression.get();  // make valid
+        property.get();  // make valid
         stage2.hide();
 
         assertTrue(state.getAndSet(null));  // hiding attached window should trigger invalidation
 
-        expression.get();  // make valid
+        property.get();  // make valid
         stage.show();
 
         assertNull(state.getAndSet(null));  // changing visibility of unattached stage should not do anything
 
         scene.setRoot(new StackPane());
         Scene scene2 = new Scene(root);
-        expression.get();  // make valid
+        property.get();  // make valid
         stage.setScene(scene2);
 
         assertTrue(state.getAndSet(null));  // making root part of a different visible scene should trigger invalidation
@@ -291,7 +291,7 @@ public class TreeShowingExpressionTest {
     public void disposeShouldUnregisterListenersOnGivenNode() {
         AtomicReference<Boolean> state = new AtomicReference<>();
 
-        expression.addListener((obs, old, current) -> state.set(current));
+        property.addListener((obs, old, current) -> state.set(current));
 
         // verify change listener works:
         Stage stage = new Stage();
@@ -300,7 +300,7 @@ public class TreeShowingExpressionTest {
         stage.show();
         assertTrue(state.getAndSet(null));
 
-        expression.dispose();
+        property.dispose();
 
         // verify change listener no longer responds:
         stage.hide();
