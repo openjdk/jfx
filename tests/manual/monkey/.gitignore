@@ -1,6 +1,0 @@
-/bin/
-/build/
-.DS_Store
-/testbin/
-/*.jar
-/hs_err*.log

@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright © 2016-2023 Andy Goryachev <andy@goryachev.com> -->
-<!-- original source: https://github.com/andy-goryachev/FxTextEditor/blob/master/build.xml -->
-
 <!--
-This build requires javafx.home property, pointing to javafx SDK (20+) directory, e.g.:
-  ant -Djavafx.home=<dir>
+This build requires javafx.home property, pointing to JavaFX SDK (20+) directory, e.g.:
+  ant -Djavafx.home=<DIR>
 -->
 <project default="build-all" basedir=".">
 
@@ -29,6 +26,7 @@ This build requires javafx.home property, pointing to javafx SDK (20+) directory
 		<mkdir dir="build" />
 		<mkdir dir="build/classes" />
 		<mkdir dir="build/jars" />
+		<mkdir dir="dist" />
 	</target>
 
 
@@ -91,7 +89,7 @@ This build requires javafx.home property, pointing to javafx SDK (20+) directory
 
 	<!-- copy jar to base dir -->
 	<target name="copy-jar" depends="make-jar">
-		<copy file="build/jars/${TARGET}.jar" todir="." />
+		<copy file="build/jars/${TARGET}.jar" todir="dist/" />
 	</target>
 
 

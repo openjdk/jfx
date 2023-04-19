@@ -1,6 +1,6 @@
 # Monkey Tester
 
-This is a testing tool developed to support ad-hoc testing of JavaFX controls.
+This is a testing tool developed to support manual ad-hoc testing of individual JavaFX controls.
 
 ![screenshot](doc/screenshot.png)
 
@@ -40,6 +40,3 @@ To use a different directory, redefine the `user.home` system property, `-Duser.
 To disable saving, specify `-Ddisable.settings=true` VM agrument.
 
 
-## Contact
-
-andy.goryachev@oracle.com
