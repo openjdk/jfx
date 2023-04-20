@@ -138,6 +138,9 @@ class WindowMonitor {
         WindowMonitor m = monitors.get(w);
         if (m == null) {
             String id = createID(w);
+            if (id == null) {
+                return null;
+            }
             m = new WindowMonitor(w, id);
             monitors.put(w, m);
         }
@@ -173,6 +176,9 @@ class WindowMonitor {
                 continue;
             }
             WindowMonitor m = monitors.get(w);
+            if (m == null) {
+                return null;
+            }
             String id = m.getID();
             if (id.startsWith(prefix)) {
                 ids.add(id);
