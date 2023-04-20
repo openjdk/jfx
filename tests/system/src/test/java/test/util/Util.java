@@ -424,11 +424,10 @@ public class Util {
         }
     }
 
-    /** returns true if either scaleX or scaleY of the specified Node is not integer */
-    public static boolean isFractionalScale(Node n) {
-        return
-            isFractional(n.getScene().getWindow().getRenderScaleX()) ||
-            isFractional(n.getScene().getWindow().getRenderScaleY());
+    /** returns true if scaleX of the specified Node is not integer */
+    public static boolean isFractionalScaleX(Node n) {
+        double scale = n.getScene().getWindow().getRenderScaleX();
+        return isFractional(scale);
     }
 
     private static boolean isFractional(double x) {

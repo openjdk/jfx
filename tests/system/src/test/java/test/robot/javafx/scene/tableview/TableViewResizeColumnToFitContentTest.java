@@ -96,7 +96,7 @@ public class TableViewResizeColumnToFitContentTest {
                 (colTwoWidth != table.getColumns().get(1).getWidth()));
 
         // Skip this check on platforms with fractional scale until JDK-8299753 gets implemented
-        if (!Util.isFractionalScale(table)) {
+        if (!Util.isFractionalScaleX(table)) {
             colTwoWidth = table.getColumns().get(1).getWidth();
             colThreeWidth = table.getColumns().get(2).getWidth();
             double colsWidthAfterResize = colOneWidth + colTwoWidth + colThreeWidth;

@@ -96,7 +96,7 @@ public class TreeTableViewResizeColumnToFitContentTest {
                 (colTwoWidth != treeTableView.getColumns().get(1).getWidth()));
 
         // Skip this check on platforms with fractional scale until JDK-8299753 gets implemented
-        if (!Util.isFractionalScale(treeTableView)) {
+        if (!Util.isFractionalScaleX(treeTableView)) {
             colTwoWidth = treeTableView.getColumns().get(1).getWidth();
             colThreeWidth = treeTableView.getColumns().get(2).getWidth();
             double colsWidthAfterResize = colOneWidth + colTwoWidth + colThreeWidth;
