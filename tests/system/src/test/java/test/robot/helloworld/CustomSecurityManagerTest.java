@@ -153,8 +153,8 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         final AtomicInteger screenWidth = new AtomicInteger();
         final AtomicInteger screenHeight = new AtomicInteger();
         runAndWait(() -> {
-            screenWidth.set((int)Screen.getPrimary().getBounds().getWidth());
-            screenHeight.set((int)Screen.getPrimary().getBounds().getHeight());
+            screenWidth.set((int)Screen.getPrimary().getVisualBounds().getWidth());
+            screenHeight.set((int)Screen.getPrimary().getVisualBounds().getHeight());
         });
 
         System.setSecurityManager(sm);
@@ -201,11 +201,11 @@ public class CustomSecurityManagerTest extends VisualTestBase {
                     // avoid the top area as it might contain OS-specific UI (Macs with a notch)
                     y = h / 3;
                 } else {
-                    y = h - 2;
+                    y = h - 5;
                 }
 
                 for (int col = 0; col < 2; col++) {
-                    int x = col == 0 ? 1 : screenWidth.get() - 2;
+                    int x = col == 0 ? 1 : screenWidth.get() - 5;
                     Color color = getColor(x, y);
                     if (expectedFullScreen) {
                         assertColorEquals(Color.LIME, color, TOLERANCE);
