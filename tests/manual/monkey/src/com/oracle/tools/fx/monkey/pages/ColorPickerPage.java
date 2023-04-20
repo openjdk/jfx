@@ -24,32 +24,32 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.time.LocalDate;
 import javafx.geometry.Point2D;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
-import javafx.scene.control.DatePicker;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.paint.Color;
 import javafx.stage.StageStyle;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- * DatePicker Page
+ * ColorPicker Page
  */
-public class DatePickerPage extends TestPaneBase {
+public class ColorPickerPage extends TestPaneBase {
     private final Button button;
-    private DatePicker datePicker;
-    private DatePicker datePicker2;
+    private ColorPicker picker1;
+    private ColorPicker picker2;
     private Alert dialog;
 
-    public DatePickerPage() {
-        setId("DatePickerPage");
+    public ColorPickerPage() {
+        setId("ColorPickerPage");
 
         button = new Button("Show in Alert");
 
-        datePicker = new DatePicker(LocalDate.now());
-        datePicker.valueProperty().addListener(event -> {
+        picker1 = new ColorPicker(Color.BLUE);
+        picker1.valueProperty().addListener(event -> {
             dialog.close();
         });
 
@@ -59,21 +59,25 @@ public class DatePickerPage extends TestPaneBase {
             dialog = new Alert(AlertType.INFORMATION);
             dialog.initStyle(StageStyle.UNDECORATED);
             dialog.initOwner(getWindow());
-            dialog.getDialogPane().setContent(datePicker);
+            dialog.getDialogPane().setContent(picker1);
             dialog.setX(p.getX());
             dialog.setY(p.getY());
             dialog.show();
 
-            LocalDate v = datePicker.getValue();
+            Object v = picker1.getValue();
             System.out.println(v);
         });
 
-        datePicker2 = new DatePicker(LocalDate.now());
+        picker2 = new ColorPicker(Color.YELLOW);
+        picker2.setOnAction((ev) -> {
+            Object v = picker2.getValue();
+            System.out.println(v);
+        });
 
         OptionPane p = new OptionPane();
         p.option(button);
 
-        setContent(datePicker2);
+        setContent(picker2);
         setOptions(p);
     }
 }

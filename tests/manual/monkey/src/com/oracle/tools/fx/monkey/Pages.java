@@ -40,8 +40,8 @@ public class Pages {
             // TODO CheckBox
             new DemoPage("ChoiceBox", ChoiceBoxPage::new),
             new DemoPage("ComboBox", ComboBoxPage::new),
-            // TODO ColorPicker
-            // TODO DatePicker
+            new DemoPage("ColorPicker", ColorPickerPage::new),
+            new DemoPage("DatePicker", DatePickerPage::new),
             new DemoPage("HBox", HBoxPage::new),
             new DemoPage("HtmlEditor", HtmlEditorPage::new),
             // TODO Hyperlink
