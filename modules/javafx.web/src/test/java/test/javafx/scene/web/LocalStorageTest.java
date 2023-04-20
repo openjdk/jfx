@@ -108,7 +108,6 @@ public class LocalStorageTest extends TestBase {
             //get data
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
             assertEquals("1001", s);
-            webEngine.setUserDataDirectory(null);
         });
     }
 
@@ -123,7 +122,6 @@ public class LocalStorageTest extends TestBase {
             view.getEngine().executeScript("test_local_storage_set();");
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
             assertEquals("1001", s);
-            webEngine.setUserDataDirectory(null);
         });
     }
 
@@ -140,7 +138,6 @@ public class LocalStorageTest extends TestBase {
             String s = (String) view.getEngine().executeScript("document.getElementById('key').innerText;");
             boolean res = (s == null || s.length() == 0);
             assertTrue(res);
-            webEngine.setUserDataDirectory(null);
         });
     }
 }
