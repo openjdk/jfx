@@ -101,7 +101,7 @@ gst_audio_info_new (void)
 
 /**
  * gst_audio_info_init:
- * @info: a #GstAudioInfo
+ * @info: (out caller-allocates): a #GstAudioInfo
  *
  * Initialize @info with default values.
  */
@@ -181,7 +181,7 @@ gst_audio_info_set_format (GstAudioInfo * info, GstAudioFormat format,
 
 /**
  * gst_audio_info_from_caps:
- * @info: a #GstAudioInfo
+ * @info: (out caller-allocates): a #GstAudioInfo
  * @caps: a #GstCaps
  *
  * Parse @caps and update @info.
@@ -317,6 +317,28 @@ invalid_channel_mask:
     GST_ERROR ("Invalid channel mask 0x%016" G_GINT64_MODIFIER
         "x for %d channels", channel_mask, channels);
     return FALSE;
+  }
+}
+
+/**
+ * gst_audio_info_new_from_caps:
+ * @caps: a #GstCaps
+ *
+ * Parse @caps to generate a #GstAudioInfo.
+ *
+ * Returns: A #GstAudioInfo, or %NULL if @caps couldn't be parsed
+ * Since: 1.20
+ */
+GstAudioInfo *
+gst_audio_info_new_from_caps (const GstCaps * caps)
+{
+  GstAudioInfo *ret = gst_audio_info_new ();
+
+  if (gst_audio_info_from_caps (ret, caps)) {
+    return ret;
+  } else {
+    gst_audio_info_free (ret);
+    return NULL;
   }
 }
 

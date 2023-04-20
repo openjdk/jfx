@@ -26,53 +26,52 @@
 #include "ReferrerPolicy.h"
 
 #include "HTTPParsers.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
 enum class ShouldParseLegacyKeywords { No, Yes };
 
-static Optional<ReferrerPolicy> parseReferrerPolicyToken(StringView policy, ShouldParseLegacyKeywords shouldParseLegacyKeywords)
+static std::optional<ReferrerPolicy> parseReferrerPolicyToken(StringView policy, ShouldParseLegacyKeywords shouldParseLegacyKeywords)
 {
     // "never" / "default" / "always" are legacy keywords that we support and still defined in the HTML specification:
     // https://html.spec.whatwg.org/#meta-referrer
     if (shouldParseLegacyKeywords == ShouldParseLegacyKeywords::Yes) {
-        if (equalLettersIgnoringASCIICase(policy, "never"))
+        if (equalLettersIgnoringASCIICase(policy, "never"_s))
             return ReferrerPolicy::NoReferrer;
-        if (equalLettersIgnoringASCIICase(policy, "always"))
+        if (equalLettersIgnoringASCIICase(policy, "always"_s))
             return ReferrerPolicy::UnsafeUrl;
-        if (equalLettersIgnoringASCIICase(policy, "default"))
-            return ReferrerPolicy::NoReferrerWhenDowngrade;
+        if (equalLettersIgnoringASCIICase(policy, "default"_s))
+            return ReferrerPolicy::Default;
     }
 
-    if (equalLettersIgnoringASCIICase(policy, "no-referrer"))
+    if (equalLettersIgnoringASCIICase(policy, "no-referrer"_s))
         return ReferrerPolicy::NoReferrer;
-    if (equalLettersIgnoringASCIICase(policy, "unsafe-url"))
+    if (equalLettersIgnoringASCIICase(policy, "unsafe-url"_s))
         return ReferrerPolicy::UnsafeUrl;
-    if (equalLettersIgnoringASCIICase(policy, "origin"))
+    if (equalLettersIgnoringASCIICase(policy, "origin"_s))
         return ReferrerPolicy::Origin;
-    if (equalLettersIgnoringASCIICase(policy, "origin-when-cross-origin"))
+    if (equalLettersIgnoringASCIICase(policy, "origin-when-cross-origin"_s))
         return ReferrerPolicy::OriginWhenCrossOrigin;
-    if (equalLettersIgnoringASCIICase(policy, "same-origin"))
+    if (equalLettersIgnoringASCIICase(policy, "same-origin"_s))
         return ReferrerPolicy::SameOrigin;
-    if (equalLettersIgnoringASCIICase(policy, "strict-origin"))
+    if (equalLettersIgnoringASCIICase(policy, "strict-origin"_s))
         return ReferrerPolicy::StrictOrigin;
-    if (equalLettersIgnoringASCIICase(policy, "strict-origin-when-cross-origin"))
+    if (equalLettersIgnoringASCIICase(policy, "strict-origin-when-cross-origin"_s))
         return ReferrerPolicy::StrictOriginWhenCrossOrigin;
-    if (equalLettersIgnoringASCIICase(policy, "no-referrer-when-downgrade"))
+    if (equalLettersIgnoringASCIICase(policy, "no-referrer-when-downgrade"_s))
         return ReferrerPolicy::NoReferrerWhenDowngrade;
     if (!policy.isNull() && policy.isEmpty())
         return ReferrerPolicy::EmptyString;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-Optional<ReferrerPolicy> parseReferrerPolicy(StringView policyString, ReferrerPolicySource source)
+std::optional<ReferrerPolicy> parseReferrerPolicy(StringView policyString, ReferrerPolicySource source)
 {
     switch (source) {
     case ReferrerPolicySource::HTTPHeader: {
         // Implementing https://www.w3.org/TR/2017/CR-referrer-policy-20170126/#parse-referrer-policy-from-header.
-        Optional<ReferrerPolicy> result;
+        std::optional<ReferrerPolicy> result;
         for (auto tokenView : policyString.split(',')) {
             auto token = parseReferrerPolicyToken(stripLeadingAndTrailingHTTPSpaces(tokenView), ShouldParseLegacyKeywords::No);
             if (token && token.value() != ReferrerPolicy::EmptyString)
@@ -86,7 +85,7 @@ Optional<ReferrerPolicy> parseReferrerPolicy(StringView policyString, ReferrerPo
         return parseReferrerPolicyToken(policyString, ShouldParseLegacyKeywords::No);
     }
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 String referrerPolicyToString(const ReferrerPolicy& referrerPolicy)

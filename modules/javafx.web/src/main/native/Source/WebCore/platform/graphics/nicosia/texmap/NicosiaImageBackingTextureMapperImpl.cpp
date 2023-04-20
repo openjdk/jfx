@@ -46,12 +46,12 @@ ImageBackingTextureMapperImpl::~ImageBackingTextureMapperImpl() = default;
 
 void ImageBackingTextureMapperImpl::flushUpdate()
 {
-    LockHolder locker(m_update.lock);
+    Locker locker { m_update.lock };
 
     // If the update happens for the same image and there's no buffer, keep the current one
     // so it can be received by the CoordinatedGraphicsScene. In that case we only need to update
     // the isVisible flag.
-    if ((m_layerState.update.nativeImageID == m_update.update.nativeImageID) && !m_layerState.update.buffer) {
+    if ((m_layerState.update.nativeImageID == m_update.update.nativeImageID) && !m_layerState.update.imageBackingStore) {
         m_update.update.isVisible = m_layerState.update.isVisible;
         return;
     }
@@ -61,7 +61,7 @@ void ImageBackingTextureMapperImpl::flushUpdate()
 
 auto ImageBackingTextureMapperImpl::takeUpdate() -> Update
 {
-    LockHolder locker(m_update.lock);
+    Locker locker { m_update.lock };
     return WTFMove(m_update.update);
 }
 

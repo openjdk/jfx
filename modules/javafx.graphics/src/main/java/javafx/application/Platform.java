@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -149,6 +149,12 @@ public final class Platform {
      * For applications that do not follow any of these approaches, then it is
      * necessary to manually start the JavaFX runtime by calling
      * {@link #startup(Runnable)} once.
+     * </p>
+     *
+     * <p>
+     * Memory consistency effects: Actions in a thread prior to submitting a
+     * {@code runnable} to this method <i>happen-before</i> actions performed
+     * by the runnable in the JavaFX Application Thread.
      * </p>
      *
      * @param runnable the Runnable whose run method will be executed on the
@@ -383,6 +389,22 @@ public final class Platform {
      */
     public static boolean isNestedLoopRunning() {
         return Toolkit.getToolkit().isNestedLoopRunning();
+    }
+
+    /**
+     * Indicates whether a nested event loop can be started from the current thread in the current state.
+     * A nested event loop can be started from an event handler or from a {@code Runnable} passed to
+     * {@link #runLater(Runnable)}.
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @return {@code true} if a nested event loop can be started, and {@code false} otherwise.
+     *
+     * @throws IllegalStateException if this method is called on a thread other than the JavaFX Application Thread.
+     *
+     * @since 21
+     */
+    public static boolean canStartNestedEventLoop() {
+        return Toolkit.getToolkit().canStartNestedEventLoop();
     }
 
     private static ReadOnlyBooleanWrapper accessibilityActiveProperty;

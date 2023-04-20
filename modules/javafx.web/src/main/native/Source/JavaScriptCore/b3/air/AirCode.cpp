@@ -34,7 +34,6 @@
 #include "AllowMacroScratchRegisterUsageIf.h"
 #include "B3BasicBlockUtils.h"
 #include "B3Procedure.h"
-#include "B3StackSlot.h"
 #include "CCallHelpers.h"
 #include <wtf/ListDump.h>
 #include <wtf/MathExtras.h>
@@ -57,12 +56,16 @@ static void defaultPrologueGenerator(CCallHelpers& jit, Code& code)
 Code::Code(Procedure& proc)
     : m_proc(proc)
     , m_cfg(new CFG(*this))
+    , m_preserveB3Origins(Options::dumpAirGraphAtEachPhase() || Options::dumpFTLDisassembly())
     , m_lastPhaseName("initial")
     , m_defaultPrologueGenerator(createSharedTask<PrologueGeneratorFunction>(&defaultPrologueGenerator))
 {
     // Come up with initial orderings of registers. The user may replace this with something else.
+    std::optional<WeakRandom> weakRandom;
+    if (Options::airRandomizeRegs())
+        weakRandom.emplace();
     forEachBank(
-        [&] (Bank bank) {
+        [&](Bank bank) {
             Vector<Reg> volatileRegs;
             Vector<Reg> calleeSaveRegs;
             RegisterSet all = bank == GP ? RegisterSet::allGPRs() : RegisterSet::allFPRs();
@@ -80,7 +83,7 @@ Code::Code(Procedure& proc)
                         calleeSaveRegs.append(reg);
                 });
             if (Options::airRandomizeRegs()) {
-                WeakRandom random(Options::airRandomizeRegsSeed() ? Options::airRandomizeRegsSeed() : m_weakRandom.getUint32());
+                WeakRandom random(Options::airRandomizeRegsSeed() ? Options::airRandomizeRegsSeed() : weakRandom->getUint32());
                 shuffleVector(volatileRegs, [&] (unsigned limit) { return random.getUint32(limit); });
                 shuffleVector(calleeSaveRegs, [&] (unsigned limit) { return random.getUint32(limit); });
             }
@@ -89,9 +92,6 @@ Code::Code(Procedure& proc)
             result.appendVector(calleeSaveRegs);
             setRegsInPriorityOrder(bank, result);
         });
-
-    if (auto reg = pinnedExtendedOffsetAddrRegister())
-        pinRegister(*reg);
 
     m_pinnedRegs.set(MacroAssembler::framePointerRegister);
 }
@@ -163,9 +163,9 @@ BasicBlock* Code::addBlock(double frequency)
     return result;
 }
 
-StackSlot* Code::addStackSlot(unsigned byteSize, StackSlotKind kind, B3::StackSlot* b3Slot)
+StackSlot* Code::addStackSlot(uint64_t byteSize, StackSlotKind kind)
 {
-    StackSlot* result = m_stackSlots.addNew(byteSize, kind, b3Slot);
+    StackSlot* result = m_stackSlots.addNew(byteSize, kind);
     if (m_stackIsAllocated) {
         // FIXME: This is unnecessarily awful. Fortunately, it doesn't run often.
         unsigned extent = WTF::roundUpToMultipleOf(result->alignment(), frameSize() + byteSize);
@@ -173,11 +173,6 @@ StackSlot* Code::addStackSlot(unsigned byteSize, StackSlotKind kind, B3::StackSl
         setFrameSize(WTF::roundUpToMultipleOf(stackAlignmentBytes(), extent));
     }
     return result;
-}
-
-StackSlot* Code::addStackSlot(B3::StackSlot* b3Slot)
-{
-    return addStackSlot(b3Slot->byteSize(), StackSlotKind::Locked, b3Slot);
 }
 
 Special* Code::addSpecial(std::unique_ptr<Special> special)
@@ -210,14 +205,14 @@ bool Code::isEntrypoint(BasicBlock* block) const
     return false;
 }
 
-Optional<unsigned> Code::entrypointIndex(BasicBlock* block) const
+std::optional<unsigned> Code::entrypointIndex(BasicBlock* block) const
 {
     RELEASE_ASSERT(m_entrypoints.size());
     for (unsigned i = 0; i < m_entrypoints.size(); ++i) {
         if (m_entrypoints[i].block() == block)
             return i;
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void Code::setCalleeSaveRegisterAtOffsetList(RegisterAtOffsetList&& registerAtOffsetList, StackSlot* slot)
@@ -231,14 +226,8 @@ void Code::setCalleeSaveRegisterAtOffsetList(RegisterAtOffsetList&& registerAtOf
 RegisterAtOffsetList Code::calleeSaveRegisterAtOffsetList() const
 {
     RegisterAtOffsetList result = m_uncorrectedCalleeSaveRegisterAtOffsetList;
-    if (StackSlot* slot = m_calleeSaveStackSlot) {
-        ptrdiff_t offset = slot->byteSize() + slot->offsetFromFP();
-        for (size_t i = result.size(); i--;) {
-            result.at(i) = RegisterAtOffset(
-                result.at(i).reg(),
-                result.at(i).offset() + offset);
-        }
-    }
+    if (StackSlot* slot = m_calleeSaveStackSlot)
+        result.adjustOffsets(slot->byteSize() + slot->offsetFromFP());
     return result;
 }
 
@@ -279,7 +268,7 @@ void Code::dump(PrintStream& out) const
     if (m_callArgAreaSize)
         out.print(tierName, "Call arg area size: ", m_callArgAreaSize, "\n");
     RegisterAtOffsetList calleeSaveRegisters = this->calleeSaveRegisterAtOffsetList();
-    if (calleeSaveRegisters.size())
+    if (calleeSaveRegisters.registerCount())
         out.print(tierName, "Callee saves: ", calleeSaveRegisters, "\n");
 }
 
@@ -336,12 +325,9 @@ unsigned Code::jsHash() const
     return result;
 }
 
-void Code::setNumEntrypoints(unsigned numEntrypoints)
+void Code::setNumEntrypoints(unsigned numEntryPoints)
 {
-    m_prologueGenerators.clear();
-    m_prologueGenerators.reserveCapacity(numEntrypoints);
-    for (unsigned i = 0; i < numEntrypoints; ++i)
-        m_prologueGenerators.uncheckedAppend(m_defaultPrologueGenerator.copyRef());
+    m_prologueGenerators = { numEntryPoints, m_defaultPrologueGenerator.copyRef() };
 }
 
 } } } // namespace JSC::B3::Air

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.IndexedCell;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,7 +38,7 @@ public class IndexedCellTest {
     private IndexedCell<String> cell;
 
     @Before public void setup() {
-        cell = new IndexedCell<String>();
+        cell = new IndexedCell<>();
     }
 
     @Test public void defaultStyleClassShouldBe_indexed_cell() {

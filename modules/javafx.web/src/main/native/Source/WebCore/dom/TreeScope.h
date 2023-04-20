@@ -32,6 +32,10 @@
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 
+namespace JSC {
+class JSValue;
+}
+
 namespace WebCore {
 
 class ContainerNode;
@@ -104,7 +108,7 @@ public:
     // for an anchor with the given name. ID matching is always case sensitive, but
     // Anchor name matching is case sensitive in strict mode and not case sensitive in
     // quirks mode for historical compatibility reasons.
-    Element* findAnchor(const String& name);
+    Element* findAnchor(StringView name);
 
     ContainerNode& rootNode() const { return m_rootNode; }
 

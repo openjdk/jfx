@@ -27,17 +27,19 @@
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "LayoutRect.h"
-#include "MutationObserver.h"
 #include "RenderStyleConstants.h"
 #include "StyleValidity.h"
+#include "TaskSource.h"
 #include "TreeScope.h"
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactUniquePtrTuple.h>
+#include <wtf/FixedVector.h>
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/MainThread.h>
 #include <wtf/OptionSet.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/URLHash.h>
 #include <wtf/WeakPtr.h>
 
@@ -54,6 +56,8 @@ class FloatPoint;
 class HTMLQualifiedName;
 class HTMLSlotElement;
 class MathMLQualifiedName;
+class MutationObserver;
+class MutationObserverRegistration;
 class NamedNodeMap;
 class NodeList;
 class NodeListsNodeData;
@@ -66,8 +70,13 @@ class RenderStyle;
 class SVGQualifiedName;
 class ShadowRoot;
 class TouchEvent;
+class WebCoreOpaqueRoot;
 
-using NodeOrString = Variant<RefPtr<Node>, String>;
+enum class MutationObserverOptionType : uint8_t;
+using MutationObserverOptions = OptionSet<MutationObserverOptionType>;
+using MutationRecordDeliveryOptions = OptionSet<MutationObserverOptionType>;
+
+using NodeOrString = std::variant<RefPtr<Node>, String>;
 
 class Node : public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(Node);
@@ -113,15 +122,15 @@ public:
 
     bool hasTagName(const HTMLQualifiedName&) const;
     bool hasTagName(const MathMLQualifiedName&) const;
-    bool hasTagName(const SVGQualifiedName&) const;
+    inline bool hasTagName(const SVGQualifiedName&) const;
     virtual String nodeName() const = 0;
     virtual String nodeValue() const;
-    virtual ExceptionOr<void> setNodeValue(const String&);
+    virtual void setNodeValue(const String&);
     virtual NodeType nodeType() const = 0;
     virtual size_t approximateMemoryCost() const { return sizeof(*this); }
     ContainerNode* parentNode() const;
     static ptrdiff_t parentNodeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_parentNode); }
-    Element* parentElement() const;
+    inline Element* parentElement() const;
     Node* previousSibling() const { return m_previous; }
     static ptrdiff_t previousSiblingMemoryOffset() { return OBJECT_OFFSETOF(Node, m_previous); }
     Node* nextSibling() const { return m_next; }
@@ -129,8 +138,8 @@ public:
     WEBCORE_EXPORT RefPtr<NodeList> childNodes();
     Node* firstChild() const;
     Node* lastChild() const;
-    bool hasAttributes() const;
-    NamedNodeMap* attributes() const;
+    inline bool hasAttributes() const;
+    inline NamedNodeMap* attributes() const;
     Node* pseudoAwareNextSibling() const;
     Node* pseudoAwarePreviousSibling() const;
     Node* pseudoAwareFirstChild() const;
@@ -169,7 +178,7 @@ public:
     WEBCORE_EXPORT const AtomString& lookupNamespaceURI(const AtomString& prefix) const;
 
     WEBCORE_EXPORT String textContent(bool convertBRsToNewlines = false) const;
-    WEBCORE_EXPORT ExceptionOr<void> setTextContent(const String&);
+    WEBCORE_EXPORT void setTextContent(String&&);
 
     Node* lastDescendant() const;
     Node* firstDescendant() const;
@@ -179,9 +188,9 @@ public:
     WEBCORE_EXPORT Element* nextElementSibling() const;
 
     // From the ChildNode - https://dom.spec.whatwg.org/#childnode
-    ExceptionOr<void> before(Vector<NodeOrString>&&);
-    ExceptionOr<void> after(Vector<NodeOrString>&&);
-    ExceptionOr<void> replaceWith(Vector<NodeOrString>&&);
+    ExceptionOr<void> before(FixedVector<NodeOrString>&&);
+    ExceptionOr<void> after(FixedVector<NodeOrString>&&);
+    ExceptionOr<void> replaceWith(FixedVector<NodeOrString>&&);
     WEBCORE_EXPORT ExceptionOr<void> remove();
 
     // Other methods (not part of DOM)
@@ -216,6 +225,7 @@ public:
     bool isTreeScope() const { return hasNodeFlag(NodeFlag::IsDocumentNode) || hasNodeFlag(NodeFlag::IsShadowRoot); }
     bool isDocumentFragment() const { return hasNodeFlag(NodeFlag::IsDocumentFragment); }
     bool isShadowRoot() const { return hasNodeFlag(NodeFlag::IsShadowRoot); }
+    bool isUserAgentShadowRoot() const; // Defined in ShadowRoot.h
 
     bool hasCustomStyleResolveCallbacks() const { return hasNodeFlag(NodeFlag::HasCustomStyleResolveCallbacks); }
 
@@ -225,12 +235,14 @@ public:
     bool hasShadowRootContainingSlots() const { return hasNodeFlag(NodeFlag::HasShadowRootContainingSlots); }
     void setHasShadowRootContainingSlots(bool flag) { setNodeFlag(NodeFlag::HasShadowRootContainingSlots, flag); }
 
+    bool needsSVGRendererUpdate() const { return hasNodeFlag(NodeFlag::NeedsSVGRendererUpdate); }
+    void setNeedsSVGRendererUpdate(bool flag) { setNodeFlag(NodeFlag::NeedsSVGRendererUpdate, flag); }
+
     // If this node is in a shadow tree, returns its shadow host. Otherwise, returns null.
     WEBCORE_EXPORT Element* shadowHost() const;
     ShadowRoot* containingShadowRoot() const;
-    ShadowRoot* shadowRoot() const;
+    inline ShadowRoot* shadowRoot() const; // Defined in ElementRareData.h
     bool isClosedShadowHidden(const Node&) const;
-    bool delegatesFocusToShadowRoot() const { return hasNodeFlag(NodeFlag::DelegatesFocusToShadowRoot); }
 
     HTMLSlotElement* assignedSlot() const;
     HTMLSlotElement* assignedSlotForBindings() const;
@@ -244,7 +256,7 @@ public:
     Node* nonBoundaryShadowTreeRootNode();
 
     // Node's parent or shadow tree host.
-    ContainerNode* parentOrShadowHostNode() const;
+    ContainerNode* parentOrShadowHostNode() const; // Defined in ShadowRoot.h
     ContainerNode* parentInComposedTree() const;
     Element* parentElementInComposedTree() const;
     Element* parentOrShadowHostElement() const;
@@ -258,7 +270,11 @@ public:
     };
     Node& getRootNode(const GetRootNodeOptions&) const;
 
-    void* opaqueRoot() const;
+    inline WebCoreOpaqueRoot opaqueRoot() const; // Defined in DocumentInlines.h.
+    WebCoreOpaqueRoot traverseToOpaqueRoot() const;
+
+    void queueTaskKeepingThisNodeAlive(TaskSource, Function<void ()>&&);
+    void queueTaskToDispatchEvent(TaskSource, Ref<Event>&&);
 
     // Use when it's guaranteed to that shadowHost is null.
     ContainerNode* parentNodeGuaranteedHostFree() const;
@@ -269,7 +285,7 @@ public:
     void setSelfOrAncestorHasDirAutoAttribute(bool flag) { setNodeFlag(NodeFlag::SelfOrAncestorHasDirAuto, flag); }
 
     // Returns the enclosing event parent Element (or self) that, when clicked, would trigger a navigation.
-    Element* enclosingLinkEventParentOrSelf();
+    WEBCORE_EXPORT Element* enclosingLinkEventParentOrSelf();
 
     // These low-level calls give the caller responsibility for maintaining the integrity of the tree.
     void setPreviousSibling(Node* previous) { m_previous = previous; }
@@ -317,8 +333,11 @@ public:
     bool hasEventTargetData() const { return hasNodeFlag(NodeFlag::HasEventTargetData); }
     void setHasEventTargetData(bool flag) { setNodeFlag(NodeFlag::HasEventTargetData, flag); }
 
-    WEBCORE_EXPORT bool isContentEditable();
-    bool isContentRichlyEditable();
+    bool isInGCReacheableRefMap() const { return hasNodeFlag(NodeFlag::IsInGCReachableRefMap); }
+    void setIsInGCReacheableRefMap(bool flag) { setNodeFlag(NodeFlag::IsInGCReachableRefMap, flag); }
+
+    WEBCORE_EXPORT bool isContentEditable() const;
+    bool isContentRichlyEditable() const;
 
     WEBCORE_EXPORT void inspect();
 
@@ -340,6 +359,7 @@ public:
     enum class Editability { ReadOnly, CanEditPlainText, CanEditRichly };
     enum class ShouldUpdateStyle { Update, DoNotUpdate };
     WEBCORE_EXPORT Editability computeEditability(UserSelectAllTreatment, ShouldUpdateStyle) const;
+    Editability computeEditabilityWithStyle(const RenderStyle*, UserSelectAllTreatment, ShouldUpdateStyle) const;
 
     WEBCORE_EXPORT LayoutRect renderRect(bool* isReplaced);
     IntRect pixelSnappedRenderRect(bool* isReplaced) { return snappedIntRect(renderRect(isReplaced)); }
@@ -367,6 +387,10 @@ public:
     bool isInUserAgentShadowTree() const;
     bool isInShadowTree() const { return hasNodeFlag(NodeFlag::IsInShadowTree); }
     bool isInTreeScope() const { return hasNodeFlag(NodeFlag::IsConnected) || hasNodeFlag(NodeFlag::IsInShadowTree); }
+    bool hasBeenInUserAgentShadowTree() const { return hasNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree); }
+
+    // https://dom.spec.whatwg.org/#in-a-document-tree
+    bool isInDocumentTree() const { return isConnected() && !isInShadowTree(); }
 
     bool isDocumentTypeNode() const { return nodeType() == DOCUMENT_TYPE_NODE; }
     virtual bool childTypeAllowed(NodeType) const { return false; }
@@ -414,14 +438,9 @@ public:
         Done,
         NeedsPostInsertionCallback,
     };
-    enum class AncestorState : uint8_t {
-        Form = 1 << 0,
-        Canvas = 1 << 1,
-    };
     struct InsertionType {
         bool connectedToDocument { false };
         bool treeScopeChanged { false };
-        OptionSet<AncestorState> ancestorStates;
     };
     // Called *after* this node or its ancestor is inserted into a new parent (may or may not be a part of document) by scripts or parser.
     // insertedInto **MUST NOT** invoke scripts. Return NeedsPostInsertionCallback and implement didFinishInsertingNode instead to run scripts.
@@ -431,10 +450,10 @@ public:
     struct RemovalType {
         bool disconnectedFromDocument { false };
         bool treeScopeChanged { false };
-        OptionSet<AncestorState> ancestorStates;
     };
     virtual void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree);
 
+    virtual String description() const;
     virtual String debugDescription() const;
 
 #if ENABLE(TREE_DEBUGGING)
@@ -450,9 +469,12 @@ public:
     NodeListsNodeData* nodeLists();
     void clearNodeLists();
 
-    virtual bool willRespondToMouseMoveEvents();
-    virtual bool willRespondToMouseClickEvents();
-    virtual bool willRespondToMouseWheelEvents();
+    virtual bool willRespondToMouseMoveEvents() const;
+    bool willRespondToMouseClickEvents() const;
+    Editability computeEditabilityForMouseClickEvents(const RenderStyle* = nullptr) const;
+    virtual bool willRespondToMouseClickEventsWithEditability(Editability) const;
+    virtual bool willRespondToMouseWheelEvents() const;
+    virtual bool willRespondToTouchEvents() const;
 
     WEBCORE_EXPORT unsigned short compareDocumentPosition(Node&);
 
@@ -474,8 +496,6 @@ public:
     virtual bool allowsDoubleTapGesture() const { return true; }
 #endif
 
-    bool dispatchBeforeLoadEvent(const String& sourceURL);
-
     WEBCORE_EXPORT void dispatchInputEvent();
 
     // Perform the default action for an event.
@@ -496,8 +516,8 @@ public:
     EventTargetData* eventTargetDataConcurrently() final;
     EventTargetData& ensureEventTargetData() final;
 
-    HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> registeredMutationObservers(MutationObserver::MutationType, const QualifiedName* attributeName);
-    void registerMutationObserver(MutationObserver&, MutationObserverOptions, const HashSet<AtomString>& attributeFilter);
+    HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> registeredMutationObservers(MutationObserverOptionType, const QualifiedName* attributeName);
+    void registerMutationObserver(MutationObserver&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     void unregisterMutationObserver(MutationObserverRegistration&);
     void registerTransientMutationObserver(MutationObserverRegistration&);
     void unregisterTransientMutationObserver(MutationObserverRegistration&);
@@ -508,8 +528,6 @@ public:
     void decrementConnectedSubframeCount(unsigned amount = 1);
     void updateAncestorConnectedSubframeCountForRemoval() const;
     void updateAncestorConnectedSubframeCountForInsertion() const;
-
-    OptionSet<AncestorState> inclusiveAncestorStates() const;
 
 #if ENABLE(JIT)
     static ptrdiff_t nodeFlagsMemoryOffset() { return OBJECT_OFFSETOF(Node, m_nodeFlags); }
@@ -525,7 +543,6 @@ public:
     static int32_t flagIsShadowRoot() { return static_cast<int32_t>(NodeFlag::IsShadowRoot); }
     static int32_t flagIsHTML() { return static_cast<int32_t>(NodeFlag::IsHTMLElement); }
     static int32_t flagIsLink() { return static_cast<int32_t>(NodeFlag::IsLink); }
-    static int32_t flagHasFocusWithin() { return static_cast<int32_t>(NodeFlag::HasFocusWithin); }
     static int32_t flagIsParsingChildrenFinished() { return static_cast<int32_t>(NodeFlag::IsParsingChildrenFinished); }
 #endif // ENABLE(JIT)
 
@@ -550,26 +567,26 @@ protected:
         // be stored in the same memory word as the Node bits above.
         IsDocumentFragmentForInnerOuterHTML = 1 << 14, // DocumentFragment
         IsEditingText = 1 << 15, // Text
-        HasFocusWithin = 1 << 16, // Element
-        IsLink = 1 << 17,
-        IsUserActionElement = 1 << 18,
-        IsParsingChildrenFinished = 1 << 19,
-        HasSyntheticAttrChildNodes = 1 << 20,
-        SelfOrAncestorHasDirAuto = 1 << 21,
+        IsLink = 1 << 16, // Element
+        IsUserActionElement = 1 << 17,
+        IsParsingChildrenFinished = 1 << 18,
+        HasSyntheticAttrChildNodes = 1 << 19,
+        SelfOrAncestorHasDirAuto = 1 << 20,
 
-        HasCustomStyleResolveCallbacks = 1 << 22,
+        HasCustomStyleResolveCallbacks = 1 << 21,
 
-        HasPendingResources = 1 << 23,
-        HasElementIdentifier = 1 << 24,
+        HasPendingResources = 1 << 22,
+        IsInGCReachableRefMap = 1 << 23,
 #if ENABLE(FULLSCREEN_API)
-        ContainsFullScreenElement = 1 << 25,
+        ContainsFullScreenElement = 1 << 24,
 #endif
-        IsComputedStyleInvalidFlag = 1 << 26,
-        DelegatesFocusToShadowRoot = 1 << 27,
+        IsComputedStyleInvalidFlag = 1 << 25,
+        HasShadowRootContainingSlots = 1 << 26,
+        IsInTopLayer = 1 << 27,
+        NeedsSVGRendererUpdate = 1 << 28,
+        NeedsUpdateQueryContainerDependentStyle = 1 << 29,
+        HasBeenInUserAgentShadowTree = 1 << 30,
 
-        InclusiveAncestorStateForForm = 1 << 28,
-        InclusiveAncestorStateForCanvas = 1 << 29,
-        HasShadowRootContainingSlots = 1 << 30,
         // Bit 31 is free.
     };
 
@@ -610,11 +627,6 @@ protected:
     void setIsParsingChildrenFinished() { setNodeFlag(NodeFlag::IsParsingChildrenFinished); }
     void clearIsParsingChildrenFinished() { clearNodeFlag(NodeFlag::IsParsingChildrenFinished); }
 
-    void setDelegatesFocusToShadowRoot() { setNodeFlag(NodeFlag::DelegatesFocusToShadowRoot); }
-
-    void setInclusiveAncestorStates(OptionSet<AncestorState>);
-    void addInclusiveAncestorState(AncestorState);
-
     constexpr static auto DefaultNodeFlags = OptionSet<NodeFlag>(NodeFlag::IsParsingChildrenFinished);
     constexpr static auto CreateOther = DefaultNodeFlags;
     constexpr static auto CreateCharacterData = DefaultNodeFlags | NodeFlag::IsCharacterData;
@@ -635,27 +647,24 @@ protected:
     static constexpr uint32_t s_refCountIncrement = 2;
     static constexpr uint32_t s_refCountMask = ~static_cast<uint32_t>(1);
 
-    enum class NodeStyleFlag : uint8_t {
-        DescendantNeedsStyleResolution = 1 << 0,
-        DirectChildNeedsStyleResolution = 1 << 1,
-        StyleResolutionShouldRecompositeLayer = 1 << 2,
+    enum class NodeStyleFlag : uint16_t {
+        DescendantNeedsStyleResolution                          = 1 << 0,
+        DirectChildNeedsStyleResolution                         = 1 << 1,
+        StyleResolutionShouldRecompositeLayer                   = 1 << 2,
 
-        ChildrenAffectedByFirstChildRules = 1 << 3,
-        ChildrenAffectedByLastChildRules = 1 << 4,
-        AffectsNextSiblingElementStyle = 1 << 5,
-        StyleIsAffectedByPreviousSibling = 1 << 6,
-        DescendantsAffectedByPreviousSibling = 1 << 7,
-    };
-
-    enum class DynamicStyleRelationFlag : uint8_t {
-        StyleAffectedByEmpty                                    = 1 << 0,
+        ChildrenAffectedByFirstChildRules                       = 1 << 3,
+        ChildrenAffectedByLastChildRules                        = 1 << 4,
+        AffectsNextSiblingElementStyle                          = 1 << 5,
+        StyleIsAffectedByPreviousSibling                        = 1 << 6,
+        DescendantsAffectedByPreviousSibling                    = 1 << 7,
+        StyleAffectedByEmpty                                    = 1 << 8,
         // We optimize for :first-child and :last-child. The other positional child selectors like nth-child or
         // *-child-of-type, we will just give up and re-evaluate whenever children change at all.
-        ChildrenAffectedByForwardPositionalRules                = 1 << 1,
-        DescendantsAffectedByForwardPositionalRules             = 1 << 2,
-        ChildrenAffectedByBackwardPositionalRules               = 1 << 3,
-        DescendantsAffectedByBackwardPositionalRules            = 1 << 4,
-        ChildrenAffectedByPropertyBasedBackwardPositionalRules  = 1 << 5,
+        ChildrenAffectedByForwardPositionalRules                = 1 << 9,
+        DescendantsAffectedByForwardPositionalRules             = 1 << 10,
+        ChildrenAffectedByBackwardPositionalRules               = 1 << 11,
+        DescendantsAffectedByBackwardPositionalRules            = 1 << 12,
+        ChildrenAffectedByPropertyBasedBackwardPositionalRules  = 1 << 13,
     };
 
     struct StyleBitfields {
@@ -666,27 +675,22 @@ protected:
         Style::Validity styleValidity() const { return static_cast<Style::Validity>(m_styleValidity); }
         void setStyleValidity(Style::Validity validity) { m_styleValidity = static_cast<uint8_t>(validity); }
 
-        OptionSet<DynamicStyleRelationFlag> dynamicStyleRelations() const { return OptionSet<DynamicStyleRelationFlag>::fromRaw(m_dynamicStyleRelation); }
-        void setDynamicStyleRelation(DynamicStyleRelationFlag flag) { m_dynamicStyleRelation = (dynamicStyleRelations() | flag).toRaw(); }
-        void clearDynamicStyleRelations() { m_dynamicStyleRelation = 0; }
-
         OptionSet<NodeStyleFlag> flags() const { return OptionSet<NodeStyleFlag>::fromRaw(m_flags); }
         void setFlag(NodeStyleFlag flag) { m_flags = (flags() | flag).toRaw(); }
         void clearFlag(NodeStyleFlag flag) { m_flags = (flags() - flag).toRaw(); }
+        void clearFlags(OptionSet<NodeStyleFlag> flagsToClear) { m_flags = (flags() - flagsToClear).toRaw(); }
         void clearDescendantsNeedStyleResolution() { m_flags = (flags() - NodeStyleFlag::DescendantNeedsStyleResolution - NodeStyleFlag::DirectChildNeedsStyleResolution).toRaw(); }
 
     private:
-        uint8_t m_styleValidity : 2;
-        uint8_t m_dynamicStyleRelation : 6;
-        uint8_t m_flags : 8;
+        uint16_t m_styleValidity : 2;
+        uint16_t m_flags : 14;
     };
 
     StyleBitfields styleBitfields() const { return StyleBitfields::fromRaw(m_rendererWithStyleFlags.type()); }
     void setStyleBitfields(StyleBitfields bitfields) { m_rendererWithStyleFlags.setType(bitfields.toRaw()); }
     ALWAYS_INLINE bool hasStyleFlag(NodeStyleFlag flag) const { return styleBitfields().flags().contains(flag); }
     ALWAYS_INLINE void setStyleFlag(NodeStyleFlag);
-    ALWAYS_INLINE bool hasDynamicStyleRelationFlag(DynamicStyleRelationFlag flag) const { return styleBitfields().dynamicStyleRelations().contains(flag); }
-    ALWAYS_INLINE void setDynamicStyleRelationFlag(DynamicStyleRelationFlag);
+    ALWAYS_INLINE void clearStyleFlags(OptionSet<NodeStyleFlag>);
 
     virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const { }
 
@@ -704,7 +708,7 @@ protected:
     void invalidateStyle(Style::Validity, Style::InvalidationMode = Style::InvalidationMode::Normal);
     void updateAncestorsForStyleRecalc();
 
-    ExceptionOr<RefPtr<Node>> convertNodesOrStringsIntoNode(Vector<NodeOrString>&&);
+    ExceptionOr<RefPtr<Node>> convertNodesOrStringsIntoNode(FixedVector<NodeOrString>&&);
 
 private:
     virtual PseudoId customPseudoId() const
@@ -727,11 +731,11 @@ private:
 
     void adjustStyleValidity(Style::Validity, Style::InvalidationMode);
 
-    void* opaqueRootSlow() const;
-
     static void moveShadowTreeToNewDocument(ShadowRoot&, Document& oldDocument, Document& newDocument);
     static void moveTreeToNewScope(Node&, TreeScope& oldScope, TreeScope& newScope);
     void moveNodeToNewDocument(Document& oldDocument, Document& newDocument);
+
+    WEBCORE_EXPORT void notifyInspectorOfRendererChange();
 
     struct NodeRareDataDeleter {
         void operator()(NodeRareData*) const;
@@ -857,15 +861,6 @@ inline ContainerNode* Node::parentNode() const
     return m_parentNode;
 }
 
-inline void* Node::opaqueRoot() const
-{
-    // FIXME: Possible race?
-    // https://bugs.webkit.org/show_bug.cgi?id=165713
-    if (isConnected())
-        return &document();
-    return opaqueRootSlow();
-}
-
 inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
 {
     ASSERT(!isShadowRoot());
@@ -879,10 +874,10 @@ ALWAYS_INLINE void Node::setStyleFlag(NodeStyleFlag flag)
     setStyleBitfields(bitfields);
 }
 
-ALWAYS_INLINE void Node::setDynamicStyleRelationFlag(DynamicStyleRelationFlag flag)
+ALWAYS_INLINE void Node::clearStyleFlags(OptionSet<NodeStyleFlag> flags)
 {
     auto bitfields = styleBitfields();
-    bitfields.setDynamicStyleRelation(flag);
+    bitfields.clearFlags(flags);
     setStyleBitfields(bitfields);
 }
 
@@ -908,44 +903,6 @@ inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
     ASSERT(!m_deletionHasBegun);
     if (m_treeScope != &newTreeScope)
         moveTreeToNewScope(*this, *m_treeScope, newTreeScope);
-}
-
-ALWAYS_INLINE OptionSet<Node::AncestorState> Node::inclusiveAncestorStates() const
-{
-    ASSERT(isElementNode() || isTreeScope() || isDocumentFragment()); // Only Element supports ancestor states for expediency.
-    OptionSet<Node::AncestorState> states;
-    if (hasNodeFlag(NodeFlag::InclusiveAncestorStateForForm))
-        states.add(AncestorState::Form);
-    if (hasNodeFlag(NodeFlag::InclusiveAncestorStateForCanvas))
-        states.add(AncestorState::Canvas);
-    return states;
-}
-
-ALWAYS_INLINE void Node::setInclusiveAncestorStates(OptionSet<AncestorState> states)
-{
-    ASSERT(isElementNode());
-    if (states.contains(AncestorState::Form))
-        setNodeFlag(NodeFlag::InclusiveAncestorStateForForm);
-    else
-        clearNodeFlag(NodeFlag::InclusiveAncestorStateForForm);
-
-    if (states.contains(AncestorState::Canvas))
-        setNodeFlag(NodeFlag::InclusiveAncestorStateForCanvas);
-    else
-        clearNodeFlag(NodeFlag::InclusiveAncestorStateForCanvas);
-}
-
-inline void Node::addInclusiveAncestorState(AncestorState state)
-{
-    ASSERT(isHTMLElement());
-    switch (state) {
-    case AncestorState::Form:
-        setNodeFlag(NodeFlag::InclusiveAncestorStateForForm);
-        break;
-    case AncestorState::Canvas:
-        setNodeFlag(NodeFlag::InclusiveAncestorStateForCanvas);
-        break;
-    }
 }
 
 #if PLATFORM(JAVA)
@@ -988,7 +945,7 @@ constexpr bool is_gteq(PartialOrdering ordering)
     return is_gt(ordering) || is_eq(ordering);
 }
 
-WTF::TextStream& operator<<(WTF::TextStream&, const Node&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Node&);
 
 } // namespace WebCore
 

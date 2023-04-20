@@ -40,15 +40,15 @@
 namespace WebCore {
 
 AudioListener::AudioListener(BaseAudioContext& context)
-    : m_positionX(AudioParam::create(context, "positionX", 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_positionY(AudioParam::create(context, "positionY", 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_positionZ(AudioParam::create(context, "positionZ", 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_forwardX(AudioParam::create(context, "forwardX", 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_forwardY(AudioParam::create(context, "forwardY", 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_forwardZ(AudioParam::create(context, "forwardZ", -1.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_upX(AudioParam::create(context, "upX", 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_upY(AudioParam::create(context, "upY", 1.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
-    , m_upZ(AudioParam::create(context, "upZ", 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    : m_positionX(AudioParam::create(context, "positionX"_s, 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_positionY(AudioParam::create(context, "positionY"_s, 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_positionZ(AudioParam::create(context, "positionZ"_s, 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_forwardX(AudioParam::create(context, "forwardX"_s, 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_forwardY(AudioParam::create(context, "forwardY"_s, 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_forwardZ(AudioParam::create(context, "forwardZ"_s, -1.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_upX(AudioParam::create(context, "upX"_s, 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_upY(AudioParam::create(context, "upY"_s, 1.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
+    , m_upZ(AudioParam::create(context, "upZ"_s, 0.0, -FLT_MAX, FLT_MAX, AutomationRate::ARate))
     , m_positionXValues(AudioUtilities::renderQuantumSize)
     , m_positionYValues(AudioUtilities::renderQuantumSize)
     , m_positionZValues(AudioUtilities::renderQuantumSize)
@@ -91,7 +91,10 @@ bool AudioListener::shouldUseARate() const
 
 void AudioListener::updateValuesIfNeeded(size_t framesToProcess)
 {
-    double currentTime = positionX().context().currentTime();
+    if (!positionX().context())
+        return;
+
+    double currentTime = positionX().context()->currentTime();
     if (m_lastUpdateTime != currentTime) {
         // Time has changed. Update all of the automation values now.
         m_lastUpdateTime = currentTime;
@@ -118,6 +121,20 @@ void AudioListener::updateValuesIfNeeded(size_t framesToProcess)
         upY().calculateSampleAccurateValues(m_upYValues.data(), framesToProcess);
         upZ().calculateSampleAccurateValues(m_upZValues.data(), framesToProcess);
     }
+}
+
+void AudioListener::updateDirtyState()
+{
+    ASSERT(!isMainThread());
+
+    auto lastPosition = std::exchange(m_lastPosition, position());
+    m_isPositionDirty = lastPosition != m_lastPosition;
+
+    auto lastOrientation = std::exchange(m_lastOrientation, orientation());
+    m_isOrientationDirty = lastOrientation != m_lastOrientation;
+
+    auto lastUpVector = std::exchange(m_lastUpVector, upVector());
+    m_isUpVectorDirty = lastUpVector != m_lastUpVector;
 }
 
 const float* AudioListener::positionXValues(size_t framesToProcess)
@@ -177,8 +194,10 @@ const float* AudioListener::upZValues(size_t framesToProcess)
 ExceptionOr<void> AudioListener::setPosition(float x, float y, float z)
 {
     ASSERT(isMainThread());
+    if (!m_positionX->context())
+        return { };
 
-    double now = m_positionX->context().currentTime();
+    double now = m_positionX->context()->currentTime();
 
     auto result = m_positionX->setValueAtTime(x, now);
     if (result.hasException())
@@ -201,8 +220,10 @@ FloatPoint3D AudioListener::position() const
 ExceptionOr<void> AudioListener::setOrientation(float x, float y, float z, float upX, float upY, float upZ)
 {
     ASSERT(isMainThread());
+    if (!m_forwardX->context())
+        return { };
 
-    double now = m_forwardX->context().currentTime();
+    double now = m_forwardX->context()->currentTime();
 
     auto result = m_forwardX->setValueAtTime(x, now);
     if (result.hasException())

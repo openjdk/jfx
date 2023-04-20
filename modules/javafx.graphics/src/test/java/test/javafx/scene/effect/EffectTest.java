@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -101,18 +101,18 @@ public class EffectTest {
         glow.setLevel(1.1);
         assertEquals(1.1, glow.getLevel(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(1.0f, (float) ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
         n2.setEffect(glow);
         glow.setLevel(0.5);
         assertEquals(0.5, glow.getLevel(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(0.5f, (float)((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
         Bloom bloom2 = new Bloom();
         glow.setInput(bloom2);
         bloom2.setThreshold(0.1);
         assertEquals(0.1, bloom2.getThreshold(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(0.1f, (float) ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom2)).getThreshold(), 1e-100);
+        assertEquals(0.1f, ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom2)).getThreshold(), 1e-100);
         // Now try setting first the effect and then adding node to scene
         Bloom bloom3 = new Bloom();
         n3.setEffect(bloom3);
@@ -120,7 +120,7 @@ public class EffectTest {
         root.getChildren().add(n3);
         assertEquals(0.1, bloom3.getThreshold(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(0.1f, (float) ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom3)).getThreshold(), 1e-100);
+        assertEquals(0.1f, ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom3)).getThreshold(), 1e-100);
     }
 
     /*
@@ -153,12 +153,12 @@ public class EffectTest {
         glow.setLevel(1.1);
         assertEquals(1.1, glow.getLevel(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(1.0f, (float) ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
         n2.setEffect(glow);
         glow.setLevel(0.5);
         assertEquals(0.5, glow.getLevel(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(0.5f, (float)((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.Glow) EffectHelper.getPeer(glow)).getLevel(), 1e-100);
 
         ObjectProperty ov2 = new SimpleObjectProperty();
         glow.inputProperty().bind(ov2);
@@ -168,7 +168,7 @@ public class EffectTest {
         bloom2.setThreshold(0.1);
         assertEquals(0.1, bloom2.getThreshold(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(0.1f, (float) ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom2)).getThreshold(), 1e-100);
+        assertEquals(0.1f, ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom2)).getThreshold(), 1e-100);
 
         // now change the bound value
         // previous input should be deregistred
@@ -180,14 +180,14 @@ public class EffectTest {
         assertTrue(EffectHelper.isEffectDirty(glow));
         assertTrue(EffectHelper.isEffectDirty(bloom));
         toolkit.fireTestPulse();
-        assertEquals(0.1f, (float) ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom3)).getThreshold(), 1e-100);
+        assertEquals(0.1f, ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom3)).getThreshold(), 1e-100);
 
         bloom2.setThreshold(0.2);
         // test that previously bound effect is correctly deregistred and doesn't propagate its changes via listeners
         assertFalse(EffectHelper.isEffectDirty(glow));
         assertEquals(0.2, bloom2.getThreshold(), 1e-100);
         toolkit.fireTestPulse();
-        assertEquals(0.1f, (float) ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom2)).getThreshold(), 1e-100);
+        assertEquals(0.1f, ((com.sun.scenario.effect.Bloom) EffectHelper.getPeer(bloom2)).getThreshold(), 1e-100);
     }
 
     @Test

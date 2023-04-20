@@ -28,6 +28,7 @@
 #include "DOMCacheEngine.h"
 
 #include "CacheQueryOptions.h"
+#include "CrossOriginAccessControl.h"
 #include "Exception.h"
 #include "HTTPParsers.h"
 #include "ScriptExecutionContext.h"
@@ -51,6 +52,8 @@ Exception convertToException(Error error)
         return Exception { TypeError, "Internal error"_s };
     case Error::Stopped:
         return Exception { TypeError, "Context is stopped"_s };
+    case Error::CORP:
+        return Exception { TypeError, "Cross-Origin-Resource-Policy failure"_s };
     }
     ASSERT_NOT_REACHED();
     return Exception { TypeError, "Connection stopped"_s };
@@ -66,7 +69,7 @@ Exception convertToExceptionAndLog(ScriptExecutionContext* context, Error error)
 
 static inline bool matchURLs(const ResourceRequest& request, const URL& cachedURL, const CacheQueryOptions& options)
 {
-    ASSERT(options.ignoreMethod || request.httpMethod() == "GET");
+    ASSERT(options.ignoreMethod || request.httpMethod() == "GET"_s);
 
     URL requestURL = request.url();
     URL cachedRequestURL = cachedURL;
@@ -95,12 +98,11 @@ bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cach
         if (isVarying)
             return;
         auto nameView = stripLeadingAndTrailingHTTPSpaces(view);
-        if (nameView == "*") {
+        if (nameView == "*"_s) {
             isVarying = true;
             return;
         }
-        auto name = nameView.toString();
-        isVarying = cachedRequest.httpHeaderField(name) != request.httpHeaderField(name);
+        isVarying = cachedRequest.httpHeaderField(nameView) != request.httpHeaderField(nameView);
     });
 
     return !isVarying;
@@ -126,22 +128,22 @@ bool queryCacheMatch(const ResourceRequest& request, const URL& url, bool hasVar
 
 ResponseBody isolatedResponseBody(const ResponseBody& body)
 {
-    return WTF::switchOn(body, [](const Ref<FormData>& formData) {
+    return WTF::switchOn(body, [](const Ref<FormData>& formData) -> ResponseBody {
         return formData->isolatedCopy();
-    }, [](const Ref<SharedBuffer>& buffer) {
-        return buffer->copy();
-    }, [](const std::nullptr_t&) {
+    }, [](const Ref<SharedBuffer>& buffer) -> ResponseBody {
+        return buffer.copyRef(); // SharedBuffer are immutable and can be returned as-is.
+    }, [](const std::nullptr_t&) -> ResponseBody {
         return DOMCacheEngine::ResponseBody { };
     });
 }
 
 ResponseBody copyResponseBody(const ResponseBody& body)
 {
-    return WTF::switchOn(body, [](const Ref<FormData>& formData) {
+    return WTF::switchOn(body, [](const Ref<FormData>& formData) -> ResponseBody {
         return formData.copyRef();
-    }, [](const Ref<SharedBuffer>& buffer) {
+    }, [](const Ref<SharedBuffer>& buffer) -> ResponseBody {
         return buffer.copyRef();
-    }, [](const std::nullptr_t&) {
+    }, [](const std::nullptr_t&) -> ResponseBody {
         return DOMCacheEngine::ResponseBody { };
     });
 }
@@ -149,16 +151,6 @@ ResponseBody copyResponseBody(const ResponseBody& body)
 Record Record::copy() const
 {
     return Record { identifier, updateResponseCounter, requestHeadersGuard, request, options, referrer, responseHeadersGuard, response, copyResponseBody(responseBody), responseBodySize };
-}
-
-static inline CacheInfo isolateCacheInfo(const CacheInfo& info)
-{
-    return CacheInfo { info.identifier, info.name.isolatedCopy() };
-}
-
-CacheInfos CacheInfos::isolatedCopy()
-{
-    return { WTF::map(infos, isolateCacheInfo), updateCounter };
 }
 
 } // namespace DOMCacheEngine

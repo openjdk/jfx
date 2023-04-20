@@ -36,28 +36,35 @@ namespace WebCore {
 
 class DOMPointReadOnly;
 
-class WebXRBoundedReferenceSpace final: public WebXRReferenceSpace {
+class WebXRBoundedReferenceSpace final : public WebXRReferenceSpace {
     WTF_MAKE_ISO_ALLOCATED(WebXRBoundedReferenceSpace);
 public:
-    static Ref<WebXRBoundedReferenceSpace> create(Document&, Ref<WebXRSession>&&, XRReferenceSpaceType);
-    static Ref<WebXRBoundedReferenceSpace> create(Document&, Ref<WebXRSession>&&, Ref<WebXRRigidTransform>&&, XRReferenceSpaceType);
+    static Ref<WebXRBoundedReferenceSpace> create(Document&, WebXRSession&, XRReferenceSpaceType);
+    static Ref<WebXRBoundedReferenceSpace> create(Document&, WebXRSession&, Ref<WebXRRigidTransform>&&, XRReferenceSpaceType);
 
     virtual ~WebXRBoundedReferenceSpace();
 
-    TransformationMatrix nativeOrigin() const final;
-    const Vector<Ref<DOMPointReadOnly>>& boundsGeometry() const;
-    RefPtr<WebXRReferenceSpace> getOffsetReferenceSpace(const WebXRRigidTransform&) final;
+    std::optional<TransformationMatrix> nativeOrigin() const final;
+    const Vector<Ref<DOMPointReadOnly>>& boundsGeometry();
+    ExceptionOr<Ref<WebXRReferenceSpace>> getOffsetReferenceSpace(const WebXRRigidTransform&) final;
 
 private:
-    WebXRBoundedReferenceSpace(Document&, Ref<WebXRSession>&&, Ref<WebXRRigidTransform>&&, XRReferenceSpaceType);
+    WebXRBoundedReferenceSpace(Document&, WebXRSession&, Ref<WebXRRigidTransform>&&, XRReferenceSpaceType);
 
     bool isBoundedReferenceSpace() const final { return true; }
 
+    void updateIfNeeded();
+    float quantize(float);
+
     Vector<Ref<DOMPointReadOnly>> m_boundsGeometry;
+    int m_lastUpdateId { -1 };
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_WEBXRSPACE(WebXRBoundedReferenceSpace, isBoundedReferenceSpace())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebXRBoundedReferenceSpace)
+    static bool isType(const WebCore::WebXRReferenceSpace& element) { return element.isBoundedReferenceSpace(); }
+    static bool isType(const WebCore::WebXRSpace& element) { return is<WebCore::WebXRReferenceSpace>(element) && isType(downcast<WebCore::WebXRReferenceSpace>(element)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEBXR)

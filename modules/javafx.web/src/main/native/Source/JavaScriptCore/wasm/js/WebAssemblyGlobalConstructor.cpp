@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@
 
 namespace JSC {
 
-const ClassInfo WebAssemblyGlobalConstructor::s_info = { "Function", &Base::s_info, &constructorGlobalWebAssemblyGlobal, nullptr, CREATE_METHOD_TABLE(WebAssemblyGlobalConstructor) };
+const ClassInfo WebAssemblyGlobalConstructor::s_info = { "Function"_s, &Base::s_info, &constructorGlobalWebAssemblyGlobal, nullptr, CREATE_METHOD_TABLE(WebAssemblyGlobalConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyGlobal);
 static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyGlobal);
@@ -55,9 +55,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* webAssemblyGlobalStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->webAssemblyGlobalStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->webAssemblyGlobalStructure());
+    Structure* webAssemblyGlobalStructure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyGlobalStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(throwScope, { });
 
     JSObject* globalDescriptor;
@@ -68,46 +66,46 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         globalDescriptor = jsCast<JSObject*>(argument);
     }
 
-    Wasm::GlobalInformation::Mutability mutability;
+    Wasm::Mutability mutability;
     {
-        Identifier mutableIdent = Identifier::fromString(vm, "mutable");
+        Identifier mutableIdent = Identifier::fromString(vm, "mutable"_s);
         JSValue mutableValue = globalDescriptor->get(globalObject, mutableIdent);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         bool mutableBoolean = mutableValue.toBoolean(globalObject);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         if (mutableBoolean)
-            mutability = Wasm::GlobalInformation::Mutable;
+            mutability = Wasm::Mutable;
         else
-            mutability = Wasm::GlobalInformation::Immutable;
+            mutability = Wasm::Immutable;
     }
 
     Wasm::Type type;
     {
-        Identifier valueIdent = Identifier::fromString(vm, "value");
+        Identifier valueIdent = Identifier::fromString(vm, "value"_s);
         JSValue valueValue = globalDescriptor->get(globalObject, valueIdent);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         String valueString = valueValue.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         if (valueString == "i32"_s)
-            type = Wasm::Type::I32;
+            type = Wasm::Types::I32;
         else if (valueString == "i64"_s)
-            type = Wasm::Type::I64;
+            type = Wasm::Types::I64;
         else if (valueString == "f32"_s)
-            type = Wasm::Type::F32;
+            type = Wasm::Types::F32;
         else if (valueString == "f64"_s)
-            type = Wasm::Type::F64;
-        else if (Options::useWebAssemblyReferences() && (valueString == "anyfunc"_s || valueString == "funcref"_s))
-            type = Wasm::Type::Funcref;
-        else if (Options::useWebAssemblyReferences() && valueString == "externref"_s)
-            type = Wasm::Type::Externref;
+            type = Wasm::Types::F64;
+        else if (valueString == "anyfunc"_s || valueString == "funcref"_s)
+            type = Wasm::funcrefType();
+        else if (valueString == "externref"_s)
+            type = Wasm::externrefType();
         else
             return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global expects its 'value' field to be the string 'i32', 'i64', 'f32', 'f64', 'anyfunc', 'funcref', or 'externref'"_s)));
     }
 
     uint64_t initialValue = 0;
     JSValue argument = callFrame->argument(1);
-    switch (type) {
-    case Wasm::Type::I32: {
+    switch (type.kind) {
+    case Wasm::TypeKind::I32: {
         if (!argument.isUndefined()) {
             int32_t value = argument.toInt32(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -115,7 +113,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::I64: {
+    case Wasm::TypeKind::I64: {
         if (!argument.isUndefined()) {
             int64_t value = argument.toBigInt64(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -123,7 +121,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::F32: {
+    case Wasm::TypeKind::F32: {
         if (!argument.isUndefined()) {
             float value = argument.toFloat(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -131,7 +129,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::F64: {
+    case Wasm::TypeKind::F64: {
         if (!argument.isUndefined()) {
             double value = argument.toNumber(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -139,32 +137,30 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::Type::Funcref: {
-        ASSERT(Options::useWebAssemblyReferences());
+    default: {
+        if (Wasm::isFuncref(type)) {
         if (argument.isUndefined())
             argument = defaultValueForReferenceType(type);
-        if (!isWebAssemblyHostFunction(vm, argument) && !argument.isNull()) {
-            throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"));
+            if (!isWebAssemblyHostFunction(argument) && !argument.isNull()) {
+                throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"_s));
             return { };
         }
         initialValue = JSValue::encode(argument);
-        break;
-    }
-    case Wasm::Type::Externref: {
-        ASSERT(Options::useWebAssemblyReferences());
+        } else if (Wasm::isExternref(type)) {
         if (argument.isUndefined())
             argument = defaultValueForReferenceType(type);
         initialValue = JSValue::encode(argument);
-        break;
-    }
-    default:
+        } else if (Wasm::isExternref(type))
+            return throwVMException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "I31ref import from JS currently unsupported"_s));
+        else
         RELEASE_ASSERT_NOT_REACHED();
+    }
     }
 
     Ref<Wasm::Global> wasmGlobal = Wasm::Global::create(type, mutability, initialValue);
     JSWebAssemblyGlobal* jsWebAssemblyGlobal = JSWebAssemblyGlobal::tryCreate(globalObject, vm, webAssemblyGlobalStructure, WTFMove(wasmGlobal));
     RETURN_IF_EXCEPTION(throwScope, { });
-    ensureStillAliveHere(bitwise_cast<void*>(initialValue)); // Ensure this is kept alive while creating JSWebAssemblyGlobal.
+    ensureStillAliveHere(initialValue); // Ensure this is kept alive while creating JSWebAssemblyGlobal.
     return JSValue::encode(jsWebAssemblyGlobal);
 }
 
@@ -177,7 +173,7 @@ JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyGlobal, (JSGlobalObject* globalObject,
 
 WebAssemblyGlobalConstructor* WebAssemblyGlobalConstructor::create(VM& vm, Structure* structure, WebAssemblyGlobalPrototype* thisPrototype)
 {
-    auto* constructor = new (NotNull, allocateCell<WebAssemblyGlobalConstructor>(vm.heap)) WebAssemblyGlobalConstructor(vm, structure);
+    auto* constructor = new (NotNull, allocateCell<WebAssemblyGlobalConstructor>(vm)) WebAssemblyGlobalConstructor(vm, structure);
     constructor->finishCreation(vm, thisPrototype);
     return constructor;
 }

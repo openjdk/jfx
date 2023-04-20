@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "DeferTermination.h"
 #include "Heap.h"
+#include "VMTraps.h"
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -46,7 +48,7 @@ void LazyProperty<OwnerType, ElementType>::initLater(const Func&)
     // may be used for things. We address this problem by indirecting through a global const
     // variable. The "theFunc" variable is guaranteed to be native-aligned, i.e. at least a
     // multiple of 4.
-    static const FuncType theFunc = callFunc<Func>;
+    static const FuncType theFunc = &callFunc<Func>;
     m_pointer = lazyTag | bitwise_cast<uintptr_t>(&theFunc);
 }
 
@@ -55,7 +57,7 @@ void LazyProperty<OwnerType, ElementType>::setMayBeNull(VM& vm, const OwnerType*
 {
     m_pointer = bitwise_cast<uintptr_t>(value);
     RELEASE_ASSERT(!(m_pointer & lazyTag));
-    vm.heap.writeBarrier(owner, value);
+    vm.writeBarrier(owner, value);
 }
 
 template<typename OwnerType, typename ElementType>
@@ -81,12 +83,12 @@ void LazyProperty<OwnerType, ElementType>::dump(PrintStream& out) const
         return;
     }
     if (m_pointer & lazyTag) {
-        out.print("Lazy:", RawPointer(bitwise_cast<void*>(m_pointer & ~lazyTag)));
+        out.print("Lazy:", RawHex(m_pointer & ~lazyTag));
         if (m_pointer & initializingTag)
             out.print("(Initializing)");
         return;
     }
-    out.print(RawPointer(bitwise_cast<void*>(m_pointer)));
+    out.print(RawHex(m_pointer));
 }
 
 template<typename OwnerType, typename ElementType>
@@ -95,6 +97,8 @@ ElementType* LazyProperty<OwnerType, ElementType>::callFunc(const Initializer& i
 {
     if (initializer.property.m_pointer & initializingTag)
         return nullptr;
+
+    DeferTerminationForAWhile deferTerminationForAWhile { initializer.vm };
     initializer.property.m_pointer |= initializingTag;
     callStatelessLambda<void, Func>(initializer);
     RELEASE_ASSERT(!(initializer.property.m_pointer & lazyTag));

@@ -30,7 +30,10 @@
 
 namespace WebCore {
 
+class RenderBoxModelObject;
+class RenderText;
 class RenderedDocumentMarker;
+struct TextBoxSelectableRange;
 
 struct MarkedText {
     // Sorted by paint order
@@ -42,6 +45,7 @@ struct MarkedText {
         TextMatch,
         DictationAlternatives,
         Highlight,
+        FragmentHighlight,
 #if ENABLE(APP_HIGHLIGHTS)
         AppHighlight,
 #endif
@@ -52,11 +56,23 @@ struct MarkedText {
         Selection,
         DraggedContent,
     };
+
+    enum class PaintPhase {
+        Background,
+        Foreground,
+        Decoration
+    };
+
+    enum class OverlapStrategy {
+        None,
+        Frontmost
+    };
+
     unsigned startOffset;
     unsigned endOffset;
     Type type;
     const RenderedDocumentMarker* marker { nullptr };
-    String highlightName { };
+    AtomString highlightName { };
 
     bool isEmpty() const { return endOffset <= startOffset; }
     bool operator!=(const MarkedText& other) const { return !(*this == other); }
@@ -64,10 +80,13 @@ struct MarkedText {
     {
         return startOffset == other.startOffset && endOffset == other.endOffset && type == other.type && marker == other.marker && highlightName == other.highlightName;
     }
-};
 
-enum class OverlapStrategy { None, Frontmost };
-WEBCORE_EXPORT Vector<MarkedText> subdivide(const Vector<MarkedText>&, OverlapStrategy = OverlapStrategy::None);
+    WEBCORE_EXPORT static Vector<MarkedText> subdivide(const Vector<MarkedText>&, OverlapStrategy = OverlapStrategy::None);
+
+    static Vector<MarkedText> collectForDocumentMarkers(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
+    static Vector<MarkedText> collectForHighlights(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
+    static Vector<MarkedText> collectForDraggedContent(const RenderText&, const TextBoxSelectableRange&);
+};
 
 }
 

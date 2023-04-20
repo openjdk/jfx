@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010, 2011, 2012, 2013 Google Inc. All rights reserved.
@@ -43,6 +43,7 @@
 #include "ShadowRoot.h"
 #include "TextEvent.h"
 #include "TouchEvent.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -59,7 +60,8 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
         return;
 
     // Non-bubbling events call only one default event handler, the one for the target.
-    path.contextAt(0).node()->defaultEventHandler(event);
+    Ref rootNode { *path.contextAt(0).node() };
+    rootNode->defaultEventHandler(event);
     ASSERT(!event.defaultPrevented());
 
     if (event.defaultHandled() || !event.bubbles())
@@ -67,7 +69,8 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
 
     size_t size = path.size();
     for (size_t i = 1; i < size; ++i) {
-        path.contextAt(i).node()->defaultEventHandler(event);
+        Ref currentNode { *path.contextAt(i).node() };
+        currentNode->defaultEventHandler(event);
         ASSERT(!event.defaultPrevented());
         if (event.defaultHandled())
             return;
@@ -144,14 +147,14 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(node));
 
-    LOG(Events, "EventDispatcher::dispatchEvent %s on node %s", event.type().string().utf8().data(), node.nodeName().utf8().data());
+    LOG_WITH_STREAM(Events, stream << "EventDispatcher::dispatchEvent " << event << " on node " << node);
 
-    auto protectedNode = makeRef(node);
-    auto protectedView = makeRefPtr(node.document().view());
+    Ref protectedNode { node };
+    RefPtr protectedView { node.document().view() };
 
     EventPath eventPath { node, event };
 
-    Optional<bool> shouldClearTargetsAfterDispatch;
+    std::optional<bool> shouldClearTargetsAfterDispatch;
     for (size_t i = eventPath.size(); i > 0; --i) {
         const EventContext& eventContext = eventPath.contextAt(i - 1);
         // FIXME: We should also set shouldClearTargetsAfterDispatch to true if an EventTarget object in eventContext's touch target list
@@ -173,7 +176,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     InputElementClickState clickHandlingState;
 
     bool isActivationEvent = event.type() == eventNames().clickEvent;
-    RefPtr<HTMLInputElement> inputForLegacyPreActivationBehavior = is<HTMLInputElement>(node) ? &downcast<HTMLInputElement>(node) : nullptr;
+    RefPtr inputForLegacyPreActivationBehavior = dynamicDowncast<HTMLInputElement>(node);
     if (!inputForLegacyPreActivationBehavior && isActivationEvent && event.bubbles())
         inputForLegacyPreActivationBehavior = findInputElementInEventPath(eventPath);
     if (inputForLegacyPreActivationBehavior)
@@ -204,7 +207,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         event.setTarget(finalTarget);
     }
 
-    if (shouldClearTargetsAfterDispatch.valueOr(false)) {
+    if (shouldClearTargetsAfterDispatch.value_or(false)) {
         event.setTarget(nullptr);
         event.setRelatedTarget(nullptr);
         // FIXME: We should also clear the event's touch target list.

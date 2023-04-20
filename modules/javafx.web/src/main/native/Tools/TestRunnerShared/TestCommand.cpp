@@ -98,10 +98,17 @@ TestCommand parseInputLine(const std::string& inputLine)
             result.shouldDumpPixels = true;
             if (tokenizer.hasNext())
                 result.expectedPixelHash = tokenizer.next();
+        } else if (arg == "--self-compare-with-header") {
+            if (tokenizer.hasNext())
+                result.selfComparisonHeader = tokenizer.next();
+            else
+                die(inputLine);
         } else if (arg == std::string("--dump-jsconsolelog-in-stderr"))
             result.dumpJSConsoleLogInStdErr = true;
         else if (arg == std::string("--absolutePath"))
             result.absolutePath = tokenizer.next();
+        else if (arg == "--force-dump-pixels")
+            result.forceDumpPixels = true;
         else
             die(inputLine);
     }
@@ -112,7 +119,7 @@ TestCommand parseInputLine(const std::string& inputLine)
     return result;
 }
 
-#if PLATFORM(JAVA) && OS(MAC_OS_X)
+#if PLATFORM(JAVA)
 std::string testPath(const std::string& pathOrURL)
 {
     if (pathOrURL.find("http://") == 0 || pathOrURL.find("https://") == 0)
@@ -132,7 +139,8 @@ std::filesystem::path testPath(const std::string& pathOrURL)
     if (pathOrURL.find("file://") == 0)
         return pathOrURL.substr(strlen("file:/"));
 
-    return std::filesystem::absolute(pathOrURL);
+    std::error_code ec;
+    return std::filesystem::absolute(pathOrURL, ec);
 }
 #endif
 
@@ -141,10 +149,11 @@ std::string testURLString(const std::string& pathOrURL)
     if (pathOrURL.find("http://") == 0 || pathOrURL.find("https://") == 0 || pathOrURL.find("file://") == 0)
         return pathOrURL;
 
-#if PLATFORM(JAVA) && OS(MAC_OS_X)
+#if PLATFORM(JAVA)
     return "file://" + pathOrURL;
 #else
-    return "file://" + std::filesystem::absolute(pathOrURL).generic_string();
+    std::error_code ec;
+    return "file://" + std::filesystem::absolute(pathOrURL, ec).generic_string();
 #endif
 }
 

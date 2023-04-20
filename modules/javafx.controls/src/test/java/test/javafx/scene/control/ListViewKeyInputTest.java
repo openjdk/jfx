@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -60,7 +58,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 public class ListViewKeyInputTest {
     private ListView<String> listView;
@@ -1834,6 +1832,7 @@ public class ListViewKeyInputTest {
         sl.dispose();
     }
 
+    @Ignore("JDK-8289909") // there is no guarantee that there will be 8 selected items (can be 7 as well)
     @Test public void test_rt34407_up_up_down() {
         final int items = 100;
         listView.getItems().clear();
@@ -2373,5 +2372,44 @@ public class ListViewKeyInputTest {
 
         assertEquals(1, sm.getSelectedIndex());
         assertEquals(1, fm.getFocusedIndex());
+    }
+
+    @Test public void testSpaceKeyPressWithNullSelectionModelDoesNotThrowNPE() {
+        listView.setSelectionModel(null);
+
+        assertDoesNotThrow(() ->  keyboard.doKeyPress(KeyCode.SPACE));
+    }
+
+    @Test public void testSpaceKeyPressWithNullFocusModelDoesNotThrowNPE() {
+        listView.setFocusModel(null);
+
+        assertDoesNotThrow(() -> keyboard.doKeyPress(KeyCode.SPACE));
+    }
+
+    @Test public void testKpUpKeyPressWithNullSelectionModelDoesNotThrowNPE() {
+        // Navigate one down so as we can navigate up below.
+        keyboard.doKeyPress(KeyCode.KP_DOWN);
+
+        listView.setSelectionModel(null);
+
+        assertDoesNotThrow(() -> keyboard.doKeyPress(KeyCode.KP_UP));
+    }
+
+    @Test public void testHomeKeyPressWithNullSelectionModelDoesNotThrowNPE() {
+        listView.setSelectionModel(null);
+
+        assertDoesNotThrow(() -> keyboard.doKeyPress(KeyCode.HOME));
+    }
+
+    @Test public void testEndKeyPressWithNullSelectionModelDoesNotThrowNPE() {
+        listView.setSelectionModel(null);
+
+        assertDoesNotThrow(() -> keyboard.doKeyPress(KeyCode.END));
+    }
+
+    @Test public void testBackSlashKeyPressWithNullSelectionModelDoesNotThrowNPE() {
+        listView.setSelectionModel(null);
+
+        assertDoesNotThrow(() -> keyboard.doKeyPress(KeyCode.BACK_SLASH, KeyModifier.CTRL));
     }
 }

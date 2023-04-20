@@ -57,7 +57,7 @@ bool RenderRubyText::isChildAllowed(const RenderObject& child, const RenderStyle
     return child.isInline();
 }
 
-Optional<TextAlignMode> RenderRubyText::overrideTextAlignmentForLine(bool) const
+std::optional<TextAlignMode> RenderRubyText::overrideTextAlignmentForLine(bool) const
 {
     TextAlignMode textAlign = style().textAlign();
     // FIXME: This check is bogus since user can set the initial value.
@@ -75,7 +75,7 @@ void RenderRubyText::adjustInlineDirectionLineBounds(int expansionOpportunityCou
     if (textAlign != RenderStyle::initialTextAlign())
         return RenderBlockFlow::adjustInlineDirectionLineBounds(expansionOpportunityCount, logicalLeft, logicalWidth);
 
-    int maxPreferredLogicalWidth = this->maxPreferredLogicalWidth();
+    auto maxPreferredLogicalWidth = this->maxPreferredLogicalWidth();
     if (maxPreferredLogicalWidth >= logicalWidth)
         return;
 

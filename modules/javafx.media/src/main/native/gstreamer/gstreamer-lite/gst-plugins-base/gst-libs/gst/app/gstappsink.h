@@ -59,6 +59,14 @@ typedef struct _GstAppSinkPrivate GstAppSinkPrivate;
  *       The new sample can be retrieved with
  *       gst_app_sink_pull_sample() either from this callback
  *       or from any other thread.
+ * @new_event: Called when a new event is available.
+ *       This callback is called from the streaming thread.
+ *       The new event can be retrieved with
+ *       gst_app_sink_pull_event() either from this callback
+ *       or from any other thread.
+ *       The callback should return %TRUE if the event has been handled,
+ *       %FALSE otherwise.
+ *       Since: 1.20
  *
  * A set of callbacks that can be installed on the appsink with
  * gst_app_sink_set_callbacks().
@@ -67,9 +75,10 @@ typedef struct {
   void          (*eos)              (GstAppSink *appsink, gpointer user_data);
   GstFlowReturn (*new_preroll)      (GstAppSink *appsink, gpointer user_data);
   GstFlowReturn (*new_sample)       (GstAppSink *appsink, gpointer user_data);
+  gboolean      (*new_event)        (GstAppSink *appsink, gpointer user_data);
 
   /*< private >*/
-  gpointer     _gst_reserved[GST_PADDING];
+  gpointer     _gst_reserved[GST_PADDING - 1];
 } GstAppSinkCallbacks;
 
 struct _GstAppSink
@@ -91,15 +100,24 @@ struct _GstAppSinkClass
   void          (*eos)              (GstAppSink *appsink);
   GstFlowReturn (*new_preroll)      (GstAppSink *appsink);
   GstFlowReturn (*new_sample)       (GstAppSink *appsink);
+  /* new_event is missing as we ran out padding */
 
   /* actions */
   GstSample *   (*pull_preroll)      (GstAppSink *appsink);
   GstSample *   (*pull_sample)       (GstAppSink *appsink);
   GstSample *   (*try_pull_preroll)  (GstAppSink *appsink, GstClockTime timeout);
   GstSample *   (*try_pull_sample)   (GstAppSink *appsink, GstClockTime timeout);
+ /**
+   * GstAppSinkClass::try_pull_object:
+   *
+   * See #GstAppSink::try-pull-object: signal.
+   *
+   * Since: 1.20
+   */
+  GstMiniObject * (*try_pull_object) (GstAppSink *appsink, GstClockTime timeout);
 
   /*< private >*/
-  gpointer     _gst_reserved[GST_PADDING - 2];
+  gpointer     _gst_reserved[GST_PADDING - 3];
 };
 
 GST_APP_API
@@ -151,10 +169,16 @@ GST_APP_API
 GstSample *     gst_app_sink_pull_sample      (GstAppSink *appsink);
 
 GST_APP_API
+GstMiniObject * gst_app_sink_pull_object      (GstAppSink *appsink);
+
+GST_APP_API
 GstSample *     gst_app_sink_try_pull_preroll (GstAppSink *appsink, GstClockTime timeout);
 
 GST_APP_API
 GstSample *     gst_app_sink_try_pull_sample  (GstAppSink *appsink, GstClockTime timeout);
+
+GST_APP_API
+GstMiniObject * gst_app_sink_try_pull_object    (GstAppSink *appsink, GstClockTime timeout);
 
 GST_APP_API
 void            gst_app_sink_set_callbacks    (GstAppSink * appsink,

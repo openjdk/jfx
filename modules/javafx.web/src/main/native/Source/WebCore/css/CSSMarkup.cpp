@@ -78,9 +78,7 @@ static void serializeCharacter(UChar32 c, StringBuilder& appendTo)
 
 static void serializeCharacterAsCodePoint(UChar32 c, StringBuilder& appendTo)
 {
-    appendTo.append('\\');
-    appendTo.append(hex(c, Lowercase));
-    appendTo.append(' ');
+    appendTo.append('\\', hex(c, Lowercase), ' ');
 }
 
 void serializeIdentifier(const String& identifier, StringBuilder& appendTo, bool skipStartChecks)
@@ -100,11 +98,11 @@ void serializeIdentifier(const String& identifier, StringBuilder& appendTo, bool
 
         if (!c)
             appendTo.append(replacementCharacter);
-        else if (c <= 0x1f || c == 0x7f || (0x30 <= c && c <= 0x39 && (isFirst || (isSecond && isFirstCharHyphen))))
+        else if (c <= 0x1f || c == deleteCharacter || (0x30 <= c && c <= 0x39 && (isFirst || (isSecond && isFirstCharHyphen))))
             serializeCharacterAsCodePoint(c, appendTo);
-        else if (c == 0x2d && isFirst && index == identifier.length())
+        else if (c == hyphenMinus && isFirst && index == identifier.length())
             serializeCharacter(c, appendTo);
-        else if (0x80 <= c || c == 0x2d || c == 0x5f || (0x30 <= c && c <= 0x39) || (0x41 <= c && c <= 0x5a) || (0x61 <= c && c <= 0x7a))
+        else if (0x80 <= c || c == hyphenMinus || c == lowLine || (0x30 <= c && c <= 0x39) || (0x41 <= c && c <= 0x5a) || (0x61 <= c && c <= 0x7a))
             appendTo.appendCharacter(c);
         else
             serializeCharacter(c, appendTo);
@@ -112,7 +110,7 @@ void serializeIdentifier(const String& identifier, StringBuilder& appendTo, bool
         if (isFirst) {
             isFirst = false;
             isSecond = true;
-            isFirstCharHyphen = (c == 0x2d);
+            isFirstCharHyphen = (c == hyphenMinus);
         } else if (isSecond)
             isSecond = false;
     }
@@ -127,9 +125,9 @@ void serializeString(const String& string, StringBuilder& appendTo)
         UChar32 c = string.characterStartingAt(index);
         index += U16_LENGTH(c);
 
-        if (c <= 0x1f || c == 0x7f)
+        if (c <= 0x1f || c == deleteCharacter)
             serializeCharacterAsCodePoint(c, appendTo);
-        else if (c == 0x22 || c == 0x5c)
+        else if (c == quotationMark || c == reverseSolidus)
             serializeCharacter(c, appendTo);
         else
             appendTo.appendCharacter(c);
@@ -148,16 +146,6 @@ String serializeString(const String& string)
 String serializeURL(const String& string)
 {
     return "url(" + serializeString(string) + ")";
-}
-
-String serializeAsStringOrCustomIdent(const String& string)
-{
-    if (isCSSTokenizerIdentifier(string)) {
-        StringBuilder builder;
-        serializeIdentifier(string, builder);
-        return builder.toString();
-    }
-    return serializeString(string);
 }
 
 String serializeFontFamily(const String& string)

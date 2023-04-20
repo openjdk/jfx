@@ -63,6 +63,27 @@
 
 #include <string.h>
 
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT gst_pb_utils_missing_plugins_ensure_debug_category()
+
+static GstDebugCategory *
+gst_pb_utils_missing_plugins_ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    GstDebugCategory *cat = NULL;
+
+    GST_DEBUG_CATEGORY_INIT (cat, "missing-plugins", 0,
+        "GstPbUtils missing plugins helper");
+
+    g_once_init_leave (&cat_gonce, (gsize) cat);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#endif /* GST_DISABLE_GST_DEBUG */
+
 #define GST_DETAIL_STRING_MARKER "gstreamer"
 
 typedef enum

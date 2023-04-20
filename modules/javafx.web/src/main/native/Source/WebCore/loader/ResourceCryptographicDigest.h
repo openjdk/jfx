@@ -34,6 +34,7 @@
 namespace WebCore {
 
 class CachedResource;
+class FragmentedSharedBuffer;
 
 struct ResourceCryptographicDigest {
     enum class Algorithm {
@@ -59,6 +60,11 @@ struct ResourceCryptographicDigest {
     }
 };
 
+inline void add(Hasher& hasher, const ResourceCryptographicDigest& digest)
+{
+    add(hasher, digest.algorithm, digest.value);
+}
+
 struct EncodedResourceCryptographicDigest {
     using Algorithm = ResourceCryptographicDigest::Algorithm;
 
@@ -66,14 +72,15 @@ struct EncodedResourceCryptographicDigest {
     String digest;
 };
 
-Optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<UChar>&);
-Optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<LChar>&);
+std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<UChar>&);
+std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<LChar>&);
 
-Optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<UChar>&);
-Optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<LChar>&);
+std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<UChar>&);
+std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<LChar>&);
 
-Optional<ResourceCryptographicDigest> decodeEncodedResourceCryptographicDigest(const EncodedResourceCryptographicDigest&);
+std::optional<ResourceCryptographicDigest> decodeEncodedResourceCryptographicDigest(const EncodedResourceCryptographicDigest&);
 
+ResourceCryptographicDigest cryptographicDigestForSharedBuffer(ResourceCryptographicDigest::Algorithm, const FragmentedSharedBuffer*);
 ResourceCryptographicDigest cryptographicDigestForBytes(ResourceCryptographicDigest::Algorithm, const void* bytes, size_t length);
 
 }
@@ -83,7 +90,7 @@ namespace WTF {
 template<> struct DefaultHash<WebCore::ResourceCryptographicDigest> {
     static unsigned hash(const WebCore::ResourceCryptographicDigest& digest)
     {
-        return pairIntHash(intHash(static_cast<unsigned>(digest.algorithm)), StringHasher::computeHash(digest.value.data(), digest.value.size()));
+        return computeHash(digest);
     }
     static bool equal(const WebCore::ResourceCryptographicDigest& a, const WebCore::ResourceCryptographicDigest& b)
     {

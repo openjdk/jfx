@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,14 +36,13 @@ public class ClassWithCollection {
     public double a;
     public double b;
     public List<Integer> list;
-    ObservableList<Integer> propertyList = new TrackableObservableList<Integer>() {
+    ObservableList<Integer> propertyList = new TrackableObservableList<>() {
         @Override
         protected void onChanged(ListChangeListener.Change<Integer> c) {}
     };
 
     public ClassWithCollection(@NamedArg("a") double a) {
         this.a = a;
-        this.b = b;
     }
 
     public ClassWithCollection(@NamedArg("a") double a, @NamedArg("b") double b) {

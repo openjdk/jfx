@@ -83,7 +83,7 @@ private:
     bool hasControlClip() const override { return true; }
     bool canHaveGeneratedChildren() const override { return false; }
 
-    const char* renderName() const override { return "RenderMenuList"; }
+    ASCIILiteral renderName() const override { return "RenderMenuList"_s; }
 
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
@@ -125,12 +125,12 @@ private:
 
     // Flexbox defines baselines differently than regular blocks.
     // For backwards compatibility, menulists need to do the regular block behavior.
-    int baselinePosition(FontBaseline baseline, bool firstLine, LineDirectionMode direction, LinePositionMode position) const override
+    LayoutUnit baselinePosition(FontBaseline baseline, bool firstLine, LineDirectionMode direction, LinePositionMode position) const override
     {
         return RenderBlock::baselinePosition(baseline, firstLine, direction, position);
     }
-    Optional<int> firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
-    Optional<int> inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
+    std::optional<LayoutUnit> firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
+    std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
 
     void getItemBackgroundColor(unsigned listIndex, Color&, bool& itemHasCustomBackgroundColor) const;
 
@@ -149,7 +149,7 @@ private:
     bool m_needsOptionsWidthUpdate;
     int m_optionsWidth;
 
-    Optional<int> m_lastActiveIndex;
+    std::optional<int> m_lastActiveIndex;
 
     std::unique_ptr<RenderStyle> m_optionStyle;
 

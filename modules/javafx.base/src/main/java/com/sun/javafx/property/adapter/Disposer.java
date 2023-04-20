@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,8 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * of the associated Runnable object will be called.
  */
 public class Disposer implements Runnable {
-    private static final ReferenceQueue queue = new ReferenceQueue();
-    private static final Map<Object, Runnable> records = new ConcurrentHashMap<>();
+    private static final ReferenceQueue<Object> queue = new ReferenceQueue<>();
+    private static final Map<Reference<?>, Runnable> records = new ConcurrentHashMap<>();
     private static Disposer disposerInstance;
 
     static {
@@ -52,7 +52,8 @@ public class Disposer implements Runnable {
 
         @SuppressWarnings("removal")
         var dummy = java.security.AccessController.doPrivileged(
-            new java.security.PrivilegedAction() {
+            new java.security.PrivilegedAction<>() {
+                @Override
                 public Object run() {
                     /* The thread must be a member of a thread group
                      * which will not get GCed before VM exit.
@@ -80,16 +81,17 @@ public class Disposer implements Runnable {
      * @param rec the associated Runnable object
      */
     public static void addRecord(Object target, Runnable rec) {
-        PhantomReference ref = new PhantomReference<>(target, queue);
+        PhantomReference<Object> ref = new PhantomReference<>(target, queue);
         records.put(ref, rec);
     }
 
+    @Override
     public void run() {
         while (true) {
             try {
-                Object obj = queue.remove();
-                ((Reference)obj).clear();
-                Runnable rec = (Runnable)records.remove(obj);
+                Reference<?> reference = queue.remove();
+                reference.clear();
+                Runnable rec = records.remove(reference);
                 rec.run();
             } catch (Exception e) {
                 System.out.println("Exception while removing reference: " + e);

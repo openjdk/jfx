@@ -124,6 +124,8 @@ gst_plugin_feature_load (GstPluginFeature * feature)
   else if (!real_feature->loaded)
     goto not_found;
 
+  GST_TRACER_PLUGIN_FEATURE_LOADED (real_feature);
+
   return real_feature;
 
   /* ERRORS */
@@ -489,6 +491,7 @@ _priv_gst_plugin_feature_rank_initialize (void)
           if (feature) {
             gst_plugin_feature_set_rank (feature, rank);
             GST_DEBUG ("Update rank of plugin feature \"%s\" to %d", str, rank);
+            gst_object_unref (feature);
           }
         }
       }

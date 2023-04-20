@@ -31,6 +31,7 @@
 
 namespace WebCore {
 
+class FontCache;
 class FontCascadeDescription;
 class FontDescription;
 class FontSelectorClient;

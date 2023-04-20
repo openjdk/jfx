@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ public class ImageHiDPITest {
     private ImageFrame loadImage(String path, float pixelScale) {
         try {
             ImageFrame[] imageFrames =
-                    ImageStorage.loadAll(path, null, 0, 0, true, pixelScale, true);
+                    new ImageStorage().loadAll(path, null, 0, 0, true, pixelScale, true);
 
             assertNotNull(imageFrames);
             assertEquals(1, imageFrames.length);

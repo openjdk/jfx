@@ -28,7 +28,6 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "ImageBuffer.h"
-#include "MediaSample.h"
 #include "RealtimeMediaSource.h"
 #include "VideoPreset.h"
 #include <wtf/Lock.h>
@@ -42,20 +41,23 @@ class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource {
 public:
     virtual ~RealtimeVideoCaptureSource();
 
-    void clientUpdatedSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate);
+    void clientUpdatedSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate);
 
-    bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) override;
+    bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
     virtual void generatePresets() = 0;
-    virtual MediaSample::VideoRotation sampleRotation() const { return MediaSample::VideoRotation::None; }
+    virtual VideoFrame::Rotation videoFrameRotation() const { return VideoFrame::Rotation::None; }
 
     double observedFrameRate() const { return m_observedFrameRate; }
     Vector<VideoPresetData> presetsData();
 
-protected:
-    RealtimeVideoCaptureSource(String&& name, String&& id, String&& hashSalt);
+    void ensureIntrinsicSizeMaintainsAspectRatio();
 
-    void prepareToProduceData();
-    void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) override;
+    const VideoPreset* currentPreset() const { return m_currentPreset.get(); }
+
+protected:
+    RealtimeVideoCaptureSource(AtomString&& name, String&& id, String&& hashSalt, PageIdentifier);
+
+    void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
 
     virtual bool prefersPreset(VideoPreset&) { return true; }
     virtual void setFrameRateWithPreset(double, RefPtr<VideoPreset>) { };
@@ -70,8 +72,9 @@ protected:
 
     void updateCapabilities(RealtimeMediaSourceCapabilities&);
 
-    void dispatchMediaSampleToObservers(MediaSample&);
-    const Vector<IntSize>& standardVideoSizes();
+    void dispatchVideoFrameToObservers(VideoFrame&, VideoFrameTimeMetadata);
+
+    static Span<const IntSize> standardVideoSizes();
 
 private:
     struct CaptureSizeAndFrameRate {
@@ -79,23 +82,24 @@ private:
         IntSize requestedSize;
         double requestedFrameRate { 0 };
     };
-    bool supportsCaptureSize(Optional<int>, Optional<int>, const Function<bool(const IntSize&)>&&);
-    Optional<CaptureSizeAndFrameRate> bestSupportedSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>);
+    bool supportsCaptureSize(std::optional<int>, std::optional<int>, const Function<bool(const IntSize&)>&&);
+    std::optional<CaptureSizeAndFrameRate> bestSupportedSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>);
     bool presetSupportsFrameRate(RefPtr<VideoPreset>, double);
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "RealtimeVideoCaptureSource"; }
 #endif
 
+    RefPtr<VideoPreset> m_currentPreset;
     Vector<Ref<VideoPreset>> m_presets;
     Deque<double> m_observedFrameTimeStamps;
     double m_observedFrameRate { 0 };
 };
 
 struct SizeAndFrameRate {
-    Optional<int> width;
-    Optional<int> height;
-    Optional<double> frameRate;
+    std::optional<int> width;
+    std::optional<int> height;
+    std::optional<double> frameRate;
 
     String toJSONString() const;
     Ref<JSON::Object> toJSONObject() const;

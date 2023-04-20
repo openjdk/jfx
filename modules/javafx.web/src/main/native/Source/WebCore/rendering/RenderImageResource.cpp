@@ -45,7 +45,7 @@ void RenderImageResource::initialize(RenderElement& renderer, CachedImage* style
 {
     ASSERT(!m_renderer);
     ASSERT(!m_cachedImage);
-    m_renderer = makeWeakPtr(renderer);
+    m_renderer = renderer;
     m_cachedImage = styleCachedImage;
     m_cachedImageRemoveClientIsNeeded = !styleCachedImage;
 }
@@ -63,6 +63,10 @@ void RenderImageResource::setCachedImage(CachedImage* newImage)
 
     if (m_cachedImage && m_renderer && m_cachedImageRemoveClientIsNeeded)
         m_cachedImage->removeClient(*m_renderer);
+    if (!m_renderer) {
+        // removeClient may have destroyed the renderer.
+        return;
+    }
     m_cachedImage = newImage;
     m_cachedImageRemoveClientIsNeeded = true;
     if (!m_cachedImage)
@@ -105,7 +109,7 @@ LayoutSize RenderImageResource::imageSize(float multiplier, CachedImage::SizeTyp
     if (!m_cachedImage)
         return LayoutSize();
     LayoutSize size = m_cachedImage->imageSizeForRenderer(m_renderer.get(), multiplier, type);
-    if (is<RenderImage>(m_renderer.get()))
+    if (is<RenderImage>(m_renderer))
         size.scale(downcast<RenderImage>(*m_renderer).imageDevicePixelRatio());
     return size;
 }

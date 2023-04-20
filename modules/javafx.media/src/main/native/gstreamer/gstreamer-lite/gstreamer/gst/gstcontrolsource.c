@@ -84,6 +84,7 @@ gst_control_source_get_value (GstControlSource * self, GstClockTime timestamp,
     gdouble * value)
 {
   g_return_val_if_fail (GST_IS_CONTROL_SOURCE (self), FALSE);
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (timestamp), FALSE);
 
   if (G_LIKELY (self->get_value)) {
     return self->get_value (self, timestamp, value);
@@ -112,6 +113,8 @@ gst_control_source_get_value_array (GstControlSource * self,
     gdouble * values)
 {
   g_return_val_if_fail (GST_IS_CONTROL_SOURCE (self), FALSE);
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (timestamp), FALSE);
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (interval), FALSE);
 
   if (G_LIKELY (self->get_value_array)) {
     return self->get_value_array (self, timestamp, interval, n_values, values);

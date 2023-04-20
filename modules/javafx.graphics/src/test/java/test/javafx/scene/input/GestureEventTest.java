@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,7 @@ package test.javafx.scene.input;
 import javafx.event.Event;
 import javafx.geometry.Point3D;
 import javafx.scene.input.GestureEvent;
-import javafx.scene.input.GestureEvent;
 import javafx.scene.input.GestureEventShim;
-import javafx.scene.input.PickResult;
 import javafx.scene.input.PickResult;
 import javafx.scene.shape.Rectangle;
 import org.junit.Test;

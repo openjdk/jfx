@@ -150,8 +150,8 @@ PluginWidgetJava::PluginWidgetJava(
     const IntSize& size,
     const String& url,
     const String& mimeType,
-    const Vector<String>& paramNames,
-    const Vector<String>& paramValues)
+    const Vector<AtomString>& paramNames,
+    const Vector<AtomString>& paramValues)
       : m_element(element),
         m_url(url),
         m_mimeType(mimeType),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
         this.list = decorated;
         this.list.addListener((ListChangeListener.Change<? extends E> c) -> {
             ListListenerHelper.fireValueChangedEvent(helper,
-                    new SourceAdapterChange<E>(VetoableListDecorator.this, c));
+                    new SourceAdapterChange<>(VetoableListDecorator.this, c));
         });
     }
 
@@ -110,7 +110,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
 
     @Override
     public boolean setAll(Collection<? extends E> col) {
-        onProposedChange(Collections.unmodifiableList(new ArrayList(col)), 0, size());
+        onProposedChange(Collections.unmodifiableList(new ArrayList<>(col)), 0, size());
         try {
             modCount++;
             return list.setAll(col);
@@ -230,7 +230,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        onProposedChange(Collections.unmodifiableList(new ArrayList(c)), size(), size());
+        onProposedChange(Collections.unmodifiableList(new ArrayList<>(c)), size(), size());
         try {
             modCount++;
             boolean ret = list.addAll(c);
@@ -245,7 +245,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
 
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
-        onProposedChange(Collections.unmodifiableList(new ArrayList(c)), index, index);
+        onProposedChange(Collections.unmodifiableList(new ArrayList<>(c)), index, index);
         try {
             modCount++;
             boolean ret = list.addAll(index, c);
@@ -461,7 +461,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
         @Override
         public boolean addAll(Collection<? extends E> c) {
             checkForComodification();
-            onProposedChange(Collections.unmodifiableList(new ArrayList(c)), offset + size(), offset + size());
+            onProposedChange(Collections.unmodifiableList(new ArrayList<>(c)), offset + size(), offset + size());
             try {
                 incrementModCount();
                 boolean res =  subList.addAll(c);
@@ -477,7 +477,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
         @Override
         public boolean addAll(int index, Collection<? extends E> c) {
             checkForComodification();
-            onProposedChange(Collections.unmodifiableList(new ArrayList(c)), offset + index, offset + index);
+            onProposedChange(Collections.unmodifiableList(new ArrayList<>(c)), offset + index, offset + index);
             try {
                 incrementModCount();
                 boolean res = subList.addAll(index, c);

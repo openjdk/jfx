@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import javafx.beans.value.ChangeListener;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.control.CheckBoxTreeItem;
-import javafx.scene.control.CheckBoxTreeItem.TreeModificationEvent;
 import javafx.scene.control.TreeItem;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;

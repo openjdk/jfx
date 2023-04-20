@@ -30,15 +30,9 @@
 #include <mach/mach_init.h>
 #include <utility>
 
-#define LOG_CHANNEL_PREFIX Log
+#include <wtf/Logging.h>
 
 namespace WTF {
-
-#if RELEASE_LOG_DISABLED
-WTFLogChannel LogProcess = { WTFLogChannelState::On, "Process", WTFLogLevel::Error };
-#else
-WTFLogChannel LogProcess = { WTFLogChannelState::On, "Process", WTFLogLevel::Error, LOG_CHANNEL_WEBKIT_SUBSYSTEM, OS_LOG_DEFAULT };
-#endif
 
 static void retainSendRight(mach_port_t port)
 {
@@ -78,8 +72,26 @@ void deallocateSendRightSafely(mach_port_t port)
         CRASH();
 }
 
+static void assertSendRight(mach_port_t port)
+{
+    if (port == MACH_PORT_NULL)
+        return;
+
+    unsigned count = 0;
+    auto kr = mach_port_get_refs(mach_task_self(), port, MACH_PORT_RIGHT_SEND, &count);
+    if (kr == KERN_SUCCESS && !count)
+        kr = mach_port_get_refs(mach_task_self(), port, MACH_PORT_RIGHT_DEAD_NAME, &count);
+
+    if (kr == KERN_SUCCESS && count > 0)
+        return;
+
+    RELEASE_LOG_ERROR(Process, "mach_port_get_refs error for port %d: %{private}s (%#x)", port, mach_error_string(kr), kr);
+    CRASH();
+}
+
 MachSendRight MachSendRight::adopt(mach_port_t port)
 {
+    assertSendRight(port);
     return MachSendRight(port);
 }
 
@@ -124,6 +136,7 @@ MachSendRight& MachSendRight::operator=(MachSendRight&& other)
 MachSendRight& MachSendRight::operator=(const MachSendRight& other)
 {
     if (this != &other) {
+        releaseSendRight(m_port);
         m_port = other.sendRight();
         retainSendRight(m_port);
     }

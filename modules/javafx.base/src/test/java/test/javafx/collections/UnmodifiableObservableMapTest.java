@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,11 +68,10 @@ public class UnmodifiableObservableMapTest {
     }
 
     @Before
-    @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
         observableMap = mapFactory.call();
         unmodifiableMap = FXCollections.unmodifiableObservableMap(observableMap);
-        observer = new MockMapObserver<String, String>();
+        observer = new MockMapObserver<>();
         unmodifiableMap.addListener(observer);
 
         useMapData();
@@ -120,7 +119,7 @@ public class UnmodifiableObservableMapTest {
 
     @Test
     public void testPutAll() {
-        Map<String, String> map = new HashMap<String, String>();
+        Map<String, String> map = new HashMap<>();
         map.put("oFoo", "OFoo");
         map.put("pFoo", "PFoo");
         map.put("foo", "foofoo");
@@ -201,7 +200,6 @@ public class UnmodifiableObservableMapTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testEntrySet() {
         try {
             unmodifiableMap.entrySet().remove(entry("one","1"));
@@ -232,7 +230,7 @@ public class UnmodifiableObservableMapTest {
     }
 
     private<K, V> Map.Entry<K, V> entry(final K key, final V value) {
-        return new Map.Entry<K, V>() {
+        return new Map.Entry<>() {
 
             @Override
             public K getKey() {

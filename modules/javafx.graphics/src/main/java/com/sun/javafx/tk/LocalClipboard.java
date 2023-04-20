@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ final class LocalClipboard implements TKClipboard {
     private final Map<DataFormat, Object> values;
 
     public LocalClipboard() {
-        values = new HashMap<DataFormat, Object>();
+        values = new HashMap<>();
     }
 
     @Override
@@ -50,8 +50,7 @@ final class LocalClipboard implements TKClipboard {
 
     @Override
     public Set<DataFormat> getContentTypes() {
-        return Collections.unmodifiableSet(
-                   new HashSet<DataFormat>(values.keySet()));
+        return Collections.unmodifiableSet(new HashSet<>(values.keySet()));
     }
 
     @Override

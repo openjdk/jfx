@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +24,7 @@
 #include "RenderWidget.h"
 
 #include "AXObjectCache.h"
+#include "DocumentInlines.h"
 #include "FloatRoundedRect.h"
 #include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
@@ -48,6 +49,7 @@ static HashMap<const Widget*, RenderWidget*>& widgetRendererMap()
 }
 
 unsigned WidgetHierarchyUpdatesSuspensionScope::s_widgetHierarchyUpdateSuspendCount = 0;
+bool WidgetHierarchyUpdatesSuspensionScope::s_haveScheduledWidgetToMove = false;
 
 WidgetHierarchyUpdatesSuspensionScope::WidgetToParentMap& WidgetHierarchyUpdatesSuspensionScope::widgetNewParentMap()
 {
@@ -57,6 +59,7 @@ WidgetHierarchyUpdatesSuspensionScope::WidgetToParentMap& WidgetHierarchyUpdates
 
 void WidgetHierarchyUpdatesSuspensionScope::moveWidgets()
 {
+    ASSERT(s_haveScheduledWidgetToMove);
     while (!widgetNewParentMap().isEmpty()) {
         auto map = std::exchange(widgetNewParentMap(), { });
         for (auto& entry : map) {
@@ -71,6 +74,7 @@ void WidgetHierarchyUpdatesSuspensionScope::moveWidgets()
             }
         }
     }
+    s_haveScheduledWidgetToMove = false;
 }
 
 static void moveWidgetToParentSoon(Widget& child, FrameView* parent)
@@ -103,6 +107,8 @@ void RenderWidget::willBeDestroyed()
         cache->remove(this);
     }
 
+    if (renderTreeBeingDestroyed() && document().backForwardCacheState() == Document::NotInBackForwardCache && m_widget)
+        m_widget->willBeDestroyed();
     setWidget(nullptr);
 
     RenderReplaced::willBeDestroyed();
@@ -134,7 +140,7 @@ bool RenderWidget::setWidgetGeometry(const LayoutRect& frame)
 
     m_clipRect = clipRect;
 
-    auto weakThis = makeWeakPtr(*this);
+    WeakPtr weakThis { *this };
     // These calls *may* cause this renderer to disappear from underneath...
     if (boundsChanged)
         m_widget->setFrameRect(newFrameRect);
@@ -184,7 +190,7 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
         // widget immediately, but we have to have really been fully constructed.
         if (hasInitializedStyle()) {
             if (!needsLayout()) {
-                auto weakThis = makeWeakPtr(*this);
+                WeakPtr weakThis { *this };
                 updateWidgetGeometry();
                 if (!weakThis)
                     return;
@@ -199,6 +205,9 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
         }
         moveWidgetToParentSoon(*m_widget, &view().frameView());
     }
+
+    if (auto* cache = document().existingAXObjectCache())
+        cache->childrenChanged(this);
 }
 
 void RenderWidget::layout()
@@ -329,8 +338,9 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 
     // Paint a partially transparent wash over selected widgets.
     if (isSelected() && !document().printing()) {
-        // FIXME: selectionRect() is in absolute, not painting coordinates.
-        paintInfo.context().fillRect(snappedIntRect(selectionRect()), selectionBackgroundColor());
+        LayoutRect rect = localSelectionRect();
+        rect.moveBy(adjustedPaintOffset);
+        paintInfo.context().fillRect(snappedIntRect(rect), selectionBackgroundColor());
     }
 
     if (hasLayer() && layer()->canResize()) {
@@ -350,7 +360,7 @@ RenderWidget::ChildWidgetState RenderWidget::updateWidgetPosition()
     if (!m_widget)
         return ChildWidgetState::Destroyed;
 
-    auto weakThis = makeWeakPtr(*this);
+    WeakPtr weakThis { *this };
     bool widgetSizeChanged = updateWidgetGeometry();
     if (!weakThis || !m_widget)
         return ChildWidgetState::Destroyed;
@@ -387,7 +397,7 @@ RenderWidget* RenderWidget::find(const Widget& widget)
 
 bool RenderWidget::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction action)
 {
-    auto shouldHitTestChildFrameContent = request.allowsChildFrameContent() || (request.allowsVisibleChildFrameContent() && visibleToHitTesting());
+    auto shouldHitTestChildFrameContent = request.allowsChildFrameContent() || (request.allowsVisibleChildFrameContent() && visibleToHitTesting(request));
     auto hasRenderView = is<FrameView>(widget()) && downcast<FrameView>(*widget()).renderView();
     if (shouldHitTestChildFrameContent && hasRenderView) {
         FrameView& childFrameView = downcast<FrameView>(*widget());
@@ -395,7 +405,7 @@ bool RenderWidget::nodeAtPoint(const HitTestRequest& request, HitTestResult& res
         LayoutPoint adjustedLocation = accumulatedOffset + location();
         LayoutPoint contentOffset = LayoutPoint(borderLeft() + paddingLeft(), borderTop() + paddingTop()) - toIntSize(childFrameView.scrollPosition());
         HitTestLocation newHitTestLocation(locationInContainer, -adjustedLocation - contentOffset);
-        HitTestRequest newHitTestRequest(request.type() | HitTestRequest::ChildFrameHitTest);
+        HitTestRequest newHitTestRequest(request.type() | HitTestRequest::Type::ChildFrameHitTest);
         HitTestResult childFrameResult(newHitTestLocation);
 
         auto* document = childFrameView.frame().document();

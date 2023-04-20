@@ -29,9 +29,11 @@ require "config"
 require "backends"
 require "digest/sha1"
 require "offsets"
+require 'optparse'
 require "parser"
 require "self_hash"
 require "settings"
+require "shellwords"
 require "transform"
 
 IncludeFile.processIncludeOptions()
@@ -42,9 +44,20 @@ outputFlnm = ARGV.shift
 validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
 includeOnlyBackends(validBackends)
 
-inputHash = "// SettingsExtractor input hash: #{parseHash(inputFlnm)} #{selfHash}"
+$options = {}
+OptionParser.new do |opts|
+    opts.banner = "Usage: generate_settings_extractor.rb asmFile settingFile [--webkit-additions-path=<path>] [--depfile=<depfile>]"
+    opts.on("--webkit-additions-path=PATH", "WebKitAdditions path.") do |path|
+        $options[:webkit_additions_path] = path
+    end
+    opts.on("--depfile=DEPFILE", "path to write Makefile-style discovered dependencies to.") do |path|
+        $options[:depfile] = path
+    end
+end.parse!
 
-if FileTest.exist? outputFlnm
+inputHash = "// SettingsExtractor input hash: #{parseHash(inputFlnm, $options)} #{selfHash}"
+
+if FileTest.exist?(outputFlnm) and (not $options[:depfile] or FileTest.exist?($options[:depfile]))
     File.open(outputFlnm, "r") {
         | inp |
         firstLine = inp.gets
@@ -55,8 +68,15 @@ if FileTest.exist? outputFlnm
     }
 end
 
-originalAST = parse(inputFlnm)
+sources = Set.new
+originalAST = parse(inputFlnm, $options, sources)
 prunedAST = Sequence.new(originalAST.codeOrigin, originalAST.filter(Setting))
+
+if $options[:depfile]
+    depfile = File.open($options[:depfile], "w")
+    depfile.print(Shellwords.escape(outputFlnm), ": ")
+    depfile.puts(Shellwords.join(sources.sort))
+end
 
 File.open(outputFlnm, "w") {
     | outp |

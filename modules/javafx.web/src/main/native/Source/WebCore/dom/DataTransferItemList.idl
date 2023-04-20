@@ -30,7 +30,7 @@
  */
 
 [
-    EnabledBySetting=DataTransferItems,
+    EnabledBySetting=DataTransferItemsEnabled,
     JSGenerateToNativeObject,
     JSGenerateToJSObject,
     Exposed=Window
@@ -38,10 +38,10 @@
     readonly attribute long length;
     getter DataTransferItem item(unsigned long index);
 
-    [MayThrowException] DataTransferItem? add(DOMString data, DOMString type);
+    DataTransferItem? add(DOMString data, DOMString type);
     DataTransferItem? add(File file);
 
-    [MayThrowException] undefined remove(unsigned long index);
+    undefined remove(unsigned long index);
 
     undefined clear();
 };

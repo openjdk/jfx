@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "config.h"
 #include "TypeProfilerLog.h"
 
+#include "FrameTracers.h"
 #include "JSCJSValueInlines.h"
 #include "TypeLocation.h"
 
@@ -58,9 +59,9 @@ void TypeProfilerLog::processLogEntries(VM& vm, const String& reason)
     // We need to do this because this code will call into calculatedDisplayName.
     // calculatedDisplayName will clear any exception it sees (because it thinks
     // it's a stack overflow). We may be called when an exception was already
-    // thrown, so we don't want calcualtedDisplayName to clear that exception that
+    // thrown, so we don't want calculatedDisplayName to clear that exception that
     // was thrown before we even got here.
-    VM::DeferExceptionScope deferExceptionScope(vm);
+    SuspendExceptionScope suspendExceptionScope(vm);
 
     MonotonicTime before { };
     if (TypeProfilerLogInternal::verbose) {
@@ -80,7 +81,7 @@ void TypeProfilerLog::processLogEntries(VM& vm, const String& reason)
         Structure* structure = nullptr;
         bool sawPolyProtoStructure = false;
         if (id) {
-            structure = Heap::heap(value.asCell())->structureIDTable().get(id);
+            structure = id.decode();
             auto iter = cachedMonoProtoShapes.find(structure);
             if (iter == cachedMonoProtoShapes.end()) {
                 auto key = std::make_pair(structure, value.asCell());
@@ -101,7 +102,7 @@ void TypeProfilerLog::processLogEntries(VM& vm, const String& reason)
                 shape = iter->value;
         }
 
-        RuntimeType type = runtimeTypeForValue(m_vm, value);
+        RuntimeType type = runtimeTypeForValue(value);
         TypeLocation* location = entry->location;
         location->m_lastSeenType = type;
         if (location->m_globalTypeSet)
@@ -131,7 +132,7 @@ void TypeProfilerLog::visit(AbstractSlotVisitor& visitor)
     for (LogEntry* entry = m_logStartPtr; entry != m_currentLogEntryPtr; ++entry) {
         visitor.appendUnbarriered(entry->value);
         if (StructureID id = entry->structureID) {
-            Structure* structure = visitor.heap()->structureIDTable().get(id);
+            Structure* structure = id.decode();
             visitor.appendUnbarriered(structure);
         }
     }

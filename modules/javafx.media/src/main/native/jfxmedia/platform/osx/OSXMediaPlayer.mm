@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,9 @@
 #import <CoreAudio/CoreAudio.h>
 #import <jni/Logger.h>
 #import <jni/JniUtils.h>
+#import <jni/JavaInputStreamCallbacks.h>
+#import <Locator/Locator.h>
+#import <Locator/LocatorStream.h>
 #import <jfxmedia_errors.h>
 
 #import <objc/runtime.h>
@@ -98,7 +101,7 @@ static Class gMediaPlayerClass = nil;
     return self;
 }
 
-- (id) initWithURL:(NSURL *)source javaPlayer:(jobject)jp andEnv:(JNIEnv*)env eventHandler:(CJavaPlayerEventDispatcher*)hdlr
+- (id) initWithURL:(NSURL *)source javaPlayer:(jobject)jp andEnv:(JNIEnv*)env eventHandler:(CJavaPlayerEventDispatcher*)hdlr locatorStream:(CLocatorStream*)ls
 {
     if (!gMediaPlayerClass) {
         // No player class available, abort
@@ -124,12 +127,12 @@ static Class gMediaPlayerClass = nil;
         eventHandler = hdlr;
 
         // create the player object
-        player = [[gMediaPlayerClass alloc] initWithURL:movieURL eventHandler:eventHandler];
+        player = [[gMediaPlayerClass alloc] initWithURL:movieURL eventHandler:eventHandler locatorStream:ls];
     }
     return self;
 }
 
-- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr
+- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr locatorStream:(CLocatorStream*)ls
 {
     // stub initWithURL message to satisfy the protocol requirements, this should
     // never be called
@@ -288,14 +291,20 @@ static Class gMediaPlayerClass = nil;
  * Signature: (Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlayer_osxCreatePlayer
-    (JNIEnv *env, jobject playerObject, jstring sourceURI)
+    (JNIEnv *env, jobject playerObject, jobject jLocator, jstring jContentType,
+    jlong jSizeHint)
 {
+    CLocatorStream *locatorStream = NULL;
+    jstring jSourceURI = CLocator::LocatorGetStringLocation(env, jLocator);
+    char *pjSourceURI = NULL;
+    char *pjContent = NULL;
+
     // create the event dispatcher, init later
     CJavaPlayerEventDispatcher *eventHandler = new CJavaPlayerEventDispatcher();
     eventHandler->Init(env, playerObject, NULL);
 
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    NSString *sourceURIString = NSStringFromJavaString(env, sourceURI);
+    NSString *sourceURIString = NSStringFromJavaString(env, jSourceURI);
     if (!sourceURIString) {
         LOGGER_ERRORMSG("OSXMediaPlayer: Unable to create sourceURIString\n");
         ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
@@ -311,7 +320,53 @@ JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlay
         return;
     }
 
-    OSXMediaPlayer *player = [[OSXMediaPlayer alloc] initWithURL:mediaURL javaPlayer:playerObject andEnv:env eventHandler:eventHandler];
+    // Check if we need to use Locator to read data. For FILE/HTTP/HTTPS
+    // AVFoundation will read data directly. For JAR/JRT we will use Locator to
+    // read data.
+    NSString *scheme = [mediaURL scheme];
+    if ([scheme caseInsensitiveCompare:@"jar"] == NSOrderedSame ||
+        [scheme caseInsensitiveCompare:@"jrt"] == NSOrderedSame) {
+        CJavaInputStreamCallbacks *callbacks = new (nothrow) CJavaInputStreamCallbacks();
+        if (callbacks == NULL) {
+            [mediaURL release];
+            LOGGER_WARNMSG("OSXMediaPlayer: Unable to create CJavaInputStreamCallbacks\n");
+            ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
+                               "OSXMediaPlayer: Unable to create CJavaInputStreamCallbacks");
+            return;
+        }
+
+        if (!callbacks->Init(env, jLocator)) {
+            [mediaURL release];
+            delete callbacks;
+            LOGGER_WARNMSG("OSXMediaPlayer: callbacks->Init() failed\n");
+            ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
+                               "OSXMediaPlayer: callbacks->Init() failed");
+            return;
+        }
+
+        pjContent = (char*)env->GetStringUTFChars(jContentType, NULL);
+        pjSourceURI = (char*)env->GetStringUTFChars(jSourceURI, NULL);
+        if (pjContent == NULL || pjSourceURI == NULL) {
+            [mediaURL release];
+            delete callbacks;
+            if (pjContent != NULL) {
+                env->ReleaseStringUTFChars(jContentType, pjContent);
+            }
+            if (pjSourceURI != NULL) {
+                env->ReleaseStringUTFChars(jSourceURI, pjSourceURI);
+            }
+            LOGGER_WARNMSG("OSXMediaPlayer: memory allocation failed\n");
+            ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
+                                    "OSXMediaPlayer: memory allocation failed");
+            return;
+        }
+
+        locatorStream = new(nothrow) CLocatorStream(callbacks, pjContent, pjSourceURI, jSizeHint);
+        env->ReleaseStringUTFChars(jContentType, pjContent);
+        env->ReleaseStringUTFChars(jSourceURI, pjSourceURI);
+    }
+
+    OSXMediaPlayer *player = [[OSXMediaPlayer alloc] initWithURL:mediaURL javaPlayer:playerObject andEnv:env eventHandler:eventHandler locatorStream:locatorStream];
     if (!player) {
         LOGGER_WARNMSG("OSXMediaPlayer: Unable to create player\n");
         ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",

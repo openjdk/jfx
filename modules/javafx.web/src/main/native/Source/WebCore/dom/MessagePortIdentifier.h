@@ -36,15 +36,18 @@ struct MessagePortIdentifier {
     enum PortIdentifierType { };
     ObjectIdentifier<PortIdentifierType> portIdentifier;
 
-    unsigned hash() const;
-
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MessagePortIdentifier> decode(Decoder&);
+    template<class Decoder> static std::optional<MessagePortIdentifier> decode(Decoder&);
 
 #if !LOG_DISABLED
     String logString() const;
 #endif
 };
+
+inline void add(Hasher& hasher, const MessagePortIdentifier& identifier)
+{
+    add(hasher, identifier.processIdentifier, identifier.portIdentifier);
+}
 
 inline bool operator==(const MessagePortIdentifier& a, const MessagePortIdentifier& b)
 {
@@ -58,24 +61,19 @@ void MessagePortIdentifier::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<MessagePortIdentifier> MessagePortIdentifier::decode(Decoder& decoder)
+std::optional<MessagePortIdentifier> MessagePortIdentifier::decode(Decoder& decoder)
 {
-    Optional<ProcessIdentifier> processIdentifier;
+    std::optional<ProcessIdentifier> processIdentifier;
     decoder >> processIdentifier;
     if (!processIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<ObjectIdentifier<PortIdentifierType>> portIdentifier;
+    std::optional<ObjectIdentifier<PortIdentifierType>> portIdentifier;
     decoder >> portIdentifier;
     if (!portIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return { { WTFMove(*processIdentifier), WTFMove(*portIdentifier) } };
-}
-
-inline unsigned MessagePortIdentifier::hash() const
-{
-    return computeHash(processIdentifier.toUInt64(), portIdentifier.toUInt64());
 }
 
 #if !LOG_DISABLED
@@ -92,7 +90,7 @@ inline String MessagePortIdentifier::logString() const
 namespace WTF {
 
 struct MessagePortIdentifierHash {
-    static unsigned hash(const WebCore::MessagePortIdentifier& key) { return key.hash(); }
+    static unsigned hash(const WebCore::MessagePortIdentifier& key) { return computeHash(key); }
     static bool equal(const WebCore::MessagePortIdentifier& a, const WebCore::MessagePortIdentifier& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = true;
 };
@@ -100,9 +98,9 @@ struct MessagePortIdentifierHash {
 template<> struct HashTraits<WebCore::MessagePortIdentifier> : GenericHashTraits<WebCore::MessagePortIdentifier> {
     static WebCore::MessagePortIdentifier emptyValue() { return { }; }
 
-    static void constructDeletedValue(WebCore::MessagePortIdentifier& slot) { slot.processIdentifier = makeObjectIdentifier<WebCore::ProcessIdentifierType>(std::numeric_limits<uint64_t>::max()); }
+    static void constructDeletedValue(WebCore::MessagePortIdentifier& slot) { new (NotNull, &slot.processIdentifier) WebCore::ProcessIdentifier(WTF::HashTableDeletedValue); }
 
-    static bool isDeletedValue(const WebCore::MessagePortIdentifier& slot) { return slot.processIdentifier.toUInt64() == std::numeric_limits<uint64_t>::max(); }
+    static bool isDeletedValue(const WebCore::MessagePortIdentifier& slot) { return slot.processIdentifier.isHashTableDeletedValue(); }
 };
 
 template<> struct DefaultHash<WebCore::MessagePortIdentifier> : MessagePortIdentifierHash { };

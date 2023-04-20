@@ -26,9 +26,12 @@
 #include "config.h"
 #include "FontGenericFamilies.h"
 
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/Language.h>
 
 namespace WebCore {
+
+using namespace WebKitFontFamilyNames;
 
 static bool setGenericFontFamilyForScript(ScriptFontFamilyMap& fontMap, const String& family, UScriptCode script)
 {
@@ -41,29 +44,6 @@ static bool setGenericFontFamilyForScript(ScriptFontFamilyMap& fontMap, const St
     return true;
 }
 
-static inline bool computeUserPrefersSimplified()
-{
-    const Vector<String>& preferredLanguages = userPreferredLanguages();
-    for (auto& language : preferredLanguages) {
-        if (equalIgnoringASCIICase(language, "zh-tw"))
-            return false;
-        if (equalIgnoringASCIICase(language, "zh-cn"))
-            return true;
-    }
-    return true;
-}
-
-static bool& cachedUserPrefersSimplified()
-{
-    static bool cached = true;
-    return cached;
-}
-
-static void languageChanged(void*)
-{
-    cachedUserPrefersSimplified() = computeUserPrefersSimplified();
-}
-
 static const String& genericFontFamilyForScript(const ScriptFontFamilyMap& fontMap, UScriptCode script)
 {
     ScriptFontFamilyMap::const_iterator it = fontMap.find(static_cast<int>(script));
@@ -72,7 +52,7 @@ static const String& genericFontFamilyForScript(const ScriptFontFamilyMap& fontM
     // Content using USCRIPT_HAN doesn't tell us if we should be using Simplified Chinese or Traditional Chinese. In the
     // absence of all other signals, we consult with the user's system preferences.
     if (script == USCRIPT_HAN) {
-        it = fontMap.find(static_cast<int>(cachedUserPrefersSimplified() ? USCRIPT_SIMPLIFIED_HAN : USCRIPT_TRADITIONAL_HAN));
+        it = fontMap.find(static_cast<int>(userPrefersSimplifiedChinese() ? USCRIPT_SIMPLIFIED_HAN : USCRIPT_TRADITIONAL_HAN));
         if (it != fontMap.end())
             return it->value;
     }
@@ -81,32 +61,31 @@ static const String& genericFontFamilyForScript(const ScriptFontFamilyMap& fontM
     return emptyAtom();
 }
 
-FontGenericFamilies::FontGenericFamilies()
-{
-    static std::once_flag once;
-    std::call_once(once, [&] {
-        addLanguageChangeObserver(&once, &languageChanged);
-        languageChanged(nullptr);
-    });
-}
+FontGenericFamilies::FontGenericFamilies() = default;
 
-FontGenericFamilies FontGenericFamilies::isolatedCopy() const
+FontGenericFamilies FontGenericFamilies::isolatedCopy() const &
 {
     FontGenericFamilies copy;
-    for (auto &keyValue : m_standardFontFamilyMap)
-        copy.m_standardFontFamilyMap.add(keyValue.key, keyValue.value.isolatedCopy());
-    for (auto &keyValue : m_serifFontFamilyMap)
-        copy.m_serifFontFamilyMap.add(keyValue.key, keyValue.value.isolatedCopy());
-    for (auto &keyValue : m_fixedFontFamilyMap)
-        copy.m_fixedFontFamilyMap.add(keyValue.key, keyValue.value.isolatedCopy());
-    for (auto &keyValue : m_sansSerifFontFamilyMap)
-        copy.m_sansSerifFontFamilyMap.add(keyValue.key, keyValue.value.isolatedCopy());
-    for (auto &keyValue : m_cursiveFontFamilyMap)
-        copy.m_cursiveFontFamilyMap.add(keyValue.key, keyValue.value.isolatedCopy());
-    for (auto &keyValue : m_fantasyFontFamilyMap)
-        copy.m_fantasyFontFamilyMap.add(keyValue.key, keyValue.value.isolatedCopy());
-    for (auto &keyValue : m_pictographFontFamilyMap)
-        copy.m_pictographFontFamilyMap.add(keyValue.key, keyValue.value.isolatedCopy());
+    copy.m_standardFontFamilyMap = crossThreadCopy(m_standardFontFamilyMap);
+    copy.m_serifFontFamilyMap = crossThreadCopy(m_serifFontFamilyMap);
+    copy.m_fixedFontFamilyMap = crossThreadCopy(m_fixedFontFamilyMap);
+    copy.m_sansSerifFontFamilyMap = crossThreadCopy(m_sansSerifFontFamilyMap);
+    copy.m_cursiveFontFamilyMap = crossThreadCopy(m_cursiveFontFamilyMap);
+    copy.m_fantasyFontFamilyMap = crossThreadCopy(m_fantasyFontFamilyMap);
+    copy.m_pictographFontFamilyMap = crossThreadCopy(m_pictographFontFamilyMap);
+    return copy;
+}
+
+FontGenericFamilies FontGenericFamilies::isolatedCopy() &&
+{
+    FontGenericFamilies copy;
+    copy.m_standardFontFamilyMap = crossThreadCopy(WTFMove(m_standardFontFamilyMap));
+    copy.m_serifFontFamilyMap = crossThreadCopy(WTFMove(m_serifFontFamilyMap));
+    copy.m_fixedFontFamilyMap = crossThreadCopy(WTFMove(m_fixedFontFamilyMap));
+    copy.m_sansSerifFontFamilyMap = crossThreadCopy(WTFMove(m_sansSerifFontFamilyMap));
+    copy.m_cursiveFontFamilyMap = crossThreadCopy(WTFMove(m_cursiveFontFamilyMap));
+    copy.m_fantasyFontFamilyMap = crossThreadCopy(WTFMove(m_fantasyFontFamilyMap));
+    copy.m_pictographFontFamilyMap = crossThreadCopy(WTFMove(m_pictographFontFamilyMap));
     return copy;
 }
 
@@ -178,6 +157,31 @@ bool FontGenericFamilies::setFantasyFontFamily(const String& family, UScriptCode
 bool FontGenericFamilies::setPictographFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_pictographFontFamilyMap, family, script);
+}
+
+const String* FontGenericFamilies::fontFamily(FamilyNamesIndex family, UScriptCode script) const
+{
+    switch (family) {
+    case FamilyNamesIndex::CursiveFamily:
+        return &cursiveFontFamily(script);
+    case FamilyNamesIndex::FantasyFamily:
+        return &fantasyFontFamily(script);
+    case FamilyNamesIndex::MonospaceFamily:
+        return &fixedFontFamily(script);
+    case FamilyNamesIndex::PictographFamily:
+        return &pictographFontFamily(script);
+    case FamilyNamesIndex::SansSerifFamily:
+        return &sansSerifFontFamily(script);
+    case FamilyNamesIndex::SerifFamily:
+        return &serifFontFamily(script);
+    case FamilyNamesIndex::StandardFamily:
+        return &standardFontFamily(script);
+    case FamilyNamesIndex::SystemUiFamily:
+        return nullptr;
+    }
+
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 }

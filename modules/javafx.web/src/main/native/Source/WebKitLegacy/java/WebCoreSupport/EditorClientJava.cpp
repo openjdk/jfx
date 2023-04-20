@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,8 @@
 #include <WebCore/Widget.h>
 
 #include <wtf/Assertions.h>
+//#include <wtf/text/ASCIILiteral.h>
+
 
 #include "com_sun_webkit_event_WCKeyEvent.h"
 
@@ -296,7 +298,7 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     if (!frame)
         return false;
 
-    String commandName = interpretKeyEvent(evt);
+    String commandName = String::fromLatin1(interpretKeyEvent(evt));
     Editor::Command command = frame->editor().command(commandName);
 
     if (keyEvent->type() == PlatformKeyboardEvent::RawKeyDown) {
@@ -365,7 +367,7 @@ void EditorClientJava::handleKeyboardEvent(KeyboardEvent& evt)
     }
 }
 
-bool EditorClientJava::shouldDeleteRange(const Optional<SimpleRange>&)
+bool EditorClientJava::shouldDeleteRange(const std::optional<SimpleRange>&)
 {
     notImplemented();
     return true;
@@ -414,18 +416,18 @@ bool EditorClientJava::shouldEndEditing(const SimpleRange&)
     return true;
 }
 
-bool EditorClientJava::shouldInsertText(const String&, const Optional<SimpleRange>&, EditorInsertAction)
+bool EditorClientJava::shouldInsertText(const String&, const std::optional<SimpleRange>&, EditorInsertAction)
 {
     notImplemented();
     return true;
 }
 
-bool EditorClientJava::shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, Affinity, bool)
+bool EditorClientJava::shouldChangeSelectedRange(const std::optional<SimpleRange>&, const std::optional<SimpleRange>&, Affinity, bool)
 {
     return true;
 }
 
-bool EditorClientJava::shouldApplyStyle(const StyleProperties&, const Optional<SimpleRange>&)
+bool EditorClientJava::shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&)
 {
     return true;
 }
@@ -510,7 +512,7 @@ void EditorClientJava::redo()
     }
 }
 
-bool EditorClientJava::shouldInsertNode(Node&, const Optional<SimpleRange>&, EditorInsertAction)
+bool EditorClientJava::shouldInsertNode(Node&, const std::optional<SimpleRange>&, EditorInsertAction)
 {
     notImplemented();
     return true;
@@ -532,39 +534,43 @@ void EditorClientJava::toggleGrammarChecking()
     notImplemented();
 }
 
-void EditorClientJava::textFieldDidBeginEditing(Element*)
+void EditorClientJava::textFieldDidBeginEditing(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textFieldDidEndEditing(Element*)
+void EditorClientJava::textFieldDidEndEditing(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textDidChangeInTextField(Element*)
+void EditorClientJava::textDidChangeInTextField(Element&)
 {
     notImplemented();
 }
 
-bool EditorClientJava::doTextFieldCommandFromEvent(Element*, KeyboardEvent*)
+bool EditorClientJava::doTextFieldCommandFromEvent(Element&, KeyboardEvent*)
 {
     notImplemented();
     return false;
 }
 
-void EditorClientJava::textWillBeDeletedInTextField(Element*)
+void EditorClientJava::textWillBeDeletedInTextField(Element&)
 {
     notImplemented();
 }
 
-void EditorClientJava::textDidChangeInTextArea(Element*)
+void EditorClientJava::textDidChangeInTextArea(Element&)
 {
     notImplemented();
 }
 
 void EditorClientJava::overflowScrollPositionChanged() {
     notImplemented();
+}
+
+void EditorClientJava::subFrameScrollPositionChanged() {
+     notImplemented();
 }
 
 void EditorClientJava::updateSpellingUIWithGrammarString(const String&, const GrammarDetail&)
@@ -636,6 +642,11 @@ void EditorClientJava::discardedComposition(Frame*)
 {
 }
 
+DOMPasteAccessResponse EditorClientJava::requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier)
+{
+    return DOMPasteAccessResponse::DeniedForGesture;
+}
+
 void EditorClientJava::canceledComposition()
 {
 }
@@ -661,12 +672,12 @@ void EditorClientJava::clearUndoRedoOperations()
     m_redoStack.clear();
 }
 
-void EditorClientJava::getClientPasteboardData(const Optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
+void EditorClientJava::getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
 {
     notImplemented();
 }
 
-void EditorClientJava::willWriteSelectionToPasteboard(const Optional<SimpleRange>&)
+void EditorClientJava::willWriteSelectionToPasteboard(const std::optional<SimpleRange>&)
 {
 }
 
@@ -692,11 +703,11 @@ void EditorClientJava::checkSpellingOfString(StringView, int*, int*)
     notImplemented();
 }
 
-String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String&)
+/*String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String&)
 {
     notImplemented();
     return String();
-}
+}*/
 
 void EditorClientJava::checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public class TimelinePlayTest {
     }
 
     public void setupTimeline(Timeline a, LongProperty property, Pair<Duration, Long>... values) {
-        ObservableList<KeyFrame> keyFrames = ((Timeline) a).getKeyFrames();
+        ObservableList<KeyFrame> keyFrames = a.getKeyFrames();
         for (Pair<Duration, Long> v : values) {
             keyFrames.add(new KeyFrame(v.getKey(), new KeyValue(property, v.getValue())));
         }

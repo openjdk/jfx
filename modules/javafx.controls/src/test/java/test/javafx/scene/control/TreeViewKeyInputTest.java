@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class TreeViewKeyInputTest {
     private TreeView<String> treeView;
@@ -69,20 +68,20 @@ public class TreeViewKeyInputTest {
     private KeyEventFirer keyboard;
     private StageLoader stageLoader;
 
-    private final TreeItem<String> root = new TreeItem<String>("Root");                     // 0
-        private final TreeItem<String> child1 = new TreeItem<String>("Child 1");            // 1
-        private final TreeItem<String> child2 = new TreeItem<String>("Child 2");            // 2
-        private final TreeItem<String> child3 = new TreeItem<String>("Child 3");            // 3
-            private final TreeItem<String> subchild1 = new TreeItem<String>("Subchild 1");  // 4
-            private final TreeItem<String> subchild2 = new TreeItem<String>("Subchild 2");  // 5
-            private final TreeItem<String> subchild3 = new TreeItem<String>("Subchild 3");  // 6
-        private final TreeItem<String> child4 = new TreeItem<String>("Child 4");            // 7
-        private final TreeItem<String> child5 = new TreeItem<String>("Child 5");            // 8
-        private final TreeItem<String> child6 = new TreeItem<String>("Child 6");            // 9
-        private final TreeItem<String> child7 = new TreeItem<String>("Child 7");            // 10
-        private final TreeItem<String> child8 = new TreeItem<String>("Child 8");            // 11
-        private final TreeItem<String> child9 = new TreeItem<String>("Child 9");            // 12
-        private final TreeItem<String> child10 = new TreeItem<String>("Child 10");          // 13
+    private final TreeItem<String> root = new TreeItem<>("Root");                     // 0
+        private final TreeItem<String> child1 = new TreeItem<>("Child 1");            // 1
+        private final TreeItem<String> child2 = new TreeItem<>("Child 2");            // 2
+        private final TreeItem<String> child3 = new TreeItem<>("Child 3");            // 3
+            private final TreeItem<String> subchild1 = new TreeItem<>("Subchild 1");  // 4
+            private final TreeItem<String> subchild2 = new TreeItem<>("Subchild 2");  // 5
+            private final TreeItem<String> subchild3 = new TreeItem<>("Subchild 3");  // 6
+        private final TreeItem<String> child4 = new TreeItem<>("Child 4");            // 7
+        private final TreeItem<String> child5 = new TreeItem<>("Child 5");            // 8
+        private final TreeItem<String> child6 = new TreeItem<>("Child 6");            // 9
+        private final TreeItem<String> child7 = new TreeItem<>("Child 7");            // 10
+        private final TreeItem<String> child8 = new TreeItem<>("Child 8");            // 11
+        private final TreeItem<String> child9 = new TreeItem<>("Child 9");            // 12
+        private final TreeItem<String> child10 = new TreeItem<>("Child 10");          // 13
 
     @Before public void setup() {
         // reset tree structure
@@ -112,7 +111,7 @@ public class TreeViewKeyInputTest {
         child10.setExpanded(false);
 
         // recreate treeview and gather models
-        treeView = new TreeView<String>();
+        treeView = new TreeView<>();
         treeView.setRoot(root);
         sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -1389,7 +1388,7 @@ public class TreeViewKeyInputTest {
     @Test public void test_rt32383_pageDown() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
-            root.getChildren().add(new TreeItem<String>("Row " + i));
+            root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
         final MultipleSelectionModel sm = treeView.getSelectionModel();
@@ -1413,7 +1412,7 @@ public class TreeViewKeyInputTest {
     @Test public void test_rt32383_pageUp() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
-            root.getChildren().add(new TreeItem<String>("Row " + i));
+            root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
         final int lastIndex = 99;

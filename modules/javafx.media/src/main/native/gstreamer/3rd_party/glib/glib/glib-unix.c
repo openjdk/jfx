@@ -33,6 +33,12 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+G_STATIC_ASSERT (sizeof (ssize_t) == GLIB_SIZEOF_SSIZE_T);
+G_STATIC_ASSERT (G_ALIGNOF (gssize) == G_ALIGNOF (ssize_t));
+
+G_STATIC_ASSERT (sizeof (GPid) == sizeof (pid_t));
+G_STATIC_ASSERT (G_ALIGNOF (GPid) == G_ALIGNOF (pid_t));
+
 /**
  * SECTION:gunix
  * @title: UNIX-specific utilities and integration
@@ -42,7 +48,7 @@
  * Most of GLib is intended to be portable; in contrast, this set of
  * functions is designed for programs which explicitly target UNIX,
  * or are using it to build higher level abstractions which would be
- * conditionally compiled if the platform matches G_OS_UNIX.
+ * conditionally compiled if the platform matches %G_OS_UNIX.
  *
  * To use these functions, you must explicitly include the
  * "glib-unix.h" header.
@@ -227,7 +233,7 @@ g_unix_signal_source_new (int signum)
 /**
  * g_unix_signal_add_full: (rename-to g_unix_signal_add)
  * @priority: the priority of the signal source. Typically this will be in
- *            the range between #G_PRIORITY_DEFAULT and #G_PRIORITY_HIGH.
+ *            the range between %G_PRIORITY_DEFAULT and %G_PRIORITY_HIGH.
  * @signum: Signal number
  * @handler: Callback
  * @user_data: Data for @handler
@@ -457,7 +463,6 @@ g_unix_get_passwd_entry (const gchar  *user_name,
     } *buffer = NULL;
   gsize string_buffer_size = 0;
   GError *local_error = NULL;
-  int errsv = 0;
 
   g_return_val_if_fail (user_name != NULL, NULL);
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
@@ -487,10 +492,8 @@ g_unix_get_passwd_entry (const gchar  *user_name,
        */
       buffer = g_malloc0 (sizeof (*buffer) + string_buffer_size + 6);
 
-      errno = 0;
       retval = getpwnam_r (user_name, &buffer->pwd, buffer->string_buffer,
                            string_buffer_size, &passwd_file_entry);
-      errsv = errno;
 
       /* Bail out if: the lookup was successful, or if the user id can't be
        * found (should be pretty rare case actually), or if the buffer should be
@@ -502,19 +505,19 @@ g_unix_get_passwd_entry (const gchar  *user_name,
           break;
         }
       else if (retval == 0 ||
-          errsv == ENOENT || errsv == ESRCH ||
-          errsv == EBADF || errsv == EPERM)
+          retval == ENOENT || retval == ESRCH ||
+          retval == EBADF || retval == EPERM)
         {
           /* Username not found. */
-          g_unix_set_error_from_errno (&local_error, errsv);
+          g_unix_set_error_from_errno (&local_error, retval);
           break;
         }
-      else if (errsv == ERANGE)
+      else if (retval == ERANGE)
         {
           /* Can’t allocate enough string buffer space. */
           if (string_buffer_size > 32 * 1024)
             {
-              g_unix_set_error_from_errno (&local_error, errsv);
+              g_unix_set_error_from_errno (&local_error, retval);
               break;
             }
 
@@ -523,7 +526,7 @@ g_unix_get_passwd_entry (const gchar  *user_name,
         }
       else
         {
-          g_unix_set_error_from_errno (&local_error, errsv);
+          g_unix_set_error_from_errno (&local_error, retval);
           break;
         }
     }
@@ -537,7 +540,6 @@ g_unix_get_passwd_entry (const gchar  *user_name,
     {
       g_clear_pointer (&buffer, g_free);
       g_propagate_error (error, g_steal_pointer (&local_error));
-      errno = errsv;
     }
 
   return (struct passwd *) g_steal_pointer (&buffer);

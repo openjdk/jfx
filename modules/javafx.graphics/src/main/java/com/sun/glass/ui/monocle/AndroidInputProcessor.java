@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ class AndroidInputProcessor {
 
     synchronized void dispatchKeyEvent(int type, int key, char[] chars, int modifiers) {
         Platform.runLater( () -> {
-            MonocleWindow window = (MonocleWindow) MonocleWindowManager.getInstance().getFocusedWindow();
+            MonocleWindow window = MonocleWindowManager.getInstance().getFocusedWindow();
             if (window == null) {
                 return;
             }
@@ -67,6 +67,20 @@ class AndroidInputProcessor {
                 return;
             }
             RunnableProcessor.runLater( () ->  view.notifyKey(type, key, chars, modifiers));
+        });
+    }
+
+    synchronized void dispatchMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+        Platform.runLater(() -> {
+            MonocleWindow window = MonocleWindowManager.getInstance().getFocusedWindow();
+            if (window == null) {
+                return;
+            }
+            MonocleView view = (MonocleView) window.getView();
+            if (view == null) {
+                return;
+            }
+            RunnableProcessor.runLater(() -> view.notifyMenu(x, y, xAbs, yAbs, isKeyboardTrigger));
         });
     }
 

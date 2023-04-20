@@ -26,6 +26,9 @@
 #include "config.h"
 #include "JITCode.h"
 
+#include "DFGJITCode.h"
+#include "FTLJITCode.h"
+
 #include <wtf/PrintStream.h>
 
 namespace JSC {
@@ -42,25 +45,49 @@ JITCode::~JITCode()
 {
 }
 
-const char* JITCode::typeName(JITType jitType)
+ASCIILiteral JITCode::typeName(JITType jitType)
 {
     switch (jitType) {
     case JITType::None:
-        return "None";
+        return "None"_s;
     case JITType::HostCallThunk:
-        return "Host";
+        return "Host"_s;
     case JITType::InterpreterThunk:
-        return "LLInt";
+        return "LLInt"_s;
     case JITType::BaselineJIT:
-        return "Baseline";
+        return "Baseline"_s;
     case JITType::DFGJIT:
-        return "DFG";
+        return "DFG"_s;
     case JITType::FTLJIT:
-        return "FTL";
+        return "FTL"_s;
     default:
         CRASH();
-        return "";
+        return ""_s;
     }
+}
+
+bool JITCode::isUnlinked() const
+{
+    switch (m_jitType) {
+    case JITType::None:
+    case JITType::HostCallThunk:
+    case JITType::InterpreterThunk:
+    case JITType::BaselineJIT:
+        return true;
+    case JITType::DFGJIT:
+#if ENABLE(DFG_JIT)
+        return static_cast<const DFG::JITCode*>(this)->isUnlinked();
+#else
+        return false;
+#endif
+    case JITType::FTLJIT:
+#if ENABLE(FTL_JIT)
+        return static_cast<const FTL::JITCode*>(this)->isUnlinked();
+#else
+        return false;
+#endif
+    }
+    return true;
 }
 
 void JITCode::validateReferences(const TrackedReferences&)
@@ -93,6 +120,23 @@ FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
 
 void JITCode::shrinkToFit(const ConcurrentJSLocker&)
 {
+}
+
+const RegisterAtOffsetList* JITCode::calleeSaveRegisters() const
+{
+#if ENABLE(FTL_JIT)
+    if (m_jitType == JITType::FTLJIT)
+        return static_cast<const FTL::JITCode*>(this)->calleeSaveRegisters();
+#endif
+#if ENABLE(DFG_JIT)
+    if (m_jitType == JITType::DFGJIT)
+        return &RegisterAtOffsetList::dfgCalleeSaveRegisters();
+#endif
+#if !ENABLE(C_LOOP)
+    return &RegisterAtOffsetList::llintBaselineCalleeSaveRegisters();
+#else
+    return nullptr;
+#endif
 }
 
 JITCodeWithCodeRef::JITCodeWithCodeRef(JITType jitType)

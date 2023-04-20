@@ -27,24 +27,21 @@
 
 #if ENABLE(APPLE_PAY)
 
+#include "ApplePayAutomaticReloadPaymentRequest.h"
 #include "ApplePayError.h"
 #include "ApplePayLineItem.h"
+#include "ApplePayPaymentTokenContext.h"
+#include "ApplePayRecurringPaymentRequest.h"
+#include "ApplePayShippingContactEditingMode.h"
 #include "ApplePayShippingMethod.h"
 #include "PaymentContact.h"
 #include "PaymentInstallmentConfigurationWebCore.h"
 #include <wtf/EnumTraits.h>
-#include <wtf/Optional.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePaySessionPaymentRequestAdditions.h>
-#endif
-
 namespace WebCore {
-
-enum class PaymentAuthorizationStatus;
 
 class ApplePaySessionPaymentRequest {
 public:
@@ -130,6 +127,34 @@ public:
     void setInstallmentConfiguration(PaymentInstallmentConfiguration&& installmentConfiguration) { m_installmentConfiguration = WTFMove(installmentConfiguration); }
 #endif
 
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    std::optional<bool> supportsCouponCode() const { return m_supportsCouponCode; }
+    void setSupportsCouponCode(std::optional<bool> supportsCouponCode) { m_supportsCouponCode = supportsCouponCode; }
+
+    const String& couponCode() const { return m_couponCode; }
+    void setCouponCode(const String& couponCode) { m_couponCode = couponCode; }
+#endif
+
+#if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)
+    const std::optional<ApplePayShippingContactEditingMode>& shippingContactEditingMode() const { return m_shippingContactEditingMode; }
+    void setShippingContactEditingMode(const std::optional<ApplePayShippingContactEditingMode>& shippingContactEditingMode) { m_shippingContactEditingMode = shippingContactEditingMode; }
+#endif
+
+#if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
+    const std::optional<ApplePayRecurringPaymentRequest>& recurringPaymentRequest() const { return m_recurringPaymentRequest; }
+    void setRecurringPaymentRequest(std::optional<ApplePayRecurringPaymentRequest>&& recurringPaymentRequest) { m_recurringPaymentRequest = WTFMove(recurringPaymentRequest); }
+#endif
+
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
+    const std::optional<ApplePayAutomaticReloadPaymentRequest>& automaticReloadPaymentRequest() const { return m_automaticReloadPaymentRequest; }
+    void setAutomaticReloadPaymentRequest(std::optional<ApplePayAutomaticReloadPaymentRequest>&& automaticReloadPaymentRequest) { m_automaticReloadPaymentRequest = WTFMove(automaticReloadPaymentRequest); }
+#endif
+
+#if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
+    const std::optional<Vector<ApplePayPaymentTokenContext>>& multiTokenContexts() const { return m_multiTokenContexts; }
+    void setMultiTokenContexts(std::optional<Vector<ApplePayPaymentTokenContext>>&& multiTokenContexts) { m_multiTokenContexts = WTFMove(multiTokenContexts); }
+#endif
+
 private:
     unsigned m_version { 0 };
 
@@ -160,17 +185,27 @@ private:
     PaymentInstallmentConfiguration m_installmentConfiguration;
 #endif
 
-#if defined(ApplePaySessionPaymentRequestAdditions_members)
-    ApplePaySessionPaymentRequestAdditions_members
+#if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)
+    std::optional<ApplePayShippingContactEditingMode> m_shippingContactEditingMode;
+#endif
+
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    std::optional<bool> m_supportsCouponCode;
+    String m_couponCode;
+#endif
+
+#if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
+    std::optional<ApplePayAutomaticReloadPaymentRequest> m_automaticReloadPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
+    std::optional<ApplePayRecurringPaymentRequest> m_recurringPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
+    std::optional<Vector<ApplePayPaymentTokenContext>> m_multiTokenContexts;
 #endif
 };
-
-struct PaymentAuthorizationResult {
-    PaymentAuthorizationStatus status;
-    Vector<RefPtr<ApplePayError>> errors;
-};
-
-WEBCORE_EXPORT bool isFinalStateResult(const Optional<PaymentAuthorizationResult>&);
 
 } // namespace WebCore
 

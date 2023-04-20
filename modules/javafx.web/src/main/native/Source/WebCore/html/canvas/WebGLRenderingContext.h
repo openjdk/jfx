@@ -41,14 +41,16 @@ public:
     bool isWebGL1() const final { return true; }
 
     WebGLExtension* getExtension(const String&) final;
-    Optional<Vector<String>> getSupportedExtensions() final;
+    std::optional<Vector<String>> getSupportedExtensions() final;
 
     WebGLAny getFramebufferAttachmentParameter(GCGLenum target, GCGLenum attachment, GCGLenum pname) final;
 
     GCGLint getMaxDrawBuffers() final;
     GCGLint getMaxColorAttachments() final;
     void initializeVertexArrayObjects() final;
+#if !USE(ANGLE)
     bool validateIndexArrayConservative(GCGLenum type, unsigned& numElementsRequired) final;
+#endif
     bool validateBlendEquation(const char* functionName, GCGLenum mode) final;
 
 private:

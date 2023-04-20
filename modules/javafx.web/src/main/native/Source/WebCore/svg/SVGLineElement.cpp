@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGLineElement.h"
 
+#include "LegacyRenderSVGShape.h"
 #include "RenderSVGResource.h"
 #include "SVGLengthValue.h"
 #include <wtf/IsoMallocInlines.h>
@@ -73,10 +74,9 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
 
-        if (auto* renderer = downcast<RenderSVGShape>(this->renderer())) {
-            renderer->setNeedsShapeUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+        if (auto* renderer = this->renderer())
+            static_cast<LegacyRenderSVGShape*>(renderer)->setNeedsShapeUpdate();
+        updateSVGRendererForElementChange();
         return;
     }
 

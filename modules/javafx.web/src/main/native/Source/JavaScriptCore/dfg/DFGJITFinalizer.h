@@ -40,10 +40,9 @@ public:
 
     size_t codeSize() final;
     bool finalize() final;
-    bool finalizeFunction() final;
+    bool isFailed() final { return false; }
 
 private:
-    void finalizeCommon();
 
     Ref<JITCode> m_jitCode;
     std::unique_ptr<LinkBuffer> m_linkBuffer;

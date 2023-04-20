@@ -47,17 +47,17 @@ public:
     uint32_t functionIndex() const { return m_functionIndex; }
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    StreamingPlan(Context*, Ref<ModuleInformation>&&, Ref<LLIntPlan>&&, uint32_t functionIndex, CompletionTask&&);
+    StreamingPlan(VM&, Ref<ModuleInformation>&&, Ref<LLIntPlan>&&, uint32_t functionIndex, CompletionTask&&);
 
 private:
     // For some reason friendship doesn't extend to parent classes...
     using Base::m_lock;
 
     bool isComplete() const final { return m_completed; }
-    void complete(const AbstractLocker& locker) final
+    void complete() WTF_REQUIRES_LOCK(m_lock) final
     {
         m_completed = true;
-        runCompletionTasks(locker);
+        runCompletionTasks();
     }
 
     Ref<LLIntPlan> m_plan;

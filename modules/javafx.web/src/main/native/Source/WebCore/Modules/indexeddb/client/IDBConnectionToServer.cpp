@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBConnectionToServer.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionProxy.h"
 #include "IDBDatabase.h"
 #include "IDBDatabaseNameAndVersion.h"
@@ -39,10 +37,13 @@
 #include "Logging.h"
 #include "SecurityOrigin.h"
 #include "TransactionOperation.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 namespace IDBClient {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBConnectionToServer);
 
 Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDelegate& delegate)
 {
@@ -50,7 +51,7 @@ Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDe
 }
 
 IDBConnectionToServer::IDBConnectionToServer(IDBConnectionToServerDelegate& delegate)
-    : m_delegate(makeWeakPtr(delegate))
+    : m_delegate(delegate)
     , m_proxy(makeUnique<IDBConnectionProxy>(*this))
 {
 }
@@ -68,7 +69,7 @@ IDBConnectionProxy& IDBConnectionToServer::proxy()
 
 void IDBConnectionToServer::callResultFunctionWithErrorLater(ResultFunction function, const IDBResourceIdentifier& requestIdentifier)
 {
-    callOnMainThread([this, protectedThis = makeRef(*this), function, requestIdentifier]() {
+    callOnMainThread([this, protectedThis = Ref { *this }, function, requestIdentifier]() {
         (this->*function)(IDBResultData::error(requestIdentifier, IDBError::serverConnectionLostError()));
     });
 }
@@ -355,15 +356,15 @@ void IDBConnectionToServer::establishTransaction(uint64_t databaseConnectionIden
         m_delegate->establishTransaction(databaseConnectionIdentifier, info);
 }
 
-void IDBConnectionToServer::commitTransaction(const IDBResourceIdentifier& transactionIdentifier)
+void IDBConnectionToServer::commitTransaction(const IDBResourceIdentifier& transactionIdentifier, uint64_t pendingRequestCount)
 {
     LOG(IndexedDB, "IDBConnectionToServer::commitTransaction");
     ASSERT(isMainThread());
 
     if (m_serverConnectionIsValid)
-        m_delegate->commitTransaction(transactionIdentifier);
+        m_delegate->commitTransaction(transactionIdentifier, pendingRequestCount);
     else {
-        callOnMainThread([this, protectedThis = makeRef(*this), transactionIdentifier] {
+        callOnMainThread([this, protectedThis = Ref { *this }, transactionIdentifier] {
             didCommitTransaction(transactionIdentifier, IDBError::serverConnectionLostError());
         });
     }
@@ -394,7 +395,7 @@ void IDBConnectionToServer::abortTransaction(const IDBResourceIdentifier& transa
     if (m_serverConnectionIsValid)
         m_delegate->abortTransaction(transactionIdentifier);
     else {
-        callOnMainThread([this, protectedThis = makeRef(*this), transactionIdentifier] {
+        callOnMainThread([this, protectedThis = Ref { *this }, transactionIdentifier] {
             didAbortTransaction(transactionIdentifier, IDBError::serverConnectionLostError());
         });
     }
@@ -486,7 +487,7 @@ void IDBConnectionToServer::databaseConnectionClosed(uint64_t databaseConnection
         m_delegate->databaseConnectionClosed(databaseConnectionIdentifier);
 }
 
-void IDBConnectionToServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& transactionIdentifier)
+void IDBConnectionToServer::abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const std::optional<IDBResourceIdentifier>& transactionIdentifier)
 {
     LOG(IndexedDB, "IDBConnectionToServer::abortOpenAndUpgradeNeeded");
     ASSERT(isMainThread());
@@ -505,7 +506,7 @@ void IDBConnectionToServer::getAllDatabaseNamesAndVersions(const IDBResourceIden
         return;
     }
 
-    callOnMainThread([this, protectedThis = makeRef(*this), requestIdentifier] {
+    callOnMainThread([this, protectedThis = Ref { *this }, requestIdentifier] {
         didGetAllDatabaseNamesAndVersions(requestIdentifier, { });
     });
 }
@@ -520,5 +521,3 @@ void IDBConnectionToServer::didGetAllDatabaseNamesAndVersions(const IDBResourceI
 
 } // namespace IDBClient
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

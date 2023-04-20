@@ -42,10 +42,12 @@
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -65,9 +67,6 @@ inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url,
 
 ExceptionOr<Ref<EventSource>> EventSource::create(ScriptExecutionContext& context, const String& url, const Init& eventSourceInit)
 {
-    if (url.isEmpty())
-        return Exception { SyntaxError };
-
     URL fullURL = context.completeURL(url);
     if (!fullURL.isValid())
         return Exception { SyntaxError };
@@ -79,7 +78,6 @@ ExceptionOr<Ref<EventSource>> EventSource::create(ScriptExecutionContext& contex
     }
 
     auto source = adoptRef(*new EventSource(context, fullURL, eventSourceInit));
-    source->setPendingActivity(source.get());
     source->scheduleInitialConnect();
     source->suspendIfNeeded();
     return source;
@@ -97,9 +95,10 @@ void EventSource::connect()
     ASSERT(!m_requestInFlight);
 
     ResourceRequest request { m_url };
-    request.setHTTPMethod("GET");
-    request.setHTTPHeaderField(HTTPHeaderName::Accept, "text/event-stream");
-    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache");
+    request.setRequester(ResourceRequest::Requester::EventSource);
+    request.setHTTPMethod("GET"_s);
+    request.setHTTPHeaderField(HTTPHeaderName::Accept, "text/event-stream"_s);
+    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache"_s);
     if (!m_lastEventId.isEmpty())
         request.setHTTPHeaderField(HTTPHeaderName::LastEventID, m_lastEventId);
 
@@ -129,8 +128,6 @@ void EventSource::networkRequestEnded()
 
     if (m_state != CLOSED)
         scheduleReconnect();
-    else
-        unsetPendingActivity(*this);
 }
 
 void EventSource::scheduleInitialConnect()
@@ -162,10 +159,8 @@ void EventSource::close()
 
     if (m_requestInFlight)
         doExplicitLoadCancellation();
-    else {
+    else
         m_state = CLOSED;
-        unsetPendingActivity(*this);
-    }
 }
 
 bool EventSource::responseIsValid(const ResourceResponse& response) const
@@ -176,26 +171,26 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
     if (response.httpStatusCode() != 200)
         return false;
 
-    if (!equalLettersIgnoringASCIICase(response.mimeType(), "text/event-stream")) {
+    if (!equalLettersIgnoringASCIICase(response.mimeType(), "text/event-stream"_s)) {
         auto message = makeString("EventSource's response has a MIME type (\"", response.mimeType(), "\") that is not \"text/event-stream\". Aborting the connection.");
         // FIXME: Console message would be better with a source code location; where would we get that?
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
         return false;
     }
 
-    // If we have a charset, the only allowed value is UTF-8 (case-insensitive).
+    // The specification states we should always decode as UTF-8. If there is a provided charset and it is not UTF-8, then log a warning
+    // message but keep going anyway.
     auto& charset = response.textEncodingName();
-    if (!charset.isEmpty() && !equalLettersIgnoringASCIICase(charset, "utf-8")) {
-        auto message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. Aborting the connection.");
+    if (!charset.isEmpty() && !equalLettersIgnoringASCIICase(charset, "utf-8"_s)) {
+        auto message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. The response will be decoded as UTF-8.");
         // FIXME: Console message would be better with a source code location; where would we get that?
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
-        return false;
     }
 
     return true;
 }
 
-void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& response)
+void EventSource::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     ASSERT(m_state == CONNECTING);
     ASSERT(m_requestInFlight);
@@ -217,17 +212,17 @@ void EventSource::dispatchErrorEvent()
     dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-void EventSource::didReceiveData(const char* data, int length)
+void EventSource::didReceiveData(const SharedBuffer& buffer)
 {
     ASSERT(m_state == OPEN);
     ASSERT(m_requestInFlight);
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
-    append(m_receiveBuffer, m_decoder->decode(data, length));
+    append(m_receiveBuffer, m_decoder->decode(buffer.data(), buffer.size()));
     parseEventStream();
 }
 
-void EventSource::didFinishLoading(unsigned long)
+void EventSource::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&)
 {
     ASSERT(m_state == OPEN);
     ASSERT(m_requestInFlight);
@@ -279,21 +274,25 @@ void EventSource::abortConnectionAttempt()
     ASSERT(m_state == CONNECTING);
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
+    auto jsWrapperProtector = makePendingActivity(*this);
     if (m_requestInFlight)
         doExplicitLoadCancellation();
-    else {
+    else
         m_state = CLOSED;
-        unsetPendingActivity(*this);
-    }
 
     ASSERT(m_state == CLOSED);
     dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
+bool EventSource::virtualHasPendingActivity() const
+{
+    return m_state != CLOSED;
+}
+
 void EventSource::doExplicitLoadCancellation()
 {
     ASSERT(m_requestInFlight);
-    SetForScope<bool> explicitLoadCancellation(m_isDoingExplicitCancellation, true);
+    SetForScope explicitLoadCancellation(m_isDoingExplicitCancellation, true);
     m_loader->cancel();
 }
 
@@ -308,8 +307,8 @@ void EventSource::parseEventStream()
             m_discardTrailingNewline = false;
         }
 
-        Optional<unsigned> lineLength;
-        Optional<unsigned> fieldLength;
+        std::optional<unsigned> lineLength;
+        std::optional<unsigned> fieldLength;
         for (unsigned i = position; !lineLength && i < size; ++i) {
             switch (m_receiveBuffer[i]) {
             case ':':
@@ -345,7 +344,7 @@ void EventSource::parseEventStream()
         m_receiveBuffer.remove(0, position);
 }
 
-void EventSource::parseEventStreamLine(unsigned position, Optional<unsigned> fieldLength, unsigned lineLength)
+void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned> fieldLength, unsigned lineLength)
 {
     if (!lineLength) {
         if (!m_data.isEmpty())
@@ -369,26 +368,22 @@ void EventSource::parseEventStreamLine(unsigned position, Optional<unsigned> fie
     position += step;
     unsigned valueLength = lineLength - step;
 
-    if (field == "data") {
+    if (field == "data"_s) {
         m_data.append(&m_receiveBuffer[position], valueLength);
         m_data.append('\n');
-    } else if (field == "event")
+    } else if (field == "event"_s)
         m_eventName = { &m_receiveBuffer[position], valueLength };
-    else if (field == "id") {
+    else if (field == "id"_s) {
         StringView parsedEventId = { &m_receiveBuffer[position], valueLength };
         constexpr UChar nullCharacter = '\0';
         if (!parsedEventId.contains(nullCharacter))
             m_currentlyParsedEventId = parsedEventId.toString();
-    } else if (field == "retry") {
+    } else if (field == "retry"_s) {
         if (!valueLength)
             m_reconnectDelay = defaultReconnectDelay;
         else {
-            // FIXME: Do we really want to ignore trailing garbage here? Should we be using the strict version instead?
-            // FIXME: If we can't parse the value, should we leave m_reconnectDelay alone or set it to defaultReconnectDelay?
-            bool ok;
-            auto reconnectDelay = charactersToUInt64(&m_receiveBuffer[position], valueLength, &ok);
-            if (ok)
-                m_reconnectDelay = reconnectDelay;
+            if (auto reconnectDelay = parseInteger<uint64_t>({ &m_receiveBuffer[position], valueLength }))
+                m_reconnectDelay = *reconnectDelay;
         }
     }
 }
@@ -435,14 +430,13 @@ void EventSource::dispatchMessageEvent()
 
     auto& name = m_eventName.isEmpty() ? eventNames().messageEvent : m_eventName;
 
-    // Omit the trailing "\n" character.
     ASSERT(!m_data.isEmpty());
-    unsigned size = m_data.size() - 1;
-    auto data = SerializedScriptValue::create({ m_data.data(), size });
-    RELEASE_ASSERT(data);
+
+    // Omit the trailing "\n" character.
+    String data(m_data.data(), m_data.size() - 1);
     m_data = { };
 
-    dispatchEvent(MessageEvent::create(name, data.releaseNonNull(), m_eventStreamOrigin, m_lastEventId));
+    dispatchEvent(MessageEvent::create(name, WTFMove(data), m_eventStreamOrigin, m_lastEventId));
 }
 
 } // namespace WebCore

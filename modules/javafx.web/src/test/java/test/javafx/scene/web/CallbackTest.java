@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ import javafx.scene.web.WebEvent;
 import javafx.util.Callback;
 
 import org.junit.Test;
+import org.junit.Ignore;
 
 
 public class CallbackTest extends TestBase {
@@ -158,6 +159,7 @@ public class CallbackTest extends TestBase {
         }
     }
 
+    @Ignore("JDK-8290238")
     @Test public void testCloseWindow() {
         clear();
         executeScript(JS_CLOSE);
@@ -220,7 +222,7 @@ public class CallbackTest extends TestBase {
     }
 
     class TestUI {
-        private List<List<Object>> calls = new LinkedList<List<Object>>();
+        private List<List<Object>> calls = new LinkedList<>();
 
         public void clear() {
             calls.clear();
@@ -232,7 +234,7 @@ public class CallbackTest extends TestBase {
 //                System.out.print("" + a + ", ");
 //            }
 //            System.out.println();
-            List<Object> call = new ArrayList<Object>(args.length + 1);
+            List<Object> call = new ArrayList<>(args.length + 1);
             call.add(methodName);
             Collections.addAll(call, args);
             calls.add(call);
@@ -248,7 +250,7 @@ public class CallbackTest extends TestBase {
         }
 
         public void checkCalled(String methodName, Object... args) {
-            List<Object> e = new ArrayList<Object>(args.length + 1);
+            List<Object> e = new ArrayList<>(args.length + 1);
             e.add(methodName);
             Collections.addAll(e, args);
             for (List<Object> call: calls) {

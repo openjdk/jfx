@@ -50,7 +50,7 @@ public:
     // NEVER_INLINE so that framesToSkip is predictable.
     NEVER_INLINE void profile()
     {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         m_profile.add(StackShot(m_numFrames + m_framesToSkip));
         m_totalCount++;
     }
@@ -60,17 +60,20 @@ private:
     {
         for (;;) {
             sleep(1_s);
-            auto locker = holdLock(m_lock);
-            auto list = m_profile.buildList();
+            Locker locker { m_lock };
+            {
+                Locker spectrumLocker { m_profile.getLock() };
+                auto list = m_profile.buildList(spectrumLocker);
             dataLog("\nHottest stacks in ", getCurrentProcessID(), ":\n");
             for (size_t i = list.size(), count = 0; i-- && count < m_stacksToReport; count++) {
                 auto& entry = list[i];
                 dataLog("\nTop #", count + 1, " stack: ", entry.count * 100 / m_totalCount, "%\n");
-                StackTrace trace(entry.key.array() + m_framesToSkip, entry.key.size() - m_framesToSkip);
+                    StackTrace trace(entry.key->array() + m_framesToSkip, entry.key->size() - m_framesToSkip);
                 dataLog(trace);
             }
             dataLog("\n");
         }
+    }
     }
 
     WordLock m_lock;

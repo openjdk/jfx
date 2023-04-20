@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,22 +43,22 @@ public:
     void setAmbientLight(float r, float g, float b);
     void setLight(int index, float x, float y, float z,
         float r, float g, float b, float w,
-        float ca, float la, float qa, float maxRange,
+        float ca, float la, float qa, float isAttenuated, float maxRange,
         float dirX, float dirY, float dirZ,
         float innerAngle, float outerAngle, float falloff);
     void computeNumLights();
     void render();
 
 private:
-    D3DContext *context;
-    D3DMesh *mesh;
-    D3DPhongMaterial *material;
+    D3DContext *context = NULL;
+    D3DMesh *mesh = NULL;
+    D3DPhongMaterial *material = NULL;
     D3DLight lights[MAX_NUM_LIGHTS];
-    float ambientLightColor[3];
-    int numLights;
-    bool lightsDirty;
-    int cullMode;
-    bool wireframe;
+    float ambientLightColor[3] = {0};
+    int numLights = 0;
+    bool lightsDirty = true;
+    int cullMode = D3DCULL_NONE;
+    bool wireframe = false;
 };
 
 #endif  /* D3DMESHVIEW_H */

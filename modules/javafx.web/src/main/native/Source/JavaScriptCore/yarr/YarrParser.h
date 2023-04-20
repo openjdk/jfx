@@ -31,7 +31,6 @@
 #include "YarrUnicodeProperties.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/HashSet.h>
-#include <wtf/Optional.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,7 +41,7 @@ template<class Delegate, typename CharType>
 class Parser {
 private:
     template<class FriendDelegate>
-    friend ErrorCode parse(FriendDelegate&, const String& pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed);
+    friend ErrorCode parse(FriendDelegate&, StringView pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed);
 
     enum class UnicodeParseContext : uint8_t { PatternCodePoint, GroupName };
 
@@ -61,7 +60,7 @@ private:
             : m_delegate(delegate)
             , m_errorCode(err)
             , m_isUnicode(isUnicode)
-            , m_state(Empty)
+            , m_state(CharacterClassConstructionState::Empty)
             , m_character(0)
         {
         }
@@ -88,7 +87,7 @@ private:
         void atomPatternCharacter(UChar32 ch, bool hyphenIsRange = false)
         {
             switch (m_state) {
-            case AfterCharacterClass:
+            case CharacterClassConstructionState::AfterCharacterClass:
                 // Following a built-in character class we need look out for a hyphen.
                 // We're looking for invalid ranges, such as /[\d-x]/ or /[\d-\d]/.
                 // If we see a hyphen following a character class then unlike usual
@@ -99,44 +98,44 @@ private:
                 // the end of a regex.
                 if (hyphenIsRange && ch == '-') {
                     m_delegate.atomCharacterClassAtom('-');
-                    m_state = AfterCharacterClassHyphen;
+                    m_state = CharacterClassConstructionState::AfterCharacterClassHyphen;
                     return;
                 }
-                // Otherwise just fall through - cached character so treat this as Empty.
+                // Otherwise just fall through - cached character so treat this as CharacterClassConstructionState::Empty.
                 FALLTHROUGH;
 
-            case Empty:
+            case CharacterClassConstructionState::Empty:
                 m_character = ch;
-                m_state = CachedCharacter;
+                m_state = CharacterClassConstructionState::CachedCharacter;
                 return;
 
-            case CachedCharacter:
+            case CharacterClassConstructionState::CachedCharacter:
                 if (hyphenIsRange && ch == '-')
-                    m_state = CachedCharacterHyphen;
+                    m_state = CharacterClassConstructionState::CachedCharacterHyphen;
                 else {
                     m_delegate.atomCharacterClassAtom(m_character);
                     m_character = ch;
                 }
                 return;
 
-            case CachedCharacterHyphen:
+            case CharacterClassConstructionState::CachedCharacterHyphen:
                 if (ch < m_character) {
                     m_errorCode = ErrorCode::CharacterClassRangeOutOfOrder;
                     return;
                 }
                 m_delegate.atomCharacterClassRange(m_character, ch);
-                m_state = Empty;
+                m_state = CharacterClassConstructionState::Empty;
                 return;
 
                 // If we hit this case, we have an invalid range like /[\d-a]/.
                 // See coment in atomBuiltInCharacterClass() below.
-            case AfterCharacterClassHyphen:
+            case CharacterClassConstructionState::AfterCharacterClassHyphen:
                 if (m_isUnicode) {
                     m_errorCode = ErrorCode::CharacterClassRangeInvalid;
                     return;
                 }
                 m_delegate.atomCharacterClassAtom(ch);
-                m_state = Empty;
+                m_state = CharacterClassConstructionState::Empty;
                 return;
             }
         }
@@ -149,14 +148,14 @@ private:
         void atomBuiltInCharacterClass(BuiltInCharacterClassID classID, bool invert)
         {
             switch (m_state) {
-            case CachedCharacter:
+            case CharacterClassConstructionState::CachedCharacter:
                 // Flush the currently cached character, then fall through.
                 m_delegate.atomCharacterClassAtom(m_character);
                 FALLTHROUGH;
-            case Empty:
-            case AfterCharacterClass:
+            case CharacterClassConstructionState::Empty:
+            case CharacterClassConstructionState::AfterCharacterClass:
                 m_delegate.atomCharacterClassBuiltIn(classID, invert);
-                m_state = AfterCharacterClass;
+                m_state = CharacterClassConstructionState::AfterCharacterClass;
                 return;
 
                 // If we hit either of these cases, we have an invalid range that
@@ -167,17 +166,17 @@ private:
                 // e.g. /[\d-a-z]/ is treated as /[\d\-a\-z]/.
                 // See usages of CharacterRangeOrUnion abstract op in
                 // https://tc39.es/ecma262/#sec-regular-expression-patterns-semantics
-            case CachedCharacterHyphen:
+            case CharacterClassConstructionState::CachedCharacterHyphen:
                 m_delegate.atomCharacterClassAtom(m_character);
                 m_delegate.atomCharacterClassAtom('-');
                 FALLTHROUGH;
-            case AfterCharacterClassHyphen:
+            case CharacterClassConstructionState::AfterCharacterClassHyphen:
                 if (m_isUnicode) {
                     m_errorCode = ErrorCode::CharacterClassRangeInvalid;
                     return;
                 }
                 m_delegate.atomCharacterClassBuiltIn(classID, invert);
-                m_state = Empty;
+                m_state = CharacterClassConstructionState::Empty;
                 return;
             }
         }
@@ -189,9 +188,9 @@ private:
          */
         void end()
         {
-            if (m_state == CachedCharacter)
+            if (m_state == CharacterClassConstructionState::CachedCharacter)
                 m_delegate.atomCharacterClassAtom(m_character);
-            else if (m_state == CachedCharacterHyphen) {
+            else if (m_state == CharacterClassConstructionState::CachedCharacterHyphen) {
                 m_delegate.atomCharacterClassAtom(m_character);
                 m_delegate.atomCharacterClassAtom('-');
             }
@@ -209,17 +208,18 @@ private:
         Delegate& m_delegate;
         ErrorCode& m_errorCode;
         bool m_isUnicode;
-        enum CharacterClassConstructionState {
+        enum class CharacterClassConstructionState {
             Empty,
             CachedCharacter,
             CachedCharacterHyphen,
             AfterCharacterClass,
             AfterCharacterClassHyphen,
-        } m_state;
+        };
+        CharacterClassConstructionState m_state;
         UChar32 m_character;
     };
 
-    Parser(Delegate& delegate, const String& pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
+    Parser(Delegate& delegate, StringView pattern, bool isUnicode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
         : m_delegate(delegate)
         , m_data(pattern.characters<CharType>())
         , m_size(pattern.length())
@@ -454,27 +454,27 @@ private:
             consume();
             ParseState state = saveState();
             if (!inCharacterClass && tryConsume('<')) {
-                    auto groupName = tryConsumeGroupName();
+                auto groupName = tryConsumeGroupName();
                 if (hasError(m_errorCode))
                     break;
 
-                    if (groupName) {
-                        if (m_captureGroupNames.contains(groupName.value())) {
-                            delegate.atomNamedBackReference(groupName.value());
-                            break;
-                        }
+                if (groupName) {
+                    if (m_captureGroupNames.contains(groupName.value())) {
+                        delegate.atomNamedBackReference(groupName.value());
+                        break;
+                    }
 
                     if (m_isNamedForwardReferenceAllowed) {
                         m_forwardReferenceNames.add(groupName.value());
-                            delegate.atomNamedForwardReference(groupName.value());
-                            break;
-                        }
+                        delegate.atomNamedForwardReference(groupName.value());
+                        break;
                     }
+                }
             }
 
             restoreState(state);
             if (!isIdentityEscapeAnError('k')) {
-            delegate.atomPatternCharacter('k');
+                delegate.atomPatternCharacter('k');
                 m_kIdentityEscapeSeen = true;
             }
             break;
@@ -508,7 +508,7 @@ private:
         // UnicodeEscape
         case 'u': {
             int codePoint = tryConsumeUnicodeEscape<UnicodeParseContext::PatternCodePoint>();
-                if (hasError(m_errorCode))
+            if (hasError(m_errorCode))
                 break;
 
             delegate.atomPatternCharacter(codePoint == -1 ? 'u' : codePoint);
@@ -860,7 +860,7 @@ private:
         if (m_size > MAX_PATTERN_SIZE)
             return ErrorCode::PatternTooLarge;
 
-            parseTokens();
+        parseTokens();
 
         if (!hasError(m_errorCode)) {
             ASSERT(atEndOfPattern());
@@ -1080,10 +1080,10 @@ private:
 
     unsigned consumeNumber()
     {
-        Checked<unsigned, RecordOverflow> n = consumeDigit();
+        CheckedUint32 n = consumeDigit();
         while (peekIsDigit())
             n = n * 10 + consumeDigit();
-        return n.hasOverflowed() ? quantifyInfinite : n.unsafeGet();
+        return n.hasOverflowed() ? quantifyInfinite : n.value();
     }
 
     // https://tc39.es/ecma262/#prod-annexB-LegacyOctalEscapeSequence
@@ -1118,10 +1118,10 @@ private:
         return n;
     }
 
-    Optional<String> tryConsumeGroupName()
+    std::optional<String> tryConsumeGroupName()
     {
         if (atEndOfPattern())
-            return WTF::nullopt;
+            return std::nullopt;
 
         ParseState state = saveState();
 
@@ -1134,7 +1134,7 @@ private:
             while (!atEndOfPattern()) {
                 ch = tryConsumeIdentifierCharacter();
                 if (ch == '>')
-                    return Optional<String>(identifierBuilder.toString());
+                    return std::optional<String>(identifierBuilder.toString());
 
                 if (!isIdentifierPart(ch))
                     break;
@@ -1145,14 +1145,14 @@ private:
 
         restoreState(state);
 
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
-    Optional<BuiltInCharacterClassID> tryConsumeUnicodePropertyExpression()
+    std::optional<BuiltInCharacterClassID> tryConsumeUnicodePropertyExpression()
     {
         if (atEndOfPattern() || !isUnicodePropertyValueExpressionChar(peek())) {
             m_errorCode = ErrorCode::InvalidUnicodePropertyExpression;
-            return WTF::nullopt;
+            return std::nullopt;
         }
 
         StringBuilder expressionBuilder;
@@ -1168,7 +1168,7 @@ private:
                 consume();
                 if (errors) {
                     m_errorCode = ErrorCode::InvalidUnicodePropertyExpression;
-                    return WTF::nullopt;
+                    return std::nullopt;
                 }
 
                 if (foundEquals) {
@@ -1199,7 +1199,7 @@ private:
         }
 
         m_errorCode = ErrorCode::InvalidUnicodePropertyExpression;
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     enum class ParenthesesType : uint8_t { Subpattern, Assertion };
@@ -1244,7 +1244,7 @@ private:
  *    void atomCharacterClassRange(UChar32 begin, UChar32 end)
  *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
  *    void atomCharacterClassEnd()
- *    void atomParenthesesSubpatternBegin(bool capture = true, Optional<String> groupName);
+ *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
  *    void atomParentheticalAssertionBegin(bool invert = false);
  *    void atomParenthesesEnd();
  *    void atomBackReference(unsigned subpatternId);
@@ -1287,7 +1287,7 @@ private:
  */
 
 template<class Delegate>
-ErrorCode parse(Delegate& delegate, const String& pattern, bool isUnicode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
+ErrorCode parse(Delegate& delegate, const StringView pattern, bool isUnicode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
 {
     if (pattern.is8Bit())
         return Parser<Delegate, LChar>(delegate, pattern, isUnicode, backReferenceLimit, isNamedForwardReferenceAllowed).parse();

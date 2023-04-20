@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
 
         // We will populate this list with the parameters with which we will test.
         // Each Object[] within the params is composed of a Creator and a Polluter.
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         // A standard list of polluters which applies to all tests
         List<Polluter> polluters = Arrays.asList(new Polluter[]{
                 pollutePositiveTranslation
@@ -81,7 +81,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
         }
 
         // Construct the Creator / Polluter pair for Rectangles
-        List<Polluter> rectanglePolluters = new ArrayList<Polluter>(polluters);
+        List<Polluter> rectanglePolluters = new ArrayList<>(polluters);
         rectanglePolluters.add(new Polluter() {
             @Override public void pollute(NGNode node) {
                 NGRectangle rect = (NGRectangle)node;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.binding.ExpressionHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +32,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoublePropertyBase;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
@@ -46,8 +46,6 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
-import javafx.beans.InvalidationListener;
-import javafx.beans.value.ChangeListener;
 import javafx.css.Styleable;
 
 import static javafx.geometry.Orientation.*;
@@ -1011,8 +1009,8 @@ public class TilePane extends Pane {
      private static class StyleableProperties {
 
          private static final CssMetaData<TilePane,Pos> ALIGNMENT =
-             new CssMetaData<TilePane,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class),
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class),
                  Pos.TOP_LEFT) {
 
             @Override
@@ -1027,7 +1025,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> PREF_COLUMNS =
-             new CssMetaData<TilePane,Number>("-fx-pref-columns",
+             new CssMetaData<>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -1043,7 +1041,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> HGAP =
-             new CssMetaData<TilePane,Number>("-fx-hgap",
+             new CssMetaData<>("-fx-hgap",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -1059,7 +1057,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> PREF_ROWS =
-             new CssMetaData<TilePane,Number>("-fx-pref-rows",
+             new CssMetaData<>("-fx-pref-rows",
                  SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -1075,8 +1073,8 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Pos> TILE_ALIGNMENT =
-             new CssMetaData<TilePane,Pos>("-fx-tile-alignment",
-                 new EnumConverter<Pos>(Pos.class),
+             new CssMetaData<>("-fx-tile-alignment",
+                 new EnumConverter<>(Pos.class),
                  Pos.CENTER) {
 
             @Override
@@ -1092,7 +1090,7 @@ public class TilePane extends Pane {
          };
 
          private static final CssMetaData<TilePane,Number> PREF_TILE_WIDTH =
-             new CssMetaData<TilePane,Number>("-fx-pref-tile-width",
+             new CssMetaData<>("-fx-pref-tile-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
             @Override
@@ -1108,7 +1106,7 @@ public class TilePane extends Pane {
         };
 
          private static final CssMetaData<TilePane,Number> PREF_TILE_HEIGHT =
-             new CssMetaData<TilePane,Number>("-fx-pref-tile-height",
+             new CssMetaData<>("-fx-pref-tile-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE) {
 
             @Override
@@ -1124,8 +1122,8 @@ public class TilePane extends Pane {
          };
 
          private static final CssMetaData<TilePane,Orientation> ORIENTATION =
-             new CssMetaData<TilePane,Orientation>("-fx-orientation",
-                 new EnumConverter<Orientation>(Orientation.class),
+             new CssMetaData<>("-fx-orientation",
+                 new EnumConverter<>(Orientation.class),
                  Orientation.HORIZONTAL) {
 
                 @Override
@@ -1147,7 +1145,7 @@ public class TilePane extends Pane {
          };
 
          private static final CssMetaData<TilePane,Number> VGAP =
-             new CssMetaData<TilePane,Number>("-fx-vgap",
+             new CssMetaData<>("-fx-vgap",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -1165,7 +1163,7 @@ public class TilePane extends Pane {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(HGAP);
             styleables.add(ORIENTATION);
@@ -1201,9 +1199,9 @@ public class TilePane extends Pane {
         return getClassCssMetaData();
     }
 
-    private abstract class TileSizeProperty extends ReadOnlyDoubleProperty {
+    private abstract class TileSizeProperty extends ReadOnlyDoublePropertyBase {
         private final String name;
-        private ExpressionHelper<Number> helper;
+
         private double value;
         private boolean valid;
 
@@ -1225,26 +1223,6 @@ public class TilePane extends Pane {
         }
 
         @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Number> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Number> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
         public double get() {
             if (!valid) {
                 value = compute();
@@ -1257,7 +1235,7 @@ public class TilePane extends Pane {
         public void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 

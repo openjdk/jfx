@@ -25,13 +25,11 @@
 
 #pragma once
 
-#include "ConcreteImageBuffer.h"
 #include "DisplayListImageBuffer.h"
+#include "ImageBuffer.h"
 
 #if USE(CG)
 #include "ImageBufferCGBitmapBackend.h"
-#elif USE(DIRECT2D)
-#include "ImageBufferDirect2DBackend.h"
 #elif USE(CAIRO)
 #include "ImageBufferCairoImageSurfaceBackend.h"
 #elif PLATFORM(JAVA)
@@ -46,8 +44,6 @@ namespace WebCore {
 
 #if USE(CG)
 using UnacceleratedImageBufferBackend = ImageBufferCGBitmapBackend;
-#elif USE(DIRECT2D)
-using UnacceleratedImageBufferBackend = ImageBufferDirect2DBackend;
 #elif USE(CAIRO)
 using UnacceleratedImageBufferBackend = ImageBufferCairoImageSurfaceBackend;
 #elif PLATFORM(JAVA)
@@ -60,24 +56,30 @@ using AcceleratedImageBufferBackend = ImageBufferIOSurfaceBackend;
 using AcceleratedImageBufferBackend = UnacceleratedImageBufferBackend;
 #endif
 
-using UnacceleratedImageBuffer = ConcreteImageBuffer<UnacceleratedImageBufferBackend>;
-
 #if HAVE(IOSURFACE)
-class AcceleratedImageBuffer : public ConcreteImageBuffer<ImageBufferIOSurfaceBackend> {
-    using Base = ConcreteImageBuffer<AcceleratedImageBufferBackend>;
-    using Base::Base;
+class IOSurfaceImageBuffer final : public ImageBuffer {
 public:
-    IOSurface& surface() { return *m_backend->surface(); }
-};
-#else
-using AcceleratedImageBuffer = ConcreteImageBuffer<AcceleratedImageBufferBackend>;
-#endif
+    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const CreationContext& creationContext = { })
+    {
+        return ImageBuffer::create<ImageBufferIOSurfaceBackend, IOSurfaceImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
+    }
 
-using DisplayListUnacceleratedImageBuffer = DisplayList::ImageBuffer<UnacceleratedImageBufferBackend>;
-using DisplayListAcceleratedImageBuffer = DisplayList::ImageBuffer<AcceleratedImageBufferBackend>;
+    static auto create(const FloatSize& size, const GraphicsContext& context, RenderingPurpose purpose)
+    {
+        return ImageBuffer::create<ImageBufferIOSurfaceBackend, IOSurfaceImageBuffer>(size, context, purpose);
+    }
+
+    IOSurface& surface() { return *static_cast<ImageBufferIOSurfaceBackend&>(*m_backend).surface(); }
+
+protected:
+    using ImageBuffer::ImageBuffer;
+};
+#endif
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AcceleratedImageBuffer)
+#if HAVE(IOSURFACE)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::IOSurfaceImageBuffer)
     static bool isType(const WebCore::ImageBuffer& buffer) { return buffer.renderingMode() == WebCore::RenderingMode::Accelerated; }
 SPECIALIZE_TYPE_TRAITS_END()
+#endif

@@ -27,12 +27,13 @@
 #include "NetworkStorageSession.h"
 
 #include "Cookie.h"
+#include "CookieJar.h"
 #include "HTTPCookieAcceptPolicy.h"
 #include "RuntimeApplicationChecks.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessPrivilege.h>
 
-#if ENABLE(RESOURCE_LOAD_STATISTICS)
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
 #include "ResourceRequest.h"
 #if ENABLE(PUBLIC_SUFFIX_LIST)
 #include "PublicSuffix.h"
@@ -65,7 +66,7 @@ Vector<Cookie> NetworkStorageSession::domCookiesForHost(const String&)
 }
 #endif // !PLATFORM(COCOA)
 
-#if ENABLE(RESOURCE_LOAD_STATISTICS)
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
 
 #if !USE(SOUP)
 void NetworkStorageSession::setResourceLoadStatisticsEnabled(bool enabled)
@@ -126,12 +127,12 @@ bool NetworkStorageSession::hasHadUserInteractionAsFirstParty(const RegistrableD
     return m_registrableDomainsWithUserInteractionAsFirstParty.contains(registrableDomain);
 }
 
-bool NetworkStorageSession::shouldBlockCookies(const ResourceRequest& request, Optional<FrameIdentifier> frameID, Optional<PageIdentifier> pageID, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
+bool NetworkStorageSession::shouldBlockCookies(const ResourceRequest& request, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
 {
     return shouldBlockCookies(request.firstPartyForCookies(), request.url(), frameID, pageID, shouldRelaxThirdPartyCookieBlocking);
 }
 
-bool NetworkStorageSession::shouldBlockCookies(const URL& firstPartyForCookies, const URL& resource, Optional<FrameIdentifier> frameID, Optional<PageIdentifier> pageID, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
+bool NetworkStorageSession::shouldBlockCookies(const URL& firstPartyForCookies, const URL& resource, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking) const
 {
     if (shouldRelaxThirdPartyCookieBlocking == ShouldRelaxThirdPartyCookieBlocking::Yes)
         return false;
@@ -178,17 +179,20 @@ bool NetworkStorageSession::shouldExemptDomainPairFromThirdPartyCookieBlocking(c
     return topFrameDomain == resourceDomain || (m_appBoundDomains.contains(topFrameDomain) && m_appBoundDomains.contains(resourceDomain));
 }
 
-Optional<Seconds> NetworkStorageSession::maxAgeCacheCap(const ResourceRequest& request)
+std::optional<Seconds> NetworkStorageSession::maxAgeCacheCap(const ResourceRequest& request)
 {
-    if (m_cacheMaxAgeCapForPrevalentResources && shouldBlockCookies(request, WTF::nullopt, WTF::nullopt, ShouldRelaxThirdPartyCookieBlocking::No))
+    if (m_cacheMaxAgeCapForPrevalentResources && shouldBlockCookies(request, std::nullopt, std::nullopt, ShouldRelaxThirdPartyCookieBlocking::No))
         return m_cacheMaxAgeCapForPrevalentResources;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-void NetworkStorageSession::setAgeCapForClientSideCookies(Optional<Seconds> seconds)
+void NetworkStorageSession::setAgeCapForClientSideCookies(std::optional<Seconds> seconds)
 {
     m_ageCapForClientSideCookies = seconds;
     m_ageCapForClientSideCookiesShort = seconds ? Seconds { seconds->seconds() / 7. } : seconds;
+#if ENABLE(JS_COOKIE_CHECKING)
+    m_ageCapForClientSideCookiesForLinkDecorationTargetPage = seconds;
+#endif
 }
 
 void NetworkStorageSession::setPrevalentDomainsToBlockAndDeleteCookiesFor(const Vector<RegistrableDomain>& domains)
@@ -228,7 +232,7 @@ void NetworkStorageSession::grantCrossPageStorageAccess(const TopFrameDomain& to
     }
 }
 
-bool NetworkStorageSession::hasStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, Optional<FrameIdentifier> frameID, PageIdentifier pageID) const
+bool NetworkStorageSession::hasStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, std::optional<FrameIdentifier> frameID, PageIdentifier pageID) const
 {
     if (frameID) {
         auto framesGrantedIterator = m_framesGrantedStorageAccess.find(pageID);
@@ -265,7 +269,7 @@ Vector<String> NetworkStorageSession::getAllStorageAccessEntries() const
     return entries;
 }
 
-void NetworkStorageSession::grantStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, Optional<FrameIdentifier> frameID, PageIdentifier pageID)
+void NetworkStorageSession::grantStorageAccess(const RegistrableDomain& resourceDomain, const RegistrableDomain& firstPartyDomain, std::optional<FrameIdentifier> frameID, PageIdentifier pageID)
 {
     if (NetworkStorageSession::loginDomainMatchesRequestingDomain(firstPartyDomain, resourceDomain)) {
         grantCrossPageStorageAccess(firstPartyDomain, resourceDomain);
@@ -335,7 +339,7 @@ void NetworkStorageSession::setCacheMaxAgeCapForPrevalentResources(Seconds secon
 
 void NetworkStorageSession::resetCacheMaxAgeCapForPrevalentResources()
 {
-    m_cacheMaxAgeCapForPrevalentResources = WTF::nullopt;
+    m_cacheMaxAgeCapForPrevalentResources = std::nullopt;
 }
 
 void NetworkStorageSession::didCommitCrossSiteLoadWithDataTransferFromPrevalentResource(const RegistrableDomain& toDomain, PageIdentifier pageID)
@@ -366,8 +370,18 @@ void NetworkStorageSession::resetAppBoundDomains()
 }
 #endif
 
-Optional<Seconds> NetworkStorageSession::clientSideCookieCap(const RegistrableDomain& firstParty, Optional<PageIdentifier> pageID) const
+std::optional<Seconds> NetworkStorageSession::clientSideCookieCap(const RegistrableDomain& firstParty, std::optional<PageIdentifier> pageID) const
 {
+#if ENABLE(JS_COOKIE_CHECKING)
+    if (!pageID)
+        return std::nullopt;
+
+    auto domainIterator = m_navigatedToWithLinkDecorationByPrevalentResource.find(*pageID);
+    if (domainIterator != m_navigatedToWithLinkDecorationByPrevalentResource.end() && domainIterator->value == firstParty)
+        return m_ageCapForClientSideCookiesForLinkDecorationTargetPage;
+
+    return std::nullopt;
+#else
     if (!m_ageCapForClientSideCookies || !pageID || m_navigatedToWithLinkDecorationByPrevalentResource.isEmpty())
         return m_ageCapForClientSideCookies;
 
@@ -379,20 +393,21 @@ Optional<Seconds> NetworkStorageSession::clientSideCookieCap(const RegistrableDo
         return m_ageCapForClientSideCookiesShort;
 
     return m_ageCapForClientSideCookies;
+#endif
 }
 
 const HashMap<RegistrableDomain, HashSet<RegistrableDomain>>& NetworkStorageSession::storageAccessQuirks()
 {
     static NeverDestroyed<HashMap<RegistrableDomain, HashSet<RegistrableDomain>>> map = [] {
         HashMap<RegistrableDomain, HashSet<RegistrableDomain>> map;
-        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("microsoft.com"),
+        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("microsoft.com"_s),
             HashSet { RegistrableDomain::uncheckedCreateFromRegistrableDomainString("microsoftonline.com"_s) });
-        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("live.com"),
+        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("live.com"_s),
             HashSet { RegistrableDomain::uncheckedCreateFromRegistrableDomainString("skype.com"_s) });
-        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("playstation.com"), HashSet {
+        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("playstation.com"_s), HashSet {
             RegistrableDomain::uncheckedCreateFromRegistrableDomainString("sonyentertainmentnetwork.com"_s),
             RegistrableDomain::uncheckedCreateFromRegistrableDomainString("sony.com"_s) });
-        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("bbc.co.uk"), HashSet {
+        map.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("bbc.co.uk"_s), HashSet {
             RegistrableDomain::uncheckedCreateFromRegistrableDomainString("radioplayer.co.uk"_s) });
         return map;
     }();
@@ -410,15 +425,15 @@ bool NetworkStorageSession::canRequestStorageAccessForLoginOrCompatibilityPurpos
     return loginDomainMatchesRequestingDomain(topFrameDomain, resourceDomain);
 }
 
-Optional<HashSet<RegistrableDomain>> NetworkStorageSession::subResourceDomainsInNeedOfStorageAccessForFirstParty(const RegistrableDomain& topFrameDomain)
+std::optional<HashSet<RegistrableDomain>> NetworkStorageSession::subResourceDomainsInNeedOfStorageAccessForFirstParty(const RegistrableDomain& topFrameDomain)
 {
     auto it = storageAccessQuirks().find(topFrameDomain);
     if (it != storageAccessQuirks().end())
         return it->value;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-Optional<RegistrableDomain> NetworkStorageSession::findAdditionalLoginDomain(const TopFrameDomain& topDomain, const SubResourceDomain& subDomain)
+std::optional<RegistrableDomain> NetworkStorageSession::findAdditionalLoginDomain(const TopFrameDomain& topDomain, const SubResourceDomain& subDomain)
 {
     if (subDomain.string() == "sony.com"_s && topDomain.string() == "playstation.com"_s)
         return RegistrableDomain::uncheckedCreateFromRegistrableDomainString("sonyentertainmentnetwork.com"_s);
@@ -426,9 +441,14 @@ Optional<RegistrableDomain> NetworkStorageSession::findAdditionalLoginDomain(con
     if (subDomain.string() == "sonyentertainmentnetwork.com"_s && topDomain.string() == "playstation.com"_s)
         return RegistrableDomain::uncheckedCreateFromRegistrableDomainString("sony.com"_s);
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-#endif // ENABLE(RESOURCE_LOAD_STATISTICS)
+#endif // ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+
+void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& cookieHostNames, CompletionHandler<void()>&& completionHandler)
+{
+    deleteCookiesForHostnames(cookieHostNames, IncludeHttpOnlyCookies::Yes, ScriptWrittenCookiesOnly::No, WTFMove(completionHandler));
+}
 
 }

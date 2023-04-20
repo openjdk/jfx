@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
  * Copyright (C) 2013 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,12 @@
 #include <cstring>
 #include <memory>
 #include <type_traits>
+#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Compiler.h>
+#include <wtf/GetPtr.h>
+#include <wtf/TypeCasts.h>
 
 // Use this macro to declare and define a debug-only global variable that may have a
 // non-trivial constructor and destructor. When building with clang, this will suppress
@@ -80,7 +83,7 @@
  * - https://bugs.webkit.org/show_bug.cgi?id=38045
  * - http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43976
  */
-#if (CPU(ARM) || CPU(MIPS)) && COMPILER(GCC_COMPATIBLE)
+#if (CPU(ARM) || CPU(MIPS) || CPU(RISCV64)) && COMPILER(GCC_COMPATIBLE)
 template<typename Type>
 inline bool isPointerTypeAlignmentOkay(Type* ptr)
 {
@@ -169,28 +172,32 @@ template<typename T> char (&ArrayLengthHelperFunction(T (&)[0]))[0];
 #endif
 #define WTF_ARRAY_LENGTH(array) sizeof(::WTF::ArrayLengthHelperFunction(array))
 
-ALWAYS_INLINE constexpr size_t roundUpToMultipleOfImpl(size_t divisor, size_t x)
+inline constexpr bool isPowerOfTwo(size_t size) { return !(size & (size - 1)); }
+
+template<typename T, typename U>
+ALWAYS_INLINE constexpr T roundUpToMultipleOfImpl(U divisor, T x)
 {
-    size_t remainderMask = divisor - 1;
+    T remainderMask = static_cast<T>(divisor) - 1;
     return (x + remainderMask) & ~remainderMask;
 }
 
 // Efficient implementation that takes advantage of powers of two.
-inline size_t roundUpToMultipleOf(size_t divisor, size_t x)
+template<typename T, typename U>
+inline constexpr T roundUpToMultipleOf(U divisor, T x)
 {
-    ASSERT(divisor && !(divisor & (divisor - 1)));
-    return roundUpToMultipleOfImpl(divisor, x);
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(divisor && isPowerOfTwo(divisor));
+    return roundUpToMultipleOfImpl<T, U>(divisor, x);
 }
 
 template<size_t divisor> constexpr size_t roundUpToMultipleOf(size_t x)
 {
-    static_assert(divisor && !(divisor & (divisor - 1)), "divisor must be a power of two!");
+    static_assert(divisor && isPowerOfTwo(divisor));
     return roundUpToMultipleOfImpl(divisor, x);
 }
 
-template<size_t divisor, typename T> inline T* roundUpToMultipleOf(T* x)
+template<size_t divisor, typename T> inline constexpr T* roundUpToMultipleOf(T* x)
 {
-    static_assert(sizeof(T*) == sizeof(size_t), "");
+    static_assert(sizeof(T*) == sizeof(size_t));
     return reinterpret_cast<T*>(roundUpToMultipleOf<divisor>(reinterpret_cast<size_t>(x)));
 }
 
@@ -206,7 +213,7 @@ inline ArrayElementType* binarySearchImpl(ArrayType& array, size_t size, KeyType
     size_t offset = 0;
     while (size > 1) {
         size_t pos = (size - 1) >> 1;
-        KeyType val = extractKey(&array[offset + pos]);
+        auto val = extractKey(&array[offset + pos]);
 
         if (val == key)
             return &array[offset + pos];
@@ -383,6 +390,36 @@ Visitor<F...> makeVisitor(F... f)
     return Visitor<F...>(f...);
 }
 
+template<class V, class... F>
+auto switchOn(V&& v, F&&... f) -> decltype(std::visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v)))
+{
+    return std::visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v));
+}
+
+namespace Detail {
+
+template<std::size_t, class, class> struct AlternativeIndexHelper;
+
+template<std::size_t index, class T, class U>
+struct AlternativeIndexHelper<index, T, std::variant<U>> {
+    static constexpr std::size_t count = std::is_same_v<T, U>;
+    static constexpr std::size_t value = index;
+};
+
+template<std::size_t index, class T, class U, class... Types> struct AlternativeIndexHelper<index, T, std::variant<U, Types...>> {
+    static constexpr std::size_t count = std::is_same_v<T, U> + AlternativeIndexHelper<index + 1, T, std::variant<Types...>>::count;
+    static constexpr std::size_t value = std::is_same_v<T, U> ? index : AlternativeIndexHelper<index + 1, T, std::variant<Types...>>::value;
+};
+
+} // namespace Detail
+
+template<class T, class U> struct alternativeIndex {
+    static_assert(Detail::AlternativeIndexHelper<0, T, U>::count == 1, "There needs to be exactly one of the given type in the variant");
+    static constexpr std::size_t value = Detail::AlternativeIndexHelper<0, T, U>::value;
+};
+
+template <class T, class U> inline constexpr std::size_t alternativeIndexV = alternativeIndex<T, U>::value;
+
 namespace Detail
 {
     template <typename, template <typename...> class>
@@ -527,28 +564,84 @@ constexpr auto constructFixedSizeArrayWithArguments(Args&&... args) -> decltype(
     return constructFixedSizeArrayWithArgumentsImpl<ResultType>(tuple, std::forward<Args>(args)...);
 }
 
+// FIXME: Use std::is_sorted instead of this and remove it, once we require C++20.
+template<typename Iterator, typename Predicate> constexpr bool isSortedConstExpr(Iterator first, Iterator last, Predicate predicate)
+{
+    if (first == last)
+        return true;
+    auto current = first;
+    auto previous = current;
+    while (++current != last) {
+        if (!predicate(*previous, *current))
+            return false;
+        previous = current;
+    }
+    return true;
+}
+
+// FIXME: Use std::is_sorted instead of this and remove it, once we require C++20.
+template<typename Iterator> constexpr bool isSortedConstExpr(Iterator first, Iterator last)
+{
+    return isSortedConstExpr(first, last, [] (auto& a, auto& b) { return a < b; });
+}
+
+// FIXME: Use std::all_of instead of this and remove it, once we require C++20.
+template<typename Iterator, typename Predicate> constexpr bool allOfConstExpr(Iterator first, Iterator last, Predicate predicate)
+{
+    for (; first != last; ++first) {
+        if (!predicate(*first))
+            return false;
+    }
+    return true;
+}
+
+template<typename OptionalType, class Callback> typename OptionalType::value_type valueOrCompute(OptionalType optional, Callback callback)
+{
+    return optional ? *optional : callback();
+}
+
+template<typename OptionalType> auto valueOrDefault(OptionalType&& optionalValue)
+{
+    return optionalValue ? *std::forward<OptionalType>(optionalValue) : std::remove_reference_t<decltype(*optionalValue)> { };
+}
+
 } // namespace WTF
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
 
+// FIXME: Needed for GCC<=9.3. Remove it after Ubuntu 20.04 end of support (May 2023).
+#if defined(__GLIBCXX__) && !defined(HAVE_STD_REMOVE_CVREF) && !COMPILER(CLANG)
+namespace std {
+template <typename T>
+struct remove_cvref {
+    using type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+};
+
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
+}
+#endif
+
+using WTF::GB;
 using WTF::KB;
 using WTF::MB;
-using WTF::GB;
 using WTF::approximateBinarySearch;
 using WTF::binarySearch;
 using WTF::bitwise_cast;
 using WTF::callStatelessLambda;
 using WTF::checkAndSet;
+using WTF::constructFixedSizeArrayWithArguments;
 using WTF::findBitInWord;
 using WTF::insertIntoBoundedVector;
+using WTF::is8ByteAligned;
 using WTF::isCompilationThread;
 using WTF::isPointerAligned;
 using WTF::isStatelessLambda;
-using WTF::is8ByteAligned;
+using WTF::makeUnique;
+using WTF::makeUniqueWithoutFastMallocCheck;
 using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
 using WTF::safeCast;
 using WTF::tryBinarySearch;
-using WTF::makeUnique;
-using WTF::makeUniqueWithoutFastMallocCheck;
-using WTF::constructFixedSizeArrayWithArguments;
+using WTF::valueOrCompute;
+using WTF::valueOrDefault;

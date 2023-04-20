@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar;
@@ -34,7 +35,9 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import org.junit.After;
 import org.junit.Before;
@@ -57,6 +60,41 @@ public class DialogPaneTest {
     @After
     public void after() {
         sl.dispose();
+    }
+
+    @Test
+    public void test_noGraphic_noHeader() {
+        // Since DialogPane is not set in a Dialog, PseudoClass is activated manually
+        dialogPane.pseudoClassStateChanged(PseudoClass.getPseudoClass("no-header"), true);
+        // add empty headerText to call updateHeaderArea
+        dialogPane.setHeaderText("");
+        BorderPane pane = new BorderPane();
+        dialogPane.setContent(pane);
+        dialogPane.applyCss();
+        dialogPane.layout();
+
+        Bounds paneBounds = pane.localToScene(pane.getLayoutBounds());
+        assertEquals(0, paneBounds.getMinX(), 0.0);
+        assertEquals(0, paneBounds.getMinY(), 0.0);
+    }
+
+    @Test
+    public void test_graphic_noHeader() {
+        // Since DialogPane is not set in a Dialog, PseudoClass is activated manually
+        dialogPane.pseudoClassStateChanged(PseudoClass.getPseudoClass("no-header"), true);
+        Rectangle graphic = new Rectangle(10, 10);
+        dialogPane.setGraphic(graphic);
+        BorderPane pane = new BorderPane();
+        dialogPane.setContent(pane);
+        dialogPane.applyCss();
+        dialogPane.layout();
+
+        final StackPane graphicContainer = (StackPane) graphic.getParent();
+        final Insets padding = graphicContainer.getPadding();
+
+        Bounds paneBounds = pane.localToScene(pane.getLayoutBounds());
+        assertEquals(padding.getLeft() + graphic.getWidth() + padding.getRight(), paneBounds.getMinX(), 0.0);
+        assertEquals(0, paneBounds.getMinY(), 0.0);
     }
 
     @Test

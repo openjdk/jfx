@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(AtomicsObject);
 FOR_EACH_ATOMICS_FUNC(DECLARE_FUNC_PROTO)
 #undef DECLARE_FUNC_PROTO
 
-const ClassInfo AtomicsObject::s_info = { "Atomics", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AtomicsObject) };
+const ClassInfo AtomicsObject::s_info = { "Atomics"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AtomicsObject) };
 
 AtomicsObject::AtomicsObject(VM& vm, Structure* structure)
     : JSNonFinalObject(vm, structure)
@@ -64,7 +64,7 @@ AtomicsObject::AtomicsObject(VM& vm, Structure* structure)
 
 AtomicsObject* AtomicsObject::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    AtomicsObject* object = new (NotNull, allocateCell<AtomicsObject>(vm.heap)) AtomicsObject(vm, structure);
+    AtomicsObject* object = new (NotNull, allocateCell<AtomicsObject>(vm)) AtomicsObject(vm, structure);
     object->finishCreation(vm, globalObject);
     return object;
 }
@@ -77,10 +77,10 @@ Structure* AtomicsObject::createStructure(VM& vm, JSGlobalObject* globalObject, 
 void AtomicsObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
 #define PUT_DIRECT_NATIVE_FUNC(lowerName, upperName, count) \
-    putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, #lowerName), count, atomicsFunc ## upperName, Atomics ## upperName ## Intrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, #lowerName ""_s), count, atomicsFunc ## upperName, ImplementationVisibility::Public, Atomics ## upperName ## Intrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
     FOR_EACH_ATOMICS_FUNC(PUT_DIRECT_NATIVE_FUNC)
 #undef PUT_DIRECT_NATIVE_FUNC
 
@@ -121,7 +121,6 @@ static unsigned validateAtomicAccess(JSGlobalObject* globalObject, VM& vm, JSArr
         RETURN_IF_EXCEPTION(scope, 0);
     }
 
-    ASSERT(typedArrayView->length() <= static_cast<unsigned>(INT_MAX));
     if (accessIndex >= typedArrayView->length()) {
         throwRangeError(globalObject, scope, "Access index out of bounds for atomic access."_s);
         return 0;

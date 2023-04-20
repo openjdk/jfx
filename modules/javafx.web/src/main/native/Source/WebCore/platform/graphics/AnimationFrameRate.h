@@ -27,13 +27,16 @@
 
 #include <wtf/OptionSet.h>
 #include <wtf/Seconds.h>
-#include <wtf/text/TextStream.h>
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
 using FramesPerSecond = unsigned;
 
-enum class ThrottlingReason {
+enum class ThrottlingReason : uint8_t {
     VisuallyIdle                    = 1 << 0,
     OutsideViewport                 = 1 << 1,
     LowPowerMode                    = 1 << 2,
@@ -50,77 +53,15 @@ constexpr const int IntervalThrottlingFactor { 2 };
 constexpr const FramesPerSecond FullSpeedFramesPerSecond = 60;
 constexpr const FramesPerSecond HalfSpeedThrottlingFramesPerSecond = 30;
 
-inline FramesPerSecond framesPerSecondNearestFullSpeed(FramesPerSecond nominalFramesPerSecond)
-{
-    if (nominalFramesPerSecond <= FullSpeedFramesPerSecond)
-        return nominalFramesPerSecond;
+WEBCORE_EXPORT FramesPerSecond framesPerSecondNearestFullSpeed(FramesPerSecond);
 
-    float fullSpeedRatio = nominalFramesPerSecond / FullSpeedFramesPerSecond;
-    FramesPerSecond floorSpeed = nominalFramesPerSecond / std::floor(fullSpeedRatio);
-    FramesPerSecond ceilSpeed = nominalFramesPerSecond / std::ceil(fullSpeedRatio);
+// This will return std::nullopt if throttling results in a frequency < 1fps.
+WEBCORE_EXPORT std::optional<FramesPerSecond> preferredFramesPerSecond(OptionSet<ThrottlingReason>, std::optional<FramesPerSecond> nominalFramesPerSecond, bool preferFrameRatesNear60FPS);
 
-    return fullSpeedRatio - std::floor(fullSpeedRatio) <= 0.5 ? floorSpeed : ceilSpeed;
-}
+WEBCORE_EXPORT Seconds preferredFrameInterval(OptionSet<ThrottlingReason>, std::optional<FramesPerSecond> nominalFramesPerSecond, bool preferFrameRatesNear60FPS);
 
-inline Seconds preferredFrameInterval(const OptionSet<ThrottlingReason>& reasons, Optional<FramesPerSecond> nominalFramesPerSecond)
-{
-    if (reasons.contains(ThrottlingReason::OutsideViewport))
-        return AggressiveThrottlingAnimationInterval;
+WEBCORE_EXPORT FramesPerSecond preferredFramesPerSecondFromInterval(Seconds);
 
-    if (!nominalFramesPerSecond || *nominalFramesPerSecond == FullSpeedFramesPerSecond) {
-        // FIXME: handle ThrottlingReason::VisuallyIdle
-        if (reasons.containsAny({ ThrottlingReason::LowPowerMode, ThrottlingReason::NonInteractedCrossOriginFrame }))
-            return HalfSpeedThrottlingAnimationInterval;
-        return FullSpeedAnimationInterval;
-    }
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const OptionSet<ThrottlingReason>&);
 
-    auto framesPerSecond = framesPerSecondNearestFullSpeed(*nominalFramesPerSecond);
-    auto interval = Seconds(1.0 / framesPerSecond);
-
-    if (reasons.containsAny({ ThrottlingReason::LowPowerMode, ThrottlingReason::NonInteractedCrossOriginFrame, ThrottlingReason::VisuallyIdle }))
-        interval *= IntervalThrottlingFactor;
-
-    return interval;
-}
-
-inline FramesPerSecond preferredFramesPerSecond(Seconds preferredFrameInterval)
-{
-    if (preferredFrameInterval == FullSpeedAnimationInterval)
-        return FullSpeedFramesPerSecond;
-
-    if (preferredFrameInterval == HalfSpeedThrottlingAnimationInterval)
-        return HalfSpeedThrottlingFramesPerSecond;
-
-    return std::round(1 / preferredFrameInterval.seconds());
-}
-
-inline TextStream& operator<<(TextStream& ts, const OptionSet<ThrottlingReason>& reasons)
-{
-    bool didAppend = false;
-
-    for (auto reason : reasons) {
-        if (didAppend)
-            ts << "|";
-        switch (reason) {
-        case ThrottlingReason::VisuallyIdle:
-            ts << "VisuallyIdle";
-            break;
-        case ThrottlingReason::OutsideViewport:
-            ts << "OutsideViewport";
-            break;
-        case ThrottlingReason::LowPowerMode:
-            ts << "LowPowerMode";
-            break;
-        case ThrottlingReason::NonInteractedCrossOriginFrame:
-            ts << "NonInteractiveCrossOriginFrame";
-            break;
-        }
-        didAppend = true;
-    }
-
-    if (reasons.isEmpty())
-        ts << "[Unthrottled]";
-    return ts;
-}
-
-}
+} // namespace WebCore

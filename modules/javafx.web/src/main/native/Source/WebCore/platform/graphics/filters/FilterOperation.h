@@ -42,6 +42,7 @@ namespace WebCore {
 
 // CSS Filters
 
+struct BlendingContext;
 class CachedResourceLoader;
 class CachedSVGDocumentReference;
 class FilterEffect;
@@ -74,7 +75,7 @@ public:
     virtual bool operator==(const FilterOperation&) const = 0;
     bool operator!=(const FilterOperation& o) const { return !(*this == o); }
 
-    virtual RefPtr<FilterOperation> blend(const FilterOperation* /*from*/, double /*progress*/, bool /*blendToPassthrough*/ = false)
+    virtual RefPtr<FilterOperation> blend(const FilterOperation* /*from*/, const BlendingContext&, bool /*blendToPassthrough*/ = false)
     {
         return nullptr;
     }
@@ -95,6 +96,8 @@ public:
     }
 
     bool isSameType(const FilterOperation& o) const { return o.type() == m_type; }
+
+    virtual bool isIdentity() const { return false; }
 
     // True if the alpha channel of any pixel can change under this operation.
     virtual bool affectsOpacity() const { return false; }
@@ -164,9 +167,9 @@ private:
 
 class ReferenceFilterOperation : public FilterOperation {
 public:
-    static Ref<ReferenceFilterOperation> create(const String& url, const String& fragment)
+    static Ref<ReferenceFilterOperation> create(const String& url, AtomString&& fragment)
     {
-        return adoptRef(*new ReferenceFilterOperation(url, fragment));
+        return adoptRef(*new ReferenceFilterOperation(url, WTFMove(fragment)));
     }
     virtual ~ReferenceFilterOperation();
 
@@ -183,19 +186,21 @@ public:
     bool shouldBeRestrictedBySecurityOrigin() const override { return true; }
 
     const String& url() const { return m_url; }
-    const String& fragment() const { return m_fragment; }
+    const AtomString& fragment() const { return m_fragment; }
 
     void loadExternalDocumentIfNeeded(CachedResourceLoader&, const ResourceLoaderOptions&);
 
     CachedSVGDocumentReference* cachedSVGDocumentReference() const { return m_cachedSVGDocumentReference.get(); }
 
 private:
-    ReferenceFilterOperation(const String& url, const String& fragment);
+    ReferenceFilterOperation(const String& url, AtomString&& fragment);
 
     bool operator==(const FilterOperation&) const override;
 
+    bool isIdentity() const override;
+
     String m_url;
-    String m_fragment;
+    AtomString m_fragment;
     std::unique_ptr<CachedSVGDocumentReference> m_cachedSVGDocumentReference;
 };
 
@@ -215,7 +220,7 @@ public:
 
     double amount() const { return m_amount; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
@@ -226,6 +231,11 @@ private:
         : FilterOperation(type)
         , m_amount(amount)
     {
+    }
+
+    bool isIdentity() const override
+    {
+        return m_type == SATURATE ? (m_amount == 1) : !m_amount;
     }
 
     bool transformColor(SRGBA<float>&) const override;
@@ -250,7 +260,7 @@ public:
 
     bool affectsOpacity() const override { return m_type == OPACITY; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
@@ -261,6 +271,11 @@ private:
         : FilterOperation(type)
         , m_amount(amount)
     {
+    }
+
+    bool isIdentity() const override
+    {
+        return m_type == INVERT ? !m_amount : (m_amount == 1);
     }
 
     bool transformColor(SRGBA<float>&) const override;
@@ -280,7 +295,7 @@ public:
         return adoptRef(*new InvertLightnessFilterOperation());
     }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const final;
@@ -311,7 +326,7 @@ public:
     bool affectsOpacity() const override { return true; }
     bool movesPixels() const override { return true; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
@@ -320,6 +335,11 @@ private:
         : FilterOperation(BLUR)
         , m_stdDeviation(WTFMove(stdDeviation))
     {
+    }
+
+    bool isIdentity() const override
+    {
+        return m_stdDeviation.isZero() || m_stdDeviation.isNegative();
     }
 
     Length m_stdDeviation;
@@ -346,7 +366,7 @@ public:
     bool affectsOpacity() const override { return true; }
     bool movesPixels() const override { return true; }
 
-    RefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
@@ -357,6 +377,11 @@ private:
         , m_stdDeviation(stdDeviation)
         , m_color(color)
     {
+    }
+
+    bool isIdentity() const override
+    {
+        return m_stdDeviation < 0 || (!m_stdDeviation && m_location.isZero());
     }
 
     IntPoint m_location; // FIXME: should location be in Lengths?

@@ -33,6 +33,7 @@
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "SecurityOrigin.h"
@@ -45,17 +46,17 @@ namespace WebCore {
 // static
 bool MixedContentChecker::isMixedContent(SecurityOrigin& securityOrigin, const URL& url)
 {
-    if (securityOrigin.protocol() != "https")
+    if (securityOrigin.protocol() != "https"_s)
         return false; // We only care about HTTPS security origins.
 
     // We're in a secure context, so |url| is mixed content if it's insecure.
     return !SecurityOrigin::isSecure(url);
 }
 
-static void logWarning(const Frame& frame, bool allowed, const String& action, const URL& target)
+static void logWarning(const Frame& frame, bool allowed, ASCIILiteral action, const URL& target)
 {
     const char* errorString = allowed ? " was allowed to " : " was not allowed to ";
-    String message = makeString((allowed ? String() : "[blocked] "), "The page at ", frame.document()->url().stringCenterEllipsizedToLength(), errorString, action, " insecure content from ", target.stringCenterEllipsizedToLength(), ".\n");
+    auto message = makeString((allowed ? "" : "[blocked] "), "The page at ", frame.document()->url().stringCenterEllipsizedToLength(), errorString, action, " insecure content from ", target.stringCenterEllipsizedToLength(), ".\n");
     frame.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, message);
 }
 
@@ -72,7 +73,7 @@ bool MixedContentChecker::canDisplayInsecureContent(Frame& frame, SecurityOrigin
         return true;
 
     bool allowed = !isStrictMode && (frame.settings().allowDisplayOfInsecureContent() || type == ContentType::ActiveCanWarn) && !frame.document()->geolocationAccessed();
-    logWarning(frame, allowed, "display", url);
+    logWarning(frame, allowed, "display"_s, url);
 
     if (allowed) {
         frame.document()->setFoundMixedContent(SecurityContext::MixedContentType::Inactive);
@@ -91,7 +92,7 @@ bool MixedContentChecker::canRunInsecureContent(Frame& frame, SecurityOrigin& se
         return false;
 
     bool allowed = !frame.document()->isStrictMixedContentMode() && frame.settings().allowRunningOfInsecureContent() && !frame.document()->geolocationAccessed() && !frame.document()->secureCookiesAccessed();
-    logWarning(frame, allowed, "run", url);
+    logWarning(frame, allowed, "run"_s, url);
 
     if (allowed) {
         frame.document()->setFoundMixedContent(SecurityContext::MixedContentType::Active);
@@ -111,13 +112,13 @@ void MixedContentChecker::checkFormForMixedContent(Frame& frame, SecurityOrigin&
     if (!isMixedContent(securityOrigin, url))
         return;
 
-    String message = makeString("The page at ", frame.document()->url().stringCenterEllipsizedToLength(), " contains a form which targets an insecure URL ", url.stringCenterEllipsizedToLength(), ".\n");
+    auto message = makeString("The page at ", frame.document()->url().stringCenterEllipsizedToLength(), " contains a form which targets an insecure URL ", url.stringCenterEllipsizedToLength(), ".\n");
     frame.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, message);
 
     frame.loader().client().didDisplayInsecureContent();
 }
 
-Optional<String> MixedContentChecker::checkForMixedContentInFrameTree(const Frame& frame, const URL& url)
+std::optional<String> MixedContentChecker::checkForMixedContentInFrameTree(const Frame& frame, const URL& url)
 {
     auto* document = frame.document();
 
@@ -136,7 +137,7 @@ Optional<String> MixedContentChecker::checkForMixedContentInFrameTree(const Fram
         document = frame->document();
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 } // namespace WebCore

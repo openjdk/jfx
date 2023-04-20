@@ -80,6 +80,9 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GSequence, g_sequence_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GSList, g_slist_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GString, g_autoptr_cleanup_gstring_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GStringChunk, g_string_chunk_free)
+#ifndef GSTREAMER_LITE
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GStrvBuilder, g_strv_builder_unref)
+#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GThread, g_thread_unref)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(GMutex, g_mutex_clear)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GMutexLocker, g_mutex_locker_free)

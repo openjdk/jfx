@@ -59,7 +59,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getAl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getAxisImpl(JNIEnv* env, jclass, jlong peer)
@@ -71,7 +71,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getAx
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setAxisImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::axisAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::axisAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getBgColorImpl(JNIEnv* env, jclass, jlong peer)
@@ -83,7 +83,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getBg
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setBgColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::bgcolorAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getChImpl(JNIEnv* env, jclass, jlong peer)
@@ -95,7 +95,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getCh
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setChImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getChOffImpl(JNIEnv* env, jclass, jlong peer)
@@ -107,7 +107,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getCh
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setChOffImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getColSpanImpl(JNIEnv*, jclass, jlong peer)
@@ -143,7 +143,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getHe
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setHeadersImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::headersAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::headersAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getHeightImpl(JNIEnv* env, jclass, jlong peer)
@@ -155,7 +155,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getHe
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setHeightImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::heightAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::heightAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getNoWrapImpl(JNIEnv*, jclass, jlong peer)
@@ -179,7 +179,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getVA
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setVAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valignAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valignAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getWidthImpl(JNIEnv* env, jclass, jlong peer)
@@ -191,7 +191,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getWi
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setWidthImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::widthAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::widthAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getAbbrImpl(JNIEnv* env, jclass, jlong peer)
@@ -203,7 +203,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getAb
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setAbbrImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::abbrAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::abbrAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getScopeImpl(JNIEnv* env, jclass, jlong peer)
@@ -215,7 +215,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getSc
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setScopeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::scopeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::scopeAttr, AtomString{String(env, value)});
 }
 
 }

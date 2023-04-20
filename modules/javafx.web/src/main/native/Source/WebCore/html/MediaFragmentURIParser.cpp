@@ -24,25 +24,25 @@
  */
 
 #include "config.h"
+#include "MediaFragmentURIParser.h"
 
 #if ENABLE(VIDEO)
-
-#include "MediaFragmentURIParser.h"
 
 #include "HTMLElement.h"
 #include "MediaPlayer.h"
 #include "ProcessingInstruction.h"
 #include "SegmentedString.h"
 #include "Text.h"
+#include <pal/text/TextEncoding.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-const int secondsPerHour = 3600;
-const int secondsPerMinute = 60;
-const unsigned nptIdentifierLength = 4; // "npt:"
+constexpr int secondsPerHour = 3600;
+constexpr int secondsPerMinute = 60;
+constexpr unsigned nptIdentifierLength = 4; // "npt:"
 
 static String collectDigits(const LChar* input, unsigned length, unsigned& position)
 {
@@ -55,19 +55,17 @@ static String collectDigits(const LChar* input, unsigned length, unsigned& posit
     return digits.toString();
 }
 
-static String collectFraction(const LChar* input, unsigned length, unsigned& position)
+static StringView collectFraction(const LChar* input, unsigned length, unsigned& position)
 {
-    StringBuilder digits;
-
     // http://www.ietf.org/rfc/rfc2326.txt
     // [ "." *DIGIT ]
     if (input[position] != '.')
-        return String();
+        return { };
 
-    digits.append(input[position++]);
+    unsigned start = position++;
     while (position < length && isASCIIDigit(input[position]))
-        digits.append(input[position++]);
-    return digits.toString();
+        ++position;
+    return StringView { input + start, position - start };
 }
 
 MediaFragmentURIParser::MediaFragmentURIParser(const URL& url)
@@ -125,20 +123,20 @@ void MediaFragmentURIParser::parseFragments()
         //  a. Decode percent-encoded octets in name and value as defined by RFC 3986. If either
         //     name or value are not valid percent-encoded strings, then remove the name-value pair
         //     from the list.
-        String name = decodeURLEscapeSequences(fragmentString.substring(parameterStart, equalOffset - parameterStart));
+        String name = PAL::decodeURLEscapeSequences(fragmentString.substring(parameterStart, equalOffset - parameterStart));
         String value;
         if (equalOffset != parameterEnd)
-            value = decodeURLEscapeSequences(fragmentString.substring(equalOffset + 1, parameterEnd - equalOffset - 1));
+            value = PAL::decodeURLEscapeSequences(fragmentString.substring(equalOffset + 1, parameterEnd - equalOffset - 1));
 
         //  b. Convert name and value to Unicode strings by interpreting them as UTF-8. If either
         //     name or value are not valid UTF-8 strings, then remove the name-value pair from the list.
         bool validUTF8 = false;
         if (!name.isEmpty() && !value.isEmpty()) {
-            name = name.utf8(StrictConversion).data();
+            name = String::fromUTF8(name.utf8(StrictConversion).data());
             validUTF8 = !name.isEmpty();
 
             if (validUTF8) {
-                value = value.utf8(StrictConversion).data();
+                value = String::fromUTF8(value.utf8(StrictConversion).data());
                 validUTF8 = !value.isEmpty();
             }
         }
@@ -166,7 +164,7 @@ void MediaFragmentURIParser::parseTimeFragment()
         // http://www.w3.org/2008/WebVideo/Fragments/WD-media-fragments-spec/#naming-time
         // Temporal clipping is denoted by the name t, and specified as an interval with a begin
         // time and an end time
-        if (fragment.first != "t")
+        if (fragment.first != "t"_s)
             continue;
 
         // http://www.w3.org/2008/WebVideo/Fragments/WD-media-fragments-spec/#npt-time
@@ -260,7 +258,7 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
     // npt-ss        =   2DIGIT      ; 0-59
 
     String digits1 = collectDigits(timeString, length, offset);
-    int value1 = digits1.toInt();
+    int value1 = parseInteger<int>(digits1).value_or(0);
     if (offset >= length || timeString[offset] == ',') {
         time = MediaTime::createWithDouble(value1);
         return true;
@@ -270,8 +268,9 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
     if (timeString[offset] == '.') {
         if (offset == length)
             return true;
-        String digits = collectFraction(timeString, length, offset);
-        fraction = MediaTime::createWithDouble(digits.toDouble());
+        auto digits = collectFraction(timeString, length, offset);
+        bool isValid;
+        fraction = MediaTime::createWithDouble(digits.toDouble(isValid));
         time = MediaTime::createWithDouble(value1) + fraction;
         return true;
     }
@@ -287,9 +286,9 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
     if (offset >= length || !isASCIIDigit(timeString[(offset)]))
         return false;
     String digits2 = collectDigits(timeString, length, offset);
-    int value2 = digits2.toInt();
     if (digits2.length() != 2)
         return false;
+    int value2 = parseInteger<int>(digits2).value();
 
     // Detect whether this timestamp includes hours.
     int value3;
@@ -301,15 +300,17 @@ bool MediaFragmentURIParser::parseNPTTime(const LChar* timeString, unsigned leng
         String digits3 = collectDigits(timeString, length, offset);
         if (digits3.length() != 2)
             return false;
-        value3 = digits3.toInt();
+        value3 = parseInteger<int>(digits3).value();
     } else {
         value3 = value2;
         value2 = value1;
         value1 = 0;
     }
 
-    if (offset < length && timeString[offset] == '.')
-        fraction = MediaTime::createWithDouble(collectFraction(timeString, length, offset).toDouble());
+    if (offset < length && timeString[offset] == '.') {
+        bool isValid;
+        fraction = MediaTime::createWithDouble(collectFraction(timeString, length, offset).toDouble(isValid));
+    }
 
     time = MediaTime::createWithDouble((value1 * secondsPerHour) + (value2 * secondsPerMinute) + value3) + fraction;
     return true;

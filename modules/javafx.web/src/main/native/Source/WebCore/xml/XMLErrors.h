@@ -48,11 +48,11 @@ public:
     void insertErrorMessageBlock();
 
 private:
-    void appendErrorMessage(const String& typeString, TextPosition, const char* message);
+    void appendErrorMessage(ASCIILiteral typeString, TextPosition, const char* message);
 
     Document& m_document;
     int m_errorCount { 0 };
-    Optional<TextPosition> m_lastErrorPosition;
+    std::optional<TextPosition> m_lastErrorPosition;
     StringBuilder m_errorMessages;
 };
 

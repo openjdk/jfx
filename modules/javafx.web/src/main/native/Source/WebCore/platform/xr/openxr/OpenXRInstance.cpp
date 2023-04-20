@@ -56,16 +56,12 @@ Instance::Impl::Impl()
         if (!m_extensions)
             return;
 
-        if (!m_extensions->isExtensionSupported(XR_MND_HEADLESS_EXTENSION_NAME)) {
-            LOG(XR, "Required extension %s not supported", XR_MND_HEADLESS_EXTENSION_NAME);
-            return;
-        }
-
         static const char* s_applicationName = "WebXR (WebKit)";
         static const uint32_t s_applicationVersion = 1;
 
         const char* const enabledExtensions[] = {
-            XR_MND_HEADLESS_EXTENSION_NAME
+            XR_KHR_OPENGL_ENABLE_EXTENSION_NAME,
+            XR_MNDX_EGL_ENABLE_EXTENSION_NAME
         };
 
         auto createInfo = createStructure<XrInstanceCreateInfo, XR_TYPE_INSTANCE_CREATE_INFO>();
@@ -82,15 +78,17 @@ Instance::Impl::Impl()
         if (m_instance == XR_NULL_HANDLE)
             return;
 
+        m_extensions->loadMethods(m_instance);
+
         LOG(XR, "xrCreateInstance(): using instance %p\n", m_instance);
     });
 }
 
 Instance::Impl::~Impl()
 {
-    m_workQueue->dispatch([this] {
-        if (m_instance != XR_NULL_HANDLE)
-            xrDestroyInstance(m_instance);
+    m_workQueue->dispatch([instance = m_instance] {
+        if (instance != XR_NULL_HANDLE)
+            xrDestroyInstance(instance);
     });
 }
 
@@ -134,7 +132,7 @@ void Instance::enumerateImmersiveXRDevices(CompletionHandler<void(const DeviceLi
         callbackOnExit.release();
 
         callOnMainThread([this, callback = WTFMove(callback), systemId]() mutable {
-            m_immersiveXRDevices = DeviceList::from(makeUniqueRef<OpenXRDevice>(m_impl->xrInstance(), systemId, m_impl->queue(), *m_impl->extensions(), [this, callback = WTFMove(callback)]() mutable {
+            m_immersiveXRDevices = DeviceList::from(OpenXRDevice::create(m_impl->xrInstance(), systemId, m_impl->queue(), *m_impl->extensions(), [this, callback = WTFMove(callback)]() mutable {
                 ASSERT(isMainThread());
                 callback(m_immersiveXRDevices);
             }));

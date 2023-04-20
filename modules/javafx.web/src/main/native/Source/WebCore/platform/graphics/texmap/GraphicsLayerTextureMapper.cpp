@@ -1,5 +1,6 @@
 /*
     Copyright (C) 2009 Nokia Corporation and/or its subsidiary(-ies)
+    Copyright (C) 2022 Sony Interactive Entertainment Inc.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -24,6 +25,7 @@
 #include "GraphicsLayerFactory.h"
 #include "ImageBuffer.h"
 #include "NicosiaAnimation.h"
+#include "TransformOperation.h"
 
 #if !USE(COORDINATED_GRAPHICS)
 
@@ -255,6 +257,14 @@ void GraphicsLayerTextureMapper::setBackfaceVisibility(bool value)
     notifyChange(BackfaceVisibilityChange);
 }
 
+void GraphicsLayerTextureMapper::setBackgroundColor(const Color& value)
+{
+    if (value == backgroundColor())
+        return;
+    GraphicsLayer::setBackgroundColor(value);
+    notifyChange(BackgroundColorChange);
+}
+
 void GraphicsLayerTextureMapper::setOpacity(float value)
 {
     if (value == opacity())
@@ -280,13 +290,22 @@ void GraphicsLayerTextureMapper::setContentsClippingRect(const FloatRoundedRect&
     notifyChange(ContentsRectChange);
 }
 
+void GraphicsLayerTextureMapper::setContentsRectClipsDescendants(bool contentsRectClipsDescendants)
+{
+    if (contentsRectClipsDescendants == m_contentsRectClipsDescendants)
+        return;
+
+    GraphicsLayer::setContentsRectClipsDescendants(contentsRectClipsDescendants);
+    notifyChange(ContentsRectChange);
+}
+
 void GraphicsLayerTextureMapper::setContentsToSolidColor(const Color& color)
 {
     if (color == m_solidColor)
         return;
 
     m_solidColor = color;
-    notifyChange(BackgroundColorChange);
+    notifyChange(SolidColorChange);
 }
 
 void GraphicsLayerTextureMapper::setContentsToImage(Image* image)
@@ -332,6 +351,12 @@ void GraphicsLayerTextureMapper::setContentsToPlatformLayer(TextureMapperPlatfor
 
     if (m_contentsLayer)
         m_contentsLayer->setClient(this);
+}
+
+void GraphicsLayerTextureMapper::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&& displayDelegate, ContentsLayerPurpose purpose)
+{
+    PlatformLayer* platformLayer = displayDelegate ? displayDelegate->platformLayer() : nullptr;
+    setContentsToPlatformLayer(platformLayer, purpose);
 }
 
 void GraphicsLayerTextureMapper::setShowDebugBorder(bool show)
@@ -402,10 +427,10 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
         return;
 
     if (m_changeMask & ChildrenChange) {
-        Vector<GraphicsLayer*> rawChildren;
+        Vector<TextureMapperLayer*> rawChildren;
         rawChildren.reserveInitialCapacity(children().size());
-        for (auto& layer : children())
-            rawChildren.uncheckedAppend(layer.ptr());
+        for (auto& child : children())
+            rawChildren.uncheckedAppend(&downcast<GraphicsLayerTextureMapper>(child.get()).layer());
         m_layer.setChildren(rawChildren);
     }
 
@@ -458,6 +483,7 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
     if (m_changeMask & ContentsRectChange) {
         m_layer.setContentsRect(contentsRect());
         m_layer.setContentsClippingRect(contentsClippingRect());
+        m_layer.setContentsRectClipsDescendants(contentsRectClipsDescendants());
     }
 
     if (m_changeMask & MasksToBoundsChange)
@@ -475,10 +501,13 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
     if (m_changeMask & BackfaceVisibilityChange)
         m_layer.setBackfaceVisibility(backfaceVisibility());
 
+    if (m_changeMask & BackgroundColorChange)
+        m_layer.setBackgroundColor(backgroundColor());
+
     if (m_changeMask & OpacityChange)
         m_layer.setOpacity(opacity());
 
-    if (m_changeMask & BackgroundColorChange)
+    if (m_changeMask & SolidColorChange)
         m_layer.setSolidColor(m_solidColor);
 
     if (m_changeMask & FilterChange)
@@ -500,7 +529,7 @@ void GraphicsLayerTextureMapper::commitLayerChanges()
         m_layer.setAnimations(m_animations);
 
     if (m_changeMask & AnimationStarted)
-        client().notifyAnimationStarted(this, "", m_animationStartTime);
+        client().notifyAnimationStarted(this, emptyString(), m_animationStartTime);
 
     m_changeMask = NoChanges;
 }
@@ -593,14 +622,8 @@ bool GraphicsLayerTextureMapper::addAnimation(const KeyframeValueList& valueList
             return false;
     }
 
-    bool listsMatch = false;
-    bool hasBigRotation;
-
-    if (valueList.property() == AnimatedPropertyTransform)
-        listsMatch = validateTransformOperations(valueList, hasBigRotation) >= 0;
-
     const MonotonicTime currentTime = MonotonicTime::now();
-    m_animations.add(Nicosia::Animation(keyframesName, valueList, boxSize, *anim, listsMatch, currentTime - Seconds(timeOffset), 0_s, Nicosia::Animation::AnimationState::Playing));
+    m_animations.add(Nicosia::Animation(keyframesName, valueList, boxSize, *anim, currentTime - Seconds(timeOffset), 0_s, Nicosia::Animation::AnimationState::Playing));
     // m_animationStartTime is the time of the first real frame of animation, now or delayed by a negative offset.
     if (Seconds(timeOffset) > 0_s)
         m_animationStartTime = currentTime;

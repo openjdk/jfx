@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,6 +144,7 @@ class IntSet {
         }
     }
 
+    @Override
     public boolean equals(Object o) {
         if (o instanceof IntSet) {
             return equals((IntSet) o);
@@ -152,6 +153,16 @@ class IntSet {
         }
     }
 
+    @Override
+    public int hashCode() {
+        int h = 1;
+        for (int i = 0; i < size; i++) {
+            h = 31 * h + elements[i];
+        }
+        return h;
+    }
+
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("IntSet[");
         for (int i = 0; i < size; i++) {

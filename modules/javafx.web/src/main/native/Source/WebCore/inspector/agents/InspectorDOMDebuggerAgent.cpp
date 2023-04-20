@@ -172,7 +172,7 @@ Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setEventBreakpoint(Prot
     }
 
     ASSERT_NOT_REACHED();
-    return makeUnexpected("Not supported");
+    return makeUnexpected("Not supported"_s);
 }
 
 Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::removeEventBreakpoint(Protocol::DOMDebugger::EventBreakpointType breakpointType, const String& eventName)
@@ -215,12 +215,15 @@ Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::removeEventBreakpoint(P
     }
 
     ASSERT_NOT_REACHED();
-    return makeUnexpected("Not supported");
+    return makeUnexpected("Not supported"_s);
 }
 
-void InspectorDOMDebuggerAgent::willHandleEvent(Event& event, const RegisteredEventListener& registeredEventListener)
+void InspectorDOMDebuggerAgent::willHandleEvent(ScriptExecutionContext& scriptExecutionContext, Event& event, const RegisteredEventListener& registeredEventListener)
 {
-    auto state = event.target()->scriptExecutionContext()->globalObject();
+    // `event.target()->scriptExecutionContext()` can change between `willHandleEvent` and `didHandleEvent`. The passed
+    // `scriptExecutionContext` parameter will always match in companion calls to `willHandleEvent` and
+    // `didHandleEvent`, and will not be null.
+    auto state = scriptExecutionContext.globalObject();
     auto injectedScript = m_injectedScriptManager.injectedScriptFor(state);
     if (injectedScript.hasNoValue())
         return;
@@ -259,9 +262,12 @@ void InspectorDOMDebuggerAgent::willHandleEvent(Event& event, const RegisteredEv
     m_debuggerAgent->schedulePauseForSpecialBreakpoint(*breakpoint, Inspector::DebuggerFrontendDispatcher::Reason::Listener, WTFMove(eventData));
 }
 
-void InspectorDOMDebuggerAgent::didHandleEvent(Event& event, const RegisteredEventListener& registeredEventListener)
+void InspectorDOMDebuggerAgent::didHandleEvent(ScriptExecutionContext& scriptExecutionContext, Event& event, const RegisteredEventListener& registeredEventListener)
 {
-    auto state = event.target()->scriptExecutionContext()->globalObject();
+    // `event.target()->scriptExecutionContext()` can change between `willHandleEvent` and `didHandleEvent`. Here it
+    // could also be nullptr. The passed `scriptExecutionContext` parameter here will always match in companion calls to
+    // `willHandleEvent` and `didHandleEvent`, and will not be null.
+    auto state = scriptExecutionContext.globalObject();
     auto injectedScript = m_injectedScriptManager.injectedScriptFor(state);
     if (injectedScript.hasNoValue())
         return;
@@ -314,7 +320,7 @@ void InspectorDOMDebuggerAgent::didFireTimer(bool oneShot)
     m_debuggerAgent->cancelPauseForSpecialBreakpoint(*breakpoint);
 }
 
-Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setURLBreakpoint(const String& url, Optional<bool>&& isRegex, RefPtr<JSON::Object>&& options)
+Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setURLBreakpoint(const String& url, std::optional<bool>&& isRegex, RefPtr<JSON::Object>&& options)
 {
     Protocol::ErrorString errorString;
 
@@ -340,7 +346,7 @@ Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::setURLBreakpoint(const 
     return { };
 }
 
-Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::removeURLBreakpoint(const String& url, Optional<bool>&& isRegex)
+Protocol::ErrorStringOr<void> InspectorDOMDebuggerAgent::removeURLBreakpoint(const String& url, std::optional<bool>&& isRegex)
 {
     if (url.isEmpty()) {
         if (!m_pauseOnAllURLsBreakpoint)
@@ -404,8 +410,8 @@ void InspectorDOMDebuggerAgent::breakOnURLIfNeeded(const String& url, URLBreakpo
     }
 
     Ref<JSON::Object> eventData = JSON::Object::create();
-    eventData->setString("breakpointURL", breakpointURL);
-    eventData->setString("url", url);
+    eventData->setString("breakpointURL"_s, breakpointURL);
+    eventData->setString("url"_s, url);
     m_debuggerAgent->breakProgram(breakReason, WTFMove(eventData), WTFMove(breakpoint));
 }
 

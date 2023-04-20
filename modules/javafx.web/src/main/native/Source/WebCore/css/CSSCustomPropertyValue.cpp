@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,35 +25,48 @@
 
 #include "config.h"
 #include "CSSCustomPropertyValue.h"
+
+#include "CSSParserIdioms.h"
 #include "CSSTokenizer.h"
 
 namespace WebCore {
 
+Ref<CSSCustomPropertyValue> CSSCustomPropertyValue::createEmpty(const AtomString& name)
+{
+    return adoptRef(*new CSSCustomPropertyValue(name, std::monostate { }));
+}
+
+Ref<CSSCustomPropertyValue> CSSCustomPropertyValue::createWithID(const AtomString& name, CSSValueID id)
+{
+    ASSERT(WebCore::isCSSWideKeyword(id) || id == CSSValueInvalid);
+    return adoptRef(*new CSSCustomPropertyValue(name, { id }));
+}
+
 bool CSSCustomPropertyValue::equals(const CSSCustomPropertyValue& other) const
 {
-    if (this == &other)
-        return true;
     if (m_name != other.m_name || m_value.index() != other.m_value.index())
         return false;
-    return WTF::switchOn(m_value, [&](const Ref<CSSVariableReferenceValue>& value) {
-        return value.get() == WTF::get<Ref<CSSVariableReferenceValue>>(other.m_value).get();
+    return WTF::switchOn(m_value, [&](const std::monostate&) {
+        return true;
+    }, [&](const Ref<CSSVariableReferenceValue>& value) {
+        return value.get() == std::get<Ref<CSSVariableReferenceValue>>(other.m_value).get();
     }, [&](const CSSValueID& value) {
-        return value == WTF::get<CSSValueID>(other.m_value);
+        return value == std::get<CSSValueID>(other.m_value);
     }, [&](const Ref<CSSVariableData>& value) {
-        return value.get() == WTF::get<Ref<CSSVariableData>>(other.m_value).get();
+        return value.get() == std::get<Ref<CSSVariableData>>(other.m_value).get();
     }, [&](const Length& value) {
-        return value == WTF::get<Length>(other.m_value);
+        return value == std::get<Length>(other.m_value);
     }, [&](const Ref<StyleImage>& value) {
-        return value.get() == WTF::get<Ref<StyleImage>>(other.m_value).get();
+        return value.get() == std::get<Ref<StyleImage>>(other.m_value).get();
     });
 }
 
 String CSSCustomPropertyValue::customCSSText() const
 {
-    if (!m_serialized) {
-        m_serialized = true;
-
-        WTF::switchOn(m_value, [&](const Ref<CSSVariableReferenceValue>& value) {
+    if (m_stringValue.isNull()) {
+        WTF::switchOn(m_value, [&](const std::monostate&) {
+            m_stringValue = emptyString();
+        }, [&](const Ref<CSSVariableReferenceValue>& value) {
             m_stringValue = value->cssText();
         }, [&](const CSSValueID& value) {
             m_stringValue = getValueName(value);
@@ -71,27 +84,20 @@ String CSSCustomPropertyValue::customCSSText() const
 Vector<CSSParserToken> CSSCustomPropertyValue::tokens() const
 {
     Vector<CSSParserToken> result;
-
-    WTF::switchOn(m_value, [&](const Ref<CSSVariableReferenceValue>&) {
+    WTF::switchOn(m_value, [&](const std::monostate&) {
+        // Do nothing.
+    }, [&](const Ref<CSSVariableReferenceValue>&) {
         ASSERT_NOT_REACHED();
     }, [&](const CSSValueID&) {
-        // Do nothing
+        // Do nothing.
     }, [&](const Ref<CSSVariableData>& value) {
         result.appendVector(value->tokens());
-    }, [&](const Length&) {
-        CSSTokenizer tokenizer(cssText());
-
-        auto tokenizerRange = tokenizer.tokenRange();
-        while (!tokenizerRange.atEnd())
-            result.append(tokenizerRange.consume());
-    }, [&](const Ref<StyleImage>&) {
-        CSSTokenizer tokenizer(cssText());
-
+    }, [&](auto&) {
+        CSSTokenizer tokenizer(customCSSText());
         auto tokenizerRange = tokenizer.tokenRange();
         while (!tokenizerRange.atEnd())
             result.append(tokenizerRange.consume());
     });
-
     return result;
 }
 

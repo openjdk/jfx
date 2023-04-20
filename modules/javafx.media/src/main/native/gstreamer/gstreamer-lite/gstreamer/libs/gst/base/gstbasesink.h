@@ -125,10 +125,10 @@ struct _GstBaseSink {
  * @unlock: Unlock any pending access to the resource. Subclasses should
  *     unblock any blocked function ASAP and call gst_base_sink_wait_preroll()
  * @unlock_stop: Clear the previous unlock request. Subclasses should clear
- *     any state they set during #GstBaseSinkClass.unlock(), and be ready to
+ *     any state they set during #GstBaseSinkClass::unlock, and be ready to
  *     continue where they left off after gst_base_sink_wait_preroll(),
  *     gst_base_sink_wait() or gst_wait_sink_wait_clock() return or
- *     #GstBaseSinkClass.render() is called again.
+ *     #GstBaseSinkClass::render is called again.
  * @query: perform a #GstQuery on the element.
  * @event: Override this to handle events arriving on the sink pad
  * @wait_event: Override this to implement custom logic to wait for the event
@@ -166,7 +166,13 @@ struct _GstBaseSinkClass {
   /* start or stop a pulling thread */
   gboolean      (*activate_pull)(GstBaseSink *sink, gboolean active);
 
-  /* get the start and end times for syncing on this buffer */
+  /**
+   * GstBaseSink::get_times:
+   * @start: (out): the start #GstClockTime
+   * @end: (out): the end #GstClockTime
+   *
+   * Get the start and end times for syncing on this buffer.
+   */
   void          (*get_times)    (GstBaseSink *sink, GstBuffer *buffer,
                                  GstClockTime *start, GstClockTime *end);
 

@@ -49,12 +49,12 @@ public:
     bool canBreakBefore(const LazyLineBreakIterator&) const;
 
 private:
-    const char* renderName() const override { return "RenderRubyText"; }
+    ASCIILiteral renderName() const override { return "RenderRubyText"_s; }
     bool isRubyText() const override { return true; }
 
     bool avoidsFloats() const override;
 
-    Optional<TextAlignMode> overrideTextAlignmentForLine(bool endsWithSoftBreak) const override;
+    std::optional<TextAlignMode> overrideTextAlignmentForLine(bool endsWithSoftBreak) const override;
     void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const override;
 };
 

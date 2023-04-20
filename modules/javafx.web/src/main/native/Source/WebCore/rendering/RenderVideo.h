@@ -38,7 +38,7 @@ public:
     RenderVideo(HTMLVideoElement&, RenderStyle&&);
     virtual ~RenderVideo();
 
-    HTMLVideoElement& videoElement() const;
+    WEBCORE_EXPORT HTMLVideoElement& videoElement() const;
 
     WEBCORE_EXPORT IntRect videoBox() const;
 
@@ -64,7 +64,7 @@ private:
 
     void imageChanged(WrappedImagePtr, const IntRect*) final;
 
-    const char* renderName() const final { return "RenderVideo"; }
+    ASCIILiteral renderName() const final { return "RenderVideo"_s; }
 
     bool requiresLayer() const final { return true; }
     bool isVideo() const final { return true; }

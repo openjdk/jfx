@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,25 +28,31 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AuthenticatorResponse.h"
+#include "AuthenticatorTransport.h"
 
 namespace WebCore {
 
 class AuthenticatorAttestationResponse : public AuthenticatorResponse {
 public:
-    static Ref<AuthenticatorAttestationResponse> create(Ref<ArrayBuffer>&& rawId, Ref<ArrayBuffer>&& attestationObject);
-    WEBCORE_EXPORT static Ref<AuthenticatorAttestationResponse> create(const Vector<uint8_t>& rawId, const Vector<uint8_t>& attestationObject);
+    static Ref<AuthenticatorAttestationResponse> create(Ref<ArrayBuffer>&& rawId, Ref<ArrayBuffer>&& attestationObject, AuthenticatorAttachment, Vector<AuthenticatorTransport>&&);
+    WEBCORE_EXPORT static Ref<AuthenticatorAttestationResponse> create(const Vector<uint8_t>& rawId, const Vector<uint8_t>& attestationObject, AuthenticatorAttachment, Vector<AuthenticatorTransport>&&);
 
     virtual ~AuthenticatorAttestationResponse() = default;
 
     ArrayBuffer* attestationObject() const { return m_attestationObject.ptr(); }
+    const Vector<AuthenticatorTransport>& getTransports() const { return m_transports; }
+    RefPtr<ArrayBuffer> getAuthenticatorData() const;
+    RefPtr<ArrayBuffer> getPublicKey() const;
+    int64_t getPublicKeyAlgorithm() const;
 
 private:
-    AuthenticatorAttestationResponse(Ref<ArrayBuffer>&&, Ref<ArrayBuffer>&&);
+    AuthenticatorAttestationResponse(Ref<ArrayBuffer>&&, Ref<ArrayBuffer>&&, AuthenticatorAttachment, Vector<AuthenticatorTransport>&&);
 
     Type type() const final { return Type::Attestation; }
     AuthenticatorResponseData data() const final;
 
     Ref<ArrayBuffer> m_attestationObject;
+    Vector<AuthenticatorTransport> m_transports;
 };
 
 } // namespace WebCore

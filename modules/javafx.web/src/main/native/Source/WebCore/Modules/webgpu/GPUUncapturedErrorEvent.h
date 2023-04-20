@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,36 +25,49 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
-
 #include "Event.h"
 #include "GPUError.h"
+#include "GPUUncapturedErrorEventInit.h"
+#include <pal/graphics/WebGPU/WebGPUUncapturedErrorEvent.h>
 #include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class GPUUncapturedErrorEvent final : public Event {
     WTF_MAKE_ISO_ALLOCATED(GPUUncapturedErrorEvent);
 public:
-    struct Init: EventInit {
-        GPUError error;
-    };
+    static Ref<GPUUncapturedErrorEvent> create(String&& type, const GPUUncapturedErrorEventInit& gpuUncapturedErrorEventInitDict)
+    {
+        return adoptRef(*new GPUUncapturedErrorEvent(WTFMove(type), gpuUncapturedErrorEventInitDict));
+    }
 
-    static Ref<GPUUncapturedErrorEvent> create(const AtomString&, const Init&, IsTrusted = IsTrusted::No);
-    static Ref<GPUUncapturedErrorEvent> create(const AtomString&, GPUError&&);
+    static Ref<GPUUncapturedErrorEvent> create(Ref<PAL::WebGPU::UncapturedErrorEvent>&& backing)
+    {
+        return adoptRef(*new GPUUncapturedErrorEvent(WTFMove(backing)));
+    }
 
-    const GPUError error() const { return m_error; }
+    GPUError error() const;
+
+    PAL::WebGPU::UncapturedErrorEvent* backing() { return m_backing.get(); }
+    const PAL::WebGPU::UncapturedErrorEvent* backing() const { return m_backing.get(); }
 
 private:
-    GPUUncapturedErrorEvent(const AtomString&, const Init&, IsTrusted);
-    GPUUncapturedErrorEvent(const AtomString&, GPUError&&);
+    GPUUncapturedErrorEvent(String&& type, const GPUUncapturedErrorEventInit& uncapturedErrorEventInit)
+        : m_type(WTFMove(type))
+        , m_uncapturedErrorEventInit(uncapturedErrorEventInit)
+    {
+    }
 
-    // Event
-    EventInterface eventInterface() const override;
+    GPUUncapturedErrorEvent(Ref<PAL::WebGPU::UncapturedErrorEvent>&& backing)
+        : m_backing(WTFMove(backing))
+    {
+    }
 
-    GPUError m_error;
+    String m_type;
+    GPUUncapturedErrorEventInit m_uncapturedErrorEventInit;
+    RefPtr<PAL::WebGPU::UncapturedErrorEvent> m_backing;
 };
 
-} // namespace WebCore
-
-#endif // ENABLE(WEBGPU)
+}

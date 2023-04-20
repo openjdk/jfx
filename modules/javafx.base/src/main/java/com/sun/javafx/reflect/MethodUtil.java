@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.reflect;
 
-import java.io.EOFException;
 import java.security.AllPermission;
 import java.security.AccessController;
 import java.security.PermissionCollection;
@@ -33,17 +32,13 @@ import java.security.SecureClassLoader;
 import java.security.PrivilegedExceptionAction;
 import java.security.CodeSource;
 import java.io.InputStream;
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import com.sun.javafx.reflect.ReflectUtil;
 
 
 class Trampoline {
@@ -114,7 +109,7 @@ public final class MethodUtil extends SecureClassLoader {
         if (System.getSecurityManager() == null) {
             return cls.getMethods();
         }
-        Map<Signature, Method> sigs = new HashMap<Signature, Method>();
+        Map<Signature, Method> sigs = new HashMap<>();
         while (cls != null) {
             boolean done = getInternalPublicMethods(cls, sigs);
             if (done) {
@@ -298,6 +293,7 @@ public final class MethodUtil extends SecureClassLoader {
         try {
             return AccessController.doPrivileged(
                 new PrivilegedExceptionAction<Method>() {
+                    @Override
                     public Method run() throws Exception {
                         Class<?> t = getTrampolineClass();
                         Class<?>[] types = {
@@ -314,6 +310,7 @@ public final class MethodUtil extends SecureClassLoader {
     }
 
 
+    @Override
     protected synchronized Class<?> loadClass(String name, boolean resolve)
         throws ClassNotFoundException
     {
@@ -337,6 +334,7 @@ public final class MethodUtil extends SecureClassLoader {
     }
 
 
+    @Override
     protected Class<?> findClass(final String name)
         throws ClassNotFoundException
     {
@@ -371,6 +369,7 @@ public final class MethodUtil extends SecureClassLoader {
         return defineClass(name, b, 0, b.length, cs);
     }
 
+    @Override
     protected PermissionCollection getPermissions(CodeSource codesource)
     {
         PermissionCollection perms = super.getPermissions(codesource);

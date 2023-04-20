@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ using namespace WebCore;
 
 namespace JSC {
 
-const ClassInfo RuntimeArray::s_info = { "RuntimeArray", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeArray) };
+const ClassInfo RuntimeArray::s_info = { "RuntimeArray"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeArray) };
 
 static JSC_DECLARE_CUSTOM_GETTER(arrayLengthGetter);
 
@@ -50,7 +50,7 @@ RuntimeArray::RuntimeArray(VM& vm, Structure* structure)
 void RuntimeArray::finishCreation(VM& vm, Bindings::Array* array)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     m_array = array;
 }
 
@@ -69,7 +69,7 @@ JSC_DEFINE_CUSTOM_GETTER(arrayLengthGetter, (JSGlobalObject* lexicalGlobalObject
     VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    RuntimeArray* thisObject = jsDynamicCast<RuntimeArray*>(vm, JSValue::decode(thisValue));
+    RuntimeArray* thisObject = jsDynamicCast<RuntimeArray*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(lexicalGlobalObject, scope);
     return JSValue::encode(jsNumber(thisObject->getLength()));
@@ -98,7 +98,7 @@ bool RuntimeArray::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexicalG
         return true;
     }
 
-    Optional<uint32_t> index = parseIndex(propertyName);
+    std::optional<uint32_t> index = parseIndex(propertyName);
     if (index && index.value() < thisObject->getLength()) {
         slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontDelete),
             thisObject->getConcreteArray()->valueAt(lexicalGlobalObject, index.value()));
@@ -127,11 +127,11 @@ bool RuntimeArray::put(JSCell* cell, JSGlobalObject* lexicalGlobalObject, Proper
 
     RuntimeArray* thisObject = jsCast<RuntimeArray*>(cell);
     if (propertyName == vm.propertyNames->length) {
-        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"));
+        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"_s));
         return false;
     }
 
-    if (Optional<uint32_t> index = parseIndex(propertyName))
+    if (std::optional<uint32_t> index = parseIndex(propertyName))
         return thisObject->getConcreteArray()->setValueAt(lexicalGlobalObject, index.value(), value);
 
     RELEASE_AND_RETURN(scope, JSObject::put(thisObject, lexicalGlobalObject, propertyName, value, slot));
@@ -144,7 +144,7 @@ bool RuntimeArray::putByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalObject,
 
     RuntimeArray* thisObject = jsCast<RuntimeArray*>(cell);
     if (index >= thisObject->getLength()) {
-        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"));
+        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"_s));
         return false;
     }
 
@@ -161,7 +161,7 @@ bool RuntimeArray::deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned)
     return false;
 }
 
-JSC::IsoSubspace* RuntimeArray::subspaceForImpl(JSC::VM& vm)
+JSC::GCClient::IsoSubspace* RuntimeArray::subspaceForImpl(JSC::VM& vm)
 {
     return &static_cast<JSVMClientData*>(vm.clientData)->runtimeArraySpace();
 }

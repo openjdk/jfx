@@ -1,0 +1,39 @@
+Updating libxslt in OpenJFX:
+
+1. Download respective libxslt source tarball from here: https://gitlab.gnome.org/GNOME/libxslt/-/releases.
+Alternatively we can also clone the libxslt repo from github. (url- https://gitlab.gnome.org/GNOME/libxslt.git)
+
+2. Extract contents into 'modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src' directory.
+3. We do not have any local changes in the libxslt source but libxslt source needs to be configured before integrating into JavaFX.
+Below are platform wise steps to configure.
+
+- For windows
+4. Configure libxslt.
+        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src/win32
+        > cscript configure.js compiler=msvc xslt_debug=no  iconv=no mem_debug=no modules=no  zlib=no profiler=no trio=no
+        - Above command generates a header file 'src/config.h' file (on all platforms) and libxslt\src\libxslt\xsltconfig.h.
+4.1 Copy `libxslt\src\config.h` to `libxslt\win32\config.h'. config.h file defines several macros to control libxslt features.
+We do not require all of the features to be enabled.
+4.2 Compare the generated `libxslt\src\config.h` with existing `libxslt\win32\config.h' and update the macros based on the output of ./configure.
+4.3 Update version related info in libxslt\src\libxslt\xsltconfig.h.
+
+5. Remove files & directories which are not relevant to JavaFX WebKit.
+
+- For Mac
+6. Prerequisites to compile libxslt: libtool, autoconf, automake
+7. Configure libxslt.
+        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src
+        > ./autogen.sh
+        > ./configure
+7.1 Copy `libxslt/src/config.h` to `libxslt/mac/config.h` and follow same guidelines as Windows to retain changes from our repo.
+
+- For Linux
+8. Prerequisites to compile libxslt: libtool, autoconf, automake
+9. Configure libxslt.
+        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src
+        > ./configure
+9.1 Copy `libxslt/src/config.h` to `libxslt/linux/config.h` and follow same guidelines as Windows to retain changes from our repo.
+
+10. Update version info in 'modules/javafx.web/src/main/legal/libxslt.md'. Also, update copyright if any new files are added.
+
+11. Remove tabs and trailing whitespaces from source files(.h and .c).

@@ -29,7 +29,6 @@
 
 #include "B3Type.h"
 #include "B3Width.h"
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace B3 {
@@ -112,6 +111,8 @@ enum Opcode : uint8_t {
     Ceil,
     Floor,
     Sqrt,
+    FMax,
+    FMin,
 
     // Casts and such.
     // Bitwise Cast of Double->Int64 or Int64->Double
@@ -381,7 +382,7 @@ inline bool isCheckMath(Opcode opcode)
     }
 }
 
-Optional<Opcode> invertedCompare(Opcode, Type);
+std::optional<Opcode> invertedCompare(Opcode, Type);
 
 inline Opcode constPtrOpcode()
 {

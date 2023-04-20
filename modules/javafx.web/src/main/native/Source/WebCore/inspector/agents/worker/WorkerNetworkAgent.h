@@ -39,9 +39,13 @@ public:
 private:
     Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*);
     Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*);
-    Vector<WebSocket*> activeWebSockets(const LockHolder&);
+    Vector<WebSocket*> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock());
     void setResourceCachingDisabledInternal(bool);
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+    bool setEmulatedConditionsInternal(std::optional<int>&& bytesPerSecondLimit);
+#endif
     ScriptExecutionContext* scriptExecutionContext(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::FrameId&);
+    void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&);
     bool shouldForceBufferingNetworkResourceData() const { return true; }
 
     WorkerOrWorkletGlobalScope& m_globalScope;

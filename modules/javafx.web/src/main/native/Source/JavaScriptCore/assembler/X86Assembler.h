@@ -335,17 +335,17 @@ private:
 
     TwoByteOpcodeID cmovcc(Condition cond)
     {
-        return (TwoByteOpcodeID)(OP2_CMOVCC + cond);
+        return (TwoByteOpcodeID)(OP2_CMOVCC + static_cast<TwoByteOpcodeID>(cond));
     }
 
     TwoByteOpcodeID jccRel32(Condition cond)
     {
-        return (TwoByteOpcodeID)(OP2_JCC_rel32 + cond);
+        return (TwoByteOpcodeID)(OP2_JCC_rel32 + static_cast<TwoByteOpcodeID>(cond));
     }
 
     TwoByteOpcodeID setccOpcode(Condition cond)
     {
-        return (TwoByteOpcodeID)(OP_SETCC + cond);
+        return (TwoByteOpcodeID)(OP_SETCC + static_cast<TwoByteOpcodeID>(cond));
     }
 
     typedef enum {
@@ -2049,6 +2049,19 @@ public:
         m_formatter.oneByteOp(OP_CMP_EvGv, src, base, index, scale, offset);
     }
 
+    void cmpw_im(int imm, int offset, RegisterID base)
+    {
+        if (CAN_SIGN_EXTEND_8_32(imm)) {
+            m_formatter.prefix(PRE_OPERAND_SIZE);
+            m_formatter.oneByteOp(OP_GROUP1_EvIb, GROUP1_OP_CMP, base, offset);
+            m_formatter.immediate8(imm);
+        } else {
+            m_formatter.prefix(PRE_OPERAND_SIZE);
+            m_formatter.oneByteOp(OP_GROUP1_EvIz, GROUP1_OP_CMP, base, offset);
+            m_formatter.immediate16(imm);
+        }
+    }
+
     void cmpw_im(int imm, int offset, RegisterID base, RegisterID index, int scale)
     {
         if (CAN_SIGN_EXTEND_8_32(imm)) {
@@ -2150,6 +2163,20 @@ public:
     {
         m_formatter.prefix(PRE_OPERAND_SIZE);
         m_formatter.oneByteOp(OP_TEST_EvGv, src, dst);
+    }
+
+    void testw_im(int imm, int offset, RegisterID base)
+    {
+        m_formatter.prefix(PRE_OPERAND_SIZE);
+        m_formatter.oneByteOp(OP_GROUP3_EvIz, GROUP3_OP_TEST, base, offset);
+        m_formatter.immediate16(imm);
+    }
+
+    void testw_im(int imm, int offset, RegisterID base, RegisterID index, int scale)
+    {
+        m_formatter.prefix(PRE_OPERAND_SIZE);
+        m_formatter.oneByteOp(OP_GROUP3_EvIz, GROUP3_OP_TEST, base, index, scale, offset);
+        m_formatter.immediate16(imm);
     }
 
     void testb_i8r(int imm, RegisterID dst)
@@ -3767,21 +3794,14 @@ public:
         setRel32(from, to);
     }
 
-    static void relinkJumpToNop(void* from)
-    {
-        setInt32(from, 0);
-    }
-
     static void relinkCall(void* from, void* to)
     {
         setRel32(from, to);
     }
 
-    static void repatchCompact(void* where, int32_t value)
+    static void relinkTailCall(void* from, void* to)
     {
-        ASSERT(value >= std::numeric_limits<int8_t>::min());
-        ASSERT(value <= std::numeric_limits<int8_t>::max());
-        setInt8(where, value);
+        relinkJump(from, to);
     }
 
     static void repatchInt32(void* where, int32_t value)

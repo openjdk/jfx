@@ -30,7 +30,7 @@
 #include "BreakBlockquoteCommand.h"
 #include "DataTransfer.h"
 #include "DeleteSelectionCommand.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "Element.h"
@@ -384,7 +384,7 @@ void TypingCommand::doApply()
     ASSERT_NOT_REACHED();
 }
 
-String TypingCommand::inputEventTypeName() const
+AtomString TypingCommand::inputEventTypeName() const
 {
     return inputTypeNameForEditingAction(m_currentTypingEditAction);
 }
@@ -476,7 +476,7 @@ void TypingCommand::markMisspellingsAfterTyping(ETypingCommand commandType)
     }
 }
 
-bool TypingCommand::willAddTypingToOpenCommand(ETypingCommand commandType, TextGranularity granularity, const String& text, const Optional<SimpleRange>& range)
+bool TypingCommand::willAddTypingToOpenCommand(ETypingCommand commandType, TextGranularity granularity, const String& text, const std::optional<SimpleRange>& range)
 {
     m_currentTextToInsert = text;
     m_currentTypingEditAction = editActionForTypingCommand(commandType, granularity, m_compositionType, m_isAutocompletion);
@@ -557,7 +557,7 @@ void TypingCommand::insertLineBreakAndNotifyAccessibility()
 {
     AccessibilityReplacedText replacedText(document().selection().selection());
     insertLineBreak();
-    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n", document().selection().selection());
+    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n"_s, document().selection().selection());
     composition()->setRangeDeletedByUnapply(replacedText.replacedRange());
 }
 
@@ -577,7 +577,7 @@ void TypingCommand::insertParagraphSeparatorAndNotifyAccessibility()
 {
     AccessibilityReplacedText replacedText(document().selection().selection());
     insertParagraphSeparator();
-    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n", document().selection().selection());
+    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n"_s, document().selection().selection());
     composition()->setRangeDeletedByUnapply(replacedText.replacedRange());
 }
 
@@ -601,7 +601,7 @@ void TypingCommand::insertParagraphSeparatorInQuotedContentAndNotifyAccessibilit
 {
     AccessibilityReplacedText replacedText(document().selection().selection());
     insertParagraphSeparatorInQuotedContent();
-    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n", document().selection().selection());
+    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n"_s, document().selection().selection());
     composition()->setRangeDeletedByUnapply(replacedText.replacedRange());
 }
 
@@ -662,8 +662,8 @@ void TypingCommand::deleteKeyPressed(TextGranularity granularity, bool shouldAdd
         const Node* enclosingTableCellForPreviousPosition = enclosingNodeOfType(previousPosition.deepEquivalent(), &isTableCell);
         if (previousPosition.isNull() || enclosingTableCell != enclosingTableCellForPreviousPosition) {
             // When the caret is at the start of the editable area in an empty list item, break out of the list item.
-            if (auto deleteListSelection = shouldBreakOutOfEmptyListItem()) {
-                if (willAddTypingToOpenCommand(DeleteKey, granularity, { }, *deleteListSelection.value().firstRange())) {
+            if (auto deleteListSelection = shouldBreakOutOfEmptyListItem(); !deleteListSelection.isNone()) {
+                if (willAddTypingToOpenCommand(DeleteKey, granularity, { }, deleteListSelection.firstRange())) {
                     breakOutOfEmptyListItem();
                     typingAddedToOpenCommand(DeleteKey);
                 }

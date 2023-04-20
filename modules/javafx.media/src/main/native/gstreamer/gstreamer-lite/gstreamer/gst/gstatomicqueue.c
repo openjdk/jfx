@@ -57,9 +57,9 @@ struct _GstAQueueMem
 {
   gint size;
   gpointer *array;
-  volatile gint head;
-  volatile gint tail_write;
-  volatile gint tail_read;
+  gint head;
+  gint tail_write;
+  gint tail_read;
   GstAQueueMem *next;
   GstAQueueMem *free;
 };
@@ -103,7 +103,7 @@ free_queue_mem (GstAQueueMem * mem)
 
 struct _GstAtomicQueue
 {
-  volatile gint refcount;
+  gint refcount;
 #ifdef LOW_MEM
   gint num_readers;
 #endif

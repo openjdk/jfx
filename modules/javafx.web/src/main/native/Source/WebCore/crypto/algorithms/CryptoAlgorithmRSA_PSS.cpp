@@ -33,17 +33,17 @@
 #include "CryptoAlgorithmRsaPssParams.h"
 #include "CryptoKeyPair.h"
 #include "CryptoKeyRSA.h"
+#include <variant>
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/Variant.h>
 
 namespace WebCore {
 
 namespace CryptoAlgorithmRSA_PSSInternal {
-static const char* const ALG1 = "PS1";
-static const char* const ALG224 = "PS224";
-static const char* const ALG256 = "PS256";
-static const char* const ALG384 = "PS384";
-static const char* const ALG512 = "PS512";
+static constexpr auto ALG1 = "PS1"_s;
+static constexpr auto ALG224 = "PS224"_s;
+static constexpr auto ALG256 = "PS256"_s;
+static constexpr auto ALG384 = "PS384"_s;
+static constexpr auto ALG512 = "PS512"_s;
 }
 
 Ref<CryptoAlgorithm> CryptoAlgorithmRSA_PSS::create()
@@ -111,13 +111,13 @@ void CryptoAlgorithmRSA_PSS::importKey(CryptoKeyFormat format, KeyData&& data, c
     RefPtr<CryptoKeyRSA> result;
     switch (format) {
     case CryptoKeyFormat::Jwk: {
-        JsonWebKey key = WTFMove(WTF::get<JsonWebKey>(data));
+        JsonWebKey key = WTFMove(std::get<JsonWebKey>(data));
 
         if (usages && ((!key.d.isNull() && (usages ^ CryptoKeyUsageSign)) || (key.d.isNull() && (usages ^ CryptoKeyUsageVerify)))) {
             exceptionCallback(SyntaxError);
             return;
         }
-        if (usages && !key.use.isNull() && key.use != "sig") {
+        if (usages && !key.use.isNull() && key.use != "sig"_s) {
             exceptionCallback(DataError);
             return;
         }
@@ -156,7 +156,7 @@ void CryptoAlgorithmRSA_PSS::importKey(CryptoKeyFormat format, KeyData&& data, c
             return;
         }
         // FIXME: <webkit.org/b/165436>
-        result = CryptoKeyRSA::importSpki(rsaParameters.identifier, rsaParameters.hashIdentifier, WTFMove(WTF::get<Vector<uint8_t>>(data)), extractable, usages);
+        result = CryptoKeyRSA::importSpki(rsaParameters.identifier, rsaParameters.hashIdentifier, WTFMove(std::get<Vector<uint8_t>>(data)), extractable, usages);
         break;
     }
     case CryptoKeyFormat::Pkcs8: {
@@ -165,7 +165,7 @@ void CryptoAlgorithmRSA_PSS::importKey(CryptoKeyFormat format, KeyData&& data, c
             return;
         }
         // FIXME: <webkit.org/b/165436>
-        result = CryptoKeyRSA::importPkcs8(parameters.identifier, rsaParameters.hashIdentifier, WTFMove(WTF::get<Vector<uint8_t>>(data)), extractable, usages);
+        result = CryptoKeyRSA::importPkcs8(parameters.identifier, rsaParameters.hashIdentifier, WTFMove(std::get<Vector<uint8_t>>(data)), extractable, usages);
         break;
     }
     default:

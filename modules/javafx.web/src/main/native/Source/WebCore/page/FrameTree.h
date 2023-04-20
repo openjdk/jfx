@@ -74,6 +74,7 @@ public:
     WEBCORE_EXPORT unsigned childCount() const;
     unsigned descendantCount() const;
     WEBCORE_EXPORT Frame& top() const;
+    unsigned depth() const;
 
     WEBCORE_EXPORT Frame* scopedChild(unsigned index) const;
     WEBCORE_EXPORT Frame* scopedChild(const AtomString& name) const;
@@ -106,6 +107,14 @@ private:
     mutable unsigned m_scopedChildCount { invalidCount };
     mutable uint64_t m_frameIDGenerator { 0 };
 };
+
+ASCIILiteral blankTargetFrameName();
+ASCIILiteral selfTargetFrameName();
+
+bool isBlankTargetFrameName(StringView);
+bool isParentTargetFrameName(StringView);
+bool isSelfTargetFrameName(StringView);
+bool isTopTargetFrameName(StringView);
 
 } // namespace WebCore
 

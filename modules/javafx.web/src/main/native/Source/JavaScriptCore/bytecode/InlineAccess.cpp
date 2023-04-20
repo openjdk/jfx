@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -152,9 +152,9 @@ void InlineAccess::dumpCacheSizesAndCrash()
 template <typename Function>
 ALWAYS_INLINE static bool linkCodeInline(const char* name, CCallHelpers& jit, StructureStubInfo& stubInfo, const Function& function)
 {
-    if (jit.m_assembler.buffer().codeSize() <= stubInfo.inlineSize()) {
+    if (jit.m_assembler.buffer().codeSize() <= stubInfo.inlineCodeSize()) {
         bool needsBranchCompaction = true;
-        LinkBuffer linkBuffer(jit, stubInfo.start, stubInfo.inlineSize(), JITCompilationMustSucceed, needsBranchCompaction);
+        LinkBuffer linkBuffer(jit, stubInfo.startLocation, stubInfo.inlineCodeSize(), LinkBuffer::Profile::InlineCache, JITCompilationMustSucceed, needsBranchCompaction);
         ASSERT(linkBuffer.isValid());
         function(linkBuffer);
         FINALIZE_CODE(linkBuffer, NoPtrTag, "InlineAccessType: '%s'", name);
@@ -169,21 +169,26 @@ ALWAYS_INLINE static bool linkCodeInline(const char* name, CCallHelpers& jit, St
     constexpr bool failIfCantInline = false;
     if (failIfCantInline) {
         dataLog("Failure for: ", name, "\n");
-        dataLog("real size: ", jit.m_assembler.buffer().codeSize(), " inline size:", stubInfo.inlineSize(), "\n");
+        dataLog("real size: ", jit.m_assembler.buffer().codeSize(), " inline size:", stubInfo.inlineCodeSize(), "\n");
         CRASH();
     }
 
     return false;
 }
 
-bool InlineAccess::generateSelfPropertyAccess(StructureStubInfo& stubInfo, Structure* structure, PropertyOffset offset)
+bool InlineAccess::generateSelfPropertyAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo, Structure* structure, PropertyOffset offset)
 {
     if (!stubInfo.hasConstantIdentifier)
         return false;
 
+    if (codeBlock->useDataIC()) {
+        // These dynamic slots get filled in by StructureStubInfo. Nothing else to do.
+        return true;
+    }
+
     CCallHelpers jit;
 
-    GPRReg base = stubInfo.baseGPR;
+    GPRReg base = stubInfo.m_baseGPR;
     JSValueRegs value = stubInfo.valueRegs();
 
     auto branchToSlowPath = jit.patchableBranch32(
@@ -210,12 +215,18 @@ bool InlineAccess::generateSelfPropertyAccess(StructureStubInfo& stubInfo, Struc
 ALWAYS_INLINE static GPRReg getScratchRegister(StructureStubInfo& stubInfo)
 {
     ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
-    allocator.lock(stubInfo.baseGPR);
-    allocator.lock(stubInfo.valueGPR);
+    allocator.lock(stubInfo.m_baseGPR);
+    allocator.lock(stubInfo.m_valueGPR);
 #if USE(JSVALUE32_64)
-    allocator.lock(stubInfo.baseTagGPR);
-    allocator.lock(stubInfo.valueTagGPR);
+    allocator.lock(stubInfo.m_baseTagGPR);
+    allocator.lock(stubInfo.m_valueTagGPR);
 #endif
+    if (stubInfo.propertyRegs())
+        allocator.lock(stubInfo.propertyRegs());
+    if (stubInfo.m_stubInfoGPR != InvalidGPRReg)
+        allocator.lock(stubInfo.m_stubInfoGPR);
+    if (stubInfo.m_arrayProfileGPR != InvalidGPRReg)
+        allocator.lock(stubInfo.m_arrayProfileGPR);
     GPRReg scratch = allocator.allocateScratchGPR();
     if (allocator.didReuseRegisters())
         return InvalidGPRReg;
@@ -227,10 +238,13 @@ ALWAYS_INLINE static bool hasFreeRegister(StructureStubInfo& stubInfo)
     return getScratchRegister(stubInfo) != InvalidGPRReg;
 }
 
-bool InlineAccess::canGenerateSelfPropertyReplace(StructureStubInfo& stubInfo, PropertyOffset offset)
+bool InlineAccess::canGenerateSelfPropertyReplace(CodeBlock* codeBlock, StructureStubInfo& stubInfo, PropertyOffset offset)
 {
     if (!stubInfo.hasConstantIdentifier)
         return false;
+
+    if (codeBlock->useDataIC())
+        return true;
 
     if (isInlineOffset(offset))
         return true;
@@ -238,16 +252,21 @@ bool InlineAccess::canGenerateSelfPropertyReplace(StructureStubInfo& stubInfo, P
     return hasFreeRegister(stubInfo);
 }
 
-bool InlineAccess::generateSelfPropertyReplace(StructureStubInfo& stubInfo, Structure* structure, PropertyOffset offset)
+bool InlineAccess::generateSelfPropertyReplace(CodeBlock* codeBlock, StructureStubInfo& stubInfo, Structure* structure, PropertyOffset offset)
 {
     if (!stubInfo.hasConstantIdentifier)
         return false;
 
-    ASSERT(canGenerateSelfPropertyReplace(stubInfo, offset));
+    ASSERT(canGenerateSelfPropertyReplace(codeBlock, stubInfo, offset));
+
+    if (codeBlock->useDataIC()) {
+        // These dynamic slots get filled in by StructureStubInfo. Nothing else to do.
+        return true;
+    }
 
     CCallHelpers jit;
 
-    GPRReg base = stubInfo.baseGPR;
+    GPRReg base = stubInfo.m_baseGPR;
     JSValueRegs value = stubInfo.valueRegs();
 
     auto branchToSlowPath = jit.patchableBranch32(
@@ -273,11 +292,14 @@ bool InlineAccess::generateSelfPropertyReplace(StructureStubInfo& stubInfo, Stru
     return linkedCodeInline;
 }
 
-bool InlineAccess::isCacheableArrayLength(StructureStubInfo& stubInfo, JSArray* array)
+bool InlineAccess::isCacheableArrayLength(CodeBlock* codeBlock, StructureStubInfo& stubInfo, JSArray* array)
 {
     ASSERT(array->indexingType() & IsArray);
 
     if (!stubInfo.hasConstantIdentifier)
+        return false;
+
+    if (codeBlock->useDataIC())
         return false;
 
     if (!hasFreeRegister(stubInfo))
@@ -286,16 +308,17 @@ bool InlineAccess::isCacheableArrayLength(StructureStubInfo& stubInfo, JSArray* 
     return !hasAnyArrayStorage(array->indexingType()) && array->indexingType() != ArrayClass;
 }
 
-bool InlineAccess::generateArrayLength(StructureStubInfo& stubInfo, JSArray* array)
+bool InlineAccess::generateArrayLength(CodeBlock* codeBlock, StructureStubInfo& stubInfo, JSArray* array)
 {
-    ASSERT(isCacheableArrayLength(stubInfo, array));
+    ASSERT_UNUSED(codeBlock, !codeBlock->useDataIC());
+    ASSERT_UNUSED(codeBlock, isCacheableArrayLength(codeBlock, stubInfo, array));
 
     if (!stubInfo.hasConstantIdentifier)
         return false;
 
     CCallHelpers jit;
 
-    GPRReg base = stubInfo.baseGPR;
+    GPRReg base = stubInfo.m_baseGPR;
     JSValueRegs value = stubInfo.valueRegs();
     GPRReg scratch = getScratchRegister(stubInfo);
 
@@ -313,24 +336,28 @@ bool InlineAccess::generateArrayLength(StructureStubInfo& stubInfo, JSArray* arr
     return linkedCodeInline;
 }
 
-bool InlineAccess::isCacheableStringLength(StructureStubInfo& stubInfo)
+bool InlineAccess::isCacheableStringLength(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
 {
     if (!stubInfo.hasConstantIdentifier)
+        return false;
+
+    if (codeBlock->useDataIC())
         return false;
 
     return hasFreeRegister(stubInfo);
 }
 
-bool InlineAccess::generateStringLength(StructureStubInfo& stubInfo)
+bool InlineAccess::generateStringLength(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
 {
-    ASSERT(isCacheableStringLength(stubInfo));
+    ASSERT_UNUSED(codeBlock, !codeBlock->useDataIC());
+    ASSERT_UNUSED(codeBlock, isCacheableStringLength(codeBlock, stubInfo));
 
     if (!stubInfo.hasConstantIdentifier)
         return false;
 
     CCallHelpers jit;
 
-    GPRReg base = stubInfo.baseGPR;
+    GPRReg base = stubInfo.m_baseGPR;
     JSValueRegs value = stubInfo.valueRegs();
     GPRReg scratch = getScratchRegister(stubInfo);
 
@@ -357,14 +384,19 @@ bool InlineAccess::generateStringLength(StructureStubInfo& stubInfo)
 }
 
 
-bool InlineAccess::generateSelfInAccess(StructureStubInfo& stubInfo, Structure* structure)
+bool InlineAccess::generateSelfInAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo, Structure* structure)
 {
     CCallHelpers jit;
 
     if (!stubInfo.hasConstantIdentifier)
         return false;
 
-    GPRReg base = stubInfo.baseGPR;
+    if (codeBlock->useDataIC()) {
+        // These dynamic slots get filled in by StructureStubInfo. Nothing else to do.
+        return true;
+    }
+
+    GPRReg base = stubInfo.m_baseGPR;
     JSValueRegs value = stubInfo.valueRegs();
 
     auto branchToSlowPath = jit.patchableBranch32(
@@ -379,19 +411,60 @@ bool InlineAccess::generateSelfInAccess(StructureStubInfo& stubInfo, Structure* 
     return linkedCodeInline;
 }
 
-void InlineAccess::rewireStubAsJump(StructureStubInfo& stubInfo, CodeLocationLabel<JITStubRoutinePtrTag> target)
+void InlineAccess::rewireStubAsJumpInAccessNotUsingInlineAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo, CodeLocationLabel<JITStubRoutinePtrTag> target)
 {
-    CCallHelpers jit;
+    if (codeBlock->useDataIC()) {
+        stubInfo.m_codePtr = target;
+        return;
+    }
 
-    auto jump = jit.jump();
+    CCallHelpers::emitJITCodeOver(stubInfo.startLocation.retagged<JSInternalPtrTag>(), scopedLambda<void(CCallHelpers&)>([&](CCallHelpers& jit) {
+        // We don't need a nop sled here because nobody should be jumping into the middle of an IC.
+        auto jump = jit.jump();
+        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+            linkBuffer.link(jump, target);
+        });
+    }), "InlineAccess: linking constant jump");
+}
 
-    // We don't need a nop sled here because nobody should be jumping into the middle of an IC.
-    bool needsBranchCompaction = false;
-    LinkBuffer linkBuffer(jit, stubInfo.start, jit.m_assembler.buffer().codeSize(), JITCompilationMustSucceed, needsBranchCompaction);
-    RELEASE_ASSERT(linkBuffer.isValid());
-    linkBuffer.link(jump, target);
+void InlineAccess::rewireStubAsJumpInAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo, CodeLocationLabel<JITStubRoutinePtrTag> target)
+{
+    if (codeBlock->useDataIC()) {
+        stubInfo.m_codePtr = target;
+        stubInfo.m_inlineAccessBaseStructureID.clear(); // Clear out the inline access code.
+        return;
+    }
 
-    FINALIZE_CODE(linkBuffer, NoPtrTag, "InlineAccess: linking constant jump");
+    CCallHelpers::emitJITCodeOver(stubInfo.startLocation.retagged<JSInternalPtrTag>(), scopedLambda<void(CCallHelpers&)>([&](CCallHelpers& jit) {
+        // We don't need a nop sled here because nobody should be jumping into the middle of an IC.
+        auto jump = jit.jump();
+        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+            linkBuffer.link(jump, target);
+        });
+    }), "InlineAccess: linking constant jump");
+}
+
+void InlineAccess::resetStubAsJumpInAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
+{
+    if (codeBlock->useDataIC()) {
+        stubInfo.m_codePtr = stubInfo.slowPathStartLocation;
+        stubInfo.m_inlineAccessBaseStructureID.clear(); // Clear out the inline access code.
+        return;
+    }
+
+    CCallHelpers::emitJITCodeOver(stubInfo.startLocation.retagged<JSInternalPtrTag>(), scopedLambda<void(CCallHelpers&)>([&](CCallHelpers& jit) {
+        // We don't need a nop sled here because nobody should be jumping into the middle of an IC.
+        auto jump = jit.jump();
+        auto slowPathStartLocation = stubInfo.slowPathStartLocation;
+        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+            linkBuffer.link(jump, slowPathStartLocation);
+        });
+    }), "InlineAccess: linking constant jump");
+}
+
+void InlineAccess::resetStubAsJumpInAccessNotUsingInlineAccess(CodeBlock* codeBlock, StructureStubInfo& stubInfo)
+{
+    rewireStubAsJumpInAccessNotUsingInlineAccess(codeBlock, stubInfo, stubInfo.slowPathStartLocation);
 }
 
 } // namespace JSC

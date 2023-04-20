@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,7 @@
 
 package javafx.beans.property;
 
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.MapExpression;
 import javafx.collections.ObservableMap;
@@ -109,34 +107,30 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this)
+        if (obj == this) {
             return true;
-
-        if (!(obj instanceof Map))
-            return false;
-        Map<K,V> m = (Map<K,V>) obj;
-        if (m.size() != size())
-            return false;
-
-        try {
-            for (Entry<K,V> e : entrySet()) {
-                K key = e.getKey();
-                V value = e.getValue();
-                if (value == null) {
-                    if (!(m.get(key)==null && m.containsKey(key)))
-                        return false;
-                } else {
-                    if (!value.equals(m.get(key)))
-                        return false;
-                }
-            }
-        } catch (ClassCastException unused) {
-            return false;
-        } catch (NullPointerException unused) {
+        }
+        if (!(obj instanceof Map<?, ?> otherMap) || otherMap.size() != size()) {
             return false;
         }
 
-        return true;
+        try {
+            for (Entry<K, V> e : entrySet()) {
+                K key = e.getKey();
+                V value = e.getValue();
+                if (value == null) {
+                    if (otherMap.get(key) != null || !otherMap.containsKey(key)) {
+                        return false;
+                    }
+                } else if (!value.equals(otherMap.get(key))) {
+                    return false;
+                }
+            }
+
+            return true;
+        } catch (ClassCastException | NullPointerException unused) {
+            return false;
+        }
     }
 
     /**

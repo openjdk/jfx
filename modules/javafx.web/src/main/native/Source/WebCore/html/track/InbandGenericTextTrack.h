@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,11 +53,11 @@ private:
 class InbandGenericTextTrack final : public InbandTextTrack, private WebVTTParserClient {
     WTF_MAKE_ISO_ALLOCATED(InbandGenericTextTrack);
 public:
-    static Ref<InbandGenericTextTrack> create(Document&, TextTrackClient&, InbandTextTrackPrivate&);
+    static Ref<InbandGenericTextTrack> create(Document&, InbandTextTrackPrivate&);
     virtual ~InbandGenericTextTrack();
 
 private:
-    InbandGenericTextTrack(Document&, TextTrackClient&, InbandTextTrackPrivate&);
+    InbandGenericTextTrack(Document&, InbandTextTrackPrivate&);
 
     void addGenericCue(InbandGenericCue&) final;
     void updateGenericCue(InbandGenericCue&) final;
@@ -74,6 +74,8 @@ private:
     void newRegionsParsed() final;
     void newStyleSheetsParsed() final;
     void fileFailedToParse() final;
+
+    bool shouldPurgeCuesFromUnbufferedRanges() const final { return true; }
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "InbandGenericTextTrack"; }

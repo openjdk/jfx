@@ -105,6 +105,17 @@ struct _GstMeta {
   const GstMetaInfo *info;
 };
 
+/**
+ * GstCustomMeta:
+ *
+ * Simple typing wrapper around #GstMeta
+ *
+ * Since: 1.20
+ */
+typedef struct {
+  GstMeta meta;
+} GstCustomMeta;
+
 #include <gst/gstbuffer.h>
 
 /**
@@ -183,6 +194,30 @@ typedef gboolean (*GstMetaTransformFunction) (GstBuffer *transbuf,
                                               GQuark type, gpointer data);
 
 /**
+ * GstCustomMetaTransformFunction:
+ * @transbuf: a #GstBuffer
+ * @meta: a #GstCustomMeta
+ * @buffer: a #GstBuffer
+ * @type: the transform type
+ * @data: transform specific data.
+ * @user_data: user data passed when registering the meta
+ *
+ * Function called for each @meta in @buffer as a result of performing a
+ * transformation on @transbuf. Additional @type specific transform data
+ * is passed to the function as @data.
+ *
+ * Implementations should check the @type of the transform and parse
+ * additional type specific fields in @data that should be used to update
+ * the metadata on @transbuf.
+ *
+ * Returns: %TRUE if the transform could be performed
+ * Since: 1.20
+ */
+typedef gboolean (*GstCustomMetaTransformFunction) (GstBuffer *transbuf,
+                                                    GstCustomMeta *meta, GstBuffer *buffer,
+                                                    GQuark type, gpointer data, gpointer user_data);
+
+/**
  * GstMetaInfo:
  * @api: tag identifying the metadata structure and api
  * @type: type identifying the implementor of the api
@@ -220,6 +255,21 @@ const GstMetaInfo *  gst_meta_register          (GType api, const gchar *impl,
                                                  GstMetaInitFunction      init_func,
                                                  GstMetaFreeFunction      free_func,
                                                  GstMetaTransformFunction transform_func);
+
+GST_API
+const GstMetaInfo *  gst_meta_register_custom   (const gchar *name, const gchar **tags,
+                                                 GstCustomMetaTransformFunction transform_func,
+                                                 gpointer user_data, GDestroyNotify destroy_data);
+
+GST_API
+gboolean             gst_meta_info_is_custom    (const GstMetaInfo *info);
+
+GST_API
+GstStructure *       gst_custom_meta_get_structure (GstCustomMeta *meta);
+
+GST_API
+gboolean             gst_custom_meta_has_name (GstCustomMeta *meta, const gchar * name);
+
 GST_API
 const GstMetaInfo *  gst_meta_get_info          (const gchar * impl);
 

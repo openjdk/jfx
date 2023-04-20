@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package com.sun.javafx.collections;
 
 import javafx.collections.ObservableListBase;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.RandomAccess;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.util.Callback;
@@ -61,7 +59,7 @@ final class ElementObserver<E> {
     private final Callback<E, InvalidationListener> listenerGenerator;
     private final ObservableListBase<E> list;
     private IdentityHashMap<E, ElementObserver.ElementsMapElement> elementsMap =
-            new IdentityHashMap<E, ElementObserver.ElementsMapElement>();
+            new IdentityHashMap<>();
 
     ElementObserver(Callback<E, Observable[]> extractor, Callback<E, InvalidationListener> listenerGenerator, ObservableListBase<E> list) {
         this.extractor = extractor;

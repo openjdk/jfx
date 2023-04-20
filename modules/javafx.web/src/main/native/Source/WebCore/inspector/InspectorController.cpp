@@ -161,7 +161,7 @@ void InspectorController::createLazyAgents()
     auto debuggerAgentPtr = debuggerAgent.get();
     m_agents.append(WTFMove(debuggerAgent));
 
-    m_agents.append(makeUnique<PageNetworkAgent>(pageContext));
+    m_agents.append(makeUnique<PageNetworkAgent>(pageContext, m_inspectorClient));
     m_agents.append(makeUnique<InspectorCSSAgent>(pageContext));
     ensureDOMAgent();
     m_agents.append(makeUnique<PageDOMDebuggerAgent>(pageContext, debuggerAgentPtr));
@@ -170,9 +170,7 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<InspectorWorkerAgent>(pageContext));
     m_agents.append(makeUnique<InspectorDOMStorageAgent>(pageContext));
     m_agents.append(makeUnique<InspectorDatabaseAgent>(pageContext));
-#if ENABLE(INDEXED_DATABASE)
     m_agents.append(makeUnique<InspectorIndexedDBAgent>(pageContext));
-#endif
 
     auto scriptProfilerAgentPtr = makeUnique<InspectorScriptProfilerAgent>(pageContext);
     m_instrumentingAgents->setPersistentScriptProfilerAgent(scriptProfilerAgentPtr.get());
@@ -361,9 +359,27 @@ void InspectorController::getHighlight(InspectorOverlay::Highlight& highlight, I
     m_overlay->getHighlight(highlight, coordinateSystem);
 }
 
+bool InspectorController::isUnderTest() const
+{
+    return m_isUnderTest;
+}
+
 unsigned InspectorController::gridOverlayCount() const
 {
     return m_overlay->gridOverlayCount();
+}
+
+unsigned InspectorController::flexOverlayCount() const
+{
+    return m_overlay->flexOverlayCount();
+}
+
+unsigned InspectorController::paintRectCount() const
+{
+    if (m_inspectorClient->overridesShowPaintRects())
+        return m_inspectorClient->paintRectCount();
+
+    return m_overlay->paintRectCount();
 }
 
 bool InspectorController::shouldShowOverlay() const
@@ -462,7 +478,7 @@ bool InspectorController::canAccessInspectedScriptState(JSC::JSGlobalObject* lex
 {
     JSLockHolder lock(lexicalGlobalObject);
 
-    JSDOMWindow* inspectedWindow = toJSDOMWindow(lexicalGlobalObject->vm(), lexicalGlobalObject);
+    auto* inspectedWindow = jsDynamicCast<JSDOMWindow*>(lexicalGlobalObject);
     if (!inspectedWindow)
         return false;
 

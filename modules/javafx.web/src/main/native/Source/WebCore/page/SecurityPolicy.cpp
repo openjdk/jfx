@@ -34,6 +34,7 @@
 #include "UserContentURLPattern.h"
 #include <memory>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
@@ -43,11 +44,11 @@ namespace WebCore {
 
 static SecurityPolicy::LocalLoadPolicy localLoadPolicy = SecurityPolicy::AllowLocalLoadsForLocalOnly;
 
-typedef Vector<OriginAccessEntry> OriginAccessAllowlist;
-typedef HashMap<String, std::unique_ptr<OriginAccessAllowlist>> OriginAccessMap;
+using OriginAccessAllowlist = Vector<OriginAccessEntry>;
+using OriginAccessMap = HashMap<SecurityOriginData, std::unique_ptr<OriginAccessAllowlist>>;
 
 static Lock originAccessMapLock;
-static OriginAccessMap& originAccessMap()
+static OriginAccessMap& originAccessMap() WTF_REQUIRES_LOCK(originAccessMapLock)
 {
     ASSERT(originAccessMapLock.isHeld());
     static NeverDestroyed<OriginAccessMap> originAccessMap;
@@ -55,7 +56,7 @@ static OriginAccessMap& originAccessMap()
 }
 
 static Lock originAccessPatternLock;
-static Vector<UserContentURLPattern>& originAccessPatterns()
+static Vector<UserContentURLPattern>& originAccessPatterns() WTF_REQUIRES_LOCK(originAccessPatternLock)
 {
     ASSERT(originAccessPatternLock.isHeld());
     static NeverDestroyed<Vector<UserContentURLPattern>> originAccessPatterns;
@@ -64,8 +65,8 @@ static Vector<UserContentURLPattern>& originAccessPatterns()
 
 bool SecurityPolicy::shouldHideReferrer(const URL& url, const String& referrer)
 {
-    bool referrerIsSecureURL = protocolIs(referrer, "https");
-    bool referrerIsWebURL = referrerIsSecureURL || protocolIs(referrer, "http");
+    bool referrerIsSecureURL = protocolIs(referrer, "https"_s);
+    bool referrerIsWebURL = referrerIsSecureURL || protocolIs(referrer, "http"_s);
 
     if (!referrerIsWebURL)
         return true;
@@ -73,7 +74,7 @@ bool SecurityPolicy::shouldHideReferrer(const URL& url, const String& referrer)
     if (!referrerIsSecureURL)
         return false;
 
-    bool URLIsSecureURL = url.protocolIs("https");
+    bool URLIsSecureURL = url.protocolIs("https"_s);
 
     return !URLIsSecureURL;
 }
@@ -81,7 +82,7 @@ bool SecurityPolicy::shouldHideReferrer(const URL& url, const String& referrer)
 String SecurityPolicy::referrerToOriginString(const String& referrer)
 {
     String originString = SecurityOrigin::createFromString(referrer)->toString();
-    if (originString == "null")
+    if (originString == "null"_s)
         return String();
     // A security origin is not a canonical URL as it lacks a path. Add /
     // to turn it into a canonical URL we can use as referrer.
@@ -90,8 +91,8 @@ String SecurityPolicy::referrerToOriginString(const String& referrer)
 
 String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, const URL& url, const String& referrer)
 {
-    ASSERT(referrer == URL(URL(), referrer).strippedForUseAsReferrer()
-        || referrer == SecurityOrigin::create(URL(URL(), referrer))->toString());
+    ASSERT(referrer == URL { referrer }.strippedForUseAsReferrer()
+        || referrer == SecurityOrigin::create(URL { referrer })->toString());
 
     if (referrer.isEmpty())
         return String();
@@ -149,7 +150,7 @@ String SecurityPolicy::generateOriginHeader(ReferrerPolicy referrerPolicy, const
     case ReferrerPolicy::NoReferrerWhenDowngrade:
     case ReferrerPolicy::StrictOrigin:
     case ReferrerPolicy::StrictOriginWhenCrossOrigin:
-        if (protocolIs(securityOrigin.protocol(), "https") && !url.protocolIs("https"))
+        if (protocolIs(securityOrigin.protocol(), "https"_s) && !url.protocolIs("https"_s))
             return "null"_s;
         break;
     case ReferrerPolicy::SameOrigin:
@@ -205,15 +206,15 @@ bool SecurityPolicy::isAccessAllowed(const SecurityOrigin& activeOrigin, const S
 {
     ASSERT(targetOrigin.equal(SecurityOrigin::create(targetURL).ptr()));
     {
-        Locker<Lock> locker(originAccessMapLock);
-        if (OriginAccessAllowlist* list = originAccessMap().get(activeOrigin.toString())) {
+        Locker locker { originAccessMapLock };
+        if (auto* list = originAccessMap().get(activeOrigin.data())) {
             for (auto& entry : *list) {
                 if (entry.matchesOrigin(targetOrigin))
                     return true;
             }
         }
     }
-    Locker<Lock> locker(originAccessPatternLock);
+    Locker locker { originAccessPatternLock };
     for (const auto& pattern : originAccessPatterns()) {
         if (pattern.matches(targetURL))
             return true;
@@ -232,15 +233,9 @@ void SecurityPolicy::addOriginAccessAllowlistEntry(const SecurityOrigin& sourceO
     if (sourceOrigin.isUnique())
         return;
 
-    String sourceString = sourceOrigin.toString();
-
-    Locker<Lock> locker(originAccessMapLock);
-    OriginAccessMap::AddResult result = originAccessMap().add(sourceString, nullptr);
-    if (result.isNewEntry)
-        result.iterator->value = makeUnique<OriginAccessAllowlist>();
-
-    OriginAccessAllowlist* list = result.iterator->value.get();
-    list->append(OriginAccessEntry(destinationProtocol, destinationDomain, allowDestinationSubdomains ? OriginAccessEntry::AllowSubdomains : OriginAccessEntry::DisallowSubdomains, OriginAccessEntry::TreatIPAddressAsIPAddress));
+    Locker locker { originAccessMapLock };
+    auto* allowList = originAccessMap().ensure(sourceOrigin.data(), [] { return makeUnique<OriginAccessAllowlist>(); }).iterator->value.get();
+    allowList->append(OriginAccessEntry(destinationProtocol, destinationDomain, allowDestinationSubdomains ? OriginAccessEntry::AllowSubdomains : OriginAccessEntry::DisallowSubdomains, OriginAccessEntry::TreatIPAddressAsIPAddress));
 }
 
 void SecurityPolicy::removeOriginAccessAllowlistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains)
@@ -249,15 +244,13 @@ void SecurityPolicy::removeOriginAccessAllowlistEntry(const SecurityOrigin& sour
     if (sourceOrigin.isUnique())
         return;
 
-    String sourceString = sourceOrigin.toString();
-
-    Locker<Lock> locker(originAccessMapLock);
-    OriginAccessMap& map = originAccessMap();
-    OriginAccessMap::iterator it = map.find(sourceString);
+    Locker locker { originAccessMapLock };
+    auto& map = originAccessMap();
+    auto it = map.find(sourceOrigin.data());
     if (it == map.end())
         return;
 
-    OriginAccessAllowlist& list = *it->value;
+    auto& list = *it->value;
     OriginAccessEntry originAccessEntry(destinationProtocol, destinationDomain, allowDestinationSubdomains ? OriginAccessEntry::AllowSubdomains : OriginAccessEntry::DisallowSubdomains, OriginAccessEntry::TreatIPAddressAsIPAddress);
     if (!list.removeFirst(originAccessEntry))
         return;
@@ -268,13 +261,13 @@ void SecurityPolicy::removeOriginAccessAllowlistEntry(const SecurityOrigin& sour
 
 void SecurityPolicy::resetOriginAccessAllowlists()
 {
-    Locker<Lock> locker(originAccessMapLock);
+    Locker locker { originAccessMapLock };
     originAccessMap().clear();
 }
 
 void SecurityPolicy::allowAccessTo(const UserContentURLPattern& pattern)
 {
-    Locker<Lock> locker(originAccessPatternLock);
+    Locker locker { originAccessPatternLock };
     originAccessPatterns().append(pattern);
 }
 

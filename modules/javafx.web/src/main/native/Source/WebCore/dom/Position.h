@@ -36,7 +36,7 @@ class TextStream;
 
 namespace WebCore {
 
-class InlineBox;
+class LegacyInlineBox;
 class RenderElement;
 class Text;
 
@@ -49,7 +49,7 @@ enum PositionMoveType {
     BackwardDeletion // Subject to platform conventions.
 };
 
-struct InlineRunAndOffset;
+struct InlineBoxAndOffset;
 
 class Position {
 public:
@@ -83,6 +83,7 @@ public:
     // will return img->parentNode() and img->computeNodeIndex() from these functions.
     WEBCORE_EXPORT Node* containerNode() const; // null for a before/after position anchored to a node with no parent
     Text* containerText() const;
+    Element* containerOrParentElement() const;
 
     int computeOffsetInContainerNode() const;  // O(n) for before/after-anchored positions, O(1) for parent-anchored positions
     WEBCORE_EXPORT Position parentAnchoredEquivalent() const; // Convenience method for DOM positions that also fixes up some positions for editing
@@ -171,8 +172,8 @@ public:
     bool isRenderedCharacter() const;
     bool rendersInDifferentPosition(const Position&) const;
 
-    InlineRunAndOffset inlineRunAndOffset(Affinity) const;
-    InlineRunAndOffset inlineRunAndOffset(Affinity, TextDirection primaryDirection) const;
+    InlineBoxAndOffset inlineBoxAndOffset(Affinity) const;
+    InlineBoxAndOffset inlineBoxAndOffset(Affinity, TextDirection primaryDirection) const;
 
     TextDirection primaryDirection() const;
 
@@ -234,7 +235,7 @@ WEBCORE_EXPORT Position makeContainerOffsetPosition(const BoundaryPoint&);
 Position makeDeprecatedLegacyPosition(Node*, unsigned offset);
 WEBCORE_EXPORT Position makeDeprecatedLegacyPosition(const BoundaryPoint&);
 
-WEBCORE_EXPORT Optional<BoundaryPoint> makeBoundaryPoint(const Position&);
+WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPoint(const Position&);
 
 Position positionInParentBeforeNode(Node*);
 Position positionInParentAfterNode(Node*);
@@ -258,7 +259,7 @@ struct PositionRange {
     Position end;
 };
 
-Optional<SimpleRange> makeSimpleRange(const PositionRange&);
+std::optional<SimpleRange> makeSimpleRange(const PositionRange&);
 
 // inlines
 

@@ -57,7 +57,7 @@ private:
 
     Lock m_taskThreadCreationLock;
     Lock m_mainThreadReplyLock;
-    bool m_mainThreadReplyScheduled { false };
+    bool m_mainThreadReplyScheduled WTF_GUARDED_BY_LOCK(m_mainThreadReplyLock) { false };
 
     CrossThreadQueue<CrossThreadTask> m_taskQueue;
     CrossThreadQueue<CrossThreadTask> m_taskReplyQueue;

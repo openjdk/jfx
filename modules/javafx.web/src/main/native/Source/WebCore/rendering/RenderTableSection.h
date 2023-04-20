@@ -62,7 +62,7 @@ public:
     RenderTableRow* firstRow() const;
     RenderTableRow* lastRow() const;
 
-    Optional<int> firstLineBaseline() const override;
+    std::optional<LayoutUnit> firstLineBaseline() const override;
 
     void addCell(RenderTableCell*, RenderTableRow* row);
 
@@ -159,13 +159,13 @@ private:
         DoNotIncludeAllIntersectingCells
     };
 
-    const char* renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)" : "RenderTableSection"; }
+    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s; }
 
     bool canHaveChildren() const override { return true; }
 
     bool isTableSection() const override { return true; }
 
-    void willBeRemovedFromTree() override;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
     void layout() override;
 

@@ -24,9 +24,11 @@
  */
 
 #include "config.h"
-#include "RTCEncodedVideoFrame.h"
 
 #if ENABLE(WEB_RTC)
+#include "RTCEncodedVideoFrame.h"
+
+#include <JavaScriptCore/ArrayBuffer.h>
 
 namespace WebCore {
 
@@ -37,6 +39,18 @@ RTCEncodedVideoFrame::RTCEncodedVideoFrame(Ref<RTCRtpTransformableFrame>&& frame
 }
 
 RTCEncodedVideoFrame::~RTCEncodedVideoFrame() = default;
+
+uint64_t RTCEncodedVideoFrame::timestamp() const
+{
+    return m_frame->timestamp();
+}
+
+const RTCEncodedVideoFrame::Metadata& RTCEncodedVideoFrame::getMetadata()
+{
+    if (!m_metadata)
+        m_metadata = m_frame->videoMetadata();
+    return *m_metadata;
+}
 
 } // namespace WebCore
 

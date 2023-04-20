@@ -103,10 +103,8 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
  * This function is used for full decompression.
  */
 {
-#ifdef IDCT_SCALING_SUPPORTED
-  int ci, ssize;
+  int ci, i;
   jpeg_component_info *compptr;
-#endif
 
   /* Prevent application from calling me at wrong times */
   if (cinfo->global_state != DSTATE_READY)
@@ -124,7 +122,7 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
    */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    ssize = 1;
+    int ssize = 1;
     if (! cinfo->raw_data_out)
       while (cinfo->min_DCT_h_scaled_size * ssize <=
          (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
@@ -173,20 +171,15 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
     break;
   case JCS_RGB:
   case JCS_BG_RGB:
-#if RGB_PIXELSIZE != 3
     cinfo->out_color_components = RGB_PIXELSIZE;
     break;
-#endif /* else share code with YCbCr */
-  case JCS_YCbCr:
-  case JCS_BG_YCC:
-    cinfo->out_color_components = 3;
-    break;
-  case JCS_CMYK:
-  case JCS_YCCK:
-    cinfo->out_color_components = 4;
-    break;
   default:            /* else must be same colorspace as in file */
-    cinfo->out_color_components = cinfo->num_components;
+    i = 0;
+    for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
+     ci++, compptr++)
+      if (compptr->component_needed)
+    i++;    /* count output color components */
+    cinfo->out_color_components = i;
   }
   cinfo->output_components = (cinfo->quantize_colors ? 1 :
                   cinfo->out_color_components);

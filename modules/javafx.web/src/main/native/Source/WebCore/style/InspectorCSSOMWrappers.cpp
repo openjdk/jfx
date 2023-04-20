@@ -29,7 +29,10 @@
 #include "config.h"
 #include "InspectorCSSOMWrappers.h"
 
+#include "CSSContainerRule.h"
 #include "CSSImportRule.h"
+#include "CSSLayerBlockRule.h"
+#include "CSSLayerStatementRule.h"
 #include "CSSMediaRule.h"
 #include "CSSRule.h"
 #include "CSSStyleRule.h"
@@ -57,17 +60,26 @@ void InspectorCSSOMWrappers::collect(ListType* listType)
     unsigned size = listType->length();
     for (unsigned i = 0; i < size; ++i) {
         CSSRule* cssRule = listType->item(i);
-        switch (cssRule->type()) {
-        case CSSRule::IMPORT_RULE:
+        if (!cssRule)
+            continue;
+
+        switch (cssRule->styleRuleType()) {
+        case StyleRuleType::Container:
+            collect(downcast<CSSContainerRule>(cssRule));
+            break;
+        case StyleRuleType::Import:
             collect(downcast<CSSImportRule>(*cssRule).styleSheet());
             break;
-        case CSSRule::MEDIA_RULE:
+        case StyleRuleType::LayerBlock:
+            collect(downcast<CSSLayerBlockRule>(cssRule));
+            break;
+        case StyleRuleType::Media:
             collect(downcast<CSSMediaRule>(cssRule));
             break;
-        case CSSRule::SUPPORTS_RULE:
+        case StyleRuleType::Supports:
             collect(downcast<CSSSupportsRule>(cssRule));
             break;
-        case CSSRule::STYLE_RULE:
+        case StyleRuleType::Style:
             m_styleRuleToCSSOMWrapperMap.add(&downcast<CSSStyleRule>(*cssRule).styleRule(), downcast<CSSStyleRule>(cssRule));
             break;
         default:
@@ -118,7 +130,10 @@ void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& exten
         collectFromStyleSheetContents(UserAgentStyle::colorInputStyleSheet);
 #endif
 #if ENABLE(IOS_FORM_CONTROL_REFRESH)
-        collectFromStyleSheetContents(UserAgentStyle::formControlsIOSStyleSheet);
+        collectFromStyleSheetContents(UserAgentStyle::legacyFormControlsIOSStyleSheet);
+#endif
+#if ENABLE(ALTERNATE_FORM_CONTROL_DESIGN)
+        collectFromStyleSheetContents(UserAgentStyle::alternateFormControlDesignStyleSheet);
 #endif
         collectFromStyleSheetContents(UserAgentStyle::plugInsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mediaQueryStyleSheet);

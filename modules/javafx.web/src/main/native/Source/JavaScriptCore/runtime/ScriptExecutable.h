@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ExecutableBase.h"
+#include "ParserModes.h"
 
 namespace JSC {
 
@@ -45,7 +46,7 @@ public:
     CodeBlockHash hashFor(CodeSpecializationKind) const;
 
     const SourceCode& source() const { return m_source; }
-    intptr_t sourceID() const { return m_source.providerID(); }
+    SourceID sourceID() const { return m_source.providerID(); }
     const SourceOrigin& sourceOrigin() const { return m_source.provider()->sourceOrigin(); }
     // This is NOT the path that should be used for computing relative paths from a script. Use SourceOrigin's URL for that, the values may or may not be the same... This should only be used for `error.sourceURL` and stack traces.
     const String& sourceURL() const { return m_source.provider()->sourceURL(); }
@@ -54,16 +55,15 @@ public:
     unsigned startColumn() const { return m_source.startColumn().oneBasedInt(); }
     JS_EXPORT_PRIVATE unsigned endColumn() const;
 
-    Optional<int> overrideLineNumber(VM&) const;
+    std::optional<int> overrideLineNumber(VM&) const;
     unsigned typeProfilingStartOffset(VM&) const;
     unsigned typeProfilingEndOffset(VM&) const;
 
-    bool usesEval() const { return m_features & EvalFeature; }
     bool usesArguments() const { return m_features & ArgumentsFeature; }
     bool isArrowFunctionContext() const { return m_isArrowFunctionContext; }
     DerivedContextType derivedContextType() const { return static_cast<DerivedContextType>(m_derivedContextType); }
     EvalContextType evalContextType() const { return static_cast<EvalContextType>(m_evalContextType); }
-    bool isInStrictContext() const { return m_features & StrictModeFeature; }
+    bool isInStrictContext() const { return m_lexicalScopeFeatures & StrictModeLexicalFeature; }
     bool usesNonSimpleParameterList() const { return m_features & NonSimpleParameterListFeature; }
 
     void setNeverInline(bool value) { m_neverInline = value; }
@@ -86,10 +86,10 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    void recordParse(CodeFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn);
+    void recordParse(CodeFeatures, LexicalScopeFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn);
     void installCode(CodeBlock*);
     void installCode(VM&, CodeBlock*, CodeType, CodeSpecializationKind);
-    CodeBlock* newCodeBlockFor(CodeSpecializationKind, JSFunction*, JSScope*, Exception*&);
+    CodeBlock* newCodeBlockFor(CodeSpecializationKind, JSFunction*, JSScope*);
     CodeBlock* newReplacementCodeBlockFor(CodeSpecializationKind);
 
     void clearCode(IsoCellSet&);
@@ -115,44 +115,42 @@ public:
     // to point to it. This forces callers to have a CodeBlock* in a register or on the stack that will be marked
     // by conservative GC if a GC happens after we create the CodeBlock.
     template <typename ExecutableType>
-    Exception* prepareForExecution(VM&, JSFunction*, JSScope*, CodeSpecializationKind, CodeBlock*& resultCodeBlock);
+    void prepareForExecution(VM&, JSFunction*, JSScope*, CodeSpecializationKind, CodeBlock*&);
 
     ScriptExecutable* topLevelExecutable();
     JSArray* createTemplateObject(JSGlobalObject*, JSTemplateObjectDescriptor*);
 
 private:
     friend class ExecutableBase;
-    Exception* prepareForExecutionImpl(VM&, JSFunction*, JSScope*, CodeSpecializationKind, CodeBlock*&);
+    void prepareForExecutionImpl(VM&, JSFunction*, JSScope*, CodeSpecializationKind, CodeBlock*&);
 
-    bool hasClearableCode(VM&) const;
+    bool hasClearableCode() const;
 
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
 protected:
-    ScriptExecutable(Structure*, VM&, const SourceCode&, bool isInStrictContext, DerivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, Intrinsic);
+    ScriptExecutable(Structure*, VM&, const SourceCode&, LexicalScopeFeatures, DerivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, Intrinsic);
 
-    void finishCreation(VM& vm)
-    {
-        Base::finishCreation(vm);
-
-#if ENABLE(CODEBLOCK_SAMPLING)
-        if (SamplingTool* sampler = vm.interpreter->sampler())
-            sampler->notifyOfScope(vm, this);
-#endif
-    }
-
-    void recordParse(CodeFeatures features, bool hasCapturedVariables)
+    void recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables)
     {
         m_features = features;
+        m_lexicalScopeFeatures = lexicalScopeFeatures;
         m_hasCapturedVariables = hasCapturedVariables;
     }
 
     static TemplateObjectMap& ensureTemplateObjectMapImpl(std::unique_ptr<TemplateObjectMap>& dest);
 
+    template<typename Visitor>
+    static void runConstraint(const ConcurrentJSLocker&, Visitor&, CodeBlock*);
+    template<typename Visitor>
+    static void visitCodeBlockEdge(Visitor&, CodeBlock*);
+    void finalizeCodeBlockEdge(VM&, WriteBarrier<CodeBlock>&);
+
     SourceCode m_source;
     Intrinsic m_intrinsic { NoIntrinsic };
     bool m_didTryToEnterInLoop { false };
     CodeFeatures m_features;
+    unsigned m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
     OptionSet<CodeGenerationMode> m_codeGenerationModeForGeneratorBody;
     bool m_hasCapturedVariables : 1;
     bool m_neverInline : 1;

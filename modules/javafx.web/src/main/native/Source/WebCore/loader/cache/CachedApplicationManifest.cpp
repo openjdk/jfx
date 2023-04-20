@@ -34,18 +34,23 @@
 
 namespace WebCore {
 
-CachedApplicationManifest::CachedApplicationManifest(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedApplicationManifest::CachedApplicationManifest(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), Type::ApplicationManifest, sessionID, cookieJar)
-    , m_decoder(TextResourceDecoder::create("application/manifest+json", UTF8Encoding()))
+    , m_decoder(TextResourceDecoder::create("application/manifest+json"_s, PAL::UTF8Encoding()))
 {
 }
 
-void CachedApplicationManifest::finishLoading(SharedBuffer* data, const NetworkLoadMetrics& metrics)
+void CachedApplicationManifest::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
-    m_data = data;
-    setEncodedSize(data ? data->size() : 0);
-    if (data)
-        m_text = m_decoder->decodeAndFlush(data->data(), data->size());
+    if (data) {
+        auto contiguousData = data->makeContiguous();
+        setEncodedSize(data->size());
+        m_text = m_decoder->decodeAndFlush(contiguousData->data(), data->size());
+        m_data = WTFMove(contiguousData);
+    } else {
+        m_data = nullptr;
+        setEncodedSize(0);
+    }
     CachedResource::finishLoading(data, metrics);
 }
 
@@ -56,15 +61,15 @@ void CachedApplicationManifest::setEncoding(const String& chs)
 
 String CachedApplicationManifest::encoding() const
 {
-    return m_decoder->encoding().name();
+    return String::fromLatin1(m_decoder->encoding().name());
 }
 
-Optional<ApplicationManifest> CachedApplicationManifest::process(const URL& manifestURL, const URL& documentURL, RefPtr<ScriptExecutionContext> scriptExecutionContext)
+std::optional<ApplicationManifest> CachedApplicationManifest::process(const URL& manifestURL, const URL& documentURL, Document* document)
 {
     if (!m_text)
-        return WTF::nullopt;
-    if (scriptExecutionContext)
-        return ApplicationManifestParser::parse(*scriptExecutionContext, *m_text, manifestURL, documentURL);
+        return std::nullopt;
+    if (document)
+        return ApplicationManifestParser::parse(*document, *m_text, manifestURL, documentURL);
     return ApplicationManifestParser::parse(*m_text, manifestURL, documentURL);
 }
 

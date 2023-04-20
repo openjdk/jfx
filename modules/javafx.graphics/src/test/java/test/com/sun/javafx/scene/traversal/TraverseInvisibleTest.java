@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,10 @@
 package test.com.sun.javafx.scene.traversal;
 
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.scene.traversal.TraverseListener;
-import com.sun.javafx.scene.traversal.TraverseListener;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
@@ -124,7 +119,7 @@ public final class TraverseInvisibleTest {
     public void traverseOverInvisible() {
         keypadNodes[fromNumber].requestFocus();
         keypadNodes[invisibleNumber].setVisible(false);
-        traversalEngine.trav(keypadNodes[fromNumber], direction);
+        traversalEngine.trav(keypadNodes[fromNumber], direction, TraversalMethod.DEFAULT);
 
         assertTrue(keypadNodes[toNumber].isFocused());
 

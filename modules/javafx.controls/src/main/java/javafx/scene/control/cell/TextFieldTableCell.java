@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,7 +88,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
      */
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter) {
-        return list -> new TextFieldTableCell<S,T>(converter);
+        return list -> new TextFieldTableCell<>(converter);
     }
 
 
@@ -147,7 +147,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.

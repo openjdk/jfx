@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -203,39 +203,37 @@ public class LogicalFont implements CompositeFontResource {
         return slot0FontResource;
     }
 
-    private ArrayList<String> linkedFontFiles;
-    private ArrayList<String> linkedFontNames;
-    private FontResource[] fallbacks;
-    private FontResource[] nativeFallbacks;
+    volatile private String[] linkedFontNames;
+    volatile private String[] linkedFontFiles;
+    volatile private FontResource[] fallbacks;
+    volatile private FontResource[] nativeFallbacks;
 
     private void getLinkedFonts() {
         if (fallbacks == null) {
-            ArrayList<String>[] linkedFontInfo;
-            if (PrismFontFactory.isLinux) {
-                FontConfigManager.FcCompFont font =
-                    FontConfigManager.getFontConfigFont(familyName,
-                                                        isBold, isItalic);
-                linkedFontFiles = FontConfigManager.getFileNames(font, true);
-                linkedFontNames = FontConfigManager.getFontNames(font, true);
-            } else {
-                linkedFontInfo = PrismFontFactory.getLinkedFonts("Tahoma", true);
-                linkedFontFiles = linkedFontInfo[0];
-                linkedFontNames = linkedFontInfo[1];
-            }
-            fallbacks = new FontResource[linkedFontFiles.size()];
+            PrismFontFactory factory = PrismFontFactory.getFontFactory();
+            FontFallbackInfo fallbackInfo = factory.getFallbacks(getSlot0Resource());
+            linkedFontNames = fallbackInfo.getFontNames();
+            linkedFontFiles = fallbackInfo.getFontFiles();
+            fallbacks       = fallbackInfo.getFonts();
         }
     }
 
+    @Override
     public int getNumSlots() {
         getLinkedFonts();
-        int num = linkedFontFiles.size();
+        int num = fallbacks.length;
         if (nativeFallbacks != null) {
             num += nativeFallbacks.length;
         }
         return num + 1;
     }
 
-    public int getSlotForFont(String fontName) {
+    private int getSlotForFontNoCreate(String fontName) {
+
+        if (fontName.equals(getSlot0Resource().getFullName())) {
+            return 0;
+        }
+
         getLinkedFonts();
         int i = 1;
         for (String linkedFontName : linkedFontNames) {
@@ -252,8 +250,36 @@ public class LogicalFont implements CompositeFontResource {
                 i++;
             }
         }
+        return -1;
+    }
 
-        if (i >= 0x7E) {
+    @Override
+    public int getSlotForFont(String fontName) {
+        int slot = getSlotForFontNoCreate(fontName);
+        if (slot >= 0) {
+            return slot;
+        }
+
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        FontResource fr = factory.getFontResource(fontName, null, false);
+        if (fr == null) {
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("\t Font name not supported \"" + fontName + "\".");
+            }
+            return -1;
+        }
+        slot = getSlotForFontNoCreate(fr.getFullName());
+        if (slot >= 0) {
+            return slot;
+        }
+
+        /* Add the font to the list of native fallbacks */
+        return addNativeFallback(fr);
+    }
+
+    private int addNativeFallback(FontResource fr) {
+        int ns = getNumSlots();
+        if (ns >= 0x7E) {
             /* There are 8bits (0xFF) reserved in a glyph code to store the slot
              * number. The first bit cannot be set to avoid negative values
              * (leaving 0x7F). The extra -1 (leaving 0x7E) is to account for
@@ -264,15 +290,6 @@ public class LogicalFont implements CompositeFontResource {
             }
             return -1;
         }
-        PrismFontFactory factory = PrismFontFactory.getFontFactory();
-        FontResource fr = factory.getFontResource(fontName, null, false);
-        if (fr == null) {
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("\t Font name not supported \"" + fontName + "\".");
-            }
-            return -1;
-        }
-
         /* Add the font to the list of native fallbacks */
         FontResource[] tmp;
         if (nativeFallbacks == null) {
@@ -284,9 +301,22 @@ public class LogicalFont implements CompositeFontResource {
         tmp[tmp.length - 1] = fr;
         nativeFallbacks = tmp;
 
-        return i;
+        return ns;
     }
 
+    public int addSlotFont(FontResource fr) {
+        if (fr == null) {
+            return -1;
+        }
+        int slot = getSlotForFont(fr.getFullName());
+        if (slot >= 0) {
+            return slot;
+        } else {
+            return addNativeFallback(fr);
+        }
+    }
+
+    @Override
     public FontResource getSlotResource(int slot) {
         if (slot == 0) {
             return getSlot0Resource();
@@ -301,8 +331,8 @@ public class LogicalFont implements CompositeFontResource {
                 return nativeFallbacks[slot];
             }
             if (fallbacks[slot] == null) {
-                String file = linkedFontFiles.get(slot);
-                String name = linkedFontNames.get(slot);
+                String file = linkedFontFiles[slot];
+                String name = linkedFontNames[slot];
                 fallbacks[slot] =
                     PrismFontFactory.getFontFactory().
                           getFontResource(name, file, false);
@@ -314,62 +344,77 @@ public class LogicalFont implements CompositeFontResource {
         }
     }
 
+    @Override
     public String getFullName() {
         return fullName;
     }
 
+    @Override
     public String getPSName() {
         return fullName;
     }
 
+    @Override
     public String getFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getStyleName() {
         return styleName;
     }
 
+    @Override
     public String getLocaleFullName() {
         return fullName;
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getLocaleStyleName() {
         return styleName;
     }
 
+    @Override
     public boolean isBold() {
         return getSlotResource(0).isBold();
     }
 
+    @Override
     public boolean isItalic() {
         return getSlotResource(0).isItalic();
     }
 
+    @Override
     public String getFileName() {
         return getSlotResource(0).getFileName();
     }
 
+    @Override
     public int getFeatures() {
         return getSlotResource(0).getFeatures();
     }
 
+    @Override
     public Object getPeer() {
         return null;
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return getSlotResource(0).isEmbeddedFont();
     }
 
+    @Override
     public void setPeer(Object peer) {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public float[] getGlyphBoundingBox(int glyphCode,
                                 float size, float[] retArr) {
         int slot = (glyphCode >>> 24);
@@ -378,6 +423,7 @@ public class LogicalFont implements CompositeFontResource {
         return slotResource.getGlyphBoundingBox(slotglyphCode, size, retArr);
    }
 
+    @Override
     public float getAdvance(int glyphCode, float size) {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
@@ -386,6 +432,7 @@ public class LogicalFont implements CompositeFontResource {
     }
 
     CompositeGlyphMapper mapper;
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         //return getSlot0Resource().getGlyphMapper();
         if (mapper == null) {
@@ -394,21 +441,24 @@ public class LogicalFont implements CompositeFontResource {
         return mapper;
     }
 
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
-        new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
+    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
 
+    @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
         return strikeMap;
     }
 
+    @Override
     public int getDefaultAAMode() {
         return getSlot0Resource().getDefaultAAMode();
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
         FontStrikeDesc desc= new FontStrikeDesc(size, transform, aaMode);
@@ -423,7 +473,7 @@ public class LogicalFont implements CompositeFontResource {
             if (strike.disposer != null) {
                 ref = Disposer.addRecord(strike, strike.disposer);
             } else {
-                ref = new WeakReference<FontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }

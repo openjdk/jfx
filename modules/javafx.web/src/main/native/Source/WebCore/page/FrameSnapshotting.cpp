@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2013 University of Washington.
@@ -31,14 +31,17 @@
 #include "config.h"
 #include "FrameSnapshotting.h"
 
+#include "ColorBlending.h"
 #include "Document.h"
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
+#include "GeometryUtilities.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "Page.h"
+#include "RenderAncestorIterator.h"
 #include "RenderObject.h"
 #include "Settings.h"
 
@@ -67,37 +70,38 @@ struct ScopedFramePaintingState {
     const Color backgroundColor;
 };
 
-RefPtr<ImageBuffer> snapshotFrameRect(Frame& frame, const IntRect& imageRect, SnapshotOptions options)
+RefPtr<ImageBuffer> snapshotFrameRect(Frame& frame, const IntRect& imageRect, SnapshotOptions&& options)
 {
     Vector<FloatRect> clipRects;
-    return snapshotFrameRectWithClip(frame, imageRect, clipRects, options);
+    return snapshotFrameRectWithClip(frame, imageRect, clipRects, WTFMove(options));
 }
 
-RefPtr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRect& imageRect, const Vector<FloatRect>& clipRects, SnapshotOptions options)
+RefPtr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRect& imageRect, const Vector<FloatRect>& clipRects, SnapshotOptions&& options)
 {
     if (!frame.page())
         return nullptr;
 
-    frame.document()->updateLayout();
+    Ref document = *frame.document();
+    document->updateLayout();
 
     FrameView::SelectionInSnapshot shouldIncludeSelection = FrameView::IncludeSelection;
-    if (options & SnapshotOptionsExcludeSelectionHighlighting)
+    if (options.flags.contains(SnapshotFlags::ExcludeSelectionHighlighting))
         shouldIncludeSelection = FrameView::ExcludeSelection;
 
     FrameView::CoordinateSpaceForSnapshot coordinateSpace = FrameView::DocumentCoordinates;
-    if (options & SnapshotOptionsInViewCoordinates)
+    if (options.flags.contains(SnapshotFlags::InViewCoordinates))
         coordinateSpace = FrameView::ViewCoordinates;
 
     ScopedFramePaintingState state(frame, nullptr);
 
     auto paintBehavior = state.paintBehavior;
-    if (options & SnapshotOptionsForceBlackText)
+    if (options.flags.contains(SnapshotFlags::ForceBlackText))
         paintBehavior.add(PaintBehavior::ForceBlackText);
-    if (options & SnapshotOptionsPaintSelectionOnly)
+    if (options.flags.contains(SnapshotFlags::PaintSelectionOnly))
         paintBehavior.add(PaintBehavior::SelectionOnly);
-    if (options & SnapshotOptionsPaintSelectionAndBackgroundsOnly)
+    if (options.flags.contains(SnapshotFlags::PaintSelectionAndBackgroundsOnly))
         paintBehavior.add(PaintBehavior::SelectionAndBackgroundsOnly);
-    if (options & SnapshotOptionsPaintEverythingExcludingSelection)
+    if (options.flags.contains(SnapshotFlags::PaintEverythingExcludingSelection))
         paintBehavior.add(PaintBehavior::ExcludeSelection);
 
     // Other paint behaviors are set by paintContentsForSnapshot.
@@ -108,13 +112,17 @@ RefPtr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRect& image
     if (frame.page()->delegatesScaling())
         scaleFactor *= frame.page()->pageScaleFactor();
 
-    if (options & SnapshotOptionsPaintWithIntegralScaleFactor)
+    if (options.flags.contains(SnapshotFlags::PaintWithIntegralScaleFactor))
         scaleFactor = ceilf(scaleFactor);
 
-    auto buffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated, scaleFactor);
+    auto purpose = options.flags.contains(SnapshotFlags::Shareable) ? RenderingPurpose::ShareableSnapshot : RenderingPurpose::Snapshot;
+    auto hostWindow = (document->view() && document->view()->root()) ? document->view()->root()->hostWindow() : nullptr;
+
+    auto buffer = ImageBuffer::create(imageRect.size(), purpose, scaleFactor, options.colorSpace, options.pixelFormat, { }, { hostWindow });
     if (!buffer)
         return nullptr;
-    buffer->context().translate(-imageRect.x(), -imageRect.y());
+
+    buffer->context().translate(-imageRect.location());
 
     if (!clipRects.isEmpty()) {
         Path clipPath;
@@ -127,7 +135,7 @@ RefPtr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRect& image
     return buffer;
 }
 
-RefPtr<ImageBuffer> snapshotSelection(Frame& frame, SnapshotOptions options)
+RefPtr<ImageBuffer> snapshotSelection(Frame& frame, SnapshotOptions&& options)
 {
     auto& selection = frame.selection();
 
@@ -140,11 +148,11 @@ RefPtr<ImageBuffer> snapshotSelection(Frame& frame, SnapshotOptions options)
     if (selectionBounds.isEmpty())
         return nullptr;
 
-    options |= SnapshotOptionsPaintSelectionOnly;
-    return snapshotFrameRect(frame, enclosingIntRect(selectionBounds), options);
+    options.flags.add(SnapshotFlags::PaintSelectionOnly);
+    return snapshotFrameRect(frame, enclosingIntRect(selectionBounds), WTFMove(options));
 }
 
-RefPtr<ImageBuffer> snapshotNode(Frame& frame, Node& node)
+RefPtr<ImageBuffer> snapshotNode(Frame& frame, Node& node, SnapshotOptions&& options)
 {
     if (!node.renderer())
         return nullptr;
@@ -155,7 +163,53 @@ RefPtr<ImageBuffer> snapshotNode(Frame& frame, Node& node)
     frame.view()->setNodeToDraw(&node);
 
     LayoutRect topLevelRect;
-    return snapshotFrameRect(frame, snappedIntRect(node.renderer()->paintingRootRect(topLevelRect)));
+    return snapshotFrameRect(frame, snappedIntRect(node.renderer()->paintingRootRect(topLevelRect)), WTFMove(options));
+}
+
+static bool styleContainsComplexBackground(const RenderStyle& style)
+{
+    return style.hasBlendMode() || style.hasBackgroundImage() || style.hasBackdropFilter();
+}
+
+Color estimatedBackgroundColorForRange(const SimpleRange& range, const Frame& frame)
+{
+    auto estimatedBackgroundColor = frame.view() ? frame.view()->documentBackgroundColor() : Color::transparentBlack;
+
+    RenderElement* renderer = nullptr;
+    auto commonAncestor = commonInclusiveAncestor<ComposedTree>(range);
+    while (commonAncestor) {
+        if (is<RenderElement>(commonAncestor->renderer())) {
+            renderer = downcast<RenderElement>(commonAncestor->renderer());
+            break;
+        }
+        commonAncestor = commonAncestor->parentOrShadowHostElement();
+    }
+
+    auto boundingRectForRange = enclosingIntRect(unionRectIgnoringZeroRects(RenderObject::absoluteBorderAndTextRects(range, {
+        RenderObject::BoundingRectBehavior::RespectClipping,
+        RenderObject::BoundingRectBehavior::UseVisibleBounds,
+        RenderObject::BoundingRectBehavior::IgnoreTinyRects,
+    })));
+
+    Vector<Color> parentRendererBackgroundColors;
+    for (auto& ancestor : lineageOfType<RenderElement>(*renderer)) {
+        auto absoluteBoundingBox = ancestor.absoluteBoundingBoxRect();
+        auto& style = ancestor.style();
+        if (!absoluteBoundingBox.contains(boundingRectForRange) || !style.hasBackground())
+            continue;
+
+        if (styleContainsComplexBackground(style))
+            return estimatedBackgroundColor;
+
+        auto visitedDependentBackgroundColor = style.visitedDependentColor(CSSPropertyBackgroundColor);
+        if (visitedDependentBackgroundColor != Color::transparentBlack)
+            parentRendererBackgroundColors.append(visitedDependentBackgroundColor);
+    }
+    parentRendererBackgroundColors.reverse();
+    for (const auto& backgroundColor : parentRendererBackgroundColors)
+        estimatedBackgroundColor = blendSourceOver(estimatedBackgroundColor, backgroundColor);
+
+    return estimatedBackgroundColor;
 }
 
 } // namespace WebCore

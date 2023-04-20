@@ -27,6 +27,7 @@
 #include "AppendNodeCommand.h"
 
 #include "AXObjectCache.h"
+#include "CompositeEditCommand.h"
 #include "Document.h"
 #include "Editing.h"
 #include "RenderElement.h"
@@ -60,7 +61,7 @@ void AppendNodeCommand::doUnapply()
 }
 
 #ifndef NDEBUG
-void AppendNodeCommand::getNodesInCommand(HashSet<Node*>& nodes)
+void AppendNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
 {
     addNodeAndDescendants(m_parent.ptr(), nodes);
     addNodeAndDescendants(m_node.ptr(), nodes);

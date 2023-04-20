@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,22 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import javafx.beans.value.ChangeListener;
-import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.TitledPane;
 import javafx.scene.shape.Rectangle;
 
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.AccordionBehavior;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 /**
  * Default skin implementation for the {@link Accordion} control.
@@ -96,9 +95,10 @@ public class AccordionSkin extends SkinBase<Accordion> {
 
         // install default input map for the accordion control
         behavior = new AccordionBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
-        control.getPanes().addListener((ListChangeListener<TitledPane>) c -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addListChangeListener(control.getPanes(), (c) -> {
             if (firstTitledPane != null) {
                 firstTitledPane.getStyleClass().remove("first-titled-pane");
             }
@@ -132,13 +132,15 @@ public class AccordionSkin extends SkinBase<Accordion> {
         getChildren().setAll(control.getPanes());
         getSkinnable().requestLayout();
 
-        registerChangeListener(getSkinnable().widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
-        registerChangeListener(getSkinnable().heightProperty(), e -> {
+        lh.addChangeListener(getSkinnable().widthProperty(), (ev) -> {
+            clipRect.setWidth(getSkinnable().getWidth());
+        });
+
+        lh.addChangeListener(getSkinnable().heightProperty(), (ev) -> {
             clipRect.setHeight(getSkinnable().getHeight());
             relayout = true;
         });
     }
-
 
 
     /* *************************************************************************
@@ -148,12 +150,19 @@ public class AccordionSkin extends SkinBase<Accordion> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+
+        removeTitledPaneListeners(getSkinnable().getPanes());
 
         if (behavior != null) {
             behavior.dispose();
         }
+
+        super.dispose();
     }
 
     /** {@inheritDoc} */
@@ -223,7 +232,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
         double collapsedPanesHeight = 0;
         for (TitledPane tp : getSkinnable().getPanes()) {
             if (!tp.equals(expandedPane)) {
-                TitledPaneSkin childSkin = (TitledPaneSkin) ((TitledPane)tp).getSkin();
+                TitledPaneSkin childSkin = (TitledPaneSkin) tp.getSkin();
                 collapsedPanesHeight += snapSizeY(childSkin.getTitleRegionSize(w));
             }
         }

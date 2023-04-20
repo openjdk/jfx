@@ -25,8 +25,9 @@
 #pragma once
 
 #include "ExceptionOr.h"
-#include <wtf/Variant.h>
+#include <variant>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -35,13 +36,12 @@ class DOMURL;
 
 class URLSearchParams : public RefCounted<URLSearchParams> {
 public:
-    static ExceptionOr<Ref<URLSearchParams>> create(Variant<Vector<Vector<String>>, Vector<WTF::KeyValuePair<String, String>>, String>&&);
+    static ExceptionOr<Ref<URLSearchParams>> create(std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>, String>&&);
     static Ref<URLSearchParams> create(const String& string, DOMURL* associatedURL)
     {
         return adoptRef(*new URLSearchParams(string, associatedURL));
     }
 
-    void associatedURLDestroyed() { m_associatedURL = nullptr; }
     void append(const String& name, const String& value);
     void remove(const String& name);
     String get(const String& name) const;
@@ -55,7 +55,7 @@ public:
     class Iterator {
     public:
         explicit Iterator(URLSearchParams&);
-        Optional<WTF::KeyValuePair<String, String>> next();
+        std::optional<KeyValuePair<String, String>> next();
 
     private:
         Ref<URLSearchParams> m_target;
@@ -64,13 +64,13 @@ public:
     Iterator createIterator() { return Iterator { *this }; }
 
 private:
-    const Vector<WTF::KeyValuePair<String, String>>& pairs() const { return m_pairs; }
+    const Vector<KeyValuePair<String, String>>& pairs() const { return m_pairs; }
     URLSearchParams(const String&, DOMURL*);
-    URLSearchParams(const Vector<WTF::KeyValuePair<String, String>>&);
+    URLSearchParams(const Vector<KeyValuePair<String, String>>&);
     void updateURL();
 
-    DOMURL* m_associatedURL { nullptr };
-    Vector<WTF::KeyValuePair<String, String>> m_pairs;
+    WeakPtr<DOMURL> m_associatedURL;
+    Vector<KeyValuePair<String, String>> m_pairs;
 };
 
 } // namespace WebCore

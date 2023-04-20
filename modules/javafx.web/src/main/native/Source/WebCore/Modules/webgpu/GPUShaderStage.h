@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +25,31 @@
 
 #pragma once
 
-#if ENABLE(WEBGPU)
-
+#include "GPUIntegralTypes.h"
+#include <cstdint>
+#include <pal/graphics/WebGPU/WebGPUShaderStage.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
-using GPUShaderStageFlags = unsigned;
-
+using GPUShaderStageFlags = uint32_t;
 class GPUShaderStage : public RefCounted<GPUShaderStage> {
 public:
-    enum Flags : GPUShaderStageFlags {
-        None = 0,
-        Vertex = 1 << 0,
-        Fragment = 1 << 1,
-        Compute = 1 << 2,
-    };
+    static constexpr GPUFlagsConstant VERTEX   = 0x1;
+    static constexpr GPUFlagsConstant FRAGMENT = 0x2;
+    static constexpr GPUFlagsConstant COMPUTE  = 0x4;
 };
 
+inline PAL::WebGPU::ShaderStageFlags convertShaderStageFlagsToBacking(GPUShaderStageFlags shaderStageFlags)
+{
+    PAL::WebGPU::ShaderStageFlags result;
+    if (shaderStageFlags & GPUShaderStage::VERTEX)
+        result.add(PAL::WebGPU::ShaderStage::Vertex);
+    if (shaderStageFlags & GPUShaderStage::FRAGMENT)
+        result.add(PAL::WebGPU::ShaderStage::Fragment);
+    if (shaderStageFlags & GPUShaderStage::COMPUTE)
+        result.add(PAL::WebGPU::ShaderStage::Compute);
+    return result;
+}
 
-} // namespace WebCore
-
-#endif // ENABLE(WEBGPU)
+}

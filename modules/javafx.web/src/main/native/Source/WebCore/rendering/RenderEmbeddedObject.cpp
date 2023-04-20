@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
  *           (C) 2000 Stefan Schimanski (1Stein@gmx.de)
- * Copyright (C) 2004, 2005, 2006, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -52,6 +52,7 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "SystemFontDatabase.h"
 #include "Text.h"
 #include "TextRun.h"
 #include <wtf/IsoMallocInlines.h>
@@ -206,8 +207,8 @@ static void drawReplacementArrow(GraphicsContext& context, const FloatRect& insi
     FloatPoint arrowTip(rect.maxX(), center.y());
 
     context.setStrokeThickness(2);
-    context.setLineCap(RoundCap);
-    context.setLineJoin(RoundJoin);
+    context.setLineCap(LineCap::Round);
+    context.setLineJoin(LineJoin::Round);
 
     Path path;
     path.moveTo(FloatPoint(rect.x(), center.y()));
@@ -256,7 +257,7 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
     context.setStrokeThickness(2);
     context.strokePath(strokePath);
 
-    const FontMetrics& fontMetrics = font.fontMetrics();
+    const FontMetrics& fontMetrics = font.metricsOfPrimaryFont();
     float labelX = roundf(replacementTextRect.location().x() + replacementTextRoundedRectLeftTextMargin);
     float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.height()) / 2 + fontMetrics.ascent() + replacementTextRoundedRectTopTextMargin);
     context.setFillColor(replacementTextColor);
@@ -305,12 +306,12 @@ void RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
     contentRect.moveBy(roundedIntPoint(accumulatedOffset));
 
     FontCascadeDescription fontDescription;
-    RenderTheme::singleton().systemFont(CSSValueWebkitSmallControl, fontDescription);
+    fontDescription.setOneFamily(SystemFontDatabase::singleton().systemFontShorthandFamily(SystemFontDatabase::FontShorthand::WebkitSmallControl));
     fontDescription.setWeight(boldWeightValue());
     fontDescription.setRenderingMode(settings().fontRenderingMode());
     fontDescription.setComputedSize(12);
     font = FontCascade(WTFMove(fontDescription), 0, 0);
-    font.update(0);
+    font.update(nullptr);
 
     run = TextRun(m_unavailablePluginReplacementText);
     textWidth = font.width(run);
@@ -383,7 +384,7 @@ bool RenderEmbeddedObject::nodeAtPoint(const HitTestRequest& request, HitTestRes
     return true;
 }
 
-bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity granularity, float, Element**, RenderBox*, const IntPoint&)
+bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity granularity, unsigned, Element**, RenderBox*, const IntPoint&)
 {
     if (!is<PluginViewBase>(widget()))
         return false;
@@ -391,10 +392,10 @@ bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity g
     return downcast<PluginViewBase>(*widget()).scroll(direction, granularity);
 }
 
-bool RenderEmbeddedObject::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Element** stopElement)
+bool RenderEmbeddedObject::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, unsigned stepCount, Element** stopElement)
 {
     // Plugins don't expose a writing direction, so assuming horizontal LTR.
-    return scroll(logicalToPhysical(direction, true, false), granularity, multiplier, stopElement);
+    return scroll(logicalToPhysical(direction, true, false), granularity, stepCount, stopElement);
 }
 
 bool RenderEmbeddedObject::isInUnavailablePluginIndicator(const FloatPoint& point) const

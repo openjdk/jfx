@@ -80,6 +80,7 @@ static const gchar *_quark_strings[] = {
   "GstEventInstantRateChange",
   "GstEventInstantRateSyncTime", "GstMessageInstantRateRequest",
   "upstream-running-time", "base", "offset", "plugin-api", "plugin-api-flags",
+  "gap-flags"
 };
 
 GQuark _priv_gst_quark_table[GST_QUARK_MAX];

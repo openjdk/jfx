@@ -34,7 +34,7 @@ public:
     Text& textNode() const { return downcast<Text>(nodeForNonAnonymous()); }
 
     void combineTextIfNeeded();
-    Optional<FloatPoint> computeTextOrigin(const FloatRect& boxRect) const;
+    std::optional<FloatPoint> computeTextOrigin(const FloatRect& boxRect) const;
     String combinedStringForRendering() const;
     bool isCombined() const { return m_isCombined; }
     float combinedTextWidth(const FontCascade& font) const { return font.size(); }
@@ -45,8 +45,7 @@ private:
     void node() const = delete;
 
     bool isCombineText() const override { return true; }
-    float width(unsigned from, unsigned length, const FontCascade&, float xPosition, HashSet<const Font*>* fallbackFonts = 0, GlyphOverflow* = 0) const override;
-    const char* renderName() const override { return "RenderCombineText"; }
+    ASCIILiteral renderName() const override { return "RenderCombineText"_s; }
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
     void setRenderedText(const String&) override;
 

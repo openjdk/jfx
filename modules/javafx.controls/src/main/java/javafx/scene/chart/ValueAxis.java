@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Side;
@@ -522,10 +521,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
-    private static class StyleableProperties  {
-        private  static final CssMetaData<ValueAxis<? extends Number>,Number> MINOR_TICK_LENGTH =
-            new CssMetaData<ValueAxis<? extends Number>,Number>("-fx-minor-tick-length",
-                SizeConverter.getInstance(), 5.0) {
+    private static class StyleableProperties {
+        private static final CssMetaData<ValueAxis<? extends Number>,Number> MINOR_TICK_LENGTH =
+            new CssMetaData<>("-fx-minor-tick-length", SizeConverter.getInstance(), 5.0) {
 
             @Override
             public boolean isSettable(ValueAxis<? extends Number> n) {
@@ -534,13 +532,12 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ValueAxis<? extends Number> n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickLengthProperty();
+                return (StyleableProperty<Number>)n.minorTickLengthProperty();
             }
         };
 
         private static final CssMetaData<ValueAxis<? extends Number>,Number> MINOR_TICK_COUNT =
-            new CssMetaData<ValueAxis<? extends Number>,Number>("-fx-minor-tick-count",
-                SizeConverter.getInstance(), 5) {
+            new CssMetaData<>("-fx-minor-tick-count", SizeConverter.getInstance(), 5) {
 
             @Override
             public boolean isSettable(ValueAxis<? extends Number> n) {
@@ -549,13 +546,12 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ValueAxis<? extends Number> n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickCountProperty();
+                return (StyleableProperty<Number>)n.minorTickCountProperty();
             }
         };
 
-         private static final CssMetaData<ValueAxis<? extends Number>,Boolean> MINOR_TICK_VISIBLE =
-            new CssMetaData<ValueAxis<? extends Number>,Boolean>("-fx-minor-tick-visible",
-                 BooleanConverter.getInstance(), Boolean.TRUE) {
+        private static final CssMetaData<ValueAxis<? extends Number>,Boolean> MINOR_TICK_VISIBLE =
+            new CssMetaData<>("-fx-minor-tick-visible", BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
             public boolean isSettable(ValueAxis<? extends Number> n) {
@@ -564,21 +560,22 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ValueAxis<? extends Number> n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.minorTickVisibleProperty();
+                return (StyleableProperty<Boolean>)n.minorTickVisibleProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-         static {
+
+        static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Axis.getClassCssMetaData());
+                new ArrayList<>(Axis.getClassCssMetaData());
             styleables.add(MINOR_TICK_COUNT);
             styleables.add(MINOR_TICK_LENGTH);
             styleables.add(MINOR_TICK_COUNT);
             styleables.add(MINOR_TICK_VISIBLE);
             STYLEABLES = Collections.unmodifiableList(styleables);
-         }
-     }
+        }
+    }
 
     /**
      * Gets the {@code CssMetaData} associated with this class, which may include the

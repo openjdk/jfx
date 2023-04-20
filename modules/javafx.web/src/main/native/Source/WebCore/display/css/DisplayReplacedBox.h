@@ -33,20 +33,21 @@ namespace WebCore {
 namespace Display {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ReplacedBox);
+
 class ReplacedBox : public BoxModelBox {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ReplacedBox);
     friend class BoxFactory;
 public:
-    ReplacedBox(Tree&, AbsoluteFloatRect borderBox, Style&&, OptionSet<TypeFlags>);
+    ReplacedBox(Tree&, UnadjustedAbsoluteFloatRect borderBox, Style&&, OptionSet<TypeFlags>);
 
-    AbsoluteFloatRect replacedContentRect() const { return m_replacedContentRect; }
+    UnadjustedAbsoluteFloatRect replacedContentRect() const { return m_replacedContentRect; }
 
 private:
     const char* boxName() const override;
 
-    void setReplacedContentRect(const AbsoluteFloatRect& box) { m_replacedContentRect = box; }
+    void setReplacedContentRect(const UnadjustedAbsoluteFloatRect& box) { m_replacedContentRect = box; }
 
-    AbsoluteFloatRect m_replacedContentRect;
+    UnadjustedAbsoluteFloatRect m_replacedContentRect;
 };
 
 } // namespace Display

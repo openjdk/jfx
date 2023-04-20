@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "CommonAtomStrings.h"
 #include "FEConvolveMatrix.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
@@ -27,20 +28,20 @@ namespace WebCore {
 
 template<>
 struct SVGPropertyTraits<EdgeModeType> {
-    static unsigned highestEnumValue() { return EDGEMODE_NONE; }
-    static EdgeModeType initialValue() { return EDGEMODE_NONE; }
+    static unsigned highestEnumValue() { return static_cast<unsigned>(EdgeModeType::None); }
+    static EdgeModeType initialValue() { return EdgeModeType::None; }
 
     static String toString(EdgeModeType type)
     {
         switch (type) {
-        case EDGEMODE_UNKNOWN:
+        case EdgeModeType::Unknown:
             return emptyString();
-        case EDGEMODE_DUPLICATE:
+        case EdgeModeType::Duplicate:
             return "duplicate"_s;
-        case EDGEMODE_WRAP:
+        case EdgeModeType::Wrap:
             return "wrap"_s;
-        case EDGEMODE_NONE:
-            return "none"_s;
+        case EdgeModeType::None:
+            return noneAtom();
         }
 
         ASSERT_NOT_REACHED();
@@ -49,13 +50,13 @@ struct SVGPropertyTraits<EdgeModeType> {
 
     static EdgeModeType fromString(const String& value)
     {
-        if (value == "duplicate")
-            return EDGEMODE_DUPLICATE;
-        if (value == "wrap")
-            return EDGEMODE_WRAP;
-        if (value == "none")
-            return EDGEMODE_NONE;
-        return EDGEMODE_UNKNOWN;
+        if (value == "duplicate"_s)
+            return EdgeModeType::Duplicate;
+        if (value == "wrap"_s)
+            return EdgeModeType::Wrap;
+        if (value == noneAtom())
+            return EdgeModeType::None;
+        return EdgeModeType::Unknown;
     }
 };
 
@@ -102,8 +103,9 @@ private:
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
-    bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&) override;
-    RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) const override;
+    bool setFilterEffectAttribute(FilterEffect&, const QualifiedName&) override;
+    Vector<AtomString> filterEffectInputsNames() const override { return { AtomString { in1() } }; }
+    RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
     PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedString> m_in1 { SVGAnimatedString::create(this) };
@@ -114,7 +116,7 @@ private:
     Ref<SVGAnimatedNumber> m_bias { SVGAnimatedNumber::create(this) };
     Ref<SVGAnimatedInteger> m_targetX { SVGAnimatedInteger::create(this) };
     Ref<SVGAnimatedInteger> m_targetY { SVGAnimatedInteger::create(this) };
-    Ref<SVGAnimatedEnumeration> m_edgeMode { SVGAnimatedEnumeration::create(this, EDGEMODE_DUPLICATE) };
+    Ref<SVGAnimatedEnumeration> m_edgeMode { SVGAnimatedEnumeration::create(this, EdgeModeType::Duplicate) };
     Ref<SVGAnimatedNumber> m_kernelUnitLengthX { SVGAnimatedNumber::create(this) };
     Ref<SVGAnimatedNumber> m_kernelUnitLengthY { SVGAnimatedNumber::create(this) };
     Ref<SVGAnimatedBoolean> m_preserveAlpha { SVGAnimatedBoolean::create(this) };

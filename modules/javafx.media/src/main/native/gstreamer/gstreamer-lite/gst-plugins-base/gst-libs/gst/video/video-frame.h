@@ -94,11 +94,11 @@ struct _GstVideoFrame {
 };
 
 GST_VIDEO_API
-gboolean    gst_video_frame_map           (GstVideoFrame *frame, GstVideoInfo *info,
+gboolean    gst_video_frame_map           (GstVideoFrame *frame, const GstVideoInfo *info,
                                            GstBuffer *buffer, GstMapFlags flags);
 
 GST_VIDEO_API
-gboolean    gst_video_frame_map_id        (GstVideoFrame *frame, GstVideoInfo *info,
+gboolean    gst_video_frame_map_id        (GstVideoFrame *frame, const GstVideoInfo *info,
                                            GstBuffer *buffer, gint id, GstMapFlags flags);
 
 GST_VIDEO_API

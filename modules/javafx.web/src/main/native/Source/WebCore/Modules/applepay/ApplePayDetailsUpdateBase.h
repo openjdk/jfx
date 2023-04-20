@@ -27,18 +27,32 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayDetailsUpdateData.h"
+#include "ApplePayAutomaticReloadPaymentRequest.h"
 #include "ApplePayLineItem.h"
+#include "ApplePayPaymentTokenContext.h"
+#include "ApplePayRecurringPaymentRequest.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-struct ApplePayDetailsUpdateBase : public ApplePayDetailsUpdateData {
+struct ApplePayDetailsUpdateBase {
     ApplePayLineItem newTotal;
     Vector<ApplePayLineItem> newLineItems;
 
+#if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
+    std::optional<ApplePayRecurringPaymentRequest> newRecurringPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
+    std::optional<ApplePayAutomaticReloadPaymentRequest> newAutomaticReloadPaymentRequest;
+#endif
+
+#if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
+    std::optional<Vector<ApplePayPaymentTokenContext>> newMultiTokenContexts;
+#endif
+
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<ApplePayDetailsUpdateBase> decode(Decoder&);
+    template<class Decoder> static std::optional<ApplePayDetailsUpdateBase> decode(Decoder&);
 
     template<class Decoder> WARN_UNUSED_RETURN bool decodeBase(Decoder&);
 };
@@ -46,28 +60,33 @@ struct ApplePayDetailsUpdateBase : public ApplePayDetailsUpdateData {
 template<class Encoder>
 void ApplePayDetailsUpdateBase::encode(Encoder& encoder) const
 {
-    ApplePayDetailsUpdateData::encode(encoder);
     encoder << newTotal;
     encoder << newLineItems;
+#if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
+    encoder << newRecurringPaymentRequest;
+#endif
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
+    encoder << newAutomaticReloadPaymentRequest;
+#endif
+#if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
+    encoder << newMultiTokenContexts;
+#endif
 }
 
 template<class Decoder>
-Optional<ApplePayDetailsUpdateBase> ApplePayDetailsUpdateBase::decode(Decoder& decoder)
+std::optional<ApplePayDetailsUpdateBase> ApplePayDetailsUpdateBase::decode(Decoder& decoder)
 {
     ApplePayDetailsUpdateBase result;
     if (!result.decodeBase(decoder))
-        return WTF::nullopt;
+        return std::nullopt;
     return result;
 }
 
 template<class Decoder>
 bool ApplePayDetailsUpdateBase::decodeBase(Decoder& decoder)
 {
-    if (!decodeData(decoder))
-        return false;
-
 #define DECODE(name, type) \
-    Optional<type> name; \
+    std::optional<type> name; \
     decoder >> name; \
     if (!name) \
         return false; \
@@ -75,6 +94,15 @@ bool ApplePayDetailsUpdateBase::decodeBase(Decoder& decoder)
 
     DECODE(newTotal, ApplePayLineItem)
     DECODE(newLineItems, Vector<ApplePayLineItem>)
+#if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
+    DECODE(newRecurringPaymentRequest, std::optional<ApplePayRecurringPaymentRequest>);
+#endif
+#if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
+    DECODE(newAutomaticReloadPaymentRequest, std::optional<ApplePayAutomaticReloadPaymentRequest>);
+#endif
+#if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
+    DECODE(newMultiTokenContexts, std::optional<Vector<ApplePayPaymentTokenContext>>);
+#endif
 
 #undef DECODE
 

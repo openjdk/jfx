@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -111,7 +111,7 @@ public class ArcToTest {
         NGPath pgPath = NodeHelper.getPeer(path);
         Path2D geometry = pgPath.getGeometry();
         float[] coords = new float[6];
-        PathIterator it = (PathIterator)geometry.getPathIterator(null);
+        PathIterator it = geometry.getPathIterator(null);
         it.next(); it.next(); //path contains [MoveTo], [CubicTo], [CubicTo], [MoveTo]
         int segType = it.currentSegment(coords);
         assertEquals(PathIterator.SEG_CUBICTO, segType);

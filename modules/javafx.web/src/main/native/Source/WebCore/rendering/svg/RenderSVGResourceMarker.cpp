@@ -23,7 +23,8 @@
 #include "RenderSVGResourceMarker.h"
 
 #include "GraphicsContext.h"
-#include "RenderSVGRoot.h"
+#include "LegacyRenderSVGRoot.h"
+#include "RenderSVGResourceMarkerInlines.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
@@ -43,12 +44,12 @@ void RenderSVGResourceMarker::layout()
     StackStats::LayoutCheckPoint layoutCheckPoint;
     // Invalidate all resources if our layout changed.
     if (everHadLayout() && selfNeedsLayout())
-        RenderSVGRoot::addResourceForClientInvalidation(this);
+        LegacyRenderSVGRoot::addResourceForClientInvalidation(this);
 
     // RenderSVGHiddenContainer overwrites layout(). We need the
-    // layouting of RenderSVGContainer for calculating  local
+    // layouting of LegacyRenderSVGContainer for calculating  local
     // transformations and repaint.
-    RenderSVGContainer::layout();
+    LegacyRenderSVGContainer::layout();
 }
 
 void RenderSVGResourceMarker::removeAllClientsFromCache(bool markForInvalidation)
@@ -69,7 +70,7 @@ void RenderSVGResourceMarker::applyViewportClip(PaintInfo& paintInfo)
 
 FloatRect RenderSVGResourceMarker::markerBoundaries(const AffineTransform& markerTransformation) const
 {
-    FloatRect coordinates = RenderSVGContainer::repaintRectInLocalCoordinates();
+    FloatRect coordinates = LegacyRenderSVGContainer::repaintRectInLocalCoordinates();
 
     // Map repaint rect into parent coordinate space, in which the marker boundaries have to be evaluated
     coordinates = localToParentTransform().mapRect(coordinates);
@@ -79,7 +80,7 @@ FloatRect RenderSVGResourceMarker::markerBoundaries(const AffineTransform& marke
 
 const AffineTransform& RenderSVGResourceMarker::localToParentTransform() const
 {
-    m_localToParentTransform = AffineTransform::translation(m_viewport.x(), m_viewport.y()) * viewportTransform();
+    m_localToParentTransform = AffineTransform::makeTranslation(toFloatSize(m_viewport.location())) * viewportTransform();
     return m_localToParentTransform;
     // If this class were ever given a localTransform(), then the above would read:
     // return viewportTranslation * localTransform() * viewportTransform();
@@ -121,7 +122,7 @@ void RenderSVGResourceMarker::draw(PaintInfo& paintInfo, const AffineTransform& 
     PaintInfo info(paintInfo);
     GraphicsContextStateSaver stateSaver(info.context());
     info.applyTransform(transform);
-    RenderSVGContainer::paint(info, IntPoint());
+    LegacyRenderSVGContainer::paint(info, IntPoint());
 }
 
 AffineTransform RenderSVGResourceMarker::markerContentTransformation(const AffineTransform& contentTransformation, const FloatPoint& origin, float strokeWidth) const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1297,10 +1297,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setView
         }
         pWindow->ResetMouseTracking(hWnd);
         pWindow->SetGlassView(view);
-        // The condition below may be restricted to WS_POPUP windows
-        if (::IsWindowVisible(hWnd)) {
-            pWindow->NotifyViewSize(hWnd);
-        }
     }
     GlassView * view;
     LEAVE_MAIN_THREAD_WITH_hWnd;
@@ -1309,6 +1305,28 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setView
 
     PERFORM();
     return JNI_TRUE;
+}
+
+/**
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _updateViewSize
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1updateViewSize
+    (JNIEnv * env, jobject jThis, jlong ptr)
+{
+    ENTER_MAIN_THREAD()
+    {
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+
+        // The condition below may be restricted to WS_POPUP windows
+        if (::IsWindowVisible(hWnd)) {
+            pWindow->NotifyViewSize(hWnd);
+        }
+    }
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+
+    PERFORM();
 }
 
 /*

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ public class CubicApproximator {
     }
 
     public float approximate(List<QuadCurve2D> res, CubicCurve2D curve) {
-        List<CubicCurve2D> tmp = new ArrayList<CubicCurve2D>();
+        List<CubicCurve2D> tmp = new ArrayList<>();
         return approximate(res, tmp, curve);
     }
 
@@ -313,7 +313,7 @@ public class CubicApproximator {
                 if (param > 0) {
                     ProcessFirstMonotonicPartOfCubic(resVect, coords,
                         /* Scale parameter to match with rest of the curve */
-                        (float)(param/(1f - params[i - 1])));
+                        param / (1f - params[i - 1]));
                 }
             }
         }

@@ -55,7 +55,8 @@ public:
 
 #if ENABLE(VIDEO)
     WEBCORE_EXPORT void captionPreferencesChanged();
-    WEBCORE_EXPORT CaptionUserPreferences& captionPreferences();
+    WEBCORE_EXPORT CaptionUserPreferences& ensureCaptionPreferences();
+    CaptionUserPreferences* captionPreferences() const { return m_captionPreferences.get(); }
 #endif
 
 private:
@@ -65,7 +66,7 @@ private:
     unsigned m_identifier;
 
 #if ENABLE(VIDEO)
-    std::unique_ptr<CaptionUserPreferences> m_captionPreferences;
+    RefPtr<CaptionUserPreferences> m_captionPreferences;
 #endif
 };
 

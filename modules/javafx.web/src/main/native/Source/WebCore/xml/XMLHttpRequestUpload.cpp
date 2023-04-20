@@ -27,6 +27,7 @@
 #include "XMLHttpRequestUpload.h"
 
 #include "EventNames.h"
+#include "WebCoreOpaqueRoot.h"
 #include "XMLHttpRequestProgressEvent.h"
 #include <wtf/Assertions.h>
 #include <wtf/IsoMallocInlines.h>
@@ -43,7 +44,12 @@ XMLHttpRequestUpload::XMLHttpRequestUpload(XMLHttpRequest& request)
 
 void XMLHttpRequestUpload::eventListenersDidChange()
 {
-    m_hasRelevantEventListener = hasEventListeners(eventNames().abortEvent)
+    m_request.updateHasRelevantEventListener();
+}
+
+bool XMLHttpRequestUpload::hasRelevantEventListener() const
+{
+    return hasEventListeners(eventNames().abortEvent)
         || hasEventListeners(eventNames().errorEvent)
         || hasEventListeners(eventNames().loadEvent)
         || hasEventListeners(eventNames().loadendEvent)
@@ -58,6 +64,11 @@ void XMLHttpRequestUpload::dispatchProgressEvent(const AtomString& type, unsigne
 
     // https://xhr.spec.whatwg.org/#firing-events-using-the-progressevent-interface
     dispatchEvent(XMLHttpRequestProgressEvent::create(type, !!total, loaded, total));
+}
+
+WebCoreOpaqueRoot root(XMLHttpRequestUpload* upload)
+{
+    return WebCoreOpaqueRoot { upload };
 }
 
 } // namespace WebCore

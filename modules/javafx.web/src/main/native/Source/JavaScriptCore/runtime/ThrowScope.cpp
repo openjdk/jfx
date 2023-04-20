@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "Exception.h"
 #include "JSCJSValueInlines.h"
 #include "VM.h"
+#include <wtf/StackTrace.h>
 
 namespace JSC {
 
@@ -80,7 +81,7 @@ Exception* ThrowScope::throwException(JSGlobalObject* globalObject, Exception* e
 
 Exception* ThrowScope::throwException(JSGlobalObject* globalObject, JSValue error)
 {
-    if (!error.isCell() || error.isObject() || !jsDynamicCast<Exception*>(m_vm, error.asCell()))
+    if (!error.isCell() || error.isObject() || !jsDynamicCast<Exception*>(error.asCell()))
         m_vm.verifyExceptionCheckNeedIsSatisfied(m_recursionDepth, m_location);
 
     return m_vm.throwException(globalObject, error);

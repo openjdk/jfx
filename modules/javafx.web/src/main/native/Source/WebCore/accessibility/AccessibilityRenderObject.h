@@ -50,18 +50,13 @@ class Node;
 class RenderTextControl;
 class RenderView;
 class VisibleSelection;
-class Widget;
 
-class AccessibilityRenderObject : public AccessibilityNodeObject, public CanMakeWeakPtr<AccessibilityRenderObject> {
+class AccessibilityRenderObject : public AccessibilityNodeObject {
 public:
     static Ref<AccessibilityRenderObject> create(RenderObject*);
     virtual ~AccessibilityRenderObject();
 
-    void init() override;
-
     bool isAttachment() const override;
-    bool isFileUploadButton() const override;
-
     bool isSelected() const override;
     bool isFocused() const override;
     bool isLoaded() const override;
@@ -86,7 +81,7 @@ public:
     AccessibilityObjectInclusion defaultObjectInclusion() const override;
 
     int layoutCount() const override;
-    double estimatedLoadingProgress() const override;
+    double loadingProgress() const override;
 
     AccessibilityObject* firstChild() const override;
     AccessibilityObject* lastChild() const override;
@@ -95,11 +90,8 @@ public:
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override;
     AccessibilityObject* observableObject() const override;
-    void linkedUIElements(AccessibilityChildrenVector&) const override;
-    bool exposesTitleUIElement() const override;
+    AccessibilityChildrenVector linkedObjects() const override;
     AccessibilityObject* titleUIElement() const override;
-    AccessibilityObject* correspondingControlForLabelElement() const override;
-    AccessibilityObject* correspondingLabelForControlElement() const override;
 
     bool supportsARIAOwns() const override;
     bool isPresentationalChildOfAriaRole() const override;
@@ -123,10 +115,10 @@ public:
 
     RenderView* topRenderer() const;
     RenderTextControl* textControl() const;
-    HTMLLabelElement* labelElementContainer() const;
 
     URL url() const override;
     PlainTextRange selectedTextRange() const override;
+    int insertionPointLineNumber() const override;
     VisibleSelection selection() const override;
     String stringValue() const override;
     String helpText() const override;
@@ -135,7 +127,8 @@ public:
     int textLength() const override;
     String selectedText() const override;
     String accessKey() const override;
-    String actionVerb() const override;
+
+    bool isWidget() const override;
     Widget* widget() const override;
     Widget* widgetForAttachmentView() const override;
     AccessibilityChildrenVector documentLinks() override;
@@ -148,9 +141,7 @@ public:
     void setSelectedTextRange(const PlainTextRange&) override;
     bool setValue(const String&) override;
     void setSelectedRows(AccessibilityChildrenVector&) override;
-    AccessibilityOrientation orientation() const override;
 
-    void textChanged() override;
     void addChildren() override;
     bool canHaveChildren() const override;
     bool canHaveSelectedChildren() const override;
@@ -158,14 +149,13 @@ public:
     void visibleChildren(AccessibilityChildrenVector&) override;
     void tabChildren(AccessibilityChildrenVector&) override;
     bool shouldFocusActiveDescendant() const override;
-    bool shouldNotifyActiveDescendant() const;
     AccessibilityObject* activeDescendant() const override;
-    void handleActiveDescendantChanged() override;
 
     VisiblePositionRange visiblePositionRange() const override;
     VisiblePositionRange visiblePositionRangeForLine(unsigned) const override;
     IntRect boundsForVisiblePositionRange(const VisiblePositionRange&) const override;
     IntRect boundsForRange(const SimpleRange&) const override;
+    VisiblePositionRange selectedVisiblePositionRange() const override;
     void setSelectedVisiblePositionRange(const VisiblePositionRange&) const override;
     bool isVisiblePositionRangeInDifferentDocument(const VisiblePositionRange&) const;
     bool hasPopup() const override;
@@ -207,6 +197,7 @@ protected:
 
     bool isDetached() const override { return !m_renderer; }
 
+    bool shouldIgnoreAttributeRole() const override;
     AccessibilityRole determineAccessibilityRole() override;
     bool computeAccessibilityIsIgnored() const override;
 
@@ -221,7 +212,6 @@ private:
     void ariaListboxSelectedChildren(AccessibilityChildrenVector&);
     void ariaListboxVisibleChildren(AccessibilityChildrenVector&);
     bool isAllowedChildOfTree() const;
-    bool hasTextAlternative() const;
     String positionalDescriptionForMSAA() const;
     PlainTextRange documentBasedSelectedTextRange() const;
     Element* rootEditableElementForPosition(const Position&) const;
@@ -242,8 +232,9 @@ private:
 
     bool renderObjectIsObservable(RenderObject&) const;
     RenderObject* renderParentObject() const;
-    bool isDescendantOfElementType(const QualifiedName& tagName) const;
-    bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
+#if USE(ATSPI)
+    RenderObject* markerRenderer() const;
+#endif
 
     bool isSVGImage() const;
     void detachRemoteSVGRoot();
@@ -253,12 +244,15 @@ private:
     void offsetBoundingBoxForRemoteSVGElement(LayoutRect&) const;
     bool supportsPath() const override;
 
-    void addHiddenChildren();
+    void addNodeOnlyChildren();
     void addTextFieldChildren();
     void addImageMapChildren();
     void addCanvasChildren();
     void addAttachmentChildren();
     void addRemoteSVGChildren();
+#if USE(ATSPI)
+    void addListItemMarker();
+#endif
 #if PLATFORM(COCOA)
     void updateAttachmentViewParents();
 #endif
@@ -268,15 +262,7 @@ private:
 
     void ariaSelectedRows(AccessibilityChildrenVector&);
 
-    bool elementAttributeValue(const QualifiedName&) const;
-    void setElementAttributeValue(const QualifiedName&, bool);
-
     OptionSet<SpeakAs> speakAsProperty() const override;
-
-    const String liveRegionStatus() const override;
-    const String liveRegionRelevant() const override;
-    bool liveRegionAtomic() const override;
-    bool isBusy() const override;
 
     bool inheritsPresentationalRole() const override;
 
@@ -288,7 +274,6 @@ private:
     String applePayButtonDescription() const;
 #endif
 
-    RenderObject* targetElementForActiveDescendant(const QualifiedName&, AccessibilityObject*) const;
     bool canHavePlainText() const;
     // Special handling of click point for links.
     IntPoint linkClickPoint();

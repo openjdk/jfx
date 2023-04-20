@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class TableViewKeyInputTest {
     private TableView<String> tableView;
@@ -86,7 +85,7 @@ public class TableViewKeyInputTest {
     private TableColumn<String, String> col4;
 
     @Before public void setup() {
-        tableView = new TableView<String>();
+        tableView = new TableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
 
@@ -95,11 +94,11 @@ public class TableViewKeyInputTest {
 
         tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
 
-        col0 = new TableColumn<String, String>("col0");
-        col1 = new TableColumn<String, String>("col1");
-        col2 = new TableColumn<String, String>("col2");
-        col3 = new TableColumn<String, String>("col3");
-        col4 = new TableColumn<String, String>("col4");
+        col0 = new TableColumn<>("col0");
+        col1 = new TableColumn<>("col1");
+        col2 = new TableColumn<>("col2");
+        col3 = new TableColumn<>("col3");
+        col4 = new TableColumn<>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
 
         keyboard = new KeyEventFirer(tableView);
@@ -857,40 +856,149 @@ public class TableViewKeyInputTest {
      * Tests for cell-based multiple selection
      **************************************************************************/
 
-    @Ignore("Bug persists")
     @Test public void testSelectionPathDeviationWorks1() {
         // select horizontally, then select two items vertically, then go back
         // in opposite direction
         sm.setCellSelectionEnabled(true);
         sm.clearAndSelect(1, col0);
 
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col1)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col2)
-        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col3)
-        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col3)
-        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (3, col3)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col2)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (3, col2)
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(2, col2));
         assertTrue(sm.isSelected(3, col2));
 
-        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (3, col3)
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (3, col2)
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(2, col2));
         assertFalse(sm.isSelected(3, col2));
 
-        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (2, col3)
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (2, col2)
         assertTrue(sm.isSelected(1, col2));
         assertFalse(sm.isSelected(2, col2));
         assertFalse(sm.isSelected(3, col2));
 
-        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (1, col3)
-        assertFalse(debug(), sm.isSelected(1, col2));
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (1, col2)
+        assertFalse(sm.isSelected(1, col2));
         assertFalse(sm.isSelected(2, col2));
         assertFalse(sm.isSelected(3, col2));
 
-        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (1, col2)
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (1, col1)
         assertFalse(sm.isSelected(1, col1));
     }
 
+    @Test public void testSelectionPathDeviationWorks2() {
+        // select vertically, then select two items horizontally, then go back
+        // in opposite direction
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(1, col2);
+
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);   // select (2, col2)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);   // select (3, col2)
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (3, col1)
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (3, col0)
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(3, col1));
+        assertTrue(sm.isSelected(3, col2));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(1, col2));
+
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);    // deselect (3, col0)
+        assertFalse(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(3, col1));
+        assertTrue(sm.isSelected(3, col2));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(1, col2));
+
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);    // deselect (3, col1)
+        assertFalse(sm.isSelected(3, col0));
+        assertFalse(sm.isSelected(3, col1));
+        assertTrue(sm.isSelected(3, col2));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(1, col2));
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (3, col2)
+        assertFalse(sm.isSelected(3, col0));
+        assertFalse(sm.isSelected(3, col1));
+        assertFalse(sm.isSelected(3, col2));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(1, col2));
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (2, col2)
+        assertFalse(sm.isSelected(3, col0));
+        assertFalse(sm.isSelected(3, col1));
+        assertFalse(sm.isSelected(3, col2));
+        assertFalse(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(1, col2));
+    }
+
+    @Test public void testSelectionPathDeviationWorks3() {
+        // select horizontally, then select one item vertically, then start
+        // another selection and go back in opposite direction
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(1, col0);
+
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col1)
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col2)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col2)
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(2, col2));
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (2, col2)
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col2));
+        assertFalse(sm.isSelected(2, col2));
+
+        // new selection: anchor changes
+        sm.clearAndSelect(3, col0);
+        assertFalse(sm.isSelected(1, col0));
+        assertFalse(sm.isSelected(1, col1));
+        assertFalse(sm.isSelected(1, col2));
+        assertFalse(sm.isSelected(2, col2));
+
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (3, col1)
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (3, col2)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (4, col2)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (5, col2)
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(3, col1));
+        assertTrue(sm.isSelected(3, col2));
+        assertTrue(sm.isSelected(4, col2));
+        assertTrue(sm.isSelected(5, col2));
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (5, col2)
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(3, col1));
+        assertTrue(sm.isSelected(3, col2));
+        assertTrue(sm.isSelected(4, col2));
+        assertFalse(sm.isSelected(5, col2));
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (4, col2)
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(3, col1));
+        assertTrue(sm.isSelected(3, col2));
+        assertFalse(sm.isSelected(4, col2));
+        assertFalse(sm.isSelected(5, col2));
+
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (3, col2)
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(3, col1));
+        assertFalse(sm.isSelected(3, col2));
+        assertFalse(sm.isSelected(4, col2));
+        assertFalse(sm.isSelected(5, col2));
+
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (3, col1)
+        assertTrue(sm.isSelected(3, col0));
+        assertFalse(sm.isSelected(3, col1));
+        assertFalse(sm.isSelected(3, col2));
+        assertFalse(sm.isSelected(4, col2));
+        assertFalse(sm.isSelected(5, col2));
+    }
 
     /***************************************************************************
      * Tests for discontinuous multiple row selection (RT-18951)

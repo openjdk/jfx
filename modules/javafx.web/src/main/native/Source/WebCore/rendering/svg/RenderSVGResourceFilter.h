@@ -23,16 +23,18 @@
 
 #pragma once
 
+#include "FilterResults.h"
 #include "ImageBuffer.h"
 #include "RenderSVGResourceContainer.h"
 #include "SVGFilter.h"
-#include "SVGFilterBuilder.h"
-#include "SVGFilterElement.h"
 #include "SVGUnitTypes.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
+
+class GraphicsContext;
+class SVGFilterElement;
 
 struct FilterData {
     WTF_MAKE_ISO_ALLOCATED(FilterData);
@@ -43,17 +45,14 @@ public:
     FilterData() = default;
 
     RefPtr<SVGFilter> filter;
-    std::unique_ptr<SVGFilterBuilder> builder;
-    RefPtr<ImageBuffer> sourceGraphicBuffer;
+    FilterResults results;
+
+    RefPtr<ImageBuffer> sourceImage;
+    FloatRect sourceImageRect;
+
     GraphicsContext* savedContext { nullptr };
-    AffineTransform shearFreeAbsoluteTransform;
-    FloatRect boundaries;
-    FloatRect drawingRegion;
-    FloatSize scale;
     FilterDataState state { PaintingSource };
 };
-
-class GraphicsContext;
 
 class RenderSVGResourceFilter final : public RenderSVGResourceContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceFilter);
@@ -61,22 +60,22 @@ public:
     RenderSVGResourceFilter(SVGFilterElement&, RenderStyle&&);
     virtual ~RenderSVGResourceFilter();
 
-    SVGFilterElement& filterElement() const { return downcast<SVGFilterElement>(RenderSVGResourceContainer::element()); }
+    inline SVGFilterElement& filterElement() const;
+    bool isIdentity() const;
 
     void removeAllClientsFromCache(bool markForInvalidation = true) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
-    void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderSVGShape*) override;
+    void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) override;
 
     FloatRect resourceBoundingBox(const RenderObject&) override;
 
-    std::unique_ptr<SVGFilterBuilder> buildPrimitives(SVGFilter&) const;
+    inline SVGUnitTypes::SVGUnitType filterUnits() const;
+    inline SVGUnitTypes::SVGUnitType primitiveUnits() const;
 
-    SVGUnitTypes::SVGUnitType filterUnits() const { return filterElement().filterUnits(); }
-    SVGUnitTypes::SVGUnitType primitiveUnits() const { return filterElement().primitiveUnits(); }
-
-    void primitiveAttributeChanged(RenderObject*, const QualifiedName&);
+    void markFilterForRepaint(FilterEffect&);
+    void markFilterForRebuild();
 
     RenderSVGResourceType resourceType() const override { return FilterResourceType; }
 
@@ -84,7 +83,7 @@ public:
 private:
     void element() const = delete;
 
-    const char* renderName() const override { return "RenderSVGResourceFilter"; }
+    ASCIILiteral renderName() const override { return "RenderSVGResourceFilter"_s; }
     bool isSVGResourceFilter() const override { return true; }
 
     HashMap<RenderObject*, std::unique_ptr<FilterData>> m_rendererFilterDataMap;

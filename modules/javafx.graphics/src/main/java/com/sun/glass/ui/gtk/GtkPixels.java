@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,10 @@ final class GtkPixels extends Pixels {
 
     public GtkPixels(int width, int height, ByteBuffer data) {
         super(width, height, data);
+    }
+
+    public GtkPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
     }
 
     public GtkPixels(int width, int height, IntBuffer data) {

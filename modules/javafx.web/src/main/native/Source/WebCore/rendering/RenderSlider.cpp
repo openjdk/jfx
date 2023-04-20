@@ -61,7 +61,7 @@ HTMLInputElement& RenderSlider::element() const
     return downcast<HTMLInputElement>(nodeForNonAnonymous());
 }
 
-int RenderSlider::baselinePosition(FontBaseline, bool /*firstLine*/, LineDirectionMode, LinePositionMode) const
+LayoutUnit RenderSlider::baselinePosition(FontBaseline, bool /*firstLine*/, LineDirectionMode, LinePositionMode) const
 {
     // FIXME: Patch this function for writing-mode.
     return height() + marginTop();
@@ -69,6 +69,8 @@ int RenderSlider::baselinePosition(FontBaseline, bool /*firstLine*/, LineDirecti
 
 void RenderSlider::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
+    if (shouldApplySizeContainment())
+        return;
     maxLogicalWidth = defaultTrackLength * style().effectiveZoom();
     if (!style().width().isPercentOrCalculated())
         minLogicalWidth = maxLogicalWidth;
@@ -89,6 +91,7 @@ void RenderSlider::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
+#if PLATFORM(JAVA)
 void RenderSlider::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
@@ -100,6 +103,7 @@ void RenderSlider::layout()
 
     RenderFlexibleBox::layout();
 }
+#endif
 
 bool RenderSlider::inDragMode() const
 {

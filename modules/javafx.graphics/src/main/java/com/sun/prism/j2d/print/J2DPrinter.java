@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,6 +87,7 @@ public class J2DPrinter implements PrinterImpl {
         return fxPrinter;
     }
 
+    @Override
     public void setPrinter(Printer printer) {
         fxPrinter = printer;
     }
@@ -95,6 +96,7 @@ public class J2DPrinter implements PrinterImpl {
         return service;
     }
 
+    @Override
     public String getName() {
         return service.getName();
     }
@@ -103,6 +105,7 @@ public class J2DPrinter implements PrinterImpl {
      * Since JobSettings are mutable, this always returns
      * a new instance.
      */
+    @Override
     public JobSettings getDefaultJobSettings() {
         return PrintHelper.createJobSettings(fxPrinter);
     }
@@ -110,6 +113,7 @@ public class J2DPrinter implements PrinterImpl {
     //////////////// BEGIN COPIES ////////////////////
 
     private int defaultCopies = 0;
+    @Override
     public int defaultCopies() {
         if (defaultCopies > 0) {
             return defaultCopies;
@@ -125,6 +129,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private int maxCopies = 0;
+    @Override
     public int maxCopies() {
         if (maxCopies > 0) {
             return maxCopies;
@@ -154,6 +159,7 @@ public class J2DPrinter implements PrinterImpl {
 
     //////////////// BEGIN PAGERANGE ////////////////////
 
+    @Override
     public PageRange defaultPageRange() {
         try {
             PageRanges ranges =
@@ -173,6 +179,7 @@ public class J2DPrinter implements PrinterImpl {
         }
     }
 
+    @Override
     public boolean supportsPageRanges() {
         return true;
     }
@@ -191,6 +198,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private Collation defaultCollation;
+    @Override
     public Collation defaultCollation() {
         if (defaultCollation != null) {
             return defaultCollation;
@@ -203,9 +211,10 @@ public class J2DPrinter implements PrinterImpl {
 
 
     private Set<Collation> collateSet;
+    @Override
     public Set<Collation> supportedCollations() {
         if (collateSet == null) {
-            Set<Collation> cSet = new TreeSet<Collation>();
+            Set<Collation> cSet = new TreeSet<>();
             SheetCollate[] sc = null;
             try {
                 sc = (SheetCollate[])
@@ -243,6 +252,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private PrintColor defColor;
+    @Override
     public PrintColor defaultPrintColor() {
         if (defColor != null) {
             return defColor;
@@ -255,9 +265,10 @@ public class J2DPrinter implements PrinterImpl {
 
 
     private Set<PrintColor> colorSet;
+    @Override
     public Set<PrintColor> supportedPrintColor() {
         if (colorSet == null) {
-            Set<PrintColor> cSet = new TreeSet<PrintColor>();
+            Set<PrintColor> cSet = new TreeSet<>();
             Chromaticity[] sc = null;
             try {
                 sc = (Chromaticity[])
@@ -285,6 +296,7 @@ public class J2DPrinter implements PrinterImpl {
     //////////////// BEGIN SIDES ////////////////////
 
     private PrintSides defSides;
+    @Override
     public PrintSides defaultSides() {
         if (defSides != null) {
             return defSides;
@@ -301,9 +313,10 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private Set<PrintSides> sidesSet;
+    @Override
     public Set<PrintSides> supportedSides() {
         if (sidesSet == null) {
-            Set<PrintSides> sSet = new TreeSet<PrintSides>();
+            Set<PrintSides> sSet = new TreeSet<>();
             Sides[] ss = null;
             try {
                 ss = (Sides[])
@@ -367,6 +380,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private PageOrientation defOrient;
+    @Override
     public PageOrientation defaultOrientation() {
         if (defOrient == null) {
             OrientationRequested orient = (OrientationRequested)
@@ -377,12 +391,13 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private Set<PageOrientation> orientSet;
+    @Override
     public Set<PageOrientation> supportedOrientation() {
         if (orientSet != null) {
             return orientSet;
         }
 
-        Set<PageOrientation> oset = new TreeSet<PageOrientation>();
+        Set<PageOrientation> oset = new TreeSet<>();
         OrientationRequested[] or = null;
         try {
             or = (OrientationRequested[])
@@ -426,6 +441,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private PrintResolution defRes;
+    @Override
     public PrintResolution defaultPrintResolution() {
         if (defRes != null) {
             return defRes;
@@ -453,6 +469,7 @@ public class J2DPrinter implements PrinterImpl {
          * @return whether this resolution is less, equal or
          * greater than the other.
          */
+        @Override
         public int compare(PrintResolution r1, PrintResolution r2) {
             long r1Res =
                 r1.getCrossFeedResolution() * r1.getFeedResolution();
@@ -469,12 +486,13 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private Set<PrintResolution> resSet;
+    @Override
     public Set<PrintResolution> supportedPrintResolution() {
         if (resSet != null) {
             return resSet;
         }
         Set<PrintResolution> rSet = new
-            TreeSet<PrintResolution>(PrintResolutionComparator.theComparator);
+            TreeSet<>(PrintResolutionComparator.theComparator);
         PrinterResolution[] pr = null;
         try {
             pr = (PrinterResolution[])
@@ -512,6 +530,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private PrintQuality defQuality;
+    @Override
     public PrintQuality defaultPrintQuality() {
         if (defQuality != null) {
             return defQuality;
@@ -532,9 +551,10 @@ public class J2DPrinter implements PrinterImpl {
 
 
     private Set<PrintQuality> qualitySet;
+    @Override
     public Set<PrintQuality> supportedPrintQuality() {
         if (qualitySet == null) {
-            Set<PrintQuality> set = new TreeSet<PrintQuality>();
+            Set<PrintQuality> set = new TreeSet<>();
            javax.print.attribute.standard.PrintQuality[] arr = null;
             try {
                 arr = (javax.print.attribute.standard.PrintQuality[])
@@ -579,6 +599,7 @@ public class J2DPrinter implements PrinterImpl {
         /**
          * This sorts papers lexically based on name, not size.
          */
+        @Override
         public int compare(Paper p1, Paper p2) {
             return p1.getName().compareTo(p2.getName());
         }
@@ -593,6 +614,7 @@ public class J2DPrinter implements PrinterImpl {
         /**
          * This sorts papers lexically based on name, not size.
          */
+        @Override
         public int compare(PaperSource p1, PaperSource p2) {
             return p1.getName().compareTo(p2.getName());
         }
@@ -608,6 +630,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private Paper defPaper;
+    @Override
     public Paper defaultPaper() {
         if (defPaper != null) {
             return defPaper;
@@ -622,6 +645,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private Set<Paper> paperSet;
+    @Override
     public Set<Paper> supportedPapers() {
         if (paperSet == null) {
             populateMedia();
@@ -684,9 +708,9 @@ public class J2DPrinter implements PrinterImpl {
         Media[] media =
             (Media[])service.getSupportedAttributeValues(Media.class,
                                                          null, null);
-        Set<Paper> pSet = new TreeSet<Paper>(PaperComparator.theComparator);
+        Set<Paper> pSet = new TreeSet<>(PaperComparator.theComparator);
         Set<PaperSource> tSet =
-            new TreeSet<PaperSource>(PaperSourceComparator.theComparator);
+            new TreeSet<>(PaperSourceComparator.theComparator);
         /* We will get back a list of Media and want to look for
          * MediaSizeName and MediaTray instances and map to FX classes.
          * We will hard code here recognising the set we've chosen to
@@ -712,6 +736,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private PaperSource defPaperSource;
+    @Override
     public PaperSource defaultPaperSource() {
         if (defPaperSource != null) {
             return defPaperSource;
@@ -721,6 +746,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private Set<PaperSource> paperSourceSet;
+    @Override
     public Set<PaperSource> supportedPaperSources() {
         if (paperSourceSet == null) {
             populateMedia();
@@ -764,12 +790,12 @@ public class J2DPrinter implements PrinterImpl {
         }
 
         if (trayToSourceMap == null) {
-            trayToSourceMap = new HashMap<MediaTray, PaperSource>();
+            trayToSourceMap = new HashMap<>();
         }
         trayToSourceMap.put(tray, source);
 
         if (sourceToTrayMap == null) {
-            sourceToTrayMap = new HashMap<PaperSource, MediaTray>();
+            sourceToTrayMap = new HashMap<>();
         }
         sourceToTrayMap.put(source, tray);
         return source;
@@ -781,9 +807,9 @@ public class J2DPrinter implements PrinterImpl {
      * create a printer-specific instance and store it in a per-printer map.
      */
     private final Map<MediaSizeName, Paper> mediaToPaperMap
-         = new HashMap<MediaSizeName, Paper>();
+         = new HashMap<>();
     private final Map<Paper, MediaSizeName> paperToMediaMap
-         = new HashMap<Paper, MediaSizeName>();
+         = new HashMap<>();
 
     private Paper createPaper(MediaSizeName media) {
         Paper paper = null;
@@ -840,6 +866,7 @@ public class J2DPrinter implements PrinterImpl {
      * For any given paper, this retrieves the hardware margins,
      * or a reasonable and safe guess if they aren't available.
      */
+    @Override
     public Rectangle2D printableArea(Paper paper) {
         Rectangle2D area = null;
 
@@ -862,7 +889,7 @@ public class J2DPrinter implements PrinterImpl {
         // then go with 0.75" margins unless they are too large
         // ie its a really small paper.
         if (area == null) {
-            double pw = (paper.getWidth() / 72.0);                    ;
+            double pw = (paper.getWidth() / 72.0);
             double ph = (paper.getHeight() / 72.0);
             double iw, ih;
             if (pw < 3.0) {
