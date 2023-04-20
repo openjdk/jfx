@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -79,13 +80,18 @@ public class LocalStorageTest extends TestBase {
         deleteRecursively(LOCAL_STORAGE_DIR);
     }
 
+    @After
+    public void after() {
+        final WebEngine webEngine = getEngine();
+        webEngine.setUserDataDirectory(null);
+    }
+
     @Test
     public void testLocalStorage() throws Exception {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
         webEngine.setUserDataDirectory(LOCAL_STORAGE_DIR);
         checkLocalStorageAfterWindowClose(webEngine);
-        webEngine.setUserDataDirectory(null);
     }
 
     /* test localstorage set data before window.close and check data after window.close */
