@@ -33,6 +33,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.application.Platform;
 import javafx.scene.robot.Robot;
@@ -63,6 +64,7 @@ public class DatePickerUpdateOnAlertCloseTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch onDatePickerShownLatch = new CountDownLatch(1);
     static CountDownLatch onAlertShownLatch = new CountDownLatch(1);
+    static CountDownLatch onAlertHiddenLatch = new CountDownLatch(1);
     static Robot robot;
 
     static volatile Stage stage;
@@ -107,18 +109,23 @@ public class DatePickerUpdateOnAlertCloseTest {
         Util.waitForLatch(onAlertShownLatch, 5, "Failed to show Alert dialog.");
     }
 
+    private void selectNextDate() {
+        Util.runAndWait(() -> {
+            robot.keyType(KeyCode.RIGHT);
+            robot.keyType(KeyCode.ENTER);
+        });
+        Util.waitForLatch(onAlertHiddenLatch, 5, "Failed to hide Alert dialog.");
+    }
+
     @Test
     public void testDatePickerUpdateOnAlertClose() throws Exception {
         Thread.sleep(1000); // Wait for stage to layout
 
         showAlertDialog();
         selectDatePicker();
+        selectNextDate();
 
-        // Select date from date picker popup
-        mouseClick(datePicker.getLayoutX() + datePicker.getWidth() / 2,
-                    datePicker.getLayoutY() + datePicker.getHeight() * Y_FACTOR);
         Thread.sleep(400); // Wait for date to be selected.
-
         Assert.assertFalse(LocalDate.now().isEqual(datePicker.getValue()));
     }
 
@@ -145,6 +152,10 @@ public class DatePickerUpdateOnAlertCloseTest {
             dialog.initStyle(StageStyle.UNDECORATED);
             dialog.setOnShown(event -> {
                 onAlertShownLatch.countDown();
+            });
+
+            dialog.setOnHidden(event -> {
+                onAlertHiddenLatch.countDown();
             });
 
             button.setOnAction(event -> {
