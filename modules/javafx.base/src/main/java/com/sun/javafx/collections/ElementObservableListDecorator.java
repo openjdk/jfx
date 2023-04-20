@@ -76,7 +76,7 @@ public final class ElementObservableListDecorator<E> extends ObservableListBase<
                     }
                 };
             }
-        }, this);
+        });
         this.decoratedList = decorated;
         final int sz = decoratedList.size();
         for (int i = 0; i < sz; ++i) {

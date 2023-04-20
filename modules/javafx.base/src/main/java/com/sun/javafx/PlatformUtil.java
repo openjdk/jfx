@@ -240,7 +240,7 @@ public class PlatformUtil {
     private static File getRTDir() {
         try {
             String theClassFile = "PlatformUtil.class";
-            Class theClass = PlatformUtil.class;
+            Class<?> theClass = PlatformUtil.class;
             URL url = theClass.getResource(theClassFile);
             if (url == null) return null;
             String classUrlString = url.toString();

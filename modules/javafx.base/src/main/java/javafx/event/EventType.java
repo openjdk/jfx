@@ -137,8 +137,8 @@ public final class EventType<T extends Event> implements Serializable{
         this.name = name;
         if (superType != null) {
             if (superType.subTypes != null) {
-                for (Iterator i = superType.subTypes.keySet().iterator(); i.hasNext();) {
-                    EventType t  = (EventType) i.next();
+                for (Iterator<?> i = superType.subTypes.keySet().iterator(); i.hasNext();) {
+                    EventType<?> t  = (EventType<?>) i.next();
                     if (name == null && t.name == null || (name != null && name.equals(t.name))) {
                         i.remove();
                     }
@@ -207,11 +207,12 @@ public final class EventType<T extends Event> implements Serializable{
         }
 
         private Object readResolve() throws ObjectStreamException {
-            EventType t = ROOT;
+            EventType<Event> t = ROOT;
             for (int i = 0; i < path.size(); ++i) {
                 String p = path.get(i);
                 if (t.subTypes != null) {
-                    EventType s = findSubType(t.subTypes.keySet(), p);
+                    @SuppressWarnings("unchecked")
+                    EventType<Event> s = (EventType<Event>) findSubType(t.subTypes.keySet(), p);
                     if (s == null) {
                         throw new InvalidObjectException("Cannot find event type \"" + p + "\" (of " + t + ")");
                     }
@@ -223,8 +224,8 @@ public final class EventType<T extends Event> implements Serializable{
             return t;
         }
 
-        private EventType findSubType(Set<EventType> subTypes, String name) {
-            for (EventType t : subTypes) {
+        private EventType<?> findSubType(Set<EventType<?>> subTypes, String name) {
+            for (EventType<?> t : subTypes) {
                 if (((t.name == null && name == null) || (t.name != null && t.name.equals(name)))) {
                     return t;
                 }

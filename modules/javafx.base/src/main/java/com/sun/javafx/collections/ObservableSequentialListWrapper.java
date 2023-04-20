@@ -67,7 +67,7 @@ public class ObservableSequentialListWrapper<E> extends ModifiableObservableList
                     }
                 };
             }
-        }, this);
+        });
         for (E e : backingList) {
             elementObserver.attachListener(e);
         }

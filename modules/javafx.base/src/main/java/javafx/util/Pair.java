@@ -114,8 +114,7 @@ public class Pair<K,V> implements Serializable{
      @Override
      public boolean equals(Object o) {
          if (this == o) return true;
-         if (o instanceof Pair) {
-             Pair pair = (Pair) o;
+         if (o instanceof Pair<?, ?> pair) {
              if (key != null ? !key.equals(pair.key) : pair.key != null) return false;
              if (value != null ? !value.equals(pair.value) : pair.value != null) return false;
              return true;

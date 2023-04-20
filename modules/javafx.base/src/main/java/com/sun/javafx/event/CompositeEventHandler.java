@@ -123,17 +123,17 @@ public final class CompositeEventHandler<T extends Event> {
     private EventProcessorRecord<T> createEventHandlerRecord(
             final EventHandler<? super T> eventHandler) {
         return (eventHandler instanceof WeakEventHandler)
-                   ? new WeakEventHandlerRecord(
+                   ? new WeakEventHandlerRecord<>(
                              (WeakEventHandler<? super T>) eventHandler)
-                   : new NormalEventHandlerRecord(eventHandler);
+                   : new NormalEventHandlerRecord<>(eventHandler);
     }
 
     private EventProcessorRecord<T> createEventFilterRecord(
             final EventHandler<? super T> eventFilter) {
         return (eventFilter instanceof WeakEventHandler)
-                   ? new WeakEventFilterRecord(
+                   ? new WeakEventFilterRecord<>(
                              (WeakEventHandler<? super T>) eventFilter)
-                   : new NormalEventFilterRecord(eventFilter);
+                   : new NormalEventFilterRecord<>(eventFilter);
     }
 
     private void remove(final EventProcessorRecord<T> record) {

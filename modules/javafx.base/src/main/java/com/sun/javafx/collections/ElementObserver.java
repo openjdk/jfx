@@ -25,7 +25,6 @@
 
 package com.sun.javafx.collections;
 
-import javafx.collections.ObservableListBase;
 import java.util.IdentityHashMap;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -57,16 +56,13 @@ final class ElementObserver<E> {
 
     private Callback<E, Observable[]> extractor;
     private final Callback<E, InvalidationListener> listenerGenerator;
-    private final ObservableListBase<E> list;
     private IdentityHashMap<E, ElementObserver.ElementsMapElement> elementsMap =
             new IdentityHashMap<>();
 
-    ElementObserver(Callback<E, Observable[]> extractor, Callback<E, InvalidationListener> listenerGenerator, ObservableListBase<E> list) {
+    ElementObserver(Callback<E, Observable[]> extractor, Callback<E, InvalidationListener> listenerGenerator) {
         this.extractor = extractor;
         this.listenerGenerator = listenerGenerator;
-        this.list = list;
     }
-
 
     void attachListener(final E e) {
         if (elementsMap != null && e != null) {

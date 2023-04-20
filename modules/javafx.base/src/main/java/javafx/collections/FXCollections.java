@@ -2674,10 +2674,6 @@ public class FXCollections {
             this.mutex = mutex;
         }
 
-        SynchronizedCollection(Collection<E> c) {
-            this(c, new Object());
-        }
-
         @Override
         public int size() {
             synchronized (mutex) {

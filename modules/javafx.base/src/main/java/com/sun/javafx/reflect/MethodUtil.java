@@ -65,6 +65,7 @@ class Trampoline {
                 new UnsupportedOperationException("invocation not supported"));
     }
 
+    @SuppressWarnings("unused")  // called via reflection
     private static Object invoke(Method m, Object obj, Object[] params)
         throws InvocationTargetException, IllegalAccessException
     {

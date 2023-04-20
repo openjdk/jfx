@@ -75,7 +75,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
                     }
                 };
             }
-        }, this);
+        });
         final int sz = backingList.size();
         for (int i = 0; i < sz; ++i) {
             elementObserver.attachListener(backingList.get(i));
