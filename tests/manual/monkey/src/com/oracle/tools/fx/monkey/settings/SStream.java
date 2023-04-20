@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package goryachev.settings;
+package com.oracle.tools.fx.monkey.settings;
 
 import java.util.ArrayList;
 

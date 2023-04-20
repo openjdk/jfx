@@ -24,7 +24,7 @@
  */
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxDock
-package goryachev.settings;
+package com.oracle.tools.fx.monkey.settings;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
