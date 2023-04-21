@@ -26,6 +26,7 @@
 package com.sun.javafx.binding;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
@@ -131,6 +132,9 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             if (listener.equals(this.listener)) {
                 return null;
             }
+            if (listener instanceof WeakListener) {
+                return this;
+            }
 
             throw new IllegalStateException("No such listener was registered: " + listener);
         }
@@ -142,6 +146,10 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> removeListener(ChangeListener<? super T> listener) {
+            if (listener instanceof WeakListener) {
+                return this;
+            }
+
             throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
@@ -173,6 +181,10 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> removeListener(InvalidationListener listener) {
+            if (listener instanceof WeakListener) {
+                return this;
+            }
+
             throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
@@ -185,6 +197,9 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         protected ExpressionHelper<T> removeListener(ChangeListener<? super T> listener) {
             if (listener.equals(this.listener)) {
                 return null;
+            }
+            if (listener instanceof WeakListener) {
+                return this;
             }
 
             throw new IllegalStateException("No such listener was registered: " + listener);
@@ -293,6 +308,10 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                 }
             }
 
+            if (listener instanceof WeakListener) {
+                return this;
+            }
+
             throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
@@ -354,6 +373,10 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                         return this;
                     }
                 }
+            }
+
+            if (listener instanceof WeakListener) {
+                return this;
             }
 
             throw new IllegalStateException("No such listener was registered: " + listener);
