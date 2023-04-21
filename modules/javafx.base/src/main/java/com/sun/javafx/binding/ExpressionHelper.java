@@ -128,7 +128,11 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> removeListener(InvalidationListener listener) {
-            return (listener.equals(this.listener))? null : this;
+            if (listener.equals(this.listener)) {
+                return null;
+            }
+
+            throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
         @Override
@@ -138,7 +142,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> removeListener(ChangeListener<? super T> listener) {
-            return this;
+            throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
         @Override
@@ -169,7 +173,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> removeListener(InvalidationListener listener) {
-            return this;
+            throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
         @Override
@@ -179,7 +183,11 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected ExpressionHelper<T> removeListener(ChangeListener<? super T> listener) {
-            return (listener.equals(this.listener))? null : this;
+            if (listener.equals(this.listener)) {
+                return null;
+            }
+
+            throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
         @Override
@@ -261,7 +269,8 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                             }
                             invalidationListeners = null;
                             invalidationSize = 0;
-                        } else if ((invalidationSize == 2) && (changeSize == 0)) {
+                        }
+                        else if ((invalidationSize == 2) && (changeSize == 0)) {
                             return new SingleInvalidation<>(observable, invalidationListeners[1-index]);
                         } else {
                             final int numMoved = invalidationSize - index - 1;
@@ -278,11 +287,13 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                                 invalidationListeners[invalidationSize] = null; // Let gc do its work
                             }
                         }
-                        break;
+
+                        return this;
                     }
                 }
             }
-            return this;
+
+            throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
         @Override
@@ -339,11 +350,13 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                                 changeListeners[changeSize] = null; // Let gc do its work
                             }
                         }
-                        break;
+
+                        return this;
                     }
                 }
             }
-            return this;
+
+            throw new IllegalStateException("No such listener was registered: " + listener);
         }
 
         @Override
