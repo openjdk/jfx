@@ -35,7 +35,10 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.GridPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -144,5 +147,10 @@ public class FX {
                 w.setY(y + off);
             }
         }
+    }
+
+    /** creates a Background */
+    public static Background background(Color c) {
+        return new Background(new BackgroundFill(c, null, null));
     }
 }

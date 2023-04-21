@@ -24,10 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.util.Random;
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -36,17 +33,21 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
  * HBox page
  */
 public class HBoxPage extends TestPaneBase {
     enum Demo {
+        BUG_8264591("8264591 fractional prefs"),
         FILL_MAX("fill + max"),
         PREF("pref only"),
         ALL("all set: min, pref, max"),
@@ -102,7 +103,7 @@ public class HBoxPage extends TestPaneBase {
 
         Button addButton = new Button("Add Item");
         addButton.setOnAction((ev) -> {
-            hbox.getChildren().add(newItem());
+            addItem(hbox);
         });
 
         Button clearButton = new Button("Clear Items");
@@ -145,6 +146,15 @@ public class HBoxPage extends TestPaneBase {
                 COL, PREF, 200,
                 COL, PREF, 300, MAX, 400,
                 COL
+            };
+        case BUG_8264591:
+            return new Object[] {
+                COL, PREF, 25.3,
+                COL, PREF, 25.3,
+                COL, PREF, 25.4,
+                COL, PREF, 25.3,
+                COL, PREF, 25.3,
+                COL, PREF, 25.4
             };
         case FILL_MAX:
             return new Object[] {
@@ -312,7 +322,7 @@ public class HBoxPage extends TestPaneBase {
             return new HBox();
         }
 
-        HBox b = new HBox();
+        HBox box = new HBox();
         Region region = null;
 
         for (int i = 0; i < spec.length;) {
@@ -321,27 +331,26 @@ public class HBoxPage extends TestPaneBase {
                 switch (cmd) {
                 case COL:
                     {
-                        Region c = newItem();
-                        b.getChildren().add(c);
+                        Region c = addItem(box);
                         HBox.setHgrow(c, grow.isSelected() ? Priority.ALWAYS : Priority.NEVER);
                         region = c;
                     }
                     break;
                 case MAX:
                     {
-                        int w = (int)(spec[i++]);
+                        double w = number(spec[i++]);
                         region.setMaxWidth(w);
                     }
                     break;
                 case MIN:
                     {
-                        int w = (int)(spec[i++]);
+                        double w = number(spec[i++]);
                         region.setMinWidth(w);
                     }
                     break;
                 case PREF:
                     {
-                        int w = (int)(spec[i++]);
+                        double w = number(spec[i++]);
                         region.setPrefWidth(w);
                     }
                     break;
@@ -357,15 +366,25 @@ public class HBoxPage extends TestPaneBase {
                 throw new Error("?" + x);
             }
         }
+        
+        box.setPadding(new Insets(0, 0, 10, 0));
+        box.setBackground(FX.background(Color.DARKGRAY));
 
-        return b;
+        return box;
     }
 
-    protected Region newItem() {
+    protected static double number(Object x) {
+        return ((Number)x).doubleValue();
+    }
+
+    protected Region addItem(HBox box) {
+        boolean even = (box.getChildren().size() % 2) == 0;
+        Background bg = FX.background(even ? Color.GRAY : Color.LIGHTGRAY);
+
         Region r = new Region();
         r.setPrefWidth(30);
         r.setMinWidth(10);
-        r.setBackground(bg());
+        r.setBackground(bg);
         ContextMenu m = new ContextMenu();
         r.setOnContextMenuRequested((ev) -> {
             m.getItems().setAll(
@@ -373,23 +392,21 @@ public class HBoxPage extends TestPaneBase {
                 new SeparatorMenuItem(),
                 new MenuItem("min width=" + r.getMinWidth()),
                 new MenuItem("pref width=" + r.getPrefWidth()),
-                new MenuItem("max width=" + r.getMaxWidth())
-            );
+                new MenuItem("max width=" + r.getMaxWidth()));
             m.show(r, ev.getScreenX(), ev.getScreenY());
         });
+        box.getChildren().add(r);
         return r;
-    }
-
-    protected Background bg() {
-        double h = new Random().nextInt(360);
-        Color c = Color.hsb(h, 0.2, 0.99);
-        return new Background(new BackgroundFill(c, null, null));
     }
 
     protected void updatePane() {
         Demo d = demoSelector.getSelectionModel().getSelectedItem();
         Object[] spec = createSpec(d);
         hbox = createPane(d, spec);
-        setContent(hbox);
+
+        BorderPane bp = new BorderPane(hbox);
+        bp.setPadding(new Insets(0, 10, 0, 0));
+
+        setContent(bp);
     }
 }
