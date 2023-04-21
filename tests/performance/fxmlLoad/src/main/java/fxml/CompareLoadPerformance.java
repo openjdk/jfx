@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.com.oracle.javafx.fxml.test;
+package fxml;
 
 import java.io.IOException;
 

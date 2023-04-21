@@ -33,7 +33,6 @@ import javafx.event.EventDispatchChain;
 import javafx.scene.Node;
 
 import com.sun.javafx.util.WeakReferenceQueue;
-import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -41,11 +40,10 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.scene.transform.TransformUtils;
 import java.lang.ref.SoftReference;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
@@ -673,32 +671,10 @@ public abstract class Transform implements Cloneable, EventTarget {
      * Lazily computed read-only boolean property implementation.
      * Used for type2D and identity properties.
      */
-    private static abstract class LazyBooleanProperty
-            extends ReadOnlyBooleanProperty {
+    private static abstract class LazyBooleanProperty extends ReadOnlyBooleanPropertyBase {
 
-        private ExpressionHelper<Boolean> helper;
         private boolean valid;
         private boolean value;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         @Override
         public boolean get() {
@@ -713,7 +689,7 @@ public abstract class Transform implements Cloneable, EventTarget {
         public void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 

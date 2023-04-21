@@ -65,9 +65,9 @@ import org.junit.Test;
 
 public class UserDataDirectoryTest extends TestBase {
 
-    private static final File FOO = new File("foo");
-    private static final File BAR = new File("bar");
-    private static final File PRE_LOCKED = new File("baz");
+    private static final File FOO = new File("build/foo");
+    private static final File BAR = new File("build/bar");
+    private static final File PRE_LOCKED = new File("build/baz");
     private static final File[] DIRS = new File[] {FOO, BAR, PRE_LOCKED};
 
 

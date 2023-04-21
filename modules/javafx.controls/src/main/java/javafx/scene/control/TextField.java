@@ -29,11 +29,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
@@ -44,7 +42,6 @@ import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
 
-import com.sun.javafx.binding.ExpressionHelper;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.scene.control.skin.TextFieldSkin;
@@ -74,9 +71,9 @@ import javafx.css.Styleable;
  * @since JavaFX 2.0
  */
 public class TextField extends TextInputControl {
+
     // Text field content
-    private static final class TextFieldContent implements Content {
-        private ExpressionHelper<String> helper = null;
+    private static final class TextFieldContent extends ContentBase {
         private StringBuilder characters = new StringBuilder();
 
         @Override public String get(int start, int end) {
@@ -88,7 +85,7 @@ public class TextField extends TextInputControl {
             if (!text.isEmpty()) {
                 characters.insert(index, text);
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -97,7 +94,7 @@ public class TextField extends TextInputControl {
             if (end > start) {
                 characters.delete(start, end);
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -110,24 +107,8 @@ public class TextField extends TextInputControl {
             return characters.toString();
         }
 
-        @Override public void addListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.addListener(helper, this, changeListener);
-        }
-
-        @Override public void removeListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.removeListener(helper, changeListener);
-        }
-
         @Override public String getValue() {
             return get();
-        }
-
-        @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
         }
     }
 
