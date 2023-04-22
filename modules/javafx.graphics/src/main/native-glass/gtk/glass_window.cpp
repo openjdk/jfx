@@ -599,11 +599,10 @@ bool WindowContextBase::set_view(jobject view) {
     }
 
     if (view) {
-        jview = mainEnv->NewGlobalRef(view);;
+        jview = mainEnv->NewGlobalRef(view);
     } else {
         jview = NULL;
     }
-
     return TRUE;
 }
 
