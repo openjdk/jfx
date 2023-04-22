@@ -1194,6 +1194,10 @@ public class Stage extends Window {
             if (peer != null) {
                 peer.setIcons(platformImages);
             }
+
+            if (!isIconified()) {
+                requestFocus();
+            }
         }
 
         if (!value && inNestedEventLoop) {
