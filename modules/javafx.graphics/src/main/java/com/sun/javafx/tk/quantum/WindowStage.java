@@ -526,9 +526,7 @@ public class WindowStage extends GlassStage {
                 windowsSetEnabled(false);
             }
 
-            if (platformWindow != null && !platformWindow.isMinimized()) {
-                requestFocus();
-            }
+            requestFocus();
         }
 
         applyFullScreen();
