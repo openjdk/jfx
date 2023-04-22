@@ -525,6 +525,8 @@ public class WindowStage extends GlassStage {
             } else if (modality == Modality.APPLICATION_MODAL) {
                 windowsSetEnabled(false);
             }
+
+            requestFocus();
         }
 
         applyFullScreen();
