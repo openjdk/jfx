@@ -599,10 +599,11 @@ bool WindowContextBase::set_view(jobject view) {
     }
 
     if (view) {
-        jview = mainEnv->NewGlobalRef(view);
+        jview = mainEnv->NewGlobalRef(view);;
     } else {
         jview = NULL;
     }
+
     return TRUE;
 }
 
@@ -1322,6 +1323,16 @@ void WindowContextTop::set_owner(WindowContext * owner_ctx) {
     owner = owner_ctx;
 }
 
+void WindowContextTop::notify_view_resize() {
+    if (jview) {
+        int cw = geometry_get_content_width(&geometry);
+        int ch = geometry_get_content_height(&geometry);
+
+        mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
+}
+
 void WindowContextTop::notify_window_resize() {
     int w = geometry_get_window_width(&geometry);
     int h = geometry_get_window_height(&geometry);
@@ -1330,13 +1341,7 @@ void WindowContextTop::notify_window_resize() {
                  com_sun_glass_events_WindowEvent_RESIZE, w, h);
     CHECK_JNI_EXCEPTION(mainEnv)
 
-    if (jview) {
-        int cw = geometry_get_content_width(&geometry);
-        int ch = geometry_get_content_height(&geometry);
-
-        mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    notify_view_resize();
 }
 
 void WindowContextTop::notify_window_move() {

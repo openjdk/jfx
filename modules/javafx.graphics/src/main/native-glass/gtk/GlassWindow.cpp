@@ -139,6 +139,22 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1showOrHideChildren
     ctx->show_or_hide_children(show);
 }
 
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _updateViewSize
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1updateViewSize
+  (JNIEnv * env, jobject obj, jlong ptr) {
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    ctx->notify_view_resize();
+}
+
+
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
  * Method:    minimizeImpl
