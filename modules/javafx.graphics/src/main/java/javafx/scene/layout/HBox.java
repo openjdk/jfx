@@ -517,10 +517,14 @@ public class HBox extends Pane {
         double renderScale = isSnapToPixel() ? getSnapScaleX() : 0.0;
 
         if (extraWidth < 0) {
-            return SpaceDistributor.distribute(width, renderScale, prefSizes, computeChildSizes(managed, height, true));
+            double[] minSizes = computeChildSizes(managed, height, true);
+
+            if (width < 0) {  // Not sure why this happens, but let's not try to continue...
+                return minSizes;  // For a negative width, minSizes probably is best...
+            }
+
+            return SpaceDistributor.distribute(width, renderScale, prefSizes, minSizes);
         }
-        // need to first determine whether or not we need to shrink (range is min to pref) or grow (range is pref to max)
-        // if it is the later, then two passes, with SOMETIMES and ALWAYS
 
         double[] maxSizes = new double[size];
 
