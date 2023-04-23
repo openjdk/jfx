@@ -18,6 +18,7 @@
 --add-exports javafx.graphics/com.sun.javafx.iio.gif=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.iio=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.iio.png=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.iio.javax=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.image.impl=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.image=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED
