@@ -281,4 +281,54 @@ abstract class BaseByteToByteConverter
             }
         }
     }
+
+    static class SwapThreeByteConverter extends BaseByteToByteConverter {
+        public SwapThreeByteConverter(BytePixelGetter getter, BytePixelSetter setter) {
+            super(getter, setter);
+        }
+
+        @Override
+        void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
+                       byte[] dstarr, int dstoff, int dstscanbytes,
+                       int w, int h)
+        {
+            srcscanbytes -= w * 3;
+            srcscanbytes -= w * 4;
+            while (--h >= 0) {
+                for (int x = 0; x < w; x++) {
+                    byte b0 = srcarr[srcoff];
+                    byte b1 = srcarr[srcoff + 1];
+                    byte b2 = srcarr[srcoff + 2];
+                    dstarr[dstoff++] = b2;
+                    dstarr[dstoff++] = b1;
+                    dstarr[dstoff++] = b0;
+                    srcoff += 3;
+                }
+                srcoff += srcscanbytes;
+                dstoff += dstscanbytes;
+            }
+        }
+
+        @Override
+        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
+                       ByteBuffer dstbuf, int dstoff, int dstscanbytes,
+                       int w, int h)
+        {
+            srcscanbytes -= w * 3;
+            srcscanbytes -= w * 4;
+            while (--h >= 0) {
+                for (int x = 0; x < w; x++) {
+                    byte b0 = srcbuf.get(srcoff);
+                    byte b1 = srcbuf.get(srcoff + 1);
+                    byte b2 = srcbuf.get(srcoff + 2);
+                    dstbuf.put(dstoff++, b2);
+                    dstbuf.put(dstoff++, b1);
+                    dstbuf.put(dstoff++, b0);
+                    srcoff += 3;
+                }
+                srcoff += srcscanbytes;
+                dstoff += dstscanbytes;
+            }
+        }
+    }
 }

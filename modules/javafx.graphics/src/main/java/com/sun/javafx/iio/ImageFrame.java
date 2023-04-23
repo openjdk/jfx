@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,20 +27,19 @@ package com.sun.javafx.iio;
 
 import com.sun.javafx.iio.ImageStorage.ImageType;
 import java.nio.Buffer;
-import java.nio.ByteBuffer;
 
 /**
  * A class representing the data and metadata of a single image.
  */
-public class ImageFrame {
-    private ImageType imageType;
-    private ByteBuffer imageData;
-    private int width;
-    private int height;
-    private int stride;
+public final class ImageFrame {
+    private final ImageType imageType;
+    private final Buffer imageData;
+    private final int width;
+    private final int height;
+    private final int stride;
+    private final byte[][] palette;
+    private final ImageMetadata metadata;
     private float pixelScale;
-    private byte[][] palette;
-    private ImageMetadata metadata;
 
     /**
      * Create an <code>ImageFrame</code> with a default 72DPI pixel scale.
@@ -56,7 +55,7 @@ public class ImageFrame {
      * one of the palette types.
      * @param metadata The image metadata.
      */
-    public ImageFrame(ImageType imageType, ByteBuffer imageData,
+    public ImageFrame(ImageType imageType, Buffer imageData,
                       int width, int height, int stride, byte[][] palette,
                       ImageMetadata metadata)
     {
@@ -81,7 +80,7 @@ public class ImageFrame {
      * of the image (1.0f for 72DPI images, 2.0f for 144DPI images, etc.).
      * @param metadata The image metadata.
      */
-    public ImageFrame(ImageType imageType, ByteBuffer imageData,
+    public ImageFrame(ImageType imageType, Buffer imageData,
                       int width, int height, int stride, byte[][] palette,
                       float pixelScale, ImageMetadata metadata)
     {

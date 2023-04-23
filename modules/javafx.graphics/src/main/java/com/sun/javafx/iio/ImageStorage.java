@@ -65,56 +65,107 @@ public class ImageStorage {
          */
         GRAY,
         /**
-         * An image with with two 8-bit valued channels, one of gray levels,
+         * An image with two 8-bit valued channels, one of gray levels,
          * the other of non-premultiplied opacity, ordered as GAGAGA...
          */
         GRAY_ALPHA,
         /**
-         * An image with with two 8-bit valued channels, one of gray levels,
+         * An image with two 8-bit valued channels, one of gray levels,
          * the other of premultiplied opacity, ordered as GAGAGA...
          */
         GRAY_ALPHA_PRE,
         /**
-         * An image with with one 8-bit channel of indexes into a 24-bit
+         * An image with one 8-bit channel of indexes into a 24-bit
          * lookup table which maps the indexes to 8-bit RGB components.
          */
         PALETTE,
         /**
-         * An image with with one 8-bit channel of indexes into a 32-bit
+         * An image with one 8-bit channel of indexes into a 32-bit
          * lookup table which maps the indexes to 8-bit RGBA components
          * wherein the opacity is not-premultiplied.
          */
         PALETTE_ALPHA,
         /**
-         * An image with with one 8-bit channel of indexes into a 32-bit
+         * An image with one 8-bit channel of indexes into a 32-bit
          * lookup table which maps the indexes to 8-bit RGBA components
          * wherein the opacity is premultiplied.
          */
         PALETTE_ALPHA_PRE,
         /**
-         * An image with with one 8-bit channel of indexes into a 24-bit
+         * An image with one 8-bit channel of indexes into a 24-bit
          * lookup table which maps the indexes to 8-bit RGB components, and
          * a single transparent index to indicate the location of transparent
          * pixels.
          */
         PALETTE_TRANS,
         /**
-         * An image with with three 8-bit valued channels of red, green, and
+         * An image with three 8-bit valued channels of red, green, and
          * blue, respectively, ordered as RGBRGBRGB...
          */
         RGB,
         /**
-         * An image with with four 8-bit valued channels of red, green, blue,
+         * An image with three 8-bit valued channels of red, green, and
+         * blue, respectively, ordered as BGRBGRBGR...
+         */
+        BGR,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
          * and non-premultiplied opacity, respectively, ordered as
          * RGBARGBARGBA...
          */
         RGBA,
         /**
-         * An image with with four 8-bit valued channels of red, green, blue,
+         * An image with four 8-bit valued channels of red, green, blue,
          * and premultiplied opacity, respectively, ordered as
          * RGBARGBARGBA...
          */
-        RGBA_PRE
+        RGBA_PRE,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and non-premultiplied opacity, respectively, ordered as
+         * BGRABGRABGRA...
+         */
+        BGRA,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and premultiplied opacity, respectively, ordered as
+         * BGRABGRABGRA...
+         */
+        BGRA_PRE,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and non-premultiplied opacity, respectively, ordered as
+         * ABGRABGRABGR...
+         */
+        ABGR,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue,
+         * and premultiplied opacity, respectively, ordered as
+         * ABGRABGRABGR...
+         */
+        ABGR_PRE,
+        /**
+         * An image with three 8-bit valued channels of red, green, and blue,
+         * packed into a 32-bit integer, ordered as XRGBXRGBXRGB...
+         */
+        INT_RGB,
+        /**
+         * An image with three 8-bit valued channels of red, green, and blue,
+         * packed into a 32-bit integer, ordered as XBGRXBGRXBGR...
+         */
+        INT_BGR,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue, and
+         * non-premultiplied opacity, packed into a 32-bit integer, ordered as
+         * ARGBARGBARGB...
+         */
+        INT_ARGB,
+        /**
+         * An image with four 8-bit valued channels of red, green, blue, and
+         * premultiplied opacity, packed into a 32-bit integer, ordered as
+         * ARGBARGBARGB...
+         */
+        INT_ARGB_PRE
     }
 //    /**
 //     * A mapping of lower case file extensions to loader factories.

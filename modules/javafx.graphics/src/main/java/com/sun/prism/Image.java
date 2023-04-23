@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,8 @@ import com.sun.javafx.image.PixelConverter;
 import com.sun.javafx.image.PixelGetter;
 import com.sun.javafx.image.PixelSetter;
 import com.sun.javafx.image.PixelUtils;
+import com.sun.javafx.image.impl.ByteAbgr;
+import com.sun.javafx.image.impl.ByteBgr;
 import com.sun.javafx.image.impl.ByteBgra;
 import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.image.impl.ByteGray;
@@ -54,6 +56,9 @@ import com.sun.javafx.image.impl.ByteGrayAlpha;
 import com.sun.javafx.image.impl.ByteGrayAlphaPre;
 import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.ByteRgba;
+import com.sun.javafx.image.impl.IntArgb;
+import com.sun.javafx.image.impl.IntBgr;
+import com.sun.javafx.image.impl.IntRgb;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.prism.impl.BufferUtil;
 
@@ -200,60 +205,104 @@ public class Image implements PlatformImage {
         return new Image(PixelFormat.FLOAT_XYZW, pixels, width, height);
     }
 
-    /*
+    /**
      * This method wraps ImageFrame data to com.sum.prism.Image.
      * The data buffer will be shared between objects.
-     * It does not duplicate the memory, except in L8A8 case.
-     * If it necessary, it does in-place format conversion like RGBA->BGRA
+     * If possible, it does not duplicate the memory.
+     * If necessary, it does in-place format conversion like RGBA->BGRA
      *
      * @param frame ImageFrame to convert.
      * @return New Image instance.
      */
     public static Image convertImageFrame(ImageFrame frame) {
-        ByteBuffer buffer = (ByteBuffer) frame.getImageData();
         ImageStorage.ImageType type = frame.getImageType();
         int w = frame.getWidth(), h = frame.getHeight();
-        int scanBytes = frame.getStride();
+        int stride = frame.getStride();
         float ps = frame.getPixelScale();
 
-        switch (type) {
-            case GRAY:
-                return Image.fromByteGrayData(buffer, w, h, scanBytes, ps);
+        // GRAY, RGB, BGRA_PRE, and INT_ARGB_PRE are directly supported by Prism.
+        // We'll need to convert all other formats that we might encounter to one of the supported formats.
+        // TODO: 3D - need a way to handle pre versus non-Pre
+        return switch (type) {
+            case GRAY -> fromByteGrayData((ByteBuffer)frame.getImageData(), w, h, stride, ps);
+            case RGB -> fromByteRgbData((ByteBuffer)frame.getImageData(), w, h, stride, ps);
+            case BGRA_PRE -> fromByteBgraPreData((ByteBuffer)frame.getImageData(), w, h, stride, ps);
+            case INT_ARGB_PRE -> fromIntArgbPreData((IntBuffer)frame.getImageData(), w, h, stride, ps);
 
-            case RGB:
-                return Image.fromByteRgbData(buffer, w, h, scanBytes, ps);
+            case GRAY_ALPHA -> {
+                byte[] buffer = new byte[w * h * 4];
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteGrayAlpha.ToByteGrayAlphaPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                ByteGrayAlphaPre.ToByteBgraPreConverter().convert(imageData, 0, stride, buffer, 0, w * 4, w, h);
+                yield fromByteBgraPreData(buffer, w, h, ps);
+            }
 
-            case RGBA:
-                // Bgra => BgrePre is same operation as Rgba => RgbaPre
-                // TODO: 3D - need a way to handle pre versus non-Pre
-                ByteBgra.ToByteBgraPreConverter().convert(buffer, 0, scanBytes,
-                                                          buffer, 0, scanBytes,
-                                                          w, h);
-                /* NOBREAK */
-            case RGBA_PRE:
-                ByteRgba.ToByteBgraConverter().convert(buffer, 0, scanBytes,
-                                                       buffer, 0, scanBytes,
-                                                       w, h);
-                return Image.fromByteBgraPreData(buffer, w, h, scanBytes, ps);
+            case GRAY_ALPHA_PRE -> {
+                byte[] buffer = new byte[w * h * 4];
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteGrayAlphaPre.ToByteBgraPreConverter().convert(imageData, 0, stride, buffer, 0, w * 4, w, h);
+                yield fromByteBgraPreData(buffer, w, h, ps);
+            }
 
-            case GRAY_ALPHA:
-                // TODO: 3D - need a way to handle pre versus non-Pre
-                ByteGrayAlpha.ToByteGrayAlphaPreConverter().convert(buffer, 0, scanBytes,
-                                                                    buffer, 0, scanBytes,
-                                                                    w, h);
-                /* NOBREAK */
-            case GRAY_ALPHA_PRE:
-                if (scanBytes != w * 2) {
-                    throw new AssertionError("Bad stride for GRAY_ALPHA");
-                }
-                byte newbuf[] = new byte[w * h * 4];
-                ByteGrayAlphaPre.ToByteBgraPreConverter().convert(buffer, 0, scanBytes,
-                                                                  newbuf, 0, w*4,
-                                                                  w, h);
-                return Image.fromByteBgraPreData(newbuf, w, h, ps);
-            default:
-                throw new RuntimeException("Unknown image type: " + type);
-        }
+            case BGR -> {
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteBgr.ToByteRgbConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromByteRgbData(imageData, w, h, stride, ps);
+            }
+
+            case RGBA -> {
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteRgba.ToByteBgraPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromByteBgraPreData(imageData, w, h, stride, ps);
+            }
+
+            case RGBA_PRE -> {
+                // Source is already premultiplied, so the non-pre converter is sufficient.
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteRgba.ToByteBgraConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromByteBgraPreData(imageData, w, h, stride, ps);
+            }
+
+            case BGRA -> {
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteBgra.ToByteBgraPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromByteBgraPreData(imageData, w, h, stride, ps);
+            }
+
+            case ABGR -> {
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteAbgr.ToByteBgraPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromByteBgraPreData(imageData, w, h, stride, ps);
+            }
+
+            case ABGR_PRE -> {
+                // Source is already premultiplied, so the non-pre converter is sufficient.
+                ByteBuffer imageData = (ByteBuffer)frame.getImageData();
+                ByteAbgr.ToByteBgraConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromByteBgraPreData(imageData, w, h, stride, ps);
+            }
+
+            case INT_RGB -> {
+                IntBuffer imageData = (IntBuffer)frame.getImageData();
+                IntRgb.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromIntArgbPreData(imageData, w, h, stride, ps);
+            }
+
+            case INT_BGR -> {
+                IntBuffer imageData = (IntBuffer)frame.getImageData();
+                IntBgr.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromIntArgbPreData(imageData, w, h, stride, ps);
+            }
+
+            case INT_ARGB -> {
+                IntBuffer imageData = (IntBuffer)frame.getImageData();
+                IntArgb.ToIntArgbPreConverter().convert(imageData, 0, stride, imageData, 0, stride, w, h);
+                yield fromIntArgbPreData(imageData, w, h, stride, ps);
+            }
+
+            case PALETTE, PALETTE_ALPHA, PALETTE_ALPHA_PRE, PALETTE_TRANS ->
+                throw new RuntimeException("Unsupported image type: " + type);
+        };
     }
 
     private Image(PixelFormat pixelFormat, int[] pixels,

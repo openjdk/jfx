@@ -58,9 +58,9 @@ public class ByteRgba {
         return ToByteBgraObj;
     }
 
-//    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
-//        return ByteRgba.ToByteBgraPreConv.instance;
-//    }
+    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        return ByteRgba.ToByteBgraPreConv.instance;
+    }
 
     static class Accessor implements BytePixelAccessor {
         static final BytePixelAccessor instance = new Accessor();
