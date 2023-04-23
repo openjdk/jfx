@@ -30,6 +30,8 @@ import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageLoadListener;
 import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageMetadata;
+import com.sun.javafx.iio.ImageStorage;
+import com.sun.javafx.iio.ImageStorageException;
 import com.sun.javafx.iio.common.ImageDescriptor;
 import com.sun.javafx.iio.common.ImageTools;
 import javax.imageio.ImageReadParam;
@@ -39,10 +41,17 @@ import javax.imageio.stream.ImageInputStream;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.WeakHashMap;
+
+import static java.awt.image.BufferedImage.*;
 
 public class XImageLoader implements ImageLoader {
 
@@ -143,10 +152,84 @@ public class XImageLoader implements ImageLoader {
             null, null, image.getWidth(), image.getHeight(), null,
             null, null);
 
-        ImageFrame frame = BufferedImageConverter.convert(image, metadata);
-        frame.setPixelScale(pixelScale);
+        return switch (image.getType()) {
+            case TYPE_BYTE_GRAY -> new ImageFrame(ImageStorage.ImageType.GRAY,
+                    getByteBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth(),
+                    null, pixelScale, metadata);
 
-        return frame;
+            case TYPE_3BYTE_BGR -> new ImageFrame(ImageStorage.ImageType.BGR,
+                    getByteBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * 3,
+                    null, pixelScale, metadata);
+
+            case TYPE_4BYTE_ABGR -> new ImageFrame(ImageStorage.ImageType.ABGR,
+                    getByteBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    null, pixelScale, metadata);
+
+            case TYPE_4BYTE_ABGR_PRE -> new ImageFrame(ImageStorage.ImageType.ABGR_PRE,
+                    getByteBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    null, pixelScale, metadata);
+
+            case TYPE_INT_RGB -> new ImageFrame(ImageStorage.ImageType.INT_RGB,
+                    getIntBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    null, pixelScale, metadata);
+
+            case TYPE_INT_BGR -> new ImageFrame(ImageStorage.ImageType.INT_BGR,
+                    getIntBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    null, pixelScale, metadata);
+
+            case TYPE_INT_ARGB -> new ImageFrame(ImageStorage.ImageType.INT_ARGB,
+                    getIntBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    null, pixelScale, metadata);
+
+            case TYPE_INT_ARGB_PRE -> new ImageFrame(ImageStorage.ImageType.INT_ARGB_PRE,
+                    getIntBuffer(image.getData().getDataBuffer()),
+                    image.getWidth(), image.getHeight(), image.getWidth() * 4,
+                    null, pixelScale, metadata);
+
+            default ->
+                throw new ImageStorageException("Unsupported image type: " + switch (image.getType()) {
+                    case TYPE_CUSTOM -> "TYPE_CUSTOM";
+                    case TYPE_USHORT_565_RGB -> "TYPE_USHORT_565_RGB";
+                    case TYPE_USHORT_555_RGB -> "TYPE_USHORT_555_RGB";
+                    case TYPE_USHORT_GRAY -> "TYPE_USHORT_GRAY";
+                    case TYPE_BYTE_BINARY -> "TYPE_BYTE_BINARY";
+                    case TYPE_BYTE_INDEXED -> "TYPE_BYTE_INDEXED";
+                    default -> Integer.toString(image.getType());
+                });
+        };
+    }
+
+    private static ByteBuffer getByteBuffer(DataBuffer buffer) {
+        DataBufferByte byteBuffer = (DataBufferByte)buffer;
+        byte[] data = byteBuffer.getData();
+        int offset = byteBuffer.getOffset();
+        int size = byteBuffer.getSize();
+
+        if (offset == 0 && size == data.length) {
+            return ByteBuffer.wrap(data);
+        }
+
+        return ByteBuffer.wrap(Arrays.copyOf(data, size - offset));
+    }
+
+    private static IntBuffer getIntBuffer(DataBuffer buffer) {
+        DataBufferInt byteBuffer = (DataBufferInt)buffer;
+        int[] data = byteBuffer.getData();
+        int offset = byteBuffer.getOffset();
+        int size = byteBuffer.getSize();
+
+        if (offset == 0 && size == data.length) {
+            return IntBuffer.wrap(data);
+        }
+
+        return IntBuffer.wrap(Arrays.copyOf(data, size - offset));
     }
 
 }
