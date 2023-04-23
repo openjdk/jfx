@@ -36,7 +36,8 @@ import com.sun.javafx.iio.common.ImageDescriptor;
 import com.sun.javafx.iio.common.ImageTools;
 import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
-import javax.imageio.spi.ImageReaderSpi;
+import javax.imageio.event.IIOReadProgressListener;
+import javax.imageio.event.IIOReadWarningListener;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.Dimension;
 import java.awt.Image;
@@ -48,14 +49,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Arrays;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.Objects;
 
 import static java.awt.image.BufferedImage.*;
 
 public class XImageLoader implements ImageLoader {
-
-    private static final Map<ImageReaderSpi, String[]> mimeSubtypes = new WeakHashMap<>();
 
     private final ImageReader reader;
     private final ImageInputStream stream;
@@ -64,22 +62,11 @@ public class XImageLoader implements ImageLoader {
     public XImageLoader(ImageReader reader, ImageInputStream stream) throws IOException {
         this.reader = reader;
         this.stream = stream;
-        String[] subtypes;
-
-        synchronized (mimeSubtypes) {
-            ImageReaderSpi originatingProvider = reader.getOriginatingProvider();
-            subtypes = mimeSubtypes.get(originatingProvider);
-            if (subtypes == null) {
-                subtypes = Arrays.stream(originatingProvider.getMIMETypes())
-                    .map(type -> type.substring(type.indexOf('/')))
-                    .toArray(String[]::new);
-
-                mimeSubtypes.put(originatingProvider, subtypes);
-            }
-        }
-
         this.description = new ImageDescriptor(
-            reader.getFormatName(), new String[0], new ImageFormatDescription.Signature[0], subtypes);
+            reader.getFormatName(), new String[0], new ImageFormatDescription.Signature[0],
+            Arrays.stream(reader.getOriginatingProvider().getMIMETypes())
+                .map(type -> type.substring(type.indexOf('/')))
+                .toArray(String[]::new));
     }
 
     @Override
@@ -99,10 +86,16 @@ public class XImageLoader implements ImageLoader {
 
     @Override
     public void addListener(ImageLoadListener listener) {
+        var listenerImpl = new LoadListenerImpl(listener);
+        reader.addIIOReadProgressListener(listenerImpl);
+        reader.addIIOReadWarningListener(listenerImpl);
     }
 
     @Override
     public void removeListener(ImageLoadListener listener) {
+        var listenerImpl = new LoadListenerImpl(listener);
+        reader.removeIIOReadProgressListener(listenerImpl);
+        reader.removeIIOReadWarningListener(listenerImpl);
     }
 
     @Override
@@ -230,6 +223,56 @@ public class XImageLoader implements ImageLoader {
         }
 
         return IntBuffer.wrap(Arrays.copyOf(data, size - offset));
+    }
+
+    private final class LoadListenerImpl implements IIOReadProgressListener, IIOReadWarningListener {
+        private final ImageLoadListener listener;
+        private float lastProgress;
+
+        LoadListenerImpl(ImageLoadListener listener) {
+            this.listener = listener;
+        }
+
+        @Override
+        public void warningOccurred(ImageReader source, String warning) {
+            listener.imageLoadWarning(XImageLoader.this, warning);
+        }
+
+        @Override
+        public void imageProgress(ImageReader source, float percentageDone) {
+            if (percentageDone > lastProgress) {
+                lastProgress = percentageDone;
+                listener.imageLoadProgress(XImageLoader.this, percentageDone);
+            }
+        }
+
+        @Override public void imageStarted(ImageReader source, int imageIndex) {
+            listener.imageLoadProgress(XImageLoader.this, 0);
+        }
+
+        @Override
+        public void imageComplete(ImageReader source) {
+            if (lastProgress < 100) {
+                listener.imageLoadProgress(XImageLoader.this, 100);
+            }
+        }
+
+        @Override public void sequenceStarted(ImageReader source, int minIndex) {}
+        @Override public void sequenceComplete(ImageReader source) {}
+        @Override public void thumbnailStarted(ImageReader source, int imageIndex, int thumbnailIndex) {}
+        @Override public void thumbnailProgress(ImageReader source, float percentageDone) {}
+        @Override public void thumbnailComplete(ImageReader source) {}
+        @Override public void readAborted(ImageReader source) {}
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof LoadListenerImpl impl && Objects.equals(impl.listener, listener);
+        }
+
+        @Override
+        public int hashCode() {
+            return listener.hashCode();
+        }
     }
 
 }

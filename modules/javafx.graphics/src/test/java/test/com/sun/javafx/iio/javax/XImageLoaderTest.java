@@ -26,13 +26,23 @@
 package test.com.sun.javafx.iio.javax;
 
 import com.sun.javafx.iio.ImageFrame;
+import com.sun.javafx.iio.ImageLoadListener;
 import com.sun.javafx.iio.ImageLoader;
+import com.sun.javafx.iio.ImageMetadata;
 import com.sun.javafx.iio.ImageStorage;
+import com.sun.javafx.iio.javax.XImageLoader;
 import com.sun.javafx.iio.javax.XImageLoaderFactory;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import org.junit.jupiter.api.Test;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -110,6 +120,63 @@ public class XImageLoaderTest {
             assertEquals(24, image.getHeight());
             assertEquals(PixelFormat.BYTE_BGRA_PRE, image.getPixelFormat());
             assertImageContent(image);
+        }
+    }
+
+    @Test
+    void testAddAndRemoveListener() throws Exception {
+        try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.png")) {
+            ImageReader pngReader = ImageIO.getImageReadersByFormatName("PNG").next();
+            ImageInputStream input = ImageIO.createImageInputStream(stream);
+            pngReader.setInput(input);
+            XImageLoader loader = new XImageLoader(pngReader, input);
+            ImageLoadListener listener = new ImageLoadListener() {
+                @Override public void imageLoadProgress(ImageLoader loader, float percentageComplete) {}
+                @Override public void imageLoadWarning(ImageLoader loader, String message) {}
+                @Override public void imageLoadMetaData(ImageLoader loader, ImageMetadata metadata) {}
+            };
+
+            Field progressListenersField = ImageReader.class.getDeclaredField("progressListeners");
+            Field warningListenersField = ImageReader.class.getDeclaredField("warningListeners");
+            progressListenersField.setAccessible(true);
+            warningListenersField.setAccessible(true);
+            assertNull(progressListenersField.get(pngReader));
+            assertNull(warningListenersField.get(pngReader));
+
+            loader.addListener(listener);
+            assertEquals(1, ((List<?>)progressListenersField.get(pngReader)).size());
+            assertEquals(1, ((List<?>)warningListenersField.get(pngReader)).size());
+
+            loader.removeListener(listener);
+            assertNull(progressListenersField.get(pngReader));
+            assertNull(warningListenersField.get(pngReader));
+        }
+    }
+
+    @Test
+    void testProgressListener() throws Exception {
+        try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.png")) {
+            List<Float> progress = new ArrayList<>();
+            ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+            loader.addListener(new ImageLoadListener() {
+                @Override
+                public void imageLoadProgress(ImageLoader loader, float percentageComplete) {
+                    progress.add(percentageComplete);
+                }
+
+                @Override public void imageLoadWarning(ImageLoader loader, String message) {}
+                @Override public void imageLoadMetaData(ImageLoader loader, ImageMetadata metadata) {}
+            });
+
+            loader.load(0, -1, -1, true, false, 1, 1);
+
+            assertTrue(progress.size() > 1);
+            assertEquals(0, progress.get(0));
+            assertEquals(100, progress.get(progress.size() - 1));
+
+            List<Float> orderedProgress = new ArrayList<>(progress);
+            orderedProgress.sort(Comparator.naturalOrder());
+            assertEquals(orderedProgress, progress);
         }
     }
 

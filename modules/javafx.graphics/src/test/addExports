@@ -50,6 +50,7 @@
 --add-opens javafx.graphics/javafx.scene.robot=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.layout=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.paint=ALL-UNNAMED
+--add-opens java.desktop/javax.imageio=ALL-UNNAMED
 #
 # compile time additions
 --add-exports=javafx.base/com.sun.javafx.runtime=ALL-UNNAMED
