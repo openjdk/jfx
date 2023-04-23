@@ -410,9 +410,12 @@ public class HBox extends Pane {
 
     @Override protected double computeMinWidth(double height) {
         Insets insets = getInsets();
-        return snapSpaceX(insets.getLeft()) +
-               computeContentWidth(getManagedChildren(), height, true) +
-               snapSpaceX(insets.getRight());
+
+        return snapSpaceX(
+            snapSpaceX(insets.getLeft()) +
+            computeContentWidth(getManagedChildren(), height, true) +
+            snapSpaceX(insets.getRight())
+        );
     }
 
     @Override protected double computeMinHeight(double width) {
@@ -426,16 +429,22 @@ public class HBox extends Pane {
         } else {
             contentHeight = computeMaxMinAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
         }
-        return snapSpaceY(insets.getTop()) +
-               contentHeight +
-               snapSpaceY(insets.getBottom());
+
+        return snapSpaceY(
+            snapSpaceY(insets.getTop()) +
+            contentHeight +
+            snapSpaceY(insets.getBottom())
+        );
     }
 
     @Override protected double computePrefWidth(double height) {
         Insets insets = getInsets();
-        return snapSpaceX(insets.getLeft()) +
-               computeContentWidth(getManagedChildren(), height, false) +
-               snapSpaceX(insets.getRight());
+
+        return snapSpaceX(
+            snapSpaceX(insets.getLeft()) +
+            computeContentWidth(getManagedChildren(), height, false) +
+            snapSpaceX(insets.getRight())
+        );
     }
 
     @Override protected double computePrefHeight(double width) {
@@ -449,9 +458,12 @@ public class HBox extends Pane {
         } else {
             contentHeight = computeMaxPrefAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
         }
-        return snapSpaceY(insets.getTop()) +
-               contentHeight +
-               snapSpaceY(insets.getBottom());
+
+        return snapSpaceY(
+            snapSpaceY(insets.getTop()) +
+            contentHeight +
+            snapSpaceY(insets.getBottom())
+        );
     }
 
     private double getSnapScaleX() {
@@ -505,7 +517,7 @@ public class HBox extends Pane {
         double renderScale = isSnapToPixel() ? getSnapScaleX() : 0.0;
 
         if (extraWidth < 0) {
-            return SpaceDistributor.distribute(width, renderScale, computeChildSizes(managed, height, true), prefSizes);
+            return SpaceDistributor.distribute(width, renderScale, prefSizes, computeChildSizes(managed, height, true));
         }
         // need to first determine whether or not we need to shrink (range is min to pref) or grow (range is pref to max)
         // if it is the later, then two passes, with SOMETIMES and ALWAYS
