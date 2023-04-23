@@ -42,61 +42,74 @@ public class XImageLoaderTest {
         return 255 << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
     }
 
+    private void assertImageContent(Image image) {
+        assertEquals(color(255, 0, 0), image.getArgb(0, 0));
+        assertEquals(color(0, 255, 0), image.getArgb(5, 0));
+        assertEquals(color(0, 0, 255), image.getArgb(9, 0));
+
+        assertEquals(color(0, 255, 255), image.getArgb(0, 5));
+        assertEquals(color(255, 0, 255), image.getArgb(4, 5));
+        assertEquals(color(255, 255, 0), image.getArgb(9, 5));
+
+        assertEquals(color(255, 128, 128), image.getArgb(0, 9));
+        assertEquals(color(128, 128, 255), image.getArgb(4, 9));
+        assertEquals(color(143, 240, 128), image.getArgb(9, 9));
+    }
+
     @Test
-    void testLoadImage() throws Exception {
+    void testLoadImageBGR() throws Exception {
+        try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.bmp")) {
+            ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
+            ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 1);
+            Image image = Image.convertImageFrame(frame);
+
+            assertEquals(12, frame.getWidth());
+            assertEquals(12, frame.getHeight());
+            assertEquals(1, frame.getPixelScale());
+            assertEquals(ImageStorage.ImageType.BGR, frame.getImageType());
+
+            assertEquals(12, image.getWidth());
+            assertEquals(12, image.getHeight());
+            assertEquals(PixelFormat.BYTE_RGB, image.getPixelFormat());
+            assertImageContent(image);
+        }
+    }
+
+    @Test
+    void testLoadImageABGR() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker.png")) {
             ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 1);
+            Image image = Image.convertImageFrame(frame);
 
             assertEquals(12, frame.getWidth());
             assertEquals(12, frame.getHeight());
             assertEquals(1, frame.getPixelScale());
             assertEquals(ImageStorage.ImageType.ABGR, frame.getImageType());
 
-            Image image = Image.convertImageFrame(frame);
+            assertEquals(12, image.getWidth());
+            assertEquals(12, image.getHeight());
             assertEquals(PixelFormat.BYTE_BGRA_PRE, image.getPixelFormat());
-
-            assertEquals(color(255, 0, 0), image.getArgb(0, 0));
-            assertEquals(color(0, 255, 0), image.getArgb(5, 0));
-            assertEquals(color(0, 0, 255), image.getArgb(9, 0));
-
-            assertEquals(color(0, 255, 255), image.getArgb(0, 5));
-            assertEquals(color(255, 0, 255), image.getArgb(4, 5));
-            assertEquals(color(255, 255, 0), image.getArgb(9, 5));
-
-            assertEquals(color(255, 128, 128), image.getArgb(0, 9));
-            assertEquals(color(128, 128, 255), image.getArgb(4, 9));
-            assertEquals(color(143, 240, 128), image.getArgb(9, 9));
+            assertImageContent(image);
         }
     }
 
     @Test
-    void testLoadImage2x() throws Exception {
+    void testLoadImageABGR2x() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/test/com/sun/javafx/iio/checker@2x.png")) {
             ImageLoader loader = XImageLoaderFactory.getInstance().createImageLoader(stream);
             ImageFrame frame = loader.load(0, -1, -1, true, false, 1, 2);
+            Image image = Image.convertImageFrame(frame);
 
             assertEquals(24, frame.getWidth());
             assertEquals(24, frame.getHeight());
             assertEquals(2, frame.getPixelScale());
             assertEquals(ImageStorage.ImageType.ABGR, frame.getImageType());
 
-            Image image = Image.convertImageFrame(frame);
             assertEquals(24, image.getWidth());
             assertEquals(24, image.getHeight());
             assertEquals(PixelFormat.BYTE_BGRA_PRE, image.getPixelFormat());
-
-            assertEquals(color(255, 0, 0), image.getArgb(0, 0));
-            assertEquals(color(0, 255, 0), image.getArgb(5, 0));
-            assertEquals(color(0, 0, 255), image.getArgb(9, 0));
-
-            assertEquals(color(0, 255, 255), image.getArgb(0, 5));
-            assertEquals(color(255, 0, 255), image.getArgb(4, 5));
-            assertEquals(color(255, 255, 0), image.getArgb(9, 5));
-
-            assertEquals(color(255, 128, 128), image.getArgb(0, 9));
-            assertEquals(color(128, 128, 255), image.getArgb(4, 9));
-            assertEquals(color(143, 240, 128), image.getArgb(9, 9));
+            assertImageContent(image);
         }
     }
 
