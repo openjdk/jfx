@@ -168,8 +168,8 @@ public class CustomSecurityManagerTest extends VisualTestBase {
                 if (initFullScreen) {
                     testStage1.setFullScreen(true);
                 }
-                testStage1.setX(((int)screenBounds.getWidth() - WIDTH) / 2);
-                testStage1.setY(((int)screenBounds.getHeight() - HEIGHT) / 2);
+                testStage1.setX((screenBounds.getWidth() - WIDTH) / 2);
+                testStage1.setY((screenBounds.getHeight() - HEIGHT) / 2);
                 testStage1.show();
                 testStage1.toFront();
             });
@@ -196,13 +196,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
             }
             final int offset = 10;
             for (int row = 0; row < 2; row++) {
-                int y;
-                if (row == 0) {
-                    // avoid the top area as it might contain OS-specific UI (Macs with a notch)
-                    y = (int)screenBounds.getMinY() + offset;
-                } else {
-                    y = (int)screenBounds.getMaxY() - offset - 1;
-                }
+                int y = row == 0 ? (int)screenBounds.getMinY() + offset : (int)screenBounds.getMaxY() - offset - 1;
 
                 for (int col = 0; col < 2; col++) {
                     int x = col == 0 ? (int)screenBounds.getMinX() + offset : (int)screenBounds.getMaxX() - offset - 1;
