@@ -32,6 +32,10 @@ public interface CompositeFontResource extends FontResource {
 
     public int getNumSlots();
 
+    default public int addSlotFont(FontResource font) {
+        return -1;
+    }
+
     /**
      * Returns the slot for the given font name.
      * Adds fontName as a new fallback font if needed.
