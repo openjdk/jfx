@@ -107,6 +107,8 @@ public class LocalDateTimeStringConverterTest {
 
         final var version = Runtime.Version.parse(System.getProperty("java.version"));
         if (version.major() < 20) {
+            // TODO: This can be removed when the minimum version of boot jdk
+            // for JFX build is updated to JDK20 or above.
             JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56 PM";
         } else {
             JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56\u202fPM";
