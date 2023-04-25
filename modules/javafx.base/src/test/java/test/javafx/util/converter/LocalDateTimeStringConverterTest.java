@@ -52,7 +52,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class LocalDateTimeStringConverterTest {
 
-    private static final String JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56 PM";
+    private static String JAPANESE_DATE_STRING;
     private static final LocalDateTime VALID_LDT_WITH_SECONDS    = LocalDateTime.of(1985, 1, 12, 12, 34, 56);
     private static final LocalDateTime VALID_LDT_WITHOUT_SECONDS = LocalDateTime.of(1985, 1, 12, 12, 34, 0);
 
@@ -104,6 +104,13 @@ public class LocalDateTimeStringConverterTest {
         this.locale = null;
         this.formatter = null;
         this.parser = null;
+
+        final var version = Runtime.Version.parse(System.getProperty("java.version"));
+        if (version.major() < 20) {
+            JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56 PM";
+        } else {
+            JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56\u202fPM";
+        }
     }
 
     @BeforeClass
