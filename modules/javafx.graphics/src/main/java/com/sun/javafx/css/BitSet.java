@@ -182,14 +182,16 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        T t = cast(o);
+        Class<T> elementType = getElementType();
 
-        if (t == null) {  // if cast failed, it can't be part of this set, so not modified
+        if (!elementType.isInstance(o)) {  // if cast failed, it can't be part of this set, so not modified
             return false;
         }
 
-        final int element = getIndex(t) / Long.SIZE;
-        final long bit = 1l << (getIndex(t) % Long.SIZE);
+        T t = elementType.cast(o);
+        int index = getIndex(t);
+        int element = index / Long.SIZE;
+        long bit = 1l << (index % Long.SIZE);
 
         if (element >= bits.length) {
             // not in this Set!
@@ -224,13 +226,13 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
             return false;
         }
 
-        final T t = cast(o);
+        Class<T> elementType = getElementType();
 
-        if (t == null) {  // if cast failed, it can't be part of this set
+        if (!elementType.isInstance(o)) {
             return false;
         }
 
-        int index = getIndex(t);
+        int index = getIndex(elementType.cast(o));
         int element = index / Long.SIZE;
         long bit = 1L << (index % Long.SIZE);
 
@@ -542,7 +544,20 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         if (obj == this) {
             return true;
         }
-        if (obj instanceof BitSet<?> bitSet) {  // fast path if other is a BitSet
+
+        if (obj instanceof BitSet<?> bitSet && getElementType().equals(bitSet.getElementType())) {
+
+            /*
+             * For historic reasons, a potentially faster path is entered here to do a comparison of the
+             * underlying long array directly. The proof of whether it is actually faster is lost, but
+             * it is assumed it is until proven otherwise. Note that in the past the element type was NOT
+             * considered, and potentially two bit sets with the same pattern could be considered equal
+             * despite having different classes stored in them.
+             *
+             * Now if the two sets contain different element types, we enter the much safer default
+             * path, which takes the equals implementation of each element correctly into consideration.
+             */
+
             return equalsBitSet(bitSet);
         }
 
@@ -573,14 +588,11 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
     protected abstract int getIndex(T t);
 
     /**
-     * Return {@code obj} if it is an instance of type {@code T},
-     * otherwise return {@code null}.
+     * Returns the element type.
      *
-     * @param obj the object to cast, cannot be {@code null}
-     * @return a type T, or {@code null} if the argument was not of this type
-     * @throws NullPointerException when {@code obj} is {@code null}
+     * @return a {@link Class} of type {@code T}, never {@code null}
      */
-    protected abstract T cast(Object obj);
+    protected abstract Class<T> getElementType();
 
     long[] getBits() {
         return bits;

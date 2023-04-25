@@ -73,12 +73,8 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
     }
 
     @Override
-    protected StyleClass cast(Object o) {
-        if (o == null) {
-            throw new NullPointerException("null arg");
-        }
-
-        return o instanceof StyleClass styleClass ? styleClass : null;
+    protected Class<StyleClass> getElementType() {
+        return StyleClass.class;
     }
 
     @Override

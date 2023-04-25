@@ -65,12 +65,8 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
     }
 
     @Override
-    protected PseudoClass cast(Object o) {
-        if (o == null) {
-            throw new NullPointerException("null arg");
-        }
-
-        return o instanceof PseudoClass pseudoClass ? pseudoClass : null;
+    protected Class<PseudoClass> getElementType() {
+        return PseudoClass.class;
     }
 
     @Override
