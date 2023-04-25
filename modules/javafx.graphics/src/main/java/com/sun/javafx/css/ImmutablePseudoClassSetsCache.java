@@ -48,9 +48,16 @@ public class ImmutablePseudoClassSetsCache {
      * @throws NullPointerException when {@code pseudoClasses} is {@code null} or contains {@code null}s
      */
     public static Set<PseudoClass> of(Set<PseudoClass> pseudoClasses) {
-        return CACHE.computeIfAbsent(
-            Objects.requireNonNull(pseudoClasses, "pseudoClasses cannot be null"),
-            k -> Set.copyOf(pseudoClasses)
-        );
+        Set<PseudoClass> cachedSet = CACHE.get(Objects.requireNonNull(pseudoClasses, "pseudoClasses cannot be null"));
+
+        if (cachedSet != null) {
+            return cachedSet;
+        }
+
+        Set<PseudoClass> copy = Set.copyOf(pseudoClasses);
+
+        CACHE.put(copy, copy);
+
+        return copy;
     }
 }
