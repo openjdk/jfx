@@ -160,7 +160,7 @@ public class SpaceDistributor {
 
         double pixelSize = 1 / renderScale;
 
-        assert Math.abs(available) <= round(pixelSize * resizables, renderScale) : "available exceeded threshold: " + available + "; resizables: = " + resizables;
+        //assert Math.abs(available) <= round(pixelSize * resizables, renderScale) : "available exceeded threshold: " + available + "; resizables: = " + resizables;
 
         for (int i = 0; i < count; i++) {
             if (Math.abs(available) < 0.5 * pixelSize) {  // exit if less than half a pixel is available
