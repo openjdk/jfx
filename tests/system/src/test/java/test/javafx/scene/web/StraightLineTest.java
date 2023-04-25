@@ -154,6 +154,8 @@ public class StraightLineTest {
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        //introduce sleep , so that web contents would be loaded , then take snapshot for testing
+        Util.sleep(1000);
 
         Util.runAndWait(() -> {
             WritableImage snapshot = straightLineTestApp.primaryStage.getScene().snapshot(null);
