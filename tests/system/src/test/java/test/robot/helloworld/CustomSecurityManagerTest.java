@@ -32,6 +32,7 @@ import java.security.AllPermission;
 import java.security.Permission;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
@@ -61,6 +62,8 @@ public class CustomSecurityManagerTest extends VisualTestBase {
 
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
+
+    Rectangle2D screenBounds;
 
     @SuppressWarnings("removal")
     static class MySecurityManager extends SecurityManager {
@@ -150,11 +153,8 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         // Readback of FullScreen window is not stable on Linux
         assumeTrue(!PlatformUtil.isLinux());
 
-        final AtomicInteger screenWidth = new AtomicInteger();
-        final AtomicInteger screenHeight = new AtomicInteger();
         runAndWait(() -> {
-            screenWidth.set((int)Screen.getPrimary().getBounds().getWidth());
-            screenHeight.set((int)Screen.getPrimary().getBounds().getHeight());
+            screenBounds = Screen.getPrimary().getVisualBounds();
         });
 
         System.setSecurityManager(sm);
@@ -168,8 +168,8 @@ public class CustomSecurityManagerTest extends VisualTestBase {
                 if (initFullScreen) {
                     testStage1.setFullScreen(true);
                 }
-                testStage1.setX((screenWidth.get() - WIDTH) / 2);
-                testStage1.setY((screenHeight.get() - HEIGHT) / 2);
+                testStage1.setX((screenBounds.getWidth() - WIDTH) / 2);
+                testStage1.setY((screenBounds.getHeight() - HEIGHT) / 2);
                 testStage1.show();
                 testStage1.toFront();
             });
@@ -194,18 +194,12 @@ public class CustomSecurityManagerTest extends VisualTestBase {
             } else {
                 assertFalse(propertyState);
             }
+            final int offset = 10;
             for (int row = 0; row < 2; row++) {
-                int h = screenHeight.get();
-                int y;
-                if (row == 0) {
-                    // avoid the top area as it might contain OS-specific UI (Macs with a notch)
-                    y = h / 3;
-                } else {
-                    y = h - 2;
-                }
+                int y = row == 0 ? (int)screenBounds.getMinY() + offset : (int)screenBounds.getMaxY() - offset - 1;
 
                 for (int col = 0; col < 2; col++) {
-                    int x = col == 0 ? 1 : screenWidth.get() - 2;
+                    int x = col == 0 ? (int)screenBounds.getMinX() + offset : (int)screenBounds.getMaxX() - offset - 1;
                     Color color = getColor(x, y);
                     if (expectedFullScreen) {
                         assertColorEquals(Color.LIME, color, TOLERANCE);

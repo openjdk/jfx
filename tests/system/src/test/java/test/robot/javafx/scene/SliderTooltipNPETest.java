@@ -27,6 +27,7 @@ package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.scene.input.MouseButton;
 import javafx.application.Platform;
@@ -44,6 +45,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import test.util.Util;
+
+import static org.junit.Assume.assumeTrue;
 
 /*
  * Test for verifying Slider NPE error.
@@ -72,6 +75,8 @@ public class SliderTooltipNPETest {
 
     @Test
     public void testSliderTooltipNPE() throws Throwable {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8304922
+
         Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
         dragSliderAfterTooltipDisplayed(DRAG_DISTANCE);
         if (exception != null) {
