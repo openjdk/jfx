@@ -47,6 +47,8 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
  */
 public class HBoxPage extends TestPaneBase {
     enum Demo {
+        PMAX("progressive max"),
+        PMIN("progressive min"),
         BUG_8264591("8264591 fractional prefs"),
         FILL_MAX("fill + max"),
         PREF("pref only"),
@@ -139,6 +141,38 @@ public class HBoxPage extends TestPaneBase {
 
     protected Object[] createSpec(Demo d) {
         switch (d) {
+        case PMAX:
+            return new Object[] {
+                COL, MAX, 30,
+                COL, MAX, 31,
+                COL, MAX, 32,
+                COL, MAX, 33,
+                COL, MAX, 34,
+                COL, MAX, 35,
+                COL, MAX, 36,
+                COL, MAX, 37,
+                COL, MAX, 38,
+                COL, MAX, 39,
+                COL, MAX, 40,
+                COL, MAX, 41,
+                COL, MAX, 30,
+            };
+        case PMIN:
+            return new Object[] {
+                COL, MIN, 30,
+                COL, MIN, 31,
+                COL, MIN, 32,
+                COL, MIN, 33,
+                COL, MIN, 34,
+                COL, MIN, 35,
+                COL, MIN, 36,
+                COL, MIN, 37,
+                COL, MIN, 38,
+                COL, MIN, 39,
+                COL, MIN, 40,
+                COL, MIN, 41,
+                COL, MIN, 30,
+            };
         case ALL:
             return new Object[] {
                 COL,
