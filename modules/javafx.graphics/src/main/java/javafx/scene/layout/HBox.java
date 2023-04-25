@@ -511,6 +511,7 @@ public class HBox extends Pane {
         Insets insets = getInsets();
 
         double contentWidth = sum(prefSizes, managed.size()) + (managed.size() - 1) * snapSpaceX(getSpacing());
+        double space = width - snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight()) - (managed.size() - 1) * snapSpaceX(getSpacing());
 
         double extraWidth = width -
                 snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight()) - contentWidth;
@@ -523,7 +524,7 @@ public class HBox extends Pane {
                 return minSizes;  // For a negative width, minSizes probably is best...
             }
 
-            return SpaceDistributor.distribute(width, renderScale, prefSizes, minSizes);
+            return SpaceDistributor.distribute(space, renderScale, prefSizes, minSizes);
         }
 
         double[] maxSizes = new double[size];
@@ -540,7 +541,7 @@ public class HBox extends Pane {
             }
         }
 
-        double[] results = SpaceDistributor.distribute(width, renderScale, prefSizes, maxSizes);
+        double[] results = SpaceDistributor.distribute(space, renderScale, prefSizes, maxSizes);
 
         contentWidth = sum(results, results.length) + (managed.size() - 1) * snapSpaceX(getSpacing());
         extraWidth = width - snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight()) - contentWidth;
@@ -561,7 +562,7 @@ public class HBox extends Pane {
             }
         }
 
-        return SpaceDistributor.distribute(width, renderScale, results, maxSizes);
+        return SpaceDistributor.distribute(space, renderScale, results, maxSizes);
     }
 
     private double computeContentWidth(List<Node> managedChildren, double height, boolean minimum) {
