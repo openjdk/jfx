@@ -184,8 +184,6 @@ public class SpaceDistributor {
                 }
             }
         }
-
-        assert Math.abs(available) == 0 : "available should be 0: " + available;
     }
 
     // array functions:
