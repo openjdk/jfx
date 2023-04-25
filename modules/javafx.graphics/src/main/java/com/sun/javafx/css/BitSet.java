@@ -567,14 +567,11 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
     private boolean equalsBitSet(BitSet<?> other) {
         int a = this.bits != null ? this.bits.length : 0;
         int b = other.bits != null ? other.bits.length : 0;
+        int max = Math.max(a, b);
 
-        if (a != b) {
-            return false;
-        }
-
-        for (int m = 0; m < a; m++) {
-            long m0 = this.bits[m];
-            long m1 = other.bits[m];
+        for (int i = 0; i < max; i++) {
+            long m0 = i >= a ? 0 : this.bits[i];
+            long m1 = i >= b ? 0 : other.bits[i];
 
             if (m0 != m1) {
                 return false;
