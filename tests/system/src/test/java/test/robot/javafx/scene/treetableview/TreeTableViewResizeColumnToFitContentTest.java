@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,7 @@
 package test.robot.javafx.scene.treetableview;
 
 import static org.junit.Assert.fail;
-
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -41,12 +39,10 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import test.util.Util;
 
 /*
@@ -61,6 +57,7 @@ public class TreeTableViewResizeColumnToFitContentTest {
     static volatile Scene scene;
     static final int SCENE_WIDTH = 450;
     static final int SCENE_HEIGHT = 100;
+    private static final double EPSILON = 1e-10;
     static CountDownLatch startupLatch = new CountDownLatch(1);
 
     public static void main(String[] args) {
@@ -97,11 +94,15 @@ public class TreeTableViewResizeColumnToFitContentTest {
         }
         Assert.assertTrue("resizeColumnToFitContent failed",
                 (colTwoWidth != treeTableView.getColumns().get(1).getWidth()));
-        colTwoWidth = treeTableView.getColumns().get(1).getWidth();
-        colThreeWidth = treeTableView.getColumns().get(2).getWidth();
-        double colsWidthAfterResize = colOneWidth + colTwoWidth + colThreeWidth;
-        Assert.assertEquals("TreeTableView.CONSTRAINED_RESIZE_POLICY ignored.",
-                colsWidthBeforeResize, colsWidthAfterResize, 0);
+
+        // Skip this check on platforms with fractional scale until JDK-8299753 gets implemented
+        if (!Util.isFractionalScaleX(treeTableView)) {
+            colTwoWidth = treeTableView.getColumns().get(1).getWidth();
+            colThreeWidth = treeTableView.getColumns().get(2).getWidth();
+            double colsWidthAfterResize = colOneWidth + colTwoWidth + colThreeWidth;
+            Assert.assertEquals("TreeTableView.CONSTRAINED_RESIZE_POLICY ignored.",
+                    colsWidthBeforeResize, colsWidthAfterResize, EPSILON);
+        }
     }
 
     @BeforeClass

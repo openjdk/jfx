@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -167,6 +167,11 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean removeAll(Collection<?> c) {
+        // implicit check to ensure c != null
+        if (c.isEmpty() || backingList.isEmpty()) {
+            return false;
+        }
+
         beginChange();
         BitSet bs = new BitSet(c.size());
         for (int i = 0; i < size(); ++i) {
@@ -186,6 +191,16 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean retainAll(Collection<?> c) {
+        // implicit check to ensure c != null
+        if (c.isEmpty() && !backingList.isEmpty()) {
+            clear();
+            return true;
+        }
+
+        if (backingList.isEmpty()) {
+            return false;
+        }
+
         beginChange();
         BitSet bs = new BitSet(c.size());
         for (int i = 0; i < size(); ++i) {

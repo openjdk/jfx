@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import javafx.beans.Observable;
 import javafx.collections.ModifiableObservableListBase;
 import javafx.util.Callback;
 
-public final class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E> {
+public class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E>{
 
     private final List<E> backingList;
     private final ElementObserver<E> elementObserver;
@@ -178,6 +178,15 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
 
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
+        if (index < 0 || index > size()) {
+            throw new IndexOutOfBoundsException("Index: " + index);
+        }
+
+        // implicit check to ensure c != null
+        if (c.isEmpty()) {
+            return false;
+        }
+
         try {
             beginChange();
             boolean modified = false;
