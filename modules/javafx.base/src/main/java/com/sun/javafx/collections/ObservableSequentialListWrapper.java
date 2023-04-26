@@ -38,7 +38,7 @@ import javafx.beans.Observable;
 import javafx.collections.ModifiableObservableListBase;
 import javafx.util.Callback;
 
-public class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E>{
+public class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E> {
 
     private final List<E> backingList;
     private final ElementObserver<E> elementObserver;
