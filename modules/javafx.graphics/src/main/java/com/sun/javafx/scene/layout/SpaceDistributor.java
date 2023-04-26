@@ -219,7 +219,13 @@ public class SpaceDistributor {
             return x;
         }
 
-        return Math.ceil(x * s) / s;
+        double d = x * s;
+
+        if (Double.isInfinite(d)) {
+            return x;
+        }
+
+        return Math.ceil(d - Math.ulp(d)) / s;
     }
 
     private static double floor(double x, double s) {
@@ -227,7 +233,13 @@ public class SpaceDistributor {
             return x;
         }
 
-        return Math.floor(x * s) / s;
+        double d = x * s;
+
+        if (Double.isInfinite(d)) {
+            return x;
+        }
+
+        return Math.floor(d + Math.ulp(d)) / s;
     }
 
     private static double round(double x, double s) {
@@ -235,6 +247,12 @@ public class SpaceDistributor {
             return x;
         }
 
-        return Math.round(x * s) / s;
+        double d = x * s;
+
+        if (Double.isInfinite(d)) {
+            return x;
+        }
+
+        return Math.rint(d) / s;
     }
 }
