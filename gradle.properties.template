@@ -69,11 +69,15 @@
 
 #INCLUDE_ES2 = true
 
-# Specifies whether to build SDK for running unit tests
-# By default, it is set to true and the tests are running of the
-# fresh-built SDK. If set to false, this flag removes main sources
-# compilation tasks and building the whole SDK. The existing SDK is used
-# instead, and must have been previously built
+# Specifies whether to build SDK for running the provided test task.
+# By default, it is set to false and the tests are running of the
+# fresh-built SDK. If set to true, this flag disables all non test tasks,
+# and it is expected that sdk and shims tasks have been previously built.
+
+#TEST_ONLY = true
+
+# Same as TEST_ONLY, excpet that the name and values have opposite meaning.
+# Recommended to use TEST_ONLY instead of this property.
 
 #BUILD_SDK_FOR_TEST = false
 

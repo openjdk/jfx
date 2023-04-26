@@ -605,9 +605,13 @@ if (hasProperty("CROSS_TOOLS_DIR")) {
 }
 ext.CROSS_TOOLS_DIR = file(crossToolsDir)
 
-// Specifies whether to run tests with the existing javafx.* modules instead of compiling a new one
+// For backward compatibility, -PBUILD_SDK_FOR_TEST=false will set TEST_ONLY to true
 defineProperty("BUILD_SDK_FOR_TEST", "true")
-ext.DO_BUILD_SDK_FOR_TEST = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
+def buildSdkForTest = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
+
+// Specifies whether to run tests with the existing javafx.* modules instead of compiling a new one
+defineProperty("TEST_ONLY", "false")
+ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
@@ -4190,13 +4194,36 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     dependsOn(projectsToDocument.collect { project -> project.getTasksByName("classes", true)});
 }
 
-task sdk() {
-    if (DO_BUILD_SDK_FOR_TEST) {
-        rootProject.getTasksByName("test", true).each { t ->
-            if (t.enabled) t.dependsOn(sdk)
+task shims() {
+    gradle.allprojects { aProject ->
+        if (aProject.hasProperty("sourceSets") && aProject.sourceSets.hasProperty('shims')) {
+            aProject.tasks.each { aTask ->
+                if (aTask.name.contains("shim") || aTask.name.contains("Shim")) {
+                    dependsOn(aTask)
+                }
+            }
         }
     }
 }
+
+task sdk() {
+    if (!IS_TEST_ONLY) {
+        rootProject.getTasksByName("test", true).each { t ->
+            if (t.enabled) t.dependsOn(sdk)
+        }
+    } else {
+        gradle.taskGraph.whenReady { theTaskGraph ->
+            theTaskGraph.allTasks.each { task ->
+                if (!task.name.contains("test") && !task.name.contains("Test") &&
+                    !task.name.equals("verifyJava")) {
+                    task.enabled = false
+                }
+            }
+        }
+    }
+}
+
+shims.dependsOn(sdk)
 
 task jmods() {
     dependsOn(sdk)
