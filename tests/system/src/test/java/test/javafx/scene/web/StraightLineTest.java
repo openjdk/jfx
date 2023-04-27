@@ -108,7 +108,6 @@ public class StraightLineTest {
 
     @Test public void testLine() {
         // JDK-8296590
-        assumeFalse(PlatformUtil.isLinux());
 
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
 
@@ -137,6 +136,7 @@ public class StraightLineTest {
                     "margin:0px;\n"+
                     "}\n" +
                     "div {\n" +
+                    "white-space:nowrap;\n"+
                     "padding:0px;\n"+
                     "width:150px;\n"+
                     "height:20px;\n"+
