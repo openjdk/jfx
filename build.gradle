@@ -4209,7 +4209,7 @@ task shims() {
 task sdk() {
     if (!IS_TEST_ONLY) {
         rootProject.getTasksByName("test", true).each { t ->
-            if (t.enabled) t.dependsOn(sdk)
+            if (t.enabled) t.dependsOn(shims)
         }
     } else {
         gradle.taskGraph.whenReady { theTaskGraph ->
