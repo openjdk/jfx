@@ -69,7 +69,7 @@ public class ItemSelector<T> {
         T v = toValue(x);
         return v;
     }
-    
+
     private Pair[] toPairs(Object[] pairs) {
         ArrayList<Pair> a = new ArrayList<>();
         for (int i = 0; i < pairs.length; ) {
