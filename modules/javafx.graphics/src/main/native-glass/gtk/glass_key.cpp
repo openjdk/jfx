@@ -319,11 +319,10 @@ jint glass_key_to_modifier(jint glassKey) {
 extern "C" {
 
 /*
- * Class:     com_sun_glass_ui_gtk_GtkApplication
- * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * The original getKeyCodeForChar implementation. Superseded
+ * by getCanKeyGenerateCharacter.
  */
-static jint internalGetKeyCodeForChar(jchar character)
+static jint getKeyCodeForChar(jchar character)
 {
     gunichar *ucs_char = g_utf16_to_ucs4(&character, 1, NULL, NULL, NULL);
     if (ucs_char == NULL) {
@@ -340,12 +339,6 @@ static jint internalGetKeyCodeForChar(jchar character)
     g_free(ucs_char);
 
     return gdk_keyval_to_glass(keyval);
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar
-  (JNIEnv *env, jobject jApplication, jchar character)
-{
-    return internalGetKeyCodeForChar(character);
 }
 
 /*
@@ -423,6 +416,31 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked
     return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
 }
 
+static bool vkCodeIsNumericKeypad(jint vkCode)
+{
+    switch (vkCode) {
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD0:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD1:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD2:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD3:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD4:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD5:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD6:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD7:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD8:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD9:
+        case com_sun_glass_events_KeyEvent_VK_DIVIDE:
+        case com_sun_glass_events_KeyEvent_VK_MULTIPLY:
+        case com_sun_glass_events_KeyEvent_VK_SUBTRACT:
+        case com_sun_glass_events_KeyEvent_VK_ADD:
+        case com_sun_glass_events_KeyEvent_VK_DECIMAL:
+        case com_sun_glass_events_KeyEvent_VK_SEPARATOR:
+            return true;
+        default:
+            return false;
+    }
+}
+
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCanGenerateCharacter
   (JNIEnv *env, jobject jApplication, jint hardwareCode, jint vkCode, jchar character)
 {
@@ -430,50 +448,58 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCanG
     (void)jApplication;
 
     if (hardwareCode < 0) {
-        if (vkCode != com_sun_glass_events_KeyEvent_VK_UNDEFINED)
-            return vkCode == internalGetKeyCodeForChar(character);
-        return false;
+        /*
+         * This key event didn't originate from this platform code (someone
+         * constructed a KeyEvent from whole cloth). Use the old code.
+         */
+        if (vkCode != com_sun_glass_events_KeyEvent_VK_UNDEFINED) {
+            return vkCode == getKeyCodeForChar(character);
+        }
+        return FALSE;
     }
 
     gint currentGroup = get_current_keyboard_group();
-    if (currentGroup < 0)
-        return false;
+    if (currentGroup < 0) {
+        return FALSE;
+    }
 
-    GdkKeymapKey* keys = nullptr;
-    guint* keyvals = nullptr;
-    gint count = 0;
-    bool result = false;
+    /*
+     * Walk through modifier states looking for the character.
+     */
+    static const GdkModifierType standardModifiers[] = {
+        (GdkModifierType) 0,
+        GDK_SHIFT_MASK,
+        GDK_MOD5_MASK, // AltGr
+        (GdkModifierType) ((int) GDK_MOD5_MASK | (int) GDK_SHIFT_MASK)
+    };
+    static const GdkModifierType keypadModifiers[] = {
+        GDK_MOD2_MASK
+    };
 
-    if (gdk_keymap_get_entries_for_keycode(gdk_keymap_get_default(), hardwareCode,
-                                           &keys, &keyvals, &count))
-    {
-        // For fixed-function keys (e.g Space or the keypad) we can get entries
-        // for group 0 even if that's not the current group.
-        gint searchGroup = currentGroup;
-        if (searchGroup != 0) {
-            bool allAreZero = true;
-            for (gint i = 0; i < count; ++i) {
-                if (keys[i].group != 0) {
-                    allAreZero = false;
-                    break;
-                }
-            }
-            if (allAreZero)
-                searchGroup = 0;
+    int numModifiers = 4;
+    const GdkModifierType* modifierArray = standardModifiers;
+    if (vkCodeIsNumericKeypad(vkCode)) {
+        numModifiers = 1;
+        modifierArray = keypadModifiers;
+    }
+
+    GdkKeymap* keymap = gdk_keymap_get_for_display(gdk_display_get_default());
+    for (int i = 0; i < numModifiers; ++i) {
+        guint keyValue = 0;
+        if (!gdk_keymap_translate_keyboard_state(keymap, hardwareCode, modifierArray[i],
+                                                 currentGroup, &keyValue, NULL, NULL, NULL)) {
+            // Failure at this modifier level means we'll fail at higher levels.
+            return FALSE;
         }
-        for (gint i = 0; i < count; ++i) {
-            if (keys[i].group == searchGroup) {
-                guint32 unicode = gdk_keyval_to_unicode(keyvals[i]);
-                if (unicode && unicode == character) {
-                    result = true;
-                    break;
-                }
+        if (keyValue != 0) {
+            guint32 unicode = gdk_keyval_to_unicode(keyValue);
+            if (unicode == character) {
+                return TRUE;
             }
         }
     }
-    g_free(keys);
-    g_free(keyvals);
-    return result;
+
+    return FALSE;
 }
 
 } // extern "C"

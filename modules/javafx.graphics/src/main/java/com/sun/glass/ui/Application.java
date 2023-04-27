@@ -756,8 +756,6 @@ public abstract class Application {
      * instances are expected to override this call.
      */
     protected boolean _getKeyCanGenerateCharacter(int hardwareCode, int vkCode, char c) {
-        // Platform classes can override this. Default implementation bridges to
-        // existing code.
         if (vkCode != com.sun.glass.events.KeyEvent.VK_UNDEFINED) {
             return getKeyCodeForChar(c) == vkCode;
         }
@@ -766,8 +764,9 @@ public abstract class Application {
 
     /**
      * Returns true if the key is capable of producing the given Unicode
-     * character. Either the vkCode will be something other than VK_UNDEFINED
-     * or the hardwareCode will be a positive number.
+     * character. The call will be provided enough information to identify the
+     * key, either a vkCode that is not VK_UNDEFINED or a hardwareCode that is
+     * non-negative or both.
      *
      * @param hardwareCode the platform-specific key identifier
      * @param vkCode the JavaFX key code

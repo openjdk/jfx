@@ -2175,6 +2175,9 @@ public class Scene implements EventTarget {
         traverse(node, Direction.NEXT, TraversalMethod.DEFAULT);
     }
 
+    /**
+     * @return true iff the event was consumed
+     */
     boolean processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {

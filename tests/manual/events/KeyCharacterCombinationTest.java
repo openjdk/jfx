@@ -101,13 +101,6 @@ public class KeyCharacterCombinationTest extends Application {
             return;
         }
 
-        // Keys that only generate characters with diacritics are not
-        // assigned key codes and will not match any combination.
-        if (lastPressed.getCode() == KeyCode.UNDEFINED) {
-            ignored("undefined key code for " + e.getCharacter());
-            return;
-        }
-
         String keyCodeName = lastPressed.getCode().getName();
 
         // Keys that generate control codes (like Tab and Delete) don't
@@ -116,18 +109,6 @@ public class KeyCharacterCombinationTest extends Application {
         // handled using KeyCodeCombinations instead.
         if (Character.isISOControl(e.getCharacter().charAt(0))) {
             ignored("control key");
-            return;
-        }
-
-        // Keys on the numeric keypad will not match on Windows or Linux.
-        // There are existing bug reports for this.
-        if (lastPressed.getCode().isKeypadKey() ||
-            lastPressed.getCode() == KeyCode.DIVIDE ||
-            lastPressed.getCode() == KeyCode.MULTIPLY ||
-            lastPressed.getCode() == KeyCode.ADD ||
-            lastPressed.getCode() == KeyCode.SUBTRACT ||
-            lastPressed.getCode() == KeyCode.DECIMAL) {
-            ignored("keypad code ");
             return;
         }
 

@@ -68,6 +68,7 @@ public abstract class View {
         public boolean handleKeyEvent(View view, long time, int action,
                 int keyCode, char[] keyChars, int modifiers, int hardwareCode)
         {
+            /* Event was not consumed */
             return false;
         }
         public void handleMenuEvent(View view, int x, int y, int xAbs,
@@ -970,6 +971,7 @@ public abstract class View {
         handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers, -1);
     }
 
+    // Returns true iff event was consumed
     protected boolean notifyKeyEx(int type, int keyCode, char[] keyChars, int modifiers, int hardwareCode) {
         return handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers, hardwareCode);
     }

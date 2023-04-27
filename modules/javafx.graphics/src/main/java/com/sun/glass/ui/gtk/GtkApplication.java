@@ -515,7 +515,11 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected int _getKeyCodeForChar(char c) {
+        // Linux has transitioned to getKeyCanGenerateCharacter so this
+        // should never be called.
+        return 0;
+    }
 
     @Override
     protected native boolean _getKeyCanGenerateCharacter(int hardwareCode, int vkCode, char c);
