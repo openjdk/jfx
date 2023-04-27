@@ -4288,7 +4288,7 @@ task zips() {
 }
 
 task all() {
-    dependsOn(sdk,publicExports,apps,perf,zips)
+    dependsOn(sdk, shims, publicExports, apps, perf, zips)
 }
 
 
