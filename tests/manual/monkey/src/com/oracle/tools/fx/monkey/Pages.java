@@ -64,7 +64,7 @@ public class Pages {
             new DemoPage("TextArea", TextAreaPage::new),
             new DemoPage("TextField", TextFieldPage::new),
             new DemoPage("TextFlow", TextFlowPage::new),
-            // TODO TitledPane
+            new DemoPage("TitledPane", TitledPanePage::new),
             // TODO ToggleButton
             // TODO ToolBar
             // TODO in tables: Cell, DateCell, IndexedCell* ?
