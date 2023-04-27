@@ -143,12 +143,6 @@ public class MonkeyTesterApp extends Application {
             stage.getScene().setNodeOrientation(v);
         });
 
-        CheckMenuItem usePreferred = new CheckMenuItem("Use Preferred Size");
-        usePreferred.setOnAction((ev) -> {
-            boolean on = usePreferred.isSelected();
-            TestPaneBase.usePreferredSize.set(on);
-        });
-
         MenuBar b = new MenuBar();
         // File
         FX.menu(b, "_File");
@@ -156,8 +150,6 @@ public class MonkeyTesterApp extends Application {
         // Page
         FX.menu(b, "_Page");
         FX.item(b, "Reload Current Page", this::reloadCurrentPage);
-        FX.separator(b);
-        FX.item(b, usePreferred);
         // Menu
         FX.menu(b, "_Menu");
         ToggleGroup g = new ToggleGroup();

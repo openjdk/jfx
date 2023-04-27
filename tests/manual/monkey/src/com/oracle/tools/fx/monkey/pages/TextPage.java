@@ -24,18 +24,19 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.Group;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.layout.Border;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import com.oracle.tools.fx.monkey.util.FontSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
 import com.oracle.tools.fx.monkey.util.Templates;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.TextSelector;
-import javafx.scene.Group;
-import javafx.scene.Parent;
-import javafx.scene.control.CheckBox;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 
 /**
  * Text Page
@@ -44,13 +45,12 @@ public class TextPage extends TestPaneBase {
     private final TextSelector textSelector;
     private final FontSelector fontSelector;
     private final CheckBox showChars;
-    private final Group textGroup;
+    private final ScrollPane scroll;
+    private final CheckBox wrap;
     private Text control;
 
     public TextPage() {
         setId("TextPage");
-
-        textGroup = new Group();
 
         textSelector = TextSelector.fromPairs(
             "textSelector",
@@ -66,7 +66,7 @@ public class TextPage extends TestPaneBase {
             updateText();
         });
 
-        CheckBox wrap = new CheckBox("set wrap width");
+        wrap = new CheckBox("wrap width");
         wrap.setId("wrap");
         wrap.selectedProperty().addListener((p) -> {
             updateWrap(wrap.selectedProperty().get());
@@ -79,9 +79,16 @@ public class TextPage extends TestPaneBase {
         p.option(fontSelector.fontNode());
         p.label("Font Size:");
         p.option(fontSelector.sizeNode());
+        p.option(wrap);
         p.option(showChars);
 
-        setContent(new BorderPane(textGroup));
+        scroll = new ScrollPane();
+        scroll.setBorder(Border.EMPTY);
+        scroll.setHbarPolicy(ScrollBarPolicy.AS_NEEDED);
+        scroll.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
+        scroll.setFitToWidth(false);
+
+        setContent(scroll);
         setOptions(p);
 
         textSelector.selectFirst();
@@ -94,22 +101,23 @@ public class TextPage extends TestPaneBase {
 
         control = new Text(text);
         control.setFont(f);
+        Group group = new Group(control);
+        scroll.setContent(group);
 
-        textGroup.getChildren().setAll(control);
+        updateWrap(wrap.isSelected());
+
         if (showChars.isSelected()) {
             Group g = ShowCharacterRuns.createFor(control);
-            textGroup.getChildren().add(g);
+            group.getChildren().add(g);
         }
     }
 
     protected void updateWrap(boolean on) {
         if (on) {
-            Parent p = textGroup.getParent();
-            if (p instanceof BorderPane bp) {
-                control.wrappingWidthProperty().bind(bp.widthProperty());
-            }
+            control.wrappingWidthProperty().bind(scroll.viewportBoundsProperty().map((b) -> b.getWidth()));
         } else {
             control.wrappingWidthProperty().unbind();
+            control.setWrappingWidth(0);
         }
     }
 }
