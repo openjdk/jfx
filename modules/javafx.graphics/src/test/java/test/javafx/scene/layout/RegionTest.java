@@ -1251,33 +1251,34 @@ public class RegionTest {
     }
 
     // Test for JDK-8255415
-    @Test public void snappingASnappedValueGivesTheSameValueTest() {
+    @Test
+    public void snappingASnappedValueGivesTheSameValueTest() {
         Stage stage = new Stage();
         Region region = new Region();
         Scene scene = new Scene(region);
         stage.setScene(scene);
 
-        double[] scales = new double[] {1.0, 1.25, 1.5, 1.75, 2.0, 1.374562997};
+        double[] scales = new double[] {1.0, 1.25, 1.5, 1.75, 2.0, 1.374562997, 20.0};
 
         // test snapSizeX/snapSizeY methods
 
         for (double scale : scales) {
             stage.setRenderScaleX(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = new Random().nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = region.snapSizeX(value);
                 double snapOfSnappedValue = region.snapSizeX(snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(snappedValue, snapOfSnappedValue, 0.0);
             }
         }
 
         for (double scale : scales) {
             stage.setRenderScaleY(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = new Random().nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = region.snapSizeY(value);
                 double snapOfSnappedValue = region.snapSizeY(snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(snappedValue, snapOfSnappedValue, 0.0);
             }
         }
 
@@ -1286,20 +1287,20 @@ public class RegionTest {
         for (double scale : scales) {
             stage.setRenderScaleX(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = new Random().nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = RegionShim.snapPortionX(region, value);
                 double snapOfSnappedValue = RegionShim.snapPortionX(region, snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(snappedValue, snapOfSnappedValue, 0.0);
             }
         }
 
         for (double scale : scales) {
             stage.setRenderScaleY(scale);
             for (int j = 0; j < 1000; j++) {
-                double value = new Random().nextDouble() * 100 - 50;
+                double value = new Random().nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = RegionShim.snapPortionY(region, value);
                 double snapOfSnappedValue = RegionShim.snapPortionY(region, snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+                assertEquals(snappedValue, snapOfSnappedValue, 0.0);
             }
         }
     }

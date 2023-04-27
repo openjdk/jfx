@@ -210,8 +210,6 @@ public class Region extends Parent {
 
     static Vec2d TEMP_VEC2D = new Vec2d();
 
-    private static final double EPSILON = 1e-14;
-
     /* *************************************************************************
      *                                                                         *
      * Static convenience methods for layout                                   *
@@ -295,30 +293,42 @@ public class Region extends Parent {
 
     /**
      * The value is floored for a given scale using Math.floor.
-     * This method guarantees that:
+     * When the absolute value of the given value multiplied by the
+     * current scale is less than 10^15, then this method guarantees that:
      *
-     * scaledFloor(scaledFloor(value, scale), scale) == scaledFloor(value, scale)
+     * <pre>scaledFloor(scaledFloor(value, scale), scale) == scaledFloor(value, scale)</pre>
+     *
+     * The limit is about 10^15 because double values will no longer be able to represent
+     * larger integers with exact precision beyond this limit.
      *
      * @param value The value that needs to be floored
      * @param scale The scale that will be used
      * @return value floored with scale
      */
     private static double scaledFloor(double value, double scale) {
-        return Math.floor(value * scale + EPSILON) / scale;
+        double d = value * scale;
+
+        return Math.floor(d + Math.ulp(d)) / scale;
     }
 
     /**
      * The value is ceiled with a given scale using Math.ceil.
-     * This method guarantees that:
+     * When the absolute value of the given value multiplied by the
+     * current scale is less than 10^15, then this method guarantees that:
      *
-     * scaledCeil(scaledCeil(value, scale), scale) == scaledCeil(value, scale)
+     * <pre>scaledCeil(scaledCeil(value, scale), scale) == scaledCeil(value, scale)</pre>
+     *
+     * The limit is about 10^15 because double values will no longer be able to represent
+     * larger integers with exact precision beyond this limit.
      *
      * @param value The value that needs to be ceiled
      * @param scale The scale that will be used
      * @return value ceiled with scale
      */
     private static double scaledCeil(double value, double scale) {
-        return Math.ceil(value * scale - EPSILON) / scale;
+        double d = value * scale;
+
+        return Math.ceil(d - Math.ulp(d)) / scale;
     }
 
     /**
@@ -384,9 +394,13 @@ public class Region extends Parent {
 
     /**
      * If snapToPixel is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. This method guarantees that:
+     * ceiled (negative values) with a scale. When the absolute value of the given value
+     * multiplied by the current scale is less than 10^15, then this method guarantees that:
      *
-     * snapPortionX(snapPortionX(value, snapToPixel), snapToPixel) == snapPortionX(value, snapToPixel)
+     * <pre>snapPortionX(snapPortionX(value, snapToPixel), snapToPixel) == snapPortionX(value, snapToPixel)</pre>
+     *
+     * The limit is about 10^15 because double values will no longer be able to represent
+     * larger integers with exact precision beyond this limit.
      *
      * @param value The value that needs to be snapped
      * @param snapToPixel Whether to snap to pixel
@@ -394,21 +408,21 @@ public class Region extends Parent {
      */
     private double snapPortionX(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
+
         double s = getSnapScaleX();
-        value *= s;
-        if (value > 0) {
-            value = Math.max(1, Math.floor(value + EPSILON));
-        } else {
-            value = Math.min(-1, Math.ceil(value - EPSILON));
-        }
-        return value / s;
+
+        return value > 0 ? scaledFloor(value, s) : scaledCeil(value, s);
     }
 
     /**
      * If snapToPixel is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. This method guarantees that:
+     * ceiled (negative values) with a scale. When the absolute value of the given value
+     * multiplied by the current scale is less than 10^15, then this method guarantees that:
      *
-     * snapPortionY(snapPortionY(value, snapToPixel), snapToPixel) == snapPortionY(value, snapToPixel)
+     * <pre>snapPortionY(snapPortionY(value, snapToPixel), snapToPixel) == snapPortionY(value, snapToPixel)</pre>
+     *
+     * The limit is about 10^15 because double values will no longer be able to represent
+     * larger integers with exact precision beyond this limit.
      *
      * @param value The value that needs to be snapped
      * @param snapToPixel Whether to snap to pixel
@@ -416,14 +430,10 @@ public class Region extends Parent {
      */
     private double snapPortionY(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
+
         double s = getSnapScaleY();
-        value *= s;
-        if (value > 0) {
-            value = Math.max(1, Math.floor(value + EPSILON));
-        } else {
-            value = Math.min(-1, Math.ceil(value - EPSILON));
-        }
-        return value / s;
+
+        return value > 0 ? scaledFloor(value, s) : scaledCeil(value, s);
     }
 
     double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
