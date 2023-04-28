@@ -28,6 +28,8 @@ package test.robot.javafx.scene;
 import java.util.concurrent.CountDownLatch;
 
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.tk.Toolkit;
+
 import javafx.application.Application;
 import javafx.scene.input.MouseButton;
 import javafx.application.Platform;
@@ -75,8 +77,6 @@ public class SliderTooltipNPETest {
 
     @Test
     public void testSliderTooltipNPE() throws Throwable {
-        assumeTrue(!PlatformUtil.isLinux()); // JDK-8304922
-
         Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
         dragSliderAfterTooltipDisplayed(DRAG_DISTANCE);
         if (exception != null) {
@@ -94,6 +94,7 @@ public class SliderTooltipNPETest {
                                 slider.getLayoutX() + slider.getLayoutBounds().getWidth()/2),
                             (int)(scene.getWindow().getY() + scene.getY() +
                                 slider.getLayoutY() + slider.getLayoutBounds().getHeight()/2));
+            Toolkit.getToolkit().firePulse();
         });
 
         Util.waitForLatch(tooltipLatch, 5, "Timeout waiting for tooltip to display");
