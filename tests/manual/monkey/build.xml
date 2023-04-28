@@ -50,7 +50,7 @@ This build requires javafx.home property, pointing to JavaFX SDK (20+) directory
 	</target>
 
 
-	<!-- copy non-java resources -->
+	<!-- copies non-java resources -->
 	<target name="copy-resources" depends="init">
 		<copy todir="build/classes">
 			<fileset dir="src" excludes="**/*.java" />
@@ -58,7 +58,7 @@ This build requires javafx.home property, pointing to JavaFX SDK (20+) directory
 	</target>
 
 
-	<!-- unpack library jars -->
+	<!-- unpacks the library jars -->
 	<target name="unpack-jars" depends="init">
 		<unzip dest="build/classes">
 			<path refid="libs" />
@@ -68,7 +68,7 @@ This build requires javafx.home property, pointing to JavaFX SDK (20+) directory
 	</target>
 
 
-	<!-- build app jar -->
+	<!-- builds the app jar -->
 	<target name="make-jar" depends="compile, copy-resources, unpack-jars">
 		<delete file="build/jars/${TARGET}.jar" />
 
@@ -81,19 +81,16 @@ This build requires javafx.home property, pointing to JavaFX SDK (20+) directory
 	</target>
 
 
-	<!-- generate digest -->
-	<target name="sha-jar" depends="make-jar">
-		<checksum file="build/jars/${TARGET}.jar" algorithm="sha-256" forceoverwrite="yes" fileext=".sha256.txt" />
-	</target>
-
-
-	<!-- copy jar to base dir -->
+	<!-- copies jar to base dir -->
 	<target name="copy-jar" depends="make-jar">
 		<copy file="build/jars/${TARGET}.jar" todir="dist/" />
 	</target>
 
 
-	<!-- build all -->
-	<target name="build-all" depends="compile, copy-resources, make-jar, sha-jar, copy-jar" />
+	<!-- builds all -->
+	<target name="build-all" depends="compile, copy-resources, make-jar, copy-jar" />
 
+	
+	<!-- alias to build-all target, to make it compatible with the rest of the apps -->
+	<target name="jar" depends="build-all" />
 </project>

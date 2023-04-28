@@ -28,7 +28,8 @@ import java.util.function.Supplier;
 import javafx.scene.layout.Pane;
 
 /**
- *
+ * Descriptor for an individual test (a "demo").
+ * Encapsulates the title and a generator that creates the Pane.
  */
 public class DemoPage {
     private final String title;

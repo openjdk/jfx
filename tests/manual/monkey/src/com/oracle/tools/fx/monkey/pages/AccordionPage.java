@@ -32,7 +32,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 
 /**
- *
+ * Accordion Page.
  */
 public class AccordionPage extends TestPaneBase {
     private final Accordion accordion;

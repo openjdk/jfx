@@ -28,7 +28,6 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
 
 /**
  * Option Pane - a vertical option sheet.
@@ -39,9 +38,6 @@ public class OptionPane extends GridPane {
     private static final Insets MARGIN = new Insets(2, 4, 2, 4);
 
     public OptionPane() {
-        // no such thing
-        // https://stackoverflow.com/questions/20454021/how-to-set-padding-between-columns-of-a-javafx-gridpane
-        // setVGap(2);
     }
 
     public void label(String text) {

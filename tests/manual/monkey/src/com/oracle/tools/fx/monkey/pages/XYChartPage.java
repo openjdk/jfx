@@ -45,7 +45,7 @@ import javafx.scene.layout.BorderPane;
 /**
  * Tests various XYCharts
  */
-public class ChartPage extends TestPaneBase {
+public class XYChartPage extends TestPaneBase {
     public enum Mode {
         AREA,
         BAR,
@@ -60,8 +60,8 @@ public class ChartPage extends TestPaneBase {
     private XYChart<?, Number> chart;
     protected static Random rnd = new Random();
 
-    public ChartPage() {
-        setId("ChartPage");
+    public XYChartPage() {
+        setId("XYChartPage");
 
         modeSelector = new ComboBox<>();
         modeSelector.setId("modeSelector");

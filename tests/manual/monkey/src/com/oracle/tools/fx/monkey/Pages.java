@@ -36,7 +36,6 @@ public class Pages {
             // TODO Button
             // TODO ButtonBar
             new DemoPage("Canvas", CanvasPage::new),
-            new DemoPage("Chart", ChartPage::new),
             // TODO CheckBox
             new DemoPage("ChoiceBox", ChoiceBoxPage::new),
             new DemoPage("ComboBox", ComboBoxPage::new),
@@ -51,6 +50,7 @@ public class Pages {
             // TODO MenuBar
             // TODO MenuButton
             // TODO Pagination
+            // TODO PieChart
             // TODO ProgressIndicator
             new DemoPage("ScrollBar", ScrollBarPage::new),
             // TODO ScrollPane
@@ -71,10 +71,8 @@ public class Pages {
             new DemoPage("TreeTableView", TreeTableViewPage::new),
             new DemoPage("TreeView", TreeViewPage::new),
             // TODO VBox
-
-            // bugs
-            //new DemoPage("⚑ Dual Focus JDK-8292933", DualFocusPage::new),
-            //new DemoPage("⚑ DatePicker in Alert", DatePickerPage::new),
+            // TODO WebView
+            new DemoPage("X/Y Charts", XYChartPage::new),
         };
     }
 }

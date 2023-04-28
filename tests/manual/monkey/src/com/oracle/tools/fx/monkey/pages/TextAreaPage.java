@@ -77,7 +77,6 @@ public class TextAreaPage extends TestPaneBase {
         p.option(editable);
         p.label("Prompt:");
         p.option(promptChoice.node());
-        p.label("Formatter: TODO");
 
         setContent(control);
         setOptions(p);

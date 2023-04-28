@@ -56,14 +56,11 @@ public class FxSettingsFileProvider implements ISettingsProvider {
     @Override
     public void load() throws IOException {
         if (file.exists() && file.isFile()) {
-            BufferedReader rd = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), Charset.forName("utf-8")));
-            try {
+            Charset cs = Charset.forName("utf-8");
+            try (BufferedReader rd = new BufferedReader(new InputStreamReader(new FileInputStream(file), cs))) {
                 synchronized (data) {
                     read(rd);
                 }
-            } finally {
-                rd.close();
             }
         }
     }
@@ -74,13 +71,11 @@ public class FxSettingsFileProvider implements ISettingsProvider {
             file.getParentFile().mkdirs();
         }
 
-        Writer wr = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), Charset.forName("utf-8")));
-        try {
+        Charset cs = Charset.forName("utf-8");
+        try (Writer wr = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), cs))) {
             synchronized (data) {
                 write(wr);
             }
-        } finally {
-            wr.close();
         }
     }
 

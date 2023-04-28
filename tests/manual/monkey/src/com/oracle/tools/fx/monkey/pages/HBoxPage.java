@@ -409,7 +409,7 @@ public class HBoxPage extends TestPaneBase {
         }
 
         box.setPadding(new Insets(0, 0, 10, 0));
-        box.setBackground(FX.background(Color.DARKGRAY));
+        box.setBackground(Background.fill(Color.DARKGRAY));
 
         return box;
     }
@@ -420,7 +420,7 @@ public class HBoxPage extends TestPaneBase {
 
     protected Region addItem(HBox box) {
         boolean even = (box.getChildren().size() % 2) == 0;
-        Background bg = FX.background(even ? Color.GRAY : Color.LIGHTGRAY);
+        Background bg = Background.fill(even ? Color.GRAY : Color.LIGHTGRAY);
 
         Region r = new Region();
         r.setPrefWidth(30);
