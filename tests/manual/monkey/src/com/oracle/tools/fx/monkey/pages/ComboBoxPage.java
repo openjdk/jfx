@@ -24,16 +24,18 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- *
+ * ComboBox Page
  */
 public class ComboBoxPage extends TestPaneBase {
     private ComboBox control;
@@ -46,13 +48,10 @@ public class ComboBoxPage extends TestPaneBase {
 
         VBox b = new VBox();
         b.getChildren().add(control);
-        setContent(b);
 
-        addButton("Set Converter", () -> {
+        Button setConverterButton = new Button("Set Converter");
+        setConverterButton.setOnAction((ev) -> {
             control.setConverter(new StringConverter() {
-                int toStringCounter = 0;
-                int fromStringCounter = 0;
-
                 @Override
                 public String toString(Object t) {
                     return "toString-" + t;
@@ -65,7 +64,8 @@ public class ComboBoxPage extends TestPaneBase {
             });
         });
 
-        addButton("Change Item Count", () -> {
+        Button changeCountButton = new Button("Change Item Count");
+        changeCountButton.setOnAction((x) -> {
             new Timeline(
                 new KeyFrame(Duration.seconds(1.0), (ev) -> {
                     System.out.println("2");
@@ -80,5 +80,12 @@ public class ComboBoxPage extends TestPaneBase {
                     control.setVisibleRowCount(2);
                 })).play();
         });
+
+        OptionPane p = new OptionPane();
+        p.option(setConverterButton);
+        p.option(changeCountButton);
+
+        setContent(b);
+        setOptions(p);
     }
 }

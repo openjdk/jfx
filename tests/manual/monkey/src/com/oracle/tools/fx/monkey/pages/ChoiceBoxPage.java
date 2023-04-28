@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,25 +24,16 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import java.util.Locale;
+import javafx.scene.control.ChoiceBox;
 import com.oracle.tools.fx.monkey.util.ItemSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import javafx.scene.control.ChoiceBox;
 
 /**
  * ChoiceBox Page
  */
 public class ChoiceBoxPage extends TestPaneBase {
-    enum TextChoice {
-        NULL,
-        SHORT,
-        LONG,
-        RIGHT_TO_LEFT,
-    }
-
     private ChoiceBox<String> control;
-    private Locale defaultLocale;
 
     public ChoiceBoxPage() {
         setId("ChoiceBoxPage");
