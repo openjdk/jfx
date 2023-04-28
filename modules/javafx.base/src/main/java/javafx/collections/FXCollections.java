@@ -667,10 +667,11 @@ public class FXCollections {
     }
 
     /**
-     * Sorts the provided observable list as specified in {@link java.util.Collections#sort(List) Collections.sort(List)}.
+     * Sorts the provided observable list as specified in
+     * {@link java.util.Collections#sort(List) Collections.sort(List)}.
      * Fires only <b>one</b> change notification on the list.
      *
-     * @param <T> the element type of the list
+     * @param <T> the type of elements in this list
      * @param list the list to be sorted
      */
     public static <T extends Comparable<? super T>> void sort(ObservableList<T> list) {
@@ -682,7 +683,7 @@ public class FXCollections {
      * {@link java.util.Collections#sort(List, Comparator) Collections.sort(List, Comparator)}.
      * Fires only <b>one</b> change notification on the list.
      *
-     * @param <T> the element type of the list
+     * @param <T> the type of elements in this list
      * @param list the list to sort
      * @param comparator the comparator to determine the order of the list. A {@code null} value indicates that the
      *      elements' <i>natural ordering</i> should be used.
