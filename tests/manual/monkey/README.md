@@ -14,7 +14,8 @@ https://jdk.java.net/javafx21/
 
 ## Build
 
-The tool uses `ant` to build a non-modular JAR.  You'll need to specify the path to JavaFX SDK 20+:
+The tool uses `ant` to build a non-modular JAR.  You'll need to specify the path to JavaFX SDK 20+
+(using absolute path, the script apparently does not understand ~ symbols):
 ```
 ant -Djavafx.home=<JAVAFX>
 ```
@@ -24,10 +25,10 @@ ant -Djavafx.home=<JAVAFX>
 
 The tool requires JDK 17+ and JavaFX 20+.
 
-To launch, specify the path to the javaFX SDK lib/ folder on the command line, example:
+To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 
 ```
-java -p javafx-sdk-21/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
+java -p /PATH/javafx-sdk-21/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
 ```
 
 
