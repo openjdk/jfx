@@ -34,7 +34,7 @@ import javafx.collections.ObservableList;
  * A helper and marker interface used for {@code ObservableList}s that implement sorting algorithms that report
  * the sort as one change.
  *
- * @param <E> the element type of the list
+ * @param <E> the type of elements in this list
  * @see FXCollections#sort(ObservableList, Comparator)
  */
 public interface SortableList<E> extends ObservableList<E> {
