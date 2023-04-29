@@ -855,11 +855,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         private int oldCount = 0;
 
         @Override protected void invalidated() {
-            int oldIndex = computeCurrentIndex();
-            double oldOffset = computeViewportOffset(getPosition());
+            int oldIndex = computeCurrentIndex(oldCount);
+            double oldOffset = computeViewportOffset(getPosition(), oldCount);
             int cellCount = get();
             resetSizeEstimates();
-            recalculateEstimatedSize();
+            recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT, oldIndex, oldOffset);
 
             boolean countChanged = oldCount != cellCount;
             double boff = computeBaseOffset(oldIndex);
@@ -2895,15 +2895,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * performance.
      */
     private double computeViewportOffset(double position) {
+        return computeViewportOffset(position, getCellCount());
+    }
+
+    private double computeViewportOffset(double position, int localCellCount) {
         double p = com.sun.javafx.util.Utils.clamp(0, position, 1);
         double bound = 0d;
-        double estSize = estimatedSize / getCellCount();
+        double estSize = estimatedSize / localCellCount;
         double maxOff = estimatedSize - getViewportLength();
         if ((maxOff > 0) && (absoluteOffset > maxOff)) {
             return maxOff - absoluteOffset;
         }
 
-        for (int i = 0; i < getCellCount(); i++) {
+        for (int i = 0; i < localCellCount; i++) {
             double h = getCellSize(i);
             if (h < 0) h = estSize;
             if (bound + h > absoluteOffset) {
@@ -2995,8 +2999,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private int computeCurrentIndex() {
+        return computeCurrentIndex(getCellCount());
+    }
+
+    private int computeCurrentIndex(int currentCellCount) {
         double total = 0;
-        int currentCellCount = getCellCount();
         double estSize = estimatedSize / currentCellCount;
         for (int i = 0; i < currentCellCount; i++) {
             double nextSize = getCellSize(i);

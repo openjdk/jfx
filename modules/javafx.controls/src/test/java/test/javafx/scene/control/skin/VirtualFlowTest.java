@@ -1243,11 +1243,13 @@ public class VirtualFlowTest {
         // cell 33 should be at (32 x 25 + 1 x 100) - 911 = -11
         assertEquals("Wrong first cell position", -11d, cellPosition, 0d);
 
-        flow.setCellCount(101);
-        pulse();
-        vc = flow.getCell(33);
-        cellPosition = flow.getCellPosition(vc);
-        assertEquals("First cell position changed after adding cell on large irregular list", -11d, cellPosition, 0d);
+        for (int i = 1; i < 10; i++) {
+            flow.setCellCount(100 + i);
+            pulse();
+            vc = flow.getCell(33);
+            cellPosition = flow.getCellPosition(vc);
+            assertEquals("First cell position changed after adding " + i + " cells on large irregular list", -11d, cellPosition, 0d);
+        }
     }
 
 
