@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -749,6 +749,32 @@ public abstract class Application {
      */
     public static int getKeyCodeForChar(char c) {
         return application._getKeyCodeForChar(c);
+    }
+
+    /**
+     * The default implementation bridges to the existing getKeyCodeForChar call. Platform
+     * instances are expected to override this call.
+     */
+    protected boolean _getKeyCanGenerateCharacter(int hardwareCode, int vkCode, char c) {
+        if (vkCode != com.sun.glass.events.KeyEvent.VK_UNDEFINED) {
+            return getKeyCodeForChar(c) == vkCode;
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if the key is capable of producing the given Unicode
+     * character. The call will be provided enough information to identify the
+     * key, either a vkCode that is not VK_UNDEFINED or a hardwareCode that is
+     * non-negative or both.
+     *
+     * @param hardwareCode the platform-specific key identifier
+     * @param vkCode the JavaFX key code
+     * @param c the character
+     * @return true if the key can generate the character
+     */
+    public final boolean getKeyCanGenerateCharacter(int hardwareCode, int vkCode, char c) {
+        return _getKeyCanGenerateCharacter(hardwareCode, vkCode, c);
     }
 
     protected int _isKeyLocked(int keyCode) {

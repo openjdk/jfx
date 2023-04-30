@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,8 +65,11 @@ public abstract class View {
     public static class EventHandler {
         public void handleViewEvent(View view, long time, int type) {
         }
-        public void handleKeyEvent(View view, long time, int action,
-                int keyCode, char[] keyChars, int modifiers) {
+        public boolean handleKeyEvent(View view, long time, int action,
+                int keyCode, char[] keyChars, int modifiers, int hardwareCode)
+        {
+            /* Event was not consumed */
+            return false;
         }
         public void handleMenuEvent(View view, int x, int y, int xAbs,
                 int yAbs, boolean isKeyboardTrigger) {
@@ -536,11 +539,13 @@ public abstract class View {
         }
     }
 
-    private void handleKeyEvent(long time, int action,
-            int keyCode, char[] keyChars, int modifiers) {
+    private boolean handleKeyEvent(long time, int action,
+            int keyCode, char[] keyChars, int modifiers, int hardwareCode) {
         if (this.eventHandler != null) {
-            this.eventHandler.handleKeyEvent(this, time, action, keyCode, keyChars, modifiers);
+            return this.eventHandler.handleKeyEvent(this, time, action, keyCode,
+                                                    keyChars, modifiers, hardwareCode);
         }
+        return false;
     }
 
     private void handleMouseEvent(long time, int type, int button, int x, int y,
@@ -963,7 +968,12 @@ public abstract class View {
     }
 
     protected void notifyKey(int type, int keyCode, char[] keyChars, int modifiers) {
-        handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers);
+        handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers, -1);
+    }
+
+    // Returns true iff event was consumed
+    protected boolean notifyKeyEx(int type, int keyCode, char[] keyChars, int modifiers, int hardwareCode) {
+        return handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers, hardwareCode);
     }
 
     protected void notifyInputMethod(String text, int[] clauseBoundary,

@@ -343,21 +343,46 @@ BOOL IsExtendedKey(UINT vkey) {
 }
 
 /*
- * Class:     Java_com_sun_glass_ui_win_WinApplication
- * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Class:     com_sun_glass_ui_win_WinApplication
+ * Method:    _getKeyCanGenerateCharacter
+ * Signature: (IIC)Z
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar
-  (JNIEnv * env, jobject jApplication, jchar c)
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCanGenerateCharacter
+  (JNIEnv *env, jobject jApplication, jint hardwareCode, jint vkCode, jchar character)
 {
-    BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c,
-            ::GetKeyboardLayout(GlassApplication::GetMainThreadId()));
+    HKL layout = ::GetKeyboardLayout(GlassApplication::GetMainThreadId());
 
-    if (!vkey || vkey == 0xFF) {
-        return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    // Normally Windows doesn't generate a character for the Delete key but the
+    // ViewContainer synthesizes one
+    if (vkCode == com_sun_glass_events_KeyEvent_VK_DELETE) {
+        return character == 0x7F;
     }
 
-    return WindowsKeyToJavaKey(vkey);
+    // This will match keys on the numeric keypad as well as characters on the
+    // main keyboard that don't require modifiers
+    if (hardwareCode >= 0) {
+        UINT keyChar = ::MapVirtualKeyEx(UINT(hardwareCode), 2, layout);
+        // Filter out dead keys
+        BOOL isDead = (keyChar & 0x80000000) != 0;
+        if (!isDead && keyChar == character) {
+            return TRUE;
+        }
+    }
+
+    // Search for the character on the main keyboard
+    BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)character, layout);
+
+    if (!vkey || vkey == 0xFF) {
+        return FALSE;
+    }
+
+    // Compare to the hardware code if present
+    if (hardwareCode >= 0) {
+        return hardwareCode == vkey;
+    }
+
+    // Compare Java key codes
+    return WindowsKeyToJavaKey(vkey) == vkCode;
 }
 
 /*

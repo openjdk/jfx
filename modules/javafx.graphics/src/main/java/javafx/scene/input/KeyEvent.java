@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.scene.input.KeyEventHelper;
+
 import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
@@ -134,6 +136,7 @@ public final class KeyEvent extends InputEvent {
         this.controlDown = controlDown;
         this.altDown = altDown;
         this.metaDown = metaDown;
+        this.hardwareCode = -1;
     }
 
     /**
@@ -162,6 +165,7 @@ public final class KeyEvent extends InputEvent {
         this.controlDown = controlDown;
         this.altDown = altDown;
         this.metaDown = metaDown;
+        this.hardwareCode = -1;
     }
 
     /**
@@ -378,6 +382,32 @@ public final class KeyEvent extends InputEvent {
         return (EventType<KeyEvent>) super.getEventType();
     }
 
+    /**
+     * The hardware key code which is private to the implementation.
+     */
+    private int hardwareCode;
 
+    int getHardwareCode() {
+        return hardwareCode;
+    }
 
+    void setHardwareCode(int newCode) {
+        hardwareCode = newCode;
+    }
+
+    static {
+        KeyEventHelper.setKeyEventAccessor(
+            new KeyEventHelper.KeyEventAccessor() {
+                @Override
+                public void setHardwareCode(KeyEvent keyEvent, int hardwareCode) {
+                    keyEvent.setHardwareCode(hardwareCode);
+                }
+
+                @Override
+                public int getHardwareCode(KeyEvent keyEvent) {
+                    return keyEvent.getHardwareCode();
+                }
+            }
+        );
+    }
 }

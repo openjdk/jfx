@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -376,7 +376,14 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected int _getKeyCodeForChar(char c) {
+        // This platform has migrated to getKeyCanGenerateCharacter
+        // so getKeyCodeForChar will no longer be called.
+        return 0;
+    }
+
+    @Override
+    protected native boolean _getKeyCanGenerateCharacter(int hardwareCode, int vkCode, char c);
 
     @Override
     protected native int _isKeyLocked(int keyCode);

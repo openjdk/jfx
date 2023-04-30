@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -171,8 +171,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1initIDs
     ASSERT(javaIDs.View.notifyRepaint);
     if (env->ExceptionCheck()) return;
 
-     javaIDs.View.notifyKey = env->GetMethodID(cls, "notifyKey", "(II[CI)V");
-     ASSERT(javaIDs.View.notifyKey);
+     javaIDs.View.notifyKeyEx = env->GetMethodID(cls, "notifyKeyEx", "(II[CII)Z");
+     ASSERT(javaIDs.View.notifyKeyEx);
      if (env->ExceptionCheck()) return;
 
      javaIDs.View.notifyMouse = env->GetMethodID(cls, "notifyMouse", "(IIIIIIIZZ)V");
