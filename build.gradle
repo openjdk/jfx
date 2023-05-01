@@ -3465,6 +3465,7 @@ project(":web") {
         implementation project(":graphics")
         implementation project(":controls")
         implementation project(":media")
+        testImplementation project(":base").sourceSets.test.output
     }
 
     compileJava.dependsOn updateCacheIfNeeded
