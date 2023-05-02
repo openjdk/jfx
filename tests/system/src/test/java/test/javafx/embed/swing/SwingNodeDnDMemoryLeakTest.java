@@ -71,9 +71,7 @@ public class SwingNodeDnDMemoryLeakTest {
             testSwingNodeObjectsInStage();
         });
 
-        for (WeakReference<SwingNode> ref : weakRefArrSN) {
-            JMemoryBuddy.assertCollectable(ref);
-        }
+        JMemoryBuddy.assertCollectable(weakRefArrSN);
     }
 
     private void testSwingNodeObjectsInStage() {

@@ -79,13 +79,8 @@ public class SwingNodeMemoryLeakTest {
 
         SwingUtilities.invokeAndWait(() -> Util.sleep(500));
 
-        for (WeakReference<SwingNode> ref : weakRefArrSN) {
-            JMemoryBuddy.assertCollectable(ref);
-        }
-
-        for (WeakReference<JLabel> ref : weakRefArrJL) {
-            JMemoryBuddy.assertCollectable(ref);
-        }
+        JMemoryBuddy.assertCollectable(weakRefArrSN);
+        JMemoryBuddy.assertCollectable(weakRefArrJL);
     }
 
     private void testSwingNodeObjectsInStage() {

@@ -77,10 +77,6 @@ public abstract class FocusedWindowTestBase {
 
         closedFocusedStage.requestFocus();
         closedFocusedStage = null;
-        assertCollectable(closedFocusedStageWeak);
-    }
-
-    public static void assertCollectable(WeakReference weakReference) throws Exception {
-        JMemoryBuddy.assertCollectable(weakReference);
+        JMemoryBuddy.assertCollectable(closedFocusedStageWeak);
     }
 }

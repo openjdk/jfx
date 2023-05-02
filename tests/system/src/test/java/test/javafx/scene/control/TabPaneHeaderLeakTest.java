@@ -94,7 +94,6 @@ public class TabPaneHeaderLeakTest {
             root.getChildren().clear();
         });
 
-        JMemoryBuddy.assertCollectable(tabWeakRef);
-        JMemoryBuddy.assertCollectable(textFieldWeakRef);
+        JMemoryBuddy.assertCollectable(tabWeakRef, textFieldWeakRef);
     }
 }

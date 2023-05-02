@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Objects;
@@ -88,6 +89,25 @@ public class JMemoryBuddy {
             AssertCollectable assertCollectable = new AssertCollectable(weakReference);
             createHeapDump();
             throw new AssertionError("Content of WeakReference was not collected. content: " + weakReference.get());
+        }
+    }
+
+    public static void assertCollectable(WeakReference[] weakReferences) {
+        for (WeakReference wr : weakReferences) {
+            assertCollectable(wr);
+        }
+    }
+
+    public static <T> void assertCollectable(ArrayList<WeakReference<T>> weakReferences) {
+        for (WeakReference<T> wr : weakReferences) {
+            assertCollectable(wr);
+        }
+    }
+
+    public static void assertCollectable(WeakReference weakReference, WeakReference... otherWeakReferences) {
+        assertCollectable(weakReference);
+        for (WeakReference wr : otherWeakReferences) {
+            assertCollectable(wr);
         }
     }
 
