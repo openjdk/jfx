@@ -76,11 +76,6 @@
 
 #TEST_ONLY = true
 
-# Same as TEST_ONLY, excpet that the name and values have opposite meaning.
-# Recommended to use TEST_ONLY instead of this property.
-
-#BUILD_SDK_FOR_TEST = false
-
 # Specifies whether to do a full test run or a "smoke test" run. By default we
 # do a smoke test run which excludes all tests that show a window or play media.
 # Certain long running tests might also be excluded when this is not set.
