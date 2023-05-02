@@ -525,7 +525,7 @@ public class VBox extends Pane {
                 if (Math.abs(available) < pixelSize) {
                     break outer;
                 }
-                if (Math.abs(change) <= Math.abs(portion)) {
+                if (Math.abs(change) < Math.abs(portion)) {
                     temp[i] = -1;
                     adjustingNumber--;
                 }
