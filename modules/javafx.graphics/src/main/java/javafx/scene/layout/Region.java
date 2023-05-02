@@ -259,7 +259,7 @@ public class Region extends Parent {
         return height - snapSpaceY(margin.getTop(), isSnapToPixel) - snapSpaceY(margin.getBottom(), isSnapToPixel);
     }
 
-    private static double getSnapScaleX(Node n) {
+    static double getSnapScaleX(Node n) {
         return _getSnapScaleXimpl(n.getScene());
     }
     private static double _getSnapScaleXimpl(Scene scene) {
@@ -269,7 +269,7 @@ public class Region extends Parent {
         return window.getRenderScaleX();
     }
 
-    private static double getSnapScaleY(Node n) {
+    static double getSnapScaleY(Node n) {
         return _getSnapScaleYimpl(n.getScene());
     }
     private static double _getSnapScaleYimpl(Scene scene) {
