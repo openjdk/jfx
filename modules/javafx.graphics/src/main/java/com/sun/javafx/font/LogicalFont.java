@@ -203,41 +203,37 @@ public class LogicalFont implements CompositeFontResource {
         return slot0FontResource;
     }
 
-    private ArrayList<String> linkedFontFiles;
-    private ArrayList<String> linkedFontNames;
-    private FontResource[] fallbacks;
-    private FontResource[] nativeFallbacks;
+    volatile private String[] linkedFontNames;
+    volatile private String[] linkedFontFiles;
+    volatile private FontResource[] fallbacks;
+    volatile private FontResource[] nativeFallbacks;
 
     private void getLinkedFonts() {
         if (fallbacks == null) {
-            ArrayList<String>[] linkedFontInfo;
-            if (PrismFontFactory.isLinux) {
-                FontConfigManager.FcCompFont font =
-                    FontConfigManager.getFontConfigFont(familyName,
-                                                        isBold, isItalic);
-                linkedFontFiles = FontConfigManager.getFileNames(font, true);
-                linkedFontNames = FontConfigManager.getFontNames(font, true);
-            } else {
-                linkedFontInfo = PrismFontFactory.getLinkedFonts("Tahoma", true);
-                linkedFontFiles = linkedFontInfo[0];
-                linkedFontNames = linkedFontInfo[1];
-            }
-            fallbacks = new FontResource[linkedFontFiles.size()];
+            PrismFontFactory factory = PrismFontFactory.getFontFactory();
+            FontFallbackInfo fallbackInfo = factory.getFallbacks(getSlot0Resource());
+            linkedFontNames = fallbackInfo.getFontNames();
+            linkedFontFiles = fallbackInfo.getFontFiles();
+            fallbacks       = fallbackInfo.getFonts();
         }
     }
 
     @Override
     public int getNumSlots() {
         getLinkedFonts();
-        int num = linkedFontFiles.size();
+        int num = fallbacks.length;
         if (nativeFallbacks != null) {
             num += nativeFallbacks.length;
         }
         return num + 1;
     }
 
-    @Override
-    public int getSlotForFont(String fontName) {
+    private int getSlotForFontNoCreate(String fontName) {
+
+        if (fontName.equals(getSlot0Resource().getFullName())) {
+            return 0;
+        }
+
         getLinkedFonts();
         int i = 1;
         for (String linkedFontName : linkedFontNames) {
@@ -254,8 +250,36 @@ public class LogicalFont implements CompositeFontResource {
                 i++;
             }
         }
+        return -1;
+    }
 
-        if (i >= 0x7E) {
+    @Override
+    public int getSlotForFont(String fontName) {
+        int slot = getSlotForFontNoCreate(fontName);
+        if (slot >= 0) {
+            return slot;
+        }
+
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        FontResource fr = factory.getFontResource(fontName, null, false);
+        if (fr == null) {
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("\t Font name not supported \"" + fontName + "\".");
+            }
+            return -1;
+        }
+        slot = getSlotForFontNoCreate(fr.getFullName());
+        if (slot >= 0) {
+            return slot;
+        }
+
+        /* Add the font to the list of native fallbacks */
+        return addNativeFallback(fr);
+    }
+
+    private int addNativeFallback(FontResource fr) {
+        int ns = getNumSlots();
+        if (ns >= 0x7E) {
             /* There are 8bits (0xFF) reserved in a glyph code to store the slot
              * number. The first bit cannot be set to avoid negative values
              * (leaving 0x7F). The extra -1 (leaving 0x7E) is to account for
@@ -266,15 +290,6 @@ public class LogicalFont implements CompositeFontResource {
             }
             return -1;
         }
-        PrismFontFactory factory = PrismFontFactory.getFontFactory();
-        FontResource fr = factory.getFontResource(fontName, null, false);
-        if (fr == null) {
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("\t Font name not supported \"" + fontName + "\".");
-            }
-            return -1;
-        }
-
         /* Add the font to the list of native fallbacks */
         FontResource[] tmp;
         if (nativeFallbacks == null) {
@@ -286,7 +301,19 @@ public class LogicalFont implements CompositeFontResource {
         tmp[tmp.length - 1] = fr;
         nativeFallbacks = tmp;
 
-        return i;
+        return ns;
+    }
+
+    public int addSlotFont(FontResource fr) {
+        if (fr == null) {
+            return -1;
+        }
+        int slot = getSlotForFont(fr.getFullName());
+        if (slot >= 0) {
+            return slot;
+        } else {
+            return addNativeFallback(fr);
+        }
     }
 
     @Override
@@ -304,8 +331,8 @@ public class LogicalFont implements CompositeFontResource {
                 return nativeFallbacks[slot];
             }
             if (fallbacks[slot] == null) {
-                String file = linkedFontFiles.get(slot);
-                String name = linkedFontNames.get(slot);
+                String file = linkedFontFiles[slot];
+                String name = linkedFontNames[slot];
                 fallbacks[slot] =
                     PrismFontFactory.getFontFactory().
                           getFontResource(name, file, false);

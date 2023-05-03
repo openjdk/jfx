@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2023 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,10 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Skin;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -46,6 +48,7 @@ import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -242,6 +245,53 @@ public class TableRowSkinTest {
         assertEquals(prefHeight, cell.prefHeight(-1), 0);
         assertEquals(maxHeight, cell.maxHeight(-1), 0);
         assertEquals(height, cell.getHeight(), 0);
+    }
+
+    /**
+     * When we set a fixed cell size and make an invisible column visible we expect the underlying cells to be visible,
+     * e.g. width > 0.
+     * See also: JDK-8305248
+     */
+    @Test
+    public void testMakeInvisibleColumnVisible() {
+        tableView.setFixedCellSize(24);
+        TableColumn<Person, ?> firstColumn = tableView.getColumns().get(0);
+        firstColumn.setVisible(false);
+
+        tableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(true);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 0);
+        for (Node node : row.getChildrenUnmodifiable()) {
+            if (node instanceof TableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
+        }
+    }
+
+    @Test
+    public void testMakeVisibleColumnInvisible() {
+        tableView.setFixedCellSize(24);
+        TableColumn<Person, ?> firstColumn = tableView.getColumns().get(0);
+        assertTrue(firstColumn.isVisible());
+
+        tableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(false);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 0);
+        for (Node node : row.getChildrenUnmodifiable()) {
+            if (node instanceof TableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
+        }
     }
 
     @Test

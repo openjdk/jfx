@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,15 +30,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+
+import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ModifiableObservableListBase;
 import javafx.util.Callback;
 
-public final class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E>{
+public class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E> {
+
     private final List<E> backingList;
     private final ElementObserver<E> elementObserver;
-    private SortHelper helper;
 
     public ObservableSequentialListWrapper(List<E> list) {
         backingList = list;
@@ -175,6 +178,15 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
 
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
+        if (index < 0 || index > size()) {
+            throw new IndexOutOfBoundsException("Index: " + index);
+        }
+
+        // implicit check to ensure c != null
+        if (c.isEmpty()) {
+            return false;
+        }
+
         try {
             beginChange();
             boolean modified = false;
@@ -229,21 +241,12 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
         }
     }
 
-    @Override
-    public void sort() {
-        sort(null);
-    }
+    private SortHelper helper;
 
     @Override
-    public void sort(Comparator<? super E> comparator) {
-        if (backingList.isEmpty()) {
-            return;
-        }
-
-        @SuppressWarnings("unchecked")
-        int[] perm = comparator == null ? getSortHelper().sort((List<? extends Comparable<Object>>) backingList)
-                : getSortHelper().sort(backingList, comparator);
-        fireChange(new NonIterableChange.SimplePermutationChange<>(0, size(), perm, this));
+    public void doSort(Comparator<? super E> comparator) {
+        int[] perm = getSortHelper().sort(backingList, comparator);
+        fireChange(new SimplePermutationChange<>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {
@@ -252,5 +255,4 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
         }
         return helper;
     }
-
 }

@@ -25,6 +25,8 @@
 
 package com.sun.javafx.font.directwrite;
 
+import com.sun.javafx.font.FontFallbackInfo;
+import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontFile;
 import com.sun.javafx.text.GlyphLayout;
@@ -150,5 +152,46 @@ public class DWFactory extends PrismFontFactory {
             D2D_FACTORY = OS.D2D1CreateFactory(OS.D2D1_FACTORY_TYPE_SINGLE_THREADED);
         }
         return D2D_FACTORY;
+    }
+
+    private static native String regReadFontLink(String searchfont);
+    private static native String getEUDCFontFile();
+
+    /*
+     * Ignoring the primary on Windows - this should change some day.
+     */
+    public FontFallbackInfo getFallbacks(FontResource primaryResource) {
+        FontFallbackInfo info = new FontFallbackInfo();
+
+        String fontRegBuf = regReadFontLink("Tahoma");
+        if (fontRegBuf != null && fontRegBuf.length() > 0) {
+            // split registry data into null terminated strings
+            String[] fontRegList = fontRegBuf.split("\u0000");
+            int linkListLen = fontRegList.length;
+            for (int i=0; i < linkListLen; i++) {
+                String[] splitFontData = fontRegList[i].split(",");
+                int len = splitFontData.length;
+                String file = getPathNameWindows(splitFontData[0]);
+                String name = (len > 1) ? splitFontData[1] : null;
+                if (name != null && info.containsName(name)) {
+                    continue;
+                } else if (name == null && info.containsFile(file)) {
+                    continue;
+                }
+                info.add(name, file, null);
+            }
+        }
+
+        String eudcFontFile = getEUDCFontFile();
+        if (eudcFontFile != null) {
+            info.add(null, eudcFontFile, null);
+        }
+
+        // CJK Ext B Supplementary character fallbacks.
+        info.add("MingLiU-ExtB", getPathNameWindows("mingliub.ttc"), null);
+        info.add("Segoe UI Symbol", getPathNameWindows("seguisym.ttf"), null);
+        // TBD add way more here.
+
+        return info;
     }
 }
