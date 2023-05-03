@@ -2480,7 +2480,7 @@ public class Scene implements EventTarget {
                 for (int i = 0 ; i < dirtyNodesSize; ++i) {
                     Node node = dirtyNodes[i];
                     dirtyNodes[i] = null;
-                    if (node.getScene() == Scene.this) {
+                    if (node != null && node.getScene() == Scene.this) {
                             node.syncPeer();
                         }
                     }
