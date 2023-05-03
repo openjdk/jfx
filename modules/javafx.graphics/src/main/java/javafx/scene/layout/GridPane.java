@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -735,10 +735,10 @@ public class GridPane extends Pane {
     }
 
     /**
-     * Creates a GridPane layout with the given {@link #hgapProperty() hgap} and {@link #vgapProperty() vgap}.
+     * Creates a {@code GridPane} layout with the given {@link #hgapProperty() hgap} and {@link #vgapProperty() vgap}.
      *
-     * @param hgap the width of the horizontal gaps between columns
-     * @param vgap the height of the vertical gaps between rows
+     * @param hgap the size of the horizontal gaps between columns
+     * @param vgap the size of the vertical gaps between rows
      *
      * @since 21
      */
