@@ -24,12 +24,12 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.SequenceNumber;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
  * Accordion Page.
@@ -58,7 +58,8 @@ public class AccordionPage extends TestPaneBase {
     }
 
     protected void addPane() {
-        String name = "" + System.currentTimeMillis();
+        String name = SequenceNumber.next();
+        System.nanoTime();
         Button b = new Button(name);
         b.setOnAction((ev) -> {
             System.out.println(name);

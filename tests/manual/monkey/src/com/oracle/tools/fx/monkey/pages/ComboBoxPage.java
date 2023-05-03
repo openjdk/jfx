@@ -28,6 +28,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
@@ -39,9 +41,12 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
  */
 public class ComboBoxPage extends TestPaneBase {
     private ComboBox control;
+    private final Label itemCountField;
 
     public ComboBoxPage() {
         setId("ComboBoxPage");
+
+        itemCountField = new Label("<default>");
 
         control = new ComboBox();
         control.getItems().setAll("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
@@ -64,28 +69,33 @@ public class ComboBoxPage extends TestPaneBase {
             });
         });
 
-        Button changeCountButton = new Button("Change Item Count");
+        Button changeCountButton = new Button("Change Visible Row Count");
+        changeCountButton.setTooltip(new Tooltip("starts a timer to change row count 3 times"));
         changeCountButton.setOnAction((x) -> {
             new Timeline(
-                new KeyFrame(Duration.seconds(1.0), (ev) -> {
-                    System.out.println("2");
-                    control.setVisibleRowCount(2);
-                }),
                 new KeyFrame(Duration.seconds(2.0), (ev) -> {
-                    System.out.println("20");
-                    control.setVisibleRowCount(20);
+                    changeItemCount(2);
                 }),
-                new KeyFrame(Duration.seconds(3.0), (ev) -> {
-                    System.out.println("2");
-                    control.setVisibleRowCount(2);
+                new KeyFrame(Duration.seconds(4.0), (ev) -> {
+                    changeItemCount(20);
+                }),
+                new KeyFrame(Duration.seconds(6.0), (ev) -> {
+                    changeItemCount(2);
                 })).play();
         });
 
         OptionPane p = new OptionPane();
         p.option(setConverterButton);
+        p.label("Visible Row Count:");
+        p.option(itemCountField);
         p.option(changeCountButton);
 
         setContent(b);
         setOptions(p);
+    }
+
+    protected void changeItemCount(int x) {
+        control.setVisibleRowCount(x);
+        itemCountField.setText(String.valueOf(x));
     }
 }
