@@ -90,10 +90,7 @@ public class LeakTest extends TestBase {
         });
 
         Thread.sleep(SLEEP_TIME);
-
-        for (WeakReference ref : willGC) {
-            JMemoryBuddy.assertCollectable(ref);
-        }
+        JMemoryBuddy.assertCollectable(willGC);
     }
 
     private static boolean isAllElementsNull(Reference<?>[] array) {
@@ -117,10 +114,7 @@ public class LeakTest extends TestBase {
         });
 
         Thread.sleep(SLEEP_TIME);
-
-        for (WeakReference ref : willGC) {
-            JMemoryBuddy.assertCollectable(ref);
-        }
+        JMemoryBuddy.assertCollectable(willGC);
     }
 
     // JDK-8170938
@@ -220,8 +214,6 @@ public class LeakTest extends TestBase {
         });
 
         Thread.sleep(SLEEP_TIME);
-        for (WeakReference ref : willGC) {
-            JMemoryBuddy.assertCollectable(ref);
-        }
+        JMemoryBuddy.assertCollectable(willGC);
     }
 }
