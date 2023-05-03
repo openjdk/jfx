@@ -3158,4 +3158,15 @@ public class GridPaneTest {
 
         assertEquals(160, gridpane.prefHeight(-1), 1e-100);
     }
+
+    @Test
+    public void testGridPaneHgapVgapConstructor() {
+        assertEquals(0, gridpane.getHgap(), 0);
+        assertEquals(0, gridpane.getVgap(), 0);
+
+        gridpane = new GridPane(3, 8);
+
+        assertEquals(3, gridpane.getHgap(), 0);
+        assertEquals(8, gridpane.getVgap(), 0);
+    }
 }

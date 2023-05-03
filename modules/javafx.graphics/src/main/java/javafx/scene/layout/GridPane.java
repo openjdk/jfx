@@ -735,6 +735,20 @@ public class GridPane extends Pane {
     }
 
     /**
+     * Creates a GridPane layout with the given {@link #hgapProperty() hgap} and {@link #vgapProperty() vgap}.
+     *
+     * @param hgap the width of the horizontal gaps between columns
+     * @param vgap the height of the vertical gaps between rows
+     *
+     * @since 21
+     */
+    public GridPane(double hgap, double vgap) {
+        this();
+        setHgap(hgap);
+        setVgap(vgap);
+    }
+
+    /**
      * The width of the horizontal gaps between columns.
      * @return the width of the horizontal gaps between columns
      */
