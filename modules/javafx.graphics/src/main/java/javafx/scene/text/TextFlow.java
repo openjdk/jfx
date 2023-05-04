@@ -232,7 +232,7 @@ public class TextFlow extends Pane {
     }
 
     /**
-     * Returns underline shape for the range of the text in local coordinates.
+     * Returns the shape for the underline in local coordinates.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
