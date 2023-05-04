@@ -58,11 +58,13 @@ public class TextFlowPage extends TestPaneBase {
     protected final FontSelector fontSelector;
     protected final CheckBox showChars;
     protected final CheckBox showCaretPath;
+    protected final CheckBox underline;
     protected final TextFlow control;
     protected final Label pickResult;
     protected final Label hitInfo;
     protected final Label hitInfo2;
     protected final Path caretPath;
+    protected final Path underlinePath;
     private static final String INLINE = "$INLINE";
     private static final String RICH_TEXT = "$RICH";
 
@@ -82,6 +84,12 @@ public class TextFlowPage extends TestPaneBase {
         caretPath.setStrokeWidth(1);
         caretPath.setStroke(Color.RED);
         caretPath.setManaged(false);
+
+        underlinePath = new Path();
+        underlinePath.setStrokeWidth(1);
+        underlinePath.setStroke(Color.GREEN);
+        underlinePath.setFill(Color.YELLOW);
+        underlinePath.setManaged(false);
 
         textSelector = TextSelector.fromPairs(
             "textSelector",
@@ -104,7 +112,13 @@ public class TextFlowPage extends TestPaneBase {
         showCaretPath = new CheckBox("show caret path");
         showCaretPath.setId("showCaretPath");
         showCaretPath.selectedProperty().addListener((p) -> {
-            updateControl();
+            updateCaret();
+        });
+        
+        underline = new CheckBox("underline shape");
+        underline.setId("underline");
+        underline.selectedProperty().addListener((p) -> {
+            updateUnderline();
         });
 
         OptionPane p = new OptionPane();
@@ -116,6 +130,7 @@ public class TextFlowPage extends TestPaneBase {
         p.option(fontSelector.sizeNode());
         p.option(showChars);
         p.option(showCaretPath);
+        p.option(underline);
         p.option(new Separator(Orientation.HORIZONTAL));
         p.label("Pick Result:");
         p.option(pickResult);
@@ -142,16 +157,12 @@ public class TextFlowPage extends TestPaneBase {
             control.getChildren().add(g);
         }
 
-        if (showCaretPath.isSelected()) {
-            caretPath.getElements().clear();
-            control.getChildren().add(caretPath);
+        caretPath.getElements().clear();
+        underlinePath.getElements().clear();
+        control.getChildren().addAll(underlinePath, caretPath);
 
-            int len = computeTextLength(control);
-            for (int i = 0; i < len; i++) {
-                PathElement[] es = control.caretShape(i, true);
-                caretPath.getElements().addAll(es);
-            }
-        }
+        updateCaret();
+        updateUnderline();
     }
 
     /** TextFlow.getTextLength() */
@@ -220,5 +231,27 @@ public class TextFlowPage extends TestPaneBase {
         Point2D p = new Point2D(ev.getX(), ev.getY());
         HitInfo h = control.hitTest(p);
         hitInfo.setText(String.valueOf(h));
+    }
+
+    protected void updateUnderline() {
+        if (underline.isSelected()) {
+            int len = computeTextLength(control);
+            PathElement[] es = control.underlineShape(0, len);
+            underlinePath.getElements().addAll(es);
+        } else {
+            underlinePath.getElements().clear();
+        }
+    }
+
+    protected void updateCaret() {
+        if (showCaretPath.isSelected()) {
+            int len = computeTextLength(control);
+            for (int i = 0; i < len; i++) {
+                PathElement[] es = control.caretShape(i, true);
+                caretPath.getElements().addAll(es);
+            }
+        } else {
+            caretPath.getElements().clear();
+        }
     }
 }
