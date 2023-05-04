@@ -114,7 +114,7 @@ public class TextFlowPage extends TestPaneBase {
         showCaretPath.selectedProperty().addListener((p) -> {
             updateCaret();
         });
-        
+
         underline = new CheckBox("underline shape");
         underline.setId("underline");
         underline.selectedProperty().addListener((p) -> {
@@ -171,8 +171,10 @@ public class TextFlowPage extends TestPaneBase {
         for (Node n: f.getChildrenUnmodifiable()) {
             if (n instanceof Text t) {
                 len += t.getText().length();
+            } else {
+                // treat any other nodes as having length 1
+                len++;
             }
-            // embedded nodes do not have an associated text
         }
         return len;
     }
