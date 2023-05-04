@@ -1250,6 +1250,67 @@ public class RegionTest {
         assertFalse(peer.isClean());
     }
 
+    @Test
+    public void snapFunctionsShouldHandleExtremelyLargeValuesWithoutReturningNaN() {
+        Stage stage = new Stage();
+        Region region = new Region();
+        Scene scene = new Scene(region);
+        stage.setScene(scene);
+
+        // Size functions:
+
+        assertEquals(Double.MAX_VALUE, region.snapSizeX(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(Double.MAX_VALUE, region.snapSizeY(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeX(-Double.MAX_VALUE), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeY(Double.NEGATIVE_INFINITY), 0.0);
+
+        // Space functions:
+
+        // These are bugged because they use Math.round instead of Math.rint, but better than Double.NaN...
+        assertEquals(Long.MAX_VALUE, region.snapSpaceX(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MAX_VALUE, region.snapSpaceY(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceX(-Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Long.MAX_VALUE, region.snapSpaceX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MAX_VALUE, region.snapSpaceY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE, region.snapSpaceY(Double.NEGATIVE_INFINITY), 0.0);
+
+        stage.setRenderScaleX(1.5);
+        stage.setRenderScaleY(1.5);
+
+        // Size functions:
+
+        assertEquals(Double.MAX_VALUE, region.snapSizeX(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(Double.MAX_VALUE, region.snapSizeY(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
+        assertEquals(-Double.MAX_VALUE, region.snapSizeX(-Double.MAX_VALUE), 0.0);
+        assertEquals(-Double.MAX_VALUE, region.snapSizeY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.POSITIVE_INFINITY, region.snapSizeY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Double.NEGATIVE_INFINITY, region.snapSizeY(Double.NEGATIVE_INFINITY), 0.0);
+
+        // Space functions:
+
+        // These are even more bugged, they divide the long max/min value by scale after using the round instead of rint
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceX(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceY(Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceX(-Double.MAX_VALUE), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceY(-Double.MAX_VALUE), 0.0);
+
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceX(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceY(Double.POSITIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceX(Double.NEGATIVE_INFINITY), 0.0);
+        assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceY(Double.NEGATIVE_INFINITY), 0.0);
+    }
+
     // Test for JDK-8255415
     @Test
     public void snappingASnappedValueGivesTheSameValueTest() {

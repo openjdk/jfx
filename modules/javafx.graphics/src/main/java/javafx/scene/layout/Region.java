@@ -74,6 +74,7 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.layout.RegionHelper;
+import com.sun.javafx.scene.layout.ScaledMath;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
@@ -287,50 +288,6 @@ public class Region extends Parent {
         return _getSnapScaleYimpl(getScene());
     }
 
-    private static double scaledRound(double value, double scale) {
-        return Math.round(value * scale) / scale;
-    }
-
-    /**
-     * The value is floored for a given scale using Math.floor.
-     * When the absolute value of the given value multiplied by the
-     * current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>scaledFloor(scaledFloor(value, scale), scale) == scaledFloor(value, scale)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
-     * @param value The value that needs to be floored
-     * @param scale The scale that will be used
-     * @return value floored with scale
-     */
-    private static double scaledFloor(double value, double scale) {
-        double d = value * scale;
-
-        return Math.floor(d + Math.ulp(d)) / scale;
-    }
-
-    /**
-     * The value is ceiled with a given scale using Math.ceil.
-     * When the absolute value of the given value multiplied by the
-     * current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>scaledCeil(scaledCeil(value, scale), scale) == scaledCeil(value, scale)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
-     * @param value The value that needs to be ceiled
-     * @param scale The scale that will be used
-     * @return value ceiled with scale
-     */
-    private static double scaledCeil(double value, double scale) {
-        double d = value * scale;
-
-        return Math.ceil(d - Math.ulp(d)) / scale;
-    }
-
     /**
      * If snapToPixel is true, then the value is rounded using Math.round. Otherwise,
      * the value is simply returned. This method will surely be JIT'd under normal
@@ -344,14 +301,14 @@ public class Region extends Parent {
      * @return value either as passed in or rounded based on snapToPixel
      */
     private double snapSpaceX(double value, boolean snapToPixel) {
-        return snapToPixel ? scaledRound(value, getSnapScaleX()) : value;
+        return snapToPixel ? ScaledMath.round(value, getSnapScaleX()) : value;
     }
     private double snapSpaceY(double value, boolean snapToPixel) {
-        return snapToPixel ? scaledRound(value, getSnapScaleY()) : value;
+        return snapToPixel ? ScaledMath.round(value, getSnapScaleY()) : value;
     }
 
     private static double snapSpace(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? scaledRound(value, snapScale) : value;
+        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
     }
 
     /**
@@ -363,14 +320,14 @@ public class Region extends Parent {
      * @return value either as passed in or ceil'd based on snapToPixel
      */
     private double snapSizeX(double value, boolean snapToPixel) {
-        return snapToPixel ? scaledCeil(value, getSnapScaleX()) : value;
+        return snapToPixel ? ScaledMath.ceil(value, getSnapScaleX()) : value;
     }
     private double snapSizeY(double value, boolean snapToPixel) {
-        return snapToPixel ? scaledCeil(value, getSnapScaleY()) : value;
+        return snapToPixel ? ScaledMath.ceil(value, getSnapScaleY()) : value;
     }
 
     private static double snapSize(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? scaledCeil(value, snapScale) : value;
+        return snapToPixel ? ScaledMath.ceil(value, snapScale) : value;
     }
 
     /**
@@ -382,14 +339,14 @@ public class Region extends Parent {
      * @return value either as passed in or rounded based on snapToPixel
      */
     private double snapPositionX(double value, boolean snapToPixel) {
-        return snapToPixel ? scaledRound(value, getSnapScaleX()) : value;
+        return snapToPixel ? ScaledMath.round(value, getSnapScaleX()) : value;
     }
     private double snapPositionY(double value, boolean snapToPixel) {
-        return snapToPixel ? scaledRound(value, getSnapScaleY()) : value;
+        return snapToPixel ? ScaledMath.round(value, getSnapScaleY()) : value;
     }
 
     private static double snapPosition(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? scaledRound(value, snapScale) : value;
+        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
     }
 
     /**
@@ -411,7 +368,7 @@ public class Region extends Parent {
 
         double s = getSnapScaleX();
 
-        return value > 0 ? scaledFloor(value, s) : scaledCeil(value, s);
+        return value > 0 ? ScaledMath.floor(value, s) : ScaledMath.ceil(value, s);
     }
 
     /**
@@ -433,7 +390,7 @@ public class Region extends Parent {
 
         double s = getSnapScaleY();
 
-        return value > 0 ? scaledFloor(value, s) : scaledCeil(value, s);
+        return value > 0 ? ScaledMath.floor(value, s) : ScaledMath.ceil(value, s);
     }
 
     double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
