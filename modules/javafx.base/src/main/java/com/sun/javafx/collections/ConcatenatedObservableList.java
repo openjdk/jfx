@@ -38,12 +38,12 @@ public final class ConcatenatedObservableList<E> extends ObservableListBase<E> {
     private int size;
 
     public ConcatenatedObservableList(ObservableList<? extends E>[] lists) {
-        this.lists = lists;
+        this.lists = lists.clone(); // implicit null check of lists array
         this.listChangeListener = this::onListChanged;
 
         ListChangeListener<? super E> weakListChangeListener = new WeakListChangeListener<>(listChangeListener);
         for (ObservableList<? extends E> list : lists) {
-            list.addListener(weakListChangeListener);
+            list.addListener(weakListChangeListener); // implicit null check of list
             size = addSize(list.size());
         }
     }
@@ -52,11 +52,11 @@ public final class ConcatenatedObservableList<E> extends ObservableListBase<E> {
         int offset = 0;
 
         for (ObservableList<? extends E> l : lists) {
-            if (l != list) {
-                offset += l.size();
-            } else {
+            if (l == list) {
                 return offset;
             }
+
+            offset += l.size();
         }
 
         throw new IllegalArgumentException("list");
@@ -72,14 +72,12 @@ public final class ConcatenatedObservableList<E> extends ObservableListBase<E> {
                 onPermutated(change, listOffset);
             } else if (change.wasUpdated()) {
                 onUpdated(change, listOffset);
-            } else {
-                if (change.wasReplaced()) {
-                    onReplaced(change, listOffset);
-                } else if (change.wasRemoved()) {
-                    onRemoved(change, listOffset);
-                } else if (change.wasAdded()) {
-                    onAdded(change, listOffset);
-                }
+            } else if (change.wasReplaced()) {
+                onReplaced(change, listOffset);
+            } else if (change.wasRemoved()) {
+                onRemoved(change, listOffset);
+            } else if (change.wasAdded()) {
+                onAdded(change, listOffset);
             }
 
             endChange();
@@ -134,14 +132,15 @@ public final class ConcatenatedObservableList<E> extends ObservableListBase<E> {
 
         for (ObservableList<? extends E> list : lists) {
             int listSize = list.size();
-            if (newIndex >= listSize) {
-                newIndex -= listSize;
-            } else {
+            if (newIndex < listSize) {
                 return list.get(newIndex);
             }
+
+            newIndex -= listSize;
         }
 
-        throw new IndexOutOfBoundsException(index);
+        // Can't happen because the index was already validated by Objects.checkIndex
+        throw new AssertionError();
     }
 
     @Override

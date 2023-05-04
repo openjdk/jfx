@@ -404,13 +404,19 @@ public class FXCollections {
      * returned list result in an {@link UnsupportedOperationException}.
      * <p>
      * In contrast to {@link #concat(ObservableList[])}, the list returned from this method is updated
-     * when any of the source lists are changed.
+     * when any of the source lists are changed. Note that the maximum size of the concatenated list
+     * view is {@link Integer#MAX_VALUE}. If an attempt to add an element to a source list causes this
+     * invariant to be violated, the concatenated list view fails with {@link IndexOutOfBoundsException}
+     * and its internal state is undefined.
      *
      * @param lists the source lists
      * @param <E> the element type
      * @return an unmodifiable {@code ObservableList} view that contains the concatenation of the source lists
+     * @throws NullPointerException if {@code lists} is {@code null} or contains {@code null} elements
      * @throws IndexOutOfBoundsException if number of elements contained in all source lists
      *                                   exceeds {@link Integer#MAX_VALUE}
+     * @implNote The {@code lists} array is defensively copied by the implementation and can
+     *           safely be reused by callers of this method.
      * @since 21
      */
     @SafeVarargs
