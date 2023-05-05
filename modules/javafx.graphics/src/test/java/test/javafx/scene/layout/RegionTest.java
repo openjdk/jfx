@@ -1339,8 +1339,6 @@ public class RegionTest {
             }
         }
 
-        random.setSeed(seed);
-
         for (double scale : scales) {
             stage.setRenderScaleY(scale);
             for (int j = 0; j < 1000; j++) {
@@ -1353,8 +1351,6 @@ public class RegionTest {
 
         // test snapPortionX/snapPortionY methods
 
-        random.setSeed(seed);
-
         for (double scale : scales) {
             stage.setRenderScaleX(scale);
             for (int j = 0; j < 1000; j++) {
@@ -1364,8 +1360,6 @@ public class RegionTest {
                 assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
-
-        random.setSeed(seed);
 
         for (double scale : scales) {
             stage.setRenderScaleY(scale);
