@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
@@ -48,8 +48,6 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-
-import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 
@@ -98,46 +96,43 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         updateTreeItem();
 
-        ListenerHelper lh = ListenerHelper.get(this);
-
-        lh.addChangeListener(control.indexProperty(), (ev) -> {
+        control.indexProperty().addListener(new WeakInvalidationListener((x) -> {
             updateCells = true;
-        });
+        }));
 
-        lh.addChangeListener(control.treeItemProperty(), (ev) -> {
+        control.treeItemProperty().addListener(new WeakInvalidationListener((x) -> {
             updateTreeItem();
             // There used to be an isDirty = true statement here, but this was
             // determined to be unnecessary and led to performance issues such as
             // those detailed in JDK-8143266
-        });
+        }));
 
         setupTreeTableViewListeners();
     }
 
     // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
-        ListenerHelper lh = ListenerHelper.get(this);
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
-            lh.addInvalidationListener(getSkinnable().treeTableViewProperty(), (ev) -> {
+            getSkinnable().treeTableViewProperty().addListener(new WeakInvalidationListener((x) -> {
                 unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
                 setupTreeTableViewListeners();
-            });
+            }));
         } else {
-            lh.addChangeListener(treeTableView.treeColumnProperty(), (ev) -> {
+            treeTableView.treeColumnProperty().addListener(new WeakInvalidationListener((x) -> {
                 // Fix for RT-27782: Need to set isDirty to true, rather than the
                 // cheaper updateCells, as otherwise the text indentation will not
                 // be recalculated in TreeTableCellSkin.calculateIndentation()
                 isDirty = true;
                 getSkinnable().requestLayout();
-            });
+            }));
 
             DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
             if (fixedCellSizeProperty != null) {
-                lh.addChangeListener(fixedCellSizeProperty, (ev) -> {
+                fixedCellSizeProperty.addListener(new WeakInvalidationListener((x) -> {
                     fixedCellSize = fixedCellSizeProperty.get();
                     fixedCellSizeEnabled = fixedCellSize > 0;
-                });
+                }));
                 fixedCellSize = fixedCellSizeProperty.get();
                 fixedCellSizeEnabled = fixedCellSize > 0;
 
@@ -147,7 +142,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // be required (because we remove all cells that are not visible).
                 VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
                 if (virtualFlow != null) {
-                    lh.addChangeListener(getVirtualFlow().widthProperty(), (ev) -> treeTableView.requestLayout());
+                    getVirtualFlow().widthProperty().addListener(new WeakInvalidationListener((x) -> {
+                        treeTableView.requestLayout();
+                    }));
                 }
             }
         }
