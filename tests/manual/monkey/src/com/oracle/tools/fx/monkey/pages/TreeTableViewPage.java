@@ -43,6 +43,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.ItemSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -116,6 +117,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
     protected final ComboBox<ResizePolicy> policySelector;
     protected final ComboBox<Selection> selectionSelector;
     protected final CheckBox nullFocusModel;
+    protected final ItemSelector<Double> fixedSize;
     protected TreeTableView<String> tree;
 
     public TreeTableViewPage() {
@@ -162,6 +164,17 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         refresh.setOnAction((ev) -> {
             tree.refresh();
         });
+        
+        fixedSize = new ItemSelector<Double>(
+            "fixedSize",
+            (x) -> {
+                tree.setFixedCellSize(x);
+            },
+            "<none>", 0.0,
+            "18", 18.0,
+            "24", 24.0,
+            "66", 66.0
+        );
 
         // layout
 
@@ -174,6 +187,8 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         p.label("Selection Model:");
         p.option(selectionSelector);
         p.option(nullFocusModel);
+        p.label("Fixed Cell Size:");
+        p.option(fixedSize.node());
         p.option(refresh);
         setOptions(p);
 
@@ -509,6 +524,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         if (nullFocusModel.isSelected()) {
             tree.setFocusModel(null);
         }
+        tree.setFixedCellSize(fixedSize.getSelectedItem());
 
         Callback<ResizeFeatures, Boolean> p = createPolicy(policy);
         tree.setColumnResizePolicy(p);
