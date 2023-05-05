@@ -556,10 +556,14 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
                                 @Override
                                 protected void updateItem(String item, boolean empty) {
                                     super.updateItem(item, empty);
-                                    Text t = new Text("11111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n2\n3\n");
-                                    t.wrappingWidthProperty().bind(widthProperty());
+                                    if (empty) {
+                                        setGraphic(null);
+                                    } else {
+                                        Text t = new Text("11111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n2\n3\n");
+                                        t.wrappingWidthProperty().bind(widthProperty());
+                                        setGraphic(t);
+                                    }
                                     setPrefHeight(USE_COMPUTED_SIZE);
-                                    setGraphic(t);
                                 }
                             };
                         });
