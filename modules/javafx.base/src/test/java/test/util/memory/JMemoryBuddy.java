@@ -92,18 +92,31 @@ public class JMemoryBuddy {
         }
     }
 
+    /**
+     * Checks whether an array of WeakReference objects can be collected.
+     * @param weakReferences WeakReference objects to check.
+     */
     public static void assertCollectable(WeakReference[] weakReferences) {
         for (WeakReference wr : weakReferences) {
             assertCollectable(wr);
         }
     }
 
+    /**
+     * Checks whether a Collection of WeakReference objects can be collected.
+     * @param weakReferences WeakReference objects to check.
+     */
     public static <T> void assertCollectable(Collection<WeakReference<T>> weakReferences) {
         for (WeakReference<T> wr : weakReferences) {
             assertCollectable(wr);
         }
     }
 
+    /**
+     * Checks whether provided WeakReference objects can be collected.
+     * @param weakReference The WeakReference to check.
+     * @param otherWeakReferences Other WeakReference objects to check.
+     */
     public static void assertCollectable(WeakReference weakReference, WeakReference... otherWeakReferences) {
         assertCollectable(weakReference);
         for (WeakReference wr : otherWeakReferences) {
