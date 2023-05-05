@@ -187,6 +187,11 @@ public class TableViewPage extends TestPaneBase {
             updatePane();
         });
 
+        Button refresh = new Button("Refresh");
+        refresh.setOnAction((ev) -> {
+            table.refresh();
+        });
+
         // layout
 
         OptionPane p = new OptionPane();
@@ -203,6 +208,7 @@ public class TableViewPage extends TestPaneBase {
         p.option(nullFocusModel);
         p.option(hideColumn);
         p.option(fixedHeight);
+        p.option(refresh);
         setOptions(p);
 
         demoSelector.getSelectionModel().selectFirst();

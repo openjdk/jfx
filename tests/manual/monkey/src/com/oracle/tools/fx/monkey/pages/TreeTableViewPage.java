@@ -156,6 +156,11 @@ public class TreeTableViewPage extends TestPaneBase {
             tree.setShowRoot(false);
         });
 
+        Button refresh = new Button("Refresh");
+        refresh.setOnAction((ev) -> {
+            tree.refresh();
+        });
+
         // layout
 
         OptionPane p = new OptionPane();
@@ -167,6 +172,7 @@ public class TreeTableViewPage extends TestPaneBase {
         p.label("Selection Model:");
         p.option(selectionSelector);
         p.option(nullFocusModel);
+        p.option(refresh);
         setOptions(p);
 
         demoSelector.getSelectionModel().selectFirst();
