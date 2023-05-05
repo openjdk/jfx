@@ -38,10 +38,12 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.ResizeFeatures;
+import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -49,7 +51,7 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
 /**
  * TableView page
  */
-public class TableViewPage extends TestPaneBase {
+public class TableViewPage extends TestPaneBase implements HasSkinnable {
     enum Demo {
         PREF("pref only"),
         VARIABLE("variable cell height"),
@@ -719,5 +721,15 @@ public class TableViewPage extends TestPaneBase {
             }
             return false;
         }
+    }
+
+    @Override
+    public void nullSkin() {
+        table.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        table.setSkin(new TableViewSkin<>(table));
     }
 }

@@ -37,10 +37,12 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.ResizeFeatures;
+import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -48,7 +50,7 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
 /**
  * TreeTableView page
  */
-public class TreeTableViewPage extends TestPaneBase {
+public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
     enum Demo {
         PREF("pref only"),
         VARIABLE("variable cell height"),
@@ -594,6 +596,16 @@ public class TreeTableViewPage extends TestPaneBase {
 
     protected String newItem() {
         return SequenceNumber.next();
+    }
+
+    @Override
+    public void nullSkin() {
+        tree.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        tree.setSkin(new TreeTableViewSkin<>(tree));
     }
 
     /**
