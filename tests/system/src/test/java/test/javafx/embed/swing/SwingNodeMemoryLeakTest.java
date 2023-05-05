@@ -77,6 +77,10 @@ public class SwingNodeMemoryLeakTest {
             testSwingNodeObjectsInStage();
         });
 
+        // Invoke a noop on EDT thread and wait for a bit to make sure EDT processed node objects
+        SwingUtilities.invokeAndWait(() -> {});
+        Util.sleep(500);
+
         JMemoryBuddy.assertCollectable(weakRefArrSN);
         JMemoryBuddy.assertCollectable(weakRefArrJL);
     }

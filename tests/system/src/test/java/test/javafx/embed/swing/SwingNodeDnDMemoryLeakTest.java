@@ -33,6 +33,8 @@ import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
+
 import java.lang.reflect.InvocationTargetException;
 
 import javafx.application.Application;
@@ -70,6 +72,10 @@ public class SwingNodeDnDMemoryLeakTest {
         Util.runAndWait(() -> {
             testSwingNodeObjectsInStage();
         });
+
+        // Invoke a noop on EDT thread and wait for a bit to make sure EDT processed node objects
+        SwingUtilities.invokeAndWait(() -> {});
+        Util.sleep(500);
 
         JMemoryBuddy.assertCollectable(weakRefArrSN);
     }
