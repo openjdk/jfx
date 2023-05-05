@@ -89,7 +89,6 @@ public class LeakTest extends TestBase {
             willGC[2] = new WeakReference<>(WebEngineShim.getPage(webView.getEngine()));
         });
 
-        Thread.sleep(SLEEP_TIME);
         JMemoryBuddy.assertCollectable(willGC);
     }
 
@@ -113,7 +112,6 @@ public class LeakTest extends TestBase {
             }
         });
 
-        Thread.sleep(SLEEP_TIME);
         JMemoryBuddy.assertCollectable(willGC);
     }
 
@@ -213,7 +211,6 @@ public class LeakTest extends TestBase {
             assertEquals("Expected NodeImpl(tag:br) HashCount", initialHashCount+7, NodeImplShim.test_getHashCount());
         });
 
-        Thread.sleep(SLEEP_TIME);
         JMemoryBuddy.assertCollectable(willGC);
     }
 }
