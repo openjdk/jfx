@@ -25,27 +25,26 @@
 
 package com.sun.javafx.collections;
 
-import javafx.collections.ModifiableObservableListBase;
-import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
-
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.RandomAccess;
+
+import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.collections.ModifiableObservableListBase;
 import javafx.util.Callback;
 
 /**
  * A List wrapper class that implements observability.
  *
  */
-public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements
-        SortableList<E>, RandomAccess {
+public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E>, RandomAccess {
 
     private final List<E> backingList;
-
     private final ElementObserver<E> elementObserver;
 
     public ObservableListWrapper(List<E> list) {
@@ -222,18 +221,8 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
     private SortHelper helper;
 
     @Override
-    public void sort() {
-        sort(null);
-    }
-
-    @Override
-    public void sort(Comparator<? super E> comparator) {
-        if (backingList.isEmpty()) {
-            return;
-        }
-        @SuppressWarnings("unchecked")
-        int[] perm = comparator == null ? getSortHelper().sort((List<? extends Comparable<Object>>) backingList)
-                : getSortHelper().sort(backingList, comparator);
+    public void doSort(Comparator<? super E> comparator) {
+        int[] perm = getSortHelper().sort(backingList, comparator);
         fireChange(new SimplePermutationChange<>(0, size(), perm, this));
     }
 
@@ -243,5 +232,4 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
         }
         return helper;
     }
-
 }
