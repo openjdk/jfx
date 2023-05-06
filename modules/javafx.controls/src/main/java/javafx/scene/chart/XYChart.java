@@ -135,7 +135,7 @@ public abstract class XYChart<X,Y> extends Chart {
             Set<Series<X, Y>> dupCheck = new HashSet<>(displayedSeries);
             dupCheck.removeAll(c.getRemoved());
             for (Series<X, Y> d : c.getAddedSubList()) {
-                if (!dupCheck.add(d)) {
+                if (!dupCheck.add(d) && !d.setToRemove) {
                     throw new IllegalArgumentException("Duplicate series added");
                 }
             }
@@ -147,12 +147,12 @@ public abstract class XYChart<X,Y> extends Chart {
 
             for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
                 final Series<X,Y> s = c.getList().get(i);
-                // add new listener to data
-                s.setChart(XYChart.this);
                 if (s.setToRemove) {
                     s.setToRemove = false;
                     s.getChart().seriesBeingRemovedIsAdded(s);
                 }
+                // add new listener to data
+                s.setChart(XYChart.this);
                 // update linkedList Pointers for series
                 displayedSeries.add(s);
                 // update default color style class

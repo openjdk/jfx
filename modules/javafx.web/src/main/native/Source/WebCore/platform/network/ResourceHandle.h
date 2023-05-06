@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AuthenticationClient.h"
+#include "ResourceLoaderOptions.h"
 #include "StoredCredentialsPolicy.h"
 #include <wtf/Box.h>
 #include <wtf/MonotonicTime.h>
@@ -95,7 +96,7 @@ class CurlResourceHandleDelegate;
 
 class ResourceHandle : public RefCounted<ResourceHandle>, public AuthenticationClient {
 public:
-    WEBCORE_EXPORT static RefPtr<ResourceHandle> create(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation);
+    WEBCORE_EXPORT static RefPtr<ResourceHandle> create(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, ContentEncodingSniffingPolicy, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation);
     WEBCORE_EXPORT static void loadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentialsPolicy, SecurityOrigin*, ResourceError&, ResourceResponse&, Vector<uint8_t>& data);
     WEBCORE_EXPORT virtual ~ResourceHandle();
 
@@ -155,7 +156,7 @@ public:
     bool shouldContentSniff() const;
     static bool shouldContentSniffURL(const URL&);
 
-    bool shouldContentEncodingSniff() const;
+    ContentEncodingSniffingPolicy contentEncodingSniffingPolicy() const;
 
     WEBCORE_EXPORT static void forceContentSniffing();
 
@@ -214,7 +215,7 @@ public:
     static void registerBuiltinSynchronousLoader(const AtomString& protocol, BuiltinSynchronousLoader);
 
 protected:
-    ResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation);
+    ResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, ContentEncodingSniffingPolicy, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation);
 
 private:
     enum FailureType {
@@ -240,19 +241,19 @@ private:
 #endif
 
 #if USE(CFURLCONNECTION)
-    void createCFURLConnection(bool shouldUseCredentialStorage, bool shouldContentSniff, bool shouldContentEncodingSniff, RefPtr<SynchronousLoaderMessageQueue>&&, CFDictionaryRef clientProperties);
+    void createCFURLConnection(bool shouldUseCredentialStorage, bool shouldContentSniff, ContentEncodingSniffingPolicy, RefPtr<SynchronousLoaderMessageQueue>&&, CFDictionaryRef clientProperties);
 #endif
 
 #if PLATFORM(MAC)
-    void createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, bool shouldContentEncodingSniff, SchedulingBehavior);
+    void createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, ContentEncodingSniffingPolicy, SchedulingBehavior);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    void createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, bool shouldContentEncodingSniff, SchedulingBehavior, NSDictionary *connectionProperties);
+    void createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, ContentEncodingSniffingPolicy, SchedulingBehavior, NSDictionary *connectionProperties);
 #endif
 
 #if PLATFORM(COCOA)
-    NSURLRequest *applySniffingPoliciesIfNeeded(NSURLRequest *, bool shouldContentSniff, bool shouldContentEncodingSniff);
+    NSURLRequest *applySniffingPoliciesIfNeeded(NSURLRequest *, bool shouldContentSniff, ContentEncodingSniffingPolicy);
 #endif
 
 #if USE(CURL)

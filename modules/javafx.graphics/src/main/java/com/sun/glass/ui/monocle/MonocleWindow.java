@@ -179,6 +179,10 @@ final class MonocleWindow extends Window {
         return result;
     }
 
+    // empty - not needed by this implementation
+    @Override
+    protected void _updateViewSize(long ptr) {}
+
     /**
      * Returns the handle used to create a rendering context in Prism
      */

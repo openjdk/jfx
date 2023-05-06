@@ -1031,6 +1031,29 @@ public class ObservableValueFluentBindingsTest {
                 }
 
                 @Test
+                void shouldBeStronglyReferencedImmediatelyAfterConditionBecomesTrue() {
+                    condition.set(false);
+                    condition.set(true);
+
+                    ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> {
+                        observableValue = null;
+                        condition = null;
+                    });
+                }
+
+                @Test
+                void shouldBeStronglyReferencedImmediatelyAfterConditionBecomesTrue_2() {
+                    condition.set(false);
+                    property.set("Middle");
+                    condition.set(true);
+
+                    ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> {
+                        observableValue = null;
+                        condition = null;
+                    });
+                }
+
+                @Test
                 void shouldBeStronglyReferenced() {
                     ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> {
                         observableValue = null;

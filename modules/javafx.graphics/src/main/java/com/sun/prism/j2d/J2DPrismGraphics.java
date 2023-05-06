@@ -875,6 +875,11 @@ public class J2DPrismGraphics
         int count = gl.getGlyphCount();
         if (count == 0) return;
 
+        if (strike.getFontResource().isColorGlyph(gl.getGlyphCode(0))) {
+            drawColorGlyph(gl, strike, x, y, selectColor, start, end);
+            return;
+        }
+
         // In JDK6, setting graphics AA disables fast text loops
         g2d.setRenderingHint(KEY_ANTIALIASING, VALUE_ANTIALIAS_OFF);
 

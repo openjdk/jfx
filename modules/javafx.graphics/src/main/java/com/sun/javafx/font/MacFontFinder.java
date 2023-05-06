@@ -33,7 +33,7 @@ import java.util.Locale;
 
 import com.sun.glass.utils.NativeLibLoader;
 
-class MacFontFinder {
+public class MacFontFinder {
 
     static {
         @SuppressWarnings("removal")
@@ -109,5 +109,8 @@ class MacFontFinder {
      * @return array of post-script font names
      */
     private native static String[] getFontData();
+
+    public native static String[] getCascadeList(long fontRef);
+    public native static long[] getCascadeListRefs(long fontRef);
 }
 

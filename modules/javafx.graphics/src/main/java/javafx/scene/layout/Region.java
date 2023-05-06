@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
-import javafx.beans.value.ChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -61,7 +60,6 @@ import java.util.List;
 import java.util.function.Function;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.TempState;
-import com.sun.javafx.binding.ExpressionHelper;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.InsetsConverter;
 import javafx.css.converter.ShapeConverter;
@@ -913,34 +911,17 @@ public class Region extends Parent {
     private final InsetsProperty insets = new InsetsProperty();
     public final Insets getInsets() { return insets.get(); }
     public final ReadOnlyObjectProperty<Insets> insetsProperty() { return insets; }
-    private final class InsetsProperty extends ReadOnlyObjectProperty<Insets> {
+    private final class InsetsProperty extends ReadOnlyObjectPropertyBase<Insets> {
         private Insets cache = null;
-        private ExpressionHelper<Insets> helper = null;
 
         @Override public Object getBean() { return Region.this; }
         @Override public String getName() { return "insets"; }
-
-        @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override public void addListener(ChangeListener<? super Insets> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(ChangeListener<? super Insets> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         void fireValueChanged() {
             cache = null;
             updateSnappedInsets();
             requestLayout();
-            ExpressionHelper.fireValueChangedEvent(helper);
+            fireValueChangedEvent();
         }
 
         @Override public Insets get() {
@@ -1454,9 +1435,9 @@ public class Region extends Parent {
     }
 
     /**
-     * Defines whether the shape is centered within the Region's width or height.
-     * {@code true} means the shape centered within the Region's width and height,
-     * {@code false} means the shape is positioned at its source position.
+     * Defines whether the shape is centered within the {@code Region}'s width and height.
+     * When {@code true}, the shape is centered within the {@code Region}'s width and height,
+     * otherwise the shape is positioned at its source position.
      *
      * @defaultValue true
      * @since JavaFX 8.0
@@ -2606,12 +2587,11 @@ public class Region extends Parent {
             }
         }
 
-
         if (child.isResizable()) {
             Vec2d size = boundedNodeSizeWithBias(child, areaWidth - left - right, areaHeight - top - bottom,
                     fillWidth, fillHeight, TEMP_VEC2D);
             child.resize(snapSize(size.x, isSnapToPixel, snapScaleX),
-                         snapSize(size.y, isSnapToPixel, snapScaleX));
+                         snapSize(size.y, isSnapToPixel, snapScaleY));
         }
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 top, right, bottom, left, halignment, valignment, isSnapToPixel);

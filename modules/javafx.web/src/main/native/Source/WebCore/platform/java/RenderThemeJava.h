@@ -82,6 +82,8 @@ protected:
     virtual Vector<String, 2> mediaControlsScripts() override;
     String extraMediaControlsStyleSheet() override;
 
+    bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
 #endif
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;

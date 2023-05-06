@@ -60,6 +60,10 @@ const AtomString& webkitGenericCueRoot();
 const AtomString& webkitInnerSpinButton();
 
 const AtomString& webkitListButton();
+#if PLATFORM(JAVA)
+const AtomString& webkitMediaSliderThumb();
+const AtomString& webkitMediaSliderContainer();
+#endif
 
 const AtomString& webkitMediaTextTrackContainer();
 
