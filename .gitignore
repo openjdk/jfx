@@ -31,3 +31,17 @@ testbin/
 *.rej
 *.swp
 *~
+
+# Ignore macOS system files
+.DS_Store
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Ignore Windows system files
+Desktop.ini
+Thumbs.db

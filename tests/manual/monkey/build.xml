@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This build requires javafx.home property, pointing to JavaFX SDK (20+) directory, e.g.:
+  ant -Djavafx.home=<DIR>
+-->
+<project default="build-all" basedir=".">
+
+	<!-- project config -->
+	<property name="TARGET" value="MonkeyTester" />
+	<property name="MAIN_CLASS" value="com.oracle.tools.fx.monkey.MonkeyTesterApp"/>
+	
+	<!-- libraries -->
+	<path id="libs">
+		<!--
+		<pathelement location="lib/gson/gson-2.9.1.jar" />
+		-->
+	</path>
+
+
+	<target name="clean">
+		<delete includeEmptyDirs="true" dir="build" failonerror="false" />
+	</target>
+
+
+	<target name="init" depends="clean">
+		<mkdir dir="build" />
+		<mkdir dir="build/classes" />
+		<mkdir dir="build/jars" />
+		<mkdir dir="dist" />
+	</target>
+
+
+	<target name="compile" depends="init">
+		<javac
+			srcdir="src"
+			destdir="build/classes"
+			debug="true"
+			encoding="utf-8"
+			fork="true"
+			nowarn="true"
+			optimize="false"
+			source="17"
+			target="17"
+			includeantruntime="false"
+		>
+			<compilerarg value="-Xlint:none"/>
+			<compilerarg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls"/>
+			<classpath refid="libs" />
+		</javac>
+	</target>
+
+
+	<!-- copies non-java resources -->
+	<target name="copy-resources" depends="init">
+		<copy todir="build/classes">
+			<fileset dir="src" excludes="**/*.java" />
+		</copy>
+	</target>
+
+
+	<!-- unpacks the library jars -->
+	<target name="unpack-jars" depends="init">
+		<unzip dest="build/classes">
+			<path refid="libs" />
+		</unzip>
+
+		<delete dir="build/classes/META-INF" />
+	</target>
+
+
+	<!-- builds the app jar -->
+	<target name="make-jar" depends="compile, copy-resources, unpack-jars">
+		<delete file="build/jars/${TARGET}.jar" />
+
+		<jar jarfile="build/jars/${TARGET}.jar" basedir="build/classes" filesonly="true">
+			<manifest>
+				<attribute name="Main-Class" value="${MAIN_CLASS}" />
+				<attribute name="Created-By" value="andy@goryachev.com" />
+			</manifest>
+		</jar>
+	</target>
+
+
+	<!-- copies jar to base dir -->
+	<target name="copy-jar" depends="make-jar">
+		<copy file="build/jars/${TARGET}.jar" todir="dist/" />
+	</target>
+
+
+	<!-- builds all -->
+	<target name="build-all" depends="compile, copy-resources, make-jar, copy-jar" />
+
+	
+	<!-- alias to build-all target, to make it compatible with the rest of the apps -->
+	<target name="jar" depends="build-all" />
+</project>
