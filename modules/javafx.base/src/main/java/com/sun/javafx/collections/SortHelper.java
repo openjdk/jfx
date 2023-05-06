@@ -32,101 +32,82 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * Helper class that contains algorithms taken from JDK that additionally
- * tracks the permutation that's created thorough the process
+ * A helper class containing algorithms taken from JDK 6 that additionally track the permutations that're created
+ * during the process.
+ *
+ * @see Arrays
  */
 public class SortHelper {
+
     private int[] permutation;
     private int[] reversePermutation;
 
     private static final int INSERTIONSORT_THRESHOLD = 7;
 
-    public <T extends Comparable<? super T>> int[] sort(List<T> list) {
-        T[] a = (T[]) Array.newInstance(Comparable.class, list.size());
-        try {
-            a = list.toArray(a);
-        } catch (ArrayStoreException e) {
-            // this means this is not comparable (used without generics)
-            throw new ClassCastException();
-        }
-        int[] result = sort(a);
+    // Used only by Observable[Sequential]ListWrapper, comparator can't be null here
+    public <T> int[] sort(List<T> list, Comparator<? super T> comparator) {
+        @SuppressWarnings("unchecked")
+        T[] a = (T[]) list.toArray();
+        int[] result = sort(a, comparator);
         ListIterator<T> i = list.listIterator();
-        for (int j=0; j<a.length; j++) {
+        for (int j = 0; j < a.length; j++) {
             i.next();
             i.set(a[j]);
         }
         return result;
     }
 
-    public <T> int[] sort(List<T> list, Comparator<? super T> c) {
-        Object[] a = list.toArray();
-        int[] result = sort(a, (Comparator)c);
-        ListIterator i = list.listIterator();
-        for (int j=0; j<a.length; j++) {
-            i.next();
-            i.set(a[j]);
-        }
-        return result;
-    }
-
-    public <T extends Comparable<? super T>> int[] sort(T[] a) {
-        return sort(a, null);
-    }
-
-    public <T> int[] sort(T[] a, Comparator<? super T> c) {
-        T[] aux = a.clone();
-        int[] result = initPermutation(a.length);
-        if (c==null)
-            mergeSort(aux, a, 0, a.length, 0);
-        else
-            mergeSort(aux, a, 0, a.length, 0, c);
+    private <T> int[] sort(T[] items, Comparator<? super T> comparator) {
+        T[] aux = items.clone();
+        int[] result = initPermutation(items.length);
+        mergeSort(aux, items, 0, items.length, 0, comparator);
         reversePermutation = null;
         permutation = null;
         return result;
     }
 
-    public <T> int[] sort(T[] a, int fromIndex, int toIndex,
-                Comparator<? super T> c) {
-        rangeCheck(a.length, fromIndex, toIndex);
-        T[] aux = copyOfRange(a, fromIndex, toIndex);
-        int[] result = initPermutation(a.length);
-        if (c==null)
-            mergeSort(aux, a, fromIndex, toIndex, -fromIndex);
-        else
-            mergeSort(aux, a, fromIndex, toIndex, -fromIndex, c);
+    // Used only by {@link SortedList}, comparator can't be null here
+    public <T> int[] sort(T[] items, int fromIndex, int toIndex, Comparator<? super T> comparator) {
+        rangeCheck(items.length, fromIndex, toIndex);
+        T[] aux = copyOfRange(items, fromIndex, toIndex);
+        int[] result = initPermutation(items.length);
+        mergeSort(aux, items, fromIndex, toIndex, -fromIndex, comparator);
         reversePermutation = null;
         permutation = null;
         return Arrays.copyOfRange(result, fromIndex, toIndex);
     }
 
-    public int[] sort(int[] a, int fromIndex, int toIndex) {
-        rangeCheck(a.length, fromIndex, toIndex);
-        int[] aux = copyOfRange(a, fromIndex, toIndex);
-        int[] result = initPermutation(a.length);
-        mergeSort(aux, a, fromIndex, toIndex, -fromIndex);
+    // used only by {@link FilteredList}
+    public int[] sort(int[] indices, int fromIndex, int toIndex) {
+        rangeCheck(indices.length, fromIndex, toIndex);
+        int[] aux = copyOfRange(indices, fromIndex, toIndex);
+        int[] result = initPermutation(indices.length);
+        mergeSort(aux, indices, fromIndex, toIndex, -fromIndex);
         reversePermutation = null;
         permutation = null;
         return Arrays.copyOfRange(result, fromIndex, toIndex);
     }
 
     private static void rangeCheck(int arrayLen, int fromIndex, int toIndex) {
-        if (fromIndex > toIndex)
-            throw new IllegalArgumentException("fromIndex(" + fromIndex +
-                       ") > toIndex(" + toIndex+")");
-        if (fromIndex < 0)
+        if (fromIndex > toIndex) {
+            throw new IllegalArgumentException("fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
+        }
+        if (fromIndex < 0) {
             throw new ArrayIndexOutOfBoundsException(fromIndex);
-        if (toIndex > arrayLen)
+        }
+        if (toIndex > arrayLen) {
             throw new ArrayIndexOutOfBoundsException(toIndex);
+        }
     }
 
 
     private static int[] copyOfRange(int[] original, int from, int to) {
         int newLength = to - from;
-        if (newLength < 0)
+        if (newLength < 0) {
             throw new IllegalArgumentException(from + " > " + to);
+        }
         int[] copy = new int[newLength];
-        System.arraycopy(original, from, copy, 0,
-                         Math.min(original.length - from, newLength));
+        System.arraycopy(original, from, copy, 0, Math.min(original.length - from, newLength));
         return copy;
     }
 
@@ -134,56 +115,50 @@ public class SortHelper {
         return copyOfRange(original, from, to, (Class<T[]>) original.getClass());
     }
 
-    private static <T,U> T[] copyOfRange(U[] original, int from, int to, Class<? extends T[]> newType) {
+    private static <T, U> T[] copyOfRange(U[] original, int from, int to, Class<? extends T[]> newType) {
         int newLength = to - from;
-        if (newLength < 0)
+        if (newLength < 0) {
             throw new IllegalArgumentException(from + " > " + to);
-        T[] copy = ((Object)newType == (Object)Object[].class)
-            ? (T[]) new Object[newLength]
-            : (T[]) Array.newInstance(newType.getComponentType(), newLength);
-        System.arraycopy(original, from, copy, 0,
-                         Math.min(original.length - from, newLength));
+        }
+        T[] copy = ((Object) newType == (Object) Object[].class) ? (T[]) new Object[newLength]
+                : (T[]) Array.newInstance(newType.getComponentType(), newLength);
+        System.arraycopy(original, from, copy, 0, Math.min(original.length - from, newLength));
         return copy;
     }
 
-    /**
-     * Merge sort from Oracle JDK 6
-     */
-    private void mergeSort(int[] src,
-                  int[] dest,
-                  int low,
-                  int high,
-                  int off) {
+
+    private void mergeSort(int[] src, int[] dest, int low, int high, int off) {
         int length = high - low;
 
         // Insertion sort on smallest arrays
         if (length < INSERTIONSORT_THRESHOLD) {
-            for (int i=low; i<high; i++)
-                for (int j=i; j>low &&
-                     ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
-                    swap(dest, j, j-1);
+            for (int i = low; i < high; i++) {
+                for (int j = i; j > low && Integer.compare(dest[j - 1], dest[j]) > 0; j--) {
+                    swap(dest, j, j - 1);
+                }
+            }
             return;
         }
 
         // Recursively sort halves of dest into src
-        int destLow  = low;
+        int destLow = low;
         int destHigh = high;
-        low  += off;
+        low += off;
         high += off;
         int mid = (low + high) >>> 1;
         mergeSort(dest, src, low, mid, -off);
         mergeSort(dest, src, mid, high, -off);
 
-        // If list is already sorted, just copy from src to dest.  This is an
+        // If list is already sorted, just copy from src to dest. This is an
         // optimization that results in faster sorts for nearly ordered lists.
-        if (((Comparable)src[mid-1]).compareTo(src[mid]) <= 0) {
+        if (Integer.compare(src[mid - 1], src[mid]) <= 0) {
             System.arraycopy(src, low, dest, destLow, length);
             return;
         }
 
         // Merge sorted halves (now in src) into dest
-        for(int i = destLow, p = low, q = mid; i < destHigh; i++) {
-            if (q >= high || p < mid && ((Comparable)src[p]).compareTo(src[q])<=0) {
+        for (int i = destLow, p = low, q = mid; i < destHigh; i++) {
+            if (q >= high || p < mid && Integer.compare(src[p], src[q]) <= 0) {
                 dest[i] = src[p];
                 permutation[reversePermutation[p++]] = i;
             } else {
@@ -197,90 +172,39 @@ public class SortHelper {
         }
     }
 
-    /**
-     * Merge sort from Oracle JDK 6
-     */
-    private void mergeSort(Object[] src,
-                  Object[] dest,
-                  int low,
-                  int high,
-                  int off) {
+
+    private <T> void mergeSort(T[] src, T[] dest, int low, int high, int off, Comparator<? super T> comparator) {
         int length = high - low;
 
         // Insertion sort on smallest arrays
         if (length < INSERTIONSORT_THRESHOLD) {
-            for (int i=low; i<high; i++)
-                for (int j=i; j>low &&
-                     ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
-                    swap(dest, j, j-1);
+            for (int i = low; i < high; i++) {
+                for (int j = i; j > low && comparator.compare(dest[j - 1], dest[j]) > 0; j--) {
+                    swap(dest, j, j - 1);
+                }
+            }
             return;
         }
 
         // Recursively sort halves of dest into src
-        int destLow  = low;
+        int destLow = low;
         int destHigh = high;
-        low  += off;
+        low += off;
         high += off;
         int mid = (low + high) >>> 1;
-        mergeSort(dest, src, low, mid, -off);
-        mergeSort(dest, src, mid, high, -off);
+        mergeSort(dest, src, low, mid, -off, comparator);
+        mergeSort(dest, src, mid, high, -off, comparator);
 
-        // If list is already sorted, just copy from src to dest.  This is an
+        // If list is already sorted, just copy from src to dest. This is an
         // optimization that results in faster sorts for nearly ordered lists.
-        if (((Comparable)src[mid-1]).compareTo(src[mid]) <= 0) {
+        if (comparator.compare(src[mid - 1], src[mid]) <= 0) {
             System.arraycopy(src, low, dest, destLow, length);
             return;
         }
 
         // Merge sorted halves (now in src) into dest
-        for(int i = destLow, p = low, q = mid; i < destHigh; i++) {
-            if (q >= high || p < mid && ((Comparable)src[p]).compareTo(src[q])<=0) {
-                dest[i] = src[p];
-                permutation[reversePermutation[p++]] = i;
-            } else {
-                dest[i] = src[q];
-                permutation[reversePermutation[q++]] = i;
-            }
-        }
-
-        for (int i = destLow; i < destHigh; ++i) {
-            reversePermutation[permutation[i]] = i;
-        }
-    }
-
-    private void mergeSort(Object[] src,
-                  Object[] dest,
-                  int low, int high, int off,
-                  Comparator c) {
-        int length = high - low;
-
-        // Insertion sort on smallest arrays
-        if (length < INSERTIONSORT_THRESHOLD) {
-            for (int i=low; i<high; i++)
-            for (int j=i; j>low && c.compare(dest[j-1], dest[j])>0; j--)
-                swap(dest, j, j-1);
-            return;
-        }
-
-        // Recursively sort halves of dest into src
-        int destLow  = low;
-        int destHigh = high;
-        low  += off;
-        high += off;
-        int mid = (low + high) >>> 1;
-        mergeSort(dest, src, low, mid, -off, c);
-        mergeSort(dest, src, mid, high, -off, c);
-
-        // If list is already sorted, just copy from src to dest.  This is an
-        // optimization that results in faster sorts for nearly ordered lists.
-        if (c.compare(src[mid-1], src[mid]) <= 0) {
-           System.arraycopy(src, low, dest, destLow, length);
-           return;
-        }
-
-        // Merge sorted halves (now in src) into dest
-        for(int i = destLow, p = low, q = mid; i < destHigh; i++) {
-            if (q >= high || p < mid && c.compare(src[p], src[q]) <= 0) {
+        for (int i = destLow, p = low, q = mid; i < destHigh; i++) {
+            if (q >= high || p < mid && comparator.compare(src[p], src[q]) <= 0) {
                 dest[i] = src[p];
                 permutation[reversePermutation[p++]] = i;
             } else {

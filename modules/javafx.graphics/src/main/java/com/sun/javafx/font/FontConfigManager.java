@@ -36,7 +36,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Properties;
 
-class FontConfigManager {
+public class FontConfigManager {
 
     static boolean debugFonts = false;
     static boolean useFontConfig = true;
