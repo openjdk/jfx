@@ -36,7 +36,6 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -45,7 +44,6 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
 
-import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
 import javafx.css.converter.SizeConverter;
@@ -84,12 +82,11 @@ import javafx.scene.AccessibleRole;
  */
 public class TextArea extends TextInputControl {
     // Text area content model
-    private static final class TextAreaContent implements Content {
-        private ExpressionHelper<String> helper = null;
-        private ArrayList<StringBuilder> paragraphs = new ArrayList<>();
+    private static final class TextAreaContent extends ContentBase {
+        private final List<StringBuilder> paragraphs = new ArrayList<>();
+        private final ParagraphList paragraphList = new ParagraphList();
+
         private int contentLength = 0;
-        private ParagraphList paragraphList = new ParagraphList();
-        private ListListenerHelper<CharSequence> listenerHelper;
 
         private TextAreaContent() {
             paragraphs.add(new StringBuilder(DEFAULT_PARAGRAPH_CAPACITY));
@@ -214,7 +211,7 @@ public class TextArea extends TextInputControl {
                 // Update content length
                 contentLength += length;
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -297,7 +294,7 @@ public class TextArea extends TextInputControl {
                 // Update content length
                 contentLength -= length;
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -310,29 +307,13 @@ public class TextArea extends TextInputControl {
             return get(0, length());
         }
 
-        @Override public void addListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.addListener(helper, this, changeListener);
-        }
-
-        @Override public void removeListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.removeListener(helper, changeListener);
-        }
-
         @Override public String getValue() {
             return get();
         }
 
-        @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
         private void fireParagraphListChangeEvent(int from, int to, List<CharSequence> removed) {
             ParagraphListChange change = new ParagraphListChange(paragraphList, from, to, removed);
-            ListListenerHelper.fireValueChangedEvent(listenerHelper, change);
+            ListListenerHelper.fireValueChangedEvent(paragraphList.listenerHelper, change);
         }
     }
 
@@ -341,6 +322,7 @@ public class TextArea extends TextInputControl {
             implements ObservableList<CharSequence> {
 
         private TextAreaContent content;
+        private ListListenerHelper<CharSequence> listenerHelper;
 
         @Override
         public CharSequence get(int index) {
@@ -374,12 +356,12 @@ public class TextArea extends TextInputControl {
 
         @Override
         public void addListener(ListChangeListener<? super CharSequence> listener) {
-            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.addListener(listenerHelper, listener);
         }
 
         @Override
         public void removeListener(ListChangeListener<? super CharSequence> listener) {
-            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener);
         }
 
         @Override
@@ -399,12 +381,12 @@ public class TextArea extends TextInputControl {
 
         @Override
         public void addListener(InvalidationListener listener) {
-            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.addListener(listenerHelper, listener);
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener);
         }
     }
 

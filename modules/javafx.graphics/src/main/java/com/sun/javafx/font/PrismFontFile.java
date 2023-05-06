@@ -64,7 +64,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     // then its really expensive as all font files need to be opened.
     //
     String familyName;           /* Family font name (English) */
-    String fullName;             /* Full font name (English)   */
+    protected String fullName;   /* Full font name (English)   */
     String psName;               /* PostScript font name       */
     String localeFamilyName;
     String localeFullName;
@@ -559,6 +559,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             }
 
             DirectoryEntry headDE = getDirectoryEntry(headTag);
+            if (headDE == null) {
+                throw new Exception("No header table - font is invalid.");
+            }
             Buffer headTable = filereader.readBlock(headDE.offset,
                                                     headDE.length);
             // Important font attribute must be set in order to prevent div by zero
@@ -624,7 +627,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 if (familyName == null) {
                     familyName = fullName != null ? fullName : fontName;
                 }
-                throw new Exception("Font name not found.");
+                throw new Exception("Font name not found in " + filename);
             }
 
             /* update the font resource only if the file was decoded
@@ -764,6 +767,8 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     }
 
     /* -- ID's used in the 'name' table */
+    public static final int UNICODE_PLATFORM_ID = 0;
+
     public static final int MAC_PLATFORM_ID = 1;
     public static final int MACROMAN_SPECIFIC_ID = 0;
     public static final int MACROMAN_ENGLISH_LANG = 0;
@@ -797,8 +802,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
          */
         for (int i=0; i<numRecords; i++) {
             short platformID = buffer.getShort();
-            if (platformID != MS_PLATFORM_ID &&
-                platformID != MAC_PLATFORM_ID) {
+            if ((platformID != UNICODE_PLATFORM_ID) &&
+                (platformID != MS_PLATFORM_ID) &&
+                (platformID != MAC_PLATFORM_ID)) {
                 buffer.skip(10);
                 continue; // skip over this record.
             }

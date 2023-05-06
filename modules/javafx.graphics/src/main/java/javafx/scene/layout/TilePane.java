@@ -25,7 +25,6 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.binding.ExpressionHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +32,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoublePropertyBase;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
@@ -46,8 +46,6 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
-import javafx.beans.InvalidationListener;
-import javafx.beans.value.ChangeListener;
 import javafx.css.Styleable;
 
 import static javafx.geometry.Orientation.*;
@@ -1201,9 +1199,9 @@ public class TilePane extends Pane {
         return getClassCssMetaData();
     }
 
-    private abstract class TileSizeProperty extends ReadOnlyDoubleProperty {
+    private abstract class TileSizeProperty extends ReadOnlyDoublePropertyBase {
         private final String name;
-        private ExpressionHelper<Number> helper;
+
         private double value;
         private boolean valid;
 
@@ -1225,26 +1223,6 @@ public class TilePane extends Pane {
         }
 
         @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Number> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Number> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
         public double get() {
             if (!valid) {
                 value = compute();
@@ -1257,7 +1235,7 @@ public class TilePane extends Pane {
         public void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 

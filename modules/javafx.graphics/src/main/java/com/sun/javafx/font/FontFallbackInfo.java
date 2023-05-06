@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,43 @@
 
 package com.sun.javafx.font;
 
+import java.util.ArrayList;
 
-public interface CompositeFontResource extends FontResource {
+public class FontFallbackInfo {
 
-    public FontResource getSlotResource(int slot);
+   private ArrayList<String> linkedFontFiles;
+   private ArrayList<String> linkedFontNames;
+   private ArrayList<FontResource> linkedFonts;
 
-    public int getNumSlots();
+   public FontFallbackInfo() {
+      linkedFontFiles = new ArrayList<String>();
+      linkedFontNames = new ArrayList<String>();
+      linkedFonts = new ArrayList<FontResource>();
+   }
 
-    default public int addSlotFont(FontResource font) {
-        return -1;
-    }
+   public void add(String name, String file, FontResource font) {
+       linkedFontNames.add(name);
+       linkedFontFiles.add(file);
+       linkedFonts.add(font);
+   }
 
-    /**
-     * Returns the slot for the given font name.
-     * Adds fontName as a new fallback font if needed.
-     */
-    public int getSlotForFont(String fontName);
+   public boolean containsName(String name) {
+       return (name != null) && linkedFontNames.contains(name);
+   }
 
-    default boolean isColorGlyph(int glyphCode) {
-        int slot = (glyphCode >>> 24);
-        int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
-        FontResource slotResource = getSlotResource(slot);
-        return slotResource.isColorGlyph(slotglyphCode);
-    }
+   public boolean containsFile(String file) {
+       return (file != null) && linkedFontFiles.contains(file);
+   }
+
+   public String[] getFontNames() {
+      return linkedFontNames.toArray(new String[0]);
+   }
+
+   public String[] getFontFiles() {
+      return linkedFontFiles.toArray(new String[0]);
+   }
+
+   public FontResource[] getFonts() {
+      return linkedFonts.toArray(new FontResource[0]);
+   }
 }
