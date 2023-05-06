@@ -2006,6 +2006,9 @@ allprojects {
     test {
         useJUnitPlatform();
 
+        // Always run tests
+        outputs.upToDateWhen { false }
+
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
