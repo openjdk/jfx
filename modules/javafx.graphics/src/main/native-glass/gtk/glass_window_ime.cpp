@@ -58,12 +58,14 @@ void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     EXCEPTION_OCCURED(mainEnv);
     g_free(preedit_text);
 
+    jsize slen = mainEnv->GetStringLength(jstr);
+
     mainEnv->CallVoidMethod(ctx->get_jview(),
             jViewNotifyInputMethod,
             jstr,
             NULL, NULL, NULL,
             0,
-            0,
+            slen,
             0);
     LOG_EXCEPTION(mainEnv)
 }
