@@ -418,7 +418,6 @@ void WindowContextBase::process_mouse_scroll(GdkEventScroll* event) {
     }
 
     if (jview && (dx != 0 || dy != 0)) {
-        g_print("Delta: %f, %f\n", dx, dy);
         mainEnv->CallVoidMethod(jview, jViewNotifyScroll,
                 (jint) event->x, (jint) event->y,
                 (jint) event->x_root, (jint) event->y_root,
