@@ -93,7 +93,7 @@ public class JMemoryBuddy {
     }
 
     /**
-     * Checks whether an array of WeakReference objects can be collected.
+     * Checks whether the content of all references from a WeakReference array can be collected.
      * @param weakReferences WeakReference objects to check.
      */
     public static void assertCollectable(WeakReference[] weakReferences) {
@@ -103,7 +103,7 @@ public class JMemoryBuddy {
     }
 
     /**
-     * Checks whether a Collection of WeakReference objects can be collected.
+     * Checks whether the content of all references from a WeakReference Collection can be collected.
      * @param weakReferences WeakReference objects to check.
      */
     public static <T> void assertCollectable(Collection<WeakReference<T>> weakReferences) {
@@ -113,7 +113,7 @@ public class JMemoryBuddy {
     }
 
     /**
-     * Checks whether provided WeakReference objects can be collected.
+     * Checks whether the content of provided WeakReference objects can be collected.
      * @param weakReference The WeakReference to check.
      * @param otherWeakReferences Other WeakReference objects to check.
      */
