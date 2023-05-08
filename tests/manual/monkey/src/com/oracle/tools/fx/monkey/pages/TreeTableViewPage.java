@@ -164,7 +164,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         refresh.setOnAction((ev) -> {
             tree.refresh();
         });
-        
+
         fixedSize = new ItemSelector<Double>(
             "fixedSize",
             (x) -> {
