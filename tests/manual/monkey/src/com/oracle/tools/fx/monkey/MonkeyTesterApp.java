@@ -26,13 +26,17 @@ package com.oracle.tools.fx.monkey;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import com.oracle.tools.fx.monkey.pages.DemoPage;
+import com.oracle.tools.fx.monkey.settings.FxSettings;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.Native2AsciiPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
@@ -48,11 +52,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import com.oracle.tools.fx.monkey.pages.DemoPage;
-import com.oracle.tools.fx.monkey.settings.FxSettings;
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.HasSkinnable;
-import com.oracle.tools.fx.monkey.util.Native2AsciiPane;
 
 /**
  * Monkey Tester Application.
@@ -151,10 +150,6 @@ public class MonkeyTesterApp extends Application {
         // Page
         FX.menu(b, "_Page");
         FX.item(b, "Reload Current Page", this::reloadCurrentPage);
-        // Skin
-        FX.menu(b, "_Skin");
-        FX.item(b, "Set New Skin", this::newSkin);
-        FX.item(b, "<null> Skin", this::nullSkin);
         // Menu
         FX.menu(b, "_Menu");
         ToggleGroup g = new ToggleGroup();
@@ -248,19 +243,5 @@ public class MonkeyTesterApp extends Application {
         s.setTitle("Native to ASCII");
         s.setScene(new Scene(new Native2AsciiPane()));
         s.show();
-    }
-
-    protected void nullSkin() {
-        Node n = contentPane.getCenter();
-        if (n instanceof HasSkinnable s) {
-            s.nullSkin();
-        }
-    }
-
-    protected void newSkin() {
-        Node n = contentPane.getCenter();
-        if (n instanceof HasSkinnable s) {
-            s.newSkin();
-        }
     }
 }
