@@ -124,7 +124,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // cheaper updateCells, as otherwise the text indentation will not
                 // be recalculated in TreeTableCellSkin.calculateIndentation()
                 isDirty = true;
-                getSkinnable().requestLayout();
+                if (getSkinnable() != null) {
+                    getSkinnable().requestLayout();
+                }
             }));
 
             DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
@@ -329,7 +331,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     private void updateTreeItem() {
         unregisterInvalidationListeners(graphicProperty());
-        treeItem = getSkinnable().getTreeItem();
+        treeItem = (getSkinnable() == null) ? null : getSkinnable().getTreeItem();
         registerInvalidationListener(graphicProperty(), e -> updateTreeItemGraphic());
     }
 
