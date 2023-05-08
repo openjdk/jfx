@@ -452,13 +452,23 @@ public class PrismTextLayout implements TextLayout {
                 charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
                 leading = (trailing[0] == 0);
 
-                // Calculate insertion index for surrogate pair text in TextFlow
-                // when leading is false
-                if (run.getTextSpan() != null) {
-                    String txt = run.getTextSpan().getText();
-                    int relIdx = charIndex - run.getStart();
-                    if (Character.isHighSurrogate(txt.charAt(relIdx)) && !leading) {
-                        insertionIndex = charIndex + 2;
+                insertionIndex = charIndex;
+                String txt = new String(getText());
+                if (!leading) {
+                    if (txt != null) {
+                        int next;
+                        BreakIterator charIterator = BreakIterator.getCharacterInstance();
+                        synchronized(charIterator) {
+                            charIterator.setText(txt);
+                            next = charIterator.following(insertionIndex);
+                        }
+                        if (next == BreakIterator.DONE) {
+                            insertionIndex += 1;
+                        } else {
+                            insertionIndex = next;
+                        }
+                    } else {
+                        insertionIndex += 1;
                     }
                 }
             } else {

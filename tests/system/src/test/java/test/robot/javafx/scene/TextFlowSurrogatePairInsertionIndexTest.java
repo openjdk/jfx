@@ -40,7 +40,6 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -57,22 +56,50 @@ import test.util.Util;
 /*
  * Test for verifying insertion index in TextFlow surrogate pairs
  *
- * There is 1 test in this file.
- * Steps for testTextFlowSurrogatePairInsertionIndex()
+ * There are 4 tests in this file.
+ * Steps for testTextFlowInsertionIndexUsingTwoEmojis()
  * 1. Create a TextFlow. Add Text node with surrogate pair to it.
  * 2. Move the cursor and click on the leading side of a surrogate pair text.
  * 3. Insertion index should be same as character index.
  * 4. Move the cursor and click on the trailing side of a surrogate pair text.
  * 5. Insertion index should 2 more than the character index.
+ *
+ * Steps for testTextFlowInsertionIndexUsingMultipleEmojis()
+ * 1. Create a TextFlow. Add Text node with multiple emojis (surrogate pairs).
+ * 2. Move the cursor to the first character and click.
+ * 3. Insertion index should be same as character index.
+ * 4. Move the cursor continously till last character and check that
+ *    character index and insertion index increase monitonically as expected.
+ *
+ * Steps for testTextFlowInsertionIndexUsingTextAndEmojis()
+ * 1. Create a TextFlow. Add Text node with multiple emojis (surrogate pairs).
+ * 2. Move the cursor to the first character and click.
+ * 3. Insertion index should be same as character index.
+ * 4. Move the cursor continously till last character and check that
+ *    character index and insertion index increase monitonically as expected.
+ *
+ * Steps for testTextFlowInsertionIndexUsingEmbeddedTextNodes()
+ * 1. Create a TextFlow. Add a Text node with text and another with emojis.
+ * 2. Move the cursor to the first character and click.
+ * 3. Insertion index should be same as character index.
+ * 4. Move the cursor continously till last character and check that
+ *    character index and insertion index increase monitonically as expected.
  */
 
 public class TextFlowSurrogatePairInsertionIndexTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
+    static CountDownLatch textSetLatch;
     static Robot robot;
     static TextFlow textFlow;
+    static Text text;
+    static Text emoji;
 
     static volatile Stage stage;
     static volatile Scene scene;
+
+    final int Y_OFFSET = 25;
+    final int X_LEADING_OFFSET = 10;
+    final int X_TRAILING_OFFSET = 40;
 
     boolean isLeading;
     int charIndex;
@@ -84,30 +111,91 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         Util.runAndWait(() -> {
             robot.mouseMove((int) (scene.getWindow().getX() + scene.getX() + x),
                     (int) (scene.getWindow().getY() + scene.getY() + y));
-            robot.mousePress(MouseButton.PRIMARY);
-            robot.mouseRelease(MouseButton.PRIMARY);
+            robot.mouseClick(MouseButton.PRIMARY);
             mouseClickLatch.countDown();
         });
     }
 
     private void moveMouseToLeadingSide() throws Exception {
         mouseClickLatch = new CountDownLatch(1);
-        mouseClick(textFlow.getLayoutX() + (textFlow.getWidth() / 4) - 10,
-                    textFlow.getLayoutY() + textFlow.getHeight() / 2);
-        Thread.sleep(200); // Small delay to wait for cursor to move and mouse click.
-        Util.waitForLatch(mouseClickLatch, 10, "Timeout waiting for mouse click");
+        mouseClick(textFlow.getLayoutX() + X_LEADING_OFFSET,
+                    textFlow.getLayoutY() + Y_OFFSET);
+        Util.waitForLatch(mouseClickLatch, 5, "Timeout waiting for mouse click");
     }
 
     private void moveMouseToTrailingSide() throws Exception {
         mouseClickLatch = new CountDownLatch(1);
-        mouseClick(textFlow.getLayoutX() + (textFlow.getWidth() / 4) + 10,
-                    textFlow.getLayoutY() + textFlow.getHeight() / 2);
-        Thread.sleep(200); // Small delay to wait for cursor to move and mouse click.
-        Util.waitForLatch(mouseClickLatch, 10, "Timeout waiting for mouse click");
+        mouseClick(textFlow.getLayoutX() + X_TRAILING_OFFSET,
+                    textFlow.getLayoutY() + Y_OFFSET);
+        Util.waitForLatch(mouseClickLatch, 5, "Timeout waiting for mouse click");
+    }
+
+    private void moveMouseByPixel(int c) throws Exception {
+        mouseClickLatch = new CountDownLatch(1);
+        mouseClick(textFlow.getLayoutX() + X_LEADING_OFFSET + c,
+                    textFlow.getLayoutY() + Y_OFFSET);
+        Util.waitForLatch(mouseClickLatch, 5, "Timeout waiting for mouse click");
+    }
+
+    private void addTwoEmojis() {
+        textSetLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            text = new Text("😊😇");
+            text.setFont(new Font(48));
+            textFlow.getChildren().clear();
+            textFlow.getChildren().setAll(text);
+
+            textSetLatch.countDown();
+        });
+        Util.waitForLatch(textSetLatch, 5, "Timeout waiting for text intialization.");
+    }
+
+    private void addMultipleEmojis() {
+        textSetLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            text = new Text("😊😇❤️💙🦋🏁🔥");
+            text.setFont(new Font(48));
+            textFlow.getChildren().clear();
+            textFlow.getChildren().setAll(text);
+
+            textSetLatch.countDown();
+        });
+        Util.waitForLatch(textSetLatch, 5, "Timeout waiting for text intialization.");
+    }
+
+    private void addTextAndEmojis() {
+        textSetLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            text = new Text("Text 😊😇❤️💙🦋🔥");
+            text.setFont(new Font(48));
+            textFlow.getChildren().clear();
+            textFlow.getChildren().setAll(text);
+
+            textSetLatch.countDown();
+        });
+        Util.waitForLatch(textSetLatch, 5, "Timeout waiting for text intialization.");
+    }
+
+    private void addTwoTextNodes() {
+        textSetLatch = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            text = new Text("Text");
+            text.setFont(new Font(48));
+
+            emoji = new Text("😊😇");
+            emoji.setFont(new Font(48));
+
+            textFlow.getChildren().clear();
+            textFlow.getChildren().setAll(text, emoji);
+
+            textSetLatch.countDown();
+        });
+        Util.waitForLatch(textSetLatch, 5, "Timeout waiting for text intialization.");
     }
 
     @Test
-    public void testTextFlowSurrogatePairInsertionIndex() throws Exception {
+    public void testTextFlowInsertionIndexUsingTwoEmojis() throws Exception {
+        addTwoEmojis();
         moveMouseToLeadingSide();
         Assert.assertTrue(isLeading);
         Assert.assertEquals(charIndex, insertionIndex);
@@ -115,6 +203,62 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         moveMouseToTrailingSide();
         Assert.assertFalse(isLeading);
         Assert.assertEquals(charIndex, insertionIndex - 2);
+    }
+
+    @Test
+    public void testTextFlowInsertionIndexUsingMultipleEmojis() throws Exception {
+        addMultipleEmojis();
+
+        int textLength = text.getText().length();
+        int index = 0;
+        while (charIndex < textLength - 2) {
+            moveMouseByPixel(index);
+            if (isLeading) {
+                Assert.assertEquals(charIndex, insertionIndex);
+            } else {
+                Assert.assertEquals(charIndex, insertionIndex - 2);
+            }
+            index += 5;
+        }
+    }
+
+    @Test
+    public void testTextFlowInsertionIndexUsingTextAndEmojis() throws Exception {
+        addTextAndEmojis();
+
+        int textLength = text.getText().length();
+        int index = 0;
+        while (charIndex < textLength - 2) {
+            moveMouseByPixel(index);
+            if (isLeading) {
+                Assert.assertEquals(charIndex, insertionIndex);
+            } else if (!isLeading && charIndex < 5) {
+                Assert.assertEquals(charIndex, insertionIndex - 1);
+            } else {
+                Assert.assertEquals(charIndex, insertionIndex - 2);
+            }
+            index += 5;
+        }
+    }
+
+    @Test
+    public void testTextFlowInsertionIndexUsingEmbeddedTextNodes() throws Exception {
+        addTwoTextNodes();
+
+        int textLength = text.getText().length();
+        textLength += emoji.getText().length();
+        int index = 0;
+        while (charIndex < textLength - 2) {
+            moveMouseByPixel(index);
+            if(isLeading) {
+                Assert.assertEquals(charIndex, insertionIndex);
+            } else if (!isLeading && charIndex < 4) {
+                Assert.assertEquals(charIndex, insertionIndex - 1);
+            } else {
+                Assert.assertEquals(charIndex, insertionIndex - 2);
+            }
+            index += 5;
+        }
     }
 
     private void handleMouseEvent(MouseEvent event) {
@@ -155,11 +299,8 @@ public class TextFlowSurrogatePairInsertionIndexTest {
             robot = new Robot();
             stage = primaryStage;
 
-            Text text = new Text("😊😇");
-            text.setFont(new Font(48));
-            textFlow = new TextFlow(text);
-
-            scene = new Scene(textFlow);
+            textFlow = new TextFlow();
+            scene = new Scene(textFlow, 500, 100);
             stage.setScene(scene);
             stage.initStyle(StageStyle.UNDECORATED);
             stage.setOnShown(event -> Platform.runLater(startupLatch::countDown));
