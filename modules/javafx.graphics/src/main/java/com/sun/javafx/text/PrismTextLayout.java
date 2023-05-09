@@ -453,23 +453,19 @@ public class PrismTextLayout implements TextLayout {
                 leading = (trailing[0] == 0);
 
                 insertionIndex = charIndex;
-                String txt = new String(getText());
-                if (!leading) {
-                    if (txt != null) {
-                        int next;
+                if (getText() != null) {
+                    if (!leading) {
                         BreakIterator charIterator = BreakIterator.getCharacterInstance();
-                        synchronized(charIterator) {
-                            charIterator.setText(txt);
-                            next = charIterator.following(insertionIndex);
-                        }
+                        charIterator.setText(new String(getText()));
+                        int next = charIterator.following(insertionIndex);
                         if (next == BreakIterator.DONE) {
                             insertionIndex += 1;
                         } else {
                             insertionIndex = next;
                         }
-                    } else {
-                        insertionIndex += 1;
                     }
+                } else if (!leading) {
+                    insertionIndex += 1;
                 }
             } else {
                 //empty line, set to line break leading
