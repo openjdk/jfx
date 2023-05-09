@@ -23,10 +23,10 @@
 #include "unicode/currunit.h"
 
 /**
- * \file
+ * \file 
  * \brief C++ API: Currency Amount Object.
  */
-
+ 
 U_NAMESPACE_BEGIN
 
 /**
@@ -43,7 +43,7 @@ class U_I18N_API CurrencyAmount: public Measure {
      * ISO currency code.
      * @param amount a numeric object; amount.isNumeric() must be true
      * @param isoCode the 3-letter ISO 4217 currency code; must not be
-     * NULL and must have length 3
+     * nullptr and must have length 3
      * @param ec input-output error code. If the amount or the isoCode
      * is invalid, then this will be set to a failing value.
      * @stable ICU 3.0
@@ -56,7 +56,7 @@ class U_I18N_API CurrencyAmount: public Measure {
      * ISO currency code.
      * @param amount the amount of the given currency
      * @param isoCode the 3-letter ISO 4217 currency code; must not be
-     * NULL and must have length 3
+     * nullptr and must have length 3
      * @param ec input-output error code. If the isoCode is invalid,
      * then this will be set to a failing value.
      * @stable ICU 3.0
@@ -69,7 +69,7 @@ class U_I18N_API CurrencyAmount: public Measure {
      * @stable ICU 3.0
      */
     CurrencyAmount(const CurrencyAmount& other);
-
+ 
     /**
      * Assignment operator
      * @stable ICU 3.0
@@ -88,7 +88,7 @@ class U_I18N_API CurrencyAmount: public Measure {
      * @stable ICU 3.0
      */
     virtual ~CurrencyAmount();
-
+    
     /**
      * Returns a unique class ID for this object POLYMORPHICALLY.
      * This method implements a simple form of RTTI used by ICU.
@@ -111,7 +111,7 @@ class U_I18N_API CurrencyAmount: public Measure {
      * Return the currency unit object of this object.
      * @stable ICU 3.0
      */
-    inline const CurrencyUnit& getCurrency() const;
+    const CurrencyUnit& getCurrency() const;
 
     /**
      * Return the ISO currency code of this object.
@@ -119,10 +119,6 @@ class U_I18N_API CurrencyAmount: public Measure {
      */
     inline const char16_t* getISOCurrency() const;
 };
-
-inline const CurrencyUnit& CurrencyAmount::getCurrency() const {
-    return (const CurrencyUnit&) getUnit();
-}
 
 inline const char16_t* CurrencyAmount::getISOCurrency() const {
     return getCurrency().getISOCurrency();

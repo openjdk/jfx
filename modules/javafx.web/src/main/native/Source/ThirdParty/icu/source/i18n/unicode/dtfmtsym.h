@@ -74,14 +74,14 @@ class Hashtable;
  * DateFormatSymbols are not expected to be subclassed. Data for a calendar is
  * loaded out of resource bundles.  The 'type' parameter indicates the type of
  * calendar, for example, "gregorian" or "japanese".  If the type is not gregorian
- * (or NULL, or an empty string) then the type is appended to the resource name,
+ * (or nullptr, or an empty string) then the type is appended to the resource name,
  * for example,  'Eras_japanese' instead of 'Eras'.   If the resource 'Eras_japanese' did
  * not exist (even in root), then this class will fall back to just 'Eras', that is,
  * Gregorian data.  Therefore, the calendar implementor MUST ensure that the root
  * locale at least contains any resources that are to be particularized for the
  * calendar type.
  */
-class U_I18N_API DateFormatSymbols U_FINAL : public UObject  {
+class U_I18N_API DateFormatSymbols final : public UObject  {
 public:
     /**
      * Construct a DateFormatSymbols object by loading format data from
@@ -122,7 +122,7 @@ public:
      *
      * @param type      Type of calendar (as returned by Calendar::getType).
      *                  Will be used to access the correct set of strings.
-     *                  (NULL or empty string defaults to "gregorian".)
+     *                  (nullptr or empty string defaults to "gregorian".)
      * @param status    Status code.  Failure
      *                  results if the resources for the default cannot be
      *                  found or cannot be loaded
@@ -137,7 +137,7 @@ public:
      * @param locale    Locale to load format data from.
      * @param type      Type of calendar (as returned by Calendar::getType).
      *                  Will be used to access the correct set of strings.
-     *                  (NULL or empty string defaults to "gregorian".)
+     *                  (nullptr or empty string defaults to "gregorian".)
      * @param status    Status code.  Failure
      *                  results if the resources for the locale cannot be
      *                  found or cannot be loaded
@@ -524,14 +524,14 @@ public:
 
     /**
      * Somewhat temporary function for getting complete set of leap month patterns for all
-     * contexts & widths, indexed by EMonthPatternType values. Returns NULL if calendar
+     * contexts & widths, indexed by EMonthPatternType values. Returns nullptr if calendar
      * does not have leap month patterns. Note, there is currently no setter for this.
      * Eventually we will add full support for different month pattern types (needed for
      * other calendars such as Hindu) at which point this approach will be replaced by a
      * more complete approach.
      * @param count        Filled in with length of the array (may be 0).
      * @return             The leap month patterns (DateFormatSymbols retains ownership).
-     *                     May be NULL if there are no leap month patterns for this calendar.
+     *                     May be nullptr if there are no leap month patterns for this calendar.
      * @internal
      */
     const UnicodeString* getLeapMonthPatterns(int32_t& count) const;
@@ -597,7 +597,7 @@ public:
     Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
 
     /* The following type and kCapContextUsageTypeCount cannot be #ifndef U_HIDE_INTERNAL_API,
-       they are needed for .h file declarations. */
+       they are needed for .h file declarations. */ 
     /**
      * Constants for capitalization context usage types.
      * @internal
@@ -779,7 +779,7 @@ private:
      */
     UnicodeString  *fNarrowQuarters;
     int32_t         fNarrowQuartersCount;
-
+    
     /**
      * Standalone quarter strings. For example: "1st quarter", "2nd quarter", etc.
      */
@@ -798,7 +798,7 @@ private:
      */
     UnicodeString  *fStandaloneNarrowQuarters;
     int32_t         fStandaloneNarrowQuartersCount;
-
+    
     /**
      * All leap month patterns, for example "{0}bis".
      */
@@ -828,7 +828,7 @@ private:
      * entry containing the localized names for a single TimeZone.
      *
      * Each such row contains (with i ranging from 0..n-1):
-     *
+     * 
      * zoneStrings[i][0] - time zone ID
      *  example: America/Los_Angeles
      * zoneStrings[i][1] - long name of zone in standard time
@@ -914,13 +914,13 @@ private:
     int32_t         fStandaloneNarrowDayPeriodsCount;
 
 private:
-    /** valid/actual locale information
+    /** valid/actual locale information 
      *  these are always ICU locales, so the length should not be a problem
      */
     char validLocale[ULOC_FULLNAME_CAPACITY];
     char actualLocale[ULOC_FULLNAME_CAPACITY];
 
-    DateFormatSymbols(); // default constructor not implemented
+    DateFormatSymbols() = delete; // default constructor not implemented
 
     /**
      * Called by the constructors to actually load data from the resources

@@ -24,7 +24,7 @@
  * ICU-internal class CStr, a small helper class to facilitate passing UnicodeStrings
  * to functions needing (const char *) strings, such as printf().
  *
- * It is intended primarily for use in debugging or in tests. Uses platform
+ * It is intended primarily for use in debugging or in tests. Uses platform 
  * default code page conversion, which will do the best job possible,
  * but may be lossy, depending on the platform.
  *
@@ -51,8 +51,8 @@ class U_COMMON_API CStr : public UMemory {
 
   private:
     CharString s;
-    CStr(const CStr &other);               //  Forbid copying of this class.
-    CStr &operator =(const CStr &other);   //  Forbid assignment.
+    CStr(const CStr &other) = delete;               //  Forbid copying of this class.
+    CStr &operator =(const CStr &other) = delete;   //  Forbid assignment.
 };
 
 U_NAMESPACE_END

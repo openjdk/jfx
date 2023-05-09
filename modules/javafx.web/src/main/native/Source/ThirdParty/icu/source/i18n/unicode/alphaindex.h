@@ -87,7 +87,7 @@ class UVector;
  * AlphabeticIndex supports the creation of a UI index appropriate for a given language.
  * It can support either direct use, or use with a client that doesn't support localized collation.
  * The following is an example of what an index might look like in a UI:
- *
+ * 
  * <pre>
  *  <b>... A B C D E F G H I J K L M N O P Q R S T U V W X Y Z  ...</b>
  *
@@ -277,7 +277,7 @@ public:
         int32_t getBucketIndex(const UnicodeString &name, UErrorCode &errorCode) const;
 
         /**
-         * Returns the index-th bucket. Returns NULL if the index is out of range.
+         * Returns the index-th bucket. Returns nullptr if the index is out of range.
          *
          * @param index bucket number
          * @return the index-th bucket
@@ -309,17 +309,17 @@ public:
      */
      AlphabeticIndex(const Locale &locale, UErrorCode &status);
 
-   /**
+   /** 
      * Construct an AlphabeticIndex that uses a specific collator.
-     *
+     * 
      * The index will be created with no labels; the addLabels() function must be called
      * after creation to add the desired labels to the index.
-     *
-     * The index adopts the collator, and is responsible for deleting it.
+     * 
+     * The index adopts the collator, and is responsible for deleting it. 
      * The caller should make no further use of the collator after creating the index.
-     *
+     * 
      * @param collator The collator to use to order the contents of this index.
-     * @param status Error code, will be set with the reason if the
+     * @param status Error code, will be set with the reason if the 
      *               operation fails.
      * @stable ICU 51
      */
@@ -330,7 +330,7 @@ public:
      * that are already in the index; they do not replace the existing
      * ones.
      * @param additions The additional characters to add to the index, such as A-Z.
-     * @param status Error code, will be set with the reason if the
+     * @param status Error code, will be set with the reason if the 
      *               operation fails.
      * @return this, for chaining
      * @stable ICU 4.8
@@ -345,7 +345,7 @@ public:
      * when creating this Index.
      *
      * @param locale The locale whose index characters are to be added.
-     * @param status Error code, will be set with the reason if the
+     * @param status Error code, will be set with the reason if the 
      *               operation fails.
      * @return this, for chaining
      * @stable ICU 4.8
@@ -627,7 +627,7 @@ public:
 
     /**
      * Return the data pointer of the Record currently being iterated over.
-     * Return NULL if the current iteration position before the first item in this Bucket,
+     * Return nullptr if the current iteration position before the first item in this Bucket,
      * or after the last.
      *
      *  @return The current Record's data pointer.
@@ -649,7 +649,7 @@ private:
       * No Copy constructor.
       * @internal (private)
       */
-     AlphabeticIndex(const AlphabeticIndex &other);
+     AlphabeticIndex(const AlphabeticIndex &other) = delete;
 
      /**
       *   No assignment.
@@ -731,7 +731,7 @@ private:
     int32_t  itemsIterIndex_;
     Bucket   *currentBucket_;         // While an iteration of the index in underway,
                                       //   point to the bucket for the current label.
-                                      // NULL when no iteration underway.
+                                      // nullptr when no iteration underway.
 
     int32_t    maxLabelCount_;        // Limit on # of labels permitted in the index.
 

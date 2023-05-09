@@ -37,7 +37,6 @@ U_NAMESPACE_BEGIN
 //  class RegexCompile    Contains the regular expression compiler.
 //
 //--------------------------------------------------------------------------------
-struct  RegexTableEl;
 class   RegexPattern;
 
 
@@ -59,14 +58,11 @@ public:
 
     void       compile(const UnicodeString &pat, UParseError &pp, UErrorCode &e);
     void       compile(UText *pat, UParseError &pp, UErrorCode &e);
-
+    
 
     virtual    ~RegexCompile();
 
     void        nextChar(RegexPatternChar &c);      // Get the next char from the input stream.
-
-    static void cleanup();                       // Memory cleanup
-
 
 
     // Categories of parentheses in pattern.
@@ -154,12 +150,6 @@ private:
     RegexPatternChar              fC;                // Current char for parse state machine
                                                      //   processing.
 
-    //
-    //   Data for the state machine that parses the regular expression.
-    //
-    RegexTableEl                  **fStateTable;     // State Transition Table for regex Rule
-                                                     //   parsing.  index by p[state][char-class]
-
     uint16_t                      fStack[kStackSize];  // State stack, holds state pushes
     int32_t                       fStackPtr;           //  and pops as specified in the state
                                                        //  transition rules.
@@ -182,7 +172,7 @@ private:
                                                      //   string will be cleared.
 
     int64_t                       fPatternLength;    // Length of the input pattern string.
-
+    
     UVector32                     fParenStack;       // parentheses stack.  Each frame consists of
                                                      //   the positions of compiled pattern operations
                                                      //   needing fixup, followed by negative value.  The
@@ -210,10 +200,6 @@ private:
                                                      //   encountered overwrites these values.
                                                      //   -1 for the upper interval value means none
                                                      //   was specified (unlimited occurrences.)
-
-    int64_t                       fNameStartPos;     // Starting position of a \N{NAME} name in a
-                                                     //   pattern, valid while remainder of name is
-                                                     //   scanned.
 
     UStack                        fSetStack;         // Stack of UnicodeSets, used while evaluating
                                                      //   (at compile time) set expressions within

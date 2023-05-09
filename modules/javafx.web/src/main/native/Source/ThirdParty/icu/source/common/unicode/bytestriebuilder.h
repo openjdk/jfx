@@ -129,8 +129,8 @@ public:
 private:
     friend class ::BytesTrieTest;
 
-    BytesTrieBuilder(const BytesTrieBuilder &other);  // no copy constructor
-    BytesTrieBuilder &operator=(const BytesTrieBuilder &other);  // no assignment operator
+    BytesTrieBuilder(const BytesTrieBuilder &other) = delete;  // no copy constructor
+    BytesTrieBuilder &operator=(const BytesTrieBuilder &other) = delete;  // no assignment operator
 
     void buildBytes(UStringTrieBuildOption buildOption, UErrorCode &errorCode);
 
@@ -161,7 +161,7 @@ private:
     private:
         const char *s;
     };
-
+    
     virtual Node *createLinearMatchNode(int32_t i, int32_t byteIndex, int32_t length,
                                         Node *nextNode) const override;
 

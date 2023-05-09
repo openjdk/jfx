@@ -75,28 +75,28 @@ public:
    * @internal
    */
   enum EEras {
-    /**
-     * Constant for Chaitra, the 1st month of the Indian year.
+    /** 
+     * Constant for Chaitra, the 1st month of the Indian year. 
      */
       CHAITRA,
 
       /**
-     * Constant for Vaisakha, the 2nd month of the Indian year.
+     * Constant for Vaisakha, the 2nd month of the Indian year. 
      */
       VAISAKHA,
 
       /**
-     * Constant for Jyaistha, the 3rd month of the Indian year.
+     * Constant for Jyaistha, the 3rd month of the Indian year. 
      */
       JYAISTHA,
 
     /**
-     * Constant for Asadha, the 4th month of the Indian year.
+     * Constant for Asadha, the 4th month of the Indian year. 
      */
       ASADHA,
 
     /**
-     * Constant for Sravana, the 5th month of the Indian year.
+     * Constant for Sravana, the 5th month of the Indian year. 
      */
       SRAVANA,
 
@@ -105,33 +105,33 @@ public:
      */
       BHADRA,
 
-    /**
-     * Constant for the Asvina, the 7th month of the Indian year.
+    /** 
+     * Constant for the Asvina, the 7th month of the Indian year. 
      */
       ASVINA,
 
     /**
-     * Constant for Kartika, the 8th month of the Indian year.
+     * Constant for Kartika, the 8th month of the Indian year. 
      */
       KARTIKA,
 
     /**
-     * Constant for Agrahayana, the 9th month of the Indian year.
+     * Constant for Agrahayana, the 9th month of the Indian year. 
      */
       AGRAHAYANA,
 
     /**
-     * Constant for Pausa, the 10th month of the Indian year.
+     * Constant for Pausa, the 10th month of the Indian year. 
      */
       PAUSA,
 
     /**
-     * Constant for Magha, the 11th month of the Indian year.
+     * Constant for Magha, the 11th month of the Indian year. 
      */
       MAGHA,
 
     /**
-     * Constant for Phalguna, the 12th month of the Indian year.
+     * Constant for Phalguna, the 12th month of the Indian year. 
      */
       PHALGUNA
     };
@@ -173,7 +173,7 @@ public:
    * @internal
    */
   //void setCivil(ECivil beCivil, UErrorCode &status);
-
+    
   /**
    * Returns <code>true</code> if this object is using the fixed-cycle civil
    * calendar, or <code>false</code> if using the religious, astronomical
@@ -190,7 +190,7 @@ public:
 
  private:
   /**
-   * Determine whether a year is the gregorian year a leap year
+   * Determine whether a year is the gregorian year a leap year 
    */
   //static UBool isGregorianLeap(int32_t year);
   //----------------------------------------------------------------------
@@ -201,7 +201,7 @@ public:
    * @internal
    */
   virtual int32_t handleGetLimit(UCalendarDateFields field, ELimitType limitType) const override;
-
+  
   /**
    * Return the length (in days) of the given month.
    *
@@ -210,7 +210,7 @@ public:
    * @internal
    */
   virtual int32_t handleGetMonthLength(int32_t extendedYear, int32_t month) const override;
-
+  
   /**
    * Return the number of days in the given Indian year
    * @internal
@@ -246,7 +246,7 @@ public:
    * <li>DAY_OF_MONTH
    * <li>DAY_OF_YEAR
    * <li>EXTENDED_YEAR</ul>
-   *
+   * 
    * The DAY_OF_WEEK and DOW_LOCAL fields are already set when this
    * method is called. The getGregorianXxx() methods return Gregorian
    * calendar equivalents for the given Julian day.
@@ -255,13 +255,13 @@ public:
   virtual void handleComputeFields(int32_t julianDay, UErrorCode &status) override;
 
   // UObject stuff
- public:
+ public: 
   /**
    * @return   The class ID for this object. All objects of a given class have the
    *           same class ID. Objects of other classes have different class IDs.
    * @internal
    */
-  virtual UClassID getDynamicClassID(void) const override;
+  virtual UClassID getDynamicClassID() const override;
 
   /**
    * Return the class ID for this class. This is useful only for comparing to a return
@@ -274,7 +274,7 @@ public:
    * @return   The class ID for all objects of this class.
    * @internal
    */
-  static UClassID U_EXPORT2 getStaticClassID(void);
+  static UClassID U_EXPORT2 getStaticClassID();
 
   /**
    * return the calendar type, "indian".
@@ -284,24 +284,26 @@ public:
    */
   virtual const char * getType() const override;
 
+  /**
+   * @return      The related Gregorian year; will be obtained by modifying the value
+   *              obtained by get from UCAL_EXTENDED_YEAR field
+   * @internal
+   */
+  virtual int32_t getRelatedYear(UErrorCode &status) const override;
+
+  /**
+   * @param year  The related Gregorian year to set; will be modified as necessary then
+   *              set in UCAL_EXTENDED_YEAR field
+   * @internal
+   */
+  virtual void setRelatedYear(int32_t year) override;
+
+
 private:
-  IndianCalendar(); // default constructor not implemented
+  IndianCalendar() = delete; // default constructor not implemented
 
   // Default century.
 protected:
-
-  /**
-   * (Overrides Calendar) Return true if the current date for this Calendar is in
-   * Daylight Savings Time. Recognizes DST_OFFSET, if it is set.
-   *
-   * @param status Fill-in parameter which receives the status of this operation.
-   * @return   True if the current date for this Calendar is in Daylight Savings Time,
-   *           false, otherwise.
-   * @internal
-   */
-  virtual UBool inDaylightTime(UErrorCode& status) const override;
-
-
   /**
    * Returns true because the Indian Calendar does have a default century
    * @internal

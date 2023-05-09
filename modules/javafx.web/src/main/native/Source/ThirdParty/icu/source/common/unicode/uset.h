@@ -53,6 +53,12 @@ typedef struct USet USet;
 /**
  * Bitmask values to be passed to uset_openPatternOptions() or
  * uset_applyPattern() taking an option parameter.
+ *
+ * Use at most one of USET_CASE_INSENSITIVE, USET_ADD_CASE_MAPPINGS, USET_SIMPLE_CASE_INSENSITIVE.
+ * These case options are mutually exclusive.
+ *
+ * Undefined options bits are ignored, and reserved for future use.
+ *
  * @stable ICU 2.4
  */
 enum {
@@ -66,7 +72,7 @@ enum {
      * Enable case insensitive matching.  E.g., "[ab]" with this flag
      * will match 'a', 'A', 'b', and 'B'.  "[^ab]" with this flag will
      * match all except 'a', 'A', 'b', and 'B'. This performs a full
-     * closure over case mappings, e.g. U+017F for s.
+     * closure over case mappings, e.g. 'ſ' (U+017F long s) for 's'.
      *
      * The resulting set is a superset of the input for the code points but
      * not for the strings.
@@ -91,14 +97,33 @@ enum {
     USET_CASE_INSENSITIVE = 2,
 
     /**
-     * Enable case insensitive matching.  E.g., "[ab]" with this flag
-     * will match 'a', 'A', 'b', and 'B'.  "[^ab]" with this flag will
-     * match all except 'a', 'A', 'b', and 'B'. This adds the lower-,
-     * title-, and uppercase mappings as well as the case folding
+     * Adds all case mappings for each element in the set.
+     * This adds the full lower-, title-, and uppercase mappings as well as the full case folding
      * of each existing element in the set.
+     *
+     * Unlike the “case insensitive” options, this does not perform a closure.
+     * For example, it does not add 'ſ' (U+017F long s) for 's',
+     * 'K' (U+212A Kelvin sign) for 'k', or replace set strings by their case-folded versions.
+     *
      * @stable ICU 3.2
      */
-    USET_ADD_CASE_MAPPINGS = 4
+    USET_ADD_CASE_MAPPINGS = 4,
+
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * Enable case insensitive matching.
+     * Same as USET_CASE_INSENSITIVE but using only Simple_Case_Folding (scf) mappings,
+     * which map each code point to one code point,
+     * not full Case_Folding (cf) mappings, which map some code points to multiple code points.
+     *
+     * This is designed for case-insensitive matches, for example in certain
+     * regular expression implementations where only Simple_Case_Folding mappings are used,
+     * such as in ECMAScript (JavaScript) regular expressions.
+     *
+     * @draft ICU 73
+     */
+    USET_SIMPLE_CASE_INSENSITIVE = 6
+#endif  // U_HIDE_DRAFT_API
 };
 
 /**
@@ -268,7 +293,7 @@ uset_openEmpty(void);
 
 /**
  * Creates a USet object that contains the range of characters
- * start..end, inclusive.  If <code>start > end</code>
+ * start..end, inclusive.  If <code>start > end</code> 
  * then an empty set is created (same as using uset_openEmpty()).
  * @param start first character of the range, inclusive
  * @param end last character of the range, inclusive
@@ -299,7 +324,9 @@ uset_openPattern(const UChar* pattern, int32_t patternLength,
  * @param patternLength the length of the pattern, or -1 if null
  * terminated
  * @param options bitmask for options to apply to the pattern.
- * Valid options are USET_IGNORE_SPACE and USET_CASE_INSENSITIVE.
+ * Valid options are USET_IGNORE_SPACE and
+ * at most one of USET_CASE_INSENSITIVE, USET_ADD_CASE_MAPPINGS, USET_SIMPLE_CASE_INSENSITIVE.
+ * These case options are mutually exclusive.
  * @param ec the error code
  * @stable ICU 2.4
  */
@@ -405,26 +432,29 @@ uset_set(USet* set,
 
 /**
  * Modifies the set to represent the set specified by the given
- * pattern. See the UnicodeSet class description for the syntax of
+ * pattern. See the UnicodeSet class description for the syntax of 
  * the pattern language. See also the User Guide chapter about UnicodeSet.
  * <em>Empties the set passed before applying the pattern.</em>
  * A frozen set will not be modified.
- * @param set               The set to which the pattern is to be applied.
+ * @param set               The set to which the pattern is to be applied. 
  * @param pattern           A pointer to UChar string specifying what characters are in the set.
  *                          The character at pattern[0] must be a '['.
  * @param patternLength     The length of the UChar string. -1 if NUL terminated.
  * @param options           A bitmask for options to apply to the pattern.
- *                          Valid options are USET_IGNORE_SPACE and USET_CASE_INSENSITIVE.
+ *                          Valid options are USET_IGNORE_SPACE and
+ *                          at most one of USET_CASE_INSENSITIVE, USET_ADD_CASE_MAPPINGS,
+ *                          USET_SIMPLE_CASE_INSENSITIVE.
+ *                          These case options are mutually exclusive.
  * @param status            Returns an error if the pattern cannot be parsed.
  * @return                  Upon successful parse, the value is either
- *                          the index of the character after the closing ']'
+ *                          the index of the character after the closing ']' 
  *                          of the parsed pattern.
- *                          If the status code indicates failure, then the return value
+ *                          If the status code indicates failure, then the return value 
  *                          is the index of the error in the source.
  *
  * @stable ICU 2.8
  */
-U_CAPI int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2 
 uset_applyPattern(USet *set,
                   const UChar *pattern, int32_t patternLength,
                   uint32_t options,
@@ -804,7 +834,7 @@ uset_clear(USet* set);
 
 /**
  * Close this set over the given attribute.  For the attribute
- * USET_CASE, the result is to modify this set so that:
+ * USET_CASE_INSENSITIVE, the result is to modify this set so that:
  *
  * 1. For each character or string 'a' in this set, all strings or
  * characters 'b' such that foldCase(a) == foldCase(b) are added
@@ -824,8 +854,10 @@ uset_clear(USet* set);
  * @param set the set
  *
  * @param attributes bitmask for attributes to close over.
- * Currently only the USET_CASE bit is supported.  Any undefined bits
- * are ignored.
+ * Valid options:
+ * At most one of USET_CASE_INSENSITIVE, USET_ADD_CASE_MAPPINGS, USET_SIMPLE_CASE_INSENSITIVE.
+ * These case options are mutually exclusive.
+ * Unrelated options bits are ignored.
  * @stable ICU 4.2
  */
 U_CAPI void U_EXPORT2
@@ -850,15 +882,13 @@ uset_removeAllStrings(USet* set);
 U_CAPI UBool U_EXPORT2
 uset_isEmpty(const USet* set);
 
-#ifndef U_HIDE_DRAFT_API
 /**
  * @param set the set
  * @return true if this set contains multi-character strings or the empty string.
- * @draft ICU 70
+ * @stable ICU 70
  */
 U_CAPI UBool U_EXPORT2
 uset_hasStrings(const USet *set);
-#endif  // U_HIDE_DRAFT_API
 
 /**
  * Returns true if the given USet contains the given character.
@@ -941,18 +971,16 @@ uset_charAt(const USet* set, int32_t charIndex);
 U_CAPI int32_t U_EXPORT2
 uset_size(const USet* set);
 
-#ifndef U_HIDE_DRAFT_API
 /**
  * @param set the set
  * @return the number of ranges in this set.
- * @draft ICU 70
+ * @stable ICU 70
  * @see uset_getItemCount
  * @see uset_getItem
  * @see uset_size
  */
 U_CAPI int32_t U_EXPORT2
 uset_getRangeCount(const USet *set);
-#endif  // U_HIDE_DRAFT_API
 
 /**
  * Returns the number of items in this set.  An item is either a range

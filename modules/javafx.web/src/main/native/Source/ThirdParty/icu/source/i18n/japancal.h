@@ -43,7 +43,7 @@ U_NAMESPACE_BEGIN
  * of that year were in the Showa era, e.g. "January 6, 64 Showa", while the rest
  * of the year was in the Heisei era, e.g. "January 7, 1 Heisei".  This class
  * handles this distinction correctly when computing dates.  However, in lenient
- * mode either form of date is acceptable as input.
+ * mode either form of date is acceptable as input. 
  * <p>
  * In modern times, eras have started on January 8, 1868 AD, Gregorian (Meiji),
  * July 30, 1912 (Taisho), December 25, 1926 (Showa), and January 7, 1989 (Heisei).  Constants
@@ -67,17 +67,17 @@ class JapaneseCalendar : public GregorianCalendar {
 public:
 
     /**
-     * Check environment variable.
+     * Check environment variable. 
      * @internal
      */
-    U_I18N_API static UBool U_EXPORT2 enableTentativeEra(void);
+    U_I18N_API static UBool U_EXPORT2 enableTentativeEra();
 
     /**
      * Useful constants for JapaneseCalendar.
      * Exported for use by test code.
      * @internal
      */
-    U_I18N_API static uint32_t U_EXPORT2 getCurrentEra(void); // the current era
+    U_I18N_API static uint32_t U_EXPORT2 getCurrentEra(); // the current era
 
     /**
      * Constructs a JapaneseCalendar based on the current time in the default time zone
@@ -119,7 +119,7 @@ public:
     virtual JapaneseCalendar* clone() const override;
 
     /**
-     * Return the extended year defined by the current fields.  In the
+     * Return the extended year defined by the current fields.  In the 
      * Japanese calendar case, this is equal to the equivalent extended Gregorian year.
      * @internal
      */
@@ -143,7 +143,7 @@ public:
      *           same class ID. Objects of other classes have different class IDs.
      * @internal
      */
-    virtual UClassID getDynamicClassID(void) const override;
+    virtual UClassID getDynamicClassID() const override;
 
     /**
      * Return the class ID for this class. This is useful only for comparing to a return
@@ -156,7 +156,7 @@ public:
      * @return   The class ID for all objects of this class.
      * @internal
      */
-    U_I18N_API static UClassID U_EXPORT2 getStaticClassID(void);
+    U_I18N_API static UClassID U_EXPORT2 getStaticClassID();
 
     /**
      * return the calendar type, "japanese".
@@ -168,7 +168,7 @@ public:
 
     /**
      * @return false - no default century in Japanese
-     * @internal
+     * @internal 
      */
     virtual UBool haveDefaultCentury() const override;
 
@@ -187,7 +187,7 @@ private:
     JapaneseCalendar(); // default constructor not implemented
 
 protected:
-    /**
+    /** 
      * Calculate the era for internal computation
      * @internal
      */
@@ -207,7 +207,7 @@ protected:
 
     /***
      * Called by computeJulianDay.  Returns the default month (0-based) for the year,
-     * taking year and era into account.  Will return the first month of the given era, if
+     * taking year and era into account.  Will return the first month of the given era, if 
      * the current year is an ascension year.
      * @param eyear the extended year
      * @internal

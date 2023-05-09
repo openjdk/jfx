@@ -18,10 +18,10 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file
+ * \file 
  * \brief C++ API: MeasureUnit object.
  */
-
+ 
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/fmtable.h"
@@ -49,7 +49,7 @@ class U_I18N_API Measure: public UObject {
      * unit.  After this call, the caller must not delete the given
      * unit object.
      * @param number a numeric object; amount.isNumeric() must be true
-     * @param adoptedUnit the unit object, which must not be NULL
+     * @param adoptedUnit the unit object, which must not be nullptr
      * @param ec input-output error code. If the amount or the unit
      * is invalid, then this will be set to a failing value.
      * @stable ICU 3.0
@@ -81,7 +81,7 @@ class U_I18N_API Measure: public UObject {
      * @stable ICU 3.0
      */
     virtual ~Measure();
-
+    
     /**
      * Equality operator.  Return true if this object is equal
      * to the given object.

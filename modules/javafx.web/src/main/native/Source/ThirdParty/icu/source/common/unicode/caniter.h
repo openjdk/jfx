@@ -23,7 +23,7 @@
  * \file
  * \brief C++ API: Canonical Iterator
  */
-
+ 
 /** Should permutation skip characters with combining class zero
  *  Should be either true or false. This is a compile time option
  *  @stable ICU 2.4
@@ -73,7 +73,7 @@ Results for: {LATIN CAPITAL LETTER A WITH RING ABOVE}{LATIN SMALL LETTER D}{COMB
  * @author C++ port by V. Weinstein
  * @stable ICU 2.4
  */
-class U_COMMON_API CanonicalIterator U_FINAL : public UObject {
+class U_COMMON_API CanonicalIterator final : public UObject {
 public:
     /**
      * Construct a CanonicalIterator object
@@ -150,20 +150,20 @@ public:
 private:
     // ===================== PRIVATES ==============================
     // private default constructor
-    CanonicalIterator();
+    CanonicalIterator() = delete;
 
 
     /**
      * Copy constructor. Private for now.
      * @internal (private)
      */
-    CanonicalIterator(const CanonicalIterator& other);
+    CanonicalIterator(const CanonicalIterator& other) = delete;
 
     /**
      * Assignment operator. Private for now.
      * @internal (private)
      */
-    CanonicalIterator& operator=(const CanonicalIterator& other);
+    CanonicalIterator& operator=(const CanonicalIterator& other) = delete;
 
     // fields
     UnicodeString source;

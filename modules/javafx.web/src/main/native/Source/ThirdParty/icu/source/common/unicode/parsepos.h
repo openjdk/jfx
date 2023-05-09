@@ -24,14 +24,14 @@
 
 #include "unicode/uobject.h"
 
-
+ 
 U_NAMESPACE_BEGIN
 
 /**
  * \file
  * \brief C++ API: Canonical Iterator
  */
-/**
+/** 
  * <code>ParsePosition</code> is a simple class used by <code>Format</code>
  * and its subclasses to keep track of the current position during parsing.
  * The <code>parseObject</code> method in the various <code>Format</code>
@@ -112,7 +112,7 @@ public:
     /**
      * Clone this object.
      * Clones can be used concurrently in multiple threads.
-     * If an error occurs, then NULL is returned.
+     * If an error occurs, then nullptr is returned.
      * The caller must delete the clone.
      *
      * @return a clone of this object

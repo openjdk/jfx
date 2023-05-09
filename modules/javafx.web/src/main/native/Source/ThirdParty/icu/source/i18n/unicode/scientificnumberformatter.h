@@ -19,7 +19,7 @@
 #include "unicode/unistr.h"
 
 /**
- * \file
+ * \file 
  * \brief C++ API: Formats in scientific notation.
  */
 
@@ -196,7 +196,7 @@ public:
             UErrorCode &status);
 
     ScientificNumberFormatter(const ScientificNumberFormatter &other);
-    ScientificNumberFormatter &operator=(const ScientificNumberFormatter &);
+    ScientificNumberFormatter &operator=(const ScientificNumberFormatter &) = delete;
 
     static void getPreExponent(
             const DecimalFormatSymbols &dfs, UnicodeString &preExponent);
@@ -219,4 +219,4 @@ U_NAMESPACE_END
 
 #endif /* U_SHOW_CPLUSPLUS_API */
 
-#endif
+#endif 

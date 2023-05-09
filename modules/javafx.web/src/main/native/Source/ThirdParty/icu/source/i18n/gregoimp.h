@@ -78,7 +78,7 @@ class ClockMath {
      * @return the floor of the quotient
      */
     static int32_t floorDivide(double numerator, int32_t denominator,
-                               int32_t& remainder);
+                               int32_t* remainder);
 
     /**
      * For a positive divisor, return the quotient and remainder
@@ -91,7 +91,7 @@ class ClockMath {
      * Calling with a divisor <= 0 is disallowed.
      */
     static double floorDivide(double dividend, double divisor,
-                              double& remainder);
+                              double* remainder);
 };
 
 // Useful millisecond constants
@@ -179,7 +179,7 @@ class Grego {
      * @return the day number, with day 0 == Jan 1 1970
      */
     static double fieldsToDay(int32_t year, int32_t month, int32_t dom);
-
+    
     /**
      * Convert a 1970-epoch day number to proleptic Gregorian year,
      * month, day-of-month, and day-of-week.
@@ -252,9 +252,9 @@ class Grego {
      */
     static inline int32_t millisToJulianDay(double millis);
 
-    /**
+    /** 
      * Calculates the Gregorian day shift value for an extended year.
-     * @param eyear Extended year
+     * @param eyear Extended year 
      * @returns number of days to ADD to Julian in order to convert from J->G
      */
     static inline int32_t gregorianShift(int32_t eyear);

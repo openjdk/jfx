@@ -1531,20 +1531,18 @@ typedef enum UDateFormatSymbolType {
      * @stable ICU 54
      */
     UDAT_ZODIAC_NAMES_NARROW,
-
-#ifndef U_HIDE_DRAFT_API
+    
     /**
      * The narrow quarter names, for example 1
-     * @draft ICU 70
+     * @stable ICU 70
      */
     UDAT_NARROW_QUARTERS,
-
+    
     /**
      * The narrow standalone quarter names, for example 1
-     * @draft ICU 70
+     * @stable ICU 70
      */
     UDAT_STANDALONE_NARROW_QUARTERS
-#endif // U_HIDE_DRAFT_API
 } UDateFormatSymbolType;
 
 struct UDateFormatSymbols;

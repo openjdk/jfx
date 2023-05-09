@@ -26,7 +26,7 @@ constexpr int32_t DEFAULT_CAPACITY = 8;
  */
 constexpr int8_t HINT_KEY_POINTER = 1;
 constexpr int8_t HINT_KEY_INTEGER = 0;
-
+ 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(UVector)
 
 UVector::UVector(UErrorCode &status) :
@@ -193,40 +193,40 @@ int32_t UVector::elementAti(int32_t index) const {
 UBool UVector::containsAll(const UVector& other) const {
     for (int32_t i=0; i<other.size(); ++i) {
         if (indexOf(other.elements[i]) < 0) {
-            return FALSE;
+            return false;
         }
     }
-    return TRUE;
+    return true;
 }
 
 UBool UVector::containsNone(const UVector& other) const {
     for (int32_t i=0; i<other.size(); ++i) {
         if (indexOf(other.elements[i]) >= 0) {
-            return FALSE;
+            return false;
         }
     }
-    return TRUE;
+    return true;
 }
 
 UBool UVector::removeAll(const UVector& other) {
-    UBool changed = FALSE;
+    UBool changed = false;
     for (int32_t i=0; i<other.size(); ++i) {
         int32_t j = indexOf(other.elements[i]);
         if (j >= 0) {
             removeElementAt(j);
-            changed = TRUE;
+            changed = true;
         }
     }
     return changed;
 }
 
 UBool UVector::retainAll(const UVector& other) {
-    UBool changed = FALSE;
+    UBool changed = false;
     for (int32_t j=size()-1; j>=0; --j) {
         int32_t i = other.indexOf(elements[j]);
         if (i < 0) {
             removeElementAt(j);
-            changed = TRUE;
+            changed = true;
         }
     }
     return changed;
@@ -243,12 +243,12 @@ UBool UVector::removeElement(void* obj) {
     int32_t i = indexOf(obj);
     if (i >= 0) {
         removeElementAt(i);
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
-void UVector::removeAllElements(void) {
+void UVector::removeAllElements() {
     if (deleter != nullptr) {
         for (int32_t i=0; i<count; ++i) {
             if (elements[i].pointer != nullptr) {
@@ -263,12 +263,12 @@ UBool   UVector::equals(const UVector &other) const {
     int      i;
 
     if (this->count != other.count) {
-        return FALSE;
+        return false;
     }
     if (comparer == nullptr) {
         for (i=0; i<count; i++) {
             if (elements[i].pointer != other.elements[i].pointer) {
-                return FALSE;
+                return false;
             }
         }
     } else {
@@ -276,11 +276,11 @@ UBool   UVector::equals(const UVector &other) const {
         for (i=0; i<count; i++) {
             key.pointer = &other.elements[i];
             if (!(*comparer)(key, elements[i])) {
-                return FALSE;
+                return false;
             }
         }
     }
-    return TRUE;
+    return true;
 }
 
 
@@ -332,7 +332,7 @@ UBool UVector::ensureCapacity(int32_t minimumCapacity, UErrorCode &status) {
         return false;
     }
     if (capacity < minimumCapacity) {
-        if (capacity > (INT32_MAX - 1) / 2) {           // integer overflow check
+        if (capacity > (INT32_MAX - 1) / 2) {        	// integer overflow check
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return false;
         }
@@ -340,7 +340,7 @@ UBool UVector::ensureCapacity(int32_t minimumCapacity, UErrorCode &status) {
         if (newCap < minimumCapacity) {
             newCap = minimumCapacity;
         }
-        if (newCap > (int32_t)(INT32_MAX / sizeof(UElement))) { // integer overflow check
+        if (newCap > (int32_t)(INT32_MAX / sizeof(UElement))) {	// integer overflow check
             // We keep the original memory contents on bad minimumCapacity.
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return false;
@@ -491,7 +491,7 @@ void UVector::sortedInsert(UElement e, UElementComparator *compare, UErrorCode& 
   *
   *  The context pointer to this function is a pointer back
   *  (with some extra indirection) to the user supplied comparator.
-  *
+  *  
   */
 static int32_t U_CALLCONV
 sortComparator(const void *context, const void *left, const void *right) {
@@ -525,7 +525,7 @@ sortiComparator(const void * /*context */, const void *left, const void *right) 
 void UVector::sorti(UErrorCode &ec) {
     if (U_SUCCESS(ec)) {
         uprv_sortArray(elements, count, sizeof(UElement),
-                       sortiComparator, nullptr,  FALSE, &ec);
+                       sortiComparator, nullptr,  false, &ec);
     }
 }
 
@@ -547,7 +547,7 @@ void UVector::sorti(UErrorCode &ec) {
 void UVector::sort(UElementComparator *compare, UErrorCode &ec) {
     if (U_SUCCESS(ec)) {
         uprv_sortArray(elements, count, sizeof(UElement),
-                       sortComparator, &compare, FALSE, &ec);
+                       sortComparator, &compare, false, &ec);
     }
 }
 
@@ -558,7 +558,7 @@ void UVector::sort(UElementComparator *compare, UErrorCode &ec) {
 void UVector::sortWithUComparator(UComparator *compare, const void *context, UErrorCode &ec) {
     if (U_SUCCESS(ec)) {
         uprv_sortArray(elements, count, sizeof(UElement),
-                       compare, context, TRUE, &ec);
+                       compare, context, true, &ec);
     }
 }
 

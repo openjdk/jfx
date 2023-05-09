@@ -35,13 +35,13 @@
 #include "unicode/calendar.h"
 
 /**
- * \file
+ * \file 
  * \brief C++ API: Concrete class which provides the standard calendar.
  */
 
 U_NAMESPACE_BEGIN
 
-/**
+/** 
  * Concrete class which provides the standard calendar used by most of the world.
  * <P>
  * The standard (Gregorian) calendar has 2 eras, BC and AD.
@@ -88,7 +88,7 @@ U_NAMESPACE_BEGIN
  *     cout << "Current Time" << endl;
  *
  *     // create a Pacific Standard Time time zone
- *     SimpleTimeZone* pdt = new SimpleTimeZone(-8 * 60 * 60 * 1000, ids->unext(NULL, success)));
+ *     SimpleTimeZone* pdt = new SimpleTimeZone(-8 * 60 * 60 * 1000, ids->unext(nullptr, success)));
  *
  *     // set up rules for daylight savings time
  *     pdt->setStartRule(UCAL_MARCH, 1, UCAL_SUNDAY, 2 * 60 * 60 * 1000);
@@ -347,7 +347,7 @@ public:
      * Returns true if the given Calendar object is equivalent to this
      * one.  Calendar override.
      *
-     * @param other the Calendar to be compared with this Calendar
+     * @param other the Calendar to be compared with this Calendar   
      * @stable ICU 2.4
      */
     virtual UBool isEquivalentTo(const Calendar& other) const override;
@@ -411,19 +411,6 @@ public:
      */
     int32_t getActualMinimum(UCalendarDateFields field, UErrorCode &status) const override;
 
-#ifndef U_HIDE_DEPRECATED_API
-    /**
-     * Return the maximum value that this field could have, given the current date.
-     * For example, with the date "Feb 3, 1997" and the DAY_OF_MONTH field, the actual
-     * maximum would be 28; for "Feb 3, 1996" it s 29.  Similarly for a Hebrew calendar,
-     * for some years the actual maximum for MONTH is 12, and for others 13.
-     * @param field    the time field.
-     * @return         the maximum value that this field could have, given the current date.
-     * @deprecated ICU 2.6. Use getActualMaximum(UCalendarDateFields field) instead.
-     */
-    int32_t getActualMaximum(EDateFields field) const;
-#endif  /* U_HIDE_DEPRECATED_API */
-
     /**
      * Return the maximum value that this field could have, given the current date.
      * For example, with the date "Feb 3, 1997" and the DAY_OF_MONTH field, the actual
@@ -435,17 +422,6 @@ public:
      * @stable ICU 2.6
      */
     virtual int32_t getActualMaximum(UCalendarDateFields field, UErrorCode& status) const override;
-
-    /**
-     * (Overrides Calendar) Return true if the current date for this Calendar is in
-     * Daylight Savings Time. Recognizes DST_OFFSET, if it is set.
-     *
-     * @param status Fill-in parameter which receives the status of this operation.
-     * @return   True if the current date for this Calendar is in Daylight Savings Time,
-     *           false, otherwise.
-     * @stable ICU 2.0
-     */
-    virtual UBool inDaylightTime(UErrorCode& status) const override;
 
 public:
 
@@ -487,7 +463,7 @@ public:
     virtual const char * getType() const override;
 
  private:
-    GregorianCalendar(); // default constructor not implemented
+    GregorianCalendar() = delete; // default constructor not implemented
 
  protected:
     /**
@@ -518,7 +494,7 @@ public:
      * Subclasses may override this.  This method calls
      * handleGetMonthLength() to obtain the calendar-specific month
      * length.
-     * @param bestField which field to use to calculate the date
+     * @param bestField which field to use to calculate the date 
      * @return julian day specified by calendar fields.
      * @internal
      */
@@ -567,7 +543,7 @@ public:
      * @internal
      */
     int32_t yearLength(int32_t year) const;
-
+    
     /**
      * return the length of the year field.
      * @return    the length of the year field
@@ -589,7 +565,7 @@ public:
      * Return the day number with respect to the epoch.  January 1, 1970 (Gregorian)
      * is day zero.
      * @param status Fill-in parameter which receives the status of this operation.
-     * @return       the day number with respect to the epoch.
+     * @return       the day number with respect to the epoch.  
      * @internal
      */
     virtual UDate getEpochDay(UErrorCode& status);
@@ -627,8 +603,8 @@ public:
      */
     virtual int32_t handleGetExtendedYear() override;
 
-    /**
-     * Subclasses may override this to convert from week fields
+    /** 
+     * Subclasses may override this to convert from week fields 
      * (YEAR_WOY and WEEK_OF_YEAR) to an extended year in the case
      * where YEAR, EXTENDED_YEAR are not set.
      * The Gregorian implementation assumes a yearWoy in gregorian format, according to the current era.
@@ -660,12 +636,12 @@ public:
      * Compute the julian day number of the given year.
      * @param isGregorian    if true, using Gregorian calendar, otherwise using Julian calendar
      * @param year           the given year.
-     * @param isLeap         true if the year is a leap year.
-     * @return
+     * @param isLeap         true if the year is a leap year.       
+     * @return 
      */
     static double computeJulianDayOfYear(UBool isGregorian, int32_t year,
                                          UBool& isLeap);
-
+    
     /**
      * Validates the values of the set time fields.  True if they're all valid.
      * @return    True if the set time fields are all valid.
@@ -716,12 +692,6 @@ public:
     int32_t fGregorianCutoverYear;// = 1582;
 
     /**
-     * The year of the gregorianCutover, with 0 representing
-     * 1 BC, -1 representing 2 BC, etc.
-     */
-    int32_t fGregorianCutoverJulianDay;// = 2299161;
-
-    /**
      * Converts time as milliseconds to Julian date. The Julian date used here is not a
      * true Julian date, since it is measured from midnight, not noon.
      *
@@ -757,7 +727,7 @@ public:
 
     /**
      * @return true if this calendar has the notion of a default century
-     * @internal
+     * @internal 
      */
     virtual UBool haveDefaultCentury() const override;
 
@@ -769,7 +739,7 @@ public:
 
     /**
      * @return the beginning year of the default century
-     * @internal
+     * @internal 
      */
     virtual int32_t defaultCenturyStartYear() const override;
 };

@@ -54,8 +54,8 @@ public:                                       //   of these structs for each ent
     ~RBBISymbolTableEntry();
 
 private:
-    RBBISymbolTableEntry(const RBBISymbolTableEntry &other); // forbid copying of this class
-    RBBISymbolTableEntry &operator=(const RBBISymbolTableEntry &other); // forbid copying of this class
+    RBBISymbolTableEntry(const RBBISymbolTableEntry &other) = delete; // forbid copying of this class
+    RBBISymbolTableEntry &operator=(const RBBISymbolTableEntry &other) = delete; // forbid copying of this class
 };
 
 
@@ -91,7 +91,7 @@ public:
     // A do-nothing inline function for non-debug builds.  Member funcs can't be empty
     //  or the call sites won't compile.
     int32_t fFakeField;
-    #define rbbiSymtablePrint() fFakeField=0;
+    #define rbbiSymtablePrint() fFakeField=0; 
 #endif
 
 private:
@@ -177,8 +177,8 @@ public:
     RBBIDataHeader                *flattenData();    // Create the flattened (runtime format)
                                                      // data tables..
 private:
-    RBBIRuleBuilder(const RBBIRuleBuilder &other); // forbid copying of this class
-    RBBIRuleBuilder &operator=(const RBBIRuleBuilder &other); // forbid copying of this class
+    RBBIRuleBuilder(const RBBIRuleBuilder &other) = delete; // forbid copying of this class
+    RBBIRuleBuilder &operator=(const RBBIRuleBuilder &other) = delete; // forbid copying of this class
 };
 
 
@@ -223,7 +223,7 @@ typedef std::pair<int32_t, int32_t> IntPair;
 #define RBBIDebugPrintf printf
 #define RBBIDebugPuts puts
 #else
-#undef RBBIDebugPrintf
+#undef RBBIDebugPrintf 
 #define RBBIDebugPuts(arg)
 #endif
 

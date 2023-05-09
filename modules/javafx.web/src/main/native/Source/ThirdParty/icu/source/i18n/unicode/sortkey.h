@@ -28,10 +28,10 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file
- * \brief C++ API: Keys for comparing strings multiple times.
+ * \file 
+ * \brief C++ API: Keys for comparing strings multiple times. 
  */
-
+ 
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/uobject.h"
@@ -186,7 +186,7 @@ public:
     uint8_t*                toByteArray(int32_t& count) const;
 #endif
 
-#ifndef U_HIDE_DEPRECATED_API
+#ifndef U_HIDE_DEPRECATED_API 
     /**
     * Convenience method which does a string(bit-wise) comparison of the
     * two collation keys.
@@ -249,7 +249,7 @@ private:
     /**
      * Replaces the current bytes buffer with a new one of newCapacity
      * and copies length bytes from the old buffer to the new one.
-     * @return the new buffer, or NULL if the allocation failed
+     * @return the new buffer, or nullptr if the allocation failed
      */
     uint8_t *reallocate(int32_t newCapacity, int32_t length);
     /**

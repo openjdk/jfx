@@ -154,18 +154,18 @@ public:
     void insertElementAt(void* obj, int32_t index, UErrorCode &status);
 
     void insertElementAt(int32_t elem, int32_t index, UErrorCode &status);
-
+    
     void* elementAt(int32_t index) const;
 
     int32_t elementAti(int32_t index) const;
 
     UBool equals(const UVector &other) const;
 
-    inline void* firstElement(void) const {return elementAt(0);}
+    inline void* firstElement() const {return elementAt(0);}
 
-    inline void* lastElement(void) const {return elementAt(count-1);}
+    inline void* lastElement() const {return elementAt(count-1);}
 
-    inline int32_t lastElementi(void) const {return elementAti(count-1);}
+    inline int32_t lastElementi() const {return elementAti(count-1);}
 
     int32_t indexOf(void* obj, int32_t startIndex = 0) const;
 
@@ -187,9 +187,9 @@ public:
 
     void removeAllElements();
 
-    inline int32_t size(void) const {return count;}
+    inline int32_t size() const {return count;}
 
-    inline UBool isEmpty(void) const {return count == 0;}
+    inline UBool isEmpty() const {return count == 0;}
 
     UBool ensureCapacity(int32_t minimumCapacity, UErrorCode &status);
 
@@ -197,7 +197,7 @@ public:
      * Change the size of this vector as follows: If newSize is
      * smaller, then truncate the array, possibly deleting held
      * elements for i >= newSize.  If newSize is larger, grow the
-     * array, filling in new slots with NULL.
+     * array, filling in new slots with nullptr.
      */
     void setSize(int32_t newSize, UErrorCode &status);
 
@@ -328,21 +328,21 @@ public:
     // It's okay not to have a virtual destructor (in UVector)
     // because UStack has no special cleanup to do.
 
-    inline UBool empty(void) const {return isEmpty();}
+    inline UBool empty() const {return isEmpty();}
 
-    inline void* peek(void) const {return lastElement();}
+    inline void* peek() const {return lastElement();}
 
-    inline int32_t peeki(void) const {return lastElementi();}
-
+    inline int32_t peeki() const {return lastElementi();}
+    
     /**
      * Pop and return an element from the stack.
      * For stacks with a deleter function, the caller takes ownership
      * of the popped element.
      */
-    void* pop(void);
-
-    int32_t popi(void);
-
+    void* pop();
+    
+    int32_t popi();
+    
     inline void* push(void* obj, UErrorCode &status) {
         if (hasDeleter()) {
             adoptElement(obj, status);
