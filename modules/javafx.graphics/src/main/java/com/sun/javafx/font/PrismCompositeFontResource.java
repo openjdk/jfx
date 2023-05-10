@@ -53,11 +53,7 @@ class PrismCompositeFontResource implements CompositeFontResource {
             factory.compResourceMap.put(lookupName, this);
         }
         this.primaryResource = primaryResource;
-        int aaMode = primaryResource.getDefaultAAMode();
-        boolean bold = primaryResource.isBold();
-        boolean italic = primaryResource.isItalic();
-        fallbackResource =
-              FallbackResource.getFallbackResource(bold, italic, aaMode);
+        fallbackResource = FallbackResource.getFallbackResource(primaryResource);
     }
 
     @Override

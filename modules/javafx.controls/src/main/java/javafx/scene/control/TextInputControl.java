@@ -119,6 +119,37 @@ public abstract class TextInputControl extends Control {
         public int length();
     }
 
+    /**
+     * Package private base implementation of Content.
+     */
+    abstract static class ContentBase implements Content {
+        private ExpressionHelper<String> helper;
+
+        @Override
+        public void addListener(ChangeListener<? super String> changeListener) {
+            helper = ExpressionHelper.addListener(helper, this, changeListener);
+        }
+
+        @Override
+        public void removeListener(ChangeListener<? super String> changeListener) {
+            helper = ExpressionHelper.removeListener(helper, changeListener);
+        }
+
+        @Override
+        public void addListener(InvalidationListener listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        protected final void fireValueChangedEvent() {
+            ExpressionHelper.fireValueChangedEvent(helper);
+        }
+    }
+
     private boolean blockSelectedTextUpdate;
 
     /* *************************************************************************

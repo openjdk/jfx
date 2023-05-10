@@ -60,8 +60,6 @@ class GtkWindow extends Window {
 
     private native void maximizeImpl(long ptr, boolean maximize, boolean wasMaximized);
 
-    private native void setBoundsImpl(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch);
-
     private native void setVisibleImpl(long ptr, boolean visible);
 
     @Override
@@ -185,27 +183,10 @@ class GtkWindow extends Window {
         return _getNativeWindowImpl(super.getNativeWindow());
     }
 
-    private native void _setGravity(long ptr, float xGravity, float yGravity);
-
     @Override
-    protected void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity) {
-        _setGravity(ptr, xGravity, yGravity);
-        setBoundsImpl(ptr, x, y, xSet, ySet, w, h, cw, ch);
-
-        if ((w <= 0) && (cw > 0) || (h <= 0) && (ch > 0)) {
-            final int[] extarr = new int[4];
-            getFrameExtents(ptr, extarr);
-
-            // TODO: ((w <= 0) && (cw <= 0)) || ((h <= 0) && (ch <= 0))
-            notifyResize(WindowEvent.RESIZE,
-                         ((w <= 0) && (cw > 0)) ? cw + extarr[0] + extarr[1]
-                                                : w,
-                         ((h <= 0) && (ch > 0)) ? ch + extarr[2] + extarr[3]
-                                                : h);
-        }
-    }
-
-    private native void getFrameExtents(long ptr, int[] extarr);
+    protected native void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet,
+                                       int w, int h, int cw, int ch,
+                                       float xGravity, float yGravity);
 
     @Override
     protected void _requestInput(long ptr, String text, int type, double width, double height,
