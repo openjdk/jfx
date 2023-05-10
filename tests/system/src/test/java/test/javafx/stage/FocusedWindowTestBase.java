@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import javafx.stage.Stage;
 import org.junit.Assert;
 
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public abstract class FocusedWindowTestBase {
 
@@ -76,20 +77,6 @@ public abstract class FocusedWindowTestBase {
 
         closedFocusedStage.requestFocus();
         closedFocusedStage = null;
-        assertCollectable(closedFocusedStageWeak);
-    }
-
-    public static void assertCollectable(WeakReference weakReference) throws Exception {
-        int counter = 0;
-
-        System.gc();
-
-        while (counter < 10 && weakReference.get() != null) {
-            Thread.sleep(100);
-            counter = counter + 1;
-            System.gc();
-        }
-
-        Assert.assertNull(weakReference.get());
+        JMemoryBuddy.assertCollectable(closedFocusedStageWeak);
     }
 }
