@@ -344,10 +344,10 @@ BOOL IsExtendedKey(UINT vkey) {
 
 /*
  * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _getKeyCanGenerateCharacter
+ * Method:    _canKeyGenerateCharacter
  * Signature: (IIC)Z
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCanGenerateCharacter
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinApplication__1canKeyGenerateCharacter
   (JNIEnv *env, jobject jApplication, jint hardwareCode, jint vkCode, jchar character)
 {
     HKL layout = ::GetKeyboardLayout(GlassApplication::GetMainThreadId());

@@ -706,7 +706,7 @@ public abstract class Toolkit {
     /**
      * The default implementation bridges into the existing getKeyCodeForChar call.
      */
-    public boolean getKeyCanGenerateCharacter(KeyEvent event, String character) {
+    public boolean canKeyGenerateCharacter(KeyEvent event, String character) {
         if (event.getCode() != KeyCode.UNDEFINED) {
             return getKeyCodeForChar(character) == event.getCode().getCode();
         }

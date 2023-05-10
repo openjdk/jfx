@@ -110,7 +110,7 @@ public final class KeyCharacterCombination extends KeyCombination {
     @Override
     public boolean match(final KeyEvent event) {
         return (super.match(event) &&
-                Toolkit.getToolkit().getKeyCanGenerateCharacter(event, getCharacter()));
+                Toolkit.getToolkit().canKeyGenerateCharacter(event, getCharacter()));
     }
 
     /**

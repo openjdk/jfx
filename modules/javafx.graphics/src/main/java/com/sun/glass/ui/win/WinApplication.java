@@ -377,13 +377,13 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected int _getKeyCodeForChar(char c) {
-        // This platform has migrated to getKeyCanGenerateCharacter
+        // This platform has migrated to canKeyGenerateCharacter
         // so getKeyCodeForChar will no longer be called.
-        return 0;
+        throw new UnsupportedOperationException("Windows uses canKeyGenerateCharacter");
     }
 
     @Override
-    protected native boolean _getKeyCanGenerateCharacter(int hardwareCode, int vkCode, char c);
+    protected native boolean _canKeyGenerateCharacter(int hardwareCode, int vkCode, char c);
 
     @Override
     protected native int _isKeyLocked(int keyCode);

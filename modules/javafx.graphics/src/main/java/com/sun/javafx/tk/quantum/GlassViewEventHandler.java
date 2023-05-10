@@ -165,7 +165,6 @@ class GlassViewEventHandler extends View.EventHandler {
                 PulseLogger.newInput(keyEventType(type).toString());
             }
             WindowStage stage = scene.getWindowStage();
-            Boolean consumed = Boolean.FALSE;
 
             try {
                 boolean shiftDown = (modifiers & KeyEvent.MODIFIER_SHIFT) != 0;
@@ -221,7 +220,7 @@ class GlassViewEventHandler extends View.EventHandler {
                         }
                         if (scene.sceneListener != null) {
                             if (scene.sceneListener.keyEvent(keyEvent))
-                                consumed = Boolean.TRUE;
+                                return Boolean.TRUE;
                         }
                         break;
                     default:
@@ -237,7 +236,7 @@ class GlassViewEventHandler extends View.EventHandler {
                     PulseLogger.newInput(null);
                 }
             }
-            return consumed;
+            return Boolean.FALSE;
         }
     }
 

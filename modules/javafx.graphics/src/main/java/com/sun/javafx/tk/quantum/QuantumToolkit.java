@@ -1089,11 +1089,11 @@ public final class QuantumToolkit extends Toolkit {
 
     // The Quantum version of this call knows that we may have the hardware key code
     // available.
-    @Override public boolean getKeyCanGenerateCharacter(KeyEvent keyEvent, String character) {
+    @Override public boolean canKeyGenerateCharacter(KeyEvent keyEvent, String character) {
         int hardwareCode = KeyEventHelper.getHardwareCode(keyEvent);
         if (keyEvent.getCode() != KeyCode.UNDEFINED || hardwareCode != -1) {
             if (character.length() == 1)
-                return Application.GetApplication().getKeyCanGenerateCharacter(
+                return Application.GetApplication().canKeyGenerateCharacter(
                     hardwareCode,
                     keyEvent.getCode().getCode(),
                     character.charAt(0));
