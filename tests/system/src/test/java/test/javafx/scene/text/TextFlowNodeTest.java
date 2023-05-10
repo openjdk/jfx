@@ -26,7 +26,6 @@
 package test.javafx.scene.text;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import javafx.geometry.Bounds;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
@@ -36,7 +35,7 @@ import javafx.scene.text.TextFlow;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import com.sun.javafx.application.PlatformImpl;
+import test.util.Util;
 
 /**
  * Tests TextFlow Node
@@ -44,17 +43,8 @@ import com.sun.javafx.application.PlatformImpl;
 public class TextFlowNodeTest {
     @BeforeClass
     public static void initFX() {
-        final CountDownLatch startupLatch = new CountDownLatch(1);
-        PlatformImpl.startup(() -> {
-            startupLatch.countDown();
-        });
-        try {
-            if (!startupLatch.await(5, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+        CountDownLatch startupLatch = new CountDownLatch(1);
+        Util.startup(startupLatch, startupLatch::countDown);
     }
 
     @Test
@@ -67,7 +57,7 @@ public class TextFlowNodeTest {
         // underline 0,0 must be empty
         PathElement[] p = f.underlineShape(0, 0);
         Assert.assertNotNull(p);
-        Assert.assertEquals(p.length, 0);
+        Assert.assertEquals(0, p.length);
 
         // underline 1,0 .. 1,len must increase monotonically
         int len = t1.getText().length() + t2.getText().length();
