@@ -25,6 +25,8 @@
 
 package com.sun.glass.ui.monocle;
 
+import com.sun.javafx.PlatformUtil;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -32,10 +34,7 @@ class LinuxPlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
-        @SuppressWarnings("removal")
-        String os = AccessController.doPrivileged(
-                (PrivilegedAction<String>) () -> System.getProperty("os.name"));
-        return os != null && os.equals("Linux");
+        return PlatformUtil.isLinux();
     }
 
     @Override

@@ -25,6 +25,8 @@
 
 package com.sun.javafx.application;
 
+import com.sun.javafx.PlatformUtil;
+
 import java.io.File;
 import java.net.URI;
 import javafx.application.Application;
@@ -132,12 +134,11 @@ public abstract class HostServicesDelegate {
 
         @Override
         public void showDocument(final String uri) {
-            String osName = System.getProperty("os.name");
             try {
-                if (osName.startsWith("Mac OS")) {
+                if (PlatformUtil.isMac()) {
                     Runtime.getRuntime().exec(
                             "open " + uri);
-                } else if (osName.startsWith("Windows")) {
+                } else if (PlatformUtil.isWindows()) {
                     Runtime.getRuntime().exec(
                             "rundll32 url.dll,FileProtocolHandler " + uri);
                 } else { //assume Unix or Linux

@@ -24,6 +24,7 @@
  */
 package com.sun.media.jfxmedia.locator;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmedia.MediaManager;
 import com.sun.media.jfxmedia.logging.Logger;
@@ -358,7 +359,7 @@ public class Locator {
             }
 
             // On non-Windows systems, replace "/~/" with home directory path + "/".
-            if (System.getProperty("os.name").toLowerCase().indexOf("win") == -1
+            if (!PlatformUtil.isWindows()
                     && protocol.equals("file")) {
                 int index = uriString.indexOf("/~/");
                 if (index != -1) {
