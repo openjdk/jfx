@@ -363,7 +363,7 @@ ffi_prep_closure_loc (ffi_closure*,
               ffi_cif *,
               void (*fun)(ffi_cif*,void*,void**,void*),
               void *user_data,
-		          void *codeloc);
+              void *codeloc);
 
 #ifdef __sgi
 # pragma pack 8

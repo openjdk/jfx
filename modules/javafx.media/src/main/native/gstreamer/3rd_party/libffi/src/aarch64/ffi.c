@@ -259,7 +259,7 @@ struct arg_state
   unsigned ngrn;                /* Next general-purpose register number. */
   unsigned nsrn;                /* Next vector register number. */
   size_t nsaa;                  /* Next stack offset. */
-  size_t next_struct_area;	/* Place to allocate big structs. */
+  size_t next_struct_area;      /* Place to allocate big structs. */
 
 #if defined (__APPLE__)
   unsigned allocating_variadic;
@@ -306,7 +306,7 @@ allocate_to_stack (struct arg_state *state, void *stack,
    return a pointer to it.  */
 static void *
 allocate_and_copy_struct_to_stack (struct arg_state *state, void *stack,
-				   size_t alignment, size_t size, void *value)
+                                   size_t alignment, size_t size, void *value)
 {
   size_t dest = state->next_struct_area - size;
 
@@ -387,48 +387,48 @@ extend_hfa_type (void *dest, void *src, int h)
   void *x0;
 
   asm volatile (
-	"adr	%0, 0f\n"
-"	add	%0, %0, %1\n"
-"	br	%0\n"
-"0:	ldp	s16, s17, [%3]\n"	/* S4 */
-"	ldp	s18, s19, [%3, #8]\n"
-"	b	4f\n"
-"	ldp	s16, s17, [%3]\n"	/* S3 */
-"	ldr	s18, [%3, #8]\n"
-"	b	3f\n"
-"	ldp	s16, s17, [%3]\n"	/* S2 */
-"	b	2f\n"
-"	nop\n"
-"	ldr	s16, [%3]\n"		/* S1 */
-"	b	1f\n"
-"	nop\n"
-"	ldp	d16, d17, [%3]\n"	/* D4 */
-"	ldp	d18, d19, [%3, #16]\n"
-"	b	4f\n"
-"	ldp	d16, d17, [%3]\n"	/* D3 */
-"	ldr	d18, [%3, #16]\n"
-"	b	3f\n"
-"	ldp	d16, d17, [%3]\n"	/* D2 */
-"	b	2f\n"
-"	nop\n"
-"	ldr	d16, [%3]\n"		/* D1 */
-"	b	1f\n"
-"	nop\n"
-"	ldp	q16, q17, [%3]\n"	/* Q4 */
-"	ldp	q18, q19, [%3, #32]\n"
-"	b	4f\n"
-"	ldp	q16, q17, [%3]\n"	/* Q3 */
-"	ldr	q18, [%3, #32]\n"
-"	b	3f\n"
-"	ldp	q16, q17, [%3]\n"	/* Q2 */
-"	b	2f\n"
-"	nop\n"
-"	ldr	q16, [%3]\n"		/* Q1 */
-"	b	1f\n"
-"4:	str	q19, [%2, #48]\n"
-"3:	str	q18, [%2, #32]\n"
-"2:	str	q17, [%2, #16]\n"
-"1:	str	q16, [%2]"
+"adr    %0, 0f\n"
+"       add     %0, %0, %1\n"
+"       br      %0\n"
+"0:     ldp     s16, s17, [%3]\n"       /* S4 */
+"       ldp     s18, s19, [%3, #8]\n"
+"       b       4f\n"
+"       ldp     s16, s17, [%3]\n"       /* S3 */
+"       ldr     s18, [%3, #8]\n"
+"       b       3f\n"
+"       ldp     s16, s17, [%3]\n"       /* S2 */
+"       b       2f\n"
+"       nop\n"
+"       ldr     s16, [%3]\n"            /* S1 */
+"       b       1f\n"
+"       nop\n"
+"       ldp     d16, d17, [%3]\n"       /* D4 */
+"       ldp     d18, d19, [%3, #16]\n"
+"       b       4f\n"
+"       ldp     d16, d17, [%3]\n"       /* D3 */
+"       ldr     d18, [%3, #16]\n"
+"       b       3f\n"
+"       ldp     d16, d17, [%3]\n"       /* D2 */
+"       b       2f\n"
+"       nop\n"
+"       ldr     d16, [%3]\n"            /* D1 */
+"       b       1f\n"
+"       nop\n"
+"       ldp     q16, q17, [%3]\n"       /* Q4 */
+"       ldp     q18, q19, [%3, #32]\n"
+"       b       4f\n"
+"       ldp     q16, q17, [%3]\n"       /* Q3 */
+"       ldr     q18, [%3, #32]\n"
+"       b       3f\n"
+"       ldp     q16, q17, [%3]\n"       /* Q2 */
+"       b       2f\n"
+"       nop\n"
+"       ldr     q16, [%3]\n"            /* Q1 */
+"       b       1f\n"
+"4:     str     q19, [%2, #48]\n"
+"3:     str     q18, [%2, #32]\n"
+"2:     str     q17, [%2, #16]\n"
+"1:     str     q16, [%2]"
     : "=&r"(x0)
     : "r"(f * 12), "r"(dest), "r"(src)
     : "memory", "v16", "v17", "v18", "v19");
@@ -763,12 +763,12 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *orig_rvalue,
         else if (s > 16)
           {
         /* If the argument is a composite type that is larger than 16
-		   bytes, then the argument is copied to memory, and
+           bytes, then the argument is copied to memory, and
            the argument is replaced by a pointer to the copy.  */
-		dest = allocate_and_copy_struct_to_stack (&state, stack,
-							  ty->alignment, s,
-							  avalue[i]);
-		a = &dest;
+        dest = allocate_and_copy_struct_to_stack (&state, stack,
+                                                  ty->alignment, s,
+                                                  avalue[i]);
+        a = &dest;
         t = FFI_TYPE_POINTER;
         s = sizeof (void *);
         goto do_pointer;
@@ -872,10 +872,10 @@ ffi_prep_closure_loc (ffi_closure *closure,
   config[1] = start;
 # endif
 #else
-  static const unsigned char trampoline[16] = {
-    0x90, 0x00, 0x00, 0x58,	/* ldr	x16, tramp+16	*/
-    0xf1, 0xff, 0xff, 0x10,	/* adr	x17, tramp+0	*/
-    0x00, 0x02, 0x1f, 0xd6	/* br	x16		*/
+static const unsigned char trampoline[16] = {
+    0x90, 0x00, 0x00, 0x58,     /* ldr  x16, tramp+16   */
+    0xf1, 0xff, 0xff, 0x10,     /* adr  x17, tramp+0    */
+    0x00, 0x02, 0x1f, 0xd6      /* br   x16             */
   };
   char *tramp = closure->tramp;
 

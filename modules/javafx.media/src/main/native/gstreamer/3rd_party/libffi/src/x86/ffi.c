@@ -224,19 +224,19 @@ extend_basic_type(void *arg, int type)
 
 struct call_frame
 {
-  void *ebp;		/* 0 */
-  void *retaddr;	/* 4 */
-  void (*fn)(void);	/* 8 */
-  int flags;		/* 12 */
-  void *rvalue;		/* 16 */
-  unsigned regs[3];	/* 20-28 */
+  void *ebp;            /* 0 */
+  void *retaddr;        /* 4 */
+  void (*fn)(void);     /* 8 */
+  int flags;            /* 12 */
+  void *rvalue;         /* 16 */
+  unsigned regs[3];     /* 20-28 */
 };
 
 struct abi_params
 {
-  int dir;		/* parameter growth direction */
-  int static_chain;	/* the static chain register used by gcc */
-  int nregs;		/* number of register parameters */
+  int dir;              /* parameter growth direction */
+  int static_chain;     /* the static chain register used by gcc */
+  int nregs;            /* number of register parameters */
   int regs[3];
 };
 
@@ -437,11 +437,11 @@ void FFI_HIDDEN ffi_closure_REGISTER_alt(void);
 
 struct closure_frame
 {
-  unsigned rettemp[4];				/* 0 */
-  unsigned regs[3];				/* 16-24 */
-  ffi_cif *cif;					/* 28 */
-  void (*fun)(ffi_cif*,void*,void**,void*);	/* 32 */
-  void *user_data;				/* 36 */
+  unsigned rettemp[4];                          /* 0 */
+  unsigned regs[3];                             /* 16-24 */
+  ffi_cif *cif;                                 /* 28 */
+  void (*fun)(ffi_cif*,void*,void**,void*);     /* 32 */
+  void *user_data;                              /* 36 */
 };
 
 int FFI_HIDDEN FFI_DECLARE_FASTCALL
