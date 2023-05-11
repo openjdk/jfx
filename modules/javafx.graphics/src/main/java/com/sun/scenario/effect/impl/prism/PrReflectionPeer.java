@@ -37,7 +37,7 @@ import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.RenderState;
 
-public class PrReflectionPeer extends EffectPeer<RenderState> {
+public class PrReflectionPeer extends EffectPeer {
 
     public PrReflectionPeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);

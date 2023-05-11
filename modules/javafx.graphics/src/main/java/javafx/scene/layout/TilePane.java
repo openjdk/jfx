@@ -356,7 +356,7 @@ public class TilePane extends Pane {
      */
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
-            orientation = new StyleableObjectProperty<>(HORIZONTAL) {
+            orientation = new StyleableObjectProperty(HORIZONTAL) {
                 @Override
                 public void invalidated() {
                     requestLayout();

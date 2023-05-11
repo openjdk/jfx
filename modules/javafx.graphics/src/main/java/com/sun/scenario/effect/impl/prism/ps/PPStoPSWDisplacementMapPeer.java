@@ -38,9 +38,9 @@ import com.sun.scenario.effect.impl.prism.PrRenderer;
 import com.sun.scenario.effect.impl.prism.PrTexture;
 import com.sun.scenario.effect.impl.state.RenderState;
 
-public class PPStoPSWDisplacementMapPeer extends EffectPeer<RenderState>  {
+public class PPStoPSWDisplacementMapPeer extends EffectPeer  {
     PrRenderer softwareRenderer;
-    EffectPeer<RenderState> softwarePeer;
+    EffectPeer softwarePeer;
 
     public PPStoPSWDisplacementMapPeer(FilterContext fctx, Renderer r, String shaderName) {
         super(fctx, r, shaderName);
@@ -56,7 +56,7 @@ public class PPStoPSWDisplacementMapPeer extends EffectPeer<RenderState>  {
                             ImageData... inputs)
     {
         ImageData input = inputs[0];
-        PrTexture<?> srcTex = (PrTexture<?>) input.getUntransformedImage();
+        PrTexture srcTex = (PrTexture) input.getUntransformedImage();
         RTTexture srcRT = (RTTexture) srcTex.getTextureObject();
         // The software renderer produces drawables that also implement HeapImage
         PrDrawable srcDrawable = softwareRenderer.createDrawable(srcRT);

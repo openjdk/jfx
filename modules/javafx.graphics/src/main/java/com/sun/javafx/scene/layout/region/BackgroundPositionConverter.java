@@ -52,10 +52,10 @@ public final class BackgroundPositionConverter extends StyleConverter<ParsedValu
         ParsedValue<?, Size>[] positions = value.getValue();
 
         // The parser gives us 4 values, none of them null
-        final Size top = positions[0].convert(font);
-        final Size right = positions[1].convert(font);
-        final Size bottom = positions[2].convert(font);
-        final Size left = positions[3].convert(font);
+        final Size top = (Size)positions[0].convert(font);
+        final Size right = (Size)positions[1].convert(font);
+        final Size bottom = (Size)positions[2].convert(font);
+        final Size left = (Size)positions[3].convert(font);
 
         boolean verticalEdgeProportional =
                 (bottom.getValue() > 0 && bottom.getUnits() == SizeUnits.PERCENT)

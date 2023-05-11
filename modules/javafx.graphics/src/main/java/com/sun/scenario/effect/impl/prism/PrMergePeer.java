@@ -36,7 +36,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.Graphics;
 import com.sun.scenario.effect.impl.state.RenderState;
 
-public class PrMergePeer extends EffectPeer<RenderState> {
+public class PrMergePeer extends EffectPeer {
 
     public PrMergePeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);

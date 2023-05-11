@@ -30,9 +30,9 @@ import javafx.beans.value.ObservableValue;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 
 abstract class EffectChangeListener extends AbstractNotifyListener {
-    protected ObservableValue<?> registredOn;
+    protected ObservableValue registredOn;
 
-    public void register(ObservableValue<?> value) {
+    public void register(ObservableValue value) {
         if (registredOn == value)
             return;
 

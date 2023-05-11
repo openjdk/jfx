@@ -39,9 +39,9 @@ import javafx.scene.paint.Paint;
 /**
  * Converts the CSS for -fx-background items into a Background.
  */
-class BackgroundConverter extends StyleConverter<ParsedValue<?, ?>[], Background> {
+class BackgroundConverter extends StyleConverter<ParsedValue[], Background> {
 
-    static final StyleConverter<ParsedValue<?, ?>[], Background> INSTANCE = new BackgroundConverter();
+    static final StyleConverter<ParsedValue[], Background> INSTANCE = new BackgroundConverter();
 
     @Override public Background convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
         final Paint[] fills = (Paint[]) convertedValues.get(Background.BACKGROUND_COLOR);

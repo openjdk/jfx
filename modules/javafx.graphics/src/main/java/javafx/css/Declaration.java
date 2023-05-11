@@ -38,7 +38,7 @@ import java.io.IOException;
  */
 final public class Declaration {
     final String property;
-    final ParsedValue<?, ?> parsedValue;
+    final ParsedValue parsedValue;
     final boolean important;
     // The Rule to which this Declaration belongs.
     Rule rule;
@@ -49,7 +49,7 @@ final public class Declaration {
      * @param parsedValue value of the CSS property
      * @param important importance of the Declaration
      */
-    Declaration(final String propertyName, final ParsedValue<?, ?> parsedValue,
+    Declaration(final String propertyName, final ParsedValue parsedValue,
                 final boolean important) {
         this.property = propertyName;
         this.parsedValue = parsedValue;
@@ -66,7 +66,7 @@ final public class Declaration {
      * Gets the parsed value.
      * @return the parsed value
      */
-    public ParsedValue<?, ?> getParsedValue() {
+    public ParsedValue getParsedValue() {
         return parsedValue;
     }
 
@@ -169,25 +169,22 @@ final public class Declaration {
 
         if (stylesheetUrl == null) return;
 
-        final StyleConverter<?, ?> converter = parsedValue.getConverter();
+        final StyleConverter converter = parsedValue.getConverter();
 
         // code is tightly coupled to the way URLConverter works
         if (converter == URLConverter.getInstance()) {
 
-            @SuppressWarnings("unchecked")
-            final ParsedValue<String, String>[] values = (ParsedValue<String, String>[]) parsedValue.getValue();
-
-            values[1] = new ParsedValueImpl<>(stylesheetUrl, null);
+            final ParsedValue[] values = (ParsedValue[])parsedValue.getValue();
+            values[1] = new ParsedValueImpl<String,String>(stylesheetUrl, null);
 
         } else if (converter == URLConverter.SequenceConverter.getInstance()) {
 
-            @SuppressWarnings("unchecked")
-            final ParsedValue<ParsedValue<String, String>[], String>[] layers =
-                (ParsedValue<ParsedValue<String, String>[], String>[]) parsedValue.getValue();
+            final ParsedValue<ParsedValue[], String>[] layers =
+                (ParsedValue<ParsedValue[], String>[])parsedValue.getValue();
 
             for (int layer = 0; layer < layers.length; layer++) {
-                final ParsedValue<String, String>[] values = layers[layer].getValue();
-                values[1] = new ParsedValueImpl<>(stylesheetUrl, null);
+                final ParsedValue[] values = layers[layer].getValue();
+                values[1] = new ParsedValueImpl<String,String>(stylesheetUrl, null);
             }
 
         }
@@ -199,7 +196,7 @@ final public class Declaration {
     {
         if (parsedValue instanceof ParsedValueImpl) {
             os.writeShort(stringStore.addString(getProperty()));
-            ((ParsedValueImpl<?, ?>) parsedValue).writeBinary(os,stringStore);
+            ((ParsedValueImpl)parsedValue).writeBinary(os,stringStore);
             os.writeBoolean(isImportant());
         }
     }
@@ -208,7 +205,7 @@ final public class Declaration {
         throws IOException
     {
         final String propertyName = strings[is.readShort()];
-        final ParsedValueImpl<?, ?> parsedValue = ParsedValueImpl.readBinary(bssVersion,is,strings);
+        final ParsedValueImpl parsedValue = ParsedValueImpl.readBinary(bssVersion,is,strings);
         final boolean important = is.readBoolean();
         return new Declaration(propertyName, parsedValue, important);
 

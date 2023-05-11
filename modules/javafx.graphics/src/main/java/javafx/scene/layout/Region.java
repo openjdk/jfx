@@ -597,8 +597,7 @@ public class Region extends Parent {
      * BorderImage images in the background and border property invalidation code.
      */
     private InvalidationListener imageChangeListener = observable -> {
-        @SuppressWarnings("unchecked")
-        final ReadOnlyObjectPropertyBase<Image> imageProperty = (ReadOnlyObjectPropertyBase<Image>) observable;
+        final ReadOnlyObjectPropertyBase imageProperty = (ReadOnlyObjectPropertyBase) observable;
         final Image image = (Image) imageProperty.getBean();
         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
         if (image.getProgress() == 1 && !acc.isAnimation(image)) {

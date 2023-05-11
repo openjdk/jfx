@@ -35,7 +35,7 @@ import javafx.css.StyleConverter;
  * Date: 8/10/12
  * Time: 7:31 AM
  */
-public final class BorderStrokeStyleSequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[], BorderStrokeStyle[]> {
+public final class BorderStrokeStyleSequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?, ?>[],BorderStrokeStyle>[],BorderStrokeStyle[]> {
     /**
      * Convert an array of border style values to an array of BorderStyle which
      * contains one BorderStyle element per border (top, right, bottom, left).
@@ -52,9 +52,9 @@ public final class BorderStrokeStyleSequenceConverter extends StyleConverter<Par
     }
 
     @Override
-    public BorderStrokeStyle[] convert(ParsedValue<ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[], BorderStrokeStyle[]> value, Font font) {
+    public BorderStrokeStyle[] convert(ParsedValue<ParsedValue<ParsedValue<?, ?>[],BorderStrokeStyle>[], BorderStrokeStyle[]> value, Font font) {
 
-        ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[] borders = value.getValue();
+        ParsedValue<ParsedValue<?, ?>[],BorderStrokeStyle>[] borders = value.getValue();
         BorderStrokeStyle[] styles = new BorderStrokeStyle[4];
 
         styles[0] = (borders.length > 0) ?

@@ -207,7 +207,7 @@ public class Hueristic2D implements Algorithm {
     protected Direction cacheStartTraversalDirection = null;
     protected boolean reverseDirection = false;
     protected Node cacheLastTraversalNode = null;
-    protected Stack<Node> traversalNodeStack = new Stack<>();
+    protected Stack<Node> traversalNodeStack = new Stack();
 
     private void cacheTraversal(Node node, Direction dir) {
         if (!traversalNodeStack.empty() && node != cacheLastTraversalNode) {

@@ -27,6 +27,7 @@ package javafx.css.converter;
 
 import javafx.application.Application;
 import javafx.css.ParsedValue;
+import javafx.css.Size;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 import com.sun.javafx.logging.PlatformLogger;
@@ -74,7 +75,7 @@ public final class URLConverter extends StyleConverter<ParsedValue<String, Strin
 
         String url = null;
 
-        ParsedValue<String, String>[] values = value.getValue();
+        ParsedValue[] values = value.getValue();
 
         String resource = values.length > 0 ? StringConverter.getInstance().convert(values[0], font) : null;
         resource = resource != null ? resource.trim() : null;

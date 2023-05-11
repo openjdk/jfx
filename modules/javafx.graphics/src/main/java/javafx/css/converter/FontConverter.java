@@ -43,7 +43,7 @@ import java.util.Map.Entry;
  * Converter to convert a parsed representation of a {@code Font} to a {@code Font}.
  * @since 9
  */
-public final class FontConverter extends StyleConverter<ParsedValue<?, ?>[], Font> {
+public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -54,7 +54,7 @@ public final class FontConverter extends StyleConverter<ParsedValue<?, ?>[], Fon
      * Gets the {@code FontConverter} instance.
      * @return the {@code FontConverter} instance
      */
-    public static StyleConverter<ParsedValue<?, ?>[], Font> getInstance() {
+    public static StyleConverter<ParsedValue[], Font> getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -63,8 +63,8 @@ public final class FontConverter extends StyleConverter<ParsedValue<?, ?>[], Fon
     }
 
     @Override
-    public Font convert(ParsedValue<ParsedValue<?, ?>[], Font> value, Font font) {
-        ParsedValue<?, ?>[] values = value.getValue();
+    public Font convert(ParsedValue<ParsedValue[], Font> value, Font font) {
+        ParsedValue[] values = value.getValue();
         Font aFont = (font != null) ? font : Font.getDefault();
         String family = (values[0] != null) ? Utils.stripQuotes((String) values[0].convert(aFont)) : aFont.getFamily();
         // if font size is given in terms of percent, then we have to call

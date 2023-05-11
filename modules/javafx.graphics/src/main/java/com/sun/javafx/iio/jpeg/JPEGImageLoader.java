@@ -86,7 +86,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     private Lock accessLock = new Lock();
 
     /** Sets up static C structures. */
-    private static native void initJPEGMethodIDs(Class<?> inputStreamClass);
+    private static native void initJPEGMethodIDs(Class inputStreamClass);
 
     private static native void disposeNative(long structPointer);
 

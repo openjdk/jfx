@@ -70,7 +70,7 @@ public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Nu
      * Converter to convert a sequence of sizes to an array of {@code Number}.
      * @since 9
      */
-    public static final class SequenceConverter extends StyleConverter<ParsedValue<?, Size>[], Number[]> {
+    public static final class SequenceConverter extends StyleConverter<ParsedValue[], Number[]> {
 
         /**
          * Gets the {@code SequenceConverter} instance.
@@ -85,11 +85,11 @@ public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Nu
         }
 
         @Override
-        public Number[] convert(ParsedValue<ParsedValue<?, Size>[], Number[]> value, Font font) {
-            ParsedValue<?, Size>[] sizes = value.getValue();
+        public Number[] convert(ParsedValue<ParsedValue[], Number[]> value, Font font) {
+            ParsedValue[] sizes = value.getValue();
             Number[] doubles = new Number[sizes.length];
             for (int i = 0; i < sizes.length; i++) {
-                doubles[i] = sizes[i].convert(font).pixels(font);
+                doubles[i] = ((Size)sizes[i].convert(font)).pixels(font);
             }
             return doubles;
         }

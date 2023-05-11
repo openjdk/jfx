@@ -198,7 +198,7 @@ public class WritableImage extends Image {
                     acc_platformImageProperty();
 
                 @Override
-                public PixelFormat<? extends Buffer> getPixelFormat() {
+                public PixelFormat getPixelFormat() {
                     PlatformImage pimg = getWritablePlatformImage();
                     return pimg.getPlatformPixelFormat();
                 }

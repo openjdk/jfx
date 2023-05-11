@@ -27,8 +27,6 @@ package javafx.css.converter;
 
 import javafx.css.Size;
 import javafx.css.SizeUnits;
-
-import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
@@ -170,7 +168,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
      * Converter to convert image pattern parsed values to a {@code Paint} object.
      * @since 9
      */
-    public static final class ImagePatternConverter extends StyleConverter<ParsedValue<?, ?>[], Paint> {
+    public static final class ImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
 
         /**
          * Gets the {@code ImagePatternConverter} instance.
@@ -185,13 +183,13 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         }
 
         @Override
-        public Paint convert(ParsedValue<ParsedValue<?, ?>[], Paint> value, Font font) {
+        public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
 
             Paint paint = super.getCachedValue(value);
             if (paint != null) return paint;
 
-            ParsedValue<?, ?>[] values = value.getValue();
-            ParsedValue<?, ?> urlParsedValue = values[0];
+            ParsedValue[] values = value.getValue();
+            ParsedValue<?,?> urlParsedValue = values[0];
             String url = (String) urlParsedValue.convert(font);
             if (values.length == 1) {
                 return new ImagePattern(StyleManager.getInstance().getCachedImage(url));
@@ -224,7 +222,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
      * Converter to convert repeating image pattern parsed values to a {@code Paint} object.
      * @since 9
      */
-    public static final class RepeatingImagePatternConverter extends StyleConverter<ParsedValue<ParsedValue<String, String>[], String>[], Paint> {
+    public static final class RepeatingImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
 
         /**
          * Gets the {@code RepeatingImagePatternConverter} instance.
@@ -239,14 +237,14 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         }
 
         @Override
-        public Paint convert(ParsedValue<ParsedValue<ParsedValue<String, String>[], String>[], Paint> value, Font font) {
+        public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
 
             Paint paint = super.getCachedValue(value);
             if (paint != null) return paint;
 
-            ParsedValue<ParsedValue<String, String>[], String>[] values = value.getValue();
-            ParsedValue<ParsedValue<String, String>[], String> url = values[0];
-            String u = url.convert(font);
+            ParsedValue[] values = value.getValue();
+            ParsedValue<?, ?> url = values[0];
+            String u = (String) url.convert(font);
             // If u is null, then we failed to locate the image associated with the url specified in the CSS file.
             if (u == null) return null;
             final Image image = new Image(u);

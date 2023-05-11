@@ -68,7 +68,6 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
-import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.Stylesheet;
 import javafx.event.*;
@@ -6342,7 +6341,7 @@ public class Scene implements EventTarget {
                 }
 
                 @Override
-                public CssMetaData<? extends Styleable, NodeOrientation> getCssMetaData() {
+                public CssMetaData getCssMetaData() {
                     //TODO - not yet supported
                     throw new UnsupportedOperationException("Not supported yet.");
                 }

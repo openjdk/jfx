@@ -309,7 +309,7 @@ public class BoxRenderState extends LinearConvolveRenderState {
                 name = isShadow() ? "LinearConvolveShadow" : "LinearConvolve";
                 break;
         }
-        EffectPeer<BoxRenderState> peer = r.getPeerInstance(fctx, name, psize);
+        EffectPeer peer = r.getPeerInstance(fctx, name, psize);
         return peer;
     }
 

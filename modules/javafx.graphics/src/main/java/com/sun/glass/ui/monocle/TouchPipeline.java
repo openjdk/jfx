@@ -67,6 +67,7 @@ class TouchPipeline {
             } else if (filterName.equals("AssignPointID")) {
                 addFilter(new AssignPointIDTouchFilter());
             } else {
+                Class cls;
                 if (!filterName.contains(".")) {
                     filterName = "com.sun.glass.ui.monocle."
                             + filterName + "TouchFilter";

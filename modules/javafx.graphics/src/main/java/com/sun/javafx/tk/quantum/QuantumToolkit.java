@@ -480,7 +480,7 @@ public final class QuantumToolkit extends Toolkit {
         return Toolkit.getFxUserThread();
     }
 
-    @Override public Future<?> addRenderJob(RenderJob<?> r) {
+    @Override public Future addRenderJob(RenderJob r) {
         // Do not run any render jobs (this is for benchmarking only)
         if (noRenderJobs) {
             CompletionListener listener = r.getCompletionListener();
@@ -810,9 +810,9 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public AbstractRemoteResource<? extends ImageLoader> loadImageAsync(
-            AsyncOperationListener<? extends ImageLoader> listener, String url,
+            AsyncOperationListener listener, String url,
             double width, double height, boolean preserveRatio, boolean smooth) {
-        return new PrismImageLoader2.AsyncImageLoader((AsyncOperationListener<PrismImageLoader2>) listener, url, width, height, preserveRatio, smooth);
+        return new PrismImageLoader2.AsyncImageLoader(listener, url, width, height, preserveRatio, smooth);
     }
 
     // Note that this method should only be called by PlatformImpl.runLater
@@ -1477,7 +1477,7 @@ public final class QuantumToolkit extends Toolkit {
         final com.sun.prism.paint.Paint currentPaint = p.platformPaint instanceof com.sun.prism.paint.Paint ?
                 (com.sun.prism.paint.Paint)p.platformPaint : null;
 
-        RenderJob<?> re = new RenderJob<>(new Runnable() {
+        RenderJob re = new RenderJob(new Runnable() {
 
             private com.sun.prism.paint.Color getClearColor() {
                 if (currentPaint == null) {

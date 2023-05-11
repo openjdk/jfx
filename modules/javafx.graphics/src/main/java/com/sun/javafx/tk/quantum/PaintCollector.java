@@ -266,7 +266,7 @@ final class PaintCollector implements CompletionListener {
      * such that when the repaint has completed, this method is called.
      * This method will decrement the count on the allWorkCompletedLatch.
      */
-    @Override public void done(RenderJob<?> job) {
+    @Override public void done(RenderJob job) {
         // It would be better to have an assertive check that
         // this call is being made on the render thread, rather
         // than on the FXT, but this is easier for now.
@@ -327,7 +327,7 @@ final class PaintCollector implements CompletionListener {
          quantum.pulse(false);
          final CountDownLatch latch = new CountDownLatch(1);
          QuantumToolkit.runWithoutRenderLock(() -> {
-             quantum.addRenderJob(new RenderJob<>(viewPainter, rj -> latch.countDown()));
+             quantum.addRenderJob(new RenderJob(viewPainter, rj -> latch.countDown()));
              try {
                  latch.await();
              } catch (InterruptedException e) {

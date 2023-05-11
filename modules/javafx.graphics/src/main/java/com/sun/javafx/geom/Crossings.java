@@ -76,14 +76,14 @@ public abstract class Crossings {
 
     public abstract boolean covers(double ystart, double yend);
 
-    public static Crossings findCrossings(Vector<Curve> curves,
+    public static Crossings findCrossings(Vector curves,
                                           double xlo, double ylo,
                                           double xhi, double yhi)
     {
         Crossings cross = new EvenOdd(xlo, ylo, xhi, yhi);
-        Enumeration<Curve> enum_ = curves.elements();
+        Enumeration enum_ = curves.elements();
         while (enum_.hasMoreElements()) {
-            Curve c = enum_.nextElement();
+            Curve c = (Curve) enum_.nextElement();
             if (c.accumulateCrossings(cross)) {
                 return null;
             }

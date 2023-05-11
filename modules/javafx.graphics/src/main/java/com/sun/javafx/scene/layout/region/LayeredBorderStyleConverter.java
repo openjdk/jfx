@@ -43,7 +43,7 @@ import javafx.css.StyleConverter;
 * where <dash-style> = none | solid | dotted | dashed | segments(<size>[, <size>]+) ]
 */
 public final class LayeredBorderStyleConverter
-        extends StyleConverter<ParsedValue<ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[], BorderStrokeStyle[]>[], BorderStrokeStyle[][]> {
+        extends StyleConverter<ParsedValue<ParsedValue<ParsedValue<?, ?>[],BorderStrokeStyle>[], BorderStrokeStyle[]>[], BorderStrokeStyle[][]> {
 
     /**
      * Convert layers of border style values to an array of BorderStyle[], where
@@ -62,9 +62,9 @@ public final class LayeredBorderStyleConverter
 
     @Override
     public BorderStrokeStyle[][]
-    convert(ParsedValue<ParsedValue<ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[], BorderStrokeStyle[]>[], BorderStrokeStyle[][]> value, Font font) {
+    convert(ParsedValue<ParsedValue<ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]> value, Font font) {
 
-        ParsedValue<ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[], BorderStrokeStyle[]>[] layers = value.getValue();
+        ParsedValue<ParsedValue<ParsedValue<?, ?>[], BorderStrokeStyle>[],BorderStrokeStyle[]>[] layers = value.getValue();
         BorderStrokeStyle[][] styles = new BorderStrokeStyle[layers.length][0];
 
         for (int layer=0; layer<layers.length; layer++) {

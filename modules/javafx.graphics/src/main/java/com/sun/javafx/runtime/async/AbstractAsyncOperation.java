@@ -46,7 +46,7 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
                                                            Callable<V> {
 
     protected final FutureTask<V> future;
-    protected final AsyncOperationListener<V> listener;
+    protected final AsyncOperationListener listener;
 
     private int progressGranularity = 100;
     private int progressMax, lastProgress, progressIncrement, nextProgress, bytesRead;

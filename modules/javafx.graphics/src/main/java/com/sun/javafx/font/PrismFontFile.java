@@ -87,7 +87,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
      * manage how much of that is kept around. We clearly want
      * to keep a reference to the strike that created that data.
      */
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
+    Map<FontStrikeDesc, WeakReference<PrismFontStrike>> strikeMap = new ConcurrentHashMap<>();
 
     protected PrismFontFile(String name, String filename, int fIndex,
                           boolean register, boolean embedded,
@@ -325,11 +325,11 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     }
 
     @Override
-    public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
+    public Map getStrikeMap() {
         return strikeMap;
     }
 
-    protected abstract PrismFontStrike<?> createStrike(float size,
+    protected abstract PrismFontStrike createStrike(float size,
                                                     BaseTransform transform,
                                                     int aaMode,
                                                     FontStrikeDesc desc);
@@ -338,14 +338,14 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
         FontStrikeDesc desc = new FontStrikeDesc(size, transform, aaMode);
-        WeakReference<FontStrike> ref = strikeMap.get(desc);
-        FontStrike strike = null;
+        WeakReference<PrismFontStrike> ref = strikeMap.get(desc);
+        PrismFontStrike strike = null;
         if (ref != null) {
             strike = ref.get();
         }
         if (strike == null) {
             strike = createStrike(size, transform, aaMode, desc);
-            DisposerRecord disposer = ((PrismFontStrike<?>) strike).getDisposer();
+            DisposerRecord disposer = strike.getDisposer();
             if (disposer != null) {
                 ref = Disposer.addRecord(strike, disposer);
             } else {

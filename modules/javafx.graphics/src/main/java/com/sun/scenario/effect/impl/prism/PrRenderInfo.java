@@ -57,7 +57,7 @@ public class PrRenderInfo implements ImageDataRenderer {
             // the actual image may be much larger than the region
             // of interest ("r"), so to improve performance we render
             // only that subregion here
-            Texture tex = ((PrTexture<?>) image.getUntransformedImage()).getTextureObject();
+            Texture tex = ((PrTexture)image.getUntransformedImage()).getTextureObject();
             BaseTransform savedTx = null;
             if (!transform.isIdentity()) {
                 savedTx = g.getTransformNoClone().copy();

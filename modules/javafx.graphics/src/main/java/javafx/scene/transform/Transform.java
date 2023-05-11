@@ -333,7 +333,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     private SoftReference<Transform> inverseCache = null;
 
-    private WeakReferenceQueue<Node> nodes = new WeakReferenceQueue<>();
+    private WeakReferenceQueue nodes = new WeakReferenceQueue();
 
     /* *************************************************************************
      *                                                                         *
@@ -2085,9 +2085,9 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     protected void transformChanged() {
         inverseCache = null;
-        final Iterator<Node> iterator = nodes.iterator();
+        final Iterator iterator = nodes.iterator();
         while (iterator.hasNext()) {
-            NodeHelper.transformsChanged(iterator.next());
+            NodeHelper.transformsChanged(((Node) iterator.next()));
         }
 
         if (type2D != null) {

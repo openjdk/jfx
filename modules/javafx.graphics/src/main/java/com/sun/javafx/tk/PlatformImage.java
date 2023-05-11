@@ -69,7 +69,7 @@ public interface PlatformImage {
      * @return the PixelFormat to use for the pixel data transfer methods
      * getPixels() and setPixels().
      */
-    public PixelFormat<? extends Buffer> getPlatformPixelFormat();
+    public PixelFormat getPlatformPixelFormat();
 
     public boolean isWritable();
     public PlatformImage promoteToWritableImage();

@@ -75,7 +75,7 @@ public class FontTypeTest {
 
         ParsedValue<String,FontWeight> weight =
                 new ParsedValueImpl<>(FontWeight.NORMAL.name(), FontConverter.FontWeightConverter.getInstance());
-        ParsedValue<ParsedValue<?, ?>[],Font> value = new ParsedValueImpl<>(
+        ParsedValue<ParsedValue[],Font> value = new ParsedValueImpl<>(
                 new ParsedValue[] {family, size, weight, style},
                 FontConverter.getInstance()
             );

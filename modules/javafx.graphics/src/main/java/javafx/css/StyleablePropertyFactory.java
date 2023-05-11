@@ -1409,9 +1409,9 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         @SuppressWarnings("unchecked") // getCssMetaData checks and will throw a ClassCastException
         CssMetaData<S, E> cssMetaData =
-                (CssMetaData<S, E>) getCssMetaData(Effect.class, property, key -> {
-                    final StyleConverter<ParsedValue<?, ?>[], E> converter =  (StyleConverter<ParsedValue<?, ?>[], E>) StyleConverter.getEffectConverter();
-                    return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
+                (CssMetaData<S, E>)getCssMetaData(Effect.class, property, key -> {
+                    final StyleConverter<ParsedValue<?, ?>[], Effect> converter = StyleConverter.getEffectConverter();
+                    return new SimpleCssMetaData(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
     }
@@ -1461,7 +1461,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Enum<E>> CssMetaData<S, E>
-    createEnumCssMetaData(Class<E> enumClass, final String property, final Function<S,StyleableProperty<E>> function, final E initialValue, final boolean inherits)
+    createEnumCssMetaData(Class<? extends Enum> enumClass, final String property, final Function<S,StyleableProperty<E>> function, final E initialValue, final boolean inherits)
     {
         if (property == null || property.isEmpty()) {
             throw new IllegalArgumentException("property cannot be null or empty string");
@@ -1474,7 +1474,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         @SuppressWarnings("unchecked") // getCssMetaData checks and will throw a ClassCastException
         CssMetaData<S, E> cssMetaData =
                 (CssMetaData<S, E>)getCssMetaData(enumClass, property, key -> {
-                    final EnumConverter<E> converter = new EnumConverter<>(enumClass);
+                    final EnumConverter<E> converter = new EnumConverter(enumClass);
                     return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
@@ -1491,7 +1491,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Enum<E>> CssMetaData<S, E>
-    createEnumCssMetaData(Class<E> enumClass, final String property, final Function<S,StyleableProperty<E>> function, final E initialValue) {
+    createEnumCssMetaData(Class<? extends Enum> enumClass, final String property, final Function<S,StyleableProperty<E>> function, final E initialValue) {
         return createEnumCssMetaData(enumClass, property, function, initialValue, false);
     }
 
@@ -1505,7 +1505,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Enum<E>> CssMetaData<S, E>
-    createEnumCssMetaData(Class<E> enumClass, final String property, final Function<S,StyleableProperty<E>> function) {
+    createEnumCssMetaData(Class<? extends Enum> enumClass, final String property, final Function<S,StyleableProperty<E>> function) {
         return createEnumCssMetaData(enumClass, property, function, null, false);
     }
 
@@ -1538,7 +1538,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         @SuppressWarnings("unchecked") // getCssMetaData checks and will throw a ClassCastException
         CssMetaData<S,Font> cssMetaData =
                 (CssMetaData<S,Font>)getCssMetaData(Font.class, property, key -> {
-                    final StyleConverter<ParsedValue<?, ?>[], Font> converter = StyleConverter.getFontConverter();
+                    final StyleConverter<ParsedValue[],Font> converter = StyleConverter.getFontConverter();
                     return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
@@ -1598,7 +1598,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         @SuppressWarnings("unchecked") // getCssMetaData checks and will throw a ClassCastException
         CssMetaData<S,Insets> cssMetaData =
                 (CssMetaData<S,Insets>)getCssMetaData(Insets.class, property, key -> {
-                    final StyleConverter<ParsedValue<?, Size>[], Insets> converter = StyleConverter.getInsetsConverter();
+                    final StyleConverter<ParsedValue[],Insets> converter = StyleConverter.getInsetsConverter();
                     return new SimpleCssMetaData<>(property, function, converter, initialValue, inherits);
                 });
         return cssMetaData;
@@ -1902,8 +1902,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
         @Override
         public final boolean isSettable(S styleable) {
             final StyleableProperty<V> prop = getStyleableProperty(styleable);
-            if (prop instanceof Property<?> p) {
-                return !p.isBound();
+            if (prop instanceof Property) {
+                return !((Property)prop).isBound();
             }
             // can't set this property if getStyleableProperty returns null!
             return prop != null;
@@ -1927,15 +1927,15 @@ public class StyleablePropertyFactory<S extends Styleable> {
         metaDataList.clear();
     }
 
-    private CssMetaData<S, ?> getCssMetaData(final Class<?> ofClass, String property) {
+    private CssMetaData<S, ?> getCssMetaData(final Class ofClass, String property) {
         return getCssMetaData(ofClass, property, null);
     }
 
-    private CssMetaData<S, ?> getCssMetaData(final Class<?> ofClass, String property, final Function<String,CssMetaData<S,?>> createFunction) {
+    private CssMetaData<S, ?> getCssMetaData(final Class ofClass, String property, final Function<String,CssMetaData<S,?>> createFunction) {
 
         final String key = property.toLowerCase();
 
-        Pair<Class<?>, CssMetaData<S,?>> entry = metaDataMap.get(key);
+        Pair<Class,CssMetaData<S,?>> entry = metaDataMap.get(key);
         if (entry != null) {
             if (entry.getKey() == ofClass) {
                 return entry.getValue();
@@ -1948,12 +1948,12 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         // Entry was null
         CssMetaData<S,?> cssMetaData = createFunction.apply(key);
-        metaDataMap.put(key, new Pair<>(ofClass, cssMetaData));
+        metaDataMap.put(key, new Pair(ofClass, cssMetaData));
         metaDataList.add(cssMetaData);
         return cssMetaData;
     }
 
-    private final Map<String,Pair<Class<?>, CssMetaData<S,?>>> metaDataMap;
+    private final Map<String,Pair<Class,CssMetaData<S,?>>> metaDataMap;
     private final List<CssMetaData<? extends Styleable,?>> unmodifiableMetaDataList;
     private final List<CssMetaData<? extends Styleable,?>> metaDataList;
 

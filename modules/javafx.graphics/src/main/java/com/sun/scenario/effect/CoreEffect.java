@@ -61,7 +61,7 @@ abstract class CoreEffect<T extends RenderState> extends FilterEffect<T> {
         this.peerCount = unrollCount;
     }
 
-    private EffectPeer<?> getPeer(FilterContext fctx, int approxW, int approxH) {
+    private EffectPeer getPeer(FilterContext fctx, int approxW, int approxH) {
         return Renderer.getRenderer(fctx, this, approxW, approxH).
             getPeerInstance(fctx, peerKey, peerCount);
     }
@@ -74,7 +74,7 @@ abstract class CoreEffect<T extends RenderState> extends FilterEffect<T> {
      * an appropriate Renderer/EffectPeer combination based on the
      * dimensions of the first input.
      */
-    final EffectPeer<?> getPeer(FilterContext fctx, ImageData[] inputs) {
+    final EffectPeer getPeer(FilterContext fctx, ImageData[] inputs) {
         // RT-27395
         // TODO: we would be much better off using getResultBounds() here
         // to infer the size of the operation since some effects (e.g. Flood)
@@ -103,7 +103,7 @@ abstract class CoreEffect<T extends RenderState> extends FilterEffect<T> {
                                       T rstate,
                                       ImageData... inputs)
     {
-        return ((EffectPeer<RenderState>) getPeer(fctx, inputs)).filter(this, rstate, transform, outputClip, inputs);
+        return getPeer(fctx, inputs).filter(this, rstate, transform, outputClip, inputs);
     }
 
     @Override
@@ -111,7 +111,7 @@ abstract class CoreEffect<T extends RenderState> extends FilterEffect<T> {
         // We choose relatively large (yet arbitrary) values for approxW/H
         // here so that we get the AccelType for the "ideal" case where
         // hardware acceleration is used.
-        EffectPeer<?> peer = getPeer(fctx, 1024, 1024);
+        EffectPeer peer = getPeer(fctx, 1024, 1024);
         return peer.getAccelType();
     }
 }

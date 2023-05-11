@@ -260,7 +260,7 @@ public abstract class Parent extends Node {
      * rendering order of the children is the same as the order in the children
      * list.
      */
-    private final List<Node> viewOrderChildren = new ArrayList<>(1);
+    private final List<Node> viewOrderChildren = new ArrayList(1);
 
     void markViewOrderChildrenDirty() {
         viewOrderChildren.clear();

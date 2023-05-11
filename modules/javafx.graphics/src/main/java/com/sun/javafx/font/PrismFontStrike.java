@@ -223,7 +223,7 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
         if (!(obj instanceof PrismFontStrike)) {
             return false;
         }
-        final PrismFontStrike<?> other = (PrismFontStrike<?>) obj;
+        final PrismFontStrike other = (PrismFontStrike) obj;
 
         // REMIND: When fonts can be rendered other than as greyscale
         // and generally differ in ways other than the size

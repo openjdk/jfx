@@ -296,11 +296,10 @@ public abstract class Application {
         }
 
         try {
-            Class<?> theClass = Class.forName(callingClassName, false,
+            Class theClass = Class.forName(callingClassName, false,
                                Thread.currentThread().getContextClassLoader());
             if (Application.class.isAssignableFrom(theClass)) {
-                @SuppressWarnings("unchecked")
-                Class<? extends Application> appClass = (Class<? extends Application>) theClass;
+                Class<? extends Application> appClass = theClass;
                 LauncherImpl.launchApplication(appClass, args);
             } else {
                 throw new RuntimeException("Error: " + theClass

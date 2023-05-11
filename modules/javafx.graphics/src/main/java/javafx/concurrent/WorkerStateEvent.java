@@ -92,7 +92,7 @@ public class WorkerStateEvent extends Event {
      *               for the event will be null.
      * @param eventType The type of event. This should not be null.
      */
-    public WorkerStateEvent(@NamedArg("worker") Worker<?> worker, @NamedArg("eventType") EventType<? extends WorkerStateEvent> eventType) {
+    public WorkerStateEvent(@NamedArg("worker") Worker worker, @NamedArg("eventType") EventType<? extends WorkerStateEvent> eventType) {
         super(worker, worker instanceof EventTarget ? (EventTarget) worker : null, eventType);
     }
 
@@ -101,7 +101,7 @@ public class WorkerStateEvent extends Event {
      *
      * @return The Worker on which the Event initially occurred.
      */
-    @Override public Worker<?> getSource() {
-        return (Worker<?>) super.getSource();
+    @Override public Worker getSource() {
+        return (Worker) super.getSource();
     }
 }

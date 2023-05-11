@@ -32,10 +32,10 @@ import java.util.concurrent.FutureTask;
 /*
  * RenderJob for the Quantum toolkit.
  */
-public class RenderJob<T> extends FutureTask<T> {
+public class RenderJob extends FutureTask {
 
     private CompletionListener listener;
-    private T futureReturn;
+    private Object             futureReturn;
 
     public RenderJob(Runnable pen) {
         super(pen, null);
@@ -82,11 +82,11 @@ public class RenderJob<T> extends FutureTask<T> {
         }
     }
 
-    @Override public T get() {
-        return futureReturn;
+    @Override public Object get() {
+        return (futureReturn);
     }
 
-    public void setFutureReturn(T o) {
+    public void setFutureReturn(Object o) {
         futureReturn = o;
     }
 }

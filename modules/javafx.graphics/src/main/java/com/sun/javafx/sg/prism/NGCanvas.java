@@ -557,7 +557,7 @@ public class NGCanvas extends NGNode {
             r.run();
         } else {
             FutureTask<Void> f = new FutureTask<>(r, null);
-            Toolkit.getToolkit().addRenderJob(new RenderJob<>(f));
+            Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete
                 f.get();
@@ -741,7 +741,7 @@ public class NGCanvas extends NGNode {
             effect.filter(fctx, transform, outputClip, null, definput);
         Rectangle r = id.getUntransformedBounds();
         Filterable f = id.getUntransformedImage();
-        Texture tex = ((PrTexture<?>) f).getTextureObject();
+        Texture tex = ((PrTexture) f).getTextureObject();
         destbuf.g.setTransform(id.getTransform());
         destbuf.g.setCompositeMode(comp);
         destbuf.g.drawTexture(tex, r.x, r.y, r.width, r.height);

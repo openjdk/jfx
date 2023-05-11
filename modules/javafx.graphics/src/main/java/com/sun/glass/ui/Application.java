@@ -120,18 +120,18 @@ public abstract class Application {
         loadNativeLibrary("glass");
     }
 
-    private static volatile Map<Object, Object> deviceDetails = null;
+    private static volatile Map deviceDetails = null;
 
     // provides a means for the user to pass platorm specific details
     // to the native glass impl. Can be null.
     // May need be called before Run.
     // May be called on any thread.
-    public static void setDeviceDetails(Map<Object, Object> details) {
+    public static void setDeviceDetails(Map details) {
         deviceDetails = details;
     }
 
     // May be called on any thread.
-    public static Map<Object, Object> getDeviceDetails() {
+    public static Map getDeviceDetails() {
         return deviceDetails;
     }
 

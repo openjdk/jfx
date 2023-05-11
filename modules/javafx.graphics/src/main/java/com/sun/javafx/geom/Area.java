@@ -93,9 +93,9 @@ import com.sun.javafx.geom.transform.BaseTransform;
  */
 public class Area extends Shape {
 
-    private static final Vector<Curve> EmptyCurves = new Vector<>();
+    private static final Vector EmptyCurves = new Vector();
 
-    private Vector<Curve> curves;
+    private Vector curves;
 
     /**
      * Default constructor which creates an empty area.
@@ -114,8 +114,8 @@ public class Area extends Shape {
      * @throws NullPointerException if <code>s</code> is null
      */
     public Area(Shape s) {
-        if (s instanceof Area a) {
-            curves = a.curves;
+        if (s instanceof Area) {
+            curves = ((Area) s).curves;
         } else {
             curves = pathToCurves(s.getPathIterator(null));
         }
@@ -125,8 +125,8 @@ public class Area extends Shape {
         curves = pathToCurves(iter);
     }
 
-    private static Vector<Curve> pathToCurves(PathIterator pi) {
-        Vector<Curve> curves = new Vector<>();
+    private static Vector pathToCurves(PathIterator pi) {
+        Vector curves = new Vector();
         int windingRule = pi.getWindingRule();
         // coords array is big enough for holding:
         //     coordinates returned from currentSegment (6)
@@ -335,7 +335,7 @@ public class Area extends Shape {
      * restores it to an empty area.
      */
     public void reset() {
-        curves = new Vector<>();
+        curves = new Vector();
         invalidateBounds();
     }
 
@@ -356,9 +356,9 @@ public class Area extends Shape {
      * <code>false</code> otherwise.
      */
     public boolean isPolygonal() {
-        Enumeration<Curve> enum_ = curves.elements();
+        Enumeration enum_ = curves.elements();
         while (enum_.hasMoreElements()) {
-            if (enum_.nextElement().getOrder() > 1) {
+            if (((Curve) enum_.nextElement()).getOrder() > 1) {
                 return false;
             }
         }
@@ -379,8 +379,8 @@ public class Area extends Shape {
         if (size > 3) {
             return false;
         }
-        Curve c1 = curves.get(1);
-        Curve c2 = curves.get(2);
+        Curve c1 = (Curve) curves.get(1);
+        Curve c2 = (Curve) curves.get(2);
         if (c1.getOrder() != 1 || c2.getOrder() != 1) {
             return false;
         }
@@ -408,10 +408,10 @@ public class Area extends Shape {
         if (curves.size() < 3) {
             return true;
         }
-        Enumeration<Curve> enum_ = curves.elements();
+        Enumeration enum_ = curves.elements();
         enum_.nextElement(); // First Order0 "moveto"
         while (enum_.hasMoreElements()) {
-            if (enum_.nextElement().getOrder() == 0) {
+            if (((Curve) enum_.nextElement()).getOrder() == 0) {
                 return false;
             }
         }
@@ -428,11 +428,11 @@ public class Area extends Shape {
         }
         RectBounds r = new RectBounds();
         if (curves.size() > 0) {
-            Curve c = curves.get(0);
+            Curve c = (Curve) curves.get(0);
             // First point is always an order 0 curve (moveto)
             r.setBounds((float) c.getX0(), (float) c.getY0(), 0, 0);
             for (int i = 1; i < curves.size(); i++) {
-                curves.get(i).enlarge(r);
+                ((Curve) curves.get(i)).enlarge(r);
             }
         }
         return (cachedBounds = r);
@@ -474,7 +474,7 @@ public class Area extends Shape {
         if (other == null) {
             return false;
         }
-        Vector<Curve> c = new AreaOp.XorOp().calculate(this.curves, other.curves);
+        Vector c = new AreaOp.XorOp().calculate(this.curves, other.curves);
         return c.isEmpty();
     }
 
@@ -520,10 +520,10 @@ public class Area extends Shape {
         if (!getCachedBounds().contains(x, y)) {
             return false;
         }
-        Enumeration<Curve> enum_ = curves.elements();
+        Enumeration enum_ = curves.elements();
         int crossings = 0;
         while (enum_.hasMoreElements()) {
-            Curve c = enum_.nextElement();
+            Curve c = (Curve) enum_.nextElement();
             crossings += c.crossingsFor(x, y);
         }
         return ((crossings & 1) == 1);
@@ -612,16 +612,16 @@ public class Area extends Shape {
 
 class AreaIterator implements PathIterator {
     private BaseTransform transform;
-    private Vector<Curve> curves;
+    private Vector curves;
     private int index;
     private Curve prevcurve;
     private Curve thiscurve;
 
-    public AreaIterator(Vector<Curve> curves, BaseTransform tx) {
+    public AreaIterator(Vector curves, BaseTransform tx) {
         this.curves = curves;
         this.transform = tx;
         if (curves.size() >= 1) {
-            thiscurve = curves.get(0);
+            thiscurve = (Curve) curves.get(0);
         }
     }
 
@@ -646,7 +646,7 @@ class AreaIterator implements PathIterator {
             prevcurve = thiscurve;
             index++;
             if (index < curves.size()) {
-                thiscurve = curves.get(index);
+                thiscurve = (Curve) curves.get(index);
                 if (thiscurve.getOrder() != 0 &&
                     prevcurve.getX1() == thiscurve.getX0() &&
                     prevcurve.getY1() == thiscurve.getY0())

@@ -157,7 +157,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public Future<?> addRenderJob(RenderJob<?> rj) {
+    public Future addRenderJob(RenderJob rj) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

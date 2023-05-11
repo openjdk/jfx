@@ -100,7 +100,7 @@ public abstract class Toolkit {
     private static final String QUANTUM_TOOLKIT     = "com.sun.javafx.tk.quantum.QuantumToolkit";
     private static final String DEFAULT_TOOLKIT     = QUANTUM_TOOLKIT;
 
-    private static final Map<Paint, Object> gradientMap = new WeakHashMap<>();
+    private static final Map gradientMap = new WeakHashMap();
 
     @SuppressWarnings("removal")
     private static final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.verbose"));
@@ -241,7 +241,7 @@ public abstract class Toolkit {
                 || (userSpecifiedToolkit && !forcedToolkit.endsWith("StubToolkit"));
 
         try {
-            Class<?> clz = null;
+            Class clz = null;
 
             try {
                 // try our priveledged loader first
@@ -558,7 +558,7 @@ public abstract class Toolkit {
     // this flag is cleared each cycle so subsequent pulses must be requested
     public abstract void requestNextPulse();
 
-    public abstract Future<?> addRenderJob(RenderJob<?> rj);
+    public abstract Future addRenderJob(RenderJob rj);
 
     public abstract ImageLoader loadImage(String url,
                                           double width, double height,

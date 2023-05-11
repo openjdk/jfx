@@ -26,10 +26,6 @@
 package com.sun.javafx.tk;
 
 import java.security.AccessControlContext;
-import java.util.List;
-
-import com.sun.prism.Image;
-
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination.ModifierValue;
@@ -98,7 +94,7 @@ public interface TKStage {
     public float getOutputScaleX();
     public float getOutputScaleY();
 
-    public void setIcons(List<Object> icons);
+    public void setIcons(java.util.List icons);
 
     public void setTitle(String title);
 

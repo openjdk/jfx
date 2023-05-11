@@ -750,7 +750,7 @@ public class Image {
      *
      * @param pixelBuffer the {@code PixelBuffer} used to construct this image.
      */
-    Image(PixelBuffer<?> pixelBuffer) {
+    Image(PixelBuffer pixelBuffer) {
         this(null, null, pixelBuffer.getWidth(), pixelBuffer.getHeight(),
                 false, false, false);
         initialize(pixelBuffer); // Creates an image using the java.nio.Buffer provided by PixelBuffer.
@@ -1191,7 +1191,7 @@ public class Image {
         if (reader == null) {
             reader = new PixelReader() {
                 @Override
-                public PixelFormat<? extends Buffer> getPixelFormat() {
+                public PixelFormat getPixelFormat() {
                     PlatformImage pimg = platformImage.get();
                     return pimg.getPlatformPixelFormat();
                 }

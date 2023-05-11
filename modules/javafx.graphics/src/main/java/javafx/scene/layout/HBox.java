@@ -276,7 +276,7 @@ public class HBox extends Pane {
                 }
 
                 @Override
-                public CssMetaData<? extends Styleable, Number> getCssMetaData() {
+                public CssMetaData getCssMetaData () {
                     return StyleableProperties.SPACING;
                 }
 

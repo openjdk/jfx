@@ -25,41 +25,35 @@
 
 package com.sun.javafx.tk.quantum;
 
-import static com.sun.javafx.FXPermissions.SET_WINDOW_ALWAYS_ON_TOP_PERMISSION;
-import static com.sun.javafx.FXPermissions.UNRESTRICTED_FULL_SCREEN_PERMISSION;
-
 import java.nio.ByteBuffer;
-import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.Permission;
 import java.security.PrivilegedAction;
+import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.ResourceBundle;
-
-import com.sun.glass.events.WindowEvent;
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Screen;
-import com.sun.glass.ui.View;
-import com.sun.glass.ui.Window;
-import com.sun.glass.ui.Window.Level;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.iio.common.PushbroomScaler;
-import com.sun.javafx.iio.common.ScalerFactory;
-import com.sun.javafx.tk.FocusCause;
-import com.sun.javafx.tk.PlatformImage;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.tk.TKStage;
-import com.sun.prism.Image;
-import com.sun.prism.PixelFormat;
 
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+
+import com.sun.glass.events.WindowEvent;
+import com.sun.glass.ui.*;
+import com.sun.glass.ui.Window.Level;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.iio.common.PushbroomScaler;
+import com.sun.javafx.iio.common.ScalerFactory;
+import com.sun.javafx.tk.FocusCause;
+import com.sun.javafx.tk.TKScene;
+import com.sun.javafx.tk.TKStage;
+import com.sun.prism.Image;
+import com.sun.prism.PixelFormat;
+import java.util.Locale;
+import java.util.ResourceBundle;
+import static com.sun.javafx.FXPermissions.*;
 
 public class WindowStage extends GlassStage {
 
@@ -358,7 +352,7 @@ public class WindowStage extends GlassStage {
         platformWindow.setMaximumSize(maxWidth, maxHeight);
     }
 
-    static Image findBestImage(List<Object> icons, int width, int height) {
+    static Image findBestImage(java.util.List icons, int width, int height) {
         Image image = null;
         double bestSimilarity = 3; //Impossibly high value
         for (Object icon : icons) {
@@ -368,7 +362,7 @@ public class WindowStage extends GlassStage {
             //It's found by experimentation that good-looking results are achieved
             //with scale factors x1, x3/4, x2/3, xN, x1/N.
             //Check to make sure the image/image format is correct.
-            Image im = (Image) icon;
+            Image im = (Image)icon;
             if (im == null || !(im.getPixelFormat() == PixelFormat.BYTE_RGB ||
                 im.getPixelFormat() == PixelFormat.BYTE_BGRA_PRE ||
                 im.getPixelFormat() == PixelFormat.BYTE_GRAY))
@@ -436,7 +430,7 @@ public class WindowStage extends GlassStage {
         return image;
     }
 
-    @Override public void setIcons(List<Object> icons) {
+    @Override public void setIcons(java.util.List icons) {
 
         int SMALL_ICON_HEIGHT = 32;
         int SMALL_ICON_WIDTH = 32;

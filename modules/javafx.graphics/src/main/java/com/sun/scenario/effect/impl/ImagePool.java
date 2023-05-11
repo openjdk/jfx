@@ -49,7 +49,7 @@ public class ImagePool {
 
     static {
         @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<?>) () -> {
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             if (System.getProperty("decora.showstats") != null) {
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     @Override public void run() {

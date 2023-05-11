@@ -42,7 +42,6 @@ import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.FloatMap;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.LockableResource;
-import com.sun.scenario.effect.impl.state.RenderState;
 
 public abstract class Renderer {
 
@@ -87,8 +86,10 @@ public abstract class Renderer {
     }
 
     public static final String rootPkg = "com.sun.scenario.effect";
-    private static final Map<FilterContext, Renderer> rendererMap = new HashMap<>(1);
-    private Map<String, EffectPeer<?>> peerCache = Collections.synchronizedMap(new HashMap<>(5));
+    private static final Map<FilterContext, Renderer> rendererMap =
+        new HashMap<>(1);
+    private Map<String, EffectPeer> peerCache =
+        Collections.synchronizedMap(new HashMap<String, EffectPeer>(5));
     private final ImagePool imagePool;
 
     @SuppressWarnings("removal")
@@ -237,22 +238,22 @@ public abstract class Renderer {
      * @param unrollCount
      * @return cached peer for this name and unroll count
      */
-    public final synchronized <T extends RenderState> EffectPeer<T>
+    public final synchronized EffectPeer
         getPeerInstance(FilterContext fctx, String name, int unrollCount)
     {
         // first look for a previously cached peer using only the base name
         // (e.g. GaussianBlur); software peers do not (currently) have
         // unrolled loops, so this step should locate those...
-        EffectPeer<?> peer = peerCache.get(name);
+        EffectPeer peer = peerCache.get(name);
         if (peer != null) {
-            return (EffectPeer<T>) peer;
+            return peer;
         }
         // failing that, if there is a positive unrollCount, we attempt
         // to find a previously cached hardware peer for that unrollCount
         if (unrollCount > 0) {
             peer = peerCache.get(name + "_" + unrollCount);
             if (peer != null) {
-                return (EffectPeer<T>) peer;
+                return peer;
             }
         }
 
@@ -264,7 +265,7 @@ public abstract class Renderer {
         // use the peer's unique name as the hashmap key
         peerCache.put(peer.getUniqueName(), peer);
 
-        return (EffectPeer<T>) peer;
+        return peer;
     }
 
 
@@ -284,13 +285,13 @@ public abstract class Renderer {
      * @param unrollCount unroll count
      * @return new peer
      */
-    protected abstract EffectPeer<?> createPeer(FilterContext fctx,
+    protected abstract EffectPeer createPeer(FilterContext fctx,
                                              String name, int unrollCount);
 
     /**
      * Returns current cache of peers.
      */
-    protected Collection<EffectPeer<?>> getPeers() {
+    protected Collection<EffectPeer> getPeers() {
         return peerCache.values();
     }
 

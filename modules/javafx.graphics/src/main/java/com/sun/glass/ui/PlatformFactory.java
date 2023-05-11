@@ -39,7 +39,7 @@ public abstract class PlatformFactory {
                 String platform = Platform.determinePlatform();
                 String factory = "com.sun.glass.ui." +  platform.toLowerCase(Locale.ROOT) + "."+ platform + "PlatformFactory";
                 // System.out.println("Loading Glass Factory " + factory);
-                Class<?> c = Class.forName(factory);
+                Class c = Class.forName(factory);
                 instance = (PlatformFactory) c.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 e.printStackTrace();

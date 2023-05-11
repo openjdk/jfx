@@ -48,7 +48,7 @@ public final class BackgroundSizeConverter  extends StyleConverter<ParsedValue<?
 
     @Override
     public BackgroundSize convert(ParsedValue<ParsedValue<?, ?>[], BackgroundSize> value, Font font) {
-        ParsedValue<?, ?>[] values = value.getValue();
+        ParsedValue[] values = value.getValue();
 
         // A Size that is null represents that we are "auto" for that dimension
         final Size wSize = (values[0] != null)
@@ -71,10 +71,10 @@ public final class BackgroundSizeConverter  extends StyleConverter<ParsedValue<?
         double h = (hSize != null) ? hSize.pixels(font) : BackgroundSize.AUTO;
 
         boolean cover = (values[2] != null)
-                ? BooleanConverter.getInstance().convert((ParsedValue<String, Boolean>) values[2], font) : false;
+                ? BooleanConverter.getInstance().convert(values[2], font) : false;
 
         boolean contain = (values[3] != null)
-                ? BooleanConverter.getInstance().convert((ParsedValue<String, Boolean>) values[3], font) : false;
+                ? BooleanConverter.getInstance().convert(values[3], font) : false;
 
         return new BackgroundSize(w, h, proportionalWidth, proportionalHeight, contain, cover);
     }

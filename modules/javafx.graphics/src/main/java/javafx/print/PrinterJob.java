@@ -473,7 +473,7 @@ public final class PrinterJob {
     }
 
     private ReadOnlyObjectWrapper<JobStatus> jobStatus =
-        new ReadOnlyObjectWrapper<>(JobStatus.NOT_STARTED);
+        new ReadOnlyObjectWrapper(JobStatus.NOT_STARTED);
 
     /**
      * A read only object property representing the current

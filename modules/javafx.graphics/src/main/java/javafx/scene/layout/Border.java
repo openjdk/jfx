@@ -133,7 +133,8 @@ public final class Border {
                     new Insets[] {Insets.EMPTY});
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
-            Collections.unmodifiableList(Arrays.asList(
+            // Unchecked!
+            (List) Collections.unmodifiableList(Arrays.asList(
                 BORDER_COLOR,
                 BORDER_STYLE,
                 BORDER_WIDTH,

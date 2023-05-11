@@ -78,7 +78,7 @@ public abstract class PrRenderer extends Renderer {
             Renderer.rootPkg + ".impl.prism.ps.PPSRenderer" :
             Renderer.rootPkg + ".impl.prism.sw.PSWRenderer";
         try {
-            Class<?> klass = Class.forName(klassName);
+            Class klass = Class.forName(klassName);
             Method m = klass.getMethod("createRenderer", new Class[] { FilterContext.class });
             return (PrRenderer)m.invoke(null, new Object[] { fctx });
         } catch (Throwable e) {}

@@ -35,7 +35,7 @@ import javafx.scene.text.Font;
  * Converter to convert a parsed representation of color ladder values to a {@code Color}.
  * @since 9
  */
-public final class LadderConverter extends StyleConverter<ParsedValue<?, ?>[], Color> {
+public final class LadderConverter extends StyleConverter<ParsedValue[], Color> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -55,8 +55,8 @@ public final class LadderConverter extends StyleConverter<ParsedValue<?, ?>[], C
     }
 
     @Override
-    public Color convert(ParsedValue<ParsedValue<?, ?>[], Color> value, Font font) {
-        final ParsedValue<?, ?>[] values = value.getValue();
+    public Color convert(ParsedValue<ParsedValue[], Color> value, Font font) {
+        final ParsedValue[] values = value.getValue();
         final Color color = (Color) values[0].convert(font);
         Stop[] stops = new Stop[values.length - 1];
         for (int v = 1; v < values.length; v++) {

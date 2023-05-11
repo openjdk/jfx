@@ -1588,7 +1588,7 @@ public class Text extends Shape {
                 textOrigin = new StyleableObjectProperty<VPos>(DEFAULT_TEXT_ORIGIN) {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "textOrigin"; }
-                    @Override public CssMetaData<Text, VPos> getCssMetaData() {
+                    @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.TEXT_ORIGIN;
                     }
                     @Override public void invalidated() {
@@ -1610,7 +1610,7 @@ public class Text extends Shape {
                 underline = new StyleableBooleanProperty() {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "underline"; }
-                    @Override public CssMetaData<Text, Boolean> getCssMetaData() {
+                    @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.UNDERLINE;
                     }
                     @Override public void invalidated() {
@@ -1635,7 +1635,7 @@ public class Text extends Shape {
                 strikethrough = new StyleableBooleanProperty() {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "strikethrough"; }
-                    @Override public CssMetaData<Text, Boolean> getCssMetaData() {
+                    @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.STRIKETHROUGH;
                     }
                     @Override public void invalidated() {
@@ -1661,7 +1661,7 @@ public class Text extends Shape {
                     new StyleableObjectProperty<TextAlignment>(DEFAULT_TEXT_ALIGNMENT) {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "textAlignment"; }
-                    @Override public CssMetaData<Text, TextAlignment> getCssMetaData() {
+                    @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.TEXT_ALIGNMENT;
                     }
                     @Override public void invalidated() {
@@ -1693,7 +1693,7 @@ public class Text extends Shape {
                     new StyleableDoubleProperty(DEFAULT_LINE_SPACING) {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "lineSpacing"; }
-                    @Override public CssMetaData<Text, Number> getCssMetaData() {
+                    @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.LINE_SPACING;
                     }
                     @Override public void invalidated() {
@@ -1877,7 +1877,7 @@ public class Text extends Shape {
                 tabSize = new StyleableIntegerProperty(TextLayout.DEFAULT_TAB_SIZE) {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "tabSize"; }
-                    @Override public CssMetaData<Text, Number> getCssMetaData() {
+                    @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.TAB_SIZE;
                     }
                     @Override protected void invalidated() {

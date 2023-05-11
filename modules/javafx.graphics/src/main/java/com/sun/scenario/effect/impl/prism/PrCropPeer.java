@@ -35,7 +35,7 @@ import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.RenderState;
 
-public class PrCropPeer extends EffectPeer<RenderState> {
+public class PrCropPeer extends EffectPeer {
 
     public PrCropPeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);

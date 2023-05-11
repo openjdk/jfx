@@ -36,7 +36,7 @@ import javafx.scene.text.Font;
  *
  * @since 9
  */
-public final class DeriveColorConverter extends StyleConverter<ParsedValue<?, ?>[], Color> {
+public final class DeriveColorConverter extends StyleConverter<ParsedValue[], Color> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -56,8 +56,8 @@ public final class DeriveColorConverter extends StyleConverter<ParsedValue<?, ?>
     }
 
     @Override
-    public Color convert(ParsedValue<ParsedValue<?, ?>[], Color> value, Font font) {
-        ParsedValue<?, ?>[] values = value.getValue();
+    public Color convert(ParsedValue<ParsedValue[], Color> value, Font font) {
+        ParsedValue[] values = value.getValue();
         final Color color = (Color) values[0].convert(font);
         final Size brightness = (Size) values[1].convert(font);
         return com.sun.javafx.util.Utils.deriveColor(color, brightness.pixels(font));

@@ -50,7 +50,7 @@ public class NativeLibLoader {
             @SuppressWarnings("removal")
             StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
-            Class<?> caller = walker.getCallerClass();
+            Class caller = walker.getCallerClass();
             loadLibraryInternal(libname, null, caller);
             loaded.add(libname);
         }
@@ -61,7 +61,7 @@ public class NativeLibLoader {
             @SuppressWarnings("removal")
             StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
-            Class<?> caller = walker.getCallerClass();
+            Class caller = walker.getCallerClass();
             loadLibraryInternal(libname, dependencies, caller);
             loaded.add(libname);
         }
@@ -113,7 +113,7 @@ public class NativeLibLoader {
         return paths;
     }
 
-    private static void loadLibraryInternal(String libraryName, List<String> dependencies, Class<?> caller) {
+    private static void loadLibraryInternal(String libraryName, List<String> dependencies, Class caller) {
         // The search order for native library loading is:
         // - try to load the native library from either ${java.home}
         //   (for jlinked javafx modules) or from the same folder as
@@ -193,7 +193,7 @@ public class NativeLibLoader {
     * If there is a library with the platform-correct name at the
     * root of the resources in this jar, use that.
     */
-    private static boolean loadLibraryFromResource(String libraryName, List<String> dependencies, Class<?> caller) {
+    private static boolean loadLibraryFromResource(String libraryName, List<String> dependencies, Class caller) {
         return installLibraryFromResource(libraryName, dependencies, caller, true);
     }
 
@@ -201,7 +201,7 @@ public class NativeLibLoader {
     * If there is a library with the platform-correct name at the
     * root of the resources in this jar, install it. If load is true, also load it.
     */
-    private static boolean installLibraryFromResource(String libraryName, List<String> dependencies, Class<?> caller, boolean load) {
+    private static boolean installLibraryFromResource(String libraryName, List<String> dependencies, Class caller, boolean load) {
         try {
             // first preload dependencies
             if (dependencies != null) {
@@ -232,7 +232,7 @@ public class NativeLibLoader {
         return false;
     }
 
-    private static String cacheLibrary(InputStream is, String name, Class<?> caller) throws IOException {
+    private static String cacheLibrary(InputStream is, String name, Class caller) throws IOException {
         String jfxVersion = System.getProperty("javafx.runtime.version", "versionless");
         String userCache = System.getProperty("javafx.cachedir", "");
         String arch = System.getProperty("os.arch");
@@ -383,7 +383,7 @@ public class NativeLibLoader {
                 // Get the URL for this class, if it is a jar URL, then get the
                 // filename associated with it.
                 String theClassFile = "NativeLibLoader.class";
-                Class<NativeLibLoader> theClass = NativeLibLoader.class;
+                Class theClass = NativeLibLoader.class;
                 String classUrlString = theClass.getResource(theClassFile).toString();
                 if (classUrlString.startsWith("jrt:")) {
                     libDir = libDirForJRT();

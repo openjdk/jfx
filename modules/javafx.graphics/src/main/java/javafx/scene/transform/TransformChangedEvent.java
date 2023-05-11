@@ -42,7 +42,7 @@ public final class TransformChangedEvent extends Event {
      * The only valid EventType for the TransformChangedEvent.
      */
     public static final EventType<TransformChangedEvent> TRANSFORM_CHANGED =
-            new EventType<>(Event.ANY, "TRANSFORM_CHANGED");
+            new EventType(Event.ANY, "TRANSFORM_CHANGED");
 // TODO: use EventTypeUtil once it's returned
 //            EventTypeUtil.registerInternalEventType(Event.ANY, "TRANSFORM_CHANGED");
 

@@ -204,7 +204,7 @@ final class GtkApplication extends Application implements
     private static native void _initGTK(int version, boolean verbose, float overrideUIScale);
 
     private void initDisplay() {
-        Map<Object, Object> ds = getDeviceDetails();
+        Map ds = getDeviceDetails();
         if (ds != null) {
             Object value;
             value = ds.get("XDisplay");
@@ -225,7 +225,7 @@ final class GtkApplication extends Application implements
     private void init() {
         initDisplay();
         long eventProc = 0;
-        Map<Object, Object> map = getDeviceDetails();
+        Map map = getDeviceDetails();
         if (map != null) {
             Long result = (Long) map.get("javafx.embed.eventProc");
             eventProc = result == null ? 0 : result;

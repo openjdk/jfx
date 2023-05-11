@@ -35,8 +35,6 @@ import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.Image;
-
 import javafx.application.Platform;
 
 final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
@@ -133,7 +131,7 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     }
 
     @Override
-    public void setIcons(List<Object> icons) {
+    public void setIcons(List icons) {
         if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.setIcons");
         }

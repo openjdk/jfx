@@ -88,7 +88,7 @@ public class PSWRenderer extends PrRenderer {
     public synchronized static PSWRenderer createJSWInstance(Screen screen) {
         PSWRenderer ret = null;
         try {
-            Class<?> klass = Class.forName(rootPkg + ".impl.sw.java.JSWRendererDelegate");
+            Class klass = Class.forName(rootPkg + ".impl.sw.java.JSWRendererDelegate");
             RendererDelegate delegate = (RendererDelegate)klass.getDeclaredConstructor().newInstance();
             ret = new PSWRenderer(screen, delegate);
         } catch (Throwable e) {}
@@ -103,7 +103,7 @@ public class PSWRenderer extends PrRenderer {
     public synchronized static PSWRenderer createJSWInstance(ResourceFactory factory) {
         PSWRenderer ret = null;
         try {
-            Class<?> klass = Class.forName(rootPkg + ".impl.sw.java.JSWRendererDelegate");
+            Class klass = Class.forName(rootPkg + ".impl.sw.java.JSWRendererDelegate");
             RendererDelegate delegate = (RendererDelegate)klass.getDeclaredConstructor().newInstance();
             ret = new PSWRenderer(factory, delegate);
         } catch (Throwable e) {}
@@ -127,7 +127,7 @@ public class PSWRenderer extends PrRenderer {
     private synchronized static PSWRenderer createSSEInstance(Screen screen) {
         PSWRenderer ret = null;
         try {
-            Class<?> klass = Class.forName(rootPkg + ".impl.sw.sse.SSERendererDelegate");
+            Class klass = Class.forName(rootPkg + ".impl.sw.sse.SSERendererDelegate");
             RendererDelegate delegate = (RendererDelegate)klass.getDeclaredConstructor().newInstance();
             ret = new PSWRenderer(screen, delegate);
         } catch (Throwable e) {}
@@ -241,14 +241,14 @@ public class PSWRenderer extends PrRenderer {
      * @param name the name of the effect peer
      * @return a new {@code EffectPeer} instance
      */
-    private EffectPeer<?> createIntrinsicPeer(FilterContext fctx, String name) {
-        Class<?> klass = null;
-        EffectPeer<?> peer;
+    private EffectPeer createIntrinsicPeer(FilterContext fctx, String name) {
+        Class klass = null;
+        EffectPeer peer;
         try {
             klass = Class.forName(rootPkg + ".impl.prism.Pr" + name + "Peer");
-            Constructor<?> ctor = klass.getConstructor(new Class[]
+            Constructor ctor = klass.getConstructor(new Class[]
                 { FilterContext.class, Renderer.class, String.class });
-            peer = (EffectPeer<?>)ctor.newInstance(new Object[] {fctx, this, name});
+            peer = (EffectPeer)ctor.newInstance(new Object[] {fctx, this, name});
         } catch (Exception e) {
             return null;
         }
@@ -264,16 +264,16 @@ public class PSWRenderer extends PrRenderer {
      * @param unrollCount the unroll count
      * @return a new {@code EffectPeer} instance
      */
-    private EffectPeer<?> createPlatformPeer(FilterContext fctx, String name,
+    private EffectPeer createPlatformPeer(FilterContext fctx, String name,
                                           int unrollCount)
     {
         String klassName = delegate.getPlatformPeerName(name, unrollCount);
-        EffectPeer<?> peer;
+        EffectPeer peer;
         try {
-            Class<?> klass = Class.forName(klassName);
-            Constructor<?> ctor = klass.getConstructor(new Class[]
+            Class klass = Class.forName(klassName);
+            Constructor ctor = klass.getConstructor(new Class[]
                 { FilterContext.class, Renderer.class, String.class });
-            peer = (EffectPeer<?>)ctor.newInstance(new Object[] {fctx, this, name});
+            peer = (EffectPeer)ctor.newInstance(new Object[] {fctx, this, name});
         } catch (Exception e) {
             System.err.println("Error: " + getAccelType() +
                                " peer not found for: " + name +
@@ -284,7 +284,7 @@ public class PSWRenderer extends PrRenderer {
     }
 
     @Override
-    protected EffectPeer<?> createPeer(FilterContext fctx, String name,
+    protected EffectPeer createPeer(FilterContext fctx, String name,
                                     int unrollCount)
     {
         if (PrRenderer.isIntrinsicPeer(name)) {

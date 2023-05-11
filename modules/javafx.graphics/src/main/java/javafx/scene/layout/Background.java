@@ -30,6 +30,7 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import java.util.Arrays;
@@ -106,7 +107,8 @@ public final class Background {
                     new BackgroundSize[] { BackgroundSize.DEFAULT } );
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
-            Collections.unmodifiableList(Arrays.asList(
+            // Unchecked!
+            (List) Collections.unmodifiableList(Arrays.asList(
                 BACKGROUND_COLOR,
                 BACKGROUND_INSETS,
                 BACKGROUND_RADIUS,
