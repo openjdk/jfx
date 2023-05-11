@@ -359,8 +359,7 @@ public class Locator {
             }
 
             // On non-Windows systems, replace "/~/" with home directory path + "/".
-            if (!PlatformUtil.isWindows()
-                    && protocol.equals("file")) {
+            if (!PlatformUtil.isWindows() && protocol.equals("file")) {
                 int index = uriString.indexOf("/~/");
                 if (index != -1) {
                     uriString = uriString.substring(0, index)
