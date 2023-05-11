@@ -27,9 +27,6 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.javafx.PlatformUtil;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 class LinuxPlatformFactory extends NativePlatformFactory {
 
     @Override
