@@ -469,14 +469,14 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         {
             // MS Windows doesn't send WM_KEYDOWN for the PrintScreen key,
             // so we synthesize one
-            env->CallBooleanMethod(GetView(), javaIDs.View.notifyKeyEx,
+            env->CallBooleanMethod(GetView(), javaIDs.View.notifyKey,
                     com_sun_glass_events_KeyEvent_PRESS,
                     jKeyCode, jKeyChars, jModifiers, jint(wKey));
             CheckAndClearException(env);
         }
 
         if (GetGlassView()) {
-            env->CallBooleanMethod(GetView(), javaIDs.View.notifyKeyEx,
+            env->CallBooleanMethod(GetView(), javaIDs.View.notifyKey,
                     (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
                     com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
                     jKeyCode, jKeyChars, jModifiers, jint(wKey));
@@ -513,7 +513,7 @@ void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar)
             }
             env->ReleaseCharArrayElements(jKeyChars, nKeyChars, 0);
 
-            env->CallBooleanMethod(GetView(), javaIDs.View.notifyKeyEx,
+            env->CallBooleanMethod(GetView(), javaIDs.View.notifyKey,
                                 com_sun_glass_events_KeyEvent_TYPED,
                                 com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars,
                                 GetModifiers(), -1);

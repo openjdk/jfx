@@ -447,7 +447,7 @@ typedef struct _tagJavaIDs {
     struct {
         jmethodID notifyResize;
         jmethodID notifyRepaint;
-        jmethodID notifyKeyEx;
+        jmethodID notifyKey;
         jmethodID notifyMouse;
         jmethodID notifyMenu;
         jmethodID notifyScroll;

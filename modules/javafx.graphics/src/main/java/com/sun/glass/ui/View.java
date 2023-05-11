@@ -972,7 +972,7 @@ public abstract class View {
     }
 
     // Returns true iff event was consumed
-    protected boolean notifyKeyEx(int type, int keyCode, char[] keyChars, int modifiers, int hardwareCode) {
+    protected boolean notifyKey(int type, int keyCode, char[] keyChars, int modifiers, int hardwareCode) {
         return handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers, hardwareCode);
     }
 
