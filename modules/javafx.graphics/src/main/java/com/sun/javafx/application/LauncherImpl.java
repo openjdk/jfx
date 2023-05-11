@@ -384,8 +384,7 @@ public class LauncherImpl {
             } catch (ClassNotFoundException | NoClassDefFoundError cnfe) {}
         }
 
-        if (clz == null && PlatformUtil.isMac()
-                    && Normalizer.isNormalized(className, Normalizer.Form.NFD)) {
+        if (clz == null && PlatformUtil.isMac() && Normalizer.isNormalized(className, Normalizer.Form.NFD)) {
             // macOS may have decomposed diacritical marks in mainClassName
             // recompose them and try again
             String cn = Normalizer.normalize(className, Normalizer.Form.NFC);
