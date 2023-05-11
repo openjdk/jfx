@@ -50,7 +50,7 @@ module javafx.base {
         javafx.graphics,
         javafx.fxml,
         javafx.media,
-        javafx.swing;
+        javafx.swing, javafx.web;
     exports com.sun.javafx.beans to
         javafx.controls,
         javafx.fxml,
