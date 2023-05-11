@@ -209,14 +209,15 @@ public class TreeTableRowSkinTest {
 
     @Test
     public void treeTableRowWithFixedCellSizeShouldIgnoreVerticalPadding() {
-        int top = 11;
-        int right = 23;
-        int bottom = 37;
-        int left = 49;
+        int top = 10;
+        int right = 20;
+        int bottom = 30;
+        int left = 40;
+        double fixed = 24;
 
         int horizontalPadding = left + right;
 
-        treeTableView.setFixedCellSize(23);
+        treeTableView.setFixedCellSize(fixed);
         Toolkit.getToolkit().firePulse();
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
@@ -227,6 +228,8 @@ public class TreeTableRowSkinTest {
         double width = cell.getWidth();
 
         double minHeight = cell.minHeight(-1);
+        assertEquals(fixed, minHeight, 0);
+
         double prefHeight = cell.prefHeight(-1);
         double maxHeight = cell.maxHeight(-1);
         double height = cell.getHeight();

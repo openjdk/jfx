@@ -28,6 +28,7 @@ package javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -72,8 +73,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private Node graphic;
     private final BehaviorBase<TreeTableRow<T>> behavior;
     private boolean childrenDirty = false;
-
-
+    private final InvalidationListener indexPropertyListener;
+    private final InvalidationListener treeItemListener;
+    private final InvalidationListener treeTableViewListener;
+    private final InvalidationListener treeColumnListener;
+    private final InvalidationListener fixedSizeListener;
+    private final InvalidationListener vflowWidthListener;
 
     /* *************************************************************************
      *                                                                         *
@@ -96,16 +101,44 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         updateTreeItem();
 
-        control.indexProperty().addListener(new WeakInvalidationListener((x) -> {
+        indexPropertyListener = (obs) -> {
             updateCells = true;
-        }));
+        };
+        control.indexProperty().addListener(new WeakInvalidationListener(indexPropertyListener));
 
-        control.treeItemProperty().addListener(new WeakInvalidationListener((x) -> {
+        treeItemListener = (obs) -> {
             updateTreeItem();
             // There used to be an isDirty = true statement here, but this was
             // determined to be unnecessary and led to performance issues such as
             // those detailed in JDK-8143266
-        }));
+        };
+        control.treeItemProperty().addListener(new WeakInvalidationListener(treeItemListener));
+
+        treeTableViewListener = (obs) -> {
+            unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
+            setupTreeTableViewListeners();
+        };
+
+        treeColumnListener = (obs) -> {
+            // Fix for RT-27782: Need to set isDirty to true, rather than the
+            // cheaper updateCells, as otherwise the text indentation will not
+            // be recalculated in TreeTableCellSkin.calculateIndentation()
+            isDirty = true;
+            if (getSkinnable() != null) {
+                getSkinnable().requestLayout();
+            }
+        };
+
+        fixedSizeListener = (obs) -> {
+            updateCachedFixedSize();
+        };
+
+        vflowWidthListener = (obs) -> {
+            if (getSkinnable() != null) {
+                TreeTableView<T> t = getSkinnable().getTreeTableView();
+                t.requestLayout();
+            }
+        };
 
         setupTreeTableViewListeners();
     }
@@ -114,29 +147,14 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private void setupTreeTableViewListeners() {
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
-            getSkinnable().treeTableViewProperty().addListener(new WeakInvalidationListener((x) -> {
-                unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
-                setupTreeTableViewListeners();
-            }));
+            getSkinnable().treeTableViewProperty().addListener(new WeakInvalidationListener(treeTableViewListener));
         } else {
-            treeTableView.treeColumnProperty().addListener(new WeakInvalidationListener((x) -> {
-                // Fix for RT-27782: Need to set isDirty to true, rather than the
-                // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.calculateIndentation()
-                isDirty = true;
-                if (getSkinnable() != null) {
-                    getSkinnable().requestLayout();
-                }
-            }));
+            treeTableView.treeColumnProperty().addListener(new WeakInvalidationListener(treeColumnListener));
 
             DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
             if (fixedCellSizeProperty != null) {
-                fixedCellSizeProperty.addListener(new WeakInvalidationListener((x) -> {
-                    fixedCellSize = fixedCellSizeProperty.get();
-                    fixedCellSizeEnabled = fixedCellSize > 0;
-                }));
-                fixedCellSize = fixedCellSizeProperty.get();
-                fixedCellSizeEnabled = fixedCellSize > 0;
+                fixedCellSizeProperty.addListener(new WeakInvalidationListener(fixedSizeListener));
+                updateCachedFixedSize();
 
                 // JDK-8144500:
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
@@ -144,14 +162,24 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // be required (because we remove all cells that are not visible).
                 VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
                 if (virtualFlow != null) {
-                    getVirtualFlow().widthProperty().addListener(new WeakInvalidationListener((x) -> {
-                        treeTableView.requestLayout();
-                    }));
+                    getVirtualFlow().widthProperty().addListener(new WeakInvalidationListener(vflowWidthListener));
                 }
             }
         }
     }
 
+    private void updateCachedFixedSize() {
+        if (getSkinnable() != null) {
+            TreeTableView<T> t = getSkinnable().getTreeTableView();
+            if (t != null) {
+                DoubleProperty p = t.fixedCellSizeProperty();
+                if (p != null) {
+                    fixedCellSize = p.get();
+                    fixedCellSizeEnabled = fixedCellSize > 0;
+                }
+            }
+        }
+    }
 
     /* *************************************************************************
      *                                                                         *
