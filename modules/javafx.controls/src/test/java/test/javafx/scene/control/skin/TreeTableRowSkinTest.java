@@ -340,6 +340,22 @@ public class TreeTableRowSkinTest {
         JMemoryBuddy.assertCollectable(ref);
     }
 
+    /** TreeTableView.setRowFactory() must release all discarded cells JDK-8307538 */
+    @Test
+    public void cellsMustBeCollectableAfterRowFactoryChange() {
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertNotNull(row);
+        WeakReference<Object> ref = new WeakReference<>(row);
+        row = null;
+
+        treeTableView.setRowFactory((x) -> {
+            return new TreeTableRow<>();
+        });
+        Toolkit.getToolkit().firePulse();
+
+        JMemoryBuddy.assertCollectable(ref);
+    }
+
     @AfterEach
     public void after() {
         stageLoader.dispose();
