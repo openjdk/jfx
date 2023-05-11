@@ -50,11 +50,6 @@ RenderLayerFilters::~RenderLayerFilters()
     removeReferenceFilterClients();
 }
 
-void RenderLayerFilters::setFilter(RefPtr<CSSFilter>&& filter)
-{
-    m_filter = WTFMove(filter);
-}
-
 bool RenderLayerFilters::hasFilterThatMovesPixels() const
 {
     return m_filter && m_filter->hasFilterThatMovesPixels();
@@ -116,12 +111,20 @@ void RenderLayerFilters::removeReferenceFilterClients()
     m_internalSVGReferences.clear();
 }
 
-void RenderLayerFilters::buildFilter(RenderElement& renderer, float scaleFactor, RenderingMode renderingMode)
+bool RenderLayerFilters::isIdentity(RenderElement& renderer)
 {
-    // If the filter fails to build, remove it from the layer. It will still attempt to
-    // go through regular processing (e.g. compositing), but never apply anything.
-    // FIXME: This rebuilds the entire effects chain even if the filter style didn't change.
-    m_filter = CSSFilter::create(renderer, renderer.style().filter(), renderingMode, FloatSize { scaleFactor, scaleFactor }, Filter::ClipOperation::Unite, m_targetBoundingBox);
+    const auto& operations = renderer.style().filter();
+    return CSSFilter::isIdentity(renderer, operations);
+}
+
+IntOutsets RenderLayerFilters::calculateOutsets(RenderElement& renderer, const FloatRect& targetBoundingBox)
+{
+    const auto& operations = renderer.style().filter();
+
+    if (!operations.hasFilterThatMovesPixels())
+        return { };
+
+    return CSSFilter::calculateOutsets(renderer, operations, targetBoundingBox);
 }
 
 GraphicsContext* RenderLayerFilters::inputContext()
@@ -135,23 +138,29 @@ void RenderLayerFilters::allocateBackingStoreIfNeeded(GraphicsContext& context)
     auto logicalSize = filter.scaledByFilterScale(m_filterRegion.size());
 
     if (!m_sourceImage || m_sourceImage->logicalSize() != logicalSize)
-        m_sourceImage = context.createImageBuffer(m_filterRegion.size(), filter.filterScale(), DestinationColorSpace::SRGB(), filter.renderingMode());
+        m_sourceImage = context.createScaledImageBuffer(m_filterRegion.size(), filter.filterScale(), DestinationColorSpace::SRGB(), filter.renderingMode());
 }
 
 GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, GraphicsContext& context, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect)
 {
-    if (!m_filter)
-        return nullptr;
+    auto expandedDirtyRect = dirtyRect;
+    auto targetBoundingBox = intersection(filterBoxRect, dirtyRect);
+
+    auto outsets = calculateOutsets(renderer, targetBoundingBox);
+    if (!outsets.isZero()) {
+        LayoutBoxExtent flippedOutsets { outsets.bottom(), outsets.left(), outsets.top(), outsets.right() };
+        expandedDirtyRect.expand(flippedOutsets);
+    }
 
     // Calculate targetBoundingBox since it will be used if the filter is created.
-    auto targetBoundingBox = intersection(filterBoxRect, dirtyRect);
+    targetBoundingBox = intersection(filterBoxRect, expandedDirtyRect);
     if (targetBoundingBox.isEmpty())
         return nullptr;
 
-    if (m_targetBoundingBox != targetBoundingBox) {
+    if (!m_filter || m_targetBoundingBox != targetBoundingBox) {
         m_targetBoundingBox = targetBoundingBox;
         // FIXME: This rebuilds the entire effects chain even if the filter style didn't change.
-        m_filter = CSSFilter::create(renderer, renderer.style().filter(), m_filter->renderingMode(), m_filter->filterScale(), Filter::ClipOperation::Unite, m_targetBoundingBox);
+        m_filter = CSSFilter::create(renderer, renderer.style().filter(), m_renderingMode, m_filterScale, Filter::ClipOperation::Unite, m_targetBoundingBox, context);
     }
 
     if (!m_filter)
@@ -162,7 +171,7 @@ GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, 
     // For CSSFilter, filterRegion = targetBoundingBox + filter->outsets()
     auto filterRegion = targetBoundingBox;
     if (filter.hasFilterThatMovesPixels())
-        filterRegion += filter.outsets();
+        filterRegion.expand(toLayoutBoxExtent(outsets));
 
     if (filterRegion.isEmpty())
         return nullptr;

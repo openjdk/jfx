@@ -31,6 +31,7 @@
 
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
+#include "CommonAtomStrings.h"
 #include "DOMJITHelpers.h"
 #include "Element.h"
 #include "ElementData.h"
@@ -76,6 +77,7 @@ static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationModuloHelper, int
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationSynchronizeAllAnimatedSVGAttribute, void, (SVGElement&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationSynchronizeStyleAttributeInternal, void, (StyledElement* styledElement));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationEqualIgnoringASCIICaseNonNull, bool, (const StringImpl*, const StringImpl*));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationElementIsTarget, bool, (const Element*));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsAutofilled, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsAutofilledAndObscured, bool, (const Element&));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationIsAutofilledStrongPassword, bool, (const Element&));
@@ -124,7 +126,7 @@ static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesVolumeLock
 #if ENABLE(ATTACHMENT_ELEMENT)
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationHasAttachment, bool, (const Element&));
 #endif
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesModalDialogPseudoClass, bool, (const Element&));
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationMatchesModalPseudoClass, bool, (const Element&));
 
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationAttributeValueBeginsWithCaseSensitive, bool, (const Attribute* attribute, AtomStringImpl* expectedString));
 static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(operationAttributeValueBeginsWithCaseInsensitive, bool, (const Attribute* attribute, AtomStringImpl* expectedString));
@@ -803,9 +805,9 @@ JSC_DEFINE_JIT_OPERATION(operationMatchesLangPseudoClass, bool, (const Element& 
     return matchesLangPseudoClass(element, argumentList);
 }
 
-JSC_DEFINE_JIT_OPERATION(operationMatchesModalDialogPseudoClass, bool, (const Element& element))
+JSC_DEFINE_JIT_OPERATION(operationMatchesModalPseudoClass, bool, (const Element& element))
 {
-    return matchesModalDialogPseudoClass(element);
+    return matchesModalPseudoClass(element);
 }
 
 static inline FunctionType addPseudoClassType(const CSSSelector& selector, SelectorFragment& fragment, SelectorContext selectorContext, FragmentsLevel fragmentLevel, FragmentPositionInRootFragments positionInRootFragments, bool visitedMatchEnabled, VisitedMode& visitedMode, PseudoElementMatchingBehavior pseudoElementMatchingBehavior)
@@ -944,8 +946,8 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
         return FunctionType::SimpleSelectorChecker;
 #endif
 
-    case CSSSelector::PseudoClassModalDialog:
-        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesModalDialogPseudoClass));
+    case CSSSelector::PseudoClassModal:
+        fragment.unoptimizedPseudoClasses.append(JSC::FunctionPtr<JSC::OperationPtrTag>(operationMatchesModalPseudoClass));
         return FunctionType::SimpleSelectorChecker;
 
     // These pseudo-classes only have meaning with scrollbars.
@@ -970,17 +972,13 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClassDrag:
     case CSSSelector::PseudoClassHas:
     case CSSSelector::PseudoClassRelativeScope:
-#if ENABLE(CSS_SELECTORS_LEVEL4)
     case CSSSelector::PseudoClassDir:
-    case CSSSelector::PseudoClassRole:
-#endif
         return FunctionType::CannotCompile;
 
     // Optimized pseudo selectors.
     case CSSSelector::PseudoClassAnyLink:
     case CSSSelector::PseudoClassLink:
     case CSSSelector::PseudoClassRoot:
-    case CSSSelector::PseudoClassTarget:
         fragment.pseudoClasses.add(type);
         return FunctionType::SimpleSelectorChecker;
     case CSSSelector::PseudoClassAnyLinkDeprecated:
@@ -1016,6 +1014,7 @@ static inline FunctionType addPseudoClassType(const CSSSelector& selector, Selec
     case CSSSelector::PseudoClassLastChild:
     case CSSSelector::PseudoClassOnlyChild:
     case CSSSelector::PseudoClassPlaceholderShown:
+    case CSSSelector::PseudoClassTarget:
         fragment.pseudoClasses.add(type);
         if (selectorContext == SelectorContext::QuerySelector)
             return FunctionType::SimpleSelectorChecker;
@@ -2529,8 +2528,8 @@ void SelectorCodeGenerator::generateAddStyleRelation(Assembler::RegisterID check
     auto getLastRelationPointer = [&] (Assembler::RegisterID sizeAndTarget) {
         m_assembler.sub32(Assembler::TrustedImm32(1), sizeAndTarget);
 #if CPU(ADDRESS64)
-        static_assert(sizeof(Style::Relation) == 16, "");
-        static_assert(1 << 4 == 16, "");
+        static_assert(sizeof(Style::Relation) == 16);
+        static_assert(1 << 4 == 16);
         m_assembler.lshiftPtr(Assembler::TrustedImm32(4), sizeAndTarget);
 #else
         m_assembler.mul32(Assembler::TrustedImm32(sizeof(Style::Relation)), sizeAndTarget, sizeAndTarget);
@@ -4185,11 +4184,18 @@ void SelectorCodeGenerator::generateElementIsScopeRoot(Assembler::JumpList& fail
     failureCases.append(m_assembler.branchPtr(Assembler::NotEqual, scope, elementAddressRegister));
 }
 
+JSC_DEFINE_JIT_OPERATION(operationElementIsTarget, bool, (const Element* element))
+{
+    return element == element->document().cssTarget() || InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClassTarget);
+}
+
 void SelectorCodeGenerator::generateElementIsTarget(Assembler::JumpList& failureCases)
 {
-    LocalRegister document(m_registerAllocator);
-    DOMJIT::loadDocument(m_assembler, elementAddressRegister, document);
-    failureCases.append(m_assembler.branchPtr(Assembler::NotEqual, Assembler::Address(document, Document::cssTargetMemoryOffset()), elementAddressRegister));
+    // FIXME: <https://webkit.org/b/241733> optimize CSS JIT for `:target`
+    FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
+    functionCall.setFunctionAddress(operationElementIsTarget);
+    functionCall.setOneArgument(elementAddressRegister);
+    failureCases.append(functionCall.callAndBranchOnBooleanReturnValue(Assembler::Zero));
 }
 
 void SelectorCodeGenerator::generateElementIsFirstLink(Assembler::JumpList& failureCases, Assembler::RegisterID element)

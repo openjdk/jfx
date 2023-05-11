@@ -27,7 +27,7 @@
     Global=(Worker,ServiceWorker),
     Exposed=ServiceWorker,
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=ServiceWorkerEnabled,
+    EnabledBySetting=ServiceWorkersEnabled,
     JSCustomMarkFunction,
     IsImmutablePrototypeExoticObject,
     IsImmutablePrototypeExoticObjectOnPrototype,
@@ -46,6 +46,6 @@
     attribute EventHandler onmessage;
     attribute EventHandler onmessageerror;
 
-    [Conditional=NOTIFICATION_EVENT, EnabledAtRuntime=NotificationEventEnabled] attribute EventHandler onnotificationclick;
-    [Conditional=NOTIFICATION_EVENT, EnabledAtRuntime=NotificationEventEnabled] attribute EventHandler onnotificationclose;
+    [Conditional=NOTIFICATION_EVENT, EnabledByDeprecatedGlobalSetting=NotificationEventEnabled] attribute EventHandler onnotificationclick;
+    [Conditional=NOTIFICATION_EVENT, EnabledByDeprecatedGlobalSetting=NotificationEventEnabled] attribute EventHandler onnotificationclose;
 };

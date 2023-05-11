@@ -101,11 +101,10 @@ bool PaymentCoordinator::beginPaymentSession(Document& document, PaymentSession&
 {
     ASSERT(!m_activeSession);
 
-    Vector<URL> linkIconURLs;
-    for (auto& icon : LinkIconCollector { document }.iconsOfTypes({ LinkIconType::TouchIcon, LinkIconType::TouchPrecomposedIcon }))
-        linkIconURLs.append(icon.url);
-
-    auto showPaymentUI = m_client.showPaymentUI(document.url(), linkIconURLs, paymentRequest);
+    auto linkIconURLs = LinkIconCollector { document }.iconsOfTypes({ LinkIconType::TouchIcon, LinkIconType::TouchPrecomposedIcon }).map([](auto& icon) {
+        return icon.url;
+    });
+    auto showPaymentUI = m_client.showPaymentUI(document.url(), WTFMove(linkIconURLs), paymentRequest);
     PAYMENT_COORDINATOR_RELEASE_LOG("beginPaymentSession() -> %d", showPaymentUI);
     if (!showPaymentUI)
         return false;
@@ -266,10 +265,10 @@ void PaymentCoordinator::didCancelPaymentSession(PaymentSessionError&& error)
 
 std::optional<String> PaymentCoordinator::validatedPaymentNetwork(Document&, unsigned version, const String& paymentNetwork) const
 {
-    if (version < 2 && equalIgnoringASCIICase(paymentNetwork, "jcb"))
+    if (version < 2 && equalLettersIgnoringASCIICase(paymentNetwork, "jcb"_s))
         return std::nullopt;
 
-    if (version < 3 && equalIgnoringASCIICase(paymentNetwork, "carteBancaire"))
+    if (version < 3 && equalIgnoringASCIICase(paymentNetwork, "carteBancaire"_s))
         return std::nullopt;
 
     return m_client.validatedPaymentNetwork(paymentNetwork);

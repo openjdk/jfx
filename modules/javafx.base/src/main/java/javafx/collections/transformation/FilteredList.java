@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
     private int size;
 
     private SortHelper helper;
-    private static final Predicate ALWAYS_TRUE = t -> true;
 
     /**
      * Constructs a new FilteredList wrapper around the source list.
@@ -129,7 +128,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
         if (getPredicate() != null) {
             return getPredicate();
         }
-        return ALWAYS_TRUE;
+        return t -> true;
     }
 
     @Override

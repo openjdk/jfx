@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,12 +29,18 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeaderShim;
+import javafx.scene.control.skin.TreeTableRowSkin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,12 +48,16 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TreeTableRowSkinTest {
 
     private TreeTableView<Person> treeTableView;
     private StageLoader stageLoader;
+    private TableColumnHeader firstColumnHeader;
 
     @BeforeEach
     public void before() {
@@ -77,6 +87,32 @@ public class TreeTableRowSkinTest {
         treeTableView.setShowRoot(false);
 
         stageLoader = new StageLoader(treeTableView);
+        firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(treeTableView, firstNameCol);
+    }
+
+    /**
+     * The {@link TreeTableView} should never be null inside the {@link TreeTableRowSkin} during auto sizing.
+     * See also: JDK-8289357
+     */
+    @Test
+    public void testTreeTableViewInRowSkinIsNotNullWhenAutoSizing() {
+        treeTableView.setRowFactory(tv -> new TreeTableRow<>() {
+            @Override
+            protected Skin<?> createDefaultSkin() {
+                return new ThrowingTreeTableRowSkin<>(this);
+            }
+        });
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+    }
+
+    /**
+     * The {@link TreeTableView} should not have any {@link TreeTableRow} as children.
+     * {@link TreeTableRow}s are added temporary as part of the auto sizing, but should never remain after.
+     * See also: JDK-8289357 and JDK-8292009
+     */
+    @Test
+    public void testTreeTableViewChildrenCount() {
+        assertTrue(treeTableView.getChildrenUnmodifiable().stream().noneMatch(node -> node instanceof TreeTableRow));
     }
 
     @Test
@@ -215,6 +251,53 @@ public class TreeTableRowSkinTest {
         assertEquals(height, cell.getHeight(), 0);
     }
 
+    /**
+     * When we set a fixed cell size and make an invisible column visible we expect the underlying cells to be visible,
+     * e.g. width > 0.
+     * See also: JDK-8305248
+     */
+    @Test
+    public void testMakeInvisibleColumnVisible() {
+        treeTableView.setFixedCellSize(24);
+        TreeTableColumn<Person, ?> firstColumn = treeTableView.getColumns().get(0);
+        firstColumn.setVisible(false);
+
+        treeTableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(true);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        for (Node node : row.getChildrenUnmodifiable()) {
+            if (node instanceof TreeTableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
+        }
+    }
+
+    @Test
+    public void testMakeVisibleColumnInvisible() {
+        treeTableView.setFixedCellSize(24);
+        TreeTableColumn<Person, ?> firstColumn = treeTableView.getColumns().get(0);
+        assertTrue(firstColumn.isVisible());
+
+        treeTableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        firstColumn.setVisible(false);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        for (Node cellNode : row.getChildrenUnmodifiable()) {
+            if (cellNode instanceof TreeTableCell<?, ?> cell) {
+                double width = cell.getWidth();
+                assertNotEquals(0.0, width);
+            }
+        }
+    }
+
     @Test
     public void removedColumnsShouldRemoveCorrespondingCellsInRowFixedCellSize() {
         treeTableView.setFixedCellSize(24);
@@ -265,6 +348,13 @@ public class TreeTableRowSkinTest {
         // Note: TreeTableView has an additional children - the disclosure node - therefore we subtract 1 here.
         assertEquals(treeTableView.getColumns().size(),
                 VirtualFlowTestUtils.getCell(treeTableView, 0).getChildrenUnmodifiable().size() - 1);
+    }
+
+    private static class ThrowingTreeTableRowSkin<T> extends TreeTableRowSkin<T> {
+        public ThrowingTreeTableRowSkin(TreeTableRow<T> treeTableRow) {
+            super(treeTableRow);
+            assertNotNull(treeTableRow.getTreeTableView());
+        }
     }
 
 }

@@ -40,9 +40,6 @@ enum class AuxiliaryProcessType : uint8_t {
 #if ENABLE(GPU_PROCESS)
     GPU,
 #endif
-#if ENABLE(WEB_AUTHN)
-    WebAuthn,
-#endif
 };
 
 WEBCORE_EXPORT void setAuxiliaryProcessType(AuxiliaryProcessType);
@@ -54,9 +51,14 @@ WEBCORE_EXPORT const char* processTypeDescription(std::optional<AuxiliaryProcess
 bool isInAuxiliaryProcess();
 inline bool isInWebProcess() { return checkAuxiliaryProcessType(AuxiliaryProcessType::WebContent); }
 inline bool isInNetworkProcess() { return checkAuxiliaryProcessType(AuxiliaryProcessType::Network); }
+inline bool isInGPUProcess()
+{
 #if ENABLE(GPU_PROCESS)
-inline bool isInGPUProcess() { return checkAuxiliaryProcessType(AuxiliaryProcessType::GPU); }
+    return checkAuxiliaryProcessType(AuxiliaryProcessType::GPU);
+#else
+    return false;
 #endif
+}
 
 #if PLATFORM(COCOA)
 
@@ -65,9 +67,13 @@ WEBCORE_EXPORT void setApplicationBundleIdentifierOverride(const String&);
 WEBCORE_EXPORT String applicationBundleIdentifier();
 WEBCORE_EXPORT void clearApplicationBundleIdentifierTestingOverride();
 
+WEBCORE_EXPORT void setPresentingApplicationBundleIdentifier(const String&);
+WEBCORE_EXPORT const String& presentingApplicationBundleIdentifier();
+
 namespace CocoaApplication {
 
 WEBCORE_EXPORT bool isIBooks();
+WEBCORE_EXPORT bool isWebkitTestRunner();
 
 }
 

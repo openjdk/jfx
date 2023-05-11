@@ -145,9 +145,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
                 // that when it changes, we can appropriately add / remove cells that may or may not
                 // be required (because we remove all cells that are not visible).
-                lh.addChangeListener(getVirtualFlow().widthProperty(), (ev) -> {
-                    treeTableView.requestLayout();
-                });
+                VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
+                if (virtualFlow != null) {
+                    lh.addChangeListener(getVirtualFlow().widthProperty(), (ev) -> treeTableView.requestLayout());
+                }
             }
         }
     }
@@ -452,22 +453,25 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         final TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         switch (attribute) {
             case SELECTED_ITEMS: {
-                // FIXME this could be optimised to iterate over cellsMap only
-                // (selectedCells could be big, cellsMap is much smaller)
-                List<Node> selection = new ArrayList<>();
-                int index = getSkinnable().getIndex();
-                for (TreeTablePosition<T,?> pos : treeTableView.getSelectionModel().getSelectedCells()) {
-                    if (pos.getRow() == index) {
-                        TreeTableColumn<T,?> column = pos.getTableColumn();
-                        if (column == null) {
-                            /* This is the row-based case */
-                            column = treeTableView.getVisibleLeafColumn(0);
+                if (treeTableView.getSelectionModel() != null) {
+                    // FIXME this could be optimised to iterate over cellsMap only
+                    // (selectedCells could be big, cellsMap is much smaller)
+                    List<Node> selection = new ArrayList<>();
+                    int index = getSkinnable().getIndex();
+                    for (TreeTablePosition<T,?> pos : treeTableView.getSelectionModel().getSelectedCells()) {
+                        if (pos.getRow() == index) {
+                            TreeTableColumn<T,?> column = pos.getTableColumn();
+                            if (column == null) {
+                                /* This is the row-based case */
+                                column = treeTableView.getVisibleLeafColumn(0);
+                            }
+                            TreeTableCell<T,?> cell = cellsMap.get(column).get();
+                            if (cell != null) selection.add(cell);
                         }
-                        TreeTableCell<T,?> cell = cellsMap.get(column).get();
-                        if (cell != null) selection.add(cell);
+                        return FXCollections.observableArrayList(selection);
                     }
-                    return FXCollections.observableArrayList(selection);
                 }
+                return FXCollections.observableArrayList();
             }
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
@@ -490,7 +494,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 }
                 return null;
             }
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+            default:
+                return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

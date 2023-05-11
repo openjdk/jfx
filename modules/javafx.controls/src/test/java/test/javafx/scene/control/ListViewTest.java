@@ -66,6 +66,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -1166,7 +1167,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 71, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 17 : 101, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
@@ -2510,7 +2511,52 @@ public class ListViewTest {
             listView.requestLayout();
             Toolkit.getToolkit().firePulse();
             assertEquals("Upper cell shouldn't move after changing heights", previousLayoutY, scrollToCell.getLayoutY(), 1.);
+            VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
+            vf.scrollPixels(-1);
+            assertEquals("Upper cell should move 1 pixels, after scrolling 1 pixel", previousLayoutY + 1, scrollToCell.getLayoutY(), 1.);
         }
+
+    }
+
+    @Test
+    public void fixListViewCrash_JDK_8303680() {
+        final ListView<String> listView = new ListView<>();
+
+        // add 100 entries
+        listView.setPrefSize(200, 200);
+        for (int i = 0; i < 100; i++) {
+            listView.getItems().add("Item " + i);
+        }
+        StageLoader sl = new StageLoader(new VBox(listView, new Button()));
+
+        // pulse
+        Toolkit.getToolkit().firePulse();
+
+        // get virtual flow
+        VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
+
+        // scroll to 50 and scroll 1 pixel
+        vf.scrollTo(50);
+        vf.scrollPixels(1);
+
+        // another pulse
+        Toolkit.getToolkit().firePulse();
+
+        // scroll to cell
+        IndexedCell<Integer> cell = vf.getCell(50);//VirtualFlowTestUtils.getCell(listView, 70);
+
+        // shouldn't be null
+        assertNotNull(cell);
+
+        // should be visible
+        assertTrue("Cell should be visible", cell.isVisible());
+
+        // should have parent
+        assertNotNull("Cell should have parent", cell.getParent());
+
+        // Note:
+        // We don't check for the position of the cell, because it's currently don't work properly.
+        // But we wan't to ensure, that the VirtualFlow "Doesn't crash" - which was the case before.
 
     }
 

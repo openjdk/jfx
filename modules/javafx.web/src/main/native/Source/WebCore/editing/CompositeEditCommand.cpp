@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -475,7 +476,7 @@ void CompositeEditCommand::setShouldRetainAutocorrectionIndicator(bool)
 {
 }
 
-String CompositeEditCommand::inputEventTypeName() const
+AtomString CompositeEditCommand::inputEventTypeName() const
 {
     return inputTypeNameForEditingAction(editingAction());
 }
@@ -608,7 +609,10 @@ void CompositeEditCommand::insertNodeAt(Ref<Node>&& insertChild, const Position&
 
 void CompositeEditCommand::appendNode(Ref<Node>&& node, Ref<ContainerNode>&& parent)
 {
-    ASSERT(canHaveChildrenForEditing(parent));
+    // When cloneParagraphUnderNewElement() clones the fallback content of an OBJECT element,
+    // the ASSERT below may fire since the return value of canHaveChildrenForEditing is not reliable
+    // until the render object of the OBJECT is created. Hence we ignore this check for OBJECTs.
+    ASSERT(canHaveChildrenForEditing(parent) || parent->hasTagName(objectTag));
     applyCommandToComposite(AppendNodeCommand::create(WTFMove(parent), WTFMove(node), editingAction()));
 }
 
@@ -892,7 +896,7 @@ RefPtr<Text> CompositeEditCommand::textNodeForRebalance(const Position& position
     if (position.anchorType() != Position::PositionIsOffsetInAnchor || !is<Text>(node))
         return nullptr;
 
-    auto textNode = static_pointer_cast<Text>(std::exchange(node, nullptr));
+    auto textNode = static_pointer_cast<Text>(WTFMove(node));
     if (!textNode->length())
         return nullptr;
 
@@ -1008,7 +1012,7 @@ void CompositeEditCommand::deleteInsignificantText(Text& textNode, unsigned star
     document().updateLayout();
 
     bool wholeTextNodeIsEmpty = false;
-    String str;
+    String string;
     auto determineRemovalMode = [&] {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         RenderText* textRenderer = textNode.renderer();
@@ -1037,15 +1041,15 @@ void CompositeEditCommand::deleteInsignificantText(Text& textNode, unsigned star
 
             unsigned gapEnd = run ? run->start() : length;
             bool indicesIntersect = start <= gapEnd && end >= gapStart;
-            int gapLen = gapEnd - gapStart;
-            if (indicesIntersect && gapLen > 0) {
+            int gapLength = gapEnd - gapStart;
+            if (indicesIntersect && gapLength > 0) {
                 gapStart = std::max(gapStart, start);
                 gapEnd = std::min(gapEnd, end);
-                if (str.isNull())
-                    str = textNode.data().substring(start, end - start);
-                // remove text in the gap
-                str.remove(gapStart - start - removed, gapLen);
-                removed += gapLen;
+                if (string.isNull())
+                    string = textNode.data().substring(start, end - start);
+                // Remove text in the gap.
+                string = makeStringByRemoving(string, gapStart - start - removed, gapLength);
+                removed += gapLength;
             }
 
             previousRun = run;
@@ -1060,10 +1064,10 @@ void CompositeEditCommand::deleteInsignificantText(Text& textNode, unsigned star
         return;
     }
 
-    if (!str.isNull()) {
+    if (!string.isNull()) {
         // Replace the text between start and end with our pruned version.
-        if (!str.isEmpty())
-            replaceTextInNode(textNode, start, end - start, str);
+        if (!string.isEmpty())
+            replaceTextInNode(textNode, start, end - start, string);
         else {
             // Assert that we are not going to delete all of the text in the node.
             // If we were, that should have been done above with the call to

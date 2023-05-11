@@ -134,12 +134,12 @@ RefPtr<FilterImage> FilterEffect::apply(const Filter& filter, const FilterImageV
     if (!applier)
         return nullptr;
 
-    auto result = FilterImage::create(primitiveSubregion, imageRect, absoluteImageRect, isAlphaImage, isValidPremultiplied, filter.renderingMode(), imageColorSpace);
+    auto result = FilterImage::create(primitiveSubregion, imageRect, absoluteImageRect, isAlphaImage, isValidPremultiplied, filter.renderingMode(), imageColorSpace, results.allocator());
     if (!result)
         return nullptr;
 
     LOG_WITH_STREAM(Filters, stream
-        << "FilterEffect " << filterName() << " " << this << " apply():"
+        << "FilterEffect " << filterName() << " " << this << " apply(): " << *this
         << "\n  filterPrimitiveSubregion " << primitiveSubregion
         << "\n  absolutePaintRect " << absoluteImageRect
         << "\n  maxEffectRect " << filter.maxEffectRect(primitiveSubregion)

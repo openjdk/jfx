@@ -72,7 +72,7 @@ typedef pas_aligned_allocation_result (*pas_heap_config_aligned_allocator)(
     size_t size,
     pas_alignment alignment,
     pas_large_heap* large_heap,
-    pas_heap_config* config);
+    const pas_heap_config* config);
 typedef void* (*pas_heap_config_prepare_to_enumerate)(pas_enumerator* enumerator);
 typedef bool (*pas_heap_config_for_each_shared_page_directory)(
     pas_segregated_heap* heap,
@@ -120,7 +120,7 @@ typedef bool (*pas_heap_config_specialized_try_deallocate_not_small_exclusive_se
 
 struct pas_heap_config {
     /* This always self-points. It's useful for going from a config to a config_ptr. */
-    pas_heap_config* config_ptr;
+    const pas_heap_config* config_ptr;
 
     pas_heap_config_kind kind;
 
@@ -195,6 +195,9 @@ struct pas_heap_config {
     pas_heap_config_specialized_local_allocator_try_allocate_slow specialized_local_allocator_try_allocate_slow;
     pas_heap_config_specialized_try_allocate_common_impl_slow specialized_try_allocate_common_impl_slow;
     pas_heap_config_specialized_try_deallocate_not_small_exclusive_segregated specialized_try_deallocate_not_small_exclusive_segregated;
+
+    /* Configure whether probabilistic guard malloc may be called or not during allocation. */
+    bool pgm_enabled;
 };
 
 #define PAS_HEAP_CONFIG_SPECIALIZATIONS(lower_case_heap_config_name) \
@@ -244,9 +247,9 @@ struct pas_heap_config {
         pas_deallocation_mode deallocation_mode, \
         pas_fast_megapage_kind megapage_kind)
 
-static PAS_ALWAYS_INLINE pas_segregated_page_config*
+static PAS_ALWAYS_INLINE const pas_segregated_page_config*
 pas_heap_config_segregated_page_config_ptr_for_variant(
-    pas_heap_config* config,
+    const pas_heap_config* config,
     pas_segregated_page_config_variant variant)
 {
     switch (variant) {
@@ -259,9 +262,9 @@ pas_heap_config_segregated_page_config_ptr_for_variant(
     return NULL;
 }
 
-static PAS_ALWAYS_INLINE pas_bitfit_page_config*
+static PAS_ALWAYS_INLINE const pas_bitfit_page_config*
 pas_heap_config_bitfit_page_config_ptr_for_variant(
-    pas_heap_config* config,
+    const pas_heap_config* config,
     pas_bitfit_page_config_variant variant)
 {
     switch (variant) {
@@ -328,7 +331,7 @@ static PAS_ALWAYS_INLINE size_t pas_heap_config_segregated_heap_min_align(pas_he
 /* Returns true if we were the first to active it. Must hold the heap lock to call this. This is
    permissive of recursive initialization: in that case, it will just pretend that the config is
    already initialized. */
-bool pas_heap_config_activate(pas_heap_config* config);
+bool pas_heap_config_activate(const pas_heap_config* config);
 
 /* NOTE: always pass pas_heap_config by value to inline functions, using constants if possible.
    Pass pas_heap_config by pointer to out-of-line functions, using the provided globals if

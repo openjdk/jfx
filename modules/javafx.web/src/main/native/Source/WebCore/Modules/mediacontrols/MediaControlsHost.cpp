@@ -75,25 +75,25 @@ namespace WebCore {
 
 const AtomString& MediaControlsHost::automaticKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> automatic("automatic", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> automatic("automatic"_s);
     return automatic;
 }
 
 const AtomString& MediaControlsHost::forcedOnlyKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> forcedOnly("forced-only", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> forcedOnly("forced-only"_s);
     return forcedOnly;
 }
 
 static const AtomString& alwaysOnKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> alwaysOn("always-on", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> alwaysOn("always-on"_s);
     return alwaysOn;
 }
 
 static const AtomString& manualKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> alwaysOn("manual", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> alwaysOn("manual"_s);
     return alwaysOn;
 }
 
@@ -118,14 +118,16 @@ MediaControlsHost::~MediaControlsHost()
 String MediaControlsHost::layoutTraitsClassName() const
 {
 #if defined(MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE)
-    return MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE;
+    return MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE""_s;
 #else
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
-    return "MacOSLayoutTraits";
+    return "MacOSLayoutTraits"_s;
 #elif PLATFORM(IOS)
-    return "IOSLayoutTraits";
+    return "IOSLayoutTraits"_s;
 #elif PLATFORM(WATCHOS)
-    return "WatchOSLayoutTraits";
+    return "WatchOSLayoutTraits"_s;
+#elif PLATFORM(GTK) || PLATFORM(WPE)
+    return "AdwaitaLayoutTraits"_s;
 #else
     ASSERT_NOT_REACHED();
     return nullString();
@@ -135,7 +137,7 @@ String MediaControlsHost::layoutTraitsClassName() const
 
 const AtomString& MediaControlsHost::mediaControlsContainerClassName() const
 {
-    static MainThreadNeverDestroyed<const AtomString> className("media-controls-container", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> className("media-controls-container"_s);
     return className;
 }
 
@@ -555,11 +557,10 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
 
     if (optionsJSONObject->getBoolean("includeLanguages"_s).value_or(false)) {
         if (auto* audioTracks = mediaElement.audioTracks(); audioTracks && audioTracks->length() > 1) {
-            Vector<MenuItem> languageMenuItems;
-
             auto& captionPreferences = page->group().ensureCaptionPreferences();
-            for (auto& audioTrack : captionPreferences.sortedTrackListForMenu(audioTracks))
-                languageMenuItems.append(createMenuItem(audioTrack, captionPreferences.displayNameForTrack(audioTrack.get()), audioTrack->enabled()));
+            auto languageMenuItems = captionPreferences.sortedTrackListForMenu(audioTracks).map([&](auto& audioTrack) {
+                return createMenuItem(audioTrack, captionPreferences.displayNameForTrack(audioTrack.get()), audioTrack->enabled());
+            });
 
             if (!languageMenuItems.isEmpty())
                 items.append(createSubmenu(WEB_UI_STRING_KEY("Languages", "Languages (Media Controls Menu)", "Languages media controls context menu title"), "globe"_s, WTFMove(languageMenuItems)));
@@ -568,15 +569,13 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
 
     if (optionsJSONObject->getBoolean("includeSubtitles"_s).value_or(false)) {
         if (auto* textTracks = mediaElement.textTracks(); textTracks && textTracks->length()) {
-            Vector<MenuItem> subtitleMenuItems;
-
             auto& captionPreferences = page->group().ensureCaptionPreferences();
             auto sortedTextTracks = captionPreferences.sortedTrackListForMenu(textTracks, { TextTrack::Kind::Subtitles, TextTrack::Kind::Captions, TextTrack::Kind::Descriptions });
             bool allTracksDisabled = notFound == sortedTextTracks.findIf([] (const auto& textTrack) {
                 return textTrack->mode() == TextTrack::Mode::Showing;
             });
             bool usesAutomaticTrack = captionPreferences.captionDisplayMode() == CaptionUserPreferences::Automatic && allTracksDisabled;
-            for (auto& textTrack : sortedTextTracks) {
+            auto subtitleMenuItems = sortedTextTracks.map([&](auto& textTrack) {
                 bool checked = false;
                 if (allTracksDisabled && textTrack == &TextTrack::captionMenuOffItem() && (captionPreferences.captionDisplayMode() == CaptionUserPreferences::ForcedOnly || captionPreferences.captionDisplayMode() == CaptionUserPreferences::Manual))
                     checked = true;
@@ -584,8 +583,8 @@ bool MediaControlsHost::showMediaControlsContextMenu(HTMLElement& target, String
                     checked = true;
                 else if (!usesAutomaticTrack && textTrack->mode() == TextTrack::Mode::Showing)
                     checked = true;
-                subtitleMenuItems.append(createMenuItem(textTrack, captionPreferences.displayNameForTrack(textTrack.get()), checked));
-            }
+                return createMenuItem(textTrack, captionPreferences.displayNameForTrack(textTrack.get()), checked);
+            });
 
             if (!subtitleMenuItems.isEmpty())
                 items.append(createSubmenu(WEB_UI_STRING_KEY("Subtitles", "Subtitles (Media Controls Menu)", "Subtitles media controls context menu title"), "captions.bubble"_s, WTFMove(subtitleMenuItems)));

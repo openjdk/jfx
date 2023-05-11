@@ -38,7 +38,7 @@ namespace TemporalPlainDateInternal {
 static constexpr bool verbose = false;
 }
 
-const ClassInfo TemporalPlainDate::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalPlainDate) };
+const ClassInfo TemporalPlainDate::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalPlainDate) };
 
 TemporalPlainDate* TemporalPlainDate::create(VM& vm, Structure* structure, ISO8601::PlainDate&& plainDate)
 {
@@ -61,12 +61,12 @@ TemporalPlainDate::TemporalPlainDate(VM& vm, Structure* structure, ISO8601::Plai
 void TemporalPlainDate::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     m_calendar.initLater(
         [] (const auto& init) {
             VM& vm = init.vm;
             auto* plainDate = jsCast<TemporalPlainDate*>(init.owner);
-            auto* globalObject = plainDate->globalObject(vm);
+            auto* globalObject = plainDate->globalObject();
             auto* calendar = TemporalCalendar::create(vm, globalObject->calendarStructure(), iso8601CalendarID());
             init.set(calendar);
         });
@@ -160,6 +160,8 @@ TemporalPlainDate* TemporalPlainDate::from(JSGlobalObject* globalObject, JSValue
     UNUSED_PARAM(overflowValue);
 
     if (itemValue.isObject()) {
+        if (itemValue.inherits<TemporalPlainDate>())
+            return jsCast<TemporalPlainDate*>(itemValue);
         throwRangeError(globalObject, scope, "unimplemented: from object"_s);
         return { };
     }
@@ -199,6 +201,26 @@ int32_t TemporalPlainDate::compare(TemporalPlainDate* plainDate1, TemporalPlainD
     if (d1.day() < d2.day())
         return -1;
     return 0;
+}
+
+String TemporalPlainDate::monthCode() const
+{
+    return ISO8601::monthCode(m_plainDate.month());
+}
+
+uint8_t TemporalPlainDate::dayOfWeek() const
+{
+    return ISO8601::dayOfWeek(m_plainDate);
+}
+
+uint16_t TemporalPlainDate::dayOfYear() const
+{
+    return ISO8601::dayOfYear(m_plainDate);
+}
+
+uint8_t TemporalPlainDate::weekOfYear() const
+{
+    return ISO8601::weekOfYear(m_plainDate);
 }
 
 } // namespace JSC

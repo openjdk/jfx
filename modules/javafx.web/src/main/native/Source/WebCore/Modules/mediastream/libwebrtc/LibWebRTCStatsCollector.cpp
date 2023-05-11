@@ -76,18 +76,29 @@ static inline void fillRtpStreamStats(RTCStatsReport::RtpStreamStats& stats, con
     }
 }
 
-static inline void fillReceivedRtpStreamStats(RTCStatsReport::ReceivedRtpStreamStats& stats, const webrtc::RTCInboundRTPStreamStats& rtcStats)
+static inline void fillReceivedRtpStreamStats(RTCStatsReport::ReceivedRtpStreamStats& stats, const webrtc::RTCReceivedRtpStreamStats& rtcStats)
 {
     fillRtpStreamStats(stats, rtcStats);
 
-    if (rtcStats.packets_received.is_defined())
-        stats.packetsReceived = *rtcStats.packets_received;
+    // packetsReceived
     if (rtcStats.packets_lost.is_defined())
         stats.packetsLost = *rtcStats.packets_lost;
     if (rtcStats.jitter.is_defined())
         stats.jitter = *rtcStats.jitter;
+    // FIXME: Remove packets_discarded
     if (rtcStats.packets_discarded.is_defined())
         stats.packetsDiscarded = *rtcStats.packets_discarded;
+    // framesDropped
+}
+
+static inline void fillInboundRtpStreamStats(RTCStatsReport::InboundRtpStreamStats& stats, const webrtc::RTCInboundRTPStreamStats& rtcStats)
+{
+    fillReceivedRtpStreamStats(stats, rtcStats);
+
+    // receiverId
+    // remoteId
+    if (rtcStats.packets_received.is_defined())
+        stats.packetsReceived = *rtcStats.packets_received;
     if (rtcStats.packets_repaired.is_defined())
         stats.packetsRepaired = *rtcStats.packets_repaired;
     if (rtcStats.burst_packets_lost.is_defined())
@@ -106,15 +117,10 @@ static inline void fillReceivedRtpStreamStats(RTCStatsReport::ReceivedRtpStreamS
         stats.gapLossRate = *rtcStats.gap_loss_rate;
     if (rtcStats.gap_discard_rate.is_defined())
         stats.gapDiscardRate = *rtcStats.gap_discard_rate;
-    // Add frames_dropped and full_frames_lost.
-}
+    if (rtcStats.frames_dropped.is_defined())
+        stats.framesDropped = *rtcStats.frames_dropped;
+    // full_frames_lost.
 
-static inline void fillInboundRtpStreamStats(RTCStatsReport::InboundRtpStreamStats& stats, const webrtc::RTCInboundRTPStreamStats& rtcStats)
-{
-    fillReceivedRtpStreamStats(stats, rtcStats);
-
-    // receiverId
-    // remoteId
     if (rtcStats.frames_decoded.is_defined())
         stats.framesDecoded = *rtcStats.frames_decoded;
     if (rtcStats.key_frames_decoded.is_defined())
@@ -188,7 +194,7 @@ static inline void fillInboundRtpStreamStats(RTCStatsReport::InboundRtpStreamSta
 
 static inline void fillRemoteInboundRtpStreamStats(RTCStatsReport::RemoteInboundRtpStreamStats& stats, const webrtc::RTCRemoteInboundRtpStreamStats& rtcStats)
 {
-    fillRTCStats(stats, rtcStats);
+    fillReceivedRtpStreamStats(stats, rtcStats);
 
     // FIXME: this should be filled in fillRtpStreamStats.
     if (rtcStats.ssrc.is_defined())

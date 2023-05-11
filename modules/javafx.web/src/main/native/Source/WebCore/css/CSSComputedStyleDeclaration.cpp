@@ -35,6 +35,7 @@
 #include "CSSFontVariationValue.h"
 #include "CSSFunctionValue.h"
 #include "CSSGridAutoRepeatValue.h"
+#include "CSSGridIntegerRepeatValue.h"
 #include "CSSLineBoxContainValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
@@ -53,6 +54,7 @@
 #include "CursorList.h"
 #include "DeprecatedCSSOMValue.h"
 #include "Document.h"
+#include "ElementRareData.h"
 #include "FontCascade.h"
 #include "FontSelectionValueInlines.h"
 #include "FontTaggedSettings.h"
@@ -224,7 +226,7 @@ static Ref<CSSValue> valueForNinePieceImageRepeat(const NinePieceImage& image)
     return cssValuePool.createValue(Pair::create(WTFMove(horizontalRepeat), WTFMove(verticalRepeat)));
 }
 
-static Ref<CSSValue> valueForNinePieceImage(const NinePieceImage& image, const RenderStyle& style)
+static RefPtr<CSSValue> valueForNinePieceImage(CSSPropertyID propertyID, const NinePieceImage& image, const RenderStyle& style)
 {
     if (!image.hasImage())
         return CSSValuePool::singleton().createIdentifierValue(CSSValueNone);
@@ -233,10 +235,17 @@ static Ref<CSSValue> valueForNinePieceImage(const NinePieceImage& image, const R
     if (image.image())
         imageValue = image.image()->cssValue();
 
+    // -webkit-border-image has a legacy behavior that makes fixed border slices also set the border widths.
+    const LengthBox& slices = image.borderSlices();
+    bool overridesBorderWidths = propertyID == CSSPropertyWebkitBorderImage && (slices.top().isFixed() || slices.right().isFixed() || slices.bottom().isFixed() || slices.left().isFixed());
+    if (overridesBorderWidths != image.overridesBorderWidths())
+        return nullptr;
+
     auto imageSlices = valueForNinePieceImageSlice(image);
-    auto borderSlices = valueForNinePieceImageQuad(image.borderSlices(), style);
+    auto borderSlices = valueForNinePieceImageQuad(slices, style);
     auto outset = valueForNinePieceImageQuad(image.outset(), style);
     auto repeat = valueForNinePieceImageRepeat(image);
+
     return createBorderImageValue(WTFMove(imageValue), WTFMove(imageSlices), WTFMove(borderSlices), WTFMove(outset), WTFMove(repeat));
 }
 
@@ -284,7 +293,7 @@ static Ref<CSSValue> valueForReflection(const StyleReflection* reflection, const
         break;
     }
 
-    return CSSReflectValue::create(direction.releaseNonNull(), offset.releaseNonNull(), valueForNinePieceImage(reflection->mask(), style));
+    return CSSReflectValue::create(direction.releaseNonNull(), offset.releaseNonNull(), valueForNinePieceImage(CSSPropertyWebkitBoxReflect, reflection->mask(), style));
 }
 
 static Ref<CSSValueList> createPositionListForLayer(CSSPropertyID propertyID, const FillLayer& layer, const RenderStyle& style)
@@ -560,17 +569,6 @@ static LayoutRect sizingBox(RenderObject& renderer)
     return box.style().boxSizing() == BoxSizing::BorderBox ? box.borderBoxRect() : box.computedCSSContentBoxRect();
 }
 
-static FloatRect transformReferenceBox(const RenderStyle& style, const RenderElement& renderer)
-{
-    if (is<RenderBox>(renderer))
-        return downcast<RenderBox>(renderer).referenceBox(transformBoxToCSSBoxType(style.transformBox()));
-
-    if (is<SVGElement>(renderer.element()))
-        return SVGRenderSupport::transformReferenceBox(renderer, downcast<SVGElement>(*renderer.element()), style);
-
-    return { };
-}
-
 static Ref<CSSFunctionValue> matrixTransformValue(const TransformationMatrix& transform, const RenderStyle& style)
 {
     RefPtr<CSSFunctionValue> transformValue;
@@ -623,7 +621,8 @@ static Ref<CSSValue> computedTransform(RenderElement* renderer, const RenderStyl
         return CSSValuePool::singleton().createIdentifierValue(CSSValueNone);
 
     TransformationMatrix transform;
-    style.applyTransform(transform, transformReferenceBox(style, *renderer), { });
+    style.applyTransform(transform, renderer->transformReferenceBoxRect(style), { });
+
     // Note that this does not flatten to an affine transform if ENABLE(3D_TRANSFORMS) is off, by design.
 
     // FIXME: Need to print out individual functions (https://bugs.webkit.org/show_bug.cgi?id=23924)
@@ -855,7 +854,7 @@ public:
     virtual ~OrderedNamedLinesCollector() = default;
 
     bool isEmpty() const { return m_orderedNamedGridLines.isEmpty() && m_orderedNamedAutoRepeatGridLines.isEmpty(); }
-    virtual void collectLineNamesForIndex(CSSGridLineNamesValue&, unsigned index) const;
+    virtual void collectLineNamesForIndex(CSSGridLineNamesValue&, unsigned index) const = 0;
 
     virtual int namedGridLineCount() const { return m_orderedNamedGridLines.size(); }
 
@@ -866,18 +865,6 @@ protected:
 
     const OrderedNamedGridLinesMap& m_orderedNamedGridLines;
     const OrderedNamedGridLinesMap& m_orderedNamedAutoRepeatGridLines;
-};
-
-class OrderedNamedLinesCollectorInsideRepeat : public OrderedNamedLinesCollector {
-public:
-    OrderedNamedLinesCollectorInsideRepeat(const RenderStyle& style, bool isRowAxis)
-        : OrderedNamedLinesCollector(style, isRowAxis)
-    {
-    }
-
-    void collectLineNamesForIndex(CSSGridLineNamesValue&, unsigned index) const override;
-
-    int namedGridLineCount() const override { return m_orderedNamedAutoRepeatGridLines.size(); }
 };
 
 class OrderedNamedLinesCollectorInGridLayout : public OrderedNamedLinesCollector {
@@ -939,18 +926,6 @@ void OrderedNamedLinesCollector::appendLines(CSSGridLineNamesValue& lineNamesVal
     auto& cssValuePool = CSSValuePool::singleton();
     for (const auto& lineName : iter->value)
         lineNamesValue.append(cssValuePool.createCustomIdent(lineName));
-}
-
-void OrderedNamedLinesCollector::collectLineNamesForIndex(CSSGridLineNamesValue& lineNamesValue, unsigned i) const
-{
-    ASSERT(!isEmpty());
-    appendLines(lineNamesValue, i, NamedLines);
-}
-
-void OrderedNamedLinesCollectorInsideRepeat::collectLineNamesForIndex(CSSGridLineNamesValue& lineNamesValue, unsigned i) const
-{
-    ASSERT(!isEmpty());
-    appendLines(lineNamesValue, i, AutoRepeatNamedLines);
 }
 
 void OrderedNamedLinesCollectorInGridLayout::collectLineNamesForIndex(CSSGridLineNamesValue& lineNamesValue, unsigned i) const
@@ -1024,9 +999,10 @@ static Ref<CSSValueList> valueForGridTrackSizeList(GridTrackSizingDirection dire
 }
 
 template <typename T, typename F>
-void populateGridTrackList(CSSValueList& list, OrderedNamedLinesCollector& collector, const Vector<T>& tracks, F getTrackSize, int start, int end, int offset = 0)
+void populateGridTrackList(CSSValueList& list, OrderedNamedLinesCollector& collector, const Vector<T>& tracks, F getTrackSize, int offset = 0)
 {
-    ASSERT(0 <= start);
+    int start = 0;
+    int end = tracks.size();
     ASSERT(start <= end);
     ASSERT(static_cast<unsigned>(end) <= tracks.size());
     for (int i = start; i < end; ++i) {
@@ -1038,21 +1014,10 @@ void populateGridTrackList(CSSValueList& list, OrderedNamedLinesCollector& colle
         addValuesForNamedGridLinesAtIndex(collector, end + offset, list);
 }
 
-template <typename T, typename F>
-void populateGridTrackList(CSSValueList& list, OrderedNamedLinesCollector& collector, const Vector<T>& tracks, F getTrackSize, int offset = 0)
-{
-    populateGridTrackList<T>(list, collector, tracks, getTrackSize, 0, tracks.size(), offset);
-}
-
-static void populateSubgridLineNameList(CSSValueList& list, OrderedNamedLinesCollector& collector, int start, int end)
-{
-    for (int i = start; i < end; i++)
-        addValuesForNamedGridLinesAtIndex(collector, i, list, true);
-}
-
 static void populateSubgridLineNameList(CSSValueList& list, OrderedNamedLinesCollector& collector)
 {
-    populateSubgridLineNameList(list, collector, 0, collector.namedGridLineCount());
+    for (int i = 0; i < collector.namedGridLineCount(); i++)
+        addValuesForNamedGridLinesAtIndex(collector, i, list, true);
 }
 
 static Ref<CSSValue> valueForGridTrackList(GridTrackSizingDirection direction, RenderObject* renderer, const RenderStyle& style)
@@ -1077,8 +1042,6 @@ static Ref<CSSValue> valueForGridTrackList(GridTrackSizingDirection direction, R
         return CSSValuePool::singleton().createIdentifierValue(CSSValueNone);
 
     auto list = CSSValueList::createSpaceSeparated();
-    if (isSubgrid)
-        list->append(CSSValuePool::singleton().createIdentifierValue(CSSValueSubgrid));
 
     // If the element is a grid container, the resolved value is the used value,
     // specifying track sizes in pixels and expanding the repeat() notation.
@@ -1087,6 +1050,8 @@ static Ref<CSSValue> valueForGridTrackList(GridTrackSizingDirection direction, R
     if (isRenderGrid && (!isSubgrid || downcast<RenderGrid>(renderer)->isSubgrid(direction))) {
         auto* grid = downcast<RenderGrid>(renderer);
         if (isSubgrid) {
+            list->append(CSSValuePool::singleton().createIdentifierValue(CSSValueSubgrid));
+
             OrderedNamedLinesCollectorInSubgridLayout collector(style, isRowAxis, grid->numTracks(direction));
             populateSubgridLineNameList(list.get(), collector);
             return list;
@@ -1102,54 +1067,51 @@ static Ref<CSSValue> valueForGridTrackList(GridTrackSizingDirection direction, R
     }
 
     // Otherwise, the resolved value is the computed value, preserving repeat().
-    OrderedNamedLinesCollector collector(style, isRowAxis);
-    auto getTrackSize = [&](const GridTrackSize& v) {
-        return specifiedValueForGridTrackSize(v, style);
+    const GridTrackList& computedTracks = isRowAxis ? style.gridColumnList() : style.gridRowList();
+
+    auto repeatVisitor = [&](CSSValueList& dest, const RepeatEntry& entry) {
+        if (std::holds_alternative<Vector<String>>(entry)) {
+            const auto& names = std::get<Vector<String>>(entry);
+            if (names.isEmpty() && !isSubgrid)
+                return;
+            auto lineNamesValue = CSSGridLineNamesValue::create();
+            for (const auto& name : names)
+                lineNamesValue->append(CSSValuePool::singleton().createCustomIdent(name));
+            dest.append(lineNamesValue);
+        } else {
+            dest.append(specifiedValueForGridTrackSize(std::get<GridTrackSize>(entry), style));
+        }
     };
 
-    OrderedNamedLinesCollectorInsideRepeat repeatCollector(style, isRowAxis);
-    if (isSubgrid) {
-        if (!repeatCollector.namedGridLineCount()) {
-            populateSubgridLineNameList(list.get(), collector);
-            return list;
-        }
+    auto trackEntryVisitor = WTF::makeVisitor([&](const GridTrackSize& size) {
+        list->append(specifiedValueForGridTrackSize(size, style));
+    }, [&](const Vector<String>& names) {
+        // Subgrids don't have track sizes specified, so empty line names sets
+        // need to be serialized, as they are meaningful placeholders.
+        if (names.isEmpty() && !isSubgrid)
+            return;
 
-        // Add the line names that precede the auto repeat().
-        int autoRepeatInsertionPoint = isRowAxis ? style.gridAutoRepeatColumnsInsertionPoint() : style.gridAutoRepeatRowsInsertionPoint();
-        autoRepeatInsertionPoint = std::clamp<int>(autoRepeatInsertionPoint, 0, collector.namedGridLineCount());
-        populateSubgridLineNameList(list.get(), collector, 0, autoRepeatInsertionPoint);
+        auto lineNamesValue = CSSGridLineNamesValue::create();
+        for (const auto& name : names)
+            lineNamesValue->append(CSSValuePool::singleton().createCustomIdent(name));
+        list->append(lineNamesValue);
+    }, [&](const GridTrackEntryRepeat& repeat) {
+        auto repeatedValues = CSSGridIntegerRepeatValue::create(repeat.repeats);
+        for (const auto& entry : repeat.list)
+            repeatVisitor(repeatedValues, entry);
+        list->append(repeatedValues);
+    }, [&](const GridTrackEntryAutoRepeat& repeat) {
+        auto repeatedValues = CSSGridAutoRepeatValue::create(repeat.type == AutoRepeatType::Fill ? CSSValueAutoFill : CSSValueAutoFit);
+        for (const auto& entry : repeat.list)
+            repeatVisitor(repeatedValues, entry);
+        list->append(repeatedValues);
+    }, [&](const GridTrackEntrySubgrid&) {
+        list->append(CSSValuePool::singleton().createIdentifierValue(CSSValueSubgrid));
+    });
 
-        // Add a CSSGridAutoRepeatValue with the contents of the auto repeat().
-        ASSERT((isRowAxis ? style.gridAutoRepeatColumnsType() : style.gridAutoRepeatRowsType()) == AutoRepeatType::Fill);
-        auto repeatedValues = CSSGridAutoRepeatValue::create(CSSValueAutoFill);
-        populateSubgridLineNameList(repeatedValues.get(), repeatCollector);
-        list->append(repeatedValues.get());
+    for (const auto& entry : computedTracks)
+        std::visit(trackEntryVisitor, entry);
 
-        // Add the line names that follow the auto repeat().
-        populateSubgridLineNameList(list.get(), collector, autoRepeatInsertionPoint, collector.namedGridLineCount());
-        return list;
-    }
-
-    if (autoRepeatTrackSizes.isEmpty()) {
-        // If there's no auto repeat(), just add all the line names and track sizes.
-        populateGridTrackList(list.get(), collector, trackSizes, getTrackSize);
-        return list;
-    }
-
-    // Add the line names and track sizes that precede the auto repeat().
-    int autoRepeatInsertionPoint = isRowAxis ? style.gridAutoRepeatColumnsInsertionPoint() : style.gridAutoRepeatRowsInsertionPoint();
-    autoRepeatInsertionPoint = std::clamp<int>(autoRepeatInsertionPoint, 0, trackSizes.size());
-    populateGridTrackList(list.get(), collector, trackSizes, getTrackSize, 0, autoRepeatInsertionPoint);
-
-    // Add a CSSGridAutoRepeatValue with the contents of the auto repeat().
-    AutoRepeatType autoRepeatType = isRowAxis ? style.gridAutoRepeatColumnsType() : style.gridAutoRepeatRowsType();
-    auto repeatedValues = CSSGridAutoRepeatValue::create(autoRepeatType == AutoRepeatType::Fill ? CSSValueAutoFill : CSSValueAutoFit);
-
-    populateGridTrackList(repeatedValues.get(), repeatCollector, autoRepeatTrackSizes, getTrackSize);
-    list->append(repeatedValues.get());
-
-    // Add the line names and track sizes that follow the auto repeat().
-    populateGridTrackList(list.get(), collector, trackSizes, getTrackSize, autoRepeatInsertionPoint, trackSizes.size(), 1);
     return list;
 }
 
@@ -1599,14 +1561,20 @@ static Ref<CSSValueList> valueListForAnimationOrTransitionProperty(CSSPropertyID
 static Ref<CSSValueList> animationShorthandValue(CSSPropertyID property, const AnimationList* animationList)
 {
     auto parentList = CSSValueList::createCommaSeparated();
-    if (animationList) {
-        for (const auto& animation : *animationList) {
-            auto childList = CSSValueList::createSpaceSeparated();
-            for (auto longhand : shorthandForProperty(property))
-                ComputedStyleExtractor::addValueForAnimationPropertyToList(childList.get(), longhand, animation.ptr());
-            parentList->append(childList);
-        }
-    }
+
+    auto addAnimation = [&](Ref<Animation> animation) {
+        auto childList = CSSValueList::createSpaceSeparated();
+        for (auto longhand : shorthandForProperty(property))
+            ComputedStyleExtractor::addValueForAnimationPropertyToList(childList.get(), longhand, animation.ptr());
+        parentList->append(childList);
+    };
+
+    if (animationList && !animationList->isEmpty()) {
+        for (const auto& animation : *animationList)
+            addAnimation(animation);
+    } else
+        addAnimation(Animation::create());
+
     return parentList;
 }
 
@@ -1698,6 +1666,30 @@ static Ref<CSSValue> valueForPathOperation(const RenderStyle& style, const PathO
     }
 
     ASSERT_NOT_REACHED();
+    return cssValuePool.createIdentifierValue(CSSValueNone);
+}
+
+static Ref<CSSValue> valueForContainIntrinsicSize(const RenderStyle& style, const ContainIntrinsicSizeType& type, const std::optional<Length> containIntrinsicLength)
+{
+    auto& cssValuePool = CSSValuePool::singleton();
+
+    switch (type) {
+    case ContainIntrinsicSizeType::None:
+        return cssValuePool.createIdentifierValue(CSSValueNone);
+    case ContainIntrinsicSizeType::Length: {
+        ASSERT(containIntrinsicLength.has_value());
+        return zoomAdjustedPixelValueForLength(containIntrinsicLength.value(), style);
+    }
+    case ContainIntrinsicSizeType::AutoAndLength: {
+        auto autoValue = cssValuePool.createIdentifierValue(CSSValueAuto);
+        auto list = CSSValueList::createSpaceSeparated();
+        list->append(autoValue);
+        ASSERT(containIntrinsicLength.has_value());
+        list->append(zoomAdjustedPixelValueForLength(containIntrinsicLength.value(), style));
+        return list;
+    }
+    }
+    RELEASE_ASSERT_NOT_REACHED();
     return cssValuePool.createIdentifierValue(CSSValueNone);
 }
 
@@ -1922,6 +1914,33 @@ static Ref<CSSValue> renderEmphasisPositionFlagsToCSSValue(OptionSet<TextEmphasi
     return list;
 }
 
+static Ref<CSSValue> valueForTextEmphasisStyle(const RenderStyle& style)
+{
+    auto& cssValuePool = CSSValuePool::singleton();
+    switch (style.textEmphasisMark()) {
+    case TextEmphasisMark::None:
+        return cssValuePool.createIdentifierValue(CSSValueNone);
+    case TextEmphasisMark::Custom:
+        return cssValuePool.createValue(style.textEmphasisCustomMark(), CSSUnitType::CSS_STRING);
+    case TextEmphasisMark::Auto:
+        ASSERT_NOT_REACHED();
+#if !ASSERT_ENABLED
+        FALLTHROUGH;
+#endif
+    case TextEmphasisMark::Dot:
+    case TextEmphasisMark::Circle:
+    case TextEmphasisMark::DoubleCircle:
+    case TextEmphasisMark::Triangle:
+    case TextEmphasisMark::Sesame:
+        auto list = CSSValueList::createSpaceSeparated();
+        if (style.textEmphasisFill() != TextEmphasisFill::Filled)
+            list->append(cssValuePool.createValue(style.textEmphasisFill()));
+        list->append(cssValuePool.createValue(style.textEmphasisMark()));
+        return list;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 static Ref<CSSValue> speakAsToCSSValue(OptionSet<SpeakAs> speakAs)
 {
     auto& cssValuePool = CSSValuePool::singleton();
@@ -2052,11 +2071,16 @@ static Ref<CSSValue> counterToCSSValue(const RenderStyle& style, CSSPropertyID p
     auto& cssValuePool = CSSValuePool::singleton();
     auto list = CSSValueList::createSpaceSeparated();
     for (auto& keyValue : *map) {
-        list->append(cssValuePool.createCustomIdent(keyValue.key));
-        int number = (propertyID == CSSPropertyCounterIncrement ? keyValue.value.incrementValue : keyValue.value.resetValue).value_or(0);
-        list->append(cssValuePool.createValue(number, CSSUnitType::CSS_INTEGER));
+        if (auto number = (propertyID == CSSPropertyCounterIncrement ? keyValue.value.incrementValue : keyValue.value.resetValue)) {
+            list->append(cssValuePool.createCustomIdent(keyValue.key));
+            list->append(cssValuePool.createValue(*number, CSSUnitType::CSS_INTEGER));
+        }
     }
-    return list;
+
+    if (list->length())
+        return list;
+
+    return CSSValuePool::singleton().createIdentifierValue(CSSValueNone);
 }
 
 static Ref<CSSValueList> fontFamilyListFromStyle(const RenderStyle& style)
@@ -2546,6 +2570,11 @@ const Settings* CSSComputedStyleDeclaration::settings() const
     return &m_element->document().settings();
 }
 
+const FixedVector<CSSPropertyID>& CSSComputedStyleDeclaration::exposedComputedCSSPropertyIDs() const
+{
+    return m_element->document().exposedComputedCSSPropertyIDs();
+}
+
 static inline bool hasValidStyleForProperty(Element& element, CSSPropertyID propertyID)
 {
     if (element.styleValidity() != Style::Validity::Valid)
@@ -2555,12 +2584,23 @@ static inline bool hasValidStyleForProperty(Element& element, CSSPropertyID prop
     if (!element.document().childNeedsStyleRecalc())
         return true;
 
+    auto isQueryContainer = [&](Element& element) {
+        auto* style = element.renderStyle();
+        return style && style->containerType() != ContainerType::Normal;
+    };
+
     bool isInherited = CSSProperty::isInheritedProperty(propertyID) || isImplicitlyInheritedGridOrFlexProperty(propertyID);
     bool maybeExplicitlyInherited = !isInherited;
+
+    if (isQueryContainer(element))
+        return false;
 
     const auto* currentElement = &element;
     for (auto& ancestor : composedTreeAncestors(element)) {
         if (ancestor.styleValidity() >= Style::Validity::SubtreeInvalid)
+            return false;
+
+        if (isQueryContainer(ancestor))
             return false;
 
         if (maybeExplicitlyInherited) {
@@ -2777,7 +2817,7 @@ inline static bool isFlexOrGridItem(RenderObject* renderer)
     return box.isFlexItem() || box.isGridItem();
 }
 
-RefPtr<CSSValue> ComputedStyleExtractor::customPropertyValue(const String& propertyName)
+RefPtr<CSSValue> ComputedStyleExtractor::customPropertyValue(const AtomString& propertyName)
 {
     Element* styledElement = m_element.get();
     if (!styledElement)
@@ -2803,7 +2843,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::customPropertyValue(const String& prope
     });
 }
 
-String ComputedStyleExtractor::customPropertyText(const String& propertyName)
+String ComputedStyleExtractor::customPropertyText(const AtomString& propertyName)
 {
     RefPtr<CSSValue> propertyValue = customPropertyValue(propertyName);
     return propertyValue ? propertyValue->cssText() : emptyString();
@@ -2842,11 +2882,16 @@ static Ref<CSSFontValue> fontShorthandValueForSelectionProperties(const FontDesc
     return computedFont;
 }
 
-RefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propertyID, EUpdateLayout updateLayout)
+RefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propertyID, EUpdateLayout updateLayout, PropertyValueType valueType)
 {
     auto* styledElement = m_element.get();
     if (!styledElement)
         return nullptr;
+
+    if (!isCSSPropertyExposed(propertyID, &m_element->document().settings())) {
+        // Exit quickly, and avoid us ever having to update layout in this case.
+        return nullptr;
+    }
 
     std::unique_ptr<RenderStyle> ownedStyle;
     const RenderStyle* style = nullptr;
@@ -2860,10 +2905,20 @@ RefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propertyID,
 
         style = computeRenderStyleForProperty(*styledElement, m_pseudoElementSpecifier, propertyID, ownedStyle, styledRenderer());
 
-        // FIXME: Some of these cases could be narrowed down or optimized better.
-        forceFullLayout = isLayoutDependent(propertyID, style, styledRenderer())
-            || styledElement->isInShadowTree()
-            || (document.styleScope().resolverIfExists() && document.styleScope().resolverIfExists()->hasViewportDependentMediaQueries() && document.ownerElement());
+        forceFullLayout = [&] {
+            // FIXME: Some of these cases could be narrowed down or optimized better.
+            if (isLayoutDependent(propertyID, style, styledRenderer()))
+                return true;
+            // FIXME: Why?
+            if (styledElement->isInShadowTree())
+                return true;
+            if (!document.ownerElement())
+                return false;
+            if (!document.styleScope().resolverIfExists())
+                return false;
+            auto& ruleSets = document.styleScope().resolverIfExists()->ruleSets();
+            return ruleSets.hasViewportDependentMediaQueries() || ruleSets.hasContainerQueries();
+        }();
 
         if (forceFullLayout)
             document.updateLayoutIgnorePendingStylesheets();
@@ -2875,7 +2930,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propertyID,
     if (!style)
         return nullptr;
 
-    return valueForPropertyInStyle(*style, propertyID, styledRenderer());
+    return valueForPropertyInStyle(*style, propertyID, valueType == PropertyValueType::Resolved ? styledRenderer() : nullptr);
 }
 
 RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderStyle& style, CSSPropertyID propertyID, RenderElement* renderer)
@@ -2883,15 +2938,12 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
     auto& cssValuePool = CSSValuePool::singleton();
     propertyID = CSSProperty::resolveDirectionAwareProperty(propertyID, style.direction(), style.writingMode());
 
+    ASSERT(isCSSPropertyExposed(propertyID, &m_element->document().settings()));
+
     switch (propertyID) {
         case CSSPropertyInvalid:
-#if ENABLE(TEXT_AUTOSIZING)
-        case CSSPropertyInternalTextAutosizingStatus:
-#endif
-            break;
+            return nullptr;
         case CSSPropertyAccentColor: {
-            if (!m_element->document().settings().accentColorEnabled())
-                return nullptr;
             if (style.hasAutoAccentColor())
                 return cssValuePool.createIdentifierValue(CSSValueAuto);
             return currentColorOrValidColor(&style, style.accentColor());
@@ -3345,8 +3397,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return cssValuePool.createValue(style.imageResolution(), CSSUnitType::CSS_DPPX);
 #endif
         case CSSPropertyInputSecurity:
-            if (!m_element->document().settings().cssInputSecurityEnabled())
-                return nullptr;
             return cssValuePool.createValue(style.inputSecurity());
         case CSSPropertyLeft:
             return positionOffsetValue(style, CSSPropertyLeft, renderer);
@@ -3465,16 +3515,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyOverflowY:
             return cssValuePool.createValue(style.overflowY());
         case CSSPropertyOverscrollBehavior:
-            if (!m_element->document().settings().overscrollBehaviorEnabled())
-                return nullptr;
             return cssValuePool.createValue(std::max(style.overscrollBehaviorX(), style.overscrollBehaviorY()));
         case CSSPropertyOverscrollBehaviorX:
-            if (!m_element->document().settings().overscrollBehaviorEnabled())
-                return nullptr;
             return cssValuePool.createValue(style.overscrollBehaviorX());
         case CSSPropertyOverscrollBehaviorY:
-            if (!m_element->document().settings().overscrollBehaviorEnabled())
-                return nullptr;
             return cssValuePool.createValue(style.overscrollBehaviorY());
         case CSSPropertyPaddingTop:
             return zoomAdjustedPaddingOrMarginPixelValue<&RenderStyle::paddingTop, &RenderBoxModelObject::computedCSSPaddingTop>(style, renderer);
@@ -3508,18 +3552,16 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return cssValuePool.createValue(style.tableLayout());
         case CSSPropertyTextAlign:
             return cssValuePool.createValue(style.textAlign());
-        case CSSPropertyTextDecoration:
-            return renderTextDecorationLineFlagsToCSSValue(style.textDecoration());
-#if ENABLE(CSS3_TEXT)
-        case CSSPropertyWebkitTextAlignLast:
+        case CSSPropertyTextAlignLast:
             return cssValuePool.createValue(style.textAlignLast());
-        case CSSPropertyWebkitTextJustify:
+        case CSSPropertyTextDecoration:
+            return renderTextDecorationLineFlagsToCSSValue(style.textDecorationLine());
+        case CSSPropertyTextJustify:
             return cssValuePool.createValue(style.textJustify());
-#endif // CSS3_TEXT
         case CSSPropertyWebkitTextDecoration:
             return getCSSPropertyValuesForShorthandProperties(webkitTextDecorationShorthand());
         case CSSPropertyTextDecorationLine:
-            return renderTextDecorationLineFlagsToCSSValue(style.textDecoration());
+            return renderTextDecorationLineFlagsToCSSValue(style.textDecorationLine());
         case CSSPropertyTextDecorationStyle:
             return renderTextDecorationStyleFlagsToCSSValue(style.textDecorationStyle());
         case CSSPropertyTextDecorationColor:
@@ -3543,27 +3585,13 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyTextEmphasisPosition:
             return renderEmphasisPositionFlagsToCSSValue(style.textEmphasisPosition());
         case CSSPropertyTextEmphasisStyle:
-            switch (style.textEmphasisMark()) {
-            case TextEmphasisMark::None:
-                return cssValuePool.createIdentifierValue(CSSValueNone);
-            case TextEmphasisMark::Custom:
-                return cssValuePool.createValue(style.textEmphasisCustomMark(), CSSUnitType::CSS_STRING);
-            case TextEmphasisMark::Auto:
-                ASSERT_NOT_REACHED();
-#if !ASSERT_ENABLED
-                FALLTHROUGH;
-#endif
-            case TextEmphasisMark::Dot:
-            case TextEmphasisMark::Circle:
-            case TextEmphasisMark::DoubleCircle:
-            case TextEmphasisMark::Triangle:
-            case TextEmphasisMark::Sesame:
-                auto list = CSSValueList::createSpaceSeparated();
-                list->append(cssValuePool.createValue(style.textEmphasisFill()));
-                list->append(cssValuePool.createValue(style.textEmphasisMark()));
-                return list;
-            }
-            RELEASE_ASSERT_NOT_REACHED();
+            return valueForTextEmphasisStyle(style);
+        case CSSPropertyTextEmphasis: {
+            auto list = CSSValueList::createSpaceSeparated();
+            list->append(valueForTextEmphasisStyle(style));
+            list->append(currentColorOrValidColor(&style, style.textEmphasisColor()));
+            return list;
+        }
         case CSSPropertyTextIndent: {
             auto textIndent = zoomAdjustedPixelValueForLength(style.textIndent(), style);
             if (style.textIndentLine() == TextIndentLine::EachLine || style.textIndentType() == TextIndentType::Hanging) {
@@ -3652,8 +3680,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return cssValuePool.createValue(style.wordBreak());
         case CSSPropertyWordSpacing:
             return zoomAdjustedPixelValue(style.fontCascade().wordSpacing(), style);
-        case CSSPropertyWordWrap:
-            return cssValuePool.createValue(style.overflowWrap());
         case CSSPropertyLineBreak:
             return cssValuePool.createValue(style.lineBreak());
         case CSSPropertyWebkitNbspMode:
@@ -3701,8 +3727,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyAppearance:
             return cssValuePool.createValue(style.appearance());
         case CSSPropertyAspectRatio:
-            if (m_element && !m_element->document().settings().aspectRatioEnabled())
-                return nullptr;
             switch (style.aspectRatioType()) {
             case AspectRatioType::Auto:
                 return cssValuePool.createIdentifierValue(CSSValueAuto);
@@ -3723,8 +3747,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             ASSERT_NOT_REACHED();
             return nullptr;
         case CSSPropertyContain: {
-            if (!m_element->document().settings().cssContainmentEnabled())
-                return nullptr;
             auto containment = style.contain();
             if (!containment)
                 return cssValuePool.createIdentifierValue(CSSValueNone);
@@ -3741,13 +3763,18 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
                 list->append(cssValuePool.createIdentifierValue(CSSValueStyle));
             if (containment & Containment::Paint)
                 list->append(cssValuePool.createIdentifierValue(CSSValuePaint));
+            if (containment & Containment::InlineSize)
+                list->append(cssValuePool.createIdentifierValue(CSSValueInlineSize));
             return list;
         }
         case CSSPropertyContainer: {
             auto list = CSSValueList::createSlashSeparated();
-            list->append(propertyValue(CSSPropertyContainerType, DoNotUpdateLayout).releaseNonNull());
-            if (!style.containerNames().isEmpty())
+            if (style.containerNames().isEmpty())
+                list->append(cssValuePool.createIdentifierValue(CSSValueNone));
+            else
                 list->append(propertyValue(CSSPropertyContainerName, DoNotUpdateLayout).releaseNonNull());
+            if (style.containerType() != ContainerType::Normal)
+                list->append(propertyValue(CSSPropertyContainerType, DoNotUpdateLayout).releaseNonNull());
             return list;
         }
         case CSSPropertyContainerType:
@@ -3760,10 +3787,17 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
                 list->append(cssValuePool.createCustomIdent(name));
             return list;
         }
+        case CSSPropertyContainIntrinsicSize:
+            return getCSSPropertyValuesFor2SidesShorthand(containIntrinsicSizeShorthand());
+        case CSSPropertyContainIntrinsicWidth:
+            return valueForContainIntrinsicSize(style, style.containIntrinsicWidthType(), style.containIntrinsicWidth());
+        case CSSPropertyContainIntrinsicHeight:
+            return valueForContainIntrinsicSize(style, style.containIntrinsicHeightType(), style.containIntrinsicHeight());
         case CSSPropertyBackfaceVisibility:
             return cssValuePool.createIdentifierValue((style.backfaceVisibility() == BackfaceVisibility::Hidden) ? CSSValueHidden : CSSValueVisible);
+        case CSSPropertyBorderImage:
         case CSSPropertyWebkitBorderImage:
-            return valueForNinePieceImage(style.borderImage(), style);
+            return valueForNinePieceImage(propertyID, style.borderImage(), style);
         case CSSPropertyBorderImageOutset:
             return valueForNinePieceImageQuad(style.borderImage().outset(), style);
         case CSSPropertyBorderImageRepeat:
@@ -3771,9 +3805,11 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyBorderImageSlice:
             return valueForNinePieceImageSlice(style.borderImage());
         case CSSPropertyBorderImageWidth:
+            if (style.borderImage().overridesBorderWidths())
+                return nullptr;
             return valueForNinePieceImageQuad(style.borderImage().borderSlices(), style);
         case CSSPropertyWebkitMaskBoxImage:
-            return valueForNinePieceImage(style.maskBoxImage(), style);
+            return valueForNinePieceImage(propertyID, style.maskBoxImage(), style);
         case CSSPropertyWebkitMaskBoxImageOutset:
             return valueForNinePieceImageQuad(style.maskBoxImage().outset(), style);
         case CSSPropertyWebkitMaskBoxImageRepeat:
@@ -3786,9 +3822,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             if (style.maskBoxImageSource())
                 return style.maskBoxImageSource()->cssValue();
             return cssValuePool.createIdentifierValue(CSSValueNone);
-        case CSSPropertyWebkitFontSizeDelta:
-            // Not a real style property -- used by the editing engine -- so has no computed value.
-            break;
         case CSSPropertyWebkitInitialLetter: {
             auto drop = !style.initialLetterDrop() ? cssValuePool.createIdentifierValue(CSSValueNormal) : cssValuePool.createValue(style.initialLetterDrop(), CSSUnitType::CSS_NUMBER);
             auto size = !style.initialLetterHeight() ? cssValuePool.createIdentifierValue(CSSValueNormal) : cssValuePool.createValue(style.initialLetterHeight(), CSSUnitType::CSS_NUMBER);
@@ -3805,13 +3838,14 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
                 return cssValuePool.createIdentifierValue(CSSValueAuto);
             return cssValuePool.createIdentifierValue(CSSValueSmooth);
         case CSSPropertyPerspective:
+        case CSSPropertyWebkitPerspective:
             if (!style.hasPerspective())
                 return cssValuePool.createIdentifierValue(CSSValueNone);
             return zoomAdjustedPixelValue(style.perspective(), style);
         case CSSPropertyPerspectiveOrigin: {
             auto list = CSSValueList::createSpaceSeparated();
             if (renderer) {
-                auto box = transformReferenceBox(style, *renderer);
+                auto box = renderer->transformReferenceBoxRect(style);
                 list->append(zoomAdjustedPixelValue(minimumValueForLength(style.perspectiveOriginX(), box.width()), style));
                 list->append(zoomAdjustedPixelValue(minimumValueForLength(style.perspectiveOriginY(), box.height()), style));
             } else {
@@ -3867,7 +3901,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyTransformOrigin: {
             auto list = CSSValueList::createSpaceSeparated();
             if (renderer) {
-                auto box = transformReferenceBox(style, *renderer);
+                auto box = renderer->transformReferenceBoxRect(style);
                 list->append(zoomAdjustedPixelValue(minimumValueForLength(style.transformOriginX(), box.width()), style));
                 list->append(zoomAdjustedPixelValue(minimumValueForLength(style.transformOriginY(), box.height()), style));
                 if (style.transformOriginZ())
@@ -3881,7 +3915,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return list;
         }
         case CSSPropertyTransformStyle:
-        case CSSPropertyWebkitTransformStyle:
             switch (style.transformStyle3D()) {
             case TransformStyle3D::Flat:
                 return cssValuePool.createIdentifierValue(CSSValueFlat);
@@ -3895,16 +3928,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             ASSERT_NOT_REACHED();
             return nullptr;
         case CSSPropertyTranslate:
-            if (!m_element->document().settings().cssIndividualTransformPropertiesEnabled())
-                return nullptr;
             return computedTranslate(renderer, style);
         case CSSPropertyScale:
-            if (!m_element->document().settings().cssIndividualTransformPropertiesEnabled())
-                return nullptr;
             return computedScale(renderer, style);
         case CSSPropertyRotate:
-            if (!m_element->document().settings().cssIndividualTransformPropertiesEnabled())
-                return nullptr;
             return computedRotate(renderer, style);
         case CSSPropertyTransitionDelay:
         case CSSPropertyTransitionDuration:
@@ -3928,7 +3955,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyWebkitTextCombine:
             if (style.textCombine() == TextCombine::All)
                 return CSSPrimitiveValue::createIdentifier(CSSValueHorizontal);
-            return nullptr;
+            return cssValuePool.createValue(style.textCombine());
         case CSSPropertyTextCombineUpright:
             return cssValuePool.createValue(style.textCombine());
         case CSSPropertyWebkitTextOrientation:
@@ -3999,6 +4026,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         }
         case CSSPropertyBorderBlockColor:
             return getCSSPropertyValuesFor2SidesShorthand(borderBlockColorShorthand());
+        case CSSPropertyBorderBlockEnd:
+            return getCSSPropertyValuesForShorthandProperties(borderBlockEndShorthand());
+        case CSSPropertyBorderBlockStart:
+            return getCSSPropertyValuesForShorthandProperties(borderBlockStartShorthand());
         case CSSPropertyBorderBlockStyle:
             return getCSSPropertyValuesFor2SidesShorthand(borderBlockStyleShorthand());
         case CSSPropertyBorderBlockWidth:
@@ -4009,8 +4040,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return getCSSPropertyValuesFor4SidesShorthand(borderColorShorthand());
         case CSSPropertyBorderLeft:
             return getCSSPropertyValuesForShorthandProperties(borderLeftShorthand());
-        case CSSPropertyBorderImage:
-            return valueForNinePieceImage(style.borderImage(), style);
         case CSSPropertyBorderInline: {
             auto value = propertyValue(CSSPropertyBorderInlineStart, DoNotUpdateLayout);
             if (!compareCSSValuePtr<CSSValue>(value, propertyValue(CSSPropertyBorderInlineEnd, DoNotUpdateLayout)))
@@ -4019,6 +4048,10 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         }
         case CSSPropertyBorderInlineColor:
             return getCSSPropertyValuesFor2SidesShorthand(borderInlineColorShorthand());
+        case CSSPropertyBorderInlineEnd:
+            return getCSSPropertyValuesForShorthandProperties(borderInlineEndShorthand());
+        case CSSPropertyBorderInlineStart:
+            return getCSSPropertyValuesForShorthandProperties(borderInlineStartShorthand());
         case CSSPropertyBorderInlineStyle:
             return getCSSPropertyValuesFor2SidesShorthand(borderInlineStyleShorthand());
         case CSSPropertyBorderInlineWidth:
@@ -4093,6 +4126,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return CSSPrimitiveValue::create(style.scrollSnapStop());
         case CSSPropertyScrollSnapType:
             return valueForScrollSnapType(style.scrollSnapType());
+        case CSSPropertyOverflowAnchor:
+            return cssValuePool.createValue(style.overflowAnchor());
 #if ENABLE(CSS_TRAILING_WORD)
         case CSSPropertyAppleTrailingWord:
             return cssValuePool.createValue(style.trailingWord());
@@ -4122,11 +4157,6 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return list;
         }
 #endif
-
-        /* Individual properties not part of the spec */
-        case CSSPropertyBackgroundRepeatX:
-        case CSSPropertyBackgroundRepeatY:
-            break;
 
         // Length properties for SVG.
         case CSSPropertyCx:
@@ -4166,25 +4196,20 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
 
         /* Unimplemented CSS 3 properties (including CSS3 shorthand properties) */
         case CSSPropertyAll:
-        case CSSPropertyTextEmphasis:
-            break;
+            return nullptr;
 
         /* Directional properties are resolved by resolveDirectionAwareProperty() before the switch. */
-        case CSSPropertyBorderBlockEnd:
         case CSSPropertyBorderBlockEndColor:
         case CSSPropertyBorderBlockEndStyle:
         case CSSPropertyBorderBlockEndWidth:
-        case CSSPropertyBorderBlockStart:
         case CSSPropertyBorderBlockStartColor:
         case CSSPropertyBorderBlockStartStyle:
         case CSSPropertyBorderBlockStartWidth:
         case CSSPropertyBorderEndEndRadius:
         case CSSPropertyBorderEndStartRadius:
-        case CSSPropertyBorderInlineEnd:
         case CSSPropertyBorderInlineEndColor:
         case CSSPropertyBorderInlineEndStyle:
         case CSSPropertyBorderInlineEndWidth:
-        case CSSPropertyBorderInlineStart:
         case CSSPropertyBorderInlineStartColor:
         case CSSPropertyBorderInlineStartStyle:
         case CSSPropertyBorderInlineStartWidth:
@@ -4198,6 +4223,8 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyMarginBlockStart:
         case CSSPropertyMarginInlineEnd:
         case CSSPropertyMarginInlineStart:
+        case CSSPropertyOverscrollBehaviorInline:
+        case CSSPropertyOverscrollBehaviorBlock:
         case CSSPropertyPaddingBlockEnd:
         case CSSPropertyPaddingBlockStart:
         case CSSPropertyPaddingInlineEnd:
@@ -4216,8 +4243,25 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyScrollPaddingBlockStart:
         case CSSPropertyScrollPaddingInlineEnd:
         case CSSPropertyScrollPaddingInlineStart:
+        case CSSPropertyContainIntrinsicBlockSize:
+        case CSSPropertyContainIntrinsicInlineSize:
             ASSERT_NOT_REACHED();
-            break;
+            return nullptr;
+
+        // Internal properties should be handled by isCSSPropertyExposed above.
+        case CSSPropertyBackgroundRepeatX:
+        case CSSPropertyBackgroundRepeatY:
+        case CSSPropertyWebkitFontSizeDelta:
+        case CSSPropertyWebkitMarqueeDirection:
+        case CSSPropertyWebkitMarqueeIncrement:
+        case CSSPropertyWebkitMarqueeRepetition:
+        case CSSPropertyWebkitMarqueeStyle:
+        case CSSPropertyWebkitMarqueeSpeed:
+#if ENABLE(TEXT_AUTOSIZING)
+        case CSSPropertyInternalTextAutosizingStatus:
+#endif
+            ASSERT_NOT_REACHED();
+            return nullptr;
 
         // These are intentionally unimplemented because they are actually descriptors for @counter-style.
         case CSSPropertySystem:
@@ -4229,31 +4273,26 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyFallback:
         case CSSPropertySymbols:
         case CSSPropertyAdditiveSymbols:
-            break;
+            return nullptr;
 
         /* Unimplemented @font-face properties */
         case CSSPropertySrc:
         case CSSPropertyUnicodeRange:
         case CSSPropertyFontDisplay:
-            break;
+            return nullptr;
 
         // Unimplemented @font-palette-values properties
         case CSSPropertyBasePalette:
         case CSSPropertyOverrideColors:
-            break;
+            return nullptr;
 
         /* Other unimplemented properties */
         case CSSPropertyPage: // for @page
         case CSSPropertySize: // for @page
-            break;
+            return nullptr;
 
         /* Unimplemented -webkit- properties */
         case CSSPropertyWebkitBorderRadius:
-        case CSSPropertyWebkitMarqueeDirection:
-        case CSSPropertyWebkitMarqueeIncrement:
-        case CSSPropertyWebkitMarqueeRepetition:
-        case CSSPropertyWebkitMarqueeStyle:
-        case CSSPropertyWebkitMarqueeSpeed:
         case CSSPropertyWebkitMask:
         case CSSPropertyMaskRepeatX:
         case CSSPropertyMaskRepeatY:
@@ -4263,7 +4302,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
         case CSSPropertyTransformOriginX:
         case CSSPropertyTransformOriginY:
         case CSSPropertyTransformOriginZ:
-            break;
+            return nullptr;
 
         case CSSPropertyBufferedRendering:
         case CSSPropertyClipRule:
@@ -4300,6 +4339,7 @@ RefPtr<CSSValue> ComputedStyleExtractor::valueForPropertyInStyle(const RenderSty
             return nullptr;
     }
 
+    ASSERT_NOT_REACHED();
     return nullptr;
 }
 
@@ -4319,7 +4359,7 @@ unsigned CSSComputedStyleDeclaration::length() const
     if (!style)
         return 0;
 
-    return numComputedPropertyIDs + style->inheritedCustomProperties().size() + style->nonInheritedCustomProperties().size();
+    return exposedComputedCSSPropertyIDs().size() + style->inheritedCustomProperties().size() + style->nonInheritedCustomProperties().size();
 }
 
 String CSSComputedStyleDeclaration::item(unsigned i) const
@@ -4327,8 +4367,8 @@ String CSSComputedStyleDeclaration::item(unsigned i) const
     if (i >= length())
         return String();
 
-    if (i < numComputedPropertyIDs)
-        return getPropertyNameString(computedPropertyIDs[i]);
+    if (i < exposedComputedCSSPropertyIDs().size())
+        return getPropertyNameString(exposedComputedCSSPropertyIDs().at(i));
 
     auto* style = m_element->computedStyle(m_pseudoElementSpecifier);
     if (!style)
@@ -4336,14 +4376,14 @@ String CSSComputedStyleDeclaration::item(unsigned i) const
 
     const auto& inheritedCustomProperties = style->inheritedCustomProperties();
 
-    if (i < numComputedPropertyIDs + inheritedCustomProperties.size()) {
+    if (i < exposedComputedCSSPropertyIDs().size() + inheritedCustomProperties.size()) {
         auto results = copyToVector(inheritedCustomProperties.keys());
-        return results.at(i - numComputedPropertyIDs);
+        return results.at(i - exposedComputedCSSPropertyIDs().size());
     }
 
     const auto& nonInheritedCustomProperties = style->nonInheritedCustomProperties();
     auto results = copyToVector(nonInheritedCustomProperties.keys());
-    return results.at(i - inheritedCustomProperties.size() - numComputedPropertyIDs);
+    return results.at(i - inheritedCustomProperties.size() - exposedComputedCSSPropertyIDs().size());
 }
 
 bool ComputedStyleExtractor::propertyMatches(CSSPropertyID propertyID, const CSSValue* value)
@@ -4463,7 +4503,7 @@ CSSRule* CSSComputedStyleDeclaration::parentRule() const
 RefPtr<DeprecatedCSSOMValue> CSSComputedStyleDeclaration::getPropertyCSSValue(const String& propertyName)
 {
     if (isCustomPropertyName(propertyName)) {
-        auto value = ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).customPropertyValue(propertyName);
+        auto value = ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).customPropertyValue(AtomString { propertyName });
         if (!value)
             return nullptr;
         return value->createDeprecatedCSSOMWrapper(*this);
@@ -4481,7 +4521,7 @@ RefPtr<DeprecatedCSSOMValue> CSSComputedStyleDeclaration::getPropertyCSSValue(co
 String CSSComputedStyleDeclaration::getPropertyValue(const String &propertyName)
 {
     if (isCustomPropertyName(propertyName))
-        return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).customPropertyText(propertyName);
+        return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).customPropertyText(AtomString { propertyName });
 
     CSSPropertyID propertyID = cssPropertyID(propertyName);
     if (!propertyID)

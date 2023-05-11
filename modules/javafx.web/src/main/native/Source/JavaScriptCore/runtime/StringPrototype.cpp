@@ -85,7 +85,7 @@ static JSC_DECLARE_HOST_FUNCTION(stringProtoFuncIterator);
 
 namespace JSC {
 
-const ClassInfo StringPrototype::s_info = { "String", &StringObject::s_info, &stringPrototypeTable, nullptr, CREATE_METHOD_TABLE(StringPrototype) };
+const ClassInfo StringPrototype::s_info = { "String"_s, &StringObject::s_info, &stringPrototypeTable, nullptr, CREATE_METHOD_TABLE(StringPrototype) };
 
 /* Source for StringConstructor.lut.h
 @begin stringPrototypeTable
@@ -124,45 +124,48 @@ StringPrototype::StringPrototype(VM& vm, Structure* structure)
 void StringPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm, jsEmptyString(vm));
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toString, stringProtoFuncToString, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, StringPrototypeValueOfIntrinsic);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->valueOf, stringProtoFuncToString, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, StringPrototypeValueOfIntrinsic);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("charAt", stringProtoFuncCharAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, CharAtIntrinsic);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("charCodeAt", stringProtoFuncCharCodeAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, CharCodeAtIntrinsic);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("codePointAt", stringProtoFuncCodePointAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, StringPrototypeCodePointAtIntrinsic);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("indexOf", stringProtoFuncIndexOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("lastIndexOf", stringProtoFuncLastIndexOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().replaceUsingRegExpPrivateName(), stringProtoFuncReplaceUsingRegExp, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, StringPrototypeReplaceRegExpIntrinsic);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().replaceUsingStringSearchPrivateName(), stringProtoFuncReplaceUsingStringSearch, static_cast<unsigned>(PropertyAttribute::DontEnum), 2);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().replaceAllUsingStringSearchPrivateName(), stringProtoFuncReplaceAllUsingStringSearch, static_cast<unsigned>(PropertyAttribute::DontEnum), 2);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("slice", stringProtoFuncSlice, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, StringPrototypeSliceIntrinsic);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("substr", stringProtoFuncSubstr, static_cast<unsigned>(PropertyAttribute::DontEnum), 2);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("substring", stringProtoFuncSubstring, static_cast<unsigned>(PropertyAttribute::DontEnum), 2);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("toLowerCase", stringProtoFuncToLowerCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, StringPrototypeToLowerCaseIntrinsic);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("toUpperCase", stringProtoFuncToUpperCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("localeCompare", stringProtoFuncLocaleCompare, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("toLocaleLowerCase", stringProtoFuncToLocaleLowerCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("toLocaleUpperCase", stringProtoFuncToLocaleUpperCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("trim", stringProtoFuncTrim, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("startsWith", stringProtoFuncStartsWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("endsWith", stringProtoFuncEndsWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("includes", stringProtoFuncIncludes, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("normalize", stringProtoFuncNormalize, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().charCodeAtPrivateName(), stringProtoFuncCharCodeAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, CharCodeAtIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->toString, stringProtoFuncToString, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public, StringPrototypeValueOfIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->valueOf, stringProtoFuncToString, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public, StringPrototypeValueOfIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("charAt"_s, stringProtoFuncCharAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, CharAtIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("charCodeAt"_s, stringProtoFuncCharCodeAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, CharCodeAtIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("codePointAt"_s, stringProtoFuncCodePointAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, StringPrototypeCodePointAtIntrinsic);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("indexOf"_s, stringProtoFuncIndexOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("lastIndexOf"_s, stringProtoFuncLastIndexOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().replaceUsingRegExpPrivateName(), stringProtoFuncReplaceUsingRegExp, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public, StringPrototypeReplaceRegExpIntrinsic);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().replaceUsingStringSearchPrivateName(), stringProtoFuncReplaceUsingStringSearch, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().replaceAllUsingStringSearchPrivateName(), stringProtoFuncReplaceAllUsingStringSearch, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("slice"_s, stringProtoFuncSlice, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public, StringPrototypeSliceIntrinsic);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("substr"_s, stringProtoFuncSubstr, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("substring"_s, stringProtoFuncSubstring, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("toLowerCase"_s, stringProtoFuncToLowerCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public, StringPrototypeToLowerCaseIntrinsic);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("toUpperCase"_s, stringProtoFuncToUpperCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("localeCompare"_s, stringProtoFuncLocaleCompare, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("toLocaleLowerCase"_s, stringProtoFuncToLocaleLowerCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("toLocaleUpperCase"_s, stringProtoFuncToLocaleUpperCase, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("trim"_s, stringProtoFuncTrim, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("startsWith"_s, stringProtoFuncStartsWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("endsWith"_s, stringProtoFuncEndsWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("includes"_s, stringProtoFuncIncludes, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("normalize"_s, stringProtoFuncNormalize, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().charCodeAtPrivateName(), stringProtoFuncCharCodeAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, CharCodeAtIntrinsic);
 
     if (Options::useAtMethod())
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().atPublicName(), stringPrototypeAtCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    JSFunction* trimStartFunction = JSFunction::create(vm, globalObject, 0, "trimStart"_s, stringProtoFuncTrimStart, NoIntrinsic);
-    JSFunction* trimEndFunction = JSFunction::create(vm, globalObject, 0, "trimEnd"_s, stringProtoFuncTrimEnd, NoIntrinsic);
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimStart"), trimStartFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimLeft"), trimStartFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimEnd"), trimEndFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimRight"), trimEndFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSFunction* trimStartFunction = JSFunction::create(vm, globalObject, 0, "trimStart"_s, stringProtoFuncTrimStart, ImplementationVisibility::Public);
+    JSFunction* trimEndFunction = JSFunction::create(vm, globalObject, 0, "trimEnd"_s, stringProtoFuncTrimEnd, ImplementationVisibility::Public);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimStart"_s), trimStartFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimLeft"_s), trimStartFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimEnd"_s), trimEndFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "trimRight"_s), trimEndFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    JSFunction* iteratorFunction = JSFunction::create(vm, globalObject, 0, "[Symbol.iterator]"_s, stringProtoFuncIterator, NoIntrinsic);
+    JSFunction* iteratorFunction = JSFunction::create(vm, globalObject, 0, "[Symbol.iterator]"_s, stringProtoFuncIterator, ImplementationVisibility::Public);
     putDirectWithoutTransition(vm, vm.propertyNames->iteratorSymbol, iteratorFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().substrPrivateName(), stringProtoFuncSubstr, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().endsWithPrivateName(), stringProtoFuncEndsWith, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
 
     // The constructor will be added later, after StringConstructor has been built
 }
@@ -215,7 +218,7 @@ static NEVER_INLINE void substituteBackreferencesSlow(StringBuilder& result, Str
                 continue;
 
             unsigned nameLength = closingBracket - i - 2;
-            unsigned backrefIndex = reg->subpatternForName(replacement.substring(i + 2, nameLength).toString());
+            unsigned backrefIndex = reg->subpatternForName(replacement.substring(i + 2, nameLength));
 
             if (!backrefIndex || backrefIndex > reg->numSubpatterns()) {
                 backrefStart = 0;
@@ -332,7 +335,7 @@ static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, 
             }
         }
 
-        RELEASE_AND_RETURN(scope, jsString(vm, WTFMove(impl)));
+        RELEASE_AND_RETURN(scope, jsString(vm, impl.releaseNonNull()));
     }
 
     UChar* buffer;
@@ -352,7 +355,7 @@ static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, 
         }
     }
 
-    RELEASE_AND_RETURN(scope, jsString(vm, WTFMove(impl)));
+    RELEASE_AND_RETURN(scope, jsString(vm, impl.releaseNonNull()));
 }
 
 static ALWAYS_INLINE JSString* jsSpliceSubstringsWithSeparators(JSGlobalObject* globalObject, JSString* sourceVal, const String& source, const StringRange* substringRanges, int rangeCount, const String* separators, int separatorCount)
@@ -420,7 +423,7 @@ static ALWAYS_INLINE JSString* jsSpliceSubstringsWithSeparators(JSGlobalObject* 
             }
         }
 
-        RELEASE_AND_RETURN(scope, jsString(vm, WTFMove(impl)));
+        RELEASE_AND_RETURN(scope, jsString(vm, impl.releaseNonNull()));
     }
 
     UChar* buffer;
@@ -453,7 +456,7 @@ static ALWAYS_INLINE JSString* jsSpliceSubstringsWithSeparators(JSGlobalObject* 
         }
     }
 
-    RELEASE_AND_RETURN(scope, jsString(vm, WTFMove(impl)));
+    RELEASE_AND_RETURN(scope, jsString(vm, impl.releaseNonNull()));
 }
 
 #define OUT_OF_MEMORY(exec__, scope__) \
@@ -709,7 +712,7 @@ JSC_DEFINE_JIT_OPERATION(operationStringProtoFuncReplaceRegExpEmptyStr, JSCell*,
         RETURN_IF_EXCEPTION(scope, nullptr);
         String source = thisValue->value(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        RELEASE_AND_RETURN(scope, removeUsingRegExpSearch(vm, globalObject, thisValue, source, regExp));
+        RELEASE_AND_RETURN(scope, removeUsingRegExpSearch(vm, globalObject, thisValue, WTFMove(source), regExp));
     }
 
     CallData callData;
@@ -737,7 +740,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* 
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     String replacementString;
-    auto callData = getCallData(vm, replaceValue);
+    auto callData = JSC::getCallData(replaceValue);
     if (callData.type == CallData::Type::None) {
         replacementString = replaceValue.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
@@ -758,7 +761,7 @@ static ALWAYS_INLINE JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* 
     String searchString = searchValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto callData = getCallData(vm, replaceValue);
+    auto callData = JSC::getCallData(replaceValue);
     std::optional<CachedCall> cachedCall;
     String replaceString;
     if (callData.type == CallData::Type::None) {
@@ -882,7 +885,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncRepeatCharacter, (JSGlobalObject* global
 ALWAYS_INLINE JSString* replace(
     VM& vm, JSGlobalObject* globalObject, CallFrame* callFrame, JSString* string, JSValue searchValue, JSValue replaceValue)
 {
-    if (searchValue.inherits<RegExpObject>(vm))
+    if (searchValue.inherits<RegExpObject>())
         return replaceUsingRegExpSearch(vm, globalObject, callFrame, string, searchValue, replaceValue);
     return replaceUsingStringSearch(vm, globalObject, callFrame, string, searchValue, replaceValue, ReplaceMode::Single);
 }
@@ -910,7 +913,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncReplaceUsingRegExp, (JSGlobalObject* glo
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     JSValue searchValue = callFrame->argument(0);
-    if (!searchValue.inherits<RegExpObject>(vm))
+    if (!searchValue.inherits<RegExpObject>())
         return JSValue::encode(jsUndefined());
 
     RELEASE_AND_RETURN(scope, JSValue::encode(replaceUsingRegExpSearch(vm, globalObject, callFrame, string, searchValue, callFrame->argument(1))));
@@ -964,7 +967,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToString, (JSGlobalObject* globalObject,
         return JSValue::encode(thisValue);
     }
 
-    auto* stringObject = jsDynamicCast<StringObject*>(vm, thisValue);
+    auto* stringObject = jsDynamicCast<StringObject*>(thisValue);
     if (!stringObject)
         return throwVMTypeError(globalObject, scope);
 
@@ -1484,7 +1487,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToLowerCase, (JSGlobalObject* globalObje
     String lowercasedString = s.convertToLowercaseWithoutLocale();
     if (lowercasedString.impl() == s.impl())
         return JSValue::encode(sVal);
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, lowercasedString)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTFMove(lowercasedString))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToUpperCase, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -1502,7 +1505,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToUpperCase, (JSGlobalObject* globalObje
     String uppercasedString = s.convertToUppercaseWithoutLocale();
     if (uppercasedString.impl() == s.impl())
         return JSValue::encode(sVal);
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, uppercasedString)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, WTFMove(uppercasedString))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncLocaleCompare, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -1621,10 +1624,10 @@ static EncodedJSValue toLocaleCase(JSGlobalObject* globalObject, CallFrame* call
     auto convertCase = mode == CaseConversionMode::Lower ? u_strToLower : u_strToUpper;
     auto status = callBufferProducingFunction(convertCase, buffer, StringView { s }.upconvertedCharacters().get(), s.length(), locale.utf8().data());
     if (U_FAILURE(status))
-        return throwVMTypeError(globalObject, scope, u_errorName(status));
+        return throwVMTypeError(globalObject, scope, String::fromLatin1(u_errorName(status)));
 
     // 18. Return L.
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, String(buffer))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, String { WTFMove(buffer) })));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncToLocaleLowerCase, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -1718,17 +1721,17 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncStartsWith, (JSGlobalObject* globalObjec
     bool isRegularExpression = isRegExp(vm, globalObject, a0);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (isRegularExpression)
-        return throwVMTypeError(globalObject, scope, "Argument to String.prototype.startsWith cannot be a RegExp");
+        return throwVMTypeError(globalObject, scope, "Argument to String.prototype.startsWith cannot be a RegExp"_s);
 
     String searchString = a0.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     JSValue positionArg = callFrame->argument(1);
-    unsigned start = 0;
+    unsigned length = stringToSearchIn.length();
+    unsigned start;
     if (positionArg.isInt32())
-        start = std::max(0, positionArg.asInt32());
+        start = std::min(clampTo<unsigned>(positionArg.asInt32()), length);
     else {
-        unsigned length = stringToSearchIn.length();
         start = clampAndTruncateToUnsigned(positionArg.toIntegerOrInfinity(globalObject), 0, length);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
@@ -1752,33 +1755,34 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncEndsWith, (JSGlobalObject* globalObject,
     bool isRegularExpression = isRegExp(vm, globalObject, a0);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (isRegularExpression)
-        return throwVMTypeError(globalObject, scope, "Argument to String.prototype.endsWith cannot be a RegExp");
+        return throwVMTypeError(globalObject, scope, "Argument to String.prototype.endsWith cannot be a RegExp"_s);
 
     String searchString = a0.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    unsigned length = stringToSearchIn.length();
-
     JSValue endPositionArg = callFrame->argument(1);
-    unsigned end = length;
-    if (endPositionArg.isInt32())
-        end = std::max(0, endPositionArg.asInt32());
-    else if (!endPositionArg.isUndefined()) {
+    unsigned length = stringToSearchIn.length();
+    unsigned end;
+    if (endPositionArg.isUndefined())
+        end = length;
+    else if (endPositionArg.isInt32())
+        end = std::min(clampTo<unsigned>(endPositionArg.asInt32()), length);
+    else {
         end = clampAndTruncateToUnsigned(endPositionArg.toIntegerOrInfinity(globalObject), 0, length);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
 
-    return JSValue::encode(jsBoolean(stringToSearchIn.hasInfixEndingAt(searchString, std::min(end, length))));
+    return JSValue::encode(jsBoolean(stringToSearchIn.hasInfixEndingAt(searchString, end)));
 }
 
 static EncodedJSValue stringIncludesImpl(JSGlobalObject* globalObject, VM& vm, String stringToSearchIn, String searchString, JSValue positionArg)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
-    unsigned start = 0;
+    auto length = stringToSearchIn.length();
+    unsigned start;
     if (positionArg.isInt32())
-        start = std::max(0, positionArg.asInt32());
+        start = std::min(clampTo<unsigned>(positionArg.asInt32()), length);
     else {
-        unsigned length = stringToSearchIn.length();
         start = clampAndTruncateToUnsigned(positionArg.toIntegerOrInfinity(globalObject), 0, length);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
@@ -1802,7 +1806,7 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncIncludes, (JSGlobalObject* globalObject,
     bool isRegularExpression = isRegExp(vm, globalObject, a0);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (isRegularExpression)
-        return throwVMTypeError(globalObject, scope, "Argument to String.prototype.includes cannot be a RegExp");
+        return throwVMTypeError(globalObject, scope, "Argument to String.prototype.includes cannot be a RegExp"_s);
 
     String searchString = a0.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1923,7 +1927,7 @@ static JSValue normalize(JSGlobalObject* globalObject, JSString* string, Normali
     unorm2_normalize(normalizer, characters, view.length(), buffer, normalizedStringLength, &status);
     ASSERT(U_SUCCESS(status));
 
-    RELEASE_AND_RETURN(scope, jsString(vm, WTFMove(result)));
+    RELEASE_AND_RETURN(scope, jsString(vm, result.releaseNonNull()));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringProtoFuncNormalize, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -1943,13 +1947,13 @@ JSC_DEFINE_HOST_FUNCTION(stringProtoFuncNormalize, (JSGlobalObject* globalObject
         String formString = formValue.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
 
-        if (formString == "NFC")
+        if (formString == "NFC"_s)
             form = NormalizationForm::NFC;
-        else if (formString == "NFD")
+        else if (formString == "NFD"_s)
             form = NormalizationForm::NFD;
-        else if (formString == "NFKC")
+        else if (formString == "NFKC"_s)
             form = NormalizationForm::NFKC;
-        else if (formString == "NFKD")
+        else if (formString == "NFKD"_s)
             form = NormalizationForm::NFKD;
         else
             return throwVMRangeError(globalObject, scope, "argument does not match any normalization form"_s);

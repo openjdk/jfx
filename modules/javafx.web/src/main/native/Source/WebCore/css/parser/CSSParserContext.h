@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,29 +54,14 @@ struct CSSParserContext {
     bool isContentOpaque { false };
     bool useSystemAppearance { false };
 
-    // Settings.
-    bool accentColorEnabled { false };
-    bool aspectRatioEnabled { false };
+    // Settings, excluding those affecting properties.
     bool colorContrastEnabled { false };
-    bool colorFilterEnabled { false };
     bool colorMixEnabled { false };
     bool constantPropertiesEnabled { false };
-    bool containmentEnabled { false };
-    bool counterStyleAtRulesEnabled { false };
     bool counterStyleAtRuleImageSymbolsEnabled { false };
     bool cssColor4 { false };
-    bool deferredCSSParserEnabled { false };
-    bool individualTransformPropertiesEnabled { false };
-#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
-    bool legacyOverflowScrollingTouchEnabled { false };
-#endif
-    bool overscrollBehaviorEnabled { false };
     bool relativeColorSyntaxEnabled { false };
-    bool scrollBehaviorEnabled { false };
     bool springTimingFunctionEnabled { false };
-#if ENABLE(TEXT_AUTOSIZING)
-    bool textAutosizingEnabled { false };
-#endif
 #if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
     bool transformStyleOptimized3DEnabled { false };
 #endif
@@ -84,21 +69,16 @@ struct CSSParserContext {
     bool focusVisibleEnabled { false };
     bool hasPseudoClassEnabled { false };
     bool cascadeLayersEnabled { false };
-    bool containerQueriesEnabled { false };
     bool overflowClipEnabled { false };
     bool gradientPremultipliedAlphaInterpolationEnabled { false };
     bool gradientInterpolationColorSpacesEnabled { false };
-    bool inputSecurityEnabled { false };
     bool subgridEnabled { false };
 
-    // RuntimeEnabledFeatures.
-#if ENABLE(ATTACHMENT_ELEMENT)
-    bool attachmentEnabled { false };
-#endif
+    // Settings, those affecting properties.
+    CSSPropertySettings propertySettings;
 
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
-    bool isPropertyRuntimeDisabled(CSSPropertyID) const;
     ResolvedURL completeURL(const String&) const;
 };
 

@@ -74,15 +74,15 @@ void SVGForeignObjectElement::parseAttribute(const QualifiedName& name, const At
 
 void SVGForeignObjectElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr) {
-        invalidateSVGPresentationalHintStyle();
-        return;
-    }
-
-    if (attrName == SVGNames::xAttr || attrName == SVGNames::yAttr) {
-        updateRelativeLengthsInformation();
-        if (auto renderer = this->renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        InstanceInvalidationGuard guard(*this);
+        if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr)
+            setPresentationalHintStyleIsDirty();
+        else {
+            ASSERT(attrName == SVGNames::xAttr || attrName == SVGNames::yAttr);
+            updateRelativeLengthsInformation();
+            updateSVGRendererForElementChange();
+        }
         return;
     }
 
@@ -113,6 +113,9 @@ bool SVGForeignObjectElement::rendererIsNeeded(const RenderStyle& style)
     // to use parentElement() here. If that changes, this method should be updated to use
     // parentOrShadowHostElement() instead.
     RefPtr ancestor = parentElement();
+    if (!ancestor)
+        return false;
+
     while (ancestor && ancestor->isSVGElement()) {
         if (ancestor->renderer() && ancestor->renderer()->isSVGHiddenContainer())
             return false;

@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+// Copyright (C) 2017-2022 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -22,6 +22,7 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 JSApplePayAMSUIRequest.cpp
+JSApplePayAutomaticReloadPaymentRequest.cpp
 JSApplePayCancelEvent.cpp
 JSApplePayContactField.cpp
 JSApplePayCouponCodeChangedEvent.cpp
@@ -30,7 +31,6 @@ JSApplePayCouponCodeUpdate.cpp
 JSApplePayDateComponents.cpp
 JSApplePayDateComponentsRange.cpp
 JSApplePayDetailsUpdateBase.cpp
-JSApplePayDetailsUpdateData.cpp
 JSApplePayError.cpp
 JSApplePayErrorCode.cpp
 JSApplePayErrorContactField.cpp
@@ -50,10 +50,13 @@ JSApplePayPaymentMethod.cpp
 JSApplePayPaymentMethodSelectedEvent.cpp
 JSApplePayPaymentMethodType.cpp
 JSApplePayPaymentMethodUpdate.cpp
+JSApplePayPaymentOrderDetails.cpp
 JSApplePayPaymentPass.cpp
 JSApplePayPaymentRequest.cpp
 JSApplePayPaymentTiming.cpp
+JSApplePayPaymentTokenContext.cpp
 JSApplePayRecurringPaymentDateUnit.cpp
+JSApplePayRecurringPaymentRequest.cpp
 JSApplePayRequest.cpp
 JSApplePayRequestBase.cpp
 JSApplePaySession.cpp
@@ -70,10 +73,16 @@ JSApplePayShippingMethod.cpp
 JSApplePayShippingMethodSelectedEvent.cpp
 JSApplePayShippingMethodUpdate.cpp
 JSApplePayValidateMerchantEvent.cpp
+JSSpeechSynthesisErrorCode.cpp
+JSSpeechSynthesisErrorEvent.cpp
+JSSpeechSynthesisErrorEventInit.cpp
+JSSpeechSynthesisEventInit.cpp
 Modules/airplay/WebMediaSessionManager.cpp
+Modules/applepay/ApplePayButtonSystemImage.mm
 Modules/applepay/ApplePayCouponCodeChangedEvent.cpp
 Modules/applepay/ApplePayCancelEvent.cpp
 Modules/applepay/ApplePayContactField.cpp
+Modules/applepay/ApplePayLogoSystemImage.mm
 Modules/applepay/ApplePayMerchantCapability.cpp
 Modules/applepay/ApplePayPaymentAuthorizationResult.cpp
 Modules/applepay/ApplePayPaymentAuthorizedEvent.cpp
@@ -108,10 +117,13 @@ Modules/model-element/scenekit/SceneKitModelLoader.mm
 Modules/model-element/scenekit/SceneKitModelLoaderClient.mm
 Modules/model-element/scenekit/SceneKitModelLoaderUSD.mm
 Modules/model-element/scenekit/SceneKitModelPlayer.mm
+Modules/notifications/NotificationDataCocoa.mm
 Modules/push-api/cocoa/PushCryptoCocoa.cpp
+Modules/plugins/YouTubePluginReplacement.cpp
 Modules/speech/cocoa/SpeechRecognizerCocoa.mm
 Modules/speech/cocoa/WebSpeechRecognizerTask.mm
 Modules/speech/cocoa/WebSpeechRecognizerTaskMock.mm
+Modules/system-preview/ARKitBadgeSystemImage.mm
 Modules/webdatabase/cocoa/DatabaseManagerCocoa.mm
 accessibility/ios/AXObjectCacheIOS.mm
 accessibility/ios/AccessibilityObjectIOS.mm
@@ -180,6 +192,7 @@ editing/mac/TextAlternativeWithRange.mm @no-unify
 editing/mac/TextUndoInsertionMarkupMac.mm
 fileapi/FileCocoa.mm
 history/mac/HistoryItemMac.mm
+html/shadow/YouTubeEmbedShadowElement.cpp
 inspector/mac/PageDebuggerMac.mm
 loader/archive/cf/LegacyWebArchive.cpp
 loader/archive/cf/LegacyWebArchiveMac.mm
@@ -224,6 +237,7 @@ page/scrolling/mac/ScrollingTreeFrameScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeMac.mm
 page/scrolling/mac/ScrollingTreeOverflowScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeScrollingNodeDelegateMac.mm
+platform/VideoFrame.mm
 platform/audio/AudioSession.cpp
 platform/audio/cocoa/AudioDestinationCocoa.cpp
 platform/audio/cocoa/AudioFileReaderCocoa.cpp
@@ -272,7 +286,6 @@ platform/cocoa/PlaybackSessionModelMediaElement.mm
 platform/cocoa/PowerSourceNotifier.mm
 platform/cocoa/RemoteCommandListenerCocoa.mm
 platform/cocoa/RuntimeApplicationChecksCocoa.mm
-platform/cocoa/SharedVideoFrameUtilities.mm @no-unify
 platform/cocoa/SearchPopupMenuCocoa.mm
 platform/cocoa/SharedBufferCocoa.mm
 platform/cocoa/SystemVersion.mm
@@ -377,13 +390,17 @@ platform/graphics/cg/SubimageCacheWithTimer.cpp
 platform/graphics/cg/TransformationMatrixCG.cpp
 platform/graphics/cg/UTIRegistry.cpp
 platform/graphics/cocoa/AudioTrackPrivateWebM.cpp
+platform/graphics/cocoa/CMUtilities.mm @no-unify
 platform/graphics/cocoa/ColorCocoa.mm
 platform/graphics/cocoa/FloatRectCocoa.mm
+platform/graphics/cocoa/FontCacheCocoa.mm
 platform/graphics/cocoa/FontCacheCoreText.cpp
 platform/graphics/cocoa/FontCascadeCocoa.cpp
 platform/graphics/cocoa/FontCocoa.cpp
+platform/graphics/cocoa/FontDatabase.cpp
 platform/graphics/cocoa/FontDescriptionCocoa.cpp
 platform/graphics/cocoa/FontFamilySpecificationCoreText.cpp
+platform/graphics/cocoa/FontFamilySpecificationCoreTextCache.cpp
 platform/graphics/cocoa/FontPlatformDataCocoa.mm
 platform/graphics/cocoa/GraphicsContextCocoa.mm
 platform/graphics/cocoa/GraphicsContextGLIOSurfaceSwapChain.cpp
@@ -393,8 +410,10 @@ platform/graphics/cocoa/IOSurfacePoolCocoa.mm
 platform/graphics/cocoa/IntRectCocoa.mm
 platform/graphics/cocoa/MediaEngineConfigurationFactoryCocoa.cpp
 platform/graphics/cocoa/MediaPlaybackTargetContext.mm
+platform/graphics/cocoa/MediaPlayerPrivateWebM.mm
 platform/graphics/cocoa/SourceBufferParser.cpp
 platform/graphics/cocoa/SourceBufferParserWebM.cpp
+platform/graphics/cocoa/SystemFontDatabaseCocoa.mm
 platform/graphics/cocoa/SystemFontDatabaseCoreText.cpp
 platform/graphics/cocoa/TextTrackRepresentationCocoa.mm
 platform/graphics/cocoa/VP9UtilitiesCocoa.mm @no-unify
@@ -554,6 +573,7 @@ platform/mediastream/mac/CGDisplayStreamScreenCaptureSource.mm
 platform/mediastream/mac/CoreAudioCaptureDevice.cpp
 platform/mediastream/mac/CoreAudioCaptureDeviceManager.cpp
 platform/mediastream/mac/CoreAudioCaptureSource.cpp
+platform/mediastream/mac/CoreAudioSharedUnit.cpp
 platform/mediastream/mac/DisplayCaptureManagerCocoa.cpp
 platform/mediastream/mac/MediaStreamTrackAudioSourceProviderCocoa.cpp
 platform/mediastream/mac/MockAudioSharedUnit.mm

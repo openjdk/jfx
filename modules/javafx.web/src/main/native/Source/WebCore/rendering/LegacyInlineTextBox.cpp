@@ -50,7 +50,6 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "StyledMarkedText.h"
 #include "Text.h"
@@ -74,7 +73,7 @@ struct SameSizeAsLegacyInlineTextBox : public LegacyInlineBox {
     unsigned short variables2;
 };
 
-COMPILE_ASSERT(sizeof(LegacyInlineTextBox) == sizeof(SameSizeAsLegacyInlineTextBox), LegacyInlineTextBox_should_stay_small);
+static_assert(sizeof(LegacyInlineTextBox) == sizeof(SameSizeAsLegacyInlineTextBox), "LegacyInlineTextBox should stay small");
 
 typedef HashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
 static LegacyInlineTextBoxOverflowMap* gTextBoxesWithOverflow;
@@ -337,47 +336,6 @@ bool LegacyInlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResu
     return false;
 }
 
-std::optional<bool> LegacyInlineTextBox::emphasisMarkExistsAndIsAbove(const RenderStyle& style) const
-{
-    // This function returns true if there are text emphasis marks and they are suppressed by ruby text.
-    if (style.textEmphasisMark() == TextEmphasisMark::None)
-        return std::nullopt;
-
-    const OptionSet<TextEmphasisPosition> horizontalMask { TextEmphasisPosition::Left, TextEmphasisPosition::Right };
-
-    auto emphasisPosition = style.textEmphasisPosition();
-    auto emphasisPositionHorizontalValue = emphasisPosition & horizontalMask;
-    ASSERT(!((emphasisPosition & TextEmphasisPosition::Over) && (emphasisPosition & TextEmphasisPosition::Under)));
-    ASSERT(emphasisPositionHorizontalValue != horizontalMask);
-
-    bool isAbove = false;
-    if (!emphasisPositionHorizontalValue)
-        isAbove = emphasisPosition.contains(TextEmphasisPosition::Over);
-    else if (style.isHorizontalWritingMode())
-        isAbove = emphasisPosition.contains(TextEmphasisPosition::Over);
-    else
-        isAbove = emphasisPositionHorizontalValue == TextEmphasisPosition::Right;
-
-    if ((style.isHorizontalWritingMode() && (emphasisPosition & TextEmphasisPosition::Under))
-        || (!style.isHorizontalWritingMode() && (emphasisPosition & TextEmphasisPosition::Left)))
-        return isAbove; // Ruby text is always over, so it cannot suppress emphasis marks under.
-
-    RenderBlock* containingBlock = renderer().containingBlock();
-    if (!containingBlock || !containingBlock->isRubyBase())
-        return isAbove; // This text is not inside a ruby base, so it does not have ruby text over it.
-
-    if (!is<RenderRubyRun>(*containingBlock->parent()))
-        return isAbove; // Cannot get the ruby text.
-
-    RenderRubyText* rubyText = downcast<RenderRubyRun>(*containingBlock->parent()).rubyText();
-
-    // The emphasis marks over are suppressed only if there is a ruby text box and it not empty.
-    if (rubyText && rubyText->hasLines())
-        return std::nullopt;
-
-    return isAbove;
-}
-
 void LegacyInlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit /*lineTop*/, LayoutUnit /*lineBottom*/)
 {
     if (isLineBreak() || !paintInfo.shouldPaintWithinRoot(renderer()) || renderer().style().visibility() != Visibility::Visible
@@ -397,7 +355,7 @@ void LegacyInlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOf
     if (logicalStart >= paintEnd || logicalStart + logicalExtent <= paintStart)
         return;
 
-    TextBoxPainter textBoxPainter(*this, paintInfo, paintOffset);
+    LegacyTextBoxPainter textBoxPainter(*this, paintInfo, paintOffset);
     textBoxPainter.paint();
 }
 
@@ -488,23 +446,23 @@ const RenderCombineText* LegacyInlineTextBox::combinedText() const
 
 ExpansionBehavior LegacyInlineTextBox::expansionBehavior() const
 {
-    ExpansionBehavior leftBehavior;
+    ExpansionBehavior behavior;
+
     if (forceLeftExpansion())
-        leftBehavior = ForceLeftExpansion;
+        behavior.left = ExpansionBehavior::Behavior::Force;
     else if (canHaveLeftExpansion())
-        leftBehavior = AllowLeftExpansion;
+        behavior.left = ExpansionBehavior::Behavior::Allow;
     else
-        leftBehavior = ForbidLeftExpansion;
+        behavior.left = ExpansionBehavior::Behavior::Forbid;
 
-    ExpansionBehavior rightBehavior;
     if (forceRightExpansion())
-        rightBehavior = ForceRightExpansion;
+        behavior.right = ExpansionBehavior::Behavior::Force;
     else if (expansion() && nextLeafOnLine() && !nextLeafOnLine()->isLineBreak())
-        rightBehavior = AllowRightExpansion;
+        behavior.right = ExpansionBehavior::Behavior::Allow;
     else
-        rightBehavior = ForbidRightExpansion;
+        behavior.right = ExpansionBehavior::Behavior::Forbid;
 
-    return leftBehavior | rightBehavior;
+    return behavior;
 }
 
 #if ENABLE(TREE_DEBUGGING)
@@ -528,8 +486,8 @@ void LegacyInlineTextBox::outputLineBox(TextStream& stream, bool mark, int depth
 
     String value = renderer().text();
     value = value.substring(start(), len());
-    value.replaceWithLiteral('\\', "\\\\");
-    value.replaceWithLiteral('\n', "\\n");
+    value = makeStringByReplacingAll(value, '\\', "\\\\"_s);
+    value = makeStringByReplacingAll(value, '\n', "\\n"_s);
     stream << boxName() << " " << FloatRect(x(), y(), width(), height()) << " (" << this << ") renderer->(" << &renderer() << ") run(" << start() << ", " << start() + len() << ") \"" << value.utf8().data() << "\"";
     stream.nextLine();
 }

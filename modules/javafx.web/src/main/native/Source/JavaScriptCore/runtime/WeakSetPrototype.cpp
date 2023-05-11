@@ -33,9 +33,9 @@
 
 namespace JSC {
 
-const ASCIILiteral WeakSetNonObjectValueError { "Attempted to add a non-object value to a WeakSet"_s };
+const ASCIILiteral WeakSetInvalidValueError { "WeakSet values must be objects or non-registered symbols"_s };
 
-const ClassInfo WeakSetPrototype::s_info = { "WeakSet", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakSetPrototype) };
+const ClassInfo WeakSetPrototype::s_info = { "WeakSet"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakSetPrototype) };
 
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakSetDelete);
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakSetHas);
@@ -43,11 +43,11 @@ static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakSetHas);
 void WeakSetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deleteKeyword, protoFuncWeakSetDelete, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, protoFuncWeakSetHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakSetHasIntrinsic);
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->add, protoFuncWeakSetAdd, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakSetAddIntrinsic);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deleteKeyword, protoFuncWeakSetDelete, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, protoFuncWeakSetHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, JSWeakSetHasIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->add, protoFuncWeakSetAdd, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, JSWeakSetAddIntrinsic);
 
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
@@ -62,7 +62,7 @@ ALWAYS_INLINE static JSWeakSet* getWeakSet(JSGlobalObject* globalObject, JSValue
         return nullptr;
     }
 
-    auto* set = jsDynamicCast<JSWeakSet*>(vm, asObject(value));
+    auto* set = jsDynamicCast<JSWeakSet*>(asObject(value));
     if (LIKELY(set))
         return set;
 
@@ -76,7 +76,9 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetDelete, (JSGlobalObject* globalObject, 
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    return JSValue::encode(jsBoolean(key.isObject() && set->remove(asObject(key))));
+    if (UNLIKELY(!key.isCell()))
+        return JSValue::encode(jsBoolean(false));
+    return JSValue::encode(jsBoolean(set->remove(key.asCell())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetHas, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -85,7 +87,9 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetHas, (JSGlobalObject* globalObject, Cal
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    return JSValue::encode(jsBoolean(key.isObject() && set->has(asObject(key))));
+    if (UNLIKELY(!key.isCell()))
+        return JSValue::encode(jsBoolean(false));
+    return JSValue::encode(jsBoolean(set->has(key.asCell())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetAdd, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -98,9 +102,9 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetAdd, (JSGlobalObject* globalObject, Cal
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
-    if (!key.isObject())
-        return JSValue::encode(throwTypeError(globalObject, scope, WeakSetNonObjectValueError));
-    set->add(vm, asObject(key));
+    if (UNLIKELY(!canBeHeldWeakly(key)))
+        return JSValue::encode(throwTypeError(globalObject, scope, WeakSetInvalidValueError));
+    set->add(vm, key.asCell());
     return JSValue::encode(callFrame->thisValue());
 }
 

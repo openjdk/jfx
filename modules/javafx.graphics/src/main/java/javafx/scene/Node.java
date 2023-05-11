@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,7 +119,6 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.PseudoClassState;
@@ -958,8 +957,6 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     if (oldParent != null) {
                         clearParentsFocusWithin(oldParent);
-                        oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
-                        oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -969,8 +966,6 @@ public abstract class Node implements EventTarget, Styleable {
                     computeDerivedDepthTest();
                     final Parent newParent = get();
                     if (newParent != null) {
-                        newParent.disabledProperty().addListener(parentDisabledChangedListener);
-                        newParent.treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -1008,10 +1003,6 @@ public abstract class Node implements EventTarget, Styleable {
         }
         return parent;
     }
-
-    private final InvalidationListener parentDisabledChangedListener = valueModel -> updateDisabled();
-
-    private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
     private SubScene subScene = null;
 
@@ -1918,6 +1909,10 @@ public abstract class Node implements EventTarget, Styleable {
                     pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, get());
                     updateCanReceiveFocus();
                     focusSetDirty(getScene());
+
+                    if (Node.this instanceof Parent parent) {
+                        parent.getChildren().forEach(Node::updateDisabled);
+                    }
                 }
 
                 @Override
@@ -2597,16 +2592,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Creates a new instance of Node.
      */
-    protected Node() {
-        //if (PerformanceTracker.isLoggingEnabled()) {
-        //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
-        //}
-        updateTreeVisible(false);
-        //if (PerformanceTracker.isLoggingEnabled()) {
-        //    PerformanceTracker.logEvent("Node.postinit " +
-        //                                "for [{this}, id=\"{id}\"] finished");
-        //}
-    }
+    protected Node() {}
 
     /* *************************************************************************
      *                                                                         *
@@ -8189,13 +8175,13 @@ public abstract class Node implements EventTarget, Styleable {
      * If the current node has the focusWithin bit, we also need to clear the focusWithin bits of this
      * node's parents. Note that a scene graph can have more than a single focused node, for example when
      * a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
-     * focus, we need to stop clearing the focusWithin bits if we encounter a parent node that is focused.
+     * focus, we need to adjust the focus-within count on all parents of the node.
      */
     private void clearParentsFocusWithin(Node oldParent) {
         if (oldParent != null && focusWithin.get()) {
             Node node = oldParent;
-            while (node != null && !node.focused.get()) {
-                node.focusWithin.set(false);
+            while (node != null) {
+                node.focusWithin.adjust(-focusWithin.count);
                 node = node.getParent();
             }
 
@@ -8237,11 +8223,13 @@ public abstract class Node implements EventTarget, Styleable {
             if (get() != value) {
                 super.set(value);
 
+                int change = value ? 1 : -1;
                 Node node = Node.this;
+
                 do {
-                    node.focusWithin.set(value);
+                    node.focusWithin.adjust(change);
                     node = node.getParent();
-                } while (node != null && !node.focused.get());
+                } while (node != null);
             }
         }
     };
@@ -8295,7 +8283,11 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue false
      * @since 19
      */
-    private final FocusPropertyBase focusWithin = new FocusPropertyBase() {
+    private final FocusWithinProperty focusWithin = new FocusWithinProperty();
+
+    private class FocusWithinProperty extends FocusPropertyBase {
+        int count;
+
         @Override
         protected PseudoClass getPseudoClass() {
             return FOCUS_WITHIN_PSEUDOCLASS_STATE;
@@ -8304,6 +8296,19 @@ public abstract class Node implements EventTarget, Styleable {
         @Override
         public String getName() {
             return "focusWithin";
+        }
+
+        /**
+         * Adjusts the number of focused nodes within this node.
+         */
+        void adjust(int change) {
+            count += change;
+
+            if (count == 1) {
+                set(true);
+            } else if (count == 0) {
+                set(false);
+            }
         }
     };
 
@@ -8544,8 +8549,8 @@ public abstract class Node implements EventTarget, Styleable {
         setTreeVisible(isTreeVisible);
     }
 
-    private boolean treeVisible;
-    private TreeVisiblePropertyReadOnly treeVisibleRO;
+    private boolean treeVisible = true;
+    private TreeVisibleProperty treeVisibleProperty;
 
     final void setTreeVisible(boolean value) {
         if (treeVisible != value) {
@@ -8558,9 +8563,15 @@ public abstract class Node implements EventTarget, Styleable {
             if (treeVisible && !isDirtyEmpty()) {
                 addToSceneDirtyList();
             }
-            ((TreeVisiblePropertyReadOnly) treeVisibleProperty()).invalidate();
-            if (Node.this instanceof SubScene) {
-                Node subSceneRoot = ((SubScene)Node.this).getRoot();
+            if (treeVisibleProperty != null) {
+                treeVisibleProperty.invalidate();
+            }
+            if (Node.this instanceof Parent parent) {
+                for (Node child : parent.getChildren()) {
+                    child.updateTreeVisible(true);
+                }
+            } else if (Node.this instanceof SubScene subScene) {
+                Node subSceneRoot = subScene.getRoot();
                 if (subSceneRoot != null) {
                     // SubScene.getRoot() is only null if it's constructor
                     // has not finished.
@@ -8574,42 +8585,31 @@ public abstract class Node implements EventTarget, Styleable {
         return treeVisibleProperty().get();
     }
 
-    final BooleanExpression treeVisibleProperty() {
-        if (treeVisibleRO == null) {
-            treeVisibleRO = new TreeVisiblePropertyReadOnly();
+    final ReadOnlyBooleanProperty treeVisibleProperty() {
+        if (treeVisibleProperty == null) {
+            treeVisibleProperty = new TreeVisibleProperty();
         }
-        return treeVisibleRO;
+        return treeVisibleProperty;
     }
 
-    class TreeVisiblePropertyReadOnly extends BooleanExpression {
+    class TreeVisibleProperty extends ReadOnlyBooleanPropertyBase {
 
-        private ExpressionHelper<Boolean> helper;
         private boolean valid;
 
         @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+        public Object getBean() {
+            return Node.this;
         }
 
         @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
+        public String getName() {
+            return "treeVisible";
         }
 
         protected void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 
@@ -9741,37 +9741,15 @@ public abstract class Node implements EventTarget, Styleable {
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
 
     private static abstract class LazyTransformProperty
-            extends ReadOnlyObjectProperty<Transform> {
+            extends ReadOnlyObjectPropertyBase<Transform> {
 
         protected static final int VALID = 0;
         protected static final int INVALID = 1;
         protected static final int VALIDITY_UNKNOWN = 2;
         protected int valid = INVALID;
 
-        private ExpressionHelper<Transform> helper;
-
         private Transform transform;
         private boolean canReuse = false;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Transform> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Transform> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         protected Transform getInternalValue() {
             if (valid == INVALID ||
@@ -9800,7 +9778,7 @@ public abstract class Node implements EventTarget, Styleable {
         public void invalidate() {
             if (valid != INVALID) {
                 valid = INVALID;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 
@@ -9810,31 +9788,10 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private static abstract class LazyBoundsProperty
-            extends ReadOnlyObjectProperty<Bounds> {
-        private ExpressionHelper<Bounds> helper;
+            extends ReadOnlyObjectPropertyBase<Bounds> {
         private boolean valid;
 
         private Bounds bounds;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Bounds> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Bounds> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         @Override
         public Bounds get() {
@@ -9849,7 +9806,7 @@ public abstract class Node implements EventTarget, Styleable {
         public void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 

@@ -32,15 +32,10 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
-#include "HTMLAudioElement.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLElement.h"
-#include "HTMLFrameElementBase.h"
-#include "HTMLImageElement.h"
-#include "HTMLLinkElement.h"
 #include "HTMLNames.h"
-#include "HTMLScriptElement.h"
-#include "HTMLStyleElement.h"
 #include "JSAttr.h"
 #include "JSCDATASection.h"
 #include "JSComment.h"
@@ -64,52 +59,19 @@
 #include "SVGElement.h"
 #include "ShadowRoot.h"
 #include "GCReachableRef.h"
-#include "StyleSheet.h"
-#include "StyledElement.h"
 #include "Text.h"
+#include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
 
 using namespace JSC;
 using namespace HTMLNames;
 
-static inline bool isReachableFromDOM(Node* node, AbstractSlotVisitor& visitor, const char** reason)
+bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
 {
-    if (!node->isConnected()) {
-        if (is<Element>(*node)) {
-            auto& element = downcast<Element>(*node);
-
-            // If a wrapper is the last reference to an image element
-            // that is loading but not in the document, the wrapper is observable
-            // because it is the only thing keeping the image element alive, and if
-            // the element is destroyed, its load event will not fire.
-            // FIXME: The DOM should manage this issue without the help of JavaScript wrappers.
-            if (is<HTMLImageElement>(element)) {
-                if (downcast<HTMLImageElement>(element).hasPendingActivity()) {
-                    if (UNLIKELY(reason))
-                        *reason = "Image element with pending activity";
-                    return true;
-                }
-            }
-#if ENABLE(VIDEO)
-            else if (is<HTMLAudioElement>(element)) {
-                if (!downcast<HTMLAudioElement>(element).paused()) {
-                    if (UNLIKELY(reason))
-                        *reason = "Audio element which is not paused";
-                    return true;
-                }
-            }
-#endif
-        }
-
-        // If a node is firing event listeners, its wrapper is observable because
-        // its wrapper is responsible for marking those event listeners.
-        if (node->isFiringEventListeners()) {
-            if (UNLIKELY(reason))
-                *reason = "Node which is firing event listeners";
-            return true;
-        }
-        if (GCReachableRefMap::contains(*node)) {
+    auto& node = jsCast<JSNode*>(handle.slot()->asCell())->wrapped();
+    if (!node.isConnected()) {
+        if (GCReachableRefMap::contains(node)) {
             if (UNLIKELY(reason))
                 *reason = "Node is scheduled to be used in an async script invocation)";
             return true;
@@ -119,18 +81,12 @@ static inline bool isReachableFromDOM(Node* node, AbstractSlotVisitor& visitor, 
     if (UNLIKELY(reason))
         *reason = "Connected node";
 
-    return visitor.containsOpaqueRoot(root(node));
-}
-
-bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
-{
-    JSNode* jsNode = jsCast<JSNode*>(handle.slot()->asCell());
-    return isReachableFromDOM(&jsNode->wrapped(), visitor, reason);
+    return containsWebCoreOpaqueRoot(visitor, node);
 }
 
 JSScope* JSNode::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObject, JSScope* node) const
 {
-    if (inherits<JSHTMLElement>(lexicalGlobalObject->vm()))
+    if (inherits<JSHTMLElement>())
         return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(lexicalGlobalObject, node);
     return node;
 }
@@ -138,7 +94,7 @@ JSScope* JSNode::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObject, JSSc
 template<typename Visitor>
 void JSNode::visitAdditionalChildren(Visitor& visitor)
 {
-    visitor.addOpaqueRoot(root(wrapped()));
+    addWebCoreOpaqueRoot(visitor, wrapped());
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSNode);

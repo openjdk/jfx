@@ -50,7 +50,7 @@ static ExceptionOr<bool> canWriteHeader(const String& name, const String& value,
         return Exception { TypeError, "Headers object's guard is 'immutable'"_s };
     if (guard == FetchHeaders::Guard::Request && isForbiddenHeaderName(name))
         return false;
-    if (guard == FetchHeaders::Guard::RequestNoCors && !combinedValue.isEmpty() && !isSimpleHeader(name, combinedValue))
+    if (guard == FetchHeaders::Guard::RequestNoCors && !isSimpleHeader(name, combinedValue))
         return false;
     if (guard == FetchHeaders::Guard::Response && isForbiddenResponseHeaderName(name))
         return false;
@@ -87,7 +87,7 @@ static ExceptionOr<void> appendToHeaderMap(const HTTPHeaderMap::HTTPHeaderMapCon
     if (header.keyAsHTTPHeaderName)
         headers.add(header.keyAsHTTPHeaderName.value(), header.value);
     else
-        headers.add(header.key, header.value);
+        headers.addUncommonHeader(header.key, header.value);
 
     if (guard == FetchHeaders::Guard::RequestNoCors)
         removePrivilegedNoCORSRequestHeaders(headers);
@@ -102,7 +102,7 @@ static ExceptionOr<void> fillHeaderMap(HTTPHeaderMap& headers, const FetchHeader
         auto& sequence = std::get<Vector<Vector<String>>>(headersInit);
         for (auto& header : sequence) {
             if (header.size() != 2)
-                return Exception { TypeError, "Header sub-sequence must contain exactly two items" };
+                return Exception { TypeError, "Header sub-sequence must contain exactly two items"_s };
             auto result = appendToHeaderMap(header[0], header[1], headers, guard);
             if (result.hasException())
                 return result.releaseException();
@@ -218,7 +218,7 @@ void FetchHeaders::filterAndFill(const HTTPHeaderMap& headers, Guard guard)
         if (header.keyAsHTTPHeaderName)
             m_headers.add(header.keyAsHTTPHeaderName.value(), header.value);
         else
-            m_headers.add(header.key, header.value);
+            m_headers.addUncommonHeader(header.key, header.value);
     }
 }
 

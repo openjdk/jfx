@@ -50,21 +50,25 @@ public:
         size_t start { 0 };
         size_t end { 0 };
     };
+    struct PartialContent {
+        PartialContent(size_t, std::optional<InlineLayoutUnit>);
+
+        size_t length { 0 };
+        std::optional<InlineLayoutUnit> width { };
+    };
     struct PreviousLine {
         InlineItemRange range;
         bool endsWithLineBreak { false };
         TextDirection inlineBaseDirection { TextDirection::LTR };
-        struct OverflowContent {
-            size_t partialContentLength { 0 };
-            std::optional<InlineLayoutUnit> width { };
-        };
-        std::optional<OverflowContent> overflowContent { };
+        std::optional<PartialContent> partialOverflowingContent { };
+        // Content width measured during line breaking (avoid double-measuring).
+        std::optional<InlineLayoutUnit> trailingOverflowingContentWidth { };
     };
     using FloatList = Vector<const Box*>;
     struct LineContent {
         InlineItemRange inlineItemRange;
-        size_t partialTrailingContentLength { 0 };
-        std::optional<InlineLayoutUnit> overflowLogicalWidth;
+        std::optional<PartialContent> partialOverflowingContent { };
+        std::optional<InlineLayoutUnit> trailingOverflowingContentWidth;
         const FloatList& floats;
         bool hasIntrusiveFloat { false };
         InlineLayoutUnit lineMarginStart { 0 };
@@ -84,6 +88,7 @@ public:
     struct IntrinsicContent {
         InlineItemRange inlineItemRange;
         InlineLayoutUnit logicalWidth { 0 };
+        std::optional<PartialContent> partialOverflowingContent { };
         const FloatList& floats;
     };
     IntrinsicContent computedIntrinsicWidth(const InlineItemRange&, const std::optional<PreviousLine>&);
@@ -102,7 +107,7 @@ private:
         size_t partialTrailingContentLength { 0 };
         std::optional<InlineLayoutUnit> overflowLogicalWidth { };
     };
-    UsedConstraints initialConstraintsForLine(const InlineRect& initialLineLogicalRect, bool isFirstLine) const;
+    UsedConstraints initialConstraintsForLine(const InlineRect& initialLineLogicalRect, std::optional<bool> previousLineEndsWithLineBreak) const;
     std::optional<HorizontalConstraints> floatConstraints(const InlineRect& lineLogicalRect) const;
 
     void handleFloatContent(const InlineItem&);
@@ -154,6 +159,12 @@ private:
     unsigned m_successiveHyphenatedLineCount { 0 };
     bool m_contentIsConstrainedByFloat { false };
 };
+
+inline LineBuilder::PartialContent::PartialContent(size_t length, std::optional<InlineLayoutUnit> width)
+    : length(length)
+    , width(width)
+{
+}
 
 }
 }

@@ -38,8 +38,6 @@
 #include "LinkRelAttribute.h"
 #include "ReferrerPolicy.h"
 
-#include <wtf/WeakPtr.h>
-
 namespace WebCore {
 
 class Document;
@@ -54,10 +52,11 @@ struct LinkLoadParameters {
     String crossOrigin;
     String imageSrcSet;
     String imageSizes;
+    String nonce;
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
 };
 
-class LinkLoader : private CachedResourceClient, public CanMakeWeakPtr<LinkLoader> {
+class LinkLoader : public CachedResourceClient {
 public:
     explicit LinkLoader(LinkLoaderClient&);
     virtual ~LinkLoader();

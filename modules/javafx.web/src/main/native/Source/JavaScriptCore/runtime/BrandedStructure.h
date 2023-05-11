@@ -53,7 +53,7 @@ public:
     ALWAYS_INLINE bool checkBrand(Symbol* brand)
     {
         UniquedStringImpl* brandUid = &brand->uid();
-        for (BrandedStructure* currentStructure = this; currentStructure; currentStructure = currentStructure->m_parentBrand.get()) {
+        for (BrandedStructure* currentStructure = this; currentStructure; currentStructure = jsCast<BrandedStructure*>(currentStructure->m_parentBrand.get())) {
             if (brandUid == currentStructure->m_brand)
                 return true;
         }
@@ -68,8 +68,8 @@ public:
     }
 
 private:
-    BrandedStructure(VM&, Structure*, UniquedStringImpl* brand, DeferredStructureTransitionWatchpointFire*);
-    BrandedStructure(VM&, BrandedStructure*, DeferredStructureTransitionWatchpointFire*);
+    BrandedStructure(VM&, Structure*, UniquedStringImpl* brand);
+    BrandedStructure(VM&, BrandedStructure*);
 
     static Structure* create(VM&, Structure*, UniquedStringImpl* brand, DeferredStructureTransitionWatchpointFire* = nullptr);
 
@@ -78,8 +78,8 @@ private:
         m_brand = nullptr;
     }
 
-    RefPtr<UniquedStringImpl> m_brand;
-    WriteBarrier<BrandedStructure> m_parentBrand;
+    CompactRefPtr<UniquedStringImpl> m_brand;
+    WriteBarrierStructureID m_parentBrand;
 
     friend class Structure;
 };

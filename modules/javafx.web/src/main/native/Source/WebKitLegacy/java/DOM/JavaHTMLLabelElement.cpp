@@ -61,7 +61,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_getHtmlFo
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_setHtmlForImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::forAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::forAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_getControlImpl(JNIEnv* env, jclass, jlong peer)
@@ -79,7 +79,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_getAccess
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLabelElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString {String(env, value)});
 }
 
 }

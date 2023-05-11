@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -194,6 +194,9 @@ public class PaginationSkin extends SkinBase<Pagination> {
         nextStackPane.getStyleClass().add("page");
         nextStackPane.setVisible(false);
 
+        // sets the current page index property in control to the same value (no-op)
+        resetIndexes(true);
+
         this.navigation = new NavigationControl();
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
@@ -235,7 +238,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
     @Override
     public void install() {
         getSkinnable().setClip(clipRect);
-        resetIndexes(true);
     }
 
 

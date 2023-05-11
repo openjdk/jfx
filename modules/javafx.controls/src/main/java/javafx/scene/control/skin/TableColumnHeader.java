@@ -671,11 +671,12 @@ public class TableColumnHeader extends Region {
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 tableRow.applyCss();
                 maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
-                tableSkin.getChildren().remove(cell);
             }
         }
+        tableSkin.getChildren().remove(tableRow);
 
-        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        tableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
         // RT-36855 - take into account the column header text / graphic widths.
@@ -712,6 +713,8 @@ public class TableColumnHeader extends Region {
     private <T> TableRow<T> createMeasureRow(TableView<T> tv, TableViewSkinBase tableSkin,
             Callback<TableView<T>, TableRow<T>> rowFactory) {
         TableRow<T> tableRow = rowFactory != null ? rowFactory.call(tv) : new TableRow<>();
+        tableRow.updateTableView(tv);
+
         tableSkin.getChildren().add(tableRow);
         tableRow.applyCss();
         if (!(tableRow.getSkin() instanceof SkinBase<?>)) {
@@ -766,11 +769,12 @@ public class TableColumnHeader extends Region {
                 double w = cell.prefWidth(-1);
 
                 maxWidth = Math.max(maxWidth, w);
-                tableSkin.getChildren().remove(cell);
             }
         }
+        tableSkin.getChildren().remove(treeTableRow);
 
-        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        treeTableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
         // RT-36855 - take into account the column header text / graphic widths.
@@ -808,6 +812,8 @@ public class TableColumnHeader extends Region {
     private <T> TreeTableRow<T> createMeasureRow(TreeTableView<T> ttv, TableViewSkinBase tableSkin,
             Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory) {
         TreeTableRow<T> treeTableRow = rowFactory != null ? rowFactory.call(ttv) : new TreeTableRow<>();
+        treeTableRow.updateTreeTableView(ttv);
+
         tableSkin.getChildren().add(treeTableRow);
         treeTableRow.applyCss();
         if (!(treeTableRow.getSkin() instanceof SkinBase<?>)) {

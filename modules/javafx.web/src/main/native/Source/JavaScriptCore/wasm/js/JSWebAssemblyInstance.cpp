@@ -40,7 +40,7 @@
 
 namespace JSC {
 
-const ClassInfo JSWebAssemblyInstance::s_info = { "WebAssembly.Instance", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyInstance) };
+const ClassInfo JSWebAssemblyInstance::s_info = { "WebAssembly.Instance"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyInstance) };
 
 Structure* JSWebAssemblyInstance::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
@@ -62,7 +62,7 @@ JSWebAssemblyInstance::JSWebAssemblyInstance(VM& vm, Structure* structure, Ref<W
 void JSWebAssemblyInstance::finishCreation(VM& vm, JSWebAssemblyModule* module, WebAssemblyModuleRecord* moduleRecord)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     m_module.set(vm, this, module);
     m_moduleRecord.set(vm, this, moduleRecord);
@@ -155,7 +155,7 @@ void JSWebAssemblyInstance::finalizeCreation(VM& vm, JSGlobalObject* globalObjec
 
 Identifier JSWebAssemblyInstance::createPrivateModuleKey()
 {
-    return Identifier::fromUid(PrivateName(PrivateName::Description, "WebAssemblyInstance"));
+    return Identifier::fromUid(PrivateName(PrivateName::Description, "WebAssemblyInstance"_s));
 }
 
 JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* globalObject, const Identifier& moduleKey, JSWebAssemblyModule* jsModule, JSObject* importObject, Structure* instanceStructure, Ref<Wasm::Module>&& module, Wasm::CreationMode creationMode)
@@ -176,13 +176,8 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
     WebAssemblyModuleRecord* moduleRecord = WebAssemblyModuleRecord::create(globalObject, vm, globalObject->webAssemblyModuleRecordStructure(), moduleKey, moduleInformation);
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
-    auto storeTopCallFrame = [&vm] (void* topCallFrame) {
-        vm.topCallFrame = bitwise_cast<CallFrame*>(topCallFrame);
-    };
-
     // FIXME: These objects could be pretty big we should try to throw OOM here.
-    auto* jsInstance = new (NotNull, allocateCell<JSWebAssemblyInstance>(vm)) JSWebAssemblyInstance(vm, instanceStructure,
-        Wasm::Instance::create(&vm.wasmContext, WTFMove(module), &vm.topEntryFrame, vm.addressOfSoftStackLimit(), WTFMove(storeTopCallFrame)));
+    auto* jsInstance = new (NotNull, allocateCell<JSWebAssemblyInstance>(vm)) JSWebAssemblyInstance(vm, instanceStructure, Wasm::Instance::create(vm, WTFMove(module)));
     jsInstance->finishCreation(vm, jsModule, moduleRecord);
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
@@ -201,7 +196,7 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
             WebAssemblyModuleRecord::ImportEntryType::Single,
             moduleName,
             fieldName,
-            Identifier::fromUid(PrivateName(PrivateName::Description, "WebAssemblyImportName")),
+            Identifier::fromUid(PrivateName(PrivateName::Description, "WebAssemblyImportName"_s)),
         });
     }
     ASSERT(moduleRecord->importEntries().size() == moduleInformation.imports.size());
@@ -212,9 +207,7 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
         auto* jsMemory = JSWebAssemblyMemory::tryCreate(globalObject, vm, globalObject->webAssemblyMemoryStructure());
         RETURN_IF_EXCEPTION(throwScope, nullptr);
 
-        RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(moduleInformation.memory.initial(), moduleInformation.memory.maximum(), moduleInformation.memory.isShared() ? Wasm::MemorySharingMode::Shared: Wasm::MemorySharingMode::Default,
-            [&vm](Wasm::Memory::NotifyPressure) { vm.heap.collectAsync(CollectionScope::Full); },
-            [&vm](Wasm::Memory::SyncTryToReclaim) { vm.heap.collectSync(CollectionScope::Full); },
+        RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(vm, moduleInformation.memory.initial(), moduleInformation.memory.maximum(), moduleInformation.memory.isShared() ? Wasm::MemorySharingMode::Shared: Wasm::MemorySharingMode::Default,
             [&vm, jsMemory](Wasm::Memory::GrowSuccess, Wasm::PageCount oldPageCount, Wasm::PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); }
         );
         if (!memory)

@@ -95,9 +95,20 @@ static const char* toString(MemoryUsagePolicy policy)
 }
 #endif
 
+static size_t thresholdForMemoryKillOfActiveProcess(unsigned tabCount)
+{
+#if CPU(ADDRESS64)
+    size_t baseThreshold = ramSize() > 16 * GB ? 15 * GB : 7 * GB;
+    return baseThreshold + tabCount * GB;
+#else
+    UNUSED_PARAM(tabCount);
+    return std::min(3 * GB, static_cast<size_t>(ramSize() * 0.9));
+#endif
+}
+
 static size_t thresholdForMemoryKillOfInactiveProcess(unsigned tabCount)
 {
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(ADDRESS64)
     size_t baseThreshold = 3 * GB + tabCount * GB;
 #else
     size_t baseThreshold = tabCount > 1 ? 3 * GB : 2 * GB;
@@ -121,7 +132,7 @@ std::optional<size_t> MemoryPressureHandler::thresholdForMemoryKill()
     case WebsamProcessState::Inactive:
         return thresholdForMemoryKillOfInactiveProcess(m_pageCount);
     case WebsamProcessState::Active:
-        break;
+        return thresholdForMemoryKillOfActiveProcess(m_pageCount);
     }
     return std::nullopt;
 }

@@ -95,9 +95,9 @@ jboolean gtk_verbose = JNI_FALSE;
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _initGTK
- * Signature: (IZ)I
+ * Signature: (IZ)V
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
   (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale)
 {
     (void) clazz;
@@ -112,7 +112,20 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
-    return JNI_TRUE;
+    // Major version is checked before loading
+    if (version == 3
+        && gtk_check_version(version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
+        char message[100];
+        snprintf(message, sizeof(message),
+                 "Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.",
+                 version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
+                 gtk_major_version, gtk_minor_version, gtk_micro_version);
+
+        jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
+        env->ThrowNew(uoe, message);
+
+        return;
+    }
 }
 
 /*
@@ -440,8 +453,9 @@ static void process_events(GdkEvent* event, gpointer data)
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:
-                    ctx->process_property_notify(&event->property);
+                    // let gtk handle it first to prevent a glitch
                     gtk_main_do_event(event);
+                    ctx->process_property_notify(&event->property);
                     break;
                 case GDK_CONFIGURE:
                     ctx->process_configure(&event->configure);
@@ -492,7 +506,6 @@ static void process_events(GdkEvent* event, gpointer data)
                     process_dnd_target(ctx, &event->dnd);
                     break;
                 case GDK_MAP:
-                    ctx->process_map();
                     // fall-through
                 case GDK_UNMAP:
                 case GDK_CLIENT_EVENT:

@@ -33,6 +33,7 @@
 #if ENABLE(MHTML)
 #include "MHTMLParser.h"
 
+#include "CommonAtomStrings.h"
 #include "MHTMLArchive.h"
 #include "MIMEHeader.h"
 #include "MIMETypeRegistry.h"
@@ -89,7 +90,7 @@ RefPtr<MHTMLArchive> MHTMLParser::parseArchiveWithHeader(MIMEHeader* header)
             LOG_ERROR("Failed to parse MHTML, invalid MIME header.");
             return nullptr;
         }
-        if (resourceHeader->contentType() == "multipart/alternative") {
+        if (resourceHeader->contentType() == "multipart/alternative"_s) {
             // Ignore IE nesting which makes little sense (IE seems to nest only some of the frames).
             RefPtr<MHTMLArchive> subframeArchive = parseArchiveWithHeader(resourceHeader.get());
             if (!subframeArchive) {
@@ -119,7 +120,7 @@ RefPtr<MHTMLArchive> MHTMLParser::parseArchiveWithHeader(MIMEHeader* header)
 void MHTMLParser::addResourceToArchive(ArchiveResource* resource, MHTMLArchive* archive)
 {
     const String& mimeType = resource->mimeType();
-    if (!MIMETypeRegistry::isSupportedNonImageMIMEType(mimeType) || MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType) || mimeType == "text/css") {
+    if (!MIMETypeRegistry::isSupportedNonImageMIMEType(mimeType) || MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType) || mimeType == cssContentTypeAtom()) {
         m_resources.append(resource);
         return;
     }
@@ -219,7 +220,7 @@ RefPtr<ArchiveResource> MHTMLParser::parseNextPart(const MIMEHeader& mimeHeader,
     // FIXME: the URL in the MIME header could be relative, we should resolve it if it is.
     // The specs mentions 5 ways to resolve a URL: http://tools.ietf.org/html/rfc2557#section-5
     // IE and Firefox (UNMht) seem to generate only absolute URLs.
-    URL location = URL(URL(), mimeHeader.contentLocation());
+    URL location { mimeHeader.contentLocation() };
     return ArchiveResource::create(WTFMove(contentBuffer), location, mimeHeader.contentType(), mimeHeader.charset(), String());
 }
 

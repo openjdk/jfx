@@ -608,7 +608,7 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigne
         }
     } else {
         if (mouseOverNode) {
-            setStatusbarText("");
+            setStatusbarText(""_s);
             mouseOverNode = 0;
         }
     }

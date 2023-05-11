@@ -118,8 +118,8 @@ public:
     FloatRect roundToDevicePixels(const FloatRect& frect, RoundingMode) override;
 
     bool supportsTransparencyLayers() const override;
-    void beginPlatformTransparencyLayer(float opacity);
-    void endPlatformTransparencyLayer();
+    void beginTransparencyLayer(float opacity) override;
+    void endTransparencyLayer() override;
 
     void translate(float x, float y) override;
     void rotate(float radians) override;
@@ -147,7 +147,7 @@ public:
 
     PlatformGraphicsContext* m_platformContext;
 
-    void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) override;
+    void didUpdateState(GraphicsContextState&) override;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) override;
     void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect,
                             const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;

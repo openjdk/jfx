@@ -39,6 +39,7 @@ class MediaQueryEvaluator;
 
 namespace Style {
 
+enum class CascadeLevel : uint8_t;
 class InspectorCSSOMWrappers;
 class Resolver;
 
@@ -58,6 +59,8 @@ public:
     RuleSet* userAgentMediaQueryStyle() const;
     RuleSet& authorStyle() const { return *m_authorStyle; }
     RuleSet* userStyle() const;
+    RuleSet* styleForCascadeLevel(CascadeLevel);
+
     const RuleFeatureSet& features() const;
     RuleSet* sibling() const { return m_siblingRuleSet.get(); }
     RuleSet* uncommonAttribute() const { return m_uncommonAttributeRuleSet.get(); }
@@ -79,12 +82,15 @@ public:
     void resetUserAgentMediaQueryStyle();
 
     bool hasViewportDependentMediaQueries() const;
+    bool hasContainerQueries() const;
 
     std::optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MediaQueryEvaluator&);
 
     RuleFeatureSet& mutableFeatures();
 
     bool& isInvalidatingStyleWithRuleSets() { return m_isInvalidatingStyleWithRuleSets; }
+
+    bool hasMatchingUserOrAuthorStyle(const Function<bool(RuleSet&)>&);
 
 private:
     void collectFeatures() const;

@@ -57,7 +57,7 @@ public:
     ExceptionOr<void> replaceChild(Node& newChild, Node& oldChild);
     WEBCORE_EXPORT ExceptionOr<void> removeChild(Node& child);
     WEBCORE_EXPORT ExceptionOr<void> appendChild(Node& newChild);
-    void stringReplaceAll(const String&);
+    void stringReplaceAll(String&&);
     void replaceAll(Node*);
 
     ContainerNode& rootNode() const { return downcast<ContainerNode>(Node::rootNode()); }
@@ -140,7 +140,7 @@ public:
 
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagName(const AtomString&);
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByTagNameNS(const AtomString& namespaceURI, const AtomString& localName);
-    WEBCORE_EXPORT Ref<NodeList> getElementsByName(const String& elementName);
+    WEBCORE_EXPORT Ref<NodeList> getElementsByName(const AtomString& elementName);
     WEBCORE_EXPORT Ref<HTMLCollection> getElementsByClassName(const AtomString& classNames);
     Ref<RadioNodeList> radioNodeList(const AtomString&);
 
@@ -170,7 +170,7 @@ protected:
 private:
     void executePreparedChildrenRemoval();
     enum class DeferChildrenChanged { Yes, No };
-    NodeVector removeAllChildrenWithScriptAssertion(ChildChange::Source, DeferChildrenChanged = DeferChildrenChanged::No);
+    void removeAllChildrenWithScriptAssertion(ChildChange::Source, NodeVector& children, DeferChildrenChanged = DeferChildrenChanged::No);
     bool removeNodeWithScriptAssertion(Node&, ChildChange::Source);
     ExceptionOr<void> removeSelfOrChildNodesForInsertion(Node&, NodeVector&);
 
@@ -223,12 +223,10 @@ inline Node& Node::rootNode() const
     return traverseToRootNode();
 }
 
-inline NodeVector collectChildNodes(Node& node)
+inline void collectChildNodes(Node& node, NodeVector& children)
 {
-    NodeVector children;
     for (Node* child = node.firstChild(); child; child = child->nextSibling())
         children.append(*child);
-    return children;
 }
 
 class ChildNodesLazySnapshot {

@@ -1654,12 +1654,12 @@ public abstract class Parent extends Node {
         }
     }
 
-    private final int LEFT_INVALID = 1;
-    private final int TOP_INVALID = 1 << 1;
-    private final int NEAR_INVALID = 1 << 2;
-    private final int RIGHT_INVALID = 1 << 3;
-    private final int BOTTOM_INVALID = 1 << 4;
-    private final int FAR_INVALID = 1 << 5;
+    private static final int LEFT_INVALID = 1;
+    private static final int TOP_INVALID = 1 << 1;
+    private static final int NEAR_INVALID = 1 << 2;
+    private static final int RIGHT_INVALID = 1 << 3;
+    private static final int BOTTOM_INVALID = 1 << 4;
+    private static final int FAR_INVALID = 1 << 5;
 
     private boolean updateCachedBounds(final List<Node> dirtyNodes,
                                        int remainingDirtyNodes) {

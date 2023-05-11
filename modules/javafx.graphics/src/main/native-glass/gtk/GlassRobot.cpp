@@ -259,17 +259,40 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getScreenCapture
 {
     (void)obj;
 
+    if (!data) {
+        return;
+    }
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+    const int maxPixels = INT_MAX / 4;
+    if (width >= maxPixels / height) {
+        return;
+    }
+
+    const int numPixels = width * height;
+    if (numPixels > env->GetArrayLength(data)) {
+        return;
+    }
+
     GdkPixbuf *screenshot, *tmp;
     GdkWindow *root_window = gdk_get_default_root_window();
 
     tmp = glass_pixbuf_from_window(root_window, x, y, width, height);
+    if (!tmp) {
+        return;
+    }
     screenshot = gdk_pixbuf_add_alpha(tmp, FALSE, 0, 0, 0);
     g_object_unref(tmp);
+    if (!screenshot) {
+        return;
+    }
 
     jint *pixels = (jint *)convert_BGRA_to_RGBA((int*)gdk_pixbuf_get_pixels(screenshot), width * 4, height);
-    env->SetIntArrayRegion(data, 0, height * width, pixels);
-    g_free(pixels);
-
+    if (pixels) {
+        env->SetIntArrayRegion(data, 0, numPixels, pixels);
+        g_free(pixels);
+    }
     g_object_unref(screenshot);
 }
 

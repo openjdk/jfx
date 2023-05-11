@@ -87,10 +87,6 @@ class HTMLModelElement;
 #include "PlatformXR.h"
 #endif
 
-#if ENABLE(WEBGL)
-#include "GraphicsContextGL.h"
-#endif
-
 OBJC_CLASS NSResponder;
 
 namespace WebCore {
@@ -128,17 +124,24 @@ class Widget;
 class MediaPlayerRequestInstallMissingPluginsCallback;
 #endif
 
+#if ENABLE(WEBGL)
+class GraphicsContextGL;
+struct GraphicsContextGLAttributes;
+#endif
+
 struct AppHighlight;
 struct ApplePayAMSUIRequest;
 struct ContactsRequestData;
 struct ContentRuleListResults;
 struct DataDetectorElementInfo;
 struct DateTimeChooserParameters;
+struct FocusOptions;
 struct GraphicsDeviceAdapter;
 struct MockWebAuthenticationConfiguration;
 struct SecurityOriginData;
 struct ShareDataWithParsedURL;
 struct TextIndicatorData;
+struct TextRecognitionOptions;
 struct ViewportArguments;
 struct WindowFeatures;
 
@@ -191,6 +194,7 @@ public:
     virtual void setResizable(bool) = 0;
 
     virtual void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) = 0;
+    virtual void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String& message, Span<const String> messageArguments, unsigned lineNumber, unsigned columnNumber, const String& sourceID) { UNUSED_PARAM(message); UNUSED_PARAM(messageArguments); UNUSED_PARAM(lineNumber); UNUSED_PARAM(columnNumber); UNUSED_PARAM(sourceID); }
 
     virtual bool canRunBeforeUnloadConfirmPanel() = 0;
     virtual bool runBeforeUnloadConfirmPanel(const String& message, Frame&) = 0;
@@ -208,7 +212,6 @@ public:
     virtual std::optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const = 0;
     virtual OptionSet<PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const = 0;
 
-    virtual bool supportsImmediateInvalidation() { return false; }
     virtual void invalidateRootView(const IntRect&) = 0;
     virtual void invalidateContentsAndRootView(const IntRect&) = 0;
     virtual void invalidateContentsForSlowScroll(const IntRect&) = 0;
@@ -345,9 +348,9 @@ public:
     // Asynchronous request to load an icon for specified filenames.
     virtual void loadIconForFiles(const Vector<String>&, FileIconLoader&) = 0;
 
-    virtual void elementDidFocus(Element&) { }
+    virtual void elementDidFocus(Element&, const FocusOptions&) { }
     virtual void elementDidBlur(Element&) { }
-    virtual void elementDidRefocus(Element&) { }
+    virtual void elementDidRefocus(Element&, const FocusOptions&) { }
 
     virtual void focusedElementDidChangeInputMode(Element&, InputMode) { }
 
@@ -359,10 +362,10 @@ public:
 
     virtual DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const { return nullptr; }
 
-    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float, const DestinationColorSpace&, PixelFormat) const { return nullptr; }
+    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const { UNUSED_PARAM(avoidBackendSizeCheck); return nullptr; }
 
 #if ENABLE(WEBGL)
-    virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes& attributes, WebCore::PlatformDisplayID) const { return createWebProcessGraphicsContextGL(attributes); }
+    WEBCORE_EXPORT virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const;
 #endif
 
     virtual RefPtr<PAL::WebGPU::GPU> createGPUForWebGPU() const { return nullptr; }
@@ -411,6 +414,7 @@ public:
     virtual GraphicsDeviceAdapter* graphicsDeviceAdapter() const { return nullptr; }
 #endif
 
+    virtual bool canEnterVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) const { return false; }
     virtual bool supportsVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) { return false; }
     virtual bool supportsVideoFullscreenStandby() { return false; }
 
@@ -535,6 +539,7 @@ public:
     virtual void handleSelectionServiceClick(FrameSelection&, const Vector<String>&, const IntPoint&) { }
     virtual bool hasRelevantSelectionServices(bool /*isTextOnly*/) const { return false; }
     virtual void handleImageServiceClick(const IntPoint&, Image&, HTMLImageElement&) { }
+    virtual void handlePDFServiceClick(const IntPoint&, HTMLAttachmentElement&) { };
 #endif
 
     virtual bool shouldDispatchFakeMouseMoveEvents() const { return true; }
@@ -597,7 +602,7 @@ public:
 #endif
 
 #if ENABLE(IMAGE_ANALYSIS)
-    virtual void requestTextRecognition(Element&, const String& = { }, CompletionHandler<void(RefPtr<Element>&&)>&& completion = { })
+    virtual void requestTextRecognition(Element&, TextRecognitionOptions&&, CompletionHandler<void(RefPtr<Element>&&)>&& completion = { })
     {
         if (completion)
             completion({ });
@@ -631,7 +636,8 @@ public:
     virtual void decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&) = 0;
 
 protected:
-    virtual ~ChromeClient() = default;
+    WEBCORE_EXPORT ChromeClient();
+    WEBCORE_EXPORT virtual ~ChromeClient();
 };
 
 } // namespace WebCore

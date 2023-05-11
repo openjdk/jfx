@@ -129,18 +129,35 @@ public class VirtualScrollBar extends ScrollBar {
         if (isVirtual()) {
             adjusting = true;
             double oldValue = flow.getPosition();
-
-            double newValue = ((getMax() - getMin()) * Utils.clamp(0, pos, 1))+getMin();
-            if (newValue < oldValue) {
-                IndexedCell cell = flow.getFirstVisibleCell();
-                if (cell == null) return;
-                flow.scrollToBottom(cell);
-            } else if (newValue > oldValue) {
-                IndexedCell cell = flow.getLastVisibleCell();
-                if (cell == null) return;
-                flow.scrollToTop(cell);
+            double newValue = ((getMax() - getMin()) * Utils.clamp(0, pos, 1)) + getMin();
+            /**
+             * Scroll one cell further in the direction the user has clicked if only one cell is shown.
+             * Otherwise, a click on the trough would have no effect when cell height > viewport height.
+             */
+            IndexedCell firstVisibleCell = flow.getFirstVisibleCell();
+            IndexedCell lastVisibleCell = flow.getLastVisibleCell();
+            if (firstVisibleCell != null && firstVisibleCell == lastVisibleCell) {
+                int index = firstVisibleCell.getIndex();
+                if (newValue < oldValue) {
+                    flow.scrollTo(index - 1);
+                } else {
+                    flow.scrollTo(index + 1);
+                }
+            } else {
+                if (newValue < oldValue) {
+                    IndexedCell cell = firstVisibleCell;
+                    if (cell == null) {
+                        return;
+                    }
+                    flow.scrollToBottom(cell);
+                } else if (newValue > oldValue) {
+                    IndexedCell cell = lastVisibleCell;
+                    if (cell == null) {
+                        return;
+                    }
+                    flow.scrollToTop(cell);
+                }
             }
-
             adjusting = false;
         } else {
             super.adjustValue(pos);

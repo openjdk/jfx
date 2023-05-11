@@ -92,12 +92,11 @@ OptionSet<WheelEventProcessingSteps> ScrollingTree::computeWheelProcessingSteps(
     position.move(m_rootNode->viewToContentsOffset(m_treeState.mainFrameScrollPosition));
 
     if (!m_treeState.eventTrackingRegions.isEmpty()) {
-        const EventNames& names = eventNames();
         IntPoint roundedPosition = roundedIntPoint(position);
 
         // Event regions are affected by page scale, so no need to map through scale.
-        bool isSynchronousDispatchRegion = m_treeState.eventTrackingRegions.trackingTypeForPoint(names.wheelEvent, roundedPosition) == TrackingType::Synchronous
-            || m_treeState.eventTrackingRegions.trackingTypeForPoint(names.mousewheelEvent, roundedPosition) == TrackingType::Synchronous;
+        bool isSynchronousDispatchRegion = m_treeState.eventTrackingRegions.trackingTypeForPoint(EventTrackingRegions::EventType::Wheel, roundedPosition) == TrackingType::Synchronous
+            || m_treeState.eventTrackingRegions.trackingTypeForPoint(EventTrackingRegions::EventType::Mousewheel, roundedPosition) == TrackingType::Synchronous;
         LOG_WITH_STREAM(Scrolling, stream << "\nScrollingTree::determineWheelEventProcessing: wheelEvent " << wheelEvent << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
 
         if (isSynchronousDispatchRegion)
@@ -217,7 +216,10 @@ WheelEventHandlingResult ScrollingTree::handleWheelEventWithNode(const PlatformW
             if (result.needsMainThreadProcessing() || eventTargeting != EventTargeting::Propagate)
                 return result;
 
-            if (scrollingNode.shouldBlockScrollPropagation(adjustedWheelEvent.delta())) {
+            auto scrollPropagationInfo = scrollingNode.computeScrollPropagation(adjustedWheelEvent.delta());
+            if (scrollPropagationInfo.shouldBlockScrollPropagation) {
+                if (!scrollPropagationInfo.isHandled)
+                    return WheelEventHandlingResult::unhandled();
                 m_latchingController.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), processingSteps, adjustedWheelEvent, m_allowLatching);
                 m_gestureState.nodeDidHandleEvent(scrollingNode.scrollingNodeID(), adjustedWheelEvent);
                 return WheelEventHandlingResult::handled();
@@ -292,7 +294,7 @@ void ScrollingTree::mainFrameViewportChangedViaDelegatedScrolling(const FloatPoi
 
 void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scrollingStateTree)
 {
-    SetForScope<bool> inCommitTreeState(m_inCommitTreeState, true);
+    SetForScope inCommitTreeState(m_inCommitTreeState, true);
     Locker locker { m_treeLock };
 
     bool rootStateNodeChanged = scrollingStateTree->hasNewRootStateNode();
@@ -539,10 +541,10 @@ std::optional<WheelScrollGestureState> ScrollingTree::gestureState()
     return m_treeState.gestureState;
 }
 
-TrackingType ScrollingTree::eventTrackingTypeForPoint(const AtomString& eventName, IntPoint p)
+TrackingType ScrollingTree::eventTrackingTypeForPoint(EventTrackingRegions::EventType eventType, IntPoint p)
 {
     Locker locker { m_treeStateLock };
-    return m_treeState.eventTrackingRegions.trackingTypeForPoint(eventName, p);
+    return m_treeState.eventTrackingRegions.trackingTypeForPoint(eventType, p);
 }
 
 // Can be called from the main thread.
@@ -687,6 +689,12 @@ Vector<ScrollUpdate> ScrollingTree::takePendingScrollUpdates()
 {
     Locker locker { m_pendingScrollUpdatesLock };
     return std::exchange(m_pendingScrollUpdates, { });
+}
+
+bool ScrollingTree::hasPendingScrollUpdates()
+{
+    Locker locker { m_pendingScrollUpdatesLock };
+    return m_pendingScrollUpdates.size();
 }
 
 // Can be called from the main thread.

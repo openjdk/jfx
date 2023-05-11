@@ -67,7 +67,7 @@ public:
     // Important functions used by nearly all SVG renderers centralizing coordinate transformations / repaint rect calculations
     static LayoutRect clippedOverflowRectForRepaint(const RenderElement&, const RenderLayerModelObject* container);
     static std::optional<FloatRect> computeFloatVisibleRectInContainer(const RenderElement&, const FloatRect&, const RenderLayerModelObject* container, RenderObject::VisibleRectContext);
-    static const RenderElement& localToParentTransform(const RenderElement&, AffineTransform &);
+    static const RenderElement& localToParentTransform(const RenderElement&, AffineTransform&);
     static void mapLocalToContainer(const RenderElement&, const RenderLayerModelObject* ancestorContainer, TransformState&, bool* wasFixed);
     static const RenderElement* pushMappingToContainer(const RenderElement&, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);
     static bool checkForSVGRepaintDuringLayout(const RenderElement&);
@@ -81,8 +81,6 @@ public:
     static void clipContextToCSSClippingArea(GraphicsContext&, const RenderElement& renderer);
 
     static void styleChanged(RenderElement&, const RenderStyle*);
-
-    static FloatRect transformReferenceBox(const RenderElement&, const SVGElement&, const RenderStyle&);
 
 #if ENABLE(CSS_COMPOSITING)
     static bool isolatesBlending(const RenderStyle&);

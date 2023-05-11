@@ -40,7 +40,7 @@ namespace WebCore {
 
 using namespace JSC;
 
-const ClassInfo JSDOMWindowProperties::s_info = { "WindowProperties", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMWindowProperties) };
+const ClassInfo JSDOMWindowProperties::s_info = { "WindowProperties"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMWindowProperties) };
 
 // https://html.spec.whatwg.org/multipage/window-object.html#dom-window-nameditem
 static bool jsDOMWindowPropertiesGetOwnPropertySlotNamedItemGetter(JSDOMWindowProperties* thisObject, DOMWindow& window, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, PropertySlot& slot)
@@ -80,25 +80,24 @@ void JSDOMWindowProperties::finishCreation(JSGlobalObject& globalObject)
 {
     VM& vm = globalObject.vm();
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
     JSObject::preventExtensions(this, &globalObject);
 }
 
 bool JSDOMWindowProperties::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, PropertySlot& slot)
 {
-    VM& vm = lexicalGlobalObject->vm();
     auto* thisObject = jsCast<JSDOMWindowProperties*>(object);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
     if (Base::getOwnPropertySlot(thisObject, lexicalGlobalObject, propertyName, slot))
         return true;
-    JSObject* proto = asObject(thisObject->getPrototypeDirect(vm));
+    JSObject* proto = asObject(thisObject->getPrototypeDirect());
     if (proto->hasProperty(lexicalGlobalObject, propertyName))
         return false;
 
     // FIXME: We should probably add support for JSRemoteDOMWindowBase too.
-    auto* jsWindow = jsDynamicCast<JSDOMWindowBase*>(vm, thisObject->globalObject());
+    auto* jsWindow = jsDynamicCast<JSDOMWindowBase*>(thisObject->globalObject());
     if (!jsWindow)
         return false;
 

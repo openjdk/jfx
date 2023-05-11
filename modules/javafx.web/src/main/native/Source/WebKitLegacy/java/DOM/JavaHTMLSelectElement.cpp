@@ -104,7 +104,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getNameI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getRequiredImpl(JNIEnv*, jclass, jlong peer)
@@ -176,7 +176,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getValue
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setValue(String(env, value));
+    IMPL->setValue(AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getWillValidateImpl(JNIEnv*, jclass, jlong peer)
@@ -206,7 +206,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getAutoc
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(String(env, value));
+    IMPL->setAutocomplete(AtomString{String(env, value)});
 }
 
 
@@ -223,7 +223,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_namedItemI
     , jstring name)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(String(env, name))));
+    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(AtomString {String(env, name)})));
 }
 
 
@@ -270,7 +270,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setCustomVa
     , jstring error)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setCustomValidity(String(env, error));
+    IMPL->setCustomValidity(AtomString{String(env, error)});
 }
 
 

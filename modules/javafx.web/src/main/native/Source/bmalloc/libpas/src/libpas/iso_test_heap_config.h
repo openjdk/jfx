@@ -73,9 +73,10 @@ PAS_BEGIN_EXTERN_C;
     .medium_bitfit_min_align_shift = PAS_MIN_MEDIUM_ALIGN_SHIFT, \
     .use_marge_bitfit = true, \
     .marge_bitfit_min_align_shift = PAS_MIN_MARGE_ALIGN_SHIFT, \
-    .marge_bitfit_page_size = PAS_MARGE_PAGE_DEFAULT_SIZE)
+    .marge_bitfit_page_size = PAS_MARGE_PAGE_DEFAULT_SIZE, \
+    .pgm_enabled = false)
 
-PAS_API extern pas_heap_config iso_test_heap_config;
+PAS_API extern const pas_heap_config iso_test_heap_config;
 
 PAS_BASIC_HEAP_CONFIG_DECLARATIONS(iso_test, ISO_TEST);
 

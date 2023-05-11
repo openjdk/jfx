@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -874,6 +874,11 @@ public class J2DPrismGraphics
 
         int count = gl.getGlyphCount();
         if (count == 0) return;
+
+        if (strike.getFontResource().isColorGlyph(gl.getGlyphCode(0))) {
+            drawColorGlyph(gl, strike, x, y, selectColor, start, end);
+            return;
+        }
 
         // In JDK6, setting graphics AA disables fast text loops
         g2d.setRenderingHint(KEY_ANTIALIASING, VALUE_ANTIALIAS_OFF);

@@ -24,6 +24,7 @@
 #include "config.h"
 #include "RenderReplaced.h"
 
+#include "DeprecatedGlobalSettings.h"
 #include "DocumentMarkerController.h"
 #include "ElementRuleCollector.h"
 #include "FloatRoundedRect.h"
@@ -35,8 +36,9 @@
 #include "HighlightData.h"
 #include "HighlightRegister.h"
 #include "InlineIteratorBox.h"
-#include "InlineIteratorLine.h"
+#include "InlineIteratorLineBox.h"
 #include "LayoutRepainter.h"
+#include "LineSelection.h"
 #include "RenderBlock.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderImage.h"
@@ -44,7 +46,6 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "VisiblePosition.h"
 #include <wtf/IsoMallocInlines.h>
@@ -166,7 +167,7 @@ Color RenderReplaced::calculateHighlightColor() const
         }
     }
 #endif
-    if (RuntimeEnabledFeatures::sharedFeatures().highlightAPIEnabled()) {
+    if (DeprecatedGlobalSettings::highlightAPIEnabled()) {
         if (auto highlightRegister = document().highlightRegisterIfExists()) {
             for (auto& highlight : highlightRegister->map()) {
                 for (auto& rangeData : highlight.value->rangesData()) {
@@ -214,7 +215,7 @@ void RenderReplaced::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         if (visibleToHitTesting()) {
             auto borderRect = LayoutRect(adjustedPaintOffset, size());
             auto borderRegion = approximateAsRegion(style().getRoundedBorderFor(borderRect));
-            paintInfo.eventRegionContext->unite(borderRegion, style());
+            paintInfo.eventRegionContext->unite(borderRegion, *this, style());
         }
         return;
     }
@@ -412,7 +413,7 @@ bool RenderReplaced::setNeedsLayoutIfNeededAfterIntrinsicSizeChange()
 void RenderReplaced::computeAspectRatioInformationForRenderBox(RenderBox* contentRenderer, FloatSize& constrainedSize, double& intrinsicRatio) const
 {
     FloatSize intrinsicSize;
-    if (shouldApplySizeContainment(*this))
+    if (shouldApplySizeContainment())
         RenderReplaced::computeIntrinsicRatioInformation(intrinsicSize, intrinsicRatio);
     else if (contentRenderer) {
         contentRenderer->computeIntrinsicRatioInformation(intrinsicSize, intrinsicRatio);
@@ -510,7 +511,7 @@ RoundedRect RenderReplaced::roundedContentBoxRect() const
 void RenderReplaced::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const
 {
     // If there's an embeddedContentBox() of a remote, referenced document available, this code-path should never be used.
-    ASSERT(!embeddedContentBox() || shouldApplySizeContainment(*this));
+    ASSERT(!embeddedContentBox() || shouldApplySizeContainment());
     intrinsicSize = FloatSize(intrinsicLogicalWidth(), intrinsicLogicalHeight());
 
     if (style().hasAspectRatio()) {
@@ -552,8 +553,8 @@ LayoutUnit RenderReplaced::computeConstrainedLogicalWidth(ShouldComputePreferred
 static inline LayoutUnit resolveWidthForRatio(LayoutUnit borderAndPaddingLogicalHeight, LayoutUnit borderAndPaddingLogicalWidth, LayoutUnit logicalHeight, double aspectRatio, BoxSizing boxSizing)
 {
     if (boxSizing == BoxSizing::BorderBox)
-        return LayoutUnit(round((logicalHeight + borderAndPaddingLogicalHeight) * aspectRatio)) - borderAndPaddingLogicalWidth;
-    return LayoutUnit(round(logicalHeight * aspectRatio));
+        return LayoutUnit((logicalHeight + borderAndPaddingLogicalHeight) * aspectRatio) - borderAndPaddingLogicalWidth;
+    return LayoutUnit(logicalHeight * aspectRatio);
 }
 
 static inline bool hasIntrinsicSize(RenderBox*contentRenderer, bool hasIntrinsicWidth, bool hasIntrinsicHeight )
@@ -586,13 +587,13 @@ LayoutUnit RenderReplaced::computeReplacedLogicalWidth(ShouldComputePreferred sh
         // grid item has an intrinsic size. It is possible (indeed, common) for an SVG graphic to have an intrinsic aspect ratio but not to have an intrinsic
         // width or height. There are also elements with intrinsic sizes but without intrinsic ratio (like an iframe).
         if (intrinsicRatio && (isFlexItem() || isGridItem()) && hasOverridingLogicalHeight() && hasIntrinsicSize(contentRenderer, hasIntrinsicWidth, hasIntrinsicHeight))
-            return computeReplacedLogicalWidthRespectingMinMaxWidth(roundToInt(round(overridingContentLogicalHeight() * intrinsicRatio)), shouldComputePreferred);
+            return computeReplacedLogicalWidthRespectingMinMaxWidth(overridingContentLogicalHeight() * intrinsicRatio, shouldComputePreferred);
 
         // If 'height' and 'width' both have computed values of 'auto' and the element also has an intrinsic width, then that intrinsic width is the used value of 'width'.
         if (computedHeightIsAuto && hasIntrinsicWidth)
             return computeReplacedLogicalWidthRespectingMinMaxWidth(constrainedSize.width(), shouldComputePreferred);
 
-        if (intrinsicRatio) {
+        if (!isAspectRatioDegenerate(intrinsicRatio)) {
             // If 'height' and 'width' both have computed values of 'auto' and the element has no intrinsic width, but does have an intrinsic height and intrinsic ratio;
             // or if 'width' has a computed value of 'auto', 'height' has some other computed value, and the element does have an intrinsic ratio; then the used value
             // of 'width' is: (used height) * (intrinsic ratio)
@@ -631,8 +632,8 @@ LayoutUnit RenderReplaced::computeReplacedLogicalWidth(ShouldComputePreferred sh
 static inline LayoutUnit resolveHeightForRatio(LayoutUnit borderAndPaddingLogicalWidth, LayoutUnit borderAndPaddingLogicalHeight, LayoutUnit logicalWidth, double aspectRatio, BoxSizing boxSizing)
 {
     if (boxSizing == BoxSizing::BorderBox)
-        return LayoutUnit(round((logicalWidth + borderAndPaddingLogicalWidth) / aspectRatio)) - borderAndPaddingLogicalHeight;
-    return LayoutUnit(round(logicalWidth / aspectRatio));
+        return LayoutUnit((logicalWidth + borderAndPaddingLogicalWidth) / aspectRatio) - borderAndPaddingLogicalHeight;
+    return LayoutUnit(logicalWidth / aspectRatio);
 }
 
 LayoutUnit RenderReplaced::computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth) const
@@ -654,7 +655,7 @@ LayoutUnit RenderReplaced::computeReplacedLogicalHeight(std::optional<LayoutUnit
 
     // See computeReplacedLogicalHeight() for a similar check for heights.
     if (intrinsicRatio && (isFlexItem() || isGridItem()) && hasOverridingLogicalWidth() && hasIntrinsicSize(contentRenderer, hasIntrinsicWidth, hasIntrinsicHeight))
-        return computeReplacedLogicalHeightRespectingMinMaxHeight(roundToInt(round(overridingContentLogicalWidth() / intrinsicRatio)));
+        return computeReplacedLogicalHeightRespectingMinMaxHeight(overridingContentLogicalWidth() / intrinsicRatio);
 
     // If 'height' and 'width' both have computed values of 'auto' and the element also has an intrinsic height, then that intrinsic height is the used value of 'height'.
     if (widthIsAuto && hasIntrinsicHeight)
@@ -718,10 +719,11 @@ void RenderReplaced::computePreferredLogicalWidths()
 
 VisiblePosition RenderReplaced::positionForPoint(const LayoutPoint& point, const RenderFragmentContainer* fragment)
 {
-    auto [top, bottom] = [&] {
+    auto [top, bottom] = [&]() -> std::pair<float, float> {
         if (auto run = InlineIterator::boxFor(*this)) {
-            auto line = run->line();
-            return std::make_pair(line->selectionTopForHitTesting(), line->selectionBottom());
+            auto lineBox = run->lineBox();
+            auto lineContentTop = LayoutUnit { std::min(previousLineBoxContentBottomOrBorderAndPadding(*lineBox), lineBox->contentLogicalTop()) };
+            return std::make_pair(lineContentTop, LineSelection::logicalBottom(*lineBox));
         }
         return std::make_pair(logicalTop(), logicalBottom());
     }();

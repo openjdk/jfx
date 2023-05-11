@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -830,6 +830,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private boolean isLeadIndex(boolean isFocusDriven, int index) {
         final TableSelectionModel<S> sm = getSelectionModel();
+        if (sm == null) {
+            return false;
+        }
+
         final FocusModel<M> fm = getFocusModel();
 
         return (isFocusDriven && fm.getFocusedIndex() == index)
@@ -903,15 +907,15 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             contentWidth -= flow.getVbar().getWidth();
         }
 
-        if (contentWidth <= 0) {
-            // Fix for RT-14855 when there is no content in the TableView.
+        if ((contentWidth <= 0) || (TableSkinUtils.getItemCount(this) == 0)) {
+            // when there is no content in the TableView.
             Control c = getSkinnable();
             contentWidth = c.getWidth() - (snappedLeftInset() + snappedRightInset());
         }
 
         contentWidth = Math.max(0.0, contentWidth);
 
-        // FIXME this isn't perfect, but it prevents RT-14885, which results in
+        // this isn't perfect, but it prevents RT-14885/JDK-8089280, which results in
         // undesired horizontal scrollbars when in constrained resize mode
         getSkinnable().getProperties().put("TableView.contentWidth", Math.floor(contentWidth));
     }
@@ -1044,6 +1048,9 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         switch (attribute) {
             case FOCUS_ITEM: {
                 TableFocusModel<M,?> fm = getFocusModel();
+                if (fm == null) {
+                    return null;
+                }
                 int focusedIndex = fm.getFocusedIndex();
                 if (focusedIndex == -1) {
                     if (placeholderRegion != null && placeholderRegion.isVisible()) {
@@ -1076,5 +1083,4 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
-
 }

@@ -288,7 +288,7 @@ void AccessibilityAtspi::registerRoot(AccessibilityRootAtspi& rootObject, Vector
     }
 
     ensureCache();
-    String path = makeString("/org/a11y/webkit/accessible/", createVersion4UUIDString().replace('-', '_'));
+    String path = makeString("/org/a11y/webkit/accessible/", makeStringByReplacingAll(createVersion4UUIDString(), '-', '_'));
     Vector<unsigned, 3> registeredObjects;
     registeredObjects.reserveInitialCapacity(interfaces.size());
     for (const auto& interface : interfaces) {
@@ -332,7 +332,7 @@ String AccessibilityAtspi::registerObject(AccessibilityObjectAtspi& atspiObject,
         return { };
 
     ensureCache();
-    String path = makeString("/org/a11y/atspi/accessible/", createVersion4UUIDString().replace('-', '_'));
+    String path = makeString("/org/a11y/atspi/accessible/", makeStringByReplacingAll(createVersion4UUIDString(), '-', '_'));
     Vector<unsigned, 7> registeredObjects;
     registeredObjects.reserveInitialCapacity(interfaces.size());
     for (const auto& interface : interfaces) {
@@ -382,7 +382,7 @@ String AccessibilityAtspi::registerHyperlink(AccessibilityObjectAtspi& atspiObje
     if (!m_connection)
         return { };
 
-    String path = makeString("/org/a11y/atspi/accessible/", createVersion4UUIDString().replace('-', '_'));
+    String path = makeString("/org/a11y/atspi/accessible/", makeStringByReplacingAll(createVersion4UUIDString(), '-', '_'));
     Vector<unsigned, 1> registeredObjects;
     registeredObjects.reserveInitialCapacity(interfaces.size());
     for (const auto& interface : interfaces) {
@@ -835,11 +835,20 @@ void AccessibilityAtspi::removeNotificationObserver(void* context)
     m_notificationObservers.remove(context);
 }
 
-void AccessibilityAtspi::notifyStateChanged(AccessibilityObjectAtspi& atspiObject, const char* name, bool value) const
+void AccessibilityAtspi::notify(AccessibilityObjectAtspi& atspiObject, const char* name, NotificationObserverParameter parameter) const
 {
     if (m_notificationObservers.isEmpty())
         return;
 
+    for (auto* context : copyToVector(m_notificationObservers.keys())) {
+        auto it = m_notificationObservers.find(context);
+        ASSERT(it != m_notificationObservers.end());
+        it->value(atspiObject, name, parameter);
+    }
+}
+
+void AccessibilityAtspi::notifyStateChanged(AccessibilityObjectAtspi& atspiObject, const char* name, bool value) const
+{
     auto notificationName = [&](const char* name) -> const char* {
         if (!g_strcmp0(name, "checked"))
             return "CheckedStateChanged";
@@ -871,38 +880,32 @@ void AccessibilityAtspi::notifyStateChanged(AccessibilityObjectAtspi& atspiObjec
     if (!notification)
         return;
 
-    for (const auto& observer : m_notificationObservers.values())
-        observer(atspiObject, notification, value);
+    notify(atspiObject, notification, value);
 }
 
 void AccessibilityAtspi::notifySelectionChanged(AccessibilityObjectAtspi& atspiObject) const
 {
-    for (const auto& observer : m_notificationObservers.values())
-        observer(atspiObject, "AXSelectedChildrenChanged", nullptr);
+    notify(atspiObject, "AXSelectedChildrenChanged", nullptr);
 }
 
 void AccessibilityAtspi::notifyMenuSelectionChanged(AccessibilityObjectAtspi& atspiObject) const
 {
-    for (const auto& observer : m_notificationObservers.values())
-        observer(atspiObject, "AXMenuItemSelected", nullptr);
+    notify(atspiObject, "AXMenuItemSelected", nullptr);
 }
 
 void AccessibilityAtspi::notifyTextChanged(AccessibilityObjectAtspi& atspiObject) const
 {
-    for (const auto& observer : m_notificationObservers.values())
-        observer(atspiObject, "AXTextChanged", nullptr);
+    notify(atspiObject, "AXTextChanged", nullptr);
 }
 
 void AccessibilityAtspi::notifyTextCaretMoved(AccessibilityObjectAtspi& atspiObject, unsigned caretOffset) const
 {
-    for (const auto& observer : m_notificationObservers.values())
-        observer(atspiObject, "AXTextCaretMoved", caretOffset);
+    notify(atspiObject, "AXTextCaretMoved", caretOffset);
 }
 
 void AccessibilityAtspi::notifyValueChanged(AccessibilityObjectAtspi& atspiObject) const
 {
-    for (const auto& observer : m_notificationObservers.values())
-        observer(atspiObject, "AXValueChanged", nullptr);
+    notify(atspiObject, "AXValueChanged", nullptr);
 }
 
 void AccessibilityAtspi::notifyLoadEvent(AccessibilityObjectAtspi& atspiObject, const CString& event) const
@@ -910,8 +913,7 @@ void AccessibilityAtspi::notifyLoadEvent(AccessibilityObjectAtspi& atspiObject, 
     if (event != "LoadComplete")
         return;
 
-    for (const auto& observer : m_notificationObservers.values())
-        observer(atspiObject, "AXLoadComplete", nullptr);
+    notify(atspiObject, "AXLoadComplete", nullptr);
 }
 
 #endif
