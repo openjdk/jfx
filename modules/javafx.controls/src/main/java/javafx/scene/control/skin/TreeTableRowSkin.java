@@ -28,8 +28,6 @@ package javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
@@ -73,12 +71,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private Node graphic;
     private final BehaviorBase<TreeTableRow<T>> behavior;
     private boolean childrenDirty = false;
-    private final InvalidationListener indexPropertyListener;
-    private final InvalidationListener treeItemListener;
-    private final InvalidationListener treeTableViewListener;
-    private final InvalidationListener treeColumnListener;
-    private final InvalidationListener fixedSizeListener;
-    private final InvalidationListener vflowWidthListener;
 
     /* *************************************************************************
      *                                                                         *
@@ -101,44 +93,16 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         updateTreeItem();
 
-        indexPropertyListener = (obs) -> {
+        registerChangeListener(control.indexProperty(), (x) -> {
             updateCells = true;
-        };
-        control.indexProperty().addListener(new WeakInvalidationListener(indexPropertyListener));
+        });
 
-        treeItemListener = (obs) -> {
+        registerChangeListener(control.treeItemProperty(), (obs) -> {
             updateTreeItem();
             // There used to be an isDirty = true statement here, but this was
             // determined to be unnecessary and led to performance issues such as
             // those detailed in JDK-8143266
-        };
-        control.treeItemProperty().addListener(new WeakInvalidationListener(treeItemListener));
-
-        treeTableViewListener = (obs) -> {
-            unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
-            setupTreeTableViewListeners();
-        };
-
-        treeColumnListener = (obs) -> {
-            // Fix for RT-27782: Need to set isDirty to true, rather than the
-            // cheaper updateCells, as otherwise the text indentation will not
-            // be recalculated in TreeTableCellSkin.calculateIndentation()
-            isDirty = true;
-            if (getSkinnable() != null) {
-                getSkinnable().requestLayout();
-            }
-        };
-
-        fixedSizeListener = (obs) -> {
-            updateCachedFixedSize();
-        };
-
-        vflowWidthListener = (obs) -> {
-            if (getSkinnable() != null) {
-                TreeTableView<T> t = getSkinnable().getTreeTableView();
-                t.requestLayout();
-            }
-        };
+        });
 
         setupTreeTableViewListeners();
     }
@@ -147,13 +111,26 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private void setupTreeTableViewListeners() {
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
-            getSkinnable().treeTableViewProperty().addListener(new WeakInvalidationListener(treeTableViewListener));
+            registerInvalidationListener(getSkinnable().treeTableViewProperty(), (x) -> {
+                unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
+                setupTreeTableViewListeners();
+            });
         } else {
-            treeTableView.treeColumnProperty().addListener(new WeakInvalidationListener(treeColumnListener));
+            registerChangeListener(treeTableView.treeColumnProperty(), (x) -> {
+                // Fix for RT-27782: Need to set isDirty to true, rather than the
+                // cheaper updateCells, as otherwise the text indentation will not
+                // be recalculated in TreeTableCellSkin.calculateIndentation()
+                isDirty = true;
+                if (getSkinnable() != null) {
+                    getSkinnable().requestLayout();
+                }
+            });
 
             DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
             if (fixedCellSizeProperty != null) {
-                fixedCellSizeProperty.addListener(new WeakInvalidationListener(fixedSizeListener));
+                registerChangeListener(fixedCellSizeProperty, (x) -> {
+                    updateCachedFixedSize();
+                });
                 updateCachedFixedSize();
 
                 // JDK-8144500:
@@ -162,7 +139,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // be required (because we remove all cells that are not visible).
                 VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
                 if (virtualFlow != null) {
-                    getVirtualFlow().widthProperty().addListener(new WeakInvalidationListener(vflowWidthListener));
+                    registerChangeListener(getVirtualFlow().widthProperty(), (x) -> {
+                        if (getSkinnable() != null) {
+                            TreeTableView<T> t = getSkinnable().getTreeTableView();
+                            t.requestLayout();
+                        }
+                    });
                 }
             }
         }
