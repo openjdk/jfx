@@ -149,7 +149,7 @@ final public class SimpleSelector extends Selector {
         Set<StyleClass> scs = new StyleClassSet();
 
         if (styleClasses != null) {
-            for(int n = 0; n < styleClasses.size(); n++) {
+            for (int n = 0; n < styleClasses.size(); n++) {
 
                 final String styleClassName = styleClasses.get(n);
                 if (styleClassName == null || styleClassName.isEmpty()) continue;
@@ -165,7 +165,7 @@ final public class SimpleSelector extends Selector {
         NodeOrientation dir = NodeOrientation.INHERIT;
 
         if (pseudoClasses != null) {
-            for(int n = 0; n < pseudoClasses.size(); n++) {
+            for (int n = 0; n < pseudoClasses.size(); n++) {
 
                 final String pclass = pseudoClasses.get(n);
                 if (pclass == null || pclass.isEmpty()) continue;
