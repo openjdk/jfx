@@ -70,6 +70,22 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
+     * Gets an immutable list of style-classes of the {@code Selector}.
+     * @return an immutable list of style-classes of the {@code Selector}
+     */
+    public List<String> getStyleClasses() {
+
+        final List<String> names = new ArrayList<>();
+
+        Iterator<StyleClass> iter = styleClassSet.iterator();
+        while (iter.hasNext()) {
+            names.add(iter.next().getStyleClassName());
+        }
+
+        return Collections.unmodifiableList(names);
+    }
+
+    /**
      * Gets the immutable {@code Set} of {@code StyleClass}es of the {@code Selector}.
      * @return the {@code Set} of {@code StyleClass}es
      */
