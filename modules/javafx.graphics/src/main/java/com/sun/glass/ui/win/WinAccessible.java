@@ -1585,7 +1585,13 @@ final class WinAccessible extends Accessible {
     private int get_ToggleState() {
         if (isDisposed()) return 0;
         if (getAttribute(ROLE) == AccessibleRole.CHECK_BOX_TREE_ITEM) {
-            return (int)getAttribute(TOGGLE_STATE);
+            ToggleState toggleState = (ToggleState)getAttribute(TOGGLE_STATE);
+            if (toggleState == ToggleState.INDETERMINATE) {
+                return ToggleState_Indeterminate;
+            } else if (toggleState == ToggleState.CHECKED) {
+                return ToggleState_On;
+            }
+            return ToggleState_Off;
         }
         if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
             return ToggleState_Indeterminate;

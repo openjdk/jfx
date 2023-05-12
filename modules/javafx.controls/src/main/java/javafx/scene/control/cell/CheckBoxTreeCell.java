@@ -26,6 +26,7 @@
 package javafx.scene.control.cell;
 
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleAttribute.ToggleState;
 import javafx.scene.AccessibleRole;
 
 import javafx.scene.control.CheckBoxTreeItem;
@@ -488,11 +489,11 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     @Override public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case TOGGLE_STATE:
-                int state = 0;
+                ToggleState state = ToggleState.UNCHECKED;
                 if (checkBox.isIndeterminate()) {
-                    state = 2;
+                    state = ToggleState.INDETERMINATE;
                 } else if (checkBox.isSelected()) {
-                    state = 1;
+                    state = ToggleState.CHECKED;
                 }
                 return state;
             default: return super.queryAccessibleAttribute(attribute, parameters);
