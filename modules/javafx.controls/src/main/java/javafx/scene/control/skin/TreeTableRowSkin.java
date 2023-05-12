@@ -154,11 +154,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         if (getSkinnable() != null) {
             TreeTableView<T> t = getSkinnable().getTreeTableView();
             if (t != null) {
-                DoubleProperty p = t.fixedCellSizeProperty();
-                if (p != null) {
-                    fixedCellSize = p.get();
-                    fixedCellSizeEnabled = fixedCellSize > 0;
-                }
+                double sz = t.getFixedCellSize();
+                fixedCellSize = sz;
+                fixedCellSizeEnabled = fixedCellSize > 0.0;
             }
         }
     }
@@ -341,7 +339,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     private void updateTreeItem() {
         unregisterInvalidationListeners(graphicProperty());
-        treeItem = (getSkinnable() == null) ? null : getSkinnable().getTreeItem();
+        treeItem = getSkinnable().getTreeItem();
         registerInvalidationListener(graphicProperty(), e -> updateTreeItemGraphic());
     }
 
