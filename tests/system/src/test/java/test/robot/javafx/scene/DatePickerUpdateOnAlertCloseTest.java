@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.application.Platform;
 import javafx.scene.robot.Robot;
@@ -52,17 +53,28 @@ import test.util.Util;
 /*
  * Test for verifying DatePicker update on closing the Alert dialog.
  *
- * There is 1 test in this file.
- * Steps for testDatePickerUpdateOnAlertClose()
- * 1. Create a alert dialog and add date picker to it.
+ * There are 2 tests in this file.
+ * Steps for testDatePickerUpdateOnAlertCloseUsingMouse()
+ * 1. Create an alert dialog and add date picker to it.
  * 2. Add button to scene and show alert dialog on button click.
  * 3. Click on date picker and select a date from popup.
+ * 4. Save the selected date locally.
+ * 5. Click on button and alert to display date picker again.
+ * 6. Select another date from the popup and save locally.
+ * 5. Verify that 2 date selected are not same and
+ *    selected dates are updated in the date picker.
+ *
+ * Steps for testDatePickerUpdateOnAlertCloseUsingKeyboard()
+ * 1. Create an alert dialog and add date picker to it.
+ * 2. Add button to scene and show alert dialog on button click.
+ * 3. Click on date picker and select a date from popup using keyboard.
  * 4. Verify that selected date is updated in the date picker.
  */
 public class DatePickerUpdateOnAlertCloseTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch onDatePickerShownLatch = new CountDownLatch(1);
     static CountDownLatch onAlertShownLatch = new CountDownLatch(1);
+    static CountDownLatch onAlertHiddenLatch = new CountDownLatch(1);
     static Robot robot;
 
     static volatile Stage stage;
@@ -96,7 +108,7 @@ public class DatePickerUpdateOnAlertCloseTest {
     private void selectDatePicker() throws Exception {
         mouseClickOnAlertDialog(datePicker.getLayoutX() + datePicker.getWidth() - 15,
                                     datePicker.getLayoutY() + datePicker.getHeight() / 2);
-        Thread.sleep(400); // Wait for DatePicker popup to display.
+        Thread.sleep(800); // Wait for DatePicker popup to display.
         Util.waitForLatch(onDatePickerShownLatch, 5, "Failed to show DatePicker popup.");
     }
 
@@ -107,18 +119,45 @@ public class DatePickerUpdateOnAlertCloseTest {
         Util.waitForLatch(onAlertShownLatch, 5, "Failed to show Alert dialog.");
     }
 
+    private void selectNextDate() {
+        Util.runAndWait(() -> {
+            robot.keyType(KeyCode.RIGHT);
+            robot.keyType(KeyCode.ENTER);
+        });
+        Util.waitForLatch(onAlertHiddenLatch, 5, "Failed to hide Alert dialog.");
+    }
+
     @Test
-    public void testDatePickerUpdateOnAlertClose() throws Exception {
+    public void testDatePickerUpdateOnAlertCloseUsingMouse() throws Exception {
         Thread.sleep(1000); // Wait for stage to layout
 
         showAlertDialog();
         selectDatePicker();
 
-        // Select date from date picker popup
         mouseClick(datePicker.getLayoutX() + datePicker.getWidth() / 2,
                     datePicker.getLayoutY() + datePicker.getHeight() * Y_FACTOR);
-        Thread.sleep(400); // Wait for date to be selected.
+        LocalDate oldDate = datePicker.getValue();
 
+        showAlertDialog();
+        selectDatePicker();
+
+        mouseClick(datePicker.getLayoutX() + datePicker.getWidth() / 3,
+                    (datePicker.getLayoutY() + datePicker.getHeight() * Y_FACTOR));
+        LocalDate newDate = datePicker.getValue();
+
+        Thread.sleep(400); // Wait for date to be selected.
+        Assert.assertNotEquals(oldDate, newDate);
+    }
+
+    @Test
+    public void testDatePickerUpdateOnAlertCloseUsingKeyboard() throws Exception {
+        Thread.sleep(1000); // Wait for stage to layout
+
+        showAlertDialog();
+        selectDatePicker();
+        selectNextDate();
+
+        Thread.sleep(400); // Wait for date to be selected.
         Assert.assertFalse(LocalDate.now().isEqual(datePicker.getValue()));
     }
 
@@ -127,6 +166,9 @@ public class DatePickerUpdateOnAlertCloseTest {
         Util.runAndWait(() -> {
             datePicker.setOnShown(null);
             datePicker.setOnAction(null);
+            dialog.setOnShown(null);
+            dialog.setOnHidden(null);
+            button.setOnAction(null);
         });
     }
 
@@ -143,12 +185,16 @@ public class DatePickerUpdateOnAlertCloseTest {
 
             dialog = new Alert(AlertType.INFORMATION);
             dialog.initStyle(StageStyle.UNDECORATED);
+            dialog.initOwner(stage);
             dialog.setOnShown(event -> {
                 onAlertShownLatch.countDown();
             });
 
+            dialog.setOnHidden(event -> {
+                onAlertHiddenLatch.countDown();
+            });
+
             button.setOnAction(event -> {
-                dialog.initOwner(stage);
                 dialog.getDialogPane().setContent(datePicker);
                 dialog.show();
             });
