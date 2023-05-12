@@ -950,21 +950,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     return [GlassDragSource mapJavaMaskToNsOperation:[GlassDragSource getMask]];
 }
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
-{
-    // The Command key masks out every operation other than NSDragOperationGeneric. We want
-    // internal Move events to get through this filtering so we copy the Move bit into the
-    // Generic bit and treat Generic as a synonym for Move.
-    if (isLocal)
-    {
-        NSDragOperation result = self->dragOperation;
-        if (result & NSDragOperationMove)
-            result |= NSDragOperationGeneric;
-        return result;
-    }
-    return self->dragOperation;
-}
-
 // called from Java layer drag handler, triggered by DnD Pasteboard flush
 - (void)startDrag:(NSDragOperation)operation withItems:(NSArray<NSDraggingItem*>*)items
 {

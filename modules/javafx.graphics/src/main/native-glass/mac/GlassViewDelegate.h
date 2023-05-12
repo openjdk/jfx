@@ -103,7 +103,6 @@ typedef enum GestureMaskType {
 
 - (NSDragOperation)sendJavaDndEvent:(id <NSDraggingInfo>)info type:(jint)type;
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal;
 - (void)startDrag:(NSDragOperation)operation withItems:(NSArray<NSDraggingItem*>*)items;
 
 - (BOOL)suppressMouseEnterExitOnMouseDown;
