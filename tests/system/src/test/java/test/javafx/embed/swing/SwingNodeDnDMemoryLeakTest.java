@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,9 @@ import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
+
+import java.lang.reflect.InvocationTargetException;
 
 import javafx.application.Application;
 import javafx.embed.swing.SwingNode;
@@ -45,12 +48,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class SwingNodeDnDMemoryLeakTest {
 
     final static int TOTAL_SWINGNODE = 10;
     static CountDownLatch launchLatch = new CountDownLatch(1);
-    final static int GC_ATTEMPTS = 10;
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
                                       new ArrayList(TOTAL_SWINGNODE);
 
@@ -65,12 +68,16 @@ public class SwingNodeDnDMemoryLeakTest {
     }
 
     @Test
-    public void testSwingNodeMemoryLeak() {
+    public void testSwingNodeMemoryLeak() throws InvocationTargetException, InterruptedException {
         Util.runAndWait(() -> {
             testSwingNodeObjectsInStage();
         });
-        attemptGCSwingNode();
-        assertEquals(TOTAL_SWINGNODE, getCleanedUpSwingNodeCount());
+
+        // Invoke a noop on EDT thread and wait for a bit to make sure EDT processed node objects
+        SwingUtilities.invokeAndWait(() -> {});
+        Util.sleep(500);
+
+        JMemoryBuddy.assertCollectable(weakRefArrSN);
     }
 
     private void testSwingNodeObjectsInStage() {
@@ -108,21 +115,6 @@ public class SwingNodeDnDMemoryLeakTest {
             if (tempStage[i] != null) {
                 tempStage[i].close();
                 tempStage[i] = null;
-            }
-        }
-    }
-
-    private void attemptGCSwingNode() {
-        // Attempt gc GC_ATTEMPTS times
-        for (int i = 0; i < GC_ATTEMPTS; i++) {
-            System.gc();
-            if (getCleanedUpSwingNodeCount() == TOTAL_SWINGNODE) {
-                break;
-            }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                System.err.println("InterruptedException occurred during Thread.sleep()");
             }
         }
     }
