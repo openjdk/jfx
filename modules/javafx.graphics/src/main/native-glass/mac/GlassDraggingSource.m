@@ -24,6 +24,7 @@
  */
 
 #import "common.h"
+#include <AppKit/AppKit.h>
 #import "GlassDraggingSource.h"
 #import "GlassMacros.h"
 
@@ -39,6 +40,16 @@
 
 - (NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
 {
+    // The Command key masks out every operation other than NSDragOperationGeneric. We want
+    // internal Move events to get through this filtering so we copy the Move bit into the
+    // Generic bit and treat Generic as a synonym for Move.
+    if (context == NSDraggingContextWithinApplication)
+    {
+        NSDragOperation result = self->dragOperation;
+        if (result & NSDragOperationMove)
+            result |= NSDragOperationGeneric;
+        return result;
+    }
     return self->dragOperation;
 }
 
