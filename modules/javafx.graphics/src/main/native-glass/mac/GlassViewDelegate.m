@@ -25,6 +25,7 @@
 
 #include "GlassDraggingSource.h"
 #import "common.h"
+#include <AppKit/AppKit.h>
 #import "com_sun_glass_events_ViewEvent.h"
 #import "com_sun_glass_events_MouseEvent.h"
 #import "com_sun_glass_events_KeyEvent.h"
@@ -970,25 +971,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             image = [[NSImage alloc] initWithData:[pbItem dataForType:DRAG_IMAGE_MIME]];
         }
 
-        if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeFileURL])
+        if (image == nil && [pbItemTypes containsObject:NSURLPboardType])
         {
             // create an image with contents of URL
-            image = [[NSImage alloc] initByReferencingFile:[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeFileURL] encoding:NSUTF8StringEncoding]];
+            image = [[NSImage alloc] initByReferencingURL:[NSURL URLWithString:[[NSString alloc] initWithData:[pbItem dataForType:NSURLPboardType] encoding:NSUTF8StringEncoding]]];
 
-            // this only works if we reference image files though, so make sure the image is valid
-            if ([image isValid] == NO)
-            {
-                [image release];
-                image = nil;
-            }
-        }
-
-        if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeURL])
-        {
-            // create an image with contents of URL
-            image = [[NSImage alloc] initByReferencingURL:[NSURL URLWithString:[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeURL] encoding:NSUTF8StringEncoding]]];
-
-            // same as with File URL, regular URL can also be invalid
+            // URL can be invalid
             if ([image isValid] == NO)
             {
                 [image release];
