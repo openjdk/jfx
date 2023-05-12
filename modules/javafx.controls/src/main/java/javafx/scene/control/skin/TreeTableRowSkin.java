@@ -47,6 +47,7 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 
@@ -93,11 +94,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         updateTreeItem();
 
-        registerChangeListener(control.indexProperty(), (x) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addChangeListener(control.indexProperty(), (ev) -> {
             updateCells = true;
         });
 
-        registerChangeListener(control.treeItemProperty(), (obs) -> {
+        lh.addChangeListener(control.treeItemProperty(), (ev) -> {
             updateTreeItem();
             // There used to be an isDirty = true statement here, but this was
             // determined to be unnecessary and led to performance issues such as
