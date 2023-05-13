@@ -25,6 +25,8 @@
 
 package com.sun.media.jfxmediaimpl;
 
+import com.sun.javafx.PlatformUtil;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -57,19 +59,19 @@ public class HostUtils {
     }
 
     public static boolean isWindows() {
-        return osName.startsWith("windows");
+        return PlatformUtil.isWindows();
     }
 
     public static boolean isMacOSX() {
-        return osName.startsWith("mac os x");
+        return PlatformUtil.isMac();
     }
 
     public static boolean isLinux() {
-        return osName.startsWith("linux");
+        return PlatformUtil.isLinux();
     }
 
     public static boolean isIOS() {
-        return osName.startsWith("ios");
+        return PlatformUtil.isIOS();
     }
 
     /**
