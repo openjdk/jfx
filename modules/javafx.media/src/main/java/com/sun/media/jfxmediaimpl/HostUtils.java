@@ -34,24 +34,18 @@ import java.security.PrivilegedAction;
  * Common functions that involve the host platform
  */
 public class HostUtils {
-    private static String osName;
-    private static String osArch;
-    private static boolean embedded;
-    private static boolean is64bit = false;
+    private static boolean is64bit;
 
     static {
         @SuppressWarnings("removal")
-        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            osName = System.getProperty("os.name").toLowerCase();
-            osArch = System.getProperty("os.arch").toLowerCase();
+        boolean temp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            String osArch = System.getProperty("os.arch").toLowerCase();
 
-            is64bit =  osArch.equals("x64")
+            return osArch.equals("x64")
                     || osArch.equals("x86_64")
                     || osArch.equals("ia64");
-
-            return Boolean.getBoolean("com.sun.javafx.isEmbedded");
         });
-        embedded = tmp;
+        is64bit = temp;
     }
 
     public static boolean is64Bit() {
