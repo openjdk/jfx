@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
 
 package test.com.sun.glass.ui;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 import javafx.application.Application;
 import javafx.geometry.Dimension2D;
@@ -37,7 +37,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import java.util.concurrent.CountDownLatch;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class InitialWindowSizeTest {
 
@@ -59,12 +59,12 @@ public class InitialWindowSizeTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void shutdown() {
         Util.shutdown();
     }
@@ -73,11 +73,8 @@ public class InitialWindowSizeTest {
     public void testInitialWindowSize() {
         Util.waitForLatch(startupLatch, 10, "startupLatch");
 
-        assertTrue("width = " + showingSize.getWidth() + ", expected = NaN",
-                   Double.isNaN(showingSize.getWidth()));
-        assertTrue("height = " + showingSize.getHeight() + ", expected = NaN",
-                   Double.isNaN(showingSize.getHeight()));
-
+        assertTrue(Double.isNaN(showingSize.getWidth()), "width = " + showingSize.getWidth() + ", expected = NaN");
+        assertTrue(Double.isNaN(showingSize.getHeight()), "height = " + showingSize.getHeight() + ", expected = NaN");
         assertEquals(300.0, shownSize.getWidth(), 0.001);
         assertEquals(200.0, shownSize.getHeight(), 0.001);
     }
