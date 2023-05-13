@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,33 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.tools.demo.rich;
 
-/**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.controls {
-    requires transitive java.desktop;
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.swing;
+import javafx.scene.Node;
+import javafx.scene.control.rich.SideDecorator;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.util;
-    exports javafx.scene.control.skin;
+public class DemoColorSideDecorator implements SideDecorator {
+    public DemoColorSideDecorator() {
+    }
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    @Override
+    public double getPrefWidth(double viewWidth) {
+        return 20.0;
+    }
+
+    @Override
+    public Node getNode(int modelIndex, boolean forMeasurement) {
+        int num = 36;
+        double a = 360.0 * (modelIndex % num) / num;
+        Color c = Color.hsb(a, 0.5, 1.0);
+
+        Region r = new Region();
+        r.setOpacity(1.0);
+        r.setBackground(new Background(new BackgroundFill(c, null, null)));
+        return r;
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,47 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+// This code borrows heavily from the following project, with permission from the author:
+// https://github.com/andy-goryachev/FxEditor
+package javafx.scene.control.rich.util;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
 
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
+ * Conventient utility for building javafx {@link Path}
  */
-module javafx.controls {
-    requires transitive java.desktop;
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.swing;
-
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.util;
-    exports javafx.scene.control.skin;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+public class FxPathBuilder {
+    private final ArrayList<PathElement> elements = new ArrayList<>();
+    
+    
+    public FxPathBuilder() {
+    }
+    
+    public void add(PathElement em) {
+        elements.add(em);
+    }
+    
+    public void addAll(PathElement ... es) {
+        for(PathElement em: es) {
+            elements.add(em);
+        }
+    }
+    
+    public void moveto(double x, double y) {
+        add(new MoveTo(x, y));
+    }
+    
+    public void lineto(double x, double y) {
+        add(new LineTo(x, y));
+    }
+    
+    public List<PathElement> getPathElements() {
+        return elements;
+    }
 }

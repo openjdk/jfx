@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,21 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.control.rich;
 
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
+ * Local caret position and dimensions.
+ * 
+ * TODO there is a notion of "split caret"
+ * PrismTextLayout:325, TextAreaSkin:580, also
+ * JDK-8089958 Text caret shape is split at bidi boundary
  */
-module javafx.controls {
-    requires transitive java.desktop;
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.swing;
+public record CaretInfo(double x, double y0, double y1) {
+    public boolean containsY(double y) {
+        return (y >= y0) && (y < y1);
+    }
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.util;
-    exports javafx.scene.control.skin;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    public String toString() {
+        return "CaretInfo{x=" + x + ", y=" + y0 + ", y1=" + y1 + "}";
+    }
 }

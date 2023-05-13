@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,48 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.tools.demo.rich;
 
-/**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.controls {
-    requires transitive java.desktop;
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.swing;
+import java.util.ArrayList;
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.util;
-    exports javafx.scene.control.skin;
+public class DataFrame {
+    private String[] columns;
+    private final ArrayList<String[]> rows = new ArrayList();
+    
+    public DataFrame() {
+    }
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    public static DataFrame parse(String[] lines) {
+        DataFrame f = new DataFrame();
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            String[] ss = line.split("\\|");
+            if (i == 0) {
+                f.setColumns(ss);
+            } else {
+                f.addValues(ss);
+            }
+        }
+        return f;
+    }
+
+    public String[] getColumnNames() {
+        return columns;
+    }
+    
+    public void setColumns(String[] columns) {
+        this.columns = columns;
+    }
+    
+    public void addValues(String[] ss) {
+        rows.add(ss);
+    }
+    
+    public int getRowCount() {
+        return rows.size();
+    }
+    
+    public String[] getRow(int ix) {
+        return rows.get(ix);
+    }
 }

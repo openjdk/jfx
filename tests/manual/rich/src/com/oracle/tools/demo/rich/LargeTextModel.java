@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,39 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.tools.demo.rich;
 
-/**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.controls {
-    requires transitive java.desktop;
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.swing;
+import java.util.Random;
+import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.util;
-    exports javafx.scene.control.skin;
+public class LargeTextModel extends SimpleReadOnlyStyledModel {
+    private final String STYLE = "-fx-font-size:500%";
+    private final Random random = new Random();
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    public LargeTextModel(int lineCount) {
+        for(int i=0; i<lineCount; i++) {
+            addLine(i);
+        }
+    }
+    
+    private void addLine(int n) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("L").append(n).append(' ');
+        int ct;
+        if(random.nextFloat() < 0.01f) {
+            ct = 200;
+        } else {
+            ct = random.nextInt(10);
+        }
+        
+        for(int i=0; i<ct; i++) {
+            sb.append(" ").append(i);
+            int len = random.nextInt(10) + 1;
+            for(int j=0; j<len; j++) {
+                sb.append('*');
+            }
+        }
+        addSegment(sb.toString(), STYLE);
+        nl();
+    }
 }

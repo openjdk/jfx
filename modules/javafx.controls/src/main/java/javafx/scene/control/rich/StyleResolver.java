@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,31 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.control.rich;
+
+import javafx.scene.Node;
+import javafx.scene.control.rich.model.StyleAttribute;
+import javafx.scene.control.rich.model.StyleAttrs;
+import javafx.scene.image.WritableImage;
 
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
+ * Enables conversion of CSS styles to {@link StyleAttribute}s.
  */
-module javafx.controls {
-    requires transitive java.desktop;
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.swing;
+public interface StyleResolver {
+    /**
+     * Converts styles to a set of {@link StyleAttribute}s.
+     * At the minimum, the attributes should include those declared by {@link StyleAttrs}.
+     * 
+     * @param directStyle direct style, can be null
+     * @param css an array of style names, can be null
+     * @return a non-null instance.
+     */
+    public StyleAttrs convert(String directStyle, String[] css);
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.util;
-    exports javafx.scene.control.skin;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    /**
+     * Creates a snapshot of the specified Node.
+     * @param node
+     * @return snapshot
+     */
+    public WritableImage snapshot(Node node);
 }

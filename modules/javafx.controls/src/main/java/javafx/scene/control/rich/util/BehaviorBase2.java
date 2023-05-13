@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,34 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.control.rich.util;
 
-/**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.controls {
-    requires transitive java.desktop;
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-    requires transitive javafx.swing;
+import javafx.scene.input.KeyCode;
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.util;
-    exports javafx.scene.control.skin;
+public class BehaviorBase2 {
+    protected final InputMap2 inputMap = new InputMap2();
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    public BehaviorBase2() {        
+    }
+    
+    public void map(Object actionTag, Runnable function) {
+        inputMap.add(actionTag, function);
+    }
+    
+    // or make inputMap public/part of the Control?
+    public void map(Object actionTag, Runnable function, KeyCode code, KCondition ... modifiers) {
+        inputMap.add(actionTag, function, code, modifiers);
+    }
+    
+    public void map(Object actionTag, KeyCode code, KCondition ... modifiers) {
+        inputMap.add(actionTag, code, modifiers);
+    }
+    
+    public Runnable getFunction(Object tag) {
+        return inputMap.getFunction(tag);
+    }
+
+    public void dispose() {
+        // TODO could unlink inputMap from the control
+    }
 }
