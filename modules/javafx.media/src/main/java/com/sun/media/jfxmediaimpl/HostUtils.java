@@ -78,6 +78,6 @@ public class HostUtils {
      * Returns true if the platform is embedded.
      */
     public static boolean isEmbedded() {
-        return embedded;
+        return PlatformUtil.isEmbedded();
     }
 }
