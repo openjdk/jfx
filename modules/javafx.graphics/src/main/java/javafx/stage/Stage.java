@@ -1187,16 +1187,16 @@ public class Stage extends Window {
             peer.setMaximized(isMaximized());
             peer.setTitle(getTitle());
 
+            if (!isIconified()) {
+                peer.requestFocus();
+            }
+
             List<Object> platformImages = new ArrayList<>();
             for (Image icon : icons) {
                 platformImages.add(Toolkit.getImageAccessor().getPlatformImage(icon));
             }
             if (peer != null) {
                 peer.setIcons(platformImages);
-            }
-
-            if (!isIconified()) {
-                requestFocus();
             }
         }
 
