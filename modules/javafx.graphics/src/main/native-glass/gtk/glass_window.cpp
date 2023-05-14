@@ -446,7 +446,7 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
     }
 }
 
-void WindowContextBase::process_key(GdkEventKey* event) {
+void WindowContextBase::process_key(GdkEventKey* event, bool ime_handled) {
     bool press = event->type == GDK_KEY_PRESS;
     jint glassKey = get_glass_key(event);
     jint glassModifier = gdk_modifier_mask_to_glass(event->state);
@@ -457,6 +457,9 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     }
     jcharArray jChars = NULL;
     jchar key = gdk_keyval_to_unicode(event->keyval);
+
+//    g_print("----> key: %c, %d, %d\n", key, event->keyval, event->state);
+
     if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
         key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
     } else {
@@ -495,7 +498,7 @@ void WindowContextBase::process_key(GdkEventKey* event) {
                     glassModifier);
             CHECK_JNI_EXCEPTION(mainEnv)
 
-            if (jview && key > 0) { // TYPED events should only be sent for printable characters.
+            if (jview && key > 0 && !ime_handled) { // TYPED events should only be sent for printable characters.
                 mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                         com_sun_glass_events_KeyEvent_TYPED,
                         com_sun_glass_events_KeyEvent_VK_UNDEFINED,

@@ -497,7 +497,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     break;
                 case GDK_KEY_PRESS:
                 case GDK_KEY_RELEASE:
-                    ctx->process_key(&event->key);
+                    ctx->process_key(&event->key, false);
                     break;
                 case GDK_DROP_START:
                 case GDK_DRAG_ENTER:

@@ -41,7 +41,13 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
     }
 
     if (event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE) {
-        return im_filter_keypress(&event->key);
+        bool filtered = im_filter_keypress(&event->key);
+
+        if (filtered && event->type == GDK_KEY_PRESS) {
+            process_key(&event->key, true);
+        }
+
+        return filtered;
     }
 
     return false;
