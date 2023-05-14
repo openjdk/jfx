@@ -1128,7 +1128,13 @@ public class ComboBoxTest {
 
         comboBox.requestFocus();
 
-        new KeyEventFirer(comboBox).doKeyPress(KeyCode.ENTER);
+        var kFirer = new KeyEventFirer(comboBox);
+        // Open selection
+        kFirer.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);
+        // Select first
+        kFirer.doKeyPress(KeyCode.DOWN);
+        // Commit selection
+        kFirer.doKeyPress(KeyCode.ENTER);
     }
 
     @Test public void test_rt31479() {
