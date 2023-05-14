@@ -456,9 +456,7 @@ void WindowContextBase::process_key(GdkEventKey* event, bool ime_handled) {
         glassModifier &= ~glass_key_to_modifier(glassKey);
     }
     jcharArray jChars = NULL;
-    jchar key = gdk_keyval_to_unicode(event->keyval);
-
-    g_print("----> key: %d, %d, %d, %s\n", key, event->keyval, event->state, gdk_keyval_name(event->keyval));
+    jchar key = glass_gdk_keyval_to_unicode(event->keyval);
 
     if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
         key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
