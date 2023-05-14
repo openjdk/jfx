@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,7 +88,7 @@ public class TableHeaderRow extends StackPane {
 
     private final VirtualFlow flow;
     final TableViewSkinBase<?,?,?,?,?> tableSkin;
-    private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<>();
+    private Map<TableColumnBase, CheckMenuItem> columnMenuItems;
     private double scrollX;
     private double tableWidth;
     private Rectangle clip;
@@ -210,12 +210,6 @@ public class TableHeaderRow extends StackPane {
         tableSkin.getSkinnable().paddingProperty().addListener(weakTablePaddingListener);
         TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakVisibleLeafColumnsListener);
 
-        // popup menu for hiding/showing columns
-        columnPopupMenu = new ContextMenu();
-        updateTableColumnListeners(TableSkinUtils.getColumns(tableSkin), Collections.<TableColumnBase<?,?>>emptyList());
-        TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakTableColumnsListener);
-        TableSkinUtils.getColumns(tableSkin).addListener(weakTableColumnsListener);
-
         // drag header region. Used to indicate the current column being reordered
         dragHeader = new StackPane();
         dragHeader.setVisible(false);
@@ -264,6 +258,14 @@ public class TableHeaderRow extends StackPane {
         }
 
         cornerRegion.setOnMousePressed(me -> {
+            if (columnPopupMenu == null) {
+                columnPopupMenu = new ContextMenu();
+                columnMenuItems = new HashMap<>();
+
+                TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakTableColumnsListener);
+                TableSkinUtils.getColumns(tableSkin).addListener(weakTableColumnsListener);
+                updateTableColumnListeners(TableSkinUtils.getColumns(tableSkin), List.of());
+            }
             // show a popupMenu which lists all columns
             columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
             me.consume();
@@ -696,4 +698,12 @@ public class TableHeaderRow extends StackPane {
         cornerPadding.set(padding);
     }
 
+    // testing only
+    Pane getCornerRegion() {
+        return cornerRegion;
+    }
+
+    ContextMenu getColumnPopupMenu() {
+        return columnPopupMenu;
+    }
 }

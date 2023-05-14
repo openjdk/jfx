@@ -231,6 +231,18 @@ public class TextFlow extends Pane {
         return getRange(start, end, TextLayout.TYPE_TEXT);
     }
 
+    /**
+     * Returns the shape for the underline in local coordinates.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 21
+     */
+    public final PathElement[] underlineShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_UNDERLINE);
+    }
+
     @Override
     public boolean usesMirroring() {
         return false;
