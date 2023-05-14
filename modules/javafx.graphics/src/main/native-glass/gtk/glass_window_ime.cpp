@@ -134,5 +134,6 @@ void WindowContextBase::disableIME() {
     if (im_ctx.ctx != NULL) {
         g_signal_handlers_disconnect_matched(im_ctx.ctx, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, NULL);
         g_object_unref(im_ctx.ctx);
+        im_ctx.ctx = NULL;
     }
 }
