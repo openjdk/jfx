@@ -838,6 +838,18 @@ public class ParentTest {
         assertNull(res.getIntersectedNode());
     }
 
+    @Test
+    public void testNegativeIndexCorruptsChildSet() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        // Adding a negative index should throw IndexOutOfBoundsException and not modify internal state
+        assertThrows(IllegalArgumentException.class, () -> g.getChildren().add(-1, new Rectangle()));
+
+        // below call should throw no exception
+        g.getChildren().remove(0);
+    }
+
     public static class MockParent extends Parent {
         public MockParent(Node... children) {
             ParentShim.getChildren(this).addAll(children);
