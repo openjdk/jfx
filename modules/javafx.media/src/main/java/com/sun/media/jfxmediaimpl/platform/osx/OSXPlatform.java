@@ -26,11 +26,11 @@
 package com.sun.media.jfxmediaimpl.platform.osx;
 
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.PlatformUtil;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaPlayer;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
-import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.platform.Platform;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -106,7 +106,7 @@ public final class OSXPlatform extends Platform {
      */
     @Override
     public boolean loadPlatform() {
-        if (!HostUtils.isMacOSX()) {
+        if (!PlatformUtil.isMac()) {
             return false;
         }
 

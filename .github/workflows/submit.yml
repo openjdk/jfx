@@ -139,7 +139,7 @@ jobs:
         run: |
           set -x
           export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
-          bash gradlew --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
+          bash gradlew --info --continue -PTEST_ONLY=true test -x :web:test
 
 
   macos_x64_build:
@@ -225,7 +225,7 @@ jobs:
           set -x
           #export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
           export PATH="$JAVA_HOME/bin:$PATH"
-          bash gradlew --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
+          bash gradlew --info --continue -PTEST_ONLY=true test -x :web:test
 
 
   windows_x64_build:
@@ -337,4 +337,4 @@ jobs:
           echo "ANT_HOME=$env:ANT_HOME"
           $env:Path = "$env:THE_PATH" ;
           echo "Path=$env:Path"
-          .\gradlew.bat --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
+          .\gradlew.bat --info --continue -PTEST_ONLY=true test -x :web:test
