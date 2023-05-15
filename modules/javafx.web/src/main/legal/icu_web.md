@@ -1,4 +1,4 @@
-## IBM International Components for Unicode (ICU4C) v71.1
+## IBM International Components for Unicode (ICU4C) v73
 
 ### ICU License
 ```
