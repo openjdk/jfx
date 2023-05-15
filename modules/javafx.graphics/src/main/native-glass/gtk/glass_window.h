@@ -141,7 +141,7 @@ public:
     virtual void process_mouse_motion(GdkEventMotion*) = 0;
     virtual void process_mouse_scroll(GdkEventScroll*) = 0;
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
-    virtual void process_key(GdkEventKey*, bool) = 0;
+    virtual void process_key(GdkEventKey*) = 0;
     virtual void process_state(GdkEventWindowState*) = 0;
 
     virtual void notify_state(jint) = 0;
@@ -237,7 +237,7 @@ public:
     void process_mouse_motion(GdkEventMotion*);
     void process_mouse_scroll(GdkEventScroll*);
     void process_mouse_cross(GdkEventCrossing*);
-    void process_key(GdkEventKey*, bool);
+    void process_key(GdkEventKey*);
     void process_state(GdkEventWindowState*);
 
     void notify_state(jint);

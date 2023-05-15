@@ -29,7 +29,6 @@
 
 #include <gtk/gtk.h>
 
-guint32 glass_gdk_keyval_to_unicode(guint keyval);
 jint gdk_keyval_to_glass(guint keyval);
 jint get_glass_key(GdkEventKey* e);
 jint glass_key_to_modifier(jint glassKey);

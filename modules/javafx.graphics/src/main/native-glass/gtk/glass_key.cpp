@@ -31,47 +31,6 @@
 #include <gdk/gdkkeysyms.h>
 #include <X11/XKBlib.h>
 
-
-static const struct {
-  unsigned short keysym;
-  unsigned short ucs;
-} glass_keysym_dead_key_to_unicode_tab[] = {
-    { 0xfe50, 0x0300 },     // dead_grave
-    { 0xfe51, 0x0301 },     // dead_acute
-    { 0xfe52, 0x0302 },     // dead_circumflex
-    { 0xfe53, 0x0303 },     // dead_tilde
-    { 0xfe54, 0x0304 },     // dead_macron
-    { 0xfe55, 0x0306 },     // dead_breve
-    { 0xfe56, 0x0307 },     // dead_abovedot
-    { 0xfe57, 0x0308 },     // dead_diaeresis
-    { 0xfe58, 0x030a },     // dead_abovering
-    { 0xfe59, 0x030b },     // dead_doubleacute
-    { 0xfe5a, 0x030c },     // dead_caron
-    { 0xfe5b, 0x0327 },     // dead_cedilla
-    { 0xfe5c, 0x0328 },     // dead_ogonek
-    { 0xfe5d, 0x0345 },     // dead_iota
-    { 0xfe5e, 0x3099 },     // dead_voiced_sound
-    { 0xfe5f, 0x309a },     // dead_semivoiced_sound
-};
-
-// This function exists because gdk_keyval_to_unicode won't translate dead keys
-guint32 glass_gdk_keyval_to_unicode(guint keyval) {
-    guint32 res = gdk_keyval_to_unicode(keyval);
-
-    // might be a dead key
-    if (res == 0) {
-        int max = G_N_ELEMENTS(glass_keysym_dead_key_to_unicode_tab);
-
-        for (int i = 0; i < max; i++) {
-            if (glass_keysym_dead_key_to_unicode_tab[i].keysym == keyval) {
-                return glass_keysym_dead_key_to_unicode_tab[i].ucs;
-            }
-        }
-    }
-
-    return res;
-}
-
 static gboolean key_initialized = FALSE;
 static GHashTable *keymap;
 
