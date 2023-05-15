@@ -468,6 +468,16 @@ public abstract class Parent extends Node {
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int... toBeRemoved) {
+            // We have to veto negative toBeRemoved indexes, otherwise our backing list
+            // might fail and leave childSet in corrupted state.
+            for (int tbr: toBeRemoved) {
+                if (tbr < 0) {
+                    throw new IllegalArgumentException(
+                            constructExceptionMessage(
+                                "negative indexes are not allowed", null));
+                }
+            }
+
             final Scene scene = getScene();
             if (scene != null) {
                 Window w = scene.getWindow();
