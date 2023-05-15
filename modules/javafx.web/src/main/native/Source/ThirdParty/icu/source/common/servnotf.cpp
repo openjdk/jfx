@@ -23,8 +23,8 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(EventListener)
 
 static UMutex notifyLock;
 
-ICUNotifier::ICUNotifier() 
-: listeners(nullptr) 
+ICUNotifier::ICUNotifier()
+: listeners(nullptr)
 {
 }
 
@@ -37,8 +37,8 @@ ICUNotifier::~ICUNotifier() {
 }
 
 
-void 
-ICUNotifier::addListener(const EventListener* l, UErrorCode& status) 
+void
+ICUNotifier::addListener(const EventListener* l, UErrorCode& status)
 {
     if (U_SUCCESS(status)) {
         if (l == nullptr) {
@@ -74,8 +74,8 @@ ICUNotifier::addListener(const EventListener* l, UErrorCode& status)
     }
 }
 
-void 
-ICUNotifier::removeListener(const EventListener *l, UErrorCode& status) 
+void
+ICUNotifier::removeListener(const EventListener *l, UErrorCode& status)
 {
     if (U_SUCCESS(status)) {
         if (l == nullptr) {
@@ -103,8 +103,8 @@ ICUNotifier::removeListener(const EventListener *l, UErrorCode& status)
     }
 }
 
-void 
-ICUNotifier::notifyChanged() 
+void
+ICUNotifier::notifyChanged()
 {
     Mutex lmx(&notifyLock);
     if (listeners != nullptr) {

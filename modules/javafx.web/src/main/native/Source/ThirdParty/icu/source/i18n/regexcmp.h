@@ -58,7 +58,7 @@ public:
 
     void       compile(const UnicodeString &pat, UParseError &pp, UErrorCode &e);
     void       compile(UText *pat, UParseError &pp, UErrorCode &e);
-    
+
 
     virtual    ~RegexCompile();
 
@@ -172,7 +172,7 @@ private:
                                                      //   string will be cleared.
 
     int64_t                       fPatternLength;    // Length of the input pattern string.
-    
+
     UVector32                     fParenStack;       // parentheses stack.  Each frame consists of
                                                      //   the positions of compiled pattern operations
                                                      //   needing fixup, followed by negative value.  The

@@ -242,7 +242,7 @@ public:
      * @param value The UDisplayContext value to set.
      * @param status Input/output status. If at entry this indicates a failure
      *               status, the function will do nothing; otherwise this will be
-     *               updated with any new status from the function. 
+     *               updated with any new status from the function.
      * @internal ICU 53
      */
     virtual void setContext(UDisplayContext value, UErrorCode& status) override;

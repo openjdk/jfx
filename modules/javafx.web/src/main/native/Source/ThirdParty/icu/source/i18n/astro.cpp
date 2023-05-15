@@ -21,7 +21,7 @@
 #include "putilimp.h"
 #include <stdio.h>  // for toString()
 
-#if defined (PI) 
+#if defined (PI)
 #undef PI
 #endif
 

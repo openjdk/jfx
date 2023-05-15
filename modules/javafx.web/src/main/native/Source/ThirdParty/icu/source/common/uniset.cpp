@@ -1619,7 +1619,7 @@ UBool UnicodeSet::allocateStrings(UErrorCode &status) {
         delete strings;
         strings = nullptr;
         return false;
-    } 
+    }
     return true;
 }
 

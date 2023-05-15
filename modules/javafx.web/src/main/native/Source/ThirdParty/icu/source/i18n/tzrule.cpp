@@ -182,7 +182,7 @@ const int32_t AnnualTimeZoneRule::MAX_YEAR = 0x7FFFFFFF; /* max signed int32 */
 
 AnnualTimeZoneRule::AnnualTimeZoneRule(const UnicodeString& name,
                                        int32_t rawOffset,
-                                       int32_t dstSavings, 
+                                       int32_t dstSavings,
                                        const DateTimeRule& dateTimeRule,
                                        int32_t startYear,
                                        int32_t endYear)
@@ -192,7 +192,7 @@ AnnualTimeZoneRule::AnnualTimeZoneRule(const UnicodeString& name,
 
 AnnualTimeZoneRule::AnnualTimeZoneRule(const UnicodeString& name,
                                        int32_t rawOffset,
-                                       int32_t dstSavings, 
+                                       int32_t dstSavings,
                                        DateTimeRule* dateTimeRule,
                                        int32_t startYear,
                                        int32_t endYear)
@@ -440,7 +440,7 @@ TimeArrayTimeZoneRule::operator=(const TimeArrayTimeZoneRule& right) {
         UErrorCode status = U_ZERO_ERROR;
         initStartTimes(right.fStartTimes, right.fNumStartTimes, status);
         //TODO - status?
-        fTimeRuleType = right.fTimeRuleType;        
+        fTimeRuleType = right.fTimeRuleType;
     }
     return *this;
 }

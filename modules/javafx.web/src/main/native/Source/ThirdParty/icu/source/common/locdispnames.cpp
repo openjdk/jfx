@@ -298,7 +298,7 @@ static const char _kSeparator[]       = "separator";
 
 static int32_t
 _getStringOrCopyKey(const char *path, const char *locale,
-                    const char *tableKey, 
+                    const char *tableKey,
                     const char* subTableKey,
                     const char *itemKey,
                     const char *substitute,
@@ -508,7 +508,7 @@ uloc_getDisplayName(const char *locale,
     const char16_t *pattern;
     int32_t patLen = 0;
     int32_t sub0Pos, sub1Pos;
-    
+
     char16_t formatOpenParen         = 0x0028; // (
     char16_t formatReplaceOpenParen  = 0x005B; // [
     char16_t formatCloseParen        = 0x0029; // )
@@ -806,8 +806,8 @@ uloc_getDisplayKeyword(const char* keyword,
     /* pass itemKey=nullptr to look for a top-level item */
     return _getStringOrCopyKey(U_ICUDATA_LANG, displayLocale,
                                _kKeys, nullptr,
-                               keyword, 
-                               keyword,      
+                               keyword,
+                               keyword,
                                dest, destCapacity,
                                status);
 
@@ -842,8 +842,8 @@ uloc_getDisplayKeywordValue(   const char* locale,
         ulocimp_getKeywordValue(locale, keyword, sink, status);
     }
 
-    /* 
-     * if the keyword is equal to currency .. then to get the display name 
+    /*
+     * if the keyword is equal to currency .. then to get the display name
      * we need to do the fallback ourselves
      */
     if(uprv_stricmp(keyword, _kCurrency)==0){
@@ -889,11 +889,11 @@ uloc_getDisplayKeywordValue(   const char* locale,
             }
         }
 
-        
+
     }else{
 
         return _getStringOrCopyKey(U_ICUDATA_LANG, displayLocale,
-                                   _kTypes, keyword, 
+                                   _kTypes, keyword,
                                    keywordValue.data(),
                                    keywordValue.data(),
                                    dest, destCapacity,

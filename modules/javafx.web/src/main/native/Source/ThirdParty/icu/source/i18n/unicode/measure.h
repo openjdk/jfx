@@ -18,10 +18,10 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file 
+ * \file
  * \brief C++ API: MeasureUnit object.
  */
- 
+
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/fmtable.h"
@@ -81,7 +81,7 @@ class U_I18N_API Measure: public UObject {
      * @stable ICU 3.0
      */
     virtual ~Measure();
-    
+
     /**
      * Equality operator.  Return true if this object is equal
      * to the given object.

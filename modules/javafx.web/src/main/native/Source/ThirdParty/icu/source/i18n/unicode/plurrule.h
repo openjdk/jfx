@@ -376,10 +376,10 @@ public:
      * range. For example, "3-5" returns "other" in English.
      *
      * To get a FormattedNumberRange, see NumberRangeFormatter.
-     * 
+     *
      * This method only works if PluralRules was created with a locale. If it was created
      * from PluralRules::createRules(), this method sets status code U_UNSUPPORTED_ERROR.
-     * 
+     *
      * @param range  The number range onto which the rules will be applied.
      * @param status Set if an error occurs while selecting plural keyword.
      *               This could happen if the FormattedNumberRange is invalid,

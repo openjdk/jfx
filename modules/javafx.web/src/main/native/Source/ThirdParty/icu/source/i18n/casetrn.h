@@ -81,7 +81,7 @@ protected:
      *                    pos.contextLimit.  Otherwise, assume the text is complete.
      */
     virtual void handleTransliterate(Replaceable& text,
-                                     UTransPosition& offsets, 
+                                     UTransPosition& offsets,
                                      UBool isIncremental) const override;
 
     UCaseMapFull *fMap;

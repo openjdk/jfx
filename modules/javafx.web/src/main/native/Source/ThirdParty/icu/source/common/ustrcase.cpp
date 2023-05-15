@@ -579,8 +579,8 @@ ustrcase_internalToTitle(int32_t caseLocale, uint32_t options, BreakIterator *it
                     }
 
                     if (c == u'I' || c == u'Í') {
-                        titleLimit = maybeTitleDutchIJ(src, c, titleStart + 1, index, 
-                                                       dest, destIndex, destCapacity, options, 
+                        titleLimit = maybeTitleDutchIJ(src, c, titleStart + 1, index,
+                                                       dest, destIndex, destCapacity, options,
                                                        edits);
                     }
                 }

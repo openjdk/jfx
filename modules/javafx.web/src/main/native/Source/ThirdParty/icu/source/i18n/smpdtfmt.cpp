@@ -2890,7 +2890,7 @@ int32_t SimpleDateFormat::matchAlphaMonthStrings(const UnicodeString& text,
         }
     }
 
-    if (bestMatch >= 0) { 
+    if (bestMatch >= 0) {
         // Adjustment for Hebrew Calendar month Adar II
         if (!strcmp(cal.getType(),"hebrew") && bestMatch==13) {
             cal.set(UCAL_MONTH,6);

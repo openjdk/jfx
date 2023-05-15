@@ -211,16 +211,16 @@ typedef double UDate;
 /** The number of milliseconds per day @stable ICU 2.0 */
 #define U_MILLIS_PER_DAY       (86400000)
 
-/** 
- * Maximum UDate value 
- * @stable ICU 4.8 
- */ 
+/**
+ * Maximum UDate value
+ * @stable ICU 4.8
+ */
 #define U_DATE_MAX DBL_MAX
 
 /**
- * Minimum UDate value 
- * @stable ICU 4.8 
- */ 
+ * Minimum UDate value
+ * @stable ICU 4.8
+ */
 #define U_DATE_MIN -U_DATE_MAX
 
 /*===========================================================================*/
@@ -435,7 +435,7 @@ typedef enum UErrorCode {
     U_AMBIGUOUS_ALIAS_WARNING = -122,   /**< This converter alias can go to different converter implementations */
 
     U_DIFFERENT_UCA_VERSION = -121,     /**< ucol_open encountered a mismatch between UCA version and collator image version, so the collator was constructed from rules. No impact to further function */
-    
+
     U_PLUGIN_CHANGED_LEVEL_WARNING = -120, /**< A plugin caused a level change. May not be an error, but later plugins may not load. */
 
 #ifndef U_HIDE_DEPRECATED_API
@@ -664,7 +664,7 @@ typedef enum UErrorCode {
     U_STRINGPREP_PROHIBITED_ERROR = U_IDNA_PROHIBITED_ERROR,
     U_STRINGPREP_UNASSIGNED_ERROR = U_IDNA_UNASSIGNED_ERROR,
     U_STRINGPREP_CHECK_BIDI_ERROR = U_IDNA_CHECK_BIDI_ERROR,
-    
+
     /*
      * Error codes in the range 0x10500-0x105ff are reserved for Plugin related error codes.
      */

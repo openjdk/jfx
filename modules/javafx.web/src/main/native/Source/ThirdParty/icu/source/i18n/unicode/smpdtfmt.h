@@ -1644,7 +1644,7 @@ private:
 
     /**
      * Number formatter pre-allocated for fast performance
-     * 
+     *
      * This references the decimal symbols from fNumberFormatter if it is an instance
      * of DecimalFormat (and is otherwise null). This should always be cleaned up before
      * destroying fNumberFormatter.

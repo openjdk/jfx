@@ -238,7 +238,7 @@ class U_I18N_API MeasureUnitImpl : public UMemory {
 
     /**
      * Extract the MeasureUnitImpl from a MeasureUnit, or parse if it is not present.
-     * 
+     *
      * @param measureUnit The source MeasureUnit.
      * @param memory A place to write the new MeasureUnitImpl if parsing is required.
      * @param status Set if an error occurs.
@@ -278,10 +278,10 @@ class U_I18N_API MeasureUnitImpl : public UMemory {
 
     /**
      * Extracts the list of all the individual units inside the `MeasureUnitImpl` with their indices.
-     *      For example:    
+     *      For example:
      *          -   if the `MeasureUnitImpl` is `foot-per-hour`
-     *                  it will return a list of 1 {(0, `foot-per-hour`)} 
-     *          -   if the `MeasureUnitImpl` is `foot-and-inch` 
+     *                  it will return a list of 1 {(0, `foot-per-hour`)}
+     *          -   if the `MeasureUnitImpl` is `foot-and-inch`
      *                  it will return a list of 2 {(0, `foot`), (1, `inch`)}
      */
     MaybeStackVector<MeasureUnitImplWithIndex>

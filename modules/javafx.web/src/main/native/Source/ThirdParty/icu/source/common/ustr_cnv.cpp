@@ -38,10 +38,10 @@ U_CAPI UConverter* U_EXPORT2
 u_getDefaultConverter(UErrorCode *status)
 {
     UConverter *converter = nullptr;
-    
+
     if (gDefaultConverter != nullptr) {
         icu::umtx_lock(nullptr);
-        
+
         /* need to check to make sure it wasn't taken out from under us */
         if (gDefaultConverter != nullptr) {
             converter = gDefaultConverter;
@@ -87,10 +87,10 @@ U_CAPI void U_EXPORT2
 u_flushDefaultConverter()
 {
     UConverter *converter = nullptr;
-    
+
     if (gDefaultConverter != nullptr) {
         icu::umtx_lock(nullptr);
-        
+
         /* need to check to make sure it wasn't taken out from under us */
         if (gDefaultConverter != nullptr) {
             converter = gDefaultConverter;

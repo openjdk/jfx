@@ -16,7 +16,7 @@
 *   created by: Markus W. Scherer
 *
 *	6/25/08 - Added Cygwin specific code in uprv_mkdir - Brian Rower
-*	
+*
 *   This file contains utility functions for ICU tools like genccode.
 */
 
@@ -251,7 +251,7 @@ uprv_getModificationDate(const char *pathname, UErrorCode *status)
     }
     //  TODO: handle case where stat is not available
     struct stat st;
-    
+
     if(stat(pathname,&st) != 0)
     {
         *status = U_FILE_ACCESS_ERROR;

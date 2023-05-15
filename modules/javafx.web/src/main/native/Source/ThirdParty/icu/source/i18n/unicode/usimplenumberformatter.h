@@ -30,7 +30,7 @@
  * </pre>
  *
  * Example using pure C:
- * 
+ *
  * <pre>
  * UErrorCode ec = U_ZERO_ERROR;
  * USimpleNumberFormatter* uformatter = usnumf_openForLocale("bn", &ec);

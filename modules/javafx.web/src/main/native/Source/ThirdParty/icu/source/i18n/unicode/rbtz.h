@@ -14,7 +14,7 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Rule based customizable time zone
  */
 

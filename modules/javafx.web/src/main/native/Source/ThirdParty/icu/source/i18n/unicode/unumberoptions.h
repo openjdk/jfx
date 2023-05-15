@@ -44,7 +44,7 @@ typedef enum UNumberFormatRoundingMode {
 #endif  /* U_HIDE_DEPRECATED_API */
     UNUM_ROUND_HALFDOWN = UNUM_ROUND_HALFEVEN + 1,
     UNUM_ROUND_HALFUP,
-    /** 
+    /**
       * ROUND_UNNECESSARY reports an error if formatted result is not exact.
       * @stable ICU 4.8
       */

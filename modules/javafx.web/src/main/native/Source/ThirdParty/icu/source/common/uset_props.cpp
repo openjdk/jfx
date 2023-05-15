@@ -69,13 +69,13 @@ uset_openPatternOptions(const char16_t* pattern, int32_t patternLength,
 }
 
 
-U_CAPI int32_t U_EXPORT2 
+U_CAPI int32_t U_EXPORT2
 uset_applyPattern(USet *set,
                   const char16_t *pattern, int32_t patternLength,
                   uint32_t options,
                   UErrorCode *status){
 
-    // status code needs to be checked since we 
+    // status code needs to be checked since we
     // dereference it
     if(status == nullptr || U_FAILURE(*status)){
         return 0;
@@ -92,9 +92,9 @@ uset_applyPattern(USet *set,
     UnicodeString pat(pattern, patternLength);
 
     ParsePosition pos;
-   
+
     ((UnicodeSet*) set)->applyPattern(pat, pos, options, nullptr, *status);
-    
+
     return pos.getIndex();
 }
 
