@@ -31,10 +31,8 @@
  * @since 9
  */
 module javafx.controls {
-    requires transitive java.desktop;
     requires transitive javafx.base;
     requires transitive javafx.graphics;
-    requires transitive javafx.swing;
 
     exports javafx.scene.chart;
     exports javafx.scene.control;

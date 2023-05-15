@@ -26,6 +26,12 @@
 package com.sun.javafx.util;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.List;
+import javax.imageio.ImageIO;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -35,16 +41,14 @@ import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import java.util.List;
-import com.sun.javafx.PlatformUtil;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.PlatformUtil;
 import com.sun.prism.impl.PrismSettings;
 
 /**
@@ -996,5 +1000,12 @@ public class Utils {
             }
             return null;
         });
+    }
+
+    public static byte[] writePNG(Image im) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
+        ImageIO.setUseCache(false);
+        ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
+        return out.toByteArray();
     }
 }

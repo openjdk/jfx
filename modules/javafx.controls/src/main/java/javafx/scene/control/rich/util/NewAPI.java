@@ -26,21 +26,17 @@
 // https://github.com/andy-goryachev/FxEditor
 package javafx.scene.control.rich.util;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import javax.imageio.ImageIO;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Screen;
+import com.sun.javafx.util.Utils;
 
 /**
  * We may consider making these APIs public.
@@ -143,9 +139,6 @@ public class NewAPI {
     }
     
     public static byte[] writePNG(Image im) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
-        ImageIO.setUseCache(false);
-        ImageIO.write(SwingFXUtils.fromFXImage(im, null), "PNG", out);
-        return out.toByteArray();
+        return Utils.writePNG(im);
     }
 }
