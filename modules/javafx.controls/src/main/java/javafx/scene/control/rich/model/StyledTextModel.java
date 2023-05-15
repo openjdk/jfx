@@ -44,7 +44,6 @@ import javafx.scene.input.DataFormat;
 
 /**
  * Base class for a styled text model for use with {@link RichTextArea}.
- * The text is considered to be a collection of paragraphs, represented by {@link StyledParagraph} class.
  * 
  * TODO printing
  */
@@ -86,7 +85,7 @@ public abstract class StyledTextModel {
      * The caller should never attempt to ask for a paragraph outside of the valid range.
      * This method might return null if no text is associated with the paragraph.
      *
-     * @param index paragraph index in the range (0...{@link getParagraphCount()})
+     * @param index paragraph index in the range (0...{@link #size()})
      */
     public abstract String getPlainText(int index);
 
@@ -97,7 +96,7 @@ public abstract class StyledTextModel {
      * The nodes are not reused, and might be created repeatedly,
      * so the model must not keep strong references to these nodes.
      *
-     * @param index paragraph index in the range (0...{@link getParagraphCount()})
+     * @param index paragraph index in the range (0...{@link #size()})
      */
     public abstract TextCell createTextCell(int index);
     
@@ -213,7 +212,8 @@ public abstract class StyledTextModel {
 
     /**
      * Replaces the given range with the provided plain text.
-     * This is a convenience method that calls {@link #replace(TextPos,TextPos,StyledInput)}.
+     * This is a convenience method that calls
+     * {@link #replace(StyleResolver,TextPos,TextPos,StyledInput)}.
      * The caller must ensure that the start position precedes the end.
      *
      * @param resolver

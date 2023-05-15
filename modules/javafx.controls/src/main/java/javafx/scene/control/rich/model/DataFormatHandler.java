@@ -44,15 +44,6 @@ public abstract class DataFormatHandler {
     public abstract StyledInput getStyledInput(Object src);
     
     /**
-     * Creates a StyledOutput for the specified options.
-     * TODO explain
-     *
-     * @param options
-     * @return
-     */
-    public final void getStyledOutput(Object options) { } // FIX remove
-    
-    /**
      * Creates an object to be put into Clipboard for the given text range.
      * The caller guarantees that the {@code start} precedes the {@code end} position.
      *
@@ -77,9 +68,6 @@ public abstract class DataFormatHandler {
      * - line separator
      *
      * TODO explain
-     *
-     * @param resolver TODO
-     * @param outputFile
      *
      * @throws IOException 
      */

@@ -22,21 +22,36 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control.rich.model;
+package test.javafx.scene.control.rich.model;
 
-import java.io.IOException;
+import java.util.ArrayList;
+import javafx.scene.control.rich.model.StyleAttrs;
+import javafx.scene.control.rich.model.StyledOutput;
+import javafx.scene.control.rich.model.StyledSegment;
 
-/**
- * Class represents a consumer of styled text segments for the purposes of
- * exporting, copying, or saving to a file.
- */
-// TODO change to Consumer<StyledSegment> maybe?
-public interface StyledOutput {
-    /**
-     * Appends the next styled segment to the output.
-     * 
-     * @param segment
-     * @throws IOException 
-     */
-    public void append(StyledSegment segment) throws IOException;
+public class TStyledOutput implements StyledOutput {
+    private ArrayList<Object> items = new ArrayList<>();
+
+    public TStyledOutput() {
+    }
+
+    public Object[] getResult() {
+        return items.toArray();
+    }
+
+    @Override
+    public void append(StyledSegment seg) {
+        System.out.println("TStyledOutput.append " + seg); // FIX
+        if (seg.isText()) {
+            String text = seg.getText();
+            // TODO a) depends on view, b) may or may not have direct attributes, c) attributes are mutable
+            StyleAttrs a = seg.getStyleAttrs();
+            items.add(text);
+            items.add(a);
+        } else if (seg.isLineBreak()) {
+            items.add("\n");
+        } else {
+            throw new Error("not yet supported: " + seg);
+        }
+    }
 }

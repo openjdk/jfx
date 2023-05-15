@@ -22,21 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control.rich.model;
+package test.javafx.scene.control.rich.model;
 
-import java.io.IOException;
+import javafx.scene.control.rich.model.StyleAttrs;
+import javafx.scene.control.rich.model.StyleInfo;
+import javafx.scene.control.rich.model.StyledInput;
+import javafx.scene.control.rich.model.StyledSegment;
 
 /**
- * Class represents a consumer of styled text segments for the purposes of
- * exporting, copying, or saving to a file.
+ * Test Styled Input gets its data from string-style pairs.
  */
-// TODO change to Consumer<StyledSegment> maybe?
-public interface StyledOutput {
-    /**
-     * Appends the next styled segment to the output.
-     * 
-     * @param segment
-     * @throws IOException 
-     */
-    public void append(StyledSegment segment) throws IOException;
+public class TStyledInput extends StyledInput {
+    private final Object[] items;
+    private int index;
+    
+    public TStyledInput(Object[] items) {
+        this.items = items;
+    }
+
+    @Override
+    public StyledSegment nextSegment() {
+        if(index < items.length) {
+            String text = (String)items[index++];
+            if("\n".equals(text)) {
+                return StyledSegment.LINE_BREAK;
+            }
+
+            StyleAttrs a = (StyleAttrs)items[index++];
+            return StyledSegment.of(text, StyleInfo.of(a));
+        }
+        return null;
+    }
 }

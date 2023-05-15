@@ -28,7 +28,7 @@ package javafx.scene.control.rich.util;
  * Condition used to build input key mappings.
  * <p>
  * The KCondition values are used as keys in a hash table, so when the platform sends a key event with multiple
- * modifiers, some modifiers are dropped in order to make the {@link KieBinding2} -> function possible.
+ * modifiers, some modifiers are dropped in order to make the {@link KeyBinding2} -> function possible.
  * The mapping is as follows:
  * <pre>
  * KCondition    Mac         Windows/Linux
@@ -40,6 +40,7 @@ package javafx.scene.control.rich.util;
  * SHIFT         SHIFT       SHIFT
  * SHORTCUT      COMMAND     CTRL
  * WINDOWS       (ignored)   META
+ * </pre>
  */
 public enum KCondition {
     // modifier keys

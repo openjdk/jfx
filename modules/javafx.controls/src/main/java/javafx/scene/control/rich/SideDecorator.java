@@ -35,14 +35,14 @@ import javafx.scene.Node;
  * layout process, would be determined by the following process:
  * <ul>
  * <li>if {@link #getPrefWidth} method returns a positive value, that will be the width of all the side nodes.
- * <li>otherwise, {@link #getNode()} method is called with a modelIndex that is a negative of the top line index
- * to obtain a Node whose preferred width will be used to size all the other Nodes.
+ * <li>otherwise, the {@link #getNode(int, boolean)} method is called with {@code forMeasurement} argument set to true.
+ * Preferred width of this Node will be used to size all other Nodes.
  * </ul>
  */
 public interface SideDecorator {
     /**
      * Returns the width for all the side Nodes, or 0 if a measurer Node needs to be obtained via
-     * {@link #getNode()}.
+     * {@link #getNode(int, boolean)}.
      */
     public double getPrefWidth(double viewWidth);
 

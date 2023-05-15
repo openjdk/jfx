@@ -67,7 +67,7 @@ import javafx.stage.Window;
  * {@link IDisconnectable} instance.
  * </ul>
  *
- * This class is currently used for clean replacement of {@link Skin}s.
+ * This class is currently used for clean replacement of {@code Skin}s.
  * We should consider making this class a part of the public API in {@code javax.base},
  * since it proved itself useful in removing listeners and handlers in bulk at the application level.
  */

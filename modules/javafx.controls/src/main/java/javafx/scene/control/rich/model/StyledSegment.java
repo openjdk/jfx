@@ -36,11 +36,10 @@ import javafx.scene.control.rich.StyleResolver;
  * 2. a line break
  * 3. an inline Node
  * 4. a paragraph containing a single Node
- * 
- * TODO in addition to is*(), add getType() returning an enum { TEXT, PARAGRAPH, INLINE_NODE, LINE_BREAK }
- * TODO perhaps add guarded/unguarded factory methods (of(), ofGuarded()) that check for <0x20, or specify that
- * text must not include those characters.
  */
+// TODO in addition to is*(), add getType() returning an enum { TEXT, PARAGRAPH, INLINE_NODE, LINE_BREAK }
+// TODO perhaps add guarded/unguarded factory methods (of(), ofGuarded()) that check for <0x20, or specify that
+// text must not include those characters.
 public abstract class StyledSegment {
     /**
      * Returns true if this segment is a text segment.
@@ -116,7 +115,7 @@ public abstract class StyledSegment {
 
     /** 
      * Creates a StyleSegment from a non-null text and non-null attributes.
-     * Important: text must not contain any characters < 0x20, except for TAB.
+     * Important: text must not contain any characters &lt; 0x20, except for TAB.
      */
     public static StyledSegment of(String text, StyleInfo si) {
         return new StyledSegment() {
@@ -146,7 +145,7 @@ public abstract class StyledSegment {
     
     /** 
      * Creates a StyleSegment from a non-null plain text.
-     * Important: text must not contain any characters < 0x20, except for TAB.
+     * Important: text must not contain any characters &lt; 0x20, except for TAB.
      */
     public static StyledSegment of(String text) {
         return of(text, StyleInfo.NONE);
