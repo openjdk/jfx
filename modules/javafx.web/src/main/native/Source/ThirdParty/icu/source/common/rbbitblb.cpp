@@ -645,8 +645,8 @@ void RBBITableBuilder::buildStateTable() {
                     if (U == nullptr) {
                         U = new UVector(*fStatus);
                         if (U == nullptr) {
-                        	*fStatus = U_MEMORY_ALLOCATION_ERROR;
-                        	goto ExitBuildSTdeleteall;
+                                *fStatus = U_MEMORY_ALLOCATION_ERROR;
+                                goto ExitBuildSTdeleteall;
                         }
                     }
                     setAdd(U, p->fFollowPos);
@@ -676,7 +676,7 @@ void RBBITableBuilder::buildStateTable() {
                 {
                     RBBIStateDescriptor *newState = new RBBIStateDescriptor(lastInputSymbol, fStatus);
                     if (newState == nullptr) {
-                    	*fStatus = U_MEMORY_ALLOCATION_ERROR;
+                        *fStatus = U_MEMORY_ALLOCATION_ERROR;
                     }
                     if (U_FAILURE(*fStatus)) {
                         goto ExitBuildSTdeleteall;

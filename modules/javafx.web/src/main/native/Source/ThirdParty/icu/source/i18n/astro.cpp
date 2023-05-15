@@ -1405,7 +1405,7 @@ UDate CalendarAstronomer::riseOrSet(CoordFunc& func, UBool rise,
 
     return fTime + (rise ? -delta : delta);
 }
-											   /**
+                                                                                           /**
  * Return the obliquity of the ecliptic (the angle between the ecliptic
  * and the earth's equator) at the current time.  This varies due to
  * the precession of the earth's axis.
