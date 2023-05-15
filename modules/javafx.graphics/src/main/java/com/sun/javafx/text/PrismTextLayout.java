@@ -473,6 +473,12 @@ public class PrismTextLayout implements TextLayout {
                 leading = true;
             }
         }
+        if (insertionIndex == -1) {
+            insertionIndex = charIndex;
+            if (!leading) {
+                insertionIndex += 1;
+            }
+        }
         return new Hit(charIndex, insertionIndex, leading);
     }
 
