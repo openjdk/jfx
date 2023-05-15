@@ -157,8 +157,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         if (getSkinnable() != null) {
             TreeTableView<T> t = getSkinnable().getTreeTableView();
             if (t != null) {
-                double sz = t.getFixedCellSize();
-                fixedCellSize = sz;
+                fixedCellSize = t.getFixedCellSize();
                 fixedCellSizeEnabled = fixedCellSize > 0.0;
             }
         }
