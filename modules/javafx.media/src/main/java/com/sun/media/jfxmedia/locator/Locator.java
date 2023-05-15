@@ -28,7 +28,6 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmedia.MediaManager;
 import com.sun.media.jfxmedia.logging.Logger;
-import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.MediaUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -233,7 +232,7 @@ public class Locator {
             protocol = scheme; // scheme is already lower case.
         }
 
-        if (HostUtils.isIOS() && protocol.equals("ipod-library")) {
+        if (PlatformUtil.isIOS() && protocol.equals("ipod-library")) {
             isIpod = true;
         }
 
