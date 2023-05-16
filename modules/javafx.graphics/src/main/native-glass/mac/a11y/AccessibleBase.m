@@ -27,6 +27,7 @@
 #import "GlassMacros.h"
 #import "GlassAccessible.h"
 #import "com_sun_glass_ui_mac_MacAccessible.h"
+#import "com_sun_glass_ui_mac_MacVariant.h"
 #import "common.h"
 
 static NSMutableDictionary * rolesMap;
@@ -37,9 +38,13 @@ static NSMutableDictionary * rolesMap;
     /*
      * Here we should keep all the mapping between the accessibility roles and implementing classes
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:1];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:4];
 
     [rolesMap setObject:@"ButtonAccessibility" forKey:@"BUTTON"];
+    [rolesMap setObject:@"ButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
+    [rolesMap setObject:@"ButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
+    [rolesMap setObject:@"ButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
+
 }
 
 + (Class) getComponentAccessibilityClass:(NSString *)role
@@ -61,6 +66,7 @@ static NSMutableDictionary * rolesMap;
     if (self != nil) {
         self->jAccessible = (*env)->NewGlobalRef(env, acc);
     }
+    self->parent = nil;
     return self;
 }
 
@@ -102,12 +108,16 @@ static NSMutableDictionary * rolesMap;
 
 - (id)accessibilityParent
 {
-    jobject jresult = NULL;
-    GET_MAIN_JENV;
-    if (env == NULL) return NULL;
-    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXParent");
-    GLASS_CHECK_EXCEPTION(env);
-    return variantToID(env, jresult);
+    if (parent == nil) {
+        jobject jresult = NULL;
+        GET_MAIN_JENV;
+        if (env == NULL) return NULL;
+        jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue,
+                                                  (jlong) @"AXParent");
+        GLASS_CHECK_EXCEPTION(env);
+        parent = variantToID(env, jresult);
+    }
+    return parent;
 }
 
 // Actions support
@@ -141,6 +151,11 @@ static NSMutableDictionary * rolesMap;
     return YES;
 }
 
+- (void)clearParent
+{
+    parent = nil;
+}
+
 @end
 
 /*
@@ -170,5 +185,30 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1destroyAccessib
     if ([accessible respondsToSelector:@selector(release)]) {
         [accessible release];
     }
+}
 
+/*
+ * Class:     com_sun_glass_ui_mac_MacAccessible
+ * Method:    NSAccessibilityUnignoredAncestor
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacAccessible_NSAccessibilityUnignoredAncestor
+        (JNIEnv *env, jclass jClass, jlong macAccessible)
+{
+    NSObject* accessible = (NSObject*)jlong_to_ptr(macAccessible);
+    return ptr_to_jlong(NSAccessibilityUnignoredAncestor(accessible));
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacAccessible
+ * Method:    _invalidateParent
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1invalidateParent
+(JNIEnv *env, jobject jAccessible, long macAccessible)
+{
+    NSObject* accessible = (NSObject*)jlong_to_ptr(macAccessible);
+    if ([accessible respondsToSelector:@selector(clearParent)]) {
+        [accessible clearParent];
+    }
 }

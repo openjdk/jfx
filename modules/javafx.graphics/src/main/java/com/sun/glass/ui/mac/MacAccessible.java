@@ -639,6 +639,9 @@ final class MacAccessible extends Accessible {
     /* Releases the native accessible peer and deletes the GlobalRef */
     private native void _destroyAccessiblePeer(long accessible);
 
+    /* Notify accessible peer about hierarchy change to invalidate parent */
+    private native void _invalidateParent(long accessible);
+
     private static native String getString(long nsString);
     private static native boolean isEqualToString(long nsString1, long nsString);
     private static native long NSAccessibilityUnignoredAncestor(long id);
@@ -788,6 +791,9 @@ final class MacAccessible extends Accessible {
                 }
                 break;
             case PARENT:
+                if (peer != 0L) {
+                    _invalidateParent(peer);
+                }
                 ignoreInnerText = null;
                 break;
             default:
@@ -795,7 +801,7 @@ final class MacAccessible extends Accessible {
         }
         if (macNotification != null) {
             View view = getView();
-            long id = view != null ? view.getNativeView() : peer;
+            long id = view != null ? view.getNativeView() : getNativeAccessible();
             NSAccessibilityPostNotification(id, macNotification.ptr);
         }
     }
@@ -969,11 +975,6 @@ final class MacAccessible extends Accessible {
     }
 
     /* NSAccessibility Protocol - JNI entry points */
-
-    private long accessibilityAttributeRole() {
-        return -1;
-    }
-
     private long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
