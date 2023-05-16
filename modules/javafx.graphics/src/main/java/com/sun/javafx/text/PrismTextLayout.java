@@ -429,6 +429,7 @@ public class PrismTextLayout implements TextLayout {
         int lineIndex = getLineIndex(y);
         if (lineIndex >= getLineCount()) {
             charIndex = getCharCount();
+            insertionIndex = charIndex + 1;
         } else {
             if (isMirrored()) {
                 x = getMirroringWidth() - x;
@@ -471,12 +472,7 @@ public class PrismTextLayout implements TextLayout {
                 //empty line, set to line break leading
                 charIndex = line.getStart();
                 leading = true;
-            }
-        }
-        if (insertionIndex == -1) {
-            insertionIndex = charIndex;
-            if (!leading) {
-                insertionIndex += 1;
+                insertionIndex = charIndex;
             }
         }
         return new Hit(charIndex, insertionIndex, leading);
