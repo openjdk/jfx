@@ -78,7 +78,6 @@ public class VFlow extends Pane {
     private final Path caretPath;
     private final Path caretLineHighlight;
     private final Path selectionHighlight;
-    protected final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
     protected final SimpleBooleanProperty caretVisible = new SimpleBooleanProperty(true);
     protected final SimpleBooleanProperty suppressBlink = new SimpleBooleanProperty(false);
     protected final SimpleDoubleProperty offsetX = new SimpleDoubleProperty(0.0);
@@ -167,7 +166,7 @@ public class VFlow extends Pane {
         lh.addChangeListener(
             this::handleOrigin,
             true,
-            origin
+            control.origin
         );
         
         widthProperty().addListener((p) -> updateWidth());
@@ -276,22 +275,18 @@ public class VFlow extends Pane {
     }
 
     public Origin getOrigin() {
-        return origin.get();
+        return control.origin.get();
     }
 
     public void setOrigin(Origin p) {
         if (p == null) {
             throw new NullPointerException();
         }
-        origin.set(p);
+        control.origin.set(p);
     }
-    
-    public ReadOnlyProperty<Origin> originProperty() {
-        return origin.getReadOnlyProperty();
-    }
-    
+
     protected void handleOrigin() {
-        if(!inReflow) {
+        if (!inReflow) {
             requestLayout();
         }
     }

@@ -111,6 +111,7 @@ public class RichTextArea extends Control {
     private final Config config;
     protected final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     protected final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
+    protected final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
     private SimpleBooleanProperty editableProperty;
     protected final ReadOnlyObjectWrapper<Duration> caretBlinkPeriod;
     // TODO property, pluggable models, or boolean (selection enabled?), do we need to allow for multiple selection?
@@ -405,12 +406,19 @@ public class RichTextArea extends Control {
         return selectionModel.selectionSegmentProperty();
     }
     
-    public ReadOnlyProperty<Origin> originProperty() {
-        return vflow().originProperty();
+    public Origin getOrigin() {
+        return origin.get();
     }
 
-    public Origin getOrigin() {
-        return vflow().getOrigin();
+    public void setOrigin(Origin p) {
+        if (p == null) {
+            throw new NullPointerException();
+        }
+        origin.set(p);
+    }
+    
+    public ReadOnlyProperty<Origin> originProperty() {
+        return origin.getReadOnlyProperty();
     }
 
     /**

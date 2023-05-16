@@ -65,15 +65,17 @@ public class RichTextAreaWindow extends Stage {
         scene.getStylesheets().add(RichTextAreaWindow.class.getResource("RichTextAreaDemo.css").toExternalForm());
 
         setScene(scene);
-        setTitle("RichTextArea Demo " + System.getProperty("javafx.runtime.version") + " " + System.getProperty("java.version"));
+        setTitle(
+            "RichTextArea Demo " +
+            System.getProperty("javafx.runtime.version") +
+            " " +
+            System.getProperty("java.version")
+        );
         setWidth(1200);
         setHeight(600);
-        
+
         demoPane.control.caretPositionProperty().addListener((x) -> updateStatus());
-        Platform.runLater(() -> {
-            // TODO move origin property to control
-            demoPane.control.originProperty().addListener((x) -> updateStatus());
-        });
+        demoPane.control.originProperty().addListener((x) -> updateStatus());
     }
 
     protected void updateStatus() {
