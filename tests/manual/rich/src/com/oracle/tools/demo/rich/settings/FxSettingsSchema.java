@@ -26,7 +26,6 @@
 // https://github.com/andy-goryachev/FxDock
 package com.oracle.tools.demo.rich.settings;
 
-import java.awt.Shape;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Rectangle2D;
@@ -135,8 +134,6 @@ public class FxSettingsSchema {
     // returns true if Node should be ignored
     private static boolean collectNames(StringBuilder sb, Node n) {
         if (n instanceof MenuBar) {
-            return true;
-        } else if (n instanceof Shape) {
             return true;
         } else if (n instanceof ImageView) {
             return true;
