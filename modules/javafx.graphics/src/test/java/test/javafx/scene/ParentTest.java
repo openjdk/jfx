@@ -839,14 +839,56 @@ public class ParentTest {
     }
 
     @Test
-    public void testNegativeIndexCorruptsChildSet() {
+    public void testNegativeIndex_Add() {
         Group g = new Group();
         g.getChildren().addAll(new Rectangle(), new Rectangle());
 
-        // Adding a negative index should throw IndexOutOfBoundsException and not modify internal state
-        assertThrows(IllegalArgumentException.class, () -> g.getChildren().add(-1, new Rectangle()));
+        int preTestSize = g.getChildren().size();
 
-        // below call should throw no exception
+        // Adding an object at a negative or too big index should throw IndexOutOfBoundsException and not modify internal state
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().add(-1, new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().add(g.getChildren().size() + 1, new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNegativeIndex_Set() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Setting an object at a negative or too big index should throw IndexOutOfBoundsException and not modify internal state
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().set(-1, new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().set(g.getChildren().size(), new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNegativeIndex_Remove() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Removing an object at negative or too big index should throw IndexOutOfBoundsException and not modify internal state
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().remove(-1));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().remove(g.getChildren().size()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
         g.getChildren().remove(0);
     }
 
