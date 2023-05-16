@@ -117,12 +117,10 @@ public class VFlow extends Pane {
         caretPath = new Path();
         caretPath.getStyleClass().add("caret");
         caretPath.setManaged(false);
-        caretPath.setStroke(Color.BLACK);
         caretPath.setStrokeWidth(1.0);
 
         caretLineHighlight = new Path();
         caretLineHighlight.getStyleClass().add("caret-line");
-        caretLineHighlight.setFill(Color.rgb(255, 0, 255, 0.02));
         caretLineHighlight.setManaged(false);
 
         selectionHighlight = new Path();
@@ -916,6 +914,10 @@ public class VFlow extends Pane {
         
         // populate side nodes
         if (leftDecorator != null) {
+            if (leftCache == null) {
+                leftCache = updateSideCache(leftDecorator, null);
+            }
+
             for (i = 0; i < layout.getVisibleCellCount(); i++) {
                 TextCell cell = layout.getCellAt(i);
                 int ix = cell.getIndex();
@@ -934,6 +936,10 @@ public class VFlow extends Pane {
         }
 
         if (rightDecorator != null) {
+            if (rightCache == null) {
+                rightCache = updateSideCache(rightDecorator, null);
+            }
+
             for (i = 0; i < layout.getVisibleCellCount(); i++) {
                 TextCell cell = layout.getCellAt(i);
                 int ix = cell.getIndex();

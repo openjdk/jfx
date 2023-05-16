@@ -70,7 +70,10 @@ public class RichTextAreaWindow extends Stage {
         setHeight(600);
         
         demoPane.control.caretPositionProperty().addListener((x) -> updateStatus());
-        demoPane.control.originProperty().addListener((x) -> updateStatus());
+        Platform.runLater(() -> {
+            // TODO move origin property to control
+            demoPane.control.originProperty().addListener((x) -> updateStatus());
+        });
     }
 
     protected void updateStatus() {

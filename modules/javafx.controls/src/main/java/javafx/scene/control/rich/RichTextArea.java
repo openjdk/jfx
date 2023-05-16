@@ -151,10 +151,7 @@ public class RichTextArea extends Control {
         setFocusTraversable(true);
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
-        setSkin(createDefaultSkin());
-        // TODO move to main stylesheet
-        // TODO focus border around content area, not the whole thing?
-        getStylesheets().add(Util.getResourceURL(getClass(), "RichTextArea.css"));
+        //setSkin(createDefaultSkin());
 
         if (m != null) {
             setModel(m);
@@ -293,7 +290,7 @@ public class RichTextArea extends Control {
     
     private static class StyleableProperties {
         private static final CssMetaData<RichTextArea, Insets> CONTENT_PADDING =
-            new CssMetaData<>("-fx-content-padding", InsetsConverter.getInstance(), Insets.EMPTY) {
+            new CssMetaData<>("-fx-content-padding", InsetsConverter.getInstance()) {
 
             @Override
             public boolean isSettable(RichTextArea t) {

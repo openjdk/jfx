@@ -1074,6 +1074,10 @@ public class ControlTest {
                     } else if (defaultValue != null && defaultValue.getClass().isArray()) {
                         assertTrue(what, Arrays.equals((Object[])defaultValue, (Object[])initialValue));
                     } else {
+                        System.err.println("initialValue=" + initialValue); // FIX
+                        System.err.println("defaultValue=" + defaultValue); // FIX
+                        System.err.println("what=" + what); // FIX
+                        System.err.println("styleable=" + styleable); // FIX
                         assertEquals(what, defaultValue, initialValue);
                     }
 
