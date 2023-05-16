@@ -922,6 +922,10 @@ final class CssStyleHelper {
                 // skip the value. A style from a user agent stylesheet should
                 // not override the user set style.
                 //
+                // Note: this check should be after the value was added to the cache
+                // as the cache is shared between all properties with the same pseudo states,
+                // and not all of the nodes will have the property set manually.
+                //
                 final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
 
                 // A calculated value should never have a null style origin since that would
@@ -1160,34 +1164,26 @@ final class CssStyleHelper {
                 }
             }
 
-        } else { // style != null
-
-            // RT-10522:
-            // If the user set the property and there is a style and
-            // the style came from the user agent stylesheet, then
-            // skip the value. A style from a user agent stylesheet should
-            // not override the user set style.
-            if (style.getOrigin() == StyleOrigin.USER_AGENT) {
-
-                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(originatingStyleable);
-                // if styleableProperty is null, then we're dealing with a sub-property.
-                if (styleableProperty != null && styleableProperty.getStyleOrigin() == StyleOrigin.USER) {
-                    return SKIP;
-                }
-            }
-
-            // If there was a style found, then we want to check whether the
-            // value was "inherit". If so, then we will simply inherit.
-            final ParsedValue cssValue = style.getParsedValue();
-            if (cssValue != null && "inherit".equals(cssValue.getValue())) {
-                style = getInheritedStyle(styleable, property);
-                if (style == null) return SKIP;
-            }
         }
 
-//        System.out.println("lookup " + property +
-//                ", selector = \'" + style.selector.toString() + "\'" +
-//                ", node = " + node.toString());
+        /*
+         * Even if this style comes from the user agent stylesheet,
+         * and the user has set the property directly, the value should
+         * still be calculated as it may be cached and shared for all nodes
+         * with the same pseudo states.
+         *
+         * The caller of this function should decide (after potentially
+         * caching the value) whether or not to proceed with applying
+         * the style.
+         */
+
+        // If there was a style found, then we want to check whether the
+        // value was "inherit". If so, then we will simply inherit.
+        final ParsedValue cssValue = style.getParsedValue();
+        if (cssValue != null && "inherit".equals(cssValue.getValue())) {
+            style = getInheritedStyle(styleable, property);
+            if (style == null) return SKIP;
+        }
 
         return calculateValue(style, styleable, cssMetaData, styleMap, states,
                 originatingStyleable, cachedFont);
