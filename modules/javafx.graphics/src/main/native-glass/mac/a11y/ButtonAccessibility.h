@@ -34,4 +34,3 @@
 - (BOOL)accessibilityPerformPress;
 - (NSRect)accessibilityFrame;
 @end
-

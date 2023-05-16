@@ -629,18 +629,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacAccessible_idToMacVariant
 
 /*
  * Class:     com_sun_glass_ui_mac_MacAccessible
- * Method:    NSAccessibilityUnignoredAncestor
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacAccessible_NSAccessibilityUnignoredAncestor
-  (JNIEnv *env, jclass jClass, jlong macAccessible)
-{
-    GlassAccessible* accessible = (GlassAccessible*)jlong_to_ptr(macAccessible);
-    return ptr_to_jlong(NSAccessibilityUnignoredAncestor(accessible));
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacAccessible
  * Method:    NSAccessibilityUnignoredChildren
  * Signature: ([J)[J
  */

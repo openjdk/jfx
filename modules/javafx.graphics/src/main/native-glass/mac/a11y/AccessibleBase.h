@@ -29,6 +29,7 @@
 @interface AccessibleBase : NSAccessibilityElement {
 @private
 jobject jAccessible;
+id parent;
 }
 - (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
 - (jobject)getJAccessible;
