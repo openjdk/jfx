@@ -823,9 +823,8 @@ public enum AccessibleAttribute {
     }
 
     /**
-     * This enum describes the values for TOGGLE_STATE attribute.
+     * This enum describes the values for {@link AccessibleAttribute#TOGGLE_STATE TOGGLE_STATE} attribute.
      *
-     * @see TOGGLE_STATE
      * @since 21
      */
     public enum ToggleState {

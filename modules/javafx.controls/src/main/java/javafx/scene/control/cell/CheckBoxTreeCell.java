@@ -489,13 +489,13 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     @Override public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case TOGGLE_STATE:
-                ToggleState state = ToggleState.UNCHECKED;
                 if (checkBox.isIndeterminate()) {
-                    state = ToggleState.INDETERMINATE;
+                    return ToggleState.INDETERMINATE;
                 } else if (checkBox.isSelected()) {
-                    state = ToggleState.CHECKED;
+                    return ToggleState.CHECKED;
+                } else {
+                    return ToggleState.UNCHECKED;
                 }
-                return state;
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

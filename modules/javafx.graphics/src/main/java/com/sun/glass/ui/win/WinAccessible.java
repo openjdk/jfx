@@ -299,8 +299,8 @@ final class WinAccessible extends Accessible {
                 break;
             }
             case INDETERMINATE: {
-                if (getAttribute(ROLE) == AccessibleRole.CHECK_BOX
-                        || getAttribute(ROLE) == AccessibleRole.CHECK_BOX_TREE_ITEM) {
+                Object role = getAttribute(ROLE);
+                if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.CHECK_BOX_TREE_ITEM) {
                     notifyToggleState();
                 }
                 break;
@@ -1590,8 +1590,9 @@ final class WinAccessible extends Accessible {
                 return ToggleState_Indeterminate;
             } else if (toggleState == ToggleState.CHECKED) {
                 return ToggleState_On;
+            } else {
+                return ToggleState_Off;
             }
-            return ToggleState_Off;
         }
         if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
             return ToggleState_Indeterminate;
