@@ -124,10 +124,16 @@ static NSMutableDictionary * rolesMap;
 - (BOOL)performAccessibleAction:(jlong)actionId
 {
     GET_MAIN_JENV;
-    if (env == NULL) return FALSE;
-    (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilityPerformAction, actionId);
-    GLASS_CHECK_EXCEPTION(env);
-    return TRUE;
+    if (env != NULL) {
+        BOOL result = TRUE;
+        (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilityPerformAction, actionId);
+        if ((*env)->ExceptionCheck(env)) {
+            result = FALSE;
+        }
+        GLASS_CHECK_EXCEPTION(env);
+        return result;
+    }
+    return FALSE;
 }
 
 
