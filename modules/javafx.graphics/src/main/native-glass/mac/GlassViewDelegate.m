@@ -958,7 +958,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     // Set up frames for dragging items
     for (NSDraggingItem* item in items)
     {
-        NSPoint dragPoint = [self->nsView convertPoint:[self->lastEvent locationInWindow] fromView:nil];//[self->lastEvent locationInWindow];
+        NSPoint dragPoint = [self->nsView convertPoint:[self->lastEvent locationInWindow] fromView:nil];
         NSImage *image = nil;
         NSRect rect = [item draggingFrame];
 
@@ -1059,9 +1059,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 if (offset.y > imageHalfY || offset.y < -imageHalfY) {
                     offset.y = imageHalfY * (offset.y > 0 ? 1 : -1);
                 }
-
-                //dragPoint.x += offset.x;
-                //dragPoint.y -= offset.y;
             }
         }
         else
@@ -1107,10 +1104,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         self->draggingSource = nil;
     }
 
-    if (self->draggingSession)
-    {
-        self->draggingSession = nil;
-    }
+    [GlassDragSource setDelegate:nil];
 
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd,  [GlassDragSource getMask]);
