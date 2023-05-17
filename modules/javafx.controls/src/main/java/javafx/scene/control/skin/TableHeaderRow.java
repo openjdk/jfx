@@ -465,11 +465,11 @@ public class TableHeaderRow extends StackPane {
     }
 
     /**
-     * Shows a menu containing all leaf columns as item.
+     * Shows a menu containing all leaf columns as items.
      * An item can be selected/deselected to make the corresponding column visible/invisible.
      *
-     * @implNote This method can be overridden to create and show a custom menu.
-     * @param mouseEvent the {@link MouseEvent} which was generated when the table menu button was pressed.
+     * @implNote This method can be overridden to create and show a custom menu
+     * @param mouseEvent the {@link MouseEvent} which was generated when the table menu button was pressed
      * @since 21
      */
     protected void showColumnMenu(MouseEvent mouseEvent) {
