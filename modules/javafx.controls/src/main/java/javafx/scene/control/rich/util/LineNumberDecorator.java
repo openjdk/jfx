@@ -64,13 +64,16 @@ public class LineNumberDecorator implements SideDecorator {
 
         String s = format.format(ix + 1);
         if(forMeasurement) {
-            // account for some variability if propertional font is used
+            // account for some variability with proportional font
             s += " ";
         }
 
         Label t = new Label(s);
         // label needs to fill all available space
         t.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        // do not interfere with vflow layout
+        t.setMinHeight(1);
+        t.setPrefHeight(1);
         // numbers should be right aligned
         t.setAlignment(Pos.TOP_RIGHT);
         // not required; one may style the left side pane instead
