@@ -174,7 +174,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1createAccessib
 {
     NSString *roleName = jStringToNSString(env, forRole);
     Class classType = [AccessibleBase getComponentAccessibilityClass:roleName];
-    GlassAccessible* accessible = NULL;
+    NSObject* accessible = NULL;
     accessible = [[classType alloc] initWithEnv: env accessible: jAccessible];
     return ptr_to_jlong(accessible);
 }
