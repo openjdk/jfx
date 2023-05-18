@@ -529,8 +529,8 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         if (obj == this) {
             return true;
         }
-        if (obj instanceof BitSet<?> bitSet) {  // fast path if other is a BitSet
-            return equalsBitSet(bitSet);
+        if (getClass() == obj.getClass()) {  // fast path if other is exact same type of BitSet
+            return equalsBitSet((BitSet<?>) obj);
         }
 
         return super.equals(obj);
