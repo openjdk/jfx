@@ -362,7 +362,7 @@ public abstract class StyledTextModel {
             return p;
         } else {
             if (ct == 0) {
-                return new TextPos(0, 0);
+                return TextPos.ZERO;
             } else {
                 ix = ct - 1;
                 String s = getPlainText(ix);

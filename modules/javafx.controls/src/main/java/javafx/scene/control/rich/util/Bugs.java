@@ -39,6 +39,7 @@ public class Bugs {
      * TextFlow.hitTest() gives wrong value for emojis due to null text.
      */
     // FIX still returns an incorrect value when multiple Text instances are added to TextFlow
+    @Deprecated // TODO remove
     public static int getInsertionIndex2(TextFlow flow, Point2D p) {
         int off = 0;
         for(Node ch: flow.getChildren()) {

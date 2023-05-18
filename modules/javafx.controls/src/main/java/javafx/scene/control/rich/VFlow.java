@@ -404,8 +404,7 @@ public class VFlow extends Pane {
     protected void createCaretPath(FxPathBuilder b, TextPos p) {
         CaretInfo c = getCaretInfo(p);
         if(c != null) {
-            b.moveto(c.x(), c.y0());
-            b.lineto(c.x(), c.y1());
+            b.addAll(c.path());
         }
     }
 
@@ -1111,13 +1110,20 @@ public class VFlow extends Pane {
             }
         } else {
             // block scroll, if needed
-            if (c.y0() < 0.0) {
-                blockScroll(c.y0());
-            } else if (c.y1() > getViewHeight()) {
-                blockScroll(c.y1() - getViewHeight());
+            if (c.getMinY() < 0.0) {
+                blockScroll(c.getMinY());
+            } else if (c.getMaxY() > getViewHeight()) {
+                blockScroll(c.getMaxY() - getViewHeight());
             }
             
-            scrollHorizontalToVisible(c.x());
+            if (!control.isWrapText()) {
+                double x = c.getMinX();
+                if (x + leftPadding < 0.0) {
+                    scrollHorizontalToVisible(x);
+                } else {
+                    scrollHorizontalToVisible(c.getMaxX());
+                }
+            }
         }
     }
 
@@ -1128,7 +1134,7 @@ public class VFlow extends Pane {
             double cw = content.getWidth();
             double off;
             if (x < 0.0) {
-                off = Math.max(getOffsetX() + x - 20.0, 0.0);
+                off = Math.max(getOffsetX() + x - config.horizontalGuard, 0.0);
             } else if (x > cw) {
                 off = getOffsetX() + x - cw + config.horizontalGuard;
             } else {
@@ -1169,8 +1175,6 @@ public class VFlow extends Pane {
             origin = new Origin(start.index(), 0);
             setOrigin(origin);
         }
-
-        // TODO causes flicker in line number nodes
 
         // TODO clear cache >= start, update layout
         cellCache.clear();

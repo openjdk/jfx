@@ -36,8 +36,6 @@ import javafx.scene.control.rich.util.NewAPI;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.TextFlow;
 
@@ -201,39 +199,12 @@ public class TextCellLayout {
             TextCell cell = getCell(ix);
             if (cell != null) {
                 int charIndex = p.offset();
-                boolean leading = true; // TODO verify
-                PathElement[] pe = cell.getCaretShape(charIndex, leading);
-                return translateCaretInfo(xoffset, cell, pe);
+                boolean leading = true; // TODO needs bias!
+                PathElement[] path = cell.getCaretShape(charIndex, leading);
+                return CaretInfo.create(-xoffset, cell.getY(), path);
             }
         }
         return null;
-    }
-
-    private CaretInfo translateCaretInfo(double xoffset, TextCell cell, PathElement[] elements) {
-        double x = 0.0;
-        double y0 = 0.0;
-        double y1 = 0.0;
-
-        double dx = -xoffset;
-        double dy = cell.getY();
-
-        int sz = elements.length;
-        for (int i = 0; i < sz; i++) {
-            PathElement em = elements[i];
-            if (em instanceof LineTo m) {
-                x = Util.halfPixel(m.getX() + dx);
-                y0 = Util.halfPixel(m.getY() + dy);
-            } else if (em instanceof MoveTo m) {
-                x = Util.halfPixel(m.getX() + dx);
-                y1 = Util.halfPixel(m.getY() + dy);
-            }
-        }
-
-        if (y0 > y1) {
-            return new CaretInfo(x, y1, y0);
-        } else {
-            return new CaretInfo(x, y0, y1);
-        }
     }
 
     public void removeNodesFrom(Pane p) {
