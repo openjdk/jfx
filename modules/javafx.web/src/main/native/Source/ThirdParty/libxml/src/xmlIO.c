@@ -3234,12 +3234,6 @@ xmlParserInputBufferGrow(xmlParserInputBufferPtr in, int len) {
     if ((len <= MINLEN) && (len != 4))
         len = MINLEN;
 
-    if (xmlBufAvail(in->buffer) <= 0) {
-        xmlIOErr(XML_IO_BUFFER_FULL, NULL);
-        in->error = XML_IO_BUFFER_FULL;
-        return(-1);
-    }
-
     if (xmlBufGrow(in->buffer, len + 1) < 0) {
         xmlIOErrMemory("growing input buffer");
         in->error = XML_ERR_NO_MEMORY;

@@ -620,7 +620,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
     @Override
     public void removeListener(SetChangeListener<? super T> setChangeListener) {
         if (setChangeListener != null) {
-            SetListenerHelper.removeListener(listenerHelper, setChangeListener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, setChangeListener);
         }
     }
 
@@ -634,7 +634,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
     @Override
     public void removeListener(InvalidationListener invalidationListener) {
         if (invalidationListener != null) {
-            SetListenerHelper.removeListener(listenerHelper, invalidationListener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, invalidationListener);
         }
     }
 
