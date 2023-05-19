@@ -477,7 +477,9 @@ public class VFlow extends Pane {
 
     /** uses vflow.content cooridinates */ 
     public TextPos getTextPosLocal(double localX, double localY) {
-        return textCellLayout().getTextPos(getOffsetX(), localX, localY);
+        // convert to cell coordinates
+        double x = localX + getOffsetX();
+        return textCellLayout().getTextPos(x, localY);
     }
 
     /** uses vflow.content coordinates */

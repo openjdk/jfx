@@ -113,8 +113,8 @@ public class TextCellLayout {
         visibleCount = n;
     }
 
-    /** finds text position inside the sliding window */
-    public TextPos getTextPos(double xoffset, double localX, double localY) {
+    /** finds text position inside the sliding window, in cell coordinates */
+    public TextPos getTextPos(double cellX, double cellY) {
         if (lineCount == 0) {
             return TextPos.ZERO;
         }
@@ -122,27 +122,21 @@ public class TextCellLayout {
         int topIx = topIndex();
         int btmIx = bottomIndex();
 
-        int ix = binarySearch(localY, topIx, btmIx - 1);
+        int ix = binarySearch(cellY, topIx, btmIx - 1);
         TextCell cell = getCell(ix);
         if (cell != null) {
             Region r = cell.getContent();
             Insets pad = r.getPadding();
-            double y = localY - cell.getY() - pad.getTop();
+            double y = cellY - cell.getY() - pad.getTop();
             if (y < 0) {
                 return new TextPos(cell.getIndex(), 0);
             } else if (y < cell.getHeight()) {
                 // TODO move this to TextCell?
                 if (r instanceof TextFlow t) {
-                    double x = localX + xoffset - pad.getLeft();
+                    double x = cellX - pad.getLeft();
                     Point2D p = new Point2D(x, y);
-                    
-                    // FIX https://bugs.openjdk.org/browse/JDK-8302511
-                    // gives wrong value for emojis
-                    //HitInfo h = t.hitTest(p);
-                    //if (h != null) {
-                    //    return new TextPos(cell.getLineIndex(), h.getInsertionIndex());
-                    //}
 
+                    // FIX
                     int ii = Bugs.getInsertionIndex(t, p);
                     return new TextPos(cell.getIndex(), ii);
                 } else {

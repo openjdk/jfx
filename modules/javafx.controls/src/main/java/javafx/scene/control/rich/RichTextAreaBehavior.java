@@ -509,14 +509,14 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         double y = (deltaPixels < 0) ? c.getMinY() + deltaPixels - sp - 0.5 : c.getMaxY() + deltaPixels + sp;
 
         if (phantomX < 0) {
-            // convert to offset from the left text edge
-            phantomX = x + vflow().getOffsetX();
+            phantomX = x;
         } else {
-            // convert back to vflow.content
-            x = phantomX - vflow().getOffsetX();
+            x = phantomX;
         }
 
-        TextPos p = vflow().getTextPosLocal(x, y);
+        TextPos p = vflow().getTextPosLocal(x + vflow().leftPadding(), y);
+        // FIX may result in move to the same line in wrapped text with tab characters.
+        // we need to check if same line and try something else then
         if (p != null) {
             control.moveCaret(p, extendSelection);
         }

@@ -125,7 +125,8 @@ public class CaretInfo {
     public double getMaxY() {
         return ymax;
     }
-    
+
+    /** returns caret path in vflow coordinates */
     public PathElement[] path() {
         return path;
     }
