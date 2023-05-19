@@ -422,12 +422,14 @@ public class PrismTextLayout implements TextLayout {
     @Override
     public Hit getHitInfo(float x, float y) {
         int charIndex = -1;
+        int insertionIndex = -1;
         boolean leading = false;
 
         ensureLayout();
         int lineIndex = getLineIndex(y);
         if (lineIndex >= getLineCount()) {
             charIndex = getCharCount();
+            insertionIndex = charIndex + 1;
         } else {
             if (isMirrored()) {
                 x = getMirroringWidth() - x;
@@ -450,13 +452,30 @@ public class PrismTextLayout implements TextLayout {
                 int[] trailing = new int[1];
                 charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
                 leading = (trailing[0] == 0);
+
+                insertionIndex = charIndex;
+                if (getText() != null) {
+                    if (!leading) {
+                        BreakIterator charIterator = BreakIterator.getCharacterInstance();
+                        charIterator.setText(new String(getText()));
+                        int next = charIterator.following(insertionIndex);
+                        if (next == BreakIterator.DONE) {
+                            insertionIndex += 1;
+                        } else {
+                            insertionIndex = next;
+                        }
+                    }
+                } else if (!leading) {
+                    insertionIndex += 1;
+                }
             } else {
                 //empty line, set to line break leading
                 charIndex = line.getStart();
                 leading = true;
+                insertionIndex = charIndex;
             }
         }
-        return new Hit(charIndex, -1, leading);
+        return new Hit(charIndex, insertionIndex, leading);
     }
 
     @Override
