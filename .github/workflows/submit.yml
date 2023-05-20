@@ -145,7 +145,7 @@ jobs:
   macos_x64_build:
     name: macOS x64
     needs: validation
-    runs-on: "macos-11"
+    runs-on: "macos-13"
 
     env:
       # FIXME: read this information from a property file
@@ -207,7 +207,7 @@ jobs:
           java -version
           which ant
           ant -version
-          sudo xcode-select --switch /Applications/Xcode_12.4.app/Contents/Developer
+          sudo xcode-select --switch /Applications/Xcode_14.3.app/Contents/Developer
           xcodebuild -version
 
       - name: Build JavaFX artifacts
