@@ -442,10 +442,6 @@ static void process_events(GdkEvent* event, gpointer data)
         return;
     }
 
-    if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
-        return;
-    }
-
     glass_evloop_call_hooks(event);
 
     if (ctx != NULL) {

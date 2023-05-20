@@ -167,7 +167,7 @@ private:
     extern jmethodID jViewNotifyDragDrop; //com.sun.glass.ui.View#notifyDragDrop (IIIII)I
     extern jmethodID jViewNotifyDragLeave; //com.sun.glass.ui.View#notifyDragLeave ()V
     extern jmethodID jViewNotifyScroll; //com.sun.glass.ui.View#notifyScroll (IIIIDDIIIIIDD)V
-    extern jmethodID jViewNotifyInputMethod; //com.sun.glass.ui.View#notifyInputMethod (Ljava/lang/String;[I[I[BIII)V
+    extern jmethodID jViewNotifyInputMethodLinux; //com.sun.glass.ui.View#notifyInputMethodLinux ((Ljava/lang/String;IIIII)V
     extern jmethodID jViewNotifyInputMethodCandidatePosRequest; //com.sun.glass.ui.View#notifyInputMethodCandidatePosRequest (I)[D
 
     extern jmethodID jViewNotifyMenu; //com.sun.glass.ui.View#notifyMenu (IIIIZ)V

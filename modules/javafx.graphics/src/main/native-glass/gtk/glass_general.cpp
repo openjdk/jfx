@@ -61,7 +61,7 @@ jmethodID jViewNotifyDragOver;
 jmethodID jViewNotifyDragDrop;
 jmethodID jViewNotifyDragLeave;
 jmethodID jViewNotifyScroll;
-jmethodID jViewNotifyInputMethod;
+jmethodID jViewNotifyInputMethodLinux;
 jmethodID jViewNotifyInputMethodCandidatePosRequest;
 jmethodID jViewNotifyMenu;
 jfieldID  jViewPtr;
@@ -208,8 +208,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyScroll = env->GetMethodID(clazz, "notifyScroll", "(IIIIDDIIIIIDD)V");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethod = env->GetMethodID(clazz, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethodCandidatePosRequest = env->GetMethodID(clazz, "notifyInputMethodCandidatePosRequest", "(I)[D");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyMenu = env->GetMethodID(clazz, "notifyMenu", "(IIIIZ)V");
@@ -218,6 +216,8 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jViewNotifyInputMethodLinux = env->GetMethodID(clazz, "notifyInputMethodLinux", "(Ljava/lang/String;IIIII)V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Window");
