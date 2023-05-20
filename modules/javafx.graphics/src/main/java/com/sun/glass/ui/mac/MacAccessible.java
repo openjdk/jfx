@@ -361,7 +361,13 @@ final class MacAccessible extends Accessible {
             },
             null
         ),
-        NSAccessibilityRowRole(new AccessibleRole[] {AccessibleRole.LIST_ITEM, AccessibleRole.TABLE_ROW, AccessibleRole.TREE_ITEM, AccessibleRole.TREE_TABLE_ROW},
+        NSAccessibilityRowRole(new AccessibleRole[] {
+                AccessibleRole.LIST_ITEM,
+                AccessibleRole.TABLE_ROW,
+                AccessibleRole.TREE_ITEM,
+                AccessibleRole.CHECK_BOX_TREE_ITEM,
+                AccessibleRole.TREE_TABLE_ROW
+            },
             new MacAttribute[] {
                 MacAttribute.NSAccessibilitySubroleAttribute,
                 MacAttribute.NSAccessibilityIndexAttribute,
@@ -483,7 +489,11 @@ final class MacAccessible extends Accessible {
     private static enum MacSubrole {
         NSAccessibilityTableRowSubrole(AccessibleRole.LIST_ITEM, AccessibleRole.TABLE_ROW),
         NSAccessibilitySecureTextFieldSubrole(AccessibleRole.PASSWORD_FIELD),
-        NSAccessibilityOutlineRowSubrole(new AccessibleRole[] { AccessibleRole.TREE_ITEM, AccessibleRole.TREE_TABLE_ROW },
+        NSAccessibilityOutlineRowSubrole(new AccessibleRole[] {
+                AccessibleRole.TREE_ITEM,
+                AccessibleRole.CHECK_BOX_TREE_ITEM,
+                AccessibleRole.TREE_TABLE_ROW
+            },
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityDisclosedByRowAttribute,
                 MacAttribute.NSAccessibilityDisclosedRowsAttribute,
@@ -748,8 +758,9 @@ final class MacAccessible extends Accessible {
                 }
 
                 AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
-                if (role == AccessibleRole.TREE_ITEM || role == AccessibleRole.TREE_TABLE_ROW) {
-                    AccessibleRole containerRole = role == AccessibleRole.TREE_ITEM ? AccessibleRole.TREE_VIEW : AccessibleRole.TREE_TABLE_VIEW;
+                if (role == AccessibleRole.TREE_ITEM || role == AccessibleRole.CHECK_BOX_TREE_ITEM || role == AccessibleRole.TREE_TABLE_ROW) {
+                    AccessibleRole containerRole = (role == AccessibleRole.TREE_ITEM || role == AccessibleRole.CHECK_BOX_TREE_ITEM) ?
+                                                                                AccessibleRole.TREE_VIEW : AccessibleRole.TREE_TABLE_VIEW;
                     MacAccessible container = (MacAccessible)getContainerAccessible(containerRole);
                     if (container != null) {
                         NSAccessibilityPostNotification(container.getNativeAccessible(), MacNotification.NSAccessibilityRowCountChangedNotification.ptr);

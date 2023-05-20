@@ -26,6 +26,7 @@
 package com.sun.media.jfxmediaimpl;
 
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.PlatformUtil;
 import com.sun.media.jfxmedia.*;
 import com.sun.media.jfxmedia.events.MediaErrorListener;
 import com.sun.media.jfxmedia.locator.Locator;
@@ -106,16 +107,16 @@ public class NativeMediaManager {
         try {
             AccessController.doPrivileged((PrivilegedExceptionAction) () -> {
                 ArrayList<String> dependencies = new ArrayList<>();
-                if (HostUtils.isWindows() || HostUtils.isMacOSX()) {
+                if (PlatformUtil.isWindows() || PlatformUtil.isMac()) {
                     NativeLibLoader.loadLibrary("glib-lite");
                 }
 
-                if (!HostUtils.isLinux() && !HostUtils.isIOS()) {
+                if (!PlatformUtil.isLinux() && !PlatformUtil.isIOS()) {
                     NativeLibLoader.loadLibrary("gstreamer-lite");
                 } else {
                     dependencies.add("gstreamer-lite");
                 }
-                if (HostUtils.isLinux()) {
+                if (PlatformUtil.isLinux()) {
                     dependencies.add("fxplugins");
                     dependencies.add("avplugin");
                     dependencies.add("avplugin-54");
@@ -126,12 +127,12 @@ public class NativeMediaManager {
                     dependencies.add("avplugin-ffmpeg-58");
                     dependencies.add("avplugin-ffmpeg-59");
                 }
-                if (HostUtils.isMacOSX()) {
+                if (PlatformUtil.isMac()) {
                     dependencies.add("fxplugins");
                     dependencies.add("glib-lite");
                     dependencies.add("jfxmedia_avf");
                 }
-                if (HostUtils.isWindows()) {
+                if (PlatformUtil.isWindows()) {
                     dependencies.add("fxplugins");
                     dependencies.add("glib-lite");
                 }
