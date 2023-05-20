@@ -274,7 +274,7 @@ public class MouseEventFirerTest {
         setBottomAnchor(bottomRight, 0.);
         setLeftAnchor(bottomRight, 0.);
 
-        content = new AnchorPane(topLeft, center, bottomRight);
+        content = new AnchorPane(center, topLeft, bottomRight);
         scene = new Scene(content);
         stage = new Stage();
         stage.setScene(scene);
