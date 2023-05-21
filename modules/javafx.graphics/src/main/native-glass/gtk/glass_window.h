@@ -95,6 +95,8 @@ class WindowContextTop;
 class WindowContext {
 public:
     virtual bool isEnabled() = 0;
+    virtual bool hasIME() = 0;
+    virtual bool filterIME(GdkEvent *) = 0;
     virtual void enableOrResetIME() = 0;
     virtual void updateCaretPos() = 0;
     virtual void disableIME() = 0;
@@ -207,6 +209,8 @@ protected:
     static WindowContext* sm_mouse_drag_window;
 public:
     bool isEnabled();
+    bool hasIME();
+    bool filterIME(GdkEvent *);
     void enableOrResetIME();
     void setOnPreEdit(bool);
     void commitIME(gchar *);

@@ -28,6 +28,7 @@
 #include "com_sun_glass_ui_View.h"
 #include "glass_window.h"
 #include "glass_general.h"
+#include "glass_key.h"
 
 void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
@@ -75,25 +76,33 @@ void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
 
 void WindowContextBase::commitIME(gchar *str) {
     g_print("commitIME: %s\n", str);
-
     jstring jstr = mainEnv->NewStringUTF(str);
     EXCEPTION_OCCURED(mainEnv);
-
     jsize slen = mainEnv->GetStringLength(jstr);
 
     if (!im_ctx.on_preedit) {
         g_print("not on preedit: %s\n", str);
 
-        jcharArray jChars = mainEnv->NewCharArray(slen);
-        mainEnv->SetCharArrayRegion(jChars, 0, slen, (const jchar*) mainEnv->GetStringUTFChars(jstr, NULL));
-        CHECK_JNI_EXCEPTION(mainEnv)
+        //FIXME: could be more?
+        if (slen == 1) {
+            jcharArray jChars = mainEnv->NewCharArray(1);
+            mainEnv->SetCharArrayRegion(jChars, 0, 1, (const jchar*) str);
+            CHECK_JNI_EXCEPTION(mainEnv)
 
-        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                com_sun_glass_events_KeyEvent_TYPED,
-                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                jChars,
-                0);
-        CHECK_JNI_EXCEPTION(mainEnv)
+            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                    com_sun_glass_events_KeyEvent_PRESS,
+                    gdk_keyval_to_glass(gdk_unicode_to_keyval(str[0])),
+                    jChars,
+                    0);
+            CHECK_JNI_EXCEPTION(mainEnv)
+
+            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                    com_sun_glass_events_KeyEvent_TYPED,
+                    com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+                    jChars,
+                    0);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     } else {
         g_print("jViewNotifyInputMethodLinux: %s\n", str);
         mainEnv->CallVoidMethod(jview,
@@ -106,6 +115,18 @@ void WindowContextBase::commitIME(gchar *str) {
                 slen);
         LOG_EXCEPTION(mainEnv)
     }
+}
+
+bool WindowContextBase::hasIME() {
+    return im_ctx.enabled;
+}
+
+bool WindowContextBase::filterIME(GdkEvent *event) {
+    if (!hasIME()) {
+        return false;
+    }
+
+    return gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 }
 
 void WindowContextBase::setOnPreEdit(bool preedit) {
@@ -134,9 +155,7 @@ void WindowContextBase::updateCaretPos() {
 }
 
 void WindowContextBase::enableOrResetIME() {
-    g_print("enableOrResetIME()\n");
     if (!im_ctx.enabled) {
-        g_print("gtk_im_multicontext_new()\n");
         im_ctx.ctx = gtk_im_multicontext_new();
         gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);
         g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
@@ -153,7 +172,6 @@ void WindowContextBase::enableOrResetIME() {
 }
 
 void WindowContextBase::disableIME() {
-    g_print("disableIME()\n");
     if (im_ctx.ctx != NULL) {
         g_signal_handlers_disconnect_matched(im_ctx.ctx, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, NULL);
         g_object_unref(im_ctx.ctx);

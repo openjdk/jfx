@@ -140,10 +140,8 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
 
     if (im_ctx.enabled && im_ctx.ctx) {
         if (event->in) {
-            g_print("gtk_im_context_focus_in\n");
             gtk_im_context_focus_in(im_ctx.ctx);
         } else {
-            g_print("gtk_im_context_focus_out\n");
             gtk_im_context_focus_out(im_ctx.ctx);
         }
     }
@@ -475,11 +473,8 @@ void WindowContextBase::process_key(GdkEventKey* event) {
             mainEnv->SetCharArrayRegion(jChars, 0, 1, &key);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
-    } else {
-        jChars = mainEnv->NewCharArray(0);
-    }
 
-    if (key > 0) {
+        g_print("key event: press = %d, %d\n", press, event->send_event);
         mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                 (press) ? com_sun_glass_events_KeyEvent_PRESS
                         : com_sun_glass_events_KeyEvent_RELEASE,
@@ -487,10 +482,8 @@ void WindowContextBase::process_key(GdkEventKey* event) {
                 jChars,
                 glassModifier);
         CHECK_JNI_EXCEPTION(mainEnv)
-    }
 
-    if (press && (!im_ctx.enabled || !gtk_im_context_filter_keypress(im_ctx.ctx, event))) {
-        if (key > 0) { // TYPED events should only be sent for printable characters.
+        if (press) { // TYPED events should only be sent for printable characters.
             mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                     com_sun_glass_events_KeyEvent_TYPED,
                     com_sun_glass_events_KeyEvent_VK_UNDEFINED,

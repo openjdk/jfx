@@ -442,6 +442,10 @@ static void process_events(GdkEvent* event, gpointer data)
         return;
     }
 
+    if (event->type == GDK_KEY_PRESS && ctx != NULL && ctx->filterIME(event)) {
+        return;
+    }
+
     glass_evloop_call_hooks(event);
 
     if (ctx != NULL) {
