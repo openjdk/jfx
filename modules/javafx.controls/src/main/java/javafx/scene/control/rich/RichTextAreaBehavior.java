@@ -42,7 +42,6 @@ import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.util.BehaviorBase2;
 import javafx.scene.control.rich.util.KCondition;
 import javafx.scene.control.rich.util.KeyBinding2;
-import javafx.scene.control.rich.util.ListenerHelper;
 import javafx.scene.control.rich.util.NewAPI;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.input.Clipboard;
@@ -57,6 +56,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
 import javafx.util.Duration;
+import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * RichTextArea Behavior.

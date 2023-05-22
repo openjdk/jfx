@@ -31,8 +31,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventType;
@@ -44,15 +42,12 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.control.rich.impl.FastCache;
 import javafx.scene.control.rich.impl.RPane;
 import javafx.scene.control.rich.impl.SelectionHelper;
-import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.util.FxPathBuilder;
-import javafx.scene.control.rich.util.ListenerHelper;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
@@ -60,6 +55,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
+import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * Virtual text flow deals with TextCells, scroll bars, and conversion
