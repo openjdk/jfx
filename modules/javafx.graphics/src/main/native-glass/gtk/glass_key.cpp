@@ -130,6 +130,23 @@ static const struct {
     { GDK_KEY_braceright, com_sun_glass_events_KeyEvent_VK_BRACERIGHT },
     { GDK_KEY_exclamdown, com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION },
     { GDK_KEY_EuroSign, com_sun_glass_events_KeyEvent_VK_EURO_SIGN },
+    { GDK_KEY_dead_grave, com_sun_glass_events_KeyEvent_VK_DEAD_GRAVE },
+    { GDK_KEY_dead_acute, com_sun_glass_events_KeyEvent_VK_DEAD_ACUTE },
+    { GDK_KEY_dead_circumflex, com_sun_glass_events_KeyEvent_VK_DEAD_CIRCUMFLEX },
+    { GDK_KEY_dead_tilde, com_sun_glass_events_KeyEvent_VK_DEAD_TILDE },
+    { GDK_KEY_dead_macron, com_sun_glass_events_KeyEvent_VK_DEAD_MACRON },
+    { GDK_KEY_dead_breve, com_sun_glass_events_KeyEvent_VK_DEAD_BREVE },
+    { GDK_KEY_dead_abovedot, com_sun_glass_events_KeyEvent_VK_DEAD_ABOVEDOT },
+    { GDK_KEY_dead_diaeresis, com_sun_glass_events_KeyEvent_VK_DEAD_DIAERESIS },
+    { GDK_KEY_dead_abovering, com_sun_glass_events_KeyEvent_VK_DEAD_ABOVERING },
+    { GDK_KEY_dead_doubleacute, com_sun_glass_events_KeyEvent_VK_DEAD_DOUBLEACUTE },
+    { GDK_KEY_dead_caron, com_sun_glass_events_KeyEvent_VK_DEAD_CARON },
+    { GDK_KEY_dead_cedilla, com_sun_glass_events_KeyEvent_VK_DEAD_CEDILLA },
+    { GDK_KEY_dead_ogonek, com_sun_glass_events_KeyEvent_VK_DEAD_OGONEK },
+    { GDK_KEY_dead_iota, com_sun_glass_events_KeyEvent_VK_DEAD_IOTA },
+    { GDK_KEY_dead_voiced_sound, com_sun_glass_events_KeyEvent_VK_DEAD_VOICED_SOUND },
+    { GDK_KEY_dead_voiced_sound, com_sun_glass_events_KeyEvent_VK_DEAD_VOICED_SOUND },
+    { GDK_KEY_dead_semivoiced_sound, com_sun_glass_events_KeyEvent_VK_DEAD_SEMIVOICED_SOUND },
     { GDK_KEY_BackSpace, com_sun_glass_events_KeyEvent_VK_BACKSPACE },
     { GDK_KEY_Tab, com_sun_glass_events_KeyEvent_VK_TAB },
     { GDK_KEY_Clear, com_sun_glass_events_KeyEvent_VK_CLEAR },
@@ -194,6 +211,18 @@ static const struct {
     { GDK_KEY_F10, com_sun_glass_events_KeyEvent_VK_F10 },
     { GDK_KEY_F11, com_sun_glass_events_KeyEvent_VK_F11 },
     { GDK_KEY_F12, com_sun_glass_events_KeyEvent_VK_F12 },
+    { GDK_KEY_F13, com_sun_glass_events_KeyEvent_VK_F13 },
+    { GDK_KEY_F14, com_sun_glass_events_KeyEvent_VK_F14 },
+    { GDK_KEY_F15, com_sun_glass_events_KeyEvent_VK_F15 },
+    { GDK_KEY_F16, com_sun_glass_events_KeyEvent_VK_F16 },
+    { GDK_KEY_F17, com_sun_glass_events_KeyEvent_VK_F17 },
+    { GDK_KEY_F18, com_sun_glass_events_KeyEvent_VK_F18 },
+    { GDK_KEY_F19, com_sun_glass_events_KeyEvent_VK_F19 },
+    { GDK_KEY_F20, com_sun_glass_events_KeyEvent_VK_F20 },
+    { GDK_KEY_F21, com_sun_glass_events_KeyEvent_VK_F21 },
+    { GDK_KEY_F22, com_sun_glass_events_KeyEvent_VK_F22 },
+    { GDK_KEY_F23, com_sun_glass_events_KeyEvent_VK_F23 },
+    { GDK_KEY_F24, com_sun_glass_events_KeyEvent_VK_F24 },
     { GDK_KEY_Shift_L, com_sun_glass_events_KeyEvent_VK_SHIFT },
     { GDK_KEY_Shift_R, com_sun_glass_events_KeyEvent_VK_SHIFT },
     { GDK_KEY_Control_L, com_sun_glass_events_KeyEvent_VK_CONTROL },
@@ -225,7 +254,7 @@ jint gdk_keyval_to_glass(guint keyval) {
         }
     }
 
-    return 0;
+    return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
 }
 
 jint get_glass_key(GdkEventKey* e) {
