@@ -35,11 +35,11 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.RichTextArea.Cmd;
 import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.util.ListenerHelper;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
+import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * Provides visual representation for RichTextArea.
