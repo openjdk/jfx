@@ -29,9 +29,44 @@ package javafx.scene.control.rich;
  * Because it is immutable, it cannot track locations in the document which is being edited.
  * For that, use {@link Marker}. 
  */
-public record TextPos(int index, int offset) implements Comparable<TextPos> {
-
+public final class TextPos implements Comparable<TextPos> {
     public static final TextPos ZERO = new TextPos(0, 0);
+    private final int index;
+    private final int offset;
+    // TODO we probably need a 'bias': whether the position is left or right off the insertion index
+
+    public TextPos(int index, int offset) {
+        this.index = index;
+        this.offset = offset;
+    }
+
+    /** returns the model paragraph index */
+    public int index() {
+        return index;
+    }
+
+    /** returns the offset into the plain text string (insertion index) */
+    public int offset() {
+        return offset;
+    }
+
+    @Override
+    public boolean equals(Object x) {
+        if (x == this) {
+            return true;
+        } else if (x instanceof TextPos p) {
+            return (index == p.index) && (offset == p.offset);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int h = TextPos.class.hashCode();
+        h = 31 * h + index;
+        h = 31 * h + offset;
+        return h;
+    }
 
     @Override
     public int compareTo(TextPos p) {
@@ -57,7 +92,7 @@ public record TextPos(int index, int offset) implements Comparable<TextPos> {
             return b;
         }
     }
-    
+
     public String toString() {
         return "TextPos{" + index + "," + offset + "}";
     }
