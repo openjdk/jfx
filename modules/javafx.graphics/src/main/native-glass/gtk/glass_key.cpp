@@ -31,6 +31,7 @@
 #include <gdk/gdkkeysyms.h>
 #include <X11/XKBlib.h>
 
+// NOTE: This must be ordered by gdk_key
 static const struct {
   unsigned short gdk_key;
   unsigned short glass_key;
