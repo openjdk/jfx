@@ -31,12 +31,12 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
-import javafx.scene.control.rich.util.Bugs;
 import javafx.scene.control.rich.util.NewAPI;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
 
 /**
@@ -135,15 +135,13 @@ public class TextCellLayout {
                 if (r instanceof TextFlow t) {
                     double x = cellX - pad.getLeft();
                     Point2D p = new Point2D(x, y);
-
-                    // FIX
-                    int ii = Bugs.getInsertionIndex(t, p);
+                    HitInfo h = t.hitTest(p);
+                    // TODO need bias!
+                    int ii = h.getInsertionIndex();
                     return new TextPos(cell.getIndex(), ii);
                 } else {
                     return new TextPos(cell.getIndex(), 0);
                 }
-            } else {
-                // TODO
             }
         }
 
