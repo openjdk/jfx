@@ -62,8 +62,6 @@
 extern JNIEnv* mainEnv; // Use only with main loop thread!!!
 extern JavaVM* javaVM;
 
-#define GLASS_GDK_KEY_CONSTANT(key) (GDK_KEY_ ## key)
-
 #include <exception>
 
 struct jni_exception: public std::exception {
