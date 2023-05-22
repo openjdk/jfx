@@ -667,37 +667,33 @@ public class FXCollections {
     }
 
     /**
-     * Sorts the provided observable list.
+     * Sorts the provided observable list as specified in
+     * {@link java.util.Collections#sort(List) Collections.sort(List)}.
      * Fires only <b>one</b> change notification on the list.
-     * @param <T> The type of List to be wrapped
+     *
+     * @param <T> the type of elements in this list
      * @param list the list to be sorted
-     * @see Collections#sort(java.util.List)
      */
     public static <T extends Comparable<? super T>> void sort(ObservableList<T> list) {
-        if (list instanceof SortableList<?> sortableList) {
-            sortableList.sort();
-        } else {
-            List<T> newContent = new ArrayList<>(list);
-            Collections.sort(newContent);
-            list.setAll(newContent);
-        }
+        sort(list, Comparator.naturalOrder());
     }
 
     /**
-     * Sorts the provided observable list using the c comparator.
+     * Sorts the provided observable list as specified in
+     * {@link java.util.Collections#sort(List, Comparator) Collections.sort(List, Comparator)}.
      * Fires only <b>one</b> change notification on the list.
-     * @param <T> The type of List to be wrapped
+     *
+     * @param <T> the type of elements in this list
      * @param list the list to sort
-     * @param c comparator used for sorting. Null if natural ordering is required.
-     * @see Collections#sort(java.util.List, java.util.Comparator)
+     * @param comparator the comparator to determine the order of the list. A {@code null} value indicates that the
+     *      elements' <i>natural ordering</i> should be used.
      */
-    @SuppressWarnings("unchecked")
-    public static <T> void sort(ObservableList<T> list, Comparator<? super T> c) {
+    public static <T> void sort(ObservableList<T> list, Comparator<? super T> comparator) {
         if (list instanceof SortableList) {
-            ((SortableList<? extends T>)list).sort(c);
+            list.sort(comparator);
         } else {
             List<T> newContent = new ArrayList<>(list);
-            Collections.sort(newContent, c);
+            newContent.sort(comparator);
             list.setAll(newContent);
         }
     }

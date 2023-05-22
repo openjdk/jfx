@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
 import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
@@ -454,5 +455,15 @@ public class Util {
                 scene.removePostLayoutPulseListener(pulseListener);
             });
         }
+    }
+
+    /** returns true if scaleX of the specified Node is not integer */
+    public static boolean isFractionalScaleX(Node n) {
+        double scale = n.getScene().getWindow().getRenderScaleX();
+        return isFractional(scale);
+    }
+
+    private static boolean isFractional(double x) {
+        return x != Math.rint(x);
     }
 }
