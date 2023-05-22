@@ -145,7 +145,6 @@ static const struct {
     { GDK_KEY_dead_ogonek, com_sun_glass_events_KeyEvent_VK_DEAD_OGONEK },
     { GDK_KEY_dead_iota, com_sun_glass_events_KeyEvent_VK_DEAD_IOTA },
     { GDK_KEY_dead_voiced_sound, com_sun_glass_events_KeyEvent_VK_DEAD_VOICED_SOUND },
-    { GDK_KEY_dead_voiced_sound, com_sun_glass_events_KeyEvent_VK_DEAD_VOICED_SOUND },
     { GDK_KEY_dead_semivoiced_sound, com_sun_glass_events_KeyEvent_VK_DEAD_SEMIVOICED_SOUND },
     { GDK_KEY_BackSpace, com_sun_glass_events_KeyEvent_VK_BACKSPACE },
     { GDK_KEY_Tab, com_sun_glass_events_KeyEvent_VK_TAB },
