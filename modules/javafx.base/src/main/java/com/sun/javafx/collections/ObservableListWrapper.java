@@ -160,6 +160,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public void remove(int fromIndex, int toIndex) {
+        Objects.checkFromToIndex(fromIndex, toIndex, size());
         beginChange();
         for (int i = fromIndex; i < toIndex; ++i) {
             remove(fromIndex);
