@@ -31,6 +31,8 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
+
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
@@ -886,6 +888,39 @@ public class ParentTest {
         assertEquals(preTestSize, g.getChildren().size());
 
         assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().remove(g.getChildren().size()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNullObject_AddAll() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Adding a null object should throw NPE and not modify internal state
+        assertThrows(NullPointerException.class, () -> g.getChildren().addAll((Collection<Node>)null));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(NullPointerException.class, () -> g.getChildren().addAll(0, (Collection<Node>)null));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNullObject_SetAll() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Setting a null object should throw NPE and not modify internal state
+        assertThrows(NullPointerException.class, () -> g.getChildren().setAll((Collection<Node>)null));
         assertEquals(preTestSize, g.getChildren().size());
 
         // below call should throw no exception - if it does, internal state is corrupted
