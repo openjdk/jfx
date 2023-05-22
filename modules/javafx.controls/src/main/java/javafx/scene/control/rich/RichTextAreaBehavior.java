@@ -284,7 +284,8 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
 
             m.replace(skin, start, end, typed);
 
-            TextPos p = new TextPos(start.index(), start.offset() + typed.length());
+            int off = start.offset() + typed.length();
+            TextPos p = new TextPos(start.index(), off);
             control.moveCaret(p, false);
 
             clearPhantomX();

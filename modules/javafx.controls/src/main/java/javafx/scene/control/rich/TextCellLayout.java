@@ -129,18 +129,19 @@ public class TextCellLayout {
             Insets pad = r.getPadding();
             double y = cellY - cell.getY() - pad.getTop();
             if (y < 0) {
-                return new TextPos(cell.getIndex(), 0);
+                return new TextPos(cell.getIndex(), 0, 0, true);
             } else if (y < cell.getHeight()) {
                 // TODO move this to TextCell?
                 if (r instanceof TextFlow t) {
                     double x = cellX - pad.getLeft();
                     Point2D p = new Point2D(x, y);
                     HitInfo h = t.hitTest(p);
-                    // TODO need bias!
                     int ii = h.getInsertionIndex();
-                    return new TextPos(cell.getIndex(), ii);
+                    int ci = h.getCharIndex();
+                    boolean leading = h.isLeading();
+                    return new TextPos(cell.getIndex(), ii, ci, leading);
                 } else {
-                    return new TextPos(cell.getIndex(), 0);
+                    return new TextPos(cell.getIndex(), 0, 0, true);
                 }
             }
         }
@@ -150,7 +151,7 @@ public class TextCellLayout {
         if (r instanceof TextFlow f) {
             cix = NewAPI.getTextLength(f);
         }
-        return new TextPos(cell.getIndex(), cix);
+        return new TextPos(cell.getIndex(), cix, cix, true);
     }
 
     /** returns the cell contained in this layout, or null */
@@ -190,8 +191,8 @@ public class TextCellLayout {
             int ix = p.index();
             TextCell cell = getCell(ix);
             if (cell != null) {
-                int charIndex = p.offset();
-                boolean leading = true; // TODO needs bias!
+                int charIndex = p.charIndex();
+                boolean leading = p.isLeading();
                 PathElement[] path = cell.getCaretShape(charIndex, leading);
                 return CaretInfo.create(-xoffset, cell.getY(), path);
             }

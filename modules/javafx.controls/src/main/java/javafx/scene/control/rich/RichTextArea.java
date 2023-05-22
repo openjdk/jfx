@@ -635,7 +635,7 @@ public class RichTextArea extends Control {
         if (ca != null) {
             TextPos an = getAnchorPosition();
             if (an != null) {
-                return !ca.isSameIndexAndOffset(an);
+                return !ca.isSameInsertionIndex(an);
             }
         }
         return false;
@@ -682,13 +682,14 @@ public class RichTextArea extends Control {
             if (pos.compareTo(an) > 0) {
                 pos = an;
             }
-        } else if(!TextPos.ZERO.equals(pos)) {
-            pos = new TextPos(pos.index(), pos.offset() - 1);
+        } else if (!TextPos.ZERO.equals(pos)) {
+            int ix = pos.offset() - 1;
+            pos = new TextPos(pos.index(), ix);
         }
 
         return m.getStyleInfo(pos);
     }
-    
+
     /**
      * When selection exists, returns the attributes (resolved for this instance of {@code RichTextArea}
      * of the first selected character.

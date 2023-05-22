@@ -30,14 +30,21 @@ package javafx.scene.control.rich;
  * For that, use {@link Marker}. 
  */
 public final class TextPos implements Comparable<TextPos> {
-    public static final TextPos ZERO = new TextPos(0, 0);
+    public static final TextPos ZERO = new TextPos(0, 0, 0, true);
     private final int index;
     private final int offset;
-    // TODO we probably need a 'bias': whether the position is left or right off the insertion index
+    private final int charIndex;
+    private final boolean leading;
 
-    public TextPos(int index, int offset) {
+    public TextPos(int index, int offset, int charIndex, boolean leading) {
         this.index = index;
         this.offset = offset;
+        this.charIndex = charIndex;
+        this.leading = leading;
+    }
+
+    public TextPos(int index, int offset) {
+        this(index, offset, offset, true);
     }
 
     /** returns the model paragraph index */
@@ -50,12 +57,20 @@ public final class TextPos implements Comparable<TextPos> {
         return offset;
     }
 
+    public int charIndex() {
+        return charIndex;
+    }
+
+    public boolean isLeading() {
+        return leading;
+    }
+
     @Override
     public boolean equals(Object x) {
         if (x == this) {
             return true;
         } else if (x instanceof TextPos p) {
-            return (index == p.index) && (offset == p.offset);
+            return (index == p.index) && (offset == p.offset) && (leading == p.leading);
         }
         return false;
     }
@@ -65,6 +80,7 @@ public final class TextPos implements Comparable<TextPos> {
         int h = TextPos.class.hashCode();
         h = 31 * h + index;
         h = 31 * h + offset;
+        h = 31 * h + (leading ? 1 : 0);
         return h;
     }
 
@@ -78,6 +94,9 @@ public final class TextPos implements Comparable<TextPos> {
                 return -1;
             } else if (off > poff) {
                 return 1;
+            }
+            if(leading != p.leading) {
+                return leading ? 1 : -1;
             }
             return 0;
         }
@@ -94,11 +113,11 @@ public final class TextPos implements Comparable<TextPos> {
     }
 
     public String toString() {
-        return "TextPos{" + index + "," + offset + "}";
+        return "TextPos{" + index + "," + offset + (leading ? ",leading" : ",trailing") + "}";
     }
 
-    /** returns true if index and offset are the same. */
-    public boolean isSameIndexAndOffset(TextPos p) {
+    /** returns true if the insertion point is the same. */
+    public boolean isSameInsertionIndex(TextPos p) {
         // added this method in case we need to add leading/trailing flag
         // semantics of this test is the insertion points are the same.
         if (p != null) {

@@ -359,6 +359,7 @@ public abstract class StyledTextModel {
         if (ix < 0) {
             return TextPos.ZERO;
         } else if (ix < ct) {
+            // TODO not to exceed paragraph length?
             return p;
         } else {
             if (ct == 0) {
