@@ -31,217 +31,203 @@
 #include <gdk/gdkkeysyms.h>
 #include <X11/XKBlib.h>
 
-static gboolean key_initialized = FALSE;
-static GHashTable *keymap;
+static const struct {
+  unsigned short gdk_key;
+  unsigned short glass_key;
+} gdk_to_glass_keys[] = {
+    { GDK_KEY_space, com_sun_glass_events_KeyEvent_VK_SPACE },
+    { GDK_KEY_exclam, com_sun_glass_events_KeyEvent_VK_EXCLAMATION },
+    { GDK_KEY_quotedbl, com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE },
+    { GDK_KEY_numbersign, com_sun_glass_events_KeyEvent_VK_NUMBER_SIGN },
+    { GDK_KEY_dollar, com_sun_glass_events_KeyEvent_VK_DOLLAR },
+    { GDK_KEY_ampersand, com_sun_glass_events_KeyEvent_VK_AMPERSAND },
+    { GDK_KEY_apostrophe, com_sun_glass_events_KeyEvent_VK_QUOTE },
+    { GDK_KEY_parenleft, com_sun_glass_events_KeyEvent_VK_LEFT_PARENTHESIS },
+    { GDK_KEY_parenright, com_sun_glass_events_KeyEvent_VK_RIGHT_PARENTHESIS },
+    { GDK_KEY_asterisk, com_sun_glass_events_KeyEvent_VK_ASTERISK },
+    { GDK_KEY_plus, com_sun_glass_events_KeyEvent_VK_PLUS },
+    { GDK_KEY_comma, com_sun_glass_events_KeyEvent_VK_COMMA },
+    { GDK_KEY_minus, com_sun_glass_events_KeyEvent_VK_MINUS },
+    { GDK_KEY_period, com_sun_glass_events_KeyEvent_VK_PERIOD },
+    { GDK_KEY_slash, com_sun_glass_events_KeyEvent_VK_SLASH },
+    { GDK_KEY_0, com_sun_glass_events_KeyEvent_VK_0 },
+    { GDK_KEY_1, com_sun_glass_events_KeyEvent_VK_1 },
+    { GDK_KEY_2, com_sun_glass_events_KeyEvent_VK_2 },
+    { GDK_KEY_3, com_sun_glass_events_KeyEvent_VK_3 },
+    { GDK_KEY_4, com_sun_glass_events_KeyEvent_VK_4 },
+    { GDK_KEY_5, com_sun_glass_events_KeyEvent_VK_5 },
+    { GDK_KEY_6, com_sun_glass_events_KeyEvent_VK_6 },
+    { GDK_KEY_7, com_sun_glass_events_KeyEvent_VK_7 },
+    { GDK_KEY_8, com_sun_glass_events_KeyEvent_VK_8 },
+    { GDK_KEY_9, com_sun_glass_events_KeyEvent_VK_9 },
+    { GDK_KEY_colon, com_sun_glass_events_KeyEvent_VK_COLON },
+    { GDK_KEY_semicolon, com_sun_glass_events_KeyEvent_VK_SEMICOLON },
+    { GDK_KEY_less, com_sun_glass_events_KeyEvent_VK_LESS },
+    { GDK_KEY_equal, com_sun_glass_events_KeyEvent_VK_EQUALS },
+    { GDK_KEY_greater, com_sun_glass_events_KeyEvent_VK_GREATER },
+    { GDK_KEY_at, com_sun_glass_events_KeyEvent_VK_AT },
+    { GDK_KEY_A, com_sun_glass_events_KeyEvent_VK_A },
+    { GDK_KEY_B, com_sun_glass_events_KeyEvent_VK_B },
+    { GDK_KEY_C, com_sun_glass_events_KeyEvent_VK_C },
+    { GDK_KEY_D, com_sun_glass_events_KeyEvent_VK_D },
+    { GDK_KEY_E, com_sun_glass_events_KeyEvent_VK_E },
+    { GDK_KEY_F, com_sun_glass_events_KeyEvent_VK_F },
+    { GDK_KEY_G, com_sun_glass_events_KeyEvent_VK_G },
+    { GDK_KEY_H, com_sun_glass_events_KeyEvent_VK_H },
+    { GDK_KEY_I, com_sun_glass_events_KeyEvent_VK_I },
+    { GDK_KEY_J, com_sun_glass_events_KeyEvent_VK_J },
+    { GDK_KEY_K, com_sun_glass_events_KeyEvent_VK_K },
+    { GDK_KEY_L, com_sun_glass_events_KeyEvent_VK_L },
+    { GDK_KEY_M, com_sun_glass_events_KeyEvent_VK_M },
+    { GDK_KEY_N, com_sun_glass_events_KeyEvent_VK_N },
+    { GDK_KEY_O, com_sun_glass_events_KeyEvent_VK_O },
+    { GDK_KEY_P, com_sun_glass_events_KeyEvent_VK_P },
+    { GDK_KEY_Q, com_sun_glass_events_KeyEvent_VK_Q },
+    { GDK_KEY_R, com_sun_glass_events_KeyEvent_VK_R },
+    { GDK_KEY_S, com_sun_glass_events_KeyEvent_VK_S },
+    { GDK_KEY_T, com_sun_glass_events_KeyEvent_VK_T },
+    { GDK_KEY_U, com_sun_glass_events_KeyEvent_VK_U },
+    { GDK_KEY_V, com_sun_glass_events_KeyEvent_VK_V },
+    { GDK_KEY_W, com_sun_glass_events_KeyEvent_VK_W },
+    { GDK_KEY_X, com_sun_glass_events_KeyEvent_VK_X },
+    { GDK_KEY_Y, com_sun_glass_events_KeyEvent_VK_Y },
+    { GDK_KEY_Z, com_sun_glass_events_KeyEvent_VK_Z },
+    { GDK_KEY_bracketleft, com_sun_glass_events_KeyEvent_VK_OPEN_BRACKET },
+    { GDK_KEY_backslash, com_sun_glass_events_KeyEvent_VK_BACK_SLASH },
+    { GDK_KEY_bracketright, com_sun_glass_events_KeyEvent_VK_CLOSE_BRACKET },
+    { GDK_KEY_asciicircum, com_sun_glass_events_KeyEvent_VK_CIRCUMFLEX },
+    { GDK_KEY_underscore, com_sun_glass_events_KeyEvent_VK_UNDERSCORE },
+    { GDK_KEY_grave, com_sun_glass_events_KeyEvent_VK_BACK_QUOTE },
+    { GDK_KEY_a, com_sun_glass_events_KeyEvent_VK_A },
+    { GDK_KEY_b, com_sun_glass_events_KeyEvent_VK_B },
+    { GDK_KEY_c, com_sun_glass_events_KeyEvent_VK_C },
+    { GDK_KEY_d, com_sun_glass_events_KeyEvent_VK_D },
+    { GDK_KEY_e, com_sun_glass_events_KeyEvent_VK_E },
+    { GDK_KEY_f, com_sun_glass_events_KeyEvent_VK_F },
+    { GDK_KEY_g, com_sun_glass_events_KeyEvent_VK_G },
+    { GDK_KEY_h, com_sun_glass_events_KeyEvent_VK_H },
+    { GDK_KEY_i, com_sun_glass_events_KeyEvent_VK_I },
+    { GDK_KEY_j, com_sun_glass_events_KeyEvent_VK_J },
+    { GDK_KEY_k, com_sun_glass_events_KeyEvent_VK_K },
+    { GDK_KEY_l, com_sun_glass_events_KeyEvent_VK_L },
+    { GDK_KEY_m, com_sun_glass_events_KeyEvent_VK_M },
+    { GDK_KEY_n, com_sun_glass_events_KeyEvent_VK_N },
+    { GDK_KEY_o, com_sun_glass_events_KeyEvent_VK_O },
+    { GDK_KEY_p, com_sun_glass_events_KeyEvent_VK_P },
+    { GDK_KEY_q, com_sun_glass_events_KeyEvent_VK_Q },
+    { GDK_KEY_r, com_sun_glass_events_KeyEvent_VK_R },
+    { GDK_KEY_s, com_sun_glass_events_KeyEvent_VK_S },
+    { GDK_KEY_t, com_sun_glass_events_KeyEvent_VK_T },
+    { GDK_KEY_u, com_sun_glass_events_KeyEvent_VK_U },
+    { GDK_KEY_v, com_sun_glass_events_KeyEvent_VK_V },
+    { GDK_KEY_w, com_sun_glass_events_KeyEvent_VK_W },
+    { GDK_KEY_x, com_sun_glass_events_KeyEvent_VK_X },
+    { GDK_KEY_y, com_sun_glass_events_KeyEvent_VK_Y },
+    { GDK_KEY_z, com_sun_glass_events_KeyEvent_VK_Z },
+    { GDK_KEY_braceleft, com_sun_glass_events_KeyEvent_VK_BRACELEFT },
+    { GDK_KEY_bar, com_sun_glass_events_KeyEvent_VK_BACK_SLASH },
+    { GDK_KEY_braceright, com_sun_glass_events_KeyEvent_VK_BRACERIGHT },
+    { GDK_KEY_exclamdown, com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION },
+    { GDK_KEY_EuroSign, com_sun_glass_events_KeyEvent_VK_EURO_SIGN },
+    { GDK_KEY_BackSpace, com_sun_glass_events_KeyEvent_VK_BACKSPACE },
+    { GDK_KEY_Tab, com_sun_glass_events_KeyEvent_VK_TAB },
+    { GDK_KEY_Clear, com_sun_glass_events_KeyEvent_VK_CLEAR },
+    { GDK_KEY_Return, com_sun_glass_events_KeyEvent_VK_ENTER },
+    { GDK_KEY_Pause, com_sun_glass_events_KeyEvent_VK_PAUSE },
+    { GDK_KEY_Scroll_Lock, com_sun_glass_events_KeyEvent_VK_SCROLL_LOCK },
+    { GDK_KEY_Escape, com_sun_glass_events_KeyEvent_VK_ESCAPE },
+    { GDK_KEY_Home, com_sun_glass_events_KeyEvent_VK_HOME },
+    { GDK_KEY_Left, com_sun_glass_events_KeyEvent_VK_LEFT },
+    { GDK_KEY_Up, com_sun_glass_events_KeyEvent_VK_UP },
+    { GDK_KEY_Right, com_sun_glass_events_KeyEvent_VK_RIGHT },
+    { GDK_KEY_Down, com_sun_glass_events_KeyEvent_VK_DOWN },
+    { GDK_KEY_Page_Up, com_sun_glass_events_KeyEvent_VK_PAGE_UP },
+    { GDK_KEY_Prior, com_sun_glass_events_KeyEvent_VK_PAGE_UP },
+    { GDK_KEY_Page_Down, com_sun_glass_events_KeyEvent_VK_PAGE_DOWN },
+    { GDK_KEY_Next, com_sun_glass_events_KeyEvent_VK_PAGE_DOWN },
+    { GDK_KEY_End, com_sun_glass_events_KeyEvent_VK_END },
+    { GDK_KEY_Print, com_sun_glass_events_KeyEvent_VK_PRINTSCREEN },
+    { GDK_KEY_Insert, com_sun_glass_events_KeyEvent_VK_INSERT },
+    { GDK_KEY_Menu, com_sun_glass_events_KeyEvent_VK_CONTEXT_MENU },
+    { GDK_KEY_Help, com_sun_glass_events_KeyEvent_VK_HELP },
+    { GDK_KEY_Num_Lock, com_sun_glass_events_KeyEvent_VK_NUM_LOCK },
+    { GDK_KEY_KP_Enter, com_sun_glass_events_KeyEvent_VK_ENTER },
+    { GDK_KEY_KP_Home, com_sun_glass_events_KeyEvent_VK_HOME },
+    { GDK_KEY_KP_Left, com_sun_glass_events_KeyEvent_VK_LEFT },
+    { GDK_KEY_KP_Up, com_sun_glass_events_KeyEvent_VK_UP },
+    { GDK_KEY_KP_Right, com_sun_glass_events_KeyEvent_VK_RIGHT },
+    { GDK_KEY_KP_Down, com_sun_glass_events_KeyEvent_VK_DOWN },
+    { GDK_KEY_KP_Prior, com_sun_glass_events_KeyEvent_VK_PAGE_UP },
+    { GDK_KEY_KP_Page_Up, com_sun_glass_events_KeyEvent_VK_PAGE_UP },
+    { GDK_KEY_KP_Next, com_sun_glass_events_KeyEvent_VK_PAGE_DOWN },
+    { GDK_KEY_KP_Page_Down, com_sun_glass_events_KeyEvent_VK_PAGE_DOWN },
+    { GDK_KEY_KP_End, com_sun_glass_events_KeyEvent_VK_END },
+    { GDK_KEY_KP_Begin, com_sun_glass_events_KeyEvent_VK_CLEAR },
+    { GDK_KEY_KP_Insert, com_sun_glass_events_KeyEvent_VK_INSERT },
+    { GDK_KEY_KP_Delete, com_sun_glass_events_KeyEvent_VK_DELETE },
+    { GDK_KEY_KP_Multiply, com_sun_glass_events_KeyEvent_VK_MULTIPLY },
+    { GDK_KEY_KP_Add, com_sun_glass_events_KeyEvent_VK_ADD },
+    { GDK_KEY_KP_Separator, com_sun_glass_events_KeyEvent_VK_SEPARATOR },
+    { GDK_KEY_KP_Subtract, com_sun_glass_events_KeyEvent_VK_SUBTRACT },
+    { GDK_KEY_KP_Decimal, com_sun_glass_events_KeyEvent_VK_DECIMAL },
+    { GDK_KEY_KP_Divide, com_sun_glass_events_KeyEvent_VK_DIVIDE },
+    { GDK_KEY_KP_0, com_sun_glass_events_KeyEvent_VK_NUMPAD0 },
+    { GDK_KEY_KP_1, com_sun_glass_events_KeyEvent_VK_NUMPAD1 },
+    { GDK_KEY_KP_2, com_sun_glass_events_KeyEvent_VK_NUMPAD2 },
+    { GDK_KEY_KP_3, com_sun_glass_events_KeyEvent_VK_NUMPAD3 },
+    { GDK_KEY_KP_4, com_sun_glass_events_KeyEvent_VK_NUMPAD4 },
+    { GDK_KEY_KP_5, com_sun_glass_events_KeyEvent_VK_NUMPAD5 },
+    { GDK_KEY_KP_6, com_sun_glass_events_KeyEvent_VK_NUMPAD6 },
+    { GDK_KEY_KP_7, com_sun_glass_events_KeyEvent_VK_NUMPAD7 },
+    { GDK_KEY_KP_8, com_sun_glass_events_KeyEvent_VK_NUMPAD8 },
+    { GDK_KEY_KP_9, com_sun_glass_events_KeyEvent_VK_NUMPAD9 },
+    { GDK_KEY_F1, com_sun_glass_events_KeyEvent_VK_F1 },
+    { GDK_KEY_F2, com_sun_glass_events_KeyEvent_VK_F2 },
+    { GDK_KEY_F3, com_sun_glass_events_KeyEvent_VK_F3 },
+    { GDK_KEY_F4, com_sun_glass_events_KeyEvent_VK_F4 },
+    { GDK_KEY_F5, com_sun_glass_events_KeyEvent_VK_F5 },
+    { GDK_KEY_F6, com_sun_glass_events_KeyEvent_VK_F6 },
+    { GDK_KEY_F7, com_sun_glass_events_KeyEvent_VK_F7 },
+    { GDK_KEY_F8, com_sun_glass_events_KeyEvent_VK_F8 },
+    { GDK_KEY_F9, com_sun_glass_events_KeyEvent_VK_F9 },
+    { GDK_KEY_F10, com_sun_glass_events_KeyEvent_VK_F10 },
+    { GDK_KEY_F11, com_sun_glass_events_KeyEvent_VK_F11 },
+    { GDK_KEY_F12, com_sun_glass_events_KeyEvent_VK_F12 },
+    { GDK_KEY_Shift_L, com_sun_glass_events_KeyEvent_VK_SHIFT },
+    { GDK_KEY_Shift_R, com_sun_glass_events_KeyEvent_VK_SHIFT },
+    { GDK_KEY_Control_L, com_sun_glass_events_KeyEvent_VK_CONTROL },
+    { GDK_KEY_Control_R, com_sun_glass_events_KeyEvent_VK_CONTROL },
+    { GDK_KEY_Caps_Lock, com_sun_glass_events_KeyEvent_VK_CAPS_LOCK },
+    { GDK_KEY_Meta_L, com_sun_glass_events_KeyEvent_VK_WINDOWS },
+    { GDK_KEY_Meta_R, com_sun_glass_events_KeyEvent_VK_CONTEXT_MENU },
+    { GDK_KEY_Alt_L, com_sun_glass_events_KeyEvent_VK_ALT },
+    { GDK_KEY_Alt_R, com_sun_glass_events_KeyEvent_VK_ALT_GRAPH },
+    { GDK_KEY_Super_L, com_sun_glass_events_KeyEvent_VK_WINDOWS },
+    { GDK_KEY_Super_R, com_sun_glass_events_KeyEvent_VK_WINDOWS },
+    { GDK_KEY_Delete, com_sun_glass_events_KeyEvent_VK_DELETE }
+};
 
-static void glass_g_hash_table_insert_int(GHashTable *table, gint key, gint value)
-{
-    g_hash_table_insert(table, GINT_TO_POINTER(key), GINT_TO_POINTER(value));
-}
+jint gdk_keyval_to_glass(guint keyval) {
+    int min = 0;
+    int max = G_N_ELEMENTS(gdk_to_glass_keys) - 1;
+    int mid;
 
-static void initialize_key()
-{
-    keymap = g_hash_table_new(g_direct_hash, g_direct_equal);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Return), com_sun_glass_events_KeyEvent_VK_ENTER);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(BackSpace), com_sun_glass_events_KeyEvent_VK_BACKSPACE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Tab), com_sun_glass_events_KeyEvent_VK_TAB);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Clear), com_sun_glass_events_KeyEvent_VK_CLEAR); //XXX what is this?
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Pause), com_sun_glass_events_KeyEvent_VK_PAUSE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Escape), com_sun_glass_events_KeyEvent_VK_ESCAPE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(space), com_sun_glass_events_KeyEvent_VK_SPACE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Delete), com_sun_glass_events_KeyEvent_VK_DELETE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Print), com_sun_glass_events_KeyEvent_VK_PRINTSCREEN); //XXX is correct?
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Insert), com_sun_glass_events_KeyEvent_VK_INSERT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Help), com_sun_glass_events_KeyEvent_VK_HELP); //XXX what is this?
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Shift_L), com_sun_glass_events_KeyEvent_VK_SHIFT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Shift_R), com_sun_glass_events_KeyEvent_VK_SHIFT); //XXX is this correct?
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Control_L), com_sun_glass_events_KeyEvent_VK_CONTROL);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Control_R), com_sun_glass_events_KeyEvent_VK_CONTROL);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Alt_L), com_sun_glass_events_KeyEvent_VK_ALT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Alt_R), com_sun_glass_events_KeyEvent_VK_ALT_GRAPH);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Super_L), com_sun_glass_events_KeyEvent_VK_WINDOWS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Super_R), com_sun_glass_events_KeyEvent_VK_WINDOWS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Menu), com_sun_glass_events_KeyEvent_VK_CONTEXT_MENU);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Meta_L), com_sun_glass_events_KeyEvent_VK_WINDOWS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Meta_R), com_sun_glass_events_KeyEvent_VK_CONTEXT_MENU);//XXX is this correct?
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Caps_Lock), com_sun_glass_events_KeyEvent_VK_CAPS_LOCK);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Num_Lock), com_sun_glass_events_KeyEvent_VK_NUM_LOCK);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Scroll_Lock), com_sun_glass_events_KeyEvent_VK_SCROLL_LOCK);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Page_Up), com_sun_glass_events_KeyEvent_VK_PAGE_UP);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Prior), com_sun_glass_events_KeyEvent_VK_PAGE_UP);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Page_Down), com_sun_glass_events_KeyEvent_VK_PAGE_DOWN);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Next), com_sun_glass_events_KeyEvent_VK_PAGE_DOWN);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(End), com_sun_glass_events_KeyEvent_VK_END);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Home), com_sun_glass_events_KeyEvent_VK_HOME);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Left), com_sun_glass_events_KeyEvent_VK_LEFT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Right), com_sun_glass_events_KeyEvent_VK_RIGHT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Up), com_sun_glass_events_KeyEvent_VK_UP);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Down), com_sun_glass_events_KeyEvent_VK_DOWN);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(comma), com_sun_glass_events_KeyEvent_VK_COMMA);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(minus), com_sun_glass_events_KeyEvent_VK_MINUS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(period), com_sun_glass_events_KeyEvent_VK_PERIOD);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(slash), com_sun_glass_events_KeyEvent_VK_SLASH);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(semicolon), com_sun_glass_events_KeyEvent_VK_SEMICOLON);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(equal), com_sun_glass_events_KeyEvent_VK_EQUALS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(bracketleft), com_sun_glass_events_KeyEvent_VK_OPEN_BRACKET);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(bracketright), com_sun_glass_events_KeyEvent_VK_CLOSE_BRACKET);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(backslash), com_sun_glass_events_KeyEvent_VK_BACK_SLASH);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(bar), com_sun_glass_events_KeyEvent_VK_BACK_SLASH);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Multiply), com_sun_glass_events_KeyEvent_VK_MULTIPLY);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Add), com_sun_glass_events_KeyEvent_VK_ADD);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Separator), com_sun_glass_events_KeyEvent_VK_SEPARATOR);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Subtract), com_sun_glass_events_KeyEvent_VK_SUBTRACT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Decimal), com_sun_glass_events_KeyEvent_VK_DECIMAL);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(apostrophe), com_sun_glass_events_KeyEvent_VK_QUOTE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(grave), com_sun_glass_events_KeyEvent_VK_BACK_QUOTE);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(ampersand), com_sun_glass_events_KeyEvent_VK_AMPERSAND);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(asterisk), com_sun_glass_events_KeyEvent_VK_ASTERISK);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(quotedbl), com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(less), com_sun_glass_events_KeyEvent_VK_LESS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(greater), com_sun_glass_events_KeyEvent_VK_GREATER);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(braceleft), com_sun_glass_events_KeyEvent_VK_BRACELEFT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(braceright), com_sun_glass_events_KeyEvent_VK_BRACERIGHT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(at), com_sun_glass_events_KeyEvent_VK_AT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(colon), com_sun_glass_events_KeyEvent_VK_COLON);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(asciicircum), com_sun_glass_events_KeyEvent_VK_CIRCUMFLEX);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(dollar), com_sun_glass_events_KeyEvent_VK_DOLLAR);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(EuroSign), com_sun_glass_events_KeyEvent_VK_EURO_SIGN);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(exclam), com_sun_glass_events_KeyEvent_VK_EXCLAMATION);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(exclamdown), com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(parenleft), com_sun_glass_events_KeyEvent_VK_LEFT_PARENTHESIS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(numbersign), com_sun_glass_events_KeyEvent_VK_NUMBER_SIGN);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(plus), com_sun_glass_events_KeyEvent_VK_PLUS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(parenright), com_sun_glass_events_KeyEvent_VK_RIGHT_PARENTHESIS);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(underscore), com_sun_glass_events_KeyEvent_VK_UNDERSCORE);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(0), com_sun_glass_events_KeyEvent_VK_0);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(1), com_sun_glass_events_KeyEvent_VK_1);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(2), com_sun_glass_events_KeyEvent_VK_2);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(3), com_sun_glass_events_KeyEvent_VK_3);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(4), com_sun_glass_events_KeyEvent_VK_4);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(5), com_sun_glass_events_KeyEvent_VK_5);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(6), com_sun_glass_events_KeyEvent_VK_6);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(7), com_sun_glass_events_KeyEvent_VK_7);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(8), com_sun_glass_events_KeyEvent_VK_8);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(9), com_sun_glass_events_KeyEvent_VK_9);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(a), com_sun_glass_events_KeyEvent_VK_A);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(b), com_sun_glass_events_KeyEvent_VK_B);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(c), com_sun_glass_events_KeyEvent_VK_C);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(d), com_sun_glass_events_KeyEvent_VK_D);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(e), com_sun_glass_events_KeyEvent_VK_E);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(f), com_sun_glass_events_KeyEvent_VK_F);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(g), com_sun_glass_events_KeyEvent_VK_G);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(h), com_sun_glass_events_KeyEvent_VK_H);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(i), com_sun_glass_events_KeyEvent_VK_I);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(j), com_sun_glass_events_KeyEvent_VK_J);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(k), com_sun_glass_events_KeyEvent_VK_K);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(l), com_sun_glass_events_KeyEvent_VK_L);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(m), com_sun_glass_events_KeyEvent_VK_M);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(n), com_sun_glass_events_KeyEvent_VK_N);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(o), com_sun_glass_events_KeyEvent_VK_O);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(p), com_sun_glass_events_KeyEvent_VK_P);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(q), com_sun_glass_events_KeyEvent_VK_Q);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(r), com_sun_glass_events_KeyEvent_VK_R);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(s), com_sun_glass_events_KeyEvent_VK_S);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(t), com_sun_glass_events_KeyEvent_VK_T);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(u), com_sun_glass_events_KeyEvent_VK_U);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(v), com_sun_glass_events_KeyEvent_VK_V);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(w), com_sun_glass_events_KeyEvent_VK_W);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(x), com_sun_glass_events_KeyEvent_VK_X);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(y), com_sun_glass_events_KeyEvent_VK_Y);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(z), com_sun_glass_events_KeyEvent_VK_Z);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(A), com_sun_glass_events_KeyEvent_VK_A);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(B), com_sun_glass_events_KeyEvent_VK_B);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(C), com_sun_glass_events_KeyEvent_VK_C);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(D), com_sun_glass_events_KeyEvent_VK_D);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(E), com_sun_glass_events_KeyEvent_VK_E);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F), com_sun_glass_events_KeyEvent_VK_F);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(G), com_sun_glass_events_KeyEvent_VK_G);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(H), com_sun_glass_events_KeyEvent_VK_H);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(I), com_sun_glass_events_KeyEvent_VK_I);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(J), com_sun_glass_events_KeyEvent_VK_J);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(K), com_sun_glass_events_KeyEvent_VK_K);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(L), com_sun_glass_events_KeyEvent_VK_L);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(M), com_sun_glass_events_KeyEvent_VK_M);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(N), com_sun_glass_events_KeyEvent_VK_N);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(O), com_sun_glass_events_KeyEvent_VK_O);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(P), com_sun_glass_events_KeyEvent_VK_P);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Q), com_sun_glass_events_KeyEvent_VK_Q);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(R), com_sun_glass_events_KeyEvent_VK_R);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(S), com_sun_glass_events_KeyEvent_VK_S);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(T), com_sun_glass_events_KeyEvent_VK_T);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(U), com_sun_glass_events_KeyEvent_VK_U);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(V), com_sun_glass_events_KeyEvent_VK_V);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(W), com_sun_glass_events_KeyEvent_VK_W);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(X), com_sun_glass_events_KeyEvent_VK_X);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Y), com_sun_glass_events_KeyEvent_VK_Y);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Z), com_sun_glass_events_KeyEvent_VK_Z);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_0), com_sun_glass_events_KeyEvent_VK_NUMPAD0);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_1), com_sun_glass_events_KeyEvent_VK_NUMPAD1);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_2), com_sun_glass_events_KeyEvent_VK_NUMPAD2);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_3), com_sun_glass_events_KeyEvent_VK_NUMPAD3);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_4), com_sun_glass_events_KeyEvent_VK_NUMPAD4);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_5), com_sun_glass_events_KeyEvent_VK_NUMPAD5);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_6), com_sun_glass_events_KeyEvent_VK_NUMPAD6);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_7), com_sun_glass_events_KeyEvent_VK_NUMPAD7);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_8), com_sun_glass_events_KeyEvent_VK_NUMPAD8);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_9), com_sun_glass_events_KeyEvent_VK_NUMPAD9);
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Enter), com_sun_glass_events_KeyEvent_VK_ENTER);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Home), com_sun_glass_events_KeyEvent_VK_HOME);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Left), com_sun_glass_events_KeyEvent_VK_LEFT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Up), com_sun_glass_events_KeyEvent_VK_UP);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Right), com_sun_glass_events_KeyEvent_VK_RIGHT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Down), com_sun_glass_events_KeyEvent_VK_DOWN);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Prior), com_sun_glass_events_KeyEvent_VK_PAGE_UP);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Page_Up), com_sun_glass_events_KeyEvent_VK_PAGE_UP);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Next), com_sun_glass_events_KeyEvent_VK_PAGE_DOWN);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Page_Down), com_sun_glass_events_KeyEvent_VK_PAGE_DOWN);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_End), com_sun_glass_events_KeyEvent_VK_END);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Insert), com_sun_glass_events_KeyEvent_VK_INSERT);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Delete), com_sun_glass_events_KeyEvent_VK_DELETE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Divide), com_sun_glass_events_KeyEvent_VK_DIVIDE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Begin),
-            com_sun_glass_events_KeyEvent_VK_CLEAR); // 5 key on keypad with Num Lock turned off
-
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F1), com_sun_glass_events_KeyEvent_VK_F1);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F2), com_sun_glass_events_KeyEvent_VK_F2);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F3), com_sun_glass_events_KeyEvent_VK_F3);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F4), com_sun_glass_events_KeyEvent_VK_F4);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F5), com_sun_glass_events_KeyEvent_VK_F5);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F6), com_sun_glass_events_KeyEvent_VK_F6);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F7), com_sun_glass_events_KeyEvent_VK_F7);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F8), com_sun_glass_events_KeyEvent_VK_F8);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F9), com_sun_glass_events_KeyEvent_VK_F9);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F10), com_sun_glass_events_KeyEvent_VK_F10);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F11), com_sun_glass_events_KeyEvent_VK_F11);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F12), com_sun_glass_events_KeyEvent_VK_F12);
-}
-
-static void init_keymap() {
-    if (!key_initialized) {
-        initialize_key();
-        key_initialized = TRUE;
+    // binary search
+    while (max >= min) {
+        mid = (min + max) / 2;
+        if (gdk_to_glass_keys[mid].gdk_key < keyval) {
+            min = mid + 1;
+        } else if (gdk_to_glass_keys[mid].gdk_key > keyval) {
+            max = mid - 1;
+        } else {
+            return gdk_to_glass_keys[mid].glass_key;
+        }
     }
-}
 
-jint gdk_keyval_to_glass(guint keyval)
-{
-    init_keymap();
-    return GPOINTER_TO_INT(g_hash_table_lookup(keymap, GINT_TO_POINTER(keyval)));
+    return 0;
 }
 
 jint get_glass_key(GdkEventKey* e) {
-    init_keymap();
-
     guint keyValue;
     guint state = e->state & GDK_MOD2_MASK; //NumLock test
 
@@ -249,9 +235,9 @@ jint get_glass_key(GdkEventKey* e) {
             e->hardware_keycode, static_cast<GdkModifierType>(state), e->group,
             &keyValue, NULL, NULL, NULL);
 
-    jint key = GPOINTER_TO_INT(g_hash_table_lookup(keymap,
-            GINT_TO_POINTER(keyValue)));
+    jint key = gdk_keyval_to_glass(e->keyval);
 
+    //FIXME: is this still needed?
     if (!key) {
         // We failed to find a keyval in our keymap, this may happen with
         // non-latin layouts(e.g. Cyrillic). So here we try to find a keyval
@@ -262,26 +248,23 @@ jint get_glass_key(GdkEventKey* e) {
 
         keyValue = gdk_keymap_lookup_key(gdk_keymap_get_default(), &kk);
 
-        key = GPOINTER_TO_INT(g_hash_table_lookup(keymap,
-                GINT_TO_POINTER(keyValue)));
+        key = gdk_keyval_to_glass(keyValue);
     }
 
     return key;
 }
 
 gint find_gdk_keyval_for_glass_keycode(jint code) {
-    gint result = -1;
-    GHashTableIter iter;
-    gpointer key, value;
-    init_keymap();
-    g_hash_table_iter_init(&iter, keymap);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        if (code == GPOINTER_TO_INT(value)) {
-            result = GPOINTER_TO_INT(key);
-            break;
+    int max = G_N_ELEMENTS(gdk_to_glass_keys);
+
+    // cant't do binary search because it's unorderd
+    for (int i = 0; i < max; i++) {
+        if (gdk_to_glass_keys[i].glass_key == code) {
+            return gdk_to_glass_keys[i].gdk_key;
         }
     }
-    return result;
+
+    return -1;
 }
 
 jint gdk_modifier_mask_to_glass(guint mask)
