@@ -459,22 +459,6 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     jchar key = gdk_keyval_to_unicode(event->keyval);
     if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
         key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
-    } else {
-#ifdef GLASS_GTK2
-        if (key == 0) {
-            // Work around "bug" fixed in gtk-3.0:
-            // http://mail.gnome.org/archives/commits-list/2011-March/msg06832.html
-            switch (event->keyval) {
-            case 0xFF08 /* Backspace */: key =  '\b';
-            case 0xFF09 /* Tab       */: key =  '\t';
-            case 0xFF0A /* Linefeed  */: key =  '\n';
-            case 0xFF0B /* Vert. Tab */: key =  '\v';
-            case 0xFF0D /* Return    */: key =  '\r';
-            case 0xFF1B /* Escape    */: key =  '\033';
-            case 0xFFFF /* Delete    */: key =  '\177';
-            }
-        }
-#endif
     }
 
     if (key > 0) {
@@ -486,31 +470,29 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     } else {
         jChars = mainEnv->NewCharArray(0);
     }
-    if (jview) {
-        if (press) {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_PRESS,
-                    glassKey,
-                    jChars,
-                    glassModifier);
-            CHECK_JNI_EXCEPTION(mainEnv)
 
-            if (jview && key > 0) { // TYPED events should only be sent for printable characters.
-                mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                        com_sun_glass_events_KeyEvent_TYPED,
-                        com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                        jChars,
-                        glassModifier);
-                CHECK_JNI_EXCEPTION(mainEnv)
-            }
-        } else {
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_RELEASE,
-                    glassKey,
-                    jChars,
-                    glassModifier);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+    if (!jview) {
+        return;
+    }
+
+    // do not send undefined keys
+    if (glassKey > 0) {
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                (press) ? com_sun_glass_events_KeyEvent_PRESS
+                        : com_sun_glass_events_KeyEvent_RELEASE,
+                glassKey,
+                jChars,
+                glassModifier);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
+
+    if (key > 0 && press) { // TYPED events should only be sent for printable characters.
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                com_sun_glass_events_KeyEvent_TYPED,
+                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+                jChars,
+                glassModifier);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
