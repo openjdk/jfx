@@ -242,7 +242,6 @@ jint gdk_keyval_to_glass(guint keyval) {
     int max = G_N_ELEMENTS(gdk_to_glass_keys) - 1;
     int mid;
 
-    g_print("key %s\n", gdk_keyval_name(keyval));
     // binary search
     while (max >= min) {
         mid = (min + max) / 2;
@@ -268,7 +267,6 @@ jint get_glass_key(GdkEventKey* e) {
 
     jint key = gdk_keyval_to_glass(e->keyval);
 
-    //FIXME: is this still needed?
     if (!key) {
         // We failed to find a keyval in our keymap, this may happen with
         // non-latin layouts(e.g. Cyrillic). So here we try to find a keyval
