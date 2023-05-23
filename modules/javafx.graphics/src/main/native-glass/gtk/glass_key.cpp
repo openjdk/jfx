@@ -130,6 +130,7 @@ static const struct {
     { GDK_KEY_braceright, com_sun_glass_events_KeyEvent_VK_BRACERIGHT },
     { GDK_KEY_exclamdown, com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION },
     { GDK_KEY_EuroSign, com_sun_glass_events_KeyEvent_VK_EURO_SIGN },
+    { GDK_KEY_ISO_Level3_Shift, com_sun_glass_events_KeyEvent_VK_ALT_GRAPH },
     { GDK_KEY_dead_grave, com_sun_glass_events_KeyEvent_VK_DEAD_GRAVE },
     { GDK_KEY_dead_acute, com_sun_glass_events_KeyEvent_VK_DEAD_ACUTE },
     { GDK_KEY_dead_circumflex, com_sun_glass_events_KeyEvent_VK_DEAD_CIRCUMFLEX },
@@ -241,6 +242,7 @@ jint gdk_keyval_to_glass(guint keyval) {
     int max = G_N_ELEMENTS(gdk_to_glass_keys) - 1;
     int mid;
 
+    g_print("key %s\n", gdk_keyval_name(keyval));
     // binary search
     while (max >= min) {
         mid = (min + max) / 2;
@@ -296,8 +298,7 @@ gint find_gdk_keyval_for_glass_keycode(jint code) {
     return -1;
 }
 
-jint gdk_modifier_mask_to_glass(guint mask)
-{
+jint gdk_modifier_mask_to_glass(guint mask) {
     jint glass_mask = 0;
     glass_mask |= (mask & GDK_SHIFT_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_SHIFT : 0;
     glass_mask |= (mask & GDK_CONTROL_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_CONTROL : 0;
@@ -325,7 +326,7 @@ jint glass_key_to_modifier(jint glassKey) {
         case com_sun_glass_events_KeyEvent_VK_WINDOWS:
             return com_sun_glass_events_KeyEvent_MODIFIER_WINDOWS;
         default:
-            return 0;
+            return com_sun_glass_events_KeyEvent_MODIFIER_NONE;
     }
 }
 extern "C" {
