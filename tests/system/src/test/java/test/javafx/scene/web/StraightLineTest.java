@@ -29,7 +29,6 @@ import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -107,8 +106,6 @@ public class StraightLineTest {
     }
 
     @Test public void testLine() {
-        // JDK-8296590
-        assumeFalse(PlatformUtil.isLinux());
 
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
 
@@ -137,6 +134,7 @@ public class StraightLineTest {
                     "margin:0px;\n"+
                     "}\n" +
                     "div {\n" +
+                    "white-space:nowrap;\n"+
                     "padding:0px;\n"+
                     "width:150px;\n"+
                     "height:20px;\n"+
@@ -154,6 +152,8 @@ public class StraightLineTest {
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        //introduce sleep , so that web contents would be loaded , then take snapshot for testing
+        Util.sleep(1000);
 
         Util.runAndWait(() -> {
             WritableImage snapshot = straightLineTestApp.primaryStage.getScene().snapshot(null);

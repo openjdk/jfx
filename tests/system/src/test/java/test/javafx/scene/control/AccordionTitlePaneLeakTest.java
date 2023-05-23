@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class AccordionTitlePaneLeakTest {
 
@@ -49,6 +50,8 @@ public class AccordionTitlePaneLeakTest {
     static private Accordion accordion;
     static private StackPane root;
     static private Stage stage;
+
+    private WeakReference<TitledPane> weakRefToPane;
 
     public static class TestApp extends Application {
         @Override
@@ -77,19 +80,14 @@ public class AccordionTitlePaneLeakTest {
 
     @Test
     public void testForTitledPaneLeak() throws Exception {
-        TitledPane pane = new TitledPane();
-        accordion.getPanes().add(pane);
-        WeakReference<TitledPane> weakRefToPane = new WeakReference<>(pane);
-        pane = null;
-        accordion.getPanes().clear();
-        for (int i = 0; i < 10; i++) {
-            System.gc();
-            if (weakRefToPane.get() == null) {
-                break;
-            }
-            Util.sleep(500);
-        }
-        // Ensure accordion's skin no longer hold a ref to titled pane.
-        Assert.assertNull("Couldn't collect TitledPane", weakRefToPane.get());
+        Util.runAndWait(() -> {
+            TitledPane pane = new TitledPane();
+            accordion.getPanes().add(pane);
+            weakRefToPane = new WeakReference<>(pane);
+            pane = null;
+            accordion.getPanes().clear();
+        });
+
+        JMemoryBuddy.assertCollectable(weakRefToPane);
     }
 }
