@@ -447,10 +447,6 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
 }
 
 void WindowContextBase::process_key(GdkEventKey* event) {
-    if (jview == NULL) {
-        return;
-    }
-
     bool press = event->type == GDK_KEY_PRESS;
     jint glassKey = get_glass_key(event);
     jint glassModifier = gdk_modifier_mask_to_glass(event->state);
@@ -459,10 +455,8 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     } else {
         glassModifier &= ~glass_key_to_modifier(glassKey);
     }
-
     jcharArray jChars = NULL;
     jchar key = gdk_keyval_to_unicode(event->keyval);
-
     if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
         key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
     }
@@ -473,7 +467,16 @@ void WindowContextBase::process_key(GdkEventKey* event) {
             mainEnv->SetCharArrayRegion(jChars, 0, 1, &key);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
+    } else {
+        jChars = mainEnv->NewCharArray(0);
+    }
 
+    if (!jview) {
+        return;
+    }
+
+    // do not send undefined keys
+    if (glassKey > 0) {
         mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                 (press) ? com_sun_glass_events_KeyEvent_PRESS
                         : com_sun_glass_events_KeyEvent_RELEASE,
@@ -481,15 +484,15 @@ void WindowContextBase::process_key(GdkEventKey* event) {
                 jChars,
                 glassModifier);
         CHECK_JNI_EXCEPTION(mainEnv)
+    }
 
-        if (press) { // TYPED events should only be sent for printable characters.
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_TYPED,
-                    com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                    jChars,
-                    glassModifier);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+    if (key > 0 && press) { // TYPED events should only be sent for printable characters.
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+                com_sun_glass_events_KeyEvent_TYPED,
+                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+                jChars,
+                glassModifier);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
