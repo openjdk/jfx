@@ -211,18 +211,6 @@ static const struct {
     { GDK_KEY_F10, com_sun_glass_events_KeyEvent_VK_F10 },
     { GDK_KEY_F11, com_sun_glass_events_KeyEvent_VK_F11 },
     { GDK_KEY_F12, com_sun_glass_events_KeyEvent_VK_F12 },
-    { GDK_KEY_F13, com_sun_glass_events_KeyEvent_VK_F13 },
-    { GDK_KEY_F14, com_sun_glass_events_KeyEvent_VK_F14 },
-    { GDK_KEY_F15, com_sun_glass_events_KeyEvent_VK_F15 },
-    { GDK_KEY_F16, com_sun_glass_events_KeyEvent_VK_F16 },
-    { GDK_KEY_F17, com_sun_glass_events_KeyEvent_VK_F17 },
-    { GDK_KEY_F18, com_sun_glass_events_KeyEvent_VK_F18 },
-    { GDK_KEY_F19, com_sun_glass_events_KeyEvent_VK_F19 },
-    { GDK_KEY_F20, com_sun_glass_events_KeyEvent_VK_F20 },
-    { GDK_KEY_F21, com_sun_glass_events_KeyEvent_VK_F21 },
-    { GDK_KEY_F22, com_sun_glass_events_KeyEvent_VK_F22 },
-    { GDK_KEY_F23, com_sun_glass_events_KeyEvent_VK_F23 },
-    { GDK_KEY_F24, com_sun_glass_events_KeyEvent_VK_F24 },
     { GDK_KEY_Shift_L, com_sun_glass_events_KeyEvent_VK_SHIFT },
     { GDK_KEY_Shift_R, com_sun_glass_events_KeyEvent_VK_SHIFT },
     { GDK_KEY_Control_L, com_sun_glass_events_KeyEvent_VK_CONTROL },
@@ -301,13 +289,13 @@ jint gdk_modifier_mask_to_glass(guint mask) {
     glass_mask |= (mask & GDK_SHIFT_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_SHIFT : 0;
     glass_mask |= (mask & GDK_CONTROL_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_CONTROL : 0;
     glass_mask |= (mask & GDK_MOD1_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_ALT : 0;
+    glass_mask |= (mask & GDK_META_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_ALT : 0; // XXX: is this OK?
     glass_mask |= (mask & GDK_BUTTON1_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY : 0;
     glass_mask |= (mask & GDK_BUTTON2_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE : 0;
     glass_mask |= (mask & GDK_BUTTON3_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY : 0;
     glass_mask |= (mask & GDK_BUTTON4_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK : 0;
     glass_mask |= (mask & GDK_BUTTON5_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD : 0;
-    glass_mask |= (mask & GDK_SUPER_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_WINDOWS : 0;
-    glass_mask |= (mask & GDK_META_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_WINDOWS : 0;
+    glass_mask |= (mask & GDK_SUPER_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_WINDOWS : 0; // XXX: is this OK?
 
     return glass_mask;
 }
