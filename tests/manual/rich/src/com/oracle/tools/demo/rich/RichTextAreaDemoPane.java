@@ -71,7 +71,7 @@ public class RichTextAreaDemoPane extends BorderPane {
     private static StyledTextModel globalModel;
     public final ROptionPane op;
     public final RichTextArea control;
-    public final ComboBox<Models> modelField;
+    public final ComboBox<ModelChoice> modelField;
 
     public RichTextAreaDemoPane(StyledTextModel m) {
         FX.name(this, "RichTextAreaDemoPane");
@@ -91,7 +91,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         
         modelField = new ComboBox<>();
         FX.name(modelField, "modelField");
-        modelField.getItems().setAll(Models.values());
+        modelField.getItems().setAll(ModelChoice.values());
         
         CheckBox editable = new CheckBox("editable");
         FX.name(editable, "editable");
@@ -270,8 +270,8 @@ public class RichTextAreaDemoPane extends BorderPane {
     }
     
     private StyledTextModel createModel() {
-        Models m = modelField.getSelectionModel().getSelectedItem();
-        return Models.create(m);
+        ModelChoice m = modelField.getSelectionModel().getSelectedItem();
+        return ModelChoice.create(m);
     }
 
     protected static Pane pane() {
@@ -392,6 +392,10 @@ public class RichTextAreaDemoPane extends BorderPane {
 
             Menu m2;
             items.add(m2 = new Menu("Text Color"));
+            colorMenu(m2, sel, Color.BLACK);
+            colorMenu(m2, sel, Color.DARKGRAY);
+            colorMenu(m2, sel, Color.GRAY);
+            colorMenu(m2, sel, Color.LIGHTGRAY);
             colorMenu(m2, sel, Color.GREEN);
             colorMenu(m2, sel, Color.RED);
             colorMenu(m2, sel, Color.BLUE);

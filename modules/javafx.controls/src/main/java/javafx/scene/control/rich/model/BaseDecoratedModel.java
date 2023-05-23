@@ -35,7 +35,7 @@ import javafx.scene.control.rich.TextPos;
  * A StyledTextModel that applies a decorator to a virtualized plain text data source.
  */
 public abstract class BaseDecoratedModel extends StyledTextModel {
-    private final SimpleObjectProperty<Decorator> decorator = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<SyntaxDecorator> decorator = new SimpleObjectProperty<>();
     private final SimpleBooleanProperty editable = new SimpleBooleanProperty(true);
 
     public BaseDecoratedModel() {
@@ -44,7 +44,7 @@ public abstract class BaseDecoratedModel extends StyledTextModel {
 
     public final TextCell createTextCell(int index) {
         String text = getPlainText(index);
-        Decorator d = getDecorator();
+        SyntaxDecorator d = getDecorator();
         if (d == null) {
             TextCell c = new TextCell(index);
             c.addSegment(text);
@@ -54,15 +54,15 @@ public abstract class BaseDecoratedModel extends StyledTextModel {
         }
     }
 
-    public Decorator getDecorator() {
+    public SyntaxDecorator getDecorator() {
         return decorator.get();
     }
 
-    public void setDecorator(Decorator d) {
+    public void setDecorator(SyntaxDecorator d) {
         decorator.set(d);
     }
 
-    public ObjectProperty<Decorator> decoratorProperty() {
+    public ObjectProperty<SyntaxDecorator> decoratorProperty() {
         return decorator;
     }
 

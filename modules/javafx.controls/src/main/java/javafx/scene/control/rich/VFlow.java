@@ -696,7 +696,7 @@ public class VFlow extends Pane {
     protected TextCell getCell(int modelIndex) {
         TextCell cell = cellCache.get(modelIndex);
         if (cell == null) {
-            cell = control.getModel().createTextCell(modelIndex);
+            cell = control.createTextCell(modelIndex);
 
             // a bit of a hack: avoid TextCells with an empty TextFlow,
             // as it makes the caret collapse to a single point

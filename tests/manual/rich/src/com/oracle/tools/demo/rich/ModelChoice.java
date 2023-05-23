@@ -34,15 +34,15 @@ import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.paint.Color;
 
-public enum Models {
+public enum ModelChoice {
     DEMO("Demo"),
     BILLION_LINES("1,000,000,000 Lines"),
+    WRITING_SYSTEMS_EDITABLE("Writing Systems (Editable)"),
     EDITABLE_STYLED("❤ Editable Rich Text Model"),
     NOTEBOOK("Notebook: Embedded Chart"),
     NOTEBOOK2("Notebook: SQL Queries"),
-    WRITING_SYSTEMS_EDITABLE("Writing Systems (Editable)"),
+    EDITABLE_PLAIN("Plaintext with Syntax Highlighting"),
     NULL("null"),
-    EDITABLE_PLAIN("Editable Plaintext Model"),
     INLINE("Inline Nodes"),
     MONOSPACED("Monospaced"),
     TABS("Tabs"),
@@ -62,7 +62,7 @@ public enum Models {
     
     private final String name;
     
-    Models(String name) {
+    ModelChoice(String name) {
         this.name = name;
     }
     
@@ -70,12 +70,12 @@ public enum Models {
         return name;
     }
 
-    public static StyledTextModel create(Models m) {
-        if(m == null) {
+    public static StyledTextModel create(ModelChoice ch) {
+        if(ch == null) {
             return null;
         }
         
-        switch(m) {
+        switch(ch) {
         case BILLION_LINES:
             return new DemoStyledTextModel(1_000_000_000, false);
         case DEMO:
@@ -83,7 +83,11 @@ public enum Models {
         case INLINE:
             return new InlineNodesModel();
         case EDITABLE_PLAIN:
-            return new EditableDecoratedModel();
+            {
+                EditableDecoratedModel m = new EditableDecoratedModel();
+                m.setDecorator(new DemoSyntaxDecorator());
+                return m;
+            }
         case EDITABLE_STYLED:
             return new EditableRichTextModel();
         case LARGE_TEXT:
@@ -123,7 +127,7 @@ public enum Models {
         case ZERO_LINES:
             return new DemoStyledTextModel(0, false);
         default:
-            throw new Error("?" + m);
+            throw new Error("?" + ch);
         }
     }
 

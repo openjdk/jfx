@@ -796,4 +796,17 @@ public class RichTextArea extends Control {
         }
         return lineSpacing.get();
     }
+
+    /** 
+     * Creates a visual representation of the model paragraph.
+     * By default, delegates to the model.
+     * Subclasses may override this method to provide, for instance, additional styling specific to the
+     * control instance.
+     * 
+     * @param modelIndex paragraph index
+     * @return a new {@link TextCell} instance
+     */
+    protected TextCell createTextCell(int modelIndex) {
+        return getModel().createTextCell(modelIndex);
+    }
 }

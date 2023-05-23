@@ -29,7 +29,7 @@ import javafx.scene.control.rich.TextCell;
 /**
  * Generates {@link TextCell} from a plain text string.
  */
-public interface Decorator {
+public interface SyntaxDecorator {
     /**
      * Converts plain text into its visual representation.
      *
