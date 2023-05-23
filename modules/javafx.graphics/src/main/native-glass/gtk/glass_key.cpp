@@ -386,33 +386,18 @@ static Bool isXkbAvailable(Display *display) {
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked
   (JNIEnv * env, jobject obj, jint keyCode)
 {
-    Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
-    if (!isXkbAvailable(display)) {
-        return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
-    }
+    GdkKeymap *keymap = gdk_keymap_get_default();
 
-    Atom keyCodeAtom = None;
     switch (keyCode) {
         case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
-            keyCodeAtom = XInternAtom(display, "Caps Lock", True);
-            break;
+            return (gdk_keymap_get_caps_lock_state(keymap))
+                ? com_sun_glass_events_KeyEvent_KEY_LOCK_ON
+                : com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
 
         case com_sun_glass_events_KeyEvent_VK_NUM_LOCK:
-            keyCodeAtom = XInternAtom(display, "Num Lock", True);
-            break;
-    }
-
-    if (keyCodeAtom == None) {
-        return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
-    }
-
-    Bool isLocked = False;
-    if (XkbGetNamedIndicator(display, keyCodeAtom, NULL, &isLocked, NULL, NULL)) {
-        if (isLocked) {
-            return com_sun_glass_events_KeyEvent_KEY_LOCK_ON;
-        } else {
-            return com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
-        }
+            return (gdk_keymap_get_num_lock_state(keymap))
+                ? com_sun_glass_events_KeyEvent_KEY_LOCK_ON
+                : com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
     }
 
     return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
