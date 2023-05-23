@@ -973,7 +973,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeFileURL])
         {
             // create an image with contents of URL
-            image = [[NSImage alloc] initByReferencingFile:[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeFileURL] encoding:NSUTF8StringEncoding]];
+            NSString *fileURL = [[[NSString alloc] autorelease] initWithData:[pbItem dataForType:NSPasteboardTypeFileURL] encoding:NSUTF8StringEncoding];
+            image = [[NSImage alloc] initByReferencingFile:fileURL];
 
             // this only works if we reference image files though, so make sure the image is valid
             if ([image isValid] == NO)
@@ -986,7 +987,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeURL])
         {
             // create an image with contents of URL
-            image = [[NSImage alloc] initByReferencingURL:[NSURL URLWithString:[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeURL] encoding:NSUTF8StringEncoding]]];
+            NSString *url = [[[NSString alloc] autorelease] initWithData:[pbItem dataForType:NSPasteboardTypeURL] encoding:NSUTF8StringEncoding];
+            image = [[NSImage alloc] initByReferencingURL:[NSURL URLWithString:url]];
 
             // same as with File URL, regular URL can also be invalid
             if ([image isValid] == NO)
@@ -1071,6 +1073,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         rect.origin = NSPointToCGPoint(dragPoint);
         [item setDraggingFrame:rect contents:image];
+        [image release];
     }
 
     self->draggingSource = [[GlassDraggingSource alloc] initWithOperation:operation];

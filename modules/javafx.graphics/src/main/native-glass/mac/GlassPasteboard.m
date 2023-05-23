@@ -791,6 +791,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                 // New DnD API (macOS 10.7+) requires us to skip writing data to Pasteboard.
                 // It handles managing the pasteboard separately on its own.
                 [GlassDragSource flushWithMask:supportedActions withItems:dItems];
+
+                for (NSDraggingItem* i in dItems)
+                {
+                    [i release];
+                }
             }
             else
             {
