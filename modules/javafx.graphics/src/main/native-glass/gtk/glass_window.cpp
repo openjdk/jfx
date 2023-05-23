@@ -475,18 +475,15 @@ void WindowContextBase::process_key(GdkEventKey* event) {
         return;
     }
 
-    // do not send undefined keys
-    if (glassKey > 0) {
-        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                (press) ? com_sun_glass_events_KeyEvent_PRESS
-                        : com_sun_glass_events_KeyEvent_RELEASE,
-                glassKey,
-                jChars,
-                glassModifier);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    mainEnv->CallVoidMethod(jview, jViewNotifyKey,
+            (press) ? com_sun_glass_events_KeyEvent_PRESS
+                    : com_sun_glass_events_KeyEvent_RELEASE,
+            glassKey,
+            jChars,
+            glassModifier);
+    CHECK_JNI_EXCEPTION(mainEnv)
 
-    if (key > 0 && press) { // TYPED events should only be sent for printable characters.
+    if (press && key > 0) { // TYPED events should only be sent for printable characters.
         mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                 com_sun_glass_events_KeyEvent_TYPED,
                 com_sun_glass_events_KeyEvent_VK_UNDEFINED,
