@@ -25,7 +25,7 @@
 package com.oracle.tools.demo.rich;
 
 import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.EditablePlainTextModel;
+import javafx.scene.control.rich.model.EditableDecoratedModel;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
 import javafx.scene.control.rich.model.StyleAttrs;
@@ -37,12 +37,12 @@ import javafx.scene.paint.Color;
 public enum Models {
     DEMO("Demo"),
     BILLION_LINES("1,000,000,000 Lines"),
-    EDITABLE_PLAIN("Editable Plaintext Model"),
     EDITABLE_STYLED("❤ Editable Rich Text Model"),
     NOTEBOOK("Notebook: Embedded Chart"),
     NOTEBOOK2("Notebook: SQL Queries"),
     WRITING_SYSTEMS_EDITABLE("Writing Systems (Editable)"),
     NULL("null"),
+    EDITABLE_PLAIN("Editable Plaintext Model"),
     INLINE("Inline Nodes"),
     MONOSPACED("Monospaced"),
     TABS("Tabs"),
@@ -83,7 +83,7 @@ public enum Models {
         case INLINE:
             return new InlineNodesModel();
         case EDITABLE_PLAIN:
-            return new EditablePlainTextModel();
+            return new EditableDecoratedModel();
         case EDITABLE_STYLED:
             return new EditableRichTextModel();
         case LARGE_TEXT:

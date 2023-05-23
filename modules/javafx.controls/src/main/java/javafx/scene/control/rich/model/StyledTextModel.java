@@ -90,8 +90,8 @@ public abstract class StyledTextModel {
     public abstract String getPlainText(int index);
 
     /**
-     * Creates Nodes which provide visual representation of the paragraph.
-     * This method must create new Nodes each time, in order to support multiple RichTextArea instances
+     * Creates a TextCell which provides a visual representation of the paragraph.
+     * This method must create new instance each time, in order to support multiple RichTextArea instances
      * connected to the same model.
      * The nodes are not reused, and might be created repeatedly,
      * so the model must not keep strong references to these nodes.

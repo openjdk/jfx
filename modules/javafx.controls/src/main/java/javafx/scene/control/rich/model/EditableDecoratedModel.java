@@ -29,29 +29,17 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 
 /**
- * Editable plain text model.
- * 
- * TODO is this necessary? or convert to DecoratedPlainTextModel ?
+ * Editable decorated plain text model.
  */
-public class EditablePlainTextModel extends StyledTextModelEditableBase {
+public class EditableDecoratedModel extends BaseDecoratedModel {
     private final ArrayList<String> paragraphs = new ArrayList<>();
-    private static final String STYLE = "-fx-font-size:200%;";
 
-    public EditablePlainTextModel() {
+    public EditableDecoratedModel() {
         paragraphs.add("");
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
-    }
-
-    @Override
-    public TextCell createTextCell(int index) {
-        String text = getPlainText(index);
-        TextCell c = new TextCell(index);
-        c.addSegment(text, STYLE, null);
-        return c;
     }
 
     @Override
