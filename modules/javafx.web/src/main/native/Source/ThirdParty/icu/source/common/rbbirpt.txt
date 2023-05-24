@@ -75,7 +75,7 @@ start:
 #  break-rule-end:  Returned from doing a break-rule expression.
 #
 break-rule-end:
-    ';'                  n start                                    doEndOfRule
+    ';'	                 n start                                    doEndOfRule
     white_space          n break-rule-end
     default                errorDeath                               doRuleError
 
@@ -290,7 +290,7 @@ scan-unicode-set:
     '['                   n pop                                      doScanUnicodeSet
     'p'                   n pop                                      doScanUnicodeSet
     'P'                   n pop                                      doScanUnicodeSet
-    default         errorDeath
+    default		    errorDeath
 
 
 
