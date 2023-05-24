@@ -27,7 +27,6 @@
 package javafx.scene.control.rich.model;
 
 import java.io.IOException;
-import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -403,10 +402,8 @@ public abstract class StyledTextModel {
         }
 
         int off = text.length();
-        BreakIterator b = BreakIterator.getCharacterInstance();
-        b.setText(text);
-        int cix = b.preceding(off);
-        if (cix == BreakIterator.DONE) {
+        int cix = off - 1;
+        if (cix < 0) {
             return new TextPos(index, off);
         } else {
             return new TextPos(index, off, cix, false);

@@ -560,11 +560,11 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         if (moveRight) {
             cix++;
             if (cix > cell.getTextLength()) {
-                int line = cell.getIndex() + 1;
+                int ix = cell.getIndex() + 1;
                 TextPos p;
-                if (line < control.getParagraphCount()) {
+                if (ix < control.getParagraphCount()) {
                     // next line
-                    p = new TextPos(line, 0);
+                    p = new TextPos(ix, 0);
                 } else {
                     // end of last paragraph w/o newline
                     p = new TextPos(cell.getIndex(), cell.getTextLength());
@@ -573,12 +573,10 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             }
         } else {
             if (start.offset() == 0) {
-                int line = cell.getIndex() - 1;
-                if (line >= 0) {
-                    // prev line
-                    TextCell prevCell = vflow().getCell(line);
-                    cix = prevCell.getTextLength();
-                    return new TextPos(line, cix);
+                int ix = cell.getIndex() - 1;
+                if (ix >= 0) {
+                    // end of prev line
+                    return control.getEndOfParagraph(ix);
                 }
                 return null;
             }
