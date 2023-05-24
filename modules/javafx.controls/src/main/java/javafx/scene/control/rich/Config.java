@@ -70,12 +70,12 @@ public class Config {
      */
     public final float slidingWindowMargin;
 
-    /** creates a vertical scroll bar.  when set to null (default) a standard ScrollBar will be created */
-    public final Supplier<ScrollBar> verticalScrollBarGenerator;
-
     /** creates a horizontal scroll bar.  when set to null (default) a standard ScrollBar will be created */
-    public final Supplier<ScrollBar> horizontalScrollBarGenerator;
+    public final Supplier<ScrollBar> scrollBarGeneratorHorizontal;
     
+    /** creates a vertical scroll bar.  when set to null (default) a standard ScrollBar will be created */
+    public final Supplier<ScrollBar> scrollBarGeneratorVertical;
+
     public static Builder builder() {
         return new Builder();
     }
@@ -97,8 +97,8 @@ public class Config {
         scrollWheelBlockSizeHorizontal = b.scrollWheelBlockSizeHorizontal;
         slidingWindowMargin = b.slidingWindowMargin;
         scrollWheelBlockSizeVertical = b.scrollWheelBlockSizeVertical;
-        verticalScrollBarGenerator = b.verticalScrollBarGenerator;
-        horizontalScrollBarGenerator = b.horizontalScrollBarGenerator;
+        scrollBarGeneratorVertical = b.verticalScrollBarGenerator;
+        scrollBarGeneratorHorizontal = b.horizontalScrollBarGenerator;
     }
 
     /** Config builder is necessary to make Config immutable */

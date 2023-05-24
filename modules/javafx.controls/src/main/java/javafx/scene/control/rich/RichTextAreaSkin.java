@@ -138,12 +138,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> implements StyleRes
     }
     
     private final ScrollBar createVScrollBar() {
-        Supplier<ScrollBar> gen = config.verticalScrollBarGenerator;
+        Supplier<ScrollBar> gen = config.scrollBarGeneratorVertical;
         return gen == null ? new ScrollBar() : gen.get();
     }
 
     private final ScrollBar createHScrollBar() {
-        Supplier<ScrollBar> gen = config.horizontalScrollBarGenerator;
+        Supplier<ScrollBar> gen = config.scrollBarGeneratorHorizontal;
         return gen == null ? new ScrollBar() : gen.get();
     }
 
