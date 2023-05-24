@@ -973,8 +973,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeFileURL])
         {
             // create an image with contents of URL
-            NSString *fileURL = [[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeFileURL] encoding:NSUTF8StringEncoding];
-            [fileURL autorelease];
+            NSString *fileURL = [[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeFileURL] encoding:NSUTF8StringEncoding] autorelease];
             image = [[NSImage alloc] initByReferencingFile:fileURL];
 
             // this only works if we reference image files though, so make sure the image is valid
@@ -988,8 +987,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeURL])
         {
             // create an image with contents of URL
-            NSString *url = [[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeURL] encoding:NSUTF8StringEncoding];
-            [url autorelease];
+            NSString *url = [[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeURL] encoding:NSUTF8StringEncoding] autorelease];
             image = [[NSImage alloc] initByReferencingURL:[NSURL URLWithString:url]];
 
             // same as with File URL, regular URL can also be invalid
