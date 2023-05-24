@@ -91,7 +91,7 @@ void WindowContextBase::commitIME(gchar *str) {
 
             mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                     com_sun_glass_events_KeyEvent_PRESS,
-                    gdk_keyval_to_glass(gdk_unicode_to_keyval(str[0])),
+                    gdk_keyval_to_glass(gdk_unicode_to_keyval((gunichar) str[0])),
                     jChars,
                     0);
             CHECK_JNI_EXCEPTION(mainEnv)
