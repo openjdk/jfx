@@ -27,6 +27,7 @@
 package javafx.scene.control.rich.model;
 
 import java.io.IOException;
+import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -390,12 +391,28 @@ public abstract class StyledTextModel {
         if (ix < 0) {
             return TextPos.ZERO;
         } else {
-            String text = getPlainText(ix);
-            int off = text == null ? 0 : text.length();
-            return new TextPos(ix, off);
+            return getEndOfParagraphTextPos(ix);
         }
     }
-    
+
+    /** Returns a TextPos corresponding to the end of paragraph at the given index */
+    public TextPos getEndOfParagraphTextPos(int index) {
+        String text = getPlainText(index);
+        if (text == null) {
+            return new TextPos(index, 0);
+        }
+
+        int off = text.length();
+        BreakIterator b = BreakIterator.getCharacterInstance();
+        b.setText(text);
+        int cix = b.preceding(off);
+        if (cix == BreakIterator.DONE) {
+            return new TextPos(index, off);
+        } else {
+            return new TextPos(index, off, cix, false);
+        }
+    }
+
     /**
      * Applies a style to the specified text range.
      * 

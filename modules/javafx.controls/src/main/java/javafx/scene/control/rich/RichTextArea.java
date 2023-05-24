@@ -717,6 +717,12 @@ public class RichTextArea extends Control {
         return (m == null) ? TextPos.ZERO : m.getEndTextPos();
     }
 
+    /** Returns a TextPos corresponding to the end of paragraph */
+    public TextPos getEndOfParagraph(int index) {
+        StyledTextModel m = getModel();
+        return (m == null) ? TextPos.ZERO : m.getEndOfParagraphTextPos(index);
+    }
+
     public final ObjectProperty<SideDecorator> leftDecoratorProperty() {
         if (leftDecorator == null) {
             leftDecorator = new SimpleObjectProperty<>();

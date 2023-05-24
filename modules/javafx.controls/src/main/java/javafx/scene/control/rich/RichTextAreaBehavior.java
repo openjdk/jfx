@@ -468,14 +468,13 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             clearPhantomX();
         }
     }
-    
+
     public void moveEnd() {
         TextPos p = control.getCaretPosition();
         if (p != null) {
-            String s = getPlainText(p.index());
-            int len = (s == null ? 0 : s.length());
-            TextPos p2 = new TextPos(p.index(), len);
-            control.moveCaret(p2, false);
+            int ix = p.index();
+            TextPos end = control.getEndOfParagraph(ix);
+            control.moveCaret(end, false);
             clearPhantomX();
         }
     }
@@ -634,12 +633,9 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     }
     
     public void selectAll() {
-        StyledTextModel m = control.getModel();
-        if(m != null) {
-            TextPos end = m.getEndTextPos();
-            control.select(TextPos.ZERO, end);
-            clearPhantomX();
-        }
+        TextPos end = control.getEndTextPos();
+        control.select(TextPos.ZERO, end);
+        clearPhantomX();
     }
 
     /** selects from the anchor position to the document start */
@@ -672,13 +668,13 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         try {
             int off0 = br.preceding(off);
             if (off0 == BreakIterator.DONE) {
-                System.err.println(" --- no previous word off=" + off); // FIX
+                //System.err.println(" --- no previous word off=" + off); // FIX
                 return;
             }
             
             int off1 = br.following(off);
             if (off1 == BreakIterator.DONE) {
-                System.err.println(" --- no following word off=" + off); // FIX
+                //System.err.println(" --- no following word off=" + off); // FIX
                 return;
             }
             
@@ -706,7 +702,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         if (p != null) {
             int ix = p.index();
             TextPos an = new TextPos(ix, 0);
-            TextPos ca = new TextPos(ix + 1, 0);
+            TextPos ca = control.getEndOfParagraph(ix);
             control.select(an, ca);
         }
     }
