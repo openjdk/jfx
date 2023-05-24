@@ -469,7 +469,7 @@ public class TableHeaderRow extends StackPane {
      * An item can be selected/deselected to make the corresponding column visible/invisible.
      *
      * @implNote This method can be overridden to create and show a custom menu.
-     * @param mouseEvent the {@link MouseEvent} which was generated when the table menu button was pressed
+     * @param mouseEvent the {@code MouseEvent} which was generated when the table menu button was pressed
      * @since 21
      */
     protected void showColumnMenu(MouseEvent mouseEvent) {
