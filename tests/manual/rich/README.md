@@ -2,6 +2,11 @@
 
 This application demonstrates capabilities of the RichTextArea control.
 
+RichTextArea control: [RichTextArea.java](https://github.com/andy-goryachev-oracle/jfx/blob/ag.rich.text.area/modules/javafx.controls/src/main/java/javafx/scene/control/rich/RichTextArea.java)
+
+Demonstration Application:
+[RichTextAreaDemoApp.java](https://github.com/andy-goryachev-oracle/jfx/blob/ag.rich.text.area/tests/manual/rich/src/com/oracle/tools/demo/rich/RichTextAreaDemoApp.java)
+
 
 ## Prerequisites
 
