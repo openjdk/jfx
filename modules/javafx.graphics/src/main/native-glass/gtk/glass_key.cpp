@@ -264,14 +264,8 @@ jint get_glass_key(GdkEventKey* e) {
             e->hardware_keycode, static_cast<GdkModifierType>(state), e->group,
             &keyValue, NULL, NULL, NULL);
 
-    clock_t start_time = clock();
-
     jint key = GPOINTER_TO_INT(g_hash_table_lookup(keymap,
             GINT_TO_POINTER(keyValue)));
-
-    clock_t end_time = clock();
-    double elapsed_time = (double)(end_time - start_time) / (CLOCKS_PER_SEC / 1000000);
-    // Display the elapsed time
 
     if (!key) {
         // We failed to find a keyval in our keymap, this may happen with
