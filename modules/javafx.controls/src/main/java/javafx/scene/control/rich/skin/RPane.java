@@ -22,7 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control.rich.impl;
+
+package javafx.scene.control.rich.skin;
 
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;

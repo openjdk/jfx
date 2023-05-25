@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control.rich.util;
 
 import java.util.ArrayList;
@@ -64,14 +65,7 @@ public class Util {
         return Collections.unmodifiableList(rv);
     }
 
-    public static String getResourceURL(Class<?> c, String name) {
-        String pkg = c.getPackage().getName().replace(".", "/");
-        if (pkg.length() != 0) {
-            name = "/" + pkg + "/" + name;
-        }
-        return c.getResource(name).toExternalForm();
-    }
-
+    // FIX use Objects
     public static <T> T notNull(T item, String name) {
         if(item == null) {
             throw new IllegalArgumentException(name + " must not be null.");

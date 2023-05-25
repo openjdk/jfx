@@ -24,7 +24,7 @@
  */
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
-package javafx.scene.control.rich.impl;
+package com.sun.javafx.scene.control.rich.impl;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;

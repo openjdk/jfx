@@ -24,11 +24,12 @@
  */
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
+
 package javafx.scene.control.rich;
 
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.scene.control.rich.impl.Markers;
+import com.sun.javafx.scene.control.rich.impl.Markers;
 
 /**
  * Tracks text position in the text document in the presence of edits.

@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control.rich;
 
 import java.util.function.Supplier;
@@ -102,7 +103,7 @@ public class Config {
     }
 
     /** Config builder is necessary to make Config immutable */
-    private static class Builder {
+    public static class Builder {
         private int autoScrollPeriod = 100;
         private double autoScrollStepFast  = 200;
         private double autoScrollStepSlow  = 20;

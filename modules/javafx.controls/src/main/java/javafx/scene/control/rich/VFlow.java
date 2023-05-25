@@ -24,6 +24,7 @@
  */
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
+
 package javafx.scene.control.rich;
 
 import javafx.animation.Animation;
@@ -39,9 +40,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
-import javafx.scene.control.rich.impl.FastCache;
-import javafx.scene.control.rich.impl.RPane;
-import javafx.scene.control.rich.impl.SelectionHelper;
+import javafx.scene.control.rich.skin.RPane;
+import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.rich.util.FxPathBuilder;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.image.WritableImage;
@@ -56,6 +56,8 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.rich.impl.FastCache;
+import com.sun.javafx.scene.control.rich.impl.SelectionHelper;
 
 /**
  * Virtual text flow deals with TextCells, scroll bars, and conversion

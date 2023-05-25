@@ -24,7 +24,8 @@
  */
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
-package javafx.scene.control.rich;
+
+package javafx.scene.control.rich.skin;
 
 import java.util.function.Supplier;
 import javafx.geometry.HPos;
@@ -33,6 +34,11 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SkinBase;
+import javafx.scene.control.rich.Config;
+import javafx.scene.control.rich.RichTextArea;
+import javafx.scene.control.rich.RichTextAreaBehavior;
+import javafx.scene.control.rich.StyleResolver;
+import javafx.scene.control.rich.VFlow;
 import javafx.scene.control.rich.RichTextArea.Cmd;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.image.WritableImage;
@@ -60,7 +66,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> implements StyleRes
     private final ScrollBar hscroll;
     private static final Text measurer = makeMeasurer();
 
-    protected RichTextAreaSkin(RichTextArea control, Config cnf) {
+    public RichTextAreaSkin(RichTextArea control, Config cnf) {
         super(control);
         
         this.config = cnf;

@@ -25,6 +25,7 @@
 // This implementation is borrowed from
 // https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/fxtexteditor/internal/rtf/RtfWriter.java
 // with permission from the author.
+
 package javafx.scene.control.rich.model;
 
 import java.io.IOException;

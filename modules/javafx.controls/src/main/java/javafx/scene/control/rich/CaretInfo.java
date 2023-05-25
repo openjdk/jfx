@@ -22,8 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control.rich;
 
+import java.util.Objects;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
@@ -31,10 +33,6 @@ import javafx.scene.shape.PathElement;
 
 /**
  * Captures a local caret position and bounds in the {@link VFlow} coordinates.
- * 
- * TODO there is a notion of "split caret"
- * PrismTextLayout:325, TextAreaSkin:580, also
- * JDK-8089958 Text caret shape is split at bidi boundary
  */
 public class CaretInfo {
     private final double xmin;
@@ -52,7 +50,8 @@ public class CaretInfo {
     }
 
     public static CaretInfo create(double dx, double dy, PathElement[] path) {
-        if((path == null) || (path.length == 0)) {
+        Objects.requireNonNull(path);
+        if (path.length == 0) {
             throw new IllegalArgumentException("non-empty path is required");
         }
 
@@ -60,7 +59,7 @@ public class CaretInfo {
         double xmax = Double.NEGATIVE_INFINITY;
         double ymin = Double.POSITIVE_INFINITY;
         double ymax = Double.NEGATIVE_INFINITY;
-        
+
         // also translate full path
         int sz = path.length;
         PathElement[] pe = new PathElement[sz];
@@ -110,28 +109,28 @@ public class CaretInfo {
         return new CaretInfo(xmin, xmax, ymin, ymax, pe);
     }
 
-    public double getMinX() {
+    public final double getMinX() {
         return xmin;
     }
-    
-    public double getMaxX() {
+
+    public final double getMaxX() {
         return xmax;
     }
 
-    public double getMinY() {
+    public final double getMinY() {
         return ymin;
     }
 
-    public double getMaxY() {
+    public final double getMaxY() {
         return ymax;
     }
 
-    /** returns caret path in vflow coordinates */
-    public PathElement[] path() {
+    /** returns the caret path in vflow coordinates */
+    public final PathElement[] path() {
         return path;
     }
 
-    public boolean containsY(double y) {
+    public final boolean containsY(double y) {
         return (y >= ymin) && (y < ymax);
     }
 

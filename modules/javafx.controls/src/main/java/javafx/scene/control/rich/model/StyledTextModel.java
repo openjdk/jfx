@@ -24,6 +24,7 @@
  */
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
+
 package javafx.scene.control.rich.model;
 
 import java.io.IOException;
@@ -38,9 +39,9 @@ import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.impl.Markers;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.input.DataFormat;
+import com.sun.javafx.scene.control.rich.impl.Markers;
 
 /**
  * Base class for a styled text model for use with {@link RichTextArea}.

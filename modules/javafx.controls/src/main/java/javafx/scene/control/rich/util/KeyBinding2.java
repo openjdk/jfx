@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control.rich.util;
 
 import java.util.EnumSet;

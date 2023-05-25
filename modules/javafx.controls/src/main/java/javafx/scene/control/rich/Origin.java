@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control.rich;
 
 /**
@@ -35,9 +36,6 @@ public record Origin(int index, double offset) {
     public static final Origin ZERO = new Origin(0, 0.0);
 
     public String toString() {
-        return
-            "Origin{index=" + index +
-            ", offset=" + offset +
-            "}";
+        return "Origin{index=" + index + ", offset=" + offset + "}";
     }
 }

@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.oracle.tools.demo.rich;
 
 import java.nio.charset.Charset;
@@ -50,7 +51,7 @@ import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.StyleAttribute;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledTextModel;
-import javafx.scene.control.rich.util.LineNumberDecorator;
+import javafx.scene.control.rich.skin.LineNumberDecorator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;

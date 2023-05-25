@@ -22,7 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control.rich.util;
+
+package javafx.scene.control.rich.skin;
 
 import java.text.DecimalFormat;
 import javafx.geometry.Pos;

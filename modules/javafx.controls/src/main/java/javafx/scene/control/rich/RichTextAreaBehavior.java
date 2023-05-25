@@ -24,6 +24,7 @@
  */
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
+
 package javafx.scene.control.rich;
 
 import java.text.BreakIterator;
@@ -39,6 +40,7 @@ import javafx.scene.control.rich.RichTextArea.Cmd;
 import javafx.scene.control.rich.model.DataFormatHandler;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
+import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.rich.util.BehaviorBase2;
 import javafx.scene.control.rich.util.KCondition;
 import javafx.scene.control.rich.util.KeyBinding2;

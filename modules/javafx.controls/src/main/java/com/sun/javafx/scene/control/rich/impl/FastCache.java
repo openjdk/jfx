@@ -22,7 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control.rich.impl;
+
+package com.sun.javafx.scene.control.rich.impl;
 
 import java.util.Arrays;
 import java.util.HashMap;
