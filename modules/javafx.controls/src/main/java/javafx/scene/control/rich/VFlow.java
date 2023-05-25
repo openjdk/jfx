@@ -56,8 +56,8 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.rich.impl.FastCache;
-import com.sun.javafx.scene.control.rich.impl.SelectionHelper;
+import com.sun.javafx.scene.control.rich.FastCache;
+import com.sun.javafx.scene.control.rich.SelectionHelper;
 
 /**
  * Virtual text flow deals with TextCells, scroll bars, and conversion

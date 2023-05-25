@@ -41,7 +41,7 @@ import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.input.DataFormat;
-import com.sun.javafx.scene.control.rich.impl.Markers;
+import com.sun.javafx.scene.control.rich.Markers;
 
 /**
  * Base class for a styled text model for use with {@link RichTextArea}.

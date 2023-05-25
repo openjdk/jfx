@@ -26,7 +26,7 @@
 // https://github.com/andy-goryachev/FxEditor
 // Copyright © 2017-2023 Andy Goryachev <andy@goryachev.com>
 
-package com.sun.javafx.scene.control.rich.impl;
+package com.sun.javafx.scene.control.rich;
 
 import javafx.scene.control.rich.util.FxPathBuilder;
 import javafx.scene.shape.LineTo;

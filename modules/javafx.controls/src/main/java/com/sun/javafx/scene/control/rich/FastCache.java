@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.scene.control.rich.impl;
+package com.sun.javafx.scene.control.rich;
 
 import java.util.Arrays;
 import java.util.HashMap;
