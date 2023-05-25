@@ -26,9 +26,11 @@ package com.sun.javafx.scene.control;
 
 import java.util.BitSet;
 import java.util.List;
+import javafx.scene.Scene;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.layout.Region;
+import javafx.stage.Window;
 
 /**
  * Helper class for Tree/TableView constrained column resize policies.
@@ -56,7 +58,7 @@ public class ResizeHelper {
         this.snap = (rf.getTableControl().isSnapToPixel() ? rf.getTableControl() : null);
         this.columns = columns;
         this.mode = mode;
-        this.target = snap(target);
+        this.target = snapRound(target);
         this.count = columns.size();
 
         size = new double[count];
@@ -67,14 +69,18 @@ public class ResizeHelper {
 
         for (int i = 0; i < count; i++) {
             TableColumnBase<?,?> c = columns.get(i);
-            size[i] = c.getWidth();
+            size[i] = snapCeil(c.getWidth());
 
             if (c.isResizable()) {
-                double cmin = c.getMinWidth();
-                double cmax = c.getMaxWidth();
+                double cmin = snapCeil(c.getMinWidth()); // always honor min width!
+                double cmax = snapFloor(c.getMaxWidth()); // TableColumnBase.doSetWidth() clamps to (min,max) range
                 min[i] = cmin;
                 max[i] = cmax;
-                pref[i] = clip(c.getPrefWidth(), cmin, cmax);
+                pref[i] = clip(snapRound(c.getPrefWidth()), cmin, cmax);
+                // skip fixed columns
+                if (cmin == cmax) {
+                    skip.set(i, true);
+                }
             } else {
                 skip.set(i, true);
             }
@@ -82,6 +88,199 @@ public class ResizeHelper {
     }
 
     public void resizeToContentWidth() {
+        if (skip.cardinality() == count) {
+            return;
+        }
+        // compute delta (snapped)
+        // if delta < 0 (and sum(width) < sum(pref)) -> distribute from size to min
+        // if delta < 0 (and sum(width) > sum(pref)) -> distribute from size to pref
+        // if delta > 0 (and sum(width) < sum(pref)) -> distribute from size to pref
+        // else -> distribute from size to max
+
+        double sumWidths = sum(size);
+        double sumPrefs = sum(pref);
+
+        double delta = target - sumWidths;
+        //System.out.println("delta=" + delta); // FIX
+        if (delta < 0.0) {
+            // shrink
+            if (target < sumPrefs) {
+                distribute(delta, min);
+            } else {
+                distribute(delta, pref);
+            }
+        } else if (delta > 0.0) {
+            // grow
+            if (target > sumPrefs) {
+                distribute(delta, max);
+            } else {
+                distribute(delta, pref);
+            }
+        }
+    }
+
+    // distibuting delta (positive when growing and negative when shrinking)
+    // proportionally to the distance to the target.
+    protected void distributeBad(double delta, double[] desired) {
+        boolean grow = delta > 0.0;
+        
+        double total = 0.0;
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                total += avail(grow, desired, i);
+            }
+        }
+        
+        if (isZero(total)) {
+            return;
+        }
+
+        double unsnapped = 0.0;
+        double snapped = 0.0;
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                double d = delta * avail(grow, desired, i) / total;
+                double uw = size[i] + d;
+                double sw = snapRound(uw);
+                
+                size[i] = sw;
+                
+                unsnapped += uw;
+                snapped += sw;
+            }
+        }
+    }
+    
+    // distibuting delta (positive when growing and negative when shrinking)
+    // proportionally to the distance to the target.
+    // FIX unfortunately, accumulation of small errors always favors one column,
+    // producing not visually pleasant result
+    protected void distribute(double delta, double[] desired) {
+        // TODO always do coarse (delta - SMALL) distribution first
+        if(Math.abs(delta) < SMALL_DELTA) {
+            distributeSmallDelta(delta, desired);
+        } else {
+            boolean grow = delta > 0.0;
+            
+            double total = 0.0;
+            for (int i = 0; i < count; i++) {
+                if (!skip.get(i)) {
+                    total += avail(grow, desired, i);
+                }
+            }
+            
+            if (isZero(total)) {
+                return;
+            }
+    
+            double unsnapped = 0.0;
+            double snapped = 0.0;
+            for (int i = 0; i < count; i++) {
+                if (!skip.get(i)) {
+                    double d = delta * avail(grow, desired, i) / total;
+                    double x = unsnapped + size[i] + d;
+                    double w = snapRound(x) - snapped;
+                    
+                    size[i] = w;
+                    
+                    unsnapped = x;
+                    snapped += w;
+                }
+            }
+        }
+    }
+    
+    protected void distributeSmallDelta(double delta, double[] desired) {
+        double pixel = 1.0 / snapScale();
+        double halfPixel = pixel / 2.0;
+        if (delta < 0) {
+            while (delta < -halfPixel) {
+                double d = -pixel;
+                if(smallShrink(d, desired)) {
+                    return;
+                }
+                delta -= d;
+            }
+        } else {
+            while (delta > halfPixel) {
+                double d = pixel;
+                if(smallGrow(d, desired)) {
+                    return;
+                }
+                delta -= d;
+            }
+        }
+    }
+    
+    /**
+     * Finds the best column to shrink, then reduces its width by delta, which is expected
+     * to be one display pixel exactly.
+     * @return true if no candidate has been found and the process should stop
+     */
+    protected boolean smallShrink(double delta, double[] desired) {
+        double dist = Double.NEGATIVE_INFINITY;
+        int ix = -1;
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                double d = size[i] - desired[i];
+                if (d > dist) {
+                    dist = d;
+                    ix = i;
+                }
+            }
+        }
+
+        if (ix < 0) {
+            return true;
+        } else {
+            size[ix] += delta;
+            return false;
+        }
+    }
+    
+    /**
+     * Finds the best column to grow, then increases its width by delta, which is expected
+     * to be one display pixel exactly.
+     * @return true if no candidate has been found and the process should stop
+     */
+    protected boolean smallGrow(double delta, double[] desired) {
+        double dist = Double.NEGATIVE_INFINITY;
+        int ix = -1;
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                double d = desired[i] - size[i];
+                if (d > dist) {
+                    dist = d;
+                    ix = i;
+                }
+            }
+        }
+
+        if (ix < 0) {
+            return true;
+        } else {
+            size[ix] += delta;
+            return false;
+        }
+    }
+
+    private double avail(boolean grow, double[] desired, int ix) {
+        double d = desired[ix];
+        double s = size[ix];
+        if (grow) {
+            if (d < s) {
+                return 0.0;
+            }
+        } else {
+            if (d > s) {
+                return 0.0;
+            }
+        }
+        return d - s;
+    }
+
+    private void delete() {
+        // TODO
         boolean needsAnotherPass;
         do {
             needsAnotherPass = false;
@@ -96,7 +295,7 @@ public class ResizeHelper {
                 return;
             }
 
-            double delta = target - snap(sumWidths);
+            double delta = target - snapCeil(sumWidths);
             if (isZero(delta)) {
                 return;
             }
@@ -151,22 +350,17 @@ public class ResizeHelper {
      * @return true if sum of columns equals or greater than the target width
      */
     public boolean applySizes() {
-        double pos = 0.0;
-        double prev = 0.0;
-
+        double total = 0.0;
         for (int i = 0; i < count; i++) {
             TableColumnBase<?, ?> c = columns.get(i);
+            double w = size[i];
             if (c.isResizable()) {
-                pos = snap(pos + size[i]);
-                double w = (pos - prev);
                 rf.setColumnWidth(c, w);
-            } else {
-                pos = pos + size[i];
             }
-            prev = pos;
+            total += w;
         }
 
-        return (pos > target);
+        return (total > target);
     }
 
     protected static double clip(double v, double min, double max) {
@@ -599,14 +793,56 @@ public class ResizeHelper {
         return sum;
     }
 
+    protected double sum(double[] widths) {
+        double sum = 0;
+        for (int i = 0; i < count; i++) {
+            sum += widths[i];
+        }
+        return sum;
+    }
+
     protected static boolean isZero(double x) {
         return Math.abs(x) < EPSILON;
     }
 
-    protected double snap(double x) {
-        if (snap == null) {
-            return x;
+    protected double snapCeil(double x) {
+        if (snap != null) {
+            return snap.snapSizeX(x);
         }
-        return snap.snapSpaceX(x);
+        return x;
+    }
+
+    protected double snapRound(double x) {
+        if (snap != null) {
+            return snap.snapPositionX(x);
+        }
+        return x;
+    }
+
+    protected double snapFloor(double x) {
+        if(snap != null) {
+            // there is no public equivalent, but we can copy implementation from Region
+            // let's try rounding for now
+            // TODO we can implement this since we have snapScale now
+            return snapRound(x);
+        }
+        return x;
+    }
+    
+    /** 
+     * implementation copied from {@link Region}.
+     * @return returns scene render scale x value
+     */
+    protected double snapScale() {
+        if (snap != null) {
+            Scene scene = snap.getScene();
+            if (scene != null) {
+                Window window = scene.getWindow();
+                if (window != null) {
+                    return window.getRenderScaleX();
+                }
+            }
+        }
+        return 1.0;
     }
 }
