@@ -91,17 +91,17 @@ public class ResizeHelper {
         if (skip.cardinality() == count) {
             return;
         }
+
         // compute delta (snapped)
         // if delta < 0 (and sum(width) < sum(pref)) -> distribute from size to min
         // if delta < 0 (and sum(width) > sum(pref)) -> distribute from size to pref
         // if delta > 0 (and sum(width) < sum(pref)) -> distribute from size to pref
         // else -> distribute from size to max
-
+        //
         double sumWidths = sum(size);
         double sumPrefs = sum(pref);
 
         double delta = target - sumWidths;
-        //System.out.println("delta=" + delta); // FIX
         if (delta < 0.0) {
             // shrink
             if (target < sumPrefs) {
@@ -118,19 +118,26 @@ public class ResizeHelper {
             }
         }
     }
+    
+    /** distibuting delta (positive when growing and negative when shrinking) */
+    private void distribute(double delta, double[] desired) {
+        double threshold = snapRound(SMALL_DELTA);
+        if (Math.abs(delta) > threshold) {
+            distributeLargeDelta(delta, desired);
+        } else {
+            distributeSmallDelta(delta, desired);
+        }
+    }
 
-    // distibuting delta (positive when growing and negative when shrinking)
-    // proportionally to the distance to the target.
-    protected void distributeBad(double delta, double[] desired) {
+    private void distributeLargeDelta(double delta, double[] desired) {
         boolean grow = delta > 0.0;
-        
         double total = 0.0;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
                 total += avail(grow, desired, i);
             }
         }
-        
+
         if (isZero(total)) {
             return;
         }
@@ -140,57 +147,27 @@ public class ResizeHelper {
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
                 double d = delta * avail(grow, desired, i) / total;
-                double uw = size[i] + d;
-                double sw = snapRound(uw);
-                
-                size[i] = sw;
-                
-                unsnapped += uw;
-                snapped += sw;
+                double x = unsnapped + size[i] + d;
+                double w = snapRound(x) - snapped;
+
+                size[i] = w;
+
+                unsnapped = x;
+                snapped += w;
             }
         }
     }
-    
-    // distibuting delta (positive when growing and negative when shrinking)
-    // proportionally to the distance to the target.
-    // FIX unfortunately, accumulation of small errors always favors one column,
-    // producing not visually pleasant result
-    protected void distribute(double delta, double[] desired) {
-        // TODO always do coarse (delta - SMALL) distribution first
-        if(Math.abs(delta) < SMALL_DELTA) {
-            distributeSmallDelta(delta, desired);
-        } else {
-            boolean grow = delta > 0.0;
-            
-            double total = 0.0;
-            for (int i = 0; i < count; i++) {
-                if (!skip.get(i)) {
-                    total += avail(grow, desired, i);
-                }
-            }
-            
-            if (isZero(total)) {
-                return;
-            }
-    
-            double unsnapped = 0.0;
-            double snapped = 0.0;
-            for (int i = 0; i < count; i++) {
-                if (!skip.get(i)) {
-                    double d = delta * avail(grow, desired, i) / total;
-                    double x = unsnapped + size[i] + d;
-                    double w = snapRound(x) - snapped;
-                    
-                    size[i] = w;
-                    
-                    unsnapped = x;
-                    snapped += w;
-                }
-            }
-        }
+
+    private void distributeSmallDelta(double delta) {
+        double[] desired = delta < 0 ? min : max;
+        distributeSmallDelta(delta, desired);
     }
-    
-    protected void distributeSmallDelta(double delta, double[] desired) {
+
+    /**
+     * for small deltas, we use a simpler, but more expensive algorithm to distribute space in small steps,
+     * each time favoring a column that is further away from its desired width.
+     */
+    private void distributeSmallDelta(double delta, double[] desired) {
         double pixel = 1.0 / snapScale();
         double halfPixel = pixel / 2.0;
         if (delta < 0) {
@@ -217,7 +194,7 @@ public class ResizeHelper {
      * to be one display pixel exactly.
      * @return true if no candidate has been found and the process should stop
      */
-    protected boolean smallShrink(double delta, double[] desired) {
+    private boolean smallShrink(double delta, double[] desired) {
         double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
@@ -243,7 +220,7 @@ public class ResizeHelper {
      * to be one display pixel exactly.
      * @return true if no candidate has been found and the process should stop
      */
-    protected boolean smallGrow(double delta, double[] desired) {
+    private boolean smallGrow(double delta, double[] desired) {
         double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
@@ -279,70 +256,6 @@ public class ResizeHelper {
         return d - s;
     }
 
-    private void delete() {
-        // TODO
-        boolean needsAnotherPass;
-        do {
-            needsAnotherPass = false;
-            double sumWidths = 0.0;
-            double sumMins = 0;
-            for (int i = 0; i < count; i++) {
-                sumWidths += size[i];
-                sumMins += min[i];
-            }
-
-            if (sumMins >= target) {
-                return;
-            }
-
-            double delta = target - snapCeil(sumWidths);
-            if (isZero(delta)) {
-                return;
-            }
-
-            // remove fixed and skipped columns from consideration
-            double total = 0;
-            for (int i = 0; i < count; i++) {
-                if (!skip.get(i)) {
-                    total += pref[i];
-                }
-            }
-
-            if (isZero(total)) {
-                return;
-            }
-
-            if (Math.abs(delta) < SMALL_DELTA) {
-                distributeSmallDelta(delta);
-                return;
-            }
-
-            for (int i = 0; i < count; i++) {
-                if (skip.get(i)) {
-                    continue;
-                }
-
-                double w = size[i] + (delta * pref[i] / total);
-                if (w < min[i]) {
-                    w = min[i];
-                    skip.set(i, true);
-                    needsAnotherPass = true;
-                } else if (w > max[i]) {
-                    w = max[i];
-                    skip.set(i, true);
-                    needsAnotherPass = true;
-                }
-
-                size[i] = w;
-
-                if (needsAnotherPass) {
-                    resetSizeChanges();
-                    break;
-                }
-            }
-        } while (needsAnotherPass);
-    }
-
     /**
      * Applies computed column widths to the tree/table columns,
      * snapping coordinates if required.
@@ -363,7 +276,7 @@ public class ResizeHelper {
         return (total > target);
     }
 
-    protected static double clip(double v, double min, double max) {
+    private static double clip(double v, double min, double max) {
         if (v < min) {
             return min;
         } else if (v > max) {
@@ -402,7 +315,7 @@ public class ResizeHelper {
             return false;
         }
 
-        allowedDelta = Math.min(Math.abs(delta), Math.min(allowedDelta, d));
+        allowedDelta = snapRound(Math.min(Math.abs(delta), Math.min(allowedDelta, d)));
         if (!expanding) {
             allowedDelta = -allowedDelta;
         }
@@ -414,7 +327,7 @@ public class ResizeHelper {
         return distributeDelta(ix, allowedDelta);
     }
 
-    protected boolean isCornerCase(double delta, int ix) {
+    private boolean isCornerCase(double delta, int ix) {
         boolean isResizingLastColumn = (ix == count - 2);
         if (isResizingLastColumn) {
             if (delta > 0) {
@@ -430,7 +343,7 @@ public class ResizeHelper {
     }
 
     /** non-negative */
-    protected double getAllowedDelta(int ix, boolean expanding) {
+    private double getAllowedDelta(int ix, boolean expanding) {
         if (expanding) {
             return Math.abs(max[ix] - size[ix]);
         } else {
@@ -439,7 +352,7 @@ public class ResizeHelper {
     }
 
     /** updates skip bitset with columns that might be resized, and returns the number of the opposite columns */
-    protected int markOppositeColumns(int ix) {
+    private int markOppositeColumns(int ix) {
         switch (mode) {
         case AUTO_RESIZE_NEXT_COLUMN:
             setSkip(0, ix + 1);
@@ -463,7 +376,7 @@ public class ResizeHelper {
     }
 
     /** range set with limit check */
-    protected void setSkip(int from, int toExclusive) {
+    private void setSkip(int from, int toExclusive) {
         if (from < 0) {
             from = 0;
         } else if (from >= count) {
@@ -476,7 +389,7 @@ public class ResizeHelper {
     }
 
     /** returns the allowable delta for all of the opposite columns */
-    protected double computeAllowedDelta(boolean expanding) {
+    private double computeAllowedDelta(boolean expanding) {
         double delta = 0;
         int i = 0;
         for (;;) {
@@ -497,7 +410,7 @@ public class ResizeHelper {
         return delta;
     }
 
-    protected boolean distributeDelta(int ix, double delta) {
+    private boolean distributeDelta(int ix, double delta) {
         int ct = count - skip.cardinality();
         switch (ct) {
         case 0:
@@ -519,11 +432,7 @@ public class ResizeHelper {
                 adj = distributeDeltaFlexTail(-delta);
                 break;
             default:
-                if (Math.abs(delta) < SMALL_DELTA) {
-                    distributeSmallDelta(-delta);
-                } else {
-                    distributeDeltaRemainingColumns(-delta);
-                }
+                distributeDeltaRemainingColumns(-delta);
                 adj = 0.0;
                 break;
             }
@@ -534,7 +443,12 @@ public class ResizeHelper {
         }
     }
 
-    protected double distributeDeltaFlexHead(double delta) {
+    private void distributeDeltaRemainingColumns(double delta) {
+        double[] desired = delta < 0 ? min : max;
+        distribute(delta, desired);
+    }
+
+    private double distributeDeltaFlexHead(double delta) {
         if (delta < 0) {
             // when shrinking, first resize columns that are wider than their preferred width
             for (int i = 0; i < count; i++) {
@@ -578,7 +492,7 @@ public class ResizeHelper {
         return delta;
     }
 
-    protected double distributeDeltaFlexTail(double delta) {
+    private double distributeDeltaFlexTail(double delta) {
         if (delta < 0) {
             // when shrinking, first resize columns that are wider than their preferred width
             for (int i = count - 1; i >= 0; --i) {
@@ -622,7 +536,7 @@ public class ResizeHelper {
         return delta;
     }
 
-    protected double resize(int ix, double delta) {
+    private double resize(int ix, double delta) {
         double w = size[ix] + delta;
         if (w < min[ix]) {
             delta = (w - min[ix]);
@@ -638,154 +552,7 @@ public class ResizeHelper {
         return delta;
     }
 
-    protected void distributeDeltaRemainingColumns(double delta) {
-        boolean needsAnotherPass;
-
-        do {
-            double total = 0;
-            for (int i = 0; i < count; i++) {
-                if (!skip.get(i)) {
-                    total += pref[i];
-                }
-            }
-
-            if (isZero(total)) {
-                return;
-            }
-
-            needsAnotherPass = false;
-
-            for (int i = 0; i < count; i++) {
-                if (skip.get(i)) {
-                    continue;
-                }
-
-                double w = size[i] + (delta * pref[i] / total);
-                if (w < min[i]) {
-                    w = min[i];
-                    skip.set(i, true);
-                    needsAnotherPass = true;
-                    delta -= (w - size[i]);
-               } else if (w > max[i]) {
-                    w = max[i];
-                    skip.set(i, true);
-                    needsAnotherPass = true;
-                    delta -= (w - size[i]);
-                }
-
-                size[i] = w;
-
-                if (needsAnotherPass) {
-                    resetSizeChanges();
-                    break;
-                }
-            }
-        } while (needsAnotherPass);
-    }
-
-    /**
-     * for small deltas, we use a simpler, but more expensive algorithm to distribute space in small steps,
-     * each time favoring a column that is further away from its preferred width.
-     */
-    protected void distributeSmallDelta(double delta) {
-        if (delta < 0) {
-            while (delta < 0.0) {
-                double d = Math.max(-1.0, delta);
-                double rem = shrinkSmall(d);
-                if (Double.isNaN(rem)) {
-                    return;
-                }
-
-                delta -= (d - rem);
-            }
-        } else {
-            while (delta > 0.0) {
-                double d = Math.min(1.0, delta);
-                double rem = expandSmall(d);
-                if (Double.isNaN(rem)) {
-                    return;
-                }
-
-                delta -= (d - rem);
-            }
-        }
-    }
-
-    /**
-     * Finds the best column to shrink, then reduces its width.
-     * Adds the column to skip list if the column width hits a constraint after adjustement.
-     * @return unused portion of delta, or Double.NaN if it did not find a good candidate
-     */
-    protected double shrinkSmall(double delta) {
-        double dist = Double.NEGATIVE_INFINITY;
-        int ix = -1;
-        for (int i = 0; i < count; i++) {
-            if (!skip.get(i)) {
-                double d = size[i] - pref[i];
-                if (d > dist) {
-                    dist = d;
-                    ix = i;
-                }
-            }
-        }
-
-        if (ix < 0) {
-            return Double.NaN;
-        }
-
-        double rem = 0.0;
-        double w = size[ix] + delta;
-        if (w < min[ix]) {
-            rem = (w - min[ix]);
-            w = min[ix];
-            skip.set(ix);
-        }
-        size[ix] = w;
-        return rem;
-    }
-
-    /**
-     * Finds the best column to shrink, then reduces its width.
-     * Adds the column to skip list if the column width hits a constraint after adjustement.
-     * @return unused portion of delta, or Double.NaN if it did not find a good candidate
-     */
-    protected double expandSmall(double delta) {
-        double dist = Double.NEGATIVE_INFINITY;
-        int ix = -1;
-        for (int i = 0; i < count; i++) {
-            if (!skip.get(i)) {
-                double d = pref[i] - size[i];
-                if (d > dist) {
-                    dist = d;
-                    ix = i;
-                }
-            }
-        }
-
-        if (ix < 0) {
-            return Double.NaN;
-        }
-
-        double rem = 0.0;
-        double w = size[ix] + delta;
-        if (w > max[ix]) {
-            rem = (w - max[ix]);
-            w = max[ix];
-            skip.set(ix);
-        }
-        size[ix] = w;
-        return rem;
-    }
-
-    protected void resetSizeChanges() {
-        for (int i = 0; i < count; i++) {
-            if (!skip.get(i)) {
-                size[i] = columns.get(i).getWidth();
-            }
-        }
-    }
-
-    protected double sumSizes() {
+    private double sumSizes() {
         double sum = 0;
         for (int i = 0; i < count; i++) {
             sum += size[i];
@@ -793,33 +560,33 @@ public class ResizeHelper {
         return sum;
     }
 
-    protected double sum(double[] widths) {
-        double sum = 0;
+    private double sum(double[] widths) {
+        double sum = 0.0;
         for (int i = 0; i < count; i++) {
             sum += widths[i];
         }
         return sum;
     }
 
-    protected static boolean isZero(double x) {
+    private static boolean isZero(double x) {
         return Math.abs(x) < EPSILON;
     }
 
-    protected double snapCeil(double x) {
+    private double snapCeil(double x) {
         if (snap != null) {
             return snap.snapSizeX(x);
         }
         return x;
     }
 
-    protected double snapRound(double x) {
+    private double snapRound(double x) {
         if (snap != null) {
             return snap.snapPositionX(x);
         }
         return x;
     }
 
-    protected double snapFloor(double x) {
+    private double snapFloor(double x) {
         if(snap != null) {
             // there is no public equivalent, but we can copy implementation from Region
             // let's try rounding for now
@@ -833,7 +600,7 @@ public class ResizeHelper {
      * implementation copied from {@link Region}.
      * @return returns scene render scale x value
      */
-    protected double snapScale() {
+    private double snapScale() {
         if (snap != null) {
             Scene scene = snap.getScene();
             if (scene != null) {
