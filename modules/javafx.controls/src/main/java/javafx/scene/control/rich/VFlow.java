@@ -1063,9 +1063,17 @@ public class VFlow extends Pane {
 
     /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
     public void blockScroll(double delta) {
-        Origin p = textCellLayout().computeOrigin(delta);
-        if (p != null) {
-            setOrigin(p);
+        blockScroll(delta, false);
+    }
+
+    /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
+    public void blockScroll(double delta, boolean forceLayout) {
+        Origin or = textCellLayout().computeOrigin(delta);
+        if (or != null) {
+            setOrigin(or);
+            if (forceLayout) {
+                layoutChildren();
+            }
         }
     }
 
