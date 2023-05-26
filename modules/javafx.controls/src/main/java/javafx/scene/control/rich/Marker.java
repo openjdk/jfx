@@ -27,70 +27,81 @@
 
 package javafx.scene.control.rich;
 
+import java.util.Objects;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import com.sun.javafx.scene.control.rich.Markers;
+import com.sun.javafx.scene.control.rich.MarkerHelper;
 
 /**
  * Tracks text position in the text document in the presence of edits.
- * 
- * TODO part of the model?  pass model to the constructor?
  */
-public class Marker implements Comparable<Marker> {
+public final class Marker implements Comparable<Marker> {
+    static {
+        MarkerHelper.setAccessor(new MarkerHelper.Accessor() {
+            @Override
+            public void setMarkerPos(Marker m, TextPos p) {
+                m.setTextPos(p);
+            }
+
+            @Override
+            public Marker createMarker(TextPos p) {
+                return new Marker(p);
+            }
+        });
+    }
+
     private final ReadOnlyObjectWrapper<TextPos> pos;
-    @Deprecated // FIX debugging, remove later
-    private static int sequence;
-    @Deprecated // FIX debugging, remove later
-    private int seq;
-    
+
     private Marker(TextPos pos) {
+        Objects.nonNull(pos);
         this.pos = new ReadOnlyObjectWrapper<>(pos);
-        this.seq = sequence++;
-    }
-    
-    public static Marker create(Markers owner, TextPos pos) {
-        if (owner == null) {
-            throw new IllegalArgumentException("must specify the owner");
-        }
-
-        return new Marker(pos);
     }
 
+    @Override
     public String toString() {
         return "Marker{" + getIndex() + "," + getOffset() + "}";
     }
 
+    /** Property tracks marker's position within the model (always non null) */
     public ReadOnlyObjectProperty<TextPos> textPosProperty() {
         return pos.getReadOnlyProperty();
+    }
+
+    public final TextPos getTextPos() {
+        return pos.get();
+    }
+    
+    private final void setTextPos(TextPos p) {
+        pos.set(p);
     }
 
     @Override
     public int compareTo(Marker m) {
         return getTextPos().compareTo(m.getTextPos());
     }
-    
+
     @Override
     public int hashCode() {
         int h = Marker.class.hashCode();
         h = h * 31 + getTextPos().hashCode();
         return h;
     }
-    
-    public TextPos getTextPos() {
-        return pos.get();
+
+    @Override
+    public boolean equals(Object x) {
+        if (x == this) {
+            return true;
+        } else if (x instanceof Marker m) {
+            return getTextPos().equals(m.getTextPos());
+        }
+        return false;
     }
 
-    public int getIndex() {
+    public final int getIndex() {
         return getTextPos().index();
     }
 
-    public int getOffset() {
+    public final int getOffset() {
         return getTextPos().offset();
-    }
-
-    // TODO should not be public, must be called only from Markers.update()
-    public void set(TextPos p) {
-        //System.out.println("Marker.set seq=" + seq + " pos=" + p);
-        pos.set(p);
     }
 }

@@ -31,7 +31,8 @@ import javafx.scene.control.ScrollBar;
 /**
  * Configuration parameters for RichTextArea.
  */
-public class Config {
+// TODO consider making it a record, or moving parameters into a private class
+public final class Config {
     /** autoscroll while selecting animation period, milliseconds (default 100 ms). */
     public final int autoScrollPeriod;
 
@@ -103,7 +104,7 @@ public class Config {
     }
 
     /** Config builder is necessary to make Config immutable */
-    public static class Builder {
+    public static final class Builder {
         private int autoScrollPeriod = 100;
         private double autoScrollStepFast  = 200;
         private double autoScrollStepSlow  = 20;

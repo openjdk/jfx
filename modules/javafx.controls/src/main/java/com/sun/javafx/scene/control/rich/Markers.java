@@ -57,7 +57,7 @@ public class Markers {
             }
         }
 
-        Marker m = Marker.create(this, pos);
+        Marker m = MarkerHelper.createMarker(pos);
         if (refs == null) {
             refs = new ArrayList<>(2);
         }
@@ -144,7 +144,7 @@ public class Markers {
                 if (m == null) {
                     refs.remove(i);
                 } else {
-                    m.set(p);
+                    MarkerHelper.setMarkerPos(m, p);
                 }
             }
 
