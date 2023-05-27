@@ -76,28 +76,35 @@ void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
 
 void WindowContextBase::commitIME(gchar *str) {
     g_print("commitIME: %s\n", str);
-    jstring jstr = mainEnv->NewStringUTF(str);
-    EXCEPTION_OCCURED(mainEnv);
-    jsize slen = mainEnv->GetStringLength(jstr);
-
     if (!im_ctx.on_preedit) {
         g_print("not on preedit: %s\n", str);
-        guint key_val = gdk_unicode_to_keyval(g_utf8_get_char(str));
+        jchar key = g_utf8_get_char(str);
+        guint key_val = gdk_unicode_to_keyval(key);
 
-        mainEnv->CallVoidMethod(jview, jViewNotifyKeyStr,
+        jcharArray jChars = mainEnv->NewCharArray(1);
+        if (jChars) {
+            mainEnv->SetCharArrayRegion(jChars, 0, 1, &key);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
+
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                 com_sun_glass_events_KeyEvent_PRESS,
                 gdk_keyval_to_glass(key_val),
-                jstr,
+                jChars,
                 0);
         CHECK_JNI_EXCEPTION(mainEnv)
 
-        mainEnv->CallVoidMethod(jview, jViewNotifyKeyStr,
+        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                 com_sun_glass_events_KeyEvent_TYPED,
                 com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                jstr,
+                jChars,
                 0);
         CHECK_JNI_EXCEPTION(mainEnv)
     } else {
+        jstring jstr = mainEnv->NewStringUTF(str);
+        EXCEPTION_OCCURED(mainEnv);
+        jsize slen = mainEnv->GetStringLength(jstr);
+
         g_print("jViewNotifyInputMethodLinux: %s\n", str);
         mainEnv->CallVoidMethod(jview,
                 jViewNotifyInputMethodLinux,

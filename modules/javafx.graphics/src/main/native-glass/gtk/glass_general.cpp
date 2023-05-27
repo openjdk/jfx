@@ -55,7 +55,6 @@ jmethodID jViewNotifyResize;
 jmethodID jViewNotifyMouse;
 jmethodID jViewNotifyRepaint;
 jmethodID jViewNotifyKey;
-jmethodID jViewNotifyKeyStr;
 jmethodID jViewNotifyView;
 jmethodID jViewNotifyDragEnter;
 jmethodID jViewNotifyDragOver;
@@ -219,8 +218,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethodLinux = env->GetMethodID(clazz, "notifyInputMethodLinux", "(Ljava/lang/String;IIIII)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyKeyStr = env->GetMethodID(clazz, "notifyKeyStr", "(IILjava/lang/String;I)V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Window");

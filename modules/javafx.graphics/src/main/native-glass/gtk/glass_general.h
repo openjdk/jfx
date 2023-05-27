@@ -161,7 +161,6 @@ private:
     extern jmethodID jViewNotifyMouse; // com.sun.glass.ui.View#notifyMouse (IIIIIIIZZ)V
     extern jmethodID jViewNotifyRepaint; // com.sun.glass.ui.View#notifyRepaint (IIII)V
     extern jmethodID jViewNotifyKey; // com.sun.glass.ui.View#notifyKey (II[CI)V
-    extern jmethodID jViewNotifyKeyStr; // com.sun.glass.ui.View#notifyKeySTR (IILjava/lang/String;I)V
     extern jmethodID jViewNotifyView; //com.sun.glass.ui.View#notifyView (I)V
     extern jmethodID jViewNotifyDragEnter; //com.sun.glass.ui.View#notifyDragEnter (IIIII)I
     extern jmethodID jViewNotifyDragOver; //com.sun.glass.ui.View#notifyDragOver (IIIII)I
