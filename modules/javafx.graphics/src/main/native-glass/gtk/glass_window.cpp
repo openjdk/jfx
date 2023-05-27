@@ -384,31 +384,11 @@ void WindowContextBase::process_mouse_scroll(GdkEventScroll* event) {
     jdouble dx = 0;
     jdouble dy = 0;
 
-    bool is_smooth = false;
-
-#ifdef GLASS_GTK3
-    // gtk sends both smooth and non-smooth events
-    if (gdk_window_get_events(gdk_window) & GDK_SMOOTH_SCROLL_MASK) {
-        is_smooth = true;
-        if (event->direction == GDK_SCROLL_SMOOTH) {
-            // Note: For gtk negatives values means UP/LEFT, JavaFx is opposite
-            dx = -event->delta_x;
-            dy = -event->delta_y;
-        }
-    }
-#endif
-
-    if (!is_smooth) {
-        // converting direction to change in pixels
-        if (event->direction == GDK_SCROLL_UP) {
-            dy = 1;
-        } else if (event->direction == GDK_SCROLL_DOWN) {
-            dy = -1;
-        } else if (event->direction == GDK_SCROLL_LEFT) {
-            dx = 1;
-        } else if (event->direction == GDK_SCROLL_RIGHT) {
-            dx = -1;
-        }
+    // GDK will send a following non-smooth event, we ignore it
+    if (event->direction == GDK_SCROLL_SMOOTH) {
+        // Note: For gtk negatives values means UP/LEFT, JavaFx is opposite
+        dx = -event->delta_x;
+        dy = -event->delta_y;
     }
 
     if (event->state & GDK_SHIFT_MASK) {
