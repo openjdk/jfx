@@ -82,27 +82,21 @@ void WindowContextBase::commitIME(gchar *str) {
 
     if (!im_ctx.on_preedit) {
         g_print("not on preedit: %s\n", str);
+        guint key_val = gdk_unicode_to_keyval(g_utf8_get_char(str));
 
-        //FIXME: could be more?
-        if (slen == 1) {
-            jcharArray jChars = mainEnv->NewCharArray(1);
-            mainEnv->SetCharArrayRegion(jChars, 0, 1, (const jchar*) str);
-            CHECK_JNI_EXCEPTION(mainEnv)
+        mainEnv->CallVoidMethod(jview, jViewNotifyKeyStr,
+                com_sun_glass_events_KeyEvent_PRESS,
+                gdk_keyval_to_glass(key_val),
+                jstr,
+                0);
+        CHECK_JNI_EXCEPTION(mainEnv)
 
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_PRESS,
-                    gdk_keyval_to_glass(gdk_unicode_to_keyval((gunichar) str[0])),
-                    jChars,
-                    0);
-            CHECK_JNI_EXCEPTION(mainEnv)
-
-            mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                    com_sun_glass_events_KeyEvent_TYPED,
-                    com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                    jChars,
-                    0);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
+        mainEnv->CallVoidMethod(jview, jViewNotifyKeyStr,
+                com_sun_glass_events_KeyEvent_TYPED,
+                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
+                jstr,
+                0);
+        CHECK_JNI_EXCEPTION(mainEnv)
     } else {
         g_print("jViewNotifyInputMethodLinux: %s\n", str);
         mainEnv->CallVoidMethod(jview,

@@ -151,6 +151,10 @@ final class GtkView extends View {
         }
     }
 
+    protected void notifyKeyStr(int type, int keyCode, String str, int modifiers) {
+        super.notifyKey(type, keyCode, str.toCharArray(), modifiers);
+    }
+
     protected double[] notifyInputMethodCandidatePosRequest(int offset) {
         double[] pos = super.notifyInputMethodCandidatePosRequest(offset);
 
