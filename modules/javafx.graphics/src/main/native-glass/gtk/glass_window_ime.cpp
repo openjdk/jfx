@@ -30,6 +30,11 @@
 #include "glass_general.h"
 #include "glass_key.h"
 
+gboolean on_retrieve_surrounding(GtkIMContext *im_context, gpointer user_data) {
+    g_print("on_retrieve_surrounding\n");
+    return FALSE;
+}
+
 void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(true);
@@ -162,6 +167,8 @@ void WindowContextBase::enableOrResetIME() {
         g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
         g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
+        g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
+        g_signal_connect(im_ctx.ctx, "retrieve_surrounding", G_CALLBACK(on_retrieve_surrounding), this);
         g_signal_connect(im_ctx.ctx, "commit", G_CALLBACK(on_commit), this);
     }
 
