@@ -190,11 +190,11 @@ public:
      * @param status  output param set to success/failure code on exit, which
      *                must not indicate a failure before the function call.
      * @stable ICU 4.0
-     * <p>
-     * <h4>Sample code</h4>
-     * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample1
-     * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample
-     * <p>
+         * <p>
+         * <h4>Sample code</h4>
+         * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample1
+         * \snippet samples/plurfmtsample/plurfmtsample.cpp PluralFormatExample
+         * <p>
      */
     PluralFormat(const Locale& locale, const PluralRules& rules, UErrorCode& status);
 
@@ -543,7 +543,7 @@ private:
 
     class U_I18N_API PluralSelectorAdapter : public PluralSelector {
       public:
-        PluralSelectorAdapter() : pluralRules(NULL) {
+        PluralSelectorAdapter() : pluralRules(nullptr) {
         }
 
         virtual ~PluralSelectorAdapter();
@@ -561,7 +561,7 @@ private:
     double offset;
     PluralSelectorAdapter pluralRulesWrapper;
 
-    PluralFormat();   // default constructor not implemented
+    PluralFormat() = delete;   // default constructor not implemented
     void init(const PluralRules* rules, UPluralType type, UErrorCode& status);
     /**
      * Copies dynamically allocated values (pointer fields).
