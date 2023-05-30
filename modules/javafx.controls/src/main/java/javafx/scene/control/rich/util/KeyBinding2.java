@@ -29,6 +29,7 @@ import java.util.EnumSet;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import com.sun.javafx.PlatformUtil;
 
 // this class might be internal to InputMap2
 public record KeyBinding2(KeyCode code, EnumSet<KCondition> modifiers) {
@@ -57,8 +58,8 @@ public record KeyBinding2(KeyCode code, EnumSet<KCondition> modifiers) {
         boolean option = false;
         boolean command = false;
         
-        boolean mac = Util.isMac();
-        boolean win = Util.isWindows();
+        boolean mac = PlatformUtil.isMac();
+        boolean win = PlatformUtil.isWindows();
 
         // drop multiple modifiers, translating when necessary 
 
@@ -125,8 +126,8 @@ public record KeyBinding2(KeyCode code, EnumSet<KCondition> modifiers) {
         }
 
         // mac-windows for now.  we might rethink the logic later if necessary.
-        boolean mac = Util.isMac();
-        boolean win = Util.isWindows();
+        boolean mac = PlatformUtil.isMac();
+        boolean win = PlatformUtil.isWindows();
 
         if (mac) {
             if (m.contains(KCondition.NOT_FOR_MAC)) {
@@ -140,7 +141,7 @@ public record KeyBinding2(KeyCode code, EnumSet<KCondition> modifiers) {
             replace(m, KCondition.ALT, KCondition.OPTION);
             replace(m, KCondition.META, KCondition.COMMAND);
             replace(m, KCondition.SHORTCUT, KCondition.COMMAND);
-        } else if (Util.isWindows()) {
+        } else if (PlatformUtil.isWindows()) {
             if (m.contains(KCondition.NOT_FOR_WIN)) {
                 return null;
             } else if (m.contains(KCondition.FOR_MAC)) {

@@ -25,25 +25,30 @@
 
 package javafx.scene.control.rich.util;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
+import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.stage.Screen;
+import com.sun.javafx.util.Utils;
 
 /**
- * Utility methods to be moved to com.sun.javafx hierarchy.
+ * Public utility methods.
+ * 
+ * TODO to be moved to javafx.scene  or  javafx.scene.control
  */
 public class Util {
-    private static final boolean isMac = initIsMac();
-    private static final boolean isWin = initIsWin();
-
     /**
      * Combines CssMetaData items in one unmodifiable list with the size equal to the number
      * of items it holds (i.e. with no unnecessary overhead).
@@ -65,148 +70,89 @@ public class Util {
         return Collections.unmodifiableList(rv);
     }
 
-    // FIX use Objects
-    public static <T> T notNull(T item, String name) {
-        if(item == null) {
-            throw new IllegalArgumentException(name + " must not be null.");
-        }
-        return item;
-    }
-    
-    public static <T extends Comparable<T>> void isLessThanOrEqual(T min, T max, String nameMin, String nameMax) {
-        if(min.compareTo(max) > 0) {
-            throw new IllegalArgumentException(nameMin + " must be less or equal to " + nameMax);
-        }
-    }
-
     public static double halfPixel(double coord) {
         return Math.round(coord + 0.5) - 0.5;
     }
 
-    public static PathElement[] translatePath(double xoffset, Region target, Region src, PathElement[] elements) {
-        Point2D p = src.localToScreen(src.snappedLeftInset(), src.snappedTopInset());
-        if (p == null) {
-            return null;
-        }
-
-        p = target.screenToLocal(p);
-        double dx = p.getX() + xoffset;
-        double dy = p.getY();
-
-        for (int i = 0; i < elements.length; i++) {
-            PathElement em = elements[i];
-            if (em instanceof LineTo m) {
-                em = new LineTo(m.getX() + dx, m.getY() + dy);
-            } else if (em instanceof MoveTo m) {
-                em = new MoveTo(m.getX() + dx, m.getY() + dy);
-            } else {
-                throw new RuntimeException("unexpected path element " + em);
-            }
-
-            elements[i] = em;
-        }
-        return elements;
-    }
-    
-    private static boolean initIsMac() {
-        // PlatformUtil
-        return System.getProperty("os.name").startsWith("Mac");
-    }
-
-    private static boolean initIsWin() {
-        // PlatformUtil
-        return System.getProperty("os.name").startsWith("Windows");
-    }
-    
-    public static boolean isMac() {
-        return isMac;
-    }
-
-    public static boolean isWindows() {
-        return isWin;
-    }
-    
     /**
      * Simple utility function which clamps the given value to be strictly
      * between the min and max values.
      */
     // see com.sun.javafx.util.Utils:77
     public static int clamp(int min, int value, int max) {
-        if (value < min) return min;
-        if (value > max) return max;
+        if (value < min) {
+            return min;
+        } else if (value > max) {
+            return max;
+        }
         return value;
     }
 
+    // com.sun.javafx.util.Utils:769
+    public static Screen getScreenForPoint(final double x, final double y) {
+        ObservableList<Screen> screens = Screen.getScreens();
+
+        // first check whether the point is inside some screen
+        for (Screen screen: screens) {
+            // can't use screen.bounds.contains, because it returns true for
+            // the min + width point
+            Rectangle2D r = screen.getBounds();
+            if (
+                (x >= r.getMinX()) && 
+                (x < r.getMaxX()) && 
+                (y >= r.getMinY()) && 
+                (y < r.getMaxY())
+            ) {
+                return screen;
+            }
+        }
+
+        // the point is not inside any screen, find the closest screen now
+        Screen selectedScreen = Screen.getPrimary();
+        double minDistance = Double.MAX_VALUE;
+        for (Screen screen: screens) {
+            Rectangle2D r = screen.getBounds();
+            double dx = getOuterDistance(r.getMinX(), r.getMaxX(), x);
+            double dy = getOuterDistance(r.getMinY(), r.getMaxY(), y);
+            double distance = dx * dx + dy * dy;
+            if (minDistance >= distance) {
+                minDistance = distance;
+                selectedScreen = screen;
+            }
+        }
+
+        return selectedScreen;
+    }
+
+    // com.sun.javafx.util.Utils:839
+    private static double getOuterDistance(double v0, double v1, double v) {
+        if (v <= v0) {
+            return v0 - v;
+        }
+        if (v >= v1) {
+            return v - v1;
+        }
+        return 0;
+    }
+
     /**
-     * A safe substring method which is tolerant to null text, and offsets being outside of the text boundaries.
-     * 
-     * @param text source text or null
-     * @param start start offset, must be >= 0
-     * @param end end offset
-     * @return a non-null substring
+     * Invoked when the user attempts an invalid operation,
+     * such as pasting into an uneditable <code>TextInputControl</code>
+     * that has focus. The default implementation beeps.
+     *
+     * @param originator the <code>Node</code> the error occurred in, may be <code>null</code>
+     *                   indicating the error condition is not directly associated with a <code>Node</code>
      */
-    public static String substring(String text, int start, int end) {
-        if (text == null) {
-            return "";
-        }
+    // TODO this probably should be in Platform
+    public static void provideErrorFeedback(Node originator) {
+        beep();
+    }
 
-        int len = text.length();
-        if((end < 0) || (end > len)) {
-            end = len;
-        }
-
-        if ((start == 0) && (end == len)) {
-            return text;
-        }
-
-        return text.substring(start, end);
+    public static void beep() {
+        // TODO not supported in FX
     }
     
-    /** Converts Color to "#rrggbb" or "rgba(r,g,b,a)" string */ 
-    public static String toCssColor(Color c) {
-        if(c.getOpacity() == 1.0) {
-            return String.format(
-                "#%02x%02x%02x", 
-                eightBit(c.getRed()),
-                eightBit(c.getGreen()),
-                eightBit(c.getBlue())
-            );
-        } else {
-            return String.format(
-                "rgba(%d,%d,%d,%d)", 
-                eightBit(c.getRed()),
-                eightBit(c.getGreen()),
-                eightBit(c.getBlue()),
-                c.getOpacity()
-            );
-        }
-    }
-
-    private static int eightBit(double val) {
-        int v = (int)Math.round(val * 255);
-        if (v < 0) {
-            return 0;
-        } else if (v > 255) {
-            return 255;
-        }
-        return v;
-    }
-
-    /** null-tolerant !equals() */
-    public static boolean notEquals(Object a, Object b) {
-        return !equals(a, b);
-    }
-
-    /** null-tolerant equals() */
-    public static boolean equals(Object a, Object b) {
-        if (a == b) {
-            return true;
-        } else if (a == null) {
-            return (b == null);
-        } else if (b == null) {
-            return false;
-        } else {
-            return a.equals(b);
-        }
+    public static byte[] writePNG(Image im) throws IOException {
+        return Utils.writePNG(im);
     }
 }

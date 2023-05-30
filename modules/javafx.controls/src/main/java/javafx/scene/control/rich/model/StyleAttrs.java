@@ -28,11 +28,11 @@ package javafx.scene.control.rich.model;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
-import javafx.scene.control.rich.util.Util;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * Map of style attributes.
@@ -88,7 +88,7 @@ public class StyleAttrs {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
             if (value != null) {
-                String color = Util.toCssColor((Color)value);
+                String color = RichUtils.toCssColor((Color)value);
                 sb.append("-fx-fill:").append(color).append("; ");
             }
         }

@@ -25,11 +25,12 @@
 package com.oracle.tools.demo.rich;
 
 import java.text.DecimalFormat;
+import javafx.scene.Node;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModelReadOnlyBase;
-import javafx.scene.control.rich.util.NewAPI;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 /**
@@ -60,7 +61,17 @@ public class DemoStyledTextModel extends StyledTextModelReadOnlyBase {
     public String getPlainText(int index) {
         TextCell c = createTextCell(index);
         TextFlow f = ((TextFlow)c.getContent());
-        return NewAPI.getText(f);
+        return getText(f);
+    }
+
+    private static String getText(TextFlow f) {
+        StringBuilder sb = new StringBuilder();
+        for (Node n : f.getChildrenUnmodifiable()) {
+            if (n instanceof Text t) {
+                sb.append(t.getText());
+            }
+        }
+        return sb.toString();
     }
 
     @Override

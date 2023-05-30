@@ -1004,6 +1004,7 @@ public class Utils {
 
     public static byte[] writePNG(Image im) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
+        // this might conflict with user-set value
         ImageIO.setUseCache(false);
         ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
         return out.toByteArray();

@@ -44,7 +44,6 @@ import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.rich.util.BehaviorBase2;
 import javafx.scene.control.rich.util.KCondition;
 import javafx.scene.control.rich.util.KeyBinding2;
-import javafx.scene.control.rich.util.NewAPI;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -58,7 +57,9 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
 import javafx.util.Duration;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * RichTextArea Behavior.
@@ -240,8 +241,8 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             if (ch.length() > 0) {
                 // see TextInputControlBehavior:395
                 // Filter out control keys except control+Alt on PC or Alt on Mac
-                if (ev.isControlDown() || ev.isAltDown() || (Util.isMac() && ev.isMetaDown())) {
-                    if (!((ev.isControlDown() || Util.isMac()) && ev.isAltDown()))
+                if (ev.isControlDown() || ev.isAltDown() || (PlatformUtil.isMac() && ev.isMetaDown())) {
+                    if (!((ev.isControlDown() || PlatformUtil.isMac()) && ev.isAltDown()))
                         return null;
                 }
 
@@ -687,15 +688,6 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             e.printStackTrace();
         }
     }
-    
-    public void selectWord2() {
-        control.previousWord();
-        if (Util.isWindows()) {
-            control.selectNextWord();
-        } else {
-            control.selectEndOfNextWord();
-        }
-    }
 
     public void selectLine() {
         TextPos p = control.getCaretPosition();
@@ -778,9 +770,9 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             double screenY = ev.getScreenY();
             double sceneX = ev.getSceneX();
 
+            /* TODO
             if (NewAPI.isTouchSupported()) {
-                /* TODO
-                Point2D menuPos;
+                 Point2D menuPos;
                 if (control.getSelection().getLength() == 0) {
                     skin.positionCaret(skin.getIndex(ev.getX(), ev.getY()), false);
                     menuPos = skin.getMenuPosition();
@@ -802,14 +794,14 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                     sceneX = p.getX();
                     screenY = location.getY();
                 }
-                */
             }
+            */
 
             populateContextMenu();
 
             double menuWidth = contextMenu.prefWidth(-1);
-            double menuX = screenX - (NewAPI.isTouchSupported() ? (menuWidth / 2) : 0);
-            Screen currentScreen = NewAPI.getScreenForPoint(screenX, 0);
+            double menuX = screenX - (RichUtils.isTouchSupported() ? (menuWidth / 2) : 0);
+            Screen currentScreen = Util.getScreenForPoint(screenX, 0);
             Rectangle2D bounds = currentScreen.getBounds();
 
             // what is this??
@@ -966,7 +958,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                 } catch(Exception | OutOfMemoryError e) {
                     // TODO log exception
                     e.printStackTrace();
-                    NewAPI.provideErrorFeedback(control);
+                    Util.provideErrorFeedback(control);
                 }
             }
         }

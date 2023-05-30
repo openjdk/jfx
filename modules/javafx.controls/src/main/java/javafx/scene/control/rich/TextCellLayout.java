@@ -32,13 +32,12 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
-import javafx.scene.control.rich.util.NewAPI;
-import javafx.scene.control.rich.util.Util;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
+import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * Manages TextCells in the visible area, surrounded by a number of cells before and after the visible area,
@@ -75,7 +74,7 @@ public class TextCellLayout {
             (f.getHeight() == flowHeight) &&
             (f.topCellIndex() == origin.index()) &&
             (f.lineSpacing() == lineSpacing) &&
-            (Util.equals(f.contentPadding(), contentPadding));
+            (RichUtils.equals(f.contentPadding(), contentPadding));
     }
 
     public String toString() {
@@ -150,7 +149,7 @@ public class TextCellLayout {
         Region r = cell.getContent();
         int cix = 0;
         if (r instanceof TextFlow f) {
-            cix = NewAPI.getTextLength(f);
+            cix = RichUtils.getTextLength(f);
         }
         return new TextPos(cell.getIndex(), cix, cix, true);
     }

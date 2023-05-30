@@ -39,9 +39,9 @@ import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.util.Util;
 import javafx.scene.input.DataFormat;
 import com.sun.javafx.scene.control.rich.Markers;
+import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * Base class for a styled text model for use with {@link RichTextArea}.
@@ -380,7 +380,7 @@ public abstract class StyledTextModel {
      */
     protected void exportPlaintextSegments(int index, int start, int end, StyledOutput out) throws IOException {
         String text = getPlainText(index);
-        text = Util.substring(text, start, end);
+        text = RichUtils.substring(text, start, end);
         StyledSegment seg = StyledSegment.of(text);
         out.append(seg);
     }

@@ -27,6 +27,7 @@
 
 package javafx.scene.control.rich;
 
+import java.util.Objects;
 import javafx.scene.control.rich.util.Util;
 
 /**
@@ -38,9 +39,9 @@ public class SelectionSegment implements Cloneable {
     private final boolean caretAtMin;
 
     public SelectionSegment(Marker min, Marker max, boolean caretAtMin) {
-        Util.notNull(min, "min");
-        Util.notNull(max, "max");
-        Util.isLessThanOrEqual(min, max, "min", "max");
+        Objects.requireNonNull(min, "min cannot be null");
+        Objects.requireNonNull(max, "max cannot be null");
+        isLessThanOrEqual(min, max, "min", "max");
 
         this.min = min;
         this.max = max;
@@ -48,8 +49,8 @@ public class SelectionSegment implements Cloneable {
     }
 
     public SelectionSegment(Marker anchor, Marker caret) {
-        Util.notNull(anchor, "anchor");
-        Util.notNull(caret, "caret");
+        Objects.requireNonNull(anchor, "anchor cannot be null");
+        Objects.requireNonNull(caret, "caret cannot be null");
 
         if (anchor.compareTo(caret) <= 0) {
             this.min = anchor;
@@ -61,24 +62,30 @@ public class SelectionSegment implements Cloneable {
             this.caretAtMin = true;
         }
     }
-    
+
     public Marker getAnchor() {
         return caretAtMin ? max : min;
     }
-    
+
     public Marker getCaret() {
         return caretAtMin ? min : max;
     }
-    
+
     public Marker getMin() {
         return min;
     }
-    
+
     public Marker getMax() {
         return max;
     }
-    
+
     public String toString() {
         return "SelectionSegment{" + min + ", " + max + ", caretAtMin=" + caretAtMin + "}";
+    }
+
+    private static <T extends Comparable<T>> void isLessThanOrEqual(T min, T max, String nameMin, String nameMax) {
+        if (min.compareTo(max) > 0) {
+            throw new IllegalArgumentException(nameMin + " must be less or equal to " + nameMax);
+        }
     }
 }

@@ -35,10 +35,10 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.util.CachingStyleResolver;
-import javafx.scene.control.rich.util.NewAPI;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
+import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * StyledOutput which generates RTF.
@@ -233,7 +233,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
 
         StyleAttrs a = seg.getStyleAttrs(resolver);
 
-        if (Util.notEquals(a, prevStyle)) {
+        if (RichUtils.notEquals(a, prevStyle)) {
             Color col;
             Color bg;
             boolean bld;
@@ -267,7 +267,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
 
             // emit changes
             
-            if (Util.notEquals(fontFamily, fam)) {
+            if (RichUtils.notEquals(fontFamily, fam)) {
                 int ix = fontTable.getIndexFor(fam);
                 write("\\f");
                 write(String.valueOf(ix));
@@ -275,7 +275,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
                 fontFamily = fam;
             }
 
-            if (Util.notEquals(fontSize, fsize)) {
+            if (RichUtils.notEquals(fontSize, fsize)) {
                 write("\\fs");
                 double fs = 24.0; // twice the points
                 if (fsize != null) {
@@ -285,7 +285,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
                 fontSize = fsize;
             }
 
-            if (Util.notEquals(col, color)) {
+            if (RichUtils.notEquals(col, color)) {
                 if (col == null) {
                     write("\\cf0 ");
                 } else {
@@ -302,7 +302,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
                 color = col;
             }
 
-            if (Util.notEquals(bg, background)) {
+            if (RichUtils.notEquals(bg, background)) {
                 if (bg == null) {
                     write("\\highlight0 ");
                 } else {
@@ -347,7 +347,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
     // TODO does not seem to work on Mac
     private void writeParagraph(Node n) throws IOException {
         WritableImage im = resolver.snapshot(n);
-        byte[] bytes = NewAPI.writePNG(im);
+        byte[] bytes = Util.writePNG(im);
         int w = (int)im.getWidth();
         int h = (int)im.getHeight();
 
