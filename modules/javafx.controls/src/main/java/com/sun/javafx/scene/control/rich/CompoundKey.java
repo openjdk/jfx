@@ -23,41 +23,34 @@
  * questions.
  */
 
-package javafx.scene.control.rich.util;
+package com.sun.javafx.scene.control.rich;
 
-import java.util.HashMap;
-import javafx.scene.Node;
-import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.image.WritableImage;
+import java.util.Arrays;
 
 /**
- * Caching StyleResolver caches conversion results to avoid re-querying for the same information.
+ * Compound Key
  */
-public class CachingStyleResolver implements StyleResolver {
-    private final StyleResolver resolver;
-    private final HashMap<Key, StyleAttrs> attrs = new HashMap<>();
+public class CompoundKey {
+    private final Object[] keys;
 
-    public CachingStyleResolver(StyleResolver r) {
-        this.resolver = r;
+    public CompoundKey(Object... keys) {
+        this.keys = keys;
     }
 
     @Override
-    public StyleAttrs convert(String directStyle, String[] css) {
-        Key k = new Key(directStyle, css);
-        StyleAttrs a = attrs.get(k);
-        if (a == null) {
-            a = resolver.convert(directStyle, css);
-            attrs.put(k, a);
+    public int hashCode() {
+        int h = CompoundKey.class.hashCode();
+        return 31 * h + Arrays.hashCode(keys);
+    }
+
+    @Override
+    public boolean equals(Object x) {
+        if (x == this) {
+            return true;
+        } else if (x instanceof CompoundKey c) {
+            return Arrays.equals(keys, c.keys);
+        } else {
+            return false;
         }
-        return a;
     }
-    
-    @Override
-    public WritableImage snapshot(Node node) {
-        return resolver.snapshot(node);
-    }
-
-    /** composite key */
-    private static record Key(String style, String[] css) { }
 }

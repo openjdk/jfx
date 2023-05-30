@@ -25,7 +25,7 @@
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
 
-package javafx.scene.control.rich.util;
+package com.sun.javafx.scene.control.rich;
 
 import java.util.ArrayList;
 import java.util.List;

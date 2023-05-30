@@ -42,7 +42,6 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.rich.skin.RPane;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
-import javafx.scene.control.rich.util.FxPathBuilder;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -56,6 +55,7 @@ import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.rich.FastCache;
+import com.sun.javafx.scene.control.rich.FxPathBuilder;
 import com.sun.javafx.scene.control.rich.RichUtils;
 import com.sun.javafx.scene.control.rich.SelectionHelper;
 

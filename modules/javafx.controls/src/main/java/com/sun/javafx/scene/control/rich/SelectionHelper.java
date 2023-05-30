@@ -28,7 +28,6 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import javafx.scene.control.rich.util.FxPathBuilder;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;

@@ -28,13 +28,13 @@
 package javafx.scene.control.rich;
 
 import javafx.scene.Node;
-import javafx.scene.control.rich.util.FxPathBuilder;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import com.sun.javafx.scene.control.rich.FxPathBuilder;
 import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
