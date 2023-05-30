@@ -3089,7 +3089,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     oldOffset = oldOffset + newSize - oldSize;
                 }
                 recalculateAndImproveEstimatedSize(0, currentIndex, oldOffset);
-
             }
         }
     }
