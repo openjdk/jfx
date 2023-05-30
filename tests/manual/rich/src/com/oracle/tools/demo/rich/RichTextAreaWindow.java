@@ -66,9 +66,9 @@ public class RichTextAreaWindow extends Stage {
 
         setScene(scene);
         setTitle(
-            "RichTextArea Demo " +
+            "RichTextArea Demo fx:" +
             System.getProperty("javafx.runtime.version") +
-            " " +
+            " jdk:" +
             System.getProperty("java.version")
         );
         setWidth(1200);
