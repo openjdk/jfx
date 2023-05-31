@@ -29,6 +29,9 @@ import javafx.scene.control.rich.Marker;
 import javafx.scene.control.rich.TextPos;
 import com.sun.javafx.util.Utils;
 
+/**
+ * Manages Marker Accessor.
+ */
 public class MarkerHelper {
     public interface Accessor {
         public Marker createMarker(TextPos p);

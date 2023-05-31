@@ -23,36 +23,34 @@
  * questions.
  */
 
-package javafx.scene.control.rich.util;
+package com.sun.javafx.scene.control.rich;
 
-import javafx.scene.input.KeyCode;
+import javafx.scene.control.rich.Origin;
+import javafx.scene.control.rich.RichTextArea;
+import com.sun.javafx.util.Utils;
 
-// TODO this class may not be needed - all it currently contains is the input map.
-// TODO the input map may be moved to Control in order to preserve user mappings when switching skins.
-public class BehaviorBase2 {
-    protected final InputMap2 inputMap = new InputMap2();
-
-    public BehaviorBase2() {        
-    }
-    
-    public void map(Object actionTag, Runnable function) {
-        inputMap.add(actionTag, function);
-    }
-    
-    // or make inputMap public/part of the Control?
-    public void map(Object actionTag, Runnable function, KeyCode code, KCondition ... modifiers) {
-        inputMap.add(actionTag, function, code, modifiers);
-    }
-    
-    public void map(Object actionTag, KeyCode code, KCondition ... modifiers) {
-        inputMap.add(actionTag, code, modifiers);
-    }
-    
-    public Runnable getFunction(Object tag) {
-        return inputMap.getFunction(tag);
+/**
+ * Manages RichTextArea Accessor.
+ */
+public class RichTextAreaHelper {
+    public interface Accessor {
+        public void setOrigin(RichTextArea a, Origin or);
     }
 
-    public void dispose() {
-        // TODO could unlink inputMap from the control
+    static {
+        Utils.forceInit(RichTextArea.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static void setOrigin(RichTextArea a, Origin or) {
+        accessor.setOrigin(a, or);
     }
 }

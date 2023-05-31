@@ -59,6 +59,7 @@ import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
+import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
 
 /**
  * Styled Text Area.
@@ -111,19 +112,27 @@ public class RichTextArea extends Control {
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
     private final Config config;
-    protected final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
-    protected final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
-    protected final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
+    private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
+    private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
+    private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
     private SimpleBooleanProperty editableProperty;
-    protected final ReadOnlyObjectWrapper<Duration> caretBlinkPeriod;
-    // TODO property, pluggable models, or boolean (selection enabled?), do we need to allow for multiple selection?
-    protected final SelectionModel selectionModel = new SingleSelectionModel();
+    private final ReadOnlyObjectWrapper<Duration> caretBlinkPeriod;
+    private final SelectionModel selectionModel = new SingleSelectionModel();
     private ReadOnlyIntegerWrapper tabSizeProperty;
     private ObjectProperty<SideDecorator> leftDecorator;
     private ObjectProperty<SideDecorator> rightDecorator;
     private ObjectProperty<Insets> contentPadding;
     private DoubleProperty lineSpacing;
     private BooleanProperty highlightCurrentLine;
+
+    static {
+        RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
+            @Override
+            public void setOrigin(RichTextArea a, Origin or) {
+                a.setOrigin(or);
+            }
+        });
+    }
 
     /**
      * Creates an editable instance with default configuration parameters,
@@ -407,20 +416,21 @@ public class RichTextArea extends Control {
     public ReadOnlyProperty<SelectionSegment> selectionSegmentProperty() {
         return selectionModel.selectionSegmentProperty();
     }
-    
+
+    /** Location of the top left corner. */
+    public ReadOnlyProperty<Origin> originProperty() {
+        return origin.getReadOnlyProperty();
+    }
+
     public Origin getOrigin() {
         return origin.get();
     }
 
-    public void setOrigin(Origin p) {
+    private void setOrigin(Origin p) {
         if (p == null) {
             throw new NullPointerException();
         }
         origin.set(p);
-    }
-    
-    public ReadOnlyProperty<Origin> originProperty() {
-        return origin.getReadOnlyProperty();
     }
 
     /**

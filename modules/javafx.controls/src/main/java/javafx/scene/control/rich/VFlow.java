@@ -56,6 +56,7 @@ import javafx.util.Duration;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.rich.FastCache;
 import com.sun.javafx.scene.control.rich.FxPathBuilder;
+import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
 import com.sun.javafx.scene.control.rich.RichUtils;
 import com.sun.javafx.scene.control.rich.SelectionHelper;
 
@@ -164,7 +165,7 @@ public class VFlow extends Pane {
         lh.addChangeListener(
             this::handleOrigin,
             true,
-            control.origin
+            control.originProperty()
         );
         
         widthProperty().addListener((p) -> updateWidth());
@@ -273,14 +274,11 @@ public class VFlow extends Pane {
     }
 
     public Origin getOrigin() {
-        return control.origin.get();
+        return control.getOrigin();
     }
 
-    public void setOrigin(Origin p) {
-        if (p == null) {
-            throw new NullPointerException();
-        }
-        control.origin.set(p);
+    public void setOrigin(Origin or) {
+        RichTextAreaHelper.setOrigin(control, or);
     }
 
     protected void handleOrigin() {
@@ -1112,7 +1110,7 @@ public class VFlow extends Pane {
             TextPos p = control.getCaretPosition();
             if (p != null) {
                 int ix = p.index();
-                Origin or = new Origin(ix, 0);
+                Origin or = new Origin(ix, 0.0);
                 setOrigin(or);
                 checkForExcessiveWhitespaceAtTheEnd();
             }
@@ -1180,7 +1178,7 @@ public class VFlow extends Pane {
         // change origin if start position is before the top line
         Origin origin = getOrigin();
         if (start.index() < origin.index()) {
-            origin = new Origin(start.index(), 0);
+            origin = new Origin(start.index(), 0.0);
             setOrigin(origin);
         }
 
