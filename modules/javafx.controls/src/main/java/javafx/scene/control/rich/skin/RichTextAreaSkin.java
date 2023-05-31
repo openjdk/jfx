@@ -31,19 +31,14 @@ import java.util.function.Supplier;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
-import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.Config;
 import javafx.scene.control.rich.RichTextArea;
-import javafx.scene.control.rich.RichTextAreaBehavior;
-import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.RichTextArea.Cmd;
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.image.WritableImage;
+import javafx.scene.control.rich.RichTextAreaBehavior;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
-import javafx.scene.text.Text;
 import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
@@ -56,14 +51,13 @@ import com.sun.javafx.scene.control.ListenerHelper;
  * <li>vertical scroll bar
  * </ul>
  */
-public class RichTextAreaSkin extends SkinBase<RichTextArea> implements StyleResolver {
+public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final Config config;
     private final ListenerHelper listenerHelper;
     private final RichTextAreaBehavior behavior;
     private final VFlow vflow;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
-    private static final Text measurer = makeMeasurer();
 
     public RichTextAreaSkin(RichTextArea control, Config cnf) {
         super(control);
@@ -140,7 +134,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> implements StyleRes
     /** called from the constructor.  override to provide custom behavior */
     // TODO variant: generator in Config, or add methods to manipulate behavior to control
     protected RichTextAreaBehavior createBehavior() {
-        return new RichTextAreaBehavior(this, config);
+        return new RichTextAreaBehavior(config, this);
     }
     
     private final ScrollBar createVScrollBar() {
@@ -178,34 +172,5 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> implements StyleRes
         if(f != null) {
             f.run();
         }
-    }
-    
-    private static Text makeMeasurer() {
-        Text t = new Text("8");
-        t.setManaged(false);
-        return t;
-    }
-
-    @Override
-    public StyleAttrs convert(String directStyle, String[] css) {
-        StyleAttrs a = new StyleAttrs();
-        vflow.getChildren().add(measurer);
-        try {
-            measurer.setStyle(directStyle);
-            if (css == null) {
-                measurer.getStyleClass().clear();
-            } else {
-                measurer.getStyleClass().setAll(css);
-            }
-            measurer.applyCss();
-        } finally {
-            vflow.getChildren().remove(measurer);
-        }
-        return StyleAttrs.from(measurer);
-    }
-
-    @Override
-    public WritableImage snapshot(Node n) {
-        return vflow.snapshot(n);
     }
 }

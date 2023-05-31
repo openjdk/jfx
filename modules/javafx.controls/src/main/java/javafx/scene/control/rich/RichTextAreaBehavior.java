@@ -78,8 +78,8 @@ import com.sun.javafx.scene.control.rich.RichUtils;
  * - TODO allows for restoring the default mapping
  */
 public class RichTextAreaBehavior extends BehaviorBase2 {
-    private final RichTextAreaSkin skin;
     private final Config config;
+    private final RichTextAreaSkin skin;
     private final RichTextArea control;
     private final StyledTextModel.ChangeListener textChangeListener;
     private final Timeline autoScrollTimer;
@@ -89,11 +89,11 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     private final Duration autoScrollPeriod;
     private ContextMenu contextMenu = new ContextMenu();
 
-    public RichTextAreaBehavior(RichTextAreaSkin skin, Config c) {
+    public RichTextAreaBehavior(Config c, RichTextAreaSkin skin) {
         this.skin = skin;
         this.config = c;
         this.control = skin.getSkinnable();
-        
+
         autoScrollPeriod = Duration.millis(config.autoScrollPeriod);
 
         map(Cmd.BACKSPACE, this::backspace, KeyCode.BACK_SPACE);
@@ -286,7 +286,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                 end = p;
             }
 
-            m.replace(skin, start, end, typed);
+            m.replace(vflow(), start, end, typed);
 
             int off = start.offset() + typed.length();
             TextPos p = new TextPos(start.index(), off);
@@ -310,7 +310,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         if(pos != null) {
             TextPos an = control.getAnchorPosition();
             // TODO check an<pos
-            TextPos p2 = m.replace(skin, an, pos, StyledInput.of("\n"));
+            TextPos p2 = m.replace(vflow(), an, pos, StyledInput.of("\n"));
             control.moveCaret(p2, false);
             clearPhantomX();
         }
@@ -723,7 +723,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
 
             TextPos start = nextCharacterVisually(end, false);
             if (start != null) {
-                control.getModel().replace(skin, start, end, StyledInput.EMPTY);
+                control.getModel().replace(vflow(), start, end, StyledInput.EMPTY);
                 control.moveCaret(start, false);
                 clearPhantomX();
             }
@@ -742,7 +742,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             TextPos end = nextCharacterVisually(start, true);
             if (end != null) {
                 // TODO ensure star<end
-                control.getModel().replace(skin, start, end, StyledInput.EMPTY);
+                control.getModel().replace(vflow(), start, end, StyledInput.EMPTY);
                 control.moveCaret(start, false);
                 clearPhantomX();
             }
@@ -757,7 +757,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             start = end;
             end = p;
         }
-        control.getModel().replace(skin, start, end, StyledInput.EMPTY);
+        control.getModel().replace(vflow(), start, end, StyledInput.EMPTY);
         control.moveCaret(start, false);
         clearPhantomX();
     }
@@ -884,7 +884,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             DataFormatHandler h = m.getDataFormatHandler(f);
             StyledInput in = h.getStyledInput(src);
             // TODO ensure star<end
-            TextPos p = m.replace(skin, caret, anchor, in);
+            TextPos p = m.replace(vflow(), caret, anchor, in);
             control.moveCaret(p, false);
         }
     }
@@ -905,7 +905,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                 TextPos caret = control.getCaretPosition();
                 TextPos anchor = control.getAnchorPosition();
                 // TODO ensure star<end
-                TextPos p = m.replace(skin, caret, anchor, in);
+                TextPos p = m.replace(vflow(), caret, anchor, in);
                 control.moveCaret(p, false);
             }
         }
@@ -946,7 +946,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                     ClipboardContent c = new ClipboardContent();
                     for (DataFormat f : fs) {
                         DataFormatHandler h = m.getDataFormatHandler(f);
-                        Object v = h.copy(m, skin, start, end);
+                        Object v = h.copy(m, vflow(), start, end);
                         if (v != null) {
                             c.put(f, v);
                         }

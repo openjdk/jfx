@@ -45,8 +45,10 @@ import javafx.scene.control.rich.Config;
 import javafx.scene.control.rich.Origin;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.SideDecorator;
+import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -69,7 +71,8 @@ import com.sun.javafx.scene.control.rich.SelectionHelper;
  * Virtual text flow deals with TextCells, scroll bars, and conversion
  * between the model and the screen coordinates.
  */
-public class VFlow extends Pane {
+// in theory, this class can be hidden as implementation detail.
+public class VFlow extends Pane implements StyleResolver {
     /** maximum width for unwrapped TextFlow layout. Neither Double.MAX_VALUE nor 1e20 work */
     private static final double MAX_WIDTH_FOR_LAYOUT = 1_000_000_000.0;
     private final RichTextArea control;
@@ -99,6 +102,7 @@ public class VFlow extends Pane {
     private double rightPadding;
     private double lineSpacing;
     private boolean inReflow;
+    private static final Text measurer = makeMeasurer();
 
     public VFlow(RichTextAreaSkin skin, Config c, ScrollBar vscroll, ScrollBar hscroll) {
         this.control = skin.getSkinnable();
@@ -187,6 +191,12 @@ public class VFlow extends Pane {
 
     public Pane getContentPane() {
         return content;
+    }
+
+    private static Text makeMeasurer() {
+        Text t = new Text("8");
+        t.setManaged(false);
+        return t;
     }
 
     public void handleModelChange() {
@@ -1202,13 +1212,32 @@ public class VFlow extends Pane {
         // TODO rebuild from start.lineIndex()
         requestLayout();
     }
-    
+
+    @Override
+    public StyleAttrs convert(String directStyle, String[] css) {
+        StyleAttrs a = new StyleAttrs();
+        getChildren().add(measurer);
+        try {
+            measurer.setStyle(directStyle);
+            if (css == null) {
+                measurer.getStyleClass().clear();
+            } else {
+                measurer.getStyleClass().setAll(css);
+            }
+            measurer.applyCss();
+        } finally {
+            getChildren().remove(measurer);
+        }
+        return StyleAttrs.from(measurer);
+    }
+
+    @Override
     public WritableImage snapshot(Node n) {
         n.setManaged(false);
         getChildren().add(n);
         try {
             n.applyCss();
-            if(n instanceof Region r) {
+            if (n instanceof Region r) {
                 double w = getContentWidth();
                 double h = r.prefHeight(w);
                 layoutInArea(r, 0, -h, w, h, 0, HPos.CENTER, VPos.CENTER);

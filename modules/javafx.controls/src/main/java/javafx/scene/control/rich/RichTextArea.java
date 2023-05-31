@@ -558,7 +558,7 @@ public class RichTextArea extends Control {
     public TextPos replaceText(TextPos start, TextPos end, String text) {
         if (canEdit()) {
             StyledTextModel m = getModel();
-            return m.replace(richTextAreaSkin(), start, end, text);
+            return m.replace(vflow(), start, end, text);
         }
         return null;
     }
