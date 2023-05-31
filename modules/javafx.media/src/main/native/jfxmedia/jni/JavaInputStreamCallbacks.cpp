@@ -59,18 +59,18 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
 
     CJavaEnvironment javaEnv(m_jvm);
 
-    static jmethodID createConnectionHolder = 0;
-    if (0 == createConnectionHolder)
+    static jmethodID createConnectionHolder = NULL;
+    if (NULL == createConnectionHolder)
     {
         jclass klass = env->GetObjectClass(jLocator);
         createConnectionHolder = env->GetMethodID(klass, "createConnectionHolder", "()Lcom/sun/media/jfxmedia/locator/ConnectionHolder;");
         env->DeleteLocalRef(klass);
-        if (javaEnv.reportException() || createConnectionHolder == 0)
+        if (javaEnv.reportException() || (NULL == createConnectionHolder))
             return false;
     }
 
     jobject connectionHolder = env->CallObjectMethod(jLocator, createConnectionHolder);
-    if (javaEnv.reportException() || NULL == connectionHolder)
+    if (javaEnv.reportException() || (NULL == connectionHolder))
         return false;
 
     m_ConnectionHolder = env->NewGlobalRef(connectionHolder);
@@ -166,7 +166,7 @@ bool CJavaInputStreamCallbacks::NeedBuffer()
             pEnv->DeleteLocalRef(connection);
         }
 
-        javaEnv.reportException();
+        javaEnv.clearException();
     }
 
     return result;

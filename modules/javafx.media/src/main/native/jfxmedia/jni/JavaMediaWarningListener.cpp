@@ -46,14 +46,14 @@ void CJavaMediaWarningListener::Warning(int warningCode, const char* warningMess
     if (pEnv) {
         jclass mediaUtilsClass = pEnv->FindClass("com/sun/media/jfxmediaimpl/MediaUtils");
         if (!javaEnv.clearException() && mediaUtilsClass != NULL) {
-            jmethodID errorMethodID = pEnv->GetStaticMethodID(mediaUtilsClass,
-                                                              "nativeWarning",
-                                                              "(ILjava/lang/String;)V");
+            jmethodID nativeWarningMethodID = pEnv->GetStaticMethodID(mediaUtilsClass,
+                                                                      "nativeWarning",
+                                                                      "(ILjava/lang/String;)V");
             if (!javaEnv.clearException()) {
                 char* message = NULL == warningMessage ? (char*)"" : (char*)warningMessage;
                 jstring jmessage = pEnv->NewStringUTF(message);
                 if (!javaEnv.clearException() && jmessage != NULL) {
-                    pEnv->CallStaticVoidMethod(mediaUtilsClass, errorMethodID,
+                    pEnv->CallStaticVoidMethod(mediaUtilsClass, nativeWarningMethodID,
                                                (jint)warningCode, jmessage);
                     javaEnv.clearException();
                     pEnv->DeleteLocalRef(jmessage);
