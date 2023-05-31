@@ -121,12 +121,12 @@ static NSMutableDictionary * rolesMap;
 }
 
 // Actions support
-- (BOOL)performAccessibleAction:(jlong)actionId
+- (BOOL)performAccessibleAction:(NSString *)action
 {
     GET_MAIN_JENV;
     if (env != NULL) {
         BOOL result = TRUE;
-        (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilityPerformAction, actionId);
+        (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilityPerformAction, (jlong)action);
         if ((*env)->ExceptionCheck(env)) {
             result = FALSE;
         }

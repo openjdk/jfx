@@ -41,7 +41,7 @@
 
 - (BOOL)accessibilityPerformPress
 {
-    return [self performAccessibleAction:(jlong)@"AXPress"];
+    return [self performAccessibleAction:@"AXPress"];
 }
 
 - (NSRect)accessibilityFrame
