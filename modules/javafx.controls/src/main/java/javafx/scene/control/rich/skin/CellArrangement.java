@@ -47,8 +47,8 @@ import com.sun.javafx.scene.control.rich.RichUtils;
  * Manages TextCells in the visible area, surrounded by a number of cells before and after the visible area,
  * for the purposes of layout, estimating the average paragraph height, and relative navigation.
  */
-public class TextCellLayout {
-    private final ArrayList<TextCell> cells = new ArrayList<>(32);
+public class CellArrangement {
+    private final ArrayList<TextCell> cells = new ArrayList<>(64);
     private final double flowWidth;
     private final double flowHeight;
     private final double lineSpacing;
@@ -63,7 +63,7 @@ public class TextCellLayout {
     private Node[] left;
     private Node[] right;
     
-    public TextCellLayout(VFlow f) {
+    public CellArrangement(VFlow f) {
         this.flowWidth = f.getWidth();
         this.flowHeight = f.getViewHeight();
         this.origin = f.getOrigin();
@@ -83,7 +83,7 @@ public class TextCellLayout {
 
     public String toString() {
         return
-            "TextCellLayout{" +
+            "CellArrangement{" +
             origin +
             ", topCount=" + topCount() +
             ", visible=" + getVisibleCellCount() +

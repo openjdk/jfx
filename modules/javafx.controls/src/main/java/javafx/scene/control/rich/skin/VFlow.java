@@ -79,9 +79,9 @@ public class VFlow extends Pane implements StyleResolver {
     private final Config config;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
-    private final RPane leftGutter;
-    private final RPane rightGutter;
-    private final RPane content;
+    private final ClippedPane leftGutter;
+    private final ClippedPane rightGutter;
+    private final ClippedPane content;
     private final Path caretPath;
     private final Path caretLineHighlight;
     private final Path selectionHighlight;
@@ -91,7 +91,7 @@ public class VFlow extends Pane implements StyleResolver {
     protected final SimpleDoubleProperty contentWidth = new SimpleDoubleProperty(0.0);
     protected final Timeline caretAnimation;
     protected final FastCache<TextCell> cellCache;
-    private TextCellLayout layout; // FIX rename?
+    private CellArrangement layout; // FIX rename?
     private FastCache<Node> leftCache;
     private FastCache<Node> rightCache;
     private boolean handleScrollEvents = true;
@@ -115,11 +115,11 @@ public class VFlow extends Pane implements StyleResolver {
         cellCache = new FastCache(config.cellCacheSize);
 
         // TODO consider creating upond demand
-        leftGutter = new RPane("left-side");
+        leftGutter = new ClippedPane("left-side");
         // TODO consider creating upond demand
-        rightGutter = new RPane("right-side");
+        rightGutter = new ClippedPane("right-side");
 
-        content = new RPane("content");
+        content = new ClippedPane("content");
 
         caretPath = new Path();
         caretPath.getStyleClass().add("caret");
@@ -611,7 +611,7 @@ public class VFlow extends Pane implements StyleResolver {
             visible = 1.0;
             val = 0.0;
         } else {
-            TextCellLayout la = textCellLayout();
+            CellArrangement la = textCellLayout();
             double av = la.averageHeight();
             double max = la.estimatedMax();
             double h = getHeight();
@@ -760,12 +760,12 @@ public class VFlow extends Pane implements StyleResolver {
         layout = reflow();
     }
 
-    protected TextCellLayout reflow() {
+    protected CellArrangement reflow() {
         inReflow = true;
         try {
             removeCells();
     
-            TextCellLayout la = new TextCellLayout(this);
+            CellArrangement la = new CellArrangement(this);
             layout = la;
             layoutCells();
     
@@ -793,7 +793,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     /** returns a non-null layout, laying out cells if necessary */
-    protected TextCellLayout textCellLayout() {
+    protected CellArrangement textCellLayout() {
         if(layout == null) {
             layoutChildren();
         }
