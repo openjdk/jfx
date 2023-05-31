@@ -169,7 +169,6 @@ public class RichTextArea extends Control {
         setFocusTraversable(true);
         getStyleClass().add("rich-text-area");
         setAccessibleRole(AccessibleRole.TEXT_AREA);
-        //setSkin(createDefaultSkin());
 
         if (m != null) {
             setModel(m);

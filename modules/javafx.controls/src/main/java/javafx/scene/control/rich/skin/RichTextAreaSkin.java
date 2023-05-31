@@ -88,7 +88,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> implements StyleRes
         hscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
         hscroll.visibleProperty().bind(control.wrapTextProperty().not());
 
-        vflow = new VFlow(this, config, listenerHelper, vscroll, hscroll);
+        vflow = new VFlow(this, config, vscroll, hscroll);
+        vflow.addListeners(listenerHelper);
 
         // TODO corner? only when both scroll bars are visible
 

@@ -100,7 +100,7 @@ public class VFlow extends Pane {
     private double lineSpacing;
     private boolean inReflow;
 
-    public VFlow(RichTextAreaSkin skin, Config c, ListenerHelper lh, ScrollBar vscroll, ScrollBar hscroll) {
+    public VFlow(RichTextAreaSkin skin, Config c, ScrollBar vscroll, ScrollBar hscroll) {
         this.control = skin.getSkinnable();
         this.config = c;
         this.vscroll = vscroll;
@@ -156,7 +156,9 @@ public class VFlow extends Pane {
                     (!control.isDisabled());
             }
         });
+    }
 
+    void addListeners(ListenerHelper lh) {
         lh.addInvalidationListener(this::handleModelChange, control.modelProperty());
         lh.addInvalidationListener(this::handleWrapText, control.wrapTextProperty());
         
