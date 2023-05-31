@@ -38,7 +38,6 @@ import javafx.scene.control.rich.Config;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.RichTextAreaBehavior;
 import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.VFlow;
 import javafx.scene.control.rich.RichTextArea.Cmd;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.image.WritableImage;

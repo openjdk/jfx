@@ -26,6 +26,7 @@
 package javafx.scene.control.rich;
 
 import java.util.Objects;
+import javafx.scene.control.rich.skin.VFlow;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;

@@ -25,7 +25,7 @@
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
 
-package javafx.scene.control.rich;
+package javafx.scene.control.rich.skin;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -40,8 +40,13 @@ import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
-import javafx.scene.control.rich.skin.RPane;
-import javafx.scene.control.rich.skin.RichTextAreaSkin;
+import javafx.scene.control.rich.CaretInfo;
+import javafx.scene.control.rich.Config;
+import javafx.scene.control.rich.Origin;
+import javafx.scene.control.rich.RichTextArea;
+import javafx.scene.control.rich.SideDecorator;
+import javafx.scene.control.rich.TextCell;
+import javafx.scene.control.rich.TextPos;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -693,10 +698,10 @@ public class VFlow extends Pane {
         return val * (max - visible);
     }
 
-    protected TextCell getCell(int modelIndex) {
+    public TextCell getCell(int modelIndex) {
         TextCell cell = cellCache.get(modelIndex);
         if (cell == null) {
-            cell = control.createTextCell(modelIndex);
+            cell = RichTextAreaHelper.createTextCell(control, modelIndex);
 
             // a bit of a hack: avoid TextCells with an empty TextFlow,
             // as it makes the caret collapse to a single point

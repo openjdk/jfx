@@ -25,13 +25,17 @@
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
 
-package javafx.scene.control.rich;
+package javafx.scene.control.rich.skin;
 
 import java.util.ArrayList;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.control.rich.CaretInfo;
+import javafx.scene.control.rich.Origin;
+import javafx.scene.control.rich.TextCell;
+import javafx.scene.control.rich.TextPos;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;

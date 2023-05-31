@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.rich;
 
 import javafx.scene.control.rich.Origin;
 import javafx.scene.control.rich.RichTextArea;
+import javafx.scene.control.rich.TextCell;
 import com.sun.javafx.util.Utils;
 
 /**
@@ -34,6 +35,7 @@ import com.sun.javafx.util.Utils;
  */
 public class RichTextAreaHelper {
     public interface Accessor {
+        public TextCell createTextCell(RichTextArea a, int index);
         public void setOrigin(RichTextArea a, Origin or);
     }
 
@@ -52,5 +54,9 @@ public class RichTextAreaHelper {
 
     public static void setOrigin(RichTextArea a, Origin or) {
         accessor.setOrigin(a, or);
+    }
+
+    public static TextCell createTextCell(RichTextArea a, int index) {
+        return accessor.createTextCell(a, index);
     }
 }

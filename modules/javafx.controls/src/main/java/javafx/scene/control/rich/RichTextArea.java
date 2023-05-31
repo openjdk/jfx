@@ -57,6 +57,7 @@ import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
+import javafx.scene.control.rich.skin.VFlow;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
@@ -130,6 +131,11 @@ public class RichTextArea extends Control {
             @Override
             public void setOrigin(RichTextArea a, Origin or) {
                 a.setOrigin(or);
+            }
+
+            @Override
+            public TextCell createTextCell(RichTextArea a, int index) {
+                return a.createTextCell(index);
             }
         });
     }
@@ -818,8 +824,7 @@ public class RichTextArea extends Control {
     /** 
      * Creates a visual representation of the model paragraph.
      * By default, delegates to the model.
-     * Subclasses may override this method to provide, for instance, additional styling specific to the
-     * control instance.
+     * Subclasses may override this method to provide, for instance, additional styling specific to this instance.
      * 
      * @param modelIndex paragraph index
      * @return a new {@link TextCell} instance
