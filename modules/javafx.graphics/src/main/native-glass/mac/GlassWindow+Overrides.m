@@ -200,7 +200,7 @@
     //NSLog(@"windowWillEnterFullScreen");
 
     NSUInteger mask = [self->nsWindow styleMask];
-    self->isWindowResizable = ((mask & NSResizableWindowMask) != 0);
+    self->isWindowResizable = ((mask & NSWindowStyleMaskResizable) != 0);
     [[self->view delegate] setResizableForFullscreen:YES];
 }
 
