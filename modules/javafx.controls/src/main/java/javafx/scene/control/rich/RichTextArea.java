@@ -57,10 +57,11 @@ import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
-import javafx.scene.control.rich.skin.VFlow;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
+import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
+import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
  * Styled Text Area.
@@ -109,7 +110,7 @@ public class RichTextArea extends Control {
         SELECT_WORD_NEXT,
         SELECT_WORD_NEXT_END,
         SELECT_WORD_PREVIOUS,
-     }
+    }
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
     private final Config config;
@@ -370,8 +371,8 @@ public class RichTextArea extends Control {
         return getClassCssMetaData();
     }
     
-    protected VFlow vflow() {
-        return ((RichTextAreaSkin)getSkin()).getVFlow();
+    private VFlow vflow() {
+        return RichTextAreaSkinHelper.getVFlow(getSkin());
     }
 
     public TextPos getTextPosition(double screenX, double screenY) {

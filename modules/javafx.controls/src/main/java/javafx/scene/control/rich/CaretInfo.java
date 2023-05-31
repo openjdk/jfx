@@ -26,14 +26,13 @@
 package javafx.scene.control.rich;
 
 import java.util.Objects;
-import javafx.scene.control.rich.skin.VFlow;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 
 /**
- * Captures a local caret position and bounds in the {@link VFlow} coordinates.
+ * Captures a local caret position and bounds in the VFlow coordinates.
  */
 public class CaretInfo {
     private final double xmin;

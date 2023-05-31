@@ -25,7 +25,7 @@
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
 
-package javafx.scene.control.rich.skin;
+package com.sun.javafx.scene.control.rich;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -49,6 +49,8 @@ import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.StyleAttrs;
+import javafx.scene.control.rich.skin.CellArrangement;
+import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -61,11 +63,6 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.rich.FastCache;
-import com.sun.javafx.scene.control.rich.FxPathBuilder;
-import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
-import com.sun.javafx.scene.control.rich.RichUtils;
-import com.sun.javafx.scene.control.rich.SelectionHelper;
 
 /**
  * Virtual text flow deals with TextCells, scroll bars, and conversion
@@ -91,7 +88,7 @@ public class VFlow extends Pane implements StyleResolver {
     protected final SimpleDoubleProperty contentWidth = new SimpleDoubleProperty(0.0);
     protected final Timeline caretAnimation;
     protected final FastCache<TextCell> cellCache;
-    private CellArrangement layout; // FIX rename?
+    private CellArrangement arrangement;
     private FastCache<Node> leftCache;
     private FastCache<Node> rightCache;
     private boolean handleScrollEvents = true;
@@ -162,7 +159,7 @@ public class VFlow extends Pane implements StyleResolver {
         });
     }
 
-    void addListeners(ListenerHelper lh) {
+    public void addListeners(ListenerHelper lh) {
         lh.addInvalidationListener(this::handleModelChange, control.modelProperty());
         lh.addInvalidationListener(this::handleWrapText, control.wrapTextProperty());
         
@@ -345,9 +342,9 @@ public class VFlow extends Pane implements StyleResolver {
             setContentWidth(w);
         } else {
             double w = getOffsetX() + content.getWidth();
-            if (layout != null) {
-                if (layout.getUnwrappedWidth() > w) {
-                    w = layout.getUnwrappedWidth();
+            if (arrangement != null) {
+                if (arrangement.getUnwrappedWidth() > w) {
+                    w = arrangement.getUnwrappedWidth();
                 }
             }
 
@@ -370,7 +367,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public void updateCaretAndSelection() {
-        if (layout == null) {
+        if (arrangement == null) {
             removeCaretAndSelection();
             return;
         }
@@ -607,7 +604,7 @@ public class VFlow extends Pane implements StyleResolver {
     protected void updateVerticalScrollBar() {
         double visible;
         double val;
-        if (layout == null || (getParagraphCount() == 0)) {
+        if (arrangement == null || (getParagraphCount() == 0)) {
             visible = 1.0;
             val = 0.0;
         } else {
@@ -674,7 +671,7 @@ public class VFlow extends Pane implements StyleResolver {
     /** handles user moving the scroll bar */
     public void handleHorizontalScroll() {
         if (handleScrollEvents) {
-            if (layout == null) {
+            if (arrangement == null) {
                 return;
             } else if (control.isWrapText()) {
                 return;
@@ -757,7 +754,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     @Override
     protected void layoutChildren() {
-        layout = reflow();
+        arrangement = reflow();
     }
 
     protected CellArrangement reflow() {
@@ -765,8 +762,8 @@ public class VFlow extends Pane implements StyleResolver {
         try {
             removeCells();
     
-            CellArrangement la = new CellArrangement(this);
-            layout = la;
+            CellArrangement ar = new CellArrangement(this);
+            arrangement = ar;
             layoutCells();
     
             checkForExcessiveWhitespaceAtTheEnd();
@@ -779,25 +776,25 @@ public class VFlow extends Pane implements StyleResolver {
             }
     
             // layout might get invalidated in the process, but we must return a non-null value
-            return la;
+            return ar;
         } finally {
             inReflow = false;
         }
     }
 
     protected void removeCells() {
-        if (layout != null) {
-            layout.removeNodesFrom(content);
-            layout = null;
+        if (arrangement != null) {
+            arrangement.removeNodesFrom(content);
+            arrangement = null;
         }
     }
 
     /** returns a non-null layout, laying out cells if necessary */
     protected CellArrangement textCellLayout() {
-        if(layout == null) {
+        if(arrangement == null) {
             layoutChildren();
         }
-        return layout;
+        return arrangement;
     }
 
     /** recomputes sliding window */
@@ -874,7 +871,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             r.applyCss();
 
-            layout.addCell(cell);
+            arrangement.addCell(cell);
 
             double h = r.prefHeight(forWidth) + lineSpacing;
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
@@ -899,7 +896,7 @@ public class VFlow extends Pane implements StyleResolver {
                 if (y > height) {
                     topMarginCount = (int)Math.ceil(count * config.slidingWindowMargin);
                     bottomMarginCount = count + topMarginCount;
-                    layout.setVisibleCellCount(count);
+                    arrangement.setVisibleCellCount(count);
                     visible = false;
                 }
             } else {
@@ -914,7 +911,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         // in case there are less paragraphs than can fit in the view
         if (visible) {
-            layout.setVisibleCellCount(count);
+            arrangement.setVisibleCellCount(count);
         }
         
         if (i == paragraphCount) {
@@ -927,8 +924,8 @@ public class VFlow extends Pane implements StyleResolver {
                 leftCache = updateSideCache(leftDecorator, null);
             }
 
-            for (i = 0; i < layout.getVisibleCellCount(); i++) {
-                TextCell cell = layout.getCellAt(i);
+            for (i = 0; i < arrangement.getVisibleCellCount(); i++) {
+                TextCell cell = arrangement.getCellAt(i);
                 int ix = cell.getIndex();
                 Node n = leftCache.get(ix);
                 if (n == null) {
@@ -939,7 +936,7 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                 }
                 if (n != null) {
-                    layout.addLeftNode(i, n);
+                    arrangement.addLeftNode(i, n);
                 }
             }
         }
@@ -949,8 +946,8 @@ public class VFlow extends Pane implements StyleResolver {
                 rightCache = updateSideCache(rightDecorator, null);
             }
 
-            for (i = 0; i < layout.getVisibleCellCount(); i++) {
-                TextCell cell = layout.getCellAt(i);
+            for (i = 0; i < arrangement.getVisibleCellCount(); i++) {
+                TextCell cell = arrangement.getCellAt(i);
                 int ix = cell.getIndex();
                 Node n = rightCache.get(ix);
                 if (n == null) {
@@ -961,14 +958,14 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                 }
                 if (n != null) {
-                    layout.addRightNode(i, n);
+                    arrangement.addRightNode(i, n);
                 }
             }
         }
 
-        layout.setBottomCount(count);
-        layout.setBottomHeight(y);
-        layout.setUnwrappedWidth(unwrappedWidth);
+        arrangement.setBottomCount(count);
+        arrangement.setBottomHeight(y);
+        arrangement.setUnwrappedWidth(unwrappedWidth);
         count = 0;
         y = ytop;
         
@@ -988,7 +985,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             r.applyCss();
             
-            layout.addCell(cell);
+            arrangement.addCell(cell);
             
             double h = r.prefHeight(forWidth) + lineSpacing;
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
@@ -1007,7 +1004,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
         }
         
-        layout.setTopHeight(-y);
+        arrangement.setTopHeight(-y);
 
         // lay out content nodes
         placeNodes();
@@ -1033,9 +1030,9 @@ public class VFlow extends Pane implements StyleResolver {
         boolean addLeft = control.getLeftDecorator() != null;
         boolean addRight = control.getRightDecorator() != null;
 
-        int sz = layout.getVisibleCellCount();
+        int sz = arrangement.getVisibleCellCount();
         for (int i=0; i < sz; i++) {
-            TextCell cell = layout.getCellAt(i);
+            TextCell cell = arrangement.getCellAt(i);
             Region r = cell.getContent();
             double h = cell.getHeight();
             double y = cell.getY();
@@ -1043,7 +1040,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             // place side nodes
             if (addLeft) {
-                Node n = layout.getLeftNodeAt(i);
+                Node n = arrangement.getLeftNodeAt(i);
                 if (n != null) {
                     leftGutter.getChildren().add(n);
                     leftGutter.layoutInArea(n, 0.0, y, leftGutter.getWidth(), h);
@@ -1051,7 +1048,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
 
             if (addRight) {
-                Node n = layout.getRightNodeAt(i);
+                Node n = arrangement.getRightNodeAt(i);
                 if (n != null) {
                     rightGutter.getChildren().add(n);
                     rightGutter.layoutInArea(n, 0.0, y, rightGutter.getWidth(), h);

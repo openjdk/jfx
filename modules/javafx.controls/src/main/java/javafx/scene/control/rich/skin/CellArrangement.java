@@ -42,6 +42,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.control.rich.RichUtils;
+import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
  * Manages TextCells in the visible area, surrounded by a number of cells before and after the visible area,

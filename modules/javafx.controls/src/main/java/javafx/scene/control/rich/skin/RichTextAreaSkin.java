@@ -32,6 +32,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.control.ScrollBar;
+import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.Config;
 import javafx.scene.control.rich.RichTextArea;
@@ -40,6 +41,8 @@ import javafx.scene.control.rich.RichTextAreaBehavior;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
+import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
  * Provides visual representation for RichTextArea.
@@ -58,6 +61,18 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final VFlow vflow;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
+
+    static {
+        RichTextAreaSkinHelper.setAccessor(new RichTextAreaSkinHelper.Accessor() {
+            @Override
+            public VFlow getVFlow(Skin<?> skin) {
+                if (skin instanceof RichTextAreaSkin s) {
+                    return s.getVFlow();
+                }
+                return null;
+            }
+        });
+    }
 
     public RichTextAreaSkin(RichTextArea control, Config cnf) {
         super(control);
@@ -147,7 +162,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         return gen == null ? new ScrollBar() : gen.get();
     }
 
-    public VFlow getVFlow() {
+    private VFlow getVFlow() {
         return vflow;
     }
 

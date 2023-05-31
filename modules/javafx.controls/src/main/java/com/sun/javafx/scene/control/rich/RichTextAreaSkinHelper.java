@@ -23,32 +23,34 @@
  * questions.
  */
 
-package javafx.scene.control.rich.skin;
+package com.sun.javafx.scene.control.rich;
 
-import javafx.geometry.HPos;
-import javafx.geometry.Insets;
-import javafx.geometry.VPos;
-import javafx.scene.Node;
-import javafx.scene.layout.Pane;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.control.Skin;
+import javafx.scene.control.rich.skin.RichTextAreaSkin;
+import com.sun.javafx.util.Utils;
 
 /**
- * Pane that allows for container/controller to lay out its children.
+ * Manages RichTextAreaSkin Accessor.
  */
-public class ClippedPane extends Pane {
-    private final Rectangle clip;
-    
-    public ClippedPane(String cssName) {
-        setManaged(false);
-        getStyleClass().add(cssName);
-        
-        clip = new Rectangle();
-        clip.widthProperty().bind(widthProperty());
-        clip.heightProperty().bind(heightProperty());
-        setClip(clip);
+public class RichTextAreaSkinHelper {
+    public interface Accessor {
+        public VFlow getVFlow(Skin<?> skin);
     }
 
-    public void layoutInArea(Node n, double x, double y, double w, double h) {
-        layoutInArea(n, x, y, w, h, 0.0, Insets.EMPTY, HPos.LEFT, VPos.TOP);
+    static {
+        Utils.forceInit(RichTextAreaSkin.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
+    }
+
+    public static VFlow getVFlow(Skin<?> skin) {
+        return accessor.getVFlow(skin);
     }
 }

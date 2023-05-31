@@ -41,7 +41,6 @@ import javafx.scene.control.rich.model.DataFormatHandler;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
-import javafx.scene.control.rich.skin.VFlow;
 import javafx.scene.control.rich.util.BehaviorBase2;
 import javafx.scene.control.rich.util.KCondition;
 import javafx.scene.control.rich.util.KeyBinding2;
@@ -60,7 +59,9 @@ import javafx.stage.Screen;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.javafx.scene.control.rich.RichUtils;
+import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
  * RichTextArea Behavior.
@@ -81,6 +82,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     private final Config config;
     private final RichTextAreaSkin skin;
     private final RichTextArea control;
+    private final VFlow vflow;
     private final StyledTextModel.ChangeListener textChangeListener;
     private final Timeline autoScrollTimer;
     private boolean autoScrollUp;
@@ -93,6 +95,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         this.skin = skin;
         this.config = c;
         this.control = skin.getSkinnable();
+        this.vflow = RichTextAreaSkinHelper.getVFlow(skin);
 
         autoScrollPeriod = Duration.millis(config.autoScrollPeriod);
 
@@ -161,7 +164,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     }
 
     public void install(ListenerHelper lh) {
-        Pane c = vflow().getContentPane();
+        Pane c = vflow.getContentPane();
         c.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
         c.addEventFilter(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
         c.addEventFilter(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
@@ -180,10 +183,6 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     @Override
     public void dispose() {
         super.dispose();
-    }
-
-    protected VFlow vflow() {
-        return skin.getVFlow();
     }
     
     protected boolean isRTL() {
@@ -216,9 +215,9 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         if (k != null) {
             Runnable r = inputMap.getFunction(k);
             if (r != null) {
-                vflow().setSuppressBlink(true);
+                vflow.setSuppressBlink(true);
                 r.run();
-                vflow().setSuppressBlink(false);
+                vflow.setSuppressBlink(false);
                 ev.consume();
             }
         }
@@ -229,9 +228,9 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         
         String character = getValidKeyTyped(ev);
         if (character != null) {
-            vflow().setSuppressBlink(true);
+            vflow.setSuppressBlink(true);
             handleKeyTyped(character);
-            vflow().setSuppressBlink(false);
+            vflow.setSuppressBlink(false);
             ev.consume();
         }
     }
@@ -286,7 +285,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                 end = p;
             }
 
-            m.replace(vflow(), start, end, typed);
+            m.replace(vflow, start, end, typed);
 
             int off = start.offset() + typed.length();
             TextPos p = new TextPos(start.index(), off);
@@ -310,7 +309,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         if(pos != null) {
             TextPos an = control.getAnchorPosition();
             // TODO check an<pos
-            TextPos p2 = m.replace(vflow(), an, pos, StyledInput.of("\n"));
+            TextPos p2 = m.replace(vflow, an, pos, StyledInput.of("\n"));
             control.moveCaret(p2, false);
             clearPhantomX();
         }
@@ -340,7 +339,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             return;
         }
 
-        vflow().setSuppressBlink(true);
+        vflow.setSuppressBlink(true);
 
         if (ev.isShiftDown()) {
             // expand selection from the anchor point to the current position
@@ -359,8 +358,8 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
 
     protected void handleMouseReleased(MouseEvent ev) {
         stopAutoScroll();
-        vflow().scrollCaretToVisible();
-        vflow().setSuppressBlink(false);
+        vflow.scrollCaretToVisible();
+        vflow.setSuppressBlink(false);
         clearPhantomX();
     }
 
@@ -374,9 +373,9 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             // above visible area
             autoScroll(y);
             return;
-        } else if (y > vflow().getViewHeight()) {
+        } else if (y > vflow.getViewHeight()) {
             // below visible area
-            autoScroll(y - vflow().getViewHeight());
+            autoScroll(y - vflow.getViewHeight());
             return;
         } else {
             stopAutoScroll();
@@ -394,15 +393,15 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                 if (ev.getDeltaX() >= 0) {
                     f = -f;
                 }
-                vflow().hscroll(f);
+                vflow.hscroll(f);
                 ev.consume();
             }
         } else if (ev.isShortcutDown()) {
             // page up / page down
             if (ev.getDeltaY() >= 0) {
-                vflow().pageUp();
+                vflow.pageUp();
             } else {
-                vflow().pageDown();
+                vflow.pageDown();
             }
             ev.consume();
         } else {
@@ -411,7 +410,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             if (ev.getDeltaY() >= 0) {
                 f = -f;
             }
-            vflow().scroll(f);
+            vflow.scroll(f);
             ev.consume();
         }
     }
@@ -437,23 +436,23 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
         if (autoScrollUp) {
             delta = -delta;
         }
-        vflow().blockScroll(delta, true);
+        vflow.blockScroll(delta, true);
 
-        double x = Math.max(0.0, phantomX + vflow().getOffsetX());
-        double y = autoScrollUp ? 0.0 : vflow().getViewHeight();
+        double x = Math.max(0.0, phantomX + vflow.getOffsetX());
+        double y = autoScrollUp ? 0.0 : vflow.getViewHeight();
 
-        vflow().scrollToVisible(x, y);
+        vflow.scrollToVisible(x, y);
 
-        TextPos p = vflow().getTextPosLocal(x, y);
+        TextPos p = vflow.getTextPosLocal(x, y);
         control.extendSelection(p);
     }
 
     public void pageDown() {
-        moveLine(vflow().getViewHeight(), false);
+        moveLine(vflow.getViewHeight(), false);
     }
 
     public void pageUp() {
-        moveLine(-vflow().getViewHeight(), false);
+        moveLine(-vflow.getViewHeight(), false);
     }
 
     public void moveRight() {
@@ -507,7 +506,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     }
 
     protected void moveLine(double deltaPixels, boolean extendSelection) {
-        CaretInfo c = vflow().getCaretInfo();
+        CaretInfo c = vflow.getCaretInfo();
         double sp = control.getLineSpacing();
         double x = (c.getMinX() + c.getMaxX()) / 2.0; // phantom x is unclear in the case of split caret
         double y = (deltaPixels < 0) ? c.getMinY() + deltaPixels - sp - 0.5 : c.getMaxY() + deltaPixels + sp;
@@ -518,7 +517,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             x = phantomX;
         }
 
-        TextPos p = vflow().getTextPosLocal(x + vflow().leftPadding(), y);
+        TextPos p = vflow.getTextPosLocal(x + vflow.leftPadding(), y);
         // FIX may result in move to the same line in wrapped text with tab characters.
         // we need to check if same line and try something else then
         if (p != null) {
@@ -559,7 +558,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             moveRight = !moveRight;
         }
 
-        TextCell cell = vflow().getCell(start.index());
+        TextCell cell = vflow.getCell(start.index());
         int cix = start.offset();
         if (moveRight) {
             cix++;
@@ -627,11 +626,11 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     }
     
     public void selectPageDown() {
-        moveLine(vflow().getViewHeight(), true);
+        moveLine(vflow.getViewHeight(), true);
     }
     
     public void selectPageUp() {
-        moveLine(-vflow().getViewHeight(), true);
+        moveLine(-vflow.getViewHeight(), true);
     }
     
     public void selectAll() {
@@ -701,11 +700,11 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
     }
 
     protected void handleTextUpdated(TextPos start, TextPos end, int addedTop, int linesAdded, int addedBottom) {
-        vflow().handleTextUpdated(start, end, addedTop, linesAdded, addedBottom);
+        vflow.handleTextUpdated(start, end, addedTop, linesAdded, addedBottom);
     }
     
     protected void handleStyleUpdated(TextPos start, TextPos end) {
-        vflow().handleStyleUpdated(start, end);
+        vflow.handleStyleUpdated(start, end);
     }
 
     public void backspace() {
@@ -723,7 +722,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
 
             TextPos start = nextCharacterVisually(end, false);
             if (start != null) {
-                control.getModel().replace(vflow(), start, end, StyledInput.EMPTY);
+                control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
                 control.moveCaret(start, false);
                 clearPhantomX();
             }
@@ -742,7 +741,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             TextPos end = nextCharacterVisually(start, true);
             if (end != null) {
                 // TODO ensure star<end
-                control.getModel().replace(vflow(), start, end, StyledInput.EMPTY);
+                control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
                 control.moveCaret(start, false);
                 clearPhantomX();
             }
@@ -757,7 +756,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             start = end;
             end = p;
         }
-        control.getModel().replace(vflow(), start, end, StyledInput.EMPTY);
+        control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
         control.moveCaret(start, false);
         clearPhantomX();
     }
@@ -884,7 +883,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
             DataFormatHandler h = m.getDataFormatHandler(f);
             StyledInput in = h.getStyledInput(src);
             // TODO ensure star<end
-            TextPos p = m.replace(vflow(), caret, anchor, in);
+            TextPos p = m.replace(vflow, caret, anchor, in);
             control.moveCaret(p, false);
         }
     }
@@ -905,7 +904,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                 TextPos caret = control.getCaretPosition();
                 TextPos anchor = control.getAnchorPosition();
                 // TODO ensure star<end
-                TextPos p = m.replace(vflow(), caret, anchor, in);
+                TextPos p = m.replace(vflow, caret, anchor, in);
                 control.moveCaret(p, false);
             }
         }
@@ -946,7 +945,7 @@ public class RichTextAreaBehavior extends BehaviorBase2 {
                     ClipboardContent c = new ClipboardContent();
                     for (DataFormat f : fs) {
                         DataFormatHandler h = m.getDataFormatHandler(f);
-                        Object v = h.copy(m, vflow(), start, end);
+                        Object v = h.copy(m, vflow, start, end);
                         if (v != null) {
                             c.put(f, v);
                         }
