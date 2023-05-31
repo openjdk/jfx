@@ -105,47 +105,47 @@ typedef enum UStringPrepProfileType {
      * RFC3530 nfs4_cs_prep
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_CS_PREP,
+        USPREP_RFC3530_NFS4_CS_PREP,
     /**
      * RFC3530 nfs4_cs_prep with case insensitive option
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_CS_PREP_CI,
+        USPREP_RFC3530_NFS4_CS_PREP_CI,
     /**
      * RFC3530 nfs4_cis_prep
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_CIS_PREP,
+        USPREP_RFC3530_NFS4_CIS_PREP,
     /**
      * RFC3530 nfs4_mixed_prep for prefix
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_MIXED_PREP_PREFIX,
+        USPREP_RFC3530_NFS4_MIXED_PREP_PREFIX,
     /**
      * RFC3530 nfs4_mixed_prep for suffix
      * @stable ICU 4.2
      */
-    USPREP_RFC3530_NFS4_MIXED_PREP_SUFFIX,
+        USPREP_RFC3530_NFS4_MIXED_PREP_SUFFIX,
     /**
      * RFC3722 iSCSI
      * @stable ICU 4.2
      */
-    USPREP_RFC3722_ISCSI,
+        USPREP_RFC3722_ISCSI,
     /**
      * RFC3920 XMPP Nodeprep
      * @stable ICU 4.2
      */
-    USPREP_RFC3920_NODEPREP,
+        USPREP_RFC3920_NODEPREP,
     /**
      * RFC3920 XMPP Resourceprep
      * @stable ICU 4.2
      */
-    USPREP_RFC3920_RESOURCEPREP,
+        USPREP_RFC3920_RESOURCEPREP,
     /**
      * RFC4011 Policy MIB Stringprep
      * @stable ICU 4.2
      */
-    USPREP_RFC4011_MIB,
+        USPREP_RFC4011_MIB,
     /**
      * RFC4013 SASLprep
      * @stable ICU 4.2
@@ -155,18 +155,18 @@ typedef enum UStringPrepProfileType {
      * RFC4505 trace
      * @stable ICU 4.2
      */
-    USPREP_RFC4505_TRACE,
+        USPREP_RFC4505_TRACE,
     /**
      * RFC4518 LDAP
      * @stable ICU 4.2
      */
-    USPREP_RFC4518_LDAP,
+        USPREP_RFC4518_LDAP,
     /**
      * RFC4518 LDAP for case ignore, numeric and stored prefix
      * matching rules
      * @stable ICU 4.2
      */
-    USPREP_RFC4518_LDAP_CI
+        USPREP_RFC4518_LDAP_CI
 } UStringPrepProfileType;
 
 /**
@@ -192,7 +192,7 @@ usprep_open(const char* path,
 /**
  * Creates a StringPrep profile for the specified profile type.
  *
- * @param type      The profile type
+ * @param type          The profile type
  * @param status    ICU error code in/out parameter. Must not be NULL.
  *                  Must fulfill U_SUCCESS before the function call.
  * @return          Pointer to UStringPrepProfile that is opened. Should be closed by
@@ -202,7 +202,7 @@ usprep_open(const char* path,
  */
 U_CAPI UStringPrepProfile* U_EXPORT2
 usprep_openByType(UStringPrepProfileType type,
-                  UErrorCode* status);
+                                  UErrorCode* status);
 
 /**
  * Closes the profile
