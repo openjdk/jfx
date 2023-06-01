@@ -43,6 +43,7 @@ package javafx.scene.control.rich.util;
  * WINDOWS       (ignored)   META
  * </pre>
  */
+@Deprecated
 public enum KCondition {
     // modifier keys
     /** ALT modifier, mapped to OPTION on Mac, ALT on Windows/Linux */

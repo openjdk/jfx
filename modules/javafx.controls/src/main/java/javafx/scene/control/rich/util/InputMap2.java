@@ -25,34 +25,48 @@
 
 package javafx.scene.control.rich.util;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 
 /**
  * Input Map maps KeyBindings(2) to function tags (any object except Runnable),
  * followed by mapping from tags to the actual Runnable function.
  * 
- * The input map may not be limited to a keyboard event, so looking up an action from an Action ID for a
+ * The input map may not be limited to a keyboard event, so looking up a function from a function tag for a
  * built-in functionality such as copy, paste, etc. is also permitted.
  *  
  * Example:
  *  
  * Control:
- * - declares an enum action id.
- * - declares public methods that lookup action id, then execute corresponding action (unless disabled)
+ * - declares function tags (any object, typically an enum)
+ * - declares public methods that execute using function id, which in turn find and execute corresponding function
  * - might declare public FxActions (ex.: copyAction which delegate to action id)
  * Behavior:
  * - maps key bindings to action ids
  * - maps action ids to methods in the behavior
  */
+// TODO rename, move to public pkg (which one?)
 public class InputMap2 {
+    private static final Object USER = new Object();
     // keyBinding2 -> tag
     // tag -> Runnable
+    // TODO Entry(owner, runnable or tag)
     private final HashMap<Object,Object> map = new HashMap<>();
 
     public InputMap2() {
+    }
+    
+    public void assign(Object tag, Runnable function) {
+        assignLocal(USER, tag, function);
+    }
+    
+    public void assign(Skin<?> skin, Object tag, Runnable function) {
+        assignLocal(skin, tag, function);
+    }
+    
+    private void assignLocal(Object owner, Object tag, Runnable function) {
+        
     }
 
     /** adds a mapping: tag -> function */
@@ -69,9 +83,6 @@ public class InputMap2 {
         }
     }
 
-    // map(Object owner, Object tag, Runnable function)
-    // map(Object owner, Object tag, KeyEvent, KCondition ...)
-
     // TODO or make KeyBinding2 class public with a bunch of factory methods
     // TODO should take additional FxAction argument instead of Runnable?
     /** adds a mapping: keyBinding -> actionTag; and actionTag -> function */
@@ -84,7 +95,7 @@ public class InputMap2 {
         }
     }
 
-    /** returns a Runnable function object for the given Action or KeyBinding.  Might return null. */
+    /** returns a Runnable function object for the given function tag or KeyBinding.  Might return null. */
     public Runnable getFunction(Object k) {
         Object v = map.get(k);
         if (v instanceof Runnable r) {
@@ -99,6 +110,31 @@ public class InputMap2 {
         return null;
     }
 
-    // TODO restore function for tag
-    // TODO restore key binding for tag
+    public void add(Skin<?> owner, Object actionTag, Runnable function, KeyCode code, KCondition... modifiers) {
+        // TODO check if user mapping exists
+    }
+    
+    public void add(Skin<?> owner, Object actionTag, KeyCode code, KCondition... modifiers) {
+        // TODO
+    }
+
+    public void add(Skin<?> owner, Object tag, Runnable function) {
+        // TODO
+    }
+
+    public void unregister(Skin<?> skin) {
+        // TODO
+    }
+
+    public void restoreDefaultBinding(KeyBinding2 b) {
+        // TODO
+    }
+    
+    public void restoreDefaultFunction(Object b) {
+        // TODO
+    }
+    
+    public void clearAllBindings() {
+        // TODO
+    }
 }

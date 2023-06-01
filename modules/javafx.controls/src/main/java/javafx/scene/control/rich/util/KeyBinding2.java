@@ -31,11 +31,17 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import com.sun.javafx.PlatformUtil;
 
-// this class might be internal to InputMap2
+/**
+ * Key binding provides a way to map key event to a hash table key for easy matching.
+ * Also it allows for encoding platform-specific keys without resorting to nested and/or
+ * multiple key maps.
+ */
+// TODO convert to class
+@Deprecated
 public record KeyBinding2(KeyCode code, EnumSet<KCondition> modifiers) {
     /** 
      * Creates a KeyBinding from a KeyEvent.  This call drops multiple key modifiers, performing
-     * translation when necessary.  May return null.
+     * translation when necessary.  May return null if the event does not correspond to a valid KeyBinding.
      */
     public static KeyBinding2 from(KeyEvent ev) {
         EnumSet<KCondition> m = EnumSet.noneOf(KCondition.class);
@@ -104,8 +110,45 @@ public record KeyBinding2(KeyCode code, EnumSet<KCondition> modifiers) {
 
         KeyCode code = ev.getCode();
         KeyBinding2 keyBinding = new KeyBinding2(code, m);
-        //System.err.println("kb=" + keyBinding + " ev=" + ev); // FIX
+        //System.err.println("kb=" + keyBinding + " ev=" + toString(ev)); // FIX
         return keyBinding;
+    }
+
+    // FIX remove, debug
+    private static String toString(KeyEvent ev) {
+        StringBuilder sb = new StringBuilder("KeyEvent{");
+        sb.append("type=").append(ev.getEventType());
+        sb.append(", char=").append(ev.getCharacter());
+
+        String ch = ev.getCharacter();
+        int sz = ch.length();
+        if (sz > 0) {
+            sb.append("(");
+            for (int i = 0; i < ch.length(); i++) {
+                sb.append(String.format("%02X", (int)ch.charAt(i)));
+            }
+            sb.append(")");
+        }
+
+        sb.append(", code=").append(ev.getCode());
+
+        if (ev.isShiftDown()) {
+            sb.append(", shift");
+        }
+        if (ev.isControlDown()) {
+            sb.append(", control");
+        }
+        if (ev.isAltDown()) {
+            sb.append(", alt");
+        }
+        if (ev.isMetaDown()) {
+            sb.append(", meta");
+        }
+        if (ev.isShortcutDown()) {
+            sb.append(", shortcut");
+        }
+
+        return sb.append("}").toString();
     }
     
     private static void replace(EnumSet<KCondition> m, KCondition c, KCondition replaceWith) {

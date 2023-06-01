@@ -36,7 +36,6 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.Config;
 import javafx.scene.control.rich.RichTextArea;
-import javafx.scene.control.rich.RichTextArea.Cmd;
 import javafx.scene.control.rich.RichTextAreaBehavior;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
@@ -179,13 +178,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             vflow.dispose();
     
             super.dispose();
-        }
-    }
-    
-    public void execute(Cmd a) {
-        Runnable f = behavior.getFunction(a);
-        if(f != null) {
-            f.run();
         }
     }
 }

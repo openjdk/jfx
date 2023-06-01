@@ -57,6 +57,7 @@ import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
+import javafx.scene.control.rich.util.InputMap2;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
@@ -114,6 +115,7 @@ public class RichTextArea extends Control {
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
     private final Config config;
+    private final InputMap2 inputMap = new InputMap2();
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
     private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
@@ -174,6 +176,10 @@ public class RichTextArea extends Control {
         if (m != null) {
             setModel(m);
         }
+    }
+
+    public final InputMap2 getInputMap() {
+        return inputMap;
     }
 
     @Override
@@ -522,9 +528,12 @@ public class RichTextArea extends Control {
     private RichTextAreaSkin richTextAreaSkin() {
         return (RichTextAreaSkin)getSkin();
     }
-    
+
     private void execute(Cmd a) {
-        richTextAreaSkin().execute(a);
+        Runnable f = inputMap.getFunction(a);
+        if (f != null) {
+            f.run();
+        }
     }
 
     public void setTabSize(int n) {
