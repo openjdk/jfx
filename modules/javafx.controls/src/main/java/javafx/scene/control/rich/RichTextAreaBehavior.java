@@ -41,9 +41,8 @@ import javafx.scene.control.rich.model.DataFormatHandler;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
-import javafx.scene.control.rich.util.InputMap2;
-import javafx.scene.control.rich.util.KCondition;
-import javafx.scene.control.rich.util.KeyBinding2;
+import javafx.scene.control.rich.util.InputMap;
+import javafx.scene.control.rich.util.KeyBinding;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -99,52 +98,78 @@ public class RichTextAreaBehavior {
 
         autoScrollPeriod = Duration.millis(config.autoScrollPeriod);
 
-        InputMap2 m = control.getInputMap();
-        m.add(skin, Cmd.BACKSPACE, this::backspace, KeyCode.BACK_SPACE);
-        m.add(skin, Cmd.COPY, this::copy, KeyCode.C, KCondition.SHORTCUT);
-        m.add(skin, Cmd.CUT, this::cut, KeyCode.X, KCondition.SHORTCUT);
-        m.add(skin, Cmd.DELETE, this::delete, KeyCode.DELETE);
-        m.add(skin, Cmd.INSERT_LINE_BREAK, this::insertLineBreak, KeyCode.ENTER);
-        m.add(skin, Cmd.INSERT_TAB, this::insertTab, KeyCode.TAB);
-        m.add(skin, Cmd.MOVE_LEFT, this::moveLeft, KeyCode.LEFT);
-        m.add(skin, Cmd.MOVE_RIGHT, this::moveRight, KeyCode.RIGHT);
-        m.add(skin, Cmd.MOVE_UP, this::moveUp, KeyCode.UP);
-        m.add(skin, Cmd.MOVE_DOWN, this::moveDown, KeyCode.DOWN);
-        m.add(skin, Cmd.MOVE_HOME, this::moveHome, KeyCode.HOME);
-        m.add(skin, Cmd.MOVE_END, this::moveEnd, KeyCode.END);
-        m.add(skin, Cmd.MOVE_DOCUMENT_START, this::moveDocumentStart);
-        m.add(skin, Cmd.MOVE_DOCUMENT_START, KeyCode.HOME, KCondition.CTRL, KCondition.NOT_FOR_MAC);
-        m.add(skin, Cmd.MOVE_DOCUMENT_START, KeyCode.UP, KCondition.SHORTCUT, KCondition.FOR_MAC);
-        m.add(skin, Cmd.MOVE_DOCUMENT_END, this::moveDocumentEnd);
-        m.add(skin, Cmd.MOVE_DOCUMENT_END, KeyCode.END, KCondition.CTRL, KCondition.NOT_FOR_MAC);
-        m.add(skin, Cmd.MOVE_DOCUMENT_END, KeyCode.DOWN, KCondition.SHORTCUT, KCondition.FOR_MAC);
-        m.add(skin, Cmd.MOVE_WORD_NEXT, this::nextWord);
-        m.add(skin, Cmd.MOVE_WORD_NEXT, KeyCode.RIGHT, KCondition.CTRL, KCondition.NOT_FOR_MAC);
-        m.add(skin, Cmd.MOVE_WORD_NEXT, KeyCode.RIGHT, KCondition.OPTION, KCondition.FOR_MAC);
-        m.add(skin, Cmd.MOVE_WORD_NEXT_END, this::endOfNextWord);
-        m.add(skin, Cmd.MOVE_WORD_PREVIOUS, this::previousWord);
-        m.add(skin, Cmd.MOVE_WORD_PREVIOUS, KeyCode.LEFT, KCondition.CTRL, KCondition.NOT_FOR_MAC);
-        m.add(skin, Cmd.MOVE_WORD_PREVIOUS, KeyCode.LEFT, KCondition.OPTION, KCondition.FOR_MAC);
-        m.add(skin, Cmd.PAGE_DOWN, this::pageDown, KeyCode.PAGE_DOWN);
-        m.add(skin, Cmd.PAGE_UP, this::pageUp, KeyCode.PAGE_UP);
-        m.add(skin, Cmd.PASTE, this::paste, KeyCode.V, KCondition.SHORTCUT);
-        m.add(skin, Cmd.PASTE_PLAIN_TEXT, this::pastePlainText);
-        m.add(skin, Cmd.SELECT_ALL, this::selectAll, KeyCode.A, KCondition.SHORTCUT);
-        m.add(skin, Cmd.SELECT_LEFT, this::selectLeft, KeyCode.LEFT, KCondition.SHIFT);
-        m.add(skin, Cmd.SELECT_RIGHT, this::selectRight, KeyCode.RIGHT, KCondition.SHIFT);
-        m.add(skin, Cmd.SELECT_UP, this::selectUp, KeyCode.UP, KCondition.SHIFT);
-        m.add(skin, Cmd.SELECT_DOWN, this::selectDown, KeyCode.DOWN, KCondition.SHIFT);
-        m.add(skin, Cmd.SELECT_PAGE_UP, this::selectPageUp, KeyCode.PAGE_UP, KCondition.SHIFT);
-        m.add(skin, Cmd.SELECT_PAGE_DOWN, this::selectPageDown, KeyCode.PAGE_DOWN, KCondition.SHIFT);
-        m.add(skin, Cmd.SELECT_DOCUMENT_START, this::selectDocumentStart, KeyCode.HOME, KCondition.SHIFT, KCondition.CTRL, KCondition.NOT_FOR_MAC);
-        m.add(skin, Cmd.SELECT_DOCUMENT_START, this::selectDocumentStart, KeyCode.UP, KCondition.SHIFT, KCondition.SHORTCUT, KCondition.FOR_MAC);
-        m.add(skin, Cmd.SELECT_DOCUMENT_END, this::selectDocumentEnd, KeyCode.END, KCondition.SHIFT, KCondition.CTRL, KCondition.NOT_FOR_MAC);
-        m.add(skin, Cmd.SELECT_DOCUMENT_END, this::selectDocumentEnd, KeyCode.DOWN, KCondition.SHIFT, KCondition.SHORTCUT, KCondition.FOR_MAC);
-        m.add(skin, Cmd.SELECT_LINE, this::selectLine);
-        m.add(skin, Cmd.SELECT_WORD, this::selectWord);
-        m.add(skin, Cmd.SELECT_WORD_NEXT, this::selectNextWord);
-        m.add(skin, Cmd.SELECT_WORD_NEXT_END, this::selectEndOfNextWord);
-        m.add(skin, Cmd.SELECT_WORD_PREVIOUS, this::selectPreviousWord);
+        InputMap m = control.getInputMap();
+        // commands
+        m.func(Cmd.BACKSPACE, this::backspace);
+        m.func(Cmd.COPY, this::copy);
+        m.func(Cmd.CUT, this::cut);
+        m.func(Cmd.DELETE, this::delete);
+        m.func(Cmd.INSERT_LINE_BREAK, this::insertLineBreak);
+        m.func(Cmd.INSERT_TAB, this::insertTab);
+        m.func(Cmd.MOVE_DOCUMENT_END, this::moveDocumentEnd);
+        m.func(Cmd.MOVE_DOCUMENT_START, this::moveDocumentStart);
+        m.func(Cmd.MOVE_DOWN, this::moveDown);
+        m.func(Cmd.MOVE_END, this::moveEnd);
+        m.func(Cmd.MOVE_HOME, this::moveHome);
+        m.func(Cmd.MOVE_LEFT, this::moveLeft);
+        m.func(Cmd.MOVE_RIGHT, this::moveRight);
+        m.func(Cmd.MOVE_UP, this::moveUp);
+        m.func(Cmd.MOVE_WORD_NEXT, this::nextWord);
+        m.func(Cmd.MOVE_WORD_NEXT_END, this::endOfNextWord);
+        m.func(Cmd.MOVE_WORD_PREVIOUS, this::previousWord);
+        m.func(Cmd.PAGE_DOWN, this::pageDown);
+        m.func(Cmd.PAGE_UP, this::pageUp);
+        m.func(Cmd.PASTE, this::paste);
+        m.func(Cmd.PASTE_PLAIN_TEXT, this::pastePlainText);
+        m.func(Cmd.SELECT_ALL, this::selectAll);
+        m.func(Cmd.SELECT_DOCUMENT_END, this::selectDocumentEnd);
+        m.func(Cmd.SELECT_DOCUMENT_START, this::selectDocumentStart);
+        m.func(Cmd.SELECT_DOWN, this::selectDown);
+        m.func(Cmd.SELECT_LEFT, this::selectLeft);
+        m.func(Cmd.SELECT_LINE, this::selectLine);
+        m.func(Cmd.SELECT_PAGE_DOWN, this::selectPageDown);
+        m.func(Cmd.SELECT_PAGE_UP, this::selectPageUp);
+        m.func(Cmd.SELECT_RIGHT, this::selectRight);
+        m.func(Cmd.SELECT_UP, this::selectUp);
+        m.func(Cmd.SELECT_WORD, this::selectWord);
+        m.func(Cmd.SELECT_WORD_NEXT, this::selectNextWord);
+        m.func(Cmd.SELECT_WORD_NEXT_END, this::selectEndOfNextWord);
+        m.func(Cmd.SELECT_WORD_PREVIOUS, this::selectPreviousWord);
+        // keys
+        m.key(skin, KeyCode.BACK_SPACE, Cmd.BACKSPACE);
+        m.key(skin, KeyBinding.shortcut(KeyCode.C), Cmd.COPY);        
+        m.key(skin, KeyBinding.shortcut(KeyCode.X), Cmd.CUT);
+        m.key(skin, KeyCode.DELETE, Cmd.DELETE);
+        m.key(skin, KeyCode.ENTER, Cmd.INSERT_LINE_BREAK);
+        m.key(skin, KeyCode.TAB, Cmd.INSERT_TAB);
+        m.key(skin, KeyCode.LEFT, Cmd.MOVE_LEFT);
+        m.key(skin, KeyCode.RIGHT, Cmd.MOVE_RIGHT);
+        m.key(skin, KeyCode.UP, Cmd.MOVE_UP);
+        m.key(skin, KeyCode.DOWN, Cmd.MOVE_DOWN);
+        m.key(skin, KeyCode.HOME, Cmd.MOVE_HOME);
+        m.key(skin, KeyCode.END, Cmd.MOVE_END);
+        m.key(skin, KeyBinding.builder().with(KeyCode.HOME).ctrl().notForMac().build(), Cmd.MOVE_DOCUMENT_START);
+        m.key(skin, KeyBinding.builder().with(KeyCode.UP).shortcut().forMac().build(), Cmd.MOVE_DOCUMENT_START);
+        m.key(skin, KeyBinding.builder().with(KeyCode.END).ctrl().notForMac().build(), Cmd.MOVE_DOCUMENT_END);
+        m.key(skin, KeyBinding.builder().with(KeyCode.DOWN).shortcut().forMac().build(), Cmd.MOVE_DOCUMENT_END);
+        m.key(skin, KeyBinding.builder().with(KeyCode.RIGHT).ctrl().notForMac().build(), Cmd.MOVE_WORD_NEXT);
+        m.key(skin, KeyBinding.builder().with(KeyCode.RIGHT).option().forMac().build(), Cmd.MOVE_WORD_NEXT);
+        m.key(skin, KeyBinding.builder().with(KeyCode.LEFT).ctrl().notForMac().build(), Cmd.MOVE_WORD_PREVIOUS);
+        m.key(skin, KeyBinding.builder().with(KeyCode.LEFT).option().forMac().build(), Cmd.MOVE_WORD_PREVIOUS);
+        m.key(skin, KeyCode.PAGE_DOWN, Cmd.PAGE_DOWN);
+        m.key(skin, KeyCode.PAGE_UP, Cmd.PAGE_UP);
+        m.key(skin, KeyBinding.shortcut(KeyCode.V), Cmd.PASTE);
+        m.key(skin, KeyBinding.shortcut(KeyCode.A), Cmd.SELECT_ALL);
+        m.key(skin, KeyBinding.shift(KeyCode.LEFT), Cmd.SELECT_LEFT);
+        m.key(skin, KeyBinding.shift(KeyCode.RIGHT), Cmd.SELECT_RIGHT);
+        m.key(skin, KeyBinding.shift(KeyCode.UP), Cmd.SELECT_UP);
+        m.key(skin, KeyBinding.shift(KeyCode.DOWN), Cmd.SELECT_DOWN);
+        m.key(skin, KeyBinding.shift(KeyCode.PAGE_UP), Cmd.SELECT_PAGE_UP);
+        m.key(skin, KeyBinding.shift(KeyCode.PAGE_DOWN), Cmd.SELECT_PAGE_DOWN);
+        m.key(skin, KeyBinding.builder().with(KeyCode.HOME).ctrl().shift().notForMac().build(), Cmd.SELECT_DOCUMENT_START);
+        m.key(skin, KeyBinding.builder().with(KeyCode.UP).shift().shortcut().forMac().build(), Cmd.SELECT_DOCUMENT_START);
+        m.key(skin, KeyBinding.builder().with(KeyCode.END).ctrl().shift().notForMac().build(), Cmd.SELECT_DOCUMENT_END);
+        m.key(skin, KeyBinding.builder().with(KeyCode.DOWN).shift().shortcut().forMac().build(), Cmd.SELECT_DOCUMENT_END);
 
         textChangeListener = new StyledTextModel.ChangeListener() {
             @Override
@@ -204,14 +229,13 @@ public class RichTextAreaBehavior {
         }
     }
 
-    // TODO possibly move to the inputMap
     public void handleKeyEvent(KeyEvent ev) {
         //System.out.println("handleKeyEvent: " + ev); // FIX
         if (ev == null || ev.isConsumed()) {
             return;
         }
 
-        KeyBinding2 k = KeyBinding2.from(ev);
+        KeyBinding k = KeyBinding.from(ev);
         if (k != null) {
             Runnable r = control.getInputMap().getFunction(k);
             if (r != null) {

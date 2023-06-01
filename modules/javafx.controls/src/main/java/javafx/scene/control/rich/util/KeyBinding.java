@@ -97,28 +97,46 @@ public class KeyBinding {
         NOT_FOR_MAC,
     }
 
-    private final Object key; // KCondition or String
+    private final Object key; // KeyCode or String
     private final EnumSet<KCondition> modifiers;
 
     private KeyBinding(Object key, EnumSet<KCondition> modifiers) {
         this.key = key;
         this.modifiers = modifiers;
     }
+    
+    private static KeyBinding create(Object key, KCondition ... mods) {
+        EnumSet<KCondition> m = EnumSet.noneOf(KCondition.class);
+        for (KCondition c: mods) {
+            m.add(c);
+        }
+        return new KeyBinding(key, m);
+    }
 
     public static KeyBinding of(KeyCode c) {
-        return new KeyBinding(c, EnumSet.noneOf(KCondition.class));
+        return create(c, KCondition.KEY_PRESS);
     }
 
-    public Builder builder() {
+    public static KeyBinding ctrl(KeyCode c) {
+        return create(c, KCondition.KEY_PRESS, KCondition.CTRL);
+    }
+
+    public static KeyBinding shift(KeyCode c) {
+        return create(c, KCondition.KEY_PRESS, KCondition.SHIFT);
+    }
+
+    public static KeyBinding shortcut(KeyCode c) {
+        return create(c, KCondition.KEY_PRESS, KCondition.SHORTCUT);
+    }
+
+    public static Builder builder() {
         return new Builder();
     }
-
-    // TODO shift(code), ctrl(code), shortcut(code) utility methods
 
     @Override
     public int hashCode() {
         int h = KeyBinding.class.hashCode();
-        h = 31 * h + (key == null ? 0 : key.hashCode());
+        h = 31 * h + key.hashCode();
         h = 31 * h + modifiers.hashCode();
         return h;
     }
@@ -153,7 +171,6 @@ public class KeyBinding {
             m.add(KCondition.KEY_TYPED);
             key = ev.getCharacter();
         } else {
-            // FIX what is it?
             return null;
         }
         
@@ -257,6 +274,16 @@ public class KeyBinding {
         }
     }
     
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("KeyBinding{key=");
+        sb.append(key);
+        sb.append(", modifiers=");
+        sb.append(modifiers);
+        sb.append("}");
+        return sb.toString();
+    }
+    
     /** Key bindings builder */
     public static class Builder {
         private Object key; // KeyCode or String
@@ -277,9 +304,34 @@ public class KeyBinding {
             key = c;
             return this;
         }
+        
+        public Builder ctrl() {
+            m.add(KCondition.CTRL);
+            return this;
+        }
+        
+        public Builder option() {
+            m.add(KCondition.OPTION);
+            return this;
+        }
 
         public Builder shift() {
             m.add(KCondition.SHIFT);
+            return this;
+        }
+        
+        public Builder shortcut() {
+            m.add(KCondition.SHORTCUT);
+            return this;
+        }
+        
+        public Builder forMac() {
+            m.add(KCondition.FOR_MAC);
+            return this;
+        }
+        
+        public Builder notForMac() {
+            m.add(KCondition.NOT_FOR_MAC);
             return this;
         }
         
