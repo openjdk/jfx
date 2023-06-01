@@ -74,8 +74,6 @@ import com.sun.javafx.scene.control.rich.VFlow;
  * Control:
  * - allows for re-mapping of an action tag to an alternative implementation
  * - executes code associated with an action tag (default or alternative)
- * - TODO manages Action instances upon demand
- * - TODO allows for restoring the default mapping
  */
 public class RichTextAreaBehavior {
     private final Config config;
@@ -1158,17 +1156,4 @@ public class RichTextAreaBehavior {
 
         return new TextPos(index, textLength);
     }
-
-//    public void map(Object actionTag, Runnable function) {
-//        inputMap.add(actionTag, function);
-//    }
-//    
-//    // or make inputMap public/part of the Control?
-//    public void map(Object actionTag, Runnable function, KeyCode code, KCondition ... modifiers) {
-//        inputMap.add(actionTag, function, code, modifiers);
-//    }
-//    
-//    public void map(Object actionTag, KeyCode code, KCondition ... modifiers) {
-//        inputMap.add(actionTag, code, modifiers);
-//    }
 }

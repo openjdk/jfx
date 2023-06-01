@@ -106,9 +106,9 @@ public class InputMap {
      * A null key binding will result in no change to this input map.
      * This method will not override any previous mappings added by {@link #key(KeyBinding,Object)}.
      *
-     * @param owner
+     * @param skin
      * @param k key binding, can be null
-     * @param tag
+     * @param tag function tag
      */
     public void key(Skin<?> skin, KeyBinding k, Object tag) {
         if (k == null) {
