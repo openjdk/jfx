@@ -77,9 +77,8 @@ import com.sun.javafx.scene.control.rich.VFlow;
  */
 public class RichTextAreaBehavior {
     private final Config config;
-    private final RichTextAreaSkin skin;
     private final RichTextArea control;
-    private final VFlow vflow;
+    private VFlow vflow;
     private final StyledTextModel.ChangeListener textChangeListener;
     private final Timeline autoScrollTimer;
     private boolean autoScrollUp;
@@ -88,13 +87,32 @@ public class RichTextAreaBehavior {
     private final Duration autoScrollPeriod;
     private ContextMenu contextMenu = new ContextMenu();
 
-    public RichTextAreaBehavior(Config c, RichTextAreaSkin skin) {
-        this.skin = skin;
+    public RichTextAreaBehavior(Config c, RichTextArea control) {
         this.config = c;
-        this.control = skin.getSkinnable();
-        this.vflow = RichTextAreaSkinHelper.getVFlow(skin);
+        this.control = control;
 
         autoScrollPeriod = Duration.millis(config.autoScrollPeriod);
+
+        textChangeListener = new StyledTextModel.ChangeListener() {
+            @Override
+            public void eventTextUpdated(TextPos start, TextPos end, int top, int ins, int btm) {
+                handleTextUpdated(start, end, top, ins, btm);
+            }
+
+            @Override
+            public void eventStyleUpdated(TextPos start, TextPos end) {
+                handleStyleUpdated(start, end);
+            }
+        };
+
+        autoScrollTimer = new Timeline(new KeyFrame(autoScrollPeriod, (ev) -> {
+            autoScroll();
+        }));
+        autoScrollTimer.setCycleCount(Timeline.INDEFINITE);
+    }
+
+    public void install(RichTextAreaSkin skin, ListenerHelper lh) {
+        vflow = RichTextAreaSkinHelper.getVFlow(skin);
 
         InputMap m = control.getInputMap();
         // commands
@@ -169,25 +187,6 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyBinding.builder().with(KeyCode.END).ctrl().shift().notForMac().build(), Cmd.SELECT_DOCUMENT_END);
         m.key(skin, KeyBinding.builder().with(KeyCode.DOWN).shift().shortcut().forMac().build(), Cmd.SELECT_DOCUMENT_END);
 
-        textChangeListener = new StyledTextModel.ChangeListener() {
-            @Override
-            public void eventTextUpdated(TextPos start, TextPos end, int top, int ins, int btm) {
-                handleTextUpdated(start, end, top, ins, btm);
-            }
-
-            @Override
-            public void eventStyleUpdated(TextPos start, TextPos end) {
-                handleStyleUpdated(start, end);
-            }
-        };
-
-        autoScrollTimer = new Timeline(new KeyFrame(autoScrollPeriod, (ev) -> {
-            autoScroll();
-        }));
-        autoScrollTimer.setCycleCount(Timeline.INDEFINITE);
-    }
-
-    public void install(ListenerHelper lh) {
         Pane c = vflow.getContentPane();
         c.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
         c.addEventFilter(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
@@ -204,7 +203,7 @@ public class RichTextAreaBehavior {
         lh.addChangeListener(control.modelProperty(), true, this::handleModel);
     }
 
-    public void dispose() {
+    public void dispose(RichTextAreaSkin skin) {
         control.getInputMap().unregister(skin);
     }
     

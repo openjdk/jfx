@@ -105,7 +105,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             protected void layoutChildren() {
                 double x0 = snappedLeftInset();
                 double y0 = snappedTopInset();
-                // is the snapping right?
                 double width = getWidth() - x0 - snappedRightInset();
                 double height = getHeight() - y0 - snappedBottomInset();
 
@@ -130,7 +129,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
         behavior = createBehavior();
 
-        // TODO should this block be moved to VFlow?
         listenerHelper.addChangeListener(vflow::handleSelectionChange, control.selectionSegmentProperty());
         listenerHelper.addChangeListener(vflow::updateRateRestartBlink, true, control.caretBlinkPeriodProperty());
         listenerHelper.addInvalidationListener(vflow::updateTabSize, control.tabSizeProperty());
@@ -148,7 +146,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     /** called from the constructor.  override to provide custom behavior */
     // TODO variant: generator in Config, or add methods to manipulate behavior to control
     protected RichTextAreaBehavior createBehavior() {
-        return new RichTextAreaBehavior(config, this);
+        return new RichTextAreaBehavior(config, getSkinnable());
     }
     
     private final ScrollBar createVScrollBar() {
@@ -167,14 +165,14 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     @Override
     public void install() {
-        behavior.install(listenerHelper);
+        behavior.install(this, listenerHelper);
     }
 
     @Override
     public void dispose() {
         if (getSkinnable() != null) {
             listenerHelper.disconnect();
-            behavior.dispose();
+            behavior.dispose(this);
             vflow.dispose();
     
             super.dispose();

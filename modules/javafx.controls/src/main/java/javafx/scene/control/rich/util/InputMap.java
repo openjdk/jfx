@@ -170,6 +170,10 @@ public class InputMap {
         return null;
     }
 
+    /**
+     * Removes all the mappings set by the skin.
+     * @param skin
+     */
     public void unregister(Skin<?> skin) {
         // TODO
     }
