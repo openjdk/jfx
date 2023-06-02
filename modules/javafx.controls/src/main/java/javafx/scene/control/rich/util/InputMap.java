@@ -26,16 +26,16 @@
 package javafx.scene.control.rich.util;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 
 /**
- * Input Map maps KeyBindings(2) to function tags (any object except Runnable),
+ * Input Map maps KeyBindings to function tags (any object except KeyBinding or Runnable),
  * followed by mapping from tags to the actual Runnable function.
- * 
- * The input map may not be limited to a keyboard event, so looking up a function from a function tag for a
- * built-in functionality such as copy, paste, etc. is also permitted.
  *  
  * Example:
  *  
@@ -49,9 +49,16 @@ import javafx.scene.input.KeyCode;
  */
 // TODO move to public pkg (which one?) javafx.incubator.scene.control.input
 public class InputMap {
-    private static final Object USER = new Object();
+    /** contains user- and skin-set key binding or function mappings */
+    private static class Entry {
+        Object userValue;
+        Skin<?> skin;
+        Object skinValue;
 
-    private static record Entry(Object owner, Object value) { }
+        public Object getValue() {
+            return userValue == null ? skinValue : userValue;
+        }
+    }
 
     // KeyBinding -> Entry with functionTag(Object)
     // functionTag(Object) -> Entry with Runnable
@@ -62,21 +69,16 @@ public class InputMap {
 
     /**
      * Adds a user-specified function under the given function tag.
-     * This function will override any function set by a skin.
+     * This function will override any function set by the skin.
      */
     public void func(Object tag, Runnable function) {
-        if (tag instanceof KeyBinding) {
-            // prevent common misuse
-            throw new IllegalArgumentException("use register() method to register a KeyBinding");
-        } else if (tag instanceof Runnable) {
-            throw new IllegalArgumentException("function tag cannot be a Runnable");
-        }
-        Objects.requireNonNull(tag, "tag must not be null");
-        addFunction(USER, tag, function);
+        validateTag(tag);
+        Objects.requireNonNull(function, "function must not be null");
+        addFunction(tag, function, null);
     }
 
     /**
-     * Maps a function to the function tag, for use by a Skin.
+     * Maps a function to the function tag, for use by the skin.
      * This method will not override any previous mapping added by {@link #func(Object,Runnable)}.
      *
      * @param skin
@@ -85,12 +87,14 @@ public class InputMap {
      */
     public void func(Skin<?> skin, Object tag, Runnable function) {
         Objects.requireNonNull(skin, "skin must not be null");
-        addFunction(skin, tag, function);
+        Objects.requireNonNull(tag, "tag must not be null");
+        Objects.requireNonNull(function, "function must not be null");
+        addFunction(tag, function, skin);
     }
     
     /**
      * Link a key binding to the specified function tag.
-     * This method will override any previous mappings set by a Skin.
+     * This method will override a mapping set by the skin.
      *
      * @param k
      * @param tag
@@ -98,13 +102,13 @@ public class InputMap {
     public void key(KeyBinding k, Object tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
-        addBinding(USER, k, tag);
+        addBinding(k, tag, null);
     }
     
     /**
-     * Link a key binding to the specified function tag, for use by a Skin.
+     * Maps a key binding to the specified function tag, for use by the skin.
      * A null key binding will result in no change to this input map.
-     * This method will not override any previous mappings added by {@link #key(KeyBinding,Object)}.
+     * This method will not override a user mapping added by {@link #key(KeyBinding,Object)}.
      *
      * @param skin
      * @param k key binding, can be null
@@ -116,51 +120,72 @@ public class InputMap {
         }
         Objects.requireNonNull(skin, "skin must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
-        addBinding(skin, k, tag);
+        addBinding(k, tag, skin);
     }
 
-    public void key(Skin<?> skin, KeyCode k, Object tag) {
-        key(skin, KeyBinding.of(k), tag);
+    /**
+     * Maps a key binding to the specified function tag, for use by the skin.
+     * This method will not override a user mapping added by {@link #key(KeyBinding,Object)}.
+     * 
+     * @param skin
+     * @param code key code to construct a {@link KeyBinding}
+     * @param tag function tag
+     */
+    public void key(Skin<?> skin, KeyCode code, Object tag) {
+        key(skin, KeyBinding.of(code), tag);
     }
-    
-    private void addFunction(Object owner, Object tag, Runnable function) {
+
+    private void addFunction(Object tag, Runnable function, Skin<?> skin) {
         Entry en = map.get(tag);
-        if (canOverride(owner, en)) {
-            map.put(tag, new Entry(owner, function));
+        if (en == null) {
+            en = new Entry();
+            map.put(tag, en);
+        }
+
+        if (skin == null) {
+            // user mapping
+            en.userValue = function;
+        } else {
+            // skin mapping
+            en.skin = skin;
+            en.skinValue = function;
         }
     }
 
-    private void addBinding(Object owner, KeyBinding k, Object tag) {
+    private void addBinding(KeyBinding k, Object tag, Skin<?> skin) {
         Entry en = map.get(k);
-        if (canOverride(owner, en)) {
-            map.put(k, new Entry(owner, tag));
+        if (en == null) {
+            en = new Entry();
+            map.put(k, en);
+        }
+        
+        if (skin == null) {
+            // user mapping
+            en.userValue = tag;
+        } else {
+            // skin mapping
+            en.skin = skin;
+            en.skinValue = tag;
         }
     }
 
-    // TODO add an entry to revert the change!  if en != null
-    private static boolean canOverride(Object owner, Entry en) {
-        if (owner != USER) {
-            if (en != null) {
-                if (en.owner() == USER) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    /** returns a Runnable function object for the given function tag or KeyBinding.  Might return null. */
+    /**
+     * Returns a Runnable function object (or null) for the given function tag or KeyBinding.
+     *
+     * @param k function tag {@code Object} or {@link KeyBinding}
+     */
     public Runnable getFunction(Object k) {
         Entry en = map.get(k);
         if (en != null) {
-            Object v = en.value();
+            Object v = en.getValue();
             if (v instanceof Runnable r) {
+                // it's a function
                 return r;
             } else if (v != null) {
-                // try an action tag
+                // try as an action tag
                 en = map.get(v);
                 if (en != null) {
-                    Object f = en.value();
+                    Object f = en.getValue();
                     if (f instanceof Runnable r) {
                         return r;
                     }
@@ -172,21 +197,79 @@ public class InputMap {
 
     /**
      * Removes all the mappings set by the skin.
+     *
      * @param skin
      */
     public void unregister(Skin<?> skin) {
-        // TODO
+        Objects.nonNull(skin);
+        Iterator<Entry> it = map.values().iterator();
+        while (it.hasNext()) {
+            Entry en = it.next();
+            if (en.skin == skin) {
+                en.skin = null;
+                en.skinValue = null;
+                if (en.userValue == null) {
+                    it.remove();
+                }
+            }
+        }
     }
 
-    public void restoreDefaultBinding(KeyBinding b) {
-        // TODO
+    /**
+     * Clears all key bindings set by user, reverting to the values set by the skin, if any.
+     */
+    public void clearUserKeyBindings() {
+        Iterator<Map.Entry<Object, Entry>> it = map.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Object, Entry> me = it.next();
+            if (me.getKey() instanceof KeyBinding) {
+                Entry en = me.getValue();
+                en.userValue = null;
+                if (en.skinValue == null) {
+                    it.remove();
+                }
+            }
+        }
     }
-    
-    public void restoreDefaultFunction(Object b) {
-        // TODO
+
+    /**
+     * Restores the specified key binding to the value set by the skin, if any.
+     *
+     * @param k
+     */
+    public void restoreDefaultBinding(KeyBinding k) {
+        Entry en = map.get(k);
+        if (en != null) {
+            en.userValue = null;
+            if (en.skinValue == null) {
+                map.remove(k);
+            }
+        }
     }
-    
-    public void clearAllBindings() {
-        // TODO
+
+    /**
+     * Restores the specified function tag to the value set by the skin, if any.
+     *
+     * @param tag
+     */
+    public void restoreDefaultFunction(Object tag) {
+        validateTag(tag);
+        Entry en = map.get(tag);
+        if (en != null) {
+            en.userValue = null;
+            if (en.skinValue == null) {
+                map.remove(tag);
+            }
+        }
+    }
+
+    private static void validateTag(Object tag) {
+        if (tag instanceof KeyBinding) {
+            // prevent common misuse
+            throw new IllegalArgumentException("use register() method to register a KeyBinding");
+        } else if (tag instanceof Runnable) {
+            throw new IllegalArgumentException("function tag cannot be a Runnable");
+        }
+        Objects.requireNonNull(tag, "tag must not be null");
     }
 }
