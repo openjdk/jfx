@@ -27,9 +27,10 @@ package javafx.scene.control.rich.util;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 
@@ -43,12 +44,16 @@ import javafx.scene.input.KeyCode;
  * - declares function tags (any object, typically an enum)
  * - declares public methods that execute using function id, which in turn find and execute corresponding function
  * - might declare public FxActions (ex.: copyAction which delegate to action id)
+ * Skin:
+ * - installs behavior mappings in Skin.install()
  * Behavior:
- * - maps key bindings to action ids
- * - maps action ids to methods in the behavior
+ * - maps key bindings to function tags
+ * - maps function tags to methods in the behavior
  */
 // TODO move to public pkg (which one?) javafx.incubator.scene.control.input
 public class InputMap {
+    private static final Object NULL = new Object();
+
     /** contains user- and skin-set key binding or function mappings */
     private static class Entry {
         Object userValue;
@@ -56,7 +61,12 @@ public class InputMap {
         Object skinValue;
 
         public Object getValue() {
-            return userValue == null ? skinValue : userValue;
+            if (userValue == NULL) {
+                return null;
+            } else if (userValue == null) {
+                return skinValue;
+            }
+            return userValue;
         }
     }
 
@@ -208,26 +218,32 @@ public class InputMap {
             if (en.skin == skin) {
                 en.skin = null;
                 en.skinValue = null;
-                if (en.userValue == null) {
-                    it.remove();
-                }
             }
         }
     }
 
     /**
-     * Clears all key bindings set by user, reverting to the values set by the skin, if any.
+     * Unbinds the specified key binding.
+     *
+     * @param k
      */
-    public void clearUserKeyBindings() {
+    public void unbind(KeyBinding k) {
+        Entry en = map.get(k);
+        if (en != null) {
+            en.userValue = NULL;
+        }
+    }
+
+    /**
+     * Resets all key bindings set by user to the values set by the skin, if any.
+     */
+    public void resetKeyBindings() {
         Iterator<Map.Entry<Object, Entry>> it = map.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Object, Entry> me = it.next();
             if (me.getKey() instanceof KeyBinding) {
                 Entry en = me.getValue();
                 en.userValue = null;
-                if (en.skinValue == null) {
-                    it.remove();
-                }
             }
         }
     }
@@ -271,5 +287,19 @@ public class InputMap {
             throw new IllegalArgumentException("function tag cannot be a Runnable");
         }
         Objects.requireNonNull(tag, "tag must not be null");
+    }
+
+    /**
+     * List key bindings (set either by the user or the skin).
+     *
+     * @return a List of KeyBindings TODO or Set?
+     */
+    public List<KeyBinding> listKeyBindings() {
+        return map.
+            keySet().
+            stream().
+            filter((k) -> (k instanceof KeyBinding)).
+            map((x) -> (KeyBinding)x).
+            collect(Collectors.toList());
     }
 }

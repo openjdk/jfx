@@ -84,7 +84,7 @@ public class KeyBinding {
         /** a key typed event */
         KEY_TYPED,
         /** any key event */
-        KEY_ANY,
+        //KEY_ANY,
 
         // platform specificity
         /** specifies Windows platform */
@@ -113,22 +113,82 @@ public class KeyBinding {
         return new KeyBinding(key, m);
     }
 
-    public static KeyBinding of(KeyCode c) {
-        return create(c, KCondition.KEY_PRESS);
+    /**
+     * Utility method creates a KeyBinding corresponding to a key press.
+     *
+     * @param code
+     * @return KeyBinding
+     */
+    public static KeyBinding of(KeyCode code) {
+        return create(code, KCondition.KEY_PRESS);
     }
 
-    public static KeyBinding ctrl(KeyCode c) {
-        return create(c, KCondition.KEY_PRESS, KCondition.CTRL);
+    /**
+     * Utility method creates a KeyBinding corresponding to a command-code key press.
+     *
+     * @param code
+     * @return KeyBinding
+     */
+    public static KeyBinding command(KeyCode code) {
+        return create(code, KCondition.KEY_PRESS, KCondition.COMMAND);
     }
 
-    public static KeyBinding shift(KeyCode c) {
-        return create(c, KCondition.KEY_PRESS, KCondition.SHIFT);
+    /**
+     * Utility method creates a KeyBinding corresponding to a ctrl-code key press.
+     *
+     * @param code
+     * @return KeyBinding
+     */
+    public static KeyBinding ctrl(KeyCode code) {
+        return create(code, KCondition.KEY_PRESS, KCondition.CTRL);
+    }
+    
+    /**
+     * Utility method creates a KeyBinding corresponding to a shift-code key press.
+     *
+     * @param code
+     * @return KeyBinding
+     */
+    public static KeyBinding shift(KeyCode code) {
+        return create(code, KCondition.KEY_PRESS, KCondition.SHIFT);
     }
 
-    public static KeyBinding shortcut(KeyCode c) {
-        return create(c, KCondition.KEY_PRESS, KCondition.SHORTCUT);
+    /**
+     * Utility method creates a KeyBinding corresponding to a shortcut-code key press.
+     *
+     * @param code
+     * @return KeyBinding
+     */
+    public static KeyBinding shortcut(KeyCode code) {
+        return create(code, KCondition.KEY_PRESS, KCondition.SHORTCUT);
     }
 
+    public boolean isControl() {
+        return modifiers.contains(KCondition.CTRL);
+    }
+
+    public boolean isCommand() {
+        return modifiers.contains(KCondition.COMMAND);
+    }
+
+    public boolean isKeyPress() {
+        return modifiers.contains(KCondition.KEY_PRESS);
+    }
+
+    public boolean isKeyRelease() {
+        return modifiers.contains(KCondition.KEY_RELEASE);
+    }
+
+    public boolean isShortcut() {
+        if (PlatformUtil.isMac()) {
+            return modifiers.contains(KCondition.COMMAND);
+        }
+        return modifiers.contains(KCondition.CTRL);
+    }
+    
+    // TODO rest of isXXX()
+
+    /** creates a builder */
     public static Builder builder() {
         return new Builder();
     }
@@ -284,6 +344,8 @@ public class KeyBinding {
         return sb.toString();
     }
     
+    // TODO other setters (platform, etc)
+    
     /** Key bindings builder */
     public static class Builder {
         private Object key; // KeyCode or String
@@ -309,7 +371,7 @@ public class KeyBinding {
             m.add(KCondition.CTRL);
             return this;
         }
-        
+
         public Builder option() {
             m.add(KCondition.OPTION);
             return this;
@@ -319,22 +381,32 @@ public class KeyBinding {
             m.add(KCondition.SHIFT);
             return this;
         }
-        
+
         public Builder shortcut() {
             m.add(KCondition.SHORTCUT);
             return this;
         }
-        
+
         public Builder forMac() {
             m.add(KCondition.FOR_MAC);
             return this;
         }
-        
+
         public Builder notForMac() {
             m.add(KCondition.NOT_FOR_MAC);
             return this;
         }
-        
+
+        public Builder forWindows() {
+            m.add(KCondition.FOR_WIN);
+            return this;
+        }
+
+        public Builder notForWindows() {
+            m.add(KCondition.NOT_FOR_WIN);
+            return this;
+        }
+
         public KeyBinding build() {
             // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();
