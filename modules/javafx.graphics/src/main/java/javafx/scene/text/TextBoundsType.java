@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ package javafx.scene.text;
  * <p>
  * Logical bounds are important for laying out text relative to other
  * text and other components, particularly those which also contain text.
- * The bounds isn't specific to the text being rendered, and so will
+ * The bounds aren't specific to the text being rendered, and so will
  * report heights which account for the potential ascent and descent of
  * text using the font at its specified size. Also leading and trailing
  * spaces are part of the logical advance width of the text.
@@ -51,8 +51,8 @@ public enum TextBoundsType {
      * Use logical bounds as the basis for calculating the bounds.
      * <p>
      * The logical bounds are based on font metrics information. The width is
-     * based on the glyph advances and the height on the ascent, descent, and
-     * line gap. Except for the last line which does not include the line gap.
+     * based on the glyph advances and the height of the ascent, descent, and
+     * line gap, except for the last line which does not include the line gap.
      * <p>
      * Note: This is usually the fastest option.
      */

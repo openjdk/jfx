@@ -579,14 +579,6 @@
     [self->_delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_EXIT];
 }
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
-{
-    // Deprecated for 10.7
-    // use NSDraggingSession - (NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
-    DNDLOG("draggingSourceOperationMaskForLocal");
-    return [self->_delegate draggingSourceOperationMaskForLocal:isLocal];
-}
-
 #pragma mark --- Callbacks
 
 - (void)enterFullscreenWithAnimate:(BOOL)animate withKeepRatio:(BOOL)keepRatio withHideCursor:(BOOL)hideCursor
