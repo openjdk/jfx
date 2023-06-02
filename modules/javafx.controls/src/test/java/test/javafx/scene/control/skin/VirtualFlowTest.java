@@ -97,7 +97,7 @@ public class VirtualFlowTest {
 
             @Override
             protected double computePrefWidth(double height) {
-                return flow.isVertical() ? (c.getIndex() == 29 ? 200 : 100) : (c.getIndex() == 29 ? 100 : 25);
+                return flow.isVertical() ? (getIndex() == 29 ? 200 : 100) : (getIndex() == 29 ? 100 : 25);
             }
 
             @Override
@@ -112,7 +112,7 @@ public class VirtualFlowTest {
 
             @Override
             protected double computePrefHeight(double width) {
-                return flow.isVertical() ? (c.getIndex() == 29 ? 100 : 25) : (c.getIndex() == 29 ? 200 : 100);
+                return flow.isVertical() ? (getIndex() == 29 ? 100 : 25) : (getIndex() == 29 ? 200 : 100);
             }
         });
         flow.setCellCount(100);
@@ -1221,6 +1221,38 @@ public class VirtualFlowTest {
             assertEquals("Wrong first cell position after inserting " + i + " cells", -10d, cellPosition, 0d);
         }
     }
+
+    @Test
+    // see JDK-8306447
+    public void testPositionCellRemainsConstantWithManyItems() {
+        flow.setVertical(true);
+        flow.setCellCount(100);
+        flow.resize(300, 300);
+        // scroll up and down, to populate the size cache
+        for (int i = 0; i < 20; i++) {
+            flow.scrollPixels(1);
+            pulse();
+            flow.scrollPixels(-1);
+            pulse();
+        }
+        flow.scrollPixels(911);
+        pulse();
+
+        IndexedCell vc = flow.getCell(33);
+        double cellPosition = flow.getCellPosition(vc);
+        // cell 33 should be at (32 x 25 + 1 x 100) - 911 = -11
+        assertEquals("Wrong first cell position", -11d, cellPosition, 0d);
+
+        for (int i = 1; i < 10; i++) {
+            flow.setCellCount(100 + i);
+            pulse();
+            vc = flow.getCell(33);
+            cellPosition = flow.getCellPosition(vc);
+            assertEquals("First cell position changed after adding " + i + " cells on large irregular list", -11d, cellPosition, 0d);
+        }
+    }
+
+
 
     @Test
     // see JDK-8252811
