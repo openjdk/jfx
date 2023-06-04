@@ -603,7 +603,6 @@ bool WindowContextBase::set_view(jobject view) {
     } else {
         jview = NULL;
     }
-
     return TRUE;
 }
 
