@@ -90,7 +90,7 @@ public class RichTextAreaBehavior {
     public RichTextAreaBehavior(RichTextArea control) {
         this.control = control;
 
-        autoScrollPeriod = Duration.millis(Params.autoScrollPeriod);
+        autoScrollPeriod = Duration.millis(Params.AUTO_SCROLL_PERIOD);
 
         textChangeListener = new StyledTextModel.ChangeListener() {
             @Override
@@ -409,7 +409,7 @@ public class RichTextAreaBehavior {
         if (ev.isShiftDown()) {
             if (!control.isWrapText()) {
                 // horizontal scroll
-                double f = Params.scrollWheelBlockSizeHorizontal;
+                double f = Params.SCROLL_SHEEL_BLOCK_SIZE_HORIZONTAL;
                 if (ev.getDeltaX() >= 0) {
                     f = -f;
                 }
@@ -426,7 +426,7 @@ public class RichTextAreaBehavior {
             ev.consume();
         } else {
             // block scroll
-            double f = Params.scrollWheelBlockSizeVertical;
+            double f = Params.SCROLL_WHEEL_BLOCK_SIZE_VERTICAL;
             if (ev.getDeltaY() >= 0) {
                 f = -f;
             }
@@ -447,12 +447,12 @@ public class RichTextAreaBehavior {
     
     protected void autoScroll(double delta) {
         autoScrollUp = (delta < 0.0);
-        fastAutoScroll = Math.abs(delta) > Params.fastAutoScrollThreshold;
+        fastAutoScroll = Math.abs(delta) > Params.AUTO_SCROLL_FAST_THRESHOLD;
         autoScrollTimer.play();
     }
 
     protected void autoScroll() {
-        double delta = fastAutoScroll ? Params.autoScrollStepFast : Params.autoStopStepSlow;
+        double delta = fastAutoScroll ? Params.AUTO_SCROLL_STEP_FAST : Params.AUTO_SCROLL_STEP_SLOW;
         if (autoScrollUp) {
             delta = -delta;
         }

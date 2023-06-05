@@ -85,7 +85,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         vscroll.setManaged(true);
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
-        vscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
+        vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         vscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
         
         hscroll = createHScrollBar();
@@ -93,7 +93,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         hscroll.setManaged(true);
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
-        hscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
+        hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         hscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
         hscroll.visibleProperty().bind(control.wrapTextProperty().not());
 

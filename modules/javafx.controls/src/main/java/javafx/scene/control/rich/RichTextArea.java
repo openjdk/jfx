@@ -168,7 +168,7 @@ public class RichTextArea extends Control {
     public RichTextArea(ConfigurationParameters c, StyledTextModel m) {
         this.config = c;
         
-        caretBlinkPeriod = new ReadOnlyObjectWrapper<>(this, "caretBlinkPeriod", Duration.millis(Params.defaultCaretBlinkPeriod));
+        caretBlinkPeriod = new ReadOnlyObjectWrapper<>(this, "caretBlinkPeriod", Duration.millis(Params.DEFAULT_CARET_BLINK_PERIOD));
 
         setFocusTraversable(true);
         getStyleClass().add("rich-text-area");
@@ -578,8 +578,8 @@ public class RichTextArea extends Control {
     }
 
     public final void setTabSize(int n) {
-        if ((n < 1) || (n > Params.maxTabSize)) {
-            throw new IllegalArgumentException("tab size out of range (1-" + Params.maxTabSize + ") " + n);
+        if ((n < 1) || (n > Params.MAX_TAB_SIZE)) {
+            throw new IllegalArgumentException("tab size out of range (1-" + Params.MAX_TAB_SIZE + ") " + n);
         }
         tabSizePropertyPrivate().set(n);
     }

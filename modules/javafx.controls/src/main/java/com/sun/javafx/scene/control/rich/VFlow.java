@@ -109,7 +109,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         getStyleClass().add("flow");
 
-        cellCache = new FastCache(Params.cellCacheSize);
+        cellCache = new FastCache(Params.CELL_CACHE_SIZE);
 
         // TODO consider creating upond demand
         leftGutter = new ClippedPane("left-side");
@@ -238,7 +238,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
         } else {
             if (cache == null) {
-                cache = new FastCache<>(Params.cellCacheSize);
+                cache = new FastCache<>(Params.CELL_CACHE_SIZE);
             } else {
                 cache.clear();
             }
@@ -620,7 +620,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
-        vscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
+        vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         vscroll.setVisibleAmount(visible);
         vscroll.setValue(val);
 
@@ -661,7 +661,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
-        hscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
+        hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         hscroll.setVisibleAmount(vis);
         hscroll.setValue(val);
 
@@ -847,7 +847,7 @@ public class VFlow extends Pane implements StyleResolver {
         double ytop = snapPositionY(-getOrigin().offset());
         double y = ytop;
         double unwrappedWidth = 0;
-        double margin = Params.slidingWindowMargin * height;
+        double margin = Params.SLIDING_WINDOW_EXTENT * height;
         int topMarginCount = 0;
         int bottomMarginCount = 0;
         int count = 0;
@@ -894,7 +894,7 @@ public class VFlow extends Pane implements StyleResolver {
             // when exceeded both pixel and line count margins
             if (visible) {
                 if (y > height) {
-                    topMarginCount = (int)Math.ceil(count * Params.slidingWindowMargin);
+                    topMarginCount = (int)Math.ceil(count * Params.SLIDING_WINDOW_EXTENT);
                     bottomMarginCount = count + topMarginCount;
                     arrangement.setVisibleCellCount(count);
                     visible = false;
@@ -1154,9 +1154,9 @@ public class VFlow extends Pane implements StyleResolver {
             double cw = content.getWidth();
             double off;
             if (x < 0.0) {
-                off = Math.max(getOffsetX() + x - Params.horizontalGuard, 0.0);
+                off = Math.max(getOffsetX() + x - Params.HORIZONTAL_GUARD, 0.0);
             } else if (x > cw) {
-                off = getOffsetX() + x - cw + Params.horizontalGuard;
+                off = getOffsetX() + x - cw + Params.HORIZONTAL_GUARD;
             } else {
                 return;
             }

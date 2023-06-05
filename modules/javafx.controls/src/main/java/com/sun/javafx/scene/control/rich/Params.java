@@ -30,41 +30,41 @@ package com.sun.javafx.scene.control.rich;
  */
 public class Params {
     /** autoscroll animation period, milliseconds. */
-    public static final int autoScrollPeriod = 100;
-
-    /** "fast" autoscroll step, in pixels. */
-    public static final double autoScrollStepFast = 200;
-
-    /** "slow" autoscroll step, in pixels. */
-    public static final double autoStopStepSlow = 20;
-
-    /** cell cache size (default 512). */
-    public static final int cellCacheSize = 512;
-
-    /** default caret blink period, in milliseconds. */
-    public static final int defaultCaretBlinkPeriod = 500;
+    public static final int AUTO_SCROLL_PERIOD = 100;
 
     /** autoscroll switches to fast mode when mouse is moved further out of the view, pixels. */
-    public static final double fastAutoScrollThreshold = 100;
+    public static final double AUTO_SCROLL_FAST_THRESHOLD = 100;
+
+    /** "fast" autoscroll step, in pixels. */
+    public static final double AUTO_SCROLL_STEP_FAST = 200;
+
+    /** "slow" autoscroll step, in pixels. */
+    public static final double AUTO_SCROLL_STEP_SLOW = 20;
+
+    /** cell cache size (default 512). */
+    public static final int CELL_CACHE_SIZE = 512;
+
+    /** default caret blink period, in milliseconds. */
+    public static final int DEFAULT_CARET_BLINK_PERIOD = 500;
 
     /** small space between the end of last character and the right edge when typing, in pixels. */
-    public static final double horizontalGuard = 20;
+    public static final double HORIZONTAL_GUARD = 20;
 
     /** maximum tab size. */
-    public static final int maxTabSize = 256;
+    public static final int MAX_TAB_SIZE = 256;
 
     /** scroll bars unit increment, fraction of view width/height (between 0.0 and 1.0). */
-    public static final double scrollBarsUnitIncrement = 0.1;
+    public static final double SCROLL_BARS_UNIT_INCREMENT = 0.1;
 
     /** horizontal mouse wheel scroll block size as a fraction of window width. */
-    public static final double scrollWheelBlockSizeHorizontal = 0.1;
+    public static final double SCROLL_SHEEL_BLOCK_SIZE_HORIZONTAL = 0.1;
 
     /** vertical mouse wheel scroll block size as a fraction of window height. */
-    public static final double scrollWheelBlockSizeVertical = 0.1;
+    public static final double SCROLL_WHEEL_BLOCK_SIZE_VERTICAL = 0.1;
 
     /**
-     * VFlow TextLayout sliding window margin before and after the visible area.
-     * Must be > 1.0f for relative navigation to work.
+     * VFlow TextLayout sliding window extent before and after the visible area.
+     * Must be > 1.0f for the relative navigation to work.
      */
-    public static final float slidingWindowMargin = 3.0f;
+    public static final float SLIDING_WINDOW_EXTENT = 3.0f;
 }
