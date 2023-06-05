@@ -57,6 +57,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 /**
@@ -117,6 +118,12 @@ public class RichTextAreaDemoPane extends BorderPane {
                     n.setStyle(null);
                 }
             }
+        });
+        
+        CheckBox fastBlink = new CheckBox("blink fast");
+        FX.name(fastBlink, "fastBlink");
+        fastBlink.selectedProperty().addListener((s,p,on) -> {
+            control.setCaretBlinkPeriod(on ? Duration.millis(200) : Duration.millis(500));
         });
         
         CheckBox highlightCurrentLine = new CheckBox("highlight current line");
@@ -210,6 +217,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.option(wrapText);
         op.option(displayCaret);
         op.option(fatCaret);
+        op.option(fastBlink);
         op.option(highlightCurrentLine);
         op.label("Tab Size:");
         op.option(tabSize);
