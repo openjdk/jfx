@@ -32,10 +32,6 @@ import javafx.scene.control.ScrollBar;
  * Configuration parameters for RichTextArea.
  */
 public final class ConfigurationParameters {
-    // TODO move to property
-    /** caret blink period in milliseconds (default 500 ms). */
-    public final int caretBlinkPeriod;
-
     /** creates a horizontal scroll bar.  when set to null (default) a standard ScrollBar will be created */
     public final Supplier<ScrollBar> scrollBarGeneratorHorizontal;
     
@@ -51,14 +47,12 @@ public final class ConfigurationParameters {
     }
     
     private ConfigurationParameters(Builder b) {
-        caretBlinkPeriod = b.caretBlinkPeriod;
         scrollBarGeneratorVertical = b.verticalScrollBarGenerator;
         scrollBarGeneratorHorizontal = b.horizontalScrollBarGenerator;
     }
 
     /** Config builder is necessary to make Config immutable */
     public static final class Builder {
-        private int caretBlinkPeriod = 500;
         private Supplier<ScrollBar> verticalScrollBarGenerator;
         private Supplier<ScrollBar> horizontalScrollBarGenerator;
         
@@ -67,11 +61,6 @@ public final class ConfigurationParameters {
 
         public ConfigurationParameters create() {
             return new ConfigurationParameters(this);
-        }
-
-        /** Sets caret blink period, in milliseconds. */
-        public void setCaretBlinkPeriod(int x) {
-            caretBlinkPeriod = x;
         }
 
         /** Allows for creating custom vertical scroll bar.  A null (default) results in a standard ScrollBar */

@@ -31,22 +31,25 @@ package com.sun.javafx.scene.control.rich;
 public class Params {
     /** autoscroll animation period, milliseconds. */
     public static final int autoScrollPeriod = 100;
-    
+
     /** "fast" autoscroll step, in pixels. */
     public static final double autoScrollStepFast = 200;
-    
+
     /** "slow" autoscroll step, in pixels. */
     public static final double autoStopStepSlow = 20;
-    
+
     /** cell cache size (default 512). */
     public static final int cellCacheSize = 512;
-    
+
+    /** default caret blink period, in milliseconds. */
+    public static final int defaultCaretBlinkPeriod = 500;
+
     /** autoscroll switches to fast mode when mouse is moved further out of the view, pixels. */
     public static final double fastAutoScrollThreshold = 100;
-    
+
     /** small space between the end of last character and the right edge when typing, in pixels. */
     public static final double horizontalGuard = 20;
-    
+
     /** maximum tab size. */
     public static final int maxTabSize = 256;
 
@@ -55,7 +58,7 @@ public class Params {
 
     /** horizontal mouse wheel scroll block size as a fraction of window width. */
     public static final double scrollWheelBlockSizeHorizontal = 0.1;
-    
+
     /** vertical mouse wheel scroll block size as a fraction of window height. */
     public static final double scrollWheelBlockSizeVertical = 0.1;
 
