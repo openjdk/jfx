@@ -1,6 +1,6 @@
 /* -----------------------------------------------------------------*-C-*-
-   libffi 3.4.2
-     - Copyright (c) 2011, 2014, 2019, 2021 Anthony Green
+   libffi 3.4.4
+     - Copyright (c) 2011, 2014, 2019, 2021, 2022 Anthony Green
      - Copyright (c) 1996-2003, 2007, 2008 Red Hat, Inc.
 
    Permission is hereby granted, free of charge, to any person
@@ -320,6 +320,9 @@ typedef struct {
   ffi_cif   *cif;
   void     (*fun)(ffi_cif*,void*,void**,void*);
   void      *user_data;
+#if defined(_MSC_VER) && defined(_M_IX86)
+  void      *padding;
+#endif
 } ffi_closure
 #ifdef __GNUC__
     __attribute__((aligned (8)))
@@ -360,7 +363,7 @@ ffi_prep_closure_loc (ffi_closure*,
               ffi_cif *,
               void (*fun)(ffi_cif*,void*,void**,void*),
               void *user_data,
-              void*codeloc);
+              void *codeloc);
 
 #ifdef __sgi
 # pragma pack 8
@@ -378,7 +381,7 @@ typedef struct {
 
   /* If this is enabled, then a raw closure has the same layout
      as a regular closure.  We use this to install an intermediate
-     handler to do the transaltion, void** -> ffi_raw*.  */
+     handler to do the translation, void** -> ffi_raw*.  */
 
   void     (*translate_args)(ffi_cif*,void*,void**,void*);
   void      *this_closure;

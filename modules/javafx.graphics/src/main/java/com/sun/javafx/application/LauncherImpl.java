@@ -25,6 +25,7 @@
 
 package com.sun.javafx.application;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Preloader;
 import javafx.application.Preloader.ErrorNotification;
@@ -383,8 +384,7 @@ public class LauncherImpl {
             } catch (ClassNotFoundException | NoClassDefFoundError cnfe) {}
         }
 
-        if (clz == null && System.getProperty("os.name", "").contains("OS X")
-                    && Normalizer.isNormalized(className, Normalizer.Form.NFD)) {
+        if (clz == null && PlatformUtil.isMac() && Normalizer.isNormalized(className, Normalizer.Form.NFD)) {
             // macOS may have decomposed diacritical marks in mainClassName
             // recompose them and try again
             String cn = Normalizer.normalize(className, Normalizer.Form.NFC);
