@@ -41,7 +41,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.rich.CaretInfo;
-import javafx.scene.control.rich.Config;
+import javafx.scene.control.rich.ConfigurationParameters;
 import javafx.scene.control.rich.Origin;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.SideDecorator;
@@ -73,7 +73,7 @@ public class VFlow extends Pane implements StyleResolver {
     /** maximum width for unwrapped TextFlow layout. Neither Double.MAX_VALUE nor 1e20 work */
     private static final double MAX_WIDTH_FOR_LAYOUT = 1_000_000_000.0;
     private final RichTextArea control;
-    private final Config config;
+    private final ConfigurationParameters config;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
     private final ClippedPane leftGutter;
@@ -101,7 +101,7 @@ public class VFlow extends Pane implements StyleResolver {
     private boolean inReflow;
     private static final Text measurer = makeMeasurer();
 
-    public VFlow(RichTextAreaSkin skin, Config c, ScrollBar vscroll, ScrollBar hscroll) {
+    public VFlow(RichTextAreaSkin skin, ConfigurationParameters c, ScrollBar vscroll, ScrollBar hscroll) {
         this.control = skin.getSkinnable();
         this.config = c;
         this.vscroll = vscroll;
@@ -109,7 +109,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         getStyleClass().add("flow");
 
-        cellCache = new FastCache(config.cellCacheSize);
+        cellCache = new FastCache(Params.cellCacheSize);
 
         // TODO consider creating upond demand
         leftGutter = new ClippedPane("left-side");
@@ -238,7 +238,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
         } else {
             if (cache == null) {
-                cache = new FastCache<>(config.cellCacheSize);
+                cache = new FastCache<>(Params.cellCacheSize);
             } else {
                 cache.clear();
             }
@@ -620,7 +620,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
-        vscroll.setUnitIncrement(config.scrollBarsUnitIncrement);
+        vscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
         vscroll.setVisibleAmount(visible);
         vscroll.setValue(val);
 
@@ -661,7 +661,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
-        hscroll.setUnitIncrement(config.scrollBarsUnitIncrement);
+        hscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
         hscroll.setVisibleAmount(vis);
         hscroll.setValue(val);
 
@@ -847,7 +847,7 @@ public class VFlow extends Pane implements StyleResolver {
         double ytop = snapPositionY(-getOrigin().offset());
         double y = ytop;
         double unwrappedWidth = 0;
-        double margin = config.slidingWindowMargin * height;
+        double margin = Params.slidingWindowMargin * height;
         int topMarginCount = 0;
         int bottomMarginCount = 0;
         int count = 0;
@@ -894,7 +894,7 @@ public class VFlow extends Pane implements StyleResolver {
             // when exceeded both pixel and line count margins
             if (visible) {
                 if (y > height) {
-                    topMarginCount = (int)Math.ceil(count * config.slidingWindowMargin);
+                    topMarginCount = (int)Math.ceil(count * Params.slidingWindowMargin);
                     bottomMarginCount = count + topMarginCount;
                     arrangement.setVisibleCellCount(count);
                     visible = false;
@@ -1154,9 +1154,9 @@ public class VFlow extends Pane implements StyleResolver {
             double cw = content.getWidth();
             double off;
             if (x < 0.0) {
-                off = Math.max(getOffsetX() + x - config.horizontalGuard, 0.0);
+                off = Math.max(getOffsetX() + x - Params.horizontalGuard, 0.0);
             } else if (x > cw) {
-                off = getOffsetX() + x - cw + config.horizontalGuard;
+                off = getOffsetX() + x - cw + Params.horizontalGuard;
             } else {
                 return;
             }

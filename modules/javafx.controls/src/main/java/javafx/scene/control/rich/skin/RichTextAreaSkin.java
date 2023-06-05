@@ -34,12 +34,13 @@ import javafx.geometry.VPos;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
-import javafx.scene.control.rich.Config;
+import javafx.scene.control.rich.ConfigurationParameters;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.RichTextAreaBehavior;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.rich.Params;
 import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.javafx.scene.control.rich.VFlow;
 
@@ -54,7 +55,7 @@ import com.sun.javafx.scene.control.rich.VFlow;
  * </ul>
  */
 public class RichTextAreaSkin extends SkinBase<RichTextArea> {
-    private final Config config;
+    private final ConfigurationParameters config;
     private final ListenerHelper listenerHelper;
     private final RichTextAreaBehavior behavior;
     private final VFlow vflow;
@@ -73,7 +74,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         });
     }
 
-    public RichTextAreaSkin(RichTextArea control, Config cnf) {
+    public RichTextAreaSkin(RichTextArea control, ConfigurationParameters cnf) {
         super(control);
         
         this.config = cnf;
@@ -84,7 +85,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         vscroll.setManaged(true);
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
-        vscroll.setUnitIncrement(config.scrollBarsUnitIncrement);
+        vscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
         vscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
         
         hscroll = createHScrollBar();
@@ -92,7 +93,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         hscroll.setManaged(true);
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
-        hscroll.setUnitIncrement(config.scrollBarsUnitIncrement);
+        hscroll.setUnitIncrement(Params.scrollBarsUnitIncrement);
         hscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
         hscroll.visibleProperty().bind(control.wrapTextProperty().not());
 
@@ -146,7 +147,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     /** called from the constructor.  override to provide custom behavior */
     // TODO variant: generator in Config, or add methods to manipulate behavior to control
     protected RichTextAreaBehavior createBehavior() {
-        return new RichTextAreaBehavior(config, getSkinnable());
+        return new RichTextAreaBehavior(getSkinnable());
     }
     
     private final ScrollBar createVScrollBar() {

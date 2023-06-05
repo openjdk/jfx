@@ -60,6 +60,7 @@ import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.rich.util.InputMap;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
+import com.sun.javafx.scene.control.rich.Params;
 import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
 import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.javafx.scene.control.rich.VFlow;
@@ -114,7 +115,7 @@ public class RichTextArea extends Control {
     }
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
-    private final Config config;
+    private final ConfigurationParameters config;
     private final InputMap inputMap = new InputMap();
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
@@ -156,7 +157,7 @@ public class RichTextArea extends Control {
      * @param model styled text model
      */
     public RichTextArea(StyledTextModel model) {
-        this(Config.defaultConfig(), model);
+        this(ConfigurationParameters.defaultConfig(), model);
     }
 
     /**
@@ -164,7 +165,7 @@ public class RichTextArea extends Control {
      * @param c configuration parameters
      * @param m styled text model
      */
-    public RichTextArea(Config c, StyledTextModel m) {
+    public RichTextArea(ConfigurationParameters c, StyledTextModel m) {
         this.config = c;
         
         caretBlinkPeriod = new ReadOnlyObjectWrapper<>(this, "caretBlinkPeriod", Duration.millis(config.caretBlinkPeriod));
@@ -537,8 +538,8 @@ public class RichTextArea extends Control {
     }
 
     public void setTabSize(int n) {
-        if ((n < 1) || (n > config.maxTabSize)) {
-            throw new IllegalArgumentException("tab size out of range (1-" + config.maxTabSize + ") " + n);
+        if ((n < 1) || (n > Params.maxTabSize)) {
+            throw new IllegalArgumentException("tab size out of range (1-" + Params.maxTabSize + ") " + n);
         }
         tabSizePropertyPrivate().set(n);
     }

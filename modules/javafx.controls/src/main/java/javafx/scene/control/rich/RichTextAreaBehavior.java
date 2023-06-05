@@ -58,6 +58,7 @@ import javafx.stage.Screen;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.rich.Params;
 import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.javafx.scene.control.rich.RichUtils;
 import com.sun.javafx.scene.control.rich.VFlow;
@@ -76,7 +77,6 @@ import com.sun.javafx.scene.control.rich.VFlow;
  * - executes code associated with an action tag (default or alternative)
  */
 public class RichTextAreaBehavior {
-    private final Config config;
     private final RichTextArea control;
     private VFlow vflow;
     private final StyledTextModel.ChangeListener textChangeListener;
@@ -87,11 +87,10 @@ public class RichTextAreaBehavior {
     private final Duration autoScrollPeriod;
     private ContextMenu contextMenu = new ContextMenu();
 
-    public RichTextAreaBehavior(Config c, RichTextArea control) {
-        this.config = c;
+    public RichTextAreaBehavior(RichTextArea control) {
         this.control = control;
 
-        autoScrollPeriod = Duration.millis(config.autoScrollPeriod);
+        autoScrollPeriod = Duration.millis(Params.autoScrollPeriod);
 
         textChangeListener = new StyledTextModel.ChangeListener() {
             @Override
@@ -410,7 +409,7 @@ public class RichTextAreaBehavior {
         if (ev.isShiftDown()) {
             if (!control.isWrapText()) {
                 // horizontal scroll
-                double f = config.scrollWheelBlockSizeHorizontal;
+                double f = Params.scrollWheelBlockSizeHorizontal;
                 if (ev.getDeltaX() >= 0) {
                     f = -f;
                 }
@@ -427,7 +426,7 @@ public class RichTextAreaBehavior {
             ev.consume();
         } else {
             // block scroll
-            double f = config.scrollWheelBlockSizeVertical;
+            double f = Params.scrollWheelBlockSizeVertical;
             if (ev.getDeltaY() >= 0) {
                 f = -f;
             }
@@ -448,12 +447,12 @@ public class RichTextAreaBehavior {
     
     protected void autoScroll(double delta) {
         autoScrollUp = (delta < 0.0);
-        fastAutoScroll = Math.abs(delta) > config.fastAutoScrollThreshold;
+        fastAutoScroll = Math.abs(delta) > Params.fastAutoScrollThreshold;
         autoScrollTimer.play();
     }
 
     protected void autoScroll() {
-        double delta = fastAutoScroll ? config.autoScrollStepFast : config.autoStopStepSlow;
+        double delta = fastAutoScroll ? Params.autoScrollStepFast : Params.autoStopStepSlow;
         if (autoScrollUp) {
             delta = -delta;
         }
