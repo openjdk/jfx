@@ -105,14 +105,6 @@ public class KeyBinding {
         this.modifiers = modifiers;
     }
     
-    private static KeyBinding create(Object key, KCondition ... mods) {
-        EnumSet<KCondition> m = EnumSet.noneOf(KCondition.class);
-        for (KCondition c: mods) {
-            m.add(c);
-        }
-        return new KeyBinding(key, m);
-    }
-
     /**
      * Utility method creates a KeyBinding corresponding to a key press.
      *
@@ -161,6 +153,10 @@ public class KeyBinding {
      */
     public static KeyBinding shortcut(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.SHORTCUT);
+    }
+
+    private static KeyBinding create(Object key, KCondition... mods) {
+        return builder().init(key, mods).build();
     }
 
     public boolean isControl() {
@@ -327,13 +323,6 @@ public class KeyBinding {
         return sb.append("}").toString();
     }
     
-    private static void replace(EnumSet<KCondition> m, KCondition c, KCondition replaceWith) {
-        if (m.contains(c)) {
-            m.remove(c);
-            m.add(replaceWith);
-        }
-    }
-    
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("KeyBinding{key=");
@@ -350,7 +339,10 @@ public class KeyBinding {
     public static class Builder {
         private Object key; // KeyCode or String
         private final EnumSet<KCondition> m = EnumSet.noneOf(KCondition.class);
-        
+
+        public Builder() {
+        }
+
         public Builder with(KeyCode c) {
             if (key != null) {
                 throw new IllegalArgumentException("only one KeyCode or character can be set");
@@ -407,6 +399,21 @@ public class KeyBinding {
             return this;
         }
 
+        private Builder init(Object key, KCondition... mods) {
+            this.key = key;
+            for (KCondition c : mods) {
+                m.add(c);
+            }
+            return this;
+        }
+
+        private void replace(KCondition c, KCondition replaceWith) {
+            if (m.contains(c)) {
+                m.remove(c);
+                m.add(replaceWith);
+            }
+        }
+
         public KeyBinding build() {
             // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();
@@ -421,9 +428,9 @@ public class KeyBinding {
                     return null;
                 }
 
-                replace(m, KCondition.ALT, KCondition.OPTION);
-                replace(m, KCondition.META, KCondition.COMMAND);
-                replace(m, KCondition.SHORTCUT, KCondition.COMMAND);
+                replace(KCondition.ALT, KCondition.OPTION);
+                replace(KCondition.META, KCondition.COMMAND);
+                replace(KCondition.SHORTCUT, KCondition.COMMAND);
             } else if (PlatformUtil.isWindows()) {
                 if (m.contains(KCondition.NOT_FOR_WIN)) {
                     return null;
@@ -431,7 +438,7 @@ public class KeyBinding {
                     return null;
                 }
 
-                replace(m, KCondition.SHORTCUT, KCondition.CTRL);
+                replace(KCondition.SHORTCUT, KCondition.CTRL);
             }
 
             if (!mac) {
@@ -441,7 +448,7 @@ public class KeyBinding {
                     return null;
                 }
 
-                replace(m, KCondition.WINDOWS, KCondition.META);
+                replace(KCondition.WINDOWS, KCondition.META);
             }
 
             // remove platform 
@@ -451,7 +458,7 @@ public class KeyBinding {
             m.remove(KCondition.NOT_FOR_WIN);
 
             boolean pressed = m.contains(KCondition.KEY_PRESS);
-            boolean released = m.contains(KCondition.KEY_PRESS);
+            boolean released = m.contains(KCondition.KEY_RELEASE);
             boolean typed = m.contains(KCondition.KEY_TYPED);
 
             int ct = 0;
