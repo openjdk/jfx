@@ -454,7 +454,7 @@ public class PrismTextLayout implements TextLayout {
                 leading = (trailing[0] == 0);
 
                 insertionIndex = charIndex;
-                if (getText() != null) {
+                if (getText() != null && insertionIndex < getText().length) {
                     if (!leading) {
                         BreakIterator charIterator = BreakIterator.getCharacterInstance();
                         charIterator.setText(new String(getText()));
