@@ -326,7 +326,7 @@ public class RichTextAreaBehavior {
 
         StyledTextModel m = control.getModel();
         TextPos pos = control.getCaretPosition();
-        if(pos != null) {
+        if (pos != null) {
             TextPos an = control.getAnchorPosition();
             // TODO check an<pos
             TextPos p2 = m.replace(vflow, an, pos, StyledInput.of("\n"));
@@ -732,7 +732,7 @@ public class RichTextAreaBehavior {
             return;
         }
 
-        if (control.hasSelection()) {
+        if (control.hasNonEmptySelection()) {
             deleteSelection();
         } else {
             TextPos end = control.getCaretPosition();
@@ -754,7 +754,7 @@ public class RichTextAreaBehavior {
             return;
         }
 
-        if (control.hasSelection()) {
+        if (control.hasNonEmptySelection()) {
             deleteSelection();
         } else {
             TextPos start = control.getCaretPosition();
@@ -844,9 +844,9 @@ public class RichTextAreaBehavior {
         ev.consume();
     }
 
-    // TODO this belongs to the control!
+    // TODO this might belong to the control!
     protected void populateContextMenu() {
-        boolean sel = control.hasSelection();
+        boolean sel = control.hasNonEmptySelection();
         boolean paste = (findFormatForPaste() != null);
         
         ObservableList<MenuItem> items = contextMenu.getItems();
@@ -890,21 +890,30 @@ public class RichTextAreaBehavior {
     }
 
     public void paste() {
-        DataFormat f = findFormatForPaste();
-        if (f != null) {
-            if (control.hasSelection()) {
-                deleteSelection();
-            }
+        if (canEdit()) {
+            DataFormat f = findFormatForPaste();
+            if (f != null) {
+                TextPos caret = control.getCaretPosition();
+                if (caret == null) {
+                    return;
+                }
+                TextPos anchor = control.getAnchorPosition();
+                if (anchor == null) {
+                    return;
+                }
 
-            Object src = Clipboard.getSystemClipboard().getContent(f);
-            TextPos caret = control.getCaretPosition();
-            TextPos anchor = control.getAnchorPosition();
-            StyledTextModel m = control.getModel();
-            DataFormatHandler h = m.getDataFormatHandler(f);
-            StyledInput in = h.getStyledInput(src);
-            // TODO ensure star<end
-            TextPos p = m.replace(vflow, caret, anchor, in);
-            control.moveCaret(p, false);
+                if (control.hasNonEmptySelection()) {
+                    deleteSelection();
+                }
+
+                StyledTextModel m = control.getModel();
+                DataFormatHandler h = m.getDataFormatHandler(f);
+                Object src = Clipboard.getSystemClipboard().getContent(f);
+                StyledInput in = h.getStyledInput(src);
+                // TODO ensure star<end
+                TextPos p = m.replace(vflow, caret, anchor, in);
+                control.moveCaret(p, false);
+            }
         }
     }
 
@@ -912,7 +921,16 @@ public class RichTextAreaBehavior {
         if (canEdit()) {
             Clipboard c = Clipboard.getSystemClipboard();
             if (c.hasString()) {
-                if (control.hasSelection()) {
+                TextPos caret = control.getCaretPosition();
+                if (caret == null) {
+                    return;
+                }
+                TextPos anchor = control.getAnchorPosition();
+                if (anchor == null) {
+                    return;
+                }
+
+                if (control.hasNonEmptySelection()) {
                     deleteSelection();
                 }
 
@@ -921,8 +939,6 @@ public class RichTextAreaBehavior {
                 String src = c.getString();
                 StyledInput in = h.getStyledInput(src);
 
-                TextPos caret = control.getCaretPosition();
-                TextPos anchor = control.getAnchorPosition();
                 // TODO ensure star<end
                 TextPos p = m.replace(vflow, caret, anchor, in);
                 control.moveCaret(p, false);
@@ -949,12 +965,18 @@ public class RichTextAreaBehavior {
     }
 
     protected void copy(boolean cut) {
-        if (control.hasSelection()) {
+        if (control.hasNonEmptySelection()) {
             StyledTextModel m = control.getModel();
             DataFormat[] fs = m.getSupportedDataFormats();
             if (fs.length > 0) {
                 TextPos start = control.getAnchorPosition();
+                if (start == null) {
+                    return;
+                }
                 TextPos end = control.getCaretPosition();
+                if (end == null) {
+                    return;
+                }
                 if (start.compareTo(end) > 0) {
                     TextPos p = start;
                     start = end;

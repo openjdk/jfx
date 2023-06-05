@@ -693,8 +693,11 @@ public class RichTextArea extends Control {
     public void selectEndOfNextWord() {
         execute(Cmd.SELECT_WORD_NEXT_END);
     }
-    
-    public boolean hasSelection() {
+
+    /**
+     * Returns true if a non-empty selection exists.
+     */
+    public boolean hasNonEmptySelection() {
         TextPos ca = getCaretPosition();
         if (ca != null) {
             TextPos an = getAnchorPosition();
@@ -741,7 +744,7 @@ public class RichTextArea extends Control {
             return StyleInfo.NONE;
         }
 
-        if (hasSelection()) {
+        if (hasNonEmptySelection()) {
             TextPos an = getAnchorPosition();
             if (pos.compareTo(an) > 0) {
                 pos = an;

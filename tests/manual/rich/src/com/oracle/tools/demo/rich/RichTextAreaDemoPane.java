@@ -334,7 +334,7 @@ public class RichTextAreaDemoPane extends BorderPane {
     }
 
     protected void populatePopupMenu(ObservableList<MenuItem> items) {
-        boolean sel = control.hasSelection();
+        boolean sel = control.hasNonEmptySelection();
         boolean paste = true; // would be easier with Actions (findFormatForPaste() != null);
         boolean styled = (control.getModel() instanceof EditableRichTextModel);
 
@@ -371,8 +371,6 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         if (styled) {
             StyleAttrs a = control.getActiveStyleAttrs();
-            System.err.println(a); // FIX
-
             items.add(new SeparatorMenuItem());
 
             items.add(m = new MenuItem("Bold"));
