@@ -58,6 +58,7 @@ public final class TextPos implements Comparable<TextPos> {
         return offset;
     }
 
+    /** returns the character index index */
     public int charIndex() {
         return charIndex;
     }
@@ -71,7 +72,11 @@ public final class TextPos implements Comparable<TextPos> {
         if (x == this) {
             return true;
         } else if (x instanceof TextPos p) {
-            return (index == p.index) && (offset == p.offset) && (leading == p.leading);
+            return
+                (index == p.index) &&
+                (charIndex == p.charIndex) &&
+                (offset == p.offset) &&
+                (leading == p.leading);
         }
         return false;
     }
@@ -80,6 +85,7 @@ public final class TextPos implements Comparable<TextPos> {
     public int hashCode() {
         int h = TextPos.class.hashCode();
         h = 31 * h + index;
+        h = 31 * h + charIndex;
         h = 31 * h + offset;
         h = 31 * h + (leading ? 1 : 0);
         return h;
@@ -114,7 +120,13 @@ public final class TextPos implements Comparable<TextPos> {
     }
 
     public String toString() {
-        return "TextPos{" + index + "," + offset + (leading ? ",leading" : ",trailing") + "}";
+        return
+            "TextPos{" +
+            "ix=" + index +
+            ", off=" + offset +
+            ", cix=" + charIndex +
+            (leading ? ", leading" : ", trailing") +
+            "}";
     }
 
     /** returns true if the insertion point is the same. */

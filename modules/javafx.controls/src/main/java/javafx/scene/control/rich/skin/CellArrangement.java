@@ -45,8 +45,9 @@ import com.sun.javafx.scene.control.rich.RichUtils;
 import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
- * Manages TextCells in the visible area, surrounded by a number of cells before and after the visible area,
- * for the purposes of layout, estimating the average paragraph height, and relative navigation.
+ * Manages TextCells in a sliding window, comprised of the visible area and some number of screenfuls
+ * before and after the visible area, for the purposes of layout.
+ * The purpose is to estimating the average paragraph height, and to support relative navigation.
  */
 public class CellArrangement {
     private final ArrayList<TextCell> cells = new ArrayList<>(64);
@@ -136,7 +137,6 @@ public class CellArrangement {
             if (y < 0) {
                 return new TextPos(cell.getIndex(), 0, 0, true);
             } else if (y < cell.getHeight()) {
-                // TODO move this to TextCell?
                 if (r instanceof TextFlow t) {
                     double x = cellX - pad.getLeft();
                     Point2D p = new Point2D(x, y);
@@ -144,6 +144,7 @@ public class CellArrangement {
                     int ii = h.getInsertionIndex();
                     int ci = h.getCharIndex();
                     boolean leading = h.isLeading();
+                    //System.out.println("CellArrangmenet.getTextPos ix=" + ii + " ci=" + ci + " leading=" + leading); // FIX
                     return new TextPos(cell.getIndex(), ii, ci, leading);
                 } else {
                     return new TextPos(cell.getIndex(), 0, 0, true);
@@ -162,30 +163,30 @@ public class CellArrangement {
     /** returns the cell contained in this layout, or null */
     public TextCell getCell(int modelIndex) {
         int ix = modelIndex - origin.index();
-        if(ix < 0) {
-            if((ix + topCount()) >= 0) {
+        if (ix < 0) {
+            if ((ix + topCount()) >= 0) {
                 // cells in the top part come after bottom part, and in reverse order
                 return cells.get(bottomCount - ix - 1);
             }
-        } else if(ix < bottomCount) {
+        } else if (ix < bottomCount) {
             // cells in the normal (bottom) part
             return cells.get(ix);
         }
         return null;
     }
-    
+
     /** returns a visible cell, or null */
     public TextCell getVisibleCell(int modelIndex) {
         int ix = modelIndex - origin.index();
-        if((ix >= 0) && (ix < visibleCount)) {
+        if ((ix >= 0) && (ix < visibleCount)) {
             return cells.get(ix);
         }
         return null;
     }
-    
+
     /** returns a TextCell from the visible or bottom margin parts, or null */
     public TextCell getCellAt(int ix) {
-        if(ix < visibleCount) {
+        if (ix < visibleCount) {
             return cells.get(ix);
         }
         return null;
@@ -271,25 +272,25 @@ public class CellArrangement {
         }
         return low;
     }
-    
+
     private int compare(TextCell cell, double localY) {
         double y = cell.getY();
-        if(localY < y) {
+        if (localY < y) {
             return 1;
-        } else if(localY >= y + cell.getHeight()) {
-            if(cell.getIndex() == (lineCount - 1)) {
+        } else if (localY >= y + cell.getHeight()) {
+            if (cell.getIndex() == (lineCount - 1)) {
                 return 0;
             }
             return -1;
         }
         return 0;
     }
-    
+
     /** returns a model index of the first cell in the sliding window top margin */
     public int topIndex() {
         return origin.index() - topCount();
     }
-    
+
     /** returns a model index of the last cell in the sliding window bottom margin + 1 */
     public int bottomIndex() {
         return origin.index() + bottomCount;
@@ -306,7 +307,7 @@ public class CellArrangement {
             double btm = btmIx / (double)lineCount;
             double f = (pos - top) / (btm - top); // TODO check for dvi0/infinity/NaN
             double localY = f * (topHeight + bottomHeight) - topHeight;
-            
+
             ix = binarySearch(localY, topIx, btmIx - 1);
             TextCell cell = getCell(ix);
             return new Origin(cell.getIndex(), localY - cell.getY());
