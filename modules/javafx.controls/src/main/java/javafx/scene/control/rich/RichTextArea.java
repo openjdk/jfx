@@ -739,22 +739,22 @@ public class RichTextArea extends Control {
      */
     public StyleInfo getActiveStyleInfo() {
         StyledTextModel m = getModel();
-        TextPos pos = getCaretPosition();
-        if ((m == null) || (pos == null)) {
-            return StyleInfo.NONE;
-        }
-
-        if (hasNonEmptySelection()) {
-            TextPos an = getAnchorPosition();
-            if (pos.compareTo(an) > 0) {
-                pos = an;
+        if (m != null) {
+            TextPos pos = getCaretPosition();
+            if (pos != null) {
+                if (hasNonEmptySelection()) {
+                    TextPos an = getAnchorPosition();
+                    if (pos.compareTo(an) > 0) {
+                        pos = an;
+                    }
+                } else if (!TextPos.ZERO.equals(pos)) {
+                    int ix = pos.offset() - 1;
+                    pos = new TextPos(pos.index(), ix);
+                }
+                return m.getStyleInfo(pos);
             }
-        } else if (!TextPos.ZERO.equals(pos)) {
-            int ix = pos.offset() - 1;
-            pos = new TextPos(pos.index(), ix);
         }
-
-        return m.getStyleInfo(pos);
+        return StyleInfo.NONE;
     }
 
     /**
