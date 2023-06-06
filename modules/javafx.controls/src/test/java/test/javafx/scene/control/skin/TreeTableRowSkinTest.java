@@ -25,7 +25,11 @@
 
 package test.javafx.scene.control.skin;
 
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.lang.ref.WeakReference;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -44,14 +48,11 @@ import javafx.scene.control.skin.TreeTableRowSkin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
-
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import test.util.memory.JMemoryBuddy;
 
 public class TreeTableRowSkinTest {
 
@@ -212,10 +213,12 @@ public class TreeTableRowSkinTest {
         int right = 20;
         int bottom = 30;
         int left = 40;
+        double fixed = 24;
 
         int horizontalPadding = left + right;
 
-        treeTableView.setFixedCellSize(24);
+        treeTableView.setFixedCellSize(fixed);
+        Toolkit.getToolkit().firePulse();
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
 
@@ -225,6 +228,8 @@ public class TreeTableRowSkinTest {
         double width = cell.getWidth();
 
         double minHeight = cell.minHeight(-1);
+        assertEquals(fixed, minHeight, 0);
+
         double prefHeight = cell.prefHeight(-1);
         double maxHeight = cell.maxHeight(-1);
         double height = cell.getHeight();
@@ -238,6 +243,7 @@ public class TreeTableRowSkinTest {
         treeTableView.refresh();
         Toolkit.getToolkit().firePulse();
 
+        assertNotEquals(cell, VirtualFlowTestUtils.getCell(treeTableView, 0));
         cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
 
         assertEquals(minWidth + horizontalPadding, cell.minWidth(-1), 0);
@@ -318,6 +324,36 @@ public class TreeTableRowSkinTest {
     @Test
     public void invisibleColumnsShouldRemoveCorrespondingCellsInRow() {
         invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
+    }
+
+    /** TreeTableView.refresh() must release all discarded cells JDK-8307538 */
+    @Test
+    public void cellsMustBeCollectableAfterRefresh() {
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertNotNull(row);
+        WeakReference<Object> ref = new WeakReference<>(row);
+        row = null;
+
+        treeTableView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        JMemoryBuddy.assertCollectable(ref);
+    }
+
+    /** TreeTableView.setRowFactory() must release all discarded cells JDK-8307538 */
+    @Test
+    public void cellsMustBeCollectableAfterRowFactoryChange() {
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
+        assertNotNull(row);
+        WeakReference<Object> ref = new WeakReference<>(row);
+        row = null;
+
+        treeTableView.setRowFactory((x) -> {
+            return new TreeTableRow<>();
+        });
+        Toolkit.getToolkit().firePulse();
+
+        JMemoryBuddy.assertCollectable(ref);
     }
 
     @AfterEach
