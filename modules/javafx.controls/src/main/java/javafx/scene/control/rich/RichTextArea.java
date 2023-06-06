@@ -28,6 +28,7 @@
 package javafx.scene.control.rich;
 
 import java.util.List;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -38,6 +39,8 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableObjectProperty;
@@ -129,6 +132,8 @@ public class RichTextArea extends Control {
     private ObjectProperty<Insets> contentPadding;
     private DoubleProperty lineSpacing;
     private BooleanProperty highlightCurrentLine;
+    private BooleanProperty trackContentWidth;
+    private BooleanProperty trackContentHeight;
 
     static {
         RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
@@ -596,6 +601,48 @@ public class RichTextArea extends Control {
             tabSizeProperty = new ReadOnlyIntegerWrapper(8);
         }
         return tabSizeProperty;
+    }
+
+    /**
+     * Determines whether the preferred width tracks the content width.
+     * When set to true, the horizontal scroll bar is disabled.
+     *
+     * @defaultValue false
+     */
+    public final BooleanProperty trackContentWidthProperty() {
+        if (trackContentWidth == null) {
+            trackContentWidth = new SimpleBooleanProperty();
+        }
+        return trackContentWidth;
+    }
+
+    public final boolean isTrackContentWidth() {
+        return trackContentWidth == null ? false : trackContentWidth.get();
+    }
+
+    public final void setTrackContentWidth(boolean on) {
+        trackContentWidthProperty().set(true);
+    }
+    
+    /**
+     * Determines whether the preferred height tracks the content height.
+     * When set to true, the vertical scroll bar is disabled.
+     *
+     * @defaultValue false
+     */
+    public final BooleanProperty trackContentHeightProperty() {
+        if (trackContentHeight == null) {
+            trackContentHeight = new SimpleBooleanProperty();
+        }
+        return trackContentHeight;
+    }
+
+    public final boolean isTrackContentHeight() {
+        return trackContentHeight == null ? false : trackContentHeight.get();
+    }
+
+    public final void setTrackContentHeight(boolean on) {
+        trackContentHeightProperty().set(true);
     }
 
     /**
