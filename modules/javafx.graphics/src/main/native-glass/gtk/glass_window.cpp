@@ -1318,9 +1318,11 @@ void WindowContextTop::set_level(int level) {
     }
 }
 
-bool WindowContextTop::set_view(jobject view) {
-    WindowContextBase::set_view(view);
+void WindowContextTop::set_owner(WindowContext * owner_ctx) {
+    owner = owner_ctx;
+}
 
+void WindowContextTop::update_view_size() {
     // Notify the view size only if size is oriented by WINDOW, otherwise
     // it knows it's own size
     if (geometry.final_width.type == BOUNDSTYPE_WINDOW
@@ -1328,12 +1330,6 @@ bool WindowContextTop::set_view(jobject view) {
 
         notify_view_resize();
     }
-
-    return true;
-}
-
-void WindowContextTop::set_owner(WindowContext * owner_ctx) {
-    owner = owner_ctx;
 }
 
 void WindowContextTop::notify_view_resize() {

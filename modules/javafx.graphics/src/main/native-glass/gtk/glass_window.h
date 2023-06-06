@@ -145,6 +145,7 @@ public:
 
     virtual void notify_state(jint) = 0;
     virtual void notify_on_top(bool) {}
+    virtual void update_view_size() = 0;
     virtual void notify_view_resize() = 0;
 
     virtual void add_child(WindowContextTop* child) = 0;
@@ -303,12 +304,12 @@ public:
     void set_level(int);
     void set_visible(bool);
     void notify_on_top(bool);
+    void update_view_size();
     void notify_view_resize();
 
     void enter_fullscreen();
     void exit_fullscreen();
 
-    bool set_view(jobject view);
     void set_owner(WindowContext*);
 
     GtkWindow *get_gtk_window();
