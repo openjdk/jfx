@@ -49,15 +49,9 @@ void ThrowJavaException(JNIEnv *env, const char* type, const char* message)
     }
     if (!klass) {
         klass = env->FindClass("java/lang/Exception");
-        if (env->ExceptionCheck() || klass != NULL) {
+        if (env->ExceptionCheck() || klass == NULL) {
             env->ExceptionClear();
             return; // This shouldn't happen...
-        }
-        if (!klass) {
-            if (env->ExceptionCheck()) {
-                env->ExceptionClear();
-            }
-
         }
     }
     env->ThrowNew(klass, message);

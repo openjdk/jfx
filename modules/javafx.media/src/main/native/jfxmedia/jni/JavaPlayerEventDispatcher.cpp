@@ -194,9 +194,8 @@ void CJavaPlayerEventDispatcher::Warning(int warningCode, const char* warningMes
                     pEnv->CallVoidMethod(localPlayer, m_SendWarningMethod,
                                  (jint)warningCode, jmessage);
                     jenv.reportException();
+                    pEnv->DeleteLocalRef(jmessage);
                 }
-
-                pEnv->DeleteLocalRef(jmessage);
             }
 
             pEnv->DeleteLocalRef(localPlayer);
