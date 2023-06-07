@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -1522,6 +1523,105 @@ assertEquals(0, firstCell.getIndex());
         // After resizing, top-cell must still have index 3
         assertEquals(3, firstCell.getIndex());
         assertEquals(-10, firstCell.getLayoutY(),1);
+    }
+
+    @Test
+    public void testComputeHeightShouldNotBeCalledWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim();
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinHeight(double width) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                fail();
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(300, 300);
+
+        pulse();
+        pulse();
+
+        for (int i = 0; i < 10; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = i * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+        }
+
+        flow.scrollPixels(cellSize * 10);
+
+        for (int i = 10; i < 20; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = (i - 10) * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+        }
+    }
+
+    @Test
+    public void testComputeWidthShouldNotBeCalledWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim();
+        flow.setVertical(false);
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinWidth(double height) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxWidth(double height) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefWidth(double height) {
+                fail();
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(300, 300);
+
+        pulse();
+        pulse();
+
+        for (int i = 0; i < 10; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = i * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+        }
+
+        flow.scrollPixels(cellSize * 10);
+
+        for (int i = 10; i < 20; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = (i - 10) * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+        }
     }
 }
 
