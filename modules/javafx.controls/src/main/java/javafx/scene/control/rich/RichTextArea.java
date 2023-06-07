@@ -55,11 +55,13 @@ import javafx.geometry.Point2D;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Control;
+import javafx.scene.control.TextField;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
+import javafx.scene.control.rich.util.FunctionTag;
 import javafx.scene.control.rich.util.InputMap;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
@@ -69,17 +71,14 @@ import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
- * Styled Text Area.
- * 
- * TODO fit height property
- * TODO fit width property
- * TODO highlight current line property
- * 
- * TODO add methods corresponding to the remaining Action tags
+ * Text input component that allows a user to enter multiple lines of rich text.
  */
+// TODO fit height property
+// TODO fit width property
+// TODO add methods corresponding to the remaining function tags
 public class RichTextArea extends Control {
     /** command tags */
-    public enum Cmd {
+    public enum Cmd implements FunctionTag {
         BACKSPACE,
         COPY,
         CUT,
@@ -184,8 +183,18 @@ public class RichTextArea extends Control {
         }
     }
 
+    // TODO move to Control
+    // TODO rename getKeyMap() ?
     public final InputMap getInputMap() {
         return inputMap;
+    }
+
+    // TODO move to Control
+    protected void execute(FunctionTag a) {
+        Runnable f = inputMap.getFunction(a);
+        if (f != null) {
+            f.run();
+        }
     }
 
     @Override
@@ -562,13 +571,6 @@ public class RichTextArea extends Control {
     
     private RichTextAreaSkin richTextAreaSkin() {
         return (RichTextAreaSkin)getSkin();
-    }
-
-    private void execute(Cmd a) {
-        Runnable f = inputMap.getFunction(a);
-        if (f != null) {
-            f.run();
-        }
     }
 
     /**

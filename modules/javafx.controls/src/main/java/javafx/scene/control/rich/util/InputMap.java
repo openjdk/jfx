@@ -27,9 +27,9 @@ package javafx.scene.control.rich.util;
 
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
@@ -47,13 +47,12 @@ import javafx.scene.input.KeyCode;
  * Skin:
  * - installs behavior mappings in Skin.install()
  * Behavior:
- * - maps key bindings to function tags
- * - maps function tags to methods in the behavior
+ * - maps key bindings to FunctionTags
+ * - maps FunctionTags to methods in the behavior
  */
 // TODO move to public pkg (which one?) javafx.incubator.scene.control.input
+// TODO this can be renamed to KeyMap
 public class InputMap {
-    private static final Object NULL = new Object();
-
     /** contains user- and skin-set key binding or function mappings */
     private static class Entry {
         Object userValue;
@@ -70,9 +69,10 @@ public class InputMap {
         }
     }
 
-    // KeyBinding -> Entry with functionTag(Object)
-    // functionTag(Object) -> Entry with Runnable
+    // KeyBinding -> Entry with value=FunctionTag
+    // FunctionTag -> Entry with value=Runnable
     private final HashMap<Object,Entry> map = new HashMap<>();
+    private static final Object NULL = new Object();
 
     public InputMap() {
     }
@@ -81,7 +81,7 @@ public class InputMap {
      * Adds a user-specified function under the given function tag.
      * This function will override any function set by the skin.
      */
-    public void func(Object tag, Runnable function) {
+    public void func(FunctionTag tag, Runnable function) {
         validateTag(tag);
         Objects.requireNonNull(function, "function must not be null");
         addFunction(tag, function, null);
@@ -95,7 +95,7 @@ public class InputMap {
      * @param tag
      * @param function
      */
-    public void func(Skin<?> skin, Object tag, Runnable function) {
+    public void func(Skin<?> skin, FunctionTag tag, Runnable function) {
         Objects.requireNonNull(skin, "skin must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
@@ -109,7 +109,7 @@ public class InputMap {
      * @param k
      * @param tag
      */
-    public void key(KeyBinding k, Object tag) {
+    public void key(KeyBinding k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
         addBinding(k, tag, null);
@@ -124,7 +124,7 @@ public class InputMap {
      * @param k key binding, can be null
      * @param tag function tag
      */
-    public void key(Skin<?> skin, KeyBinding k, Object tag) {
+    public void key(Skin<?> skin, KeyBinding k, FunctionTag tag) {
         if (k == null) {
             return;
         }
@@ -141,11 +141,11 @@ public class InputMap {
      * @param code key code to construct a {@link KeyBinding}
      * @param tag function tag
      */
-    public void key(Skin<?> skin, KeyCode code, Object tag) {
+    public void key(Skin<?> skin, KeyCode code, FunctionTag tag) {
         key(skin, KeyBinding.of(code), tag);
     }
 
-    private void addFunction(Object tag, Runnable function, Skin<?> skin) {
+    private void addFunction(FunctionTag tag, Runnable function, Skin<?> skin) {
         Entry en = map.get(tag);
         if (en == null) {
             en = new Entry();
@@ -162,7 +162,7 @@ public class InputMap {
         }
     }
 
-    private void addBinding(KeyBinding k, Object tag, Skin<?> skin) {
+    private void addBinding(KeyBinding k, FunctionTag tag, Skin<?> skin) {
         Entry en = map.get(k);
         if (en == null) {
             en = new Entry();
@@ -180,26 +180,32 @@ public class InputMap {
     }
 
     /**
-     * Returns a Runnable function object (or null) for the given function tag or KeyBinding.
+     * Returns a {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
      *
-     * @param k function tag {@code Object} or {@link KeyBinding}
+     * @param tag
      */
-    public Runnable getFunction(Object k) {
-        Entry en = map.get(k);
+    public Runnable getFunction(FunctionTag tag) {
+        Entry en = map.get(tag);
         if (en != null) {
             Object v = en.getValue();
             if (v instanceof Runnable r) {
-                // it's a function
                 return r;
-            } else if (v != null) {
-                // try as an action tag
-                en = map.get(v);
-                if (en != null) {
-                    Object f = en.getValue();
-                    if (f instanceof Runnable r) {
-                        return r;
-                    }
-                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding}, or null if no such mapping exists.
+     *
+     * @param k
+     */
+    public Runnable getFunction(KeyBinding k) {
+        Entry en = map.get(k);
+        if (en != null) {
+            Object v = en.getValue();
+            if (v instanceof FunctionTag tag) {
+                return getFunction(tag);
             }
         }
         return null;
@@ -268,7 +274,7 @@ public class InputMap {
      *
      * @param tag
      */
-    public void restoreDefaultFunction(Object tag) {
+    public void restoreDefaultFunction(FunctionTag tag) {
         validateTag(tag);
         Entry en = map.get(tag);
         if (en != null) {
@@ -279,27 +285,25 @@ public class InputMap {
         }
     }
 
-    private static void validateTag(Object tag) {
+    private static void validateTag(FunctionTag tag) {
         if (tag instanceof KeyBinding) {
             // prevent common misuse
-            throw new IllegalArgumentException("use register() method to register a KeyBinding");
+            throw new IllegalArgumentException("use key() method to register a KeyBinding");
         } else if (tag instanceof Runnable) {
             throw new IllegalArgumentException("function tag cannot be a Runnable");
         }
-        Objects.requireNonNull(tag, "tag must not be null");
+        Objects.requireNonNull(tag, "function tag must not be null");
     }
 
     /**
-     * List key bindings (set either by the user or the skin).
+     * Collects all mapped key bindings (set either by the user or the skin).
      *
-     * @return a List of KeyBindings TODO or Set?
+     * @return a Set of KeyBindings
      */
-    public List<KeyBinding> listKeyBindings() {
-        return map.
-            keySet().
-            stream().
+    public Set<KeyBinding> getKeyBindings() {
+        return map.keySet().stream().
             filter((k) -> (k instanceof KeyBinding)).
             map((x) -> (KeyBinding)x).
-            collect(Collectors.toList());
+            collect(Collectors.toSet());
     }
 }
