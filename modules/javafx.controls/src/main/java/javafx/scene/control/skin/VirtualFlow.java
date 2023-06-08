@@ -3062,7 +3062,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 doRelease = true;
             }
 
-            // if we have a valid cell, we can populate the cache
             answer = getCellLength(cell);
             itemSizeCache.set(idx, answer);
 
