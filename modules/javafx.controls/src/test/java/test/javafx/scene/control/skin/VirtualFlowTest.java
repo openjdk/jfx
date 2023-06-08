@@ -33,6 +33,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -1527,9 +1528,10 @@ assertEquals(0, firstCell.getIndex());
 
     /**
      * The VirtualFlow should never call the compute height methods when a fixed cell size is set.
+     * If it is called the height will be wrong for some cells.
      */
     @Test
-    public void testComputeHeightShouldNotBeCalledWhenFixedCellSizeIsSet() {
+    public void testComputeHeightShouldNotBeUsedWhenFixedCellSizeIsSet() {
         int cellSize = 24;
 
         flow = new VirtualFlowShim<>();
@@ -1582,9 +1584,10 @@ assertEquals(0, firstCell.getIndex());
 
     /**
      * The VirtualFlow should never call the compute width methods when a fixed cell size is set.
+     * If it is called the width will be wrong for some cells.
      */
     @Test
-    public void testComputeWidthShouldNotBeCalledWhenFixedCellSizeIsSet() {
+    public void testComputeWidthShouldNotBeUsedWhenFixedCellSizeIsSet() {
         int cellSize = 24;
 
         flow = new VirtualFlowShim<>();
@@ -1634,6 +1637,81 @@ assertEquals(0, firstCell.getIndex());
 
             assertNotEquals(cellSize, cell.getHeight(), 0d);
         }
+    }
+
+    /**
+     * The VirtualFlow should never call the compute height methods when a fixed cell size is set.
+     */
+    @Test
+    public void testComputeHeightShouldNotBeCalledWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinHeight(double width) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                fail();
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(cellSize * 10, cellSize * 10);
+
+        // Trigger layout and see if the computeXXX method are called above.
+        pulse();
+        pulse();
+    }
+
+    /**
+     * The VirtualFlow should never call the compute width methods when a fixed cell size is set.
+     */
+    @Test
+    public void testComputeWidthShouldNotBeCalledWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(false);
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinWidth(double height) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxWidth(double height) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefWidth(double height) {
+                fail();
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(cellSize * 10, cellSize * 10);
+
+        // Trigger layout and see if the computeXXX method are called above.
+        pulse();
+        pulse();
     }
 }
 
