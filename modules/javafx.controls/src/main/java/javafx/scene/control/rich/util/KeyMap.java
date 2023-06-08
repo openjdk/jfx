@@ -35,15 +35,14 @@ import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 
 /**
- * Input Map maps KeyBindings to function tags (any object except KeyBinding or Runnable),
+ * This class maps KeyBindings to function tags,
  * followed by mapping from tags to the actual Runnable function.
  *  
  * Example:
  *  
  * Control:
  * - declares function tags (any object, typically an enum)
- * - declares public methods that execute using function id, which in turn find and execute corresponding function
- * - might declare public FxActions (ex.: copyAction which delegate to action id)
+ * - declares public methods that invoke mapped functions via the corresponding function tag
  * Skin:
  * - installs behavior mappings in Skin.install()
  * Behavior:
@@ -51,8 +50,7 @@ import javafx.scene.input.KeyCode;
  * - maps FunctionTags to methods in the behavior
  */
 // TODO move to public pkg (which one?) javafx.incubator.scene.control.input
-// TODO this can be renamed to KeyMap
-public class InputMap {
+public class KeyMap {
     /** contains user- and skin-set key binding or function mappings */
     private static class Entry {
         Object userValue;
@@ -74,7 +72,7 @@ public class InputMap {
     private final HashMap<Object,Entry> map = new HashMap<>();
     private static final Object NULL = new Object();
 
-    public InputMap() {
+    public KeyMap() {
     }
 
     /**
@@ -89,7 +87,7 @@ public class InputMap {
 
     /**
      * Maps a function to the function tag, for use by the skin.
-     * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
+     * This method will not override any previous mapping added by {@link #func(Object,Runnable)}.
      *
      * @param skin
      * @param tag
@@ -118,7 +116,7 @@ public class InputMap {
     /**
      * Maps a key binding to the specified function tag, for use by the skin.
      * A null key binding will result in no change to this input map.
-     * This method will not override a user mapping added by {@link #key(KeyBinding,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #key(KeyBinding,Object)}.
      *
      * @param skin
      * @param k key binding, can be null
@@ -135,7 +133,7 @@ public class InputMap {
 
     /**
      * Maps a key binding to the specified function tag, for use by the skin.
-     * This method will not override a user mapping added by {@link #key(KeyBinding,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #key(KeyBinding,Object)}.
      * 
      * @param skin
      * @param code key code to construct a {@link KeyBinding}

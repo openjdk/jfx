@@ -59,7 +59,7 @@ import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.rich.util.FunctionTag;
-import javafx.scene.control.rich.util.InputMap;
+import javafx.scene.control.rich.util.KeyMap;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.rich.Params;
@@ -115,7 +115,7 @@ public class RichTextArea extends Control {
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
     private final ConfigurationParameters config;
-    private final InputMap inputMap = new InputMap();
+    private final KeyMap inputMap = new KeyMap();
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
     private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
@@ -179,13 +179,12 @@ public class RichTextArea extends Control {
     }
 
     // TODO move to Control
-    // TODO rename getKeyMap() ?
-    public final InputMap getInputMap() {
+    public final KeyMap getKeyMap() {
         return inputMap;
     }
 
     // TODO move to Control
-    protected void execute(FunctionTag a) {
+    protected final void execute(FunctionTag a) {
         Runnable f = inputMap.getFunction(a);
         if (f != null) {
             f.run();

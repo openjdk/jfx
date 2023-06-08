@@ -26,7 +26,7 @@
 package javafx.scene.control.rich.util;
 
 /**
- * A marker interface indicating a function tag in the context of {@link InputMap}.
+ * A marker interface indicating a function tag in the context of {@link KeyMap}.
  * A class implementing this interface must be neither {@link KeyBinding} nor {@link Runnable}.
  */
 public interface FunctionTag {
