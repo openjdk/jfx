@@ -814,6 +814,7 @@ public class VFlow extends Pane implements StyleResolver {
         double leftSide = computeSideWidth(leftDecorator);
         double rightSide = computeSideWidth(rightDecorator);
 
+        // TODO do it after, once height is know when track content height is on
         if (leftDecorator == null) {
             leftGutter.setVisible(false);
         } else {
@@ -833,7 +834,7 @@ public class VFlow extends Pane implements StyleResolver {
         int paragraphCount = getParagraphCount();
         int tabSize = control.getTabSize();
         lineSpacing = control.getLineSpacing();
-        boolean wrap = control.isWrapText();
+        boolean wrap = control.isWrapText() && !control.isTrackContentWidth();
         double forWidth;
         double maxWidth;
         if (wrap) {
@@ -1020,7 +1021,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     protected void placeNodes() {
-        boolean wrap = control.isWrapText();
+        boolean wrap = control.isWrapText() && !control.isTrackContentWidth();
         double w = wrap ? getContentWidth() : MAX_WIDTH_FOR_LAYOUT;
         double x = snapPositionX(-getOffsetX());
 
@@ -1242,6 +1243,43 @@ public class VFlow extends Pane implements StyleResolver {
             return n.snapshot(null, null);
         } finally {
             getChildren().remove(n);
+        }
+    }
+
+    public void handleTrackContentHeight() {
+        // TODO probably unnecessary due to binding
+        //boolean on = control.isTrackContentHeight();
+        requestLayout();
+    }
+
+    public void handleTrackContentWidth() {
+        // TODO probably unnecessary due to binding
+        //boolean on = control.isTrackContentWidth();
+        requestLayout();
+    }
+
+    @Override
+    protected double computePrefHeight(double width) {
+        boolean on = control.isTrackContentHeight();
+        if (on) {
+            // TODO if arrangement.width != width -> reflow()
+            layoutChildren();
+            // FIX this assumes a specific height
+            return arrangement.bottomHeight();
+        } else {
+            return super.computePrefHeight(width);
+        }
+    }
+
+    @Override
+    protected double computePrefWidth(double height) {
+        boolean on = control.isTrackContentWidth();
+        if (on) {
+            // TODO if arrangement.height != height -> reflow()
+            layoutChildren();
+            return arrangement.getUnwrappedWidth();
+        } else {
+            return super.computePrefWidth(height);
         }
     }
 }

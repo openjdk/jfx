@@ -73,8 +73,6 @@ import com.sun.javafx.scene.control.rich.VFlow;
 /**
  * Text input component that allows a user to enter multiple lines of rich text.
  */
-// TODO fit height property
-// TODO fit width property
 // TODO add methods corresponding to the remaining function tags
 public class RichTextArea extends Control {
     /** command tags */

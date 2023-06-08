@@ -42,6 +42,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.rich.RichTextArea;
@@ -52,6 +54,7 @@ import javafx.scene.control.rich.model.StyleAttribute;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.LineNumberDecorator;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -75,9 +78,12 @@ public class RichTextAreaDemoPane extends BorderPane {
     public final RichTextArea control;
     public final ComboBox<ModelChoice> modelField;
 
-    public RichTextAreaDemoPane(StyledTextModel m) {
+    public RichTextAreaDemoPane(boolean trackSize) {
         FX.name(this, "RichTextAreaDemoPane");
+
         control = new RichTextArea();
+        control.setTrackContentHeight(trackSize);
+        control.setTrackContentWidth(trackSize);
 
         SplitPane hsplit = new SplitPane(control, pane());
         FX.name(hsplit, "hsplit");
@@ -209,6 +215,14 @@ public class RichTextAreaDemoPane extends BorderPane {
             control.setRightDecorator(createDecorator(v));
         });
         
+        CheckBox trackWidth = new CheckBox("track width");
+        FX.name(trackWidth, "trackWidth");
+        trackWidth.selectedProperty().bindBidirectional(control.trackContentWidthProperty());
+        
+        CheckBox trackHeight = new CheckBox("track height");
+        FX.name(trackHeight, "trackHeight");
+        trackHeight.selectedProperty().bindBidirectional(control.trackContentHeightProperty());
+        
         op = new ROptionPane();
         op.label("Model:");
         op.option(modelField);
@@ -229,8 +243,19 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.option(rightDecorator);
         op.label("Line Spacing:");
         op.option(lineSpacing);
-        
-        setCenter(vsplit);
+        op.option(trackWidth);
+        op.option(trackHeight);
+
+        if (trackSize) {
+            ScrollPane sp = new ScrollPane(control);
+            sp.setHbarPolicy(ScrollBarPolicy.AS_NEEDED);
+            sp.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
+            sp.setBackground(Background.fill(Color.DARKGRAY));
+            sp.setOpacity(1.0);
+            setCenter(sp);
+        } else {
+            setCenter(vsplit);
+        }
         setRight(op);
 
         modelField.getSelectionModel().selectFirst();
@@ -241,14 +266,10 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         Platform.runLater(() -> {
             // all this to make sure restore settings works correctly with second window loading the same model
-            if (m == null) {
-                if (globalModel == null) {
-                    globalModel = createModel();
-                }
-                control.setModel(globalModel);
-            } else {
-                control.setModel(m);
+            if (globalModel == null) {
+                globalModel = createModel();
             }
+            control.setModel(globalModel);
 
             modelField.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
                 updateModel();

@@ -28,6 +28,7 @@
 package javafx.scene.control.rich.skin;
 
 import java.util.function.Supplier;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
@@ -87,7 +88,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         vscroll.setMax(1.0);
         vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         vscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
-        
+        vscroll.visibleProperty().bind(Bindings.createBooleanBinding(() -> {
+                return !control.isTrackContentHeight();
+            },
+            control.trackContentHeightProperty()
+        ));
+
         hscroll = createHScrollBar();
         hscroll.setOrientation(Orientation.HORIZONTAL);
         hscroll.setManaged(true);
@@ -95,14 +101,19 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         hscroll.setMax(1.0);
         hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         hscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
-        hscroll.visibleProperty().bind(control.wrapTextProperty().not());
-
+        hscroll.visibleProperty().bind(Bindings.createBooleanBinding(() -> {
+                return !control.isWrapText() && !control.isTrackContentWidth();
+            },
+            control.wrapTextProperty(),
+            control.trackContentWidthProperty()
+        ));
         vflow = new VFlow(this, config, vscroll, hscroll);
         vflow.addListeners(listenerHelper);
 
         // TODO corner? only when both scroll bars are visible
 
         getChildren().addAll(new Pane(vflow, vscroll, hscroll) {
+            @Override
             protected void layoutChildren() {
                 double x0 = snappedLeftInset();
                 double y0 = snappedTopInset();
@@ -140,6 +151,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             control.leftDecoratorProperty(),
             control.rightDecoratorProperty()
         );
+        listenerHelper.addInvalidationListener(vflow::handleTrackContentHeight, true, control.trackContentHeightProperty());
+        listenerHelper.addInvalidationListener(vflow::handleTrackContentWidth, true, control.trackContentWidthProperty());
         listenerHelper.addInvalidationListener(vflow::handleVerticalScroll, vscroll.valueProperty());
         listenerHelper.addInvalidationListener(vflow::handleHorizontalScroll, hscroll.valueProperty());
     }

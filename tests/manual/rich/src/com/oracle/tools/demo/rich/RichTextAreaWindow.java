@@ -42,12 +42,13 @@ public class RichTextAreaWindow extends Stage {
     public final RichTextAreaDemoPane demoPane;
     public final Label status;
     
-    public RichTextAreaWindow() {
-        demoPane = new RichTextAreaDemoPane(null);
+    public RichTextAreaWindow(boolean trackSize) {
+        demoPane = new RichTextAreaDemoPane(trackSize);
         
         MenuBar mb = new MenuBar();
         FX.menu(mb, "File");
-        FX.item(mb, "New Window", this::newWindow);
+        FX.item(mb, "New Window", () -> newWindow(false));
+        FX.item(mb, "New Window, Track Size", () -> newWindow(true));
         FX.separator(mb);
         FX.item(mb, "Close Window", this::hide);
         FX.separator(mb);
@@ -95,10 +96,10 @@ public class RichTextAreaWindow extends Stage {
         status.setText(sb.toString());
     }
 
-    protected void newWindow() {
+    protected void newWindow(boolean trackSize) {
         double offset = 20;
-        
-        RichTextAreaWindow w = new RichTextAreaWindow();
+
+        RichTextAreaWindow w = new RichTextAreaWindow(trackSize);
         w.setX(getX() + offset);
         w.setY(getY() + offset);
         w.setWidth(getWidth());
