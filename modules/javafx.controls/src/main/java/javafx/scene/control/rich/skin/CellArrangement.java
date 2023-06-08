@@ -74,6 +74,7 @@ public class CellArrangement {
         this.contentPadding = f.contentPadding();
     }
 
+    // TODO not called right now, use it to skip reflow when not necessary
     public boolean isValid(VFlow f) {
         return
             (f.getWidth() == flowWidth) &&

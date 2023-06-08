@@ -97,6 +97,8 @@ public class VFlow extends Pane implements StyleResolver {
     private double bottomPadding;
     private double leftPadding;
     private double rightPadding;
+    private double leftSide;
+    private double rightSide;
     private double lineSpacing;
     private boolean inReflow;
     private static final Text measurer = makeMeasurer();
@@ -805,36 +807,19 @@ public class VFlow extends Pane implements StyleResolver {
             return;
         }
 
-        double width = getWidth();
-        double height = getHeight();
-
         // sides
         SideDecorator leftDecorator = control.getLeftDecorator();
         SideDecorator rightDecorator = control.getRightDecorator();
-        double leftSide = computeSideWidth(leftDecorator);
-        double rightSide = computeSideWidth(rightDecorator);
-
-        // TODO do it after, once height is know when track content height is on
-        if (leftDecorator == null) {
-            leftGutter.setVisible(false);
-        } else {
-            leftGutter.setVisible(true);
-            layoutInArea(leftGutter, 0.0, 0.0, leftSide, height, 0.0, HPos.CENTER, VPos.CENTER);
-        }
-        
-        if (rightGutter == null) {
-            rightGutter.setVisible(false);
-        } else {
-            rightGutter.setVisible(true);
-            layoutInArea(rightGutter, width - rightSide, 0.0, rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
-        }
-        
-        layoutInArea(content, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
+        leftSide = computeSideWidth(leftDecorator);
+        rightSide = computeSideWidth(rightDecorator);
 
         int paragraphCount = getParagraphCount();
         int tabSize = control.getTabSize();
         lineSpacing = control.getLineSpacing();
-        boolean wrap = control.isWrapText() && !control.isTrackContentWidth();
+
+        boolean trackHeight = control.isTrackContentHeight();
+        boolean trackWidth = control.isTrackContentWidth();
+        boolean wrap = control.isWrapText() && !trackWidth;
         double forWidth;
         double maxWidth;
         if (wrap) {
@@ -844,6 +829,9 @@ public class VFlow extends Pane implements StyleResolver {
             forWidth = -1.0;
             maxWidth = MAX_WIDTH_FOR_LAYOUT;
         }
+
+        double width = getWidth();
+        double height = trackHeight ? 0.0 : getHeight();
 
         double ytop = snapPositionY(-getOrigin().offset());
         double y = ytop;
@@ -891,21 +879,25 @@ public class VFlow extends Pane implements StyleResolver {
             y = snapPositionY(y + h);
             count++;
 
-            // stop populating the bottom part of the sliding window
-            // when exceeded both pixel and line count margins
-            if (visible) {
-                if (y > height) {
-                    topMarginCount = (int)Math.ceil(count * Params.SLIDING_WINDOW_EXTENT);
-                    bottomMarginCount = count + topMarginCount;
-                    arrangement.setVisibleCellCount(count);
-                    visible = false;
-                }
+            if(trackHeight) {
+                height = y;
             } else {
-                // remove invisible cell from layout after sizing
-                content.getChildren().remove(r);
-
-                if ((y > (height + margin)) && (count > bottomMarginCount)) {
-                    break;
+                // stop populating the bottom part of the sliding window
+                // when exceeded both pixel and line count margins
+                if (visible) {
+                    if (y > height) {
+                        topMarginCount = (int)Math.ceil(count * Params.SLIDING_WINDOW_EXTENT);
+                        bottomMarginCount = count + topMarginCount;
+                        arrangement.setVisibleCellCount(count);
+                        visible = false;
+                    }
+                } else {
+                    // remove invisible cell from layout after sizing
+                    content.getChildren().remove(r);
+    
+                    if ((y > (height + margin)) && (count > bottomMarginCount)) {
+                        break;
+                    }
                 }
             }
         }
@@ -1006,6 +998,27 @@ public class VFlow extends Pane implements StyleResolver {
         }
         
         arrangement.setTopHeight(-y);
+
+        if (trackWidth) {
+            width = unwrappedWidth + leftSide + rightSide;
+        }
+
+        // lay out gutters
+        if (leftDecorator == null) {
+            leftGutter.setVisible(false); // TODO perhaps use bindings, and rely on .isVisible() here?
+        } else {
+            leftGutter.setVisible(true);
+            layoutInArea(leftGutter, 0.0, 0.0, leftSide, height, 0.0, HPos.CENTER, VPos.CENTER);
+        }
+        
+        if (rightGutter == null) {
+            rightGutter.setVisible(false);
+        } else {
+            rightGutter.setVisible(true);
+            layoutInArea(rightGutter, width - rightSide, 0.0, rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
+        }
+        
+        layoutInArea(content, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
 
         // lay out content nodes
         placeNodes();
@@ -1249,13 +1262,13 @@ public class VFlow extends Pane implements StyleResolver {
     public void handleTrackContentHeight() {
         // TODO probably unnecessary due to binding
         //boolean on = control.isTrackContentHeight();
-        requestLayout();
+        control.requestLayout();
     }
 
     public void handleTrackContentWidth() {
         // TODO probably unnecessary due to binding
         //boolean on = control.isTrackContentWidth();
-        requestLayout();
+        control.requestLayout();
     }
 
     @Override
@@ -1264,8 +1277,7 @@ public class VFlow extends Pane implements StyleResolver {
         if (on) {
             // TODO if arrangement.width != width -> reflow()
             layoutChildren();
-            // FIX this assumes a specific height
-            return arrangement.bottomHeight();
+            return arrangement.bottomHeight() + bottomPadding;
         } else {
             return super.computePrefHeight(width);
         }
@@ -1277,7 +1289,7 @@ public class VFlow extends Pane implements StyleResolver {
         if (on) {
             // TODO if arrangement.height != height -> reflow()
             layoutChildren();
-            return arrangement.getUnwrappedWidth();
+            return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
         } else {
             return super.computePrefWidth(height);
         }

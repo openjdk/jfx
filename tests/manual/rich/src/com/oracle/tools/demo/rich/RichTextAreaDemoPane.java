@@ -40,10 +40,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.rich.RichTextArea;
@@ -56,6 +55,7 @@ import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.LineNumberDecorator;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -247,12 +247,28 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.option(trackHeight);
 
         if (trackSize) {
-            ScrollPane sp = new ScrollPane(control);
-            sp.setHbarPolicy(ScrollBarPolicy.AS_NEEDED);
-            sp.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
-            sp.setBackground(Background.fill(Color.DARKGRAY));
-            sp.setOpacity(1.0);
-            setCenter(sp);
+            GridPane gp = new GridPane();
+            gp.setBackground(Background.fill(Color.DARKGRAY));
+            gp.setOpacity(1.0);
+            GridPane.setFillHeight(control, false);
+            GridPane.setFillWidth(control, false);
+            gp.add(control, 0, 0);
+            //
+            Label t = new Label();
+            gp.add(t, 1, 0);
+            GridPane.setFillHeight(t, true);
+            GridPane.setFillWidth(t, true);
+            //
+            t = new Label();
+            gp.add(t, 0, 1);
+            GridPane.setFillHeight(t, true);
+            GridPane.setFillWidth(t, true);
+            //
+            t = new Label();
+            gp.add(t, 1, 1);
+            GridPane.setFillHeight(t, true);
+            GridPane.setFillWidth(t, true);
+            setCenter(gp);
         } else {
             setCenter(vsplit);
         }
