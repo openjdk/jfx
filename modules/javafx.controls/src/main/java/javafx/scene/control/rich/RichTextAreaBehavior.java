@@ -41,8 +41,8 @@ import javafx.scene.control.rich.model.DataFormatHandler;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
-import javafx.scene.control.rich.util.InputMap;
 import javafx.scene.control.rich.util.KeyBinding;
+import javafx.scene.control.rich.util.KeyMap;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -113,7 +113,7 @@ public class RichTextAreaBehavior {
     public void install(RichTextAreaSkin skin, ListenerHelper lh) {
         vflow = RichTextAreaSkinHelper.getVFlow(skin);
 
-        InputMap m = control.getInputMap();
+        KeyMap m = control.getKeyMap();
         // commands
         m.func(Cmd.BACKSPACE, this::backspace);
         m.func(Cmd.COPY, this::copy);
@@ -203,7 +203,7 @@ public class RichTextAreaBehavior {
     }
 
     public void dispose(RichTextAreaSkin skin) {
-        control.getInputMap().unregister(skin);
+        control.getKeyMap().unregister(skin);
     }
     
     protected boolean isRTL() {
@@ -233,7 +233,7 @@ public class RichTextAreaBehavior {
 
         KeyBinding k = KeyBinding.from(ev);
         if (k != null) {
-            Runnable r = control.getInputMap().getFunction(k);
+            Runnable r = control.getKeyMap().getFunction(k);
             if (r != null) {
                 vflow.setSuppressBlink(true);
                 r.run();
