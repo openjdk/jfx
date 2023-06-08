@@ -1602,7 +1602,7 @@ assertEquals(0, firstCell.getIndex());
             }
         });
         flow.setCellCount(100);
-        flow.resize(300, 300);
+        flow.resize(cellSize * 10, cellSize * 10);
 
         pulse();
         pulse();
