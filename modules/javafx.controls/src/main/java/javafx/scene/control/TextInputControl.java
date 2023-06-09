@@ -90,6 +90,7 @@ public abstract class TextInputControl extends Control {
         DELETE_NEXT_WORD,
         DELETE_PREVIOUS_CHAR,
         DELETE_PREVIOUS_WORD,
+        DESELECT,
         HOME,
         END,
         LEFT,

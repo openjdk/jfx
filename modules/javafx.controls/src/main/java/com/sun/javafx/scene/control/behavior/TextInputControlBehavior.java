@@ -129,12 +129,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
         inputMap = createInputMap();
 
-        // some of the mappings are only valid when the control is editable, or
-        // only on certain platforms, so we create the following predicates that filters out the mapping when the
-        // control is not in the correct state / on the correct platform
-        final Predicate<KeyEvent> validOnWindows = e -> !PlatformUtil.isWindows();
-        final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
-
         KeyMapping cancelEditMapping;
         KeyMapping fireMapping;
         KeyMapping consumeMostPressedEventsMapping;
@@ -187,25 +181,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         fireMapping.setAutoConsume(false);
         consumeMostPressedEventsMapping.setAutoConsume(false);
 
-        // windows / linux specific mappings
-        InputMap<T> nonMacOsInputMap = new InputMap<>(c);
-        nonMacOsInputMap.setInterceptor(e -> PlatformUtil.isMac());
-        nonMacOsInputMap.getMappings().addAll(
-            keyMapping(new KeyBinding(HOME).shift(), e -> selectHome()),
-            keyMapping(new KeyBinding(END).shift(), e -> selectEnd()),
-            keyMapping(new KeyBinding(LEFT).ctrl(), e -> leftWord()),
-            keyMapping(new KeyBinding(RIGHT).ctrl(), e -> rightWord()),
-            keyMapping(new KeyBinding(H).ctrl(), e -> deletePreviousChar()),
-            keyMapping(new KeyBinding(DELETE).ctrl(), e -> deleteNextWord()),
-            keyMapping(new KeyBinding(BACK_SPACE).ctrl(), e -> deletePreviousWord()),
-            keyMapping(new KeyBinding(BACK_SLASH).ctrl(), e -> c.deselect()),
-            keyMapping(new KeyBinding(Y).ctrl(), e -> redo(), validOnWindows),
-            keyMapping(new KeyBinding(Z).ctrl().shift(), e -> redo(), validOnLinux),
-            keyMapping(new KeyBinding(LEFT).ctrl().shift(), e -> selectLeftWord()),
-            keyMapping(new KeyBinding(RIGHT).ctrl().shift(), e -> selectRightWord())
-        );
-        addDefaultChildMap(inputMap, nonMacOsInputMap);
-
         addKeyPadMappings(inputMap);
 
         textInputControl.textProperty().addListener(textListener);
@@ -224,6 +199,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         m.func(s, Cmd.DELETE_NEXT_WORD, this::deleteNextWord);
         m.func(s, Cmd.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
         m.func(s, Cmd.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
+        m.func(s, Cmd.DESELECT, c::deselect); // TODO move method to behavior
         m.func(s, Cmd.HOME, c::home); // TODO move method to behavior
         m.func(s, Cmd.END, c::end); // TODO move method to behavior
         m.func(s, Cmd.LEFT, () -> nextCharacterVisually(false));
@@ -275,7 +251,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         m.key(s, KeyBinding2.shift(TAB), Cmd.TRAVERSE_PREVIOUS);
         m.key(s, KeyBinding2.with(TAB).ctrl().shift().build(), Cmd.TRAVERSE_PREVIOUS);
 
-        // macOS specific key bindings
+        // macOS key bindings
         m.key(s, KeyBinding2.with(BACK_SPACE).shortcut().forMac().build(), Cmd.DELETE_FROM_LINE_START);
         m.key(s, KeyBinding2.with(DELETE).alt().forMac().build(), Cmd.DELETE_NEXT_WORD);
         m.key(s, KeyBinding2.with(BACK_SPACE).alt().forMac().build(), Cmd.DELETE_PREVIOUS_WORD);
@@ -291,6 +267,24 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         m.key(s, KeyBinding2.with(END).shift().forMac().build(), Cmd.SELECT_END_EXTEND);
         m.key(s, KeyBinding2.with(LEFT).shift().alt().forMac().build(), Cmd.SELECT_LEFT_WORD);
         m.key(s, KeyBinding2.with(RIGHT).shift().alt().forMac().build(), Cmd.SELECT_RIGHT_WORD);
+
+        // windows key bindings
+        m.key(s, KeyBinding2.with(Y).ctrl().forWindows().build(), Cmd.REDO);
+
+        // linux key bindings
+        m.key(s, KeyBinding2.with(Z).ctrl().shift().forLinux().build(), Cmd.REDO);
+
+        // not-mac key bindings
+        m.key(s, KeyBinding2.with(DELETE).ctrl().notForMac().build(), Cmd.DELETE_NEXT_WORD);
+        m.key(s, KeyBinding2.with(H).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_CHAR);
+        m.key(s, KeyBinding2.with(BACK_SPACE).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_WORD);
+        m.key(s, KeyBinding2.with(BACK_SLASH).ctrl().notForMac().build(), Cmd.DESELECT);
+        m.key(s, KeyBinding2.with(LEFT).ctrl().notForMac().build(), Cmd.LEFT_WORD);
+        m.key(s, KeyBinding2.with(RIGHT).ctrl().notForMac().build(), Cmd.RIGHT_WORD);
+        m.key(s, KeyBinding2.with(HOME).shift().notForMac().build(), Cmd.SELECT_HOME);
+        m.key(s, KeyBinding2.with(END).shift().notForMac().build(), Cmd.SELECT_END);
+        m.key(s, KeyBinding2.with(LEFT).ctrl().shift().notForMac().build(), Cmd.SELECT_LEFT_WORD);
+        m.key(s, KeyBinding2.with(RIGHT).ctrl().shift().notForMac().build(), Cmd.SELECT_RIGHT_WORD);
     }
 
     public void uninstall(TextInputControlSkin<?> s) {

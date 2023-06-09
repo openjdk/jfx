@@ -38,6 +38,7 @@ import com.sun.javafx.PlatformUtil;
  * multiple key maps.
  */
 // TODO rename KeyBinding
+// TODO alternative: key[Pressed](), keyReleased(), keyTyped(), and with(Predicate)
 public class KeyBinding2 {
     /**
      * Condition used to build input key mappings.
@@ -84,18 +85,20 @@ public class KeyBinding2 {
         KEY_RELEASE,
         /** a key typed event */
         KEY_TYPED,
-        /** any key event */
-        //KEY_ANY,
 
         // platform specificity
-        /** specifies Windows platform */
-        FOR_WIN,
-        /** specifies non-Windows platform */
-        NOT_FOR_WIN,
+        /** specifies Linux platform */
+        FOR_LINUX,
+        /** specifies non-Linux platform */
+        NOT_FOR_LINUX,
         /** specifies Mac platform */
         FOR_MAC,
         /** specifies non-Mac platform */
         NOT_FOR_MAC,
+        /** specifies Windows platform */
+        FOR_WIN,
+        /** specifies non-Windows platform */
+        NOT_FOR_WIN,
     }
 
     private final Object key; // KeyCode or String
@@ -413,6 +416,16 @@ public class KeyBinding2 {
             return this;
         }
 
+        public Builder forLinux() {
+            m.add(KCondition.FOR_LINUX);
+            return this;
+        }
+
+        public Builder notForLinux() {
+            m.add(KCondition.NOT_FOR_LINUX);
+            return this;
+        }
+
         private Builder init(Object key, KCondition... mods) {
             this.key = key;
             for (KCondition c : mods) {
@@ -432,11 +445,14 @@ public class KeyBinding2 {
             // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();
             boolean win = PlatformUtil.isWindows();
+            boolean linux = PlatformUtil.isLinux();
 
             if (mac) {
                 if (m.contains(KCondition.NOT_FOR_MAC)) {
                     return null;
                 } else if (m.contains(KCondition.FOR_WIN)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_LINUX)) {
                     return null;
                 } else if (m.contains(KCondition.WINDOWS)) {
                     return null;
@@ -445,10 +461,22 @@ public class KeyBinding2 {
                 replace(KCondition.ALT, KCondition.OPTION);
                 replace(KCondition.META, KCondition.COMMAND);
                 replace(KCondition.SHORTCUT, KCondition.COMMAND);
-            } else if (PlatformUtil.isWindows()) {
+            } else if (win) {
                 if (m.contains(KCondition.NOT_FOR_WIN)) {
                     return null;
                 } else if (m.contains(KCondition.FOR_MAC)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_LINUX)) {
+                    return null;
+                }
+
+                replace(KCondition.SHORTCUT, KCondition.CTRL);
+            } else if (linux) {
+                if (m.contains(KCondition.NOT_FOR_LINUX)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_MAC)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_WIN)) {
                     return null;
                 }
 
@@ -466,6 +494,8 @@ public class KeyBinding2 {
             }
 
             // remove platform 
+            m.remove(KCondition.FOR_LINUX);
+            m.remove(KCondition.NOT_FOR_LINUX);
             m.remove(KCondition.FOR_MAC);
             m.remove(KCondition.NOT_FOR_MAC);
             m.remove(KCondition.FOR_WIN);
