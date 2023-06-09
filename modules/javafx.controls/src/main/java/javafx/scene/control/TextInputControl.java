@@ -83,18 +83,32 @@ public abstract class TextInputControl extends Control {
      * @see KeyMap
      */
     public enum Cmd implements FunctionTag {
+        COPY,
+        CUT,
         DELETE_FROM_LINE_START,
+        DELETE_NEXT_CHAR,
         DELETE_NEXT_WORD,
+        DELETE_PREVIOUS_CHAR,
         DELETE_PREVIOUS_WORD,
         HOME,
         END,
+        LEFT,
         LEFT_WORD,
+        PASTE,
         REDO,
+        RIGHT,
         RIGHT_WORD,
-        SELECT_HOME_EXTEND,
+        SELECT_ALL,
+        SELECT_END,
         SELECT_END_EXTEND,
+        SELECT_HOME,
+        SELECT_HOME_EXTEND,
+        SELECT_LEFT,
         SELECT_LEFT_WORD,
+        SELECT_RIGHT,
         SELECT_RIGHT_WORD,
+        TRAVERSE_NEXT,
+        TRAVERSE_PREVIOUS,
     }
 
     /**

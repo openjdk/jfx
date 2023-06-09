@@ -139,10 +139,26 @@ public class FocusTraversalInputMap {
 
     /**
      * Calls the focus traversal engine and indicates that traversal should
+     * go the next focusTraversable Node in the focus traversal cycle.
+     */
+    public static final void traverseNext(Node n) {
+        traverse(n, com.sun.javafx.scene.traversal.Direction.NEXT, TraversalMethod.KEY);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
     public static final void traversePrevious(KeyEvent e) {
         traverse(getNode(e), com.sun.javafx.scene.traversal.Direction.PREVIOUS, TraversalMethod.KEY);
+    }
+
+    /**
+     * Calls the focus traversal engine and indicates that traversal should
+     * go the previous focusTraversable Node in the focus traversal cycle.
+     */
+    public static final void traversePrevious(Node n) {
+        traverse(n, com.sun.javafx.scene.traversal.Direction.PREVIOUS, TraversalMethod.KEY);
     }
 
     private static Node getNode(KeyEvent e) {

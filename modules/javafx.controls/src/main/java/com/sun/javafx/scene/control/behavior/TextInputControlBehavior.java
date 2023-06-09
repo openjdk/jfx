@@ -132,8 +132,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // some of the mappings are only valid when the control is editable, or
         // only on certain platforms, so we create the following predicates that filters out the mapping when the
         // control is not in the correct state / on the correct platform
-        @Deprecated // FIX move to methods
-        final Predicate<KeyEvent> validWhenEditable = e -> !c.isEditable();
         final Predicate<KeyEvent> validOnWindows = e -> !PlatformUtil.isWindows();
         final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
 
@@ -144,51 +142,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // create a child input map for mappings which are applicable on all
         // platforms, and regardless of editing state
         addDefaultMapping(inputMap,
-                // caret movement
-                keyMapping(RIGHT, e -> nextCharacterVisually(true)),
-                keyMapping(LEFT, e -> nextCharacterVisually(false)),
-                keyMapping(UP, e -> c.home()),
-                keyMapping(HOME, e -> c.home()),
-                keyMapping(DOWN, e -> c.end()),
-                keyMapping(END, e -> c.end()),
-
-                keyMapping(new KeyBinding(HOME).shortcut(), e -> c.home()),
-                keyMapping(new KeyBinding(END).shortcut(), e -> c.end()),
-
-                // deletion (only applies when control is editable)
-                keyMapping(new KeyBinding(BACK_SPACE), e -> deletePreviousChar(), validWhenEditable),
-                keyMapping(new KeyBinding(BACK_SPACE).shift(), e -> deletePreviousChar(), validWhenEditable),
-                keyMapping(new KeyBinding(DELETE), e -> deleteNextChar(), validWhenEditable),
-
-                // cut (only applies when control is editable)
-                keyMapping(new KeyBinding(X).shortcut(), e -> cut(), validWhenEditable),
-                keyMapping(new KeyBinding(CUT), e -> cut(), validWhenEditable),
-
-                // copy
-                keyMapping(new KeyBinding(C).shortcut(), e -> c.copy()),
-                keyMapping(new KeyBinding(INSERT).shortcut(), e -> c.copy()),
-                keyMapping(COPY, e -> c.copy()),
-
-                // paste (only applies when control is editable)
-                keyMapping(new KeyBinding(V).shortcut(), e -> paste(), validWhenEditable),
-                keyMapping(new KeyBinding(PASTE), e -> paste(), validWhenEditable),
-                keyMapping(new KeyBinding(INSERT).shift(), e -> paste(), validWhenEditable),
-
-                // selection
-                keyMapping(new KeyBinding(RIGHT).shift(), e -> selectRight()),
-                keyMapping(new KeyBinding(LEFT).shift(), e -> selectLeft()),
-                keyMapping(new KeyBinding(UP).shift(), e -> selectHome()),
-                keyMapping(new KeyBinding(DOWN).shift(), e -> selectEnd()),
-                keyMapping(new KeyBinding(HOME).shortcut().shift(), e -> selectHome()),
-                keyMapping(new KeyBinding(END).shortcut().shift(), e -> selectEnd()),
-                keyMapping(new KeyBinding(A).shortcut(), e -> c.selectAll()),
-
-                // Traversal Bindings
-                new KeyMapping(new KeyBinding(TAB), FocusTraversalInputMap::traverseNext),
-                new KeyMapping(new KeyBinding(TAB).shift(), FocusTraversalInputMap::traversePrevious),
-                new KeyMapping(new KeyBinding(TAB).ctrl(), FocusTraversalInputMap::traverseNext),
-                new KeyMapping(new KeyBinding(TAB).ctrl().shift(), FocusTraversalInputMap::traversePrevious),
-
                 // TODO the following key mappings should be moved to keyHandler
 
                 fireMapping = keyMapping(ENTER, this::fire),
@@ -264,20 +217,65 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         TextInputControl c = s.getSkinnable();
         KeyMap m = c.getKeyMap();
 
+        m.func(s, Cmd.COPY, c::copy); // TODO move method to behavior
+        m.func(s, Cmd.CUT, this::cut);
         m.func(s, Cmd.DELETE_FROM_LINE_START, this::deleteFromLineStart);
+        m.func(s, Cmd.DELETE_NEXT_CHAR, this::deleteNextChar);
         m.func(s, Cmd.DELETE_NEXT_WORD, this::deleteNextWord);
+        m.func(s, Cmd.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
         m.func(s, Cmd.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
         m.func(s, Cmd.HOME, c::home); // TODO move method to behavior
         m.func(s, Cmd.END, c::end); // TODO move method to behavior
+        m.func(s, Cmd.LEFT, () -> nextCharacterVisually(false));
         m.func(s, Cmd.LEFT_WORD, this::leftWord);
+        m.func(s, Cmd.PASTE, this::paste);
         m.func(s, Cmd.REDO, this::redo);
+        m.func(s, Cmd.RIGHT, () -> nextCharacterVisually(true));
         m.func(s, Cmd.RIGHT_WORD, this::rightWord);
-        m.func(s, Cmd.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        m.func(s, Cmd.SELECT_ALL, this::selectAll);
+        m.func(s, Cmd.SELECT_END, this::selectEnd);
         m.func(s, Cmd.SELECT_END_EXTEND, this::selectEndExtend);
+        m.func(s, Cmd.SELECT_HOME, this::selectHome);
+        m.func(s, Cmd.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        m.func(s, Cmd.SELECT_LEFT, this::selectLeft);
         m.func(s, Cmd.SELECT_LEFT_WORD, this::selectLeftWord);
+        m.func(s, Cmd.SELECT_RIGHT, this::selectRight);
         m.func(s, Cmd.SELECT_RIGHT_WORD, this::selectRightWord);
+        m.func(s, Cmd.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
+        m.func(s, Cmd.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
 
-        // macOS specific mappings
+        // common key bindings
+        m.key(s, KeyBinding2.shortcut(C), Cmd.COPY);
+        m.key(s, KeyBinding2.of(COPY), Cmd.COPY);
+        m.key(s, KeyBinding2.shortcut(INSERT), Cmd.COPY);
+        m.key(s, KeyBinding2.of(CUT), Cmd.CUT);
+        m.key(s, KeyBinding2.shortcut(X), Cmd.CUT);
+        m.key(s, KeyBinding2.of(DELETE), Cmd.DELETE_NEXT_CHAR);
+        m.key(s, KeyBinding2.of(BACK_SPACE), Cmd.DELETE_PREVIOUS_CHAR);
+        m.key(s, KeyBinding2.with(BACK_SPACE).shift().build(), Cmd.DELETE_PREVIOUS_CHAR);
+        m.key(s, KeyBinding2.of(HOME), Cmd.HOME);
+        m.key(s, KeyBinding2.with(HOME).shortcut().build(), Cmd.HOME);
+        m.key(s, KeyBinding2.of(UP), Cmd.HOME);
+        m.key(s, KeyBinding2.of(DOWN), Cmd.END);
+        m.key(s, KeyBinding2.of(END), Cmd.END);
+        m.key(s, KeyBinding2.with(END).shortcut().build(), Cmd.END);
+        m.key(s, KeyBinding2.of(LEFT), Cmd.LEFT);
+        m.key(s, KeyBinding2.of(PASTE), Cmd.PASTE);
+        m.key(s, KeyBinding2.shift(INSERT), Cmd.PASTE);
+        m.key(s, KeyBinding2.shortcut(V), Cmd.PASTE);
+        m.key(s, KeyBinding2.of(RIGHT), Cmd.RIGHT);
+        m.key(s, KeyBinding2.shift(DOWN), Cmd.SELECT_END);
+        m.key(s, KeyBinding2.with(END).shortcut().shift().build(), Cmd.SELECT_END);
+        m.key(s, KeyBinding2.with(HOME).shortcut().shift().build(), Cmd.SELECT_HOME);
+        m.key(s, KeyBinding2.shift(UP), Cmd.SELECT_HOME);
+        m.key(s, KeyBinding2.shift(LEFT), Cmd.SELECT_LEFT);
+        m.key(s, KeyBinding2.shift(RIGHT), Cmd.SELECT_RIGHT);
+        m.key(s, KeyBinding2.of(TAB), Cmd.TRAVERSE_NEXT);
+        m.key(s, KeyBinding2.ctrl(TAB), Cmd.TRAVERSE_NEXT);
+        m.key(s, KeyBinding2.shift(TAB), Cmd.TRAVERSE_PREVIOUS);
+        m.key(s, KeyBinding2.with(TAB).ctrl().shift().build(), Cmd.TRAVERSE_PREVIOUS);
+
+        // macOS specific key bindings
         m.key(s, KeyBinding2.with(BACK_SPACE).shortcut().forMac().build(), Cmd.DELETE_FROM_LINE_START);
         m.key(s, KeyBinding2.with(DELETE).alt().forMac().build(), Cmd.DELETE_NEXT_WORD);
         m.key(s, KeyBinding2.with(BACK_SPACE).alt().forMac().build(), Cmd.DELETE_PREVIOUS_WORD);
@@ -287,6 +285,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         m.key(s, KeyBinding2.with(LEFT).alt().forMac().build(), Cmd.LEFT_WORD);
         m.key(s, KeyBinding2.with(Z).shortcut().shift().forMac().build(), Cmd.REDO);
         m.key(s, KeyBinding2.with(RIGHT).alt().forMac().build(), Cmd.RIGHT_WORD);
+        m.key(s, KeyBinding2.shortcut(A), Cmd.SELECT_ALL);
         m.key(s, KeyBinding2.with(LEFT).shortcut().shift().forMac().build(), Cmd.SELECT_HOME_EXTEND);
         m.key(s, KeyBinding2.with(RIGHT).shortcut().shift().forMac().build(), Cmd.SELECT_END_EXTEND);
         m.key(s, KeyBinding2.with(END).shift().forMac().build(), Cmd.SELECT_END_EXTEND);
@@ -519,17 +518,25 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             textInputControl.selectForward();
         }
     }
+    
+    private boolean isEditable() {
+        return textInputControl.isEditable();
+    }
 
     private void deletePreviousChar() {
-        setEditing(true);
-        deleteChar(true);
-        setEditing(false);
+        if (isEditable()) {
+            setEditing(true);
+            deleteChar(true);
+            setEditing(false);
+        }
     }
 
     private void deleteNextChar() {
-        setEditing(true);
-        deleteChar(false);
-        setEditing(false);
+        if (isEditable()) {
+            setEditing(true);
+            deleteChar(false);
+            setEditing(false);
+        }
     }
 
     protected void deletePreviousWord() {
@@ -570,31 +577,35 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     public void cut() {
-        setEditing(true);
-        getNode().cut();
-        setEditing(false);
+        if (isEditable()) {
+            setEditing(true);
+            getNode().cut(); // FIX move here
+            setEditing(false);
+        }
     }
 
     public void paste() {
-        setEditing(true);
-        getNode().paste();
-        setEditing(false);
+        if (isEditable()) {
+            setEditing(true);
+            getNode().paste(); // FIX move here
+            setEditing(false);
+        }
     }
 
     public void undo() {
         setEditing(true);
-        getNode().undo();
+        getNode().undo(); // FIX move here
         setEditing(false);
     }
 
     public void redo() {
         setEditing(true);
-        getNode().redo();
+        getNode().redo(); // FIX move here
         setEditing(false);
     }
 
     protected void selectPreviousWord() {
-        getNode().selectPreviousWord();
+        getNode().selectPreviousWord(); // FIX move here
     }
 
     public void selectNextWord() {

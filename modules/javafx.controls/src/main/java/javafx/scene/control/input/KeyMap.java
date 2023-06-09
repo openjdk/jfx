@@ -116,7 +116,7 @@ public class KeyMap {
     /**
      * Maps a key binding to the specified function tag, for use by the skin.
      * A null key binding will result in no change to this input map.
-     * This method will not override a user mapping added by {@link #key(KeyBinding,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      *
      * @param skin
      * @param k key binding, can be null
@@ -133,10 +133,10 @@ public class KeyMap {
 
     /**
      * Maps a key binding to the specified function tag, for use by the skin.
-     * This method will not override a user mapping added by {@link #key(KeyBinding,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      * 
      * @param skin
-     * @param code key code to construct a {@link KeyBinding}
+     * @param code key code to construct a {@link KeyBinding2}
      * @param tag function tag
      */
     public void key(Skin<?> skin, KeyCode code, FunctionTag tag) {
@@ -194,7 +194,8 @@ public class KeyMap {
     }
 
     /**
-     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding}, or null if no such mapping exists.
+     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding2},
+     * or null if no such mapping exists.
      *
      * @param k
      */
