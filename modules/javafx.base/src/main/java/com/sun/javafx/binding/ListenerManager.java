@@ -104,21 +104,33 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
      * @param listener a listener to remove, cannot be {@code null}
+     * @return {@code true} if there are no more listeners registered after this call completes, otherwise {@code false}
      * @throws NullPointerException when listener is {@code null}
      */
-    public void removeListener(I instance, Object listener) {
+    public boolean removeListener(I instance, Object listener) {
         Objects.requireNonNull(listener);
 
         Object data = getData(instance);
 
-        if (data == null || data.equals(listener)) {
-            setData(instance, null);  // TODO not needed when already null
+        if (data == null) {
+            return true;
         }
-        else if (data instanceof ListenerList list) {
+
+        if (data.equals(listener)) {
+            setData(instance, null);
+
+            return true;
+        }
+
+        if (data instanceof ListenerList list) {
             list.remove(listener);
 
             updateAfterRemoval(instance, list);
+
+            return list.totalListeners() == 0;
         }
+
+        return false;
     }
 
     /**

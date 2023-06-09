@@ -25,9 +25,7 @@
 
 package com.sun.javafx.scene;
 
-import com.sun.javafx.binding.ExpressionHelper;
-import javafx.beans.InvalidationListener;
-import javafx.beans.binding.BooleanExpression;
+import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -41,14 +39,13 @@ import javafx.stage.Window;
  * This class provides the exact same functionality as {@link NodeHelper#isTreeShowing(Node)} in
  * an observable form.
  */
-public class TreeShowingExpression extends BooleanExpression {
+public class TreeShowingProperty extends ReadOnlyBooleanPropertyBase {
     private final ChangeListener<Boolean> windowShowingChangedListener = (obs, old, current) -> updateTreeShowing();
     private final ChangeListener<Window> sceneWindowChangedListener = (obs, old, current) -> windowChanged(old, current);
     private final ChangeListener<Scene> nodeSceneChangedListener = (obs, old, current) -> sceneChanged(old, current);
 
     private final Node node;
 
-    private ExpressionHelper<Boolean> helper;
     private boolean valid;
     private boolean treeShowing;
 
@@ -57,13 +54,23 @@ public class TreeShowingExpression extends BooleanExpression {
      *
      * @param node a {@link Node} for which the tree showing status should be observed, cannot be null
      */
-    public TreeShowingExpression(Node node) {
+    public TreeShowingProperty(Node node) {
         this.node = node;
         this.node.sceneProperty().addListener(nodeSceneChangedListener);
 
         NodeHelper.treeVisibleProperty(node).addListener(windowShowingChangedListener);
 
         sceneChanged(null, node.getScene());
+    }
+
+    @Override
+    public Object getBean() {
+        return node;
+    }
+
+    @Override
+    public String getName() {
+        return "treeShowing";
     }
 
     /**
@@ -79,30 +86,10 @@ public class TreeShowingExpression extends BooleanExpression {
         sceneChanged(node.getScene(), null);
     }
 
-    @Override
-    public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
-    }
-
-    @Override
-    public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
-    }
-
-    @Override
-    public void addListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
-    }
-
-    @Override
-    public void removeListener(ChangeListener<? super Boolean> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
-    }
-
     protected void invalidate() {
         if (valid) {
             valid = false;
-            ExpressionHelper.fireValueChangedEvent(helper);
+            fireValueChangedEvent();
         }
     }
 

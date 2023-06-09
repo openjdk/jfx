@@ -29,6 +29,24 @@ import com.sun.javafx.logging.PlatformLogger;
 
 public class Logging {
 
+    private static boolean keepException = false;
+
+    /**
+     * This is only used for testing purposes.
+     * @param keepException
+     */
+    public static void setKeepException(boolean keepException) {
+        Logging.keepException = keepException;
+    }
+
+    /**
+     * This is only used for testing purposes.
+     * @return
+     */
+    public static boolean getKeepException() {
+        return keepException;
+    }
+
     public static ErrorLogger getLogger() {
         return ErrorLogger.INSTANCE;
     }
@@ -50,7 +68,11 @@ public class Logging {
 
             public ErrorLogRecord(Level level, Throwable thrown) {
                 this.level = level;
-                this.thrown = thrown;
+                if (Logging.keepException) {
+                    this.thrown = thrown;
+                } else {
+                    this.thrown = null;
+                }
             }
 
             public Throwable getThrown() {

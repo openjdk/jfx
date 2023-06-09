@@ -75,6 +75,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     private T value;
     private boolean valid = false;
+    private boolean observed;
 
     /**
      * Invalidation listener used for observing dependencies.  This
@@ -93,22 +94,24 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     @Override
     public void addListener(InvalidationListener listener) {
+        observed = observed || listener != null;
         LISTENER_MANAGER.addListener(this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        LISTENER_MANAGER.removeListener(this, listener);
+        observed = LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
+        observed = observed || listener != null;
         LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        LISTENER_MANAGER.removeListener(this, listener);
+        observed = LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -226,7 +229,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      * @since 19
      */
     protected final boolean isObserved() {
-        return listenerData != null;
+        return observed;
     }
 
     /**

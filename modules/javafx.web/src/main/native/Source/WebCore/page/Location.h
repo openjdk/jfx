@@ -69,6 +69,11 @@ public:
 
     Ref<DOMStringList> ancestorOrigins() const;
 
+#if PLATFORM(JAVA)
+    /* check of custom protocol handler or url schema */
+    bool handleCustomProtocol(const std::string& url);
+#endif
+
 private:
     explicit Location(DOMWindow&);
 
