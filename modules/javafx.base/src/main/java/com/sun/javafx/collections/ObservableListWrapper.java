@@ -29,6 +29,7 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.RandomAccess;
 
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
@@ -94,6 +95,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     protected void doAdd(int index, E element) {
+        Objects.checkIndex(index, size() + 1);
         if (elementObserver != null)
             elementObserver.attachListener(element);
         backingList.add(index, element);
@@ -158,6 +160,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public void remove(int fromIndex, int toIndex) {
+        Objects.checkFromToIndex(fromIndex, toIndex, size());
         beginChange();
         for (int i = fromIndex; i < toIndex; ++i) {
             remove(fromIndex);

@@ -36,7 +36,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 
-
 /**
  * Pseudo-class state and style-classes are represented as bits in a long[]
  * which makes matching faster.
@@ -241,11 +240,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        if (c == null) {
-           throw new NullPointerException("c cannot be null");
-        }
-
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             for (Object obj : c) {
                 if (!contains(obj)) {
                     return false;
@@ -276,11 +271,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        if (c == null) {
-            throw new NullPointerException("c cannot be null");
-        }
-
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             boolean modified = false;
 
             for (T obj : c) {
@@ -355,11 +346,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        if (c == null) {
-            throw new NullPointerException("c cannot be null");
-        }
-
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             boolean modified = false;
 
             for (Iterator<T> iterator = this.iterator(); iterator.hasNext();) {
@@ -448,11 +435,7 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        if (c == null) {
-            throw new NullPointerException("c cannot be null");
-        }
-
-        if (this.getClass() != c.getClass()) {
+        if (this.getClass() != c.getClass()) {  // implicit null check here is intended
             boolean modified = false;
 
             for (Object obj : c) {
@@ -537,28 +520,21 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
     }
 
     @Override
+    public int hashCode() {
+        // Note: overridden because equals is overridden; both equals and hashCode MUST
+        // respect the Set contract to interact correctly with sets of other types!
+        return super.hashCode();
+    }
+
+    @Override
     public boolean equals(Object obj) {
-        // Note: overridden to provide a fast path; must still respect Set contract or it
-        // will not interact correctly with other sets; same goes for hashCode, do not
-        // override arbitrarily!
+        // Note: overridden to provide a fast path; both equals and hashCode MUST respect
+        // the Set contract to interact correctly with sets of other types!
         if (obj == this) {
             return true;
         }
-
-        if (obj instanceof BitSet<?> bitSet && getElementType().equals(bitSet.getElementType())) {
-
-            /*
-             * For historic reasons, a potentially faster path is entered here to do a comparison of the
-             * underlying long array directly. The proof of whether it is actually faster is lost, but
-             * it is assumed it is until proven otherwise. Note that in the past the element type was NOT
-             * considered, and potentially two bit sets with the same pattern could be considered equal
-             * despite having different classes stored in them.
-             *
-             * Now if the two sets contain different element types, we enter the much safer default
-             * path, which takes the equals implementation of each element correctly into consideration.
-             */
-
-            return equalsBitSet(bitSet);
+        if (getClass() == obj.getClass()) {  // fast path if other is exact same type of BitSet
+            return equalsBitSet((BitSet<?>) obj);
         }
 
         return super.equals(obj);
@@ -673,4 +649,3 @@ abstract class BitSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         }
     }
 }
-

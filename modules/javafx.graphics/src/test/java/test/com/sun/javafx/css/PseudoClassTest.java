@@ -605,12 +605,10 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassState_retainAll_withNullArg() {
-
+    public void testPseudoClassState_retainAll_throwsWithNullArg() {
         PseudoClassState aStates = new PseudoClassState();
-        PseudoClassState bStates = null;
 
-        assertThrows(NullPointerException.class, () -> BitSetShim.retainAll(aStates, bStates));
+        assertThrows(NullPointerException.class, () -> BitSetShim.retainAll(aStates, null));
     }
 
     @Test
@@ -705,12 +703,10 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassState_addAll_withNullArgs() {
-
+    public void testPseudoClassState_addAll_throwsWithNullArgs() {
         PseudoClassState aStates = new PseudoClassState();
-        PseudoClassState bStates = null;
 
-        assertThrows(NullPointerException.class, () -> BitSetShim.addAll(aStates, bStates));
+        assertThrows(NullPointerException.class, () -> BitSetShim.addAll(aStates, null));
     }
 
     @Test

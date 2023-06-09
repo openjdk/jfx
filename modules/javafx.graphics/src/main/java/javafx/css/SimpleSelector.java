@@ -87,7 +87,7 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * Gets the {@code Set} of {@code StyleClass}es of the {@code Selector}.
+     * Gets the immutable {@code Set} of {@code StyleClass}es of the {@code Selector}.
      * @return the {@code Set} of {@code StyleClass}es
      */
     public Set<StyleClass> getStyleClassSet() {
@@ -97,9 +97,9 @@ final public class SimpleSelector extends Selector {
     /**
      * styleClasses converted to a set of bit masks
      */
-    final private StyleClassSet styleClassSet;
+    private final Set<StyleClass> styleClassSet;
 
-    final private String id;
+    private final String id;
 
     /**
      * Gets the value of the selector id.
@@ -109,8 +109,8 @@ final public class SimpleSelector extends Selector {
         return id;
     }
 
-    // a mask of bits corresponding to the pseudoclasses
-    final private Set<PseudoClass> pseudoClassState;
+    // a mask of bits corresponding to the pseudoclasses (immutable)
+    private final Set<PseudoClass> pseudoClassState;
 
     // for test purposes
     Set<PseudoClass> getPseudoClassStates() {
@@ -148,38 +148,39 @@ final public class SimpleSelector extends Selector {
         // then match needs to check name
         this.matchOnName = (name != null && !("".equals(name)) && !("*".equals(name)));
 
-        this.styleClassSet = new StyleClassSet();
+        Set<StyleClass> scs = new StyleClassSet();
 
-        int nMax = styleClasses != null ? styleClasses.size() : 0;
-        for(int n=0; n<nMax; n++) {
+        if (styleClasses != null) {
+            for (int n = 0; n < styleClasses.size(); n++) {
 
-            final String styleClassName = styleClasses.get(n);
-            if (styleClassName == null || styleClassName.isEmpty()) continue;
+                final String styleClassName = styleClasses.get(n);
+                if (styleClassName == null || styleClassName.isEmpty()) continue;
 
-            final StyleClass styleClass = StyleClassSet.getStyleClass(styleClassName);
-            this.styleClassSet.add(styleClass);
+                scs.add(StyleClassSet.getStyleClass(styleClassName));
+            }
         }
 
+        this.styleClassSet = Collections.unmodifiableSet(scs);
         this.matchOnStyleClass = (this.styleClassSet.size() > 0);
 
         PseudoClassState pcs = new PseudoClassState();
-
-        nMax = pseudoClasses != null ? pseudoClasses.size() : 0;
-
         NodeOrientation dir = NodeOrientation.INHERIT;
-        for(int n=0; n<nMax; n++) {
 
-            final String pclass = pseudoClasses.get(n);
-            if (pclass == null || pclass.isEmpty()) continue;
+        if (pseudoClasses != null) {
+            for (int n = 0; n < pseudoClasses.size(); n++) {
 
-            // TODO: This is not how we should handle functional pseudo-classes in the long-run!
-            if ("dir(".regionMatches(true, 0, pclass, 0, 4)) {
-                final boolean rtl = "dir(rtl)".equalsIgnoreCase(pclass);
-                dir = rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-                continue;
+                final String pclass = pseudoClasses.get(n);
+                if (pclass == null || pclass.isEmpty()) continue;
+
+                // TODO: This is not how we should handle functional pseudo-classes in the long-run!
+                if ("dir(".regionMatches(true, 0, pclass, 0, 4)) {
+                    final boolean rtl = "dir(rtl)".equalsIgnoreCase(pclass);
+                    dir = rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
+                    continue;
+                }
+
+                pcs.add(PseudoClassState.getPseudoClass(pclass));
             }
-
-            pcs.add(PseudoClassState.getPseudoClass(pclass));
         }
 
         this.pseudoClassState = ImmutablePseudoClassSetsCache.of(pcs);

@@ -93,7 +93,8 @@ abstract public class Selector {
 
     /**
      * Creates a {@code Match}.
-     * @return match
+     *
+     * @return a match, never {@code null}
      */
     public abstract Match createMatch();
 

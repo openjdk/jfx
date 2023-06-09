@@ -162,7 +162,7 @@ public class BitSetTest {
     }
 
     @Test
-    void shouldBeEqual() {
+    void shouldBeEqualAfterGrowAndShrink() {
         StyleClassSet set1 = new StyleClassSet();
         StyleClassSet set2 = new StyleClassSet();
 

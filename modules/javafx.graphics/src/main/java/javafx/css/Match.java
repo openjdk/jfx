@@ -27,9 +27,10 @@ package javafx.css;
 
 import static javafx.geometry.NodeOrientation.INHERIT;
 
-import java.util.Set;
-
 import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
+
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Used by {@link Rule} to determine whether or not the selector applies to a
@@ -41,18 +42,19 @@ import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
  */
 public final class Match implements Comparable<Match> {
 
-    final Selector selector;
-    final Set<PseudoClass> pseudoClasses;
-    final int idCount;
+    private final Selector selector;
+    private final Set<PseudoClass> pseudoClasses;
+
     final int styleClassCount;
+    final int idCount;
 
     // CSS3 spec gives weight to id count, then style class count,
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
     Match(final Selector selector, Set<PseudoClass> pseudoClasses, int idCount, int styleClassCount) {
-        assert selector != null;
-        assert pseudoClasses != null;
+        Objects.requireNonNull(selector);
+        Objects.requireNonNull(pseudoClasses);
 
         this.selector = selector;
         this.idCount = idCount;
@@ -77,9 +79,9 @@ public final class Match implements Comparable<Match> {
     }
 
     /**
-     * Gets the pseudo class state.
+     * Gets the pseudo class states as an immutable set.
      *
-     * @return an immutable set of {@link PseudoClass}es, never {@code null}
+     * @return the pseudo class state, never {@code null}
      */
     public Set<PseudoClass> getPseudoClasses() {
         return pseudoClasses;
