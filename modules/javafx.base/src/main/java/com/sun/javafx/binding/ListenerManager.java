@@ -66,11 +66,11 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
         if (data == null) {
             setData(instance, listener);
         }
-        else if (data instanceof ListenerList list) {
+        else if (data instanceof ListenerList<?> list) {
             list.add(listener);
         }
         else {
-            setData(instance, new ListenerList(data, listener));
+            setData(instance, new ListenerList<>(data, listener));
         }
     }
 
@@ -91,11 +91,11 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
         if (data == null) {
             setData(instance, listener);
         }
-        else if (data instanceof ListenerList list) {
+        else if (data instanceof ListenerList<?> list) {
             list.add(listener);
         }
         else {
-            setData(instance, new ListenerList(data, listener));
+            setData(instance, new ListenerList<>(data, listener));
         }
     }
 
@@ -122,7 +122,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
             return true;
         }
 
-        if (data instanceof ListenerList list) {
+        if (data instanceof ListenerList<?> list) {
             list.remove(listener);
 
             updateAfterRemoval(instance, list);
@@ -142,7 +142,10 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
     public void fireValueChanged(I instance, T oldValue) {
         Object data = getData(instance);
 
-        if (data instanceof ListenerList list) {
+        if (data instanceof ListenerList) {
+            @SuppressWarnings("unchecked")
+            ListenerList<T> list = (ListenerList<T>)data;
+
             callMultipleListeners(instance, list, oldValue);
         }
         else if (data instanceof InvalidationListener il) {
@@ -167,7 +170,7 @@ public abstract class ListenerManager<T, I extends ObservableValue<? extends T>>
         }
     }
 
-    private void updateAfterRemoval(I instance, ListenerList list) {
+    private void updateAfterRemoval(I instance, ListenerList<?> list) {
         int invalidationListenersSize = list.invalidationListenersSize();
         int changeListenersSize = list.changeListenersSize();
 
