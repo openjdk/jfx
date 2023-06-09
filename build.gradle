@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,12 @@
  *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  *  - Integrate Parfait reports for C code
  *  - FXML Project tests are not running
+ *
+ * Adding a new project or task:
+ *  - Fix for JDK-8297071, introduces a restriction on assigning name for a project or task.
+ *    - If the name of project or task contains word test/Test then it is considered as test task.
+ *    - If the name of a task contains word shim/Shim then it is considered as shims task.
+ *    - See TEST_ONLY flag, isTestTask() method, the tasks: shims and sdk for more clarity.
  */
 defaultTasks = ["sdk"]
 
@@ -605,9 +611,15 @@ if (hasProperty("CROSS_TOOLS_DIR")) {
 }
 ext.CROSS_TOOLS_DIR = file(crossToolsDir)
 
-// Specifies whether to run tests with the existing javafx.* modules instead of compiling a new one
+// For backward compatibility, -PBUILD_SDK_FOR_TEST=false will set TEST_ONLY to true
 defineProperty("BUILD_SDK_FOR_TEST", "true")
-ext.DO_BUILD_SDK_FOR_TEST = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
+def buildSdkForTest = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
+
+// Specifies whether to run only test tasks using the already built javafx.* modules
+// and shim classes, instead of rebuilding them.
+// If true, then all non test tasks, except verifyJava are disabled. see task sdk and isTestTask method.
+defineProperty("TEST_ONLY", "false")
+ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
@@ -1806,6 +1818,14 @@ int compareJdkVersion(String a, String b) {
     return 0;
 }
 
+/**
+ * Returns true if the name of task or name of task's project contains word test/Test.
+ */
+boolean isTestTask(Task task) {
+    return (task.project.name.contains("test") || task.project.name.contains("Test")
+                 || task.name.contains("test") || task.name.contains("Test"))
+}
+
 // Task to verify the minimum level of Java needed to build JavaFX
 task verifyJava() {
     doLast {
@@ -2005,6 +2025,9 @@ allprojects {
     // we start building with Java 9.
     test {
         useJUnitPlatform();
+
+        // Always run tests
+        outputs.upToDateWhen { false }
 
         executable = JAVA;
         enableAssertions = true;
@@ -3465,11 +3488,12 @@ project(":web") {
         implementation project(":graphics")
         implementation project(":controls")
         implementation project(":media")
+        testImplementation project(":base").sourceSets.test.output
     }
 
     compileJava.dependsOn updateCacheIfNeeded
 
-    task webArchiveJar(type: Jar) {
+    task testWebArchiveJar(type: Jar) {
         from (project.file("$projectDir/src/test/resources/test/html")) {
             include "**/archive-*.*"
         }
@@ -3523,7 +3547,7 @@ project(":web") {
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
         systemProperty 'prism.order', 'sw'
-        dependsOn webArchiveJar
+        dependsOn testWebArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
         systemProperty 'java.security.manager', 'allow'
@@ -4190,13 +4214,35 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     dependsOn(projectsToDocument.collect { project -> project.getTasksByName("classes", true)});
 }
 
-task sdk() {
-    if (DO_BUILD_SDK_FOR_TEST) {
-        rootProject.getTasksByName("test", true).each { t ->
-            if (t.enabled) t.dependsOn(sdk)
+task shims() {
+    gradle.allprojects { project ->
+        if (project.hasProperty("sourceSets") && project.sourceSets.hasProperty('shims')) {
+            project.tasks.each { task ->
+                if (task.name.contains("shim") || task.name.contains("Shim")) {
+                    dependsOn(task)
+                }
+            }
         }
     }
 }
+
+task sdk() {
+    if (!IS_TEST_ONLY) {
+        rootProject.getTasksByName("test", true).each { t ->
+            if (t.enabled) t.dependsOn(shims)
+        }
+    } else {
+        gradle.taskGraph.whenReady { taskGraph ->
+            taskGraph.allTasks.each { task ->
+                if (!isTestTask(task) && !task.name.equals("verifyJava")) {
+                    task.enabled = false
+                }
+            }
+        }
+    }
+}
+
+shims.dependsOn(sdk)
 
 task jmods() {
     dependsOn(sdk)
@@ -4261,7 +4307,7 @@ task zips() {
 }
 
 task all() {
-    dependsOn(sdk,publicExports,apps,perf,zips)
+    dependsOn(sdk, shims, publicExports, apps, perf, zips)
 }
 
 

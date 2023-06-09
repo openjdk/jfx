@@ -41,6 +41,9 @@
 
 #if defined (X86_64) && defined (__i386__)
 #undef X86_64
+#warning ******************************************************
+#warning ********** X86 IS DEFINED ****************************
+#warning ******************************************************
 #define X86
 #endif
 
@@ -159,4 +162,3 @@ typedef enum ffi_abi {
 #endif
 
 #endif
-
