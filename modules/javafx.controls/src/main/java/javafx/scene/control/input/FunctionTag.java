@@ -27,7 +27,7 @@ package javafx.scene.control.input;
 
 /**
  * A marker interface indicating a function tag in the context of {@link KeyMap}.
- * A class implementing this interface must be neither {@link KeyBinding} nor {@link Runnable}.
+ * A class implementing this interface must be neither {@link KeyBinding2} nor {@link Runnable}.
  */
 public interface FunctionTag {
 }

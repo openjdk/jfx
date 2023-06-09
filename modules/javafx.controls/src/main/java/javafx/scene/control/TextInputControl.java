@@ -80,7 +80,7 @@ import javafx.util.StringConverter;
 public abstract class TextInputControl extends Control {
     /**
      * Function tags provided by TextInputControl.
-     * @see KeyMap
+     * @since 22
      */
     public enum Cmd implements FunctionTag {
         COPY,
