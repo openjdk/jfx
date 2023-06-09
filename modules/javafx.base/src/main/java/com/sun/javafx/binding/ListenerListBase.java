@@ -26,7 +26,6 @@
 package com.sun.javafx.binding;
 
 import java.util.Objects;
-import java.util.function.Predicate;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakListener;
@@ -50,11 +49,6 @@ import javafx.beans.value.ObservableValue;
  * listeners at a time of its choosing.
  */
 public abstract class ListenerListBase {
-    private static final Predicate<Object> NULL_OR_COLLECTED =
-        listener -> listener == null || (listener instanceof WeakListener wl && wl.wasGarbageCollected());
-
-    private static final Predicate<InvalidationListener> INVALIDATION_LISTENER_NULL_OR_COLLECTED =
-        listener -> listener == null || (listener instanceof WeakListener wl && wl.wasGarbageCollected());
 
     /**
      * This a variant of {@link ArrayManager} with an implemented {@link #compact(ListenerListBase, T[])}
@@ -82,7 +76,7 @@ public abstract class ListenerListBase {
             for (int i = 0; i < array.length; i++) {
                 T element = array[i];
 
-                if (NULL_OR_COLLECTED.test(element)) {
+                if (element == null || (element instanceof WeakListener wl && wl.wasGarbageCollected())) {
                     shift++;
                     array[i] = null;
                     continue;
@@ -175,10 +169,10 @@ public abstract class ListenerListBase {
     private int lockedSize = -1;
 
     /**
-     * Indicates whether a list currently contains any {@code null}s.
-     * This can only be {@code true} while locked.
+     * Indicates whether a list currently contains any {@code null}s, and
+     * how many. This is always zero when unlocked.
      */
-    private boolean containsNulls;
+    private int nulledListenerCount;
 
     /**
      * Creates a new instance with two listeners.
@@ -204,6 +198,16 @@ public abstract class ListenerListBase {
         else {
             CHANGE_LISTENERS.add(this, listener2);
         }
+    }
+
+    /**
+     * Returns the total number of listeners in this list. This accurately
+     * reflects added and removed listeners even while the list is locked.
+     *
+     * @return the total number of listeners in this list, never negative
+     */
+    public final int totalListeners() {
+        return invalidationListenersCount + changeListenersCount - nulledListenerCount;
     }
 
     /**
@@ -294,7 +298,7 @@ public abstract class ListenerListBase {
             if (isLocked()) {
                 INVALIDATION_LISTENERS.set(this, index, null);
 
-                containsNulls = true;
+                nulledListenerCount++;
             }
             else {
                 INVALIDATION_LISTENERS.remove(this, index);
@@ -310,7 +314,7 @@ public abstract class ListenerListBase {
                 else {
                     CHANGE_LISTENERS.set(this, index, null);
 
-                    containsNulls = true;
+                    nulledListenerCount++;
                 }
             }
         }
@@ -325,6 +329,8 @@ public abstract class ListenerListBase {
      */
     protected final boolean unlock() {
         assertLocked();
+
+        boolean containsNulls = nulledListenerCount > 0;
 
         // if there were no nulls and no additions...
         if (!containsNulls && invalidationListenersCount + changeListenersCount <= lockedSize) {
@@ -345,10 +351,34 @@ public abstract class ListenerListBase {
         }
 
         if (containsNulls) {
-            INVALIDATION_LISTENERS.removeIf(this, INVALIDATION_LISTENER_NULL_OR_COLLECTED);
-            CHANGE_LISTENERS.removeIf(this, NULL_OR_COLLECTED);
 
-            containsNulls = false;
+            /*
+             * Note: only nulls are removed here. Expired weak listeners are not removed
+             * as this would mean the listener count could change unexpectedly at the end
+             * of a notification without going through an addListener/removeListener call
+             * which may be overridden to track listeners. A scenario that would be troubling
+             * is:
+             *
+             * - A notification starts
+             * - An unrelated listener removes itself while list is locked (which will trigger this
+             *   clean-up code later); this goes through the normal add/removeListener channel
+             * - The notification ends
+             * - While unlocking, a weak listener is determined to be expired
+             *   - Removing this weak listener would not go through proper channels and thus
+             *     code that overrides add/removeListener would be unaware of the change
+             *
+             * Therefore, weak listeners will only be actively removed when another listener
+             * is being added or removed as the caller will then be expecting a change in the
+             * listener count, albeit higher than just the one listener being added or removed.
+             * Callers already should be aware that removing a listener may not change the count
+             * (if the listener didn't exist), so manually checking the new count after such a
+             * call must be done already.
+             */
+
+            INVALIDATION_LISTENERS.removeIf(this, Objects::isNull);
+            CHANGE_LISTENERS.removeIf(this, Objects::isNull);
+
+            nulledListenerCount = 0;
         }
 
         lockedSize = -1;
@@ -403,6 +433,7 @@ public abstract class ListenerListBase {
 
     private void assertNotLocked() {
         assert !isLocked() : "already locked";
+        assert nulledListenerCount == 0 : "nulledListenerCount must be zero when not locked";
     }
 
     static final void callInvalidationListener(ObservableValue<?> instance, InvalidationListener listener) {

@@ -72,8 +72,6 @@ public class ListenerListBaseTest {
         }
     }
 
-    private final AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
-
     @Test
     void shouldConstructListWithInvalidationBeforeChangeListeners() {
         AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
@@ -89,11 +87,15 @@ public class ListenerListBaseTest {
 
     @Test
     void shouldRejectAddNullListeners() {
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
+
         assertThrows(NullPointerException.class, () -> list.add(null));
     }
 
     @Test
     void shouldRejectUnlockedWhenNotLocked() {
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
+
         assertThrows(AssertionError.class, () -> list.accessibleUnlock());
 
         list.accessibleLock();
@@ -104,6 +106,8 @@ public class ListenerListBaseTest {
 
     @Test
     void shouldRejectLockWhenLocked() {
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
+
         list.accessibleLock();
 
         assertThrows(AssertionError.class, () -> list.accessibleLock());
@@ -114,13 +118,25 @@ public class ListenerListBaseTest {
 
     @Test
     void shouldAllowRemovingAllListeners() {
-        ListenerList list = new ListenerList(cl1, il1);
+        ListenerList<?> list = new ListenerList<>(cl1, il1);
+
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
+        assertEquals(2, list.totalListeners());
+        assertTrue(list.hasChangeListeners());
 
         list.remove(cl1);
+
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(0, list.changeListenersSize());
+        assertEquals(1, list.totalListeners());
+        assertFalse(list.hasChangeListeners());
+
         list.remove(il1);
 
         assertEquals(0, list.invalidationListenersSize());
         assertEquals(0, list.changeListenersSize());
+        assertEquals(0, list.totalListeners());
         assertFalse(list.hasChangeListeners());
 
         list.remove(cl1);
@@ -128,8 +144,83 @@ public class ListenerListBaseTest {
     }
 
     @Test
+    void shouldUpdateTotalListenersWhileLocked() {
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
+
+        list.accessibleLock();
+
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
+        assertEquals(2, list.totalListeners());
+        assertTrue(list.hasChangeListeners());
+
+        list.remove(cl1);
+
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
+        assertEquals(1, list.totalListeners());
+        assertTrue(list.hasChangeListeners());
+
+        list.remove(il1);
+
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
+        assertEquals(0, list.totalListeners());
+        assertTrue(list.hasChangeListeners());
+
+        list.accessibleUnlock();
+
+        assertEquals(0, list.invalidationListenersSize());
+        assertEquals(0, list.changeListenersSize());
+        assertEquals(0, list.totalListeners());
+        assertFalse(list.hasChangeListeners());
+    }
+
+    @Test
+    void shouldNeverSilentlyRemoveWeakListeners() {
+
+        /*
+         * Weak listeners should only ever be removed as part of a
+         * add or remove listener call (although more listeners can be removed
+         * than just the given one during such a call). It should never
+         * happen during the unlock operation as the listener count then
+         * changes unexpectedly. This is also the behavior of the old
+         * ExpressionHelper.
+         *
+         * WeakListeners that remove themselves during notification are
+         * not a problem as this always goes through a removeListener call.
+         */
+
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
+        WeakInvalidationListener weakListener = new WeakInvalidationListener("");
+
+        list.add(weakListener);  // add the listener that should NOT be removed during cleanup
+
+        list.accessibleLock();
+
+        // make a change to the list so it will trigger a cleanup during unlock
+        list.remove(cl1);  // nulls out cl1, forcing a cleanup during unlock
+
+        weakListener.setGarbageCollected(true);
+
+        list.accessibleUnlock();
+
+        // Ensure the unlock did not remove the weak listener even though it is no longer needed
+        assertEquals(2, list.invalidationListenersSize());
+        assertEquals(0, list.changeListenersSize());
+        assertEquals(2, list.totalListeners());
+        assertListeners(list, List.of(il1, weakListener));
+
+        for(int i = 0; i < 100; i++) {
+            list.add(il2);
+        }
+
+        assertEquals(101, list.totalListeners());  // Not 102 as weak listener was removed during a compaction step
+    }
+
+    @Test
     void hasChangeListenersShouldReturnCorrectState() {
-        ListenerList list = new ListenerList(cl1, il1);
+        ListenerList<?> list = new ListenerList<>(cl1, il1);
 
         assertTrue(list.hasChangeListeners());
 
@@ -137,7 +228,7 @@ public class ListenerListBaseTest {
 
         assertFalse(list.hasChangeListeners());
 
-        ListenerList list2 = new ListenerList(il1, il2);
+        ListenerList<?> list2 = new ListenerList<>(il1, il2);
 
         assertFalse(list2.hasChangeListeners());
     }
@@ -157,6 +248,7 @@ public class ListenerListBaseTest {
 
     @Test
     void shouldKeepInvalidationAndChangeListenersSeparated() {
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
         Random rnd = new Random(1);
 
         for(int i = 0; i < 10000; i++) {
@@ -317,8 +409,11 @@ public class ListenerListBaseTest {
 
     @Test
     void additionsShouldNotShowUpWhileLocked() {
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
+
         assertEquals(1, list.invalidationListenersSize());
         assertEquals(1, list.changeListenersSize());
+        assertEquals(2, list.totalListeners());
 
         list.accessibleLock();
 
@@ -327,6 +422,7 @@ public class ListenerListBaseTest {
 
         assertEquals(1, list.invalidationListenersSize());
         assertEquals(1, list.changeListenersSize());
+        assertEquals(4, list.totalListeners());
         assertEquals(il1, list.get(0));
         assertEquals(cl1, list.get(1));
         assertThrows(AssertionError.class, () -> list.get(2));  // reject attempts to bypass lock
@@ -335,30 +431,46 @@ public class ListenerListBaseTest {
 
         assertEquals(2, list.invalidationListenersSize());
         assertEquals(2, list.changeListenersSize());
+        assertEquals(4, list.totalListeners());
 
         assertListeners(list, List.of(il1, il2, cl1, cl2));
     }
 
     @Test
     void removalsShouldBecomeNullsWhileLocked() {
+        AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
+
         assertEquals(1, list.invalidationListenersSize());
         assertEquals(1, list.changeListenersSize());
+        assertEquals(2, list.totalListeners());
 
         list.add(il2);
         list.add(cl2);
 
+        assertEquals(2, list.invalidationListenersSize());
+        assertEquals(2, list.changeListenersSize());
+        assertEquals(4, list.totalListeners());
         assertListeners(list, List.of(il1, il2, cl1, cl2));
 
         list.accessibleLock();
 
+        assertEquals(2, list.invalidationListenersSize());
+        assertEquals(2, list.changeListenersSize());
+        assertEquals(4, list.totalListeners());
         assertListeners(list, List.of(il1, il2, cl1, cl2));
 
         list.remove(il1);
 
+        assertEquals(2, list.invalidationListenersSize());
+        assertEquals(2, list.changeListenersSize());
+        assertEquals(3, list.totalListeners());
         assertListeners(list, List.of(il2, cl1, cl2));
 
         list.remove(cl1);
 
+        assertEquals(2, list.invalidationListenersSize());
+        assertEquals(2, list.changeListenersSize());
+        assertEquals(2, list.totalListeners());
         assertListeners(list, List.of(il2, cl2));
 
         assertEquals(null, list.get(0));
@@ -368,6 +480,9 @@ public class ListenerListBaseTest {
 
         list.accessibleUnlock();
 
+        assertEquals(1, list.invalidationListenersSize());
+        assertEquals(1, list.changeListenersSize());
+        assertEquals(2, list.totalListeners());
         assertListeners(list, List.of(il2, cl2));
     }
 
