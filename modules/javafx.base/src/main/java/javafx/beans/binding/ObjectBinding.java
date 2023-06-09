@@ -100,7 +100,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        observed = LISTENER_MANAGER.removeListener(this, listener);
+        observed = !LISTENER_MANAGER.removeListener(this, listener);
     }
 
     @Override
@@ -111,7 +111,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        observed = LISTENER_MANAGER.removeListener(this, listener);
+        observed = !LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
