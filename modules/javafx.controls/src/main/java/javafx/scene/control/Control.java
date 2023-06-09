@@ -44,6 +44,7 @@ import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.input.KeyMap;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -201,6 +202,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     };
 
+    private KeyMap keyMap;
 
 
     /* *************************************************************************
@@ -475,6 +477,18 @@ public abstract class Control extends Region implements Skinnable {
 //            skin.dispose();
 //        }
 //    }
+
+    /**
+     * Returns the {@link KeyMap} for this {@code Control}.
+     *
+     * @since 22
+     */
+    public final KeyMap getKeyMap() {
+        if (keyMap == null) {
+            keyMap = new KeyMap();
+        }
+        return keyMap;
+    }
 
     /**
      * Returns <code>true</code> since all Controls are resizable.

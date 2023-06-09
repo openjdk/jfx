@@ -49,6 +49,7 @@ import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean.*
  *
  * @since 9
  */
+@Deprecated // TODO remove in favor of javafx.scene.control.input.KeyBinding
 public class KeyBinding {
     private final KeyCode code;
     private final EventType<KeyEvent> eventType;
