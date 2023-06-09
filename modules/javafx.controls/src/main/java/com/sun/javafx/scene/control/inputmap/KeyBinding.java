@@ -66,10 +66,12 @@ public class KeyBinding {
      * Designed for 'catch-all' situations, e.g. all KeyTyped events.
      * @param type
      */
+    @Deprecated
     public KeyBinding(EventType<KeyEvent> type) {
         this(null, type);
     }
 
+    @Deprecated
     public KeyBinding(KeyCode code, EventType<KeyEvent> type) {
         this.code = code;
         this.eventType = type != null ? type : KeyEvent.KEY_PRESSED;

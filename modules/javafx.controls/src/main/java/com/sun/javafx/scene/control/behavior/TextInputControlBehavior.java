@@ -43,6 +43,9 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.TextInputControl.Cmd;
+import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.control.input.KeyMap;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.Clipboard;
 import com.sun.javafx.scene.control.inputmap.InputMap;
@@ -95,6 +98,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private InvalidationListener textListener = observable -> invalidateBidi();
 
     private final InputMap<T> inputMap;
+    private EventHandler<KeyEvent> keyHandler;
 
 
 
@@ -110,6 +114,17 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         this.textInputControl = c;
 
+        keyHandler = (ev) -> {
+            KeyBinding2 k = KeyBinding2.from(ev);
+            Runnable r = textInputControl.getKeyMap().getFunction(k);
+            if (r != null) {
+                setCaretAnimating(false);
+                r.run();
+                setCaretAnimating(true);
+            }
+        };
+        c.addEventHandler(KeyEvent.ANY, keyHandler);
+
         // create a map for text input-specific mappings (this reuses the default
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
         inputMap = createInputMap();
@@ -117,6 +132,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // some of the mappings are only valid when the control is editable, or
         // only on certain platforms, so we create the following predicates that filters out the mapping when the
         // control is not in the correct state / on the correct platform
+        @Deprecated // FIX move to methods
         final Predicate<KeyEvent> validWhenEditable = e -> !c.isEditable();
         final Predicate<KeyEvent> validOnWindows = e -> !PlatformUtil.isWindows();
         final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
@@ -135,7 +151,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 keyMapping(HOME, e -> c.home()),
                 keyMapping(DOWN, e -> c.end()),
                 keyMapping(END, e -> c.end()),
-                fireMapping = keyMapping(ENTER, this::fire),
 
                 keyMapping(new KeyBinding(HOME).shortcut(), e -> c.home()),
                 keyMapping(new KeyBinding(END).shortcut(), e -> c.end()),
@@ -174,10 +189,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 new KeyMapping(new KeyBinding(TAB).ctrl(), FocusTraversalInputMap::traverseNext),
                 new KeyMapping(new KeyBinding(TAB).ctrl().shift(), FocusTraversalInputMap::traversePrevious),
 
+                // TODO the following key mappings should be moved to keyHandler
+
+                fireMapping = keyMapping(ENTER, this::fire),
+                keyMapping(new KeyBinding(Z).shortcut(), e -> undo()),
+
                 // The following keys are forwarded to the parent container
                 cancelEditMapping = new KeyMapping(ESCAPE, this::cancelEdit),
-
-                keyMapping(new KeyBinding(Z).shortcut(), e -> undo()),
 
                 // character input.
                 // Any other key press first goes to normal text input
@@ -216,30 +234,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         fireMapping.setAutoConsume(false);
         consumeMostPressedEventsMapping.setAutoConsume(false);
 
-        // mac os specific mappings
-        InputMap<T> macOsInputMap = new InputMap<>(c);
-        macOsInputMap.setInterceptor(e -> !PlatformUtil.isMac());
-        macOsInputMap.getMappings().addAll(
-            // Mac OS specific mappings
-            keyMapping(new KeyBinding(HOME).shift(), e -> selectHomeExtend()),
-            keyMapping(new KeyBinding(END).shift(), e -> selectEndExtend()),
-            keyMapping(new KeyBinding(LEFT).shortcut(), e -> c.home()),
-            keyMapping(new KeyBinding(RIGHT).shortcut(), e -> c.end()),
-            keyMapping(new KeyBinding(LEFT).alt(), e -> leftWord()),
-            keyMapping(new KeyBinding(RIGHT).alt(), e -> rightWord()),
-            keyMapping(new KeyBinding(DELETE).alt(), e -> deleteNextWord()),
-            keyMapping(new KeyBinding(BACK_SPACE).alt(), e -> deletePreviousWord()),
-            keyMapping(new KeyBinding(BACK_SPACE).shortcut(), e -> deleteFromLineStart()),
-            keyMapping(new KeyBinding(Z).shortcut().shift(), e -> redo()),
-            keyMapping(new KeyBinding(LEFT).shortcut().shift(), e -> selectHomeExtend()),
-            keyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> selectEndExtend()),
-
-            // Mac OS specific selection mappings
-            keyMapping(new KeyBinding(LEFT).shift().alt(), e -> selectLeftWord()),
-            keyMapping(new KeyBinding(RIGHT).shift().alt(), e -> selectRightWord())
-        );
-        addDefaultChildMap(inputMap, macOsInputMap);
-
         // windows / linux specific mappings
         InputMap<T> nonMacOsInputMap = new InputMap<>(c);
         nonMacOsInputMap.setInterceptor(e -> PlatformUtil.isMac());
@@ -264,7 +258,45 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         textInputControl.textProperty().addListener(textListener);
 
         contextMenu = new ContextMenu();
-}
+    }
+
+    public void install(TextInputControlSkin<?> s) {
+        TextInputControl c = s.getSkinnable();
+        KeyMap m = c.getKeyMap();
+
+        m.func(s, Cmd.DELETE_FROM_LINE_START, this::deleteFromLineStart);
+        m.func(s, Cmd.DELETE_NEXT_WORD, this::deleteNextWord);
+        m.func(s, Cmd.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
+        m.func(s, Cmd.HOME, c::home); // TODO move method to behavior
+        m.func(s, Cmd.END, c::end); // TODO move method to behavior
+        m.func(s, Cmd.LEFT_WORD, this::leftWord);
+        m.func(s, Cmd.REDO, this::redo);
+        m.func(s, Cmd.RIGHT_WORD, this::rightWord);
+        m.func(s, Cmd.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        m.func(s, Cmd.SELECT_END_EXTEND, this::selectEndExtend);
+        m.func(s, Cmd.SELECT_LEFT_WORD, this::selectLeftWord);
+        m.func(s, Cmd.SELECT_RIGHT_WORD, this::selectRightWord);
+
+        // macOS specific mappings
+        m.key(s, KeyBinding2.with(BACK_SPACE).shortcut().forMac().build(), Cmd.DELETE_FROM_LINE_START);
+        m.key(s, KeyBinding2.with(DELETE).alt().forMac().build(), Cmd.DELETE_NEXT_WORD);
+        m.key(s, KeyBinding2.with(BACK_SPACE).alt().forMac().build(), Cmd.DELETE_PREVIOUS_WORD);
+        m.key(s, KeyBinding2.with(HOME).shift().forMac().build(), Cmd.HOME);
+        m.key(s, KeyBinding2.with(LEFT).shortcut().forMac().build(), Cmd.HOME);
+        m.key(s, KeyBinding2.with(RIGHT).shortcut().forMac().build(), Cmd.END);
+        m.key(s, KeyBinding2.with(LEFT).alt().forMac().build(), Cmd.LEFT_WORD);
+        m.key(s, KeyBinding2.with(Z).shortcut().shift().forMac().build(), Cmd.REDO);
+        m.key(s, KeyBinding2.with(RIGHT).alt().forMac().build(), Cmd.RIGHT_WORD);
+        m.key(s, KeyBinding2.with(LEFT).shortcut().shift().forMac().build(), Cmd.SELECT_HOME_EXTEND);
+        m.key(s, KeyBinding2.with(RIGHT).shortcut().shift().forMac().build(), Cmd.SELECT_END_EXTEND);
+        m.key(s, KeyBinding2.with(END).shift().forMac().build(), Cmd.SELECT_END_EXTEND);
+        m.key(s, KeyBinding2.with(LEFT).shift().alt().forMac().build(), Cmd.SELECT_LEFT_WORD);
+        m.key(s, KeyBinding2.with(RIGHT).shift().alt().forMac().build(), Cmd.SELECT_RIGHT_WORD);
+    }
+
+    public void uninstall(TextInputControlSkin<?> s) {
+        s.getSkinnable().getKeyMap().unregister(s);
+    }
 
     @Override public InputMap<T> getInputMap() {
         return inputMap;
@@ -357,6 +389,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     @Override public void dispose() {
         textInputControl.textProperty().removeListener(textListener);
+        textInputControl.removeEventHandler(KeyEvent.ANY, keyHandler);
         super.dispose();
     }
 

@@ -107,7 +107,7 @@ public class KeyMap {
      * @param k
      * @param tag
      */
-    public void key(KeyBinding k, FunctionTag tag) {
+    public void key(KeyBinding2 k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
         addBinding(k, tag, null);
@@ -122,7 +122,7 @@ public class KeyMap {
      * @param k key binding, can be null
      * @param tag function tag
      */
-    public void key(Skin<?> skin, KeyBinding k, FunctionTag tag) {
+    public void key(Skin<?> skin, KeyBinding2 k, FunctionTag tag) {
         if (k == null) {
             return;
         }
@@ -140,7 +140,7 @@ public class KeyMap {
      * @param tag function tag
      */
     public void key(Skin<?> skin, KeyCode code, FunctionTag tag) {
-        key(skin, KeyBinding.of(code), tag);
+        key(skin, KeyBinding2.of(code), tag);
     }
 
     private void addFunction(FunctionTag tag, Runnable function, Skin<?> skin) {
@@ -160,7 +160,7 @@ public class KeyMap {
         }
     }
 
-    private void addBinding(KeyBinding k, FunctionTag tag, Skin<?> skin) {
+    private void addBinding(KeyBinding2 k, FunctionTag tag, Skin<?> skin) {
         Entry en = map.get(k);
         if (en == null) {
             en = new Entry();
@@ -198,7 +198,7 @@ public class KeyMap {
      *
      * @param k
      */
-    public Runnable getFunction(KeyBinding k) {
+    public Runnable getFunction(KeyBinding2 k) {
         Entry en = map.get(k);
         if (en != null) {
             Object v = en.getValue();
@@ -231,7 +231,7 @@ public class KeyMap {
      *
      * @param k
      */
-    public void unbind(KeyBinding k) {
+    public void unbind(KeyBinding2 k) {
         Entry en = map.get(k);
         if (en != null) {
             en.userValue = NULL;
@@ -245,7 +245,7 @@ public class KeyMap {
         Iterator<Map.Entry<Object, Entry>> it = map.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Object, Entry> me = it.next();
-            if (me.getKey() instanceof KeyBinding) {
+            if (me.getKey() instanceof KeyBinding2) {
                 Entry en = me.getValue();
                 en.userValue = null;
             }
@@ -257,7 +257,7 @@ public class KeyMap {
      *
      * @param k
      */
-    public void restoreDefaultBinding(KeyBinding k) {
+    public void restoreDefaultBinding(KeyBinding2 k) {
         Entry en = map.get(k);
         if (en != null) {
             en.userValue = null;
@@ -284,7 +284,7 @@ public class KeyMap {
     }
 
     private static void validateTag(FunctionTag tag) {
-        if (tag instanceof KeyBinding) {
+        if (tag instanceof KeyBinding2) {
             // prevent common misuse
             throw new IllegalArgumentException("use key() method to register a KeyBinding");
         } else if (tag instanceof Runnable) {
@@ -298,10 +298,10 @@ public class KeyMap {
      *
      * @return a Set of KeyBindings
      */
-    public Set<KeyBinding> getKeyBindings() {
+    public Set<KeyBinding2> getKeyBindings() {
         return map.keySet().stream().
-            filter((k) -> (k instanceof KeyBinding)).
-            map((x) -> (KeyBinding)x).
+            filter((k) -> (k instanceof KeyBinding2)).
+            map((x) -> (KeyBinding2)x).
             collect(Collectors.toSet());
     }
 }

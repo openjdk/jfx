@@ -57,6 +57,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
@@ -77,6 +78,25 @@ import javafx.util.StringConverter;
  */
 @DefaultProperty("text")
 public abstract class TextInputControl extends Control {
+    /**
+     * Function tags provided by TextInputControl.
+     * @see KeyMap
+     */
+    public enum Cmd implements FunctionTag {
+        DELETE_FROM_LINE_START,
+        DELETE_NEXT_WORD,
+        DELETE_PREVIOUS_WORD,
+        HOME,
+        END,
+        LEFT_WORD,
+        REDO,
+        RIGHT_WORD,
+        SELECT_HOME_EXTEND,
+        SELECT_END_EXTEND,
+        SELECT_LEFT_WORD,
+        SELECT_RIGHT_WORD,
+    }
+
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,
      * you can also bind to, or observe the content.

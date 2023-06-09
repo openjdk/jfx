@@ -31,35 +31,35 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
 import javafx.css.CssParser;
+import javafx.css.Styleable;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
+import javafx.css.converter.StringConverter;
 import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.input.KeyMap;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.ControlHelper;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableStringProperty;
-import javafx.css.converter.StringConverter;
-import com.sun.javafx.scene.control.Logging;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
+import com.sun.javafx.scene.control.ControlHelper;
+import com.sun.javafx.scene.control.Logging;
 
 
 /**
@@ -488,6 +488,18 @@ public abstract class Control extends Region implements Skinnable {
             keyMap = new KeyMap();
         }
         return keyMap;
+    }
+
+    /**
+     * Executes function mapped to the {@link FunctionTag}, if any.
+     * 
+     * @since 22
+     */
+    protected void execute(FunctionTag tag) {
+        Runnable f = getKeyMap().getFunction(tag);
+        if (f != null) {
+            f.run();
+        }
     }
 
     /**
