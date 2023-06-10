@@ -217,7 +217,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodLinux = env->GetMethodID(clazz, "notifyInputMethodLinux", "(Ljava/lang/String;IIIII)V");
+    jViewNotifyInputMethodLinux = env->GetMethodID(clazz, "notifyInputMethodLinux", "(Ljava/lang/String;III)V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Window");

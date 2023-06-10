@@ -40,11 +40,8 @@ void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     gchar *preedit_text;
     WindowContext *ctx = (WindowContext *) user_data;
 
-    int cursor_pos;
-    gtk_im_context_get_preedit_string(im_context, &preedit_text, NULL, &cursor_pos);
+    gtk_im_context_get_preedit_string(im_context, &preedit_text, NULL, NULL);
     ctx->updateCaretPos();
-
-    g_print("on_preedit_changed: %s - %d\n", preedit_text, cursor_pos);
 
     jstring jstr = mainEnv->NewStringUTF(preedit_text);
     EXCEPTION_OCCURED(mainEnv);
@@ -52,14 +49,14 @@ void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     jsize slen = mainEnv->GetStringLength(jstr);
 
+    g_print("on_preedit_changed: %s - %d\n", preedit_text, slen);
+
     mainEnv->CallVoidMethod(ctx->get_jview(),
             jViewNotifyInputMethodLinux,
             jstr,
             0,
             slen,
-            cursor_pos,
-            0,
-            0);
+            slen);
     LOG_EXCEPTION(mainEnv)
 }
 
@@ -111,8 +108,6 @@ void WindowContextBase::commitIME(gchar *str) {
                 jstr,
                 4,
                 slen,
-                slen,
-                0,
                 slen);
         LOG_EXCEPTION(mainEnv)
     }

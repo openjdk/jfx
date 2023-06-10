@@ -105,49 +105,20 @@ final class GtkView extends View {
         //nothing
     }
 
-    protected void notifyInputMethodLinux(String str, int attrib, int length,
-                                          int cursor, int selStart, int selLength) {
-        byte atts[] = new byte[1];
-        atts[0] = (byte) attrib;
-        int attBounds[] = new int[2];
-        attBounds[0] = 0;
-        attBounds[1] = length;
-
+    protected void notifyInputMethodLinux(String str, int attrib, int length, int cursor) {
         if (attrib == 4) {
             // attrib == 4 means we are going to commit changes, so commitLength should be non-zero
-            notifyInputMethod(str, null, attBounds, atts, length, cursor, 0);
+            notifyInputMethod(str, null, null, null, length, cursor, 0);
         } else {
-            // all other cases = just an update, update preview text but do not commit it
-            if (selLength > 0
-                    && str != null && str.length() > 0
-                    && selStart >= 0
-                    && selLength + selStart <= str.length()) {
+            int[] boundary = new int[length + 1];
+            byte[] values = new byte[length + 1];
 
-                TreeSet<Integer> b = new TreeSet<>();
-                b.add(0);
-                b.add(selStart);
-                b.add(selStart + selLength);
-                b.add(str.length());
-
-                int[] boundary = new int[b.size()];
-                int i = 0;
-                for (int e : b) {
-                    boundary[i] = e;
-                    i++;
-                }
-
-                byte[] values = new byte[boundary.length - 1];
-
-                for (i = 0; i < boundary.length - 1; i++) {
-                    values[i] = (boundary[i] == selStart)
-                            ? IME_ATTR_TARGET_CONVERTED
-                            : IME_ATTR_CONVERTED;
-                }
-
-                notifyInputMethod(str, boundary, boundary, values, 0, cursor, 0);
-            } else {
-                notifyInputMethod(str, null, attBounds, atts, 0, cursor, 0);
+            for (int i = 0; i < boundary.length; i++) {
+                boundary[i] = i;
+                values[i] = IME_ATTR_TARGET_NOTCONVERTED;
             }
+
+            notifyInputMethod(str, boundary, boundary, values, 0, cursor, 0);
         }
     }
 
