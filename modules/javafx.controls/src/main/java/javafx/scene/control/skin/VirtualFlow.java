@@ -855,11 +855,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         private int oldCount = 0;
 
         @Override protected void invalidated() {
+            int oldIndex = computeCurrentIndex(oldCount);
+            double oldOffset = computeViewportOffset(getPosition(), oldCount);
             int cellCount = get();
             resetSizeEstimates();
-            recalculateEstimatedSize();
+            recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT, oldIndex, oldOffset);
 
             boolean countChanged = oldCount != cellCount;
+            double boff = computeBaseOffset(oldIndex);
+            absoluteOffset = boff + oldOffset;
             oldCount = cellCount;
 
             // ensure that the virtual scrollbar adjusts in size based on the current
@@ -1994,8 +1998,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             double height = Math.max(getMaxPrefBreadth(), getViewportBreadth());
             cell.resize(fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefWidth(height), cell.minWidth(height), cell.maxWidth(height)), height);
         }
-        // when a cell is resized, our estimate needs to be updated.
-        recalculateAndImproveEstimatedSize(0);
     }
 
     /**
@@ -2891,15 +2893,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * performance.
      */
     private double computeViewportOffset(double position) {
+        return computeViewportOffset(position, getCellCount());
+    }
+
+    private double computeViewportOffset(double position, int localCellCount) {
         double p = com.sun.javafx.util.Utils.clamp(0, position, 1);
         double bound = 0d;
-        double estSize = estimatedSize / getCellCount();
+        double estSize = estimatedSize / localCellCount;
         double maxOff = estimatedSize - getViewportLength();
         if ((maxOff > 0) && (absoluteOffset > maxOff)) {
             return maxOff - absoluteOffset;
         }
 
-        for (int i = 0; i < getCellCount(); i++) {
+        for (int i = 0; i < localCellCount; i++) {
             double h = getCellSize(i);
             if (h < 0) h = estSize;
             if (bound + h > absoluteOffset) {
@@ -2978,9 +2984,24 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     }
 
-    private int computeCurrentIndex() {
-        double total = 0;
+    private double computeBaseOffset(int index) {
+        double baseOffset = 0d;
         int currentCellCount = getCellCount();
+        double estSize = estimatedSize / currentCellCount;
+        for (int i = 0; i < index; i++) {
+            double nextSize = getCellSize(i);
+            if (nextSize < 0) nextSize = estSize;
+            baseOffset += nextSize;
+        }
+        return baseOffset;
+    }
+
+    private int computeCurrentIndex() {
+        return computeCurrentIndex(getCellCount());
+    }
+
+    private int computeCurrentIndex(int currentCellCount) {
+        double total = 0;
         double estSize = estimatedSize / currentCellCount;
         for (int i = 0; i < currentCellCount; i++) {
             double nextSize = getCellSize(i);
@@ -3079,19 +3100,20 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     void updateCellSize(T cell) {
         int cellIndex = cell.getIndex();
-        int currentIndex = computeCurrentIndex();
-        double oldOffset = computeViewportOffset(getPosition());
-
 
         if (itemSizeCache.size() > cellIndex) {
             Double oldSize = itemSizeCache.get(cellIndex);
             double newSize = isVertical() ? cell.getLayoutBounds().getHeight() : cell.getLayoutBounds().getWidth();
             itemSizeCache.set(cellIndex, newSize);
-            if ((cellIndex == currentIndex) && (oldSize != null) && (oldOffset != 0)) {
-                oldOffset = oldOffset + newSize - oldSize;
+            if ((oldSize != null) && !oldSize.equals(newSize)) {
+                int currentIndex = computeCurrentIndex();
+                double oldOffset = computeViewportOffset(getPosition());
+                if ((cellIndex == currentIndex) && (oldOffset != 0)) {
+                    oldOffset = oldOffset + newSize - oldSize;
+                }
+                recalculateAndImproveEstimatedSize(0, currentIndex, oldOffset);
             }
         }
-        recalculateAndImproveEstimatedSize(0, currentIndex, oldOffset);
     }
 
     /**

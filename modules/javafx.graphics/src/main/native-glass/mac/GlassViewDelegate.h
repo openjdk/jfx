@@ -29,6 +29,7 @@
 #import "GlassHostView.h"
 #import "GlassFullscreenWindow.h"
 #import "GlassDragSource.h"
+#import "GlassDraggingSource.h"
 #import "GlassAccessible.h"
 
 // Bit mask for tracking gesture begin / end
@@ -66,7 +67,7 @@ typedef enum GestureMaskType {
     // The last processed key event
     NSEvent                 *s_lastKeyEvent;
 
-    NSDragOperation         dragOperation;
+    GlassDraggingSource     *draggingSource;
     NSInteger               lastTrackingNumber;
 
 @public
@@ -100,8 +101,7 @@ typedef enum GestureMaskType {
 
 - (NSDragOperation)sendJavaDndEvent:(id <NSDraggingInfo>)info type:(jint)type;
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal;
-- (void)startDrag:(NSDragOperation)operation;
+- (void)startDrag:(NSDragOperation)operation withItems:(NSArray<NSDraggingItem*>*)items;
 
 - (BOOL)suppressMouseEnterExitOnMouseDown;
 
