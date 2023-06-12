@@ -185,8 +185,18 @@ public class KeyBinding2 {
         }
         return modifiers.contains(KCondition.CTRL);
     }
-    
+
     // TODO rest of isXXX()
+
+    /**
+     * Returns a {@link KeyCode} or null if the key binding is not for a key code.
+     */
+    public KeyCode getKeyCode() {
+        if (key instanceof KeyCode c) {
+            return c;
+        }
+        return null;
+    }
 
     /** creates a builder */
     public static Builder builder() {

@@ -305,4 +305,22 @@ public class KeyMap {
             map((x) -> (KeyBinding2)x).
             collect(Collectors.toSet());
     }
+
+    /**
+     * Maps a new KeyBinding as an alias to the existing one with the same owner and function tag.
+     * This method does nothing if there is no mapping for k1.
+     *
+     * @param k1
+     * @param k2
+     */
+    public void addAlias(KeyBinding2 k1, KeyBinding2 k2) {
+        Entry en1 = map.get(k1);
+        if (en1 != null) {
+            Entry en2 = new Entry();
+            en2.skin = en1.skin;
+            en2.skinValue = en1.skinValue;
+            en2.userValue = en1.userValue;
+            map.put(k2, en2);
+        }
+    }
 }

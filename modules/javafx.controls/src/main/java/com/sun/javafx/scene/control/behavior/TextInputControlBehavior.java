@@ -56,6 +56,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 import java.text.Bidi;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import static com.sun.javafx.PlatformUtil.isLinux;
@@ -121,6 +122,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 setCaretAnimating(false);
                 r.run();
                 setCaretAnimating(true);
+                ev.consume();
             }
         };
         c.addEventHandler(KeyEvent.ANY, keyHandler);
@@ -296,58 +298,40 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     /**
-     * Bind keypad arrow keys to the same as the regular arrow keys.
+     * Binds keypad arrow keys to the same function tags as the regular arrow keys.
      */
     protected void addKeyPadMappings(InputMap<T> map) {
-        // First create a temporary map for the keypad mappings
-        InputMap<T> tmpMap = new InputMap<>(getNode());
-        for (Object o : map.getMappings()) {
-            if (o instanceof KeyMapping) {
-                KeyMapping mapping = (KeyMapping)o;
-                KeyBinding kb = (KeyBinding)mapping.getMappingKey();
-                if (kb.getCode() != null) {
-                    KeyCode newCode = null;
-                    switch (kb.getCode()) {
-                        case LEFT:  newCode = KP_LEFT;  break;
-                        case RIGHT: newCode = KP_RIGHT; break;
-                        case UP:    newCode = KP_UP;    break;
-                        case DOWN:  newCode = KP_DOWN;  break;
-                        default:
-                    }
-                    if (newCode != null) {
-                        KeyBinding newkb = new KeyBinding(newCode).shift(kb.getShift())
-                                                                  .ctrl(kb.getCtrl())
-                                                                  .alt(kb.getAlt())
-                                                                  .meta(kb.getMeta());
-                        tmpMap.getMappings().add(new KeyMapping(newkb, mapping.getEventHandler()));
-                    }
+        KeyMap m = textInputControl.getKeyMap();
+        Set<KeyBinding2> keys = m.getKeyBindings();
+        for (KeyBinding2 k: keys) {
+            KeyCode cd = k.getKeyCode();
+            if (cd != null) {
+                KeyCode newCode = null;
+                switch (cd) {
+                case LEFT:
+                    newCode = KP_LEFT;
+                    break;
+                case RIGHT:
+                    newCode = KP_RIGHT;
+                    break;
+                case UP:
+                    newCode = KP_UP;
+                    break;
+                case DOWN:
+                    newCode = KP_DOWN;
+                    break;
+                default:
+                    newCode = null;
+                    break;
+                }
+
+                if (newCode != null) {
+                    KeyBinding2 newBinding = KeyBinding2.of(newCode);
+                    m.addAlias(k, newBinding);
                 }
             }
         }
-
-        if (map == getInputMap()) {
-            // install mappings in the top-level inputMap
-            // as default mappings to clear them on dispose
-            for (Mapping<?> mapping : tmpMap.getMappings()) {
-                addDefaultMapping(map, mapping);
-            }
-        } else {
-            // Install mappings in child maps
-            for (Object o : tmpMap.getMappings()) {
-                map.getMappings().add((KeyMapping)o);
-            }
-        }
-
-        // temporary inputMap must be disposed to prevent memory leak
-        tmpMap.dispose();
-
-        // Recursive call for child maps
-        for (Object o : map.getChildInputMaps()) {
-            addKeyPadMappings((InputMap<T>)o);
-        }
-
     }
-
 
     /**
      * Wraps the event handler to pause caret blinking when
