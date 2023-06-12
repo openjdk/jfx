@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,15 +67,6 @@ import javafx.css.Styleable;
  *    <li>Have the contents of the table be sorted (using
  *      {@link #comparatorProperty() comparator}, {@link #sortableProperty() sortable} and
  *      {@link #sortTypeProperty() sortType})
- * </ul>
- *
- * {@code TreeTableColumn} declares the following {@link CellEditEvent} types, which are received
- * when a cell is being edited:
- * <ul>
- *     <li>{@link #editAnyEvent()}
- *     <li>{@link #editStartEvent()}
- *     <li>{@link #editCommitEvent()}
- *     <li>{@link #editCancelEvent()}
  * </ul>
  *
  * When creating a TreeTableColumn instance, perhaps the two most important properties

@@ -1248,6 +1248,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         return eventHelper;
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -1256,6 +1260,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         getEventHelper().addEventHandler(eventType, eventHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -1264,6 +1272,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         getEventHelper().removeEventHandler(eventType, eventHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -1272,6 +1284,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         getEventHelper().addEventFilter(eventType, eventFilter);
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,

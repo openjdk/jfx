@@ -741,6 +741,10 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         return eventHelper;
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
@@ -749,6 +753,10 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         getEventHelper().addEventHandler(eventType, eventHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -757,6 +765,10 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         getEventHelper().removeEventHandler(eventType, eventHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
@@ -765,6 +777,10 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         getEventHelper().addEventFilter(eventType, eventFilter);
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 2.1
+     */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,

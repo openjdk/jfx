@@ -66,6 +66,7 @@ public interface EventTarget {
      * @param eventHandler the event handler
      * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event handlers
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
      * @since 21
      */
     default <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
@@ -83,6 +84,7 @@ public interface EventTarget {
      * @param eventHandler the event handler
      * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event handlers
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
      * @since 21
      */
     default <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
@@ -100,6 +102,7 @@ public interface EventTarget {
      * @param eventFilter the event filter
      * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event filters
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
      * @since 21
      */
     default <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
@@ -117,6 +120,7 @@ public interface EventTarget {
      * @param eventFilter the event filter
      * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
      * @throws UnsupportedOperationException if this target does not support event filters
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
      * @since 21
      */
     default <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {

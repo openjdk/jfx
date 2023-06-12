@@ -1913,6 +1913,8 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <p>
      * Currently the only event delivered to a {@code Transform} is the {@code TransformChangedEvent}
      * with its single type {@code TRANSFORM_CHANGED}.
+     *
+     * @since JavaFX 8.0
      */
     @Override
     public final <T extends Event> void addEventHandler(
@@ -1924,6 +1926,10 @@ public abstract class Transform implements Cloneable, EventTarget {
         validate();
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 8.0
+     */
     @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
@@ -1937,6 +1943,8 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <p>
      * Currently the only event delivered to a {@code Transform} is the {@code TransformChangedEvent}
      * with its single type {@code TRANSFORM_CHANGED}.
+     *
+     * @since JavaFX 8.0
      */
     @Override
     public final <T extends Event> void addEventFilter(
@@ -1948,6 +1956,10 @@ public abstract class Transform implements Cloneable, EventTarget {
         validate();
     }
 
+    /**
+     * {@inheritDoc}
+     * @since JavaFX 8.0
+     */
     @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
