@@ -186,7 +186,21 @@ public class KeyBinding2 {
         return modifiers.contains(KCondition.CTRL);
     }
 
-    // TODO rest of isXXX()
+    public boolean isAlt() {
+        return modifiers.contains(KCondition.ALT);
+    }
+    
+    public boolean isCtrl() {
+        return modifiers.contains(KCondition.CTRL);
+    }
+    
+    public boolean isMeta() {
+        return modifiers.contains(KCondition.META);
+    }
+    
+    public boolean isShift() {
+        return modifiers.contains(KCondition.SHIFT);
+    }
 
     /**
      * Returns a {@link KeyCode} or null if the key binding is not for a key code.
@@ -386,13 +400,46 @@ public class KeyBinding2 {
             return this;
         }
 
+        public Builder alt(boolean on) {
+            if (on) {
+                m.add(KCondition.ALT);
+            }
+            return this;
+        }
+
+        public Builder command() {
+            m.add(KCondition.COMMAND);
+            return this;
+        }
+
+        public Builder command(boolean on) {
+            if (on) {
+                m.add(KCondition.COMMAND);
+            }
+            return this;
+        }
+
         public Builder ctrl() {
             m.add(KCondition.CTRL);
             return this;
         }
 
-        public Builder option() {
-            m.add(KCondition.OPTION);
+        public Builder ctrl(boolean on) {
+            if (on) {
+                m.add(KCondition.CTRL);
+            }
+            return this;
+        }
+        
+        public Builder meta() {
+            m.add(KCondition.META);
+            return this;
+        }
+
+        public Builder meta(boolean on) {
+            if (on) {
+                m.add(KCondition.META);
+            }
             return this;
         }
 
@@ -401,8 +448,20 @@ public class KeyBinding2 {
             return this;
         }
 
+        public Builder shift(boolean on) {
+            if (on) {
+                m.add(KCondition.SHIFT);
+            }
+            return this;
+        }
+
         public Builder shortcut() {
             m.add(KCondition.SHORTCUT);
+            return this;
+        }
+
+        public Builder option() {
+            m.add(KCondition.OPTION);
             return this;
         }
 

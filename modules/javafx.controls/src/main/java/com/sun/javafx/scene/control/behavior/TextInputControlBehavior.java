@@ -183,8 +183,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         fireMapping.setAutoConsume(false);
         consumeMostPressedEventsMapping.setAutoConsume(false);
 
-        addKeyPadMappings(inputMap);
-
         textInputControl.textProperty().addListener(textListener);
 
         contextMenu = new ContextMenu();
@@ -287,6 +285,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         m.key(s, KeyBinding2.with(END).shift().notForMac().build(), Cmd.SELECT_END);
         m.key(s, KeyBinding2.with(LEFT).ctrl().shift().notForMac().build(), Cmd.SELECT_LEFT_WORD);
         m.key(s, KeyBinding2.with(RIGHT).ctrl().shift().notForMac().build(), Cmd.SELECT_RIGHT_WORD);
+
+        // key pad mappings
+        addKeyPadMappings(inputMap);
     }
 
     public void uninstall(TextInputControlSkin<?> s) {
@@ -326,8 +327,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
 
                 if (newCode != null) {
-                    KeyBinding2 newBinding = KeyBinding2.of(newCode);
+                    KeyBinding2 newBinding = KeyBinding2.
+                        with(newCode).
+                        alt(k.isAlt()).
+                        command(k.isCommand()).
+                        ctrl(k.isCtrl()).
+                        meta(k.isMeta()).
+                        shift(k.isShift()).                        
+                        build();
                     m.addAlias(k, newBinding);
+                    System.out.println(k + " " + newBinding); // FIX
                 }
             }
         }
