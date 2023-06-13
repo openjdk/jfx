@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,40 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+/*
+ * To run this test press keys on the main keyboard or numeric keypad that
+ * generate printable characters. The app will verify that
+ * KeyCharacterCombinations targeting those characters match the KEY_PRESSED
+ * events that generated them. For each key press you should see a "Passed" or
+ * "Failed" message detailing the outcome. For a key that doesn't generate a
+ * printable character (like Home or Tab) you should see an "Ignored" message.
+ *
+ * KeyCharacterCombinations are primarily used to define accelerators involving
+ * punctuation or symbols (all other accelerators should be defined using
+ * KeyCodeCombinations) so it's recommended that you focus your testing there.
+ *
+ * This test is most likely to fail on punctuation and symbols typed using the
+ * Shift key. For example, on a U.S. English keyboard pressing Shift+"=" to
+ * generate a "+" symbol may fail. Keys are also more likely to fail on layouts
+ * other than U.S. English.
+ *
+ * Dead keys will confuse this application. There is variation in how they're
+ * handled across platforms and there's no easy way to detect when one is
+ * pressed. Try to avoid them.
+ *
+ * On a platform with a working Robot implementation the KeyboardTest.java app
+ * in tests/manual/events covers more keys more quickly. This test is still
+ * useful on a platform without working Robot code or to test a key that a Robot
+ * can't reach e.g. a key that isn't assigned a KeyCode because it generates a
+ * character with a diacritic.
+ */
+
 public class KeyCharacterCombinationTest extends Application {
     private final TextArea typingArea = new TextArea("");
     private KeyEvent lastPressed = null;
 
     public static void main(String[] args) {
-        Application.launch(args);
+        Application.launch(KeyCharacterCombinationTest.class, args);
     }
 
     @Override
