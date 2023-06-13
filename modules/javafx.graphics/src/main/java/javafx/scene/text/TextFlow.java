@@ -188,7 +188,7 @@ public class TextFlow extends Pane {
     }
 
     /**
-     * Maps local point to index in the content.
+     * Maps local point to {@link HitInfo} in the content.
      *
      * @param point the specified point to be tested
      * @return a {@code HitInfo} representing the character index found
@@ -229,6 +229,18 @@ public class TextFlow extends Pane {
      */
     public final PathElement[] rangeShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_TEXT);
+    }
+
+    /**
+     * Returns the shape for the underline in local coordinates.
+     *
+     * @param start the beginning character index for the range
+     * @param end the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 21
+     */
+    public final PathElement[] underlineShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_UNDERLINE);
     }
 
     @Override

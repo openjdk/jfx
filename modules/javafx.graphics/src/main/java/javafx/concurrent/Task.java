@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1249,18 +1249,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Registers an event handler to this task. Any event filters are first
-     * processed, then the specified onFoo event handlers, and finally any
-     * event handlers registered by this method. As with other events
-     * in the scene graph, if an event is consumed, it will not continue
-     * dispatching.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -1269,17 +1261,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Unregisters a previously registered event handler from this task. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -1288,15 +1273,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Registers an event filter to this task. Registered event filters get
-     * an event before any associated event handlers.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the type of the events to receive by the filter
-     * @param eventFilter the filter to register
-     * @throws NullPointerException if the event type or filter is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -1305,17 +1285,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Unregisters a previously registered event filter from this task. One
-     * filter might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the filter.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the event type from which to unregister
-     * @param eventFilter the filter to unregister
-     * @throws NullPointerException if the event type or filter is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
