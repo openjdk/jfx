@@ -1011,7 +1011,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Maps local point to index in the content.
+     * Maps local point to {@link HitInfo} in the content.
      *
      * @param point the specified point to be tested
      * @return a {@code HitInfo} representing the character index found
