@@ -25,8 +25,9 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.inputmap.InputMap;
-
+import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
@@ -37,14 +38,18 @@ import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl.Cmd;
+import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.control.input.KeyMap;
+import javafx.scene.control.skin.ComboBoxBaseSkin;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 import com.sun.javafx.scene.control.skin.Utils;
-import javafx.scene.input.*;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
-
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import static com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
@@ -69,21 +74,11 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
         inputMap = createInputMap();
 
-        final EventHandler<KeyEvent> togglePopup = e -> {
-            // If popup is shown, KeyEvent causes popup to close
-            showPopupOnMouseRelease = true;
-
-            if (getNode().isShowing()) hide();
-            else show();
-        };
+        addKeyMap(inputMap, comboBox);
 
         // comboBox-specific mappings for key and mouse input
         KeyMapping enterPressed, enterReleased;
         addDefaultMapping(inputMap,
-            new KeyMapping(F4, KEY_RELEASED, togglePopup),
-            new KeyMapping(new KeyBinding(UP).alt(), togglePopup),
-            new KeyMapping(new KeyBinding(DOWN).alt(), togglePopup),
-
             new KeyMapping(SPACE, KEY_PRESSED, this::keyPressed),
             new KeyMapping(SPACE, KEY_RELEASED, this::keyReleased),
 
@@ -110,6 +105,29 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
+        }
+    }
+    
+    enum Cmd implements FunctionTag {
+        //CANCEL_EDIT, // TODO forwards to parent, child class logic in the base class, looks poorly thought out
+        TOGGLE_POPUP
+    }
+    
+    public void install(ComboBoxBaseSkin<?> s) {
+        var c = s.getSkinnable();
+        KeyMap m = c.getKeyMap();
+        
+        //m.func(s, Cmd.CANCEL_EDIT, this::cancelEdit);
+        m.func(s, Cmd.TOGGLE_POPUP, this::togglePopup);
+        
+        m.key(s, KeyBinding2.withRelease(F4).build(), Cmd.TOGGLE_POPUP);
+        m.key(s, KeyBinding2.alt(DOWN), Cmd.TOGGLE_POPUP);
+        m.key(s, KeyBinding2.alt(UP), Cmd.TOGGLE_POPUP);
+    }
+
+    public void uninstall(ComboBoxBaseSkin<?> s) {
+        if (s.getSkinnable() != null) {
+            s.getSkinnable().getKeyMap().unregister(s);
         }
     }
 
@@ -318,4 +336,14 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
 
+    private void togglePopup() {
+        // If popup is shown, KeyEvent causes popup to close
+        showPopupOnMouseRelease = true;
+
+        if (getNode().isShowing()) {
+            hide();
+        } else {
+            show();
+        }
+    }
 }

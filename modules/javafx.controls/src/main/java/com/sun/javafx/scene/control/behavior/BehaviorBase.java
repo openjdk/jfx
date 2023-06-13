@@ -24,13 +24,19 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.Node;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.scene.Node;
+import javafx.scene.control.Control;
+import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.control.input.KeyMap;
+import javafx.scene.input.KeyEvent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
 
 public abstract class BehaviorBase<N extends Node> {
 
@@ -143,5 +149,52 @@ public abstract class BehaviorBase<N extends Node> {
             case RIGHT_TO_LEFT: return true;
             default: return false;
         }
+    }
+
+    protected void addKeyMap(InputMap inputMap, Control c) {
+        addKeyMap(inputMap, c, null, null);
+    }
+
+    protected void addKeyMap(InputMap inputMap, Control control, Runnable before, Runnable after) {
+        addDefaultMapping (
+            inputMap,
+            keyHandler(KeyEvent.KEY_PRESSED, control, before, after),
+            keyHandler(KeyEvent.KEY_RELEASED, control, before, after),
+            keyHandler(KeyEvent.KEY_TYPED, control, before, after)
+        );
+    }
+
+    private Mapping<KeyEvent> keyHandler(EventType<KeyEvent> type, Control control, Runnable before, Runnable after) {
+        EventHandler<KeyEvent> handler = (ev) -> {
+            KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
+            KeyMap m = control.getKeyMap();
+            Runnable f = m.getFunction(k);
+            if (f != null) {
+                if (before != null) {
+                    before.run();
+                }
+                f.run();
+                if (after != null) {
+                    after.run();
+                }
+                ev.consume();
+            }
+        };
+
+        Mapping<KeyEvent> rv = new Mapping<KeyEvent>(KeyEvent.KEY_TYPED, handler) {
+            @Override
+            public int getSpecificity(Event ev) {
+                KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
+                KeyMap m = control.getKeyMap();
+                Runnable f = m.getFunction(k);
+                if (f == null) {
+                    return 0;
+                }
+                // Max value returned by KeyBinding:154
+                return 6;
+            }
+        };
+        rv.setAutoConsume(false);
+        return rv;
     }
 }

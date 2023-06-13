@@ -1359,6 +1359,7 @@ public class ComboBoxTest {
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
+        System.out.println(cb.getKeyMap().getKeyBindings()); // FIX
         cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
         assertTrue(cb.isShowing());
     }
@@ -1428,6 +1429,7 @@ public class ComboBoxTest {
         assertEquals(1, cb.getEditor().getCaretPosition());
 
         // Test KP_RIGHT key
+        System.out.println(cb.getKeyMap().getKeyBindings()); // FIX
         keyboard.doKeyPress(KeyCode.KP_RIGHT);
         assertEquals(2, cb.getEditor().getCaretPosition());
 

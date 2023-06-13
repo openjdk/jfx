@@ -99,7 +99,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private InvalidationListener textListener = observable -> invalidateBidi();
 
     private final InputMap<T> inputMap;
-    private EventHandler<KeyEvent> keyHandler;
 
 
 
@@ -115,18 +114,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         this.textInputControl = c;
 
-        keyHandler = (ev) -> {
-            KeyBinding2 k = KeyBinding2.from(ev);
-            Runnable r = textInputControl.getKeyMap().getFunction(k);
-            if (r != null) {
-                setCaretAnimating(false);
-                r.run();
-                setCaretAnimating(true);
-                ev.consume();
-            }
-        };
-        c.addEventHandler(KeyEvent.ANY, keyHandler);
-
         // create a map for text input-specific mappings (this reuses the default
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
         inputMap = createInputMap();
@@ -134,6 +121,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         KeyMapping cancelEditMapping;
         KeyMapping fireMapping;
         KeyMapping consumeMostPressedEventsMapping;
+        
+        addKeyMap(
+            inputMap,
+            textInputControl,
+            () -> setCaretAnimating(false),
+            () -> setCaretAnimating(true)
+        );
 
         // create a child input map for mappings which are applicable on all
         // platforms, and regardless of editing state
@@ -336,7 +330,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                         shift(k.isShift()).                        
                         build();
                     m.addAlias(k, newBinding);
-                    System.out.println(k + " " + newBinding); // FIX
                 }
             }
         }
@@ -375,7 +368,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     @Override public void dispose() {
         textInputControl.textProperty().removeListener(textListener);
-        textInputControl.removeEventHandler(KeyEvent.ANY, keyHandler);
         super.dispose();
     }
 

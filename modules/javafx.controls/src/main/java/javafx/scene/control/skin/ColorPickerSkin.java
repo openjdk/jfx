@@ -81,7 +81,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     private Rectangle colorRect;
     private ColorPalette popupContent;
 
-    private final ColorPickerBehavior behavior;
+    private ColorPickerBehavior behavior;
 
 
 
@@ -259,12 +259,19 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
      *                                                                         *
      **************************************************************************/
 
+    @Override
+    public void install() {
+        behavior.install(this);
+    }
+
     /** {@inheritDoc} */
     @Override public void dispose() {
         super.dispose();
 
         if (behavior != null) {
+            behavior.uninstall(this);
             behavior.dispose();
+            behavior = null;
         }
     }
 

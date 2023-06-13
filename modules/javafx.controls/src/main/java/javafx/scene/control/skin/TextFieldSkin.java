@@ -384,11 +384,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      *                                                                         *
      **************************************************************************/
 
-    @Override
-    public void install() {
-        super.install();
-    }
-
     /** {@inheritDoc} */
     @Override public void dispose() {
         if (getSkinnable() == null) return;

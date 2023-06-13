@@ -130,6 +130,16 @@ public class KeyBinding2 {
     }
 
     /**
+     * Utility method creates a KeyBinding corresponding to a alt-code key press.
+     *
+     * @param code
+     * @return KeyBinding
+     */
+    public static KeyBinding2 alt(KeyCode code) {
+        return create(code, KCondition.KEY_PRESS, KCondition.ALT);
+    }
+
+    /**
      * Utility method creates a KeyBinding corresponding to a ctrl-code key press.
      *
      * @param code
@@ -239,6 +249,10 @@ public class KeyBinding2 {
 
     public static Builder with(KeyCode c) {
         return builder().with(c);
+    }
+
+    public static Builder withRelease(KeyCode c) {
+        return builder().withRelease(c);
     }
 
     public static Builder with(String c) {
@@ -384,6 +398,15 @@ public class KeyBinding2 {
                 throw new IllegalArgumentException("only one KeyCode or character can be set");
             }
             key = c;
+            return this;
+        }
+
+        public Builder withRelease(KeyCode c) {
+            if (key != null) {
+                throw new IllegalArgumentException("only one KeyCode or character can be set");
+            }
+            key = c;
+            m.add(KCondition.KEY_RELEASE);
             return this;
         }
 

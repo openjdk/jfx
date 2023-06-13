@@ -100,7 +100,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
 
-    private final ComboBoxListViewBehavior behavior;
+    private ComboBoxListViewBehavior behavior;
     private IDisconnectable selectedItemWatcher;
 
 
@@ -234,12 +234,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      *                                                                         *
      **************************************************************************/
 
+    @Override
+    public void install() {
+        super.install();
+        behavior.install(this);
+    }
+
     /** {@inheritDoc} */
-    @Override public void dispose() {
+    @Override
+    public void dispose() {
         super.dispose();
 
         if (behavior != null) {
+            behavior.uninstall(this);
             behavior.dispose();
+            behavior = null;
         }
     }
 

@@ -54,7 +54,7 @@ public class KeyMap {
     /** contains user- and skin-set key binding or function mappings */
     private static class Entry {
         Object userValue;
-        Skin<?> skin;
+        Skin<?> skin; // TODO create IBehavior, and use that instead of skin (but still need to do it in install() due to km being a control property)
         Object skinValue;
 
         public Object getValue() {
@@ -215,6 +215,7 @@ public class KeyMap {
      *
      * @param skin
      */
+    // TODO can be called by the input map
     public void unregister(Skin<?> skin) {
         Objects.nonNull(skin);
         Iterator<Entry> it = map.values().iterator();
