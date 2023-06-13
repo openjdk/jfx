@@ -42,7 +42,6 @@ import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.logging.PlatformLogger;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
@@ -51,72 +50,33 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.lang.annotation.Native;
 
+
 final class GtkApplication extends Application implements
                                     InvokeLaterDispatcher.InvokeLaterSubmitter {
-    private static final String SWT_INTERNAL_CLASS =
-            "org.eclipse.swt.internal.gtk.OS";
     private static final int forcedGtkVersion;
-    private static boolean gtk2WarningIssued = false;
-    private static final String GTK2_ALREADY_LOADED_WARNING =
-        "WARNING: Found GTK 2 library already loaded";
-    private static final String GTK2_SPECIFIED_WARNING =
-        "WARNING: A command line option has enabled the GTK 2 library";
-    private static final String GTK2_FALLBACK_WARNING =
-        "WARNING: Using GTK 2 library because GTK 3 cannot be loaded ";
-    private static final String GTK2_DEPRECATION_WARNING =
-        "WARNING: The JavaFX GTK 2 library is deprecated and will be removed in a future release";
+    private static boolean gtkVersionWarningIssued = false;
+    private static final String GTK2_REMOVED_WARNING =
+            "WARNING: A command line option tried to select the GTK 2 library, which was removed from JavaFX.";
 
+    private static final String GTK_INVALID_VERSION_WARNING =
+            "WARNING: A command line option tried to select an invalid GTK library version.";
+    private static final String GTK3_FALLBACK_WARNING = "WARNING: The GTK 3 library will be used instead.";
 
     static  {
-        //check for SWT-GTK lib presence
         @SuppressWarnings("removal")
-        Class<?> OS = AccessController.
-                doPrivileged((PrivilegedAction<Class<?>>) () -> {
-                    try {
-                        return Class.forName(SWT_INTERNAL_CLASS, true,
-                                ClassLoader.getSystemClassLoader());
-                    } catch (Exception e) {}
-                    try {
-                        return Class.forName(SWT_INTERNAL_CLASS, true,
-                                Thread.currentThread().getContextClassLoader());
-                    } catch (Exception e) {}
-                    return null;
-                });
-        if (OS != null) {
+        String gtkVersion = AccessController.doPrivileged((PrivilegedAction<String>)
+                                () -> System.getProperty("org.eclipse.swt.internal.gtk.version"));
+        if (gtkVersion != null && gtkVersion.contains(".")) {
             PlatformLogger logger = Logging.getJavaFXLogger();
-            logger.fine("SWT-GTK library found. Try to obtain GTK version.");
-            @SuppressWarnings("removal")
-            Method method = AccessController.
-                    doPrivileged((PrivilegedAction<Method>) () -> {
-                        try {
-                            return OS.getMethod("gtk_major_version");
-                        } catch (Exception e) {
-                            return null;
-                        }
-                    });
-            int ver = 0;
-            if (method != null) {
-                try {
-                    ver = ((Number)method.invoke(OS)).intValue();
-                } catch (Exception e) {
-                    logger.warning("Method gtk_major_version() of " +
-                         "the org.eclipse.swt.internal.gtk.OS class " +
-                         "returns error. SWT GTK version cannot be detected. " +
-                         "GTK3 will be used as default.");
-                    ver = 3;
-                }
+            logger.fine(String.format("SWT-GTK library found. Gtk Version = %s.", gtkVersion));
+            String[] vers = gtkVersion.split("\\.");
+            int ver = Integer.parseInt(vers[0]);
+
+            if (ver != 3) {
+                throw new UnsupportedOperationException("SWT-GTK uses unsupported major GTK version " + ver + " .");
             }
-            if (ver < 2 || ver > 3) {
-                logger.warning("SWT-GTK uses unsupported major GTK version "
-                        + ver + ". GTK3 will be used as default.");
-                ver = 3;
-            }
+
             forcedGtkVersion = ver;
-            if (ver == 2 && !gtk2WarningIssued) {
-                System.err.println(GTK2_ALREADY_LOADED_WARNING);
-                System.err.println(GTK2_DEPRECATION_WARNING);
-                gtk2WarningIssued = true;
-            }
         } else {
             forcedGtkVersion = 0;
         }
@@ -162,22 +122,24 @@ final class GtkApplication extends Application implements
     GtkApplication() {
 
         @SuppressWarnings("removal")
-        final int gtkVersion = forcedGtkVersion == 0 ?
+        int gtkVersion = forcedGtkVersion == 0 ?
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
                 String v = System.getProperty("jdk.gtk.version","3");
-                int ret = 0;
-                if ("3".equals(v) || v.startsWith("3.")) {
-                    ret = 3;
-                } else if ("2".equals(v) || v.startsWith("2.")) {
-                    ret = 2;
-                }
-                return ret;
+                return Character.getNumericValue(v.charAt(0));
             }) : forcedGtkVersion;
 
-        if (gtkVersion == 2 && !gtk2WarningIssued) {
-            System.err.println(GTK2_SPECIFIED_WARNING);
-            System.err.println(GTK2_DEPRECATION_WARNING);
-            gtk2WarningIssued = true;
+        if (gtkVersion != 3) {
+            if (!gtkVersionWarningIssued) {
+                if (gtkVersion == 2) {
+                    System.err.println(GTK2_REMOVED_WARNING);
+                } else {
+                    System.err.println(GTK_INVALID_VERSION_WARNING);
+                }
+            }
+
+            System.err.println(GTK3_FALLBACK_WARNING);
+            gtkVersionWarningIssued = true;
+            gtkVersion = 3;
         }
 
         @SuppressWarnings("removal")
@@ -204,32 +166,18 @@ final class GtkApplication extends Application implements
                 if (gtkVersionVerbose) {
                     System.out.println("Glass GTK library to load is already loaded");
                 }
-            } else if (libraryToLoad == QUERY_LOAD_GTK2) {
-                if (gtkVersionVerbose) {
-                    System.out.println("Glass GTK library to load is glassgtk2");
-                }
-                NativeLibLoader.loadLibrary("glassgtk2");
-                if (!gtk2WarningIssued) {
-                    System.err.println(GTK2_FALLBACK_WARNING);
-                    System.err.println(GTK2_DEPRECATION_WARNING);
-                    gtk2WarningIssued = true;
-                }
             } else if (libraryToLoad == QUERY_LOAD_GTK3) {
                 if (gtkVersionVerbose) {
                     System.out.println("Glass GTK library to load is glassgtk3");
                 }
                 NativeLibLoader.loadLibrary("glassgtk3");
             } else {
-                throw new UnsupportedOperationException("Internal Error");
+                throw new UnsupportedOperationException("Unable to load glass GTK library.");
             }
             return null;
         });
 
-        int version = _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
-
-        if (version == -1) {
-            throw new RuntimeException("Error loading GTK libraries");
-        }
+        _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
 
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -246,7 +194,6 @@ final class GtkApplication extends Application implements
     @Native private static final int QUERY_ERROR = -2;
     @Native private static final int QUERY_NO_DISPLAY = -1;
     @Native private static final int QUERY_USE_CURRENT = 1;
-    @Native private static final int QUERY_LOAD_GTK2 = 2;
     @Native private static final int QUERY_LOAD_GTK3 = 3;
     /*
      * check the system and return an indication of which library to load
@@ -254,7 +201,7 @@ final class GtkApplication extends Application implements
      */
     private static native int _queryLibrary(int version, boolean verbose);
 
-    private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
+    private static native void _initGTK(int version, boolean verbose, float overrideUIScale);
 
     private void initDisplay() {
         Map ds = getDeviceDetails();

@@ -35,6 +35,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
@@ -53,6 +54,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.util.StringConverter;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -1522,5 +1524,61 @@ public class SpinnerTest {
     @Test public void testSetValueNull_LocalTimeSpinner() {
         localTimeValueFactory.setValue(null);
         assertNull(localTimeSpinner.getValue());
+    }
+
+    @Test public void testDoubleSpinnerEditorUpdateOnConverterChange() {
+        dblSpinner = new Spinner<>(0.0, 1.0, 0.5, 0.01);
+        dblSpinner.setEditable(true);
+
+        assertEquals("0.5", dblSpinner.getEditor().getText());
+
+        dblSpinner.getValueFactory().setConverter(new StringConverter<Double>() {
+            private final DecimalFormat df = new DecimalFormat("#.##%");
+
+            @Override
+            public String toString(Double value) {
+                return value == null ? "" : df.format(value);
+            }
+            @Override
+            public Double fromString(String value) {
+                if (value == null) {
+                    return null;
+                }
+
+                try {
+                    return df.parse(value).doubleValue();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+
+        assertEquals("50%", dblSpinner.getEditor().getText());
+    }
+
+    @Test public void testIntegerSpinnerEditorUpdateOnConverterChange() {
+        intSpinner = new Spinner<>(0, 100, 50, 1);
+        intSpinner.setEditable(true);
+
+        assertEquals("50", intSpinner.getEditor().getText());
+
+        intSpinner.getValueFactory().setConverter(new StringConverter<Integer>() {
+            @Override
+            public String toString(Integer value) {
+                return value == null ? "" : value.toString() + "%";
+            }
+
+            @Override
+            public Integer fromString(String value) {
+                if (value == null) {
+                    return null;
+                }
+
+                String valueWithoutUnits = value.replaceAll("%", "").trim();
+                return valueWithoutUnits.isEmpty() ? 0 : Integer.valueOf(valueWithoutUnits);
+            }
+        });
+
+        assertEquals("50%", intSpinner.getEditor().getText());
     }
 }

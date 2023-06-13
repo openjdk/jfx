@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -88,7 +89,7 @@ public class TableHeaderRow extends StackPane {
 
     private final VirtualFlow flow;
     final TableViewSkinBase<?,?,?,?,?> tableSkin;
-    private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<>();
+    private Map<TableColumnBase, CheckMenuItem> columnMenuItems;
     private double scrollX;
     private double tableWidth;
     private Rectangle clip;
@@ -210,12 +211,6 @@ public class TableHeaderRow extends StackPane {
         tableSkin.getSkinnable().paddingProperty().addListener(weakTablePaddingListener);
         TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakVisibleLeafColumnsListener);
 
-        // popup menu for hiding/showing columns
-        columnPopupMenu = new ContextMenu();
-        updateTableColumnListeners(TableSkinUtils.getColumns(tableSkin), Collections.<TableColumnBase<?,?>>emptyList());
-        TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakTableColumnsListener);
-        TableSkinUtils.getColumns(tableSkin).addListener(weakTableColumnsListener);
-
         // drag header region. Used to indicate the current column being reordered
         dragHeader = new StackPane();
         dragHeader.setVisible(false);
@@ -263,11 +258,7 @@ public class TableHeaderRow extends StackPane {
             cornerRegion.visibleProperty().bind(tableMenuButtonVisibleProperty);
         }
 
-        cornerRegion.setOnMousePressed(me -> {
-            // show a popupMenu which lists all columns
-            columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
-            me.consume();
-        });
+        cornerRegion.setOnMousePressed(this::showColumnMenu);
         cornerRegion.visibleProperty().addListener(weakCornerPaddingListener);
         flow.getVbar().visibleProperty().addListener(weakCornerPaddingListener);
 
@@ -473,7 +464,26 @@ public class TableHeaderRow extends StackPane {
         return new NestedTableColumnHeader(null);
     }
 
+    /**
+     * Shows a menu containing all leaf columns as items.
+     * An item can be selected/deselected to make the corresponding column visible/invisible.
+     *
+     * @implNote This method can be overridden to create and show a custom menu.
+     * @param mouseEvent the {@code MouseEvent} which was generated when the table menu button was pressed
+     * @since 21
+     */
+    protected void showColumnMenu(MouseEvent mouseEvent) {
+        if (columnPopupMenu == null) {
+            columnPopupMenu = new ContextMenu();
+            columnMenuItems = new HashMap<>();
 
+            TableSkinUtils.getVisibleLeafColumns(tableSkin).addListener(weakTableColumnsListener);
+            TableSkinUtils.getColumns(tableSkin).addListener(weakTableColumnsListener);
+            updateTableColumnListeners(TableSkinUtils.getColumns(tableSkin), List.of());
+        }
+        columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
+        mouseEvent.consume();
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -696,4 +706,12 @@ public class TableHeaderRow extends StackPane {
         cornerPadding.set(padding);
     }
 
+    // testing only
+    Pane getCornerRegion() {
+        return cornerRegion;
+    }
+
+    ContextMenu getColumnPopupMenu() {
+        return columnPopupMenu;
+    }
 }

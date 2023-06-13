@@ -368,6 +368,11 @@ protected:
     virtual void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const;
     virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
 
+#if PLATFORM(JAVA)
+    virtual bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+    virtual bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
+#endif
+
 public:
     void updateControlStatesForRenderer(const RenderBox&, ControlStates&) const;
     OptionSet<ControlStates::States> extractControlStatesForRenderer(const RenderObject&) const;
