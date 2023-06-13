@@ -88,6 +88,13 @@ public class SliderTooltipNPETest {
     }
 
     private void dragSliderAfterTooltipDisplayed(int dragDistance) throws Exception {
+        Util.runAndWait(() -> {
+            // Click somewhere in the Stage to ensure that it is active
+            robot.mouseMove((int)(scene.getWindow().getX() + scene.getX()),
+                            (int)(scene.getWindow().getY() + scene.getY()));
+            robot.mouseClick(MouseButton.PRIMARY);
+        });
+
         Thread.sleep(1000); // Wait for slider to layout
 
         Util.runAndWait(() -> {
