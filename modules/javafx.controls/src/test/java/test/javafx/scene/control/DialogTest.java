@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,30 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.tk.Toolkit;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.layout.StackPane;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /** Tests for the {@link Dialog} class. */
 public class DialogTest {
 
     private Dialog<ButtonType> dialog;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         dialog = new Dialog<>();
     }
 
-    @After
+    @AfterEach
     public void cleanUp() {
         // Set a dummy result so the dialog can be closed.
         dialog.setResult(new ButtonType(""));
@@ -96,6 +100,39 @@ public class DialogTest {
         assertDialogPaneHeightEquals(prefHeight);
 
         assertEquals(prefHeight, dialog.getDialogPane().getPrefHeight(), 0);
+    }
+
+    @Test
+    public void testAddAndRemoveEventHandler() {
+        var handler = new TestHandler();
+        dialog.addEventHandler(ActionEvent.ACTION, handler);
+        Event.fireEvent(dialog, new ActionEvent());
+        assertEquals(1, handler.handled);
+
+        dialog.removeEventHandler(ActionEvent.ACTION, handler);
+        Event.fireEvent(dialog, new ActionEvent());
+        assertEquals(1, handler.handled);
+    }
+
+    @Test
+    public void testAddAndRemoveEventFilter() {
+        var handler = new TestHandler();
+        dialog.addEventFilter(ActionEvent.ACTION, handler);
+        Event.fireEvent(dialog, new ActionEvent());
+        assertEquals(1, handler.handled);
+
+        dialog.removeEventFilter(ActionEvent.ACTION, handler);
+        Event.fireEvent(dialog, new ActionEvent());
+        assertEquals(1, handler.handled);
+    }
+
+    private static class TestHandler implements EventHandler<ActionEvent> {
+        int handled;
+
+        @Override
+        public void handle(ActionEvent event) {
+            handled++;
+        }
     }
 
     private void assertDialogPaneHeightEquals(int height) {
