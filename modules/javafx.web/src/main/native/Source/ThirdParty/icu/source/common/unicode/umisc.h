@@ -21,7 +21,7 @@
 
 /**
  * \file
- * \brief  C API:misc definitions
+ * \brief C API: Miscellaneous definitions
  *
  *  This file contains miscellaneous definitions for the C APIs.
  */

@@ -23,13 +23,6 @@
 
 #include "unicode/utypes.h"
 
-#ifndef TRUE
-#   define TRUE  1
-#endif
-#ifndef FALSE
-#   define FALSE 0
-#endif
-
 #ifdef __cplusplus
 
 #include "unicode/errorcode.h"
@@ -106,7 +99,7 @@ findDirname(const char *path, char *buffer, int32_t bufLen, UErrorCode* status);
  * Return the current year in the Gregorian calendar. Used for copyright generation.
  */
 U_CAPI int32_t U_EXPORT2
-getCurrentYear(void);
+getCurrentYear();
 
 /*
  * Creates a directory with pathname.
@@ -118,9 +111,9 @@ uprv_mkdir(const char *pathname, UErrorCode *status);
 
 #if !UCONFIG_NO_FILE_IO
 /**
- * Return TRUE if the named item exists
+ * Return true if the named item exists
  * @param file filename
- * @return TRUE if named item (file, dir, etc) exists, FALSE otherwise
+ * @return true if named item (file, dir, etc) exists, false otherwise
  */
 U_CAPI UBool U_EXPORT2
 uprv_fileExists(const char *file);

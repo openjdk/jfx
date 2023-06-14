@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -454,7 +454,7 @@ public class PrismTextLayout implements TextLayout {
                 leading = (trailing[0] == 0);
 
                 insertionIndex = charIndex;
-                if (getText() != null) {
+                if (getText() != null && insertionIndex < getText().length) {
                     if (!leading) {
                         BreakIterator charIterator = BreakIterator.getCharacterInstance();
                         charIterator.setText(new String(getText()));

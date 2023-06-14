@@ -50,6 +50,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -257,19 +258,7 @@ public class TableHeaderRow extends StackPane {
             cornerRegion.visibleProperty().bind(tableMenuButtonVisibleProperty);
         }
 
-        cornerRegion.setOnMousePressed(me -> {
-            if (columnPopupMenu == null) {
-                columnPopupMenu = new ContextMenu();
-                columnMenuItems = new HashMap<>();
-
-                TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakTableColumnsListener);
-                TableSkinUtils.getColumns(tableSkin).addListener(weakTableColumnsListener);
-                updateTableColumnListeners(TableSkinUtils.getColumns(tableSkin), List.of());
-            }
-            // show a popupMenu which lists all columns
-            columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
-            me.consume();
-        });
+        cornerRegion.setOnMousePressed(this::showColumnMenu);
         cornerRegion.visibleProperty().addListener(weakCornerPaddingListener);
         flow.getVbar().visibleProperty().addListener(weakCornerPaddingListener);
 
@@ -475,7 +464,26 @@ public class TableHeaderRow extends StackPane {
         return new NestedTableColumnHeader(null);
     }
 
+    /**
+     * Shows a menu containing all leaf columns as items.
+     * An item can be selected/deselected to make the corresponding column visible/invisible.
+     *
+     * @implNote This method can be overridden to create and show a custom menu.
+     * @param mouseEvent the {@code MouseEvent} which was generated when the table menu button was pressed
+     * @since 21
+     */
+    protected void showColumnMenu(MouseEvent mouseEvent) {
+        if (columnPopupMenu == null) {
+            columnPopupMenu = new ContextMenu();
+            columnMenuItems = new HashMap<>();
 
+            TableSkinUtils.getVisibleLeafColumns(tableSkin).addListener(weakTableColumnsListener);
+            TableSkinUtils.getColumns(tableSkin).addListener(weakTableColumnsListener);
+            updateTableColumnListeners(TableSkinUtils.getColumns(tableSkin), List.of());
+        }
+        columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
+        mouseEvent.consume();
+    }
 
     /* *************************************************************************
      *                                                                         *
