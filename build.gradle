@@ -4174,6 +4174,9 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.tags("factory")
     options.tags("see")
 
+    options.addStringOption("-since").setValue((9..jfxReleaseMajorVersion.toInteger()).join(","))
+    options.addStringOption("-since-label").setValue("New API since JavaFX 9")
+
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")

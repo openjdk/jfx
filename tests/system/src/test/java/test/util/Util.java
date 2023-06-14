@@ -43,6 +43,7 @@ import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.robot.Robot;
+import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -421,6 +422,38 @@ public class Util {
             park.run();
         } else {
             runAndWait(park);
+        }
+    }
+
+    /**
+     * Triggers and waits for 10 pulses to complete in the specified scene.
+     */
+    public static void waitForIdle(Scene scene) {
+        waitForIdle(scene, 10);
+    }
+
+    /**
+     * Triggers and waits for specified number of pulses (pulseCount)
+     * to complete in the specified scene.
+     */
+    public static void waitForIdle(Scene scene, int pulseCount) {
+        CountDownLatch latch = new CountDownLatch(pulseCount);
+        Runnable pulseListener = () -> {
+            latch.countDown();
+            Platform.requestNextPulse();
+        };
+
+        runAndWait(() -> {
+            scene.addPostLayoutPulseListener(pulseListener);
+        });
+
+        try {
+            Platform.requestNextPulse();
+            waitForLatch(latch, TIMEOUT, "Timeout waiting for post layout pulse");
+        } finally {
+            runAndWait(() -> {
+                scene.removePostLayoutPulseListener(pulseListener);
+            });
         }
     }
 

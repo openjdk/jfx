@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -462,5 +463,36 @@ public class TabTest {
         assertTrue(vBox.isDisable());
         assertTrue(vBox.isDisabled());
         tab.setContent(null);
+    }
+
+    @Test public void testAddAndRemoveEventHandler() {
+        var handler = new TestHandler();
+        tab.addEventHandler(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+
+        tab.removeEventHandler(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+    }
+
+    @Test public void testAddAndRemoveEventFilter() {
+        var handler = new TestHandler();
+        tab.addEventFilter(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+
+        tab.removeEventFilter(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+    }
+
+    private static class TestHandler implements EventHandler<ActionEvent> {
+        int handled;
+
+        @Override
+        public void handle(ActionEvent event) {
+            handled++;
+        }
     }
 }
