@@ -81,6 +81,10 @@ import javafx.scene.AccessibleRole;
  * @since JavaFX 2.0
  */
 public class TextArea extends TextInputControl {
+//    public static final F_ Cmd extends TextInputControl.Cmd {
+//        
+//    }
+
     // Text area content model
     private static final class TextAreaContent extends ContentBase {
         private final List<StringBuilder> paragraphs = new ArrayList<>();

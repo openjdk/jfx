@@ -331,8 +331,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
         TextInputControl control = getSkinnable();
 
-        getBehavior().install();
-
         // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
         if (control.getOnInputMethodTextChanged() == null) {
             control.setOnInputMethodTextChanged(inputMethodTextChangedHandler);

@@ -25,8 +25,9 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
+import static com.sun.javafx.PlatformUtil.isMac;
+import static com.sun.javafx.PlatformUtil.isWindows;
+import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -51,19 +52,17 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.Text;
 import javafx.scene.text.HitInfo;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
-
-import java.util.List;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
+import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 /**
  * Default skin implementation for the {@link TextArea} control.
  *
@@ -71,6 +70,30 @@ import static com.sun.javafx.PlatformUtil.isWindows;
  * @since 9
  */
 public class TextAreaSkin extends TextInputControlSkin<TextArea> {
+    public enum C2 implements FunctionTag {
+        DOCUMENT_END,
+        DOCUMENT_START,
+        DOWN,
+        END,
+        HOME,
+        INSERT_TAB,
+        INSERT_NEW_LINE,
+        MOVE_PARAGRAPH_DOWN,
+        MOVE_PARAGRAPH_UP,
+        PAGE_DOWN,
+        PAGE_UP,
+        SELECT_DOWN,
+        SELECT_END_EXTEND,
+        SELECT_HOME_EXTEND,
+        SELECT_LINE_END,
+        SELECT_LINE_START,
+        SELECT_PAGE_DOWN,
+        SELECT_PAGE_UP,
+        SELECT_PARAGRAPH_DOWN,
+        SELECT_PARAGRAPH_UP,
+        SELECT_UP,
+        UP,
+    }
 
     /* ************************************************************************
      *
@@ -94,7 +117,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     // *** NOTE: Multiple node mode is not yet fully implemented *** //
     private static final boolean USE_MULTIPLE_NODES = false;
 
-    private final TextAreaBehavior behavior;
+    private TextAreaBehavior behavior;
 
     private double computedMinWidth = Double.NEGATIVE_INFINITY;
     private double computedMinHeight = Double.NEGATIVE_INFINITY;
@@ -828,16 +851,25 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
+    
+    @Override
+    public void install() {
+        super.install();
+        behavior.install();
+    }
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        if (getSkinnable() == null) return;
-        getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
-        getChildren().remove(scrollPane);
-        super.dispose();
-
-        if (behavior != null) {
-            behavior.dispose();
+    @Override
+    public void dispose() {
+        if (getSkinnable() != null) {
+            getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
+            getChildren().remove(scrollPane);
+            
+            if (behavior != null) {
+                behavior.dispose();
+                behavior = null;
+            }
+            
+            super.dispose();
         }
     }
 

@@ -36,6 +36,7 @@ import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.input.IBehavior;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.input.KeyMap;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
@@ -73,9 +74,7 @@ public abstract class BehaviorBase<N extends Control> implements IBehavior {
     }
 
     public void dispose() {
-        if (node instanceof Control c) {
-            c.getKeyMap().unregister(this);
-        }
+        node.getKeyMap().unregister(this);
 
         // when we dispose a behavior, we do NOT want to dispose the InputMap,
         // as that can remove input mappings that were not installed by the
@@ -131,6 +130,18 @@ public abstract class BehaviorBase<N extends Control> implements IBehavior {
      */
     public void key(KeyBinding2 k, FunctionTag tag) {
         getNode().getKeyMap().key(this, k, tag);
+    }
+
+    /**
+     * Maps a key binding to the specified function tag.
+     * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
+     *
+     * @param behavior
+     * @param code key code to construct a {@link KeyBinding2}
+     * @param tag function tag
+     */
+    public void key(KeyCode code, FunctionTag tag) {
+        getNode().getKeyMap().key(this, code, tag);
     }
 
     protected void addDefaultMapping(Mapping<?>... newMapping) {

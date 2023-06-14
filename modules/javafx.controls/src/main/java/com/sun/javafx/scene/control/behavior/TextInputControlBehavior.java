@@ -498,7 +498,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         }
     }
     
-    private boolean isEditable() {
+    boolean isEditable() {
         return textInputControl.isEditable();
     }
 

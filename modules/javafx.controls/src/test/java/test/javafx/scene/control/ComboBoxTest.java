@@ -1429,8 +1429,8 @@ public class ComboBoxTest {
         assertEquals(1, cb.getEditor().getCaretPosition());
 
         // Test KP_RIGHT key
-        System.out.println(cb.getKeyMap().getKeyBindings()); // FIX
         keyboard.doKeyPress(KeyCode.KP_RIGHT);
+        //Toolkit.getToolkit().firePulse();
         assertEquals(2, cb.getEditor().getCaretPosition());
 
         // Test LEFT key

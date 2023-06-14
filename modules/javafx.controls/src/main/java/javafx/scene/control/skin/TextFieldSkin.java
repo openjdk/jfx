@@ -75,7 +75,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      *
      **************************************************************************/
 
-    private final TextFieldBehavior behavior;
+    private TextFieldBehavior behavior;
 
     /**
      * This group contains the text, caret, and selection rectangle.
@@ -384,14 +384,22 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        if (getSkinnable() == null) return;
-        getChildren().removeAll(textGroup, handleGroup);
-        super.dispose();
+    @Override
+    public void install() {
+        super.install();
+        behavior.install();
+    }
 
-        if (behavior != null) {
-            behavior.dispose();
+    @Override
+    public void dispose() {
+        if (getSkinnable() != null) {
+            getChildren().removeAll(textGroup, handleGroup);
+            super.dispose();
+    
+            if (behavior != null) {
+                behavior.dispose();
+                behavior = null;
+            }
         }
     }
 
