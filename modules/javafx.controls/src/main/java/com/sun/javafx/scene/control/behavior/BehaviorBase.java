@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,13 +32,20 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.input.IBehavior;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.input.KeyMap;
 import javafx.scene.input.KeyEvent;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
 
-public abstract class BehaviorBase<N extends Node> {
+/**
+ * Class provides a foundation for behaviors.
+ *
+ * @param <N> the actual class for which this behavior is intended
+ */
+// TODO add func() and key() can be added to BehaviorBase
+public abstract class BehaviorBase<N extends Node> implements IBehavior {
 
     private final N node;
     private final List<Mapping<?>> installedDefaultMappings;
@@ -64,6 +71,10 @@ public abstract class BehaviorBase<N extends Node> {
     }
 
     public void dispose() {
+        if (node instanceof Control c) {
+            c.getKeyMap().unregister(this);
+        }
+
         // when we dispose a behavior, we do NOT want to dispose the InputMap,
         // as that can remove input mappings that were not installed by the
         // behavior. Instead, we want to only remove mappings that the behavior

@@ -25,23 +25,13 @@
 
 package javafx.scene.control.skin;
 
+import static com.sun.javafx.PlatformUtil.isWindows;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
-import com.sun.javafx.scene.control.skin.FXVK;
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import com.sun.javafx.tk.FontMetrics;
-import com.sun.javafx.tk.Toolkit;
-
-import static com.sun.javafx.PlatformUtil.*;
-
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -90,6 +80,13 @@ import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
+import com.sun.javafx.scene.control.skin.FXVK;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
+import com.sun.javafx.tk.FontMetrics;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * Abstract base class for text input skins.
@@ -334,7 +331,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
         TextInputControl control = getSkinnable();
 
-        getBehavior().install(this);
+        getBehavior().install();
 
         // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
         if (control.getOnInputMethodTextChanged() == null) {
@@ -414,8 +411,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
             getSkinnable().setOnInputMethodTextChanged(null);
         }
-
-        getBehavior().uninstall(this);
 
         super.dispose();
     }

@@ -164,18 +164,16 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
     @Override
     public void install() {
-        behavior.install(this);
+        behavior.install();
     }
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
-
+    @Override
+    public void dispose() {
         if (behavior != null) {
-            behavior.uninstall(this);
             behavior.dispose();
             behavior = null;
         }
+        super.dispose();
     }
 
     /** {@inheritDoc} */

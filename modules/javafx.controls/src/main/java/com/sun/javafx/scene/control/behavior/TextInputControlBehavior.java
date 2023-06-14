@@ -177,110 +177,107 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         contextMenu = new ContextMenu();
     }
 
-    public void install(TextInputControlSkin<?> s) {
-        TextInputControl c = s.getSkinnable();
+    public void install() {
+        TextInputControl c = getNode();
         KeyMap m = c.getKeyMap();
 
-        m.func(s, Cmd.COPY, c::copy); // TODO move method to behavior
-        m.func(s, Cmd.CUT, this::cut);
-        m.func(s, Cmd.DELETE_FROM_LINE_START, this::deleteFromLineStart);
-        m.func(s, Cmd.DELETE_NEXT_CHAR, this::deleteNextChar);
-        m.func(s, Cmd.DELETE_NEXT_WORD, this::deleteNextWord);
-        m.func(s, Cmd.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
-        m.func(s, Cmd.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
-        m.func(s, Cmd.DESELECT, c::deselect); // TODO move method to behavior
-        m.func(s, Cmd.HOME, c::home); // TODO move method to behavior
-        m.func(s, Cmd.END, c::end); // TODO move method to behavior
-        m.func(s, Cmd.LEFT, () -> nextCharacterVisually(false));
-        m.func(s, Cmd.LEFT_WORD, this::leftWord);
-        m.func(s, Cmd.PASTE, this::paste);
-        m.func(s, Cmd.REDO, this::redo);
-        m.func(s, Cmd.RIGHT, () -> nextCharacterVisually(true));
-        m.func(s, Cmd.RIGHT_WORD, this::rightWord);
-        m.func(s, Cmd.SELECT_ALL, this::selectAll);
-        m.func(s, Cmd.SELECT_END, this::selectEnd);
-        m.func(s, Cmd.SELECT_END_EXTEND, this::selectEndExtend);
-        m.func(s, Cmd.SELECT_HOME, this::selectHome);
-        m.func(s, Cmd.SELECT_HOME_EXTEND, this::selectHomeExtend);
-        m.func(s, Cmd.SELECT_LEFT, this::selectLeft);
-        m.func(s, Cmd.SELECT_LEFT_WORD, this::selectLeftWord);
-        m.func(s, Cmd.SELECT_RIGHT, this::selectRight);
-        m.func(s, Cmd.SELECT_RIGHT_WORD, this::selectRightWord);
-        m.func(s, Cmd.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
-        m.func(s, Cmd.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
+        // TODO func() and key() can be added to BehaviorBase
+        m.func(this, Cmd.COPY, c::copy); // TODO move method to behavior
+        m.func(this, Cmd.CUT, this::cut);
+        m.func(this, Cmd.DELETE_FROM_LINE_START, this::deleteFromLineStart);
+        m.func(this, Cmd.DELETE_NEXT_CHAR, this::deleteNextChar);
+        m.func(this, Cmd.DELETE_NEXT_WORD, this::deleteNextWord);
+        m.func(this, Cmd.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
+        m.func(this, Cmd.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
+        m.func(this, Cmd.DESELECT, c::deselect); // TODO move method to behavior
+        m.func(this, Cmd.HOME, c::home); // TODO move method to behavior
+        m.func(this, Cmd.END, c::end); // TODO move method to behavior
+        m.func(this, Cmd.LEFT, () -> nextCharacterVisually(false));
+        m.func(this, Cmd.LEFT_WORD, this::leftWord);
+        m.func(this, Cmd.PASTE, this::paste);
+        m.func(this, Cmd.REDO, this::redo);
+        m.func(this, Cmd.RIGHT, () -> nextCharacterVisually(true));
+        m.func(this, Cmd.RIGHT_WORD, this::rightWord);
+        m.func(this, Cmd.SELECT_ALL, this::selectAll);
+        m.func(this, Cmd.SELECT_END, this::selectEnd);
+        m.func(this, Cmd.SELECT_END_EXTEND, this::selectEndExtend);
+        m.func(this, Cmd.SELECT_HOME, this::selectHome);
+        m.func(this, Cmd.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        m.func(this, Cmd.SELECT_LEFT, this::selectLeft);
+        m.func(this, Cmd.SELECT_LEFT_WORD, this::selectLeftWord);
+        m.func(this, Cmd.SELECT_RIGHT, this::selectRight);
+        m.func(this, Cmd.SELECT_RIGHT_WORD, this::selectRightWord);
+        m.func(this, Cmd.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
+        m.func(this, Cmd.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
 
         // common key bindings
-        m.key(s, KeyBinding2.shortcut(C), Cmd.COPY);
-        m.key(s, KeyBinding2.of(COPY), Cmd.COPY);
-        m.key(s, KeyBinding2.shortcut(INSERT), Cmd.COPY);
-        m.key(s, KeyBinding2.of(CUT), Cmd.CUT);
-        m.key(s, KeyBinding2.shortcut(X), Cmd.CUT);
-        m.key(s, KeyBinding2.of(DELETE), Cmd.DELETE_NEXT_CHAR);
-        m.key(s, KeyBinding2.of(BACK_SPACE), Cmd.DELETE_PREVIOUS_CHAR);
-        m.key(s, KeyBinding2.with(BACK_SPACE).shift().build(), Cmd.DELETE_PREVIOUS_CHAR);
-        m.key(s, KeyBinding2.of(HOME), Cmd.HOME);
-        m.key(s, KeyBinding2.with(HOME).shortcut().build(), Cmd.HOME);
-        m.key(s, KeyBinding2.of(UP), Cmd.HOME);
-        m.key(s, KeyBinding2.of(DOWN), Cmd.END);
-        m.key(s, KeyBinding2.of(END), Cmd.END);
-        m.key(s, KeyBinding2.with(END).shortcut().build(), Cmd.END);
-        m.key(s, KeyBinding2.of(LEFT), Cmd.LEFT);
-        m.key(s, KeyBinding2.of(PASTE), Cmd.PASTE);
-        m.key(s, KeyBinding2.shift(INSERT), Cmd.PASTE);
-        m.key(s, KeyBinding2.shortcut(V), Cmd.PASTE);
-        m.key(s, KeyBinding2.of(RIGHT), Cmd.RIGHT);
-        m.key(s, KeyBinding2.shift(DOWN), Cmd.SELECT_END);
-        m.key(s, KeyBinding2.with(END).shortcut().shift().build(), Cmd.SELECT_END);
-        m.key(s, KeyBinding2.with(HOME).shortcut().shift().build(), Cmd.SELECT_HOME);
-        m.key(s, KeyBinding2.shift(UP), Cmd.SELECT_HOME);
-        m.key(s, KeyBinding2.shift(LEFT), Cmd.SELECT_LEFT);
-        m.key(s, KeyBinding2.shift(RIGHT), Cmd.SELECT_RIGHT);
-        m.key(s, KeyBinding2.of(TAB), Cmd.TRAVERSE_NEXT);
-        m.key(s, KeyBinding2.ctrl(TAB), Cmd.TRAVERSE_NEXT);
-        m.key(s, KeyBinding2.shift(TAB), Cmd.TRAVERSE_PREVIOUS);
-        m.key(s, KeyBinding2.with(TAB).ctrl().shift().build(), Cmd.TRAVERSE_PREVIOUS);
+        m.key(this, KeyBinding2.shortcut(C), Cmd.COPY);
+        m.key(this, KeyBinding2.of(COPY), Cmd.COPY);
+        m.key(this, KeyBinding2.shortcut(INSERT), Cmd.COPY);
+        m.key(this, KeyBinding2.of(CUT), Cmd.CUT);
+        m.key(this, KeyBinding2.shortcut(X), Cmd.CUT);
+        m.key(this, KeyBinding2.of(DELETE), Cmd.DELETE_NEXT_CHAR);
+        m.key(this, KeyBinding2.of(BACK_SPACE), Cmd.DELETE_PREVIOUS_CHAR);
+        m.key(this, KeyBinding2.with(BACK_SPACE).shift().build(), Cmd.DELETE_PREVIOUS_CHAR);
+        m.key(this, KeyBinding2.of(HOME), Cmd.HOME);
+        m.key(this, KeyBinding2.with(HOME).shortcut().build(), Cmd.HOME);
+        m.key(this, KeyBinding2.of(UP), Cmd.HOME);
+        m.key(this, KeyBinding2.of(DOWN), Cmd.END);
+        m.key(this, KeyBinding2.of(END), Cmd.END);
+        m.key(this, KeyBinding2.with(END).shortcut().build(), Cmd.END);
+        m.key(this, KeyBinding2.of(LEFT), Cmd.LEFT);
+        m.key(this, KeyBinding2.of(PASTE), Cmd.PASTE);
+        m.key(this, KeyBinding2.shift(INSERT), Cmd.PASTE);
+        m.key(this, KeyBinding2.shortcut(V), Cmd.PASTE);
+        m.key(this, KeyBinding2.of(RIGHT), Cmd.RIGHT);
+        m.key(this, KeyBinding2.shift(DOWN), Cmd.SELECT_END);
+        m.key(this, KeyBinding2.with(END).shortcut().shift().build(), Cmd.SELECT_END);
+        m.key(this, KeyBinding2.with(HOME).shortcut().shift().build(), Cmd.SELECT_HOME);
+        m.key(this, KeyBinding2.shift(UP), Cmd.SELECT_HOME);
+        m.key(this, KeyBinding2.shift(LEFT), Cmd.SELECT_LEFT);
+        m.key(this, KeyBinding2.shift(RIGHT), Cmd.SELECT_RIGHT);
+        m.key(this, KeyBinding2.of(TAB), Cmd.TRAVERSE_NEXT);
+        m.key(this, KeyBinding2.ctrl(TAB), Cmd.TRAVERSE_NEXT);
+        m.key(this, KeyBinding2.shift(TAB), Cmd.TRAVERSE_PREVIOUS);
+        m.key(this, KeyBinding2.with(TAB).ctrl().shift().build(), Cmd.TRAVERSE_PREVIOUS);
 
         // macOS key bindings
-        m.key(s, KeyBinding2.with(BACK_SPACE).shortcut().forMac().build(), Cmd.DELETE_FROM_LINE_START);
-        m.key(s, KeyBinding2.with(DELETE).alt().forMac().build(), Cmd.DELETE_NEXT_WORD);
-        m.key(s, KeyBinding2.with(BACK_SPACE).alt().forMac().build(), Cmd.DELETE_PREVIOUS_WORD);
-        m.key(s, KeyBinding2.with(HOME).shift().forMac().build(), Cmd.HOME);
-        m.key(s, KeyBinding2.with(LEFT).shortcut().forMac().build(), Cmd.HOME);
-        m.key(s, KeyBinding2.with(RIGHT).shortcut().forMac().build(), Cmd.END);
-        m.key(s, KeyBinding2.with(LEFT).alt().forMac().build(), Cmd.LEFT_WORD);
-        m.key(s, KeyBinding2.with(Z).shortcut().shift().forMac().build(), Cmd.REDO);
-        m.key(s, KeyBinding2.with(RIGHT).alt().forMac().build(), Cmd.RIGHT_WORD);
-        m.key(s, KeyBinding2.shortcut(A), Cmd.SELECT_ALL);
-        m.key(s, KeyBinding2.with(LEFT).shortcut().shift().forMac().build(), Cmd.SELECT_HOME_EXTEND);
-        m.key(s, KeyBinding2.with(RIGHT).shortcut().shift().forMac().build(), Cmd.SELECT_END_EXTEND);
-        m.key(s, KeyBinding2.with(END).shift().forMac().build(), Cmd.SELECT_END_EXTEND);
-        m.key(s, KeyBinding2.with(LEFT).shift().alt().forMac().build(), Cmd.SELECT_LEFT_WORD);
-        m.key(s, KeyBinding2.with(RIGHT).shift().alt().forMac().build(), Cmd.SELECT_RIGHT_WORD);
+        m.key(this, KeyBinding2.with(BACK_SPACE).shortcut().forMac().build(), Cmd.DELETE_FROM_LINE_START);
+        m.key(this, KeyBinding2.with(DELETE).alt().forMac().build(), Cmd.DELETE_NEXT_WORD);
+        m.key(this, KeyBinding2.with(BACK_SPACE).alt().forMac().build(), Cmd.DELETE_PREVIOUS_WORD);
+        m.key(this, KeyBinding2.with(HOME).shift().forMac().build(), Cmd.HOME);
+        m.key(this, KeyBinding2.with(LEFT).shortcut().forMac().build(), Cmd.HOME);
+        m.key(this, KeyBinding2.with(RIGHT).shortcut().forMac().build(), Cmd.END);
+        m.key(this, KeyBinding2.with(LEFT).alt().forMac().build(), Cmd.LEFT_WORD);
+        m.key(this, KeyBinding2.with(Z).shortcut().shift().forMac().build(), Cmd.REDO);
+        m.key(this, KeyBinding2.with(RIGHT).alt().forMac().build(), Cmd.RIGHT_WORD);
+        m.key(this, KeyBinding2.shortcut(A), Cmd.SELECT_ALL);
+        m.key(this, KeyBinding2.with(LEFT).shortcut().shift().forMac().build(), Cmd.SELECT_HOME_EXTEND);
+        m.key(this, KeyBinding2.with(RIGHT).shortcut().shift().forMac().build(), Cmd.SELECT_END_EXTEND);
+        m.key(this, KeyBinding2.with(END).shift().forMac().build(), Cmd.SELECT_END_EXTEND);
+        m.key(this, KeyBinding2.with(LEFT).shift().alt().forMac().build(), Cmd.SELECT_LEFT_WORD);
+        m.key(this, KeyBinding2.with(RIGHT).shift().alt().forMac().build(), Cmd.SELECT_RIGHT_WORD);
 
         // windows key bindings
-        m.key(s, KeyBinding2.with(Y).ctrl().forWindows().build(), Cmd.REDO);
+        m.key(this, KeyBinding2.with(Y).ctrl().forWindows().build(), Cmd.REDO);
 
         // linux key bindings
-        m.key(s, KeyBinding2.with(Z).ctrl().shift().forLinux().build(), Cmd.REDO);
+        m.key(this, KeyBinding2.with(Z).ctrl().shift().forLinux().build(), Cmd.REDO);
 
         // not-mac key bindings
-        m.key(s, KeyBinding2.with(DELETE).ctrl().notForMac().build(), Cmd.DELETE_NEXT_WORD);
-        m.key(s, KeyBinding2.with(H).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_CHAR);
-        m.key(s, KeyBinding2.with(BACK_SPACE).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_WORD);
-        m.key(s, KeyBinding2.with(BACK_SLASH).ctrl().notForMac().build(), Cmd.DESELECT);
-        m.key(s, KeyBinding2.with(LEFT).ctrl().notForMac().build(), Cmd.LEFT_WORD);
-        m.key(s, KeyBinding2.with(RIGHT).ctrl().notForMac().build(), Cmd.RIGHT_WORD);
-        m.key(s, KeyBinding2.with(HOME).shift().notForMac().build(), Cmd.SELECT_HOME);
-        m.key(s, KeyBinding2.with(END).shift().notForMac().build(), Cmd.SELECT_END);
-        m.key(s, KeyBinding2.with(LEFT).ctrl().shift().notForMac().build(), Cmd.SELECT_LEFT_WORD);
-        m.key(s, KeyBinding2.with(RIGHT).ctrl().shift().notForMac().build(), Cmd.SELECT_RIGHT_WORD);
+        m.key(this, KeyBinding2.with(DELETE).ctrl().notForMac().build(), Cmd.DELETE_NEXT_WORD);
+        m.key(this, KeyBinding2.with(H).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_CHAR);
+        m.key(this, KeyBinding2.with(BACK_SPACE).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_WORD);
+        m.key(this, KeyBinding2.with(BACK_SLASH).ctrl().notForMac().build(), Cmd.DESELECT);
+        m.key(this, KeyBinding2.with(LEFT).ctrl().notForMac().build(), Cmd.LEFT_WORD);
+        m.key(this, KeyBinding2.with(RIGHT).ctrl().notForMac().build(), Cmd.RIGHT_WORD);
+        m.key(this, KeyBinding2.with(HOME).shift().notForMac().build(), Cmd.SELECT_HOME);
+        m.key(this, KeyBinding2.with(END).shift().notForMac().build(), Cmd.SELECT_END);
+        m.key(this, KeyBinding2.with(LEFT).ctrl().shift().notForMac().build(), Cmd.SELECT_LEFT_WORD);
+        m.key(this, KeyBinding2.with(RIGHT).ctrl().shift().notForMac().build(), Cmd.SELECT_RIGHT_WORD);
 
         // key pad mappings
         addKeyPadMappings(inputMap);
-    }
-
-    public void uninstall(TextInputControlSkin<?> s) {
-        s.getSkinnable().getKeyMap().unregister(s);
     }
 
     @Override public InputMap<T> getInputMap() {

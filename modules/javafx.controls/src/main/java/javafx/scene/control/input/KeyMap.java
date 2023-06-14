@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 
 /**
@@ -49,19 +48,18 @@ import javafx.scene.input.KeyCode;
  * - maps key bindings to FunctionTags
  * - maps FunctionTags to methods in the behavior
  */
-// TODO move to public pkg (which one?) javafx.incubator.scene.control.input
 public class KeyMap {
     /** contains user- and skin-set key binding or function mappings */
     private static class Entry {
         Object userValue;
-        Skin<?> skin; // TODO create IBehavior, and use that instead of skin (but still need to do it in install() due to km being a control property)
-        Object skinValue;
+        IBehavior behavior;
+        Object behaviorValue;
 
         public Object getValue() {
             if (userValue == NULL) {
                 return null;
             } else if (userValue == null) {
-                return skinValue;
+                return behaviorValue;
             }
             return userValue;
         }
@@ -89,15 +87,15 @@ public class KeyMap {
      * Maps a function to the function tag, for use by the skin.
      * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
      *
-     * @param skin
+     * @param behavior
      * @param tag
      * @param function
      */
-    public void func(Skin<?> skin, FunctionTag tag, Runnable function) {
-        Objects.requireNonNull(skin, "skin must not be null");
+    public void func(IBehavior behavior, FunctionTag tag, Runnable function) {
+        Objects.requireNonNull(behavior, "skin must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
-        addFunction(tag, function, skin);
+        addFunction(tag, function, behavior);
     }
     
     /**
@@ -118,62 +116,62 @@ public class KeyMap {
      * A null key binding will result in no change to this input map.
      * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      *
-     * @param skin
+     * @param behavior
      * @param k key binding, can be null
      * @param tag function tag
      */
-    public void key(Skin<?> skin, KeyBinding2 k, FunctionTag tag) {
+    public void key(IBehavior behavior, KeyBinding2 k, FunctionTag tag) {
         if (k == null) {
             return;
         }
-        Objects.requireNonNull(skin, "skin must not be null");
+        Objects.requireNonNull(behavior, "behavior must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
-        addBinding(k, tag, skin);
+        addBinding(k, tag, behavior);
     }
 
     /**
-     * Maps a key binding to the specified function tag, for use by the skin.
+     * Maps a key binding to the specified function tag, as a part of the behavior.
      * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
-     * 
-     * @param skin
+     *
+     * @param behavior
      * @param code key code to construct a {@link KeyBinding2}
      * @param tag function tag
      */
-    public void key(Skin<?> skin, KeyCode code, FunctionTag tag) {
-        key(skin, KeyBinding2.of(code), tag);
+    public void key(IBehavior behavior, KeyCode code, FunctionTag tag) {
+        key(behavior, KeyBinding2.of(code), tag);
     }
 
-    private void addFunction(FunctionTag tag, Runnable function, Skin<?> skin) {
+    private void addFunction(FunctionTag tag, Runnable function, IBehavior behavior) {
         Entry en = map.get(tag);
         if (en == null) {
             en = new Entry();
             map.put(tag, en);
         }
 
-        if (skin == null) {
+        if (behavior == null) {
             // user mapping
             en.userValue = function;
         } else {
-            // skin mapping
-            en.skin = skin;
-            en.skinValue = function;
+            // behavior mapping
+            en.behavior = behavior;
+            en.behaviorValue = function;
         }
     }
 
-    private void addBinding(KeyBinding2 k, FunctionTag tag, Skin<?> skin) {
+    private void addBinding(KeyBinding2 k, FunctionTag tag, IBehavior b) {
         Entry en = map.get(k);
         if (en == null) {
             en = new Entry();
             map.put(k, en);
         }
         
-        if (skin == null) {
+        if (b == null) {
             // user mapping
             en.userValue = tag;
         } else {
-            // skin mapping
-            en.skin = skin;
-            en.skinValue = tag;
+            // behavior mapping
+            en.behavior = b;
+            en.behaviorValue = tag;
         }
     }
 
@@ -211,19 +209,20 @@ public class KeyMap {
     }
 
     /**
-     * Removes all the mappings set by the skin.
+     * Removes all the mappings set by the behavior.
+     * Skin developers do not need to call this method directly, as it is being called in BehaviorBase.dispose().
+     * TODO possibly make this method private.
      *
-     * @param skin
+     * @param behavior
      */
-    // TODO can be called by the input map
-    public void unregister(Skin<?> skin) {
-        Objects.nonNull(skin);
+    public void unregister(IBehavior behavior) {
+        Objects.nonNull(behavior);
         Iterator<Entry> it = map.values().iterator();
         while (it.hasNext()) {
             Entry en = it.next();
-            if (en.skin == skin) {
-                en.skin = null;
-                en.skinValue = null;
+            if (en.behavior == behavior) {
+                en.behavior = null;
+                en.behaviorValue = null;
             }
         }
     }
@@ -263,7 +262,7 @@ public class KeyMap {
         Entry en = map.get(k);
         if (en != null) {
             en.userValue = null;
-            if (en.skinValue == null) {
+            if (en.behaviorValue == null) {
                 map.remove(k);
             }
         }
@@ -279,7 +278,7 @@ public class KeyMap {
         Entry en = map.get(tag);
         if (en != null) {
             en.userValue = null;
-            if (en.skinValue == null) {
+            if (en.behaviorValue == null) {
                 map.remove(tag);
             }
         }
@@ -318,8 +317,8 @@ public class KeyMap {
         Entry en1 = map.get(k1);
         if (en1 != null) {
             Entry en2 = new Entry();
-            en2.skin = en1.skin;
-            en2.skinValue = en1.skinValue;
+            en2.behavior = en1.behavior;
+            en2.behaviorValue = en1.behaviorValue;
             en2.userValue = en1.userValue;
             map.put(k2, en2);
         }

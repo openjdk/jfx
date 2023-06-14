@@ -237,19 +237,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     @Override
     public void install() {
         super.install();
-        behavior.install(this);
+        behavior.install();
     }
 
-    /** {@inheritDoc} */
     @Override
     public void dispose() {
-        super.dispose();
-
         if (behavior != null) {
-            behavior.uninstall(this);
             behavior.dispose();
             behavior = null;
         }
+        super.dispose();
     }
 
     /** {@inheritDoc} */

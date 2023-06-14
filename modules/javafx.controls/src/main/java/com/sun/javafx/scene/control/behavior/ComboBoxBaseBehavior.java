@@ -107,32 +107,29 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
         }
     }
-    
+
+    // TODO move to control
     enum Cmd implements FunctionTag {
         //CANCEL_EDIT, // TODO forwards to parent, child class logic in the base class, looks poorly thought out
         TOGGLE_POPUP
     }
     
-    public void install(ComboBoxBaseSkin<?> s) {
-        var c = s.getSkinnable();
-        KeyMap m = c.getKeyMap();
+    public void install() {
+        KeyMap m = getNode().getKeyMap();
         
         //m.func(s, Cmd.CANCEL_EDIT, this::cancelEdit);
-        m.func(s, Cmd.TOGGLE_POPUP, this::togglePopup);
+        m.func(this, Cmd.TOGGLE_POPUP, this::togglePopup);
         
-        m.key(s, KeyBinding2.withRelease(F4).build(), Cmd.TOGGLE_POPUP);
-        m.key(s, KeyBinding2.alt(DOWN), Cmd.TOGGLE_POPUP);
-        m.key(s, KeyBinding2.alt(UP), Cmd.TOGGLE_POPUP);
+        m.key(this, KeyBinding2.withRelease(F4).build(), Cmd.TOGGLE_POPUP);
+        m.key(this, KeyBinding2.alt(DOWN), Cmd.TOGGLE_POPUP);
+        m.key(this, KeyBinding2.alt(UP), Cmd.TOGGLE_POPUP);
     }
 
-    public void uninstall(ComboBoxBaseSkin<?> s) {
-        if (s.getSkinnable() != null) {
-            s.getSkinnable().getKeyMap().unregister(s);
+    @Override
+    public void dispose() {
+        if (tlFocus != null) {
+            tlFocus.dispose();
         }
-    }
-
-    @Override public void dispose() {
-        if (tlFocus != null) tlFocus.dispose();
         getNode().focusedProperty().removeListener(focusListener);
         super.dispose();
     }
