@@ -125,11 +125,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         m.key(this, KeyBinding2.alt(UP), Cmd.TOGGLE_POPUP);
     }
 
-    @Override
-    public void dispose() {
-        if (tlFocus != null) {
-            tlFocus.dispose();
-        }
+    @Override public void dispose() {
+        if (tlFocus != null) tlFocus.dispose();
         getNode().focusedProperty().removeListener(focusListener);
         super.dispose();
     }

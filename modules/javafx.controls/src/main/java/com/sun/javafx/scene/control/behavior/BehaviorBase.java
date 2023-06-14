@@ -32,6 +32,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.input.IBehavior;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.input.KeyMap;
@@ -45,7 +46,7 @@ import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
  * @param <N> the actual class for which this behavior is intended
  */
 // TODO add func() and key() can be added to BehaviorBase
-public abstract class BehaviorBase<N extends Node> implements IBehavior {
+public abstract class BehaviorBase<N extends Control> implements IBehavior {
 
     private final N node;
     private final List<Mapping<?>> installedDefaultMappings;
@@ -66,6 +67,7 @@ public abstract class BehaviorBase<N extends Node> implements IBehavior {
     /** invoked right after running a KeyMap function */
     protected void onKeyFunctionEnd() { }
 
+    // TODO rename getControl()
     public final N getNode() {
         return node;
     }
@@ -104,6 +106,31 @@ public abstract class BehaviorBase<N extends Node> implements IBehavior {
             createKeyMap(getInputMap(), c, KeyEvent.KEY_RELEASED),
             createKeyMap(getInputMap(), c, KeyEvent.KEY_TYPED)
         );
+    }
+
+    /**
+     * Maps a function to the function tag.
+     * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
+     *
+     * @param behavior
+     * @param tag
+     * @param function
+     */
+    public void func(FunctionTag tag, Runnable function) {
+        getNode().getKeyMap().func(this, tag, function);
+    }
+
+    /**
+     * Maps a key binding to the specified function tag.
+     * A null key binding will result in no change to this input map.
+     * This method will not override a user mapping.
+     *
+     * @param behavior
+     * @param k key binding, can be null
+     * @param tag function tag
+     */
+    public void key(KeyBinding2 k, FunctionTag tag) {
+        getNode().getKeyMap().key(this, k, tag);
     }
 
     protected void addDefaultMapping(Mapping<?>... newMapping) {

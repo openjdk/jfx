@@ -84,13 +84,14 @@ public class KeyMap {
     }
 
     /**
-     * Maps a function to the function tag, for use by the skin.
+     * Maps a function to the function tag, for use by the behavior.
      * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
      *
      * @param behavior
      * @param tag
      * @param function
      */
+    // TODO this method can be made package protected once BehaviorBase is moved to this pkg
     public void func(IBehavior behavior, FunctionTag tag, Runnable function) {
         Objects.requireNonNull(behavior, "skin must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
@@ -112,7 +113,7 @@ public class KeyMap {
     }
     
     /**
-     * Maps a key binding to the specified function tag, for use by the skin.
+     * Maps a key binding to the specified function tag, for use by the behavior.
      * A null key binding will result in no change to this input map.
      * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      *
@@ -120,6 +121,7 @@ public class KeyMap {
      * @param k key binding, can be null
      * @param tag function tag
      */
+    // TODO this method can be made package protected once BehaviorBase is moved to this pkg
     public void key(IBehavior behavior, KeyBinding2 k, FunctionTag tag) {
         if (k == null) {
             return;
