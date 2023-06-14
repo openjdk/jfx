@@ -26,6 +26,9 @@
 package test.robot.javafx.scene;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -129,11 +132,14 @@ public class SceneChangeEventsTest {
 
     @BeforeClass
     public static void initFX() {
+        assumeTrue(!PlatformUtil.isMac()); // See JDK-8300094
         Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Util.shutdown(stage);
+        if (stage != null) {
+            Util.shutdown(stage);
+        }
     }
 }
