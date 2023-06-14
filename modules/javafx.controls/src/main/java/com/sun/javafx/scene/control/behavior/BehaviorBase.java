@@ -53,6 +53,12 @@ public abstract class BehaviorBase<N extends Node> {
 
     public abstract InputMap<N> getInputMap();
 
+    /** invoked just before running a KeyMap function */
+    protected void onKeyFunctionStart() { }
+
+    /** invoked right after running a KeyMap function */
+    protected void onKeyFunctionEnd() { }
+
     public final N getNode() {
         return node;
     }
@@ -79,9 +85,14 @@ public abstract class BehaviorBase<N extends Node> {
 //            inputMap.dispose();
 //        }
     }
-
-    protected void addDefaultMapping(List<Mapping<?>> newMapping) {
-        addDefaultMapping(getInputMap(), newMapping.toArray(new Mapping[newMapping.size()]));
+    
+    protected void addKeyMap(Control c) {
+        addDefaultMapping(
+            getInputMap(),
+            createKeyMap(getInputMap(), c, KeyEvent.KEY_PRESSED),
+            createKeyMap(getInputMap(), c, KeyEvent.KEY_RELEASED),
+            createKeyMap(getInputMap(), c, KeyEvent.KEY_TYPED)
+        );
     }
 
     protected void addDefaultMapping(Mapping<?>... newMapping) {
@@ -105,6 +116,39 @@ public abstract class BehaviorBase<N extends Node> {
             inputMap.getMappings().add(mapping);
             installedDefaultMappings.add(mapping);
         }
+    }
+
+    private Mapping<KeyEvent> createKeyMap(InputMap<N> inputMap, Control control, EventType<KeyEvent> t) {
+        EventHandler<KeyEvent> handler = (ev) -> {
+            KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
+            KeyMap km = control.getKeyMap();
+            Runnable f = km.getFunction(k);
+            if (f != null) {
+                onKeyFunctionStart();
+                try {
+                    f.run();
+                    ev.consume();
+                } finally {
+                    onKeyFunctionEnd();
+                }
+            }
+        };
+
+        Mapping<KeyEvent> m = new Mapping<KeyEvent>(t, handler) {
+            @Override
+            public int getSpecificity(Event ev) {
+                KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
+                KeyMap m = control.getKeyMap();
+                Runnable f = m.getFunction(k);
+                if (f == null) {
+                    return 0;
+                }
+                // Max value returned by KeyBinding:154
+                return 6;
+            }
+        };
+        m.setAutoConsume(false);
+        return m;
     }
 
     protected <T extends Node> void addDefaultChildMap(InputMap<T> parentInputMap, InputMap<T> newChildInputMap) {
@@ -149,52 +193,5 @@ public abstract class BehaviorBase<N extends Node> {
             case RIGHT_TO_LEFT: return true;
             default: return false;
         }
-    }
-
-    protected void addKeyMap(InputMap inputMap, Control c) {
-        addKeyMap(inputMap, c, null, null);
-    }
-
-    protected void addKeyMap(InputMap inputMap, Control control, Runnable before, Runnable after) {
-        addDefaultMapping (
-            inputMap,
-            keyHandler(KeyEvent.KEY_PRESSED, control, before, after),
-            keyHandler(KeyEvent.KEY_RELEASED, control, before, after),
-            keyHandler(KeyEvent.KEY_TYPED, control, before, after)
-        );
-    }
-
-    private Mapping<KeyEvent> keyHandler(EventType<KeyEvent> type, Control control, Runnable before, Runnable after) {
-        EventHandler<KeyEvent> handler = (ev) -> {
-            KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
-            KeyMap m = control.getKeyMap();
-            Runnable f = m.getFunction(k);
-            if (f != null) {
-                if (before != null) {
-                    before.run();
-                }
-                f.run();
-                if (after != null) {
-                    after.run();
-                }
-                ev.consume();
-            }
-        };
-
-        Mapping<KeyEvent> rv = new Mapping<KeyEvent>(KeyEvent.KEY_TYPED, handler) {
-            @Override
-            public int getSpecificity(Event ev) {
-                KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
-                KeyMap m = control.getKeyMap();
-                Runnable f = m.getFunction(k);
-                if (f == null) {
-                    return 0;
-                }
-                // Max value returned by KeyBinding:154
-                return 6;
-            }
-        };
-        rv.setAutoConsume(false);
-        return rv;
     }
 }

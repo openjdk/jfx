@@ -122,12 +122,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         KeyMapping fireMapping;
         KeyMapping consumeMostPressedEventsMapping;
         
-        addKeyMap(
-            inputMap,
-            textInputControl,
-            () -> setCaretAnimating(false),
-            () -> setCaretAnimating(true)
-        );
+        addKeyMap(textInputControl);
 
         // create a child input map for mappings which are applicable on all
         // platforms, and regardless of editing state
@@ -333,6 +328,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
             }
         }
+    }
+
+    @Override
+    protected void onKeyFunctionStart() {
+        setCaretAnimating(false);
+    }
+
+    @Override
+    protected void onKeyFunctionEnd() {
+        setCaretAnimating(true);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
         inputMap = createInputMap();
 
-        addKeyMap(inputMap, comboBox);
+        addKeyMap(comboBox);
 
         // comboBox-specific mappings for key and mouse input
         KeyMapping enterPressed, enterReleased;
