@@ -1098,9 +1098,15 @@ public class FXMLLoader {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);
                     }
-
-                    resources = ResourceBundle.getBundle(value, Locale.getDefault(),
-                            FXMLLoader.this.resources.getClass().getClassLoader());
+                    final ResourceBundle loaderResources = FXMLLoader.this.resources;
+                    if (loaderResources == null) {
+                        resources = ResourceBundle.getBundle(value, Locale.getDefault());
+                    } else {
+                        final ClassLoader cl = loaderResources.getClass().getClassLoader();
+                        resources = cl == null ?
+                                ResourceBundle.getBundle(value, Locale.getDefault()) :
+                                ResourceBundle.getBundle(value, Locale.getDefault(), cl);
+                    }
                 } else if (localName.equals(INCLUDE_CHARSET_ATTRIBUTE)) {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);
