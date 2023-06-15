@@ -522,31 +522,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
 
 /*
  * Class:     com_sun_glass_ui_mac_MacAccessible
- * Method:    _createGlassAccessible
- * Signature: ()J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1createGlassAccessible
-  (JNIEnv *env, jobject jAccessible)
-{
-    GlassAccessible* accessible = NULL;
-    accessible = [[GlassAccessible alloc] initWithEnv: env accessible: jAccessible];
-    return ptr_to_jlong(accessible);
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacAccessible
- * Method:    _destroyGlassAccessible
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1destroyGlassAccessible
-  (JNIEnv *env, jobject jAccessible, jlong macAccessible)
-{
-    GlassAccessible* accessible = (GlassAccessible*)jlong_to_ptr(macAccessible);
-    [accessible release];
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacAccessible
  * Method:    idToMacVariant
  * Signature: (JI)Lcom/sun/glass/ui/mac/MacVariant;
  */
@@ -650,18 +625,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacAccessible_idToMacVariant
     }
     }
     return jVariant;
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacAccessible
- * Method:    NSAccessibilityUnignoredAncestor
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacAccessible_NSAccessibilityUnignoredAncestor
-  (JNIEnv *env, jclass jClass, jlong macAccessible)
-{
-    GlassAccessible* accessible = (GlassAccessible*)jlong_to_ptr(macAccessible);
-    return ptr_to_jlong(NSAccessibilityUnignoredAncestor(accessible));
 }
 
 /*

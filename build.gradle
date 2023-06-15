@@ -301,6 +301,7 @@ ext.ARCH_NAME = "x64"
 ext.IS_64 = OS_ARCH.toLowerCase().contains("64")
 ext.IS_AARCH64 = OS_ARCH.toLowerCase().contains("aarch64")
 ext.IS_LOONGARCH64 = OS_ARCH.toLowerCase().contains("loongarch64")
+ext.IS_RISCV64 = OS_ARCH.toLowerCase().contains("riscv64")
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
 ext.IS_WINDOWS = OS_NAME.contains("windows")
 ext.IS_LINUX = OS_NAME.contains("linux")
@@ -316,7 +317,7 @@ if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
 } else if (IS_MAC && OS_ARCH != "x86_64" && OS_ARCH != "aarch64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64" && !IS_AARCH64 && !IS_LOONGARCH64) {
+} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64" && !IS_AARCH64 && !IS_LOONGARCH64 && !IS_RISCV64) {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
 }
 
@@ -325,6 +326,8 @@ if (IS_64) {
         ARCH_NAME = "aarch64"
     } else if (IS_LOONGARCH64) {
         ARCH_NAME = "loongarch64"
+    } else if (IS_RISCV64) {
+        ARCH_NAME = "riscv64"
     } else {
         ARCH_NAME = "x64"
     }
@@ -3602,6 +3605,8 @@ project(":web") {
                                 cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=aarch64"
                             } else if (IS_LOONGARCH64) {
                                 cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=loongarch64"
+                            } else if (IS_RISCV64) {
+                                cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=riscv64"
                             } else {
                                 cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86_64"
                             }
@@ -4168,6 +4173,9 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.tags("serialData")
     options.tags("factory")
     options.tags("see")
+
+    options.addStringOption("-since").setValue((9..jfxReleaseMajorVersion.toInteger()).join(","))
+    options.addStringOption("-since-label").setValue("New API since JavaFX 9")
 
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")

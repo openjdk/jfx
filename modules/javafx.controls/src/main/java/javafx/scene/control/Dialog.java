@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
+import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.stage.Modality;
@@ -894,9 +895,29 @@ public class Dialog<R> implements EventTarget {
 
     private final EventHandlerManager eventHandlerManager = new EventHandlerManager(this);
 
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
+    }
+
+    @Override
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler);
+    }
+
+    @Override
+    public final <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.removeEventHandler(eventType, eventHandler);
+    }
+
+    @Override
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        eventHandlerManager.addEventFilter(eventType, eventFilter);
+    }
+
+    @Override
+    public final <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        eventHandlerManager.removeEventFilter(eventType, eventFilter);
     }
 
     /**
