@@ -164,6 +164,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
     @Override
     public void install() {
+        super.install();
         behavior.install();
     }
 
