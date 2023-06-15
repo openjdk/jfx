@@ -118,7 +118,7 @@ public class ResizeHelper {
             }
         }
     }
-    
+
     /** distibuting delta (positive when growing and negative when shrinking) */
     private void distribute(double delta, double[] desired) {
         double threshold = snapRound(SMALL_DELTA);
@@ -188,7 +188,7 @@ public class ResizeHelper {
             }
         }
     }
-    
+
     /**
      * Finds the best column to shrink, then reduces its width by delta, which is expected
      * to be one display pixel exactly.
@@ -214,7 +214,7 @@ public class ResizeHelper {
             return false;
         }
     }
-    
+
     /**
      * Finds the best column to grow, then increases its width by delta, which is expected
      * to be one display pixel exactly.
@@ -587,7 +587,7 @@ public class ResizeHelper {
     }
 
     private double snapFloor(double x) {
-        if(snap != null) {
+        if (snap != null) {
             // there is no public equivalent, but we can copy implementation from Region
             // let's try rounding for now
             // TODO we can implement this since we have snapScale now
@@ -595,8 +595,8 @@ public class ResizeHelper {
         }
         return x;
     }
-    
-    /** 
+
+    /**
      * implementation copied from {@link Region}.
      * @return returns scene render scale x value
      */
