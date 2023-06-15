@@ -33,6 +33,8 @@ import javafx.scene.layout.StackPane;
 /***
  * Stage must initially only show on the OS taskbar, but not on the Screen.
  * If the stage pops on the Screen and then iconifies, it's wrong.
+ *
+ * Note: Will not work on MacOS until https://bugs.openjdk.org/browse/JDK-8305675 is fixed
  */
 public class StartIconified extends Application {
 

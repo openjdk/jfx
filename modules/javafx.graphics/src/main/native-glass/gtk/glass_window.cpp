@@ -1323,8 +1323,7 @@ void WindowContextTop::set_owner(WindowContext * owner_ctx) {
 }
 
 void WindowContextTop::update_view_size() {
-    // Notify the view size only if size is oriented by WINDOW, otherwise
-    // it knows it's own size
+    // Notify the view size only if size is oriented by WINDOW, otherwise it knows its own size
     if (geometry.final_width.type == BOUNDSTYPE_WINDOW
         || geometry.final_height.type == BOUNDSTYPE_WINDOW) {
 
