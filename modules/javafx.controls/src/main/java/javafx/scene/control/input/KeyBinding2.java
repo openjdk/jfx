@@ -199,15 +199,19 @@ public class KeyBinding2 {
     public boolean isAlt() {
         return modifiers.contains(KCondition.ALT);
     }
-    
+
     public boolean isCtrl() {
         return modifiers.contains(KCondition.CTRL);
     }
-    
+
     public boolean isMeta() {
         return modifiers.contains(KCondition.META);
     }
-    
+
+    public boolean isOption() {
+        return modifiers.contains(KCondition.OPTION);
+    }
+
     public boolean isShift() {
         return modifiers.contains(KCondition.SHIFT);
     }
@@ -466,6 +470,18 @@ public class KeyBinding2 {
             return this;
         }
 
+        public Builder option() {
+            m.add(KCondition.OPTION);
+            return this;
+        }
+
+        public Builder option(boolean on) {
+            if (on) {
+                m.add(KCondition.OPTION);
+            }
+            return this;
+        }
+
         public Builder shift() {
             m.add(KCondition.SHIFT);
             return this;
@@ -480,11 +496,6 @@ public class KeyBinding2 {
 
         public Builder shortcut() {
             m.add(KCondition.SHORTCUT);
-            return this;
-        }
-
-        public Builder option() {
-            m.add(KCondition.OPTION);
             return this;
         }
 

@@ -312,8 +312,8 @@ public class KeyMap {
      * Maps a new KeyBinding as an alias to the existing one with the same owner and function tag.
      * This method does nothing if there is no mapping for k1.
      *
-     * @param k1
-     * @param k2
+     * @param k1 existing key binding
+     * @param k2 new key binding
      */
     public void addAlias(KeyBinding2 k1, KeyBinding2 k2) {
         Entry en1 = map.get(k1);

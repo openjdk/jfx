@@ -317,6 +317,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                         command(k.isCommand()).
                         ctrl(k.isCtrl()).
                         meta(k.isMeta()).
+                        option(k.isOption()).
                         shift(k.isShift()).                        
                         build();
                     m.addAlias(k, newBinding);
