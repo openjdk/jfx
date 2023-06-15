@@ -38,7 +38,18 @@ import com.sun.javafx.scene.control.rich.FxPathBuilder;
 import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
- * Represents a text flow cell - contains either a TextFlow or a Region. 
+ * Provides a visual representation of a paragraph.
+ * <p>
+ * Typically, a TextCell contains a TextFlow with styled text (and possibly inline Nodes).
+ * It is also possible to create a TextCell containing a single Region (which can be a Node of any complexity,
+ * even including a different instance of RichTextArea).  These Regions will be presented as is, and,
+ * for editable models, would not be editable via the RichTextArea mechanisms.
+ * <p>
+ * A typical usage would be the StyledModel creating a new instance of TextCell and populating it with styled
+ * segments, inline Nodes, highlights (TODO), underlines (TODO).
+ * <p>
+ * Each visible TextCell will be resized horizontally to fill the available width and then resized vertically
+ * according to its preferred size (for that width). 
  */
 public class TextCell {
     private final int index;
@@ -60,7 +71,7 @@ public class TextCell {
         return content;
     }
 
-    public void addSegment(String text, String style, String[] css) {
+    public Text addSegment(String text, String style, String[] css) {
         Text t = new Text(text);
         if (style != null) {
             t.setStyle(style);
@@ -69,11 +80,13 @@ public class TextCell {
             t.getStyleClass().addAll(css);
         }
         flow().getChildren().add(t);
+        return t;
     }
     
-    public void addSegment(String text) {
+    public Text addSegment(String text) {
         Text t = new Text(text);
         flow().getChildren().add(t);
+        return t;
     }
     
     public void addInlineNode(Node n) {

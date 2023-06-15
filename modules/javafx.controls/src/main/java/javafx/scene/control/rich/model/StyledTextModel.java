@@ -49,6 +49,9 @@ import com.sun.javafx.scene.control.rich.RichUtils;
  * TODO printing
  */
 public abstract class StyledTextModel {
+    /**
+     * Receives information about modifications of the model.
+     */
     public interface ChangeListener {
         /**
          * Indicates a change in the model text.
@@ -360,7 +363,7 @@ public abstract class StyledTextModel {
         if (ix < 0) {
             return TextPos.ZERO;
         } else if (ix < ct) {
-            // TODO not to exceed paragraph length?
+            // TODO clamp to paragraph length?
             return p;
         } else {
             if (ct == 0) {
