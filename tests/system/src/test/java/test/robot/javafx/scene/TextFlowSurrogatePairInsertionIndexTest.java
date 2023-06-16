@@ -312,7 +312,7 @@ public class TextFlowSurrogatePairInsertionIndexTest {
         String s = hitInfo.toString();
         Assert.assertTrue(s != null);
     }
-    
+
     private double step() {
         return 1.0 + random.nextDouble() * 8.0;
     }
@@ -334,6 +334,7 @@ public class TextFlowSurrogatePairInsertionIndexTest {
     @BeforeClass
     public static void initFX() {
         long seed = new Random().nextLong();
+        // if any test fails, we can use the seed found in the log to reproduce exact sequence of events
         System.out.println("seed=" + seed);
         random = new Random(seed);
 
