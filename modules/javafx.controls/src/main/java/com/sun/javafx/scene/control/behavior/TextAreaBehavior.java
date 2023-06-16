@@ -25,35 +25,25 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.Properties;
-import javafx.scene.control.skin.TextAreaSkin;
-import javafx.scene.control.skin.TextAreaSkin.C2;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.input.KeyBinding2;
-import com.sun.javafx.scene.control.skin.Utils;
+import javafx.scene.control.skin.TextAreaSkin;
+import javafx.scene.control.skin.TextInputControlSkin.Direction;
+import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.HitInfo;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-
-import java.util.function.Predicate;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
-import static javafx.scene.control.skin.TextInputControlSkin.Direction;
-import static javafx.scene.input.KeyCode.*;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.skin.Utils;
 
 
 /**
@@ -92,64 +82,64 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         TextArea c = getNode();
 
         // functions
-        func(C2.DOCUMENT_END, c::end); // TODO move to behavior
-        func(C2.DOCUMENT_START, c::home); // TODO move to behavior
-        func(C2.DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false));
-        func(C2.HOME, () -> lineStart(false));
-        func(C2.END, () -> lineEnd(false));
-        func(C2.MOVE_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
-        func(C2.MOVE_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
-        func(C2.PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false));
-        func(C2.PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, false));
-        func(C2.SELECT_DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true));
-        func(C2.SELECT_END_EXTEND, () -> selectEndExtend());
-        func(C2.SELECT_HOME_EXTEND, () -> selectHomeExtend());
-        func(C2.SELECT_LINE_END, () -> lineEnd(true));
-        func(C2.SELECT_PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true));
-        func(C2.SELECT_PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, true));
-        func(C2.SELECT_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true));
-        func(C2.SELECT_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, true));
-        func(C2.SELECT_LINE_START, () -> lineStart(true));
-        func(C2.SELECT_UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, true));
-        func(C2.UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, false));
-        func(C2.INSERT_NEW_LINE, this::insertNewLine);
-        func(C2.INSERT_TAB, this::insertTab);
+        func(TextArea.DOCUMENT_END, c::end); // TODO move to behavior
+        func(TextArea.DOCUMENT_START, c::home); // TODO move to behavior
+        func(TextArea.DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false));
+        func(TextArea.HOME, () -> lineStart(false));
+        func(TextArea.END, () -> lineEnd(false));
+        func(TextArea.MOVE_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
+        func(TextArea.MOVE_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
+        func(TextArea.PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false));
+        func(TextArea.PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, false));
+        func(TextArea.SELECT_DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true));
+        func(TextArea.SELECT_END_EXTEND, () -> selectEndExtend());
+        func(TextArea.SELECT_HOME_EXTEND, () -> selectHomeExtend());
+        func(TextArea.SELECT_LINE_END, () -> lineEnd(true));
+        func(TextArea.SELECT_PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true));
+        func(TextArea.SELECT_PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, true));
+        func(TextArea.SELECT_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true));
+        func(TextArea.SELECT_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, true));
+        func(TextArea.SELECT_LINE_START, () -> lineStart(true));
+        func(TextArea.SELECT_UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, true));
+        func(TextArea.UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, false));
+        func(TextArea.INSERT_NEW_LINE, this::insertNewLine);
+        func(TextArea.INSERT_TAB, this::insertTab);
         
         // common keys
-        key(DOWN, C2.DOWN);
-        key(KeyBinding2.shift(DOWN), C2.SELECT_DOWN);
-        key(KeyBinding2.shift(END), C2.SELECT_LINE_END);
-        key(END, C2.END);
-        key(ENTER, C2.INSERT_NEW_LINE);
-        key(HOME, C2.HOME);
-        key(KeyBinding2.shift(HOME), C2.SELECT_LINE_START);
-        key(PAGE_UP, C2.PAGE_UP);
-        key(KeyBinding2.shift(PAGE_UP), C2.SELECT_PAGE_UP);
-        key(PAGE_DOWN, C2.PAGE_DOWN);
-        key(KeyBinding2.shift(PAGE_DOWN), C2.SELECT_PAGE_DOWN);
-        key(TAB, C2.INSERT_TAB);
-        key(UP, C2.UP);
-        key(KeyBinding2.shift(UP), C2.SELECT_UP);
+        key(KeyCode.DOWN, TextArea.DOWN);
+        key(KeyBinding2.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
+        key(KeyBinding2.shift(KeyCode.END), TextArea.SELECT_LINE_END);
+        key(KeyCode.END, TextArea.END);
+        key(KeyCode.ENTER, TextArea.INSERT_NEW_LINE);
+        key(KeyCode.HOME, TextArea.HOME);
+        key(KeyBinding2.shift(KeyCode.HOME), TextArea.SELECT_LINE_START);
+        key(KeyCode.PAGE_UP, TextArea.PAGE_UP);
+        key(KeyBinding2.shift(KeyCode.PAGE_UP), TextArea.SELECT_PAGE_UP);
+        key(KeyCode.PAGE_DOWN, TextArea.PAGE_DOWN);
+        key(KeyBinding2.shift(KeyCode.PAGE_DOWN), TextArea.SELECT_PAGE_DOWN);
+        key(KeyCode.TAB, TextArea.INSERT_TAB);
+        key(KeyCode.UP, TextArea.UP);
+        key(KeyBinding2.shift(KeyCode.UP), TextArea.SELECT_UP);
         
         // macOS specific mappings
-        key(KeyBinding2.with(DOWN).alt().forMac().build(), C2.MOVE_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(DOWN).alt().shift().forMac().build(), C2.SELECT_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(DOWN).shortcut().forMac().build(), C2.DOCUMENT_END);
-        key(KeyBinding2.with(DOWN).shortcut().shift().forMac().build(), C2.SELECT_END_EXTEND);
-        key(KeyBinding2.with(LEFT).shortcut().forMac().build(), C2.HOME);
-        key(KeyBinding2.with(LEFT).shortcut().shift().forMac().build(), C2.SELECT_LINE_START);
-        key(KeyBinding2.with(RIGHT).shortcut().forMac().build(), C2.END);
-        key(KeyBinding2.with(RIGHT).shortcut().shift().forMac().build(), C2.SELECT_LINE_END);
-        key(KeyBinding2.with(UP).alt().forMac().build(), C2.MOVE_PARAGRAPH_UP);
-        key(KeyBinding2.with(UP).alt().shift().forMac().build(), C2.SELECT_PARAGRAPH_UP);
-        key(KeyBinding2.with(UP).shortcut().forMac().build(), C2.DOCUMENT_START);
-        key(KeyBinding2.with(UP).shortcut().shift().forMac().build(), C2.SELECT_HOME_EXTEND);
+        key(KeyBinding2.with(KeyCode.DOWN).alt().forMac().build(), TextArea.MOVE_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
+        key(KeyBinding2.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.HOME);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.END);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
+        key(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.MOVE_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
+        key(KeyBinding2.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
 
         // non-macOS specific mappings
-        key(KeyBinding2.with(DOWN).ctrl().notForMac().build(), C2.MOVE_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(DOWN).ctrl().shift().notForMac().build(), C2.SELECT_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(UP).ctrl().notForMac().build(), C2.MOVE_PARAGRAPH_UP);
-        key(KeyBinding2.with(UP).ctrl().shift().notForMac().build(), C2.SELECT_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.DOWN).ctrl().notForMac().build(), TextArea.MOVE_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).ctrl().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.UP).ctrl().notForMac().build(), TextArea.MOVE_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).ctrl().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
 
         addKeyPadMappings(getInputMap());
     }
@@ -302,7 +292,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     // selection, and set the mark to be the other side and
                     // the dot to be the new position.
                     // everywhere else we just move the dot.
-                    if (isMac()) {
+                    if (PlatformUtil.isMac()) {
                         textArea.extendSelection(i);
                     } else {
                         skin.positionCaret(hit, true);
@@ -415,7 +405,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     protected void mouseDoubleClick(HitInfo hit) {
         final TextArea textArea = getNode();
         textArea.previousWord();
-        if (isWindows()) {
+        if (PlatformUtil.isWindows()) {
             textArea.selectNextWord();
         } else {
             textArea.selectEndOfNextWord();

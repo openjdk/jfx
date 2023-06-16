@@ -24,18 +24,21 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.skin.FXVK;
-
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.scene.control.skin.TextInputControlSkin;
+import static com.sun.javafx.PlatformUtil.isLinux;
+import static com.sun.javafx.PlatformUtil.isMac;
+import static com.sun.javafx.PlatformUtil.isWindows;
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import static javafx.scene.input.KeyEvent.KEY_TYPED;
+import java.text.Bidi;
+import java.util.Set;
+import java.util.function.Predicate;
 import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
@@ -43,33 +46,24 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.control.TextInputControl.Cmd;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.input.KeyMap;
-import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.control.skin.TextInputControlSkin;
+import javafx.scene.control.skin.TextInputControlSkin.Direction;
+import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import javafx.scene.input.Clipboard;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-
-import java.text.Bidi;
-import java.util.Set;
-import java.util.function.Predicate;
-
-import static com.sun.javafx.PlatformUtil.isLinux;
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import static com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean;
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
-import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
-import static javafx.scene.control.skin.TextInputControlSkin.Direction;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import static com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean;
+import com.sun.javafx.scene.control.skin.FXVK;
 
 /**
  * All of the "button" types (CheckBox, RadioButton, ToggleButton, and Button)
@@ -129,11 +123,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         addDefaultMapping(inputMap,
                 // TODO the following key mappings should be moved to keyHandler
 
-                fireMapping = keyMapping(ENTER, this::fire),
-                keyMapping(new KeyBinding(Z).shortcut(), e -> undo()),
+                fireMapping = keyMapping(KeyCode.ENTER, this::fire),
+                keyMapping(new KeyBinding(KeyCode.Z).shortcut(), e -> undo()),
 
                 // The following keys are forwarded to the parent container
-                cancelEditMapping = new KeyMapping(ESCAPE, this::cancelEdit),
+                cancelEditMapping = new KeyMapping(KeyCode.ESCAPE, this::cancelEdit),
 
                 // character input.
                 // Any other key press first goes to normal text input
@@ -152,7 +146,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                                e -> { if (!e.getCode().isFunctionKey()) e.consume(); }),
 
                 // VK
-                new KeyMapping(new KeyBinding(DIGIT9).ctrl().shift(), e -> {
+                new KeyMapping(new KeyBinding(KeyCode.DIGIT9).ctrl().shift(), e -> {
                     FXVK.toggleUseVK(textInputControl);
                 }, p -> !PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)),
 
@@ -180,99 +174,99 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     public void install() {
         TextInputControl c = getNode();
 
-        func(Cmd.COPY, c::copy); // TODO move method to behavior
-        func(Cmd.CUT, this::cut);
-        func(Cmd.DELETE_FROM_LINE_START, this::deleteFromLineStart);
-        func(Cmd.DELETE_NEXT_CHAR, this::deleteNextChar);
-        func(Cmd.DELETE_NEXT_WORD, this::deleteNextWord);
-        func(Cmd.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
-        func(Cmd.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
-        func(Cmd.DESELECT, c::deselect); // TODO move method to behavior
-        func(Cmd.HOME, c::home); // TODO move method to behavior
-        func(Cmd.END, c::end); // TODO move method to behavior
-        func(Cmd.LEFT, () -> nextCharacterVisually(false));
-        func(Cmd.LEFT_WORD, this::leftWord);
-        func(Cmd.PASTE, this::paste);
-        func(Cmd.REDO, this::redo);
-        func(Cmd.RIGHT, () -> nextCharacterVisually(true));
-        func(Cmd.RIGHT_WORD, this::rightWord);
-        func(Cmd.SELECT_ALL, this::selectAll);
-        func(Cmd.SELECT_END, this::selectEnd);
-        func(Cmd.SELECT_END_EXTEND, this::selectEndExtend);
-        func(Cmd.SELECT_HOME, this::selectHome);
-        func(Cmd.SELECT_HOME_EXTEND, this::selectHomeExtend);
-        func(Cmd.SELECT_LEFT, this::selectLeft);
-        func(Cmd.SELECT_LEFT_WORD, this::selectLeftWord);
-        func(Cmd.SELECT_RIGHT, this::selectRight);
-        func(Cmd.SELECT_RIGHT_WORD, this::selectRightWord);
-        func(Cmd.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
-        func(Cmd.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
+        func(TextInputControl.COPY, c::copy); // TODO move method to behavior
+        func(TextInputControl.CUT, this::cut);
+        func(TextInputControl.DELETE_FROM_LINE_START, this::deleteFromLineStart);
+        func(TextInputControl.DELETE_NEXT_CHAR, this::deleteNextChar);
+        func(TextInputControl.DELETE_NEXT_WORD, this::deleteNextWord);
+        func(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
+        func(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
+        func(TextInputControl.DESELECT, c::deselect); // TODO move method to behavior
+        func(TextInputControl.HOME, c::home); // TODO move method to behavior
+        func(TextInputControl.END, c::end); // TODO move method to behavior
+        func(TextInputControl.LEFT, () -> nextCharacterVisually(false));
+        func(TextInputControl.LEFT_WORD, this::leftWord);
+        func(TextInputControl.PASTE, this::paste);
+        func(TextInputControl.REDO, this::redo);
+        func(TextInputControl.RIGHT, () -> nextCharacterVisually(true));
+        func(TextInputControl.RIGHT_WORD, this::rightWord);
+        func(TextInputControl.SELECT_ALL, this::selectAll);
+        func(TextInputControl.SELECT_END, this::selectEnd);
+        func(TextInputControl.SELECT_END_EXTEND, this::selectEndExtend);
+        func(TextInputControl.SELECT_HOME, this::selectHome);
+        func(TextInputControl.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        func(TextInputControl.SELECT_LEFT, this::selectLeft);
+        func(TextInputControl.SELECT_LEFT_WORD, this::selectLeftWord);
+        func(TextInputControl.SELECT_RIGHT, this::selectRight);
+        func(TextInputControl.SELECT_RIGHT_WORD, this::selectRightWord);
+        func(TextInputControl.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
+        func(TextInputControl.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
 
         // common key bindings
-        key(KeyBinding2.shortcut(C), Cmd.COPY);
-        key(KeyBinding2.of(COPY), Cmd.COPY);
-        key(KeyBinding2.shortcut(INSERT), Cmd.COPY);
-        key(KeyBinding2.of(CUT), Cmd.CUT);
-        key(KeyBinding2.shortcut(X), Cmd.CUT);
-        key(KeyBinding2.of(DELETE), Cmd.DELETE_NEXT_CHAR);
-        key(KeyBinding2.of(BACK_SPACE), Cmd.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.with(BACK_SPACE).shift().build(), Cmd.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.of(HOME), Cmd.HOME);
-        key(KeyBinding2.with(HOME).shortcut().build(), Cmd.HOME);
-        key(KeyBinding2.of(UP), Cmd.HOME);
-        key(KeyBinding2.of(DOWN), Cmd.END);
-        key(KeyBinding2.of(END), Cmd.END);
-        key(KeyBinding2.with(END).shortcut().build(), Cmd.END);
-        key(KeyBinding2.of(LEFT), Cmd.LEFT);
-        key(KeyBinding2.of(PASTE), Cmd.PASTE);
-        key(KeyBinding2.shift(INSERT), Cmd.PASTE);
-        key(KeyBinding2.shortcut(V), Cmd.PASTE);
-        key(KeyBinding2.of(RIGHT), Cmd.RIGHT);
-        key(KeyBinding2.shift(DOWN), Cmd.SELECT_END);
-        key(KeyBinding2.with(END).shortcut().shift().build(), Cmd.SELECT_END);
-        key(KeyBinding2.with(HOME).shortcut().shift().build(), Cmd.SELECT_HOME);
-        key(KeyBinding2.shift(UP), Cmd.SELECT_HOME);
-        key(KeyBinding2.shift(LEFT), Cmd.SELECT_LEFT);
-        key(KeyBinding2.shift(RIGHT), Cmd.SELECT_RIGHT);
-        key(KeyBinding2.of(TAB), Cmd.TRAVERSE_NEXT);
-        key(KeyBinding2.ctrl(TAB), Cmd.TRAVERSE_NEXT);
-        key(KeyBinding2.shift(TAB), Cmd.TRAVERSE_PREVIOUS);
-        key(KeyBinding2.with(TAB).ctrl().shift().build(), Cmd.TRAVERSE_PREVIOUS);
+        key(KeyBinding2.shortcut(KeyCode.C), TextInputControl.COPY);
+        key(KeyBinding2.of(KeyCode.COPY), TextInputControl.COPY);
+        key(KeyBinding2.shortcut(KeyCode.INSERT), TextInputControl.COPY);
+        key(KeyBinding2.of(KeyCode.CUT), TextInputControl.CUT);
+        key(KeyBinding2.shortcut(KeyCode.X), TextInputControl.CUT);
+        key(KeyBinding2.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
+        key(KeyBinding2.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
+        key(KeyBinding2.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        key(KeyBinding2.of(KeyCode.HOME), TextInputControl.HOME);
+        key(KeyBinding2.with(KeyCode.HOME).shortcut().build(), TextInputControl.HOME);
+        key(KeyBinding2.of(KeyCode.UP), TextInputControl.HOME);
+        key(KeyBinding2.of(KeyCode.DOWN), TextInputControl.END);
+        key(KeyBinding2.of(KeyCode.END), TextInputControl.END);
+        key(KeyBinding2.with(KeyCode.END).shortcut().build(), TextInputControl.END);
+        key(KeyBinding2.of(KeyCode.LEFT), TextInputControl.LEFT);
+        key(KeyBinding2.of(KeyCode.PASTE), TextInputControl.PASTE);
+        key(KeyBinding2.shift(KeyCode.INSERT), TextInputControl.PASTE);
+        key(KeyBinding2.shortcut(KeyCode.V), TextInputControl.PASTE);
+        key(KeyBinding2.of(KeyCode.RIGHT), TextInputControl.RIGHT);
+        key(KeyBinding2.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
+        key(KeyBinding2.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
+        key(KeyBinding2.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
+        key(KeyBinding2.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
+        key(KeyBinding2.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
+        key(KeyBinding2.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
+        key(KeyBinding2.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        key(KeyBinding2.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        key(KeyBinding2.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
+        key(KeyBinding2.with(KeyCode.TAB).ctrl().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
 
         // macOS key bindings
-        key(KeyBinding2.with(BACK_SPACE).shortcut().forMac().build(), Cmd.DELETE_FROM_LINE_START);
-        key(KeyBinding2.with(DELETE).alt().forMac().build(), Cmd.DELETE_NEXT_WORD);
-        key(KeyBinding2.with(BACK_SPACE).alt().forMac().build(), Cmd.DELETE_PREVIOUS_WORD);
-        key(KeyBinding2.with(HOME).shift().forMac().build(), Cmd.HOME);
-        key(KeyBinding2.with(LEFT).shortcut().forMac().build(), Cmd.HOME);
-        key(KeyBinding2.with(RIGHT).shortcut().forMac().build(), Cmd.END);
-        key(KeyBinding2.with(LEFT).alt().forMac().build(), Cmd.LEFT_WORD);
-        key(KeyBinding2.with(Z).shortcut().shift().forMac().build(), Cmd.REDO);
-        key(KeyBinding2.with(RIGHT).alt().forMac().build(), Cmd.RIGHT_WORD);
-        key(KeyBinding2.shortcut(A), Cmd.SELECT_ALL);
-        key(KeyBinding2.with(LEFT).shortcut().shift().forMac().build(), Cmd.SELECT_HOME_EXTEND);
-        key(KeyBinding2.with(RIGHT).shortcut().shift().forMac().build(), Cmd.SELECT_END_EXTEND);
-        key(KeyBinding2.with(END).shift().forMac().build(), Cmd.SELECT_END_EXTEND);
-        key(KeyBinding2.with(LEFT).shift().alt().forMac().build(), Cmd.SELECT_LEFT_WORD);
-        key(KeyBinding2.with(RIGHT).shift().alt().forMac().build(), Cmd.SELECT_RIGHT_WORD);
+        key(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
+        key(KeyBinding2.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        key(KeyBinding2.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        key(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.HOME);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.HOME);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.END);
+        key(KeyBinding2.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
+        key(KeyBinding2.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
+        key(KeyBinding2.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
+        key(KeyBinding2.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        key(KeyBinding2.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        key(KeyBinding2.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        key(KeyBinding2.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // windows key bindings
-        key(KeyBinding2.with(Y).ctrl().forWindows().build(), Cmd.REDO);
+        key(KeyBinding2.with(KeyCode.Y).ctrl().forWindows().build(), TextInputControl.REDO);
 
         // linux key bindings
-        key(KeyBinding2.with(Z).ctrl().shift().forLinux().build(), Cmd.REDO);
+        key(KeyBinding2.with(KeyCode.Z).ctrl().shift().forLinux().build(), TextInputControl.REDO);
 
         // not-mac key bindings
-        key(KeyBinding2.with(DELETE).ctrl().notForMac().build(), Cmd.DELETE_NEXT_WORD);
-        key(KeyBinding2.with(H).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.with(BACK_SPACE).ctrl().notForMac().build(), Cmd.DELETE_PREVIOUS_WORD);
-        key(KeyBinding2.with(BACK_SLASH).ctrl().notForMac().build(), Cmd.DESELECT);
-        key(KeyBinding2.with(LEFT).ctrl().notForMac().build(), Cmd.LEFT_WORD);
-        key(KeyBinding2.with(RIGHT).ctrl().notForMac().build(), Cmd.RIGHT_WORD);
-        key(KeyBinding2.with(HOME).shift().notForMac().build(), Cmd.SELECT_HOME);
-        key(KeyBinding2.with(END).shift().notForMac().build(), Cmd.SELECT_END);
-        key(KeyBinding2.with(LEFT).ctrl().shift().notForMac().build(), Cmd.SELECT_LEFT_WORD);
-        key(KeyBinding2.with(RIGHT).ctrl().shift().notForMac().build(), Cmd.SELECT_RIGHT_WORD);
+        key(KeyBinding2.with(KeyCode.DELETE).ctrl().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        key(KeyBinding2.with(KeyCode.H).ctrl().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        key(KeyBinding2.with(KeyCode.BACK_SPACE).ctrl().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        key(KeyBinding2.with(KeyCode.BACK_SLASH).ctrl().notForMac().build(), TextInputControl.DESELECT);
+        key(KeyBinding2.with(KeyCode.LEFT).ctrl().notForMac().build(), TextInputControl.LEFT_WORD);
+        key(KeyBinding2.with(KeyCode.RIGHT).ctrl().notForMac().build(), TextInputControl.RIGHT_WORD);
+        key(KeyBinding2.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
+        key(KeyBinding2.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
+        key(KeyBinding2.with(KeyCode.LEFT).ctrl().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        key(KeyBinding2.with(KeyCode.RIGHT).ctrl().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // key pad mappings
         addKeyPadMappings(inputMap);
@@ -294,16 +288,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 KeyCode newCode = null;
                 switch (cd) {
                 case LEFT:
-                    newCode = KP_LEFT;
+                    newCode = KeyCode.KP_LEFT;
                     break;
                 case RIGHT:
-                    newCode = KP_RIGHT;
+                    newCode = KeyCode.KP_RIGHT;
                     break;
                 case UP:
-                    newCode = KP_UP;
+                    newCode = KeyCode.KP_UP;
                     break;
                 case DOWN:
-                    newCode = KP_DOWN;
+                    newCode = KeyCode.KP_DOWN;
                     break;
                 default:
                     newCode = null;

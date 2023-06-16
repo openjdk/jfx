@@ -25,12 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
-import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
@@ -38,11 +34,9 @@ import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputControl.Cmd;
-import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.input.KeyMap;
-import javafx.scene.control.skin.ComboBoxBaseSkin;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -79,15 +73,15 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         // comboBox-specific mappings for key and mouse input
         KeyMapping enterPressed, enterReleased;
         addDefaultMapping(inputMap,
-            new KeyMapping(SPACE, KEY_PRESSED, this::keyPressed),
-            new KeyMapping(SPACE, KEY_RELEASED, this::keyReleased),
+            new KeyMapping(KeyCode.SPACE, KeyEvent.KEY_PRESSED, this::keyPressed),
+            new KeyMapping(KeyCode.SPACE, KeyEvent.KEY_RELEASED, this::keyReleased),
 
-            enterPressed = new KeyMapping(ENTER, KEY_PRESSED, this::keyPressed),
-            enterReleased = new KeyMapping(ENTER, KEY_RELEASED, this::keyReleased),
+            enterPressed = new KeyMapping(KeyCode.ENTER, KeyEvent.KEY_PRESSED, this::keyPressed),
+            enterReleased = new KeyMapping(KeyCode.ENTER, KeyEvent.KEY_RELEASED, this::keyReleased),
 
             // The following keys are forwarded to the parent container
-            new KeyMapping(ESCAPE, KEY_PRESSED, this::cancelEdit),
-            new KeyMapping(F10,    KEY_PRESSED, this::forwardToParent),
+            new KeyMapping(KeyCode.ESCAPE, KeyEvent.KEY_PRESSED, this::cancelEdit),
+            new KeyMapping(KeyCode.F10,    KeyEvent.KEY_PRESSED, this::forwardToParent),
 
             new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
             new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
@@ -107,22 +101,14 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
         }
     }
-
-    // TODO move to control
-    enum Cmd implements FunctionTag {
-        //CANCEL_EDIT, // TODO forwards to parent, child class logic in the base class, looks poorly thought out
-        TOGGLE_POPUP
-    }
     
     public void install() {
-        KeyMap m = getNode().getKeyMap();
+        //m.func(s, ComboBoxBase.CANCEL_EDIT, this::cancelEdit);
+        func(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
         
-        //m.func(s, Cmd.CANCEL_EDIT, this::cancelEdit);
-        m.func(this, Cmd.TOGGLE_POPUP, this::togglePopup);
-        
-        m.key(this, KeyBinding2.withRelease(F4).build(), Cmd.TOGGLE_POPUP);
-        m.key(this, KeyBinding2.alt(DOWN), Cmd.TOGGLE_POPUP);
-        m.key(this, KeyBinding2.alt(UP), Cmd.TOGGLE_POPUP);
+        key(KeyBinding2.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
+        key(KeyBinding2.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
+        key(KeyBinding2.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
     }
 
     @Override public void dispose() {

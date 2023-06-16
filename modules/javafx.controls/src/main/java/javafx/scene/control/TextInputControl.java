@@ -78,39 +78,36 @@ import javafx.util.StringConverter;
  */
 @DefaultProperty("text")
 public abstract class TextInputControl extends Control {
-    /**
-     * Function tags provided by TextInputControl.
-     * @since 22
-     */
-    public enum Cmd implements FunctionTag {
-        COPY,
-        CUT,
-        DELETE_FROM_LINE_START,
-        DELETE_NEXT_CHAR,
-        DELETE_NEXT_WORD,
-        DELETE_PREVIOUS_CHAR,
-        DELETE_PREVIOUS_WORD,
-        DESELECT,
-        HOME,
-        END,
-        LEFT,
-        LEFT_WORD,
-        PASTE,
-        REDO,
-        RIGHT,
-        RIGHT_WORD,
-        SELECT_ALL,
-        SELECT_END,
-        SELECT_END_EXTEND,
-        SELECT_HOME,
-        SELECT_HOME_EXTEND,
-        SELECT_LEFT,
-        SELECT_LEFT_WORD,
-        SELECT_RIGHT,
-        SELECT_RIGHT_WORD,
-        TRAVERSE_NEXT,
-        TRAVERSE_PREVIOUS,
-    }
+    // Function tags provided by TextInputControl.
+    public static final FunctionTag COPY = new FunctionTag();
+    public static final FunctionTag CUT = new FunctionTag();
+    public static final FunctionTag DELETE_FROM_LINE_START = new FunctionTag();
+    public static final FunctionTag DELETE_NEXT_CHAR = new FunctionTag();
+    public static final FunctionTag DELETE_NEXT_WORD = new FunctionTag();
+    public static final FunctionTag DELETE_PREVIOUS_CHAR = new FunctionTag();
+    public static final FunctionTag DELETE_PREVIOUS_WORD = new FunctionTag();
+    public static final FunctionTag DESELECT = new FunctionTag();
+    // TODO replace with document start
+    public static final FunctionTag HOME = new FunctionTag();
+    // TODO replace with document end
+    public static final FunctionTag END = new FunctionTag();
+    public static final FunctionTag LEFT = new FunctionTag();
+    public static final FunctionTag LEFT_WORD = new FunctionTag();
+    public static final FunctionTag PASTE = new FunctionTag();
+    public static final FunctionTag REDO = new FunctionTag();
+    public static final FunctionTag RIGHT = new FunctionTag();
+    public static final FunctionTag RIGHT_WORD = new FunctionTag();
+    public static final FunctionTag SELECT_ALL = new FunctionTag();
+    public static final FunctionTag SELECT_END = new FunctionTag();
+    public static final FunctionTag SELECT_END_EXTEND = new FunctionTag();
+    public static final FunctionTag SELECT_HOME = new FunctionTag();
+    public static final FunctionTag SELECT_HOME_EXTEND = new FunctionTag();
+    public static final FunctionTag SELECT_LEFT = new FunctionTag();
+    public static final FunctionTag SELECT_LEFT_WORD = new FunctionTag();
+    public static final FunctionTag SELECT_RIGHT = new FunctionTag();
+    public static final FunctionTag SELECT_RIGHT_WORD = new FunctionTag();
+    public static final FunctionTag TRAVERSE_NEXT = new FunctionTag();
+    public static final FunctionTag TRAVERSE_PREVIOUS = new FunctionTag();
 
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,
