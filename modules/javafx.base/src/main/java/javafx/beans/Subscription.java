@@ -70,6 +70,8 @@ public interface Subscription {
      * and returns a new {@code Subscription} which will cancel both when
      * cancelled.
      *
+     * <p>This is equivalent to {@code Subscription.combine(this, other)}.
+     *
      * @param other another {@code Subscription}, cannot be {@code null}
      * @return a combined {@code Subscription} which will cancel both when
      *     cancelled, never {@code null}
