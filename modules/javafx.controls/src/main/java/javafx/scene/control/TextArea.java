@@ -47,6 +47,7 @@ import javafx.css.StyleableProperty;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
 import javafx.css.converter.SizeConverter;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.skin.TextAreaSkin;
 
 import javafx.css.Styleable;
@@ -81,9 +82,28 @@ import javafx.scene.AccessibleRole;
  * @since JavaFX 2.0
  */
 public class TextArea extends TextInputControl {
-//    public static final F_ Cmd extends TextInputControl.Cmd {
-//        
-//    }
+    public static final FunctionTag DOCUMENT_END = new FunctionTag();
+    public static final FunctionTag DOCUMENT_START = new FunctionTag();
+    public static final FunctionTag DOWN = new FunctionTag();
+    public static final FunctionTag END = new FunctionTag();
+    public static final FunctionTag HOME = new FunctionTag();
+    public static final FunctionTag INSERT_TAB = new FunctionTag();
+    public static final FunctionTag INSERT_NEW_LINE = new FunctionTag();
+    public static final FunctionTag MOVE_PARAGRAPH_DOWN = new FunctionTag();
+    public static final FunctionTag MOVE_PARAGRAPH_UP = new FunctionTag();
+    public static final FunctionTag PAGE_DOWN = new FunctionTag();
+    public static final FunctionTag PAGE_UP = new FunctionTag();
+    public static final FunctionTag SELECT_DOWN = new FunctionTag();
+    public static final FunctionTag SELECT_END_EXTEND = new FunctionTag();
+    public static final FunctionTag SELECT_HOME_EXTEND = new FunctionTag();
+    public static final FunctionTag SELECT_LINE_END = new FunctionTag();
+    public static final FunctionTag SELECT_LINE_START = new FunctionTag();
+    public static final FunctionTag SELECT_PAGE_DOWN = new FunctionTag();
+    public static final FunctionTag SELECT_PAGE_UP = new FunctionTag();
+    public static final FunctionTag SELECT_PARAGRAPH_DOWN = new FunctionTag();
+    public static final FunctionTag SELECT_PARAGRAPH_UP = new FunctionTag();
+    public static final FunctionTag SELECT_UP = new FunctionTag();
+    public static final FunctionTag UP = new FunctionTag();
 
     // Text area content model
     private static final class TextAreaContent extends ContentBase {

@@ -70,30 +70,6 @@ import com.sun.javafx.scene.control.skin.Utils;
  * @since 9
  */
 public class TextAreaSkin extends TextInputControlSkin<TextArea> {
-    public enum C2 implements FunctionTag {
-        DOCUMENT_END,
-        DOCUMENT_START,
-        DOWN,
-        END,
-        HOME,
-        INSERT_TAB,
-        INSERT_NEW_LINE,
-        MOVE_PARAGRAPH_DOWN,
-        MOVE_PARAGRAPH_UP,
-        PAGE_DOWN,
-        PAGE_UP,
-        SELECT_DOWN,
-        SELECT_END_EXTEND,
-        SELECT_HOME_EXTEND,
-        SELECT_LINE_END,
-        SELECT_LINE_START,
-        SELECT_PAGE_DOWN,
-        SELECT_PAGE_UP,
-        SELECT_PARAGRAPH_DOWN,
-        SELECT_PARAGRAPH_UP,
-        SELECT_UP,
-        UP,
-    }
 
     /* ************************************************************************
      *

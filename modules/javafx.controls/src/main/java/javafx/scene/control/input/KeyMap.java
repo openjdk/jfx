@@ -78,7 +78,7 @@ public class KeyMap {
      * This function will override any function set by the skin.
      */
     public void func(FunctionTag tag, Runnable function) {
-        validateTag(tag);
+        Objects.requireNonNull(tag, "function tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
         addFunction(tag, function, null);
     }
@@ -276,7 +276,7 @@ public class KeyMap {
      * @param tag
      */
     public void restoreDefaultFunction(FunctionTag tag) {
-        validateTag(tag);
+        Objects.requireNonNull(tag, "function tag must not be null");
         Entry en = map.get(tag);
         if (en != null) {
             en.userValue = null;
@@ -284,16 +284,6 @@ public class KeyMap {
                 map.remove(tag);
             }
         }
-    }
-
-    private static void validateTag(FunctionTag tag) {
-        if (tag instanceof KeyBinding2) {
-            // prevent common misuse
-            throw new IllegalArgumentException("use key() method to register a KeyBinding");
-        } else if (tag instanceof Runnable) {
-            throw new IllegalArgumentException("function tag cannot be a Runnable");
-        }
-        Objects.requireNonNull(tag, "function tag must not be null");
     }
 
     /**
