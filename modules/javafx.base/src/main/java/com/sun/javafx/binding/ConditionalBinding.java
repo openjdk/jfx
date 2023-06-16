@@ -42,13 +42,18 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
         this.nonNullCondition = Objects.requireNonNull(condition, "condition cannot be null").orElse(false);
 
         // condition is always observed and never unsubscribed
-        nonNullCondition.values(current -> {
-            invalidate();
+        nonNullCondition.values(this::conditionChanged);
+    }
 
-            if (!current) {
-                getValue();
-            }
-        });
+    private void conditionChanged(boolean active) {
+        if (!active && !isValid()) {
+            getValue();  // makes binding valid, which it should always be when inactive
+        }
+        else if (isValid() && source.getValue() != getValue()) {
+            invalidate();
+        }
+
+        updateSubscription();
     }
 
     /**
@@ -63,6 +68,12 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
 
     @Override
     protected T computeValue() {
+        updateSubscription();
+
+        return source.getValue();
+    }
+
+    private void updateSubscription() {
         if (isObserved() && isActive()) {
             if (subscription == null) {
                 subscription = source.invalidations(this::invalidate);
@@ -71,8 +82,6 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
         else {
             unsubscribe();
         }
-
-        return source.getValue();
     }
 
     @Override

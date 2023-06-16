@@ -28,6 +28,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -152,7 +153,8 @@ class SnappingTest {
                     GridPane gridPane = new GridPane();
                     gridPane.getChildren().add(node);
                     return gridPane;
-                })
+                }),
+                new ContainerCreator<>(AnchorPane::new)
 //                new ContainerCreator<>(Pane::new),
 //                new ContainerCreator<>(StackPane::new),
 //                new ContainerCreator<>(BorderPane::new),
@@ -161,7 +163,6 @@ class SnappingTest {
 //                    tilePane.setPrefColumns(1);
 //                    return tilePane;
 //                }),
-//                new ContainerCreator<>(AnchorPane::new), // fixed by JDK-8295078
 //                new ContainerCreator<>(node -> {
 //                    FlowPane flowPane = new FlowPane(node);
 //                    flowPane.setPrefWrapLength(0);

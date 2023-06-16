@@ -338,6 +338,27 @@ public enum AccessibleAttribute {
     INDETERMINATE(Boolean.class),
 
     /**
+     * Returns {@link ToggleState toggle state} of CheckBox of CheckBoxTreeItem.
+     * <ul>
+     * <li>Used by: CheckBoxTreeItem</li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link ToggleState}
+     *   <ul>
+     *    <li>{@link ToggleState#UNCHECKED ToggleState.UNCHECKED}: control is not selected</li>
+     *    <li>{@link ToggleState#CHECKED ToggleState.CHECKED}: control is selected</li>
+     *    <li>{@link ToggleState#INDETERMINATE ToggleState.INDETERMINATE}:
+     *                                     selection state of control cannot be determined</li>
+     *   </ul>
+     * </li>
+     * <li>Parameters: </li>
+     * </ul>
+     *
+     * @see ToggleState
+     * @since 21
+     */
+    TOGGLE_STATE(ToggleState.class),
+
+    /**
      * Returns the item at the given index.
      * <ul>
      * <li>Used by: TabPane, ListView, and others </li>
@@ -799,5 +820,27 @@ public enum AccessibleAttribute {
      */
     public Class<?> getReturnType() {
         return returnClass;
+    }
+
+    /**
+     * This enum describes the values for {@link AccessibleAttribute#TOGGLE_STATE TOGGLE_STATE} attribute.
+     *
+     * @since 21
+     */
+    public enum ToggleState {
+        /**
+         * Indicates that the toggle control is not selected.
+         */
+        UNCHECKED,
+
+        /**
+         * Indicates that the toggle control is selected.
+         */
+        CHECKED,
+
+        /**
+         * Indicates that the toggle state of the control cannot be determined.
+         */
+        INDETERMINATE
     }
 }

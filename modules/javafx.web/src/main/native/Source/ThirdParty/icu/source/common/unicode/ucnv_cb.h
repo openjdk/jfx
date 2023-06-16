@@ -16,7 +16,7 @@
 
 /**
  * \file
- * \brief C UConverter functions to aid the writers of callbacks
+ * \brief C API: UConverter functions to aid the writers of callbacks
  *
  * <h2> Callback API for UConverter </h2>
  *

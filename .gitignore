@@ -16,13 +16,46 @@ testbin/
 /webrev/
 /webrev.zip
 
+# IntelliJ Idea Begin
+# https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 # Ignore IntelliJ files
-.idea/tasks.xml
-.idea/workspace.xml
 .idea/inspectionProfiles/**
 .idea/copyright/profiles_settings.xml
-.idea/codeStyles/**
-.idea/checkstyle-idea.xml
+
+# Code styles should be shared
+#.idea/codeStyles/**
+#.idea/checkstyle-idea.xml
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# Generated files
+.idea/**/contentModel.xml
+
+# Gradle
+.idea/**/gradle.xml
+.idea/**/libraries
+
+# Auto-import
+.idea/artifacts
+.idea/compiler.xml
+.idea/jarRepositories.xml
+.idea/modules.xml
+.idea/*.iml
+.idea/modules
+*.iml
+*.ipr
+
+# File-based project format
+*.iws
+
+# SonarLint plugin
+.idea/sonarlint/
+#IntelliJ Idea End
 
 # Ignore the following file suffixes
 *.vcxproj.user
@@ -31,3 +64,17 @@ testbin/
 *.rej
 *.swp
 *~
+
+# Ignore macOS system files
+.DS_Store
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Ignore Windows system files
+Desktop.ini
+Thumbs.db

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -349,12 +349,13 @@ public abstract class TableRowSkinBase<T,
                 height = h;
             }
 
-            width = tableCell.prefWidth(height);
-
             if (isVisible) {
                 if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
+                // Note: prefWidth() has to be called only after the tableCell is added to the tableRow, if it wasn't
+                // already. Otherwise, it might not have its skin yet, and its pref width is therefore 0.
+                width = tableCell.prefWidth(height);
 
                 // Added for RT-32700, and then updated for RT-34074.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
@@ -426,6 +427,7 @@ public abstract class TableRowSkinBase<T,
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
+                width = tableCell.prefWidth(height);
                 if (fixedCellSizeEnabled) {
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import junit.framework.Assert;
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
+
 
 public class TabPaneHeaderLeakTest {
 
@@ -92,16 +93,7 @@ public class TabPaneHeaderLeakTest {
             tabPane.getTabs().clear();
             root.getChildren().clear();
         });
-        for (int i = 0; i < 10; i++) {
-            System.gc();
-            if (tabWeakRef.get() == null &&
-                textFieldWeakRef.get() == null) {
-                break;
-            }
-            Util.sleep(500);
-        }
-        // Ensure that Tab and TextField are GCed.
-        Assert.assertNull("Couldn't collect Tab", tabWeakRef.get());
-        Assert.assertNull("Couldn't collect TextField", textFieldWeakRef.get());
+
+        JMemoryBuddy.assertCollectable(tabWeakRef, textFieldWeakRef);
     }
 }

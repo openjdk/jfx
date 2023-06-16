@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,8 +42,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import junit.framework.Assert;
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class ShapeViewOrderLeakTest {
 
@@ -94,14 +94,7 @@ public class ShapeViewOrderLeakTest {
             group.getChildren().clear();
             root.getChildren().clear();
         });
-        for (int i = 0; i < 10; i++) {
-            System.gc();
-            if (shapeWeakRef.get() == null) {
-                break;
-            }
-            Util.sleep(500);
-        }
-        // Ensure that Shape is GCed.
-        Assert.assertNull("Couldn't collect Shape", shapeWeakRef.get());
+
+        JMemoryBuddy.assertCollectable(shapeWeakRef);
     }
 }
