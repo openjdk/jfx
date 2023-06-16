@@ -18,7 +18,7 @@ public class SubscriptionTest {
         AtomicReference<String> b = new AtomicReference<>();
         AtomicReference<String> c = new AtomicReference<>();
 
-        Subscription subscription = Subscription.of(
+        Subscription subscription = Subscription.combine(
             () -> a.set("canceled"),
             () -> b.set("canceled"),
             () -> c.set("canceled")
@@ -37,9 +37,9 @@ public class SubscriptionTest {
 
     @Test
     void ofShouldRejectNulls() {
-        assertThrows(NullPointerException.class, () -> Subscription.of((Subscription[]) null));
-        assertThrows(NullPointerException.class, () -> Subscription.of((Subscription) null));
-        assertThrows(NullPointerException.class, () -> Subscription.of(Subscription.EMPTY, null, () -> {}));
+        assertThrows(NullPointerException.class, () -> Subscription.combine((Subscription[]) null));
+        assertThrows(NullPointerException.class, () -> Subscription.combine((Subscription) null));
+        assertThrows(NullPointerException.class, () -> Subscription.combine(Subscription.EMPTY, null, () -> {}));
     }
 
     @Test

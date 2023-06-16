@@ -48,7 +48,7 @@ public interface Subscription {
      * @return a {@code Subscription}, never {@code null}
      * @throws NullPointerException when {@code subscriptions} is {@code null} or contains {@code null}
      */
-    static Subscription of(Subscription... subscriptions) {
+    static Subscription combine(Subscription... subscriptions) {
         List<Subscription> list = List.of(subscriptions);
 
         return () -> {
