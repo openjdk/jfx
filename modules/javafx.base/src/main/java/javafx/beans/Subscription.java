@@ -51,11 +51,7 @@ public interface Subscription {
     static Subscription combine(Subscription... subscriptions) {
         List<Subscription> list = List.of(subscriptions);
 
-        return () -> {
-            for (Subscription subscription : list) {
-                subscription.unsubscribe();
-            }
-        };
+        return () -> list.forEach(Subscription::unsubscribe);
     }
 
     /**
