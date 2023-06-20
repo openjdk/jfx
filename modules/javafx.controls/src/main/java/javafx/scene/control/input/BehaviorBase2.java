@@ -46,12 +46,6 @@ import javafx.scene.input.KeyCode;
  * which undoes the mapping done in install().
  */
 public abstract class BehaviorBase2<C extends Control> implements IBehavior {
-    /** invoked just before running a KeyMap function */
-    protected void onKeyFunctionStart() { }
-
-    /** invoked right after running a KeyMap function */
-    protected void onKeyFunctionEnd() { }
-    
     private C control;
     
     public BehaviorBase2() {
@@ -62,7 +56,7 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
         return control;
     }
     
-    protected InputMap2 getInputMap() {
+    protected final InputMap2 getInputMap2() {
         return control.getInputMap2();
     }
 
@@ -85,7 +79,7 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * @param function
      */
     protected void func(FunctionTag tag, Runnable function) {
-        getInputMap().func(this, tag, function);
+        getInputMap2().func(this, tag, function);
     }
 
     /**
@@ -98,7 +92,7 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * @param tag function tag
      */
     protected void key(KeyBinding2 k, FunctionTag tag) {
-        getInputMap().key(this, k, tag);
+        getInputMap2().key(this, k, tag);
     }
 
     /**
@@ -110,7 +104,7 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * @param tag function tag
      */
     protected void key(KeyCode code, FunctionTag tag) {
-        getInputMap().key(this, code, tag);
+        getInputMap2().key(this, code, tag);
     }
 
     /**
@@ -121,7 +115,7 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * @param handler
      */
     protected <T extends Event> void map(EventType<T> type, EventHandler<T> handler) {
-        getInputMap().map(this, type, handler);
+        getInputMap2().map(this, type, handler);
     }
 
     /**
@@ -132,7 +126,15 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * @param type
      * @param handler
      */
-    protected <T extends Event> void map(EventCriteria<T> criteria, EventHandler<T> handler) {
-        getInputMap().map(this, criteria, handler);
+    protected <T extends Event> void map(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
+        getInputMap2().map(this, criteria, consume, handler);
+    }
+
+    protected void setOnKeyEventEnter(Runnable action) {
+        getInputMap2().setOnKeyEventEnter(this, action);
+    }
+
+    protected void setOnKeyEventExit(Runnable action) {
+        getInputMap2().setOnKeyEventExit(this, action);
     }
 }

@@ -234,7 +234,8 @@ public class ControlSkinFactory {
     static {
         specialBehaviorMap.put(Button.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
         specialBehaviorMap.put(CheckBox.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
-        specialBehaviorMap.put(ComboBox.class, (Function<Control, BehaviorBase>) c -> new ComboBoxListViewBehavior((ComboBox) c));
+        // TODO temporarily, while migration to new behavior is ongoing
+        //specialBehaviorMap.put(ComboBox.class, (Function<Control, BehaviorBase>) c -> new ComboBoxListViewBehavior());
         specialBehaviorMap.put(Hyperlink.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
         specialBehaviorMap.put(RadioButton.class, (Function<Control, BehaviorBase>) c -> new ToggleButtonBehavior((ToggleButton) c));
         specialBehaviorMap.put(ToggleButton.class, (Function<Control, BehaviorBase>) c -> new ToggleButtonBehavior((ToggleButton) c));

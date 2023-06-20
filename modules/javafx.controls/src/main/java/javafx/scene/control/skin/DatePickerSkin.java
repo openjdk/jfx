@@ -84,9 +84,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
         this.datePicker = control;
 
-        // install default input map for the control
-        this.behavior = new DatePickerBehavior(control);
-
         ListenerHelper lh = ListenerHelper.get(this);
 
         // The "arrow" is actually a rectangular svg icon resembling a calendar.
@@ -165,7 +162,9 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     @Override
     public void install() {
         super.install();
-        behavior.install();
+
+        behavior = new DatePickerBehavior();
+        behavior.install(this);
     }
 
     @Override

@@ -35,7 +35,6 @@ import javafx.scene.control.Control;
 import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.input.IBehavior;
 import javafx.scene.control.input.KeyBinding2;
-import javafx.scene.control.input.KeyMap;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import com.sun.javafx.scene.control.inputmap.InputMap;
@@ -73,8 +72,6 @@ public abstract class BehaviorBase<N extends Control> implements IBehavior {
     }
 
     public void dispose() {
-        node.getKeyMap().unregister(this);
-
         // when we dispose a behavior, we do NOT want to dispose the InputMap,
         // as that can remove input mappings that were not installed by the
         // behavior. Instead, we want to only remove mappings that the behavior
@@ -97,52 +94,6 @@ public abstract class BehaviorBase<N extends Control> implements IBehavior {
 //        }
     }
     
-    protected void addKeyMap(Control c) {
-        addDefaultMapping(
-            getInputMap(),
-            createKeyMap(getInputMap(), c, KeyEvent.KEY_PRESSED),
-            createKeyMap(getInputMap(), c, KeyEvent.KEY_RELEASED),
-            createKeyMap(getInputMap(), c, KeyEvent.KEY_TYPED)
-        );
-    }
-
-    /**
-     * Maps a function to the function tag.
-     * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
-     *
-     * @param behavior
-     * @param tag
-     * @param function
-     */
-    public void func(FunctionTag tag, Runnable function) {
-        getNode().getKeyMap().func(this, tag, function);
-    }
-
-    /**
-     * Maps a key binding to the specified function tag.
-     * A null key binding will result in no change to this input map.
-     * This method will not override a user mapping.
-     *
-     * @param behavior
-     * @param k key binding, can be null
-     * @param tag function tag
-     */
-    public void key(KeyBinding2 k, FunctionTag tag) {
-        getNode().getKeyMap().key(this, k, tag);
-    }
-
-    /**
-     * Maps a key binding to the specified function tag.
-     * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
-     *
-     * @param behavior
-     * @param code key code to construct a {@link KeyBinding2}
-     * @param tag function tag
-     */
-    public void key(KeyCode code, FunctionTag tag) {
-        getNode().getKeyMap().key(this, code, tag);
-    }
-
     protected void addDefaultMapping(Mapping<?>... newMapping) {
         addDefaultMapping(getInputMap(), newMapping);
     }
@@ -164,39 +115,6 @@ public abstract class BehaviorBase<N extends Control> implements IBehavior {
             inputMap.getMappings().add(mapping);
             installedDefaultMappings.add(mapping);
         }
-    }
-
-    private Mapping<KeyEvent> createKeyMap(InputMap<N> inputMap, Control control, EventType<KeyEvent> t) {
-        EventHandler<KeyEvent> handler = (ev) -> {
-            KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
-            KeyMap km = control.getKeyMap();
-            Runnable f = km.getFunction(k);
-            if (f != null) {
-                onKeyFunctionStart();
-                try {
-                    f.run();
-                    ev.consume();
-                } finally {
-                    onKeyFunctionEnd();
-                }
-            }
-        };
-
-        Mapping<KeyEvent> m = new Mapping<KeyEvent>(t, handler) {
-            @Override
-            public int getSpecificity(Event ev) {
-                KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
-                KeyMap m = control.getKeyMap();
-                Runnable f = m.getFunction(k);
-                if (f == null) {
-                    return 0;
-                }
-                // Max value returned by KeyBinding:154
-                return 6;
-            }
-        };
-        m.setAutoConsume(false);
-        return m;
     }
 
     protected <T extends Node> void addDefaultChildMap(InputMap<T> parentInputMap, InputMap<T> newChildInputMap) {

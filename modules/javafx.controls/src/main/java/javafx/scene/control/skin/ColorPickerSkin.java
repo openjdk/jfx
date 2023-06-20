@@ -101,9 +101,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     public ColorPickerSkin(final ColorPicker control) {
         super(control);
 
-        // install default input map for the control
-        this.behavior = new ColorPickerBehavior(control);
-
         updateComboBoxMode();
 
         ListenerHelper.get(this).addChangeListener(control.valueProperty(), (ev) -> updateColor());
@@ -262,7 +259,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     @Override
     public void install() {
         super.install();
-        behavior.install();
+
+        // install default input map for the control
+        behavior = new ColorPickerBehavior();
+        behavior.install(this);
     }
 
     @Override

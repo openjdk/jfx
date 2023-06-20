@@ -223,7 +223,7 @@ public class BehaviorCleanupTest {
             KeyCode.KP_UP,
         };
 
-        Set<KeyBinding2> keys = control.getKeyMap().getKeyBindings();
+        Set<KeyBinding2> keys = control.getInputMap2().getKeyBindings();
         for (KeyCode c: codes) {
             KeyBinding2 k = KeyBinding2.of(c);
             assertTrue(keys.contains(k));
@@ -268,7 +268,7 @@ public class BehaviorCleanupTest {
             KeyCode.KP_RIGHT,
         };
 
-        Set<KeyBinding2> keys = control.getKeyMap().getKeyBindings();
+        Set<KeyBinding2> keys = control.getInputMap2().getKeyBindings();
         System.out.println(keys);
         for (KeyCode c: codes) {
             if (PlatformUtil.isMac()) {

@@ -138,9 +138,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     public ComboBoxListViewSkin(final ComboBox<T> control) {
         super(control);
 
-        // install default input map for the control
-        this.behavior = new ComboBoxListViewBehavior<>(control);
-
         this.comboBox = control;
         updateComboBoxItems();
 
@@ -237,7 +234,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     @Override
     public void install() {
         super.install();
-        behavior.install();
+        
+        behavior = new ComboBoxListViewBehavior<>();
+        behavior.install(this);
     }
 
     @Override

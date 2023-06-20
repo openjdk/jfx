@@ -37,7 +37,6 @@ import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.ContextMenu;
@@ -48,8 +47,8 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.input.BehaviorBase2;
+import javafx.scene.control.input.InputMap2;
 import javafx.scene.control.input.KeyBinding2;
-import javafx.scene.control.input.KeyMap;
 import javafx.scene.control.skin.TextInputControlSkin;
 import javafx.scene.control.skin.TextInputControlSkin.Direction;
 import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
@@ -60,11 +59,8 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import com.sun.javafx.scene.control.inputmap.KeyBinding.OptionalBoolean;
 import com.sun.javafx.scene.control.skin.FXVK;
 
 /**
@@ -109,6 +105,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         super.install(skin);
 
         TextInputControl c = getNode();
+
+        setOnKeyEventEnter(() -> setCaretAnimating(false));
+        setOnKeyEventExit(() -> setCaretAnimating(true));
+
         c.textProperty().addListener(textListener);
 
         func(TextInputControl.COPY, c::copy); // TODO move method to behavior
@@ -216,9 +216,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-            map(KeyBinding2.builder().with(KeyCode.DIGIT9).ctrl().shift().build(), (ev) -> {
+            map(KeyBinding2.builder().with(KeyCode.DIGIT9).ctrl().shift().build(), true, (ev) -> {
                 FXVK.toggleUseVK(getNode());
-                ev.consume();
             });
         }
 
@@ -234,7 +233,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Binds keypad arrow keys to the same function tags as the regular arrow keys.
      */
     protected void addKeyPadMappings() {
-        KeyMap m = getNode().getKeyMap();
+        InputMap2 m = getNode().getInputMap2();
         Set<KeyBinding2> keys = m.getKeyBindings();
         for (KeyBinding2 k: keys) {
             KeyCode cd = k.getKeyCode();
@@ -276,23 +275,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     // However, we want to consume other key press / release events too, for
     // things that would have been handled by the InputCharacter normally
-    // (TODO note: KEY_RELEASEs are not handled by this code migrated from the old input map)
+    // (TODO note: KEY_RELEASEs are not handled by this code, same as was implemented with the old input map)
     private void handleRemainingKeyPresses(KeyEvent ev) {
         if (!ev.isAltDown() && !ev.isControlDown() && !ev.isMetaDown() && !ev.isShortcutDown()) {
             if (!ev.getCode().isFunctionKey()) {
                 ev.consume();
             }
         }
-    }
-
-    @Override
-    protected void onKeyFunctionStart() {
-        setCaretAnimating(false);
-    }
-
-    @Override
-    protected void onKeyFunctionEnd() {
-        setCaretAnimating(true);
     }
 
     /**

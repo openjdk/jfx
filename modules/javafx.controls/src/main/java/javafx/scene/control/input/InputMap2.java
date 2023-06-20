@@ -114,8 +114,7 @@ public class InputMap2<C extends Control> {
         }
 
         KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
-        KeyMap km = control.getKeyMap();
-        Runnable f = km.getFunction(k);
+        Runnable f = getFunction(k);
         if (f != null) {
             // on key function enter
             Entry en = map.get(ON_KEY_ENTER);
@@ -148,12 +147,14 @@ public class InputMap2<C extends Control> {
         EventType<?> t = ev.getEventType();
         List<EventHandler> handlers = getHandlers(t);
         if (handlers != null) {
+            // TODO on key function enter
             for (EventHandler h: handlers) {
                 h.handle(ev);
                 if (ev.isConsumed()) {
                     break;
                 }
             }
+            // TODO on key function exit
         }
     }
 
@@ -191,14 +192,16 @@ public class InputMap2<C extends Control> {
         extendOrReplaceHandlers(behavior, type, handler);
     }
     
-    <T extends Event> void map(IBehavior behavior, EventCriteria<T> criteria, EventHandler<T> handler) {
+    <T extends Event> void map(IBehavior behavior, EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         EventType<T> type = criteria.getEventType();
         extendOrReplaceHandlers(behavior, type, new EventHandler<T>() {
             @Override
             public void handle(T ev) {
                 if (criteria.isEventAcceptable(ev)) {
                     handler.handle(ev);
-                    ev.consume();
+                    if (consume) {
+                        ev.consume();
+                    }
                 }
             }
         });
@@ -308,10 +311,7 @@ public class InputMap2<C extends Control> {
             en = new Entry();
             map.put(k, en);
         }
-
-        EventType<KeyEvent> type = k.getEventType();
-        en = addListenerIfNeeded(type);
-
+        
         if (behavior == null) {
             // user mapping
         } else {
@@ -319,6 +319,9 @@ public class InputMap2<C extends Control> {
             en.behavior = behavior;
             en.behaviorValue = tag;
         }
+
+        EventType<KeyEvent> type = k.getEventType();
+        addListenerIfNeeded(type);
     }
 
     /**
@@ -484,7 +487,7 @@ public class InputMap2<C extends Control> {
         }
     }
 
-    void setOnKeyEventExit(IBehavior behavior, Runnable action) {
+   void setOnKeyEventExit(IBehavior behavior, Runnable action) {
         Objects.nonNull(behavior);
         Entry en = map.get(ON_KEY_EXIT);
         if (en == null) {

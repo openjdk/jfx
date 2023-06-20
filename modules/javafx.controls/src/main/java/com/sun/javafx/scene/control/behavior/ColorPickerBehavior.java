@@ -41,8 +41,7 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
     /**
      *
      */
-    public ColorPickerBehavior(final ColorPicker colorPicker) {
-        super(colorPicker);
+    public ColorPickerBehavior() {
     }
 
      /**************************************************************************
