@@ -51,7 +51,7 @@ class LinkTask extends DefaultTask {
                 args("$lib");
             }
             // Exclude parfait files (.bc)
-            args(objectDir.listFiles().findAll{ !it.getAbsolutePath().endsWith(".bc") });
+            args(objectDir.listFiles().sort().findAll{ !it.getAbsolutePath().endsWith(".bc") });
             if (project.IS_WINDOWS) {
                 args("/out:$lib");
             } else {
