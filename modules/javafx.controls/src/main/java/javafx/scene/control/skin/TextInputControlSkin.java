@@ -823,10 +823,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      *
      **************************************************************************/
 
-    TextInputControlBehavior getBehavior() {
-        return null;
-    }
-
     ObservableBooleanValue caretVisibleProperty() {
         return caretVisible;
     }

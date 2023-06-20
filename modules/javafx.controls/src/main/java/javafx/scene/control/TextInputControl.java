@@ -108,6 +108,7 @@ public abstract class TextInputControl extends Control {
     public static final FunctionTag SELECT_RIGHT_WORD = new FunctionTag();
     public static final FunctionTag TRAVERSE_NEXT = new FunctionTag();
     public static final FunctionTag TRAVERSE_PREVIOUS = new FunctionTag();
+    public static final FunctionTag UNDO = new FunctionTag();
 
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,

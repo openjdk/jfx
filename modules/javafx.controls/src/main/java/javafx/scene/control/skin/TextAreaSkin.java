@@ -162,11 +162,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     public TextAreaSkin(final TextArea control) {
         super(control);
 
-        // install default input map for the text area control
-        this.behavior = new TextAreaBehavior(control);
-        this.behavior.setTextAreaSkin(this);
-//        control.setInputMap(behavior.getInputMap());
-
         this.textArea = control;
 
         caretPosition = new IntegerBinding() {
@@ -831,7 +826,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     @Override
     public void install() {
         super.install();
-        behavior.install();
+
+        // install default input map for the text area control
+        behavior = new TextAreaBehavior();
+        behavior.setTextAreaSkin(this);
+        behavior.install(this);
     }
 
     @Override
@@ -1023,11 +1022,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
      * Private implementation
      *
      **************************************************************************/
-
-    @Override
-    TextAreaBehavior getBehavior() {
-        return behavior;
-    }
 
     private void createPromptNode() {
         if (promptNode == null && usePromptText.get()) {

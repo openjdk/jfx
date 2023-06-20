@@ -39,7 +39,7 @@ import com.sun.javafx.PlatformUtil;
  */
 // TODO rename KeyBinding
 // TODO alternative: key[Pressed](), keyReleased(), keyTyped(), and with(Predicate)
-public class KeyBinding2 {
+public class KeyBinding2 implements EventCriteria<KeyEvent> {
     /**
      * Condition used to build input key mappings.
      * <p>
@@ -187,6 +187,10 @@ public class KeyBinding2 {
 
     public boolean isKeyRelease() {
         return modifiers.contains(KCondition.KEY_RELEASE);
+    }
+    
+    public boolean isKeyTyped() {
+        return modifiers.contains(KCondition.KEY_TYPED);
     }
 
     public boolean isShortcut() {
@@ -386,7 +390,23 @@ public class KeyBinding2 {
         sb.append("}");
         return sb.toString();
     }
-    
+
+    @Override
+    public EventType<KeyEvent> getEventType() {
+        if (isKeyPress()) {
+            return KeyEvent.KEY_PRESSED;
+        } else if (isKeyRelease()) {
+            return KeyEvent.KEY_RELEASED;
+        } else {
+            return KeyEvent.KEY_TYPED;
+        }
+    }
+
+    @Override
+    public boolean isEventAcceptable(KeyEvent ev) {
+        return KeyBinding2.from(ev).equals(this);
+    }
+
     // TODO other setters (platform, etc)
     
     /** Key bindings builder */

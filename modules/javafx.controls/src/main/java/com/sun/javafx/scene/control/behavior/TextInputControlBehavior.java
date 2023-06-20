@@ -45,7 +45,9 @@ import javafx.scene.control.IndexRange;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.input.BehaviorBase2;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.input.KeyMap;
 import javafx.scene.control.skin.TextInputControlSkin;
@@ -73,7 +75,7 @@ import com.sun.javafx.scene.control.skin.FXVK;
  * class behaviors.
  *
  */
-public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase<T> {
+public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase2<T> {
 
     /**
      * Specifies whether we ought to show handles. We should do it on touch platforms
@@ -86,15 +88,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Fields                                                                 *
      *************************************************************************/
 
-    final T textInputControl;
-
     protected ContextMenu contextMenu;
 
     private InvalidationListener textListener = observable -> invalidateBidi();
-
-    private final InputMap<T> inputMap;
-
-
 
 
     /***************************************************************************
@@ -103,76 +99,17 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      *                                                                         *
      **************************************************************************/
 
-    public TextInputControlBehavior(T c) {
-        super(c);
-
-        this.textInputControl = c;
-
-        // create a map for text input-specific mappings (this reuses the default
-        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
-        inputMap = createInputMap();
-
-        KeyMapping cancelEditMapping;
-        KeyMapping fireMapping;
-        KeyMapping consumeMostPressedEventsMapping;
-        
-        addKeyMap(textInputControl);
-
-        // create a child input map for mappings which are applicable on all
-        // platforms, and regardless of editing state
-        addDefaultMapping(inputMap,
-                // TODO the following key mappings should be moved to keyHandler
-
-                fireMapping = keyMapping(KeyCode.ENTER, this::fire),
-                keyMapping(new KeyBinding(KeyCode.Z).shortcut(), e -> undo()),
-
-                // The following keys are forwarded to the parent container
-                cancelEditMapping = new KeyMapping(KeyCode.ESCAPE, this::cancelEdit),
-
-                // character input.
-                // Any other key press first goes to normal text input
-                // Note this is KEY_TYPED because otherwise the character is not available in the event.
-                keyMapping(new KeyBinding(null, KEY_TYPED)
-                                    .alt(OptionalBoolean.ANY)
-                                    .shift(OptionalBoolean.ANY)
-                                    .ctrl(OptionalBoolean.ANY)
-                                    .meta(OptionalBoolean.ANY),
-                           this::defaultKeyTyped),
-
-                // However, we want to consume other key press / release events too, for
-                // things that would have been handled by the InputCharacter normally
-                consumeMostPressedEventsMapping =
-                    keyMapping(new KeyBinding(null, KEY_PRESSED).shift(OptionalBoolean.ANY),
-                               e -> { if (!e.getCode().isFunctionKey()) e.consume(); }),
-
-                // VK
-                new KeyMapping(new KeyBinding(KeyCode.DIGIT9).ctrl().shift(), e -> {
-                    FXVK.toggleUseVK(textInputControl);
-                }, p -> !PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)),
-
-                // mouse and context menu mappings
-                new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
-                new MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged),
-                new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
-                new InputMap.Mapping<>(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested) {
-                    @Override public int getSpecificity(Event event) {
-                        return 1;
-                    }
-                }
-        );
-
-        cancelEditMapping.setAutoConsume(false);
-        // fix of JDK-8207759: don't auto-consume
-        fireMapping.setAutoConsume(false);
-        consumeMostPressedEventsMapping.setAutoConsume(false);
-
-        textInputControl.textProperty().addListener(textListener);
-
+    public TextInputControlBehavior() {
+        // TODO create upon demand
         contextMenu = new ContextMenu();
     }
 
-    public void install() {
+    @Override
+    public void install(Skin<T> skin) {
+        super.install(skin);
+
         TextInputControl c = getNode();
+        c.textProperty().addListener(textListener);
 
         func(TextInputControl.COPY, c::copy); // TODO move method to behavior
         func(TextInputControl.CUT, this::cut);
@@ -201,6 +138,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         func(TextInputControl.SELECT_RIGHT_WORD, this::selectRightWord);
         func(TextInputControl.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
         func(TextInputControl.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
+        func(TextInputControl.UNDO, this::undo);
 
         // common key bindings
         key(KeyBinding2.shortcut(KeyCode.C), TextInputControl.COPY);
@@ -232,6 +170,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         key(KeyBinding2.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
         key(KeyBinding2.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
         key(KeyBinding2.with(KeyCode.TAB).ctrl().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
+        key(KeyBinding2.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
         // macOS key bindings
         key(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
@@ -269,18 +208,33 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         key(KeyBinding2.with(KeyCode.RIGHT).ctrl().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // key pad mappings
-        addKeyPadMappings(inputMap);
-    }
+        addKeyPadMappings();
 
-    @Override public InputMap<T> getInputMap() {
-        return inputMap;
+        map(KEY_PRESSED, this::handleRemainingKeyPresses);
+        map(KEY_TYPED, this::defaultKeyTyped);
+        
+        // VK
+        // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
+        if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
+            map(KeyBinding2.builder().with(KeyCode.DIGIT9).ctrl().shift().build(), (ev) -> {
+                FXVK.toggleUseVK(getNode());
+                ev.consume();
+            });
+        }
+
+        // mouse and context menu mappings
+        map(MouseEvent.MOUSE_PRESSED, this::mousePressed);
+        map(MouseEvent.MOUSE_DRAGGED, this::mouseDragged);
+        map(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
+
+        map(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
     }
 
     /**
      * Binds keypad arrow keys to the same function tags as the regular arrow keys.
      */
-    protected void addKeyPadMappings(InputMap<T> map) {
-        KeyMap m = textInputControl.getKeyMap();
+    protected void addKeyPadMappings() {
+        KeyMap m = getNode().getKeyMap();
         Set<KeyBinding2> keys = m.getKeyBindings();
         for (KeyBinding2 k: keys) {
             KeyCode cd = k.getKeyCode();
@@ -316,6 +270,17 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                         build();
                     m.addAlias(k, newBinding);
                 }
+            }
+        }
+    }
+
+    // However, we want to consume other key press / release events too, for
+    // things that would have been handled by the InputCharacter normally
+    // (TODO note: KEY_RELEASEs are not handled by this code migrated from the old input map)
+    private void handleRemainingKeyPresses(KeyEvent ev) {
+        if (!ev.isAltDown() && !ev.isControlDown() && !ev.isMetaDown() && !ev.isShortcutDown()) {
+            if (!ev.getCode().isFunctionKey()) {
+                ev.consume();
             }
         }
     }
@@ -362,7 +327,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      *************************************************************************/
 
     @Override public void dispose() {
-        textInputControl.textProperty().removeListener(textListener);
+        getNode().textProperty().removeListener(textListener);
         super.dispose();
     }
 
@@ -440,8 +405,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private Bidi getBidi() {
         if (bidi == null) {
-            bidi = new Bidi(textInputControl.textProperty().getValueSafe(),
-                    (textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
+            bidi = new Bidi(getNode().textProperty().getValueSafe(),
+                    (getNode().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
                             ? Bidi.DIRECTION_RIGHT_TO_LEFT
                             : Bidi.DIRECTION_LEFT_TO_RIGHT);
         }
@@ -461,40 +426,40 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             rtlText =
                     (bidi.isRightToLeft() ||
                             (isMixed() &&
-                                    textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
+                                getNode().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
         }
         return rtlText;
     }
 
     private void nextCharacterVisually(boolean moveRight) {
         if (isMixed()) {
-            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)textInputControl.getSkin();
+            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)getNode().getSkin();
             skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
         } else if (moveRight != isRTLText()) {
-            textInputControl.forward();
+            getNode().forward();
         } else {
-            textInputControl.backward();
+            getNode().backward();
         }
     }
 
     private void selectLeft() {
         if (isRTLText()) {
-            textInputControl.selectForward();
+            getNode().selectForward();
         } else {
-            textInputControl.selectBackward();
+            getNode().selectBackward();
         }
     }
 
     private void selectRight() {
         if (isRTLText()) {
-            textInputControl.selectBackward();
+            getNode().selectBackward();
         } else {
-            textInputControl.selectForward();
+            getNode().selectForward();
         }
     }
     
     boolean isEditable() {
-        return textInputControl.isEditable();
+        return getNode().isEditable();
     }
 
     private void deletePreviousChar() {
@@ -655,9 +620,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             nextWord();
         }
     }
-
-    protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
-    protected void cancelEdit(KeyEvent event) { }
 
     protected void selectHome() {
         getNode().selectHome();

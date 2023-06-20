@@ -177,26 +177,26 @@ public class BehaviorCleanupTest {
 
 //---------- TextInputControl
 
-    @Test
-    public void testChildMapsCleared() {
-        TextField control = new TextField("some text");
-        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
-        InputMap<?> inputMap = behavior.getInputMap();
-        // child maps are not used anymore
-        //assertFalse("sanity: inputMap has child maps", inputMap.getChildInputMaps().isEmpty());
-        behavior.dispose();
-        assertEquals("default child maps must be cleared", 0, inputMap.getChildInputMaps().size());
-    }
+//    @Test
+//    public void testChildMapsCleared() {
+//        TextField control = new TextField("some text");
+//        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+//        InputMap<?> inputMap = behavior.getInputMap();
+//        // child maps are not used anymore
+//        //assertFalse("sanity: inputMap has child maps", inputMap.getChildInputMaps().isEmpty());
+//        behavior.dispose();
+//        assertEquals("default child maps must be cleared", 0, inputMap.getChildInputMaps().size());
+//    }
 
-    @Test
-    public void testDefaultMappingsCleared() {
-        TextField control = new TextField("some text");
-        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
-        InputMap<?> inputMap = behavior.getInputMap();
-        assertFalse("sanity: inputMap has mappings", inputMap.getMappings().isEmpty());
-        behavior.dispose();
-        assertEquals("default mappings must be cleared", 0, inputMap.getMappings().size());
-    }
+//    @Test
+//    public void testDefaultMappingsCleared() {
+//        TextField control = new TextField("some text");
+//        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+//        InputMap<?> inputMap = behavior.getInputMap();
+//        assertFalse("sanity: inputMap has mappings", inputMap.getMappings().isEmpty());
+//        behavior.dispose();
+//        assertEquals("default mappings must be cleared", 0, inputMap.getMappings().size());
+//    }
 
     /**
      * Sanity test: mappings to key pad keys.
@@ -289,7 +289,7 @@ public class BehaviorCleanupTest {
     @Test
     public void testTextPropertyListener() {
         TextField control = new TextField("some text");
-        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        TextFieldBehavior behavior = new TextFieldBehavior();
         assertNull("sanity: initial bidi", getRawBidi(behavior));
         // validate bidi field
         isRTLText(behavior);

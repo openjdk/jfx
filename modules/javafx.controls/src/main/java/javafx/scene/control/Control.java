@@ -49,7 +49,8 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.input.FunctionTag;
-import javafx.scene.control.input.KeyMap;
+import javafx.scene.control.input.InputMap2;
+import javafx.scene.control.input.KeyMap; // TODO
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -202,7 +203,8 @@ public abstract class Control extends Region implements Skinnable {
         }
     };
 
-    private KeyMap keyMap;
+    private KeyMap keyMap; // TODO remove
+    private InputMap2 inputMap2;
 
 
     /* *************************************************************************
@@ -468,16 +470,6 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-    // Proposed dispose() API.
-    // Note that there is impl code for a dispose method in TableRowSkinBase
-    // and TableCell (just search for dispose())
-//    public void dispose() {
-//        Skin skin = getSkin();
-//        if (skin != null) {
-//            skin.dispose();
-//        }
-//    }
-
     /**
      * Returns the {@link KeyMap} for this {@code Control}.
      *
@@ -488,6 +480,13 @@ public abstract class Control extends Region implements Skinnable {
             keyMap = new KeyMap();
         }
         return keyMap;
+    }
+
+    public InputMap2 getInputMap2() {
+        if (inputMap2 == null) {
+            inputMap2 = new InputMap2(this);
+        }
+        return inputMap2;
     }
 
     /**

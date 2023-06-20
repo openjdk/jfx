@@ -40,7 +40,7 @@ import javafx.scene.input.KeyCode;
  * Example:
  *  
  * Control:
- * - declares function tags (any object, typically an enum)
+ * - declares function tags
  * - declares public methods that invoke mapped functions via the corresponding function tag
  * Skin:
  * - installs behavior mappings in Skin.install()

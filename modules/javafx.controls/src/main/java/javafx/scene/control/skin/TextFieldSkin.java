@@ -145,13 +145,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
     public TextFieldSkin(final TextField control) {
         super(control);
 
-        // install default input map for the text field control
-        this.behavior = (control instanceof PasswordField)
-                ? new PasswordFieldBehavior((PasswordField)control)
-                : new TextFieldBehavior(control);
-        this.behavior.setTextFieldSkin(this);
-//        control.setInputMap(behavior.getInputMap());
-
         registerChangeListener(control.caretPositionProperty(), e -> {
             if (control.getWidth() > 0) {
                 updateTextNodeCaretPos(control.getCaretPosition());
@@ -387,7 +380,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
     @Override
     public void install() {
         super.install();
-        behavior.install();
+        
+        // install default input map for the text field control
+        behavior = (getSkinnable() instanceof PasswordField) ?
+            new PasswordFieldBehavior() :
+            new TextFieldBehavior();
+        behavior.setTextFieldSkin(this);
+        behavior.install(this);
     }
 
     @Override
@@ -711,11 +710,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      * Private implementation
      *
      **************************************************************************/
-
-    @Override
-    TextInputControlBehavior getBehavior() {
-        return behavior;
-    }
 
     private void updateTextNodeCaretPos(int pos) {
         if (pos == 0 || isForwardBias()) {

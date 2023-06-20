@@ -29,6 +29,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.skin.TextAreaSkin;
@@ -59,13 +60,18 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      * Constructors                                                           *
      *************************************************************************/
 
-    public TextAreaBehavior(final TextArea c) {
-        super(c);
-
+    public TextAreaBehavior() {
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
+    }
 
+    @Override
+    public void install(Skin<TextArea> sk) {
+        super.install(sk);
+
+        TextArea c = getNode();
+        
         focusListener = (src, ov, nv) -> handleFocusChange();
         // Register for change events
         c.focusedProperty().addListener(focusListener);
@@ -74,12 +80,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(c); // needs to be last.
         }
-    }
-    
-    public void install() {
-        super.install();
-
-        TextArea c = getNode();
 
         // functions
         func(TextArea.DOCUMENT_END, c::end); // TODO move to behavior
@@ -141,7 +141,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         key(KeyBinding2.with(KeyCode.UP).ctrl().notForMac().build(), TextArea.MOVE_PARAGRAPH_UP);
         key(KeyBinding2.with(KeyCode.UP).ctrl().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
 
-        addKeyPadMappings(getInputMap());
+        addKeyPadMappings();
     }
 
     @Override public void dispose() {

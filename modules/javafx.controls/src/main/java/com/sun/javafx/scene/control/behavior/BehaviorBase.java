@@ -46,7 +46,6 @@ import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
  *
  * @param <N> the actual class for which this behavior is intended
  */
-// TODO add func() and key() can be added to BehaviorBase
 public abstract class BehaviorBase<N extends Control> implements IBehavior {
 
     private final N node;
