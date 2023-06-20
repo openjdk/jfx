@@ -24,7 +24,6 @@
  */
 
 /**
-<h2>Package Specification</h2>
 This package is for standard {@link javafx.util.StringConverter string converters}
 for JavaFX. Example use cases for these implementations include:
   <ul>
