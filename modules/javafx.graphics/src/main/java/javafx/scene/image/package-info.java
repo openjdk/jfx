@@ -27,7 +27,7 @@
 <p>Provides the set of classes for loading and displaying images.</p>
 <ul>
     <li> The {@link javafx.scene.image.Image} class is used to load images
-    (synchronously or asynchronously). Image can be resized as it is loaded and 
+    (synchronously or asynchronously). Image can be resized as it is loaded and
     the resizing can be performed with specified filtering quality and
     with an option of preserving image's original aspect ratio.
 

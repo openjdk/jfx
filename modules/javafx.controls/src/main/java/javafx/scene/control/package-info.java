@@ -55,8 +55,8 @@
     out the view and controller functionality into separate classes, although
     at present there is no public API for the "controller" aspect.</p>
 
-    <p>All Controls extend from the Control class, which is in turn a 
-    {@link javafx.scene.Parent Parent} node, and which is a 
+    <p>All Controls extend from the Control class, which is in turn a
+    {@link javafx.scene.Parent Parent} node, and which is a
     {@link javafx.scene.Node Node}. Every Control has a reference to a single Skin, which
     is the view implementation for the Control. The Control delegates to the
     Skin the responsibility of computing the min, max, and pref sizes of the

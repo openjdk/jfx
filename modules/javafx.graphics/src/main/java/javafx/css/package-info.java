@@ -42,29 +42,29 @@ that scene or parent.
 <dl>
 
 <dt>{@link javafx.css.CssMetaData CssMetaData}</dt>
-<dd>Defines the CSS property and provides a link back to the 
+<dd>Defines the CSS property and provides a link back to the
     {@link javafx.css.StyleableProperty StyleableProperty}.
-    By convention, classes that have CssMetaData implement a 
+    By convention, classes that have CssMetaData implement a
     {@code public static List<CssMetaData<? extends Styleable>> getClassCssMetaData()} method that
     allows other classes to include CssMetaData from an inherited class. The
-    method {@link javafx.scene.Node#getCssMetaData() getCssMetaData()} should 
+    method {@link javafx.scene.Node#getCssMetaData() getCssMetaData()} should
     be overridden to return {@code getClassCssMetaData()}. The CSS implementation
     frequently calls {@code getCssMetaData()}. It is strongly recommended that
     the returned list be a {@code final static}.</dd>
 
 <dt>{@link javafx.css.StyleableProperty StyleableProperty}</dt>
 <dd>Defines the interface that the CSS implementation uses to set values on a
-    property and provides a link back to the {@code CssMetaData} that 
+    property and provides a link back to the {@code CssMetaData} that
     corresponds to the property. The {@link javafx.css.StyleablePropertyFactory StyleablePropertyFactory}
     greatly simplifies creating a StyleableProperty and its corresponding CssMetaData.</dd>
 
 <dt>{@link javafx.css.PseudoClass PseudoClass}</dt>
-<dd>Defines a pseudo-class which can be set or cleared via the method 
+<dd>Defines a pseudo-class which can be set or cleared via the method
     {@link javafx.scene.Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)
     pseudoClassStateChanged}. </dd>
 
 </dl>
-    
+
 <p>For further information about CSS, how to apply CSS styles
 to nodes, and what properties are available for styling, see the
 <a href="../scene/doc-files/cssref.html">CSS Reference Guide</a>.</p>

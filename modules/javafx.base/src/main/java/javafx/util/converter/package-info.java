@@ -29,7 +29,7 @@ for JavaFX. Example use cases for these implementations include:
   <ul>
     <li><a href="../../../javafx/beans/binding/package-summary.html">JavaFX binding API</a>
         for converting Objects to and from Strings, when the binding requires this.</li>
-    <li>In JavaFX UI controls such as {@link javafx.scene.control.ComboBox ComboBox} 
+    <li>In JavaFX UI controls such as {@link javafx.scene.control.ComboBox ComboBox}
         and {@link javafx.scene.control.ChoiceBox ChoiceBox}</li>
   </ul>
 */

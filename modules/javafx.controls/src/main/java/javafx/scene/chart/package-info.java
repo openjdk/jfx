@@ -35,85 +35,85 @@ javafx.scene.chart.PieChart Pie}, {@link
 javafx.scene.chart.ScatterChart Scatter} and {@link
 javafx.scene.chart.BubbleChart Bubble} charts are provided. These
 charts are easy to create and are customizable. JavaFX Charts API is
-a visual centric API rather than model centric. 
+a visual centric API rather than model centric.
 </P>
 <P>JavaFX charts supports animation of chart components as well as
 auto ranging of chart Axis.  In addition, as with other JavaFX UI
 controls, chart visual components can be styled via CSS. Thus, there
 are several public visual properties that can be styled via CSS. An
-example is provided later in the document. 
+example is provided later in the document.
 </P>
 <P>Below is a table listing the existing Chart types and a brief
 summary of their intended use.</P>
 <TABLE>
 <CAPTION>Table of Chart Types</CAPTION>
-	<TR>
-		<TH scope="col">
-			<P>Chart</P>
-		</TH>
-		<TH scope="col">
-			<P>Summary</P>
-		</TH>
-	</TR>
-	<TR>
-		<TH scope="row">
-			<P>{@link javafx.scene.chart.LineChart}</P>
-		</TH>
-		<TD>
-			<P>Plots line between the data points in a series. Used usually to
-			view data trends over time.</P>
-		</TD>
-	</TR>
-	<TR>
-		<TH scope="row">
-			<P>{@link javafx.scene.chart.AreaChart}</P>
-		</TH>
-		<TD>
-			<P>Plots the area between the line that connects the data points
-			and the axis. Good for comparing cumulated totals over time.</P>
-		</TD>
-	</TR>
-	<TR>
-		<TH scope="row">
-			<P>{@link javafx.scene.chart.BarChart}</P>
-		</TH>
-		<TD>
-			<P>Plots rectangular bars with heights indicating data values they
-			represent, and corresponding to the categories they belongs to.
-			Used for displaying discontinuous / discrete data</P>
-		</TD>
-	</TR>
-	<TR>
-		<TH scope="row">
-			<P>{@link javafx.scene.chart.PieChart}</P>
-		</TH>
-		<TD>
-			<P>Plots circular chart divided into segments with each segment
-			representing a value as a proportion of the total. It looks like a
-			Pie and hence the name 
-			</P>
-		</TD>
-	</TR>
-	<TR>
-		<TH scope="row">
-			<P>{@link javafx.scene.chart.BubbleChart}</P>
-		</TH>
-		<TD>
-			<P>Plots bubbles for data points in a series. Each plotted entity
-			depicts three parameters in a 2D chart and hence a unique chart
-			type.</P>
-		</TD>
-	</TR>
-	<TR>
-		<TH scope="row">
-			<P>{@link javafx.scene.chart.ScatterChart}</P>
-		</TH>
-		<TD>
-			<P>Plots symbols for the data points in a series. This type of
-			chart is useful in viewing distribution of data and its
-			corelation, if there is any clustering.</P>
-		</TD>
-	</TR>
+    <TR>
+        <TH scope="col">
+            <P>Chart</P>
+        </TH>
+        <TH scope="col">
+            <P>Summary</P>
+        </TH>
+    </TR>
+    <TR>
+        <TH scope="row">
+            <P>{@link javafx.scene.chart.LineChart}</P>
+        </TH>
+        <TD>
+            <P>Plots line between the data points in a series. Used usually to
+            view data trends over time.</P>
+        </TD>
+    </TR>
+    <TR>
+        <TH scope="row">
+            <P>{@link javafx.scene.chart.AreaChart}</P>
+        </TH>
+        <TD>
+            <P>Plots the area between the line that connects the data points
+            and the axis. Good for comparing cumulated totals over time.</P>
+        </TD>
+    </TR>
+    <TR>
+        <TH scope="row">
+            <P>{@link javafx.scene.chart.BarChart}</P>
+        </TH>
+        <TD>
+            <P>Plots rectangular bars with heights indicating data values they
+            represent, and corresponding to the categories they belongs to.
+            Used for displaying discontinuous / discrete data</P>
+        </TD>
+    </TR>
+    <TR>
+        <TH scope="row">
+            <P>{@link javafx.scene.chart.PieChart}</P>
+        </TH>
+        <TD>
+            <P>Plots circular chart divided into segments with each segment
+            representing a value as a proportion of the total. It looks like a
+            Pie and hence the name
+            </P>
+        </TD>
+    </TR>
+    <TR>
+        <TH scope="row">
+            <P>{@link javafx.scene.chart.BubbleChart}</P>
+        </TH>
+        <TD>
+            <P>Plots bubbles for data points in a series. Each plotted entity
+            depicts three parameters in a 2D chart and hence a unique chart
+            type.</P>
+        </TD>
+    </TR>
+    <TR>
+        <TH scope="row">
+            <P>{@link javafx.scene.chart.ScatterChart}</P>
+        </TH>
+        <TD>
+            <P>Plots symbols for the data points in a series. This type of
+            chart is useful in viewing distribution of data and its
+            corelation, if there is any clustering.</P>
+        </TD>
+    </TR>
 </TABLE>
 <P>The {@link javafx.scene.chart.Chart} is the baseclass for all
 charts. It is responsible for drawing the background, frame, title
@@ -122,7 +122,7 @@ and legend. It can be extended to create custom chart types. The
 charts and it extends from Chart class. It is mostly responsible for
 drawing the two axis and the background of the chart plot. Most
 charts extend from XYChart class except for PieChart which extends
-from Chart class as it is not a two axis chart. 
+from Chart class as it is not a two axis chart.
 </P>
 <P>The {@link javafx.scene.chart} package includes axis classes that
 can be used when creating two axis charts. {@link
@@ -130,11 +130,11 @@ javafx.scene.chart.Axis} is the abstract base class of all chart
 axis. {@link javafx.scene.chart.CategoryAxis} plots string categories
 where each value is a unique category along the axis. {@link
 javafx.scene.chart.NumberAxis} plots a range of numbers with major
-tick marks every tickUnit. 
+tick marks every tickUnit.
 </P>
 <P>For Example BarChart plots data from a sequence of {@link
 javafx.scene.chart.XYChart.Series} objects. Each series contains
-{@link javafx.scene.chart.XYChart.Data} objects. 
+{@link javafx.scene.chart.XYChart.Data} objects.
 </P>
 <pre>{@code
     // add data
@@ -144,7 +144,7 @@ javafx.scene.chart.XYChart.Series} objects. Each series contains
 }</pre>
 <P>We can define more series objects similarly. Following code
 snippet shows how to create a BarChart with 3 categories and its X
-and Y axis: 
+and Y axis:
 </P>
 <pre>{@code
     static String[] years = {"2007", "2008", "2009"};
@@ -158,16 +158,16 @@ and Y axis:
 Charting (like online stocks, web traffic etc) from live data sets.
 Here is an example of a dynamic chart created with simulated data. A
 {@link javafx.animation.Timeline} is used to simulate dynamic data
-for stock price variations over time(hours). 
+for stock price variations over time(hours).
 </P>
 <pre><code>
-    {@literal private XYChart.Series<Number,Number> hourDataSeries;} 
+    {@literal private XYChart.Series<Number,Number> hourDataSeries;}
     private NumberAxis xAxis;
     private Timeline animation;
-    private double hours = 0; 
+    private double hours = 0;
     private double timeInHours = 0;
     private double prevY = 10;
-    private double y = 10; 
+    private double y = 10;
 
     // timeline to add new data every 60th of a second
     animation = new Timeline();
@@ -226,7 +226,7 @@ for stock price variations over time(hours).
                 xAxis.setUpperBound(xAxis.getUpperBound() + 1);
             }
         }
-    } 
+    }
 </code></pre>
 
 <P>The start method needs to call animation,.play() to start the

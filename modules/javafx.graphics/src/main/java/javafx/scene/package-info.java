@@ -89,19 +89,19 @@ import javafx.scene.text.Font;
 public class Example extends Application {
 
     &#64;Override public void start(Stage stage) {
-        
+
         Group root = new Group();
         Scene scene = new Scene(root, 200, 150);
         scene.setFill(Color.LIGHTGRAY);
 
         Circle circle = new Circle(60, 40, 30, Color.GREEN);
-        
+
         Text text = new Text(10, 90, "JavaFX Scene");
         text.setFill(Color.DARKRED);
-        
+
         Font font = new Font(20);
         text.setFont(font);
-        
+
         root.getChildren().add(circle);
         root.getChildren().add(text);
         stage.setScene(scene);
