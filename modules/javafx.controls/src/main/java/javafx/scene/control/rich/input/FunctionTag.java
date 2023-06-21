@@ -26,8 +26,9 @@
 package javafx.scene.control.rich.input;
 
 /**
- * A marker interface indicating a function tag in the context of {@link KeyMap}.
- * A class implementing this interface must be neither {@link KeyBinding} nor {@link Runnable}.
+ * A function tag is a public handle for a function in the context of InputMap.
  */
-public interface FunctionTag {
+public final class FunctionTag {
+    public FunctionTag() {
+    }
 }
