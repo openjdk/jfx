@@ -208,7 +208,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // key pad mappings
         addKeyPadMappings();
 
-        mapTail(KeyEvent.KEY_PRESSED, false, this::handleRemainingKeyPresses);
+        // TODO this consumes ENTER and ESC
+        //mapTail(KeyEvent.KEY_PRESSED, false, this::handleRemainingKeyPresses);
         map(KeyEvent.KEY_TYPED, this::defaultKeyTyped);
         
         // VK
@@ -274,13 +275,13 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     // However, we want to consume other key press / release events too, for
     // things that would have been handled by the InputCharacter normally
     // (TODO note: KEY_RELEASEs are not handled by this code, same as was implemented with the old input map)
-    private void handleRemainingKeyPresses(KeyEvent ev) {
-        if (!ev.isAltDown() && !ev.isControlDown() && !ev.isMetaDown() && !ev.isShortcutDown()) {
-            if (!ev.getCode().isFunctionKey()) {
-                ev.consume();
-            }
-        }
-    }
+//    private void handleRemainingKeyPresses(KeyEvent ev) {
+//        if (!ev.isAltDown() && !ev.isControlDown() && !ev.isMetaDown() && !ev.isShortcutDown()) {
+//            if (!ev.getCode().isFunctionKey()) {
+//                ev.consume();
+//            }
+//        }
+//    }
 
     /**
      * Wraps the event handler to pause caret blinking when

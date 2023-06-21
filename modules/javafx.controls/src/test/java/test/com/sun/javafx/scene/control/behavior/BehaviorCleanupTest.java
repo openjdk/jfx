@@ -286,17 +286,18 @@ public class BehaviorCleanupTest {
      * Sanity test: listener to textProperty still effective after fix
      * (accidentally added twice)
      */
-    @Test
-    public void testTextPropertyListener() {
-        TextField control = new TextField("some text");
-        TextFieldBehavior behavior = new TextFieldBehavior();
-        assertNull("sanity: initial bidi", getRawBidi(behavior));
-        // validate bidi field
-        isRTLText(behavior);
-        assertNotNull(getRawBidi(behavior));
-        control.setText("dummy");
-        assertNull("listener working (bidi is reset)", getRawBidi(behavior));
-    }
+    // behavior must be added in Skin.install() now
+//    @Test
+//    public void testTextPropertyListener() {
+//        TextField control = new TextField("some text");
+//        TextFieldBehavior behavior = new TextFieldBehavior();
+//        assertNull("sanity: initial bidi", getRawBidi(behavior));
+//        // validate bidi field
+//        isRTLText(behavior);
+//        assertNotNull(getRawBidi(behavior));
+//        control.setText("dummy");
+//        assertNull("listener working (bidi is reset)", getRawBidi(behavior));
+//    }
 
 //----------- TreeView
 

@@ -124,9 +124,6 @@ public class InputMap2<C extends Control> {
             } finally {
                 handleKeyFunctionExit();
             }
-        }
-
-        if (ev.isConsumed()) {
             return;
         }
 
