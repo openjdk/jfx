@@ -28,8 +28,6 @@ import static com.sun.javafx.PlatformUtil.isLinux;
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
-import static javafx.scene.input.KeyEvent.KEY_TYPED;
 import java.text.Bidi;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -210,8 +208,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // key pad mappings
         addKeyPadMappings();
 
-        map(KEY_PRESSED, this::handleRemainingKeyPresses);
-        map(KEY_TYPED, this::defaultKeyTyped);
+        mapTail(KeyEvent.KEY_PRESSED, false, this::handleRemainingKeyPresses);
+        map(KeyEvent.KEY_TYPED, this::defaultKeyTyped);
         
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?

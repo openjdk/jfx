@@ -110,12 +110,51 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
     /**
      * Adds an event handler for the specified event type, in the context of this Behavior.
      * The handler will get removed in {@link#dispose()} method.
+     * This mapping always consumes the matching event.
      *
      * @param type
      * @param handler
      */
     protected <T extends Event> void map(EventType<T> type, EventHandler<T> handler) {
-        getInputMap2().map(this, type, handler);
+        getInputMap2().map(this, type, true, false, handler);
+    }
+    
+    /**
+     * Adds an event handler for the specified event type, in the context of this Behavior.
+     * The handler will get removed in {@link#dispose()} method.
+     *
+     * @param type
+     * @param consume determines whether the matching event is consumed or not
+     * @param handler
+     */
+    protected <T extends Event> void map(EventType<T> type, boolean consume, EventHandler<T> handler) {
+        getInputMap2().map(this, type, consume, false, handler);
+    }
+    
+    /**
+     * Adds an event handler for the specified event type, in the context of this Behavior.
+     * This event handler will get invoked after all handlers added via map() methods.
+     * The handler will get removed in {@link#dispose()} method.
+     * This mapping always consumes the matching event.
+     *
+     * @param type
+     * @param handler
+     */
+    protected <T extends Event> void mapTail(EventType<T> type, EventHandler<T> handler) {
+        getInputMap2().map(this, type, true, true, handler);
+    }
+    
+    /**
+     * Adds an event handler for the specified event type, in the context of this Behavior.
+     * This event handler will get invoked after all handlers added via map() methods.
+     * The handler will get removed in {@link#dispose()} method.
+     *
+     * @param type
+     * @param consume determines whether the matching event is consumed or not
+     * @param handler
+     */
+    protected <T extends Event> void mapTail(EventType<T> type, boolean consume, EventHandler<T> handler) {
+        getInputMap2().map(this, type, consume, true, handler);
     }
 
     /**
@@ -124,10 +163,11 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * The handler will get removed in {@link#dispose()} method.
      *
      * @param type
+     * @param consume determines whether the matching event is consumed or not
      * @param handler
      */
     protected <T extends Event> void map(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
-        getInputMap2().map(this, criteria, consume, handler);
+        getInputMap2().map(this, criteria, consume, false, handler);
     }
 
     protected void setOnKeyEventEnter(Runnable action) {

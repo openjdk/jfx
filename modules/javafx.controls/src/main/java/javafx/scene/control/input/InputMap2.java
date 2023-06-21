@@ -38,6 +38,7 @@ import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import com.sun.javafx.scene.control.input.HList;
 
 /**
  * InputMap is a class that is set on a given {@link Control}. When the Node receives
@@ -97,7 +98,7 @@ public class InputMap2<C extends Control> {
         }
 
         EventType<?> t = ev.getEventType();
-        List<EventHandler> handlers = getHandlers(t);
+        HList handlers = getHandlers(t);
         if (handlers != null) {
             for (EventHandler h: handlers) {
                 h.handle(ev);
@@ -130,7 +131,7 @@ public class InputMap2<C extends Control> {
         }
 
         EventType<?> t = ev.getEventType();
-        List<EventHandler> handlers = getHandlers(t);
+        HList handlers = getHandlers(t);
         if (handlers != null) {
             handleKeyFunctionEnter();
             try {
@@ -183,13 +184,23 @@ public class InputMap2<C extends Control> {
         }
     }
 
-    <T extends Event> void map(IBehavior behavior, EventType<T> type, EventHandler<T> handler) {
-        extendHandlers(behavior, type, handler);
+    <T extends Event> void map(IBehavior behavior, EventType<T> type, boolean consume, boolean tail, EventHandler<T> handler) {
+        if (consume) {
+            extendHandlers(behavior, type, tail, new EventHandler<T>() {
+                @Override
+                public void handle(T ev) {
+                    handler.handle(ev);
+                    ev.consume();
+                }
+            });
+        } else {
+            extendHandlers(behavior, type, tail, handler);
+        }
     }
-
-    <T extends Event> void map(IBehavior behavior, EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
+    
+    <T extends Event> void map(IBehavior behavior, EventCriteria<T> criteria, boolean consume, boolean tail, EventHandler<T> handler) {
         EventType<T> type = criteria.getEventType();
-        extendHandlers(behavior, type, new EventHandler<T>() {
+        extendHandlers(behavior, type, tail, new EventHandler<T>() {
             @Override
             public void handle(T ev) {
                 if (criteria.isEventAcceptable(ev)) {
@@ -202,16 +213,16 @@ public class InputMap2<C extends Control> {
         });
     }
 
-    private <T extends Event> void extendHandlers(IBehavior behavior, EventType<T> t, EventHandler<T> h) {
+    private <T extends Event> void extendHandlers(IBehavior behavior, EventType<T> t, boolean tail, EventHandler<T> h) {
         Objects.nonNull(behavior);
         Entry en = addListenerIfNeeded(t);
 
-        List<EventHandler<?>> handlers = (en.behaviorValue instanceof List li) ? li : new ArrayList<>(2);
-        handlers.add(h);
+        HList handlers = HList.from(en.behaviorValue);
+        handlers.add(h, tail);
         en.behavior = behavior;
         en.behaviorValue = handlers;
     }
-
+    
     /**
      * Adds a user-specified function under the given function tag.
      * This function will override any function set by the behavior.
@@ -349,11 +360,11 @@ public class InputMap2<C extends Control> {
         return null;
     }
 
-    private List<EventHandler> getHandlers(EventType<?> t) {
+    private HList getHandlers(EventType<?> t) {
         Entry en = map.get(t);
         if (en != null) {
             Object v = en.getValue();
-            if (v instanceof List list) {
+            if (v instanceof HList list) {
                 return list;
             }
         }
