@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control.rich.util;
+package javafx.scene.control.rich.input;
 
 /**
  * A marker interface indicating a function tag in the context of {@link KeyMap}.

@@ -52,14 +52,13 @@ import javafx.geometry.Point2D;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Control;
-import javafx.scene.control.TextField;
+import javafx.scene.control.rich.input.FunctionTag;
+import javafx.scene.control.rich.input.KeyMap;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
-import javafx.scene.control.rich.util.FunctionTag;
-import javafx.scene.control.rich.util.KeyMap;
 import javafx.scene.control.rich.util.Util;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.rich.Params;
@@ -70,8 +69,6 @@ import com.sun.javafx.scene.control.rich.VFlow;
 /**
  * Text input component that allows a user to enter multiple lines of rich text.
  */
-// TODO fit height property
-// TODO fit width property
 // TODO add methods corresponding to the remaining function tags
 public class RichTextArea extends Control {
     /** command tags */
@@ -128,6 +125,8 @@ public class RichTextArea extends Control {
     private ObjectProperty<Insets> contentPadding;
     private DoubleProperty lineSpacing;
     private BooleanProperty highlightCurrentLine;
+    private BooleanProperty trackContentWidth;
+    private BooleanProperty trackContentHeight;
 
     static {
         RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
@@ -597,6 +596,48 @@ public class RichTextArea extends Control {
             tabSizeProperty = new ReadOnlyIntegerWrapper(8);
         }
         return tabSizeProperty;
+    }
+
+    /**
+     * Determines whether the preferred width tracks the content width.
+     * When set to true, the horizontal scroll bar is disabled.
+     *
+     * @defaultValue false
+     */
+    public final BooleanProperty trackContentWidthProperty() {
+        if (trackContentWidth == null) {
+            trackContentWidth = new SimpleBooleanProperty();
+        }
+        return trackContentWidth;
+    }
+
+    public final boolean isTrackContentWidth() {
+        return trackContentWidth == null ? false : trackContentWidth.get();
+    }
+
+    public final void setTrackContentWidth(boolean on) {
+        trackContentWidthProperty().set(true);
+    }
+    
+    /**
+     * Determines whether the preferred height tracks the content height.
+     * When set to true, the vertical scroll bar is disabled.
+     *
+     * @defaultValue false
+     */
+    public final BooleanProperty trackContentHeightProperty() {
+        if (trackContentHeight == null) {
+            trackContentHeight = new SimpleBooleanProperty();
+        }
+        return trackContentHeight;
+    }
+
+    public final boolean isTrackContentHeight() {
+        return trackContentHeight == null ? false : trackContentHeight.get();
+    }
+
+    public final void setTrackContentHeight(boolean on) {
+        trackContentHeightProperty().set(true);
     }
 
     /**
