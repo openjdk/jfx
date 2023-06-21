@@ -399,7 +399,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override protected void setCaretAnimating(boolean play) {
-        System.err.println("setCaretAnimating " + play); // FIX
         skin.setCaretAnimating(play);
     }
 

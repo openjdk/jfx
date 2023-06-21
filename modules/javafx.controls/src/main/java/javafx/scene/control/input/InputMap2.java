@@ -116,27 +116,12 @@ public class InputMap2<C extends Control> {
         KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
         Runnable f = getFunction(k);
         if (f != null) {
-            // on key function enter
-            Entry en = map.get(ON_KEY_ENTER);
-            if (en != null) {
-                Object x = en.getValue();
-                if (x instanceof Runnable r) {
-                    r.run();
-                }
-            }
-
+            handleKeyFunctionEnter();
             try {
                 f.run();
                 ev.consume();
             } finally {
-                // on key function exit
-                en = map.get(ON_KEY_EXIT);
-                if (en != null) {
-                    Object x = en.getValue();
-                    if (x instanceof Runnable r) {
-                        r.run();
-                    }
-                }
+                handleKeyFunctionExit();
             }
         }
 
@@ -147,14 +132,37 @@ public class InputMap2<C extends Control> {
         EventType<?> t = ev.getEventType();
         List<EventHandler> handlers = getHandlers(t);
         if (handlers != null) {
-            // TODO on key function enter
-            for (EventHandler h: handlers) {
-                h.handle(ev);
-                if (ev.isConsumed()) {
-                    break;
+            handleKeyFunctionEnter();
+            try {
+                for (EventHandler h: handlers) {
+                    h.handle(ev);
+                    if (ev.isConsumed()) {
+                        break;
+                    }
                 }
+            } finally {
+                handleKeyFunctionExit();
             }
-            // TODO on key function exit
+        }
+    }
+    
+    private void handleKeyFunctionEnter() {
+        Entry en = map.get(ON_KEY_ENTER);
+        if (en != null) {
+            Object x = en.getValue();
+            if (x instanceof Runnable r) {
+                r.run();
+            }
+        }
+    }
+    
+    private void handleKeyFunctionExit() {
+        Entry en = map.get(ON_KEY_EXIT);
+        if (en != null) {
+            Object x = en.getValue();
+            if (x instanceof Runnable r) {
+                r.run();
+            }
         }
     }
 
@@ -167,34 +175,21 @@ public class InputMap2<C extends Control> {
     void unregister(IBehavior behavior) {
         Objects.nonNull(behavior);
 
-        for (var x: map.entrySet()) {
-            Entry en = x.getValue();
+        for (Entry en: map.values()) {
             if (en.behavior == behavior) {
-                if (x.getKey() instanceof EventType t) {
-                    // remove event handler
-                    if (en.behaviorValue instanceof List list) {
-                        for (Object h: list) {
-                            if (h instanceof EventHandler li) {
-                                control.removeEventHandler(t, li);
-                            }
-                        }
-                    }
-                } else {
-                    // remove behavior key mapping
-                    en.behavior = null;
-                    en.behaviorValue = null;
-                }
+                en.behavior = null;
+                en.behaviorValue = null;
             }
         }
     }
-    
+
     <T extends Event> void map(IBehavior behavior, EventType<T> type, EventHandler<T> handler) {
-        extendOrReplaceHandlers(behavior, type, handler);
+        extendHandlers(behavior, type, handler);
     }
-    
+
     <T extends Event> void map(IBehavior behavior, EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         EventType<T> type = criteria.getEventType();
-        extendOrReplaceHandlers(behavior, type, new EventHandler<T>() {
+        extendHandlers(behavior, type, new EventHandler<T>() {
             @Override
             public void handle(T ev) {
                 if (criteria.isEventAcceptable(ev)) {
@@ -207,19 +202,16 @@ public class InputMap2<C extends Control> {
         });
     }
 
-    private <T extends Event> void extendOrReplaceHandlers(IBehavior behavior, EventType<T> type, EventHandler<T> handler) {
+    private <T extends Event> void extendHandlers(IBehavior behavior, EventType<T> t, EventHandler<T> h) {
         Objects.nonNull(behavior);
-        Entry en = addListenerIfNeeded(type);
-        if ((en.behavior != null) && (en.behavior != behavior)) {
-            // remove the old behavior mapping when replacing behavior
-            // TODO problem!  a single map with criteria will wipe out valid old behavior mappings?
-        }
-        
+        Entry en = addListenerIfNeeded(t);
+
         List<EventHandler<?>> handlers = (en.behaviorValue instanceof List li) ? li : new ArrayList<>(2);
-        handlers.add(handler);
+        handlers.add(h);
+        en.behavior = behavior;
         en.behaviorValue = handlers;
     }
-    
+
     /**
      * Adds a user-specified function under the given function tag.
      * This function will override any function set by the behavior.
