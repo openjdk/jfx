@@ -483,7 +483,7 @@ public class VFlow extends Pane implements StyleResolver {
             } else {
                 w = getContentWidth() + leftPadding + rightPadding;
             }
-            cell.addBoxOutline(b, 0.0, snapPositionX(w), cell.getHeight());
+            TextCellHelper.addBoxOutline(cell, b, 0.0, snapPositionX(w), TextCellHelper.getHeight(cell));
         }
     }
 
@@ -547,9 +547,9 @@ public class VFlow extends Pane implements StyleResolver {
 
         PathElement[] pe;
         if (startOffset == endOffset) {
-            pe = cell.getCaretShape(startOffset, true);
+            pe = TextCellHelper.getCaretShape(cell, startOffset, true);
         } else {
-            pe = cell.getRangeShape(startOffset, endOffset);
+            pe = TextCellHelper.getRangeShape(cell, startOffset, endOffset);
         }
         
         if (pe == null) {
@@ -864,8 +864,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             double h = r.prefHeight(forWidth) + lineSpacing;
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
-            cell.setHeight(h, forWidth);
-            cell.setLocationY(y);
+            TextCellHelper.setPosition(cell, y, h/*, forWidth*/);
 
             if (!wrap) {
                 if (visible) {
@@ -985,8 +984,7 @@ public class VFlow extends Pane implements StyleResolver {
             y = snapPositionY(y - h);
             count++;
 
-            cell.setHeight(h, forWidth);
-            cell.setLocationY(y);
+            TextCellHelper.setPosition(cell, y, h/*, forWidth*/);
             
             content.getChildren().remove(r);
 
@@ -1048,8 +1046,8 @@ public class VFlow extends Pane implements StyleResolver {
         for (int i=0; i < sz; i++) {
             TextCell cell = arrangement.getCellAt(i);
             Region r = cell.getContent();
-            double h = cell.getHeight();
-            double y = cell.getY();
+            double h = TextCellHelper.getHeight(cell);
+            double y = TextCellHelper.getY(cell);
             content.layoutInArea(r, x, y, w, h);
 
             // place side nodes

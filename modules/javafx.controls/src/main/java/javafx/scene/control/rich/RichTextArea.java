@@ -74,44 +74,42 @@ import com.sun.javafx.scene.control.rich.VFlow;
  */
 // TODO add methods corresponding to the remaining function tags
 public class RichTextArea extends Control {
-    /** command tags */
-    public enum Cmd implements FunctionTag {
-        BACKSPACE,
-        COPY,
-        CUT,
-        DELETE,
-        INSERT_LINE_BREAK,
-        INSERT_TAB,
-        MOVE_DOCUMENT_END,
-        MOVE_DOCUMENT_START,
-        MOVE_DOWN,
-        MOVE_END,
-        MOVE_HOME,
-        MOVE_LEFT,
-        MOVE_RIGHT,
-        MOVE_UP,
-        MOVE_WORD_NEXT,
-        MOVE_WORD_NEXT_END,
-        MOVE_WORD_PREVIOUS,
-        PAGE_DOWN,
-        PAGE_UP,
-        PASTE,
-        PASTE_PLAIN_TEXT,
-        SELECT_ALL,
-        SELECT_DOCUMENT_END,
-        SELECT_DOCUMENT_START,
-        SELECT_DOWN,
-        SELECT_LEFT,
-        SELECT_LINE,
-        SELECT_PAGE_DOWN,
-        SELECT_PAGE_UP,
-        SELECT_RIGHT,
-        SELECT_UP,
-        SELECT_WORD,
-        SELECT_WORD_NEXT,
-        SELECT_WORD_NEXT_END,
-        SELECT_WORD_PREVIOUS,
-    }
+    // function tags
+    public static final FunctionTag BACKSPACE = new FunctionTag();
+    public static final FunctionTag COPY = new FunctionTag();
+    public static final FunctionTag CUT = new FunctionTag();
+    public static final FunctionTag DELETE = new FunctionTag();
+    public static final FunctionTag INSERT_LINE_BREAK = new FunctionTag();
+    public static final FunctionTag INSERT_TAB = new FunctionTag();
+    public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();
+    public static final FunctionTag MOVE_DOCUMENT_START = new FunctionTag();
+    public static final FunctionTag MOVE_DOWN = new FunctionTag();
+    public static final FunctionTag MOVE_END = new FunctionTag();
+    public static final FunctionTag MOVE_HOME = new FunctionTag();
+    public static final FunctionTag MOVE_LEFT = new FunctionTag();
+    public static final FunctionTag MOVE_RIGHT = new FunctionTag();
+    public static final FunctionTag MOVE_UP = new FunctionTag();
+    public static final FunctionTag MOVE_WORD_NEXT = new FunctionTag();
+    public static final FunctionTag MOVE_WORD_NEXT_END = new FunctionTag();
+    public static final FunctionTag MOVE_WORD_PREVIOUS = new FunctionTag();
+    public static final FunctionTag PAGE_DOWN = new FunctionTag();
+    public static final FunctionTag PAGE_UP = new FunctionTag();
+    public static final FunctionTag PASTE = new FunctionTag();
+    public static final FunctionTag PASTE_PLAIN_TEXT = new FunctionTag();
+    public static final FunctionTag SELECT_ALL = new FunctionTag();
+    public static final FunctionTag SELECT_DOCUMENT_END = new FunctionTag();
+    public static final FunctionTag SELECT_DOCUMENT_START = new FunctionTag();
+    public static final FunctionTag SELECT_DOWN = new FunctionTag();
+    public static final FunctionTag SELECT_LEFT = new FunctionTag();
+    public static final FunctionTag SELECT_LINE = new FunctionTag();
+    public static final FunctionTag SELECT_PAGE_DOWN = new FunctionTag();
+    public static final FunctionTag SELECT_PAGE_UP = new FunctionTag();
+    public static final FunctionTag SELECT_RIGHT = new FunctionTag();
+    public static final FunctionTag SELECT_UP = new FunctionTag();
+    public static final FunctionTag SELECT_WORD = new FunctionTag();
+    public static final FunctionTag SELECT_WORD_NEXT = new FunctionTag();
+    public static final FunctionTag SELECT_WORD_NEXT_END = new FunctionTag();
+    public static final FunctionTag SELECT_WORD_PREVIOUS = new FunctionTag();
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
     private final ConfigurationParameters config;
@@ -489,36 +487,36 @@ public class RichTextArea extends Control {
      * Moves the caret to before the first character of the text, also clearing the selection.
      */
     public void moveDocumentStart() {
-        execute(Cmd.MOVE_DOCUMENT_START);
+        execute(MOVE_DOCUMENT_START);
     }
 
     /**
      * Moves the caret to after the last character of the text, also clearing the selection.
      */
     public void moveDocumentEnd() {
-        execute(Cmd.MOVE_DOCUMENT_END);
+        execute(MOVE_DOCUMENT_END);
     }
 
     /** selects from the anchor position to the document start */
     public void selectDocumentStart() {
-        execute(Cmd.SELECT_DOCUMENT_START);
+        execute(SELECT_DOCUMENT_START);
     }
 
     /** selects from the anchor position to the document end */
     public void selectDocumentEnd() {
-        execute(Cmd.SELECT_DOCUMENT_END);
+        execute(SELECT_DOCUMENT_END);
     }
     
     public void selectAll() {
-        execute(Cmd.SELECT_ALL);
+        execute(SELECT_ALL);
     }
     
     public void selectWord() {
-        execute(Cmd.SELECT_WORD);
+        execute(SELECT_WORD);
     }
 
     public void selectLine() {
-        execute(Cmd.SELECT_LINE);
+        execute(SELECT_LINE);
     }
 
     public void clearSelection() {
@@ -656,19 +654,19 @@ public class RichTextArea extends Control {
     }
     
     public void copy() {
-        execute(Cmd.COPY);
+        execute(COPY);
     }
     
     public void cut() {
-        execute(Cmd.CUT);
+        execute(CUT);
     }
     
     public void paste() {
-        execute(Cmd.PASTE);
+        execute(PASTE);
     }
     
     public void pastePlainText() {
-        execute(Cmd.PASTE_PLAIN_TEXT);
+        execute(PASTE_PLAIN_TEXT);
     }
 
     public void undo() {
@@ -694,7 +692,7 @@ public class RichTextArea extends Control {
      * also has the effect of clearing the selection.
      */
     public void previousWord() {
-        execute(Cmd.MOVE_WORD_PREVIOUS);
+        execute(MOVE_WORD_PREVIOUS);
     }
 
     /**
@@ -702,7 +700,7 @@ public class RichTextArea extends Control {
      * also has the effect of clearing the selection.
      */
     public void nextWord() {
-        execute(Cmd.MOVE_WORD_NEXT);
+        execute(MOVE_WORD_NEXT);
     }
 
     /**
@@ -710,7 +708,7 @@ public class RichTextArea extends Control {
      * also has the effect of clearing the selection.
      */
     public void endOfNextWord() {
-        execute(Cmd.MOVE_WORD_NEXT_END);
+        execute(MOVE_WORD_NEXT_END);
     }
 
     /**
@@ -719,7 +717,7 @@ public class RichTextArea extends Control {
      * moved to the beginning of previous word.
      */
     public void selectPreviousWord() {
-        execute(Cmd.SELECT_WORD_PREVIOUS);
+        execute(SELECT_WORD_PREVIOUS);
     }
 
     /**
@@ -728,7 +726,7 @@ public class RichTextArea extends Control {
      * moved to the beginning of next word.
      */
     public void selectNextWord() {
-        execute(Cmd.SELECT_WORD_NEXT);
+        execute(SELECT_WORD_NEXT);
     }
 
     /**
@@ -736,7 +734,7 @@ public class RichTextArea extends Control {
      * the selection to be cleared.
      */
     public void selectEndOfNextWord() {
-        execute(Cmd.SELECT_WORD_NEXT_END);
+        execute(SELECT_WORD_NEXT_END);
     }
 
     /**
