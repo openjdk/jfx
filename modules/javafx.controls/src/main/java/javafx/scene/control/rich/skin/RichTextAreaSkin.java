@@ -89,9 +89,9 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         vscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
         vscroll.visibleProperty().bind(Bindings.createBooleanBinding(() -> {
-                return !control.isTrackContentHeight();
+                return !control.isUseContentHeight();
             },
-            control.trackContentHeightProperty()
+            control.useContentHeightProperty()
         ));
 
         hscroll = createHScrollBar();
@@ -102,10 +102,10 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
         hscroll.addEventFilter(ScrollEvent.ANY, (ev) -> ev.consume());
         hscroll.visibleProperty().bind(Bindings.createBooleanBinding(() -> {
-                return !control.isWrapText() && !control.isTrackContentWidth();
+                return !control.isWrapText() && !control.isUseContentWidth();
             },
             control.wrapTextProperty(),
-            control.trackContentWidthProperty()
+            control.useContentWidthProperty()
         ));
         vflow = new VFlow(this, config, vscroll, hscroll);
         vflow.addListeners(listenerHelper);
@@ -151,8 +151,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             control.leftDecoratorProperty(),
             control.rightDecoratorProperty()
         );
-        listenerHelper.addInvalidationListener(vflow::handleTrackContentHeight, true, control.trackContentHeightProperty());
-        listenerHelper.addInvalidationListener(vflow::handleTrackContentWidth, true, control.trackContentWidthProperty());
+        listenerHelper.addInvalidationListener(vflow::handleTrackContentHeight, true, control.useContentHeightProperty());
+        listenerHelper.addInvalidationListener(vflow::handleTrackContentWidth, true, control.useContentWidthProperty());
         listenerHelper.addInvalidationListener(vflow::handleVerticalScroll, vscroll.valueProperty());
         listenerHelper.addInvalidationListener(vflow::handleHorizontalScroll, hscroll.valueProperty());
     }

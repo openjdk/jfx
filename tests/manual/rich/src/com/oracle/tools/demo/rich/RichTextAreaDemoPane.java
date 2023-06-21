@@ -82,8 +82,8 @@ public class RichTextAreaDemoPane extends BorderPane {
         FX.name(this, "RichTextAreaDemoPane");
 
         control = new RichTextArea();
-        control.setTrackContentHeight(trackSize);
-        control.setTrackContentWidth(trackSize);
+        control.setUseContentHeight(trackSize);
+        control.setUseContentWidth(trackSize);
 
         SplitPane hsplit = new SplitPane(control, pane());
         FX.name(hsplit, "hsplit");
@@ -215,13 +215,13 @@ public class RichTextAreaDemoPane extends BorderPane {
             control.setRightDecorator(createDecorator(v));
         });
         
-        CheckBox trackWidth = new CheckBox("track width");
+        CheckBox trackWidth = new CheckBox("use content width");
         FX.name(trackWidth, "trackWidth");
-        trackWidth.selectedProperty().bindBidirectional(control.trackContentWidthProperty());
+        trackWidth.selectedProperty().bindBidirectional(control.useContentWidthProperty());
         
-        CheckBox trackHeight = new CheckBox("track height");
+        CheckBox trackHeight = new CheckBox("use content height");
         FX.name(trackHeight, "trackHeight");
-        trackHeight.selectedProperty().bindBidirectional(control.trackContentHeightProperty());
+        trackHeight.selectedProperty().bindBidirectional(control.useContentHeightProperty());
         
         op = new ROptionPane();
         op.label("Model:");

@@ -817,8 +817,8 @@ public class VFlow extends Pane implements StyleResolver {
         int tabSize = control.getTabSize();
         lineSpacing = control.getLineSpacing();
 
-        boolean trackHeight = control.isTrackContentHeight();
-        boolean trackWidth = control.isTrackContentWidth();
+        boolean trackHeight = control.isUseContentHeight();
+        boolean trackWidth = control.isUseContentWidth();
         boolean wrap = control.isWrapText() && !trackWidth;
         double forWidth;
         double maxWidth;
@@ -1032,7 +1032,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     protected void placeNodes() {
-        boolean wrap = control.isWrapText() && !control.isTrackContentWidth();
+        boolean wrap = control.isWrapText() && !control.isUseContentWidth();
         double w = wrap ? getContentWidth() : MAX_WIDTH_FOR_LAYOUT;
         double x = snapPositionX(-getOffsetX());
 
@@ -1271,7 +1271,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     @Override
     protected double computePrefHeight(double width) {
-        boolean on = control.isTrackContentHeight();
+        boolean on = control.isUseContentHeight();
         if (on) {
             // TODO if arrangement.width != width -> reflow()
             layoutChildren();
@@ -1283,7 +1283,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     @Override
     protected double computePrefWidth(double height) {
-        boolean on = control.isTrackContentWidth();
+        boolean on = control.isUseContentWidth();
         if (on) {
             // TODO if arrangement.height != height -> reflow()
             layoutChildren();
