@@ -1022,7 +1022,7 @@ public class Text extends Shape {
         TextLayout layout = getTextLayout();
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        TextLayout.Hit layoutHit = layout.getHitInfo((float)x, (float)y);
+        TextLayout.Hit layoutHit = layout.getHitInfo((float)x, (float)y, getText());
         return new HitInfo(layoutHit.getCharIndex(), layoutHit.getInsertionIndex(),
                            layoutHit.isLeading(), getText());
     }

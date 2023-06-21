@@ -393,7 +393,7 @@ public class TextRun implements GlyphList {
         float runX = 0;
         for (int i = 0; i < glyphCount; i++) {
             float advance = getAdvance(i);
-            if (runX + advance > x) {
+            if (runX + advance >= x) {
                 if (trailing != null) {
                     //TODO handle clusters
                     if (x - runX > advance / 2) {

@@ -199,7 +199,7 @@ public interface TextLayout {
      */
     public boolean setTabSize(int spaces);
 
-    public Hit getHitInfo(float x, float y);
+    public Hit getHitInfo(float x, float y, String text);
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);

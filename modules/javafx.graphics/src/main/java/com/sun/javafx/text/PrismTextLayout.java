@@ -420,10 +420,11 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y) {
+    public Hit getHitInfo(float x, float y, String text) {
         int charIndex = -1;
         int insertionIndex = -1;
         boolean leading = false;
+        int relIndex = 0;
 
         ensureLayout();
         int lineIndex = getLineIndex(y);
@@ -440,24 +441,51 @@ public class PrismTextLayout implements TextLayout {
             TextRun run = null;
             x -= bounds.getMinX();
             //TODO binary search
-            for (int i = 0; i < runs.length; i++) {
-                run = runs[i];
-                if (x < run.getWidth()) break;
-                if (i + 1 < runs.length) {
-                    if (runs[i + 1].isLinebreak()) break;
-                    x -= run.getWidth();
+            if (text == null || spans == null) {
+                for (int i = 0; i < runs.length; i++) {
+                    run = runs[i];
+                    if (x < run.getWidth()) break;
+                    if (i + 1 < runs.length) {
+                        if (runs[i + 1].isLinebreak()) break;
+                        x -= run.getWidth();
+                    }
+                }
+            } else {
+                for(TextRun r: runs) {
+                    if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                        if (x > r.getWidth()) {
+                            x -= r.getWidth();
+                            relIndex += r.getLength();
+                            continue;
+                        }
+                        run = r;
+                        break;
+                    }
                 }
             }
+
             if (run != null) {
                 int[] trailing = new int[1];
-                charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
+                int temp = run.getOffsetAtX(x, trailing);
+                if (text != null && spans != null) {
+                    charIndex = run.getOffsetAtX(x, trailing);
+                    if (relIndex != 0) {
+                        charIndex += relIndex;
+                    }
+                } else {
+                    charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
+                }
                 leading = (trailing[0] == 0);
 
                 insertionIndex = charIndex;
                 if (getText() != null && insertionIndex < getText().length) {
                     if (!leading) {
                         BreakIterator charIterator = BreakIterator.getCharacterInstance();
-                        charIterator.setText(new String(getText()));
+                        if (text != null) {
+                            charIterator.setText(text);
+                        } else {
+                            charIterator.setText(new String(getText()));
+                        }
                         int next = charIterator.following(insertionIndex);
                         if (next == BreakIterator.DONE) {
                             insertionIndex += 1;
