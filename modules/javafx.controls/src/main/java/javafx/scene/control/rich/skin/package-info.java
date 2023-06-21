@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,34 +23,7 @@
  * questions.
  */
 
-#import "JavaUtils.h"
-
-NSString *NSStringFromJavaString(JNIEnv *env, jstring js)
-{
-    NSString *outString = nil;
-
-    if (NULL != env && 0 != js) {
-        jboolean isCopy = JNI_FALSE;
-        const jchar *jsChars = (*env)->GetStringChars(env, js, &isCopy);
-
-        outString = [NSString stringWithCharacters:(const unichar *)jsChars
-                                            length:(*env)->GetStringLength(env, js)];
-        (*env)->ReleaseStringChars(env, js, jsChars);
-    }
-
-    return outString;
-}
-
-JNIEnv *GetJavaEnvironment(JavaVM *jvm, BOOL *attached)
-{
-    JNIEnv *env = NULL;
-    if ((*jvm)->GetEnv(jvm, (void*)&env, JNI_VERSION_1_6) == JNI_OK) {
-        *attached = NO;
-    } else {
-        if ((*jvm)->AttachCurrentThreadAsDaemon(jvm, (void*)&env, NULL) != JNI_OK) {
-            return NULL;
-        }
-        *attached = YES;
-    }
-    return env;
-}
+/**
+<p>Contains classes that represent various parts of the RichTextArea skin.</p>
+*/
+package javafx.scene.control.rich.skin;

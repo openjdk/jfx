@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control.rich.util;
+package javafx.scene.control.rich.input;
 
 import java.util.EnumSet;
 import java.util.Objects;
