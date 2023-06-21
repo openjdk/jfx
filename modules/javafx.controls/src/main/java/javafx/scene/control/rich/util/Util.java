@@ -151,7 +151,14 @@ public class Util {
     public static void beep() {
         // TODO not supported in FX
     }
-    
+
+    /**
+     * Writes an Image to a byte array in PNG format.
+     *
+     * @param im source image
+     * @return byte array containing PNG image
+     * @throws IOException
+     */
     public static byte[] writePNG(Image im) throws IOException {
         return Utils.writePNG(im);
     }
