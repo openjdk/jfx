@@ -36,6 +36,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.control.rich.FxPathBuilder;
 import com.sun.javafx.scene.control.rich.RichUtils;
+import com.sun.javafx.scene.control.rich.TextCellHelper;
 
 /**
  * Provides a visual representation of a paragraph.
@@ -55,8 +56,40 @@ public class TextCell {
     private final int index;
     private final Region content;
     private double height;
-    private double forWidth; // TODO not used right now, to be used to skip layout when possible
     private double y;
+    static {
+        TextCellHelper.setAccessor(new TextCellHelper.Accessor() {
+            @Override
+            public void addBoxOutline(TextCell cell, FxPathBuilder b, double x, double w, double h) {
+                cell.addBoxOutline(b, x, w, h);
+            }
+            
+            @Override
+            public PathElement[] getCaretShape(TextCell cell, int cix, boolean leading) {
+                return cell.getCaretShape(cix, leading);
+            }
+
+            @Override
+            public PathElement[] getRangeShape(TextCell cell, int start, int end) {
+                return cell.getRangeShape(start, end);
+            }
+            
+            @Override
+            public double getHeight(TextCell cell) {
+                return cell.getHeight();
+            }
+
+            @Override
+            public double getY(TextCell cell) {
+                return cell.getY();
+            }
+
+            @Override
+            public void setPosition(TextCell cell, double y, double h) {
+                cell.setPosition(y, h);
+            }
+        });
+    }
 
     public TextCell(int index, Region content) {
         this.index = index;
@@ -67,7 +100,7 @@ public class TextCell {
         this(index, new TextFlow());
     }
 
-    public Region getContent() {
+    public final Region getContent() {
         return content;
     }
 
@@ -93,7 +126,7 @@ public class TextCell {
         flow().getChildren().add(n);
     }
     
-    protected TextFlow flow() {
+    private TextFlow flow() {
         if(content instanceof TextFlow f) {
             return f;
         } else {
@@ -101,21 +134,17 @@ public class TextCell {
         }
     }
 
-    public void setHeight(double height, double forWidth) {
+    /** sets cell position along the y axis of this cell in VFlow coordinates */
+    void setPosition(double y, double height) {
+        this.y = y;
         this.height = height;
-        this.forWidth = forWidth;
     }
 
-    public double getHeight() {
+    double getHeight() {
         return height;
     }
-
-    /** sets location along the y axis of this cell in VFlow coordinates */
-    public void setLocationY(double y) {
-        this.y = y;
-    }
     
-    public double getY() {
+    double getY() {
         return y;
     }
     
@@ -123,7 +152,7 @@ public class TextCell {
         return index;
     }
 
-    public void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
+    void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
         double y0 = content.getLayoutY();
         double y1 = y0 + h;
         
@@ -134,7 +163,7 @@ public class TextCell {
         b.lineto(x, y0);
     }
 
-    public PathElement[] getCaretShape(int charIndex, boolean leading) {
+    PathElement[] getCaretShape(int charIndex, boolean leading) {
         if (content instanceof TextFlow f) {
             PathElement[] p = f.caretShape(charIndex, leading);
             if (p.length == 2) {
@@ -159,7 +188,7 @@ public class TextCell {
         }
     }
 
-    public PathElement[] getRangeShape(int start, int end) {
+    PathElement[] getRangeShape(int start, int end) {
         if (content instanceof TextFlow f) {
             PathElement[] p = f.rangeShape(start, end);
             if (p != null) {

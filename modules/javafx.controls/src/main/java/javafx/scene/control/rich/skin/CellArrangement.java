@@ -42,6 +42,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.control.rich.RichUtils;
+import com.sun.javafx.scene.control.rich.TextCellHelper;
 import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
@@ -133,10 +134,10 @@ public class CellArrangement {
         if (cell != null) {
             Region r = cell.getContent();
             Insets pad = r.getPadding();
-            double y = cellY - cell.getY() - pad.getTop();
+            double y = cellY - TextCellHelper.getY(cell) - pad.getTop();
             if (y < 0) {
                 return new TextPos(cell.getIndex(), 0, 0, true);
-            } else if (y < cell.getHeight()) {
+            } else if (y < TextCellHelper.getHeight(cell)) {
                 if (r instanceof TextFlow t) {
                     double x = cellX - pad.getLeft();
                     Point2D p = new Point2D(x, y);
@@ -199,8 +200,8 @@ public class CellArrangement {
             if (cell != null) {
                 int charIndex = p.charIndex();
                 boolean leading = p.isLeading();
-                PathElement[] path = cell.getCaretShape(charIndex, leading);
-                return CaretInfo.create(-xoffset, cell.getY(), path);
+                PathElement[] path = TextCellHelper.getCaretShape(cell, charIndex, leading);
+                return CaretInfo.create(-xoffset, TextCellHelper.getY(cell), path);
             }
         }
         return null;
@@ -274,10 +275,10 @@ public class CellArrangement {
     }
 
     private int compare(TextCell cell, double localY) {
-        double y = cell.getY();
+        double y = TextCellHelper.getY(cell);
         if (localY < y) {
             return 1;
-        } else if (localY >= y + cell.getHeight()) {
+        } else if (localY >= y + TextCellHelper.getHeight(cell)) {
             if (cell.getIndex() == (lineCount - 1)) {
                 return 0;
             }
@@ -310,7 +311,7 @@ public class CellArrangement {
 
             ix = binarySearch(localY, topIx, btmIx - 1);
             TextCell cell = getCell(ix);
-            return new Origin(cell.getIndex(), localY - cell.getY());
+            return new Origin(cell.getIndex(), localY - TextCellHelper.getY(cell));
         }
         return new Origin(ix, 0.0);
     }
@@ -344,7 +345,7 @@ public class CellArrangement {
 
         int ix = binarySearch(y, topIx, btmIx - 1);
         TextCell cell = getCell(ix);
-        double off = y - cell.getY();
+        double off = y - TextCellHelper.getY(cell);
         return new Origin(cell.getIndex(), off);
     }
 
