@@ -24,7 +24,7 @@
  */
 
 /**
-<p>Provides classes that represent {@link RichTextArea} {@link Control}.</p>
+<p>Provides classes that represent {@link RichTextArea} Control.</p>
 <h2>Examples</h2>
 <p>Creating a RichTextArea with a simple editable rich text model:</p>
 <pre>
