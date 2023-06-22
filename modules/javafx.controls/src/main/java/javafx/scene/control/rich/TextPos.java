@@ -27,6 +27,7 @@ package javafx.scene.control.rich;
 
 /**
  * An immutable text position.
+ * <p>
  * Because it is immutable, it cannot track locations in the document which is being edited.
  * For that, use {@link Marker}. 
  */
@@ -63,6 +64,7 @@ public final class TextPos implements Comparable<TextPos> {
         return charIndex;
     }
 
+    /** returns whether the text position is leading or trailing */
     public boolean isLeading() {
         return leading;
     }
@@ -129,7 +131,7 @@ public final class TextPos implements Comparable<TextPos> {
             "}";
     }
 
-    /** returns true if the insertion point is the same. */
+    /** returns true if the specified insertion point is the same. */
     public boolean isSameInsertionIndex(TextPos p) {
         // added this method in case we need to add leading/trailing flag
         // semantics of this test is the insertion points are the same.

@@ -24,12 +24,26 @@
  */
 
 /**
-<p>Provides classes that ...</p>
-<h2>Heading</h2>
-<p>...</p>
+<p>Provides classes that represent {@link RichTextArea} {@link Control}.</p>
+<h2>Examples</h2>
+<p>Creating a RichTextArea with a simple editable rich text model:</p>
 <pre>
 <code>
-TODO code sample here
+    RichTextArea textArea = new RichTextArea();
+</code>
+</pre>
+<p>Creating a read-only RichTextArea with rich text content:</p>
+<pre>
+<code>
+    SimpleReadOnlyStyledModel m = new SimpleReadOnlyStyledModel();
+    // add text segment using CSS style name (requires a style sheet)
+    m.addSegment("RichTextArea ", null, "HEADER");
+    // add text segment using direct style
+    m.addSegment("Demo", "-fx-font-size:200%;", null);
+    // newline
+    m.nl();
+
+    RichTextArea t = new RichTextArea(m);
 </code>
 </pre>
 */
