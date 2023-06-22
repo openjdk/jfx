@@ -24,7 +24,6 @@
  */
 
 /**
-
-<p>Provides the public classes for the JavaFX Printing API.
-*/
+ * <p>Provides the public classes for the JavaFX Printing API.
+ */
 package javafx.print;

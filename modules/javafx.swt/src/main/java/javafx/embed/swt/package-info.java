@@ -24,11 +24,11 @@
  */
 
 /**
-<p>Provides the set of classes to use JavaFX inside SWT applications.</p>
-<p>The {@link javafx.embed.swt.FXCanvas FXCanvas} class is the base class
-that provides JavaFX and SWT interoperability. This class defines an
-SWT component, which accepts and renders an instance of
-{@link javafx.scene.Scene Scene} and forwards all input events from SWT
-to the attached JavaFX scene.</p>
-*/
+ * <p>Provides the set of classes to use JavaFX inside SWT applications.</p>
+ * <p>The {@link javafx.embed.swt.FXCanvas FXCanvas} class is the base class
+ * that provides JavaFX and SWT interoperability. This class defines an
+ * SWT component, which accepts and renders an instance of
+ * {@link javafx.scene.Scene Scene} and forwards all input events from SWT
+ * to the attached JavaFX scene.</p>
+ */
 package javafx.embed.swt;

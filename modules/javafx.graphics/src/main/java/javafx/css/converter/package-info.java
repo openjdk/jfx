@@ -24,7 +24,7 @@
  */
 
 /**
-<p>Provides various {@link javafx.css.StyleConverter StyleConverter} classes
-that convert CSS parsed values.</p>
-*/
+ * <p>Provides various {@link javafx.css.StyleConverter StyleConverter} classes
+ * that convert CSS parsed values.</p>
+ */
 package javafx.css.converter;

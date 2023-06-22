@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Contains various utilities and helper classes.</p>
-*/
+ * <p>Contains various utilities and helper classes.</p>
+ */
 package javafx.util;

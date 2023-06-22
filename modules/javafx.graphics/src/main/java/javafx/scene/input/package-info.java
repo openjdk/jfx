@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Provides the set of classes for mouse and keyboard input event handling.</p>
-*/
+ * <p>Provides the set of classes for mouse and keyboard input event handling.</p>
+ */
 package javafx.scene.input;

@@ -24,7 +24,7 @@
  */
 
 /**
-<p>Provides the set of convenient classes to perform rotating, scaling,
-shearing, and translation transformations for {@code Affine} objects.</p>
-*/
+ * <p>Provides the set of convenient classes to perform rotating, scaling,
+ * shearing, and translation transformations for {@code Affine} objects.</p>
+ */
 package javafx.scene.transform;

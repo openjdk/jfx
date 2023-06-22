@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Provides the set of classes for fonts and renderable Text Node.</p>
-*/
+ * <p>Provides the set of classes for fonts and renderable Text Node.</p>
+ */
 package javafx.scene.text;

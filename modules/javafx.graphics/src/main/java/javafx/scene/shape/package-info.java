@@ -24,7 +24,7 @@
  */
 
 /**
-<p>Provides the set of 2D classes for defining and performing operations on
-objects related to two-dimensional geometry.</p>
-*/
+ * <p>Provides the set of 2D classes for defining and performing operations on
+ * objects related to two-dimensional geometry.</p>
+ */
 package javafx.scene.shape;

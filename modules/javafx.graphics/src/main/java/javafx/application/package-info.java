@@ -24,9 +24,9 @@
  */
 
 /**
-<p>Provides the application life-cycle classes.</p>
-<p>The
-<a href="Application.html">Application</a> class is the primary class from
-which JavaFX applications extend.</p>
-*/
+ * <p>Provides the application life-cycle classes.</p>
+ * <p>The
+ * <a href="Application.html">Application</a> class is the primary class from
+ * which JavaFX applications extend.</p>
+ */
 package javafx.application;

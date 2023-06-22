@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Contains the essential JavaFX collections and collection utilities</p>
-*/
+ * <p>Contains the essential JavaFX collections and collection utilities</p>
+ */
 package javafx.collections;

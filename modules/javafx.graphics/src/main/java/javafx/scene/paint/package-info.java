@@ -24,7 +24,7 @@
  */
 
 /**
-<p>Provides the set of classes for colors and gradients used to fill shapes and
-backgrounds when rendering the scene graph. </p>
-*/
+ * <p>Provides the set of classes for colors and gradients used to fill shapes and
+ * backgrounds when rendering the scene graph. </p>
+ */
 package javafx.scene.paint;

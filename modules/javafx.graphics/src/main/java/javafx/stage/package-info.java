@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Provides the top-level container classes for JavaFX content.</p>
-*/
+ * <p>Provides the top-level container classes for JavaFX content.</p>
+ */
 package javafx.stage;
