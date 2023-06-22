@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1128,7 +1128,13 @@ public class ComboBoxTest {
 
         comboBox.requestFocus();
 
-        new KeyEventFirer(comboBox).doKeyPress(KeyCode.ENTER);
+        var kFirer = new KeyEventFirer(comboBox);
+        // Open selection
+        kFirer.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);
+        // Select first
+        kFirer.doKeyPress(KeyCode.DOWN);
+        // Commit selection
+        kFirer.doKeyPress(KeyCode.ENTER);
     }
 
     @Test public void test_rt31479() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,63 +51,67 @@ static jmethodID formatGetNativeTypeID;     // ()I
 
 static void initialize_jni_methods(JNIEnv *env) {
     if (!klassMethodsInitialized) {
-        jclass vdbClass = env->FindClass("com/sun/media/jfxmedia/control/VideoDataBuffer");
-        jclass formatClass = env->FindClass("com/sun/media/jfxmedia/control/VideoDataBuffer/Format");
+        CJavaEnvironment jenv(env);
 
-        if (!vdbClass) {
+        jclass vdbClass = env->FindClass("com/sun/media/jfxmedia/control/VideoDataBuffer");
+        if (jenv.clearException() || vdbClass == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer class";
         }
-        if (!formatClass) {
+
+        jclass formatClass = env->FindClass("com/sun/media/jfxmedia/control/VideoDataBuffer/Format");
+        if (jenv.clearException() || formatClass == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.Format class";
         }
 
         vdbCtorID = env->GetMethodID(vdbClass, "<init>", "(Lcom/sun/media/jfxmedia/control/MediaDataDisposer;Ljava/nio/ByteBuffer;DJIIIILcom/sun/media/jfxmedia/VideoDataBuffer$Format;I[I[I)V");
-        if (!vdbCtorID) {
-            throw "Internal Error: Can't get VideoDataBuffer constructor.");
+        if (jenv.clearException() || vdbCtorID == NULL) {
+            throw "Internal Error: Can't get VideoDataBuffer constructor.";
         }
 
         vdbGetBufferID = env->GetMethodID(vdbClass, "getBuffer", "()Ljava/nio/Buffer;");
-        if (!vdbGetBufferID) {
+        if (jenv.clearException() || vdbGetBufferID == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.getBuffer()";
         }
 
         vdbGetWidthID = env->GetMethodID(vdbClass, "getWidth", "()I");
-        if (!vdbGetWidthID) {
+        if (jenv.clearException() || vdbGetWidthID == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.getWidth()";
         }
 
         vdbGetHeightID = env->GetMethodID(vdbClass, "getHeight", "()I");
-        if (!vdbGetHeightID) {
+        if (jenv.clearException() || vdbGetHeightID == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.getHeight()";
         }
 
         vdbGetEncodedWidthID = env->GetMethodID(vdbClass, "getEncodedWidth", "()I");
+        if (jenv.clearException() || vdbGetEncodedWidthID == NULL) {
         if (!vdbGetEncodedWidthID) {
             throw "Internal Error: Can't find VideoDataBuffer.getEncodedWidth()";
         }
 
         vdbGetEncodedHeightID = env->GetMethodID(vdbClass, "getEncodedHeight", "()I");
+        if (jenv.clearException() || vdbGetEncodedWidthID == NULL) {
         if (!vdbGetEncodedHeightID) {
             throw "Internal Error: Can't find VideoDataBuffer.getEncodedHeight()";
         }
 
         vdbGetPlaneCountID = env->GetMethodID(vdbClass, "getPlaneCount", "()I");
-        if (!vdbGetPlaneCountID) {
+        if (jenv.clearException() || vdbGetPlaneCountID == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.getPlaneCount()";
         }
 
         vdbGetPlaneStridesID = env->GetMethodID(vdbClass, "getPlaneStrides", "()[I");
-        if (!vdbGetPlaneStridesID) {
+        if (jenv.clearException() || vdbGetPlaneStridesID == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.getPlaneStrides()";
         }
 
         vdbGetFormatID = env->GetMethodID(vdbClass, "getFormat", "()Lcom/sun/media/jfxmedia/control/VideoDataBuffer$Format;");
-        if (!vdbGetFormatID) {
+        if (jenv.clearException() || vdbGetFormatID == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.getFormat()";
         }
 
         formatGetNativeTypeID = env->GetMethodID(formatClass, "getNativeType", "()I");
-        if (!formatGetNativeTypeID) {
+        if (jenv.clearException() || formatGetNativeTypeID == NULL) {
             throw "Internal Error: Can't find VideoDataBuffer.Format.getNativeType()";
         }
 
@@ -117,9 +121,9 @@ static void initialize_jni_methods(JNIEnv *env) {
 
 static void throw_internal_error_exception(JNIEnv *env, const char *errorString)
 {
+    CJavaEnvironment jenv(env);
     jclass ieeKlass = env->FindClass("java/lang/InternalError");
-    if (ieeKlass) {
-        // FIXME: can we just pass NULL for the message string?
+    if (!jenv.clearException() && ieeKlass != NULL) {
         env->ThrowNew(ieeKlass, (NULL != errorString) ? errorString : "");
         env->DeleteLocalRef(ieeKlass);
     }
@@ -127,7 +131,7 @@ static void throw_internal_error_exception(JNIEnv *env, const char *errorString)
 
 static bool exception_check(JNIEnv *env)
 {
-    if (env->ExceptionOccurred()) {
+    if (env->ExceptionCheck()) {
         env->ExceptionDescribe();
         // Don't clear the exception, let it get back to the JVM
         return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -145,6 +145,8 @@ public:
 
     virtual void notify_state(jint) = 0;
     virtual void notify_on_top(bool) {}
+    virtual void update_view_size() = 0;
+    virtual void notify_view_resize() = 0;
 
     virtual void add_child(WindowContextTop* child) = 0;
     virtual void remove_child(WindowContextTop* child) = 0;
@@ -302,6 +304,8 @@ public:
     void set_level(int);
     void set_visible(bool);
     void notify_on_top(bool);
+    void update_view_size();
+    void notify_view_resize();
 
     void enter_fullscreen();
     void exit_fullscreen();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1392,6 +1392,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     if (setjmp(jerr->setjmp_buffer)) {
         /* If we get here, the JPEG code has signaled an error
            while reading the header. */
+        RELEASE_ARRAYS(env, data, src->next_input_byte);
         if (!(*env)->ExceptionOccurred(env)) {
             char buffer[JMSG_LENGTH_MAX];
             (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
@@ -1603,6 +1604,11 @@ JNIEXPORT jint JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
 }
 
 #define SAFE_TO_MULT(a, b) (((a) > 0) && ((b) >= 0) && ((0x7fffffff / (a)) > (b)))
+#define SAFE_FREE(PTR)  \
+    if ((PTR) != NULL) {  \
+        free(PTR);     \
+        (PTR) = NULL;     \
+    }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompressIndirect
 (JNIEnv *env, jobject this, jlong ptr, jboolean report_progress, jbyteArray barray) {
@@ -1644,12 +1650,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
                     buffer);
             ThrowByName(env, "java/io/IOException", buffer);
         }
+        SAFE_FREE(scanline_ptr);
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
         return JNI_FALSE;
     }
 
     scanline_ptr = (JSAMPROW) malloc(bytes_per_row * sizeof(JSAMPLE));
     if (scanline_ptr == NULL) {
+        RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
                 "Reading JPEG Stream");
@@ -1664,11 +1672,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
                     JPEGImageLoader_updateImageProgressID,
                     cinfo->output_scanline);
             if ((*env)->ExceptionCheck(env)) {
-                free(scanline_ptr);
+                SAFE_FREE(scanline_ptr);
                 return JNI_FALSE;
             }
             if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-                free(scanline_ptr);
+                SAFE_FREE(scanline_ptr);
                 ThrowByName(env,
                           "java/io/IOException",
                           "Array pin failed");
@@ -1680,8 +1688,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
         if (num_scanlines == 1) {
             jbyte *body = (*env)->GetPrimitiveArrayCritical(env, barray, NULL);
             if (body == NULL) {
+                RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
                 fprintf(stderr, "decompressIndirect: GetPrimitiveArrayCritical returns NULL: out of memory\n");
-                free(scanline_ptr);
+                SAFE_FREE(scanline_ptr);
                 return JNI_FALSE;
             }
             memcpy(body+offset,scanline_ptr, bytes_per_row);
@@ -1689,7 +1698,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             offset += bytes_per_row;
         }
     }
-    free(scanline_ptr);
+    SAFE_FREE(scanline_ptr);
 
     if (report_progress == JNI_TRUE) {
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
