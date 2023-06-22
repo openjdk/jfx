@@ -81,8 +81,8 @@ public class RichTextArea extends Control {
     public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();
     public static final FunctionTag MOVE_DOCUMENT_START = new FunctionTag();
     public static final FunctionTag MOVE_DOWN = new FunctionTag();
-    public static final FunctionTag MOVE_END = new FunctionTag();
-    public static final FunctionTag MOVE_HOME = new FunctionTag();
+    public static final FunctionTag MOVE_LINE_END = new FunctionTag();
+    public static final FunctionTag MOVE_LINE_START = new FunctionTag();
     public static final FunctionTag MOVE_LEFT = new FunctionTag();
     public static final FunctionTag MOVE_RIGHT = new FunctionTag();
     public static final FunctionTag MOVE_UP = new FunctionTag();
@@ -123,8 +123,8 @@ public class RichTextArea extends Control {
     private ObjectProperty<Insets> contentPadding;
     private DoubleProperty lineSpacing;
     private BooleanProperty highlightCurrentLine;
-    private BooleanProperty trackContentWidth;
-    private BooleanProperty trackContentHeight;
+    private BooleanProperty useContentWidth;
+    private BooleanProperty useContentHeight;
 
     static {
         RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
@@ -251,15 +251,15 @@ public class RichTextArea extends Control {
     /**
      * This property controls whether caret will be displayed or not.
      */
-    public BooleanProperty displayCaretProperty() {
+    public final BooleanProperty displayCaretProperty() {
         return displayCaretProperty;
     }
 
-    public void setDisplayCaret(boolean on) {
+    public final void setDisplayCaret(boolean on) {
         displayCaretProperty.set(on);
     }
 
-    public boolean isDisplayCaret() {
+    public final boolean isDisplayCaret() {
         return displayCaretProperty.get();
     }
 
@@ -597,45 +597,45 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Determines whether the preferred width tracks the content width.
+     * Determines whether the preferred width is the same as the content width.
      * When set to true, the horizontal scroll bar is disabled.
      *
      * @defaultValue false
      */
-    public final BooleanProperty trackContentWidthProperty() {
-        if (trackContentWidth == null) {
-            trackContentWidth = new SimpleBooleanProperty();
+    public final BooleanProperty useContentWidthProperty() {
+        if (useContentWidth == null) {
+            useContentWidth = new SimpleBooleanProperty();
         }
-        return trackContentWidth;
+        return useContentWidth;
     }
 
-    public final boolean isTrackContentWidth() {
-        return trackContentWidth == null ? false : trackContentWidth.get();
+    public final boolean isUseContentWidth() {
+        return useContentWidth == null ? false : useContentWidth.get();
     }
 
-    public final void setTrackContentWidth(boolean on) {
-        trackContentWidthProperty().set(true);
+    public final void setUseContentWidth(boolean on) {
+        useContentWidthProperty().set(true);
     }
     
     /**
-     * Determines whether the preferred height tracks the content height.
+     * Determines whether the preferred height is the same as the content height.
      * When set to true, the vertical scroll bar is disabled.
      *
      * @defaultValue false
      */
-    public final BooleanProperty trackContentHeightProperty() {
-        if (trackContentHeight == null) {
-            trackContentHeight = new SimpleBooleanProperty();
+    public final BooleanProperty useContentHeightProperty() {
+        if (useContentHeight == null) {
+            useContentHeight = new SimpleBooleanProperty();
         }
-        return trackContentHeight;
+        return useContentHeight;
     }
 
-    public final boolean isTrackContentHeight() {
-        return trackContentHeight == null ? false : trackContentHeight.get();
+    public final boolean isUseContentHeight() {
+        return useContentHeight == null ? false : useContentHeight.get();
     }
 
-    public final void setTrackContentHeight(boolean on) {
-        trackContentHeightProperty().set(true);
+    public final void setUseContentHeight(boolean on) {
+        useContentHeightProperty().set(true);
     }
 
     /**

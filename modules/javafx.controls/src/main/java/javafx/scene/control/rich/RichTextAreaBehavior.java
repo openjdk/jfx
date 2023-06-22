@@ -124,8 +124,8 @@ public class RichTextAreaBehavior {
         m.func(MOVE_DOCUMENT_END, this::moveDocumentEnd);
         m.func(MOVE_DOCUMENT_START, this::moveDocumentStart);
         m.func(MOVE_DOWN, this::moveDown);
-        m.func(MOVE_END, this::moveEnd);
-        m.func(MOVE_HOME, this::moveHome);
+        m.func(MOVE_LINE_END, this::moveLineEnd);
+        m.func(MOVE_LINE_START, this::moveLineStart);
         m.func(MOVE_LEFT, this::moveLeft);
         m.func(MOVE_RIGHT, this::moveRight);
         m.func(MOVE_UP, this::moveUp);
@@ -161,8 +161,8 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyCode.RIGHT, MOVE_RIGHT);
         m.key(skin, KeyCode.UP, MOVE_UP);
         m.key(skin, KeyCode.DOWN, MOVE_DOWN);
-        m.key(skin, KeyCode.HOME, MOVE_HOME);
-        m.key(skin, KeyCode.END, MOVE_END);
+        m.key(skin, KeyCode.HOME, MOVE_LINE_START);
+        m.key(skin, KeyCode.END, MOVE_LINE_END);
         m.key(skin, KeyBinding.builder().with(KeyCode.HOME).ctrl().notForMac().build(), MOVE_DOCUMENT_START);
         m.key(skin, KeyBinding.builder().with(KeyCode.UP).shortcut().forMac().build(), MOVE_DOCUMENT_START);
         m.key(skin, KeyBinding.builder().with(KeyCode.END).ctrl().notForMac().build(), MOVE_DOCUMENT_END);
@@ -491,7 +491,7 @@ public class RichTextAreaBehavior {
         moveCharacter(false, false);
     }
     
-    public void moveHome() {
+    public void moveLineStart() {
         TextPos p = control.getCaretPosition();
         if (p != null) {
             TextPos p2 = new TextPos(p.index(), 0);
@@ -500,7 +500,7 @@ public class RichTextAreaBehavior {
         }
     }
 
-    public void moveEnd() {
+    public void moveLineEnd() {
         TextPos p = control.getCaretPosition();
         if (p != null) {
             int ix = p.index();
