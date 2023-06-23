@@ -84,8 +84,8 @@ public class RichTextArea extends Control {
     public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();
     public static final FunctionTag MOVE_DOCUMENT_START = new FunctionTag();
     public static final FunctionTag MOVE_DOWN = new FunctionTag();
-    public static final FunctionTag MOVE_END = new FunctionTag();
-    public static final FunctionTag MOVE_HOME = new FunctionTag();
+    public static final FunctionTag MOVE_LINE_END = new FunctionTag();
+    public static final FunctionTag MOVE_LINE_START = new FunctionTag();
     public static final FunctionTag MOVE_LEFT = new FunctionTag();
     public static final FunctionTag MOVE_RIGHT = new FunctionTag();
     public static final FunctionTag MOVE_UP = new FunctionTag();
@@ -254,15 +254,15 @@ public class RichTextArea extends Control {
     /**
      * This property controls whether caret will be displayed or not.
      */
-    public BooleanProperty displayCaretProperty() {
+    public final BooleanProperty displayCaretProperty() {
         return displayCaretProperty;
     }
 
-    public void setDisplayCaret(boolean on) {
+    public final void setDisplayCaret(boolean on) {
         displayCaretProperty.set(on);
     }
 
-    public boolean isDisplayCaret() {
+    public final boolean isDisplayCaret() {
         return displayCaretProperty.get();
     }
 

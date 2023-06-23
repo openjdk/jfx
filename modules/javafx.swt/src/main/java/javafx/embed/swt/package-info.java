@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,11 @@
  */
 
 /**
-<p>Contains classes that represent various parts of the RichTextArea skin.</p>
-*/
-package javafx.scene.control.rich.skin;
+ * <p>Provides the set of classes to use JavaFX inside SWT applications.</p>
+ * <p>The {@link javafx.embed.swt.FXCanvas FXCanvas} class is the base class
+ * that provides JavaFX and SWT interoperability. This class defines an
+ * SWT component, which accepts and renders an instance of
+ * {@link javafx.scene.Scene Scene} and forwards all input events from SWT
+ * to the attached JavaFX scene.</p>
+ */
+package javafx.embed.swt;

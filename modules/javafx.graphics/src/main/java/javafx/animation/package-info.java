@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,9 @@
  */
 
 /**
-<p>Contains classes that represent various parts of the RichTextArea skin.</p>
-*/
-package javafx.scene.control.rich.skin;
+ * <p>Provides the set of classes for ease of use transition based animations.</p>
+ * <p>It offers a simple framework for incorporating animations onto an internal
+ * {@link javafx.animation.Timeline Timeline}. It also provides high level constructs to compose the effects
+ * of multiple animations.</p>
+ */
+package javafx.animation;

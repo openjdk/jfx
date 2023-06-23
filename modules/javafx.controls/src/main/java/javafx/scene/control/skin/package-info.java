@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 
 /**
-<p>Contains classes that represent various parts of the RichTextArea skin.</p>
-*/
-package javafx.scene.control.rich.skin;
+ * <p>The javafx.scene.control.skin package is where the skin classes, typically
+ *   one for each UI control, are located</p>
+ */
+package javafx.scene.control.skin;

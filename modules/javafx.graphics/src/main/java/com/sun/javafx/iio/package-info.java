@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,16 @@
  */
 
 /**
-<p>Contains classes that represent various parts of the RichTextArea skin.</p>
-*/
-package javafx.scene.control.rich.skin;
+ * Provides image loading capability for Java FX.
+ *
+ * <p>A plugin for loading a given format is added by creating an
+ * <code>ImageFormatDescription</code> to provide the principal attributes for
+ * recognizing images stored in the format, an <code>ImageLoader</code> which
+ * performs the actual loading of the image data and metadata, and an
+ * <code>ImageLoaderFactory</code> which is able to create an
+ * <code>ImageLoader</code> for a stream of image data stored in the format.
+ * The <code>ImageLoaderFactory</code> is registered with the
+ * <code>ImageStorage</code> object which manages all <code>ImageLoader</code>s
+ * and which also supplies convenience loading methods for application use.
+ */
+package com.sun.javafx.iio;

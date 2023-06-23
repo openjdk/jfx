@@ -27,6 +27,7 @@
 
 package javafx.scene.control.rich;
 
+import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.LineTo;
@@ -50,9 +51,9 @@ import com.sun.javafx.scene.control.rich.TextCellHelper;
  * segments, inline Nodes, highlights (TODO), underlines (TODO).
  * <p>
  * Each visible TextCell will be resized horizontally to fill the available width and then resized vertically
- * according to its preferred size (for that width). 
+ * according to its preferred size for that width. 
  */
-public class TextCell {
+public final class TextCell {
     private final int index;
     private final Region content;
     private double height;
@@ -91,11 +92,21 @@ public class TextCell {
         });
     }
 
+    /**
+     * Creates a text cell with the specified {@code Region} as its content.
+     * @param index
+     * @param content non-null content
+     */
     public TextCell(int index, Region content) {
+        Objects.nonNull(content);
         this.index = index;
         this.content = content;
     }
 
+    /**
+     * Creates a text cell with {@link TextFlow} as its content.
+     * @param index
+     */
     public TextCell(int index) {
         this(index, new TextFlow());
     }
@@ -104,28 +115,71 @@ public class TextCell {
         return content;
     }
 
-    public Text addSegment(String text, String style, String[] css) {
+    /**
+     * Adds a styled text segment to a {@link TextFlow}-based {@code TextCell}.
+     * This method will throw an IllegalArgumentException if this text cell has content other
+     * than the TextFlow.
+     *
+     * @param text non-null text string
+     * @param style direct style (such as {@code -fx-fill:red;}), or null
+     * @param css style names
+     * @return {@link Text} node added
+     */
+    public Text addSegment(String text, String style, String... css) {
+        Objects.nonNull(text);
         Text t = new Text(text);
         if (style != null) {
             t.setStyle(style);
         }
-        if (css != null) {
+        if (css.length > 0) {
             t.getStyleClass().addAll(css);
         }
         flow().getChildren().add(t);
         return t;
     }
-    
+
+    /**
+     * Adds a text segment with no styling (i.e. using default style).
+     * This method is an alias for {@code addSegment(text, null, null)}.
+     *
+     * @param text
+     * @return {@link Text} node added
+     */
     public Text addSegment(String text) {
         Text t = new Text(text);
         flow().getChildren().add(t);
         return t;
     }
-    
-    public void addInlineNode(Node n) {
-        flow().getChildren().add(n);
+
+    /**
+     * Adds an inline node to a {@link TextFlow}-based text cell.
+     *
+     * @param node node to add
+     * @return added {@code Node}
+     */
+    public <T extends Node> T addInlineNode(T node) {
+        flow().getChildren().add(node);
+        return node;
     }
-    
+
+    /**
+     * Returns the model index for this text cell.
+     * @return model index (>=0)
+     */
+    public final int getIndex() {
+        return index;
+    }
+
+    /**
+     * Returns the length of text in this cell.  A cell containing a non-text content will return 0.
+     */
+    public int getTextLength() {
+        if (content instanceof TextFlow f) {
+            return RichUtils.getTextLength(f);
+        }
+        return 0;
+    }
+
     private TextFlow flow() {
         if(content instanceof TextFlow f) {
             return f;
@@ -148,10 +202,6 @@ public class TextCell {
         return y;
     }
     
-    public int getIndex() {
-        return index;
-    }
-
     void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
         double y0 = content.getLayoutY();
         double y1 = y0 + h;
@@ -213,12 +263,5 @@ public class TextCell {
                 new LineTo(0.0, 0.0)
             };
         }
-    }
-
-    public int getTextLength() {
-        if (content instanceof TextFlow f) {
-            return RichUtils.getTextLength(f);
-        }
-        return 0;
     }
 }
