@@ -124,9 +124,9 @@ public class RichTextAreaBehavior {
         m.func(MOVE_DOCUMENT_END, this::moveDocumentEnd);
         m.func(MOVE_DOCUMENT_START, this::moveDocumentStart);
         m.func(MOVE_DOWN, this::moveDown);
+        m.func(MOVE_LEFT, this::moveLeft);
         m.func(MOVE_LINE_END, this::moveLineEnd);
         m.func(MOVE_LINE_START, this::moveLineStart);
-        m.func(MOVE_LEFT, this::moveLeft);
         m.func(MOVE_RIGHT, this::moveRight);
         m.func(MOVE_UP, this::moveUp);
         m.func(MOVE_WORD_NEXT, this::nextWord);
@@ -141,9 +141,9 @@ public class RichTextAreaBehavior {
         m.func(SELECT_DOCUMENT_START, this::selectDocumentStart);
         m.func(SELECT_DOWN, this::selectDown);
         m.func(SELECT_LEFT, this::selectLeft);
-        m.func(SELECT_LINE, this::selectLine);
         m.func(SELECT_PAGE_DOWN, this::selectPageDown);
         m.func(SELECT_PAGE_UP, this::selectPageUp);
+        m.func(SELECT_PARAGRAPH, this::selectParagraph);
         m.func(SELECT_RIGHT, this::selectRight);
         m.func(SELECT_UP, this::selectUp);
         m.func(SELECT_WORD, this::selectWord);
@@ -351,7 +351,7 @@ public class RichTextAreaBehavior {
                 control.selectWord();
                 break;
             case 3:
-                control.selectLine();
+                control.selectParagraph();
                 break;
             }
         }
@@ -717,7 +717,7 @@ public class RichTextAreaBehavior {
         }
     }
 
-    public void selectLine() {
+    public void selectParagraph() {
         TextPos p = control.getCaretPosition();
         if (p != null) {
             int ix = p.index();

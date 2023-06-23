@@ -25,12 +25,5 @@
 
 /**
 <p>This package contains new behavior classes that should be moved to javafx.scene.control.input.</p>
-<h2>Heading</h2>
-<p>...</p>
-<pre>
-<code>
-TODO code sample here
-</code>
-</pre>
 */
 package javafx.scene.control.rich.input;

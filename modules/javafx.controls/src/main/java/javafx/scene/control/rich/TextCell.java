@@ -122,16 +122,16 @@ public final class TextCell {
      *
      * @param text non-null text string
      * @param style direct style (such as {@code -fx-fill:red;}), or null
-     * @param css style names
+     * @param css array of style names, or null
      * @return {@link Text} node added
      */
-    public Text addSegment(String text, String style, String... css) {
+    public Text addSegment(String text, String style, String[] css) {
         Objects.nonNull(text);
         Text t = new Text(text);
         if (style != null) {
             t.setStyle(style);
         }
-        if (css.length > 0) {
+        if (css != null) {
             t.getStyleClass().addAll(css);
         }
         flow().getChildren().add(t);
