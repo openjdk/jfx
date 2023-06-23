@@ -26,9 +26,10 @@
 package javafx.scene.control.rich.input;
 
 /**
- * A function tag is a public handle for a function in the context of InputMap.
+ * A public handle for a function in the context of InputMap.
  */
 public final class FunctionTag {
+    // TODO Phil: maybe include tag name for the sake of debugging and toString()
     public FunctionTag() {
     }
 }

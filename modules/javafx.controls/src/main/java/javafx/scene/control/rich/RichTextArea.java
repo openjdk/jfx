@@ -72,7 +72,6 @@ import com.sun.javafx.scene.control.rich.VFlow;
 /**
  * Text input component that allows a user to enter multiple lines of rich text.
  */
-// TODO add methods corresponding to the remaining function tags
 public class RichTextArea extends Control {
     // function tags
     public static final FunctionTag BACKSPACE = new FunctionTag();
@@ -84,9 +83,9 @@ public class RichTextArea extends Control {
     public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();
     public static final FunctionTag MOVE_DOCUMENT_START = new FunctionTag();
     public static final FunctionTag MOVE_DOWN = new FunctionTag();
+    public static final FunctionTag MOVE_LEFT = new FunctionTag();
     public static final FunctionTag MOVE_LINE_END = new FunctionTag();
     public static final FunctionTag MOVE_LINE_START = new FunctionTag();
-    public static final FunctionTag MOVE_LEFT = new FunctionTag();
     public static final FunctionTag MOVE_RIGHT = new FunctionTag();
     public static final FunctionTag MOVE_UP = new FunctionTag();
     public static final FunctionTag MOVE_WORD_NEXT = new FunctionTag();
@@ -96,20 +95,22 @@ public class RichTextArea extends Control {
     public static final FunctionTag PAGE_UP = new FunctionTag();
     public static final FunctionTag PASTE = new FunctionTag();
     public static final FunctionTag PASTE_PLAIN_TEXT = new FunctionTag();
+    public static final FunctionTag REDO = new FunctionTag();
     public static final FunctionTag SELECT_ALL = new FunctionTag();
     public static final FunctionTag SELECT_DOCUMENT_END = new FunctionTag();
     public static final FunctionTag SELECT_DOCUMENT_START = new FunctionTag();
     public static final FunctionTag SELECT_DOWN = new FunctionTag();
     public static final FunctionTag SELECT_LEFT = new FunctionTag();
-    public static final FunctionTag SELECT_LINE = new FunctionTag();
     public static final FunctionTag SELECT_PAGE_DOWN = new FunctionTag();
     public static final FunctionTag SELECT_PAGE_UP = new FunctionTag();
+    public static final FunctionTag SELECT_PARAGRAPH = new FunctionTag();
     public static final FunctionTag SELECT_RIGHT = new FunctionTag();
     public static final FunctionTag SELECT_UP = new FunctionTag();
     public static final FunctionTag SELECT_WORD = new FunctionTag();
     public static final FunctionTag SELECT_WORD_NEXT = new FunctionTag();
     public static final FunctionTag SELECT_WORD_NEXT_END = new FunctionTag();
     public static final FunctionTag SELECT_WORD_PREVIOUS = new FunctionTag();
+    public static final FunctionTag UNDO = new FunctionTag();
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
     private final ConfigurationParameters config;
@@ -483,42 +484,6 @@ public class RichTextArea extends Control {
         origin.set(p);
     }
 
-    /**
-     * Moves the caret to before the first character of the text, also clearing the selection.
-     */
-    public void moveDocumentStart() {
-        execute(MOVE_DOCUMENT_START);
-    }
-
-    /**
-     * Moves the caret to after the last character of the text, also clearing the selection.
-     */
-    public void moveDocumentEnd() {
-        execute(MOVE_DOCUMENT_END);
-    }
-
-    /** selects from the anchor position to the document start */
-    public void selectDocumentStart() {
-        execute(SELECT_DOCUMENT_START);
-    }
-
-    /** selects from the anchor position to the document end */
-    public void selectDocumentEnd() {
-        execute(SELECT_DOCUMENT_END);
-    }
-    
-    public void selectAll() {
-        execute(SELECT_ALL);
-    }
-    
-    public void selectWord() {
-        execute(SELECT_WORD);
-    }
-
-    public void selectLine() {
-        execute(SELECT_LINE);
-    }
-
     public void clearSelection() {
         selectionModel.clear();
     }
@@ -652,25 +617,323 @@ public class RichTextArea extends Control {
         }
         return null;
     }
+
+    /**
+     * When selection exists, deletes selecteed text.  Otherwise, deletes the symbol before the caret.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void backspace() {
+        execute(BACKSPACE);
+    }
     
+    /**
+     * When selection exists, copies the selected rich text to the clipboard in all formats supported
+     * by the model.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
     public void copy() {
         execute(COPY);
     }
-    
+    // TODO copy plain text?
+
+    /**
+     * When selection exists, removes the selected rich text and places it into the clipboard.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
     public void cut() {
         execute(CUT);
     }
+
+    /**
+     * When selection exists, deletes selected text.  Otherwise, deletes the symbol at the caret.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void delete() {
+        execute(DELETE);
+    }
+
+    /**
+     * Inserts a line break at the caret.  If selection exists, first deletes the selected text.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void insertLineBreak() {
+        execute(INSERT_LINE_BREAK);
+    }
     
+    /**
+     * Inserts a tab symbol at the caret.  If selection exists, first deletes the selected text.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void insertTab() {
+        execute(INSERT_TAB);
+    }
+    
+    /**
+     * Moves the caret to after the last character of the text, also clearing the selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveDocumentEnd() {
+        execute(MOVE_DOCUMENT_END);
+    }
+    
+    /**
+     * Moves the caret to before the first character of the text.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveDocumentStart() {
+        execute(MOVE_DOCUMENT_START);
+    }
+    
+    /**
+     * Moves the caret down.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveDown() {
+        execute(MOVE_DOWN);
+    }
+    
+    /**
+     * Moves the caret left.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveLeft() {
+        execute(MOVE_LEFT);
+    }
+    
+    /**
+     * Moves the caret to the end of the current line of text.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveLineEnd() {
+        execute(MOVE_LINE_END);
+    }
+    
+    /**
+     * Moves the caret to the start of the current line of text.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveLineStart() {
+        execute(MOVE_LINE_START);
+    }
+    
+    /**
+     * Moves the caret to the next symbol.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveRight() {
+        execute(MOVE_RIGHT);
+    }
+    
+    /**
+     * Moves the caret up.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveUp() {
+        execute(MOVE_UP);
+    }
+    
+    /**
+     * Moves the caret to the beginning of previous word.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void movePreviousWord() {
+        execute(MOVE_WORD_PREVIOUS);
+    }
+
+    /**
+     * Moves the caret to the beginning of next word.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveNextWord() {
+        execute(MOVE_WORD_NEXT);
+    }
+
+    /**
+     * Moves the caret to the end of the next word.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveEndOfNextWord() {
+        execute(MOVE_WORD_NEXT_END);
+    }
+    
+    /**
+     * Move caret one page down.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void pageDown() {
+        execute(PAGE_DOWN);
+    }
+    
+    /**
+     * Move caret one page up.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void pageUp() {
+        execute(PAGE_UP);
+    }
+
+    /**
+     * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
+     * The model decides which format to use.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
     public void paste() {
         execute(PASTE);
     }
-    
+
+    /**
+     * Pastes the plain text clipboard content at the caret, or, if selection exists, replacing the selected text.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
     public void pastePlainText() {
         execute(PASTE_PLAIN_TEXT);
     }
+    
+    /**
+     * If possible, redoes the last undone modification. If {@link #isRedoable()} returns
+     * false, then calling this method has no effect.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void redo() {
+        execute(REDO);
+    }
+    
+    /**
+     * Selects all the text in the document.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectAll() {
+        execute(SELECT_ALL);
+    }
 
+    /**
+     * Selects from the anchor position to the document start.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectDocumentStart() {
+        execute(SELECT_DOCUMENT_START);
+    }
+
+    /**
+     * Selects from the anchor position to the document end.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectDocumentEnd() {
+        execute(SELECT_DOCUMENT_END);
+    }
+    
+    /**
+     * Moves the caret down and extends selection to the new position.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectDown() {
+        execute(SELECT_DOWN);
+    }
+    
+    /**
+     * Moves the caret left and extends selection to the new position.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectLeft() {
+        execute(SELECT_LEFT);
+    }
+    
+    /**
+     * Moves the caret one page down and extends selection to the new position.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectPageDown() {
+        execute(SELECT_PAGE_DOWN);
+    }
+    
+    /**
+     * Moves the caret one page up and extends selection to the new position.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectPageUp() {
+        execute(SELECT_PAGE_UP);
+    }
+    
+    /**
+     * Selects the paragraph at the caret.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectParagraph() {
+        execute(SELECT_PARAGRAPH);
+    }
+    
+    /**
+     * Moves the caret right and extends selection to the new position.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectRight() {
+        execute(SELECT_RIGHT);
+    }
+    
+    /**
+     * Moves the caret up and extends selection to the new position.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectUp() {
+        execute(SELECT_UP);
+    }
+
+    /**
+     * Selects a word at the caret.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectWord() {
+        execute(SELECT_WORD);
+    }
+    
+    /**
+     * Moves the caret to the beginning of next word. This does not cause
+     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
+     * moved to the beginning of next word.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectNextWord() {
+        execute(SELECT_WORD_NEXT);
+    }
+    
+    /**
+     * Moves the caret to the beginning of previous word. This does not cause
+     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
+     * moved to the beginning of previous word.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectPreviousWord() {
+        execute(SELECT_WORD_PREVIOUS);
+    }
+
+    /**
+     * Moves the caret to the end of the next word. This does not cause
+     * the selection to be cleared.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectEndOfNextWord() {
+        execute(SELECT_WORD_NEXT_END);
+    }
+
+    /**
+     * If possible, undoes the last modification. If {@link #isUndoable()} returns
+     * false, then calling this method has no effect.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
     public void undo() {
-        // TODO
+        execute(UNDO);
     }
     
     public boolean isUndoable() {
@@ -678,63 +941,9 @@ public class RichTextArea extends Control {
         return false;
     }
     
-    public void redo() {
-        // TODO
-    }
-    
     public boolean isRedoable() {
         // TODO
         return false;
-    }
-    
-    /**
-     * Moves the caret to the beginning of previous word. This function
-     * also has the effect of clearing the selection.
-     */
-    public void previousWord() {
-        execute(MOVE_WORD_PREVIOUS);
-    }
-
-    /**
-     * Moves the caret to the beginning of next word. This function
-     * also has the effect of clearing the selection.
-     */
-    public void nextWord() {
-        execute(MOVE_WORD_NEXT);
-    }
-
-    /**
-     * Moves the caret to the end of the next word. This function
-     * also has the effect of clearing the selection.
-     */
-    public void endOfNextWord() {
-        execute(MOVE_WORD_NEXT_END);
-    }
-
-    /**
-     * Moves the caret to the beginning of previous word. This does not cause
-     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
-     * moved to the beginning of previous word.
-     */
-    public void selectPreviousWord() {
-        execute(SELECT_WORD_PREVIOUS);
-    }
-
-    /**
-     * Moves the caret to the beginning of next word. This does not cause
-     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
-     * moved to the beginning of next word.
-     */
-    public void selectNextWord() {
-        execute(SELECT_WORD_NEXT);
-    }
-
-    /**
-     * Moves the caret to the end of the next word. This does not cause
-     * the selection to be cleared.
-     */
-    public void selectEndOfNextWord() {
-        execute(SELECT_WORD_NEXT_END);
     }
 
     /**
