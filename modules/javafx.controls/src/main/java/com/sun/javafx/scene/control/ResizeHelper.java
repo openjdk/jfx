@@ -173,7 +173,7 @@ public class ResizeHelper {
         if (delta < 0) {
             while (delta < -halfPixel) {
                 double d = -pixel;
-                if(smallShrink(d, desired)) {
+                if (smallShrink(d, desired)) {
                     return;
                 }
                 delta -= d;
@@ -181,7 +181,7 @@ public class ResizeHelper {
         } else {
             while (delta > halfPixel) {
                 double d = pixel;
-                if(smallGrow(d, desired)) {
+                if (smallGrow(d, desired)) {
                     return;
                 }
                 delta -= d;
