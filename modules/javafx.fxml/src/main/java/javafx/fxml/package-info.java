@@ -24,8 +24,8 @@
  */
 
 /**
-<p>Contains classes for loading an object hierarchy from markup. For more
-information, see the <a href="doc-files/introduction_to_fxml.html">Introduction
-to FXML</a> document.</p>
-*/
+ * <p>Contains classes for loading an object hierarchy from markup. For more
+ * information, see the <a href="doc-files/introduction_to_fxml.html">Introduction
+ * to FXML</a> document.</p>
+ */
 package javafx.fxml;

@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Provides API for simulating user interaction such as typing keys on the keyboard and using the mouse. </p>
-*/
+ * <p>Provides API for simulating user interaction such as typing keys on the keyboard and using the mouse. </p>
+ */
 package javafx.scene.robot;

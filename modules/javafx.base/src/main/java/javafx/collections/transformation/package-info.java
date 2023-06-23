@@ -24,7 +24,7 @@
  */
 
 /**
-<p>Provides JavaFX collections that wrap and transform (for example, sort
-or filter) other JavaFX collections.</p>
-*/
+ * <p>Provides JavaFX collections that wrap and transform (for example, sort
+ * or filter) other JavaFX collections.</p>
+ */
 package javafx.collections.transformation;

@@ -24,9 +24,9 @@
  */
 
 /**
-<p>Provides the set of classes for ease of use transition based animations.</p>
-<p>It offers a simple framework for incorporating animations onto an internal
-{@link javafx.animation.Timeline Timeline}. It also provides high level constructs to compose the effects
-of multiple animations.</p>
-*/
+ * <p>Provides the set of classes for ease of use transition based animations.</p>
+ * <p>It offers a simple framework for incorporating animations onto an internal
+ * {@link javafx.animation.Timeline Timeline}. It also provides high level constructs to compose the effects
+ * of multiple animations.</p>
+ */
 package javafx.animation;

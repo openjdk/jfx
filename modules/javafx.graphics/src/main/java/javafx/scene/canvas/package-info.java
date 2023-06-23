@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Provides the set of classes for canvas, an immediate mode style of rendering API.</p>
-*/
+ * <p>Provides the set of classes for canvas, an immediate mode style of rendering API.</p>
+ */
 package javafx.scene.canvas;

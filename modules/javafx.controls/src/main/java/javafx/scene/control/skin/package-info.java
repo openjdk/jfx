@@ -24,7 +24,7 @@
  */
 
 /**
-  <p>The javafx.scene.control.skin package is where the skin classes, typically
-    one for each UI control, are located</p>
-*/
+ * <p>The javafx.scene.control.skin package is where the skin classes, typically
+ *   one for each UI control, are located</p>
+ */
 package javafx.scene.control.skin;

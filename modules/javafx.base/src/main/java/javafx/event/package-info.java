@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Provides basic framework for FX events, their delivery and handling.</p>
-*/
+ * <p>Provides basic framework for FX events, their delivery and handling.</p>
+ */
 package javafx.event;

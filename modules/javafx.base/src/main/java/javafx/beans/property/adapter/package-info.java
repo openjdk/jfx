@@ -24,8 +24,8 @@
  */
 
 /**
-<p>Provides various classes that act as adapters between a regular Java Bean
-property and a corresponding {@link javafx.beans.property.Property JavaFX
-Property}.</p>
-*/
+ * <p>Provides various classes that act as adapters between a regular Java Bean
+ * property and a corresponding {@link javafx.beans.property.Property JavaFX
+ * Property}.</p>
+ */
 package javafx.beans.property.adapter;
