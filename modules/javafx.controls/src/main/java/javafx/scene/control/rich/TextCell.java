@@ -53,7 +53,7 @@ import com.sun.javafx.scene.control.rich.TextCellHelper;
  * Each visible TextCell will be resized horizontally to fill the available width and then resized vertically
  * according to its preferred size for that width. 
  */
-public class TextCell {
+public final class TextCell {
     private final int index;
     private final Region content;
     private double height;
@@ -122,16 +122,16 @@ public class TextCell {
      *
      * @param text non-null text string
      * @param style direct style (such as {@code -fx-fill:red;}), or null
-     * @param css an array of logical style names (or null)
+     * @param css style names
      * @return {@link Text} node added
      */
-    public Text addSegment(String text, String style, String[] css) {
+    public Text addSegment(String text, String style, String... css) {
         Objects.nonNull(text);
         Text t = new Text(text);
         if (style != null) {
             t.setStyle(style);
         }
-        if (css != null) {
+        if (css.length > 0) {
             t.getStyleClass().addAll(css);
         }
         flow().getChildren().add(t);

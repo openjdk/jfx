@@ -44,10 +44,18 @@ import com.sun.javafx.scene.control.rich.Markers;
 import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
- * Base class for a styled text model for use with {@link RichTextArea}.
- * 
- * TODO printing
+ * Base class for a styled text model for {@link RichTextArea}.
+ * <p>
+ * This class implements the following functionality with the intent
+ * to simplify custom models that extend this class:
+ * <ul>
+ * <li>managing listeners
+ * <li>firing events
+ * <li>decomposing of edits into multiple operations performed upon individual paragraphs
+ * <li>managing {@link Marker}s
+ * </ul>
  */
+// TODO printing
 public abstract class StyledTextModel {
     /**
      * Receives information about modifications of the model.
@@ -75,6 +83,8 @@ public abstract class StyledTextModel {
     
     /**
      * Indicates whether the model is editable.
+     * <p>
+     * When this method returns false, the model must silently ignore any modification attempts.
      */
     public abstract boolean isEditable();
 
@@ -97,6 +107,7 @@ public abstract class StyledTextModel {
      * Creates a TextCell which provides a visual representation of the paragraph.
      * This method must create new instance each time, in order to support multiple RichTextArea instances
      * connected to the same model.
+     * <p>
      * The nodes are not reused, and might be created repeatedly,
      * so the model must not keep strong references to these nodes.
      *
