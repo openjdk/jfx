@@ -36,11 +36,11 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.ConfigurationParameters;
 import javafx.scene.control.rich.RichTextArea;
-import javafx.scene.control.rich.RichTextAreaBehavior;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.rich.Params;
+import com.sun.javafx.scene.control.rich.RichTextAreaBehavior;
 import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.javafx.scene.control.rich.VFlow;
 

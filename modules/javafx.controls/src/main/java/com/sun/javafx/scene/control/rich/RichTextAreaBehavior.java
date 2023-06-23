@@ -25,7 +25,7 @@
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
 
-package javafx.scene.control.rich;
+package com.sun.javafx.scene.control.rich;
 
 import static javafx.scene.control.rich.RichTextArea.*;
 import java.text.BreakIterator;
@@ -37,6 +37,10 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.rich.CaretInfo;
+import javafx.scene.control.rich.RichTextArea;
+import javafx.scene.control.rich.TextCell;
+import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.input.KeyBinding;
 import javafx.scene.control.rich.input.KeyMap;
 import javafx.scene.control.rich.model.DataFormatHandler;
@@ -58,10 +62,6 @@ import javafx.stage.Screen;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.rich.Params;
-import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
-import com.sun.javafx.scene.control.rich.RichUtils;
-import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
  * RichTextArea Behavior.
