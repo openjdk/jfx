@@ -754,7 +754,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     @Override
     protected void layoutChildren() {
-        arrangement = reflow();
+        reflow();
     }
 
     protected CellArrangement reflow() {
