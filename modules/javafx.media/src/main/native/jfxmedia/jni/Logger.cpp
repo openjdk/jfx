@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ void CLogger::logMsg(int level, const char *msg)
     }
 
     jstring jmsg = env->NewStringUTF(msg);
-    if (javaEnv.clearException()) {
+    if (javaEnv.clearException() && jmsg != NULL) {
         return;
     }
 
@@ -76,15 +76,15 @@ void CLogger::logMsg(int level, const char *sourceClass, const char *sourceMetho
     jstring jsourceMethod = NULL;
     jstring jmsg = NULL;
     jsourceClass = env->NewStringUTF(sourceClass);
-    bool hasException = javaEnv.clearException();
+    bool hasException = (javaEnv.clearException() || (jsourceClass == NULL));
     if (!hasException) {
         jsourceMethod = env->NewStringUTF(sourceMethod);
-        hasException = javaEnv.clearException();
+        hasException = (javaEnv.clearException() || (jsourceMethod == NULL));
     }
 
     if (!hasException) {
         jmsg = env->NewStringUTF(msg);
-        hasException = javaEnv.clearException();
+        hasException = (javaEnv.clearException() || (jmsg == NULL));
     }
 
     if (!hasException) {
@@ -121,29 +121,27 @@ bool CLogger::init(JNIEnv *pEnv, jclass cls)
 
     if (!m_areJMethodIDsInitialized) {
         jclass local_cls = pEnv->FindClass("com/sun/media/jfxmedia/logging/Logger");
-        if (javaEnv.clearException()) {
+        if (javaEnv.clearException() || NULL == local_cls) {
             return false;
         }
 
-        if (NULL != local_cls) {
-            // Get global reference
-            m_cls = (jclass)pEnv->NewWeakGlobalRef(local_cls);
-            pEnv->DeleteLocalRef(local_cls);
+        // Get global reference
+        m_cls = (jclass)pEnv->NewWeakGlobalRef(local_cls);
+        pEnv->DeleteLocalRef(local_cls);
 
-            if (NULL != m_cls) {
-                m_logMsg1Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;)V");
-                if (javaEnv.clearException()) {
-                   return false;
-                }
+        if (NULL != m_cls) {
+            m_logMsg1Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;)V");
+            if (javaEnv.clearException()) {
+                return false;
+            }
 
-                m_logMsg2Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-                if (javaEnv.clearException()) {
-                   return false;
-                }
+            m_logMsg2Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+            if (javaEnv.clearException()) {
+                return false;
+            }
 
-                if (NULL != m_logMsg1Method && NULL != m_logMsg2Method) {
-                    m_areJMethodIDsInitialized = true;
-                }
+            if (NULL != m_logMsg1Method && NULL != m_logMsg2Method) {
+                m_areJMethodIDsInitialized = true;
             }
         }
     }

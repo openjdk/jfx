@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,17 +59,21 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
 
     CJavaEnvironment javaEnv(m_jvm);
 
-    static jmethodID createConnectionHolder = 0;
-    if (0 == createConnectionHolder)
+    static jmethodID createConnectionHolder = NULL;
+    if (NULL == createConnectionHolder)
     {
         jclass klass = env->GetObjectClass(jLocator);
         createConnectionHolder = env->GetMethodID(klass, "createConnectionHolder", "()Lcom/sun/media/jfxmedia/locator/ConnectionHolder;");
         env->DeleteLocalRef(klass);
-        if (javaEnv.reportException())
+        if (javaEnv.reportException() || (NULL == createConnectionHolder))
             return false;
     }
 
-    m_ConnectionHolder = env->NewGlobalRef(env->CallObjectMethod(jLocator, createConnectionHolder));
+    jobject connectionHolder = env->CallObjectMethod(jLocator, createConnectionHolder);
+    if (javaEnv.reportException() || (NULL == connectionHolder))
+        return false;
+
+    m_ConnectionHolder = env->NewGlobalRef(connectionHolder);
     if (NULL == m_ConnectionHolder)
     {
         javaEnv.reportException();
@@ -83,62 +87,61 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
         // Get the parent abstract class. It's wrong to get method ids from the concrete implementation
         // because it crashes jvm when it tries to call virtual methods.
         // See https://javafx-jira.kenai.com/browse/RT-37115
-        jclass klass = NULL;
-        klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder");
-        hasException = javaEnv.reportException();
+        jclass klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder");
+        hasException = (javaEnv.reportException() || (NULL == klass));
 
         if (!hasException)
         {
             m_BufferFID = env->GetFieldID(klass, "buffer", "Ljava/nio/ByteBuffer;");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_BufferFID));
         }
 
         if (!hasException)
         {
             m_NeedBufferMID = env->GetMethodID(klass, "needBuffer", "()Z");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_NeedBufferMID));
         }
 
         if (!hasException)
         {
             m_ReadNextBlockMID = env->GetMethodID(klass, "readNextBlock", "()I");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_ReadNextBlockMID));
         }
 
         if (!hasException)
         {
             m_ReadBlockMID = env->GetMethodID(klass, "readBlock", "(JI)I");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_ReadBlockMID));
         }
 
         if (!hasException)
         {
             m_IsSeekableMID = env->GetMethodID(klass, "isSeekable", "()Z");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_IsSeekableMID));
         }
 
         if (!hasException)
         {
             m_IsRandomAccessMID = env->GetMethodID(klass, "isRandomAccess", "()Z");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_IsRandomAccessMID));
         }
 
         if (!hasException)
         {
             m_SeekMID = env->GetMethodID(klass, "seek", "(J)J");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_SeekMID));
         }
 
         if (!hasException)
         {
             m_CloseConnectionMID = env->GetMethodID(klass, "closeConnection", "()V");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_CloseConnectionMID));
         }
 
         if (!hasException)
         {
             m_PropertyMID = env->GetMethodID(klass, "property", "(II)I");
-            hasException = javaEnv.reportException();
+            hasException = (javaEnv.reportException() || (NULL == m_PropertyMID));
         }
 
         if (NULL != klass)
@@ -163,7 +166,7 @@ bool CJavaInputStreamCallbacks::NeedBuffer()
             pEnv->DeleteLocalRef(connection);
         }
 
-        javaEnv.reportException();
+        javaEnv.clearException();
     }
 
     return result;
@@ -179,11 +182,10 @@ int CJavaInputStreamCallbacks::ReadNextBlock()
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             result = pEnv->CallIntMethod(connection, m_ReadNextBlockMID);
+            if (javaEnv.clearException()) {
+                result = -2;
+            }
             pEnv->DeleteLocalRef(connection);
-        }
-
-        if (javaEnv.clearException()) {
-            result = -2;
         }
     }
 
@@ -200,11 +202,10 @@ int CJavaInputStreamCallbacks::ReadBlock(int64_t position, int size)
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             result = pEnv->CallIntMethod(connection, m_ReadBlockMID, position, size);
+            if (javaEnv.clearException()) {
+                result = -2;
+            }
             pEnv->DeleteLocalRef(connection);
-        }
-
-        if (javaEnv.clearException()) {
-            result = -2;
         }
     }
 
@@ -238,10 +239,9 @@ bool CJavaInputStreamCallbacks::IsSeekable()
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             result = (pEnv->CallBooleanMethod(connection, m_IsSeekableMID) == JNI_TRUE);
+            javaEnv.clearException();
             pEnv->DeleteLocalRef(connection);
         }
-
-        javaEnv.reportException();
     }
 
     return result;
@@ -257,10 +257,9 @@ bool CJavaInputStreamCallbacks::IsRandomAccess()
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             result = (pEnv->CallBooleanMethod(connection, m_IsRandomAccessMID) == JNI_TRUE);
+            javaEnv.clearException();
             pEnv->DeleteLocalRef(connection);
         }
-
-        javaEnv.reportException();
     }
 
     return result;
@@ -276,10 +275,9 @@ int64_t CJavaInputStreamCallbacks::Seek(int64_t position)
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             result = pEnv->CallLongMethod(connection, m_SeekMID, (jlong)position);
+            javaEnv.clearException();
             pEnv->DeleteLocalRef(connection);
         }
-
-        javaEnv.reportException();
     }
 
     return (int64_t)result;
@@ -294,9 +292,8 @@ void CJavaInputStreamCallbacks::CloseConnection()
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             pEnv->CallVoidMethod(connection, m_CloseConnectionMID);
+            javaEnv.clearException();
             pEnv->DeleteLocalRef(connection);
-
-            javaEnv.reportException();
         }
 
         pEnv->DeleteGlobalRef(m_ConnectionHolder);
@@ -314,10 +311,9 @@ int CJavaInputStreamCallbacks::Property(int prop, int value)
         jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
         if (connection) {
             result = pEnv->CallIntMethod(connection, m_PropertyMID, (jint)prop, (jint)value);
+            javaEnv.clearException();
             pEnv->DeleteLocalRef(connection);
         }
-
-        javaEnv.reportException();
     }
 
     return result;

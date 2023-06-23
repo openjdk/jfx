@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,21 +42,16 @@ void ThrowJavaException(JNIEnv *env, const char* type, const char* message)
     jclass klass = NULL;
     if (type) {
         klass = env->FindClass(type);
-        if (!klass) {
-            // might have caused an exception
-            if (env->ExceptionOccurred()) {
-                env->ExceptionClear();
-            }
+        // might have caused an exception
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
         }
     }
     if (!klass) {
         klass = env->FindClass("java/lang/Exception");
-        if (!klass) {
-            if (env->ExceptionOccurred()) {
-                env->ExceptionClear();
-            }
-            // This shouldn't happen...
-            return;
+        if (env->ExceptionCheck() || klass == NULL) {
+            env->ExceptionClear();
+            return; // This shouldn't happen...
         }
     }
     env->ThrowNew(klass, message);
@@ -100,7 +95,7 @@ bool CJavaEnvironment::reportException()
         if (exc) {
             environment->ExceptionClear(); // Clear current exception
             jclass cid = environment->FindClass("java/lang/Throwable");
-            if (!clearException()) {
+            if (!clearException() && cid != NULL) {
                 jmethodID mid = environment->GetMethodID(cid, "toString", "()Ljava/lang/String;");
                 if (!clearException()) {
                     jstring jmsg = (jstring)environment->CallObjectMethod(exc, mid);

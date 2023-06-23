@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -773,8 +773,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         // To allow for a TreeView (and its skin) to be notified of changes in the
         // tree, this method recursively calls up to the root node, at which point
         // it fires a ROOT_NOTIFICATION_EVENT, which the TreeView may be watching for.
@@ -785,39 +785,42 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     }
 
     /**
-     * Registers an event handler to this TreeItem. The TreeItem class allows
-     * registration of listeners which will be notified as the
-     * number of items changes, their position or if the values themselves change.
-     * Note however that a TreeItem is <b>not</b> a Node, and therefore no visual
-     * events will be fired on the TreeItem. To get these events, it is necessary to
-     * add relevant observers to the TreeCell instances (via a custom cell factory -
-     * see the {@link Cell} class documentation for more details).
-     *
-     * @param <E> The event
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
      */
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
+    @Override
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
-    /**
-     * Unregisters a previously registered event handler from this TreeItem. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <E> The event
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
+    @Override
+    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
+     */
+    @Override
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventFilter(eventType, eventHandler);
+    }
 
+    @Override
+    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.removeEventFilter(eventType, eventHandler);
+    }
 
     /* *************************************************************************
      *                                                                         *

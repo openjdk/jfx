@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,4 +54,76 @@ public interface EventTarget {
      * @return the resulting event dispatch chain for this target
      */
     EventDispatchChain buildEventDispatchChain(EventDispatchChain tail);
+
+    /**
+     * Registers an event handler for this target.
+     * <p>
+     * The handler is called when the target receives an {@link Event} of the specified
+     * type during the bubbling phase of event delivery.
+     *
+     * @param <E> the event class of the handler
+     * @param eventType the type of the events received by the handler
+     * @param eventHandler the event handler
+     * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event handlers
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 21
+     */
+    default <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Unregisters a previously registered event handler from this target.
+     * <p>
+     * Since it is possible to register a single {@link EventHandler} instance for different event types,
+     * the caller needs to specify the event type from which the handler should be unregistered.
+     *
+     * @param <E> the event class of the handler
+     * @param eventType the event type from which to unregister
+     * @param eventHandler the event handler
+     * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event handlers
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 21
+     */
+    default <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Registers an event filter for this target.
+     * <p>
+     * The filter is called when the target receives an {@link Event} of the specified
+     * type during the capturing phase of event delivery.
+     *
+     * @param <E> the event class of the filter
+     * @param eventType the type of the events received by the filter
+     * @param eventFilter the event filter
+     * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event filters
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 21
+     */
+    default <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Unregisters a previously registered event filter from this target.
+     * <p>
+     * Since it is possible to register a single {@link EventHandler} instance for different event types,
+     * the caller needs to specify the event type from which the filter should be unregistered.
+     *
+     * @param <E> the event class of the filter
+     * @param eventType the event type from which to unregister
+     * @param eventFilter the event filter
+     * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event filters
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 21
+     */
+    default <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        throw new UnsupportedOperationException();
+    }
 }
