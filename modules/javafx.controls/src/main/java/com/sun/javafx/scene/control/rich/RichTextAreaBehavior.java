@@ -136,6 +136,7 @@ public class RichTextAreaBehavior {
         m.func(PAGE_UP, this::pageUp);
         m.func(PASTE, this::paste);
         m.func(PASTE_PLAIN_TEXT, this::pastePlainText);
+        m.func(REDO, this::redo);
         m.func(SELECT_ALL, this::selectAll);
         m.func(SELECT_DOCUMENT_END, this::selectDocumentEnd);
         m.func(SELECT_DOCUMENT_START, this::selectDocumentStart);
@@ -150,6 +151,7 @@ public class RichTextAreaBehavior {
         m.func(SELECT_WORD_NEXT, this::selectNextWord);
         m.func(SELECT_WORD_NEXT_END, this::selectEndOfNextWord);
         m.func(SELECT_WORD_PREVIOUS, this::selectPreviousWord);
+        m.func(UNDO, this::undo);
         // keys
         m.key(skin, KeyCode.BACK_SPACE, BACKSPACE);
         m.key(skin, KeyBinding.shortcut(KeyCode.C), COPY);        
@@ -163,17 +165,19 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyCode.DOWN, MOVE_DOWN);
         m.key(skin, KeyCode.HOME, MOVE_LINE_START);
         m.key(skin, KeyCode.END, MOVE_LINE_END);
-        m.key(skin, KeyBinding.builder().with(KeyCode.HOME).ctrl().notForMac().build(), MOVE_DOCUMENT_START);
-        m.key(skin, KeyBinding.builder().with(KeyCode.UP).shortcut().forMac().build(), MOVE_DOCUMENT_START);
-        m.key(skin, KeyBinding.builder().with(KeyCode.END).ctrl().notForMac().build(), MOVE_DOCUMENT_END);
-        m.key(skin, KeyBinding.builder().with(KeyCode.DOWN).shortcut().forMac().build(), MOVE_DOCUMENT_END);
-        m.key(skin, KeyBinding.builder().with(KeyCode.RIGHT).ctrl().notForMac().build(), MOVE_WORD_NEXT);
-        m.key(skin, KeyBinding.builder().with(KeyCode.RIGHT).option().forMac().build(), MOVE_WORD_NEXT);
-        m.key(skin, KeyBinding.builder().with(KeyCode.LEFT).ctrl().notForMac().build(), MOVE_WORD_PREVIOUS);
-        m.key(skin, KeyBinding.builder().with(KeyCode.LEFT).option().forMac().build(), MOVE_WORD_PREVIOUS);
+        m.key(skin, KeyBinding.with(KeyCode.HOME).ctrl().notForMac().build(), MOVE_DOCUMENT_START);
+        m.key(skin, KeyBinding.with(KeyCode.UP).shortcut().forMac().build(), MOVE_DOCUMENT_START);
+        m.key(skin, KeyBinding.with(KeyCode.END).ctrl().notForMac().build(), MOVE_DOCUMENT_END);
+        m.key(skin, KeyBinding.with(KeyCode.DOWN).shortcut().forMac().build(), MOVE_DOCUMENT_END);
+        m.key(skin, KeyBinding.with(KeyCode.RIGHT).ctrl().notForMac().build(), MOVE_WORD_NEXT);
+        m.key(skin, KeyBinding.with(KeyCode.RIGHT).option().forMac().build(), MOVE_WORD_NEXT);
+        m.key(skin, KeyBinding.with(KeyCode.LEFT).ctrl().notForMac().build(), MOVE_WORD_PREVIOUS);
+        m.key(skin, KeyBinding.with(KeyCode.LEFT).option().forMac().build(), MOVE_WORD_PREVIOUS);
         m.key(skin, KeyCode.PAGE_DOWN, PAGE_DOWN);
         m.key(skin, KeyCode.PAGE_UP, PAGE_UP);
         m.key(skin, KeyBinding.shortcut(KeyCode.V), PASTE);
+        m.key(skin, KeyBinding.with(KeyCode.Z).shift().command().forMac().build(), REDO);
+        m.key(skin, KeyBinding.with(KeyCode.Y).ctrl().notForMac().build(), REDO);
         m.key(skin, KeyBinding.shortcut(KeyCode.A), SELECT_ALL);
         m.key(skin, KeyBinding.shift(KeyCode.LEFT), SELECT_LEFT);
         m.key(skin, KeyBinding.shift(KeyCode.RIGHT), SELECT_RIGHT);
@@ -181,10 +185,11 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyBinding.shift(KeyCode.DOWN), SELECT_DOWN);
         m.key(skin, KeyBinding.shift(KeyCode.PAGE_UP), SELECT_PAGE_UP);
         m.key(skin, KeyBinding.shift(KeyCode.PAGE_DOWN), SELECT_PAGE_DOWN);
-        m.key(skin, KeyBinding.builder().with(KeyCode.HOME).ctrl().shift().notForMac().build(), SELECT_DOCUMENT_START);
-        m.key(skin, KeyBinding.builder().with(KeyCode.UP).shift().shortcut().forMac().build(), SELECT_DOCUMENT_START);
-        m.key(skin, KeyBinding.builder().with(KeyCode.END).ctrl().shift().notForMac().build(), SELECT_DOCUMENT_END);
-        m.key(skin, KeyBinding.builder().with(KeyCode.DOWN).shift().shortcut().forMac().build(), SELECT_DOCUMENT_END);
+        m.key(skin, KeyBinding.with(KeyCode.HOME).ctrl().shift().notForMac().build(), SELECT_DOCUMENT_START);
+        m.key(skin, KeyBinding.with(KeyCode.UP).shift().shortcut().forMac().build(), SELECT_DOCUMENT_START);
+        m.key(skin, KeyBinding.with(KeyCode.END).ctrl().shift().notForMac().build(), SELECT_DOCUMENT_END);
+        m.key(skin, KeyBinding.with(KeyCode.DOWN).shift().shortcut().forMac().build(), SELECT_DOCUMENT_END);
+        m.key(skin, KeyBinding.shortcut(KeyCode.Z), UNDO);
 
         Pane c = vflow.getContentPane();
         c.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
@@ -1190,5 +1195,15 @@ public class RichTextAreaBehavior {
         }
 
         return new TextPos(index, textLength);
+    }
+    
+    public void redo() {
+        // TODO
+        System.out.println("redo");
+    }
+    
+    public void undo() {
+        // TODO
+        System.out.println("undo");
     }
 }

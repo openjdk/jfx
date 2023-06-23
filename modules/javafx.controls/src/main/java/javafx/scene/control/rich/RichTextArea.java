@@ -92,6 +92,7 @@ public class RichTextArea extends Control {
     public static final FunctionTag PAGE_UP = new FunctionTag();
     public static final FunctionTag PASTE = new FunctionTag();
     public static final FunctionTag PASTE_PLAIN_TEXT = new FunctionTag();
+    public static final FunctionTag REDO = new FunctionTag();
     public static final FunctionTag SELECT_ALL = new FunctionTag();
     public static final FunctionTag SELECT_DOCUMENT_END = new FunctionTag();
     public static final FunctionTag SELECT_DOCUMENT_START = new FunctionTag();
@@ -106,6 +107,7 @@ public class RichTextArea extends Control {
     public static final FunctionTag SELECT_WORD_NEXT = new FunctionTag();
     public static final FunctionTag SELECT_WORD_NEXT_END = new FunctionTag();
     public static final FunctionTag SELECT_WORD_PREVIOUS = new FunctionTag();
+    public static final FunctionTag UNDO = new FunctionTag();
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
     private final ConfigurationParameters config;
@@ -797,6 +799,15 @@ public class RichTextArea extends Control {
     }
     
     /**
+     * If possible, redoes the last undone modification. If {@link #isRedoable()} returns
+     * false, then calling this method has no effect.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void redo() {
+        execute(REDO);
+    }
+    
+    /**
      * Selects all the text in the document.
      * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
      */
@@ -913,17 +924,18 @@ public class RichTextArea extends Control {
         execute(SELECT_WORD_NEXT_END);
     }
 
+    /**
+     * If possible, undoes the last modification. If {@link #isUndoable()} returns
+     * false, then calling this method has no effect.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
     public void undo() {
-        // TODO
+        execute(UNDO);
     }
     
     public boolean isUndoable() {
         // TODO
         return false;
-    }
-    
-    public void redo() {
-        // TODO
     }
     
     public boolean isRedoable() {

@@ -37,7 +37,9 @@ import com.sun.javafx.PlatformUtil;
  * Also it allows for encoding platform-specific keys without resorting to nested and/or
  * multiple key maps.
  */
-public class KeyBinding {
+// TODO rename KeyBinding
+// TODO alternative: key[Pressed](), keyReleased(), keyTyped(), and with(Predicate)
+public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /**
      * Condition used to build input key mappings.
      * <p>
@@ -83,18 +85,20 @@ public class KeyBinding {
         KEY_RELEASE,
         /** a key typed event */
         KEY_TYPED,
-        /** any key event */
-        //KEY_ANY,
 
         // platform specificity
-        /** specifies Windows platform */
-        FOR_WIN,
-        /** specifies non-Windows platform */
-        NOT_FOR_WIN,
+        /** specifies Linux platform */
+        FOR_LINUX,
+        /** specifies non-Linux platform */
+        NOT_FOR_LINUX,
         /** specifies Mac platform */
         FOR_MAC,
         /** specifies non-Mac platform */
         NOT_FOR_MAC,
+        /** specifies Windows platform */
+        FOR_WIN,
+        /** specifies non-Windows platform */
+        NOT_FOR_WIN,
     }
 
     private final Object key; // KeyCode or String
@@ -123,6 +127,16 @@ public class KeyBinding {
      */
     public static KeyBinding command(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.COMMAND);
+    }
+
+    /**
+     * Utility method creates a KeyBinding corresponding to a alt-code key press.
+     *
+     * @param code
+     * @return KeyBinding
+     */
+    public static KeyBinding alt(KeyCode code) {
+        return create(code, KCondition.KEY_PRESS, KCondition.ALT);
     }
 
     /**
@@ -174,6 +188,10 @@ public class KeyBinding {
     public boolean isKeyRelease() {
         return modifiers.contains(KCondition.KEY_RELEASE);
     }
+    
+    public boolean isKeyTyped() {
+        return modifiers.contains(KCondition.KEY_TYPED);
+    }
 
     public boolean isShortcut() {
         if (PlatformUtil.isMac()) {
@@ -181,8 +199,36 @@ public class KeyBinding {
         }
         return modifiers.contains(KCondition.CTRL);
     }
-    
-    // TODO rest of isXXX()
+
+    public boolean isAlt() {
+        return modifiers.contains(KCondition.ALT);
+    }
+
+    public boolean isCtrl() {
+        return modifiers.contains(KCondition.CTRL);
+    }
+
+    public boolean isMeta() {
+        return modifiers.contains(KCondition.META);
+    }
+
+    public boolean isOption() {
+        return modifiers.contains(KCondition.OPTION);
+    }
+
+    public boolean isShift() {
+        return modifiers.contains(KCondition.SHIFT);
+    }
+
+    /**
+     * Returns a {@link KeyCode} or null if the key binding is not for a key code.
+     */
+    public KeyCode getKeyCode() {
+        if (key instanceof KeyCode c) {
+            return c;
+        }
+        return null;
+    }
 
     /** creates a builder */
     public static Builder builder() {
@@ -207,6 +253,18 @@ public class KeyBinding {
                 modifiers.equals(k.modifiers);
         }
         return false;
+    }
+
+    public static Builder with(KeyCode c) {
+        return builder().with(c);
+    }
+
+    public static Builder withRelease(KeyCode c) {
+        return builder().withRelease(c);
+    }
+
+    public static Builder with(String c) {
+        return builder().with(c);
     }
 
     /** 
@@ -332,7 +390,23 @@ public class KeyBinding {
         sb.append("}");
         return sb.toString();
     }
-    
+
+//    @Override
+    public EventType<KeyEvent> getEventType() {
+        if (isKeyPress()) {
+            return KeyEvent.KEY_PRESSED;
+        } else if (isKeyRelease()) {
+            return KeyEvent.KEY_RELEASED;
+        } else {
+            return KeyEvent.KEY_TYPED;
+        }
+    }
+
+//    @Override
+//    public boolean isEventAcceptable(KeyEvent ev) {
+//        return KeyBinding2.from(ev).equals(this);
+//    }
+
     // TODO other setters (platform, etc)
     
     /** Key bindings builder */
@@ -351,6 +425,15 @@ public class KeyBinding {
             return this;
         }
 
+        public Builder withRelease(KeyCode c) {
+            if (key != null) {
+                throw new IllegalArgumentException("only one KeyCode or character can be set");
+            }
+            key = c;
+            m.add(KCondition.KEY_RELEASE);
+            return this;
+        }
+
         public Builder with(String c) {
             if (key != null) {
                 throw new IllegalArgumentException("only one KeyCode or character can be set");
@@ -358,9 +441,52 @@ public class KeyBinding {
             key = c;
             return this;
         }
-        
+
+        public Builder alt() {
+            m.add(KCondition.ALT);
+            return this;
+        }
+
+        public Builder alt(boolean on) {
+            if (on) {
+                m.add(KCondition.ALT);
+            }
+            return this;
+        }
+
+        public Builder command() {
+            m.add(KCondition.COMMAND);
+            return this;
+        }
+
+        public Builder command(boolean on) {
+            if (on) {
+                m.add(KCondition.COMMAND);
+            }
+            return this;
+        }
+
         public Builder ctrl() {
             m.add(KCondition.CTRL);
+            return this;
+        }
+
+        public Builder ctrl(boolean on) {
+            if (on) {
+                m.add(KCondition.CTRL);
+            }
+            return this;
+        }
+        
+        public Builder meta() {
+            m.add(KCondition.META);
+            return this;
+        }
+
+        public Builder meta(boolean on) {
+            if (on) {
+                m.add(KCondition.META);
+            }
             return this;
         }
 
@@ -369,8 +495,22 @@ public class KeyBinding {
             return this;
         }
 
+        public Builder option(boolean on) {
+            if (on) {
+                m.add(KCondition.OPTION);
+            }
+            return this;
+        }
+
         public Builder shift() {
             m.add(KCondition.SHIFT);
+            return this;
+        }
+
+        public Builder shift(boolean on) {
+            if (on) {
+                m.add(KCondition.SHIFT);
+            }
             return this;
         }
 
@@ -399,6 +539,16 @@ public class KeyBinding {
             return this;
         }
 
+        public Builder forLinux() {
+            m.add(KCondition.FOR_LINUX);
+            return this;
+        }
+
+        public Builder notForLinux() {
+            m.add(KCondition.NOT_FOR_LINUX);
+            return this;
+        }
+
         private Builder init(Object key, KCondition... mods) {
             this.key = key;
             for (KCondition c : mods) {
@@ -418,11 +568,14 @@ public class KeyBinding {
             // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();
             boolean win = PlatformUtil.isWindows();
+            boolean linux = PlatformUtil.isLinux();
 
             if (mac) {
                 if (m.contains(KCondition.NOT_FOR_MAC)) {
                     return null;
                 } else if (m.contains(KCondition.FOR_WIN)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_LINUX)) {
                     return null;
                 } else if (m.contains(KCondition.WINDOWS)) {
                     return null;
@@ -431,10 +584,22 @@ public class KeyBinding {
                 replace(KCondition.ALT, KCondition.OPTION);
                 replace(KCondition.META, KCondition.COMMAND);
                 replace(KCondition.SHORTCUT, KCondition.COMMAND);
-            } else if (PlatformUtil.isWindows()) {
+            } else if (win) {
                 if (m.contains(KCondition.NOT_FOR_WIN)) {
                     return null;
                 } else if (m.contains(KCondition.FOR_MAC)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_LINUX)) {
+                    return null;
+                }
+
+                replace(KCondition.SHORTCUT, KCondition.CTRL);
+            } else if (linux) {
+                if (m.contains(KCondition.NOT_FOR_LINUX)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_MAC)) {
+                    return null;
+                } else if (m.contains(KCondition.FOR_WIN)) {
                     return null;
                 }
 
@@ -452,6 +617,8 @@ public class KeyBinding {
             }
 
             // remove platform 
+            m.remove(KCondition.FOR_LINUX);
+            m.remove(KCondition.NOT_FOR_LINUX);
             m.remove(KCondition.FOR_MAC);
             m.remove(KCondition.NOT_FOR_MAC);
             m.remove(KCondition.FOR_WIN);
