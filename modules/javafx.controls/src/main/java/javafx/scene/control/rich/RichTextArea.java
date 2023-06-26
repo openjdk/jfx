@@ -78,6 +78,7 @@ public class RichTextArea extends Control {
     public static final FunctionTag COPY = new FunctionTag();
     public static final FunctionTag CUT = new FunctionTag();
     public static final FunctionTag DELETE = new FunctionTag();
+    public static final FunctionTag DELETE_PARAGRAPH = new FunctionTag();
     public static final FunctionTag INSERT_LINE_BREAK = new FunctionTag();
     public static final FunctionTag INSERT_TAB = new FunctionTag();
     public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();
@@ -117,7 +118,6 @@ public class RichTextArea extends Control {
     private final KeyMap inputMap = new KeyMap();
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
-    private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
     private SimpleBooleanProperty editableProperty;
     private final ReadOnlyObjectWrapper<Duration> caretBlinkPeriod;
     private final SelectionModel selectionModel = new SingleSelectionModel();
@@ -132,11 +132,6 @@ public class RichTextArea extends Control {
 
     static {
         RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
-            @Override
-            public void setOrigin(RichTextArea a, Origin or) {
-                a.setOrigin(or);
-            }
-
             @Override
             public TextCell createTextCell(RichTextArea a, int index) {
                 return a.createTextCell(index);
@@ -466,30 +461,6 @@ public class RichTextArea extends Control {
      */
     public final ReadOnlyProperty<SelectionSegment> selectionSegmentProperty() {
         return selectionModel.selectionSegmentProperty();
-    }
-
-    /**
-     * Location of the top left corner.
-     * <p>
-     * NOTE: we might decide to hide this property, as it sort of belongs to the skin.
-     */
-    public final ReadOnlyProperty<Origin> originProperty() {
-        return origin.getReadOnlyProperty();
-    }
-
-    public final Origin getOrigin() {
-        return origin.get();
-    }
-
-    private void setOrigin(Origin or) {
-        if (or == null) {
-            throw new NullPointerException();
-        }
-        if (isUseContentHeight()) {
-            // no vertical scrolling
-            or = Origin.ZERO;
-        }
-        origin.set(or);
     }
 
     public void clearSelection() {

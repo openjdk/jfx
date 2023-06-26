@@ -29,7 +29,6 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.rich.Origin;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.layout.BorderPane;
@@ -76,17 +75,13 @@ public class RichTextAreaWindow extends Stage {
         setHeight(600);
 
         demoPane.control.caretPositionProperty().addListener((x) -> updateStatus());
-        demoPane.control.originProperty().addListener((x) -> updateStatus());
     }
 
     protected void updateStatus() {
         RichTextArea t = demoPane.control;
         TextPos p = t.getCaretPosition();
-        Origin origin = t.getOrigin();
 
         StringBuilder sb = new StringBuilder();
-
-        sb.append(origin);
 
         if (p != null) {
             sb.append(" line=").append(p.index());

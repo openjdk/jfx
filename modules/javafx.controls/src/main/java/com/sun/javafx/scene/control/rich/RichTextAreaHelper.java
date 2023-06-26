@@ -36,7 +36,6 @@ import com.sun.javafx.util.Utils;
 public class RichTextAreaHelper {
     public interface Accessor {
         public TextCell createTextCell(RichTextArea a, int index);
-        public void setOrigin(RichTextArea a, Origin or);
     }
 
     static {
@@ -50,10 +49,6 @@ public class RichTextAreaHelper {
             throw new IllegalStateException();
         }
         accessor = a;
-    }
-
-    public static void setOrigin(RichTextArea a, Origin or) {
-        accessor.setOrigin(a, or);
     }
 
     public static TextCell createTextCell(RichTextArea a, int index) {
