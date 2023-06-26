@@ -50,6 +50,12 @@ public class Params {
     /** small space between the end of last character and the right edge when typing, in pixels. */
     public static final double HORIZONTAL_GUARD = 20;
 
+    /** min height of the content area when use content width = true and empty model */
+    public static final double LAYOUT_MIN_HEIGHT = 20;
+
+    /** min width of the content area when use content width = true and empty model */
+    public static final double LAYOUT_MIN_WIDTH = 20;
+    
     /** maximum tab size. */
     public static final int MAX_TAB_SIZE = 256;
 

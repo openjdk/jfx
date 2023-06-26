@@ -96,11 +96,13 @@ public class RichTextAreaBehavior {
             @Override
             public void eventTextUpdated(TextPos start, TextPos end, int top, int ins, int btm) {
                 handleTextUpdated(start, end, top, ins, btm);
+                // TODO do we need to reflow if useContentXX is on?
             }
 
             @Override
             public void eventStyleUpdated(TextPos start, TextPos end) {
                 handleStyleUpdated(start, end);
+                // TODO do we need to reflow if useContentXX is on?
             }
         };
 
@@ -266,8 +268,9 @@ public class RichTextAreaBehavior {
                 // see TextInputControlBehavior:395
                 // Filter out control keys except control+Alt on PC or Alt on Mac
                 if (ev.isControlDown() || ev.isAltDown() || (PlatformUtil.isMac() && ev.isMetaDown())) {
-                    if (!((ev.isControlDown() || PlatformUtil.isMac()) && ev.isAltDown()))
+                    if (!((ev.isControlDown() || PlatformUtil.isMac()) && ev.isAltDown())) {
                         return null;
+                    }
                 }
 
                 // Ignore characters in the control range and the ASCII delete
@@ -420,7 +423,7 @@ public class RichTextAreaBehavior {
 
     protected void handleScrollEvent(ScrollEvent ev) {
         if (ev.isShiftDown()) {
-            if (!control.isWrapText()) {
+            if (!control.isWrapText() && !control.isUseContentWidth()) {
                 // horizontal scroll
                 double f = Params.SCROLL_SHEEL_BLOCK_SIZE_HORIZONTAL;
                 if (ev.getDeltaX() >= 0) {
@@ -429,22 +432,26 @@ public class RichTextAreaBehavior {
                 vflow.hscroll(f);
                 ev.consume();
             }
-        } else if (ev.isShortcutDown()) {
-            // page up / page down
-            if (ev.getDeltaY() >= 0) {
-                vflow.pageUp();
-            } else {
-                vflow.pageDown();
-            }
-            ev.consume();
         } else {
-            // block scroll
-            double f = Params.SCROLL_WHEEL_BLOCK_SIZE_VERTICAL;
-            if (ev.getDeltaY() >= 0) {
-                f = -f;
+            if (!control.isUseContentHeight()) {
+                if (ev.isShortcutDown()) {
+                    // page up / page down
+                    if (ev.getDeltaY() >= 0) {
+                        vflow.pageUp();
+                    } else {
+                        vflow.pageDown();
+                    }
+                    ev.consume();
+                } else {
+                    // block scroll
+                    double f = Params.SCROLL_WHEEL_BLOCK_SIZE_VERTICAL;
+                    if (ev.getDeltaY() >= 0) {
+                        f = -f;
+                    }
+                    vflow.scroll(f);
+                    ev.consume();
+                }
             }
-            vflow.scroll(f);
-            ev.consume();
         }
     }
 
@@ -465,6 +472,9 @@ public class RichTextAreaBehavior {
     }
 
     protected void autoScroll() {
+        if (control.isUseContentHeight()) {
+            return;
+        }
         double delta = fastAutoScroll ? Params.AUTO_SCROLL_STEP_FAST : Params.AUTO_SCROLL_STEP_SLOW;
         if (autoScrollUp) {
             delta = -delta;

@@ -42,13 +42,13 @@ public class RichTextAreaWindow extends Stage {
     public final RichTextAreaDemoPane demoPane;
     public final Label status;
     
-    public RichTextAreaWindow(boolean trackSize) {
-        demoPane = new RichTextAreaDemoPane(trackSize);
+    public RichTextAreaWindow(boolean useContentSize) {
+        demoPane = new RichTextAreaDemoPane(useContentSize);
         
         MenuBar mb = new MenuBar();
         FX.menu(mb, "File");
         FX.item(mb, "New Window", () -> newWindow(false));
-        FX.item(mb, "New Window, Track Size", () -> newWindow(true));
+        FX.item(mb, "New Window, Use Content Size", () -> newWindow(true));
         FX.separator(mb);
         FX.item(mb, "Close Window", this::hide);
         FX.separator(mb);
@@ -67,9 +67,9 @@ public class RichTextAreaWindow extends Stage {
 
         setScene(scene);
         setTitle(
-            "RichTextArea Demo fx:" +
+            "RichTextArea Demo FX:" +
             System.getProperty("javafx.runtime.version") +
-            " jdk:" +
+            "  JDK:" +
             System.getProperty("java.version")
         );
         setWidth(1200);
@@ -96,10 +96,10 @@ public class RichTextAreaWindow extends Stage {
         status.setText(sb.toString());
     }
 
-    protected void newWindow(boolean trackSize) {
+    protected void newWindow(boolean useContentSize) {
         double offset = 20;
 
-        RichTextAreaWindow w = new RichTextAreaWindow(trackSize);
+        RichTextAreaWindow w = new RichTextAreaWindow(useContentSize);
         w.setX(getX() + offset);
         w.setY(getY() + offset);
         w.setWidth(getWidth());

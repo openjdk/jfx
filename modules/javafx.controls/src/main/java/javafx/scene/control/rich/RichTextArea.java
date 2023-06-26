@@ -468,7 +468,11 @@ public class RichTextArea extends Control {
         return selectionModel.selectionSegmentProperty();
     }
 
-    /** Location of the top left corner. */
+    /**
+     * Location of the top left corner.
+     * <p>
+     * NOTE: we might decide to hide this property, as it sort of belongs to the skin.
+     */
     public final ReadOnlyProperty<Origin> originProperty() {
         return origin.getReadOnlyProperty();
     }
@@ -477,11 +481,15 @@ public class RichTextArea extends Control {
         return origin.get();
     }
 
-    private void setOrigin(Origin p) {
-        if (p == null) {
+    private void setOrigin(Origin or) {
+        if (or == null) {
             throw new NullPointerException();
         }
-        origin.set(p);
+        if (isUseContentHeight()) {
+            // no vertical scrolling
+            or = Origin.ZERO;
+        }
+        origin.set(or);
     }
 
     public void clearSelection() {

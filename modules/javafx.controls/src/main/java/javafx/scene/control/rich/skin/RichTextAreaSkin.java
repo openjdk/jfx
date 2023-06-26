@@ -130,12 +130,29 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     hscrollHeight = hscroll.prefHeight(-1);
                 }
 
+                if (control.isUseContentHeight()) {
+                    width = vflow.prefWidth(-1);
+                }
+                if (control.isUseContentHeight()) {
+                    height = vflow.prefHeight(-1);
+                }
+
                 double w = snapSizeX(width - vscrollWidth - 1.0);
                 double h = snapSizeY(height - hscrollHeight - 1.0);
 
                 layoutInArea(vscroll, w, y0 + 1.0, vscrollWidth, h, -1, null, true, true, HPos.RIGHT, VPos.TOP);
                 layoutInArea(hscroll, x0 + 1, h, w, hscrollHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
                 layoutInArea(vflow, x0, y0, w, h, -1, null, true, true, HPos.LEFT, VPos.TOP);
+            }
+            
+            @Override
+            protected double computePrefWidth(double height) {
+                boolean on = control.isUseContentWidth();
+//                if (on) {
+//                    return vflow.computePrefWidth(height);
+//                } else {
+                    return super.computePrefWidth(height);
+//                }
             }
         });
 

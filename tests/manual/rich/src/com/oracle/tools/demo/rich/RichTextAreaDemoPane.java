@@ -43,6 +43,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.rich.RichTextArea;
@@ -78,14 +79,21 @@ public class RichTextAreaDemoPane extends BorderPane {
     public final RichTextArea control;
     public final ComboBox<ModelChoice> modelField;
 
-    public RichTextAreaDemoPane(boolean trackSize) {
+    public RichTextAreaDemoPane(boolean useContentSize) {
         FX.name(this, "RichTextAreaDemoPane");
 
         control = new RichTextArea();
-        control.setUseContentHeight(trackSize);
-        control.setUseContentWidth(trackSize);
+        control.setUseContentHeight(useContentSize);
+        control.setUseContentWidth(useContentSize);
 
-        SplitPane hsplit = new SplitPane(control, pane());
+        Node contentNode;
+        if (useContentSize) {
+            contentNode = new ScrollPane(control);
+        } else {
+            contentNode = control;
+        }
+
+        SplitPane hsplit = new SplitPane(contentNode, pane());
         FX.name(hsplit, "hsplit");
         hsplit.setBorder(null);
         hsplit.setDividerPositions(0.9);
@@ -246,32 +254,32 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.option(trackWidth);
         op.option(trackHeight);
 
-        if (trackSize) {
-            GridPane gp = new GridPane();
-            gp.setBackground(Background.fill(Color.DARKGRAY));
-            gp.setOpacity(1.0);
-            GridPane.setFillHeight(control, false);
-            GridPane.setFillWidth(control, false);
-            gp.add(control, 0, 0);
-            //
-            Label t = new Label();
-            gp.add(t, 1, 0);
-            GridPane.setFillHeight(t, true);
-            GridPane.setFillWidth(t, true);
-            //
-            t = new Label();
-            gp.add(t, 0, 1);
-            GridPane.setFillHeight(t, true);
-            GridPane.setFillWidth(t, true);
-            //
-            t = new Label();
-            gp.add(t, 1, 1);
-            GridPane.setFillHeight(t, true);
-            GridPane.setFillWidth(t, true);
-            setCenter(gp);
-        } else {
+//        if (useContentSize) {
+//            GridPane gp = new GridPane();
+//            gp.setBackground(Background.fill(Color.DARKGRAY));
+//            gp.setOpacity(1.0);
+//            GridPane.setFillHeight(control, false);
+//            GridPane.setFillWidth(control, false);
+//            gp.add(control, 0, 0);
+//            //
+//            Label t = new Label("right");
+//            gp.add(t, 1, 0);
+//            GridPane.setFillHeight(t, true);
+//            GridPane.setFillWidth(t, true);
+//            //
+//            t = new Label("bottom");
+//            gp.add(t, 0, 1);
+//            GridPane.setFillHeight(t, true);
+//            GridPane.setFillWidth(t, true);
+//            //
+//            t = new Label("corner");
+//            gp.add(t, 1, 1);
+//            GridPane.setFillHeight(t, true);
+//            GridPane.setFillWidth(t, true);
+//            setCenter(gp);
+//        } else {
             setCenter(vsplit);
-        }
+//        }
         setRight(op);
 
         modelField.getSelectionModel().selectFirst();

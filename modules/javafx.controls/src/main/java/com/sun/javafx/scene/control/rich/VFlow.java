@@ -199,7 +199,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public void handleModelChange() {
-        control.clearSelection();
+        control.select(TextPos.ZERO);
         setContentWidth(0.0);
         setOrigin(new Origin(0, -topPadding));
         setOffsetX(-leftPadding);
@@ -817,9 +817,9 @@ public class VFlow extends Pane implements StyleResolver {
         int tabSize = control.getTabSize();
         lineSpacing = control.getLineSpacing();
 
-        boolean trackHeight = control.isUseContentHeight();
-        boolean trackWidth = control.isUseContentWidth();
-        boolean wrap = control.isWrapText() && !trackWidth;
+        boolean useContentHeight = control.isUseContentHeight();
+        boolean useContentWidth = control.isUseContentWidth();
+        boolean wrap = control.isWrapText() && !useContentWidth;
         double forWidth;
         double maxWidth;
         if (wrap) {
@@ -831,7 +831,7 @@ public class VFlow extends Pane implements StyleResolver {
         }
 
         double width = getWidth();
-        double height = trackHeight ? 0.0 : getHeight();
+        double height = useContentHeight ? 0.0 : getHeight();
 
         double ytop = snapPositionY(-getOrigin().offset());
         double y = ytop;
@@ -878,7 +878,7 @@ public class VFlow extends Pane implements StyleResolver {
             y = snapPositionY(y + h);
             count++;
 
-            if(trackHeight) {
+            if(useContentHeight) {
                 height = y;
             } else {
                 // stop populating the bottom part of the sliding window
@@ -997,7 +997,7 @@ public class VFlow extends Pane implements StyleResolver {
         
         arrangement.setTopHeight(-y);
 
-        if (trackWidth) {
+        if (useContentWidth) {
             width = unwrappedWidth + leftSide + rightSide;
         }
 
@@ -1258,14 +1258,22 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public void handleTrackContentHeight() {
-        // TODO probably unnecessary due to binding
-        //boolean on = control.isTrackContentHeight();
+        boolean on = control.isUseContentHeight();
+        if (on) {
+            setContentWidth(0.0);
+            setOrigin(new Origin(0, -topPadding));
+            setOffsetX(-leftPadding);
+        }
         control.requestLayout();
     }
 
     public void handleTrackContentWidth() {
-        // TODO probably unnecessary due to binding
-        //boolean on = control.isTrackContentWidth();
+        boolean on = control.isUseContentWidth();
+        if (on) {
+            setContentWidth(0.0);
+            setOrigin(new Origin(0, -topPadding));
+            setOffsetX(-leftPadding);
+        }
         control.requestLayout();
     }
 
@@ -1273,9 +1281,9 @@ public class VFlow extends Pane implements StyleResolver {
     protected double computePrefHeight(double width) {
         boolean on = control.isUseContentHeight();
         if (on) {
-            // TODO if arrangement.width != width -> reflow()
-            layoutChildren();
-            return arrangement.bottomHeight() + bottomPadding;
+            // TODO optimize: skip reflow if arrangement.width == width
+            reflow();
+            return Math.max(Params.LAYOUT_MIN_WIDTH, arrangement.bottomHeight()) + bottomPadding;
         } else {
             return super.computePrefHeight(width);
         }
@@ -1285,11 +1293,32 @@ public class VFlow extends Pane implements StyleResolver {
     protected double computePrefWidth(double height) {
         boolean on = control.isUseContentWidth();
         if (on) {
-            // TODO if arrangement.height != height -> reflow()
-            layoutChildren();
-            return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
+            // TODO optimize: skip reflow if arrangement.height == height
+            reflow();
+            return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.getUnwrappedWidth()) +
+                leftSide + rightSide + leftPadding + rightPadding;
         } else {
             return super.computePrefWidth(height);
         }
     }
+
+//    @Override
+//    protected double computeMinHeight(double width) {
+//        boolean on = control.isUseContentHeight();
+//        if (on) {
+//            // is this needed?
+//            return computePrefHeight(width);
+//        }
+//        return super.computeMinHeight(width);
+//    }
+//
+//    @Override
+//    protected double computeMinWidth(double height) {
+//        boolean on = control.isUseContentWidth();
+//        if (on) {
+//            // is this needed?
+//            return computePrefWidth(height);
+//        }
+//        return super.computeMinWidth(height);
+//    }
 }
