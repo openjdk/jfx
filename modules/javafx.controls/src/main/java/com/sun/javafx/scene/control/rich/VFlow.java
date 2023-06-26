@@ -1022,7 +1022,7 @@ public class VFlow extends Pane implements StyleResolver {
             double w = wrappedWidth();
             setContentWidth(w);
         } else {
-            if (getContentWidth() < unwrappedWidth) {
+            if ((unwrappedWidth == 0.0) || (getContentWidth() < unwrappedWidth)) {
                 setContentWidth(Math.max(unwrappedWidth, width));
             }
         }
