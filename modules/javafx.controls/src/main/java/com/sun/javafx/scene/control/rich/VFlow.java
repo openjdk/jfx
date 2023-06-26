@@ -317,12 +317,15 @@ public class VFlow extends Pane implements StyleResolver {
     public int topCellIndex() {
         return getOrigin().index();
     }
-    
+
     public double getOffsetX() {
         return offsetX.get();
     }
-    
+
     public void setOffsetX(double x) {
+        if (control.isUseContentWidth()) {
+            x = -leftPadding;
+        }
         offsetX.set(x);
     }
 
@@ -337,6 +340,9 @@ public class VFlow extends Pane implements StyleResolver {
     }
     
     public void setContentWidth(double w) {
+        if (w < Params.LAYOUT_MIN_WIDTH) {
+            w = Params.LAYOUT_MIN_WIDTH;
+        }
         contentWidth.set(w);
     }
 
@@ -1268,7 +1274,7 @@ public class VFlow extends Pane implements StyleResolver {
         }
     }
 
-    public void handleTrackContentHeight() {
+    public void handleUseContentHeight() {
         boolean on = control.isUseContentHeight();
         if (on) {
             setContentWidth(0.0);
@@ -1278,7 +1284,7 @@ public class VFlow extends Pane implements StyleResolver {
         control.requestLayout();
     }
 
-    public void handleTrackContentWidth() {
+    public void handleUseContentWidth() {
         boolean on = control.isUseContentWidth();
         if (on) {
             setContentWidth(0.0);

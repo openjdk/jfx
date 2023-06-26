@@ -144,18 +144,9 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 layoutInArea(hscroll, x0 + 1, h, w, hscrollHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
                 layoutInArea(vflow, x0, y0, w, h, -1, null, true, true, HPos.LEFT, VPos.TOP);
             }
-            
-            @Override
-            protected double computePrefWidth(double height) {
-                boolean on = control.isUseContentWidth();
-//                if (on) {
-//                    return vflow.computePrefWidth(height);
-//                } else {
-                    return super.computePrefWidth(height);
-//                }
-            }
         });
 
+        // TODO can use ConfigurationParameters generator to create custom behavior
         behavior = createBehavior();
 
         listenerHelper.addChangeListener(vflow::handleSelectionChange, control.selectionSegmentProperty());
@@ -168,14 +159,16 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             control.leftDecoratorProperty(),
             control.rightDecoratorProperty()
         );
-        listenerHelper.addInvalidationListener(vflow::handleTrackContentHeight, true, control.useContentHeightProperty());
-        listenerHelper.addInvalidationListener(vflow::handleTrackContentWidth, true, control.useContentWidthProperty());
+        listenerHelper.addInvalidationListener(vflow::handleUseContentHeight, true, control.useContentHeightProperty());
+        listenerHelper.addInvalidationListener(vflow::handleUseContentWidth, true, control.useContentWidthProperty());
         listenerHelper.addInvalidationListener(vflow::handleVerticalScroll, vscroll.valueProperty());
         listenerHelper.addInvalidationListener(vflow::handleHorizontalScroll, hscroll.valueProperty());
     }
 
-    /** called from the constructor.  override to provide custom behavior */
-    // TODO variant: generator in Config, or add methods to manipulate behavior to control
+    /**
+     * Called from the constructor.  Override to provide custom behavior (this requires public BehaviorBase).
+     * TODO variant: generator in Config, or add methods to manipulate behavior to control
+     */
     protected RichTextAreaBehavior createBehavior() {
         return new RichTextAreaBehavior(getSkinnable());
     }
