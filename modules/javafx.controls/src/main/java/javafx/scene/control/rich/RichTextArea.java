@@ -115,7 +115,6 @@ public class RichTextArea extends Control {
     private final KeyMap inputMap = new KeyMap();
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
-    private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
     private SimpleBooleanProperty editableProperty;
     private final ReadOnlyObjectWrapper<Duration> caretBlinkPeriod;
     private final SelectionModel selectionModel = new SingleSelectionModel();
@@ -130,11 +129,6 @@ public class RichTextArea extends Control {
 
     static {
         RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
-            @Override
-            public void setOrigin(RichTextArea a, Origin or) {
-                a.setOrigin(or);
-            }
-
             @Override
             public TextCell createTextCell(RichTextArea a, int index) {
                 return a.createTextCell(index);
@@ -464,22 +458,6 @@ public class RichTextArea extends Control {
      */
     public final ReadOnlyProperty<SelectionSegment> selectionSegmentProperty() {
         return selectionModel.selectionSegmentProperty();
-    }
-
-    /** Location of the top left corner. */
-    public final ReadOnlyProperty<Origin> originProperty() {
-        return origin.getReadOnlyProperty();
-    }
-
-    public final Origin getOrigin() {
-        return origin.get();
-    }
-
-    private void setOrigin(Origin p) {
-        if (p == null) {
-            throw new NullPointerException();
-        }
-        origin.set(p);
     }
 
     public void clearSelection() {

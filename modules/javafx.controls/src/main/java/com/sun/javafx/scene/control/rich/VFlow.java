@@ -32,6 +32,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventType;
@@ -82,12 +84,13 @@ public class VFlow extends Pane implements StyleResolver {
     private final Path caretPath;
     private final Path caretLineHighlight;
     private final Path selectionHighlight;
-    protected final SimpleBooleanProperty caretVisible = new SimpleBooleanProperty(true);
-    protected final SimpleBooleanProperty suppressBlink = new SimpleBooleanProperty(false);
-    protected final SimpleDoubleProperty offsetX = new SimpleDoubleProperty(0.0);
-    protected final SimpleDoubleProperty contentWidth = new SimpleDoubleProperty(0.0);
-    protected final Timeline caretAnimation;
-    protected final FastCache<TextCell> cellCache;
+    private final SimpleBooleanProperty caretVisible = new SimpleBooleanProperty(true);
+    private final SimpleBooleanProperty suppressBlink = new SimpleBooleanProperty(false);
+    private final SimpleDoubleProperty offsetX = new SimpleDoubleProperty(0.0);
+    private final SimpleDoubleProperty contentWidth = new SimpleDoubleProperty(0.0);
+    private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
+    private final Timeline caretAnimation;
+    private final FastCache<TextCell> cellCache;
     private CellArrangement arrangement;
     private FastCache<Node> leftCache;
     private FastCache<Node> rightCache;
@@ -173,7 +176,7 @@ public class VFlow extends Pane implements StyleResolver {
         lh.addChangeListener(
             this::handleOrigin,
             true,
-            control.originProperty()
+            originProperty()
         );
         
         widthProperty().addListener((p) -> updateWidth());
@@ -287,12 +290,20 @@ public class VFlow extends Pane implements StyleResolver {
         return leftPadding;
     }
 
-    public Origin getOrigin() {
-        return control.getOrigin();
+    /** Location of the top left corner. */
+    public final ReadOnlyProperty<Origin> originProperty() {
+        return origin.getReadOnlyProperty();
     }
 
-    public void setOrigin(Origin or) {
-        RichTextAreaHelper.setOrigin(control, or);
+    public final Origin getOrigin() {
+        return origin.get();
+    }
+
+    private void setOrigin(Origin p) {
+        if (p == null) {
+            throw new NullPointerException();
+        }
+        origin.set(p);
     }
 
     protected void handleOrigin() {
