@@ -2989,7 +2989,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return baseOffset;
     }
 
-    protected int computeCurrentIndex() {
+    /**
+     * Compute the index of the first visible cell
+     * This has package access ONLY FOR TESTING.
+     */
+    int computeCurrentIndex() {
         return computeCurrentIndex(getCellCount());
     }
 
