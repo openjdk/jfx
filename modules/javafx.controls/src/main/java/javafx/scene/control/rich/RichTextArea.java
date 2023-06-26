@@ -75,6 +75,7 @@ public class RichTextArea extends Control {
     public static final FunctionTag COPY = new FunctionTag();
     public static final FunctionTag CUT = new FunctionTag();
     public static final FunctionTag DELETE = new FunctionTag();
+    public static final FunctionTag DELETE_PARAGRAPH = new FunctionTag();
     public static final FunctionTag INSERT_LINE_BREAK = new FunctionTag();
     public static final FunctionTag INSERT_TAB = new FunctionTag();
     public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();

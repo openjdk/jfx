@@ -119,6 +119,7 @@ public class RichTextAreaBehavior {
         m.func(COPY, this::copy);
         m.func(CUT, this::cut);
         m.func(DELETE, this::delete);
+        m.func(DELETE_PARAGRAPH, this::deleteParagraph);
         m.func(INSERT_LINE_BREAK, this::insertLineBreak);
         m.func(INSERT_TAB, this::insertTab);
         m.func(MOVE_DOCUMENT_END, this::moveDocumentEnd);
@@ -157,6 +158,7 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyBinding.shortcut(KeyCode.C), COPY);        
         m.key(skin, KeyBinding.shortcut(KeyCode.X), CUT);
         m.key(skin, KeyCode.DELETE, DELETE);
+        m.key(skin, KeyBinding.shortcut(KeyCode.D), DELETE_PARAGRAPH);
         m.key(skin, KeyCode.ENTER, INSERT_LINE_BREAK);
         m.key(skin, KeyCode.TAB, INSERT_TAB);
         m.key(skin, KeyCode.LEFT, MOVE_LEFT);
@@ -778,6 +780,15 @@ public class RichTextAreaBehavior {
                 clearPhantomX();
             }
         }
+    }
+
+    public void deleteParagraph() {
+        if (!canEdit()) {
+            return;
+        }
+
+        // TODO
+        System.out.println("deleteParagraph");
     }
 
     protected void deleteSelection() {
