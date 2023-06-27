@@ -303,6 +303,10 @@ public class VFlow extends Pane implements StyleResolver {
         if (p == null) {
             throw new NullPointerException();
         }
+        // prevent scrolling
+        if (control.isUseContentHeight()) {
+            p = new Origin(0, -topPadding);
+        }
         origin.set(p);
     }
 
@@ -321,6 +325,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public void setOffsetX(double x) {
+        // prevent scrolling
         if (control.isUseContentWidth()) {
             x = -leftPadding;
         }
@@ -1296,9 +1301,10 @@ public class VFlow extends Pane implements StyleResolver {
     protected double computePrefHeight(double width) {
         boolean on = control.isUseContentHeight();
         if (on) {
-            // TODO optimize: skip reflow if arrangement.width == width
-            reflow();
-            return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight()) + bottomPadding;
+            if (isNeedsLayout()) {
+                reflow();
+            }
+            return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
         } else {
             return super.computePrefHeight(width);
         }
@@ -1308,32 +1314,12 @@ public class VFlow extends Pane implements StyleResolver {
     protected double computePrefWidth(double height) {
         boolean on = control.isUseContentWidth();
         if (on) {
-            // TODO optimize: skip reflow if arrangement.height == height
-            reflow();
-            return Math.max(Params.LAYOUT_MIN_WIDTH, arrangement.getUnwrappedWidth()) +
-                leftSide + rightSide + leftPadding + rightPadding;
+            if (isNeedsLayout()) {
+                reflow();
+            }
+            return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
         } else {
             return super.computePrefWidth(height);
         }
     }
-
-//    @Override
-//    protected double computeMinHeight(double width) {
-//        boolean on = control.isUseContentHeight();
-//        if (on) {
-//            // is this needed?
-//            return computePrefHeight(width);
-//        }
-//        return super.computeMinHeight(width);
-//    }
-//
-//    @Override
-//    protected double computeMinWidth(double height) {
-//        boolean on = control.isUseContentWidth();
-//        if (on) {
-//            // is this needed?
-//            return computePrefWidth(height);
-//        }
-//        return super.computeMinWidth(height);
-//    }
 }
