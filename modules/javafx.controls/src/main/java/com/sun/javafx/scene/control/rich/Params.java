@@ -26,7 +26,7 @@
 package com.sun.javafx.scene.control.rich;
 
 /**
- * Various parameters and constants.
+ * Various constants.
  */
 public class Params {
     /** autoscroll animation period, milliseconds. */
@@ -55,9 +55,12 @@ public class Params {
 
     /** min width of the content area when use content width = true and empty model */
     public static final double LAYOUT_MIN_WIDTH = 20;
-    
+
     /** maximum tab size. */
     public static final int MAX_TAB_SIZE = 256;
+
+    /** maximum width for unwrapped TextFlow layout. Neither Double.MAX_VALUE nor 1e20 work, probably bc float */
+    public static final double MAX_WIDTH_FOR_LAYOUT = 1_000_000_000.0;
 
     /** scroll bars unit increment, fraction of view width/height (between 0.0 and 1.0). */
     public static final double SCROLL_BARS_UNIT_INCREMENT = 0.1;

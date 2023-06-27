@@ -72,8 +72,6 @@ import com.sun.javafx.scene.control.ListenerHelper;
  */
 // in theory, this class can be hidden as implementation detail.
 public class VFlow extends Pane implements StyleResolver {
-    /** maximum width for unwrapped TextFlow layout. Neither Double.MAX_VALUE nor 1e20 work */
-    private static final double MAX_WIDTH_FOR_LAYOUT = 1_000_000_000.0;
     private final RichTextArea control;
     private final ConfigurationParameters config;
     private final ScrollBar vscroll;
@@ -844,7 +842,7 @@ public class VFlow extends Pane implements StyleResolver {
             maxWidth = forWidth;
         } else {
             forWidth = -1.0;
-            maxWidth = MAX_WIDTH_FOR_LAYOUT;
+            maxWidth = Params.MAX_WIDTH_FOR_LAYOUT;
         }
 
         double width = getWidth();
@@ -1015,7 +1013,7 @@ public class VFlow extends Pane implements StyleResolver {
         arrangement.setTopHeight(-y);
 
         if (useContentWidth) {
-            width = unwrappedWidth + leftSide + rightSide;
+            width = unwrappedWidth + leftSide + rightSide + leftPadding + rightPadding;
         }
 
         // lay out gutters
@@ -1035,9 +1033,6 @@ public class VFlow extends Pane implements StyleResolver {
         
         layoutInArea(content, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
 
-        // lay out content nodes
-        placeNodes();
-
         if (wrap) {
             double w = wrappedWidth();
             setContentWidth(w);
@@ -1046,11 +1041,14 @@ public class VFlow extends Pane implements StyleResolver {
                 setContentWidth(Math.max(unwrappedWidth, width));
             }
         }
+        
+        // actually place content nodes
+        placeNodes();
     }
 
     protected void placeNodes() {
         boolean wrap = control.isWrapText() && !control.isUseContentWidth();
-        double w = wrap ? getContentWidth() : MAX_WIDTH_FOR_LAYOUT;
+        double w = wrap ? getContentWidth() : Params.MAX_WIDTH_FOR_LAYOUT;
         double x = snapPositionX(-getOffsetX());
 
         leftGutter.getChildren().clear();
@@ -1300,7 +1298,7 @@ public class VFlow extends Pane implements StyleResolver {
         if (on) {
             // TODO optimize: skip reflow if arrangement.width == width
             reflow();
-            return Math.max(Params.LAYOUT_MIN_WIDTH, arrangement.bottomHeight()) + bottomPadding;
+            return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight()) + bottomPadding;
         } else {
             return super.computePrefHeight(width);
         }
@@ -1312,7 +1310,7 @@ public class VFlow extends Pane implements StyleResolver {
         if (on) {
             // TODO optimize: skip reflow if arrangement.height == height
             reflow();
-            return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.getUnwrappedWidth()) +
+            return Math.max(Params.LAYOUT_MIN_WIDTH, arrangement.getUnwrappedWidth()) +
                 leftSide + rightSide + leftPadding + rightPadding;
         } else {
             return super.computePrefWidth(height);
