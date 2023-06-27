@@ -1284,7 +1284,7 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        control.requestLayout();
+        requestLayout();
     }
 
     public void handleUseContentWidth() {
@@ -1294,7 +1294,7 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        control.requestLayout();
+        requestLayout();
     }
 
     @Override
