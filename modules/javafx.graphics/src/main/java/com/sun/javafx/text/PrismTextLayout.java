@@ -427,7 +427,7 @@ public class PrismTextLayout implements TextLayout {
         int relIndex = 0;
 
         ensureLayout();
-        int lineIndex = getLineIndex(y);
+        int lineIndex = getLineIndex(y, text);
         if (lineIndex >= getLineCount()) {
             charIndex = getCharCount();
             insertionIndex = charIndex + 1;
@@ -730,14 +730,23 @@ public class PrismTextLayout implements TextLayout {
      *                                                                         *
      **************************************************************************/
 
-    private int getLineIndex(float y) {
+    private int getLineIndex(float y, String text) {
         int index = 0;
         float bottom = 0;
+        boolean isTextPresent = text == null ? true : false;
         int lineCount = getLineCount();
         while (index < lineCount) {
+            if (text != null) {
+                for (TextRun r: lines[index].runs) {
+                    if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                        isTextPresent = true;
+                        break;
+                    }
+                }
+            }
             bottom += lines[index].getBounds().getHeight() + spacing;
             if (index + 1 == lineCount) bottom -= lines[index].getLeading();
-            if (bottom > y) break;
+            if (bottom > y && isTextPresent) break;
             index++;
         }
         return index;
