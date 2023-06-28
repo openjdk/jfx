@@ -30,7 +30,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.rich.TextCell;
-import javafx.scene.control.rich.TextPos;
 
 /**
  * A StyledTextModel that applies a decorator to a virtualized plain text data source.
@@ -78,11 +77,5 @@ public abstract class BaseDecoratedModel extends StyledTextModel {
 
     public BooleanProperty editableProperty() {
         return editable;
-    }
-
-    // TODO move to base class?
-    private void fireStylingUpdate() {
-        TextPos end = getEndTextPos();
-        fireStyleChangeEvent(TextPos.ZERO, end);
     }
 }

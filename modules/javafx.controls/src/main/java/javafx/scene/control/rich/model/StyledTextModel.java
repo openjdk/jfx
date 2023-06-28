@@ -187,12 +187,21 @@ public abstract class StyledTextModel {
 
     public StyledTextModel() {
     }
-    
-    public void addChangeListener(ChangeListener listener) {
+
+    /**
+     * Adds a {@link ChangeListener} to this model.
+     * @param listener
+     */
+    public void addChangeListener(StyledTextModel.ChangeListener listener) {
         listeners.add(listener);
     }
 
-    public void removeChangeListener(ChangeListener listener) {
+    /**
+     * Removes a {@link ChangeListener} from this model.
+     * This method does nothing if this listener has never been added.
+     * @param listener
+     */
+    public void removeChangeListener(StyledTextModel.ChangeListener listener) {
         listeners.remove(listener);
     }
 
@@ -208,7 +217,10 @@ public abstract class StyledTextModel {
         handlers.put(h.getDataFormat(), new FHPriority(h, priority));
     }
 
-    /** returns supported data formats, in the order of priority - from high to low */
+    /**
+     * Returns an array of supported data formats,
+     * in the order of priority - from high to low.
+     */
     public DataFormat[] getSupportedDataFormats() {
         ArrayList<FHPriority> fs = new ArrayList<>(handlers.values());
         Collections.sort(fs);
@@ -220,6 +232,12 @@ public abstract class StyledTextModel {
         return formats;
     }
 
+    /**
+     * Returns a {@link DataFormatHandler} instance corresponding to the given {@link DataFormat}.
+     * This method will return {@code null} if the data format is not supported.
+     * @param format
+     * @return DataFormatHandler or null
+     */
     public DataFormatHandler getDataFormatHandler(DataFormat format) {
         FHPriority p = handlers.get(format);
         return p == null ? null : p.handler();
@@ -306,7 +324,15 @@ public abstract class StyledTextModel {
         }
         return null;
     }
-    
+
+    /**
+     * Fires a text modification event for the given range.
+     * @param start start of the affected range
+     * @param end end of the affected range
+     * @param charsTop number of characters added before any added paragraphs
+     * @param linesAdded number of paragraphs inserted
+     * @param charsBottom number of characters added after any inserted paragraphs
+     */
     protected void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         markers.update(start, end, charsTop, linesAdded, charsBottom);
 
@@ -314,13 +340,35 @@ public abstract class StyledTextModel {
             li.eventTextUpdated(start, end, charsTop, linesAdded, charsBottom);
         }
     }
-    
+
+    /**
+     * Fires a style change event for the given range.
+     * This event indicates that only the styling has changed, with no  changes to any text positions.
+     * @param start start position
+     * @param end end position, must be greater than the start position
+     */
     protected void fireStyleChangeEvent(TextPos start, TextPos end) {
         for (ChangeListener li : listeners) {
             li.eventStyleUpdated(start, end);
         }
     }
 
+    /**
+     * Fires a style change event for the entire document.
+     * This event indicates that only the styling has changed, with no  changes to any text positions.
+     */
+    protected void fireStylingUpdate() {
+        TextPos end = getEndTextPos();
+        fireStyleChangeEvent(TextPos.ZERO, end);
+    }
+
+    /**
+     * Sends the styled text in the given range to the specified output.
+     * @param start start of the range
+     * @param end end of the range
+     * @param out {@link StyledOutput} to receive the stream
+     * @throws IOException
+     */
     public void exportText(TextPos start, TextPos end, StyledOutput out) throws IOException {
         int cmp = start.compareTo(end);
         if (cmp > 0) {
@@ -363,11 +411,17 @@ public abstract class StyledTextModel {
         }
     }
 
+    /**
+     * Returns a {@link Marker} at the specified position.
+     */
     public Marker getMarker(TextPos pos) {
         TextPos p = clamp(pos);
         return markers.getMarker(p);
     }
 
+    /**
+     * Returns a text position guaranteed to be within the document limits.
+     */
     protected TextPos clamp(TextPos p) {
         int ct = size();
         int ix = p.index();
