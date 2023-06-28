@@ -83,7 +83,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         
         vscroll = createVScrollBar();
         vscroll.setOrientation(Orientation.VERTICAL);
-        vscroll.setManaged(true);
+        vscroll.setManaged(false);
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
         vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
@@ -96,7 +96,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
         hscroll = createHScrollBar();
         hscroll.setOrientation(Orientation.HORIZONTAL);
-        hscroll.setManaged(true);
+        hscroll.setManaged(false);
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
         hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
@@ -107,7 +107,9 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             control.wrapTextProperty(),
             control.useContentWidthProperty()
         ));
+
         vflow = new VFlow(this, config, vscroll, hscroll);
+        vflow.setManaged(false);
         vflow.addListeners(listenerHelper);
 
         // TODO corner? only when both scroll bars are visible
@@ -201,5 +203,32 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     
             super.dispose();
         }
+    }
+
+    // TODO is this needed?
+    // the purpose of this design is unclear: why have this code here when it should be done by the container?
+    // in fact, why duplicate children list in the skin in the first place?
+    @Override
+    protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (getSkinnable().isUseContentHeight()) {
+            double hscrollHeight = 0.0;
+            if (hscroll.isVisible()) {
+                hscrollHeight = hscroll.prefHeight(-1);
+            }
+            return vflow.prefHeight(-1) + hscrollHeight;
+        }
+        return super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    @Override
+    protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (getSkinnable().isUseContentWidth()) {
+            double vscrollWidth = 0.0;
+            if (vscroll.isVisible()) {
+                vscrollWidth = vscroll.prefWidth(-1);
+            }
+            return vflow.prefWidth(-1) + vscrollWidth;
+        }
+        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
     }
 }

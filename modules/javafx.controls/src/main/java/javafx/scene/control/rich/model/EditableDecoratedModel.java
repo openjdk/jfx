@@ -143,4 +143,18 @@ public class EditableDecoratedModel extends BaseDecoratedModel {
     public StyleInfo getStyleInfo(TextPos pos) {
         return StyleInfo.NONE;
     }
+
+    /**
+     * Adds a paragraph to the end of the document.
+     * @param text text to add.  must not contain newlines and other control characters except for TAB.
+     */
+    public void addParagraph(String text) {
+        // TODO this makes no sense.  better to init to an empty array and patch size()/get*() to create an appearance
+        // of the first empty row
+        if ((size() == 1) && (getPlainText(0).length() == 0)) {
+            paragraphs.remove(0);
+        }
+        // TODO check for control characters
+        paragraphs.add(text);
+    }
 }

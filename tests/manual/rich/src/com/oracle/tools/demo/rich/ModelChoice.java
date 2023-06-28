@@ -39,6 +39,7 @@ public enum ModelChoice {
     BILLION_LINES("1,000,000,000 Lines"),
     WRITING_SYSTEMS_EDITABLE("Writing Systems (Editable)"),
     EDITABLE_STYLED("❤ Editable Rich Text Model"),
+    NOTEBOOK_STACK("Notebook: Embedded Rich Text Areas"),
     NOTEBOOK("Notebook: Embedded Chart"),
     NOTEBOOK2("Notebook: SQL Queries"),
     EDITABLE_PLAIN("Plaintext with Syntax Highlighting"),
@@ -106,6 +107,8 @@ public enum ModelChoice {
             return new NotebookModel();
         case NOTEBOOK2:
             return new NotebookModel2();
+        case NOTEBOOK_STACK:
+            return new NotebookModelStacked();
         case NULL:
             return null;
         case ONE_LINE:
