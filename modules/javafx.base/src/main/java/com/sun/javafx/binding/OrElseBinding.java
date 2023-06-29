@@ -49,6 +49,6 @@ public class OrElseBinding<T> extends LazyObjectBinding<T> {
 
     @Override
     protected Subscription observeSources() {
-        return source.invalidations(this::invalidate); // start observing source
+        return source.subscribe(this::invalidate); // start observing source
     }
 }

@@ -29,8 +29,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
@@ -41,36 +42,12 @@ public class ObservableValueSubscriptionsTest {
     private final StringProperty value = new SimpleStringProperty("Initial");
 
     @Test
-    void invalidationsShouldCallSubscriberWhenObservableInvalidated() {
-        AtomicInteger calls = new AtomicInteger();
-
-        assertEquals(0, calls.get());
-
-        value.invalidations(() -> calls.addAndGet(1));
-
-        assertEquals(0, calls.get());
-
-        value.set("A");
-
-        assertEquals(1, calls.get());
-
-        value.set("B");
-
-        assertEquals(1, calls.get());
-    }
-
-    @Test
-    void invalidationsShouldRejectNull() {
-        assertThrows(NullPointerException.class, () -> value.invalidations(null));
-    }
-
-    @Test
-    void valuesShouldCallSubscriberImmediatelyAndAfterEachChange() {
+    void subscribeConsumerShouldCallSubscriberImmediatelyAndAfterEachChange() {
         AtomicReference<String> lastCall = new AtomicReference<>();
 
         assertNull(lastCall.get());
 
-        value.values(lastCall::set);
+        value.subscribe(lastCall::set);
 
         assertEquals("Initial", lastCall.get());  // provides initial upon subscribing
 
@@ -90,17 +67,17 @@ public class ObservableValueSubscriptionsTest {
     }
 
     @Test
-    void valuesShouldRejectNull() {
-        assertThrows(NullPointerException.class, () -> value.values(null));
+    void subscribeConsumerShouldRejectNull() {
+        assertThrows(NullPointerException.class, () -> value.subscribe((Consumer<String>) null));
     }
 
     @Test
-    void changesShouldCallSubscriberAfterEachChange() {
+    void subscribeBiConsumerShouldCallSubscriberAfterEachChange() {
         AtomicReference<String> lastCall = new AtomicReference<>();
 
         assertNull(lastCall.get());
 
-        value.changes((old, current) -> lastCall.set(old + " -> " + current));
+        value.subscribe((old, current) -> lastCall.set(old + " -> " + current));
 
         assertNull(lastCall.get());  // Nothing happens upon subscribing
 
@@ -120,7 +97,7 @@ public class ObservableValueSubscriptionsTest {
     }
 
     @Test
-    void changesShouldRejectNull() {
-        assertThrows(NullPointerException.class, () -> value.changes(null));
+    void subscribeBiConsumerShouldRejectNull() {
+        assertThrows(NullPointerException.class, () -> value.subscribe((BiConsumer<String, String>) null));
     }
 }

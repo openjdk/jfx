@@ -42,7 +42,7 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
         this.nonNullCondition = Objects.requireNonNull(condition, "condition cannot be null").orElse(false);
 
         // condition is always observed and never unsubscribed
-        nonNullCondition.values(this::conditionChanged);
+        nonNullCondition.subscribe(this::conditionChanged);
     }
 
     private void conditionChanged(boolean active) {
@@ -76,7 +76,7 @@ public class ConditionalBinding<T> extends LazyObjectBinding<T> {
     private void updateSubscription() {
         if (isObserved() && isActive()) {
             if (subscription == null) {
-                subscription = source.invalidations(this::invalidate);
+                subscription = source.subscribe(this::invalidate);
             }
         }
         else {

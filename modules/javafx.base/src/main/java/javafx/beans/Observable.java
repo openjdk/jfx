@@ -102,9 +102,10 @@ public interface Observable {
      *     value becomes invalid, cannot be {@code null}
      * @return a {@code Subscription} which can be used to cancel this
      *     subscription, never {@code null}
+     * @throws NullPointerException if the subscriber is {@code null}
      * @since 21
      */
-    default Subscription invalidations(Runnable subscriber) {
+    default Subscription subscribe(Runnable subscriber) {
         Objects.requireNonNull(subscriber, "subscriber cannot be null");
         InvalidationListener listener = obs -> subscriber.run();
 

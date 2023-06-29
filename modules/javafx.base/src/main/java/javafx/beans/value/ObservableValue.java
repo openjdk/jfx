@@ -314,9 +314,10 @@ public interface ObservableValue<T> extends Observable {
      *     of this {@code ObservableValue}, cannot be {@code null}
      * @return a {@code Subscription} which can be used to cancel this
      *     subscription, never {@code null}
+     * @throws NullPointerException if the subscriber is {@code null}
      * @since 21
      */
-    default Subscription changes(BiConsumer<? super T, ? super T> subscriber) {
+    default Subscription subscribe(BiConsumer<? super T, ? super T> subscriber) {
       Objects.requireNonNull(subscriber, "subscriber cannot be null");
       ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(old, current);
 
@@ -334,9 +335,10 @@ public interface ObservableValue<T> extends Observable {
      *     {@code ObservableValue}, cannot be {@code null}
      * @return a {@code Subscription} which can be used to cancel this
      *     subscription, never {@code null}
+     * @throws NullPointerException if the subscriber is {@code null}
      * @since 21
      */
-    default Subscription values(Consumer<? super T> subscriber) {
+    default Subscription subscribe(Consumer<? super T> subscriber) {
         Objects.requireNonNull(subscriber, "subscriber cannot be null");
         ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(current);
 

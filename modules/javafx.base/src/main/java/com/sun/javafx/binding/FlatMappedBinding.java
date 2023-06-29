@@ -72,7 +72,7 @@ public class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
 
         if (isObserved() && indirectSource != newIndirectSource) {  // only resubscribe when observed and the indirect source changed
             indirectSourceSubscription.unsubscribe();
-            indirectSourceSubscription = newIndirectSource == null ? Subscription.EMPTY : newIndirectSource.invalidations(this::invalidate);
+            indirectSourceSubscription = newIndirectSource == null ? Subscription.EMPTY : newIndirectSource.subscribe(this::invalidate);
             indirectSource = newIndirectSource;
         }
 
@@ -81,7 +81,7 @@ public class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
 
     @Override
     protected Subscription observeSources() {
-        Subscription subscription = source.invalidations(this::invalidateAll);
+        Subscription subscription = source.subscribe(this::invalidateAll);
 
         return () -> {
             subscription.unsubscribe();

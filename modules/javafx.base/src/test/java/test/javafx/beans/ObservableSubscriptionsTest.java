@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,33 +23,42 @@
  * questions.
  */
 
-package com.sun.javafx.binding;
+package test.javafx.beans;
 
-import java.util.Objects;
-import java.util.function.Function;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import javafx.beans.Subscription;
-import javafx.beans.value.ObservableValue;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class MappedBinding<S, T> extends LazyObjectBinding<T> {
+import org.junit.jupiter.api.Test;
 
-    private final ObservableValue<S> source;
-    private final Function<? super S, ? extends T> mapper;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 
-    public MappedBinding(ObservableValue<S> source, Function<? super S, ? extends T> mapper) {
-        this.source = Objects.requireNonNull(source, "source cannot be null");
-        this.mapper = Objects.requireNonNull(mapper, "mapper cannot be null");
+public class ObservableSubscriptionsTest {
+    private final StringProperty value = new SimpleStringProperty("Initial");
+
+    @Test
+    void subscribeRunnableShouldCallSubscriberWhenObservableInvalidated() {
+        AtomicInteger calls = new AtomicInteger();
+
+        assertEquals(0, calls.get());
+
+        value.subscribe(() -> calls.addAndGet(1));
+
+        assertEquals(0, calls.get());
+
+        value.set("A");
+
+        assertEquals(1, calls.get());
+
+        value.set("B");
+
+        assertEquals(1, calls.get());
     }
 
-    @Override
-    protected T computeValue() {
-        S value = source.getValue();
-
-        return value == null ? null : mapper.apply(value);
-    }
-
-    @Override
-    protected Subscription observeSources() {
-        return source.subscribe(this::invalidate); // start observing source
+    @Test
+    void subscribeRunnableShouldRejectNull() {
+        assertThrows(NullPointerException.class, () -> value.subscribe((Runnable) null));
     }
 }
