@@ -312,7 +312,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         @Override
         public TextCell createTextCell(int index) {
             Region n = generator.get();
-            return new TextCell(index, new NodeCellPane(n));
+            return new TextCell(index, new RegionCellPane(n));
         }
 
         @Override

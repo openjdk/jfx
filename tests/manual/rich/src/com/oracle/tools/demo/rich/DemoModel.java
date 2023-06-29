@@ -25,10 +25,16 @@
 package com.oracle.tools.demo.rich;
 import java.util.Arrays;
 import java.util.Random;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 
 /**
  * RichTextArea demo model.
@@ -96,6 +102,8 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         addSegment("ABCDEFGHIJKLMNO", "-fx-font-family:monospaced;").nl();
         addSegment("        leading and trailing whitespace         ", null, CODE).nl();
         nl(3);
+        
+        addParagraph(this::createRect);
 
         // TODO unicode codepoints
 //        addSegment("Mongolian ᠨᠢᠷᠤᠭᠤ niruγu (нуруу nuruu)", null, null).nl();
@@ -126,12 +134,32 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
             }
             nl();
         }
-        
+
         nl();
         addSegment("\t\t終 The End.", "-fx-font-size:200%;", null);
         nl();
     }
-    
+
+    private Region createRect() {
+        Label t = new Label() {
+            @Override
+            protected double computePrefWidth(double height) {
+                return super.computePrefWidth(height);
+            }
+        };
+        t.setPrefSize(400, 200);
+        t.textProperty().bind(Bindings.createObjectBinding(
+            () -> {
+                return String.format("%.1f x %.1f", t.getWidth(), t.getHeight());
+            },
+            t.widthProperty(),
+            t.heightProperty()
+        ));
+        t.setBackground(Background.fill(Color.LIGHTGRAY));
+        t.maxWidthProperty().bind(t.prefWidthProperty());
+        return t;
+    }
+
     private String word(char c, int len) {
         char[] cs = new char[len];
         Arrays.fill(cs, c);

@@ -101,6 +101,7 @@ public final class TextCell {
         Objects.nonNull(content);
         this.index = index;
         this.content = content;
+        content.setManaged(false);
     }
 
     /**

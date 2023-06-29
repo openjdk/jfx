@@ -41,6 +41,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.rich.CaretInfo;
 import javafx.scene.control.rich.ConfigurationParameters;

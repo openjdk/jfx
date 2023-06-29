@@ -32,37 +32,42 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 
 /**
- * Content pane for TextCell that shows a single region Node.
+ * Content pane for TextCell that shows an arbitrary Region.
  * The content gets resized if it cannot fit into available width.
  */
-public class NodeCellPane extends Pane {
+// TODO move to com.sun
+public class RegionCellPane extends Pane {
     private final Region content;
     private static final Insets PADDING = new Insets(1, 1, 1, 1);
 
-    public NodeCellPane(Region n) {
+    public RegionCellPane(Region n) {
         this.content = n;
 
         getChildren().add(n);
 
         setPadding(PADDING);
-        getStyleClass().add("node-cell-pane");
+        getStyleClass().add("region-cell");
     }
 
     @Override
     protected void layoutChildren() {
-        double w = getWidth();
-        double h = content.prefHeight(w);
-        
+        double width = getWidth() - snappedLeftInset() - snappedRightInset();
+        double w = content.prefWidth(-1);
+        if (w < width) {
+            width = w;
+        }
+        double h = content.prefHeight(width);
+
         double x0 = snappedLeftInset();
         double y0 = snappedTopInset();
         layoutInArea(
             content,
             x0,
             y0,
-            w,
+            width,
             h,
             0,
-            PADDING,
+            null,
             true,
             false,
             HPos.CENTER,
