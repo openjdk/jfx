@@ -93,27 +93,25 @@ public enum ModelChoice {
                     public TextCell createTextCell(int index) {
                         String text = getPlainText(index);
                         TextCell cell = new TextCell(index);
-                        if (text != null) {
-                            int start = 0;
-                            int sz = text.length();
-                            boolean num = false;
-                            for (int i = 0; i < sz; i++) {
-                                char c = text.charAt(i);
-                                if (num != Character.isDigit(c)) {
-                                    if (i > start) {
-                                        String s = text.substring(start, i);
-                                        String style = num ? DIGITS : null;
-                                        cell.addSegment(s, style, null);
-                                        start = i;
-                                    }
-                                    num = !num;
+                        int start = 0;
+                        int sz = text.length();
+                        boolean num = false;
+                        for (int i = 0; i < sz; i++) {
+                            char c = text.charAt(i);
+                            if (num != Character.isDigit(c)) {
+                                if (i > start) {
+                                    String s = text.substring(start, i);
+                                    String style = num ? DIGITS : null;
+                                    cell.addSegment(s, style, null);
+                                    start = i;
                                 }
+                                num = !num;
                             }
-                            if (start < sz) {
-                                String s = text.substring(start);
-                                String style = num ? DIGITS : null;
-                                cell.addSegment(s, style, null);
-                            }
+                        }
+                        if (start < sz) {
+                            String s = text.substring(start);
+                            String style = num ? DIGITS : null;
+                            cell.addSegment(s, style, null);
                         }
                         return cell;
                     }

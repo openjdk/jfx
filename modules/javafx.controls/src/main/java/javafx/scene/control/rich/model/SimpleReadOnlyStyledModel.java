@@ -317,7 +317,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
         @Override
         public String getText() {
-            return null;
+            return "";
         }
     }
 
@@ -335,7 +335,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
         @Override
         public String getText() {
-            return null;
+            return "";
         }
     }
 

@@ -499,14 +499,14 @@ public class RichTextArea extends Control {
         StyledTextModel m = getModel();
         return (m == null) ? 0 : m.size();
     }
-    
+
     public String getPlainText(int modelIndex) {
-        if((modelIndex < 0) || (modelIndex >= getParagraphCount())) {
+        if ((modelIndex < 0) || (modelIndex >= getParagraphCount())) {
             throw new IllegalArgumentException("No paragraph at index=" + modelIndex);
         }
         return getModel().getPlainText(modelIndex);
     }
-    
+
     private RichTextAreaSkin richTextAreaSkin() {
         return (RichTextAreaSkin)getSkin();
     }

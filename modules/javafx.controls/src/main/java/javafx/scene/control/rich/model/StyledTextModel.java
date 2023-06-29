@@ -94,10 +94,9 @@ public abstract class StyledTextModel {
     public abstract int size();
 
     /**
-     * Returns the plain text string for the specified paragraph.  The text string must not
-     * contain any line separators.
+     * Returns the plain text string for the specified paragraph.  The returned text string cannot be null
+     * and must not contain any control characters other than TAB.
      * The caller should never attempt to ask for a paragraph outside of the valid range.
-     * This method might return null if no text is associated with the paragraph.
      *
      * @param index paragraph index in the range (0...{@link #size()})
      */
@@ -436,7 +435,7 @@ public abstract class StyledTextModel {
             } else {
                 ix = ct - 1;
                 String s = getPlainText(ix);
-                int len = (s == null) ? 0 : s.length();
+                int len = s.length();
                 return new TextPos(ct - 1, len);
             }
         }
@@ -466,10 +465,6 @@ public abstract class StyledTextModel {
     /** Returns a TextPos corresponding to the end of paragraph at the given index */
     public TextPos getEndOfParagraphTextPos(int index) {
         String text = getPlainText(index);
-        if (text == null) {
-            return new TextPos(index, 0);
-        }
-
         int off = text.length();
         int cix = off - 1;
         if (cix < 0) {

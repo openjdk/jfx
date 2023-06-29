@@ -343,7 +343,6 @@ public class VFlow extends Pane implements StyleResolver {
     }
     
     public void setContentWidth(double w) {
-        System.out.println("setContentWidth=" + w + " getWidth=" + getWidth()); // FIX
         if (w < Params.LAYOUT_MIN_WIDTH) {
             w = Params.LAYOUT_MIN_WIDTH;
         }
@@ -1056,9 +1055,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     protected void placeNodes() {
         boolean wrap = control.isWrapText() && !control.isUseContentWidth();
-        // FIX should use width not content width! or set content width earlier
         double w = wrap ? getContentWidth() : Params.MAX_WIDTH_FOR_LAYOUT;
-        System.out.println("wrap=" + wrap + " width=" + getWidth() + " w=" + w + " hash=" + hashCode()); // FIX
         double x = snapPositionX(-getOffsetX());
 
         leftGutter.getChildren().clear();

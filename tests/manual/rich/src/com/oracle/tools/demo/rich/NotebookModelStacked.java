@@ -111,7 +111,7 @@ public class NotebookModelStacked extends StyledTextModel {
 
     @Override
     public String getPlainText(int index) {
-        return null;
+        return "";
     }
 
     @Override
