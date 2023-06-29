@@ -28,38 +28,71 @@ package javafx.scene.control.rich.model;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.function.Supplier;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
+import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 
 /**
- * Editable decorated plain text model.
+ * An simple editable StyledTextModel which manages plain text.
+ * <p>
+ * This class provides no styling.  Subclasses might override {@link #createTextCell(int)} to provide
+ * syntax highlighting based on the model content.
  */
-public class EditableDecoratedModel extends BaseDecoratedModel {
+public class BasePlainTextModel extends StyledTextModel {
     private final ArrayList<String> paragraphs = new ArrayList<>();
+    private final SimpleBooleanProperty editable = new SimpleBooleanProperty(true);
 
-    public EditableDecoratedModel() {
-        paragraphs.add("");
+    public BasePlainTextModel() {
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }
 
     @Override
     public int size() {
-        return paragraphs.size();
+        int sz = paragraphs.size();
+        // empty model always have one line
+        return sz == 0 ? 1 : sz;
     }
 
     @Override
     public String getPlainText(int index) {
-        return paragraphs.get(index);
+        if (index < paragraphs.size()) {
+            return paragraphs.get(index);
+        }
+        return "";
+    }
+
+    public TextCell createTextCell(int index) {
+        String text = getPlainText(index);
+        TextCell c = new TextCell(index);
+        c.addSegment(text);
+        return c;
+    }
+
+    @Override
+    public boolean isEditable() {
+        return editable.get();
+    }
+
+    public void setEditable(boolean on) {
+        editable.set(on);
+    }
+
+    public BooleanProperty editableProperty() {
+        return editable;
     }
 
     @Override
     protected int insertTextSegment(StyleResolver resolver, int index, int offset, StyledSegment segment) {
-        String s = paragraphs.get(index);
+        String s = getPlainText(index);
         String text = segment.getText();
 
         String s2 = insertText(s, offset, text);
-        paragraphs.set(index, s2);
+        setText(index, s2);
         return text.length();
     }
 
@@ -70,17 +103,17 @@ public class EditableDecoratedModel extends BaseDecoratedModel {
             return text.substring(0, offset) + toInsert + text.substring(offset);
         }
     }
-    
+
     @Override
     protected void insertLineBreak(int index, int offset) {
-        if(index >= size()) {
+        if (index >= paragraphs.size()) {
             paragraphs.add("");
         } else {
             String s = paragraphs.get(index);
-            if(offset >= s.length()) {
+            if (offset >= s.length()) {
                 paragraphs.add(index + 1, "");
             } else {
-                paragraphs.set(index, s.substring(0, offset));
+                setText(index, s.substring(0, offset));
                 paragraphs.add(index + 1, s.substring(offset));
             }
         }
@@ -89,7 +122,7 @@ public class EditableDecoratedModel extends BaseDecoratedModel {
     @Override
     protected void removeRegion(TextPos start, TextPos end) {
         int ix = start.index();
-        String text = paragraphs.get(ix);
+        String text = getPlainText(ix);
         String newText;
 
         if (ix == end.index()) {
@@ -99,16 +132,25 @@ public class EditableDecoratedModel extends BaseDecoratedModel {
             } else {
                 newText = text.substring(0, start.offset()) + text.substring(end.offset());
             }
-            paragraphs.set(ix, newText);
+            setText(ix, newText);
         } else {
             newText = text.substring(0, start.offset()) + paragraphs.get(end.index()).substring(end.offset());
-            paragraphs.set(ix, newText);
+            setText(ix, newText);
 
             int ct = end.index() - ix;
             ix++;
             for (int i = 0; i < ct; i++) {
                 paragraphs.remove(ix);
             }
+        }
+    }
+
+    private void setText(int index, String text) {
+        if (index < paragraphs.size()) {
+            paragraphs.set(index, text);
+        } else {
+            // due to emulated empty paragraph in an empty model
+            paragraphs.add(text);
         }
     }
 
@@ -138,7 +180,7 @@ public class EditableDecoratedModel extends BaseDecoratedModel {
         // no-op
         return false;
     }
-    
+
     @Override
     public StyleInfo getStyleInfo(TextPos pos) {
         return StyleInfo.NONE;
@@ -149,12 +191,6 @@ public class EditableDecoratedModel extends BaseDecoratedModel {
      * @param text text to add.  must not contain newlines and other control characters except for TAB.
      */
     public void addParagraph(String text) {
-        // TODO this makes no sense.  better to init to an empty array and patch size()/get*() to create an appearance
-        // of the first empty row
-        if ((size() == 1) && (getPlainText(0).length() == 0)) {
-            paragraphs.remove(0);
-        }
-        // TODO check for control characters
         paragraphs.add(text);
     }
 }

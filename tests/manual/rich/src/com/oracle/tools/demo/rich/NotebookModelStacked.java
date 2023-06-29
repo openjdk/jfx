@@ -34,13 +34,12 @@ import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.EditableDecoratedModel;
+import javafx.scene.control.rich.model.BasePlainTextModel;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.model.StyledTextModel;
-import javafx.scene.control.rich.model.SyntaxDecorator;
 
 public class NotebookModelStacked extends StyledTextModel {
     enum Type {
@@ -66,30 +65,35 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     public static StyledTextModel create(Type type, String ... text) {
-        EditableDecoratedModel m = new EditableDecoratedModel();
+        BasePlainTextModel m;
         switch(type) {
         case CODE:
-            m.setDecorator(new SyntaxDecorator() {
+            m = new BasePlainTextModel() {
                 @Override
-                public TextCell createTextCell(int index, String text) {
+                public TextCell createTextCell(int index) {
+                    String text = getPlainText(index);
                     TextCell c = new TextCell(index);
                     c.addSegment(text, "-fx-text-fill:darkgreen; -fx-font-family:Monospace;", null);
                     return c;
                 }
-            });
+            };
             break;
         case COMMENT:
-            m.setDecorator(new SyntaxDecorator() {
+            m = new BasePlainTextModel() {
                 @Override
-                public TextCell createTextCell(int index, String text) {
+                public TextCell createTextCell(int index) {
+                    String text = getPlainText(index);
                     TextCell c = new TextCell(index);
                     c.addSegment(text, "-fx-text-fill:gray;", null);
                     return c;
                 }
-            });
+            };
             break;
+        default:
+            throw new Error("?" + type);
         }
-        for(String s: text) {
+
+        for (String s : text) {
             m.addParagraph(s);
         }
         return m;

@@ -24,8 +24,9 @@
  */
 package com.oracle.tools.demo.rich;
 
+import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.EditableDecoratedModel;
+import javafx.scene.control.rich.model.BasePlainTextModel;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
 import javafx.scene.control.rich.model.StyleAttrs;
@@ -85,8 +86,38 @@ public enum ModelChoice {
             return new InlineNodesModel();
         case EDITABLE_PLAIN:
             {
-                EditableDecoratedModel m = new EditableDecoratedModel();
-                m.setDecorator(new DemoSyntaxDecorator());
+                BasePlainTextModel m = new BasePlainTextModel() {
+                    private static final String DIGITS = "-fx-fill:magenta;";
+
+                    @Override
+                    public TextCell createTextCell(int index) {
+                        String text = getPlainText(index);
+                        TextCell cell = new TextCell(index);
+                        if (text != null) {
+                            int start = 0;
+                            int sz = text.length();
+                            boolean num = false;
+                            for (int i = 0; i < sz; i++) {
+                                char c = text.charAt(i);
+                                if (num != Character.isDigit(c)) {
+                                    if (i > start) {
+                                        String s = text.substring(start, i);
+                                        String style = num ? DIGITS : null;
+                                        cell.addSegment(s, style, null);
+                                        start = i;
+                                    }
+                                    num = !num;
+                                }
+                            }
+                            if (start < sz) {
+                                String s = text.substring(start);
+                                String style = num ? DIGITS : null;
+                                cell.addSegment(s, style, null);
+                            }
+                        }
+                        return cell;
+                    }
+                };
                 return m;
             }
         case EDITABLE_STYLED:
