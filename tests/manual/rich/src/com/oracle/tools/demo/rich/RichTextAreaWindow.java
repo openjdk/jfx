@@ -45,6 +45,7 @@ public class RichTextAreaWindow extends Stage {
         demoPane = new RichTextAreaDemoPane(useContentSize);
         
         MenuBar mb = new MenuBar();
+        // file
         FX.menu(mb, "File");
         FX.item(mb, "New Window", () -> newWindow(false));
         FX.item(mb, "New Window, Use Content Size", () -> newWindow(true));
@@ -52,7 +53,10 @@ public class RichTextAreaWindow extends Stage {
         FX.item(mb, "Close Window", this::hide);
         FX.separator(mb);
         FX.item(mb, "Quit", () -> Platform.exit());
-        
+        // tests
+        FX.menu(mb, "Tests");
+        FX.item(mb, "Multiple Areas Stacked in VBox", this::openMultipeStacked);
+
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));
         
@@ -100,5 +104,9 @@ public class RichTextAreaWindow extends Stage {
         w.setWidth(getWidth());
         w.setHeight(getHeight());
         w.show();
+    }
+    
+    protected void openMultipeStacked() {
+        new MultipleStackedVBoxWindow().show();
     }
 }

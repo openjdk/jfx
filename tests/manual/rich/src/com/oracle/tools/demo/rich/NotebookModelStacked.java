@@ -49,15 +49,23 @@ public class NotebookModelStacked extends StyledTextModel {
         TEXTAREA,
     }
     
-    private final ArrayList<StyledTextModel> paragraphs = new ArrayList<>();
+    private final ArrayList<Object> paragraphs = new ArrayList<>();
 
     public NotebookModelStacked() {
-        add(Type.COMMENT, "This is", "a comment cell.");
-        add(Type.TEXTAREA);
-        add(Type.CODE, "x = 5;", "print(x);"); 
+        paragraphs.add(m1());
+        paragraphs.add(Type.TEXTAREA);
+        paragraphs.add(m2());
     }
-    
-    public void add(Type type, String ... text) {
+
+    public static StyledTextModel m1() {
+        return create(Type.COMMENT, "This is", "a comment cell.");
+    }
+
+    public static StyledTextModel m2() {
+        return create(Type.CODE, "x = 5;", "print(x);");
+    }
+
+    public static StyledTextModel create(Type type, String ... text) {
         EditableDecoratedModel m = new EditableDecoratedModel();
         switch(type) {
         case CODE:
@@ -80,14 +88,11 @@ public class NotebookModelStacked extends StyledTextModel {
                 }
             });
             break;
-        case TEXTAREA:
-            paragraphs.add(null);
-            return;
         }
         for(String s: text) {
             m.addParagraph(s);
         }
-        paragraphs.add(m);
+        return m;
     }
 
     @Override
@@ -105,28 +110,25 @@ public class NotebookModelStacked extends StyledTextModel {
         return null;
     }
 
-    private boolean addli = true; // FIX
     @Override
     public TextCell createTextCell(int index) {
-        StyledTextModel m = paragraphs.get(index);
-        if(m == null) {
-            TextArea t = new TextArea();
+        Object x = paragraphs.get(index);
+        if(x instanceof StyledTextModel m) {
+            RichTextArea t = new RichTextArea(m);
             t.setMaxWidth(Double.POSITIVE_INFINITY);
             t.setWrapText(true);
+            t.setUseContentHeight(true);
             return new TextCell(index, t);
+        } else if(x instanceof Type type) {
+            switch(type) {
+            case TEXTAREA:
+                TextArea t = new TextArea();
+                t.setMaxWidth(Double.POSITIVE_INFINITY);
+                t.setWrapText(true);
+                return new TextCell(index, t);
+            }
         }
-        RichTextArea t = new RichTextArea(m);
-        if(addli) {
-            t.widthProperty().addListener((s,p,c) -> {
-                double ww = c.doubleValue();
-                System.out.println("TextCell.width=" + c); // FIX
-            });
-            addli = false;
-        }
-        t.setMaxWidth(Double.POSITIVE_INFINITY);
-        t.setWrapText(true);
-        t.setUseContentHeight(true);
-        return new TextCell(index, t);
+        throw new Error("?" + x);
     }
 
     @Override

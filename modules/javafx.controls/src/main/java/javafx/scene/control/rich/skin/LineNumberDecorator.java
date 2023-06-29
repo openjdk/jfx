@@ -35,7 +35,7 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.paint.Color;
 
 /**
- * Side decorator that shows model line numbers, 1-based.
+ * Side decorator that shows model "line" numbers, 1-based.
  */
 public class LineNumberDecorator implements SideDecorator {
     private final DecimalFormat format;
