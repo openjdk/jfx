@@ -39,6 +39,7 @@ import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
+import com.sun.javafx.scene.control.rich.RegionCellPane;
 
 /**
  * A simple read-only, in-memory styled text model.
