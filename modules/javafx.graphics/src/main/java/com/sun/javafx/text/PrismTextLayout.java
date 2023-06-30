@@ -425,6 +425,7 @@ public class PrismTextLayout implements TextLayout {
         int insertionIndex = -1;
         boolean leading = false;
         int relIndex = 0;
+        int textWidthPrevLine = 0;
 
         ensureLayout();
         int lineIndex = getLineIndex(y, text);
@@ -451,7 +452,14 @@ public class PrismTextLayout implements TextLayout {
                     }
                 }
             } else {
-                for(TextRun r: runs) {
+                for (int i = 0; i < lineIndex; i++) {
+                    for (TextRun r: lines[i].runs) {
+                        if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                            textWidthPrevLine += r.getLength();
+                        }
+                    }
+                }
+                for (TextRun r: runs) {
                     if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
                         if (x > r.getWidth()) {
                             x -= r.getWidth();
@@ -466,12 +474,10 @@ public class PrismTextLayout implements TextLayout {
 
             if (run != null) {
                 int[] trailing = new int[1];
-                int temp = run.getOffsetAtX(x, trailing);
                 if (text != null && spans != null) {
                     charIndex = run.getOffsetAtX(x, trailing);
-                    if (relIndex != 0) {
-                        charIndex += relIndex;
-                    }
+                    charIndex += textWidthPrevLine;
+                    charIndex += relIndex;
                 } else {
                     charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
                 }
@@ -734,11 +740,19 @@ public class PrismTextLayout implements TextLayout {
         int index = 0;
         float bottom = 0;
         boolean isTextPresent = text == null ? true : false;
+        boolean isPresent = true;
         int lineCount = getLineCount();
         while (index < lineCount) {
             if (text != null) {
                 for (TextRun r: lines[index].runs) {
-                    if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                    if (r.getTextSpan() == null) {
+                        isTextPresent = true;
+                        break;
+                    } else if (r.getTextSpan().getText().equals(text)) {
+                        if (isPresent) {
+                            bottom = 0;
+                            isPresent = false;
+                        }
                         isTextPresent = true;
                         break;
                     }
