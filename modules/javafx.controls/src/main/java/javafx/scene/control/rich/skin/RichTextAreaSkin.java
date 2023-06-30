@@ -60,6 +60,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final ListenerHelper listenerHelper;
     private final RichTextAreaBehavior behavior;
     private final VFlow vflow;
+    private final Pane mainPane;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
 
@@ -114,7 +115,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
         // TODO corner? only when both scroll bars are visible
 
-        getChildren().addAll(new Pane(vflow, vscroll, hscroll) {
+        mainPane = new Pane(vflow, vscroll, hscroll) {
             @Override
             protected void layoutChildren() {
                 double x0 = snappedLeftInset();
@@ -146,7 +147,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 layoutInArea(hscroll, x0 + 1, h, w, hscrollHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
                 layoutInArea(vflow, x0, y0, w, h, -1, null, true, true, HPos.LEFT, VPos.TOP);
             }
-        });
+        };
+        getChildren().addAll(mainPane);
 
         // TODO can use ConfigurationParameters generator to create custom behavior
         behavior = createBehavior();
@@ -165,6 +167,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         listenerHelper.addInvalidationListener(vflow::handleUseContentWidth, true, control.useContentWidthProperty());
         listenerHelper.addInvalidationListener(vflow::handleVerticalScroll, vscroll.valueProperty());
         listenerHelper.addInvalidationListener(vflow::handleHorizontalScroll, hscroll.valueProperty());
+        listenerHelper.addInvalidationListener(this::handleWrapText, control.wrapTextProperty());
     }
 
     /**
@@ -203,6 +206,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     
             super.dispose();
         }
+    }
+
+    private void handleWrapText() {
+        vflow.handleWrapText();
+        // requestLayout() in vflow is insufficient, for reasons unknown
+        mainPane.requestLayout();
     }
 
     // TODO is this needed?

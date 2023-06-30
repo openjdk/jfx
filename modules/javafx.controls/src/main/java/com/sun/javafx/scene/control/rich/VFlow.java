@@ -71,7 +71,6 @@ import com.sun.javafx.scene.control.ListenerHelper;
  * Virtual text flow deals with TextCells, scroll bars, and conversion
  * between the model and the screen coordinates.
  */
-// in theory, this class can be hidden as implementation detail.
 public class VFlow extends Pane implements StyleResolver {
     private final RichTextArea control;
     private final ConfigurationParameters config;
@@ -165,7 +164,6 @@ public class VFlow extends Pane implements StyleResolver {
 
     public void addListeners(ListenerHelper lh) {
         lh.addInvalidationListener(this::handleModelChange, control.modelProperty());
-        lh.addInvalidationListener(this::handleWrapText, control.wrapTextProperty());
         
         lh.addChangeListener(
             this::updateHorizontalScrollBar,
@@ -224,9 +222,10 @@ public class VFlow extends Pane implements StyleResolver {
         }
         setOffsetX(-leftPadding);
         cellCache.clear();
-        requestLayout();
+
         updateHorizontalScrollBar();
         updateVerticalScrollBar();
+        requestLayout();
     }
 
     public void handleDecoratorChange() {
@@ -460,7 +459,7 @@ public class VFlow extends Pane implements StyleResolver {
         if (end.index() < topCellIndex) {
             // selection is above visible area
             return;
-        } else if (start.index() >= (topCellIndex + textCellLayout().getVisibleCellCount())) {
+        } else if (start.index() >= (topCellIndex + arrangement().getVisibleCellCount())) {
             // selection is below visible area
             return;
         }
@@ -496,7 +495,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     protected void createCurrentLineHighlight(FxPathBuilder b, TextPos caret) {
         int ix = caret.index();
-        TextCell cell = textCellLayout().getVisibleCell(ix);
+        TextCell cell = arrangement().getVisibleCell(ix);
         if(cell != null) {
             double w;
             if(control.isWrapText()) {
@@ -512,12 +511,12 @@ public class VFlow extends Pane implements StyleResolver {
     public TextPos getTextPosLocal(double localX, double localY) {
         // convert to cell coordinates
         double x = localX + getOffsetX();
-        return textCellLayout().getTextPos(x, localY);
+        return arrangement().getTextPos(x, localY);
     }
 
     /** uses vflow.content coordinates */
     protected CaretInfo getCaretInfo(TextPos p) {
-        return textCellLayout().getCaretInfo(getOffsetX() + leftPadding, p);
+        return arrangement().getCaretInfo(getOffsetX() + leftPadding, p);
     }
 
     /** returns caret sizing info using vflow.content coordinates, or null */
@@ -556,7 +555,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     /** returns the shape if both ends are at the same line */
     protected PathElement[] getRangeShape(int line, int startOffset, int endOffset) {
-        TextCell cell = textCellLayout().getVisibleCell(line);
+        TextCell cell = arrangement().getVisibleCell(line);
         if (cell == null) {
             return null;
         }
@@ -631,11 +630,11 @@ public class VFlow extends Pane implements StyleResolver {
             visible = 1.0;
             val = 0.0;
         } else {
-            CellArrangement la = textCellLayout();
-            double av = la.averageHeight();
-            double max = la.estimatedMax();
+            CellArrangement ar = arrangement();
+            double av = ar.averageHeight();
+            double max = ar.estimatedMax();
             double h = getHeight();
-            val = toScrollBarValue((topCellIndex() - la.topCount()) * av + la.topHeight(), h, max);
+            val = toScrollBarValue((topCellIndex() - ar.topCount()) * av + ar.topHeight(), h, max);
             visible = h / max;
         }
 
@@ -662,7 +661,7 @@ public class VFlow extends Pane implements StyleResolver {
             double visible = vscroll.getVisibleAmount();
             double pos = fromScrollBarValue(val, visible, max); // max is 1.0
 
-            Origin p = textCellLayout().fromAbsolutePosition(pos);
+            Origin p = arrangement().fromAbsolutePosition(pos);
             setOrigin(p);
         }
     }
@@ -813,9 +812,9 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     /** returns a non-null layout, laying out cells if necessary */
-    protected CellArrangement textCellLayout() {
+    protected CellArrangement arrangement() {
         if(arrangement == null) {
-            layoutChildren();
+            reflow();
         }
         return arrangement;
     }
@@ -1049,7 +1048,25 @@ public class VFlow extends Pane implements StyleResolver {
                 setContentWidth(Math.max(unwrappedWidth, width));
             }
         }
-        
+
+        if (useContentWidth) {
+            // update pref width property unless bound
+            if (!prefWidthProperty().isBound()) {
+                double w = arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
+                System.out.println("setPrefWidth: " + w); // FIX
+                setPrefWidth(w);
+            }
+        }
+
+        if (useContentHeight) {
+            // update pref height property unless bound
+            if (!prefHeightProperty().isBound()) {
+                double h = Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
+                System.out.println("setPrefHeight: " + h); // FIX
+                setPrefHeight(h);
+            }
+        }
+
         // actually place content nodes
         placeNodes();
     }
@@ -1115,7 +1132,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     /** scroll by a number of pixels, delta must not exceed the view height in absolute terms */
     public void blockScroll(double delta, boolean forceLayout) {
-        Origin or = textCellLayout().computeOrigin(delta);
+        Origin or = arrangement().computeOrigin(delta);
         if (or != null) {
             setOrigin(or);
             if (forceLayout) {
@@ -1203,7 +1220,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     protected void checkForExcessiveWhitespaceAtTheEnd() {
-        double delta = textCellLayout().bottomHeight() - getViewHeight();
+        double delta = arrangement().bottomHeight() - getViewHeight();
         if (delta < 0) {
             if (getOrigin().index() == 0) {
                 if (getOrigin().offset() <= -topPadding) {
