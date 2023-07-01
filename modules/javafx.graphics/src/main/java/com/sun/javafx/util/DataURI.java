@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package com.sun.javafx.util;
 
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -103,7 +104,6 @@ public class DataURI {
         }
 
         String data = uri.substring(dataSeparator + 1);
-        Charset charset = Charset.defaultCharset();
 
         return new DataURI(
             uri,
@@ -112,9 +112,7 @@ public class DataURI {
             mimeSubtype,
             nameValuePairs,
             base64,
-            base64 ?
-                Base64.getDecoder().decode(data) :
-                URLDecoder.decode(data.replace("+", "%2B"), charset).getBytes(charset));
+            base64 ? Base64.getDecoder().decode(data) : decodePercentEncoding(data));
     }
 
     private final String originalUri;
@@ -206,6 +204,69 @@ public class DataURI {
         int result = Objects.hash(mimeType, mimeSubtype, base64);
         result = 31 * result + Arrays.hashCode(data);
         return result;
+    }
+
+    private static byte[] decodePercentEncoding(String input) {
+        try (var output = new ByteArrayOutputStream(input.length())) {
+            decodePercentEncodingToStream(input, output);
+            return output.toByteArray();
+        } catch (IOException ignored) {
+            // can never happen for ByteArrayOutputStream
+            return null;
+        }
+    }
+
+    /**
+     * Decodes percent-encoded text as specified by RFC 3986, page 11.
+     * This method does not make any assumptions about the allowed character set.
+     */
+    private static void decodePercentEncodingToStream(String input, OutputStream output) throws IOException {
+        enum ParseState {
+            DEFAULT,
+            FIRST_HEX_DIGIT,
+            SECOND_HEX_DIGIT
+        }
+
+        ParseState parseState = ParseState.DEFAULT;
+        int firstDigit = 0;
+
+        for (int i = 0; i < input.length(); ++i) {
+            char c = input.charAt(i);
+
+            parseState = switch (parseState) {
+                case DEFAULT -> {
+                    if (c == '%') {
+                        yield ParseState.FIRST_HEX_DIGIT;
+                    } else {
+                        output.write(c);
+                        yield ParseState.DEFAULT;
+                    }
+                }
+
+                case FIRST_HEX_DIGIT -> {
+                    firstDigit = hexDigit(c);
+                    yield ParseState.SECOND_HEX_DIGIT;
+                }
+
+                case SECOND_HEX_DIGIT -> {
+                    output.write(firstDigit << 4 | hexDigit(c));
+                    yield ParseState.DEFAULT;
+                }
+            };
+        }
+
+        if (parseState != ParseState.DEFAULT) {
+            throw new IllegalArgumentException("Incomplete character escape sequence");
+        }
+    }
+
+    private static int hexDigit(char c) {
+        int digit = Character.digit(c, 16);
+        if (digit < 0) {
+            throw new IllegalArgumentException("Invalid symbol in character escape sequence");
+        }
+
+        return digit;
     }
 
 }
