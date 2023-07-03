@@ -369,7 +369,7 @@ public class TableColumnHeader extends Region {
             isSizeDirty = false;
         }
 
-        double cornerRegionPadding = tableHeaderRow == null ? 0.0 : tableHeaderRow.cornerPadding.get();
+        double cornerRegionPadding = tableHeaderRow == null || !isLastVisibleColumn ? 0.0 : tableHeaderRow.cornerPadding.get();
         double sortWidth = 0;
         double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset()) - cornerRegionPadding;
         double h = getHeight() - (snappedTopInset() + snappedBottomInset());
