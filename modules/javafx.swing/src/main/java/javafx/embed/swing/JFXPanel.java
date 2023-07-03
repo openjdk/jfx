@@ -626,6 +626,9 @@ public class JFXPanel extends JComponent {
         newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
                           getDefaultScreenDevice().getDefaultConfiguration().
                           getDefaultTransform().getScaleY();
+        if (oldWidth == 0 && oldHeight == 0 && pWidth == 0 && pHeight == 0) {
+            return;
+        }
         if (oldWidth != pWidth || oldHeight != pHeight ||
             newScaleFactorX != scaleFactorX || newScaleFactorY != scaleFactorY)
         {
