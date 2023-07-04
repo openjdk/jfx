@@ -947,7 +947,7 @@ public class JFXPanel extends JComponent {
     public InputMethodRequests getInputMethodRequests() {
         EmbeddedSceneInterface scene = scenePeer;
         if (scene == null) {
-            return null;
+            return new InputMethodSupport.InputMethodRequestsAdapter(null);
         }
         return new InputMethodSupport.InputMethodRequestsAdapter(scene.getInputMethodRequests());
     }
@@ -1025,6 +1025,7 @@ public class JFXPanel extends JComponent {
                 });
                 return;
             }
+            getInputMethodRequests();
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
