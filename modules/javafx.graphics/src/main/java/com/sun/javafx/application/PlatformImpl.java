@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package com.sun.javafx.application;
 
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.preferences.ApplicationPreferences;
+import com.sun.javafx.application.preferences.PlatformPreferences;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
@@ -1044,4 +1046,48 @@ public class PlatformImpl {
                 return Toolkit.getToolkit().isSupported(feature);
         }
     }
+
+    private static final PlatformPreferences platformPreferences = new PlatformPreferences();
+
+    public static PlatformPreferences getPlatformPreferences() {
+        return platformPreferences;
+    }
+
+    private static final ApplicationPreferences applicationPreferences = new ApplicationPreferences();
+
+    public static ApplicationPreferences getApplicationPreferences() {
+        return applicationPreferences;
+    }
+
+    /**
+     * Called by Glass when one or several platform preferences have changed.
+     * <p>
+     * This method can be called on any thread. The supplied {@code preferences} map may
+     * include all platform preferences, or only the changed preferences.
+     *
+     * @param preferences a map that includes the changed preferences
+     */
+    public static void updatePreferences(Map<String, Object> preferences) {
+        if (isFxApplicationThread()) {
+            checkHighContrastThemeChanged(preferences);
+            platformPreferences.update(preferences);
+            applicationPreferences.update(preferences);
+        } else {
+            // Make a defensive copy in case the caller of this method decides to re-use or
+            // modify its preferences map after the method returns. Don't use Map.copyOf
+            // because the preferences map may contain null values.
+            Map<String, Object> preferencesCopy = new HashMap<>(preferences);
+            runLater(() -> updatePreferences(preferencesCopy));
+        }
+    }
+
+    // This method will be removed when StyleThemes are added.
+    private static void checkHighContrastThemeChanged(Map<String, Object> preferences) {
+        if (preferences.get("Windows.SPI.HighContrastOn") == Boolean.TRUE) {
+            setAccessibilityTheme(preferences.get("Windows.SPI.HighContrastColorScheme") instanceof String s ? s : null);
+        } else {
+            setAccessibilityTheme(null);
+        }
+    }
+
 }

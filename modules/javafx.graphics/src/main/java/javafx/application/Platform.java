@@ -30,7 +30,12 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.Optional;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.collections.ObservableMap;
 import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.stage.Appearance;
 
 /**
  * Application platform support class.
@@ -431,5 +436,288 @@ public final class Platform {
             accessibilityActiveProperty.bind(PlatformImpl.accessibilityActiveProperty());
         }
         return accessibilityActiveProperty.getReadOnlyProperty();
+    }
+
+    /**
+     * Gets the preferences of the current platform.
+     * <p>
+     * The map returned from this method is unmodifiable, which means that keys and values cannot
+     * be added, removed, or updated. Calling any mutator method on the map will always cause
+     * {@code UnsupportedOperationException} to be thrown. However, the mappings will be updated
+     * by JavaFX when the operating system reports a different value for a platform preference.
+     * <p>
+     * Applications and libraries are encouraged to use {@link Application#getPreferences()
+     * application preferences} instead of platform preferences, as application preferences can be
+     * overridden by user code.
+     *
+     * @see Application#getPreferences()
+     * @return the {@code Preferences} instance
+     * @since 21
+     */
+    public static Preferences getPreferences() {
+        return PlatformImpl.getPlatformPreferences();
+    }
+
+    /**
+     * Contains UI preferences of the current platform.
+     * <p>
+     * {@code Preferences} extends {@link ObservableMap} to expose platform preferences as key-value pairs.
+     * For convenience, {@link #getInteger}, {@link #getDouble}, {@link #getBoolean}, {@link #getString},
+     * {@link #getColor}, {@link #getPaint}, and {@link #getValue} are provided as typed alternatives to
+     * the untyped {@link #get} method.
+     * <p>
+     * The preferences that are reported by the platform may be dependent on the operating system version,
+     * so applications should not assume that a particular preference is always available.
+     * <p>
+     * The following list contains all preferences that are potentially available on the specified platforms:
+     *
+     * <table>
+     *     <caption></caption>
+     *     <tbody>
+     *         <tr><th colspan="2" scope="colgroup">Platform-independent preferences</th></tr>
+     *         <tr><td>{@code javafx.backgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code javafx.foregroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code javafx.accentColor}</td><td>{@link Color}</td></tr>
+     *         <tr></tr>
+     *         <tr><th colspan="2" scope="colgroup">Windows</th></tr>
+     *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.SPI.HighContrastColorScheme}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_3DFACE}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_BTNTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_GRAYTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_HIGHLIGHT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_HIGHLIGHTTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_HOTLIGHT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_WINDOW}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.SysColor.COLOR_WINDOWTEXT}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.Background}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.Foreground}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentDark3}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentDark2}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentDark1}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.Accent}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentLight1}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentLight2}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UIColor.AccentLight3}</td><td>{@link Color}</td></tr>
+     *         <tr></tr>
+     *         <tr><th colspan="2" scope="colgroup">macOS</th></tr>
+     *         <tr><td>{@code macOS.NSColor.labelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.secondaryLabelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.tertiaryLabelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.quaternaryLabelColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.textColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.placeholderTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.textBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedTextBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.keyboardFocusIndicatorColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedTextBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.linkColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.separatorColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedContentBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedContentBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedMenuItemTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.gridColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.headerTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.alternatingContentBackgroundColors}</td><td>{@link Color}{@code []}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlAccentColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.controlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.disabledControlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedControlColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.selectedControlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.alternateSelectedControlTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.currentControlTint}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.windowBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.windowFrameTextColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.underPageBackgroundColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.findHighlightColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.highlightColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.shadowColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemBlueColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemBrownColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemGrayColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemGreenColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemIndigoColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemOrangeColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemPinkColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemPurpleColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemRedColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemTealColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSColor.systemYellowColor}</td><td>{@link Color}</td></tr>
+     *         <tr></tr>
+     *         <tr><th colspan="2" scope="colgroup">Linux</th></tr>
+     *         <tr><td>{@code GTK.theme_name}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code GTK.theme_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_selected_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_selected_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_selected_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_selected_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.borders}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.unfocused_borders}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.warning_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.error_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.success_color}</td><td>{@link Color}</td></tr>
+     *         <tr></tr>
+     *     </tbody>
+     * </table>
+     *
+     * @since 21
+     */
+    public interface Preferences extends ObservableMap<String, Object> {
+        /**
+         * The platform appearance, which specifies whether applications should use a light
+         * or dark color scheme. The value of this property is derived from the perceptual
+         * brightness of {@link #backgroundColorProperty() backgroundColor} in relation to
+         * {@link #foregroundColorProperty() foregroundColor} and defaults to {@link Appearance#LIGHT}
+         * if the platform does not report color preferences.
+         *
+         * @return the {@code appearance} property
+         */
+        ReadOnlyObjectProperty<Appearance> appearanceProperty();
+
+        /**
+         * Gets the value of the {@link #appearanceProperty() appearance} property.
+         *
+         * @return the platform appearance
+         */
+        Appearance getAppearance();
+
+        /**
+         * The color used for background regions. The value of this property corresponds to the
+         * reported color value for the {@code javafx.backgroundColor} key. If the platform does
+         * not report a background color, this property defaults to {@code Color.WHITE}.
+         *
+         * @return the {@code backgroundColor} property
+         */
+        ReadOnlyObjectProperty<Color> backgroundColorProperty();
+
+        /**
+         * Gets the value of the {@link #backgroundColorProperty() backgroundColor} property.
+         *
+         * @return the background color
+         */
+        Color getBackgroundColor();
+
+        /**
+         * The color used for foreground elements like text. The value of this property corresponds
+         * to the reported color value for the {@code javafx.foregroundColor} key. If the platform
+         * does not report a foreground color, this property defaults to {@code Color.BLACK}.
+         *
+         * @return the {@code foregroundColor} property
+         */
+        ReadOnlyObjectProperty<Color> foregroundColorProperty();
+
+        /**
+         * Gets the value of the {@link #foregroundColorProperty() foregroundColor} property.
+         *
+         * @return the foreground color
+         */
+        Color getForegroundColor();
+
+        /**
+         * The accent color. The value of this property corresponds to the reported color value
+         * for the {@code javafx.accentColor} key. If the platform does not report an accent color,
+         * this property defaults to {@code #157EFB}.
+         *
+         * @return the {@code accentColor} property
+         */
+        ReadOnlyObjectProperty<Color> accentColorProperty();
+
+        /**
+         * Gets the value of the {@link #accentColorProperty() accentColor} property.
+         *
+         * @return the accent color
+         */
+        Color getAccentColor();
+
+        /**
+         * Returns the {@link Integer} instance to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mapped to a {@code Integer} instance
+         * @return the {@code Integer} instance to which the key is mapped, or {@code Optional.empty()}
+         *         if no mapping exists for the specified key
+         */
+        Optional<Integer> getInteger(String key);
+
+        /**
+         * Returns the {@link Double} instance to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mapped to a {@code Double} instance
+         * @return the {@code Double} instance to which the key is mapped, or {@code Optional.empty()}
+         *         if no mapping exists for the specified key
+         */
+        Optional<Double> getDouble(String key);
+
+        /**
+         * Returns the {@link Boolean} instance to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mapped to a {@code Boolean} instance
+         * @return the {@code Boolean} instance to which the key is mapped, or {@code Optional.empty()}
+         *         if no mapping exists for the specified key
+         */
+        Optional<Boolean> getBoolean(String key);
+
+        /**
+         * Returns the {@link String} instance to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mapped to a {@code String} instance
+         * @return the {@code String} instance to which the key is mapped, or {@code Optional.empty()}
+         *         if no mapping exists for the specified key
+         */
+        Optional<String> getString(String key);
+
+        /**
+         * Returns the {@link Color} instance to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mapped to a {@code Color} instance
+         * @return the {@code Color} instance to which the key is mapped, or {@code Optional.empty()}
+         *         if no mapping exists for the specified key
+         */
+        Optional<Color> getColor(String key);
+
+        /**
+         * Returns the {@link Paint} instance to which the specified key is mapped.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mapped to a {@code Paint} instance
+         * @return the {@code Paint} instance to which the key is mapped, or {@code Optional.empty()}
+         *         if no mapping exists for the specified key
+         */
+        Optional<Paint> getPaint(String key);
+
+        /**
+         * Returns the value to which the specified key is mapped.
+         *
+         * @param <T> the type of the value
+         * @param key the key
+         * @param type the type of the value
+         * @throws NullPointerException if {@code key} is null
+         * @throws IllegalArgumentException if the key is not mapped to a {@code type} instance
+         * @return the value to which the key is mapped, or {@code Optional.empty()}
+         *         if no mapping exists for the specified key
+         */
+        <T> Optional<T> getValue(String key, Class<T> type);
     }
 }

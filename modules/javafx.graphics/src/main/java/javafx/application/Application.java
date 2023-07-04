@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@ import java.util.Map;
 import javafx.application.Preloader.PreloaderNotification;
 import javafx.css.Stylesheet;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
+import javafx.stage.Appearance;
 import javafx.stage.Stage;
 
 import com.sun.javafx.application.LauncherImpl;
@@ -537,5 +539,108 @@ public abstract class Application {
         } else {
             PlatformImpl.setPlatformUserAgentStylesheet(url);
         }
+    }
+
+    /**
+     * Gets the preferences of the current application.
+     * <p>
+     * The map returned from this method includes all platform preferences, and is updated by JavaFX
+     * when the operating system reports a different value for a platform preference. In contrast to
+     * {@link Platform#getPreferences()}, the mappings in the application preferences map can be
+     * overridden by user code. An overridden value always takes precedence over a platform-provided
+     * value.
+     *
+     * @return the {@code Preferences} instance
+     * @since 21
+     */
+    public static Preferences getPreferences() {
+        return PlatformImpl.getApplicationPreferences();
+    }
+
+    public interface Preferences extends Platform.Preferences {
+        /**
+         * Overrides the value of the {@link #appearanceProperty() appearance} property.
+         * <p>
+         * Specifying {@code null} clears the override, which restores the value of the
+         * {@code appearance} property to the platform-provided value.
+         *
+         * @param appearance the platform appearance override, or {@code null} to clear the override
+         */
+        void setAppearance(Appearance appearance);
+
+        /**
+         * Overrides the value of the {@link #backgroundColorProperty() backgroundColor} property.
+         * <p>
+         * Specifying {@code null} clears the override, which restores the value of the
+         * {@code backgroundColor} property to the platform-provided value.
+         * <p>
+         * Overriding this property will not override key-value mappings that represent the
+         * background color in the underlying map.
+         *
+         * @param color the background color override, or {@code null} to clear the override
+         */
+        void setBackgroundColor(Color color);
+
+        /**
+         * Overrides the value of the {@link #foregroundColorProperty() foregroundColor} property.
+         * <p>
+         * Specifying {@code null} clears the override, which restores the value of the
+         * {@code foregroundColor} property to the platform-provided value.
+         * <p>
+         * Overriding this property will not override key-value mappings that represent the
+         * foreground color in the underlying map.
+         *
+         * @param color the foreground color override, or {@code null} to clear the override
+         */
+        void setForegroundColor(Color color);
+
+        /**
+         * Overrides the value of the {@link #accentColorProperty() accentColor} property.
+         * <p>
+         * Specifying {@code null} clears the override, which restores the value of the
+         * {@code accentColor} property to the platform-provided value.
+         * <p>
+         * Overriding this property will not override key-value mappings that represent the
+         * accent color in the underlying map.
+         *
+         * @param color the accent color override, or {@code null} to clear the override
+         */
+        void setAccentColor(Color color);
+
+        /**
+         * Overrides a preference mapping.
+         * <p>
+         * If a platform-provided mapping for the key already exists, calling this method overrides
+         * the value that is mapped to the key. If a platform-provided mapping for the key doesn't
+         * exist, this method creates a new mapping.
+         *
+         * @param key the key
+         * @param value the new value
+         * @throws NullPointerException if {@code key} or {@code value} is null
+         * @throws IllegalArgumentException if a platform-provided mapping for the key exists, and
+         *                                  the specified value is an instance of a different class
+         *                                  than the platform-provided value
+         * @return the previous value associated with {@code key}
+         */
+        @Override
+        Object put(String key, Object value);
+
+        /**
+         * Resets an overridden preference mapping to its platform-provided value.
+         * <p>
+         * If the preference is overridden, but the platform does not provide a mapping for the
+         * specified key, the mapping will be removed. If no mapping exists for the specified
+         * key, calling this method has no effect.
+         *
+         * @param key the key
+         * @throws NullPointerException if {@code key} is null
+         */
+        void reset(String key);
+
+        /**
+         * Resets all overridden preference mappings to their platform-provided values and removes
+         * all mappings for which the platform does not provide a default value.
+         */
+        void reset();
     }
 }

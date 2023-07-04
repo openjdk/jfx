@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,8 +84,7 @@ public abstract class Application {
         // currently used only on Mac OS X
         public void handleQuitAction(Application app, long time) {
         }
-        public boolean handleThemeChanged(String themeName) {
-            return false;
+        public void handlePreferencesChanged(Map<String, Object> properties) {
         }
     }
 
@@ -259,12 +258,11 @@ public abstract class Application {
         }
     }
 
-    protected boolean notifyThemeChanged(String themeName) {
+    protected void notifyPreferencesChanged(Map<String, Object> preferences) {
         EventHandler handler = getEventHandler();
         if (handler != null) {
-            return handler.handleThemeChanged(themeName);
+            handler.handlePreferencesChanged(preferences);
         }
-        return false;
     }
 
     protected void notifyDidResignActive() {
@@ -675,19 +673,6 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
-    public String getHighContrastScheme(String themeName) {
-        return themeName;
-    }
-
-    /**
-     * Gets the Name of the currently active high contrast theme.
-     * If null, then high contrast is not enabled.
-     */
-    public String getHighContrastTheme() {
-        checkEventThread();
-        return null;
-    }
-
     protected boolean _supportsInputMethods() {
         // Overridden in subclasses
         return false;
@@ -767,5 +752,9 @@ public abstract class Application {
             default:
                 return Optional.empty();
         }
+    }
+
+    public Map<String, Object> getPlatformPreferences() {
+        return Map.of();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package com.sun.glass.ui.win;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
 
@@ -36,12 +35,11 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ResourceBundle;
+import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     static float overrideUIScale;
-    private static final String BASE_NAME = "com/sun/glass/ui/win/themes";
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
         String str = System.getProperty(propname);
@@ -342,17 +340,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    public String getHighContrastScheme(String themeName) {
-        return PlatformImpl.HighContrastScheme.fromThemeName(ResourceBundle.getBundle(BASE_NAME)::getString, themeName);
-    }
-
-    private native String _getHighContrastTheme();
-    @Override public String getHighContrastTheme() {
-        checkEventThread();
-        return getHighContrastScheme(_getHighContrastTheme());
-    }
-
-    @Override
     protected boolean _supportsInputMethods() {
         return true;
     }
@@ -380,4 +367,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
 }
