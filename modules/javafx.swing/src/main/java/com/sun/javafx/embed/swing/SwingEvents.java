@@ -93,7 +93,7 @@ public class SwingEvents {
             } else if ((extModifiers & MouseEvent.getMaskForButton(5)) != 0) {
                 abstractButton = AbstractEvents.MOUSEEVENT_FORWARD_BUTTON;
             }
-	}
+        }
         return abstractButton;
     }
 
