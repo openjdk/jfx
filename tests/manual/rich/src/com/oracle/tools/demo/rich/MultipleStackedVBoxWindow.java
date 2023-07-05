@@ -26,6 +26,7 @@
 package com.oracle.tools.demo.rich;
 
 import javafx.scene.Scene;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.skin.LineNumberDecorator;
@@ -49,13 +50,18 @@ public class MultipleStackedVBoxWindow extends Stage {
         a2.setUseContentHeight(true);
         a2.setLeftDecorator(new LineNumberDecorator());
 
+        PrefSizeTester tester = new PrefSizeTester();
+
         VBox vb = new VBox(
             a1,
             t1,
             a2,
-            t2
+            t2,
+            tester
         );
-        Scene scene = new Scene(vb);
+        ScrollPane sp = new ScrollPane(vb);
+        sp.setFitToWidth(true);
+        Scene scene = new Scene(sp);
         setScene(scene);
 
         setTitle("Multiple RichTextAreas Stacked in VBox");

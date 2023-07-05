@@ -60,7 +60,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final ListenerHelper listenerHelper;
     private final RichTextAreaBehavior behavior;
     private final VFlow vflow;
-    private final Pane mainPane;
+    public final Pane mainPane;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
 
@@ -118,6 +118,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         mainPane = new Pane(vflow, vscroll, hscroll) {
             @Override
             protected void layoutChildren() {
+                System.out.println("mainPane.layoutChildren"); // FIX
                 double x0 = snappedLeftInset();
                 double y0 = snappedTopInset();
                 double width = getWidth() - x0 - snappedRightInset();
@@ -210,7 +211,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     private void handleWrapText() {
         vflow.handleWrapText();
-        // requestLayout() in vflow is insufficient, for reasons unknown
+        // vflow is unmanaged
         mainPane.requestLayout();
     }
 

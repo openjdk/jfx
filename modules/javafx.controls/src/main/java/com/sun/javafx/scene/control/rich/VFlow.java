@@ -41,7 +41,6 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.rich.CaretInfo;
 import javafx.scene.control.rich.ConfigurationParameters;
@@ -225,7 +224,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         updateHorizontalScrollBar();
         updateVerticalScrollBar();
-        requestLayout();
+        requestSkinLayout();
     }
 
     public void handleDecoratorChange() {
@@ -780,6 +779,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     protected CellArrangement reflow() {
+        //System.out.println("reflow"); // FIX
         inReflow = true;
         try {
             removeCells();
@@ -1049,22 +1049,25 @@ public class VFlow extends Pane implements StyleResolver {
             }
         }
 
+        // TODO perhaps move the code here
         if (useContentWidth) {
-            // update pref width property unless bound
-            if (!prefWidthProperty().isBound()) {
-                double w = arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
-                System.out.println("setPrefWidth: " + w); // FIX
-                setPrefWidth(w);
-            }
+//            // update pref width property unless bound
+//            if (!prefWidthProperty().isBound()) {
+//                double w = arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
+//                System.out.println("setPrefWidth: " + w); // FIX
+//                // FIX: vflow is unmanaged
+                updatePrefWidth();
+//            }
         }
 
         if (useContentHeight) {
-            // update pref height property unless bound
-            if (!prefHeightProperty().isBound()) {
-                double h = Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
-                System.out.println("setPrefHeight: " + h); // FIX
-                setPrefHeight(h);
-            }
+//            // update pref height property unless bound
+//            if (!prefHeightProperty().isBound()) {
+//                double h = Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
+//                System.out.println("setPrefHeight: " + h); // FIX
+                // FIX: vflow is unmanaged
+                updatePrefHeight();
+//            }
         }
 
         // actually place content nodes
@@ -1304,7 +1307,7 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        requestLayout();
+        requestSkinLayout();
     }
 
     public void handleUseContentWidth() {
@@ -1314,11 +1317,13 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        requestLayout();
+        requestSkinLayout();
     }
 
+    /*
     @Override
     protected double computePrefHeight(double width) {
+        //System.out.println("vflow.computePrefHeight"); // FIX
         boolean on = control.isUseContentHeight();
         if (on) {
             if (isNeedsLayout()) {
@@ -1332,6 +1337,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     @Override
     protected double computePrefWidth(double height) {
+        //System.out.println("vflow.computePrefWidth"); // FIX
         boolean on = control.isUseContentWidth();
         if (on) {
             if (isNeedsLayout()) {
@@ -1341,5 +1347,44 @@ public class VFlow extends Pane implements StyleResolver {
         } else {
             return super.computePrefWidth(height);
         }
+    }
+    */
+
+    private void requestSkinLayout() {
+        control.requestLayout();
+    }
+
+    private void updatePrefWidth() {
+        if (arrangement != null) {
+            if (!control.prefWidthProperty().isBound()) {
+                double w = getFlowWidth();
+                System.out.println("vflow.updatePrefWidth " + w); // FIX
+                control.setPrefWidth(w);
+            }
+        }
+    }
+
+    private void updatePrefHeight() {
+        if (arrangement != null) {
+            if (!control.prefHeightProperty().isBound()) {
+                double h = getFlowHeight();
+                System.out.println("vflow.updatePrefHeight " + h); // FIX
+                control.setPrefHeight(h);
+            }
+        }
+    }
+
+    private double getFlowHeight() {
+        if (arrangement == null) {
+            return -1;
+        }
+        return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
+    }
+
+    private double getFlowWidth() {
+        if (arrangement == null) {
+            return -1;
+        }
+        return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
     }
 }

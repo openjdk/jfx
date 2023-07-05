@@ -35,7 +35,6 @@ import javafx.scene.layout.Region;
  * Content pane for TextCell that shows an arbitrary Region.
  * The content gets resized if it cannot fit into available width.
  */
-// TODO move to com.sun
 public class RegionCellPane extends Pane {
     private final Region content;
     private static final Insets PADDING = new Insets(1, 1, 1, 1);

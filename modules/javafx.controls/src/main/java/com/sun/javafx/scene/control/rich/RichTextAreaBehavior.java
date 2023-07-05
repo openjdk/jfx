@@ -79,7 +79,7 @@ import com.sun.javafx.scene.control.ListenerHelper;
 public class RichTextAreaBehavior {
     private final RichTextArea control;
     private VFlow vflow;
-    private final StyledTextModel.ChangeListener textChangeListener;
+    private final StyledTextModel.ChangeListener modelChangeListener;
     private final Timeline autoScrollTimer;
     private boolean autoScrollUp;
     private boolean fastAutoScroll;
@@ -92,7 +92,7 @@ public class RichTextAreaBehavior {
 
         autoScrollPeriod = Duration.millis(Params.AUTO_SCROLL_PERIOD);
 
-        textChangeListener = new StyledTextModel.ChangeListener() {
+        modelChangeListener = new StyledTextModel.ChangeListener() {
             @Override
             public void eventTextUpdated(TextPos start, TextPos end, int top, int ins, int btm) {
                 handleTextUpdated(start, end, top, ins, btm);
@@ -226,11 +226,11 @@ public class RichTextAreaBehavior {
 
     protected void handleModel(Object src, StyledTextModel old, StyledTextModel m) {
         if (old != null) {
-            old.removeChangeListener(textChangeListener);
+            old.removeChangeListener(modelChangeListener);
         }
 
         if (m != null) {
-            m.addChangeListener(textChangeListener);
+            m.addChangeListener(modelChangeListener);
         }
     }
 
