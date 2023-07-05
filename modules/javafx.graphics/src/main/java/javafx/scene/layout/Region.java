@@ -1760,7 +1760,7 @@ public class Region extends Parent {
     public double snapSizeY(double value) {
         return snapSizeY(value, isSnapToPixel());
     }
-    
+
     /**
      * If this region's snapToPixel property is true, returns a value floored
      * to the nearest pixel in the horizontal direction, else returns the
@@ -1773,7 +1773,7 @@ public class Region extends Parent {
     private double snapFloorX(double value) {
         return snapFloorX(value, isSnapToPixel());
     }
-    
+
     /**
      * If snapToPixel is true, then the value is floor'd using Math.floor.
      * Otherwise, the value is simply returned.
