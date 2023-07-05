@@ -758,7 +758,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      **************************************************************************/
 
     void doSetWidth(double width) {
-        setWidth(Utils.boundedSize(width, getMinWidth(), getMaxWidth()));
+        // clamping to (min,max) must be done by the caller, see ResizeFeatureBase.setColumnWidth()
+        setWidth(width);
     }
 
     void updateColumnWidths() {

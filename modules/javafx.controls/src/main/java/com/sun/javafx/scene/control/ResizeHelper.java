@@ -73,7 +73,7 @@ public class ResizeHelper {
 
             if (c.isResizable()) {
                 double cmin = snapCeil(c.getMinWidth()); // always honor min width!
-                double cmax = snapFloor(c.getMaxWidth()); // TableColumnBase.doSetWidth() clamps to (min,max) range
+                double cmax = snapFloor(c.getMaxWidth());
                 min[i] = cmin;
                 max[i] = cmax;
                 pref[i] = clip(snapRound(c.getPrefWidth()), cmin, cmax);
@@ -121,8 +121,7 @@ public class ResizeHelper {
 
     /** distibuting delta (positive when growing and negative when shrinking) */
     private void distribute(double delta, double[] desired) {
-        double threshold = snapRound(SMALL_DELTA);
-        if (Math.abs(delta) > threshold) {
+        if (Math.abs(delta) > SMALL_DELTA) {
             distributeLargeDelta(delta, desired);
         } else {
             distributeSmallDelta(delta, desired);
