@@ -167,9 +167,7 @@ class WindowMonitor {
     }
 
     private static String createID(Window win) {
-        // TODO use name provided by setName
-        String prefix = win.getClass().getSimpleName() + ".";
-
+        String prefix = FxSettingsSchema.getName(win) + ".";
         HashSet<String> ids = new HashSet<>();
         for (Window w: Window.getWindows()) {
             if (w == win) {

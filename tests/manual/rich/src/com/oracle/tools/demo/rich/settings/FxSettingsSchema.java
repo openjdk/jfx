@@ -393,15 +393,29 @@ public class FxSettingsSchema {
         n.getProperties().put(NAME_PROP, name);
     }
 
+    /** sets the name for the purposes of storing user preferences */
+    public static void setName(Window w, String name) {
+        w.getProperties().put(NAME_PROP, name);
+    }
+
     /** returns a name associated with this node for the purposes of storing user preferences */
     public static String getName(Node n) {
         Object x = n.getProperties().get(NAME_PROP);
         if (x instanceof String s) {
             return s;
         }
-        if(n instanceof Pane) {
+        if (n instanceof Pane) {
             return n.getClass().getSimpleName();
         }
         return null;
+    }
+
+    /** returns a name associated with this Window for the purposes of storing user preferences */
+    public static String getName(Window w) {
+        Object x = w.getProperties().get(NAME_PROP);
+        if (x instanceof String s) {
+            return s;
+        }
+        return w.getClass().getSimpleName();
     }
 }

@@ -30,14 +30,14 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.skin.LineNumberDecorator;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-public class MultipleStackedVBoxWindow extends Stage {
-    public MultipleStackedVBoxWindow() {
+public class MultipleStackedBoxWindow extends Stage {
+    public MultipleStackedBoxWindow(boolean vertical) {
         RichTextArea a1 = new RichTextArea(NotebookModelStacked.m1());
         a1.setWrapText(true);
-        a1.setUseContentHeight(true);
         a1.setLeftDecorator(new LineNumberDecorator());
         
         TextArea t1 = new TextArea("This TextArea has wrap text property set to false.");
@@ -47,25 +47,51 @@ public class MultipleStackedVBoxWindow extends Stage {
         
         RichTextArea a2 = new RichTextArea(NotebookModelStacked.m2());
         a2.setWrapText(true);
-        a2.setUseContentHeight(true);
         a2.setLeftDecorator(new LineNumberDecorator());
 
         PrefSizeTester tester = new PrefSizeTester();
 
-        VBox vb = new VBox(
-            a1,
-            t1,
-            a2,
-            t2,
-            tester
-        );
-        ScrollPane sp = new ScrollPane(vb);
-        sp.setFitToWidth(true);
+        ScrollPane sp = new ScrollPane();
+
+        if (vertical) {
+            a1.setUseContentHeight(true);
+            a2.setUseContentHeight(true);
+
+            VBox vb = new VBox(
+                a1,
+                t1,
+                a2,
+                t2,
+                tester
+            );
+            sp.setContent(vb);
+            sp.setFitToWidth(true);
+
+            setTitle("Test Vertical Stack");
+            setWidth(600);
+            setHeight(1200);
+            FX.name(this, "VerticalStack");
+        } else {
+            a1.setUseContentWidth(true);
+            a2.setUseContentWidth(true);
+
+            HBox hb = new HBox(
+                a1,
+                t1,
+                a2,
+                t2,
+                tester
+            );
+            sp.setContent(hb);
+            sp.setFitToHeight(true);
+
+            setTitle("Test Horizontal Stack");
+            setWidth(1200);
+            setHeight(600);
+            FX.name(this, "HorizontalStack");
+        }
+
         Scene scene = new Scene(sp);
         setScene(scene);
-
-        setTitle("Multiple RichTextAreas Stacked in VBox");
-        setWidth(600);
-        setHeight(1200);
     }
 }
