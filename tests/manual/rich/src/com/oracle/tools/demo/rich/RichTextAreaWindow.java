@@ -55,7 +55,8 @@ public class RichTextAreaWindow extends Stage {
         FX.item(mb, "Quit", () -> Platform.exit());
         // tests
         FX.menu(mb, "Tests");
-        FX.item(mb, "Multiple Areas Stacked in VBox", this::openMultipeStacked);
+        FX.item(mb, "Stacked Vertically", () -> openMultipeStacked(true));
+        FX.item(mb, "Stacked Horizontally", () -> openMultipeStacked(false));
 
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));
@@ -106,7 +107,7 @@ public class RichTextAreaWindow extends Stage {
         w.show();
     }
     
-    protected void openMultipeStacked() {
-        new MultipleStackedVBoxWindow().show();
+    protected void openMultipeStacked(boolean vertical) {
+        new MultipleStackedBoxWindow(vertical).show();
     }
 }
