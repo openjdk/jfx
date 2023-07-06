@@ -636,6 +636,10 @@ public class JFXPanel extends JComponent {
             }
             scaleFactorX = newScaleFactorX;
             scaleFactorY = newScaleFactorY;
+            if (stage != null) {
+               stage.setRenderScaleX(scaleFactorX);
+               stage.setRenderScaleY(scaleFactorY);
+            }
             sendResizeEventToFX();
         }
     }
@@ -830,6 +834,10 @@ public class JFXPanel extends JComponent {
                                                (float) newScaleFactorY);
                 scaleFactorX = newScaleFactorX;
                 scaleFactorY = newScaleFactorY;
+                if (stage != null) {
+                   stage.setRenderScaleX(scaleFactorX);
+                   stage.setRenderScaleY(scaleFactorY);
+                }
             }
         } catch (Throwable th) {
             th.printStackTrace();
