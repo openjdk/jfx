@@ -80,8 +80,8 @@ public class SwingEvents {
             default:
                 break;
         }
-        // Fix for RT-15457: we should report mouse buttons for mouse drags
         if (abstractButton == AbstractEvents.MOUSEEVENT_NONE_BUTTON) {
+            // Fix for RT-15457: we should report mouse buttons for mouse drags
             if ((extModifiers & MouseEvent.BUTTON1_DOWN_MASK) != 0) {
                 abstractButton = AbstractEvents.MOUSEEVENT_PRIMARY_BUTTON;
             } else if ((extModifiers & MouseEvent.BUTTON2_DOWN_MASK) != 0) {
