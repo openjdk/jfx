@@ -64,7 +64,6 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
-import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * Virtual text flow deals with TextCells, scroll bars, and conversion
@@ -159,28 +158,17 @@ public class VFlow extends Pane implements StyleResolver {
                     (!control.isDisabled());
             }
         });
-    }
-
-    public void addListeners(ListenerHelper lh) {
-        lh.addInvalidationListener(this::handleModelChange, control.modelProperty());
         
-        lh.addChangeListener(
-            this::updateHorizontalScrollBar,
-            true,
-            contentWidth,
-            offsetX
-        );
-        
-        lh.addChangeListener(
-            this::handleOrigin,
-            true,
-            originProperty()
-        );
-        
-        widthProperty().addListener((p) -> updateWidth());
+        contentWidth.addListener((p) -> updateHorizontalScrollBar());
+        offsetX.addListener((p) -> updateHorizontalScrollBar());
+        origin.addListener((p) -> handleOriginChange());
+        widthProperty().addListener((p) -> updateWidth()); // TODO check for use content width?
         heightProperty().addListener((p) -> updateHeight());
         
         vscroll.addEventFilter(MouseEvent.ANY, this::handleVScrollMouseEvent);
+        
+        updateHorizontalScrollBar();
+        handleOriginChange();
     }
 
     public void dispose() {
@@ -203,7 +191,7 @@ public class VFlow extends Pane implements StyleResolver {
         setOrigin(new Origin(0, -topPadding));
         setOffsetX(-leftPadding);
         cellCache.clear();
-        requestLayout();
+        requestControlLayout();
     }
 
     protected double wrappedWidth() {
@@ -224,13 +212,13 @@ public class VFlow extends Pane implements StyleResolver {
 
         updateHorizontalScrollBar();
         updateVerticalScrollBar();
-        requestSkinLayout();
+        requestControlLayout();
     }
 
     public void handleDecoratorChange() {
         leftCache = updateSideCache(control.getLeftDecorator(), leftCache);
         rightCache = updateSideCache(control.getRightDecorator(), rightCache);
-        requestLayout();
+        requestControlLayout();
     }
 
     private FastCache<Node> updateSideCache(SideDecorator decorator, FastCache<Node> cache) {
@@ -309,7 +297,7 @@ public class VFlow extends Pane implements StyleResolver {
         origin.set(p);
     }
 
-    protected void handleOrigin() {
+    private void handleOriginChange() {
         if (!inReflow) {
             requestLayout();
         }
@@ -779,7 +767,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     protected CellArrangement reflow() {
-        //System.out.println("reflow"); // FIX
+//        System.out.println("reflow"); // FIX
         inReflow = true;
         try {
             removeCells();
@@ -1051,26 +1039,13 @@ public class VFlow extends Pane implements StyleResolver {
 
         // TODO perhaps move the code here
         if (useContentWidth) {
-//            // update pref width property unless bound
-//            if (!prefWidthProperty().isBound()) {
-//                double w = arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
-//                System.out.println("setPrefWidth: " + w); // FIX
-//                // FIX: vflow is unmanaged
-                updatePrefWidth();
-//            }
+            updatePrefWidth();
         }
 
         if (useContentHeight) {
-//            // update pref height property unless bound
-//            if (!prefHeightProperty().isBound()) {
-//                double h = Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
-//                System.out.println("setPrefHeight: " + h); // FIX
-                // FIX: vflow is unmanaged
-                updatePrefHeight();
-//            }
+            updatePrefHeight();
         }
 
-        // actually place content nodes
         placeNodes();
     }
 
@@ -1307,7 +1282,7 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        requestSkinLayout();
+        requestControlLayout();
     }
 
     public void handleUseContentWidth() {
@@ -1317,73 +1292,72 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        requestSkinLayout();
+        requestControlLayout();
     }
 
-    /*
-    @Override
-    protected double computePrefHeight(double width) {
-        //System.out.println("vflow.computePrefHeight"); // FIX
-        boolean on = control.isUseContentHeight();
-        if (on) {
-            if (isNeedsLayout()) {
-                reflow();
-            }
-            return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
-        } else {
-            return super.computePrefHeight(width);
-        }
-    }
-
-    @Override
-    protected double computePrefWidth(double height) {
-        //System.out.println("vflow.computePrefWidth"); // FIX
-        boolean on = control.isUseContentWidth();
-        if (on) {
-            if (isNeedsLayout()) {
-                reflow();
-            }
-            return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
-        } else {
-            return super.computePrefWidth(height);
-        }
-    }
-    */
-
-    private void requestSkinLayout() {
+    private void requestControlLayout() {
+        D.p();
+        // FIX does not help!!!
         control.requestLayout();
+        requestParentLayout();
+        requestLayout();
     }
 
     private void updatePrefWidth() {
         if (arrangement != null) {
             if (!control.prefWidthProperty().isBound()) {
                 double w = getFlowWidth();
-                System.out.println("vflow.updatePrefWidth " + w); // FIX
-                control.setPrefWidth(w);
+                D.p(w); // FIX
+                if (mainPane().getPrefWidth() != w) {
+                    // TODO does not trigger main pane layout!
+                    //setPrefWidth(w);
+                    mainPane().setPrefWidth(w); // FIX main pane contains scroll bars!
+                    //control.setPrefWidth(w);
+
+                    D.p("control.getParent().requestLayout();");
+                    requestControlLayout();
+                    control.getParent().requestLayout();
+                }
             }
         }
     }
 
+    // TODO move to caller?
     private void updatePrefHeight() {
         if (arrangement != null) {
             if (!control.prefHeightProperty().isBound()) {
                 double h = getFlowHeight();
-                System.out.println("vflow.updatePrefHeight " + h); // FIX
-                control.setPrefHeight(h);
+                // TODO does not trigger main pane layout!
+                D.p(h); // FIX
+
+                if (mainPane().getPrefHeight() != h) { // FIX
+                    //setPrefHeight(h);
+                    mainPane().setPrefHeight(h); // FIX main pane contains scroll bars!
+                    //control.setPrefHeight(h);
+
+                    D.p("control.getParent().requestLayout();");
+                    requestControlLayout();
+                    control.getParent().requestLayout();
+                }
             }
         }
     }
+    
+    private Region mainPane() {
+        return (Region)getParent();
+    }
 
-    private double getFlowHeight() {
+    // TODO move to caller
+    public double getFlowHeight() {
         if (arrangement == null) {
-            return -1;
+            return Region.USE_COMPUTED_SIZE;
         }
         return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
     }
 
-    private double getFlowWidth() {
+    public double getFlowWidth() {
         if (arrangement == null) {
-            return -1;
+            return Region.USE_COMPUTED_SIZE;
         }
         return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
     }
