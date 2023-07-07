@@ -641,7 +641,7 @@ public class JFXPanel extends JComponent {
                    stage.setRenderScaleX(scaleFactorX);
                    stage.setRenderScaleY(scaleFactorY);
                 }
-	    });
+            });
             sendResizeEventToFX();
         }
     }
