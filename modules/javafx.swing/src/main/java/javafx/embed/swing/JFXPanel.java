@@ -636,10 +636,12 @@ public class JFXPanel extends JComponent {
             }
             scaleFactorX = newScaleFactorX;
             scaleFactorY = newScaleFactorY;
-            if (stage != null) {
-               stage.setRenderScaleX(scaleFactorX);
-               stage.setRenderScaleY(scaleFactorY);
-            }
+            Platform.runLater(() -> {
+                if (stage != null) {
+                   stage.setRenderScaleX(scaleFactorX);
+                   stage.setRenderScaleY(scaleFactorY);
+                }
+	    });
             sendResizeEventToFX();
         }
     }
