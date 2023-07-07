@@ -41,14 +41,14 @@ public class D {
             }
             sb.append(a);
         }
-        System.out.println(sb);
+        out(sb);
     }
 
     public static void f(String fmt, Object... args) {
         StringBuilder sb = new StringBuilder();
         caller(sb);
         sb.append(String.format(fmt, args));
-        System.out.println(sb);
+        out(sb);
     }
 
     private static void caller(StringBuilder sb) {
@@ -62,5 +62,12 @@ public class D {
         sb.append('.');
         sb.append(s.getMethodName());
         sb.append(' ');
+    }
+
+    private static void out(Object x) {
+        boolean enabled = true;
+        if (enabled) {
+            System.out.println(x);
+        }
     }
 }

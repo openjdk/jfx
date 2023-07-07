@@ -25,9 +25,15 @@
 package com.oracle.tools.demo.rich;
 
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -35,6 +41,7 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -48,6 +55,13 @@ public class FX {
         Menu m = new Menu(text);
         applyMnemonic(m);
         b.getMenus().add(m);
+        return m;
+    }
+    
+    public static Menu menu(ContextMenu b, String text) {
+        Menu m = new Menu(text);
+        applyMnemonic(m);
+        b.getItems().add(m);
         return m;
     }
 
@@ -98,6 +112,28 @@ public class FX {
         mi.setToggleGroup(g);
         lastMenu(b).getItems().add(mi);
         return mi;
+    }
+    
+    public static CheckMenuItem checkItem(ContextMenu c, String name, boolean selected, Consumer<Boolean> client) {
+        CheckMenuItem m = new CheckMenuItem(name);
+        m.setSelected(selected);
+        m.setOnAction((ev) -> {
+            boolean on = m.isSelected();
+            client.accept(on);
+        });
+        c.getItems().add(m);
+        return m;
+    }
+    
+    public static CheckMenuItem checkItem(Menu c, String name, boolean selected, Consumer<Boolean> client) {
+        CheckMenuItem m = new CheckMenuItem(name);
+        m.setSelected(selected);
+        m.setOnAction((ev) -> {
+            boolean on = m.isSelected();
+            client.accept(on);
+        });
+        c.getItems().add(m);
+        return m;
     }
 
     public static void add(GridPane p, Node n, int col, int row) {
@@ -155,5 +191,45 @@ public class FX {
     /** adds a name property to the Window for the purposes of storing the preferences */
     public static void name(Window w, String name) {
         FxSettingsSchema.setName(w, name);
+    }
+
+    /** 
+     * attach a popup menu to a node.
+     * WARNING: sometimes, as the case is with TableView/FxTable header, 
+     * the requested node gets created by the skin at some later time.
+     * In this case, additional dance must be performed, see for example
+     * FxTable.setHeaderPopupMenu()   
+     */
+    // https://github.com/andy-goryachev/MP3Player/blob/8b0ff12460e19850b783b961f214eacf5e1cdaf8/src/goryachev/fx/FX.java#L1251
+    public static void setPopupMenu(Node owner, Supplier<ContextMenu> generator) {
+        if (owner == null) {
+            throw new NullPointerException("cannot attach popup menu to null");
+        }
+
+        owner.setOnContextMenuRequested((ev) -> {
+            if (generator != null) {
+                ContextMenu m = generator.get();
+                if (m != null) {
+                    if (m.getItems().size() > 0) {
+                        Platform.runLater(() -> {
+                            // javafx does not dismiss the popup when the user
+                            // clicks on the owner node
+                            EventHandler<MouseEvent> li = new EventHandler<MouseEvent>() {
+                                public void handle(MouseEvent event) {
+                                    m.hide();
+                                    owner.removeEventFilter(MouseEvent.MOUSE_PRESSED, this);
+                                    event.consume();
+                                }
+                            };
+
+                            owner.addEventFilter(MouseEvent.MOUSE_PRESSED, li);
+                            m.show(owner, ev.getScreenX(), ev.getScreenY());
+                        });
+                        ev.consume();
+                    }
+                }
+            }
+            ev.consume();
+        });
     }
 }

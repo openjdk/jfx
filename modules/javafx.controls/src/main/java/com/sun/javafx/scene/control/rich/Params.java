@@ -50,6 +50,9 @@ public class Params {
     /** small space between the end of last character and the right edge when typing, in pixels. */
     public static final double HORIZONTAL_GUARD = 20;
 
+    /** allows a little space for the caret shape when use content width is enabled */
+    public static final double LAYOUT_CARET_ALLOWANCE = 1;
+
     /** min height of the content area when use content width = true and empty model */
     public static final double LAYOUT_MIN_HEIGHT = 20;
 

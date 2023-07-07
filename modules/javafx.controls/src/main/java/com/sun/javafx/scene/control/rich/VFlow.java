@@ -966,7 +966,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         arrangement.setBottomCount(count);
         arrangement.setBottomHeight(y);
-        arrangement.setUnwrappedWidth(unwrappedWidth);
+        arrangement.setUnwrappedWidth(snapSizeX(unwrappedWidth));
         count = 0;
         y = ytop;
         
@@ -1307,16 +1307,21 @@ public class VFlow extends Pane implements StyleResolver {
         if (arrangement != null) {
             if (!control.prefWidthProperty().isBound()) {
                 double w = getFlowWidth();
+                if (w >= 0.0) {
+                    if (vscroll.isVisible()) {
+                        w += vscroll.getWidth();
+                    }
+                }
+                
                 D.p(w); // FIX
                 if (mainPane().getPrefWidth() != w) {
-                    // TODO does not trigger main pane layout!
                     //setPrefWidth(w);
-                    mainPane().setPrefWidth(w); // FIX main pane contains scroll bars!
+                    mainPane().setPrefWidth(w);
                     //control.setPrefWidth(w);
 
                     D.p("control.getParent().requestLayout();");
-                    requestControlLayout();
                     control.getParent().requestLayout();
+                    requestControlLayout();
                 }
             }
         }
@@ -1327,17 +1332,22 @@ public class VFlow extends Pane implements StyleResolver {
         if (arrangement != null) {
             if (!control.prefHeightProperty().isBound()) {
                 double h = getFlowHeight();
-                // TODO does not trigger main pane layout!
+                if (h >= 0.0) {
+                    if (hscroll.isVisible()) {
+                        h += hscroll.getHeight();
+                    }
+                }
+
                 D.p(h); // FIX
 
-                if (mainPane().getPrefHeight() != h) { // FIX
+                if (mainPane().getPrefHeight() != h) {
                     //setPrefHeight(h);
-                    mainPane().setPrefHeight(h); // FIX main pane contains scroll bars!
+                    mainPane().setPrefHeight(h);
                     //control.setPrefHeight(h);
 
                     D.p("control.getParent().requestLayout();");
-                    requestControlLayout();
                     control.getParent().requestLayout();
+                    requestControlLayout();
                 }
             }
         }
@@ -1359,6 +1369,6 @@ public class VFlow extends Pane implements StyleResolver {
         if (arrangement == null) {
             return Region.USE_COMPUTED_SIZE;
         }
-        return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding;
+        return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding + Params.LAYOUT_CARET_ALLOWANCE;
     }
 }
