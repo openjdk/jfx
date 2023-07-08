@@ -35,6 +35,16 @@ import static org.junit.jupiter.api.Assertions.*;
 public class DataURITest {
 
     @Test
+    public void testNullIsInvalid() {
+        assertNull(DataURI.tryParse(null));
+    }
+
+    @Test
+    public void testEmptyStringIsInvalid() {
+        assertNull(DataURI.tryParse(""));
+    }
+
+    @Test
     public void testMissingDataSeparatorIsInvalid() {
         String data = "data:";
         DataURI uri = DataURI.tryParse(data);
@@ -200,6 +210,9 @@ public class DataURITest {
         assertTrue(ex.getMessage().startsWith("Invalid"));
 
         ex = assertThrows(IllegalArgumentException.class, () -> DataURI.tryParse("data:,%0"));
+        assertTrue(ex.getMessage().startsWith("Incomplete"));
+
+        ex = assertThrows(IllegalArgumentException.class, () -> DataURI.tryParse("data:,%"));
         assertTrue(ex.getMessage().startsWith("Incomplete"));
     }
 
