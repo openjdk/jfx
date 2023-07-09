@@ -29,6 +29,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.geometry.Dimension2D;
 import javafx.scene.Scene;
@@ -38,6 +39,7 @@ import javafx.stage.Stage;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 public class InitialWindowSizeTest {
 
@@ -71,6 +73,9 @@ public class InitialWindowSizeTest {
 
     @Test
     public void testInitialWindowSize() {
+        // JDK-8310845
+        assumeFalse(PlatformUtil.isLinux());
+
         Util.waitForLatch(startupLatch, 10, "startupLatch");
 
         assertTrue(Double.isNaN(showingSize.getWidth()), "width = " + showingSize.getWidth() + ", expected = NaN");
