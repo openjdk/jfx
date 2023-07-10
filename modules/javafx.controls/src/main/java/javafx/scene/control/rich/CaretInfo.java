@@ -51,7 +51,7 @@ public final class CaretInfo {
 
     /**
      * Creates an instance of CaretInfo given the path and translation offsets required to
-     * convert path coordinates (which come in the frame of reference of its {@link TextFlow}) to the view port
+     * convert path coordinates (which come in the frame of reference of its {@code TextFlow}) to the view port
      * coordinates.
      *
      * @param dx translation x offset

@@ -174,14 +174,26 @@ public class RichTextArea extends Control {
         }
     }
 
+    /**
+     * Returns the KeyMap associated with this instance.
+     * <p>
+     * TODO this should be moved to Control.getInputMap()
+     */
     // TODO move to Control
     public final KeyMap getKeyMap() {
         return inputMap;
     }
 
+    /**
+     * Looks up a function mapped to this {@link FunctionTag} and, if such a mapping exists,
+     * invokes the function.<p>
+     * TODO this should be moved to {@link Control} once InputMap is redesigned.
+     *
+     * @param tag function tag
+     */
     // TODO move to Control
-    protected final void execute(FunctionTag a) {
-        Runnable f = inputMap.getFunction(a);
+    protected final void execute(FunctionTag tag) {
+        Runnable f = inputMap.getFunction(tag);
         if (f != null) {
             f.run();
         }
@@ -213,7 +225,6 @@ public class RichTextArea extends Control {
      * then this variable indicates whether the text should wrap onto
      * another line.
      */
-    // TODO perhaps all other properties also need to be styleable?
     private StyleableBooleanProperty wrapText = new StyleableBooleanProperty(false) {
         @Override
         public Object getBean() {
@@ -249,6 +260,7 @@ public class RichTextArea extends Control {
 
     /**
      * This property controls whether caret will be displayed or not.
+     * TODO StyleableProperty ?
      */
     public final BooleanProperty displayCaretProperty() {
         return displayCaretProperty;
@@ -285,6 +297,7 @@ public class RichTextArea extends Control {
 
     /**
      * Indicates whether the current paragraph will be visually highlighted.
+     * TODO StyleableProperty ?
      */
     public final BooleanProperty highlightCurrentLineProperty() {
         if (highlightCurrentLine == null) {
@@ -426,6 +439,12 @@ public class RichTextArea extends Control {
         return caretBlinkPeriod.get();
     }
 
+    /**
+     * Moves the caret and anchor to the new position, unless {@code extendSelection} is true, in which case
+     * extend selection from the existing anchor to the newly set caret position.
+     * @param p text position
+     * @param extendSelection specifies whether to clear (false) or extend (true) any existing selection
+     */
     public void moveCaret(TextPos p, boolean extendSelection) {
         if (extendSelection) {
             extendSelection(p);
@@ -463,6 +482,9 @@ public class RichTextArea extends Control {
         return selectionModel.selectionSegmentProperty();
     }
 
+    /**
+     * Clears existing selection, if any.
+     */
     public void clearSelection() {
         selectionModel.clear();
     }
@@ -495,11 +517,19 @@ public class RichTextArea extends Control {
         }
     }
 
+    /**
+     * Returns the number of paragraphs in the model.  If model is null, returns 0.
+     */
     public int getParagraphCount() {
         StyledTextModel m = getModel();
         return (m == null) ? 0 : m.size();
     }
 
+    /**
+     * Returns the plain text at the specified paragraph index.
+     * @param modelIndex paragraph index
+     * @throws IllegalArgumentException if the modelIndex is outside of the range supported by the model
+     */
     public String getPlainText(int modelIndex) {
         if ((modelIndex < 0) || (modelIndex >= getParagraphCount())) {
             throw new IllegalArgumentException("No paragraph at index=" + modelIndex);
@@ -598,7 +628,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * When selection exists, deletes selecteed text.  Otherwise, deletes the symbol before the caret.
+     * When selection exists, deletes selected text.  Otherwise, deletes the symbol before the caret.
      * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
      */
     public void backspace() {
@@ -939,6 +969,12 @@ public class RichTextArea extends Control {
         return false;
     }
 
+    /**
+     * Applies the speicified style to the selected range.
+     * @param start start of the text range
+     * @param end end of the text range
+     * @param attrs style attributes to apply
+     */
     public void applyStyle(TextPos start, TextPos end, StyleAttrs attrs) {
         if (canEdit()) {
             StyledTextModel m = getModel();
@@ -951,6 +987,10 @@ public class RichTextArea extends Control {
         }
     }
 
+    /**
+     * Returns true if this control's {@link #isEditable()} returns true and the model's
+     * {@link StyledTextModel#isEditable()} also returns true.
+     */
     protected boolean canEdit() {
         if (isEditable()) {
             StyledTextModel m = getModel();
