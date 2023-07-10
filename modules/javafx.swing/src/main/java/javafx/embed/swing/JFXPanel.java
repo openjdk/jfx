@@ -608,15 +608,15 @@ public class JFXPanel extends JComponent {
     private void updateComponentSize() {
         int oldWidth = pWidth;
         int oldHeight = pHeight;
-        // It's quite possible to get negative values here, this is not
-        // what JavaFX embedded scenes/stages are ready to
-        pWidth = Math.max(0, getWidth());
-        pHeight = Math.max(0, getHeight());
         if (getBorder() != null) {
             Insets i = getBorder().getBorderInsets(this);
             pWidth -= (i.left + i.right);
             pHeight -= (i.top + i.bottom);
         }
+        // It's quite possible to get negative values here, this is not
+        // what JavaFX embedded scenes/stages are ready to
+        pWidth = Math.max(0, getWidth());
+        pHeight = Math.max(0, getHeight());
         double newScaleFactorX = scaleFactorX;
         double newScaleFactorY = scaleFactorY;
         Graphics g = getGraphics();
