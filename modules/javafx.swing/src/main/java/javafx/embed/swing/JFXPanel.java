@@ -30,6 +30,7 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.GraphicsConfiguration;
 import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
@@ -38,7 +39,6 @@ import java.awt.Insets;
 import java.awt.EventQueue;
 import java.awt.SecondaryLoop;
 import java.awt.GraphicsEnvironment;
-import java.awt.GraphicsConfiguration;
 import java.awt.Rectangle;
 import java.awt.event.AWTEventListener;
 import java.awt.event.ComponentEvent;
@@ -620,12 +620,13 @@ public class JFXPanel extends JComponent {
         double newScaleFactorX = scaleFactorX;
         double newScaleFactorY = scaleFactorY;
         Graphics g = getGraphics();
-        newScaleFactorX = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                          getDefaultScreenDevice().getDefaultConfiguration().
-                          getDefaultTransform().getScaleX();
-        newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                          getDefaultScreenDevice().getDefaultConfiguration().
-                          getDefaultTransform().getScaleY();
+        GraphicsConfiguration config = getGraphicsConfiguration();
+        if (config == null) {
+            config = GraphicsEnvironment.getLocalGraphicsEnvironment().
+                     getDefaultScreenDevice().getDefaultConfiguration();
+        }
+        newScaleFactorX = config.getDefaultTransform().getScaleX();
+        newScaleFactorY = config.getDefaultTransform().getScaleY();
         if (oldWidth != pWidth || oldHeight != pHeight ||
             newScaleFactorX != scaleFactorX || newScaleFactorY != scaleFactorY)
         {
@@ -823,12 +824,13 @@ public class JFXPanel extends JComponent {
 
             double newScaleFactorX = scaleFactorX;
             double newScaleFactorY = scaleFactorY;
-            newScaleFactorX = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                              getDefaultScreenDevice().getDefaultConfiguration().
-                              getDefaultTransform().getScaleX();
-            newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                              getDefaultScreenDevice().getDefaultConfiguration().
-                              getDefaultTransform().getScaleY();
+            GraphicsConfiguration config = getGraphicsConfiguration();
+            if (config == null) {
+                config = GraphicsEnvironment.getLocalGraphicsEnvironment().
+                         getDefaultScreenDevice().getDefaultConfiguration();
+            }
+            newScaleFactorX = config.getDefaultTransform().getScaleX();
+            newScaleFactorY = config.getDefaultTransform().getScaleY();
             if (scaleFactorX != newScaleFactorX || scaleFactorY != newScaleFactorY) {
                 createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
                 // The scene will request repaint.
