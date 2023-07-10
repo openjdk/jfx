@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1011,7 +1011,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Maps local point to index in the content.
+     * Maps local point to {@link HitInfo} in the content.
      *
      * @param point the specified point to be tested
      * @return a {@code HitInfo} representing the character index found
@@ -1022,9 +1022,8 @@ public class Text extends Shape {
         TextLayout layout = getTextLayout();
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        TextLayout.Hit layoutHit = layout.getHitInfo((float)x, (float)y);
-        return new HitInfo(layoutHit.getCharIndex(), layoutHit.getInsertionIndex(),
-                           layoutHit.isLeading(), getText());
+        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y);
+        return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
     }
 
     private PathElement[] getRange(int start, int end, int type) {

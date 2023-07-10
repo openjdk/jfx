@@ -27,6 +27,8 @@ package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
 
+import com.sun.javafx.PlatformUtil;
+
 import javafx.application.Application;
 import javafx.scene.input.MouseButton;
 import javafx.application.Platform;
@@ -45,6 +47,8 @@ import org.junit.Test;
 
 import test.util.Util;
 
+import static org.junit.Assume.assumeTrue;
+
 /*
  * Test for verifying Slider NPE error.
  *
@@ -58,7 +62,9 @@ import test.util.Util;
 
 public class SliderTooltipNPETest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
-    static CountDownLatch tooltipLatch = new CountDownLatch(1);
+    static CountDownLatch tooltipShownLatch = new CountDownLatch(1);
+    static CountDownLatch tooltipHiddenLatch = new CountDownLatch(1);
+    static CountDownLatch mouseMovedLatch = new CountDownLatch(1);
     static Robot robot;
     static Slider slider;
 
@@ -82,6 +88,13 @@ public class SliderTooltipNPETest {
     }
 
     private void dragSliderAfterTooltipDisplayed(int dragDistance) throws Exception {
+        Util.runAndWait(() -> {
+            // Click somewhere in the Stage to ensure that it is active
+            robot.mouseMove((int)(scene.getWindow().getX() + scene.getX()),
+                            (int)(scene.getWindow().getY() + scene.getY()));
+            robot.mouseClick(MouseButton.PRIMARY);
+        });
+
         Thread.sleep(1000); // Wait for slider to layout
 
         Util.runAndWait(() -> {
@@ -91,13 +104,14 @@ public class SliderTooltipNPETest {
                                 slider.getLayoutY() + slider.getLayoutBounds().getHeight()/2));
         });
 
-        Util.waitForLatch(tooltipLatch, 5, "Timeout waiting for tooltip to display");
+        Util.waitForLatch(tooltipShownLatch, 5, "Timeout waiting for tooltip to display");
         Thread.sleep(2000); // Wait for tooltip to display
 
         Util.runAndWait(() -> {
             robot.mousePress(MouseButton.PRIMARY);
         });
 
+        Util.waitForLatch(tooltipHiddenLatch, 5, "Timeout waiting for tooltip to be hidden");
         for (int i = 0; i < dragDistance; i++) {
             final int c = i;
             Util.runAndWait(() -> {
@@ -116,7 +130,11 @@ public class SliderTooltipNPETest {
         Util.runAndWait(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX()),
                             (int)(scene.getWindow().getY() + scene.getY()));
+            mouseMovedLatch.countDown();
         });
+
+        Util.waitForLatch(mouseMovedLatch, 5, "Timeout waiting for mouse to move away from slider");
+        Thread.sleep(500);
     }
 
     public static class TestApp extends Application {
@@ -128,7 +146,8 @@ public class SliderTooltipNPETest {
 
             Tooltip tooltip = new Tooltip("Autohide tooltip");
             tooltip.setAutoHide(true);
-            tooltip.setOnShown(event -> Platform.runLater(tooltipLatch::countDown));
+            tooltip.setOnShown(event -> Platform.runLater(tooltipShownLatch::countDown));
+            tooltip.setOnHidden(event -> Platform.runLater(tooltipHiddenLatch::countDown));
 
             slider = new Slider(0, 100, 50);
             slider.setTooltip(tooltip);

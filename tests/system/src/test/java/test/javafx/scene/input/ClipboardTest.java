@@ -32,6 +32,7 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import javafx.scene.input.Clipboard;
@@ -115,6 +116,68 @@ public class ClipboardTest {
         Thread.sleep(1000);
         Util.runAndWait(() ->
                assertEquals(text, clipboard.getContent(DataFormat.PLAIN_TEXT)));
+    }
+
+    private void testClipboard(List<List<Integer>> codePointsLists, boolean checkResults) {
+        codePointsLists.stream().forEach(codePointsList -> {
+            int[] codePoints = codePointsList.stream()
+                    .mapToInt(Integer::intValue)
+                    .toArray();
+            String text = new String(codePoints, 0, codePoints.length);
+            ClipboardContent content = new ClipboardContent();
+            content.put(DataFormat.PLAIN_TEXT, text);
+            Util.runAndWait(() -> clipboard.setContent(content));
+            if (checkResults) {
+                Util.runAndWait(() ->
+                       assertEquals(text, clipboard.getContent(DataFormat.PLAIN_TEXT)));
+            }
+        });
+    }
+
+    /*
+     * @test 8304441
+     *
+     * Test bad strings with mismatched halves of surrogate pairs.
+     */
+    @Test
+    public void testCopyBadSurrogate() {
+        List<List<Integer>> codePointsLists = List.of(
+            List.of(0xD800),             // High
+            List.of(0xDBFF),             // High
+            List.of(0xD83D),             // High
+            List.of(0xDC00),             // Low
+            List.of(0xDFFF),             // Low
+            List.of(0xD800, 0xDBFF),     // High, High
+            List.of(0xDC00, 0xDFFF),     // Low, Low
+            List.of(0xDC00, 0xD800),     // Low, High
+            List.of(0xDFFF, 0xDBFF),     // Low, High
+            List.of(0x1F600, 0xD800),    // High, Low, High
+            List.of(0xD800, 0x1F600),    // High, High, Low
+            List.of(0x41, 0xD83D, 0x5A), // 'A', High, 'Z'
+            List.of(0x41, 0xDDDD, 0x5A)  // 'A', Low, 'Z'
+        );
+
+        testClipboard(codePointsLists, false);
+    }
+
+    /*
+     * @test 8304441
+     *
+     * Test good strings with matched surrogate pairs.
+     */
+    @Test
+    public void testCopyPasteSurrogatePairs() {
+        List<List<Integer>> codePointsLists = List.of(
+            List.of(0xD800, 0xDC00),    // High, Low
+            List.of(0xDBFF, 0xDFFF),    // High, Low
+            List.of(0x1F600),
+            List.of(0x1F603),
+            List.of(0x1F976),
+            List.of(0x1F600, 0x1F603, 0x1F976),
+            List.of(0x41, 0x1F600, 0x1F603, 0x1F976, 0x5A)
+        );
+
+        testClipboard(codePointsLists, true);
     }
 
     /*

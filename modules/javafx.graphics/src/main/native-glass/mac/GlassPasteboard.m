@@ -31,6 +31,12 @@
 #import "GlassPasteboard.h"
 #import "GlassDragSource.h"
 
+// UTF-16 code points for surrogate pairs
+#define HIGH_SURROGATE_START 0xD800
+#define HIGH_SURROGATE_END 0xDBFF
+#define LOW_SURROGATE_START 0xDC00
+#define LOW_SURROGATE_END 0xDFFF
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -39,6 +45,40 @@
 #endif
 
 static NSInteger lastDragSesionNumber = 0;
+
+// Validate the string. Returns false if the string is nil or if
+// it contains invalid partial surrogate pairs: a high surrogate
+// without an immediately following low surrogate, or conversely,
+// a low surrogate without an immediately preceding high surrogate.
+static BOOL validate(NSString *data)
+{
+    if (data == nil) {
+        return NO;
+    }
+
+    BOOL prevHiSurrogate = NO;
+    NSUInteger i;
+    for (i = 0; i < [data length]; i++) {
+        BOOL hiSurrogate = NO;
+        BOOL loSurrogate = NO;
+        NSUInteger c = [data characterAtIndex:i];
+        if (c >= HIGH_SURROGATE_START && c <= HIGH_SURROGATE_END) {
+            hiSurrogate = YES;
+        } else if (c >= LOW_SURROGATE_START && c <= LOW_SURROGATE_END) {
+            loSurrogate = YES;
+        }
+
+        if (loSurrogate && !prevHiSurrogate) {
+            return NO;
+        }
+        if (prevHiSurrogate && !loSurrogate) {
+            return NO;
+        }
+
+        prevHiSurrogate = hiSurrogate;
+    }
+    return !prevHiSurrogate;
+}
 
 // Dock puts the data to a custom pasteboard, so dragging from it does not work.
 // Copy the contents of the sender PBoard to the DraggingPBoard
@@ -213,8 +253,11 @@ static inline void SetNSPasteboardItemValueForUtf(JNIEnv *env, NSPasteboardItem 
             string = [NSString stringWithCharacters:(UniChar *)chars length:(NSUInteger)(*env)->GetStringLength(env, jValue)];
             (*env)->ReleaseStringChars(env, jValue, chars);
         }
-        [item setString:string forType:utf];
+
         //NSLog(@"                SetValue(string): %@, ForUtf: %@", string, utf);
+        if (validate(string)) {
+            [item setString:string forType:utf];
+        }
     }
     else
     {
@@ -286,7 +329,14 @@ static inline NSPasteboardItem *NSPasteboardItemFromArray(JNIEnv *env, jobjectAr
                         }
                         (*env)->ReleaseStringChars(env, jUtf, chars);
                     }
-                    SetNSPasteboardItemValueForUtf(env, item, jObject, utf);
+                    // Setting pasteboard can throw exception. It shouldn't
+                    // happen if we validate the data, but in case it does,
+                    // we will catch the exception and log a warning
+                    @try {
+                        SetNSPasteboardItemValueForUtf(env, item, jObject, utf);
+                    } @catch (NSException *exception) {
+                        NSLog(@"WARNING: %@: %@ ",exception.name, exception.reason);
+                    }
                 }
                 else
                 {
@@ -710,7 +760,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
         seed = [pasteboard clearContents];
 
         jsize itemCount = (*env)->GetArrayLength(env, jObjects);
-        //NSLog(@"Java_com_sun_glass_ui_mac_MacPasteboard__1putItems itemCount: %d", itemCount);
+        LOG(@"Java_com_sun_glass_ui_mac_MacPasteboard__1putItems itemCount: %d", itemCount);
         if (itemCount > 0)
         {
             NSMutableArray *objects = [NSMutableArray arrayWithCapacity:(NSUInteger)itemCount];
@@ -725,12 +775,33 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                 }
             }
 
-            // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
-            [pasteboard writeObjects:objects];
-
-            if (pasteboard == [NSPasteboard pasteboardWithName:NSDragPboard])
+            // We perform a Drag-n-Drop only when our pasteboard is a DnD pasteboard
+            // and if drag delegate was set. The latter one is set when DnD operation
+            // came from a NSView (ex. mouse drag).
+            if ([[pasteboard name] isEqualToString:NSDragPboard] && [GlassDragSource isDelegateSet])
             {
-                [GlassDragSource flushWithMask:supportedActions];
+                // DnD requires separate NSDragging* calls to work since macOS 10.7
+                // convert NSPasteboardItem-s array to NSDraggingItem-s
+                NSMutableArray<NSDraggingItem*> *dItems = [NSMutableArray<NSDraggingItem*> arrayWithCapacity:itemCount];
+                for (NSPasteboardItem* i in objects)
+                {
+                    [dItems addObject:[[NSDraggingItem alloc] initWithPasteboardWriter:i]];
+                }
+
+                // New DnD API (macOS 10.7+) requires us to skip writing data to Pasteboard.
+                // It handles managing the pasteboard separately on its own.
+                [GlassDragSource flushWithMask:supportedActions withItems:dItems];
+
+                for (NSDraggingItem* i in dItems)
+                {
+                    [i release];
+                }
+            }
+            else
+            {
+                // previous write to pasteboard for compatibility
+                // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
+                [pasteboard writeObjects:objects];
             }
         }
     }

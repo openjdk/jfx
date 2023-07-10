@@ -24,6 +24,8 @@
  */
 package com.sun.glass.ui;
 
+import com.sun.javafx.PlatformUtil;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Locale;
@@ -62,15 +64,13 @@ final class Platform {
                 return type;
             }
 
-            String osName = System.getProperty("os.name");
-            String osNameLowerCase = osName.toLowerCase(Locale.ROOT);
-            if (osNameLowerCase.startsWith("mac") || osNameLowerCase.startsWith("darwin")) {
+            if (PlatformUtil.isMac()) {
                 type = MAC;
-            } else if (osNameLowerCase.startsWith("wind")) {
+            } else if (PlatformUtil.isWindows()) {
                 type = WINDOWS;
-            } else if (osNameLowerCase.startsWith("linux")) {
+            } else if (PlatformUtil.isLinux()) {
                 type = GTK;
-            } else if (osNameLowerCase.startsWith("ios")) {
+            } else if (PlatformUtil.isIOS()) {
                 type = IOS;
             }
         }

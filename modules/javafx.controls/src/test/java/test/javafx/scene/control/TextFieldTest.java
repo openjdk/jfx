@@ -50,12 +50,15 @@ import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.control.TextFormatter.Change;
 import javafx.scene.control.TextInputControlShim;
+import javafx.scene.control.skin.TextFieldSkin;
+import javafx.scene.control.skin.TextInputSkinShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
@@ -541,6 +544,69 @@ public class TextFieldTest {
         // 3 is removed, therefore we get 100. The value converter above will then add 100 (=200).
         txtField.setText("1300");
         assertEquals("200", txtField.getText());
+    }
+
+    /**
+     * test for JDK-8178368: Right and Center alignment of text field works incorrectly
+     *
+     * Here we test that text aligns as expected when text width is more than TextField width.
+     * All three alignment types LEFT, RIGHT and CENTER are validated below.
+     */
+    @Test
+    public void testTextFieldLeftAlignment() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text.");
+        txtField.setPrefColumnCount(20);
+        txtField.setAlignment(Pos.BASELINE_LEFT);
+
+        root.getChildren().add(txtField);
+        stage.show();
+
+        assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(TextInputSkinShim.getTextTranslateX(txtField), 0, 0.0);
+
+        txtField.setText("This is a long text. this is  long text.");
+        assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+    }
+
+    @Test
+    public void testTextFieldRightAlignment() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text.");
+        txtField.setPrefColumnCount(20);
+        txtField.setAlignment(Pos.BASELINE_RIGHT);
+
+        root.getChildren().add(txtField);
+        stage.show();
+
+        assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertTrue(TextInputSkinShim.getTextTranslateX(txtField) > 0);
+
+        txtField.setText("This is a long text. this is  long text.");
+        assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+    }
+
+    @Test
+    public void testTextFieldCenterAlignment() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text.");
+        txtField.setPrefColumnCount(20);
+        txtField.setAlignment(Pos.BASELINE_CENTER);
+
+        root.getChildren().add(txtField);
+        stage.show();
+
+        assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertTrue(TextInputSkinShim.getTextTranslateX(txtField) > 0);
+
+        txtField.setText("This is a long text. this is  long text.");
+        assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test public void stripInvalidCharacters() {

@@ -370,6 +370,25 @@ JNIEXPORT void JNICALL OS_NATIVE(CFRelease)
     CFRelease((CFTypeRef)arg0);
 }
 
+JNIEXPORT void JNICALL OS_NATIVE(CFRetain)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    CFRetain((CFTypeRef)arg0);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateCopyWithAttributes)
+    (JNIEnv *env, jclass that, jlong ctfont, jdouble size, jobject matrix, jlong attributes)
+{
+    CGAffineTransform transform;
+    if (matrix) {
+        getCGAffineTransformFields(env, matrix, &transform);
+    } else {
+        transform = CGAffineTransformIdentity;
+    }
+    return (jlong)CTFontCreateCopyWithAttributes((CTFontRef)ctfont, (CGFloat)size,
+                                                 &transform, (CTFontDescriptorRef)attributes);
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithGraphicsFont)
     (JNIEnv *env, jclass that, jlong cgFont, jdouble size, jobject matrix, jlong attributes)
 {
@@ -380,6 +399,23 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithGraphicsFont)
         transform = CGAffineTransformIdentity;
     }
     return (jlong)CTFontCreateWithGraphicsFont((CGFontRef)cgFont, (CGFloat)size, &transform, (CTFontDescriptorRef)attributes);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateUIFontForLanguage)
+    (JNIEnv *env, jclass that, jdouble size, jobject matrix, jboolean bold) {
+
+    CGAffineTransform _matrix, *lpmatrix=NULL;
+    CTFontUIFontType fType = bold ? kCTFontUIFontEmphasizedSystem : kCTFontUIFontSystem;
+    CTFontRef font = CTFontCreateUIFontForLanguage(fType, (CGFloat)size, NULL);
+    if (matrix == NULL) {
+        return (jlong)font;
+    }
+    if ((lpmatrix = getCGAffineTransformFields(env, matrix, &_matrix)) == NULL) {
+         return (jlong)font;
+    }
+    jlong txfont = (jlong)CTFontCreateCopyWithAttributes(font, (CGFloat)size, (CGAffineTransform*)lpmatrix, NULL);
+    CFRelease(font);
+    return txfont;
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithName)
@@ -754,6 +790,21 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetStringIndices)
         }
     }
     return i;
+}
+
+JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyURLAttribute)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    CFURLRef urlRef = CTFontCopyAttribute((CTFontRef)arg0, kCTFontURLAttribute);
+    if (urlRef == NULL) return NULL;
+    CFStringRef stringRef = CFURLCopyFileSystemPath(urlRef, kCFURLPOSIXPathStyle);
+    CFRelease(urlRef);
+    if (stringRef == NULL) return NULL;
+    CFIndex length = CFStringGetLength(stringRef);
+    UniChar buffer[length];
+    CFStringGetCharacters(stringRef, CFRangeMake(0, length), buffer);
+    CFRelease(stringRef);
+    return (*env)->NewString(env, (jchar *)buffer, length);
 }
 
 JNIEXPORT jstring JNICALL OS_NATIVE(CTFontCopyAttributeDisplayName)
