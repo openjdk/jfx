@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import javafx.scene.control.rich.Origin;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.TextCell;
 import com.sun.javafx.util.Utils;

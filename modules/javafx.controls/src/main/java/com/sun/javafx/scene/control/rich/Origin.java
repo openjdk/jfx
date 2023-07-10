@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control.rich;
+package com.sun.javafx.scene.control.rich;
 
 /**
  * View origin: model index of the top paragraph index + offset in pixels from the upper edge of the top cell to

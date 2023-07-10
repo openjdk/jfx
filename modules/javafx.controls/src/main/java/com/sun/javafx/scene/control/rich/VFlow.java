@@ -44,7 +44,6 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.rich.CaretInfo;
 import javafx.scene.control.rich.ConfigurationParameters;
-import javafx.scene.control.rich.Origin;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.SideDecorator;
 import javafx.scene.control.rich.StyleResolver;
