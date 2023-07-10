@@ -33,7 +33,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import com.sun.javafx.scene.control.rich.MarkerHelper;
 
 /**
- * Tracks text position in the text document in the presence of edits.
+ * Tracks the text position in a document in the presence of edits.
  */
 public final class Marker implements Comparable<Marker> {
     static {
@@ -62,8 +62,8 @@ public final class Marker implements Comparable<Marker> {
         return "Marker{" + getIndex() + "," + getOffset() + "}";
     }
 
-    /** Property tracks marker's position within the model (always non null) */
-    public ReadOnlyObjectProperty<TextPos> textPosProperty() {
+    /** This property tracks the marker's position within the model (value is always non-null). */
+    public final ReadOnlyObjectProperty<TextPos> textPosProperty() {
         return pos.getReadOnlyProperty();
     }
 
@@ -76,7 +76,7 @@ public final class Marker implements Comparable<Marker> {
     }
 
     @Override
-    public int compareTo(Marker m) {
+    public final int compareTo(Marker m) {
         return getTextPos().compareTo(m.getTextPos());
     }
 
@@ -97,10 +97,16 @@ public final class Marker implements Comparable<Marker> {
         return false;
     }
 
+    /**
+     * Returns the model paragraph index.
+     */
     public final int getIndex() {
         return getTextPos().index();
     }
 
+    /**
+     * Returns the insert offset within the paragraph.
+     */
     public final int getOffset() {
         return getTextPos().offset();
     }

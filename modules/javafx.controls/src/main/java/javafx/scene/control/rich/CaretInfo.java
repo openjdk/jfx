@@ -32,9 +32,9 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 
 /**
- * Captures a local caret position and bounds in the VFlow coordinates.
+ * Captures the caret position and bounds in the content view coordinates.
  */
-public class CaretInfo {
+public final class CaretInfo {
     private final double xmin;
     private final double xmax;
     private final double ymin;
@@ -49,6 +49,15 @@ public class CaretInfo {
         this.path = path;
     }
 
+    /**
+     * Creates an instance of CaretInfo given the path and translation offsets required to
+     * convert path coordinates (which come in the frame of reference of its {@link TextFlow}) to the view port
+     * coordinates.
+     *
+     * @param dx translation x offset
+     * @param dy translation y offset
+     * @param path caret path
+     */
     public static CaretInfo create(double dx, double dy, PathElement[] path) {
         Objects.requireNonNull(path);
         if (path.length == 0) {
@@ -62,13 +71,13 @@ public class CaretInfo {
 
         // also translate full path
         int sz = path.length;
-        PathElement[] pe = new PathElement[sz];
+        PathElement[] newPath = new PathElement[sz];
         for (int i = 0; i < sz; i++) {
             PathElement em = path[i];
             if (em instanceof LineTo lineto) {
                 double x = lineto.getX() + dx;
                 double y = lineto.getY() + dy;
-                pe[i] = new LineTo(x, y);
+                newPath[i] = new LineTo(x, y);
 
                 x = Util.halfPixel(x);
                 if (x < xmin) {
@@ -86,7 +95,7 @@ public class CaretInfo {
             } else if (em instanceof MoveTo moveto) {
                 double x = moveto.getX() + dx;
                 double y = moveto.getY() + dy;
-                pe[i] = new MoveTo(x, y);
+                newPath[i] = new MoveTo(x, y);
 
                 x = Util.halfPixel(x);
                 if (x < xmin) {
@@ -106,7 +115,7 @@ public class CaretInfo {
             }
         }
 
-        return new CaretInfo(xmin, xmax, ymin, ymax, pe);
+        return new CaretInfo(xmin, xmax, ymin, ymax, newPath);
     }
 
     public final double getMinX() {

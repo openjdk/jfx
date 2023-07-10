@@ -30,6 +30,10 @@ import javafx.scene.control.ScrollBar;
 
 /**
  * Configuration parameters for RichTextArea.
+ *
+ * These (immutable) parameters are passed to to the constructor,
+ * affording modification of the default skin or behavior
+ * without subsclassing of internal classes.
  */
 public final class ConfigurationParameters {
     /** creates a horizontal scroll bar.  when set to null (default) a standard ScrollBar will be created */
@@ -41,7 +45,10 @@ public final class ConfigurationParameters {
     public static Builder builder() {
         return new Builder();
     }
-    
+
+    /**
+     * Creates default configuration parameters.
+     */
     public static ConfigurationParameters defaultConfig() {
         return ConfigurationParameters.builder().create();
     }
@@ -51,7 +58,7 @@ public final class ConfigurationParameters {
         scrollBarGeneratorHorizontal = b.horizontalScrollBarGenerator;
     }
 
-    /** Config builder is necessary to make Config immutable */
+    /** A builder class allows for making {@code ConfigurationParameters} immutable */
     public static final class Builder {
         private Supplier<ScrollBar> verticalScrollBarGenerator;
         private Supplier<ScrollBar> horizontalScrollBarGenerator;
@@ -59,6 +66,9 @@ public final class ConfigurationParameters {
         private Builder() {
         }
 
+        /**
+         * Creates an immutable instance of {@link ConfigurationParameters}
+         */
         public ConfigurationParameters create() {
             return new ConfigurationParameters(this);
         }

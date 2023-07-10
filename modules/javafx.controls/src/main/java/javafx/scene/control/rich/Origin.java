@@ -26,7 +26,8 @@
 package javafx.scene.control.rich;
 
 /**
- * View origin: top paragraph index + offset in pixels from the top edge of top cell.
+ * View origin: model index of the top paragraph index + offset in pixels from the upper edge of the top cell to
+ * the upper edge of the view area.
  * 
  * @param index model index of a paragraph at the top of visible area
  * @param offset distance in pixels from the top of the visible area to the top of the topmost paragraph
