@@ -1362,13 +1362,22 @@ public class VFlow extends Pane implements StyleResolver {
         if (arrangement == null) {
             return Region.USE_COMPUTED_SIZE;
         }
-        return Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight());
+        return
+            snapSizeY(Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight())) +
+            snapSizeY(Params.LAYOUT_FOCUS_BORDER) * 2;
     }
 
     public double getFlowWidth() {
         if (arrangement == null) {
             return Region.USE_COMPUTED_SIZE;
         }
-        return arrangement.getUnwrappedWidth() + leftSide + rightSide + leftPadding + rightPadding + Params.LAYOUT_CARET_ALLOWANCE;
+        return
+            arrangement.getUnwrappedWidth() +
+            snapSizeX(leftSide) +
+            snapSizeX(rightSide) +
+            leftPadding +
+            rightPadding +
+            snapSizeX(Params.LAYOUT_CARET_ALLOWANCE) +
+            snapSizeX(Params.LAYOUT_FOCUS_BORDER) * 2;
     }
 }

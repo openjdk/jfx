@@ -108,7 +108,8 @@ public class CellArrangement {
     public void setUnwrappedWidth(double w) {
         unwrappedWidth = w;
     }
-    
+
+    /** returns snapped(ceil) size */
     public double getUnwrappedWidth() {
         return unwrappedWidth;
     }

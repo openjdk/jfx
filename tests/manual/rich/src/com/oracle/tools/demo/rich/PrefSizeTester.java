@@ -28,10 +28,12 @@ package com.oracle.tools.demo.rich;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 
-public class PrefSizeTester extends GridPane {
+public class PrefSizeTester extends Pane {
     private final ComboBox prefWidth;
     private final ComboBox prefHeight;
+    private final GridPane p;
     
     public PrefSizeTester() {
         prefWidth = new ComboBox();
@@ -56,23 +58,27 @@ public class PrefSizeTester extends GridPane {
             updateHeight();
         });
 
-        add(new Label("Pref Width:"), 0, 0);
-        add(prefWidth, 1, 0);
-        add(new Label("Pref Height:"), 0, 1);
-        add(prefHeight, 1, 1);
+        p = new GridPane();
+        p.add(new Label("Pref Width:"), 0, 0);
+        p.add(prefWidth, 1, 0);
+        p.add(new Label("Pref Height:"), 0, 1);
+        p.add(prefHeight, 1, 1);
+        
+        getChildren().add(p);
+        //setCenter(p);
     }
 
     private void updateWidth() {
         if (prefWidth.getValue() instanceof Number n) {
             double w = n.doubleValue();
-            setPrefWidth(w);
+            p.setPrefWidth(w);
         }
     }
 
     private void updateHeight() {
         if (prefHeight.getValue() instanceof Number n) {
             double h = n.doubleValue();
-            setPrefHeight(h);
+            p.setPrefHeight(h);
         }
     }
 }

@@ -135,28 +135,19 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     hscrollHeight = 0.0;
                 }
                 
-                boolean forceNormal = !true; // FIX
-
-                double width;
-                if (!forceNormal && control.isUseContentWidth()) {
-//                    width = vflow.getFlowWidth() + vscrollWidth;
-//                    width = vflow.prefWidth(-1) + vscrollWidth;
-                    width = prefWidth(-1);
+                double w;
+                if (control.isUseContentWidth()) {
+                    w = vflow.getFlowWidth();
                 } else {
-                    width = getWidth() - x0 - snappedRightInset();
+                    w = snapSizeX(getWidth() - x0 - snappedRightInset() - snapSizeX(vscrollWidth) - snapSizeX(Params.LAYOUT_FOCUS_BORDER));
                 }
 
-                double height;
-                if (!forceNormal && control.isUseContentHeight()) {
-//                    height = vflow.getFlowHeight() + hscrollHeight;
-//                    height = vflow.prefHeight(-1) + hscrollHeight;
-                    height = prefHeight(-1);
+                double h;
+                if (control.isUseContentHeight()) {
+                    h = vflow.getFlowHeight();
                 } else {
-                    height = getHeight() - y0 - snappedBottomInset();
+                    h = snapSizeY(getHeight() - y0 - snappedBottomInset() - snapSizeY(hscrollHeight) - snapSizeY(Params.LAYOUT_FOCUS_BORDER));
                 }
-
-                double w = snapSizeX(width - vscrollWidth - 1.0);
-                double h = snapSizeY(height - hscrollHeight - 1.0);
 
                 D.f("w=%.1f h=%.1f pref=%.1f", w, h, prefHeight(-1)); // FIX
 
