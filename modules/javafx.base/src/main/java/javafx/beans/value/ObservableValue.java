@@ -339,7 +339,7 @@ public interface ObservableValue<T> extends Observable {
 
     /**
      * Creates a {@link Subscription} on this value which immediately provides
-     * the current value to the given {@code subscriber}, followed by any
+     * the current value to the given {@code valueSubscriber}, followed by any
      * subsequent values whenever its value changes.
      * <p>
      * Note that the same subscriber instance may be safely subscribed for
