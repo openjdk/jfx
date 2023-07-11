@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,9 +23,10 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css;
 
 import javafx.animation.Interpolator;
+import javafx.css.StyleableProperty;
 import javafx.util.Duration;
 import java.util.Objects;
 
@@ -42,21 +43,16 @@ import java.util.Objects;
  *
  * button.getTransitions().add(
  *     new TransitionDefinition(
- *         TransitionPropertyKind.BEAN,
- *         "opacity",
+ *         "-fx-opacity",
  *         Duration.seconds(0.5),
  *         Duration.ZERO,
  *         Interpolator.LINEAR));
  * }</pre>
  *
- * Note that {@link TransitionPropertyKind#BEAN} is used to match the specified property name
- * against JavaFX Bean property names instead of JavaFX CSS property names.
- *
  * @since 20
  */
 public class TransitionDefinition {
 
-    private final TransitionPropertyKind propertyKind;
     private final String propertyName;
     private final Duration duration;
     private final Duration delay;
@@ -65,24 +61,20 @@ public class TransitionDefinition {
     /**
      * Creates a new {@code TransitionDefinition} instance with zero delay and linear interpolation.
      *
-     * @param propertyKind property selector
-     * @param propertyName name of the property (may be {@code null} when {@code propertyKind}
-     *                     is {@link TransitionPropertyKind#ALL})
+     * @param propertyName the CSS property name, or "all" to target any property
      * @param duration duration of the transition
      *
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
      */
-    public TransitionDefinition(TransitionPropertyKind propertyKind, String propertyName, Duration duration) {
-        this(propertyKind, propertyName, duration, Duration.ZERO, Interpolator.LINEAR);
+    public TransitionDefinition(String propertyName, Duration duration) {
+        this(propertyName, duration, Duration.ZERO, Interpolator.LINEAR);
     }
 
     /**
      * Creates a new {@code TransitionDefinition} instance.
      *
-     * @param propertyKind the property kind
-     * @param propertyName name of the property (may be {@code null} when {@code propertyKind}
-     *                     is {@link TransitionPropertyKind#ALL})
+     * @param propertyName the CSS property name, or "all" to target any property
      * @param duration duration of the transition
      * @param delay delay after which the transition is started; if negative, the transition starts
      *              immediately, but will appear to have begun at an earlier point in time
@@ -91,18 +83,13 @@ public class TransitionDefinition {
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
      */
-    public TransitionDefinition(TransitionPropertyKind propertyKind, String propertyName, Duration duration,
+    public TransitionDefinition(String propertyName, Duration duration,
                                 Duration delay, Interpolator interpolator) {
-        this.propertyKind = Objects.requireNonNull(propertyKind, "propertyKind cannot be null");
+        Objects.requireNonNull(propertyName, "propertyName cannot be null");
+        this.propertyName = "all".equalsIgnoreCase(propertyName) ? "all" : propertyName;
         this.duration = Objects.requireNonNull(duration, "duration cannot be null");
         this.delay = Objects.requireNonNull(delay, "delay cannot be null");
         this.interpolator = Objects.requireNonNull(interpolator, "interpolator cannot be null");
-
-        if (propertyKind != TransitionPropertyKind.ALL) {
-            this.propertyName = Objects.requireNonNull(propertyName, "propertyName cannot be null");
-        } else {
-            this.propertyName = "all";
-        }
 
         if (duration.lessThan(Duration.ZERO)) {
             throw new IllegalArgumentException("duration cannot be negative");
@@ -110,16 +97,7 @@ public class TransitionDefinition {
     }
 
     /**
-     * Gets the property kind targeted by this transition.
-     *
-     * @return the {@code TransitionPropertyKind}
-     */
-    public TransitionPropertyKind getPropertyKind() {
-        return propertyKind;
-    }
-
-    /**
-     * Gets the name of the property targeted by this transition.
+     * Gets the name of the CSS property targeted by this transition.
      *
      * @return the property name
      */

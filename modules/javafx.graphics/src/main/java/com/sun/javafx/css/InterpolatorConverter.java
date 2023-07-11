@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package com.sun.javafx.css;
 
+import com.sun.scenario.animation.StepInterpolator;
 import javafx.animation.Interpolator;
-import javafx.animation.StepPosition;
+import com.sun.scenario.animation.StepPosition;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
@@ -65,6 +66,8 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
     static final Interpolator EASE_IN = Interpolator.SPLINE(0.42, 0, 1, 1);
     static final Interpolator EASE_OUT = Interpolator.SPLINE(0, 0, 0.58, 1);
     static final Interpolator EASE_IN_OUT = Interpolator.SPLINE(0.42, 0, 0.58, 1);
+    static final Interpolator STEP_START = new StepInterpolator(1, StepPosition.START);
+    static final Interpolator STEP_END = new StepInterpolator(1, StepPosition.END);
 
     // We're using an LRU cache (least recently used) to limit the number of redundant instances.
     private static final Map<Object, Interpolator> CACHE = new LinkedHashMap<>(10, 0.75f, true) {
@@ -86,8 +89,8 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                 case "ease-in" -> EASE_IN;
                 case "ease-out" -> EASE_OUT;
                 case "ease-in-out" -> EASE_IN_OUT;
-                case "step-start" -> Interpolator.STEP_START;
-                case "step-end" -> Interpolator.STEP_END;
+                case "step-start" -> STEP_START;
+                case "step-end" -> STEP_END;
                 default -> Interpolator.LINEAR;
             };
         }
@@ -106,7 +109,7 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                         args[1] = "end";
                     }
 
-                    yield CACHE.computeIfAbsent(args, key -> Interpolator.STEPS((int)args[0], switch ((String)args[1]) {
+                    yield CACHE.computeIfAbsent(args, key -> new StepInterpolator((int)args[0], switch ((String)args[1]) {
                         case "jump-start", "start" -> StepPosition.START;
                         case "jump-both" -> StepPosition.BOTH;
                         case "jump-none" -> StepPosition.NONE;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,9 @@
 package test.com.sun.javafx.css;
 
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.NodeShim;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -35,7 +37,6 @@ import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableDoubleProperty;
-import javafx.css.TransitionPropertyKind;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableFloatProperty;
 import javafx.css.SimpleStyleableIntegerProperty;
@@ -44,7 +45,7 @@ import javafx.css.SimpleStyleableObjectProperty;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
-import javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionDefinition;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
@@ -57,7 +58,6 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import static javafx.animation.Interpolator.*;
-import static javafx.css.TransitionPropertyKind.*;
 import static javafx.util.Duration.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -67,7 +67,7 @@ public class TransitionTimerTest {
     @Test
     public void testTimerEndsWithProgressExactlyOne() {
         var trace = new ArrayList<Double>();
-        var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
+        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
             @Override
             protected void onUpdate(StyleableDoubleProperty property, double progress) {
@@ -92,7 +92,7 @@ public class TransitionTimerTest {
     @Test
     public void testTimerStopsWhenProgressIsOne() {
         var flag = new boolean[1];
-        var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
+        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
             @Override
             protected void onUpdate(StyleableDoubleProperty property, double progress) {}
@@ -117,7 +117,7 @@ public class TransitionTimerTest {
 
     @Test
     public void testRunningTimerCanBeStopped() {
-        var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
+        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
             @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {}
             @Override protected void onStop(StyleableDoubleProperty property) {}
@@ -131,7 +131,7 @@ public class TransitionTimerTest {
     @Test
     public void testTimerCannotStopItself() {
         var flag = new boolean[1];
-        var transition = new TransitionDefinition(BEAN, "test", seconds(1), ZERO, LINEAR);
+        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
             @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {
                 flag[0] = TransitionTimer.tryStop(this);
@@ -241,10 +241,9 @@ public class TransitionTimerTest {
 
             try {
                 TestArgs args = testRun.args.get();
-                args.node.getTransitions().add(
+                NodeShim.getTransitions(args.node).add(
                     new TransitionDefinition(
-                        TransitionPropertyKind.BEAN, "testProperty",
-                        Duration.seconds(1), Duration.ZERO, Interpolator.LINEAR));
+                        "testProperty", Duration.seconds(1), Duration.ZERO, Interpolator.LINEAR));
 
                 handleMethod = AnimationTimer.class.getDeclaredMethod("handle", long.class);
                 Field timerField = null;

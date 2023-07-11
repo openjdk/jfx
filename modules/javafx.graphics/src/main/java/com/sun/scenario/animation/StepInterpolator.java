@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package com.sun.scenario.animation;
 
 import javafx.animation.Interpolator;
-import javafx.animation.StepPosition;
+
 import java.util.Objects;
 
 /**
@@ -51,11 +51,11 @@ public class StepInterpolator extends Interpolator {
         this.intervals = intervals;
     }
 
-    @Override
-    public boolean isValidBeforeInterval() {
-        return true;
-    }
-
+    /**
+     * Contrary to the base {@link Interpolator#curve} specification, this interpolator accepts
+     * negative input values. A negative value indicates that the active interval hasn't been
+     * reached.
+     */
     @Override
     protected double curve(double t) {
         boolean before = t < 0;

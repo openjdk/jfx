@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,8 @@ public abstract class AbstractPropertyTimer extends AnimationTimer {
 
     /**
      * Stops the specified timer if it is currently running, but only if this method was not
-     * called from the timer's {@link #update(double)} method (i.e. a timer will not stop itself).
+     * called from the timer's {@link #update(double)} method (i.e. a timer will not stop itself
+     * while trying to set the new value of a styleable property).
      * If {@code timer} is {@code null}, it is considered to be trivially stopped, so the
      * method returns {@code true}.
      *

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,18 @@
 
 package javafx.css;
 
+import javafx.animation.Transition;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.util.Duration;
 
 /**
- * An event that signals the creation, beginning, completion and cancellation of transitions.
+ * An event that signals the creation, beginning, completion and cancellation of implicit CSS transitions.
+ * <p>
+ * Note that this event is not raised for explicit transitions that are created using the {@link Transition} class.
  *
- * @since 20
+ * @since 22
  */
 public class TransitionEvent extends Event {
 

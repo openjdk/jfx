@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,9 @@
 
 package test.com.sun.scenario.animation;
 
-import com.sun.javafx.util.Utils;
 import com.sun.scenario.animation.StepInterpolator;
+import com.sun.scenario.animation.StepPosition;
 import org.junit.jupiter.api.Test;
-
-import javafx.animation.StepPosition;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -129,10 +127,6 @@ public class StepInterpolatorTest {
 
         @Override
         public double curve(double t) {
-            if (!isValidBeforeInterval()) {
-                return super.curve(Utils.clamp(0, t, 1));
-            }
-
             return super.curve(t);
         }
     }

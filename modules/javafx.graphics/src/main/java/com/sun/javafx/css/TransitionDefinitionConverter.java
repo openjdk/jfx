@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,6 @@ import javafx.css.ParsedValue;
 import javafx.css.Size;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
-import javafx.css.TransitionDefinition;
-import javafx.css.TransitionPropertyKind;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 import java.util.Arrays;
@@ -86,7 +84,6 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         }
 
         return new TransitionDefinition(
-            "all".equalsIgnoreCase(property) ? TransitionPropertyKind.ALL : TransitionPropertyKind.CSS,
             property,
             duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration,
             parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO,
@@ -133,11 +130,8 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
                 Interpolator timingFunction = timingFunctions == null || timingFunctions.length == 0 ?
                     InterpolatorConverter.EASE : timingFunctions[i % timingFunctions.length];
 
-                TransitionPropertyKind kind = "all".equals(properties[i]) ?
-                    TransitionPropertyKind.ALL : TransitionPropertyKind.CSS;
-
                 transitions[i] = new TransitionDefinition(
-                    kind, properties[i], durations[i % durations.length], delay, timingFunction);
+                    properties[i], durations[i % durations.length], delay, timingFunction);
             }
 
             return transitions;

@@ -54,7 +54,6 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ModifiableObservableListBase;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
@@ -68,7 +67,6 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
-import javafx.css.TransitionDefinition;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
@@ -109,6 +107,7 @@ import javafx.util.Callback;
 import java.security.AccessControlContext;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -128,6 +127,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.css.PseudoClassState;
+import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import javafx.css.Selector;
 import javafx.css.Style;
@@ -633,7 +633,17 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public TransitionDefinition findTransition(Node node, CssMetaData<? extends Styleable, ?> metadata) {
+            public StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node) {
+                if (node.transitions == null) {
+                    node.transitions = node.new Transitions();
+                }
+
+                return node.transitions;
+            }
+
+            @Override
+            public TransitionDefinition findTransitionDefinition(
+                    Node node, CssMetaData<? extends Styleable, ?> metadata) {
                 return node.transitions == null ? null : node.transitions.find(metadata);
             }
 
@@ -8921,6 +8931,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (propertyTimers == null) {
             propertyTimers = new ArrayList<>(4);
         }
+
         propertyTimers.add(timer);
     }
 
@@ -8947,7 +8958,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         // Make a copy of the list, because completing the timers causes them to be removed
         // from the list, which would result in a ConcurrentModificationException.
-        for (AbstractPropertyTimer timer : new ArrayList<>(propertyTimers)) {
+        for (AbstractPropertyTimer timer : List.copyOf(propertyTimers)) {
             timer.cancel();
         }
     }
@@ -8964,10 +8975,17 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
-    private class TransitionDefinitions
-            extends ModifiableObservableListBase<TransitionDefinition>
+    /**
+     * Contains descriptions of the animated transitions that are currently defined for
+     * properties of this {@code Node}.
+     * <p>
+     * All property transitions are implicit, which means they are started automatically by
+     * the CSS subsystem when a property value is changed. Explicit property changes, such as
+     * by calling {@link Property#setValue(Object)}, do not trigger an animated transition.
+     */
+    private class Transitions
+            extends ArrayList<TransitionDefinition>
             implements StyleableProperty<TransitionDefinition[]> {
-        private final List<TransitionDefinition> list = new ArrayList<>(4);
         private StyleOrigin origin;
 
         /**
@@ -8975,7 +8993,7 @@ public abstract class Node implements EventTarget, Styleable {
          * or {@code null} if no transition was found.
          */
         TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
-            if (list.size() == 0) {
+            if (size() == 0) {
                 return null;
             }
 
@@ -8984,18 +9002,11 @@ public abstract class Node implements EventTarget, Styleable {
 
             // We look for a matching transition in reverse, since multiple transitions might be specified
             // for the same property. In this case, the last transition takes precedence.
-            for (int i = list.size() - 1; i >= 0; --i) {
-                TransitionDefinition transition = list.get(i);
+            for (int i = size() - 1; i >= 0; --i) {
+                TransitionDefinition transition = get(i);
 
-                // Depending on the property kind, we match the transition's property name against
-                // the JavaFX Bean property name, the CSS property name, or both.
-                boolean selected = switch (transition.getPropertyKind()) {
-                    case BEAN -> beanPropertyName != null && beanPropertyName.equals(transition.getPropertyName());
-                    case CSS -> metadata.getProperty().equals(transition.getPropertyName());
-                    case ANY -> beanPropertyName != null && beanPropertyName.equals(transition.getPropertyName())
-                                || metadata.getProperty().equals(transition.getPropertyName());
-                    case ALL -> true;
-                };
+                boolean selected = "all".equals(transition.getPropertyName())
+                    || metadata.getProperty().equals(transition.getPropertyName());
 
                 if (selected) {
                     return transition;
@@ -9021,38 +9032,14 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         @Override
-        public TransitionDefinition get(int index) {
-            return list.get(index);
-        }
-
-        @Override
-        public int size() {
-            return list.size();
-        }
-
-        @Override
-        protected void doAdd(int index, TransitionDefinition element) {
-            list.add(index, element);
-        }
-
-        @Override
-        protected TransitionDefinition doSet(int index, TransitionDefinition element) {
-            return list.set(index, element);
-        }
-
-        @Override
-        protected TransitionDefinition doRemove(int index) {
-            return list.remove(index);
-        }
-
-        @Override
         public TransitionDefinition[] getValue() {
-            return list.toArray(TransitionDefinition[]::new);
+            return toArray(TransitionDefinition[]::new);
         }
 
         @Override
         public void setValue(TransitionDefinition[] value) {
-            setAll(value);
+            clear();
+            addAll(Arrays.asList(value));
             this.origin = StyleOrigin.USER;
         }
 
@@ -9069,33 +9056,19 @@ public abstract class Node implements EventTarget, Styleable {
 
         @Override
         public CssMetaData<? extends Styleable, TransitionDefinition[]> getCssMetaData() {
-            return StyleableProperties.TRANSITION;
+            return TransitionDefinitionCssMetaData.INSTANCE;
         }
     }
 
-    private TransitionDefinitions transitions;
-
-    /**
-     * Gets a list of transition definitions that describe the animated transitions that are
-     * currently defined for properties of this {@code Node}.
-     * <p>
-     * All property transitions are implicit, which means they are started automatically by
-     * the CSS subsystem when a property value is changed. Explicit property changes, such as
-     * by calling {@link Property#setValue(Object)}, do not trigger an animated transition.
-     *
-     * @return an {@code ObservableList} of {@code TransitionDefinition} instances
-     * @since 20
-     */
-    public final ObservableList<TransitionDefinition> getTransitions() {
-        if (transitions == null) {
-            transitions = new TransitionDefinitions();
-        }
-        return transitions;
-    }
+    private Transitions transitions;
 
     // package-private for testing
-    List<TransitionDefinition> getTransitionDefinitions() {
-        return transitions.list;
+    List<TransitionDefinition> getTransitions() {
+        if (transitions == null) {
+            transitions = new Transitions();
+        }
+
+        return transitions;
     }
 
 
@@ -9422,21 +9395,6 @@ public abstract class Node implements EventTarget, Styleable {
                     return (StyleableProperty<Boolean>)node.managedProperty();
                 }
             };
-         private static final CssMetaData<Node, TransitionDefinition[]> TRANSITION =
-             new TransitionDefinitionCssMetaData<Node>() {
-                 @Override
-                 public boolean isSettable(Node node) {
-                     return true;
-                 }
-
-                 @Override
-                 public StyleableProperty<TransitionDefinition[]> getStyleableProperty(Node node) {
-                     if (node.transitions == null) {
-                         node.transitions = node.new TransitionDefinitions();
-                     }
-                     return node.transitions;
-                 }
-             };
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
@@ -9444,9 +9402,6 @@ public abstract class Node implements EventTarget, Styleable {
 
              final List<CssMetaData<? extends Styleable, ?>> styleables =
                      new ArrayList<>();
-             // The transition property must be the first property in this list, since transitions
-             // can potentially affect other properties that are set by CssStyleHelper.
-             styleables.add(TRANSITION);
              styleables.add(CURSOR);
              styleables.add(EFFECT);
              styleables.add(FOCUS_TRAVERSABLE);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,10 @@ package com.sun.javafx.css;
 import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.util.Utils;
+import com.sun.scenario.animation.StepInterpolator;
 import javafx.animation.Interpolator;
 import javafx.beans.property.Property;
 import javafx.css.StyleableProperty;
-import javafx.css.TransitionDefinition;
 import javafx.css.TransitionEvent;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -108,12 +108,11 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
             fireEvent(property, TransitionEvent.START, Duration.millis(elapsed));
         }
 
-        // If the interpolator doesn't accept negative input progress values, we pass in 0
-        // as long as we haven't reached the active interval. This distinction is important
-        // for stepwise interpolators, which can yield a different output progress value
-        // depending on whether the active interval has been reached.
+        // Step interpolators can yield different results depending on whether the active interval
+        // has been reached. The before-active information is conveyed to step interpolators with
+        // a negative input progress value.
         double progress = Utils.clamp(
-            interpolator.isValidBeforeInterval() ? Double.NEGATIVE_INFINITY : 0,
+            interpolator instanceof StepInterpolator ? Double.NEGATIVE_INFINITY : 0,
             (double)(now - startTime) / (double)duration,
             1);
 

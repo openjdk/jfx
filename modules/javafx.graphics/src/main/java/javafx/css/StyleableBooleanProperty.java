@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,13 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.AbstractPropertyTimer;
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code BooleanPropertyBase} and provides a partial
@@ -65,23 +70,41 @@ public abstract class StyleableBooleanProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Boolean v) {
-        // call set here in case it has been overridden in the javafx.beans.property
-        set(v.booleanValue());
+        if (timer != null) {
+            timer.stop();
+        }
+
+        // If this.origin == null, we're setting the value for the first time.
+        // No transition should be started in this case.
+        TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+            NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+
+        if (transition != null) {
+            timer = TransitionTimer.run(this, new TransitionTimerImpl(this, v, transition));
+        } else {
+            setValue(v);
+        }
+
         this.origin = origin;
     }
 
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Boolean> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+        if (AbstractPropertyTimer.tryStop(timer)) {
+            super.bind(observable);
+            origin = StyleOrigin.USER;
+        }
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(boolean v) {
         super.set(v);
-        origin = StyleOrigin.USER;
+
+        if (AbstractPropertyTimer.tryStop(timer)) {
+            origin = StyleOrigin.USER;
+        }
     }
 
     /** {@inheritDoc} */
@@ -89,4 +112,27 @@ public abstract class StyleableBooleanProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
+    private AbstractPropertyTimer timer = null;
+
+    private static class TransitionTimerImpl extends TransitionTimer<StyleableBooleanProperty> {
+        final boolean oldValue;
+        final boolean newValue;
+
+        TransitionTimerImpl(StyleableBooleanProperty property, Boolean value, TransitionDefinition transition) {
+            super(property, transition);
+            this.oldValue = property.get();
+            this.newValue = value != null && value;
+        }
+
+        @Override
+        protected void onUpdate(StyleableBooleanProperty property, double progress) {
+            property.set(progress > 0 ? newValue : oldValue);
+        }
+
+        @Override
+        public void onStop(StyleableBooleanProperty property) {
+            property.timer = null;
+        }
+    }
+
 }

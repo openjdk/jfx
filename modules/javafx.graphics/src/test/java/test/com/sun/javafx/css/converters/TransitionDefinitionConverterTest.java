@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
+import javafx.scene.Node;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import javafx.animation.Interpolator;
@@ -38,7 +39,7 @@ import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionDefinition;
 import javafx.css.converter.DurationConverter;
 import javafx.util.Duration;
 import java.util.Map;
@@ -127,7 +128,7 @@ public class TransitionDefinitionConverterTest {
 
         @Test
         public void testConvertSubPropertiesToImplicitTransitionsWithDefaults() {
-            var metadata = new TestImplicitTransitionCssMetaData<>();
+            var metadata = new TestImplicitTransitionCssMetaData();
             Map<CssMetaData<? extends Styleable, ?>, Object> values = Map.of(
                 metadata.transitionProperty(), new String[] { "test" },
                 metadata.transitionDuration(), new Duration[] { Duration.seconds(1) }
@@ -140,7 +141,7 @@ public class TransitionDefinitionConverterTest {
 
         @Test
         public void testConvertSubPropertiesToImplicitTransitions() {
-            var metadata = new TestImplicitTransitionCssMetaData<>();
+            var metadata = new TestImplicitTransitionCssMetaData();
             Map<CssMetaData<? extends Styleable, ?>, Object> values = Map.of(
                 metadata.transitionProperty(), new String[] { "test" },
                 metadata.transitionDuration(), new Duration[] { Duration.seconds(1) },
@@ -155,7 +156,7 @@ public class TransitionDefinitionConverterTest {
 
         @Test
         public void testUnmatchedValuesAreRepeated() {
-            var metadata = new TestImplicitTransitionCssMetaData<>();
+            var metadata = new TestImplicitTransitionCssMetaData();
             Map<CssMetaData<? extends Styleable, ?>, Object> values = Map.of(
                 metadata.transitionProperty(), new String[] { "test1", "test2", "test3", "test4" },
                 metadata.transitionDuration(), new Duration[] { Duration.seconds(1), Duration.seconds(2) },
@@ -173,7 +174,7 @@ public class TransitionDefinitionConverterTest {
 
         @Test
         public void testConvertSubPropertiesWithMissingPropertyNameYieldsNoResult() {
-            var metadata = new TestImplicitTransitionCssMetaData<>();
+            var metadata = new TestImplicitTransitionCssMetaData();
             Map<CssMetaData<? extends Styleable, ?>, Object> values = Map.of(
                 metadata.transitionDuration(), new Duration[] { Duration.seconds(1) }
             );
@@ -184,7 +185,7 @@ public class TransitionDefinitionConverterTest {
 
         @Test
         public void testConvertSubPropertiesWithMissingDurationYieldsNoResult() {
-            var metadata = new TestImplicitTransitionCssMetaData<>();
+            var metadata = new TestImplicitTransitionCssMetaData();
             Map<CssMetaData<? extends Styleable, ?>, Object> values = Map.of(
                 metadata.transitionProperty(), new String[] { "test" }
             );
@@ -193,40 +194,43 @@ public class TransitionDefinitionConverterTest {
             assertEquals(0, result.length);
         }
 
-        private static class TestImplicitTransitionCssMetaData<S extends Styleable>
-                extends TransitionDefinitionCssMetaData<S> {
+        private static class TestImplicitTransitionCssMetaData extends TransitionDefinitionCssMetaData {
             @Override
-            public boolean isSettable(S styleable) {
+            public boolean isSettable(Node styleable) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<TransitionDefinition[]> getStyleableProperty(S styleable) {
+            public StyleableProperty<TransitionDefinition[]> getStyleableProperty(Node styleable) {
                 return null;
             }
 
             CssMetaData<? extends Styleable, ?> transitionProperty() {
                 return getSubProperties().stream()
                     .filter(p -> p.getProperty().equals("transition-property"))
-                    .findFirst().get();
+                    .findFirst()
+                    .orElseThrow();
             }
 
             CssMetaData<? extends Styleable, ?> transitionDuration() {
                 return getSubProperties().stream()
                     .filter(p -> p.getProperty().equals("transition-duration"))
-                    .findFirst().get();
+                    .findFirst()
+                    .orElseThrow();
             }
 
             CssMetaData<? extends Styleable, ?> transitionDelay() {
                 return getSubProperties().stream()
                     .filter(p -> p.getProperty().equals("transition-delay"))
-                    .findFirst().get();
+                    .findFirst()
+                    .orElseThrow();
             }
 
             CssMetaData<? extends Styleable, ?> transitionTimingFunction() {
                 return getSubProperties().stream()
                     .filter(p -> p.getProperty().equals("transition-timing-function"))
-                    .findFirst().get();
+                    .findFirst()
+                    .orElseThrow();
             }
         }
 

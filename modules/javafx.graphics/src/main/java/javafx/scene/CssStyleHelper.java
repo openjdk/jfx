@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,7 @@ import com.sun.javafx.css.StyleCache;
 import com.sun.javafx.css.StyleCacheEntry;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.StyleMap;
+import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import javafx.css.converter.FontConverter;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
@@ -631,11 +632,13 @@ final class CssStyleHelper {
         final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
         final int numStyleables = styleables.size();
 
-        for (int n = 0; n < numStyleables; n++) {
-
-            @SuppressWarnings("unchecked") // this is a widening conversion
-            final CssMetaData<Styleable,Object> cssMetaData =
-                    (CssMetaData<Styleable,Object>)styleables.get(n);
+        for (int n = -1; n < numStyleables; n++) {
+            // The 'transition' property is a special pseudo-property that is always processed
+            // before other CSS properties, as its value might affect the transitions that are
+            // applied to other properties.
+            final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.INSTANCE :
+                    (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.
             if (inheritOnly && cssMetaData.isInherits() == false) {
@@ -823,11 +826,14 @@ final class CssStyleHelper {
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
         transitionStateInProgress = true;
-        for(int n=0; n<max; n++) {
 
-            @SuppressWarnings("unchecked") // this is a widening conversion
-            final CssMetaData<Styleable,Object> cssMetaData =
-                    (CssMetaData<Styleable,Object>)styleables.get(n);
+        for (int n = -1; n < max; n++) {
+            // The 'transition' property is a special pseudo-property that is always processed
+            // before other CSS properties, as its value might affect the transitions that are
+            // applied to other properties.
+            final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.INSTANCE :
+                    (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.
             if (inheritOnly && cssMetaData.isInherits() == false) {

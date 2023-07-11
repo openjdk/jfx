@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,15 +23,13 @@
  * questions.
  */
 
-package javafx.animation;
+package com.sun.scenario.animation;
 
 /**
- * Specifies the step position of an interpolator defined by {@link Interpolator#STEPS(int, StepPosition)}.
+ * Specifies the step position of a {@link StepInterpolator}.
  * <p>
  * The step position determines the location of rise points in the input progress interval, which are the
  * locations on the input progress axis where the output progress value jumps from one step to the next.
- *
- * @since 20
  */
 public enum StepPosition {
 

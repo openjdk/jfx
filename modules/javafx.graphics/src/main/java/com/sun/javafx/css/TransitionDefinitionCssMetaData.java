@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,26 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.css.TransitionDefinition;
 import javafx.css.converter.DurationConverter;
 import javafx.css.converter.StringConverter;
+import javafx.scene.Node;
 import javafx.util.Duration;
 import java.util.List;
 
 /**
- * A partial implementation of {@link CssMetaData} for the {@code transition} property that includes the
+ * An implementation of {@link CssMetaData} for the {@code transition} property that includes the
  * four sub-properties {@code transition-property}, {@code transition-duration}, {@code transition-delay}
  * and {@code transition-timing-function}.
- *
- * @param <S> the {@link Styleable} type
  */
-public abstract class TransitionDefinitionCssMetaData<S extends Styleable>
-        extends CssMetaData<S, TransitionDefinition[]> {
+public class TransitionDefinitionCssMetaData
+        extends CssMetaData<Node, TransitionDefinition[]> {
+
+    public static final TransitionDefinitionCssMetaData INSTANCE = new TransitionDefinitionCssMetaData();
 
     public TransitionDefinitionCssMetaData() {
         super("transition", TransitionDefinitionConverter.SequenceConverter.getInstance(),
@@ -55,6 +56,16 @@ public abstract class TransitionDefinitionCssMetaData<S extends Styleable>
     private static final Duration[] DURATION_ZERO = new Duration[] { Duration.ZERO };
 
     private static final Interpolator[] INTERPOLATOR_EASE = new Interpolator[] { InterpolatorConverter.EASE };
+
+    @Override
+    public boolean isSettable(Node node) {
+        return true;
+    }
+
+    @Override
+    public StyleableProperty<TransitionDefinition[]> getStyleableProperty(Node node) {
+        return NodeHelper.getTransitionProperty(node);
+    }
 
     private static <S extends Styleable> List<CssMetaData<? extends Styleable, ?>> createSubProperties() {
         return List.of(

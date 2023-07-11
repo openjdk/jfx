@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,9 +35,8 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import javafx.css.TransitionDefinition;
+import com.sun.javafx.css.TransitionDefinition;
 import javafx.css.TransitionEvent;
-import javafx.css.TransitionPropertyKind;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
@@ -57,12 +56,6 @@ public class Node_transition_Test {
     private static void assertTransitionEquals(
             String property, Duration duration, Duration delay, Interpolator interpolator,
             TransitionDefinition transition) {
-        if (property.equals("all")) {
-            assertEquals(TransitionPropertyKind.ALL, transition.getPropertyKind());
-        } else {
-            assertEquals(TransitionPropertyKind.CSS, transition.getPropertyKind());
-        }
-
         assertEquals(property, transition.getPropertyName());
         assertEquals(duration, transition.getDuration());
         assertEquals(delay, transition.getDelay());
@@ -76,7 +69,7 @@ public class Node_transition_Test {
         node.setStyle("transition: -fx-fill 1s, ALL 2s ease-in-out;");
         node.applyCss();
 
-        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
         assertEquals(2, transitions.size());
         assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
         assertTransitionEquals("all", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transitions.get(1));
@@ -92,11 +85,11 @@ public class Node_transition_Test {
 
         node.setStyle("transition: -fx-OPACITY 1s");
         node.applyCss();
-        assertNull(NodeHelper.findTransition(node, opacityProperty));
+        assertNull(NodeHelper.findTransitionDefinition(node, opacityProperty));
 
         node.setStyle("transition: -fx-opacity 1s");
         node.applyCss();
-        assertNotNull(NodeHelper.findTransition(node, opacityProperty));
+        assertNotNull(NodeHelper.findTransitionDefinition(node, opacityProperty));
     }
 
     @Test
@@ -106,13 +99,13 @@ public class Node_transition_Test {
 
         node.setStyle("transition: ALL 1s");
         node.applyCss();
-        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
 
         node.setStyle("transition: all 1s");
         node.applyCss();
-        transitions = NodeShim.getTransitionDefinitions(node);
+        transitions = NodeShim.getTransitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
     }
@@ -121,13 +114,13 @@ public class Node_transition_Test {
     public void testLastOccurrenceOfMultiplyReferencedPropertyIsSelected() {
         var node = new Rectangle();
         var scene = new Scene(new Group(node));
-        node.setStyle("transition: fill 1s, -fx-fill 2s ease-in-out;");
+        node.setStyle("transition: -fx-fill 1s, -fx-fill 2s ease-in-out;");
         node.applyCss();
 
         CssMetaData<?, ?> propertyMetadata = node.getCssMetaData().stream()
             .filter(m -> m.getProperty().equals("-fx-fill"))
             .findFirst().get();
-        TransitionDefinition transition = NodeHelper.findTransition(node, propertyMetadata);
+        TransitionDefinition transition = NodeHelper.findTransitionDefinition(node, propertyMetadata);
         assertTransitionEquals("-fx-fill", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transition);
     }
 
@@ -153,7 +146,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
         assertEquals(3, transitions.size());
         assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.seconds(0.5), EASE, transitions.get(0));
         assertTransitionEquals("-fx-scale-x", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(1));
@@ -162,7 +155,7 @@ public class Node_transition_Test {
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
 
-        transitions = NodeShim.getTransitionDefinitions(node);
+        transitions = NodeShim.getTransitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
     }
@@ -277,7 +270,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
+        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("-fx-scale-x", Duration.seconds(2), Duration.ZERO, LINEAR, transitions.get(0));
     }
