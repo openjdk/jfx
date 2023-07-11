@@ -23,7 +23,11 @@
  * questions.
  */
 
-package javafx.scene.control.rich.model;
+package com.sun.javafx.scene.control.rich;
+
+import javafx.scene.control.rich.model.StyleInfo;
+import javafx.scene.control.rich.model.StyledInput;
+import javafx.scene.control.rich.model.StyledSegment;
 
 public class StringStyledInput extends StyledInput {
     private final String text;

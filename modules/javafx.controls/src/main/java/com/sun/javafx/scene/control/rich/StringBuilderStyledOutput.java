@@ -23,7 +23,10 @@
  * questions.
  */
 
-package javafx.scene.control.rich.model;
+package com.sun.javafx.scene.control.rich;
+
+import javafx.scene.control.rich.model.StyledOutput;
+import javafx.scene.control.rich.model.StyledSegment;
 
 public class StringBuilderStyledOutput implements StyledOutput {
     private final StringBuilder sb;

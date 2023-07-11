@@ -25,7 +25,7 @@
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
 
-package javafx.scene.control.rich.skin;
+package com.sun.javafx.scene.control.rich;
 
 import java.util.ArrayList;
 import javafx.collections.ObservableList;
@@ -40,10 +40,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
-import com.sun.javafx.scene.control.rich.Origin;
-import com.sun.javafx.scene.control.rich.RichUtils;
-import com.sun.javafx.scene.control.rich.TextCellHelper;
-import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
  * Manages TextCells in a sliding window, comprised of the visible area and some number of screenfuls

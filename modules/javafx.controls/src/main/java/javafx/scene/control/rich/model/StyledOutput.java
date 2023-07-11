@@ -31,7 +31,6 @@ import java.io.IOException;
  * Class represents a consumer of styled text segments for the purposes of
  * exporting, copying, or saving to a file.
  */
-// TODO change to Consumer<StyledSegment> maybe?
 public interface StyledOutput {
     /**
      * Appends the next styled segment to the output.

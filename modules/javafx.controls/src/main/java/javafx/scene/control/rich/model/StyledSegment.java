@@ -31,12 +31,14 @@ import javafx.scene.control.rich.StyleResolver;
 
 /**
  * Data structure used to modify the styled text model.
- * 
+ * <p>
  * Represents:
- * 1. a single text segment with direct style and/or style names
- * 2. a line break
- * 3. an inline Node
- * 4. a paragraph containing a single Node
+ * <ol>
+ * <li> a single text segment with direct style and/or style names
+ * <li> a line break
+ * <li> an inline Node
+ * <li> a paragraph containing a single Node
+ * </ol>
  */
 // TODO in addition to is*(), add getType() returning an enum { TEXT, PARAGRAPH, INLINE_NODE, LINE_BREAK }
 // TODO perhaps add guarded/unguarded factory methods (of(), ofGuarded()) that check for <0x20, or specify that

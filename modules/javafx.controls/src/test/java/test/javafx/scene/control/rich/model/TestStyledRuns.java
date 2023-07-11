@@ -27,11 +27,11 @@ package test.javafx.scene.control.rich.model;
 import java.io.IOException;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.EditableRichTextModel;
-import javafx.scene.control.rich.model.StringBuilderStyledOutput;
 import javafx.scene.control.rich.model.StyleAttribute;
 import javafx.scene.control.rich.model.StyleAttrs;
 import org.junit.Assert;
 import org.junit.Test;
+import com.sun.javafx.scene.control.rich.StringBuilderStyledOutput;
 
 public class TestStyledRuns {
     private final StyleAttrs PLAIN = mk();

@@ -50,7 +50,6 @@ import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.skin.CellArrangement;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
