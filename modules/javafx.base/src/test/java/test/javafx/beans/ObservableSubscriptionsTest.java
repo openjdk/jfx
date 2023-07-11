@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
+import javafx.beans.Subscription;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
@@ -44,7 +45,7 @@ public class ObservableSubscriptionsTest {
 
         assertEquals(0, calls.get());
 
-        value.subscribe(() -> calls.addAndGet(1));
+        Subscription subscription = value.subscribe(() -> calls.addAndGet(1));
 
         assertEquals(0, calls.get());
 
@@ -54,7 +55,19 @@ public class ObservableSubscriptionsTest {
 
         value.set("B");
 
-        assertEquals(1, calls.get());
+        assertEquals(1, calls.get());  // already invalid, not called again
+
+        value.get();
+        value.set("C");
+
+        assertEquals(2, calls.get());
+
+        subscription.unsubscribe();
+
+        value.get();
+        value.set("C");
+
+        assertEquals(2, calls.get());  // unsubscribed, not called
     }
 
     @Test

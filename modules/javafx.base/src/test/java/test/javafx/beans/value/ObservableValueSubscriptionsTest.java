@@ -35,6 +35,7 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
+import javafx.beans.Subscription;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
@@ -47,7 +48,7 @@ public class ObservableValueSubscriptionsTest {
 
         assertNull(lastCall.get());
 
-        value.subscribe(lastCall::set);
+        Subscription subscription = value.subscribe(lastCall::set);
 
         assertEquals("Initial", lastCall.get());  // provides initial upon subscribing
 
@@ -63,7 +64,13 @@ public class ObservableValueSubscriptionsTest {
 
         value.set("B");
 
-        assertNull(lastCall.get());
+        assertNull(lastCall.get());  // unchanged when changing from B to B
+
+        subscription.unsubscribe();
+
+        value.set("C");
+
+        assertNull(lastCall.get());  // unchanged as unsubscribed
     }
 
     @Test
@@ -77,7 +84,7 @@ public class ObservableValueSubscriptionsTest {
 
         assertNull(lastCall.get());
 
-        value.subscribe((old, current) -> lastCall.set(old + " -> " + current));
+        Subscription subscription = value.subscribe((old, current) -> lastCall.set(old + " -> " + current));
 
         assertNull(lastCall.get());  // Nothing happens upon subscribing
 
@@ -93,7 +100,13 @@ public class ObservableValueSubscriptionsTest {
 
         value.set("B");
 
-        assertNull(lastCall.get());
+        assertNull(lastCall.get());  // unchanged when changing from B to B
+
+        subscription.unsubscribe();
+
+        value.set("C");
+
+        assertNull(lastCall.get());  // unchanged as unsubscribed
     }
 
     @Test
