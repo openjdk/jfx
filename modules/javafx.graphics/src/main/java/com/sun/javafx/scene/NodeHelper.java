@@ -27,6 +27,7 @@ package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
 import com.sun.javafx.css.AbstractPropertyTimer;
+import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -43,7 +44,6 @@ import javafx.css.CssMetaData;
 import javafx.css.Style;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import com.sun.javafx.css.TransitionDefinition;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
