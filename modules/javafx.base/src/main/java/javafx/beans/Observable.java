@@ -95,19 +95,30 @@ public interface Observable {
     void removeListener(InvalidationListener listener);
 
     /**
-     * Creates a {@link Subscription} on this value which calls the given
-     * {@code runnable} whenever it becomes invalid.
+     * Creates a {@link Subscription} on this {@code Observable} which calls
+     * {@code invalidationSubscriber} whenever it becomes invalid. If the same
+     * subscriber is subscribed more than once, then it will be notified more
+     * than once. That is, no check is made to ensure uniqueness.
+     * <p>
+     * Note that the same subscriber instance may be safely subscribed for
+     * different {@code Observables}.
+     * <p>
+     * Also note that when subscribing on an {@code Observable} with a longer
+     * lifecycle than the subscriber, the subscriber must be unsubscribed
+     * when no longer needed as the subscription will otherwise keep the subscriber
+     * from being garbage collected.
      *
-     * @param subscriber a {@code Runnable} to call whenever this
+     * @param invalidationSubscriber a {@code Runnable} to call whenever this
      *     value becomes invalid, cannot be {@code null}
      * @return a {@code Subscription} which can be used to cancel this
      *     subscription, never {@code null}
      * @throws NullPointerException if the subscriber is {@code null}
+     * @see #addListener(InvalidationListener)
      * @since 21
      */
-    default Subscription subscribe(Runnable subscriber) {
-        Objects.requireNonNull(subscriber, "subscriber cannot be null");
-        InvalidationListener listener = obs -> subscriber.run();
+    default Subscription subscribe(Runnable invalidationSubscriber) {
+        Objects.requireNonNull(invalidationSubscriber, "invalidationSubscriber cannot be null");
+        InvalidationListener listener = obs -> invalidationSubscriber.run();
 
         addListener(listener);
 

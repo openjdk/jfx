@@ -303,23 +303,34 @@ public interface ObservableValue<T> extends Observable {
     }
 
     /**
-     * Creates a {@link Subscription} on this value which calls the given
-     * {@code subscriber} with the old and new value of this value whenever it
-     * changes.<p>
-     *
+     * Creates a {@link Subscription} on this {@code Observable} which calls the given
+     * {@code changeSubscriber} with the old and new value whenever its value changes.
+     * <p>
      * The parameters supplied to the {@link BiConsumer} are the old and new value
      * respectively.
+     * <p>
+     * Note that the same subscriber instance may be safely subscribed for
+     * different {@code Observables}.
+     * <p>
+     * Also note that when subscribing on an {@code Observable} with a longer
+     * lifecycle than the subscriber, the subscriber must be unsubscribed
+     * when no longer needed as the subscription will otherwise keep the subscriber
+     * from being garbage collected. Considering creating a derived {@code ObservableValue}
+     * using {@link #when(ObservableValue)} and subscribing on this derived observable value
+     * to automatically decouple the lifecycle of the subscriber from this
+     * {@code ObservableValue} when some condition holds.
      *
-     * @param subscriber a {@code BiConsumer} to supply with the old and new values
+     * @param changeSubscriber a {@code BiConsumer} to supply with the old and new values
      *     of this {@code ObservableValue}, cannot be {@code null}
      * @return a {@code Subscription} which can be used to cancel this
      *     subscription, never {@code null}
      * @throws NullPointerException if the subscriber is {@code null}
+     * @see #addListener(ChangeListener)
      * @since 21
      */
-    default Subscription subscribe(BiConsumer<? super T, ? super T> subscriber) {
-      Objects.requireNonNull(subscriber, "subscriber cannot be null");
-      ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(old, current);
+    default Subscription subscribe(BiConsumer<? super T, ? super T> changeSubscriber) {
+      Objects.requireNonNull(changeSubscriber, "changeSubscriber cannot be null");
+      ChangeListener<T> listener = (obs, old, current) -> changeSubscriber.accept(old, current);
 
       addListener(listener);
 
@@ -329,20 +340,31 @@ public interface ObservableValue<T> extends Observable {
     /**
      * Creates a {@link Subscription} on this value which immediately provides
      * the current value to the given {@code subscriber}, followed by any
-     * subsequent changes in value.
+     * subsequent values whenever its value changes.
+     * <p>
+     * Note that the same subscriber instance may be safely subscribed for
+     * different {@code Observables}.
+     * <p>
+     * Also note that when subscribing on an {@code Observable} with a longer
+     * lifecycle than the subscriber, the subscriber must be unsubscribed
+     * when no longer needed as the subscription will otherwise keep the subscriber
+     * from being garbage collected. Considering creating a derived {@code ObservableValue}
+     * using {@link #when(ObservableValue)} and subscribing on this derived observable value
+     * to automatically decouple the lifecycle of the subscriber from this
+     * {@code ObservableValue} when some condition holds.
      *
-     * @param subscriber a {@link Consumer} to supply with the values of this
+     * @param valueSubscriber a {@link Consumer} to supply with the values of this
      *     {@code ObservableValue}, cannot be {@code null}
      * @return a {@code Subscription} which can be used to cancel this
      *     subscription, never {@code null}
      * @throws NullPointerException if the subscriber is {@code null}
      * @since 21
      */
-    default Subscription subscribe(Consumer<? super T> subscriber) {
-        Objects.requireNonNull(subscriber, "subscriber cannot be null");
-        ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(current);
+    default Subscription subscribe(Consumer<? super T> valueSubscriber) {
+        Objects.requireNonNull(valueSubscriber, "valueSubscriber cannot be null");
+        ChangeListener<T> listener = (obs, old, current) -> valueSubscriber.accept(current);
 
-        subscriber.accept(getValue());  // eagerly send current value
+        valueSubscriber.accept(getValue());  // eagerly send current value
         addListener(listener);
 
         return () -> removeListener(listener);
