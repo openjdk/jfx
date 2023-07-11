@@ -31,6 +31,8 @@ import java.util.Objects;
 /**
  * A subscription encapsulates how to cancel it without having
  * to keep track of how it was created.
+ *
+ * @Since 21
  */
 @FunctionalInterface
 public interface Subscription {
