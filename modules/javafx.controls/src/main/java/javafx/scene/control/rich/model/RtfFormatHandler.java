@@ -31,7 +31,11 @@ import java.nio.charset.Charset;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.input.DataFormat;
+import com.sun.javafx.scene.control.rich.RtfStyledOutput;
 
+/**
+ * This {@link DataFormatHandler} provides export/import support for RTF format.
+ */
 public class RtfFormatHandler extends DataFormatHandler {
     public RtfFormatHandler() {
         super(DataFormat.RTF);

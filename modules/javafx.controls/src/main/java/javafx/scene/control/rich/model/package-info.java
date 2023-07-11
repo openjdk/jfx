@@ -25,12 +25,5 @@
 
 /**
 <p>Provides a number of common RichTextArea models and the related classes.</p>
-<h2>Heading</h2>
-<p>...</p>
-<pre>
-<code>
-TODO code sample here
-</code>
-</pre>
 */
 package javafx.scene.control.rich.model;

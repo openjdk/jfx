@@ -30,7 +30,7 @@ package javafx.scene.control.rich;
 import javafx.beans.property.ReadOnlyProperty;
 
 /**
- * Selection Model.
+ * Single selection model.
  * 
  * TODO perhaps we should support, at least theoretically, the concept of multiple selection
  * and multiple carets.  The impacted areas:

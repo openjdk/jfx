@@ -26,7 +26,7 @@
 // https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/fxtexteditor/internal/rtf/RtfWriter.java
 // with permission from the author.
 
-package javafx.scene.control.rich.model;
+package com.sun.javafx.scene.control.rich;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,11 +34,12 @@ import java.util.HashMap;
 import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
+import javafx.scene.control.rich.model.StyleAttrs;
+import javafx.scene.control.rich.model.StyledOutput;
+import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.util.Util;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
-import com.sun.javafx.scene.control.rich.CachingStyleResolver;
-import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * StyledOutput which generates RTF.

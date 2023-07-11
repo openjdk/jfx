@@ -112,6 +112,9 @@ public final class TextCell {
         this(index, new TextFlow());
     }
 
+    /**
+     * Returns the content of this cell.
+     */
     public final Region getContent() {
         return content;
     }
@@ -190,20 +193,20 @@ public final class TextCell {
     }
 
     /** sets cell position along the y axis of this cell in VFlow coordinates */
-    void setPosition(double y, double height) {
+    private void setPosition(double y, double height) {
         this.y = y;
         this.height = height;
     }
 
-    double getHeight() {
+    private double getHeight() {
         return height;
     }
     
-    double getY() {
+    private double getY() {
         return y;
     }
     
-    void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
+    private void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
         double y0 = content.getLayoutY();
         double y1 = y0 + h;
         
@@ -214,7 +217,7 @@ public final class TextCell {
         b.lineto(x, y0);
     }
 
-    PathElement[] getCaretShape(int charIndex, boolean leading) {
+    private PathElement[] getCaretShape(int charIndex, boolean leading) {
         if (content instanceof TextFlow f) {
             PathElement[] p = f.caretShape(charIndex, leading);
             if (p.length == 2) {
@@ -239,7 +242,7 @@ public final class TextCell {
         }
     }
 
-    PathElement[] getRangeShape(int start, int end) {
+    private PathElement[] getRangeShape(int start, int end) {
         if (content instanceof TextFlow f) {
             PathElement[] p = f.rangeShape(start, end);
             if (p != null) {

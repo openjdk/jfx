@@ -38,7 +38,7 @@ import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 
 /**
- * An simple editable StyledTextModel which manages plain text.
+ * A simple, editable, in-memory StyledTextModel which manages plain text paragraphs.
  * <p>
  * This class provides no styling.  Subclasses might override {@link #createTextCell(int)} to provide
  * syntax highlighting based on the model content.
@@ -96,7 +96,7 @@ public class BasePlainTextModel extends StyledTextModel {
         return text.length();
     }
 
-    protected static String insertText(String text, int offset, String toInsert) {
+    private static String insertText(String text, int offset, String toInsert) {
         if (offset >= text.length()) {
             return text + toInsert;
         } else {

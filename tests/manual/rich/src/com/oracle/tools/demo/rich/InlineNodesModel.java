@@ -26,7 +26,6 @@ package com.oracle.tools.demo.rich;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
-import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
 
 /**
  * A demo model with inline Nodes.

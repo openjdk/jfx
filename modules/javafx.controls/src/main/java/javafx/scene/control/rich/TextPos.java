@@ -112,14 +112,14 @@ public final class TextPos implements Comparable<TextPos> {
         return d;
     }
 
-    public static TextPos min(TextPos a, TextPos b) {
-        int cmp = a.compareTo(b);
-        if (cmp <= 0) {
-            return a;
-        } else {
-            return b;
-        }
-    }
+//    public static TextPos min(TextPos a, TextPos b) {
+//        int cmp = a.compareTo(b);
+//        if (cmp <= 0) {
+//            return a;
+//        } else {
+//            return b;
+//        }
+//    }
 
     public String toString() {
         return

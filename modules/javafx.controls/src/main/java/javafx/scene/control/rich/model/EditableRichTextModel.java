@@ -35,7 +35,7 @@ import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 
 /**
- * Editable Styled Text Model based on a collection of styled segments.
+ * Editable, in-memory {@link StyledTextModel} based on a collection of styled segments.
  * 
  * This model is suitable for relatively small
  */
@@ -174,7 +174,7 @@ public class EditableRichTextModel extends StyledTextModelEditableBase {
      * Model rich text segment.
      * TODO add paragraph segment
      */
-    protected static class RSegment {
+    private static class RSegment {
         private String text;
         private StyleAttrs attrs;
         

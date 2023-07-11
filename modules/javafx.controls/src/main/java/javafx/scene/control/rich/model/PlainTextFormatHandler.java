@@ -32,6 +32,9 @@ import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.input.DataFormat;
 
+/**
+ * {@link DataFormatHandler} which operates with plain text. 
+ */
 public class PlainTextFormatHandler extends DataFormatHandler {
     public PlainTextFormatHandler() {
         super(DataFormat.PLAIN_TEXT);

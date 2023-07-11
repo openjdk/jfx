@@ -24,8 +24,6 @@
  */
 package com.oracle.tools.demo.rich;
 
-import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
-
 public class NoLastNewlineModel extends SimpleReadOnlyStyledModel {
     public NoLastNewlineModel(int lineCount) {
         for(int i=0; i<lineCount; i++) {

@@ -32,6 +32,10 @@ import javafx.scene.image.WritableImage;
 
 /**
  * Enables conversion of CSS styles to {@link StyleAttribute}s.
+ * <p>
+ * Whenever the {@code StyledTextModel} contains logical class names instead of actual attributes,
+ * a separate CSS style resolution step is required.  The resulting attributes might depend on the view that
+ * originated an operation (such as copying to RTF, for example).
  */
 public interface StyleResolver {
     /**

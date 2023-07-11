@@ -28,26 +28,30 @@
 package javafx.scene.control.rich;
 
 import java.util.Objects;
-import javafx.scene.control.rich.util.Util;
 
 /**
  * Text selection segment.
  */
-public class SelectionSegment implements Cloneable {
+public class SelectionSegment {
     private final Marker min;
     private final Marker max;
     private final boolean caretAtMin;
 
-    public SelectionSegment(Marker min, Marker max, boolean caretAtMin) {
-        Objects.requireNonNull(min, "min cannot be null");
-        Objects.requireNonNull(max, "max cannot be null");
-        isLessThanOrEqual(min, max, "min", "max");
+//    public SelectionSegment(Marker min, Marker max, boolean caretAtMin) {
+//        Objects.requireNonNull(min, "min cannot be null");
+//        Objects.requireNonNull(max, "max cannot be null");
+//        isLessThanOrEqual(min, max, "min", "max");
+//
+//        this.min = min;
+//        this.max = max;
+//        this.caretAtMin = caretAtMin;
+//    }
 
-        this.min = min;
-        this.max = max;
-        this.caretAtMin = caretAtMin;
-    }
-
+    /**
+     * Creates a new selection segment.
+     * @param anchor
+     * @param caret
+     */
     public SelectionSegment(Marker anchor, Marker caret) {
         Objects.requireNonNull(anchor, "anchor cannot be null");
         Objects.requireNonNull(caret, "caret cannot be null");
@@ -63,18 +67,30 @@ public class SelectionSegment implements Cloneable {
         }
     }
 
+    /**
+     * Returns the selection anchor.
+     */
     public Marker getAnchor() {
         return caretAtMin ? max : min;
     }
 
+    /**
+     * Returns the caret position.
+     */
     public Marker getCaret() {
         return caretAtMin ? min : max;
     }
 
+    /**
+     * Returns the marker which is closer to the start of the document.
+     */
     public Marker getMin() {
         return min;
     }
 
+    /**
+     * Returns the marker which is closer to the end of the document.
+     */
     public Marker getMax() {
         return max;
     }

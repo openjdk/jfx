@@ -36,41 +36,35 @@ import javafx.scene.input.DataFormat;
  */
 public abstract class DataFormatHandler {
     /**
-     * Creates a StyledInput for the given source.
-     * TODO explain
+     * Creates a StyledInput for the given source object obtained from the Clipboard.
      *
      * @param src
-     * @return
+     * @return StyledInput generated according to this data format
      */
     public abstract StyledInput getStyledInput(Object src);
     
     /**
-     * Creates an object to be put into Clipboard for the given text range.
+     * Creates an object to be put into the Clipboard for the given text range.
      * The caller guarantees that the {@code start} precedes the {@code end} position.
      *
-     * - may throw an exception when out of memory, or detect the condition and bail out somehow
-     *
-     * TODO explain
-     *
-     * @param model 
-     * @param resolver TODO
-     * @param start 
-     * @param end 
-     * @return
+     * @param model source model
+     * @param resolver view-specific style resolver
+     * @param start start text position
+     * @param end end text position
+     * @return an object to be placed to the Clipboard
      * @throws IOException 
      */
     public abstract Object copy(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end) throws IOException;
     
     /**
-     * Save the text range to the output stream (e.g. save to file).
+     * Save the text range in the handler's format to the output stream (e.g. save to file).
      *
-     * TODO may need to specify additional options:
-     * - encoding (platform, utf-8)?
-     * - line separator
-     *
-     * TODO explain
-     *
-     * @throws IOException 
+     * @param model source model
+     * @param resolver view-specific style resolver
+     * @param start start text position
+     * @param end end text position
+     * @param out target {@code OutputStream}
+     * @throws IOException
      */
     public abstract void save(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end, OutputStream out) throws IOException;
     
@@ -79,8 +73,11 @@ public abstract class DataFormatHandler {
     public DataFormatHandler(DataFormat f) {
         this.format = f;
     }
-    
-    public DataFormat getDataFormat() {
+
+    /**
+     * Returns the {@link DataFormat} associated with this handler.
+     */
+    public final DataFormat getDataFormat() {
         return format;
     }
 }

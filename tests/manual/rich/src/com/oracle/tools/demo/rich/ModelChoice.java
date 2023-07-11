@@ -28,7 +28,6 @@ import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.BasePlainTextModel;
 import javafx.scene.control.rich.model.EditableRichTextModel;
-import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledInput;

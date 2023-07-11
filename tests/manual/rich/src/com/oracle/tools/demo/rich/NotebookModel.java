@@ -25,7 +25,6 @@
 package com.oracle.tools.demo.rich;
 
 import javafx.scene.Node;
-import javafx.scene.control.rich.model.SimpleReadOnlyStyledModel;
 
 public class NotebookModel extends SimpleReadOnlyStyledModel {
     public NotebookModel() {
