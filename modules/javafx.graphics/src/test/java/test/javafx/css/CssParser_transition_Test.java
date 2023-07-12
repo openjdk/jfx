@@ -27,7 +27,7 @@ package test.javafx.css;
 
 import org.junit.jupiter.api.Test;
 import javafx.animation.Interpolator;
-import com.sun.scenario.animation.StepPosition;
+import javafx.animation.Interpolator.StepPosition;
 import javafx.css.CssParser;
 import javafx.css.Declaration;
 import javafx.css.Rule;

@@ -26,7 +26,6 @@
 package com.sun.scenario.animation;
 
 import javafx.animation.Interpolator;
-
 import java.util.Objects;
 
 /**
@@ -51,11 +50,6 @@ public class StepInterpolator extends Interpolator {
         this.intervals = intervals;
     }
 
-    /**
-     * Contrary to the base {@link Interpolator#curve} specification, this interpolator accepts
-     * negative input values. A negative value indicates that the active interval hasn't been
-     * reached.
-     */
     @Override
     protected double curve(double t) {
         boolean before = t < 0;

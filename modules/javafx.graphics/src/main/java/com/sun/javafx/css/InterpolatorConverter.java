@@ -27,7 +27,7 @@ package com.sun.javafx.css;
 
 import com.sun.scenario.animation.StepInterpolator;
 import javafx.animation.Interpolator;
-import com.sun.scenario.animation.StepPosition;
+import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;

@@ -26,7 +26,7 @@
 package test.com.sun.scenario.animation;
 
 import com.sun.scenario.animation.StepInterpolator;
-import com.sun.scenario.animation.StepPosition;
+import javafx.animation.Interpolator.StepPosition;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,10 +49,10 @@ public class StepInterpolatorTest {
      */
     @Test
     public void testStart() {
-        var interpolator = new StepInterpolatorMock(3, 1D / 3D, StepPosition.START);
+        var interpolator = new StepInterpolatorMock(3, ONE_THIRD, StepPosition.START);
         assertRise(interpolator, 0, 0);
-        assertRise(interpolator, 1D / 3D, 1D / 3D);
-        assertRise(interpolator, 2D / 3D, 2D / 3D);
+        assertRise(interpolator, ONE_THIRD, ONE_THIRD);
+        assertRise(interpolator, TWO_THIRDS, TWO_THIRDS);
         assertEquals(1, interpolator.curve(1), 0.001);
     }
 
@@ -68,11 +68,11 @@ public class StepInterpolatorTest {
      */
     @Test
     public void testEnd() {
-        var interpolator = new StepInterpolatorMock(3, 1D / 3D, StepPosition.END);
+        var interpolator = new StepInterpolatorMock(3, ONE_THIRD, StepPosition.END);
         assertEquals(0, interpolator.curve(0), 0.001);
-        assertRise(interpolator, 0, 1D / 3D);
-        assertRise(interpolator, 1D / 3D, 2D / 3D);
-        assertRise(interpolator, 2D / 3D, 1);
+        assertRise(interpolator, 0, ONE_THIRD);
+        assertRise(interpolator, ONE_THIRD, TWO_THIRDS);
+        assertRise(interpolator, TWO_THIRDS, 1);
     }
 
     /*
@@ -89,8 +89,8 @@ public class StepInterpolatorTest {
     public void testNone() {
         var interpolator = new StepInterpolatorMock(3, 0.5, StepPosition.NONE);
         assertEquals(0, interpolator.curve(0), 0.001);
-        assertRise(interpolator, 0, 1D / 3D);
-        assertRise(interpolator, 0.5, 2D / 3D);
+        assertRise(interpolator, 0, ONE_THIRD);
+        assertRise(interpolator, 0.5, TWO_THIRDS);
         assertEquals(1, interpolator.curve(1), 0.001);
     }
 
@@ -106,15 +106,18 @@ public class StepInterpolatorTest {
     public void testBoth() {
         var interpolator = new StepInterpolatorMock(3, 0.25, StepPosition.BOTH);
         assertRise(interpolator, 0, 0);
-        assertRise(interpolator, 0.25, 1D / 3D);
-        assertRise(interpolator, 0.5, 2D / 3D);
+        assertRise(interpolator, 0.25, ONE_THIRD);
+        assertRise(interpolator, 0.5, TWO_THIRDS);
         assertRise(interpolator, 0.75, 1);
     }
 
-    private static void assertRise(StepInterpolatorMock interpolator, double v, double t) {
-        assertEquals(v, interpolator.curve(t - 0.001), 0.001);
-        assertEquals(v + interpolator.stepSize, interpolator.curve(t), 0.001);
-        assertEquals(v + interpolator.stepSize, interpolator.curve(t + 0.001), 0.001);
+    private static final double ONE_THIRD = 1.0 / 3.0;
+    private static final double TWO_THIRDS = 2.0 / 3.0;
+
+    private static void assertRise(StepInterpolatorMock interpolator, double output, double input) {
+        assertEquals(output, interpolator.curve(input - 0.001), 0.001);
+        assertEquals(output + interpolator.stepSize, interpolator.curve(input), 0.001);
+        assertEquals(output + interpolator.stepSize, interpolator.curve(input + 0.001), 0.001);
     }
 
     private static class StepInterpolatorMock extends StepInterpolator {

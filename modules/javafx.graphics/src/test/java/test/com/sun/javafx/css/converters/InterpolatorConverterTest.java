@@ -29,7 +29,7 @@ import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
 import org.junit.jupiter.api.Test;
 import javafx.animation.Interpolator;
-import com.sun.scenario.animation.StepPosition;
+import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
 
 import java.util.Locale;

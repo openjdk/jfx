@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import javafx.util.Duration;
 
 import com.sun.scenario.animation.NumberTangentInterpolator;
 import com.sun.scenario.animation.SplineInterpolator;
+import com.sun.scenario.animation.StepInterpolator;
 
 /**
  * The abstract class defines several {@code interpolate} methods, which are
@@ -254,6 +255,66 @@ public abstract class Interpolator {
      */
     public static Interpolator TANGENT(Duration t, double v) {
         return new NumberTangentInterpolator(t, v);
+    }
+
+    /**
+     * Specifies the step position of a step interpolator.
+     * <p>
+     * The step position determines the location of rise points in the input progress interval, which are the
+     * locations on the input progress axis where the output progress value jumps from one step to the next.
+     *
+     * @since 22
+     */
+    public enum StepPosition {
+        /**
+         * The interval starts with a rise point when the input progress value is 0.
+         */
+        START,
+
+        /**
+         * The interval ends with a rise point when the input progress value is 1.
+         */
+        END,
+
+        /**
+         * All rise points are within the open interval (0..1).
+         */
+        BOTH,
+
+        /**
+         * The interval starts with a rise point when the input progress value is 0,
+         * and ends with a rise point when the input progress value is 1.
+         */
+        NONE
+    }
+
+    /**
+     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.START)}.
+     *
+     * @since 22
+     */
+    public static Interpolator STEP_START = STEPS(1, StepPosition.START);
+
+    /**
+     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
+     *
+     * @since 22
+     */
+    public static Interpolator STEP_END = STEPS(1, StepPosition.END);
+
+    /**
+     * Creates a step interpolator that divides the input time into a series of intervals, each
+     * interval being equal in length, where each interval maps to a constant output time value.
+     * The output time value is determined by the {@link StepPosition}.
+     *
+     * @param intervals the number of intervals in the step interpolator
+     * @param position the {@code StepPosition} of the step interpolator
+     * @return a new step interpolator
+     *
+     * @since 22
+     */
+    public static Interpolator STEPS(int intervals, StepPosition position) {
+        return new StepInterpolator(intervals, position);
     }
 
     /**

@@ -27,8 +27,6 @@ package com.sun.javafx.css;
 
 import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.util.Utils;
-import com.sun.scenario.animation.StepInterpolator;
 import javafx.animation.Interpolator;
 import javafx.beans.property.Property;
 import javafx.css.StyleableProperty;
@@ -108,15 +106,11 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
             fireEvent(property, TransitionEvent.START, Duration.millis(elapsed));
         }
 
-        // Step interpolators can yield different results depending on whether the active interval
-        // has been reached. The before-active information is conveyed to step interpolators with
-        // a negative input progress value.
-        double progress = Utils.clamp(
-            interpolator instanceof StepInterpolator ? Double.NEGATIVE_INFINITY : 0,
-            (double)(now - startTime) / (double)duration,
-            1);
+        double progress = Math.min((double)(now - startTime) / (double)duration, 1.0);
 
-        update(progress);
+        if (progress >= 0) {
+            update(progress);
+        }
 
         if (progress == 1) {
             stop();

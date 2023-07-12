@@ -25,10 +25,8 @@
 
 package test.javafx.animation;
 
-import com.sun.scenario.animation.StepInterpolator;
 import org.junit.jupiter.api.Assertions;
 import javafx.animation.Interpolator;
-import com.sun.scenario.animation.StepPosition;
 
 import static javafx.animation.Interpolator.SPLINE;
 
@@ -47,10 +45,10 @@ public class InterpolatorUtils {
     }
 
     // https://www.w3.org/TR/css-easing-1/#step-easing-functions
-    public static final Interpolator STEP_START = STEPS(1, StepPosition.START);
-    public static final Interpolator STEP_END = STEPS(1, StepPosition.END);
-    public static Interpolator STEPS(int intervals, StepPosition position) {
-        return new StepInterpolator(intervals, position);
+    public static final Interpolator STEP_START = Interpolator.STEP_START;
+    public static final Interpolator STEP_END = Interpolator.STEP_END;
+    public static Interpolator STEPS(int intervals, Interpolator.StepPosition position) {
+        return Interpolator.STEPS(intervals, position);
     }
 
     /**
