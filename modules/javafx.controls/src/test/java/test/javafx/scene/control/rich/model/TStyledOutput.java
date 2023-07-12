@@ -24,6 +24,7 @@
  */
 package test.javafx.scene.control.rich.model;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledOutput;
@@ -53,5 +54,9 @@ public class TStyledOutput implements StyledOutput {
         } else {
             throw new Error("not yet supported: " + seg);
         }
+    }
+
+    @Override
+    public void flush() throws IOException {
     }
 }

@@ -42,10 +42,10 @@ public abstract class DataFormatHandler {
      * @return StyledInput generated according to this data format
      */
     public abstract StyledInput getStyledInput(Object src);
-    
+
     /**
      * Creates an object to be put into the Clipboard for the given text range.
-     * The caller guarantees that the {@code start} precedes the {@code end} position.
+     * The caller must guarantee that the {@code start} precedes the {@code end} position.
      *
      * @param model source model
      * @param resolver view-specific style resolver
@@ -55,9 +55,11 @@ public abstract class DataFormatHandler {
      * @throws IOException 
      */
     public abstract Object copy(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end) throws IOException;
-    
+
     /**
      * Save the text range in the handler's format to the output stream (e.g. save to file).
+     * The caller must guarantee that the {@code start} precedes the {@code end} position.
+     * It is the responsibility of the caller to close the {@code OutputStream}.
      *
      * @param model source model
      * @param resolver view-specific style resolver
@@ -66,8 +68,12 @@ public abstract class DataFormatHandler {
      * @param out target {@code OutputStream}
      * @throws IOException
      */
+    // TODO all handlers implement this method similarly, perhaps it should be moved to StyledModel
+    // the only reason it's here is that some (RTF) handlers require two passes and prologue/epilogue.
     public abstract void save(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end, OutputStream out) throws IOException;
-    
+
+    // TODO load?
+
     private final DataFormat format;
 
     public DataFormatHandler(DataFormat f) {

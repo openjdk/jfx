@@ -33,13 +33,18 @@ import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.input.DataFormat;
+import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
 
 /**
  * Editable, in-memory {@link StyledTextModel} based on a collection of styled segments.
- * 
- * This model is suitable for relatively small
+ * <p>
+ * This model is suitable for relatively small documents as has neither disk storage backing nor
+ * incremental storage of the changes.
  */
 public class EditableRichTextModel extends StyledTextModelEditableBase {
+    /** Represents a styled text */
+    public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text-model");
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     // TODO dedup styles, later
     private final HashSet<StyleAttrs> styles = new HashSet<>();
@@ -47,6 +52,7 @@ public class EditableRichTextModel extends StyledTextModelEditableBase {
     public EditableRichTextModel() {
         paragraphs.add(new RParagraph());
 
+        registerDataFormatHandler(new RichTextFormatHandler(), 1000);
         registerDataFormatHandler(new RtfFormatHandler(), 100);
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }

@@ -385,29 +385,31 @@ public abstract class StyledTextModel {
         } else {
             // multi-line
             boolean lineBreak = false;
-            for(int ix=start.index(); ix<=end.index(); ix++) {
-                if(lineBreak) {
+            for (int ix = start.index(); ix <= end.index(); ix++) {
+                if (lineBreak) {
                     out.append(StyledSegment.LINE_BREAK);
                 } else {
                     lineBreak = true;
                 }
-                
+
                 int off0;
                 int off1;
-                if(ix == ix0) {
+                if (ix == ix0) {
                     off0 = start.offset();
                     off1 = Integer.MAX_VALUE;
-                } else if(ix == ix1) {
+                } else if (ix == ix1) {
                     off0 = 0;
                     off1 = end.offset();
                 } else {
                     off0 = 0;
                     off1 = Integer.MAX_VALUE;
                 }
-                
+
                 exportParagraph(ix, off0, off1, out);
             }
         }
+
+        out.flush();
     }
 
     /**

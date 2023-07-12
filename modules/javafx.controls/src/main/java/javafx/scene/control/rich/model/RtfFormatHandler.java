@@ -60,6 +60,10 @@ public class RtfFormatHandler extends DataFormatHandler {
             protected void write(String s) throws IOException {
                 sb.append(s);
             }
+
+            @Override
+            public void flush() throws IOException {
+            }
         };
         m.exportText(start, end, r.firstPassBuilder());
         
@@ -79,6 +83,11 @@ public class RtfFormatHandler extends DataFormatHandler {
 
             protected void write(String s) throws IOException {
                 out.write(s.getBytes(ascii));
+            }
+
+            @Override
+            public void flush() throws IOException {
+                out.flush();
             }
         };
         m.exportText(start, end, r.firstPassBuilder());

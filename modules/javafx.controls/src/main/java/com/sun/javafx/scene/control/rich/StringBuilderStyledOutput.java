@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.io.IOException;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 
@@ -56,5 +57,9 @@ public class StringBuilderStyledOutput implements StyledOutput {
 
     public String getOutput() {
         return sb.toString();
+    }
+
+    @Override
+    public void flush() throws IOException {
     }
 }

@@ -39,4 +39,10 @@ public interface StyledOutput {
      * @throws IOException 
      */
     public void append(StyledSegment segment) throws IOException;
+
+    /**
+     * Flushes this output stream, if any, and forces any buffered output bytes to be written out. 
+     * @throws IOException
+     */
+    public void flush() throws IOException;
 }

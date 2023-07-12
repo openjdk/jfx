@@ -96,6 +96,10 @@ public abstract class RtfStyledOutput implements StyledOutput {
                     }
                 }
             }
+
+            @Override
+            public void flush() throws IOException {
+            }
         };
     }
     

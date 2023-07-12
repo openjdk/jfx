@@ -84,12 +84,13 @@ public abstract class StyledSegment {
      */
     public Supplier<Node> getNodeGenerator() { return null; }
 
+    // FIX remove this method.
     /**
      * This method must return actual StyleAttrs, or null if this segment is styled with CSS styles.
      */
     public StyleAttrs getStyleAttrs() { return null; }
     
-    public StyledSegment() {
+    private StyledSegment() {
     }
     
     /**
@@ -137,6 +138,11 @@ public abstract class StyledSegment {
             @Override
             public StyleInfo getStyleInfo() {
                 return si;
+            }
+
+            @Override
+            public StyleAttrs getStyleAttrs() {
+                return getStyleInfo().getAttributes();
             }
 
             @Override

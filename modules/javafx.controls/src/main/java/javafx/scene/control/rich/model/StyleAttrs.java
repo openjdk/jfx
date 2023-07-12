@@ -36,9 +36,11 @@ import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * Map of style attributes.
+ * <p>
+ * TODO it is probably a good idea to make this class immutable.
  */
-// TODO it is probably a good idea to make this class immutable
 public class StyleAttrs {
+    /** Bold typeface attribute */
     public static final StyleAttribute BOLD = new StyleAttribute("BOLD", Boolean.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
@@ -49,7 +51,8 @@ public class StyleAttrs {
             }
         }
     };
-    
+
+    /** Font family attribute */
     public static final StyleAttribute FONT_FAMILY = new StyleAttribute("FONT_FAMILY", String.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
@@ -57,7 +60,7 @@ public class StyleAttrs {
         }
     };
     
-    /** Font size, in percent, relative to the base font size. */
+    /** Font size attribute, in percent, relative to the base font size. */
     public static final StyleAttribute FONT_SIZE = new StyleAttribute("FONT_SIZE", Integer.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
@@ -65,7 +68,8 @@ public class StyleAttrs {
             sb.append("-fx-font-size:").append(n).append("%; ");
         }
     };
-    
+
+    /** Italic type face attribute */
     public static final StyleAttribute ITALIC = new StyleAttribute("ITALIC", Boolean.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
@@ -74,7 +78,8 @@ public class StyleAttrs {
             }
         }
     };
-    
+
+    /** Strike-through style attribute */
     public static final StyleAttribute STRIKE_THROUGH = new StyleAttribute("STRIKE_THROUGH", Boolean.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
@@ -83,7 +88,8 @@ public class StyleAttrs {
             }
         }
     };
-    
+
+    /** Text color attrbute */
     public static final StyleAttribute TEXT_COLOR = new StyleAttribute("TEXT_COLOR", Color.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
@@ -93,7 +99,8 @@ public class StyleAttrs {
             }
         }
     };
-    
+
+    /** Underline style attribute */
     public static final StyleAttribute UNDERLINE = new StyleAttribute("UNDERLINE", Boolean.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
@@ -114,6 +121,7 @@ public class StyleAttrs {
         this.attributes = new HashMap<>(a.attributes);
     }
 
+    @Override
     public boolean equals(Object x) {
         if (x == this) {
             return true;
@@ -123,15 +131,18 @@ public class StyleAttrs {
             return false;
         }
     }
-    
+
+    @Override
     public int hashCode() {
         return attributes.hashCode() + (31 * StyleAttrs.class.hashCode());
     }
 
+    // TODO remove to make it immutable
     public void set(StyleAttribute a, boolean value) {
         set(a, Boolean.valueOf(value));
     }
 
+    // TODO remove to make it immutable
     public void set(StyleAttribute a, Object value) {
         if (value == null) {
             attributes.put(a, null);
@@ -142,17 +153,24 @@ public class StyleAttrs {
         }
         style = null;
     }
-    
+
+    /**
+     * Returns the attribute value, or null if no such attribute is present.
+     * @param a attribute
+     * @return attribute value or null
+     */
     public Object get(StyleAttribute a) {
         return attributes.get(a);
     }
     
-    public Set<StyleAttribute> attributeSet() {
+    private Set<StyleAttribute> attributeSet() {
         // TODO return a copy
         return attributes.keySet();
     }
 
-    /** returns a direct style string or null */
+    /**
+     * Converts the attributes into a single direct style string and returns the resulting (can be null).
+     */
     public String getStyle() {
         if (style == null) {
             style = createStyleString();
@@ -198,15 +216,22 @@ public class StyleAttrs {
         }
     }
     
-    public StyleAttrs copy() {
-        return new StyleAttrs(this);
-    }
+//    public StyleAttrs copy() {
+//        return new StyleAttrs(this);
+//    }
 
+    /**
+     * Returns true if the specified attribute has a boolean value of {@code Boolean.TRUE},
+     * false otherwise.
+     *
+     * @param a attribute
+     */
     public boolean getBoolean(StyleAttribute a) {
         Object v = attributes.get(a);
         return Boolean.TRUE.equals(v);
     }
 
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(32);
         sb.append("[");
@@ -225,36 +250,63 @@ public class StyleAttrs {
         sb.append("]");
         return sb.toString();
     }
-    
-    public Color getTextColor() {
+
+    /**
+     * This convenience method returns the value of {@link #TEXT_COLOR} attribute, or null.
+     */
+    public final Color getTextColor() {
         return (Color)get(TEXT_COLOR);
     }
 
-    public boolean isBold() {
+    /**
+     * This convenience method returns true if the value of {@link #BOLD} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     */
+    public final boolean isBold() {
         return getBoolean(BOLD);
     }
 
-    public boolean isItalic() {
+    /**
+     * This convenience method returns true if the value of {@link #ITALIC} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     */
+    public final boolean isItalic() {
         return getBoolean(ITALIC);
     }
 
-    public boolean isUnderline() {
-        return getBoolean(UNDERLINE);
-    }
-
-    public boolean isStrikeThrough() {
+    /**
+     * This convenience method returns true if the value of {@link #STRIKE_THROUGH} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     */
+    public final boolean isUnderline() {
         return getBoolean(STRIKE_THROUGH);
     }
-    
-    public Integer getFontSize() {
+
+    /**
+     * This convenience method returns true if the value of {@link #STRIKE_THROUGH} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     */
+    public final boolean isStrikeThrough() {
+        return getBoolean(STRIKE_THROUGH);
+    }
+
+    /**
+     * This convenience method returns true if the value of {@link #FONT_SIZE} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     */
+    public final Integer getFontSize() {
         return (Integer)get(FONT_SIZE);
     }
-    
-    public String getFontFamily() {
+
+    /**
+     * This convenience method returns true if the value of {@link #FONT_FAMILY} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     */
+    public final String getFontFamily() {
         return (String)get(FONT_FAMILY);
     }
 
-    /** retrieves style attributes from a Text node */
+    /** Creates a style attributes instance from a Text node. */
     public static StyleAttrs from(Text t) {
         StyleAttrs a = new StyleAttrs();
         Font f = t.getFont();
