@@ -26,14 +26,17 @@ package test.javafx.scene.control.rich.model;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 
 public class TStyledOutput implements StyledOutput {
+    private final StyleResolver resolver;
     private ArrayList<Object> items = new ArrayList<>();
 
-    public TStyledOutput() {
+    public TStyledOutput(StyleResolver r) {
+        this.resolver = r;
     }
 
     public Object[] getResult() {
@@ -46,7 +49,7 @@ public class TStyledOutput implements StyledOutput {
         if (seg.isText()) {
             String text = seg.getText();
             // TODO a) depends on view, b) may or may not have direct attributes, c) attributes are mutable
-            StyleAttrs a = seg.getStyleAttrs();
+            StyleAttrs a = seg.getStyleAttrs(resolver);
             items.add(text);
             items.add(a);
         } else if (seg.isLineBreak()) {

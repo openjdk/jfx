@@ -107,7 +107,7 @@ public class TestStyledRuns {
         m.applyStyle(start, end, a);
         
         {
-            TStyledOutput out = new TStyledOutput();
+            TStyledOutput out = new TStyledOutput(null); // TODO resolver
             TextPos last = m.getEndTextPos();
             m.exportText(TextPos.ZERO, last, out);
             Object[] result = out.getResult();
@@ -121,7 +121,7 @@ public class TestStyledRuns {
         TextPos fin = m.getEndTextPos();
         m.replace(null, TextPos.ZERO, fin, in);
         
-        TStyledOutput out = new TStyledOutput();
+        TStyledOutput out = new TStyledOutput(null); // TODO resolver
         TextPos last = m.getEndTextPos();
         m.exportText(TextPos.ZERO, last, out);
         Object[] result = out.getResult();

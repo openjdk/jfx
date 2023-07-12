@@ -73,25 +73,11 @@ public abstract class StyledSegment {
     public String getText() { return null; }
 
     /**
-     * Returns a non-null style associated with this segment.
-     */
-    public StyleInfo getStyleInfo() { return StyleInfo.NONE; }
-    
-    /**
      * This method must return a non-null value when {@link isParagraph()} is true, 
      * or null in any other case.
      * TODO inline node?
      */
     public Supplier<Node> getNodeGenerator() { return null; }
-
-    // FIX remove this method.
-    /**
-     * This method must return actual StyleAttrs, or null if this segment is styled with CSS styles.
-     */
-    public StyleAttrs getStyleAttrs() { return null; }
-    
-    private StyledSegment() {
-    }
     
     /**
      * This method must return StyleAttrs (or null) for this segment.
@@ -99,10 +85,14 @@ public abstract class StyledSegment {
      * necessitating the use of a resolver,
      * unless the model maintains the style attributes independently of the view.
      */
-    public final StyleAttrs getStyleAttrs(StyleResolver resolver) {
-        StyleInfo s = getStyleInfo();
-        return s.getStyleAttrs(resolver);
+    public StyleAttrs getStyleAttrs(StyleResolver resolver) { return null; }
+//        StyleInfo s = getStyleInfo();
+//        return s.getStyleAttrs(resolver);
+
+    private StyledSegment() {
     }
+    
+
 
     /** A styled segment that represents a line break */
     public static final StyledSegment LINE_BREAK = new StyledSegment() {
@@ -123,8 +113,6 @@ public abstract class StyledSegment {
      */
     public static StyledSegment of(String text, StyleInfo si) {
         return new StyledSegment() {
-            private String style; 
-
             @Override
             public boolean isText() {
                 return true;
@@ -136,13 +124,8 @@ public abstract class StyledSegment {
             }
 
             @Override
-            public StyleInfo getStyleInfo() {
-                return si;
-            }
-
-            @Override
-            public StyleAttrs getStyleAttrs() {
-                return getStyleInfo().getAttributes();
+            public StyleAttrs getStyleAttrs(StyleResolver r) {
+                return si.getAttributes();
             }
 
             @Override
@@ -158,6 +141,35 @@ public abstract class StyledSegment {
      */
     public static StyledSegment of(String text) {
         return of(text, StyleInfo.NONE);
+    }
+    
+    /**
+     * Creates a StyleSegment from a non-null plain text and style attributes.
+     * Important: text must not contain any characters &lt; 0x20, except for TAB.
+     */
+    public static StyledSegment of(String text, StyleAttrs a) {
+        return new StyledSegment() {
+            @Override
+            public boolean isText() {
+                return true;
+            }
+            
+            @Override
+            public String getText() {
+                return text;
+            }
+            
+            @Override
+            public StyleAttrs getStyleAttrs(StyleResolver r) {
+                // TODO must be immutable
+                return a;
+            }
+            
+            @Override
+            public String toString() {
+                return "StyledSegment{text=" + getText() + ", attrs=" + a + "}";
+            }
+        };
     }
     
     // TODO

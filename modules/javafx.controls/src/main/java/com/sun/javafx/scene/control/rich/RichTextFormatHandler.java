@@ -105,23 +105,28 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         @Override
         public StyledSegment nextSegment() {
-            int c = charAt(0);
-            switch(c)
-            {
-            case -1:
-                return null;
-            case '\n':
-                index++;
-                return StyledSegment.LINE_BREAK;
-            case '\\':
-                index++;
-                // TODO this may return an object, for paragraph Node \\P or Inline Node \\N segments, or StyleAttrs.
-                StyleAttrs a = decodeStyleAttrs();
+            try {
+                int c = charAt(0);
+                switch(c)
+                {
+                case -1:
+                    return null;
+                case '\n':
+                    index++;
+                    return StyledSegment.LINE_BREAK;
+                case '\\':
+                    index++;
+                    // TODO this may return an object, for paragraph Node \\P or Inline Node \\N segments, or StyleAttrs.
+                    StyleAttrs a = decodeStyleAttrs();
+                    String text = decodeText();
+                    return StyledSegment.of(text, a);
+                }
                 String text = decodeText();
-                return StyledSegment.of(text, a);
+                return StyledSegment.of(text);
+            } catch (IOException e) {
+                e.printStackTrace(); // FIX remove
+                return null;
             }
-            String text = decodeText();
-            return StyledSegment.of(text);
         }
 
         // TODO perhaps delta is not needed
@@ -296,7 +301,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
             } else if(seg.isText()) {
                 // TODO use caching resolver with #
                 // the model manages actual attributes
-                StyleAttrs a = seg.getStyleAttrs();
+                StyleAttrs a = seg.getStyleAttrs(resolver);
                 if (a != null) {
                     Integer num = styles.get(a);
                     if(num == null) {
