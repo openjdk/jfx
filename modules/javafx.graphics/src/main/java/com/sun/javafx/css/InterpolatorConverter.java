@@ -91,7 +91,11 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                 case "ease-in-out" -> EASE_IN_OUT;
                 case "step-start" -> STEP_START;
                 case "step-end" -> STEP_END;
-                default -> Interpolator.LINEAR;
+                case "linear" -> Interpolator.LINEAR;
+                case "-fx-ease-in" -> Interpolator.EASE_IN;
+                case "-fx-ease-out" -> Interpolator.EASE_OUT;
+                case "-fx-ease-both" -> Interpolator.EASE_BOTH;
+                default -> throw new AssertionError();
             };
         }
 
@@ -109,7 +113,7 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                         args[1] = "end";
                     }
 
-                    yield CACHE.computeIfAbsent(args, key -> new StepInterpolator((int)args[0], switch ((String)args[1]) {
+                    yield CACHE.computeIfAbsent(args, key -> Interpolator.STEPS((int)args[0], switch ((String)args[1]) {
                         case "jump-start", "start" -> StepPosition.START;
                         case "jump-both" -> StepPosition.BOTH;
                         case "jump-none" -> StepPosition.NONE;
@@ -117,11 +121,11 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                     }));
                 }
 
-                default -> Interpolator.LINEAR;
+                default -> throw new AssertionError();
             };
         }
 
-        return Interpolator.LINEAR;
+        throw new AssertionError();
     }
 
     /**

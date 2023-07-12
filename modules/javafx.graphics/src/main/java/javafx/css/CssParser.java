@@ -4061,7 +4061,8 @@ final public class CssParser {
                 }
 
                 yield new ParsedValueImpl<>(new ParsedValue[] {
-                        new ParsedValueImpl(term.token.getText(), null), new ParsedValueImpl(args, null)
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(args, null)
                     }, InterpolatorConverter.getInstance());
             }
 
@@ -4084,7 +4085,8 @@ final public class CssParser {
                 }
 
                 yield new ParsedValueImpl<>(new ParsedValue[] {
-                        new ParsedValueImpl(term.token.getText(), null), new ParsedValueImpl(args, null)
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(args, null)
                     }, InterpolatorConverter.getInstance());
             }
 
@@ -4103,6 +4105,7 @@ final public class CssParser {
             case "linear" -> true;
             case "ease", "ease-in", "ease-out", "ease-in-out", "cubic-bezier(" -> true;
             case "step-start", "step-end", "steps(" -> true;
+            case "-fx-ease-in", "-fx-ease-out", "-fx-ease-both" -> true;
             default -> false;
         };
     }

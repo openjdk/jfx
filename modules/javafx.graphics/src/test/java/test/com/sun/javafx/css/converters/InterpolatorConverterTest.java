@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
-
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -72,6 +71,27 @@ public class InterpolatorConverterTest {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("ease-in-out", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
         assertInterpolatorEquals(EASE_IN_OUT, result);
+    }
+
+    @Test
+    public void testConvertFxEaseInInterpolator() {
+        var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("-fx-ease-in", null), null);
+        var result = InterpolatorConverter.getInstance().convert(value, null);
+        assertInterpolatorEquals(Interpolator.EASE_IN, result);
+    }
+
+    @Test
+    public void testConvertFxEaseOutInterpolator() {
+        var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("-fx-ease-out", null), null);
+        var result = InterpolatorConverter.getInstance().convert(value, null);
+        assertInterpolatorEquals(Interpolator.EASE_OUT, result);
+    }
+
+    @Test
+    public void testConvertFxEaseBothInterpolator() {
+        var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("-fx-ease-both", null), null);
+        var result = InterpolatorConverter.getInstance().convert(value, null);
+        assertInterpolatorEquals(Interpolator.EASE_BOTH, result);
     }
 
     @Test
