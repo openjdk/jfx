@@ -65,7 +65,7 @@ public class ObservableSubscriptionsTest {
         subscription.unsubscribe();
 
         value.get();
-        value.set("C");
+        value.set("D");
 
         assertEquals(2, calls.get());  // unsubscribed, not called
     }
