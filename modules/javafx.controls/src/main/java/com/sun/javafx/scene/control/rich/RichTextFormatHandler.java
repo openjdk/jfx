@@ -65,7 +65,7 @@ import javafx.scene.paint.Color;
  *   <li>\U - underline
  *   <li>\Zpercent - font size
  * <\ol>
- * In addition, any subsequent occurence of a style is simplified by providing its number using {@code \\num} sequence.
+ * In addition, any subsequent occurence of a style is simplified by providing its number using {@code \num} sequence.
  */
 public class RichTextFormatHandler extends DataFormatHandler {
     public RichTextFormatHandler() {
@@ -137,7 +137,6 @@ public class RichTextFormatHandler extends DataFormatHandler {
             if(ix >= text.length()) {
                 return -1;
             }
-            // TODO decode %xx?
             return text.charAt(ix);
         }
         
@@ -247,6 +246,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                         --index;
                         int num = decodeInt();
                         if((num >= 0) && (num < attrs.size())) {
+                            skipEndStyleToken();
                             return attrs.get(num);
                         }
                         throw new IOException("invalid style number " + num + " index=" + index);
@@ -266,6 +266,19 @@ public class RichTextFormatHandler extends DataFormatHandler {
             }
         }
 
+        private void skipEndStyleToken() throws IOException {
+            int c = charAt(0);
+            if (c == '\\') {
+                index++;
+                c = charAt(0);
+                if (c == '\\') {
+                    index++;
+                    return;
+                }
+            }
+            throw new IOException("expecting style terminator, index=" + index);
+        }
+
         private Color decodeColor() throws IOException {
             int r = decodeHexByte();
             index++;
@@ -275,7 +288,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
             index++;
             return Color.rgb(r, g, b);
         }
-        
+
         private int decodeInt() throws IOException {
             int v = 0;
             int ct = 0;

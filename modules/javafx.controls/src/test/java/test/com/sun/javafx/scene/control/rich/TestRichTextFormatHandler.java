@@ -39,7 +39,8 @@ public class TestRichTextFormatHandler {
     @Test
     public void testRoundTrip() {
         String[] ss = {
-            "\\Z200\\C808080\\\\name1\\0\\\\: \\Z200\\\\val\\1\\\\1\\1\\\\\n\n\\0\\\\name2\\0\\\\: \\1\\\\val2\n\n"
+            "\\B\\\\A\\I\\\\B\n\\0\\\\C\\1\\\\D\n",
+            //"\\Z200\\C808080\\\\name1\\0\\\\: \\Z200\\\\val\\1\\\\1\\1\\\\\n\n\\0\\\\name2\\0\\\\: \\1\\\\val2\n\n"
         };
         
         RichTextFormatHandler handler = new RichTextFormatHandler();
