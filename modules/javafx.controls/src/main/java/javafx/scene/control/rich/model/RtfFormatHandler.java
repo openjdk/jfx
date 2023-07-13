@@ -27,6 +27,8 @@ package javafx.scene.control.rich.model;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.nio.charset.Charset;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
@@ -55,47 +57,30 @@ public class RtfFormatHandler extends DataFormatHandler {
 
     @Override
     public Object copy(StyledTextModel m, StyleResolver resolver, TextPos start, TextPos end) throws IOException {
-        StringBuilder sb = new StringBuilder(65536);
-        RtfStyledOutput r = new RtfStyledOutput(resolver) {
-            protected void write(String s) throws IOException {
-                sb.append(s);
-            }
-
-            @Override
-            public void flush() throws IOException {
-            }
-        };
+        StringWriter wr = new StringWriter(65536);
+        RtfStyledOutput r = new RtfStyledOutput(resolver, wr);
         m.exportText(start, end, r.firstPassBuilder());
         
         r.writePrologue();
         m.exportText(start, end, r);
         r.writeEpilogue();
+        wr.flush();
         
-        String rtf = sb.toString();
-        System.out.println(rtf); // FIX
+        String rtf = wr.toString();
+        //System.out.println(rtf); // FIX
         return rtf;
     }
 
     @Override
     public void save(StyledTextModel m, StyleResolver resolver, TextPos start, TextPos end, OutputStream out) throws IOException {
-        RtfStyledOutput r = new RtfStyledOutput(resolver) {
-            private static final Charset ascii = Charset.forName("ASCII");
-
-            protected void write(String s) throws IOException {
-                out.write(s.getBytes(ascii));
-            }
-
-            @Override
-            public void flush() throws IOException {
-                out.flush();
-            }
-        };
+        Charset ascii = Charset.forName("ASCII");
+        OutputStreamWriter wr = new OutputStreamWriter(out, ascii);
+        RtfStyledOutput r = new RtfStyledOutput(resolver, wr);
         m.exportText(start, end, r.firstPassBuilder());
         
         r.writePrologue();
         m.exportText(start, end, r);
         r.writeEpilogue();
-        
-        out.flush();
+        wr.flush();
     }
 }

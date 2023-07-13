@@ -29,6 +29,7 @@
 package com.sun.javafx.scene.control.rich;
 
 import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,13 +48,11 @@ import javafx.scene.paint.Color;
  * RTF 1.5 Spec:
  * https://www.biblioscape.com/rtf15_spec.htm
  */
-public abstract class RtfStyledOutput implements StyledOutput {
-    /** outputs ASCII-encoded string */
-    protected abstract void write(String s) throws IOException;
-    
+public class RtfStyledOutput implements StyledOutput {
     private final LookupTable<Color> colorTable = new LookupTable<>(Color.BLACK);
     private final LookupTable<String> fontTable = new LookupTable<>("system");
     private final StyleResolver resolver;
+    private final Writer writer;
     private boolean startOfLine = true;
     private StyleAttrs prevStyle;
     private Color color;
@@ -64,9 +63,10 @@ public abstract class RtfStyledOutput implements StyledOutput {
     private boolean strike;
     private String fontFamily;
     private Integer fontSize;
-    
-    public RtfStyledOutput(StyleResolver r) {
+
+    public RtfStyledOutput(StyleResolver r, Writer wr) {
         this.resolver = new CachingStyleResolver(r);
+        this.writer = wr;
     }
 
     public StyledOutput firstPassBuilder() {
@@ -75,7 +75,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
             public void append(StyledSegment seg) throws IOException {
                 if (seg.isText()) {
                     StyleAttrs a = seg.getStyleAttrs(resolver);
-                    if(a != null) {
+                    if (a != null) {
                         // colors
                         Color c = a.getTextColor();
                         if (c != null) {
@@ -87,7 +87,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
                         //                    if (c != null) {
                         //                        colorTable.add(c);
                         //                    }
-                        
+
                         // TODO font table
                         String family = a.getFontFamily();
                         if (family != null) {
@@ -102,7 +102,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
             }
         };
     }
-    
+
     //    \fnil   Unknown or default fonts (the default)  
     //    \froman Roman, proportionally spaced serif fonts    Times New Roman, Palatino
     //    \fswiss Swiss, proportionally spaced sans serif fonts   Arial
@@ -113,7 +113,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
     //    \fbidi  Arabic, Hebrew, or other bidirectional font Miriam
     private String lookupFontFamily(String name) {
         try {
-            switch(name.toLowerCase()) {
+            switch (name.toLowerCase()) {
             case "monospaced":
                 return "\\fmodern Courier New";
             case "system":
@@ -126,10 +126,11 @@ public abstract class RtfStyledOutput implements StyledOutput {
             case "fantasy":
                 return "\\fdecor ITC Zapf Chancery";
             }
-        } catch(Exception e) { }
+        } catch (Exception e) {
+        }
         return null;
     }
-    
+
     public void writePrologue() throws IOException {
         // preamble
         write("{\\rtf1\\ansi\\ansicpg1252\\uc1\\sl0\\sb0\\sa0\\deff0");
@@ -137,12 +138,12 @@ public abstract class RtfStyledOutput implements StyledOutput {
         // font table
         write("{\\fonttbl");
         int ix = 0;
-        for (String name: fontTable.getItems()) {
+        for (String name : fontTable.getItems()) {
             String fam = lookupFontFamily(name);
-                
+
             write("\\f");
             write(String.valueOf(ix++));
-            if(fam == null) {
+            if (fam == null) {
                 write("\\fnil");
                 write(" ");
                 write(name);
@@ -152,7 +153,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
             write(";");
         }
         write("}\r\n");
-        
+
         // color table
         write("{\\colortbl ;");
         for (Color c : colorTable.getItems()) {
@@ -165,7 +166,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
             write(";");
         }
         write("}\r\n");
-        
+
         // TODO \deftab720 Default tab width in twips (the default is 720).  a twip is one-twentieth of a point
     }
 
@@ -230,9 +231,9 @@ public abstract class RtfStyledOutput implements StyledOutput {
 
         if (startOfLine) {
             // first line indent 0, left aligned
-            write("\\fi0\\ql ");            
+            write("\\fi0\\ql ");
             prevStyle = null;
-            
+
             startOfLine = false;
         }
 
@@ -271,7 +272,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
             prevStyle = a;
 
             // emit changes
-            
+
             if (RichUtils.notEquals(fontFamily, fam)) {
                 int ix = fontTable.getIndexFor(fam);
                 write("\\f");
@@ -312,7 +313,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
                     write("\\highlight0 ");
                 } else {
                     int ix = colorTable.getIndexFor(bg);
-                    if(ix > 0) {
+                    if (ix > 0) {
                         ix++;
                     }
                     write("\\highlight");
@@ -372,17 +373,17 @@ public abstract class RtfStyledOutput implements StyledOutput {
         write("\r\n");
         // There is no set maximum line length for an RTF file.
         StringBuilder sb = new StringBuilder(2);
-        for(int i=0; i<bytes.length; i++) {
+        for (int i = 0; i < bytes.length; i++) {
             byte b = bytes[i];
             hex2(sb, b);
             write(sb.toString());
-            if((i % 80) == 79) {
+            if ((i % 80) == 79) {
                 write("\r\n");
             }
         }
         write("\r\n}}\r\n");
     }
-    
+
     private static void hex2(StringBuilder sb, byte b) {
         sb.setLength(0);
         String hex = "0123456789abcdef";
@@ -461,8 +462,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
                 default:
                     continue;
                 }
-            }
-            else {
+            } else {
                 return i;
             }
         }
@@ -478,15 +478,24 @@ public abstract class RtfStyledOutput implements StyledOutput {
         }
         return String.valueOf(v);
     }
-    
+
     private static void checkCancelled() throws IOException {
         // check if interrupted
-        if(Thread.currentThread().isInterrupted()) {
+        if (Thread.currentThread().isInterrupted()) {
             // don't want to have it as a checked exception... may be throws Exception?
             throw new IOException(new InterruptedException());
         }
-        
+
         // TODO check if nearly out of memory
+    }
+
+    private void write(String s) throws IOException {
+        writer.write(s);
+    }
+
+    @Override
+    public void flush() throws IOException {
+        writer.flush();
     }
 
     /** RTF is unable to specify colors inline it seems, needs a color lookup table */
@@ -495,7 +504,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
         private final HashMap<T, Integer> indexes = new HashMap<>();
 
         public LookupTable(T initValue) {
-            if(initValue != null) {
+            if (initValue != null) {
                 add(initValue);
             }
         }
@@ -511,7 +520,7 @@ public abstract class RtfStyledOutput implements StyledOutput {
         /** returns index or 0 if not found */
         public int getIndexFor(T c) {
             Integer ix = indexes.get(c);
-            if(ix == null) {
+            if (ix == null) {
                 return 0;
             }
             return ix.intValue();
