@@ -515,8 +515,7 @@ public class RichTextAreaDemoPane extends BorderPane {
     protected void apply(StyleAttribute a, Object val) {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
-        StyleAttrs m = new StyleAttrs();
-        m.set(a, val);
+        StyleAttrs m = StyleAttrs.of(a, val);
         control.applyStyle(ca, an, m);
     }
     

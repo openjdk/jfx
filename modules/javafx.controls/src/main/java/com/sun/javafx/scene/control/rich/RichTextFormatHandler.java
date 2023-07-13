@@ -206,37 +206,37 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         private StyleAttrs decodeStyleAttrs() throws IOException {
             // TODO read to style terminator, then parse styles
-            StyleAttrs a = new StyleAttrs();
+            StyleAttrs.Builder b = StyleAttrs.builder();
             for(;;) {
                 int c = charAt(0);
                 index++;
                 switch(c) {
                 case 'B':
-                    a.set(StyleAttrs.BOLD, true);
+                    b.set(StyleAttrs.BOLD, true);
                     break;
                 case 'C':
                     Color col = decodeColor();
-                    a.set(StyleAttrs.TEXT_COLOR, col);
+                    b.set(StyleAttrs.TEXT_COLOR, col);
                     break;
                 case 'F':
                     String fam = decodeText();
-                    a.set(StyleAttrs.FONT_FAMILY, fam);
+                    b.set(StyleAttrs.FONT_FAMILY, fam);
                     break;
                 case 'I':
-                    a.set(StyleAttrs.ITALIC, true);
+                    b.set(StyleAttrs.ITALIC, true);
                     break;
                 case 'T':
-                    a.set(StyleAttrs.STRIKE_THROUGH, true);
+                    b.set(StyleAttrs.STRIKE_THROUGH, true);
                     break;
                 case 'U':
-                    a.set(StyleAttrs.UNDERLINE, true);
+                    b.set(StyleAttrs.UNDERLINE, true);
                     break;
                 case 'Z':
                     int percent = decodeInt();
-                    a.set(StyleAttrs.FONT_SIZE, percent);
+                    b.set(StyleAttrs.FONT_SIZE, percent);
                     break;
                 case '\\':
-                    return a;
+                    return b.create();
                 default:
                     throw new IOException("unknown style token:" + (char)c);
                 }

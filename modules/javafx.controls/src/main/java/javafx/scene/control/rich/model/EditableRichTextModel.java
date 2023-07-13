@@ -93,8 +93,7 @@ public class EditableRichTextModel extends StyledTextModelEditableBase {
     protected StyleAttrs getStyleAttrs(StyleResolver resolver, StyledSegment segment) {
         StyleAttrs a = segment.getStyleAttrs(resolver);
         if(a == null) {
-            // TODO immutable, instance
-            a = new StyleAttrs();
+            a = StyleAttrs.EMPTY;
         }
         // TODO pass through styles hash set to save on memory
         return a;

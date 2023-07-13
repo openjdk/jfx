@@ -1240,7 +1240,6 @@ public class VFlow extends Pane implements StyleResolver {
 
     @Override
     public StyleAttrs convert(String directStyle, String[] css) {
-        StyleAttrs a = new StyleAttrs();
         getChildren().add(measurer);
         try {
             measurer.setStyle(directStyle);

@@ -66,7 +66,7 @@ public class TestStyledRuns {
     }
     
     private static StyleAttrs mk(Object... spec) {
-        StyleAttrs rv = new StyleAttrs();
+        StyleAttrs.Builder b = StyleAttrs.builder();
         for (int i = 0; i < spec.length;) {
             StyleAttribute a = (StyleAttribute)spec[i++];
             Object v;
@@ -82,9 +82,9 @@ public class TestStyledRuns {
             if (v == null) {
                 v = Boolean.TRUE;
             }
-            rv.set(a, v);
+            b.set(a, v);
         }
-        return rv;
+        return b.create();
     }
 
     // FIX does not work (yet)

@@ -25,9 +25,10 @@
 
 package javafx.scene.control.rich.model;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
@@ -35,11 +36,12 @@ import javafx.scene.text.Text;
 import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
- * Map of style attributes.
- * <p>
- * TODO it is probably a good idea to make this class immutable.
+ * An immutable object containing style attributes.
  */
 public class StyleAttrs {
+    /** an instance with no attributes set */
+    public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
+
     /** Bold typeface attribute */
     public static final StyleAttribute BOLD = new StyleAttribute("BOLD", Boolean.class) {
         @Override
@@ -113,12 +115,17 @@ public class StyleAttrs {
     private final HashMap<StyleAttribute,Object> attributes;
     private transient String style;
     
-    public StyleAttrs() {
-        this.attributes = new HashMap<>();
+    private StyleAttrs(Map<StyleAttribute,Object> a) {
+        this.attributes = new HashMap<>(a);
     }
-    
-    public StyleAttrs(StyleAttrs a) {
-        this.attributes = new HashMap<>(a.attributes);
+
+    /**
+     * Convenience method creates an instance with a single attribute.
+     * @param attribute
+     * @param value
+     */
+    public static StyleAttrs of(StyleAttribute attribute, Object value) {
+        return new Builder().set(attribute, value).create();
     }
 
     @Override
@@ -137,23 +144,6 @@ public class StyleAttrs {
         return attributes.hashCode() + (31 * StyleAttrs.class.hashCode());
     }
 
-    // TODO remove to make it immutable
-    public void set(StyleAttribute a, boolean value) {
-        set(a, Boolean.valueOf(value));
-    }
-
-    // TODO remove to make it immutable
-    public void set(StyleAttribute a, Object value) {
-        if (value == null) {
-            attributes.put(a, null);
-        } else if (value.getClass().isAssignableFrom(a.getType())) {
-            attributes.put(a, value);
-        } else {
-            throw new IllegalArgumentException(a + " requires value of type " + a.getType());
-        }
-        style = null;
-    }
-
     /**
      * Returns the attribute value, or null if no such attribute is present.
      * @param a attribute
@@ -163,11 +153,6 @@ public class StyleAttrs {
         return attributes.get(a);
     }
     
-    private Set<StyleAttribute> attributeSet() {
-        // TODO return a copy
-        return attributes.keySet();
-    }
-
     /**
      * Converts the attributes into a single direct style string and returns the resulting (can be null).
      */
@@ -192,33 +177,16 @@ public class StyleAttrs {
     }
 
     /** 
-     * Creates a new StyleAttrs instance by combining the two attribute sets.
-     * The new attributes override any existing ones.
-     * This instance remains unchanged.
+     * Creates a new StyleAttrs instance by combining this and the specified attrbutes.
+     * The values in the {@code attrs} override values found in this instance.
      */
     public StyleAttrs combine(StyleAttrs attrs) {
-        StyleAttrs rv = new StyleAttrs(this);
-        for(StyleAttribute a: attrs.attributeSet()) {
-            Object v = attrs.get(a);
-            rv.set(a, v);
-        }
-        return rv;
+        return 
+            new Builder().
+            merge(this).
+            merge(attrs).
+            create();
     }
-    
-    /** 
-     * Applies the specified attributes to this instance.
-     * The new attributes override any existing ones.
-     */
-    public void apply(StyleAttrs attrs) {
-        for(StyleAttribute a: attrs.attributeSet()) {
-            Object v = attrs.get(a);
-            set(a, v);
-        }
-    }
-    
-//    public StyleAttrs copy() {
-//        return new StyleAttrs(this);
-//    }
 
     /**
      * Returns true if the specified attribute has a boolean value of {@code Boolean.TRUE},
@@ -236,7 +204,7 @@ public class StyleAttrs {
         StringBuilder sb = new StringBuilder(32);
         sb.append("[");
         boolean sep = false;
-        for (StyleAttribute a : attributeSet()) {
+        for (StyleAttribute a : attributes.keySet()) {
             if (sep) {
                 sb.append(",");
             } else {
@@ -308,44 +276,100 @@ public class StyleAttrs {
 
     /** Creates a style attributes instance from a Text node. */
     public static StyleAttrs from(Text t) {
-        StyleAttrs a = new StyleAttrs();
+        StyleAttrs.Builder b = StyleAttrs.builder();
         Font f = t.getFont();
         String st = f.getStyle().toLowerCase(Locale.US);
         boolean bold = st.contains("bold");
         boolean italic = st.contains("italic"); // oblique? any other names?
 
         if (bold) {
-            a.set(BOLD, true);
+            b.set(BOLD, true);
         }
 
         if (italic) {
-            a.set(ITALIC, true);
+            b.set(ITALIC, true);
         }
 
         if (t.isStrikethrough()) {
-            a.set(STRIKE_THROUGH, true);
+            b.set(STRIKE_THROUGH, true);
         }
 
         if (t.isUnderline()) {
-            a.set(UNDERLINE, true);
+            b.set(UNDERLINE, true);
         }
 
         String family = f.getFamily();
-        a.set(FONT_FAMILY, family);
+        b.set(FONT_FAMILY, family);
 
         double sz = f.getSize();
         // TODO we could use a default font in the rich text area
         int size = (int)Math.round(sz / 0.12); // in percent relative to size 12
         if (size != 100) {
-            a.set(FONT_SIZE, size);
+            b.set(FONT_SIZE, size);
         }
 
         Paint x = t.getFill();
         if (x instanceof Color c) {
             // we do not support gradients (although we could get the first color, for example)
-            a.set(TEXT_COLOR, c);
+            b.set(TEXT_COLOR, c);
         }
 
-        return a;
+        return b.create();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+    
+    /** StyleAttrs are immutable, so a Builder is required to create a new instance */
+    public static class Builder {
+        private final HashMap<StyleAttribute,Object> attributes = new HashMap<>(4);
+
+        private Builder() {
+        }
+        
+        public StyleAttrs create() {
+            return new StyleAttrs(attributes);
+        }
+        
+        /**
+         * Sets a boolean attribute.
+         * @param a attribute
+         * @param value
+         */
+        public Builder set(StyleAttribute a, boolean value) {
+            return set(a, Boolean.valueOf(value));
+        }
+
+        /**
+         * Sets the value for the specified attribute.
+         * This method will throw an {@code IllegalArgumentException} if the value cannot be cast to the
+         * type specified by the attribute.
+         *
+         * @param a attribute
+         * @param value
+         */
+        public Builder set(StyleAttribute a, Object value) {
+            if (value == null) {
+                attributes.put(a, null);
+            } else if (value.getClass().isAssignableFrom(a.getType())) {
+                attributes.put(a, value);
+            } else {
+                throw new IllegalArgumentException(a + " requires value of type " + a.getType());
+            }
+            return this;
+        }
+
+        /** 
+         * Merges the specified attributes with the attributes in this instance.
+         * The new values override any existing ones.
+         */
+        public Builder merge(StyleAttrs attrs) {
+            for (StyleAttribute a : attrs.attributes.keySet()) {
+                Object v = attrs.get(a);
+                set(a, v);
+            }
+            return this;
+        }
     }
 }

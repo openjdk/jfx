@@ -167,13 +167,15 @@ public enum ModelChoice {
     }
     
     private static StyledTextModel writingSystems() {
-        StyleAttrs a = new StyleAttrs();
-        a.set(StyleAttrs.FONT_SIZE, 200);
-        a.set(StyleAttrs.TEXT_COLOR, Color.gray(0.5));
+        StyleAttrs a = StyleAttrs.builder().
+            set(StyleAttrs.FONT_SIZE, 200).
+            set(StyleAttrs.TEXT_COLOR, Color.gray(0.5)).
+            create();
         StyleInfo name = StyleInfo.of(a);
         
-        a = new StyleAttrs();
-        a.set(StyleAttrs.FONT_SIZE, 200);
+        a = StyleAttrs.builder().
+            set(StyleAttrs.FONT_SIZE, 200).
+            create();
         StyleInfo value = StyleInfo.of(a);
         
         EditableRichTextModel m = new EditableRichTextModel();
