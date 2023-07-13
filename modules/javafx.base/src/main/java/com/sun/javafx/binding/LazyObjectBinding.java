@@ -26,6 +26,7 @@
 package com.sun.javafx.binding;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.Subscription;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.value.ChangeListener;
 
