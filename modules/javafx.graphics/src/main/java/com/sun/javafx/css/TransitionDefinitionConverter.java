@@ -87,7 +87,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
             property,
             duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration,
             parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO,
-            parsedInterpolator != null ? parsedInterpolator.convert(null) : InterpolatorConverter.EASE);
+            parsedInterpolator != null ? parsedInterpolator.convert(null) : InterpolatorConverter.CSS_EASE);
     }
 
     /**
@@ -128,7 +128,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
             for (int i = 0; i < transitions.length; ++i) {
                 Duration delay = delays == null || delays.length == 0 ? Duration.ZERO : delays[i % delays.length];
                 Interpolator timingFunction = timingFunctions == null || timingFunctions.length == 0 ?
-                    InterpolatorConverter.EASE : timingFunctions[i % timingFunctions.length];
+                    InterpolatorConverter.CSS_EASE : timingFunctions[i % timingFunctions.length];
 
                 transitions[i] = new TransitionDefinition(
                     properties[i], durations[i % durations.length], delay, timingFunction);

@@ -25,13 +25,13 @@
 
 package com.sun.javafx.css;
 
-import com.sun.scenario.animation.StepInterpolator;
 import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,7 +45,7 @@ import java.util.Map;
  * </ol>
  * <p>
  * If the value is a {@code ParsedValue} array, the first element represents the name of the function
- * ({@code cubic-bezier} or {@code steps}), and the second element contains an array of arguments.
+ * ({@code cubic-bezier} or {@code steps}), and the second element contains a list of arguments.
  */
 public class InterpolatorConverter extends StyleConverter<Object, Interpolator> {
 
@@ -62,17 +62,15 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
     // SMIL 3.0's definitions that are used for Interpolator.EASE_IN and Interpolator.EASE_OUT.
     // https://www.w3.org/TR/css-easing-1/#cubic-bezier-easing-functions
     //
-    static final Interpolator EASE = Interpolator.SPLINE(0.25, 0.1, 0.25, 1);
-    static final Interpolator EASE_IN = Interpolator.SPLINE(0.42, 0, 1, 1);
-    static final Interpolator EASE_OUT = Interpolator.SPLINE(0, 0, 0.58, 1);
-    static final Interpolator EASE_IN_OUT = Interpolator.SPLINE(0.42, 0, 0.58, 1);
-    static final Interpolator STEP_START = new StepInterpolator(1, StepPosition.START);
-    static final Interpolator STEP_END = new StepInterpolator(1, StepPosition.END);
+    public static final Interpolator CSS_EASE = Interpolator.SPLINE(0.25, 0.1, 0.25, 1);
+    public static final Interpolator CSS_EASE_IN = Interpolator.SPLINE(0.42, 0, 1, 1);
+    public static final Interpolator CSS_EASE_OUT = Interpolator.SPLINE(0, 0, 0.58, 1);
+    public static final Interpolator CSS_EASE_IN_OUT = Interpolator.SPLINE(0.42, 0, 0.58, 1);
 
     // We're using an LRU cache (least recently used) to limit the number of redundant instances.
-    private static final Map<Object, Interpolator> CACHE = new LinkedHashMap<>(10, 0.75f, true) {
+    private static final Map<ParsedValue<?, ?>, Interpolator> CACHE = new LinkedHashMap<>(10, 0.75f, true) {
         @Override
-        protected boolean removeEldestEntry(Map.Entry<Object, Interpolator> eldest) {
+        protected boolean removeEldestEntry(Map.Entry<ParsedValue<?, ?>, Interpolator> eldest) {
             return size() > 20;
         }
     };
@@ -81,16 +79,14 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
 
     @Override
     public Interpolator convert(ParsedValue<Object, Interpolator> value, Font font) {
-        Object values = value.getValue();
-
-        if (values instanceof ParsedValue<?, ?> parsedValue) {
-            return switch ((String)parsedValue.getValue()) {
-                case "ease" -> EASE;
-                case "ease-in" -> EASE_IN;
-                case "ease-out" -> EASE_OUT;
-                case "ease-in-out" -> EASE_IN_OUT;
-                case "step-start" -> STEP_START;
-                case "step-end" -> STEP_END;
+        if (value.getValue() instanceof ParsedValue<?, ?> pv && pv.getValue() instanceof String name) {
+            return switch (name) {
+                case "ease" -> CSS_EASE;
+                case "ease-in" -> CSS_EASE_IN;
+                case "ease-out" -> CSS_EASE_OUT;
+                case "ease-in-out" -> CSS_EASE_IN_OUT;
+                case "step-start" -> Interpolator.STEP_START;
+                case "step-end" -> Interpolator.STEP_END;
                 case "linear" -> Interpolator.LINEAR;
                 case "-fx-ease-in" -> Interpolator.EASE_IN;
                 case "-fx-ease-out" -> Interpolator.EASE_OUT;
@@ -99,33 +95,35 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
             };
         }
 
-        if (values instanceof ParsedValue<?, ?>[] parsedValues) {
-            return switch ((String)parsedValues[0].getValue()) {
-                case "cubic-bezier(" -> {
-                    double[] args = (double[])parsedValues[1].getValue();
-                    yield CACHE.computeIfAbsent(
-                        args, key -> Interpolator.SPLINE(args[0], args[1], args[2], args[3]));
-                }
+        if (value.getValue() instanceof ParsedValue<?, ?>[] pv && pv[0].getValue() instanceof String funcName) {
+            return switch (funcName) {
+                case "cubic-bezier(" -> CACHE.computeIfAbsent(value, key -> {
+                    List<Double> args = arguments(key);
+                    return Interpolator.SPLINE(args.get(0), args.get(1), args.get(2), args.get(3));
+                });
 
-                case "steps(" -> {
-                    Object[] args = (Object[])parsedValues[1].getValue();
-                    if (args[1] == null) {
-                        args[1] = "end";
-                    }
-
-                    yield CACHE.computeIfAbsent(args, key -> Interpolator.STEPS((int)args[0], switch ((String)args[1]) {
+                case "steps(" -> CACHE.computeIfAbsent(value, key -> {
+                    List<Object> args = arguments(key);
+                    String position = args.get(1) != null ? (String)args.get(1) : "end";
+                    return Interpolator.STEPS((int)args.get(0), switch (position) {
                         case "jump-start", "start" -> StepPosition.START;
                         case "jump-both" -> StepPosition.BOTH;
                         case "jump-none" -> StepPosition.NONE;
                         default -> StepPosition.END;
-                    }));
-                }
+                    });
+                });
 
                 default -> throw new AssertionError();
             };
         }
 
         throw new AssertionError();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> List<T> arguments(ParsedValue<?, ?> value) {
+        ParsedValue<?, ?>[] values = (ParsedValue<?, ?>[])value.getValue();
+        return (List<T>)values[1].getValue();
     }
 
     /**

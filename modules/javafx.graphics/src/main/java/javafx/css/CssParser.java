@@ -103,6 +103,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -4050,7 +4051,7 @@ final public class CssParser {
 
         return switch (term.token.getText()) {
             case "cubic-bezier(" -> {
-                double[] args = new double[4];
+                Double[] args = new Double[4];
                 Term arg = term.firstArg;
 
                 for (int j = 0; j < 4; ++j, arg = arg.nextArg) {
@@ -4060,9 +4061,9 @@ final public class CssParser {
                     }
                 }
 
-                yield new ParsedValueImpl<>(new ParsedValue[] {
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
                         new ParsedValueImpl(term.token.getText(), null),
-                        new ParsedValueImpl(args, null)
+                        new ParsedValueImpl(Arrays.asList(args), null)
                     }, InterpolatorConverter.getInstance());
             }
 
@@ -4084,9 +4085,9 @@ final public class CssParser {
                     }
                 }
 
-                yield new ParsedValueImpl<>(new ParsedValue[] {
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
                         new ParsedValueImpl(term.token.getText(), null),
-                        new ParsedValueImpl(args, null)
+                        new ParsedValueImpl(Arrays.asList(args), null)
                     }, InterpolatorConverter.getInstance());
             }
 

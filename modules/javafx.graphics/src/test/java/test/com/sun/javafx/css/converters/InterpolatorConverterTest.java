@@ -27,14 +27,17 @@ package test.com.sun.javafx.css.converters;
 
 import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
-import org.junit.jupiter.api.Test;
 import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
+import java.util.List;
 import java.util.Locale;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static javafx.animation.Interpolator.*;
+import static com.sun.javafx.css.InterpolatorConverter.*;
 import static test.javafx.animation.InterpolatorUtils.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class InterpolatorConverterTest {
 
@@ -49,59 +52,59 @@ public class InterpolatorConverterTest {
     public void testConvertEaseInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("ease", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(EASE, result);
+        assertInterpolatorEquals(CSS_EASE, result);
     }
 
     @Test
     public void testConvertEaseInInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("ease-in", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(EASE_IN, result);
+        assertInterpolatorEquals(CSS_EASE_IN, result);
     }
 
     @Test
     public void testConvertEaseOutInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("ease-out", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(EASE_OUT, result);
+        assertInterpolatorEquals(CSS_EASE_OUT, result);
     }
 
     @Test
     public void testConvertEaseInOutInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("ease-in-out", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(EASE_IN_OUT, result);
+        assertInterpolatorEquals(CSS_EASE_IN_OUT, result);
     }
 
     @Test
     public void testConvertFxEaseInInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("-fx-ease-in", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(Interpolator.EASE_IN, result);
+        assertInterpolatorEquals(EASE_IN, result);
     }
 
     @Test
     public void testConvertFxEaseOutInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("-fx-ease-out", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(Interpolator.EASE_OUT, result);
+        assertInterpolatorEquals(EASE_OUT, result);
     }
 
     @Test
     public void testConvertFxEaseBothInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("-fx-ease-both", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(Interpolator.EASE_BOTH, result);
+        assertInterpolatorEquals(EASE_BOTH, result);
     }
 
     @Test
     public void testConvertCubicBezierInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
             new ParsedValueImpl<>("cubic-bezier(", null),
-            new ParsedValueImpl<>(new double[] {0.1, 0.2, 0.3, 0.4}, null) },
+            new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) },
             null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(CUBIC_BEZIER(0.1, 0.2, 0.3, 0.4), result);
+        assertInterpolatorEquals(SPLINE(0.1, 0.2, 0.3, 0.4), result);
     }
 
     @Test
@@ -124,7 +127,7 @@ public class InterpolatorConverterTest {
             var cssName = "jump-" + stepPosition.toString().toLowerCase(Locale.ROOT).replace('_', '-');
             var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
                 new ParsedValueImpl<>("steps(", null),
-                new ParsedValueImpl<>(new Object[] {3, cssName}, null) },
+                new ParsedValueImpl<>(List.of(3, cssName), null) },
                 null);
             var result = InterpolatorConverter.getInstance().convert(value, null);
             assertInterpolatorEquals(STEPS(3, stepPosition), result);
@@ -133,12 +136,16 @@ public class InterpolatorConverterTest {
 
     @Test
     public void testRepeatedConversionReturnsCachedInterpolator() {
-        var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
-            new ParsedValueImpl<>("cubic-bezier(", null),
-            new ParsedValueImpl<>(new double[] {0.1, 0.2, 0.3, 0.4}, null) },
+        var result1 = InterpolatorConverter.getInstance().convert(
+            new ParsedValueImpl<>(new ParsedValueImpl[] {
+                new ParsedValueImpl<>("cubic-bezier(", null),
+                new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) }, null),
             null);
-        var result1 = InterpolatorConverter.getInstance().convert(value, null);
-        var result2 = InterpolatorConverter.getInstance().convert(value, null);
+        var result2 = InterpolatorConverter.getInstance().convert(
+            new ParsedValueImpl<>(new ParsedValueImpl[] {
+                new ParsedValueImpl<>("cubic-bezier(", null),
+                new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) }, null),
+            null);
         assertSame(result1, result2);
     }
 
@@ -153,8 +160,8 @@ public class InterpolatorConverterTest {
         var result = InterpolatorConverter.SequenceConverter.getInstance().convert(values, null);
         assertEquals(3, result.length);
         assertInterpolatorEquals(LINEAR, result[0]);
-        assertInterpolatorEquals(EASE, result[1]);
-        assertInterpolatorEquals(EASE_IN, result[2]);
+        assertInterpolatorEquals(CSS_EASE, result[1]);
+        assertInterpolatorEquals(CSS_EASE_IN, result[2]);
     }
 
 }

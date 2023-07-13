@@ -26,16 +26,14 @@
 package test.javafx.scene;
 
 import com.sun.javafx.css.AbstractPropertyTimer;
+import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import com.sun.javafx.css.TransitionDefinition;
 import javafx.css.TransitionEvent;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -47,9 +45,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static javafx.animation.Interpolator.*;
+import static com.sun.javafx.css.InterpolatorConverter.*;
 import static test.javafx.animation.InterpolatorUtils.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class Node_transition_Test {
 
@@ -71,8 +73,8 @@ public class Node_transition_Test {
 
         List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
         assertEquals(2, transitions.size());
-        assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
-        assertTransitionEquals("all", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transitions.get(1));
+        assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
+        assertTransitionEquals("all", Duration.seconds(2), Duration.ZERO, CSS_EASE_IN_OUT, transitions.get(1));
     }
 
     @Test
@@ -101,13 +103,13 @@ public class Node_transition_Test {
         node.applyCss();
         List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
         assertEquals(1, transitions.size());
-        assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
+        assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
 
         node.setStyle("transition: all 1s");
         node.applyCss();
         transitions = NodeShim.getTransitions(node);
         assertEquals(1, transitions.size());
-        assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
+        assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
     }
 
     @Test
@@ -121,7 +123,7 @@ public class Node_transition_Test {
             .filter(m -> m.getProperty().equals("-fx-fill"))
             .findFirst().get();
         TransitionDefinition transition = NodeHelper.findTransitionDefinition(node, propertyMetadata);
-        assertTransitionEquals("-fx-fill", Duration.seconds(2), Duration.ZERO, EASE_IN_OUT, transition);
+        assertTransitionEquals("-fx-fill", Duration.seconds(2), Duration.ZERO, CSS_EASE_IN_OUT, transition);
     }
 
     @Test
@@ -148,16 +150,16 @@ public class Node_transition_Test {
 
         List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
         assertEquals(3, transitions.size());
-        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.seconds(0.5), EASE, transitions.get(0));
-        assertTransitionEquals("-fx-scale-x", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(1));
-        assertTransitionEquals("-fx-scale-y", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(2));
+        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.seconds(0.5), CSS_EASE, transitions.get(0));
+        assertTransitionEquals("-fx-scale-x", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(1));
+        assertTransitionEquals("-fx-scale-y", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(2));
 
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
 
         transitions = NodeShim.getTransitions(node);
         assertEquals(1, transitions.size());
-        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.ZERO, EASE, transitions.get(0));
+        assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
     }
 
     @Test

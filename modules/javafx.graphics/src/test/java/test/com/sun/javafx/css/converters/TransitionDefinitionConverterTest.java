@@ -25,13 +25,12 @@
 
 package test.com.sun.javafx.css.converters;
 
+import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
 import javafx.scene.Node;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
 import javafx.animation.Interpolator;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
@@ -39,14 +38,16 @@ import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import com.sun.javafx.css.TransitionDefinition;
 import javafx.css.converter.DurationConverter;
 import javafx.util.Duration;
 import java.util.Map;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static test.javafx.animation.InterpolatorUtils.*;
+import static com.sun.javafx.css.InterpolatorConverter.*;
 import static com.sun.javafx.css.TransitionDefinitionConverter.SequenceConverter;
+import static test.javafx.animation.InterpolatorUtils.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TransitionDefinitionConverterTest {
 
@@ -69,7 +70,7 @@ public class TransitionDefinitionConverterTest {
         }, null);
 
         var result = TransitionDefinitionConverter.getInstance().convert(value, null);
-        assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, EASE, result);
+        assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, CSS_EASE, result);
     }
 
     @Test
@@ -82,7 +83,7 @@ public class TransitionDefinitionConverterTest {
         }, null);
 
         var result = TransitionDefinitionConverter.getInstance().convert(value, null);
-        assertTransitionEquals("test", Duration.seconds(1), Duration.seconds(0.25), EASE_IN, result);
+        assertTransitionEquals("test", Duration.seconds(1), Duration.seconds(0.25), CSS_EASE_IN, result);
     }
 
     @Test
@@ -122,8 +123,8 @@ public class TransitionDefinitionConverterTest {
 
             var result = SequenceConverter.getInstance().convert(values, null);
             assertEquals(2, result.length);
-            assertTransitionEquals("test1", Duration.seconds(1), Duration.ZERO, EASE, result[0]);
-            assertTransitionEquals("test2", Duration.seconds(0.5), Duration.seconds(-1.5), EASE_IN, result[1]);
+            assertTransitionEquals("test1", Duration.seconds(1), Duration.ZERO, CSS_EASE, result[0]);
+            assertTransitionEquals("test2", Duration.seconds(0.5), Duration.seconds(-1.5), CSS_EASE_IN, result[1]);
         }
 
         @Test
@@ -136,7 +137,7 @@ public class TransitionDefinitionConverterTest {
 
             var result = SequenceConverter.getInstance().convert(values);
             assertEquals(1, result.length);
-            assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, EASE, result[0]);
+            assertTransitionEquals("test", Duration.seconds(1), Duration.ZERO, CSS_EASE, result[0]);
         }
 
         @Test
@@ -146,12 +147,12 @@ public class TransitionDefinitionConverterTest {
                 metadata.transitionProperty(), new String[] { "test" },
                 metadata.transitionDuration(), new Duration[] { Duration.seconds(1) },
                 metadata.transitionDelay(), new Duration[] { Duration.seconds(0.25) },
-                metadata.transitionTimingFunction(), new Interpolator[] { EASE_IN }
+                metadata.transitionTimingFunction(), new Interpolator[] { CSS_EASE_IN }
             );
 
             var result = SequenceConverter.getInstance().convert(values);
             assertEquals(1, result.length);
-            assertTransitionEquals("test", Duration.seconds(1), Duration.seconds(0.25), EASE_IN, result[0]);
+            assertTransitionEquals("test", Duration.seconds(1), Duration.seconds(0.25), CSS_EASE_IN, result[0]);
         }
 
         @Test
@@ -161,15 +162,15 @@ public class TransitionDefinitionConverterTest {
                 metadata.transitionProperty(), new String[] { "test1", "test2", "test3", "test4" },
                 metadata.transitionDuration(), new Duration[] { Duration.seconds(1), Duration.seconds(2) },
                 metadata.transitionDelay(), new Duration[] { Duration.seconds(0.25) },
-                metadata.transitionTimingFunction(), new Interpolator[] { EASE_IN, EASE_OUT }
+                metadata.transitionTimingFunction(), new Interpolator[] { CSS_EASE_IN, CSS_EASE_OUT }
             );
 
             var result = SequenceConverter.getInstance().convert(values);
             assertEquals(4, result.length);
-            assertTransitionEquals("test1", Duration.seconds(1), Duration.seconds(0.25), EASE_IN, result[0]);
-            assertTransitionEquals("test2", Duration.seconds(2), Duration.seconds(0.25), EASE_OUT, result[1]);
-            assertTransitionEquals("test3", Duration.seconds(1), Duration.seconds(0.25), EASE_IN, result[2]);
-            assertTransitionEquals("test4", Duration.seconds(2), Duration.seconds(0.25), EASE_OUT, result[3]);
+            assertTransitionEquals("test1", Duration.seconds(1), Duration.seconds(0.25), CSS_EASE_IN, result[0]);
+            assertTransitionEquals("test2", Duration.seconds(2), Duration.seconds(0.25), CSS_EASE_OUT, result[1]);
+            assertTransitionEquals("test3", Duration.seconds(1), Duration.seconds(0.25), CSS_EASE_IN, result[2]);
+            assertTransitionEquals("test4", Duration.seconds(2), Duration.seconds(0.25), CSS_EASE_OUT, result[3]);
         }
 
         @Test

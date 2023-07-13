@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,7 +82,7 @@ public final class DurationConverter extends StyleConverter<ParsedValue<?, Size>
     /**
      * Converts a sequence of parsed values to an array of {@link Duration} instances.
      *
-     * @since 20
+     * @since 22
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?, Size>, Duration>[], Duration[]> {
         /**

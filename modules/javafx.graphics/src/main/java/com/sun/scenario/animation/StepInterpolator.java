@@ -88,6 +88,18 @@ public class StepInterpolator extends Interpolator {
     }
 
     @Override
+    public int hashCode() {
+        return Integer.hashCode(intervals) + 31 * position.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof StepInterpolator other
+            && intervals == other.intervals
+            && position == other.position;
+    }
+
+    @Override
     public String toString() {
         return "StepInterpolator [intervals=" + intervals + ", position=" + position + "]";
     }

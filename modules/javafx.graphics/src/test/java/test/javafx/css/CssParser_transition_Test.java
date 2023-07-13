@@ -25,18 +25,20 @@
 
 package test.javafx.css;
 
-import org.junit.jupiter.api.Test;
 import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.CssParser;
 import javafx.css.Declaration;
 import javafx.css.Rule;
 import javafx.css.Stylesheet;
-import com.sun.javafx.css.TransitionDefinition;
 import javafx.util.Duration;
+import com.sun.javafx.css.TransitionDefinition;
+import org.junit.jupiter.api.Test;
 
-import static test.javafx.animation.InterpolatorUtils.*;
+import static javafx.animation.Interpolator.*;
 import static javafx.util.Duration.*;
+import static com.sun.javafx.css.InterpolatorConverter.*;
+import static test.javafx.animation.InterpolatorUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CssParser_transition_Test {
@@ -86,11 +88,11 @@ public class CssParser_transition_Test {
         """);
 
         assertTransition(
-            new TransitionDefinition("foo", seconds(0), seconds(0), EASE),
+            new TransitionDefinition("foo", seconds(0), seconds(0), CSS_EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(0)))[0]);
 
         assertTransition(
-            new TransitionDefinition("all", seconds(1), seconds(0), EASE),
+            new TransitionDefinition("all", seconds(1), seconds(0), CSS_EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(1)))[0]);
 
         assertTransition(
@@ -175,11 +177,11 @@ public class CssParser_transition_Test {
         assertInterpolatorEquals(LINEAR, values[0]);
 
         values = values("transition-timing-function", stylesheet.getRules().get(1));
-        assertInterpolatorEquals(EASE, values[0]);
-        assertInterpolatorEquals(EASE_IN, values[1]);
-        assertInterpolatorEquals(EASE_OUT, values[2]);
-        assertInterpolatorEquals(EASE_IN_OUT, values[3]);
-        assertInterpolatorEquals(CUBIC_BEZIER(0.1, 0.2, 0.3, 0.4), values[4]);
+        assertInterpolatorEquals(CSS_EASE, values[0]);
+        assertInterpolatorEquals(CSS_EASE_IN, values[1]);
+        assertInterpolatorEquals(CSS_EASE_OUT, values[2]);
+        assertInterpolatorEquals(CSS_EASE_IN_OUT, values[3]);
+        assertInterpolatorEquals(SPLINE(0.1, 0.2, 0.3, 0.4), values[4]);
 
         values = values("transition-timing-function", stylesheet.getRules().get(2));
         assertInterpolatorEquals(STEP_START, values[0]);
@@ -213,24 +215,24 @@ public class CssParser_transition_Test {
         """);
 
         assertTransition(
-            new TransitionDefinition("all", seconds(0.25), seconds(0), EASE),
+            new TransitionDefinition("all", seconds(0.25), seconds(0), CSS_EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(0)))[0]);
 
         assertEquals("null",
             stylesheet.getRules().get(1).getDeclarations().get(0).getParsedValue().convert(null));
 
         assertTransition(
-            new TransitionDefinition("all", seconds(0.125), seconds(0), EASE),
+            new TransitionDefinition("all", seconds(0.125), seconds(0), CSS_EASE),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(2)))[0]);
 
         assertTransition(
             new TransitionDefinition("foo", seconds(0.3), seconds(0.4),
-                                     CUBIC_BEZIER(0.1, 0.2, 0.3, .4)),
+                                     SPLINE(0.1, 0.2, 0.3, .4)),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(3)))[0]);
 
         assertTransition(
             new TransitionDefinition("foo", seconds(0.3), seconds(0.4),
-                                     CUBIC_BEZIER(0.1, 0.2, 0.3, .4)),
+                                     SPLINE(0.1, 0.2, 0.3, .4)),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(4)))[0]);
 
         assertStartsWith("Expected '<single-transition-property>'", CssParser.errorsProperty().get(0).getMessage());

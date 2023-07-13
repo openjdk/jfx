@@ -55,7 +55,7 @@ public class TransitionDefinitionCssMetaData
 
     private static final Duration[] DURATION_ZERO = new Duration[] { Duration.ZERO };
 
-    private static final Interpolator[] INTERPOLATOR_EASE = new Interpolator[] { InterpolatorConverter.EASE };
+    private static final Interpolator[] INTERPOLATOR_EASE = new Interpolator[] { InterpolatorConverter.CSS_EASE };
 
     @Override
     public boolean isSettable(Node node) {
