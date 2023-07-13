@@ -25,7 +25,6 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
@@ -102,7 +101,7 @@ public abstract class StyleableObjectProperty<T>
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends T> observable) {
-        if (AbstractPropertyTimer.tryStop(timer)) {
+        if (TransitionTimer.tryStop(timer)) {
             super.bind(observable);
             origin = StyleOrigin.USER;
         }
@@ -113,7 +112,7 @@ public abstract class StyleableObjectProperty<T>
     public void set(T v) {
         super.set(v);
 
-        if (AbstractPropertyTimer.tryStop(timer)) {
+        if (TransitionTimer.tryStop(timer)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -123,7 +122,7 @@ public abstract class StyleableObjectProperty<T>
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private AbstractPropertyTimer timer = null;
+    private TransitionTimer<?> timer = null;
 
     private static class TransitionTimerImpl<U> extends TransitionTimer<StyleableObjectProperty<U>> {
         final U oldValue;

@@ -125,10 +125,10 @@ import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
-import com.sun.javafx.css.AbstractPropertyTimer;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
+import com.sun.javafx.css.TransitionTimer;
 import javafx.css.Selector;
 import javafx.css.Style;
 import javafx.css.converter.BooleanConverter;
@@ -648,13 +648,13 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public void addPropertyTimer(Node node, AbstractPropertyTimer timer) {
-                node.addPropertyTimer(timer);
+            public void addTransitionTimer(Node node, TransitionTimer<?> timer) {
+                node.addTransitionTimer(timer);
             }
 
             @Override
-            public void removePropertyTimer(Node node, AbstractPropertyTimer timer) {
-                node.removePropertyTimer(timer);
+            public void removeTransitionTimer(Node node, TransitionTimer<?> timer) {
+                node.removeTransitionTimer(timer);
             }
         });
     }
@@ -1087,7 +1087,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
         if (sceneChanged) {
             if (newScene == null) {
-                cancelPropertyTimers();
+                cancelTransitionTimers();
             }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
@@ -8591,7 +8591,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (treeVisible != value) {
             treeVisible = value;
             if (!value) {
-                cancelPropertyTimers();
+                cancelTransitionTimers();
             }
             updateCanReceiveFocus();
             focusSetDirty(getScene());
@@ -8916,33 +8916,33 @@ public abstract class Node implements EventTarget, Styleable {
 
     /* *************************************************************************
      *                                                                         *
-     *                           Property Timers                               *
+     *                           CSS Transitions                               *
      *                                                                         *
      **************************************************************************/
 
-    private List<AbstractPropertyTimer> propertyTimers;
+    private List<TransitionTimer<?>> transitionTimers;
 
     /**
      * Called by animatable {@code StyleableProperty} implementations in order to register
-     * a running {@link AbstractPropertyTimer} with this {@code Node}. This allows the node
+     * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
      */
-    private void addPropertyTimer(AbstractPropertyTimer timer) {
-        if (propertyTimers == null) {
-            propertyTimers = new ArrayList<>(4);
+    private void addTransitionTimer(TransitionTimer<?> timer) {
+        if (transitionTimers == null) {
+            transitionTimers = new ArrayList<>(4);
         }
 
-        propertyTimers.add(timer);
+        transitionTimers.add(timer);
     }
 
     /**
-     * Removes a timer that was previously registered with {@link #addPropertyTimer}.
+     * Removes a timer that was previously registered with {@link #addTransitionTimer}.
      * This method is called by animatable {@link StyleableProperty} implementations
-     * when their {@link AbstractPropertyTimer} has completed.
+     * when their {@link TransitionTimer} has completed.
      */
-    private void removePropertyTimer(AbstractPropertyTimer timer) {
-        if (propertyTimers != null) {
-            propertyTimers.remove(timer);
+    private void removeTransitionTimer(TransitionTimer<?> timer) {
+        if (transitionTimers != null) {
+            transitionTimers.remove(timer);
         }
     }
 
@@ -8951,29 +8951,22 @@ public abstract class Node implements EventTarget, Styleable {
      * the property to the target value.
      */
     // package-private for testing
-    void cancelPropertyTimers() {
-        if (propertyTimers == null || propertyTimers.isEmpty()) {
+    void cancelTransitionTimers() {
+        if (transitionTimers == null || transitionTimers.isEmpty()) {
             return;
         }
 
         // Make a copy of the list, because completing the timers causes them to be removed
         // from the list, which would result in a ConcurrentModificationException.
-        for (AbstractPropertyTimer timer : List.copyOf(propertyTimers)) {
+        for (TransitionTimer<?> timer : List.copyOf(transitionTimers)) {
             timer.cancel();
         }
     }
 
     // package-private for testing
-    List<AbstractPropertyTimer> getPropertyTimers() {
-        return propertyTimers;
+    List<TransitionTimer<?>> getTransitionTimers() {
+        return transitionTimers;
     }
-
-
-    /* *************************************************************************
-     *                                                                         *
-     *                           CSS Transitions                               *
-     *                                                                         *
-     **************************************************************************/
 
     /**
      * Contains descriptions of the animated transitions that are currently defined for

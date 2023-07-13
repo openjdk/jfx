@@ -27,6 +27,7 @@ package com.sun.javafx.css;
 
 import com.sun.javafx.animation.AnimationTimerHelper;
 import com.sun.javafx.scene.NodeHelper;
+import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
 import javafx.beans.property.Property;
 import javafx.css.StyleableProperty;
@@ -40,7 +41,7 @@ import java.lang.ref.WeakReference;
  * {@code TransitionTimer} is the base class for timers that compute intermediate
  * values for implicit transitions of a {@link StyleableProperty}.
  */
-public abstract class TransitionTimer<P extends StyleableProperty<?>> extends AbstractPropertyTimer {
+public abstract class TransitionTimer<P extends StyleableProperty<?>> extends AnimationTimer {
 
     private final WeakReference<P> wref;
     private final long startTime, delay, duration;
@@ -57,6 +58,30 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
     }
 
     /**
+     * Stops the specified timer if it is currently running, but only if this method was not
+     * called from the timer's {@link #update(double)} method (i.e. a timer will not stop itself
+     * while trying to set the new value of a styleable property).
+     * If {@code timer} is {@code null}, it is considered to be trivially stopped, so the
+     * method returns {@code true}.
+     *
+     * @param timer the timer
+     * @return {@code true} if the timer was stopped or {@code timer} is {@code null},
+     *         {@code false} otherwise
+     */
+    public static boolean tryStop(TransitionTimer<?> timer) {
+        if (timer == null) {
+            return true;
+        }
+
+        if (timer.isUpdating()) {
+            return false;
+        }
+
+        timer.stop();
+        return true;
+    }
+
+    /**
      * Adds the specified transition timer to the list of running timers
      * and fires the {@link TransitionEvent#RUN} event.
      */
@@ -64,7 +89,7 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
         timer.start();
 
         if (property instanceof Property<?> p && p.getBean() instanceof Node node) {
-            NodeHelper.addPropertyTimer(node, timer);
+            NodeHelper.addTransitionTimer(node, timer);
 
             // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
             // The elapsed time for this event is equal to min(max(-'delay', 0), 'duration')
@@ -75,7 +100,9 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
         return timer;
     }
 
-    @Override
+    /**
+     * Returns whether the timer is currently updating the value of the property.
+     */
     public boolean isUpdating() {
         return updating;
     }
@@ -128,7 +155,6 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
      *
      * @param progress the input progress value
      */
-    @Override
     public final void update(double progress) {
         P property = wref.get();
         if (property == null) {
@@ -148,7 +174,6 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
      * Skips the rest of a running transition and updates the property to the target value.
      * Calling this method fires the {@link TransitionEvent#CANCEL} event.
      */
-    @Override
     public final void cancel() {
         P property = wref.get();
         if (property == null) {
@@ -183,7 +208,7 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends Ab
         if (property != null) {
             onStop(property);
             if (property instanceof Property<?> p && p.getBean() instanceof Node node) {
-                NodeHelper.removePropertyTimer(node, this);
+                NodeHelper.removeTransitionTimer(node, this);
             }
         }
     }
