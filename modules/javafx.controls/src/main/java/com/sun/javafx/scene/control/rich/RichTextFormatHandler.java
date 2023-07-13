@@ -32,6 +32,7 @@ import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
@@ -98,6 +99,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         private final String text;
         private int index;
         private StringBuilder sb;
+        private final ArrayList<StyleAttrs> attrs = new ArrayList<>();
 
         public RichStyledInput(String text) {
             this.text = text;
@@ -236,9 +238,21 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     b.set(StyleAttrs.FONT_SIZE, percent);
                     break;
                 case '\\':
-                    return b.create();
+                    StyleAttrs a = b.create();
+                    attrs.add(a);
+                    return a;
                 default:
-                    throw new IOException("unknown style token:" + (char)c);
+                    char ch = (char)c;
+                    if(Character.isDigit(ch)) {
+                        --index;
+                        int num = decodeInt();
+                        if((num >= 0) && (num < attrs.size())) {
+                            return attrs.get(num);
+                        }
+                        throw new IOException("invalid style number " + num + " index=" + index);
+                    } else {
+                        throw new IOException("unknown style token:" + ch + " index=" + index);
+                    }
                 }
 
                 c = charAt(0);
@@ -247,7 +261,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     index++;
                     continue;
                 default:
-                    throw new IOException("missing style terminator");
+                    throw new IOException("missing style terminator, index=" + index);
                 }
             }
         }
@@ -258,21 +272,24 @@ public class RichTextFormatHandler extends DataFormatHandler {
             int g = decodeHexByte();
             index++;
             int b = decodeHexByte();
+            index++;
             return Color.rgb(r, g, b);
         }
         
         private int decodeInt() throws IOException {
             int v = 0;
+            int ct = 0;
             for(;;) {
                 int c = charAt(0);
                 int d = Character.digit(c, 10);
                 if(d < 0) {
-                    if(v == 0) {
-                        throw new IOException("missing number");
+                    if(ct == 0) {
+                        throw new IOException("missing number index=" + index);
                     }
                     return v;
                 } else {
                     v = v * 10 + d;
+                    ct++;
                 }
                 index++;
             }
