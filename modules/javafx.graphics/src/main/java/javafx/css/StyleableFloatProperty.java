@@ -69,9 +69,7 @@ public abstract class StyleableFloatProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        if (timer != null) {
-            timer.stop();
-        }
+        TransitionTimer.stop(timer, true);
 
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
@@ -90,10 +88,9 @@ public abstract class StyleableFloatProperty
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
-        if (TransitionTimer.tryStop(timer)) {
-            super.bind(observable);
-            origin = StyleOrigin.USER;
-        }
+        super.bind(observable);
+        origin = StyleOrigin.USER;
+        TransitionTimer.stop(timer, true);
     }
 
     /** {@inheritDoc} */
@@ -101,7 +98,8 @@ public abstract class StyleableFloatProperty
     public void set(float v) {
         super.set(v);
 
-        if (TransitionTimer.tryStop(timer)) {
+        // If the 'set' method was called by the timer, the following call will not stop the timer:
+        if (TransitionTimer.stop(timer, false)) {
             origin = StyleOrigin.USER;
         }
     }

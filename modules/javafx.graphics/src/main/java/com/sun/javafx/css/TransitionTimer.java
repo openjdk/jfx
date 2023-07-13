@@ -41,44 +41,20 @@ import java.lang.ref.WeakReference;
  * {@code TransitionTimer} is the base class for timers that compute intermediate
  * values for implicit transitions of a {@link StyleableProperty}.
  */
-public abstract class TransitionTimer<P extends StyleableProperty<?>> extends AnimationTimer {
+public abstract class TransitionTimer<T extends StyleableProperty<?>> extends AnimationTimer {
 
-    private final WeakReference<P> wref;
+    private final WeakReference<T> wref;
     private final long startTime, delay, duration;
     private final Interpolator interpolator;
     private boolean updating;
     private boolean started;
 
-    protected TransitionTimer(P property, TransitionDefinition transition) {
+    protected TransitionTimer(T property, TransitionDefinition transition) {
         this.wref = new WeakReference<>(property);
         this.delay = (long)(transition.getDelay().toMillis() * 1000000);
         this.startTime = AnimationTimerHelper.getPrimaryTimer(this).nanos() + delay;
         this.duration = (long)(transition.getDuration().toMillis() * 1000000);
         this.interpolator = transition.getInterpolator();
-    }
-
-    /**
-     * Stops the specified timer if it is currently running, but only if this method was not
-     * called from the timer's {@link #update(double)} method (i.e. a timer will not stop itself
-     * while trying to set the new value of a styleable property).
-     * If {@code timer} is {@code null}, it is considered to be trivially stopped, so the
-     * method returns {@code true}.
-     *
-     * @param timer the timer
-     * @return {@code true} if the timer was stopped or {@code timer} is {@code null},
-     *         {@code false} otherwise
-     */
-    public static boolean tryStop(TransitionTimer<?> timer) {
-        if (timer == null) {
-            return true;
-        }
-
-        if (timer.isUpdating()) {
-            return false;
-        }
-
-        timer.stop();
-        return true;
     }
 
     /**
@@ -101,9 +77,36 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends An
     }
 
     /**
-     * Returns whether the timer is currently updating the value of the property.
+     * Stops the specified timer if it is currently running, but only if this method was not
+     * called from the timer's {@link #update(double)} method (i.e. a timer will not stop itself
+     * while trying to set the new value of a styleable property).
+     * If {@code timer} is {@code null}, it is considered to be trivially stopped, so the
+     * method returns {@code true}.
+     *
+     * @param timer the timer
+     * @return {@code true} if the timer was stopped or {@code timer} is {@code null},
+     *         {@code false} otherwise
      */
-    public boolean isUpdating() {
+    public static boolean stop(TransitionTimer<?> timer, boolean forceStop) {
+        if (timer == null) {
+            return true;
+        }
+
+        if (forceStop || !timer.pollUpdating()) {
+            timer.stop();
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Polls whether the timer is currently updating the value of the property.
+     * After this method was called, the {@link #updating} flag is {@code false}.
+     */
+    public boolean pollUpdating() {
+        boolean updating = this.updating;
+        this.updating = false;
         return updating;
     }
 
@@ -118,7 +121,7 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends An
      */
     @Override
     public final void handle(long now) {
-        P property = wref.get();
+        T property = wref.get();
         if (property == null) {
             super.stop();
             return;
@@ -150,13 +153,13 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends An
 
     /**
      * Updates the transition timer by mapping the specified input progress to an output progress
-     * value using the timer's interpolator, and then calling {@link #onUpdate(P, double)}} with the
+     * value using the timer's interpolator, and then calling {@link #onUpdate(T, double)}} with the
      * output progress value.
      *
      * @param progress the input progress value
      */
     public final void update(double progress) {
-        P property = wref.get();
+        T property = wref.get();
         if (property == null) {
             super.stop();
             return;
@@ -174,8 +177,8 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends An
      * Skips the rest of a running transition and updates the property to the target value.
      * Calling this method fires the {@link TransitionEvent#CANCEL} event.
      */
-    public final void cancel() {
-        P property = wref.get();
+    public final void complete() {
+        T property = wref.get();
         if (property == null) {
             super.stop();
             return;
@@ -204,7 +207,7 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends An
     public final void stop() {
         super.stop();
 
-        P property = wref.get();
+        T property = wref.get();
         if (property != null) {
             onStop(property);
             if (property instanceof Property<?> p && p.getBean() instanceof Node node) {
@@ -220,7 +223,7 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends An
      * @param property the targeted {@code StyleableProperty}
      * @param progress the progress of the transition, ranging from 0 to 1
      */
-    protected abstract void onUpdate(P property, double progress);
+    protected abstract void onUpdate(T property, double progress);
 
     /**
      * Occurs when the timer has stopped and should be discarded.
@@ -228,7 +231,7 @@ public abstract class TransitionTimer<P extends StyleableProperty<?>> extends An
      *
      * @param property the targeted {@code StyleableProperty}
      */
-    protected abstract void onStop(P property);
+    protected abstract void onStop(T property);
 
     private void fireEvent(StyleableProperty<?> property, EventType<TransitionEvent> eventType, Duration elapsedTime) {
         if (property instanceof Property<?> p && p.getBean() instanceof Node node) {

@@ -1087,7 +1087,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
         if (sceneChanged) {
             if (newScene == null) {
-                cancelTransitionTimers();
+                completeTransitionTimers();
             }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
@@ -8591,7 +8591,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (treeVisible != value) {
             treeVisible = value;
             if (!value) {
-                cancelTransitionTimers();
+                completeTransitionTimers();
             }
             updateCanReceiveFocus();
             focusSetDirty(getScene());
@@ -8947,11 +8947,11 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Cancels all running timers, which skips the rest of their animation and sets
+     * Completes all running timers, which skips the rest of their animation and sets
      * the property to the target value.
      */
     // package-private for testing
-    void cancelTransitionTimers() {
+    void completeTransitionTimers() {
         if (transitionTimers == null || transitionTimers.isEmpty()) {
             return;
         }
@@ -8959,7 +8959,7 @@ public abstract class Node implements EventTarget, Styleable {
         // Make a copy of the list, because completing the timers causes them to be removed
         // from the list, which would result in a ConcurrentModificationException.
         for (TransitionTimer<?> timer : List.copyOf(transitionTimers)) {
-            timer.cancel();
+            timer.complete();
         }
     }
 

@@ -354,7 +354,7 @@ public class Node_transition_Test {
         // elapsed time is 250ms (since we have a 250ms delay).
         tk.setCurrentTime(500);
         tk.handleAnimation();
-        NodeShim.cancelTransitionTimers(node);
+        NodeShim.completeTransitionTimers(node);
 
         assertEquals(3, trace.size());
         assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
@@ -396,7 +396,7 @@ public class Node_transition_Test {
         // elapsed time is 750ms (since we started with a negative 250ms delay).
         tk.setCurrentTime(500);
         tk.handleAnimation();
-        NodeShim.cancelTransitionTimers(node);
+        NodeShim.completeTransitionTimers(node);
 
         assertEquals(3, trace.size());
         assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());

@@ -70,9 +70,7 @@ public abstract class StyleableObjectProperty<T>
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, T v) {
-        if (timer != null) {
-            timer.stop();
-        }
+        TransitionTimer.stop(timer, true);
 
         T oldValue;
 
@@ -101,10 +99,9 @@ public abstract class StyleableObjectProperty<T>
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends T> observable) {
-        if (TransitionTimer.tryStop(timer)) {
-            super.bind(observable);
-            origin = StyleOrigin.USER;
-        }
+        super.bind(observable);
+        origin = StyleOrigin.USER;
+        TransitionTimer.stop(timer, true);
     }
 
     /** {@inheritDoc} */
@@ -112,7 +109,8 @@ public abstract class StyleableObjectProperty<T>
     public void set(T v) {
         super.set(v);
 
-        if (TransitionTimer.tryStop(timer)) {
+        // If the 'set' method was called by the timer, the following call will not stop the timer:
+        if (TransitionTimer.stop(timer, false)) {
             origin = StyleOrigin.USER;
         }
     }

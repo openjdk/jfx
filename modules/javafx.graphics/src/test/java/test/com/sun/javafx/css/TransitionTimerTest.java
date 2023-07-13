@@ -112,7 +112,7 @@ public class TransitionTimerTest {
 
     @Test
     public void testNullTimerIsTriviallyStopped() {
-        assertTrue(TransitionTimer.tryStop(null));
+        assertTrue(TransitionTimer.stop(null, false));
     }
 
     @Test
@@ -125,7 +125,7 @@ public class TransitionTimerTest {
 
         timer.start();
         timer.fire(seconds(0.2));
-        assertTrue(TransitionTimer.tryStop(timer));
+        assertTrue(TransitionTimer.stop(timer, false));
     }
 
     @Test
@@ -134,7 +134,7 @@ public class TransitionTimerTest {
         var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock(transition) {
             @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {
-                flag[0] = TransitionTimer.tryStop(this);
+                flag[0] = TransitionTimer.stop(this, false);
             }
 
             @Override protected void onStop(StyleableDoubleProperty property) {}
