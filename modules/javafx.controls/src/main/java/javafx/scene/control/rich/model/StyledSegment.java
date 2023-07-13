@@ -48,23 +48,23 @@ public abstract class StyledSegment {
      * Returns true if this segment is a text segment.
      */
     public boolean isText() { return false; }
-    
+
     /**
      * Returns true if this segment is a paragraph which contains a single Node.
      */
     public boolean isParagraph() { return false; }
-    
+
     /**
      * Returns true if this segment is a line break.
      */
     public boolean isLineBreak() { return false; }
-    
+
     /**
      * Returns true if this segment represents an inline Node.
      * TODO not yet supported due to https://bugs.openjdk.org/browse/JDK-8305001
      */
     public boolean isInlineNode() { return false; }
-    
+
     /**
      * Returns the text associated with this segment.
      * Must be one character for inline nodes, must be null for node paragraphs.
@@ -78,16 +78,15 @@ public abstract class StyledSegment {
      * TODO inline node?
      */
     public Supplier<Node> getNodeGenerator() { return null; }
-    
+
     /**
-     * This method must return StyleAttrs (or null) for this segment.
-     * Keep in mind that the actual attributes and values might depend on the view that generated the segment,
-     * necessitating the use of a resolver,
-     * unless the model maintains the style attributes independently of the view.
+     * This method returns StyleAttrs (or null) for this segment.
+     * When the model manages style names (instead of actual attributes), an instance of {@link StyleResolver}
+     * may be used to convert the style names to the attributes.
+     * Keep in mind that different views might have different CSS styles applied and as a result a different
+     * set of attributes might be produced for the same segment.
      */
     public StyleAttrs getStyleAttrs(StyleResolver resolver) { return null; }
-//        StyleInfo s = getStyleInfo();
-//        return s.getStyleAttrs(resolver);
 
     private StyledSegment() {
     }
