@@ -208,17 +208,23 @@ public abstract class StyledTextModel {
      * Registers a format handler for input/output operation such as copy(), paste(), and save().
      * Priority determines the format chosen for operations with the {@link javafx.scene.input.Clipboard}
      * when input data is available in more than one supported format.
-     * 
+     * <p>
+     * This method is expected to be called by a StyledTextModel implementation constructor.
+     *
      * @param h data format handler
      * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}, for a native model format.
      */
-    public void registerDataFormatHandler(DataFormatHandler h, int priority) {
+    protected void registerDataFormatHandler(DataFormatHandler h, int priority) {
         handlers.put(h.getDataFormat(), new FHPriority(h, priority));
     }
 
     /**
      * Returns an array of supported data formats,
      * in the order of priority - from high to low.
+     * <p>
+     * TODO: think of splitting format handlers in two: for export and for import.
+     * The reason is that export might be easily achieved (to html, for example), but
+     * import might require complicated code.
      */
     public DataFormat[] getSupportedDataFormats() {
         ArrayList<FHPriority> fs = new ArrayList<>(handlers.values());

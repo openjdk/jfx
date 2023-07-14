@@ -52,7 +52,7 @@ public class EditableRichTextModel extends StyledTextModelEditableBase {
     public EditableRichTextModel() {
         paragraphs.add(new RParagraph());
 
-        registerDataFormatHandler(new RichTextFormatHandler(), 1000);
+        registerDataFormatHandler(new RichTextFormatHandler(), Integer.MAX_VALUE);
         registerDataFormatHandler(new RtfFormatHandler(), 100);
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }

@@ -25,10 +25,13 @@
 
 package test.com.sun.javafx.scene.control.rich;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
+import org.junit.Assert;
 import org.junit.Test;
 import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
 
@@ -37,34 +40,36 @@ import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
  */
 public class TestRichTextFormatHandler {
     @Test
-    public void testRoundTrip() {
+    public void testRoundTrip() throws IOException {
         String[] ss = {
             "\\B\\\\A\\I\\\\B\n\\0\\\\C\\1\\\\D\n",
-            //"\\Z200\\C808080\\\\name1\\0\\\\: \\Z200\\\\val\\1\\\\1\\1\\\\\n\n\\0\\\\name2\\0\\\\: \\1\\\\val2\n\n"
+            "\\Z200\\C808080\\\\name1\\0\\\\: \\Z200\\\\val\\1\\\\1\\1\\\\\n\n\\0\\\\name2\\0\\\\: \\1\\\\val2\n\n"
         };
-        
+
         RichTextFormatHandler handler = new RichTextFormatHandler();
-        
-        for(String text: ss) {
+
+        for (String text : ss) {
             testRoundTrip(handler, text);
         }
     }
-    
-    private void testRoundTrip(RichTextFormatHandler handler, String text) {
+
+    private void testRoundTrip(RichTextFormatHandler handler, String text) throws IOException {
         ArrayList<StyledSegment> segments = new ArrayList<>();
-        
-        StyledInput in = handler.getStyledInput(text);
+
+        StyledInput in = handler.createStyledInput(text);
         StyledSegment seg;
-        while((seg = in.nextSegment()) != null) {
+        while ((seg = in.nextSegment()) != null) {
             segments.add(seg);
         }
-        
-        // TODO pass output stream or writer
-//        StyledOutput out = handler.getStyledOutput();
-//        for(StyledSegment s: segments) {
-//            out.append(s);
-//        }
-        
-        // TODO compare
+
+        StringWriter wr = new StringWriter();
+        StyledOutput out = handler.createStyledOutput(null, wr);
+        for (StyledSegment s : segments) {
+            out.append(s);
+        }
+        out.flush();
+
+        String result = wr.toString();
+        Assert.assertEquals(text, result);
     }
 }

@@ -947,7 +947,7 @@ public class RichTextAreaBehavior {
                 StyledTextModel m = control.getModel();
                 DataFormatHandler h = m.getDataFormatHandler(f);
                 Object src = Clipboard.getSystemClipboard().getContent(f);
-                StyledInput in = h.getStyledInput(src);
+                StyledInput in = h.createStyledInput(src);
                 TextPos p = m.replace(vflow, start, end, in);
                 control.moveCaret(p, false);
             }
@@ -979,7 +979,7 @@ public class RichTextAreaBehavior {
                 StyledTextModel m = control.getModel();
                 DataFormatHandler h = m.getDataFormatHandler(DataFormat.PLAIN_TEXT);
                 String src = c.getString();
-                StyledInput in = h.getStyledInput(src);
+                StyledInput in = h.createStyledInput(src);
 
                 TextPos p = m.replace(vflow, start, end, in);
                 control.moveCaret(p, false);

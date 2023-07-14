@@ -90,8 +90,6 @@ public abstract class StyledSegment {
 
     private StyledSegment() {
     }
-    
-
 
     /** A styled segment that represents a line break */
     public static final StyledSegment LINE_BREAK = new StyledSegment() {

@@ -44,7 +44,7 @@ public class RtfFormatHandler extends DataFormatHandler {
     }
 
     @Override
-    public StyledInput getStyledInput(Object src) {
+    public StyledInput createStyledInput(Object src) {
         if (src == null) {
             return StyledInput.of("", StyleInfo.NONE);
         }

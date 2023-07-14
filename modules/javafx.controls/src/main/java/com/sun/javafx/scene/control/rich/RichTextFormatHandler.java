@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -73,15 +74,15 @@ public class RichTextFormatHandler extends DataFormatHandler {
     }
 
     @Override
-    public StyledInput getStyledInput(Object src) {
+    public StyledInput createStyledInput(Object src) {
         String input = (String)src;
         return new RichStyledInput(input);
     }
 
     @Override
-    public Object copy(StyledTextModel m, StyleResolver resolver, TextPos start, TextPos end) throws IOException {
+    public Object copy(StyledTextModel m, StyleResolver r, TextPos start, TextPos end) throws IOException {
         StringWriter wr = new StringWriter();
-        RichStyledOutput so = new RichStyledOutput(resolver, wr);
+        RichStyledOutput so = createStyledOutput(r, wr);
         m.exportText(start, end, so);
         return wr.toString();
     }
@@ -89,9 +90,26 @@ public class RichTextFormatHandler extends DataFormatHandler {
     @Override
     public void save(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, OutputStream out) throws IOException {
         Charset cs = Charset.forName("utf-8");
-        Writer wr = new BufferedWriter(new OutputStreamWriter(out, cs));
-        RichStyledOutput so = new RichStyledOutput(r, wr);
+        Writer wr = new OutputStreamWriter(out, cs);
+        RichStyledOutput so = createStyledOutput(r, wr);
         m.exportText(start, end, so);
+    }
+
+    public RichStyledOutput createStyledOutput(StyleResolver r, Writer wr) {
+        Charset cs = Charset.forName("utf-8");
+        boolean buffered = isBuffered(wr);
+        if (buffered) {
+            return new RichStyledOutput(r, wr);
+        } else {
+            wr = new BufferedWriter(wr);
+            return new RichStyledOutput(r, wr);
+        }
+    }
+
+    private static boolean isBuffered(Writer x) {
+        return
+            (x instanceof BufferedWriter) ||
+            (x instanceof StringWriter);
     }
 
     /** importer */

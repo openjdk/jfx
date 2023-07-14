@@ -41,7 +41,7 @@ public abstract class DataFormatHandler {
      * @param src
      * @return StyledInput generated according to this data format
      */
-    public abstract StyledInput getStyledInput(Object src);
+    public abstract StyledInput createStyledInput(Object src);
 
     /**
      * Creates an object to be put into the Clipboard for the given text range.
@@ -70,6 +70,13 @@ public abstract class DataFormatHandler {
      */
     // TODO all handlers implement this method similarly, perhaps it should be moved to StyledModel
     // the only reason it's here is that some (RTF) handlers require two passes and prologue/epilogue.
+    /*
+     * Perhaps we could change this by adding:
+     * createFirstPassStyledOutput(Resolver,Writer) return null in most cases
+     * createStyledOutput(Resolver,Writer)
+     * writePrologue() - no op in most cases
+     * writeEpilogue()
+     */
     public abstract void save(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end, OutputStream out) throws IOException;
 
     // TODO load?
