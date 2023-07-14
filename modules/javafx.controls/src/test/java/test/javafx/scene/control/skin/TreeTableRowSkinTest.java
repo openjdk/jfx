@@ -28,6 +28,7 @@ package test.javafx.scene.control.skin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.ref.WeakReference;
 import javafx.collections.FXCollections;
@@ -45,6 +46,7 @@ import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TreeTableRowSkin;
+import javafx.scene.shape.Rectangle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -354,6 +356,51 @@ public class TreeTableRowSkinTest {
         Toolkit.getToolkit().firePulse();
 
         JMemoryBuddy.assertCollectable(ref);
+    }
+
+    // See JDK-8285700
+    @Test
+    public void testGraphicVisibilityOfTreeItem() {
+        TreeTableView<String> tree = new TreeTableView<>();
+        stageLoader = new StageLoader(tree);
+
+        TreeTableColumn<String, String> column = new TreeTableColumn<>("Column");
+        tree.getColumns().add(column);
+        tree.setRoot(new TreeItem("Root"));
+
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i, new Rectangle(10, 10));
+            TreeItem subNode = new TreeItem("sub-node - " + i, new Rectangle(10, 10));
+            parent.getChildren().addAll(subNode);
+            tree.getRoot().getChildren().add(parent);
+        }
+        tree.getRoot().setExpanded(true);
+
+        int itemNodeSize = tree.getRoot().getChildren().size();
+        TreeItem treeItem = (TreeItem)tree.getRoot().getChildren().get(itemNodeSize - 2);
+        TreeItem treeItemSubNode = (TreeItem)tree.getRoot().getChildren().get(itemNodeSize - 2).getChildren().get(0);
+        TreeItem lastItem = (TreeItem)tree.getRoot().getChildren().get(itemNodeSize - 1);
+
+        Toolkit.getToolkit().firePulse();
+        assertFalse(treeItem.isExpanded());
+        double lastItemBeforeExpand = lastItem.getGraphic().localToScene(lastItem.getGraphic().getBoundsInLocal()).getMinY();
+
+        treeItem.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(treeItem.isExpanded());
+        assertNotEquals(lastItemBeforeExpand, lastItem.getGraphic().localToScene(lastItem.getGraphic().getBoundsInLocal()).getMinY());
+        double treeItemSubNodeAfterExpand = treeItemSubNode.getGraphic().localToScene(treeItemSubNode.getGraphic().getBoundsInLocal()).getMinY();
+
+        treeItem.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertFalse(treeItem.isExpanded());
+        assertEquals(lastItemBeforeExpand, lastItem.getGraphic().localToScene(lastItem.getGraphic().getBoundsInLocal()).getMinY());
+        assertNotEquals(treeItemSubNodeAfterExpand, treeItemSubNode.getGraphic().localToScene(treeItemSubNode.getGraphic().getBoundsInLocal()).getMinY());
+
+        treeItem.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(treeItem.isExpanded());
+        assertEquals(treeItemSubNodeAfterExpand, treeItemSubNode.getGraphic().localToScene(treeItemSubNode.getGraphic().getBoundsInLocal()).getMinY());
     }
 
     @AfterEach
