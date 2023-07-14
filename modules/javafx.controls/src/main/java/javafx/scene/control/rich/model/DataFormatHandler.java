@@ -41,11 +41,15 @@ public abstract class DataFormatHandler {
      * @param src input object obtained from the Clipboard
      * @return StyledInput generated according to this data format
      */
+    // TODO throw UnsupportedMethodException if import operation is not supported?
     public abstract StyledInput createStyledInput(Object src);
 
     /**
      * Creates an object to be put into the Clipboard for the given text range.
      * The caller must guarantee that the {@code start} precedes the {@code end} position.
+     * <p>
+     * Typically, the implementation creates an instance of {@link StyledOutput} and calls
+     * {@link StyledTextModel#exportText(TextPos, TextPos, StyledOutput)} method.
      *
      * @param model source model
      * @param resolver view-specific style resolver
@@ -54,12 +58,17 @@ public abstract class DataFormatHandler {
      * @return an object to be placed to the Clipboard
      * @throws IOException 
      */
-    public abstract Object copy(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end) throws IOException;
+    // TODO throw UnsupportedMethodException if export operation is not supported?
+    public abstract Object copy(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end)
+        throws IOException;
 
     /**
      * Save the text range in the handler's format to the output stream (e.g. save to file).
      * The caller must guarantee that the {@code start} precedes the {@code end} position.
      * It is the responsibility of the caller to close the {@code OutputStream}.
+     * <p>
+     * Typically, the implementation creates an instance of {@link StyledOutput} and calls
+     * {@link StyledTextModel#exportText(TextPos, TextPos, StyledOutput)} method.
      *
      * @param model source model
      * @param resolver view-specific style resolver
@@ -68,18 +77,13 @@ public abstract class DataFormatHandler {
      * @param out target {@code OutputStream}
      * @throws IOException
      */
-    // TODO all handlers implement this method similarly, perhaps it should be moved to StyledModel
-    // the only reason it's here is that some (RTF) handlers require two passes and prologue/epilogue.
-    /*
-     * Perhaps we could change this by adding:
-     * createFirstPassStyledOutput(Resolver,Writer) return null in most cases
-     * createStyledOutput(Resolver,Writer)
-     * writePrologue() - no op in most cases
-     * writeEpilogue()
-     */
-    public abstract void save(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end, OutputStream out) throws IOException;
-
-    // TODO load?
+    // TODO throw UnsupportedMethodException if export operation is not supported?
+    public abstract void save(
+        StyledTextModel model,
+        StyleResolver resolver,
+        TextPos start,
+        TextPos end,
+        OutputStream out) throws IOException;
 
     private final DataFormat format;
 

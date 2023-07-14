@@ -30,7 +30,7 @@ import javafx.scene.Node;
 /**
  * Provides a way to add side decorations to each paragraph
  * in a {@link RichTextArea}.
- * 
+ * <p>
  * The side decorations Nodes are added to either left or right side, of each paragraph.  Each side node will be
  * resized to the height of the corresponding paragraph.  The width, in order to avoid complicated
  * layout process, would be determined by the following process:

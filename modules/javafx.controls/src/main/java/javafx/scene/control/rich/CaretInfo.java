@@ -118,18 +118,30 @@ public final class CaretInfo {
         return new CaretInfo(xmin, xmax, ymin, ymax, newPath);
     }
 
+    /**
+     * Returns the smallest x coordinate of the caret shape bounding box.
+     */
     public final double getMinX() {
         return xmin;
     }
 
+    /**
+     * Returns the largest x coordinate of the caret shape bounding box.
+     */
     public final double getMaxX() {
         return xmax;
     }
 
+    /**
+     * Returns the smallest y coordinate of the caret shape bounding box.
+     */
     public final double getMinY() {
         return ymin;
     }
 
+    /**
+     * Returns the largest y coordinate of the caret shape bounding box.
+     */
     public final double getMaxY() {
         return ymax;
     }
@@ -139,6 +151,11 @@ public final class CaretInfo {
         return path;
     }
 
+    /**
+     * Returns true if the specified y coordinate is between the smallest and largest y coordinate of the
+     * caret bounding box.
+     * @param y
+     */
     public final boolean containsY(double y) {
         return (y >= ymin) && (y < ymax);
     }

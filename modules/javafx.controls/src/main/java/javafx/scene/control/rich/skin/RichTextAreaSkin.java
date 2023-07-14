@@ -190,7 +190,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      * Called from the constructor.  Override to provide custom behavior (this requires public BehaviorBase).
      * TODO variant: generator in Config, or add methods to manipulate behavior to control
      */
-    protected RichTextAreaBehavior createBehavior() {
+    private RichTextAreaBehavior createBehavior() {
         return new RichTextAreaBehavior(getSkinnable());
     }
     

@@ -35,18 +35,25 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.paint.Color;
 
 /**
- * Side decorator that shows model "line" numbers, 1-based.
+ * Side decorator that shows model 1-based line (paragraph) numbers.
  */
 public class LineNumberDecorator implements SideDecorator {
     private final DecimalFormat format;
     private final Background background;
 
+    /**
+     * Creates an instance using Western-style group separator.
+     */
     public LineNumberDecorator() {
         this("#,##0");
     }
 
-    public LineNumberDecorator(String spec) {
-        format = new DecimalFormat(spec);
+    /**
+     * Creates an instance using specified pattern for {@link DecimalFormat}.
+     * @param pattern DecimalFormat pattern to use
+     */
+    public LineNumberDecorator(String pattern) {
+        format = new DecimalFormat(pattern);
         background = new Background(new BackgroundFill(Color.gray(0.5, 0.5), null, null));
     }
 

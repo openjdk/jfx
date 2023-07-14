@@ -30,7 +30,8 @@ package javafx.scene.control.rich;
 import java.util.Objects;
 
 /**
- * Text selection segment.
+ * Text selection segment, comprised of selection anchor and caret markers.
+ * The main purpose of this class is to enable atomic selection changes.
  */
 public class SelectionSegment {
     private final Marker min;
