@@ -40,7 +40,7 @@ module javafx.controls {
     exports javafx.scene.control.rich;
     exports javafx.scene.control.rich.model;
     exports javafx.scene.control.rich.skin;
-    exports javafx.scene.control.rich.util;
+    exports javafx.scene.control.util;
     exports javafx.scene.control.skin;
 
     exports com.sun.javafx.scene.control to

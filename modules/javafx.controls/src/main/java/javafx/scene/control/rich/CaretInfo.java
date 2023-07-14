@@ -26,7 +26,7 @@
 package javafx.scene.control.rich;
 
 import java.util.Objects;
-import javafx.scene.control.rich.util.Util;
+import javafx.scene.control.util.Util;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
@@ -79,14 +79,14 @@ public final class CaretInfo {
                 double y = lineto.getY() + dy;
                 newPath[i] = new LineTo(x, y);
 
-                x = Util.halfPixel(x);
+                x = halfPixel(x);
                 if (x < xmin) {
                     xmin = x;
                 } else if (x > xmax) {
                     xmax = x;
                 }
 
-                y = Util.halfPixel(y);
+                y = halfPixel(y);
                 if (y < ymin) {
                     ymin = y;
                 } else if (y > ymax) {
@@ -97,14 +97,14 @@ public final class CaretInfo {
                 double y = moveto.getY() + dy;
                 newPath[i] = new MoveTo(x, y);
 
-                x = Util.halfPixel(x);
+                x = halfPixel(x);
                 if (x < xmin) {
                     xmin = x;
                 } else if (x > xmax) {
                     xmax = x;
                 }
 
-                y = Util.halfPixel(y);
+                y = halfPixel(y);
                 if (y < ymin) {
                     ymin = y;
                 } else if (y > ymax) {
@@ -141,6 +141,10 @@ public final class CaretInfo {
 
     public final boolean containsY(double y) {
         return (y >= ymin) && (y < ymax);
+    }
+    
+    private static double halfPixel(double coord) {
+        return Math.round(coord + 0.5) - 0.5;
     }
 
     public String toString() {

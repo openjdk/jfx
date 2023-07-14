@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control.rich.util;
+package javafx.scene.control.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,16 +32,10 @@ import java.util.List;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
-import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
-import javafx.scene.layout.Region;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.PathElement;
 import javafx.stage.Screen;
-import com.sun.javafx.util.Utils;
 
 /**
  * Public utility methods.
@@ -52,7 +46,7 @@ public class Util {
     /**
      * Combines CssMetaData items in one unmodifiable list with the size equal to the number
      * of items it holds (i.e. with no unnecessary overhead).
-     * 
+     *
      * @param list css metadata items, usually from the parent
      * @param items additional items
      * @return unmodifiable list containing all the items
@@ -70,10 +64,6 @@ public class Util {
         return Collections.unmodifiableList(rv);
     }
 
-    public static double halfPixel(double coord) {
-        return Math.round(coord + 0.5) - 0.5;
-    }
-
     /**
      * Simple utility function which clamps the given value to be strictly
      * between the min and max values.
@@ -89,7 +79,7 @@ public class Util {
     }
 
     // com.sun.javafx.util.Utils:769
-    public static Screen getScreenForPoint(final double x, final double y) {
+    public static Screen getScreenForPoint(double x, double y) {
         ObservableList<Screen> screens = Screen.getScreens();
 
         // first check whether the point is inside some screen
@@ -132,7 +122,7 @@ public class Util {
         if (v >= v1) {
             return v - v1;
         }
-        return 0;
+        return 0.0;
     }
 
     /**
@@ -160,6 +150,7 @@ public class Util {
      * @throws IOException
      */
     public static byte[] writePNG(Image im) throws IOException {
-        return Utils.writePNG(im);
+        // TODO move it here and fix the exports
+        return Util.writePNG(im);
     }
 }

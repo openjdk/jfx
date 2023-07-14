@@ -24,6 +24,6 @@
  */
 
 /**
-<p>I want a dedicated package with utility classes and methods for javafx.controls.</p>
+<p>This package contains public utility methods.</p>
 */
-package javafx.scene.control.rich.util;
+package javafx.scene.control.util;
