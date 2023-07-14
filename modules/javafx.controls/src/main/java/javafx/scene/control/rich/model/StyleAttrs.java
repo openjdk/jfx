@@ -243,11 +243,11 @@ public class StyleAttrs {
     }
 
     /**
-     * This convenience method returns true if the value of {@link #STRIKE_THROUGH} attribute is {@code Boolean.TRUE},
+     * This convenience method returns true if the value of {@link #UNDERLINE} attribute is {@code Boolean.TRUE},
      * false otherwise.
      */
     public final boolean isUnderline() {
-        return getBoolean(STRIKE_THROUGH);
+        return getBoolean(UNDERLINE);
     }
 
     /**
