@@ -178,5 +178,5 @@ jboolean flushBuffer(void *nsJContext) {
 
 void setSwapInterval(void *nsJContext, int swapInterval) {
     NSOpenGLContext *nsContext = (NSOpenGLContext *) nsJContext;
-    [nsContext setValues : &swapInterval forParameter : NSOpenGLCPSwapInterval];
+    [nsContext setValues : &swapInterval forParameter : NSOpenGLContextParameterSwapInterval];
 }
