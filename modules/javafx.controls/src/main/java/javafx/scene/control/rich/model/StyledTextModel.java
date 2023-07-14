@@ -179,9 +179,10 @@ public abstract class StyledTextModel {
             return d;
         }
     }
-    
+
+    private record FHKey(DataFormat format, boolean forExport) { }
     private final CopyOnWriteArrayList<ChangeListener> listeners = new CopyOnWriteArrayList();
-    private final HashMap<DataFormat,FHPriority> handlers = new HashMap<>(4);
+    private final HashMap<FHKey,FHPriority> handlers = new HashMap<>(2);
     private final Markers markers = new Markers();
 
     public StyledTextModel() {
@@ -205,7 +206,7 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Registers a format handler for input/output operation such as copy(), paste(), and save().
+     * Registers a format handler for export and import operations.
      * Priority determines the format chosen for operations with the {@link javafx.scene.input.Clipboard}
      * when input data is available in more than one supported format.
      * <p>
@@ -215,23 +216,43 @@ public abstract class StyledTextModel {
      * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}, for a native model format.
      */
     protected void registerDataFormatHandler(DataFormatHandler h, int priority) {
-        handlers.put(h.getDataFormat(), new FHPriority(h, priority));
+        FHPriority p = new FHPriority(h, priority);
+        handlers.put(new FHKey(h.getDataFormat(), true), p);
+        handlers.put(new FHKey(h.getDataFormat(), false), p);
+    }
+    
+    /**
+     * Registers a format handler for either export or import operations.
+     * Priority determines the format chosen for operations with the {@link javafx.scene.input.Clipboard}
+     * when input data is available in more than one supported format.
+     * <p>
+     * This method is expected to be called by a StyledTextModel implementation constructor.
+     *
+     * @param h data format handler
+     * @param forExport determines the class of operations this handler supports
+     * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}.
+     */
+    protected void registerDataFormatHandler(DataFormatHandler h, boolean forExport, int priority) {
+        FHPriority p = new FHPriority(h, priority);
+        handlers.put(new FHKey(h.getDataFormat(), forExport), p);
     }
 
     /**
-     * Returns an array of supported data formats,
+     * Returns an array of supported data formats for either export or import operations,
      * in the order of priority - from high to low.
-     * <p>
-     * TODO: think of splitting format handlers in two: for export and for import.
-     * The reason is that export might be easily achieved (to html, for example), but
-     * import might require complicated code.
+     * @param forExport determines whether the operation is export (true) or import (false)
      */
-    public DataFormat[] getSupportedDataFormats() {
-        ArrayList<FHPriority> fs = new ArrayList<>(handlers.values());
+    public DataFormat[] getSupportedDataFormats(boolean forExport) {
+        ArrayList<FHPriority> fs = new ArrayList<>(handlers.size());
+        handlers.forEach((k, p) -> {
+            if (k.forExport == forExport) {
+                fs.add(p);
+            }
+        });
         Collections.sort(fs);
         int sz = fs.size();
         DataFormat[] formats = new DataFormat[sz];
-        for(int i=0; i<sz; i++) {
+        for (int i = 0; i < sz; i++) {
             formats[i] = fs.get(i).handler().getDataFormat();
         }
         return formats;
@@ -243,8 +264,9 @@ public abstract class StyledTextModel {
      * @param format
      * @return DataFormatHandler or null
      */
-    public DataFormatHandler getDataFormatHandler(DataFormat format) {
-        FHPriority p = handlers.get(format);
+    public DataFormatHandler getDataFormatHandler(DataFormat format, boolean forExport) {
+        FHKey k = new FHKey(format, forExport);
+        FHPriority p = handlers.get(k);
         return p == null ? null : p.handler();
     }
 

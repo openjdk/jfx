@@ -27,6 +27,7 @@
 
 package javafx.scene.control.rich.skin;
 
+import java.util.HashMap;
 import java.util.function.Supplier;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.HPos;
@@ -37,6 +38,12 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.ConfigurationParameters;
 import javafx.scene.control.rich.RichTextArea;
+import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.rich.model.DataFormatHandler;
+import javafx.scene.control.rich.model.StyledTextModel;
+import javafx.scene.control.util.Util;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.DataFormat;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import com.sun.javafx.scene.control.ListenerHelper;
@@ -245,4 +252,23 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 //        }
 //        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
 //    }
+
+    /**
+     * Copies the text in the specified format when selection exists and when the export in this format
+     * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
+     * @param format
+     */
+    public void copy(DataFormat format) {
+        behavior.copy(format);
+    }
+
+    /**
+     * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
+     * The format must be supported by the model, and the skin must be installed,
+     * otherwise this method has no effect.
+     * @param format
+     */
+    public void paste(DataFormat format) {
+        behavior.paste(format);
+    }
 }

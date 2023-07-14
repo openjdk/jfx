@@ -28,7 +28,6 @@
 package javafx.scene.control.rich;
 
 import java.util.List;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -39,8 +38,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableObjectProperty;
@@ -63,6 +60,7 @@ import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.util.Util;
+import javafx.scene.input.DataFormat;
 import javafx.util.Duration;
 import com.sun.javafx.scene.control.rich.Params;
 import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
@@ -643,7 +641,18 @@ public class RichTextArea extends Control {
     public void copy() {
         execute(COPY);
     }
-    // TODO copy plain text?
+
+    /**
+     * Copies the text in the specified format when selection exists and when the export in this format
+     * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
+     * @param format
+     */
+    public void copy(DataFormat format) {
+        RichTextAreaSkin skin = richTextAreaSkin();
+        if (skin != null) {
+            skin.copy(format);
+        }
+    }
 
     /**
      * When selection exists, removes the selected rich text and places it into the clipboard.
@@ -803,6 +812,19 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
+     * The format must be supported by the model, and the skin must be installed,
+     * otherwise this method has no effect.
+     * @param format
+     */
+    public void paste(DataFormat format) {
+        RichTextAreaSkin skin = richTextAreaSkin();
+        if (skin != null) {
+            skin.paste(format);
+        }
+    }
+
+    /**
      * Pastes the plain text clipboard content at the caret, or, if selection exists, replacing the selected text.
      * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
      */
@@ -957,6 +979,8 @@ public class RichTextArea extends Control {
 
     /**
      * Returns true if a non-empty selection exists.
+     * <p>
+     * This method has additional benefit: it can return true only when the model is not null.
      */
     public boolean hasNonEmptySelection() {
         TextPos ca = getCaretPosition();

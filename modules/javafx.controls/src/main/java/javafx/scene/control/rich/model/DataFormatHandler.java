@@ -36,9 +36,9 @@ import javafx.scene.input.DataFormat;
  */
 public abstract class DataFormatHandler {
     /**
-     * Creates a StyledInput for the given source object obtained from the Clipboard.
+     * Creates a StyledInput for the given source object obtained from the system Clipboard.
      *
-     * @param src
+     * @param src input object obtained from the Clipboard
      * @return StyledInput generated according to this data format
      */
     public abstract StyledInput createStyledInput(Object src);

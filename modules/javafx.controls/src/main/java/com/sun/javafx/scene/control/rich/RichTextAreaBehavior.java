@@ -27,8 +27,46 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import static javafx.scene.control.rich.RichTextArea.*;
+import static javafx.scene.control.rich.RichTextArea.BACKSPACE;
+import static javafx.scene.control.rich.RichTextArea.COPY;
+import static javafx.scene.control.rich.RichTextArea.CUT;
+import static javafx.scene.control.rich.RichTextArea.DELETE;
+import static javafx.scene.control.rich.RichTextArea.DELETE_PARAGRAPH;
+import static javafx.scene.control.rich.RichTextArea.INSERT_LINE_BREAK;
+import static javafx.scene.control.rich.RichTextArea.INSERT_TAB;
+import static javafx.scene.control.rich.RichTextArea.MOVE_DOCUMENT_END;
+import static javafx.scene.control.rich.RichTextArea.MOVE_DOCUMENT_START;
+import static javafx.scene.control.rich.RichTextArea.MOVE_DOWN;
+import static javafx.scene.control.rich.RichTextArea.MOVE_LEFT;
+import static javafx.scene.control.rich.RichTextArea.MOVE_LINE_END;
+import static javafx.scene.control.rich.RichTextArea.MOVE_LINE_START;
+import static javafx.scene.control.rich.RichTextArea.MOVE_RIGHT;
+import static javafx.scene.control.rich.RichTextArea.MOVE_UP;
+import static javafx.scene.control.rich.RichTextArea.MOVE_WORD_NEXT;
+import static javafx.scene.control.rich.RichTextArea.MOVE_WORD_NEXT_END;
+import static javafx.scene.control.rich.RichTextArea.MOVE_WORD_PREVIOUS;
+import static javafx.scene.control.rich.RichTextArea.PAGE_DOWN;
+import static javafx.scene.control.rich.RichTextArea.PAGE_UP;
+import static javafx.scene.control.rich.RichTextArea.PASTE;
+import static javafx.scene.control.rich.RichTextArea.PASTE_PLAIN_TEXT;
+import static javafx.scene.control.rich.RichTextArea.REDO;
+import static javafx.scene.control.rich.RichTextArea.SELECT_ALL;
+import static javafx.scene.control.rich.RichTextArea.SELECT_DOCUMENT_END;
+import static javafx.scene.control.rich.RichTextArea.SELECT_DOCUMENT_START;
+import static javafx.scene.control.rich.RichTextArea.SELECT_DOWN;
+import static javafx.scene.control.rich.RichTextArea.SELECT_LEFT;
+import static javafx.scene.control.rich.RichTextArea.SELECT_PAGE_DOWN;
+import static javafx.scene.control.rich.RichTextArea.SELECT_PAGE_UP;
+import static javafx.scene.control.rich.RichTextArea.SELECT_PARAGRAPH;
+import static javafx.scene.control.rich.RichTextArea.SELECT_RIGHT;
+import static javafx.scene.control.rich.RichTextArea.SELECT_UP;
+import static javafx.scene.control.rich.RichTextArea.SELECT_WORD;
+import static javafx.scene.control.rich.RichTextArea.SELECT_WORD_NEXT;
+import static javafx.scene.control.rich.RichTextArea.SELECT_WORD_NEXT_END;
+import static javafx.scene.control.rich.RichTextArea.SELECT_WORD_PREVIOUS;
+import static javafx.scene.control.rich.RichTextArea.UNDO;
 import java.text.BreakIterator;
+import java.util.HashMap;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.collections.ObservableList;
@@ -945,7 +983,7 @@ public class RichTextAreaBehavior {
                 }
 
                 StyledTextModel m = control.getModel();
-                DataFormatHandler h = m.getDataFormatHandler(f);
+                DataFormatHandler h = m.getDataFormatHandler(f, false);
                 Object src = Clipboard.getSystemClipboard().getContent(f);
                 StyledInput in = h.createStyledInput(src);
                 TextPos p = m.replace(vflow, start, end, in);
@@ -953,11 +991,11 @@ public class RichTextAreaBehavior {
             }
         }
     }
-
-    public void pastePlainText() {
+    
+    public void paste(DataFormat f) {
         if (canEdit()) {
             Clipboard c = Clipboard.getSystemClipboard();
-            if (c.hasString()) {
+            if (c.hasContent(f)) {
                 TextPos start = control.getCaretPosition();
                 if (start == null) {
                     return;
@@ -973,12 +1011,13 @@ public class RichTextAreaBehavior {
                 }
 
                 if (control.hasNonEmptySelection()) {
+                    // FIX not needed?
                     deleteSelection();
                 }
 
                 StyledTextModel m = control.getModel();
-                DataFormatHandler h = m.getDataFormatHandler(DataFormat.PLAIN_TEXT);
-                String src = c.getString();
+                DataFormatHandler h = m.getDataFormatHandler(f, false);
+                Object src = c.getContent(f);
                 StyledInput in = h.createStyledInput(src);
 
                 TextPos p = m.replace(vflow, start, end, in);
@@ -987,13 +1026,17 @@ public class RichTextAreaBehavior {
         }
     }
 
+    public void pastePlainText() {
+        paste(DataFormat.PLAIN_TEXT);
+    }
+
     /** 
      * returns a format that can be imported by a model, based on the clipboard content and model being editable.
      */
     protected DataFormat findFormatForPaste() {
         if (canEdit()) {
             StyledTextModel m = control.getModel();
-            DataFormat[] fs = m.getSupportedDataFormats();
+            DataFormat[] fs = m.getSupportedDataFormats(false);
             if (fs.length > 0) {
                 for (DataFormat f : fs) {
                     if (Clipboard.getSystemClipboard().hasContent(f)) {
@@ -1007,17 +1050,11 @@ public class RichTextAreaBehavior {
 
     protected void copy(boolean cut) {
         if (control.hasNonEmptySelection()) {
-            StyledTextModel m = control.getModel();
-            DataFormat[] fs = m.getSupportedDataFormats();
+            StyledTextModel m = control.getModel(); // non null at this point
+            DataFormat[] fs = m.getSupportedDataFormats(true);
             if (fs.length > 0) {
                 TextPos start = control.getAnchorPosition();
-                if (start == null) {
-                    return;
-                }
                 TextPos end = control.getCaretPosition();
-                if (end == null) {
-                    return;
-                }
                 if (start.compareTo(end) > 0) {
                     TextPos p = start;
                     start = end;
@@ -1027,7 +1064,7 @@ public class RichTextAreaBehavior {
                 try {
                     ClipboardContent c = new ClipboardContent();
                     for (DataFormat f : fs) {
-                        DataFormatHandler h = m.getDataFormatHandler(f);
+                        DataFormatHandler h = m.getDataFormatHandler(f, true);
                         Object v = h.copy(m, vflow, start, end);
                         if (v != null) {
                             c.put(f, v);
@@ -1044,6 +1081,32 @@ public class RichTextAreaBehavior {
                     Util.provideErrorFeedback(control);
                 }
             }
+        }
+    }
+
+    public void copy(DataFormat f) {
+        try {
+            if (control.hasNonEmptySelection()) {
+                StyledTextModel m = control.getModel(); // not null at this point
+                DataFormatHandler h = m.getDataFormatHandler(f, true);
+                if (h != null) {
+                    TextPos start = control.getAnchorPosition();
+                    TextPos end = control.getCaretPosition();
+                    if (start.compareTo(end) > 0) {
+                        TextPos p = start;
+                        start = end;
+                        end = p;
+                    }
+                    Object v = h.copy(m, vflow, start, end);
+                    ClipboardContent c = new ClipboardContent();
+                    c.put(f, v);
+                    Clipboard.getSystemClipboard().setContent(c);
+                }
+            }
+        } catch(Exception | OutOfMemoryError e) {
+            // TODO log exception?
+            e.printStackTrace();
+            Util.provideErrorFeedback(control);
         }
     }
 

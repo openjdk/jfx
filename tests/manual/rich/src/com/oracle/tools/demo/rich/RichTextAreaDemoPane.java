@@ -53,6 +53,8 @@ import javafx.scene.control.rich.model.StyleAttribute;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.LineNumberDecorator;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.DataFormat;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -375,7 +377,7 @@ public class RichTextAreaDemoPane extends BorderPane {
             m.getItems().add(new MenuItem("Dummy")); // otherwise no popup is shown
             m.addEventFilter(Menu.ON_SHOWING, (ev) -> {
                 m.getItems().clear();
-                populatePopupMenu(m.getItems());
+                populateCustomPopupMenu(m.getItems());
             });
             control.setContextMenu(m);
         } else {
@@ -383,7 +385,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         }
     }
 
-    protected void populatePopupMenu(ObservableList<MenuItem> items) {
+    protected void populateCustomPopupMenu(ObservableList<MenuItem> items) {
         boolean sel = control.hasNonEmptySelection();
         boolean paste = true; // would be easier with Actions (findFormatForPaste() != null);
         boolean styled = (control.getModel() instanceof EditableRichTextModel);
@@ -392,6 +394,7 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         items.add(new SeparatorMenuItem());
 
+        Menu m2;
         MenuItem m;
         items.add(m = new MenuItem("Undo"));
         m.setOnAction((ev) -> control.undo());
@@ -410,10 +413,34 @@ public class RichTextAreaDemoPane extends BorderPane {
         items.add(m = new MenuItem("Copy"));
         m.setOnAction((ev) -> control.copy());
         m.setDisable(!sel);
+        
+        items.add(m = m2 = new Menu("Copy Special..."));
+        {
+            DataFormat[] fs = control.getModel().getSupportedDataFormats(true);
+            for (DataFormat f : fs) {
+                String name = f.toString();
+                m2.getItems().add(m = new MenuItem(name));
+                m.setOnAction((ev) -> control.copy(f));
+            }
+        }
 
         items.add(m = new MenuItem("Paste"));
         m.setOnAction((ev) -> control.paste());
         m.setDisable(!paste);
+        
+        items.add(m = m2 = new Menu("Paste Special..."));
+        m.setDisable(!paste);
+        {
+            DataFormat[] fs = control.getModel().getSupportedDataFormats(false);
+            for (DataFormat f : fs) {
+                if (Clipboard.getSystemClipboard().hasContent(f)) {
+                    String name = f.toString();
+                    m2.getItems().add(m = new MenuItem(name));
+                    m2.setOnAction((ev) -> control.paste(f));
+                    m2.setDisable(!paste);
+                }
+            }
+        }
 
         items.add(m = new MenuItem("Paste and Match Style"));
         m.setOnAction((ev) -> control.pastePlainText());
@@ -439,7 +466,6 @@ public class RichTextAreaDemoPane extends BorderPane {
             m.setOnAction((ev) -> apply(StyleAttrs.UNDERLINE, !a.getBoolean(StyleAttrs.UNDERLINE)));
             m.setDisable(!sel);
 
-            Menu m2;
             items.add(m2 = new Menu("Text Color"));
             colorMenu(m2, sel, Color.BLACK);
             colorMenu(m2, sel, Color.DARKGRAY);
