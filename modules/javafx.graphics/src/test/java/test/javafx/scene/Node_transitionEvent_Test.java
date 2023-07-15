@@ -99,7 +99,7 @@ public class Node_transitionEvent_Test {
     }
 
     @Test
-    public void testRegularPlaybackWhenDurationIsZero() {
+    public void testPlaybackIsElidedWhenDurationIsZero() {
         String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
             .testClass {
                 -fx-opacity: 0;
@@ -124,17 +124,11 @@ public class Node_transitionEvent_Test {
         node.addEventHandler(TransitionEvent.ANY, trace::add);
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
-        assertEquals(1, trace.size());
-        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
-        assertEquals(Duration.millis(0), trace.get(0).getElapsedTime());
+        assertEquals(0, trace.size());
 
         tk.setCurrentTime(1);
         tk.handleAnimation();
-        assertEquals(3, trace.size());
-        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
-        assertEquals(TransitionEvent.END.getName(), trace.get(2).getEventType().getName());
-        assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
-        assertEquals(Duration.millis(0), trace.get(2).getElapsedTime());
+        assertEquals(0, trace.size());
     }
 
     @Test

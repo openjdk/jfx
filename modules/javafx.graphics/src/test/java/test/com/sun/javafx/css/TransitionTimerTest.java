@@ -25,13 +25,9 @@
 
 package test.com.sun.javafx.css;
 
+import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
-import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.NodeShim;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import test.util.memory.JMemoryBuddy;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
@@ -45,9 +41,9 @@ import javafx.css.SimpleStyleableObjectProperty;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
-import com.sun.javafx.css.TransitionDefinition;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.NodeShim;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import java.lang.ref.WeakReference;
@@ -56,6 +52,9 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static javafx.animation.Interpolator.*;
 import static javafx.util.Duration.*;
@@ -68,7 +67,7 @@ public class TransitionTimerTest {
     public void testTimerEndsWithProgressExactlyOne() {
         var trace = new ArrayList<Double>();
         var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock(transition) {
+        var timer = new TransitionTimerMock() {
             @Override
             protected void onUpdate(StyleableDoubleProperty property, double progress) {
                 trace.add(progress);
@@ -78,7 +77,7 @@ public class TransitionTimerTest {
             protected void onStop(StyleableDoubleProperty property) {}
         };
 
-        timer.start();
+        TransitionTimer.run(timer, transition);
 
         timer.fire(seconds(0.4));
         assertEquals(1, trace.size());
@@ -87,13 +86,15 @@ public class TransitionTimerTest {
         timer.fire(seconds(0.7));
         assertEquals(2, trace.size());
         assertTrue(trace.get(1) == 1.0); // must be exactly 1
+
+        timer.stop();
     }
 
     @Test
     public void testTimerStopsWhenProgressIsOne() {
         var flag = new boolean[1];
         var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock(transition) {
+        var timer = new TransitionTimerMock() {
             @Override
             protected void onUpdate(StyleableDoubleProperty property, double progress) {}
 
@@ -103,57 +104,59 @@ public class TransitionTimerTest {
             }
         };
 
-        timer.start();
+        TransitionTimer.run(timer, transition);
         timer.fire(seconds(0.9));
         assertFalse(flag[0]);
         timer.fire(seconds(0.2));
         assertTrue(flag[0]);
+        timer.stop();
     }
 
     @Test
     public void testNullTimerIsTriviallyStopped() {
-        assertTrue(TransitionTimer.stop(null, false));
+        assertTrue(TransitionTimer.cancel(null, false));
     }
 
     @Test
     public void testRunningTimerCanBeStopped() {
         var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock(transition) {
+        var timer = new TransitionTimerMock() {
             @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {}
             @Override protected void onStop(StyleableDoubleProperty property) {}
         };
 
-        timer.start();
+        TransitionTimer.run(timer, transition);
         timer.fire(seconds(0.2));
-        assertTrue(TransitionTimer.stop(timer, false));
+        assertTrue(TransitionTimer.cancel(timer, false));
     }
 
     @Test
     public void testTimerCannotStopItself() {
         var flag = new boolean[1];
         var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock(transition) {
+        var timer = new TransitionTimerMock() {
             @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {
-                flag[0] = TransitionTimer.stop(this, false);
+                flag[0] = TransitionTimer.cancel(this, false);
             }
 
             @Override protected void onStop(StyleableDoubleProperty property) {}
         };
 
-        timer.start();
+        TransitionTimer.run(timer, transition);
         timer.fire(seconds(0.2));
         assertFalse(flag[0]);
+        timer.stop();
     }
 
-    private static abstract class TransitionTimerMock extends TransitionTimer<StyleableDoubleProperty> {
+    private static abstract class TransitionTimerMock extends TransitionTimer<Number, StyleableDoubleProperty> {
         long now = Toolkit.getToolkit().getPrimaryTimer().nanos();
 
-        TransitionTimerMock(TransitionDefinition transition) {
-            super(new SimpleStyleableDoubleProperty(null), transition);
+        TransitionTimerMock() {
+            super(new SimpleStyleableDoubleProperty(null));
         }
 
         public void fire(Duration elapsedTime) {
-            now += (long)(elapsedTime.toMillis() * 1000000);
+            now += (long)(elapsedTime.toMillis()) * 1_000_000;
             handle(now);
         }
     }

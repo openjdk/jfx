@@ -648,13 +648,18 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public void addTransitionTimer(Node node, TransitionTimer<?> timer) {
+            public void addTransitionTimer(Node node, TransitionTimer<?, ?> timer) {
                 node.addTransitionTimer(timer);
             }
 
             @Override
-            public void removeTransitionTimer(Node node, TransitionTimer<?> timer) {
+            public void removeTransitionTimer(Node node, TransitionTimer<?, ?> timer) {
                 node.removeTransitionTimer(timer);
+            }
+
+            @Override
+            public TransitionTimer<?, ?> findTransitionTimer(Node node, Property<?> property) {
+                return node.findTransitionTimer(property);
             }
         });
     }
@@ -8920,14 +8925,14 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
-    private List<TransitionTimer<?>> transitionTimers;
+    private List<TransitionTimer<?, ?>> transitionTimers;
 
     /**
      * Called by animatable {@code StyleableProperty} implementations in order to register
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
      */
-    private void addTransitionTimer(TransitionTimer<?> timer) {
+    private void addTransitionTimer(TransitionTimer<?, ?> timer) {
         if (transitionTimers == null) {
             transitionTimers = new ArrayList<>(4);
         }
@@ -8940,10 +8945,29 @@ public abstract class Node implements EventTarget, Styleable {
      * This method is called by animatable {@link StyleableProperty} implementations
      * when their {@link TransitionTimer} has completed.
      */
-    private void removeTransitionTimer(TransitionTimer<?> timer) {
+    private void removeTransitionTimer(TransitionTimer<?, ?> timer) {
         if (transitionTimers != null) {
             transitionTimers.remove(timer);
         }
+    }
+
+    /**
+     * Finds the transition timer that targets the specified {@code property}.
+     *
+     * @return the transition timer, or {@code null}
+     */
+    private TransitionTimer<?, ?> findTransitionTimer(Property<?> property) {
+        if (transitionTimers == null || transitionTimers.isEmpty()) {
+            return null;
+        }
+
+        for (TransitionTimer<?, ?> timer : transitionTimers) {
+            if (timer.getProperty() == property) {
+                return timer;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -8958,13 +8982,13 @@ public abstract class Node implements EventTarget, Styleable {
 
         // Make a copy of the list, because completing the timers causes them to be removed
         // from the list, which would result in a ConcurrentModificationException.
-        for (TransitionTimer<?> timer : List.copyOf(transitionTimers)) {
+        for (TransitionTimer<?, ?> timer : List.copyOf(transitionTimers)) {
             timer.complete();
         }
     }
 
     // package-private for testing
-    List<TransitionTimer<?>> getTransitionTimers() {
+    List<TransitionTimer<?, ?>> getTransitionTimers() {
         return transitionTimers;
     }
 

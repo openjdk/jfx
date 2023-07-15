@@ -70,8 +70,6 @@ public abstract class StyleableObjectProperty<T>
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, T v) {
-        TransitionTimer.stop(timer, true);
-
         T oldValue;
 
         if (v == null) {
@@ -86,8 +84,7 @@ public abstract class StyleableObjectProperty<T>
                 && getBean() instanceof Node node ? NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
             if (transition != null) {
-                timer = TransitionTimer.run(
-                    this, new TransitionTimerImpl<>(this, oldValue, v, transition));
+                timer = TransitionTimer.run(new TransitionTimerImpl<>(this, oldValue, v), transition);
             } else {
                 set(v);
             }
@@ -101,7 +98,7 @@ public abstract class StyleableObjectProperty<T>
     public void bind(ObservableValue<? extends T> observable) {
         super.bind(observable);
         origin = StyleOrigin.USER;
-        TransitionTimer.stop(timer, true);
+        TransitionTimer.cancel(timer, true);
     }
 
     /** {@inheritDoc} */
@@ -110,7 +107,7 @@ public abstract class StyleableObjectProperty<T>
         super.set(v);
 
         // If the 'set' method was called by the timer, the following call will not stop the timer:
-        if (TransitionTimer.stop(timer, false)) {
+        if (TransitionTimer.cancel(timer, false)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -120,27 +117,26 @@ public abstract class StyleableObjectProperty<T>
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private TransitionTimer<?> timer = null;
+    private TransitionTimer<?, ?> timer = null;
 
-    private static class TransitionTimerImpl<U> extends TransitionTimer<StyleableObjectProperty<U>> {
-        final U oldValue;
-        final U newValue;
+    private static class TransitionTimerImpl<T> extends TransitionTimer<T, StyleableObjectProperty<T>> {
+        final T oldValue;
+        final T newValue;
 
-        TransitionTimerImpl(StyleableObjectProperty<U> property, U oldValue, U newValue,
-                            TransitionDefinition transition) {
-            super(property, transition);
+        TransitionTimerImpl(StyleableObjectProperty<T> property, T oldValue, T newValue) {
+            super(property);
             this.oldValue = oldValue;
             this.newValue = newValue;
         }
 
         @Override
         @SuppressWarnings("unchecked")
-        protected void onUpdate(StyleableObjectProperty<U> property, double progress) {
-            property.set(progress < 1 ? ((Interpolatable<U>)oldValue).interpolate(newValue, progress) : newValue);
+        protected void onUpdate(StyleableObjectProperty<T> property, double progress) {
+            property.set(progress < 1 ? ((Interpolatable<T>)oldValue).interpolate(newValue, progress) : newValue);
         }
 
         @Override
-        public void onStop(StyleableObjectProperty<U> property) {
+        public void onStop(StyleableObjectProperty<T> property) {
             property.timer = null;
         }
     }

@@ -175,7 +175,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer<?>> timers = NodeShim.getTransitionTimers(node);
+        List<TransitionTimer<?, ?>> timers = NodeShim.getTransitionTimers(node);
         assertNull(timers);
 
         // The hover state starts the timer.
@@ -204,7 +204,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer<?>> timers = NodeShim.getTransitionTimers(node);
+        List<TransitionTimer<?, ?>> timers = NodeShim.getTransitionTimers(node);
         assertNull(timers);
 
         // The hover state starts the timer.
@@ -235,7 +235,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer<?>> timers = NodeShim.getTransitionTimers(node);
+        List<TransitionTimer<?, ?>> timers = NodeShim.getTransitionTimers(node);
         assertNull(timers);
 
         // The hover state starts the timer.

@@ -69,15 +69,13 @@ public abstract class StyleableIntegerProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        TransitionTimer.stop(timer, true);
-
         // If this.origin == null, we're setting the value for the first time.
         // No transition should be started in this case.
         TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
         if (transition != null) {
-            timer = TransitionTimer.run(this, new TransitionTimerImpl(this, v, transition));
+            timer = TransitionTimer.run(new TransitionTimerImpl(this, v), transition);
         } else {
             setValue(v);
         }
@@ -90,7 +88,7 @@ public abstract class StyleableIntegerProperty
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
         origin = StyleOrigin.USER;
-        TransitionTimer.stop(timer, true);
+        TransitionTimer.cancel(timer, true);
     }
 
     /** {@inheritDoc} */
@@ -99,7 +97,7 @@ public abstract class StyleableIntegerProperty
         super.set(v);
 
         // If the 'set' method was called by the timer, the following call will not stop the timer:
-        if (TransitionTimer.stop(timer, false)) {
+        if (TransitionTimer.cancel(timer, false)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -109,14 +107,14 @@ public abstract class StyleableIntegerProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private TransitionTimer<?> timer = null;
+    private TransitionTimer<?, ?> timer = null;
 
-    private static class TransitionTimerImpl extends TransitionTimer<StyleableIntegerProperty> {
+    private static class TransitionTimerImpl extends TransitionTimer<Number, StyleableIntegerProperty> {
         final int oldValue;
         final int newValue;
 
-        TransitionTimerImpl(StyleableIntegerProperty property, Number value, TransitionDefinition transition) {
-            super(property, transition);
+        TransitionTimerImpl(StyleableIntegerProperty property, Number value) {
+            super(property);
             this.oldValue = property.get();
             this.newValue = value != null ? value.intValue() : 0;
         }
