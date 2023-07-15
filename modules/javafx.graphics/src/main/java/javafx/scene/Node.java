@@ -9010,16 +9010,12 @@ public abstract class Node implements EventTarget, Styleable {
          * or {@code null} if no transition was found.
          */
         TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
-            if (size() == 0) {
+            int size = size();
+            if (size == 0) {
                 return null;
             }
 
-            String beanPropertyName = ((CssMetaData<Styleable, ?>)metadata).getStyleableProperty(Node.this)
-                instanceof ReadOnlyProperty<?> property ? property.getName() : null;
-
-            // We look for a matching transition in reverse, since multiple transitions might be specified
-            // for the same property. In this case, the last transition takes precedence.
-            for (int i = size() - 1; i >= 0; --i) {
+            for (int i = 0; i < size; ++i) {
                 TransitionDefinition transition = get(i);
 
                 boolean selected = "all".equals(transition.getPropertyName())
