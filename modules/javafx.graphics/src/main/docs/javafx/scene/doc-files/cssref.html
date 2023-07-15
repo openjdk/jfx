@@ -686,7 +686,7 @@
     <h3><a id="introtransitions">Transitions</a></h3>
     <p>JavaFX supports <em>implicit transitions</em> for properties that are styled by CSS. When a property value is
         changed, it smoothly transitions to the new value over a period of time. Implicit transitions are supported
-        for all numeric properties, as well as for types that implement <code>javafx.animation.Interpolatable</code>.</p>
+        for all primitive types, as well as for types that implement <code>javafx.animation.Interpolatable</code>.</p>
     <p>Transitions can be defined for any node in the JavaFX scene graph with the following properties:</p>
     <table class="csspropertytable">
     <caption>Transition Properties</caption>
@@ -1657,7 +1657,7 @@
         ) ]+ </span></p>
 
     <h3><a id="typeeasingfunction">&lt;easing-function&gt;</a></h3>
-    <p class="grammar">linear | &lt;cubic-bezier-easing-function&gt; | &lt;step-easing-function&gt;</p>
+    <p class="grammar">linear | &lt;cubic-bezier-easing-function&gt; | &lt;step-easing-function&gt; | &lt;fx-easing-function&gt;</p>
     <p><strong>Linear</strong> <span class="grammar" style="font-size: smaller;">linear</span><br/>
        The linear easing function is a simple linear mapping from the input progress value to the output progress value.</p>
     <figure style="display: inline-block">
@@ -1757,6 +1757,25 @@
         <img src="easing-stepboth.svg" width="200" alt="jump-both easing function">
         <figcaption style="margin-left: 30px" class="grammar">steps(3, jump-both)</figcaption>
     </figure>
+    <p><strong>SMIL 3.0 Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;fx-easing-function&gt;</span></br></p>
+    <p class="grammar">-fx-ease-in | -fx-ease-out | -fx-ease-both</p>
+    <p>The values have the following meaning:</p>
+    <table style="margin-left: 40px;">
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-in</span></td>
+            <td>SMIL 3.0 ease-in function with an acceleration factor of 0.2</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-out</span></td>
+            <td>SMIL 3.0 ease-out function with a deceleration factor of 0.2</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-both</span></td>
+            <td>SMIL 3.0 ease-in/out function with an acceleration and decelaration factor of 0.2</td>
+        </tr>
+    </table>
+    <p>These functions are provided for compatibility with <code>javafx.animation.Interpolator</code>
+       implementations of SMIL 3.0 cubic bezier easing functions.</p>
 
     <h3><a id="typetextbounds">&lt;text-bounds&gt;</a></h3>
     <p>The geometry of text can be measured either in terms of the bounds of

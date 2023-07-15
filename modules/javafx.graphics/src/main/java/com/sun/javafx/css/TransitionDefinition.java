@@ -48,8 +48,6 @@ import java.util.Objects;
  *         Duration.ZERO,
  *         Interpolator.LINEAR));
  * }</pre>
- *
- * @since 20
  */
 public class TransitionDefinition {
 
