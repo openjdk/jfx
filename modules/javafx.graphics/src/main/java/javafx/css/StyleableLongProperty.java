@@ -96,7 +96,6 @@ public abstract class StyleableLongProperty
     public void set(long v) {
         super.set(v);
 
-        // If the 'set' method was called by the timer, the following call will not stop the timer:
         if (TransitionTimer.cancel(timer, false)) {
             origin = StyleOrigin.USER;
         }

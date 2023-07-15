@@ -98,6 +98,8 @@ public abstract class StyleableObjectProperty<T>
     public void bind(ObservableValue<? extends T> observable) {
         super.bind(observable);
         origin = StyleOrigin.USER;
+
+        // Calling the 'bind' method always cancels a transition timer.
         TransitionTimer.cancel(timer, true);
     }
 
@@ -106,7 +108,11 @@ public abstract class StyleableObjectProperty<T>
     public void set(T v) {
         super.set(v);
 
-        // If the 'set' method was called by the timer, the following call will not stop the timer:
+        // Calling the 'set' method cancels the transition timer, but not if the 'set' method was
+        // directly called by the timer itself (i.e. a timer will not accidentally cancel itself).
+        // Note that indirect cancellation is still possible: a timer may fire a transition event,
+        // which could cause user code to be executed that invokes this 'set' method. In that case,
+        // the call will cancel the timer.
         if (TransitionTimer.cancel(timer, false)) {
             origin = StyleOrigin.USER;
         }
@@ -119,6 +125,8 @@ public abstract class StyleableObjectProperty<T>
     private StyleOrigin origin = null;
     private TransitionTimer<?, ?> timer = null;
 
+    // This class must not retain a strong reference to the enclosing property, because transitions
+    // don't keep properties (and their scene graph nodes) alive.
     private static class TransitionTimerImpl<T> extends TransitionTimer<T, StyleableObjectProperty<T>> {
         final T oldValue;
         final T newValue;

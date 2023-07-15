@@ -83,23 +83,19 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         if (existingTimer != null) {
             if (combinedDuration > 0) {
                 adjustReversingTransition(existingTimer, timer, transition, now);
-            } else {
-                existingTimer.cancel();
             }
+
+            existingTimer.cancel();
         }
 
         if (combinedDuration > 0) {
             NodeHelper.addTransitionTimer(node, timer);
-
-            // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
-            // The elapsed time for this event is equal to min(max(-'delay', 0), 'duration')
-            double elapsed = (double) Math.min(Math.max(-timer.delay, 0), timer.duration) / 1_000_000.0;
-            fireEvent(property, TransitionEvent.RUN, Duration.millis(elapsed));
+            fireTransitionEvent(timer, TransitionEvent.RUN);
             return startTimer(timer, combinedDuration);
         }
 
         // If the combined duration is zero, we just call onUpdate without starting the timer.
-        // This updates the value of the targeted property to the end value.
+        // This updates the value of the target property to the end value, and no events will be fired.
         timer.onUpdate(property, 1D);
         return null;
     }
@@ -134,11 +130,15 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * end time of the new transition with the reversing shortening factor of the old transition.
      * Note that the reversing shortening factor is computed in output progress space (value),
      * not in input progress space (time).
+     *
+     * @see <a href="https://www.w3.org/TR/css-transitions-1/#reversing">
+     *          CSS Transitions, 3.1. Faster reversing of interrupted transitions
+     *      </a>
      */
     private static void adjustReversingTransition(TransitionTimer<?, ?> existingTimer, TransitionTimer<?, ?> newTimer,
                                                   TransitionDefinition transition, long now) {
         double valueProgress = 0;
-        double timeProgress = existingTimer.getProgress();
+        double timeProgress = existingTimer.getTimeProgress();
 
         if (timeProgress > 0 && timeProgress < 1) {
             valueProgress = existingTimer.interpolator.interpolate(0D, 1D, timeProgress);
@@ -157,11 +157,6 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
 
         double adjustedDuration = transition.getDuration().toMillis() * newTimer.reversingShorteningFactor;
         newTimer.endTime = newTimer.startTime + (long)(adjustedDuration * 1_000_000);
-
-        // The interrupted transition is cancelled (this also removes the transition timer from the node).
-        existingTimer.stop();
-        var elapsed = Duration.millis((double)Math.max(0, now - existingTimer.startTime) / 1_000_000.0);
-        fireEvent(existingTimer.getProperty(), TransitionEvent.CANCEL, elapsed);
     }
 
     private static <T, P extends Property<T> & StyleableProperty<T>> TransitionTimer<T, P> startTimer(
@@ -174,11 +169,25 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         return null;
     }
 
-    private static <T, P extends Property<T> & StyleableProperty<T>> void fireEvent(
-            P property, EventType<TransitionEvent> eventType, Duration elapsedTime) {
+    private static <T, P extends Property<T> & StyleableProperty<T>> void fireTransitionEvent(
+            TransitionTimer<T, P> timer, EventType<TransitionEvent> eventType) {
+        P property = timer.getProperty();
         if (property != null && property.getBean() instanceof Node node) {
             try {
-                node.fireEvent(new TransitionEvent(eventType, property, elapsedTime));
+                double elapsedTime;
+
+                // Elapsed time specification: https://www.w3.org/TR/css-transitions-1/#event-transitionevent
+                if (eventType == TransitionEvent.RUN || eventType == TransitionEvent.START) {
+                    elapsedTime = (double)Math.min(Math.max(-timer.delay, 0), timer.duration) / 1_000_000.0;
+                } else if (eventType == TransitionEvent.CANCEL) {
+                    elapsedTime = (double)Math.max(0, timer.currentTime - timer.startTime) / 1_000_000.0;
+                } else if (eventType == TransitionEvent.END) {
+                    elapsedTime = (double)timer.duration / 1_000_000.0;
+                } else {
+                    throw new IllegalArgumentException("eventType");
+                }
+
+                node.fireEvent(new TransitionEvent(eventType, property, Duration.millis(elapsedTime)));
             } catch (Throwable ex) {
                 Thread currentThread = Thread.currentThread();
                 currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
@@ -187,7 +196,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     }
 
     /**
-     * Gets the styleable property targeted by this timer.
+     * Gets the styleable property targeted by this timer, or {@code null} if the
+     * targeted property was garbage-collected.
      */
     public final P getProperty() {
         return wref.get();
@@ -195,7 +205,7 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
 
     /**
      * Polls whether the timer is currently updating the value of the property.
-     * After this method was called, the {@link #updating} flag is {@code false}.
+     * After this method is called, the {@link #updating} flag is {@code false}.
      */
     public final boolean pollUpdating() {
         boolean updating = this.updating;
@@ -219,25 +229,18 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
 
         if (!started && now - startTime > 0) {
             started = true;
-
-            // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
-            // The elapsed time for this event is equal to min(max(-'delay', 0), 'duration')
-            double elapsed = (double)Math.min(Math.max(-delay, 0), duration) / 1_000_000.0;
-            fireEvent(property, TransitionEvent.START, Duration.millis(elapsed));
+            fireTransitionEvent(this, TransitionEvent.START);
         }
 
         if (started) {
-            double progress = getProgress();
+            double progress = getTimeProgress();
             if (progress >= 0) {
                 update(progress);
             }
 
             if (progress == 1) {
                 stop();
-
-                // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
-                // The elapsedTime for this event is equal to the value of 'duration'.
-                fireEvent(property, TransitionEvent.END, Duration.millis((double)duration / 1_000_000.0));
+                fireTransitionEvent(this, TransitionEvent.END);
             }
         }
 
@@ -273,9 +276,12 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     /**
      * Skips the rest of a running transition and updates the property to the target value.
      * This happens when the targeted node is removed from the scene graph or becomes invisible.
+     * <p>
      * Calling this method fires the {@link TransitionEvent#CANCEL} event.
      */
     public final void complete() {
+        stop();
+
         P property = wref.get();
         if (property != null) {
             try {
@@ -286,38 +292,27 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
                 currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
             } finally {
                 updating = false;
-
-                // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
-                // The elapsedTime for this event is equal to the number of seconds from the end
-                // of the transition's delay to the moment when the transition was canceled.
-                var elapsed = Duration.millis((double)Math.max(0, currentTime - startTime) / 1_000_000.0);
-                fireEvent(property, TransitionEvent.CANCEL, elapsed);
+                fireTransitionEvent(this, TransitionEvent.CANCEL);
             }
         }
-
-        stop();
     }
 
     /**
      * Cancels the running transition without updating the target value.
-     * This happens when the value of a CSS property targeted by a transition is changed by the user.
+     * This happens when the value of a CSS property targeted by a transition is changed by the user,
+     * or if the transition is interrupted by another transition.
+     * <p>
      * Calling this method fires the {@link TransitionEvent#CANCEL} event.
      */
     public final void cancel() {
-        P property = wref.get();
-        if (property != null) {
-            // https://www.w3.org/TR/css-transitions-1/#event-transitionevent
-            // The elapsedTime for this event is equal to the number of seconds from the end
-            // of the transition's delay to the moment when the transition was canceled.
-            var elapsed = Duration.millis((double)Math.max(0, currentTime - startTime) / 1_000_000.0);
-            fireEvent(property, TransitionEvent.CANCEL, elapsed);
-        }
-
         stop();
+        fireTransitionEvent(this, TransitionEvent.CANCEL);
     }
 
     /**
      * Stops this {@code TransitionTimer} and removes it from the list of running timers.
+     * This method is implicitly called by {@link #complete()} and {@link #cancel()}.
+     * <p>
      * Calling this method does not fire a {@link TransitionEvent}.
      */
     @Override
@@ -325,7 +320,6 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         super.stop();
 
         P property = wref.get();
-
         if (property != null) {
             onStop(property);
 
@@ -352,7 +346,10 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      */
     protected abstract void onStop(P property);
 
-    private double getProgress() {
+    /**
+     * Gets the progress of this timer along the time axis, ranging from 0 to 1.
+     */
+    private double getTimeProgress() {
         if (currentTime <= startTime) {
             return 0.0;
         }

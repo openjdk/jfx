@@ -9015,7 +9015,9 @@ public abstract class Node implements EventTarget, Styleable {
                 return null;
             }
 
-            for (int i = 0; i < size; ++i) {
+            // We look for a matching transition in reverse, since multiple transitions might be specified
+            // for the same property. In this case, the last transition takes precedence.
+            for (int i = size - 1; i >= 0; --i) {
                 TransitionDefinition transition = get(i);
 
                 boolean selected = "all".equals(transition.getPropertyName())
@@ -9033,7 +9035,7 @@ public abstract class Node implements EventTarget, Styleable {
 
             // We also need to search for matching sub-properties, since a transition might be defined
             // for a sub-property (for example, '-fx-background-color') but must be applied to the base
-            // property (Region.background).
+            // property (-fx-background).
             for (int i = 0, max = subMetadata.size(); i < max; ++i) {
                 TransitionDefinition transition = find(subMetadata.get(i));
                 if (transition != null) {

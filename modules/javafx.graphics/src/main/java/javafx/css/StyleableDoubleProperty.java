@@ -96,7 +96,6 @@ public abstract class StyleableDoubleProperty
     public void set(double v) {
         super.set(v);
 
-        // If the 'set' method was called by the timer, the following call will not stop the timer:
         if (TransitionTimer.cancel(timer, false)) {
             origin = StyleOrigin.USER;
         }

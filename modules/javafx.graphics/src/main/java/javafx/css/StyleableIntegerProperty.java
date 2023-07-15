@@ -69,8 +69,6 @@ public abstract class StyleableIntegerProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        // If this.origin == null, we're setting the value for the first time.
-        // No transition should be started in this case.
         TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
@@ -96,7 +94,6 @@ public abstract class StyleableIntegerProperty
     public void set(int v) {
         super.set(v);
 
-        // If the 'set' method was called by the timer, the following call will not stop the timer:
         if (TransitionTimer.cancel(timer, false)) {
             origin = StyleOrigin.USER;
         }
