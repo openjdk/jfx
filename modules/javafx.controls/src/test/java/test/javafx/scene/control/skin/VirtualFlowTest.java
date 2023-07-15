@@ -1749,6 +1749,24 @@ assertEquals(0, firstCell.getIndex());
         assertTrue(newCounter < 100);
 
     }
+
+    @Test
+    public void testAddCellWithBigCurrentOne() {
+        int idx = flow.shim_computeCurrentIndex();
+        assertEquals(0, idx);
+        for (int i = 0; i < 20; i++) {
+            flow.scrollPixels(40);
+            pulse();
+        }
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertEquals(29, idx);
+        flow.setCellCount(101);
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertEquals(29, idx);
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {
