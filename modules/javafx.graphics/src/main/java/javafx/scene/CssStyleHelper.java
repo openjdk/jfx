@@ -637,7 +637,7 @@ final class CssStyleHelper {
             // before other CSS properties, as its value might affect the transitions that are
             // applied to other properties.
             final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
-                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.INSTANCE :
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
                     (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.
@@ -832,7 +832,7 @@ final class CssStyleHelper {
             // before other CSS properties, as its value might affect the transitions that are
             // applied to other properties.
             final CssMetaData<Styleable, ?> cssMetaData = n < 0 ?
-                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.INSTANCE :
+                    (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
                     (CssMetaData<Styleable, ?>)styleables.get(n);
 
             // Don't bother looking up styles that don't inherit.

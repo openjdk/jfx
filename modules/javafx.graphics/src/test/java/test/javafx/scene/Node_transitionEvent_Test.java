@@ -80,21 +80,21 @@ public class Node_transitionEvent_Test {
 
         // The transition starts with a delay, which means the elapsed time is 0.
         assertEquals(1, trace.size());
-        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
+        assertSame(TransitionEvent.RUN, trace.get(0).getEventType());
         assertEquals(Duration.millis(0), trace.get(0).getElapsedTime());
 
         // After 0.5s, the transition is in the active period (elapsed time was 0 at START).
         tk.setCurrentTime(500);
         tk.handleAnimation();
         assertEquals(2, trace.size());
-        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
+        assertSame(TransitionEvent.START, trace.get(1).getEventType());
         assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
 
         // After 1s, the transition has already ended (elapsed time was 0.75s at END).
         tk.setCurrentTime(1000);
         tk.handleAnimation();
         assertEquals(3, trace.size());
-        assertEquals(TransitionEvent.END.getName(), trace.get(2).getEventType().getName());
+        assertSame(TransitionEvent.END, trace.get(2).getEventType());
         assertEquals(Duration.millis(750), trace.get(2).getElapsedTime());
     }
 
@@ -165,9 +165,9 @@ public class Node_transitionEvent_Test {
         NodeShim.completeTransitionTimers(node);
 
         assertEquals(3, trace.size());
-        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
-        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
-        assertEquals(TransitionEvent.CANCEL.getName(), trace.get(2).getEventType().getName());
+        assertSame(TransitionEvent.RUN, trace.get(0).getEventType());
+        assertSame(TransitionEvent.START, trace.get(1).getEventType());
+        assertSame(TransitionEvent.CANCEL, trace.get(2).getEventType());
         assertEquals(Duration.millis(0), trace.get(0).getElapsedTime());
         assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
         assertEquals(Duration.millis(250), trace.get(2).getElapsedTime());
@@ -207,9 +207,9 @@ public class Node_transitionEvent_Test {
         NodeShim.completeTransitionTimers(node);
 
         assertEquals(3, trace.size());
-        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
-        assertEquals(TransitionEvent.START.getName(), trace.get(1).getEventType().getName());
-        assertEquals(TransitionEvent.CANCEL.getName(), trace.get(2).getEventType().getName());
+        assertSame(TransitionEvent.RUN, trace.get(0).getEventType());
+        assertSame(TransitionEvent.START, trace.get(1).getEventType());
+        assertSame(TransitionEvent.CANCEL, trace.get(2).getEventType());
         assertEquals(Duration.millis(250), trace.get(0).getElapsedTime());
         assertEquals(Duration.millis(250), trace.get(1).getElapsedTime());
         assertEquals(Duration.millis(750), trace.get(2).getElapsedTime());
@@ -249,8 +249,8 @@ public class Node_transitionEvent_Test {
         NodeShim.completeTransitionTimers(node);
 
         assertEquals(2, trace.size());
-        assertEquals(TransitionEvent.RUN.getName(), trace.get(0).getEventType().getName());
-        assertEquals(TransitionEvent.CANCEL.getName(), trace.get(1).getEventType().getName());
+        assertSame(TransitionEvent.RUN, trace.get(0).getEventType());
+        assertSame(TransitionEvent.CANCEL, trace.get(1).getEventType());
         assertEquals(Duration.millis(0), trace.get(0).getElapsedTime());
         assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
     }

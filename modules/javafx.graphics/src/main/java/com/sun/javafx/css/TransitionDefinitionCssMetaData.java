@@ -41,12 +41,17 @@ import java.util.List;
  * four sub-properties {@code transition-property}, {@code transition-duration}, {@code transition-delay}
  * and {@code transition-timing-function}.
  */
-public class TransitionDefinitionCssMetaData
-        extends CssMetaData<Node, TransitionDefinition[]> {
+public final class TransitionDefinitionCssMetaData extends CssMetaData<Node, TransitionDefinition[]> {
 
-    public static final TransitionDefinitionCssMetaData INSTANCE = new TransitionDefinitionCssMetaData();
+    private static class Holder {
+        static final TransitionDefinitionCssMetaData INSTANCE = new TransitionDefinitionCssMetaData();
+    }
 
-    public TransitionDefinitionCssMetaData() {
+    public static TransitionDefinitionCssMetaData getInstance() {
+        return Holder.INSTANCE;
+    }
+
+    private TransitionDefinitionCssMetaData() {
         super("transition", TransitionDefinitionConverter.SequenceConverter.getInstance(),
               new TransitionDefinition[0], false, createSubProperties());
     }

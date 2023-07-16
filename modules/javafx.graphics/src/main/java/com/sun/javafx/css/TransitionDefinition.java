@@ -57,19 +57,6 @@ public class TransitionDefinition {
     private final Interpolator interpolator;
 
     /**
-     * Creates a new {@code TransitionDefinition} instance with zero delay and linear interpolation.
-     *
-     * @param propertyName the CSS property name, or "all" to target any property
-     * @param duration duration of the transition
-     *
-     * @throws NullPointerException if any of the arguments is {@code null}
-     * @throws IllegalArgumentException if the duration is negative
-     */
-    public TransitionDefinition(String propertyName, Duration duration) {
-        this(propertyName, duration, Duration.ZERO, Interpolator.LINEAR);
-    }
-
-    /**
      * Creates a new {@code TransitionDefinition} instance.
      *
      * @param propertyName the CSS property name, or "all" to target any property
