@@ -27,7 +27,6 @@
 
 package javafx.scene.control.rich.skin;
 
-import java.util.HashMap;
 import java.util.function.Supplier;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.HPos;
@@ -38,11 +37,7 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.ConfigurationParameters;
 import javafx.scene.control.rich.RichTextArea;
-import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.DataFormatHandler;
-import javafx.scene.control.rich.model.StyledTextModel;
-import javafx.scene.control.util.Util;
-import javafx.scene.input.Clipboard;
+import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
@@ -270,5 +265,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      */
     public void paste(DataFormat format) {
         behavior.paste(format);
+    }
+
+    /**
+     * Returns the skin's {@link StyleResolver}.
+     */
+    public StyleResolver getStyleResolver() {
+        return vflow;
     }
 }

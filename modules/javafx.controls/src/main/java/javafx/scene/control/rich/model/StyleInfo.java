@@ -25,7 +25,6 @@
 
 package javafx.scene.control.rich.model;
 
-import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
 
 /**
@@ -35,64 +34,47 @@ import javafx.scene.control.rich.StyleResolver;
  * Objects of this class are immutable.
  */
 public abstract class StyleInfo {
-    /** returns true if styles are represented by the attributes */
-    public boolean hasAttributes() { return false; }
-    
-    /** returns attributes, or null if {@link #hasAttributes()} is false */
-    // FIX remove
-    public StyleAttrs getAttributes() { return null; }
-    
-    /** returns a direct style string which can be null */
-    public String getDirectStyle() { return null; }
-    
-    /** returns an array of CSS style names, can be null */
-    public String[] getCss() { return null; }
+    /**
+     * Returns the actual style attributes for the given {@link StyleResolver}.
+     * @param resolver
+     * @return attributes instance, or null
+     */
+    public abstract StyleAttrs getStyleAttrs(StyleResolver resolver);
 
     public static final StyleInfo NONE = StyleInfo.of(null, null);
 
     private StyleInfo() {
     }
-    
-    public StyleAttrs getStyleAttrs(StyleResolver resolver) {
-        if (hasAttributes()) {
-            return getAttributes();
-        } else if (resolver == null) {
-            return null;
-        }
-    
-        // convert styles to attributes
-        String sty = getDirectStyle();
-        String[] css = getCss();
-        if ((sty == null) && (css == null)) {
-            return null;
-        }
-        return resolver.convert(sty, css);
-    }
-    
+
+    /**
+     * Creates a {@code StyleInfo} instance from direct style and an array of style names,
+     * to be used when the actual style attributes are not maintained by the model.
+     *
+     * @param direct direct style
+     * @param css stylesheet style names
+     */
     public static StyleInfo of(String direct, String[] css) {
         return new StyleInfo() {
             @Override
-            public String getDirectStyle() {
-                return direct;
-            }
-            
-            @Override
-            public String[] getCss() {
-                return css;
+            public StyleAttrs getStyleAttrs(StyleResolver resolver) {
+                if ((direct == null) && (css == null)) {
+                    return null;
+                }
+                return resolver.convert(direct, css);
             }
         };
     }
-    
-    public static StyleInfo of(StyleAttrs a) {
+
+    /**
+     * Creates a {@code StyleInfo} instance from a set of attributes.
+     *
+     * @param attrs
+     */
+    public static StyleInfo of(StyleAttrs attrs) {
         return new StyleInfo() {
             @Override
-            public boolean hasAttributes() {
-                return true;
-            }
-
-            public StyleAttrs getAttributes() {
-                // TODO only if immutable
-                return a;
+            public StyleAttrs getStyleAttrs(StyleResolver resolver) {
+                return attrs;
             }
         };
     }

@@ -1032,6 +1032,7 @@ public class RichTextArea extends Control {
      *
      * @return non-null {@link StyleInfo}
      */
+    // TODO could this be made private?
     public StyleInfo getActiveStyleInfo() {
         StyledTextModel m = getModel();
         if (m != null) {
@@ -1061,16 +1062,14 @@ public class RichTextArea extends Control {
      * @return {@link StyleAttrs}, or null if no style is defined.
      */
     public StyleAttrs getActiveStyleAttrs() {
-        StyleInfo s = getActiveStyleInfo();
-        if (s.hasAttributes()) {
-            return s.getAttributes();
+        RichTextAreaSkin skin = richTextAreaSkin();
+        if (skin != null) {
+            StyleResolver resolver = skin.getStyleResolver();
+            if (resolver != null) {
+                StyleInfo s = getActiveStyleInfo();
+                return s.getStyleAttrs(resolver);
+            }
         }
-
-        // FIX this has changed
-        if (getSkin() instanceof StyleResolver r) {
-            return s.getStyleAttrs(r);
-        }
-
         return null;
     }
 
