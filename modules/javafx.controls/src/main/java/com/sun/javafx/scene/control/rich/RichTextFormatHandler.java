@@ -53,20 +53,22 @@ import javafx.scene.paint.Color;
  * <pre>
  * [optional:style][text]...[\n]...
  * </pre>
- * where option style is encoded as a sequence of \-prefixed tokens, followed by a \\ sequence,
- * text escapes certain symbols (% and \) with %XX sequences where XX is a two-symbol hexadecimal character value.
+ * where style information (optional) is encoded as a sequence of backtick- (`) prefixed tokens,
+ * followed by a double backtick (``) sequence.
+ * Certain symbols such as backtick and percent character (%) are escaped using %XX sequences where 
+ * XX is a two-character hexadecimal character value.
  * <p>
  * Style tokens are:
  * <ol>
- *   <li>\B - bold typeface
- *   <li>\Crrggbb - text color with hex RGB values
- *   <li>\Ffont-family - font family
- *   <li>\I - italic typeface
- *   <li>\T - strike-through
- *   <li>\U - underline
- *   <li>\Zpercent - font size
+ *   <li>`B - bold typeface
+ *   <li>`Crrggbb - text color with hex RGB values
+ *   <li>`Ffont-family - font family
+ *   <li>`I - italic typeface
+ *   <li>`T - strike-through
+ *   <li>`U - underline
+ *   <li>`Zpercent - font size
  * <\ol>
- * In addition, any subsequent occurence of a style is simplified by providing its number using {@code \num} sequence.
+ * In addition, any subsequent occurence of a style is simplified by providing its number using {@code 'num} sequence.
  */
 public class RichTextFormatHandler extends DataFormatHandler {
     public RichTextFormatHandler() {
@@ -134,9 +136,9 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 case '\n':
                     index++;
                     return StyledSegment.LINE_BREAK;
-                case '\\':
+                case '`':
                     index++;
-                    // TODO this may return an object, for paragraph Node \\P or Inline Node \\N segments, or StyleAttrs.
+                    // TODO this may return an object, for paragraph Node `P or Inline Node `N segments, or StyleAttrs.
                     StyleAttrs a = decodeStyleAttrs();
                     String text = decodeText();
                     return StyledSegment.of(text, a);
@@ -164,7 +166,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 int c = charAt(0);
                 switch(c) {
                 case '\n':
-                case '\\':
+                case '`':
                 case -1:
                     return text.substring(start, index);
                 case '%':
@@ -185,7 +187,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 int c = charAt(0);
                 switch(c) {
                 case '\n':
-                case '\\':
+                case '`':
                 case -1:
                     String s = sb.toString();
                     sb.setLength(0);
@@ -254,7 +256,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     int percent = decodeInt();
                     b.set(StyleAttrs.FONT_SIZE, percent);
                     break;
-                case '\\':
+                case '`':
                     StyleAttrs a = b.create();
                     attrs.add(a);
                     return a;
@@ -275,7 +277,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
                 c = charAt(0);
                 switch (c) {
-                case '\\':
+                case '`':
                     index++;
                     continue;
                 default:
@@ -286,10 +288,10 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         private void skipEndStyleToken() throws IOException {
             int c = charAt(0);
-            if (c == '\\') {
+            if (c == '`') {
                 index++;
                 c = charAt(0);
-                if (c == '\\') {
+                if (c == '`') {
                     index++;
                     return;
                 }
@@ -350,7 +352,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 // TODO use caching resolver with #
                 // the model manages actual attributes
                 StyleAttrs a = seg.getStyleAttrs(resolver);
-                if (a != null) {
+                if ((a != null) && (!a.isEmpty())) {
                     Integer num = styles.get(a);
                     if(num == null) {
                         int sz = styles.size();
@@ -358,46 +360,46 @@ public class RichTextFormatHandler extends DataFormatHandler {
                         
                         // write style info
                         if(a.isBold()) {
-                            wr.write("\\B");
+                            wr.write("`B");
                         }
                         
                         if(a.isItalic()) {
-                            wr.write("\\I");
+                            wr.write("`I");
                         }
                         
                         if(a.isStrikeThrough()) {
-                            wr.write("\\T");
+                            wr.write("`T");
                         }
                         
                         if(a.isUnderline()) {
-                            wr.write("\\U");
+                            wr.write("`U");
                         }
                         
                         String s = a.getFontFamily();
                         if(s != null) {
-                            wr.write("\\F");
+                            wr.write("`F");
                             wr.write(encode(s));
                         }
                         
                         Integer n = a.getFontSize();
                         if(n != null) {
-                            wr.write("\\Z");
+                            wr.write("`Z");
                             wr.write(String.valueOf(n));
                         }
                         
                         Color c = a.getTextColor();
                         if(c != null) {
-                            wr.write("\\C");
+                            wr.write("`C");
                             wr.write(toHex8(c.getRed()));
                             wr.write(toHex8(c.getGreen()));
                             wr.write(toHex8(c.getBlue()));
                         }                        
                     } else {
                         // write style info
-                        wr.write("\\");
+                        wr.write("`");
                         wr.write(String.valueOf(num));
                     }
-                    wr.write("\\\\");
+                    wr.write("``");
                 }
     
                 String text = seg.getText();
@@ -456,7 +458,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         private static boolean isSpecialChar(char c) {
             switch (c) {
-            case '\\':
+            case '`':
             case '%':
                 return true;
             }

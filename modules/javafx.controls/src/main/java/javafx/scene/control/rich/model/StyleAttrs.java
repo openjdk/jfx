@@ -145,6 +145,13 @@ public class StyleAttrs {
     }
 
     /**
+     * Returns {@code true} if this instance contains no attributes.
+     */
+    public boolean isEmpty() {
+        return attributes.isEmpty();
+    }
+
+    /**
      * Returns the attribute value, or null if no such attribute is present.
      * @param a attribute
      * @return attribute value or null
