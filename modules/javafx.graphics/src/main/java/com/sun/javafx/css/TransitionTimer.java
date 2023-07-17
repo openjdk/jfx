@@ -36,7 +36,6 @@ import javafx.css.TransitionEvent;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.util.Duration;
-import java.lang.ref.WeakReference;
 
 /**
  * {@code TransitionTimer} is the base class for timers that compute intermediate
@@ -44,7 +43,7 @@ import java.lang.ref.WeakReference;
  */
 public abstract class TransitionTimer<T, P extends Property<T> & StyleableProperty<T>> extends AnimationTimer {
 
-    private final WeakReference<P> wref;
+    private final P property;
     private Interpolator interpolator;
     private long startTime, endTime, delay, duration;
     private double reversingShorteningFactor;
@@ -53,14 +52,14 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     private boolean started;
 
     protected TransitionTimer(P property) {
-        this.wref = new WeakReference<>(property);
+        this.property = property;
     }
 
     /**
      * Adds the specified transition timer to the list of running timers and fires the
      * {@link TransitionEvent#RUN} event. If the combined duration of the transition is
-     * zero, no transition timer is started, no event is dispatched, and this method
-     * returns {@code null}.
+     * zero or if the targeted node is not showing, no transition timer is started, no
+     * event is dispatched, and this method returns {@code null}.
      */
     public static <T, P extends Property<T> & StyleableProperty<T>> TransitionTimer<T, P> run(
             TransitionTimer<T, P> timer, TransitionDefinition transition) {
@@ -72,30 +71,32 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         timer.startTime = now + timer.delay;
         timer.endTime = timer.startTime + timer.duration;
         timer.reversingShorteningFactor = 1;
-        long combinedDuration = Math.max(timer.duration, 0) + timer.delay;
         P property = timer.getProperty();
+        long combinedDuration = Math.max(timer.duration, 0) + timer.delay;
 
-        if (!(property.getBean() instanceof Node node)) {
-            return startTimer(timer, combinedDuration);
-        }
+        // The transition timer is only started if the targeted node is showing, i.e. if it is part
+        // of the scene graph and the node is visible.
+        if (property.getBean() instanceof Node node && NodeHelper.isTreeShowing(node)) {
+            TransitionTimer<?, ?> existingTimer = NodeHelper.findTransitionTimer(node, property);
+            if (existingTimer != null) {
+                if (combinedDuration > 0) {
+                    adjustReversingTransition(existingTimer, timer, transition, now);
+                }
 
-        TransitionTimer<?, ?> existingTimer = NodeHelper.findTransitionTimer(node, property);
-        if (existingTimer != null) {
-            if (combinedDuration > 0) {
-                adjustReversingTransition(existingTimer, timer, transition, now);
+                existingTimer.cancel();
             }
 
-            existingTimer.cancel();
+            if (combinedDuration > 0) {
+                NodeHelper.addTransitionTimer(node, timer);
+                fireTransitionEvent(timer, TransitionEvent.RUN);
+                timer.start();
+                return timer;
+            }
         }
 
-        if (combinedDuration > 0) {
-            NodeHelper.addTransitionTimer(node, timer);
-            fireTransitionEvent(timer, TransitionEvent.RUN);
-            return startTimer(timer, combinedDuration);
-        }
-
-        // If the combined duration is zero, we just call onUpdate without starting the timer.
-        // This updates the value of the target property to the end value, and no events will be fired.
+        // If the combined duration is zero or the node isn't showing, we just call onUpdate without
+        // starting the timer. This updates the value of the target property to the end value, and no
+        // events will be fired.
         timer.onUpdate(property, 1D);
         return null;
     }
@@ -131,9 +132,7 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * Note that the reversing shortening factor is computed in output progress space (value),
      * not in input progress space (time).
      *
-     * @see <a href="https://www.w3.org/TR/css-transitions-1/#reversing">
-     *          CSS Transitions, 3.1. Faster reversing of interrupted transitions
-     *      </a>
+     * @see <a href="https://www.w3.org/TR/css-transitions-1/#reversing">Faster reversing of interrupted transitions</a>
      */
     private static void adjustReversingTransition(TransitionTimer<?, ?> existingTimer, TransitionTimer<?, ?> newTimer,
                                                   TransitionDefinition transition, long now) {
@@ -159,39 +158,27 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         newTimer.endTime = newTimer.startTime + (long)(adjustedDuration * 1_000_000);
     }
 
-    private static <T, P extends Property<T> & StyleableProperty<T>> TransitionTimer<T, P> startTimer(
-            TransitionTimer<T, P> timer, long combinedDuration) {
-        if (combinedDuration > 0) {
-            timer.start();
-            return timer;
-        }
-
-        return null;
-    }
-
     private static <T, P extends Property<T> & StyleableProperty<T>> void fireTransitionEvent(
             TransitionTimer<T, P> timer, EventType<TransitionEvent> eventType) {
-        P property = timer.getProperty();
-        if (property != null && property.getBean() instanceof Node node) {
-            try {
-                double elapsedTime;
+        try {
+            double elapsedTime;
 
-                // Elapsed time specification: https://www.w3.org/TR/css-transitions-1/#event-transitionevent
-                if (eventType == TransitionEvent.RUN || eventType == TransitionEvent.START) {
-                    elapsedTime = (double)Math.min(Math.max(-timer.delay, 0), timer.duration) / 1_000_000.0;
-                } else if (eventType == TransitionEvent.CANCEL) {
-                    elapsedTime = (double)Math.max(0, timer.currentTime - timer.startTime) / 1_000_000.0;
-                } else if (eventType == TransitionEvent.END) {
-                    elapsedTime = (double)timer.duration / 1_000_000.0;
-                } else {
-                    throw new IllegalArgumentException("eventType");
-                }
-
-                node.fireEvent(new TransitionEvent(eventType, property, Duration.millis(elapsedTime)));
-            } catch (Throwable ex) {
-                Thread currentThread = Thread.currentThread();
-                currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
+            // Elapsed time specification: https://www.w3.org/TR/css-transitions-1/#event-transitionevent
+            if (eventType == TransitionEvent.RUN || eventType == TransitionEvent.START) {
+                elapsedTime = (double)Math.min(Math.max(-timer.delay, 0), timer.duration) / 1_000_000.0;
+            } else if (eventType == TransitionEvent.CANCEL) {
+                elapsedTime = (double)Math.max(0, timer.currentTime - timer.startTime) / 1_000_000.0;
+            } else if (eventType == TransitionEvent.END) {
+                elapsedTime = (double)timer.duration / 1_000_000.0;
+            } else {
+                throw new IllegalArgumentException("eventType");
             }
+
+            Node node = (Node)timer.getProperty().getBean();
+            node.fireEvent(new TransitionEvent(eventType, timer.getProperty(), Duration.millis(elapsedTime)));
+        } catch (Throwable ex) {
+            Thread currentThread = Thread.currentThread();
+            currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
         }
     }
 
@@ -200,7 +187,7 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * targeted property was garbage-collected.
      */
     public final P getProperty() {
-        return wref.get();
+        return property;
     }
 
     /**
@@ -224,7 +211,6 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      */
     @Override
     public final void handle(long now) {
-        P property = wref.get();
         currentTime = now;
 
         if (!started && now - startTime > 0) {
@@ -243,10 +229,6 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
                 fireTransitionEvent(this, TransitionEvent.END);
             }
         }
-
-        if (property == null) {
-            stop();
-        }
     }
 
     /**
@@ -257,19 +239,14 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * @param progress the input progress value
      */
     public final void update(double progress) {
-        P property = wref.get();
-        if (property != null) {
-            try {
-                updating = true;
-                onUpdate(property, interpolator.interpolate(0D, 1D, progress));
-            } catch (Throwable ex) {
-                Thread currentThread = Thread.currentThread();
-                currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
-            } finally {
-                updating = false;
-            }
-        } else {
-            stop();
+        try {
+            updating = true;
+            onUpdate(property, interpolator.interpolate(0D, 1D, progress));
+        } catch (Throwable ex) {
+            Thread currentThread = Thread.currentThread();
+            currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
+        } finally {
+            updating = false;
         }
     }
 
@@ -281,20 +258,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      */
     public final void complete() {
         stop();
-
-        P property = wref.get();
-        if (property != null) {
-            try {
-                updating = true;
-                onUpdate(property, interpolator.interpolate(0D, 1D, 1D));
-            } catch (Throwable ex) {
-                Thread currentThread = Thread.currentThread();
-                currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
-            } finally {
-                updating = false;
-                fireTransitionEvent(this, TransitionEvent.CANCEL);
-            }
-        }
+        update(1);
+        fireTransitionEvent(this, TransitionEvent.CANCEL);
     }
 
     /**
@@ -318,15 +283,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     @Override
     public final void stop() {
         super.stop();
-
-        P property = wref.get();
-        if (property != null) {
-            onStop(property);
-
-            if (property.getBean() instanceof Node node) {
-                NodeHelper.removeTransitionTimer(node, this);
-            }
-        }
+        onStop(property);
+        NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
     }
 
     /**

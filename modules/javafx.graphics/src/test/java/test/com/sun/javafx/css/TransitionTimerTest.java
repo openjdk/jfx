@@ -28,40 +28,53 @@ package test.com.sun.javafx.css;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.tk.Toolkit;
-import test.util.memory.JMemoryBuddy;
-import javafx.animation.AnimationTimer;
-import javafx.animation.Interpolator;
-import javafx.css.CssMetaData;
-import javafx.css.StyleableDoubleProperty;
 import javafx.css.SimpleStyleableDoubleProperty;
-import javafx.css.SimpleStyleableFloatProperty;
-import javafx.css.SimpleStyleableIntegerProperty;
-import javafx.css.SimpleStyleableLongProperty;
-import javafx.css.SimpleStyleableObjectProperty;
-import javafx.css.StyleConverter;
-import javafx.css.StyleOrigin;
-import javafx.css.StyleableProperty;
+import javafx.css.StyleableDoubleProperty;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.NodeShim;
-import javafx.scene.paint.Color;
+import javafx.scene.Scene;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import javafx.util.Duration;
-import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Supplier;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import static javafx.animation.Interpolator.*;
 import static javafx.util.Duration.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SuppressWarnings({"unchecked", "rawtypes"})
 public class TransitionTimerTest {
+
+    private Stage stage;
+    private Rectangle node;
+
+    private abstract class TransitionTimerMock extends TransitionTimer<Number, StyleableDoubleProperty> {
+        long now = Toolkit.getToolkit().getPrimaryTimer().nanos();
+
+        TransitionTimerMock() {
+            super(new SimpleStyleableDoubleProperty(null, node, "test"));
+        }
+
+        public void fire(Duration elapsedTime) {
+            now += (long)(elapsedTime.toMillis()) * 1_000_000;
+            handle(now);
+        }
+    }
+
+    @BeforeEach
+    public void startup() {
+        node = new Rectangle();
+        stage = new Stage();
+        stage.setScene(new Scene(new Group(node)));
+        stage.show();
+    }
+
+    @AfterEach
+    public void teardown() {
+        stage.close();
+    }
 
     @Test
     public void testTimerEndsWithProgressExactlyOne() {
@@ -113,12 +126,12 @@ public class TransitionTimerTest {
     }
 
     @Test
-    public void testNullTimerIsTriviallyStopped() {
+    public void testNullTimerIsTriviallyCancelled() {
         assertTrue(TransitionTimer.cancel(null, false));
     }
 
     @Test
-    public void testRunningTimerCanBeStopped() {
+    public void testRunningTimerCanBeCancelled() {
         var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock() {
             @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {}
@@ -127,11 +140,13 @@ public class TransitionTimerTest {
 
         TransitionTimer.run(timer, transition);
         timer.fire(seconds(0.2));
+        assertEquals(1, NodeShim.getTransitionTimers(node).size());
         assertTrue(TransitionTimer.cancel(timer, false));
+        assertEquals(0, NodeShim.getTransitionTimers(node).size());
     }
 
     @Test
-    public void testTimerCannotStopItself() {
+    public void testTimerDoesNotStopItselfWhenSettingValue() {
         var flag = new boolean[1];
         var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
         var timer = new TransitionTimerMock() {
@@ -146,161 +161,6 @@ public class TransitionTimerTest {
         timer.fire(seconds(0.2));
         assertFalse(flag[0]);
         timer.stop();
-    }
-
-    private static abstract class TransitionTimerMock extends TransitionTimer<Number, StyleableDoubleProperty> {
-        long now = Toolkit.getToolkit().getPrimaryTimer().nanos();
-
-        TransitionTimerMock() {
-            super(new SimpleStyleableDoubleProperty(null));
-        }
-
-        public void fire(Duration elapsedTime) {
-            now += (long)(elapsedTime.toMillis()) * 1_000_000;
-            handle(now);
-        }
-    }
-
-    record TestArgs(Node node, StyleableProperty property, Object initialValue, Object newValue) {}
-    record TestRun(Supplier<TestArgs> args) {}
-
-    private static List<TestRun> testTimerIsStoppedWhenPropertyIsCollected_parameters() {
-        class DoubleTestNode extends Group {
-            final StyleableProperty testProperty = new SimpleStyleableDoubleProperty(METADATA, this, "testProperty", 0D);
-            static final CssMetaData<DoubleTestNode, Number> METADATA = new CssMetaData<>(
-                    "testProperty", StyleConverter.getSizeConverter()) {
-                @Override public boolean isSettable(DoubleTestNode styleable) { return true; }
-                @Override public StyleableProperty<Number> getStyleableProperty(DoubleTestNode n) { return n.testProperty; }
-            };
-        }
-
-        class FloatTestNode extends Group {
-            final StyleableProperty testProperty = new SimpleStyleableFloatProperty(METADATA, this, "testProperty");
-            static final CssMetaData<FloatTestNode, Number> METADATA = new CssMetaData<>(
-                    "testProperty", StyleConverter.getSizeConverter()) {
-                @Override public boolean isSettable(FloatTestNode styleable) { return true; }
-                @Override public StyleableProperty<Number> getStyleableProperty(FloatTestNode n) { return n.testProperty; }
-            };
-        }
-
-        class IntegerTestNode extends Group {
-            final StyleableProperty testProperty = new SimpleStyleableIntegerProperty(METADATA, this, "testProperty");
-            static final CssMetaData<IntegerTestNode, Number> METADATA = new CssMetaData<>(
-                    "testProperty", StyleConverter.getSizeConverter()) {
-                @Override public boolean isSettable(IntegerTestNode styleable) { return true; }
-                @Override public StyleableProperty<Number> getStyleableProperty(IntegerTestNode n) { return n.testProperty; }
-            };
-        }
-
-        class LongTestNode extends Group {
-            final StyleableProperty testProperty = new SimpleStyleableLongProperty(METADATA, this, "testProperty");
-            static final CssMetaData<LongTestNode, Number> METADATA = new CssMetaData<>(
-                    "testProperty", StyleConverter.getSizeConverter()) {
-                @Override public boolean isSettable(LongTestNode styleable) { return true; }
-                @Override public StyleableProperty<Number> getStyleableProperty(LongTestNode n) { return n.testProperty; }
-            };
-        }
-
-        class ObjectTestNode extends Group {
-            final StyleableProperty testProperty = new SimpleStyleableObjectProperty<>(METADATA, this, "testProperty");
-            static final CssMetaData<ObjectTestNode, Color> METADATA = new CssMetaData<>(
-                    "testProperty", StyleConverter.getColorConverter()) {
-                @Override public boolean isSettable(ObjectTestNode styleable) { return true; }
-                @Override public StyleableProperty<Color> getStyleableProperty(ObjectTestNode n) { return n.testProperty; }
-            };
-        }
-
-        return List.of(
-            new TestRun(() -> {
-                var node = new DoubleTestNode();
-                return new TestArgs(node, node.testProperty, 0D, 1D);
-            }),
-            new TestRun(() -> {
-                var node = new FloatTestNode();
-                return new TestArgs(node, node.testProperty, 0F, 1F);
-            }),
-            new TestRun(() -> {
-                var node = new IntegerTestNode();
-                return new TestArgs(node, node.testProperty, 0, 1);
-            }),
-            new TestRun(() -> {
-                var node = new LongTestNode();
-                return new TestArgs(node, node.testProperty, 0L, 1L);
-            }),
-            new TestRun(() -> {
-                var node = new ObjectTestNode();
-                return new TestArgs(node, node.testProperty, Color.RED, Color.GREEN);
-            })
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("testTimerIsStoppedWhenPropertyIsCollected_parameters")
-    public void testTimerIsStoppedWhenPropertyIsCollected(TestRun testRun) {
-        JMemoryBuddy.memoryTest(test -> {
-            Object timer = null;
-            Method handleMethod = null;
-            WeakReference<?> propertyRef = null;
-
-            try {
-                TestArgs args = testRun.args.get();
-                NodeShim.getTransitions(args.node).add(
-                    new TransitionDefinition(
-                        "testProperty", Duration.seconds(1), Duration.ZERO, Interpolator.LINEAR));
-
-                handleMethod = AnimationTimer.class.getDeclaredMethod("handle", long.class);
-                Field timerField = null;
-
-                StyleableProperty property = args.property;
-                Class<?> clazz = property.getClass();
-                while (clazz != null) {
-                    try {
-                        timerField = clazz.getDeclaredField("timer");
-                        timerField.setAccessible(true);
-                        break;
-                    } catch (NoSuchFieldException ignored) {
-                        clazz = clazz.getSuperclass();
-                    }
-                }
-
-                propertyRef = new WeakReference<>(property);
-                timer = timerField.get(property);
-                assertNull(timer);
-
-                // Applies the initial value, which is never animated
-                property.applyStyle(StyleOrigin.USER, args.initialValue);
-                timer = timerField.get(property);
-                assertNull(timer);
-
-                // Applying the next value creates a timer
-                property.applyStyle(StyleOrigin.USER, args.newValue);
-                timer = timerField.get(property);
-                assertNotNull(timer);
-            } catch (ReflectiveOperationException ex) {
-                fail(ex);
-            }
-
-            try {
-                long now = System.nanoTime();
-
-                // Wait until the property instance has been collected.
-                while (propertyRef.get() != null) {
-                    if (System.nanoTime() - now > 10_000_000_000L) {
-                        fail("Test timed out");
-                    }
-
-                    System.gc();
-                    Thread.sleep(100);
-                }
-
-                // Since the property has been collected, calling the timer will stop it
-                // and make it eligible for collection.
-                handleMethod.invoke(timer, System.nanoTime() + 10000);
-                test.assertCollectable(timer);
-            } catch (ReflectiveOperationException | InterruptedException ex) {
-                fail(ex);
-            }
-        });
     }
 
 }

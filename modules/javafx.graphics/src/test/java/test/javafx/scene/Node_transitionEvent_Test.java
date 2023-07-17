@@ -25,17 +25,19 @@
 
 package test.javafx.scene;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 import javafx.css.TransitionEvent;
 import javafx.scene.Group;
 import javafx.scene.NodeShim;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import javafx.util.Duration;
-import com.sun.javafx.tk.Toolkit;
-import test.com.sun.javafx.pgstub.StubToolkit;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -51,6 +53,26 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class Node_transitionEvent_Test {
 
+    private StubToolkit toolkit;
+    private Stage stage;
+    private Scene scene;
+    private Rectangle node;
+
+    @BeforeEach
+    public void startup() {
+        toolkit = (StubToolkit)Toolkit.getToolkit();
+        node = new Rectangle();
+        scene = new Scene(new Group(node));
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    @AfterEach
+    public void teardown() {
+        stage.close();
+    }
+
     @Test
     public void testRegularPlayback() {
         String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
@@ -64,11 +86,7 @@ public class Node_transitionEvent_Test {
             }
             """.getBytes(StandardCharsets.UTF_8));
 
-        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
-        tk.setCurrentTime(0);
-
-        var node = new Rectangle();
-        var scene = new Scene(new Group(node));
+        toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
         node.applyCss();
@@ -84,15 +102,15 @@ public class Node_transitionEvent_Test {
         assertEquals(Duration.millis(0), trace.get(0).getElapsedTime());
 
         // After 0.5s, the transition is in the active period (elapsed time was 0 at START).
-        tk.setCurrentTime(500);
-        tk.handleAnimation();
+        toolkit.setCurrentTime(500);
+        toolkit.handleAnimation();
         assertEquals(2, trace.size());
         assertSame(TransitionEvent.START, trace.get(1).getEventType());
         assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
 
         // After 1s, the transition has already ended (elapsed time was 0.75s at END).
-        tk.setCurrentTime(1000);
-        tk.handleAnimation();
+        toolkit.setCurrentTime(1000);
+        toolkit.handleAnimation();
         assertEquals(3, trace.size());
         assertSame(TransitionEvent.END, trace.get(2).getEventType());
         assertEquals(Duration.millis(750), trace.get(2).getElapsedTime());
@@ -111,11 +129,7 @@ public class Node_transitionEvent_Test {
             }
             """.getBytes(StandardCharsets.UTF_8));
 
-        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
-        tk.setCurrentTime(0);
-
-        var node = new Rectangle();
-        var scene = new Scene(new Group(node));
+        toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
         node.applyCss();
@@ -126,8 +140,8 @@ public class Node_transitionEvent_Test {
         node.applyCss();
         assertEquals(0, trace.size());
 
-        tk.setCurrentTime(1);
-        tk.handleAnimation();
+        toolkit.setCurrentTime(1);
+        toolkit.handleAnimation();
         assertEquals(0, trace.size());
     }
 
@@ -144,11 +158,7 @@ public class Node_transitionEvent_Test {
             }
             """.getBytes(StandardCharsets.UTF_8));
 
-        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
-        tk.setCurrentTime(0);
-
-        var node = new Rectangle();
-        var scene = new Scene(new Group(node));
+        toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
         node.applyCss();
@@ -160,8 +170,8 @@ public class Node_transitionEvent_Test {
 
         // The animation advances 500ms and is then cancelled, which means that the
         // elapsed time is 250ms (since we have a 250ms delay).
-        tk.setCurrentTime(500);
-        tk.handleAnimation();
+        toolkit.setCurrentTime(500);
+        toolkit.handleAnimation();
         NodeShim.completeTransitionTimers(node);
 
         assertEquals(3, trace.size());
@@ -186,11 +196,7 @@ public class Node_transitionEvent_Test {
             }
             """.getBytes(StandardCharsets.UTF_8));
 
-        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
-        tk.setCurrentTime(0);
-
-        var node = new Rectangle();
-        var scene = new Scene(new Group(node));
+        toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
         node.applyCss();
@@ -202,8 +208,8 @@ public class Node_transitionEvent_Test {
 
         // The animation advances 500ms and is then cancelled, which means that the
         // elapsed time is 750ms (since we started with a negative 250ms delay).
-        tk.setCurrentTime(500);
-        tk.handleAnimation();
+        toolkit.setCurrentTime(500);
+        toolkit.handleAnimation();
         NodeShim.completeTransitionTimers(node);
 
         assertEquals(3, trace.size());
@@ -228,11 +234,7 @@ public class Node_transitionEvent_Test {
             }
             """.getBytes(StandardCharsets.UTF_8));
 
-        StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
-        tk.setCurrentTime(0);
-
-        var node = new Rectangle();
-        var scene = new Scene(new Group(node));
+        toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
         node.getStyleClass().add("testClass");
         node.applyCss();
@@ -244,8 +246,8 @@ public class Node_transitionEvent_Test {
 
         // The animation advances 250ms and is then cancelled, which means that we're
         // still in the delay phase. The elapsed time of the CANCEL event will be 0.
-        tk.setCurrentTime(250);
-        tk.handleAnimation();
+        toolkit.setCurrentTime(250);
+        toolkit.handleAnimation();
         NodeShim.completeTransitionTimers(node);
 
         assertEquals(2, trace.size());

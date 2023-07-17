@@ -8596,6 +8596,9 @@ public abstract class Node implements EventTarget, Styleable {
         if (treeVisible != value) {
             treeVisible = value;
             if (!value) {
+                // When this node is removed from the scene graph or becomes invisible, we complete
+                // all running transitions for this node. This ensures that a node is not affected
+                // by a transition when it is no longer useful.
                 completeTransitionTimers();
             }
             updateCanReceiveFocus();
@@ -9071,7 +9074,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         @Override
         public CssMetaData<? extends Styleable, TransitionDefinition[]> getCssMetaData() {
-            return TransitionDefinitionCssMetaData.INSTANCE;
+            return TransitionDefinitionCssMetaData.getInstance();
         }
     }
 
