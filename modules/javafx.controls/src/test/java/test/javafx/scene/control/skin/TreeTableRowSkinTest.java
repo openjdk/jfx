@@ -405,7 +405,10 @@ public class TreeTableRowSkinTest {
 
     @AfterEach
     public void after() {
-        stageLoader.dispose();
+        if (stageLoader != null) {
+            stageLoader.dispose();
+            stageLoader = null;
+        }
     }
 
     private void invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl() {
