@@ -31,6 +31,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.rich.model.HtmlExportFormatHandler;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -42,6 +43,8 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
     private final SimpleStringProperty textField = new SimpleStringProperty();
     
     public DemoModel() {
+        registerDataFormatHandler(new HtmlExportFormatHandler(), true, 100);
+        
         String ARABIC = "arabic";
         String CODE = "code";
         String RED = "red";

@@ -54,7 +54,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     private final ArrayList<StyledParagraph> paragraphs = new ArrayList<>();
 
     public SimpleReadOnlyStyledModel() {
-        registerDataFormatHandler(new RtfFormatHandler(), 100);
+        registerDataFormatHandler(new RtfFormatHandler(), 1000);
     }
 
     public static SimpleReadOnlyStyledModel from(String text) {

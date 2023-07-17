@@ -36,6 +36,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.stage.Screen;
+import com.sun.javafx.util.Utils;
 
 /**
  * Public utility methods.
@@ -151,6 +152,6 @@ public class Util {
      */
     public static byte[] writePNG(Image im) throws IOException {
         // TODO move it here and fix the exports
-        return Util.writePNG(im);
+        return Utils.writePNG(im);
     }
 }

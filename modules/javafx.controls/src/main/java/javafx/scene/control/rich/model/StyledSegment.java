@@ -122,7 +122,7 @@ public abstract class StyledSegment {
 
             @Override
             public StyleAttrs getStyleAttrs(StyleResolver r) {
-                return si.getAttributes();
+                return si.getStyleAttrs(r);
             }
 
             @Override

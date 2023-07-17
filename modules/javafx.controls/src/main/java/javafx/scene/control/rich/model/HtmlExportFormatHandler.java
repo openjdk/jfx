@@ -34,26 +34,20 @@ import java.nio.charset.Charset;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.input.DataFormat;
+import com.sun.javafx.scene.control.rich.HtmlStyledOutput;
 import com.sun.javafx.scene.control.rich.RtfStyledOutput;
 
 /**
- * This {@link DataFormatHandler} provides export/import support for RTF format.
+ * This partial {@link DataFormatHandler} supports export of styled text in a simple HTML format.
  */
-public class RtfFormatHandler extends DataFormatHandler {
-    public RtfFormatHandler() {
-        super(DataFormat.RTF);
+public class HtmlExportFormatHandler extends DataFormatHandler {
+    public HtmlExportFormatHandler() {
+        super(DataFormat.HTML);
     }
 
     @Override
     public StyledInput createStyledInput(Object src) {
-        if (src == null) {
-            return StyledInput.of("", StyleInfo.NONE);
-        }
-
-        // TODO parse RTF
-        String text = src.toString();
-        System.err.println(text);
-        return StyledInput.of(text);
+        throw new UnsupportedOperationException("import from HTML is not supported by this DataFormatHandler");
     }
 
     @Override
@@ -70,11 +64,11 @@ public class RtfFormatHandler extends DataFormatHandler {
         OutputStreamWriter wr = new OutputStreamWriter(out, ascii);
         export(model, resolver, start, end, wr);
     }
-
+    
     private void export(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end, Writer wr)
         throws IOException {
 
-        RtfStyledOutput out = new RtfStyledOutput(resolver, wr);
+        HtmlStyledOutput out = new HtmlStyledOutput(resolver, wr);
         // collect styles
         model.exportText(start, end, out.firstPassBuilder());
 

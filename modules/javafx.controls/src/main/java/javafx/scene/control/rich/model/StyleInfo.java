@@ -39,6 +39,7 @@ public abstract class StyleInfo {
     public boolean hasAttributes() { return false; }
     
     /** returns attributes, or null if {@link #hasAttributes()} is false */
+    // FIX remove
     public StyleAttrs getAttributes() { return null; }
     
     /** returns a direct style string which can be null */

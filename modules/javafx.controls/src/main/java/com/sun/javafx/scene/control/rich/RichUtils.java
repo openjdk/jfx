@@ -85,6 +85,16 @@ public class RichUtils {
             );
         }
     }
+    
+    /* Converts Color to its web CSS value #rrggbb */
+    public static String toWebColor(Color c) {
+        return String.format(
+            "#%02x%02x%02x",
+            eightBit(c.getRed()),
+            eightBit(c.getGreen()),
+            eightBit(c.getBlue())
+        );
+    }
 
     private static int eightBit(double val) {
         int v = (int)Math.round(val * 255);

@@ -1066,6 +1066,7 @@ public class RichTextArea extends Control {
             return s.getAttributes();
         }
 
+        // FIX this has changed
         if (getSkin() instanceof StyleResolver r) {
             return s.getStyleAttrs(r);
         }

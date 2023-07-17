@@ -27,8 +27,10 @@ package javafx.scene.control.rich.model;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
@@ -159,7 +161,11 @@ public class StyleAttrs {
     public Object get(StyleAttribute a) {
         return attributes.get(a);
     }
-    
+
+    public Set<StyleAttribute> getAttributes() {
+        return new HashSet<>(attributes.keySet());
+    }
+
     /**
      * Converts the attributes into a single direct style string and returns the resulting (can be null).
      */
@@ -184,8 +190,8 @@ public class StyleAttrs {
     }
 
     /** 
-     * Creates a new StyleAttrs instance by combining this and the specified attrbutes.
-     * The values in the {@code attrs} override values found in this instance.
+     * Creates a new StyleAttrs instance by first copying attrirutes from this instance,
+     * then adding (and/or overwriting) the attributes from the specified instance.
      */
     public StyleAttrs combine(StyleAttrs attrs) {
         return 
