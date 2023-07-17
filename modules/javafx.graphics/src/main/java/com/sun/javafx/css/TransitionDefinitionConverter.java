@@ -69,11 +69,11 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         ParsedValue<ParsedValue<?, Size>, Duration> parsedDelay = values[2];
         ParsedValue<?, Interpolator> parsedInterpolator = values[3];
 
-        String property;
+        String propertyName;
         if (parsedProperty != null) {
-            property = parsedProperty.convert(null);
+            propertyName = parsedProperty.convert(null);
         } else {
-            property = "all";
+            propertyName = "all";
         }
 
         Duration duration;
@@ -84,7 +84,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         }
 
         return new TransitionDefinition(
-            property,
+            propertyName.intern(),
             duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration,
             parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO,
             parsedInterpolator != null ? parsedInterpolator.convert(null) : InterpolatorConverter.CSS_EASE);
