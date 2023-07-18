@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control.rich.model;
+package com.oracle.tools.demo.rich;
 
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;

@@ -37,8 +37,6 @@ import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.ImageCellPane;
-import javafx.scene.control.rich.model.RegionCellPane;
 import javafx.scene.control.rich.model.RtfFormatHandler;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledOutput;
@@ -48,7 +46,7 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 
 /**
- * A simple, read-only, in-memory styled text model.
+ * A simple, read-only, in-memory, styled text model.
  */
 public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     private final ArrayList<StyledParagraph> paragraphs = new ArrayList<>();
