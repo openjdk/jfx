@@ -26,7 +26,7 @@
 #import "AccessibleBase.h"
 #import <AppKit/AppKit.h>
 
-@interface ButtonAccessibility : AccessibleBase <NSAccessibilityButton> {
+@interface JFXButtonAccessibility : AccessibleBase <NSAccessibilityButton> {
 
 };
 - (NSAccessibilityRole)accessibilityRole;
