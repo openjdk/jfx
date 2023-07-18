@@ -32,7 +32,7 @@ import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
 
 /**
- * Read-only StyledTextModel base class.
+ * A base class for read-only {@link StyledTextModel}s.
  */
 public abstract class StyledTextModelReadOnlyBase extends StyledTextModel {
     public StyledTextModelReadOnlyBase() {
@@ -40,7 +40,7 @@ public abstract class StyledTextModelReadOnlyBase extends StyledTextModel {
     }
 
     @Override
-    public boolean isEditable() {
+    public final boolean isEditable() {
         return false;
     }
 

@@ -42,7 +42,7 @@ import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
  * This model is suitable for relatively small documents as has neither disk storage backing nor
  * incremental storage of the changes.
  */
-public class EditableRichTextModel extends StyledTextModelEditableBase {
+public class EditableRichTextModel extends StyledTextModel {
     /** Represents a styled text */
     public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text-model");
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
@@ -57,7 +57,12 @@ public class EditableRichTextModel extends StyledTextModelEditableBase {
         registerDataFormatHandler(new HtmlExportFormatHandler(), true, 100);
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }
-    
+
+    @Override
+    public final boolean isEditable() {
+        return true;
+    }
+
     @Override
     public int size() {
         return paragraphs.size();
@@ -360,6 +365,9 @@ public class EditableRichTextModel extends StyledTextModelEditableBase {
         /** trims this paragraph and returns the remainder to be inserted next */
         public RParagraph insertLineBreak(int offset) {
             int off = 0;
+            // FIX styles!
+            // problem: has no segments to store style info, initially.
+            // perhaps it needs a zero width segment with styles
             RParagraph next = new RParagraph();
             int i;
             int ct = size();
