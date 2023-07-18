@@ -44,17 +44,20 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
     
     public DemoModel() {
         registerDataFormatHandler(new HtmlExportFormatHandler(), true, 100);
-        
+
+        // see RichTextAreaDemo.css
         String ARABIC = "arabic";
         String CODE = "code";
         String RED = "red";
         String GREEN = "green";
-        String UNDER = "underline";
         String GRAY = "gray";
         String LARGE = "large";
+        String BOLD = "bold";
         String ITALIC = "italic";
+        String STRIKETHROUGH = "strikethrough";
+        String UNDERLINE = "underline";
 
-        addSegment("RichTextArea Control", "-fx-font-size:200%;", UNDER);
+        addSegment("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
         nl();
         addImage(DemoModel.class.getResourceAsStream("animated.gif"));
         addSegment("  Fig. 1 Embedded animated GIF image.", null, GRAY, ITALIC);
@@ -81,6 +84,13 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         nl();
         addSegment("}", null, CODE);
         nl(2);
+        // font attributes
+        addSegment("BOLD ", null, BOLD);
+        addSegment("ITALIC ", null, ITALIC);
+        addSegment("STRIKETHROUGH ", null, STRIKETHROUGH);
+        addSegment("UNDERLINE ", null, UNDERLINE);
+        addSegment("ALL OF THEM ", null, BOLD, ITALIC, STRIKETHROUGH, UNDERLINE);
+        nl(2);
         // inline nodes
         addSegment("Inline Nodes: ");
         addNodeSegment(() -> {
@@ -99,12 +109,12 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         //addSegment("Emojis: [🇺🇦❤️🏁🇺🇸🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", null, LARGE).nl();
         addSegment("Emojis: [🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", null, LARGE).nl();
         nl();
-        addSegment("Halfwidth and FullWidth Forms", null, UNDER).nl();
+        addSegment("Halfwidth and FullWidth Forms", null, UNDERLINE).nl();
         addSegment("ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯ", "-fx-font-family:monospaced;").nl();
         addSegment("ABCDEFGHIJKLMNO", "-fx-font-family:monospaced;").nl();
         addSegment("        leading and trailing whitespace         ", null, CODE).nl();
         nl(3);
-        
+
         addParagraph(this::createRect);
 
         // TODO unicode codepoints

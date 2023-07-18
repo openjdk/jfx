@@ -496,7 +496,7 @@ public abstract class StyledTextModel {
     /** Returns a TextPos corresponding to the end of paragraph at the given index */
     public TextPos getEndOfParagraphTextPos(int index) {
         String text = getPlainText(index);
-        int off = text.length();
+        int off = (text == null ? 0 : text.length());
         int cix = off - 1;
         if (cix < 0) {
             return new TextPos(index, off);

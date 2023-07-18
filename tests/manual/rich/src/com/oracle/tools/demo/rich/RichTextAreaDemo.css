@@ -22,9 +22,17 @@
     -fx-font-family:Monospaced;
 }
 
+.bold {
+    -fx-font-weight: bold;
+}
+
 .italic {
-    -fx-font-family:serif;
-    -fx-font-style:italic;
+    -fx-font-family: serif;
+    -fx-font-style: italic;
+}
+
+.strikethrough {
+	-fx-strikethrough: true;
 }
 
 .arabic {

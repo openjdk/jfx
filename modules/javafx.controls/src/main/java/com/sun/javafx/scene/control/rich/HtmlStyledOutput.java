@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.HashSet;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.model.StyleAttribute;
@@ -52,12 +51,14 @@ public class HtmlStyledOutput implements StyledOutput {
     };
     private final StyleResolver resolver;
     private final Writer wr;
+    private final boolean inlineStyles;
     private record Key(StyleAttribute attr, Object value) { }
     private final HashMap<Key,Val> styles = new HashMap<>();
 
-    public HtmlStyledOutput(StyleResolver resolver, Writer wr) {
+    public HtmlStyledOutput(StyleResolver resolver, Writer wr, boolean inlineStyles) {
         this.resolver = resolver;
         this.wr = wr;
+        this.inlineStyles = inlineStyles;
     }
 
     @Override
@@ -79,6 +80,9 @@ public class HtmlStyledOutput implements StyledOutput {
             if(div) {
                 wr.write("</span>");
             }
+        } else if (seg.isInlineNode()) {
+            Node n = seg.getNodeGenerator().get();
+            writeInlineNode(n);
         } else if (seg.isParagraph()) {
             Node n = seg.getNodeGenerator().get();
             writeParagraph(n);
@@ -99,7 +103,11 @@ public class HtmlStyledOutput implements StyledOutput {
                     }
 
                     Val val = styles.get(k);
-                    wr.write(val.name);
+                    if (inlineStyles) {
+                        wr.write(val.css);
+                    } else {
+                        wr.write(val.name);
+                    }
                 }
             }
         }
@@ -123,7 +131,6 @@ public class HtmlStyledOutput implements StyledOutput {
         return new Key(a, v);
     }
 
-    // TODO does not seem to work on Mac
     private void writeParagraph(Node n) throws IOException {
         WritableImage im = resolver.snapshot(n);
         byte[] bytes = Util.writePNG(im);
@@ -138,6 +145,22 @@ public class HtmlStyledOutput implements StyledOutput {
         wr.write(" height=");
         wr.write(String.valueOf(h));
         wr.write("></p>");
+    }
+    
+    private void writeInlineNode(Node n) throws IOException {
+        WritableImage im = resolver.snapshot(n);
+        byte[] bytes = Util.writePNG(im);
+        int w = (int)im.getWidth();
+        int h = (int)im.getHeight();
+        byte[] b = Util.writePNG(im);
+        String base64 = Base64.getEncoder().encodeToString(b);
+        wr.write("<img src=\"data:image/png;base64,");
+        wr.write(base64);
+        wr.write("\" width=");
+        wr.write(String.valueOf(w));
+        wr.write(" height=");
+        wr.write(String.valueOf(h));
+        wr.write(">");
     }
     
     // TODO unit test!
@@ -293,17 +316,21 @@ public class HtmlStyledOutput implements StyledOutput {
     }
 
     public void writePrologue() throws IOException {
-        wr.write("<html><head><style>\n");
-        for(Val v: styles.values()) {
-            wr.write(v.name);
-            wr.write(" { ");
-            wr.write(v.css);
-            wr.write(" }\n");
+        wr.write("<html>");
+        if (!inlineStyles) {
+            wr.write("<head><style>\n");
+            for (Val v : styles.values()) {
+                wr.write(v.name);
+                wr.write(" { ");
+                wr.write(v.css);
+                wr.write(" }\n");
+            }
+            wr.write("</style></head>\n");
         }
-        wr.write("</style></head>\n<body>\n");
+        wr.write("<body>\n");
     }
 
     public void writeEpilogue() throws IOException {
         wr.write("\n</body></html>\n");
-   }
+    }
 }

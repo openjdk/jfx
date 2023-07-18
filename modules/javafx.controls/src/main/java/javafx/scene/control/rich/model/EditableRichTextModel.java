@@ -40,8 +40,8 @@ import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
 /**
  * Editable, in-memory {@link StyledTextModel} based on a collection of styled segments.
  * <p>
- * This model is suitable for relatively small documents as has neither disk storage backing nor
- * incremental storage of the changes.
+ * This model is suitable for relatively small documents as it has neither disk storage backing
+ * nor storage of incremental changes.
  */
 public class EditableRichTextModel extends StyledTextModel {
     /** Represents a styled text */

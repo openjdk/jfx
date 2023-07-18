@@ -41,6 +41,9 @@ import com.sun.javafx.scene.control.rich.RtfStyledOutput;
  * This partial {@link DataFormatHandler} supports export of styled text in a simple HTML format.
  */
 public class HtmlExportFormatHandler extends DataFormatHandler {
+    /** when true, style attrbiutes are inlined, this seems to work better in Thunderbird */
+    private static final boolean INLINE_STYLES = true;
+
     public HtmlExportFormatHandler() {
         super(DataFormat.HTML);
     }
@@ -67,8 +70,7 @@ public class HtmlExportFormatHandler extends DataFormatHandler {
     
     private void export(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end, Writer wr)
         throws IOException {
-
-        HtmlStyledOutput out = new HtmlStyledOutput(resolver, wr);
+        HtmlStyledOutput out = new HtmlStyledOutput(resolver, wr, INLINE_STYLES);
         // collect styles
         model.exportText(start, end, out.firstPassBuilder());
 
