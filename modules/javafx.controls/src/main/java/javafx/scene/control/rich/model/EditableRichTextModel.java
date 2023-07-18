@@ -27,7 +27,8 @@ package javafx.scene.control.rich.model;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
@@ -46,8 +47,7 @@ public class EditableRichTextModel extends StyledTextModel {
     /** Represents a styled text */
     public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text-model");
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
-    // TODO dedup styles, later
-    private final HashSet<StyleAttrs> styles = new HashSet<>();
+    private final HashMap<StyleAttrs,StyleAttrs> styleCache = new HashMap<>();
     
     public EditableRichTextModel() {
         paragraphs.add(new RParagraph());
@@ -96,13 +96,12 @@ public class EditableRichTextModel extends StyledTextModel {
         return text.length();
     }
     
-    protected StyleAttrs getStyleAttrs(StyleResolver resolver, StyledSegment segment) {
+    private StyleAttrs getStyleAttrs(StyleResolver resolver, StyledSegment segment) {
         StyleAttrs a = segment.getStyleAttrs(resolver);
         if(a == null) {
             a = StyleAttrs.EMPTY;
         }
-        // TODO pass through styles hash set to save on memory
-        return a;
+        return dedup(a);
     }
 
     @Override
@@ -151,23 +150,37 @@ public class EditableRichTextModel extends StyledTextModel {
 
     @Override
     protected boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs a) {
+        a = dedup(a);
         int ix = start.index();
         RParagraph par = paragraphs.get(ix);
 
         if (ix == end.index()) {
-            par.applyStyle(start.offset(), end.offset(), a);
+            par.applyStyle(start.offset(), end.offset(), a, this::dedup);
         } else {
-            par.applyStyle(start.offset(), Integer.MAX_VALUE, a);
+            par.applyStyle(start.offset(), Integer.MAX_VALUE, a, this::dedup);
             ix++;
             while (ix < end.index()) {
                 par = paragraphs.get(ix);
-                par.applyStyle(0, Integer.MAX_VALUE, a);
+                par.applyStyle(0, Integer.MAX_VALUE, a, this::dedup);
                 ix++;
             }
             par = paragraphs.get(ix);
-            par.applyStyle(0, end.offset(), a);
+            par.applyStyle(0, end.offset(), a, this::dedup);
         }
         return true;
+    }
+
+    /** deduplicates style attributes. */
+    private StyleAttrs dedup(StyleAttrs a) {
+        // the expectation is that the number of different style combinations is relatively low
+        // but the number of instances can be large
+        // the drawback is that there is no way to clear the cache
+        StyleAttrs cached = styleCache.get(a);
+        if (cached != null) {
+            return cached;
+        }
+        styleCache.put(a, a);
+        return a;
     }
 
     @Override
@@ -467,7 +480,7 @@ public class EditableRichTextModel extends StyledTextModel {
             }
         }
 
-        public void applyStyle(int start, int end, StyleAttrs attrs) {
+        public void applyStyle(int start, int end, StyleAttrs attrs, Function<StyleAttrs,StyleAttrs> dedup) {
             int off = 0;
             int i = 0;
             for ( ; i < size(); i++) {
@@ -479,20 +492,20 @@ public class EditableRichTextModel extends StyledTextModel {
                     break;
                 case 1:
                 case 2:
-                    if (applyStyle(i, seg, attrs)) {
+                    if (applyStyle(i, seg, attrs, dedup)) {
                         i--;
                     }
                     break;
                 case 3:
                 case 9:
-                    applyStyle(i, seg, attrs);
+                    applyStyle(i, seg, attrs, dedup);
                     return;
                 case 4:
                 case 8:
                     // split
                     {
                         StyleAttrs a = seg.attrs();
-                        StyleAttrs newAttrs = a.combine(attrs);
+                        StyleAttrs newAttrs = dedup.apply(a.combine(attrs));
                         int ix = end - off;
                         String s1 = seg.text().substring(0, ix);
                         String s2 = seg.text().substring(ix);
@@ -510,7 +523,7 @@ public class EditableRichTextModel extends StyledTextModel {
                     // split
                     {
                         StyleAttrs a = seg.attrs();
-                        StyleAttrs newAttrs = a.combine(attrs);
+                        StyleAttrs newAttrs = dedup.apply(a.combine(attrs));
                         int ix = start - off;
                         String s1 = seg.text().substring(0, ix);
                         String s2 = seg.text().substring(ix);
@@ -529,7 +542,7 @@ public class EditableRichTextModel extends StyledTextModel {
                 case 7:
                     {
                         StyleAttrs a = seg.attrs();
-                        StyleAttrs newAttrs = a.combine(attrs);
+                        StyleAttrs newAttrs = dedup.apply(a.combine(attrs));
                         String text = seg.text();
                         int ix0 = start - off;
                         int ix1 = end - off;
@@ -561,8 +574,8 @@ public class EditableRichTextModel extends StyledTextModel {
          * if the new style is the same as the previous segment, merges text with the previous segment.
          * @return true if this segment has been merged with the previous segment
          */
-        private boolean applyStyle(int ix, RSegment seg, StyleAttrs a) {
-            StyleAttrs newAttrs = seg.attrs().combine(a);
+        private boolean applyStyle(int ix, RSegment seg, StyleAttrs a, Function<StyleAttrs,StyleAttrs> dedup) {
+            StyleAttrs newAttrs = dedup.apply(seg.attrs().combine(a));
             if (ix > 0) {
                 RSegment prev = get(ix - 1);
                 if (prev.attrs().equals(newAttrs)) {
@@ -572,13 +585,12 @@ public class EditableRichTextModel extends StyledTextModel {
                     return true;
                 }
             }
-            // TODO dedup
             seg.setAttrs(newAttrs);
             return false;
         }
         
         /** 
-         * inserts a new segment.
+         * inserts a new segment with the specified, deduplicated attributes.
          * if the new style is the same as the previous segment, merges text with the previous segment instead.
          * @return true if the new segment has been merged with the previous segment
          */
@@ -593,7 +605,6 @@ public class EditableRichTextModel extends StyledTextModel {
                     return true;
                 }
             }
-            // TODO dedup
             RSegment seg = new RSegment(text, a);
             if (ix >= size()) {
                 add(seg);

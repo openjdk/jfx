@@ -291,14 +291,12 @@ public abstract class StyledTextModel {
     }
     
     /**
-     * Replaces the given range with the provided styled text.
-     * When inserting a plain text, the style is taken from preceding text segment, or, if the text is being
-     * inserted into the beginning of the document, the style is taken from the following text segment.
-     * 
-     * The caller must ensure that the start position precedes the end.
-     * 
+     * Replaces the given range with the provided styled text input.
+     * When inserting plain text, the style is taken from the preceding text segment, or, if the text is being
+     * inserted in the beginning of the document, the style is taken from the following text segment.
+     * <p>
      * After the model applies the requested changes, an event is sent to all the registered ChangeListeners.
-     * 
+     * <p>
      * @param resolver
      * @param start start position
      * @param end end position
@@ -306,10 +304,13 @@ public abstract class StyledTextModel {
      * @return text position at the end of the inserted text, or null if the model is read only
      */
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input) {
+        // TODO create UndoableEvent
         if (isEditable()) {
             int cmp = start.compareTo(end);
-            if(cmp != 0) {
+            if(cmp < 0) {
                 removeRegion(start, end);
+            } else if(cmp > 0) {
+                removeRegion(end, start);
             }
 
             int index = start.index();
@@ -512,6 +513,7 @@ public abstract class StyledTextModel {
      * @param attrs non-null attribute map
      */
     public final void applyStyle(TextPos start, TextPos end, StyleAttrs attrs) {
+        // TODO create UndoableEvent
         boolean changed = applyStyleImpl(start, end, attrs);
         if (changed) {
             fireStyleChangeEvent(start, end);
