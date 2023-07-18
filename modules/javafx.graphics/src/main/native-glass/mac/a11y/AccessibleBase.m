@@ -40,10 +40,10 @@ static NSMutableDictionary * rolesMap;
      */
     rolesMap = [[NSMutableDictionary alloc] initWithCapacity:4];
 
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"BUTTON"];
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
 
 }
 

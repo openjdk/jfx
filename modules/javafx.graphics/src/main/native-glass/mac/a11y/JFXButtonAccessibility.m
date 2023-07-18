@@ -23,12 +23,12 @@
  * questions.
  */
 
-#import "ButtonAccessibility.h"
+#import "JFXButtonAccessibility.h"
 
 /*
  * Implementation of the accessibility peer for the pushbutton role
  */
-@implementation ButtonAccessibility
+@implementation JFXButtonAccessibility
 - (NSAccessibilityRole)accessibilityRole
 {
     return NSAccessibilityButtonRole;
