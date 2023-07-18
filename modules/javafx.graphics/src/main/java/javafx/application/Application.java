@@ -551,18 +551,30 @@ public abstract class Application {
      * value.
      *
      * @return the {@code Preferences} instance
-     * @since 21
+     * @since 22
      */
     public static Preferences getPreferences() {
         return PlatformImpl.getApplicationPreferences();
     }
 
+    /**
+     * Contains UI preferences of the current application.
+     *
+     * @since 22
+     */
     public interface Preferences extends Platform.Preferences {
         /**
          * Overrides the value of the {@link #appearanceProperty() appearance} property.
          * <p>
          * Specifying {@code null} clears the override, which restores the value of the
          * {@code appearance} property to the platform-provided value.
+         * <p>
+         * Note that {@code appearance} is a derived property: its value is computed by comparing
+         * the {@link #backgroundColorProperty() background} and {@link #foregroundColorProperty() foreground}
+         * properties. However, overriding the {@code appearance} property does not change the value
+         * of the {@code background} or {@code foreground} properties. An application should consider
+         * overriding {@code background} and {@code foreground} to match the value of the overridden
+         * {@code appearance} property.
          *
          * @param appearance the platform appearance override, or {@code null} to clear the override
          */

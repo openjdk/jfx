@@ -452,7 +452,7 @@ public final class Platform {
      *
      * @see Application#getPreferences()
      * @return the {@code Preferences} instance
-     * @since 21
+     * @since 22
      */
     public static Preferences getPreferences() {
         return PlatformImpl.getPlatformPreferences();
@@ -572,7 +572,7 @@ public final class Platform {
      *     </tbody>
      * </table>
      *
-     * @since 21
+     * @since 22
      */
     public interface Preferences extends ObservableMap<String, Object> {
         /**

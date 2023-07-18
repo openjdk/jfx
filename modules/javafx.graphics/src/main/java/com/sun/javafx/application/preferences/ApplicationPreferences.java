@@ -108,7 +108,7 @@ public final class ApplicationPreferences extends PlatformPreferences implements
     }
 
     /**
-     * Updates this map of preferences with a new set of platform preferences.
+     * Updates this map of preferences with a new set of application preferences.
      * The specified preferences may include all available preferences, or only the changed preferences.
      */
     @Override

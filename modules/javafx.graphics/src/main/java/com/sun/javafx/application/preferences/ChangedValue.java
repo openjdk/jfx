@@ -46,11 +46,11 @@ public record ChangedValue(Object oldValue, Object newValue) {
         for (Map.Entry<String, Object> entry : change.entrySet()) {
             Object newValue = entry.getValue();
             Object oldValue = base.get(entry.getKey());
-            boolean equals = false;
+            boolean equals;
 
             if (oldValue instanceof Object[] oldArray && newValue instanceof Object[] newArray) {
                 equals = Arrays.equals(oldArray, newArray);
-            } else if (!(oldValue instanceof Object[]) && !(newValue instanceof Object[])) {
+            } else {
                 equals = Objects.equals(oldValue, newValue);
             }
 

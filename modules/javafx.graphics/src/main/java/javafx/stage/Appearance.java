@@ -28,7 +28,7 @@ package javafx.stage;
 /**
  * Defines the appearance of the user interface.
  *
- * @since 21
+ * @since 22
  */
 public enum Appearance {
 
