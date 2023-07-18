@@ -800,7 +800,7 @@ public class JFXPanel extends JComponent {
         DataBufferInt dataBuf = (DataBufferInt)pixelsIm.getRaster().getDataBuffer();
         int[] pixelsData = dataBuf.getData();
         IntBuffer buf = IntBuffer.wrap(pixelsData);
-        if (!scenePeer.getPixels(buf, pWidth, pHeight)) {
+        if (scenePeer != null && !scenePeer.getPixels(buf, pWidth, pHeight)) {
             // In this case we just render what we have so far in the buffer.
         }
 
