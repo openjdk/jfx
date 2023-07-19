@@ -148,6 +148,8 @@ public class JFXPanel extends JComponent {
     private transient volatile EmbeddedWindow stage;
     private transient volatile Scene scene;
 
+    private static final Object LOCK = new Object();
+
     // Accessed on EDT only
     private transient SwingDnD dnd;
 
@@ -405,8 +407,25 @@ public class JFXPanel extends JComponent {
         return new Point2D(newx, newy);
     }
 
+    private EmbeddedSceneInterface getScenePeer() {
+        EmbeddedSceneInterface lScenePeer;
+        synchronized(LOCK) {
+            lScenePeer = scenePeer;
+        }
+        return lScenePeer;
+    }
+
+    private EmbeddedStageInterface getStagePeer() {
+        EmbeddedStageInterface lStagePeer;
+        synchronized(LOCK) {
+            lStagePeer = stagePeer;
+        }
+        return lStagePeer;
+    }
+
     private void sendMouseEventToFX(MouseEvent e) {
-        if (scenePeer == null || !isFxEnabled()) {
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
+        if (lScenePeer == null || !isFxEnabled()) {
             return;
         }
 
@@ -455,7 +474,7 @@ public class JFXPanel extends JComponent {
         int fxYOnScreen = (int)Math.round(onScreen.getY());
 
         if(e.getID() == MouseEvent.MOUSE_WHEEL) {
-            scenePeer.scrollEvent(AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL,
+            lScenePeer.scrollEvent(AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL,
                     0, -SwingEvents.getWheelRotation(e),
                     0, 0, // total scroll
                     40, 40, // multiplier
@@ -466,7 +485,7 @@ public class JFXPanel extends JComponent {
                     (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
                     (extModifiers & MouseEvent.META_DOWN_MASK) != 0, false);
         } else {
-            scenePeer.mouseEvent(
+            lScenePeer.mouseEvent(
                     SwingEvents.mouseIDToEmbedMouseType(e.getID()),
                     SwingEvents.mouseButtonToEmbedMouseButton(e.getButton(), extModifiers),
                     primaryBtnDown, middleBtnDown, secondaryBtnDown,
@@ -480,7 +499,7 @@ public class JFXPanel extends JComponent {
                     popupTrigger);
         }
         if (e.isPopupTrigger()) {
-            scenePeer.menuEvent(e.getX(), e.getY(), fxXOnScreen, fxYOnScreen, false);
+            lScenePeer.menuEvent(e.getX(), e.getY(), fxXOnScreen, fxYOnScreen, false);
         }
     }
 
@@ -500,9 +519,10 @@ public class JFXPanel extends JComponent {
                 // The extra simulated mouse pressed event is removed by making the JavaFX scene focused.
                 // It is safe, because in JavaFX only the method "setFocused(true)" is called,
                 // which doesn't have any side-effects when called multiple times.
-                if (stagePeer != null) {
+                EmbeddedStageInterface lStagePeer = getStagePeer();
+                if (lStagePeer != null) {
                     int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
-                    stagePeer.setFocused(true, focusCause);
+                    lStagePeer.setFocused(true, focusCause);
                 }
             }
         }
@@ -539,7 +559,8 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendKeyEventToFX(final KeyEvent e) {
-        if (scenePeer == null || !isFxEnabled()) {
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
+        if (lScenePeer == null || !isFxEnabled()) {
             return;
         }
 
@@ -547,7 +568,7 @@ public class JFXPanel extends JComponent {
                        ? new char[] {}
                        : new char[] { SwingEvents.keyCharToEmbedKeyChar(e.getKeyChar()) };
 
-        scenePeer.keyEvent(
+        lScenePeer.keyEvent(
                 SwingEvents.keyIDToEmbedKeyType(e.getID()),
                 e.getKeyCode(), chars,
                 SwingEvents.keyModifiersToEmbedKeyModifiers(e.getModifiersEx()));
@@ -567,11 +588,13 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendResizeEventToFX() {
-        if (stagePeer != null) {
-            stagePeer.setSize(pWidth, pHeight);
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
+        EmbeddedStageInterface lStagePeer = getStagePeer();
+        if (lStagePeer != null) {
+            lStagePeer.setSize(pWidth, pHeight);
         }
-        if (scenePeer != null) {
-            scenePeer.setSize(pWidth, pHeight);
+        if (lScenePeer != null) {
+            lScenePeer.setSize(pWidth, pHeight);
         }
     }
 
@@ -606,6 +629,7 @@ public class JFXPanel extends JComponent {
 
     // called on EDT only
     private void updateComponentSize() {
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
         int oldWidth = pWidth;
         int oldHeight = pHeight;
         if (getBorder() != null) {
@@ -633,8 +657,8 @@ public class JFXPanel extends JComponent {
             newScaleFactorX != scaleFactorX || newScaleFactorY != scaleFactorY)
         {
             createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
-            if (scenePeer != null) {
-                scenePeer.setPixelScaleFactors((float) newScaleFactorX,
+            if (lScenePeer != null) {
+                lScenePeer.setPixelScaleFactors((float) newScaleFactorX,
                                                (float) newScaleFactorY);
             }
             scaleFactorX = newScaleFactorX;
@@ -658,11 +682,12 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendMoveEventToFX() {
-        if (stagePeer == null) {
+        EmbeddedStageInterface lStagePeer = getStagePeer();
+        if (lStagePeer == null) {
             return;
         }
 
-        stagePeer.setLocation(screenX, screenY);
+        lStagePeer.setLocation(screenX, screenY);
     }
 
     /**
@@ -695,7 +720,8 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendFocusEventToFX(final FocusEvent e) {
-        if ((stage == null) || (stagePeer == null) || !isFxEnabled()) {
+        EmbeddedStageInterface lStagePeer = getStagePeer();
+        if ((stage == null) || (lStagePeer == null) || !isFxEnabled()) {
             return;
         }
 
@@ -710,7 +736,7 @@ public class JFXPanel extends JComponent {
                 focusCause = AbstractEvents.FOCUSEVENT_TRAVERSED_BACKWARD;
             }
         }
-        stagePeer.setFocused(focused, focusCause);
+        lStagePeer.setFocused(focused, focusCause);
     }
 
     /**
@@ -729,7 +755,8 @@ public class JFXPanel extends JComponent {
 
     // called on EDT only
     private void createResizePixelBuffer(double newScaleFactorX, double newScaleFactorY) {
-        if (scenePeer == null || pWidth <= 0 || pHeight <= 0) {
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
+        if (lScenePeer == null || pWidth <= 0 || pHeight <= 0) {
             pixelsIm = null;
         } else {
             BufferedImage oldIm = pixelsIm;
@@ -737,7 +764,7 @@ public class JFXPanel extends JComponent {
             int newPixelH = (int) Math.ceil(pHeight * newScaleFactorY);
             pixelsIm = new BufferedImage(newPixelW, newPixelH,
                                          SwingFXUtils.getBestBufferedImageType(
-                                             scenePeer.getPixelFormat(), null, false));
+                                             lScenePeer.getPixelFormat(), null, false));
             if (oldIm != null) {
                 double ratioX = newScaleFactorX / scaleFactorX;
                 double ratioY = newScaleFactorY / scaleFactorY;
@@ -764,13 +791,14 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendInputMethodEventToFX(InputMethodEvent e) {
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
         String t = InputMethodSupport.getTextForEvent(e);
 
         int insertionIndex = 0;
         if (e.getCaret() != null) {
             insertionIndex = e.getCaret().getInsertionIndex();
         }
-        scenePeer.inputMethodEvent(
+        lScenePeer.inputMethodEvent(
                 javafx.scene.input.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
                 InputMethodSupport.inputMethodEventComposed(t, e.getCommittedCharacterCount()),
                 t.substring(0, e.getCommittedCharacterCount()),
@@ -788,7 +816,8 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void paintComponent(Graphics g) {
-        if (scenePeer == null) {
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
+        if (lScenePeer == null) {
             return;
         }
         if (pixelsIm == null) {
@@ -800,7 +829,7 @@ public class JFXPanel extends JComponent {
         DataBufferInt dataBuf = (DataBufferInt)pixelsIm.getRaster().getDataBuffer();
         int[] pixelsData = dataBuf.getData();
         IntBuffer buf = IntBuffer.wrap(pixelsData);
-        if (scenePeer != null && !scenePeer.getPixels(buf, pWidth, pHeight)) {
+        if (!lScenePeer.getPixels(buf, pWidth, pHeight)) {
             // In this case we just render what we have so far in the buffer.
         }
 
@@ -829,7 +858,7 @@ public class JFXPanel extends JComponent {
             if (scaleFactorX != newScaleFactorX || scaleFactorY != newScaleFactorY) {
                 createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
                 // The scene will request repaint.
-                scenePeer.setPixelScaleFactors((float) newScaleFactorX,
+                lScenePeer.setPixelScaleFactors((float) newScaleFactorX,
                                                (float) newScaleFactorY);
                 scaleFactorX = newScaleFactorX;
                 scaleFactorY = newScaleFactorY;
@@ -853,7 +882,8 @@ public class JFXPanel extends JComponent {
      */
     @Override
     public Dimension getPreferredSize() {
-        if (isPreferredSizeSet() || scenePeer == null) {
+        EmbeddedSceneInterface lScenePeer = getScenePeer();
+        if (isPreferredSizeSet() || lScenePeer == null) {
             return super.getPreferredSize();
         }
         return new Dimension(pPreferredWidth, pPreferredHeight);
@@ -886,11 +916,12 @@ public class JFXPanel extends JComponent {
     private transient  AWTEventListener ungrabListener = event -> {
         if (jfxPanelIOP.isUngrabEvent(event)) {
             SwingNodeHelper.runOnFxThread(() -> {
-                if (JFXPanel.this.stagePeer != null &&
+                EmbeddedStageInterface lStagePeer = getStagePeer();
+                if (lStagePeer != null &&
                         getScene() != null &&
                         getScene().getFocusOwner() != null &&
                         getScene().getFocusOwner().isFocused()) {
-                    JFXPanel.this.stagePeer.focusUngrab();
+                    lStagePeer.focusUngrab();
                 }
             });
         }
@@ -904,7 +935,8 @@ public class JFXPanel extends JComponent {
 
                 if (jfxPanelWindow == eventWindow) {
                     SwingNodeHelper.runOnFxThread(() -> {
-                        if (JFXPanel.this.stagePeer != null) {
+                        EmbeddedStageInterface lStagePeer = getStagePeer();
+                        if (lStagePeer != null) {
                             // No need to check if grab is active or not.
                             // NoAutoHide popups don't request the grab and
                             // ignore the Ungrab event anyway.
@@ -912,7 +944,7 @@ public class JFXPanel extends JComponent {
                             // user clicks some non-FX content, even if for
                             // some reason they didn't install the grab when
                             // they were shown.
-                            JFXPanel.this.stagePeer.focusUngrab();
+                            lStagePeer.focusUngrab();
                         }
                     });
                 }
@@ -948,7 +980,7 @@ public class JFXPanel extends JComponent {
 
     @Override
     public InputMethodRequests getInputMethodRequests() {
-        EmbeddedSceneInterface scene = scenePeer;
+        EmbeddedSceneInterface scene = getScenePeer();
         if (scene == null) {
             return null;
         }
@@ -998,16 +1030,27 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedStage(EmbeddedStageInterface embeddedStage) {
-            stagePeer = embeddedStage;
-            if (stagePeer == null) {
+            EmbeddedStageInterface lStagePeer;
+            synchronized(LOCK) {
+                lStagePeer = stagePeer;
+            }
+            lStagePeer = embeddedStage;
+            if (lStagePeer == null) {
                 return;
             }
             if (pWidth > 0 && pHeight > 0) {
-                stagePeer.setSize(pWidth, pHeight);
+                lStagePeer.setSize(pWidth, pHeight);
+            }
+            synchronized(LOCK) {
+                stagePeer = lStagePeer;
             }
             invokeOnClientEDT(() -> {
-                if (stagePeer != null && JFXPanel.this.isFocusOwner()) {
-                    stagePeer.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
+                EmbeddedStageInterface tmpStagePeer;
+                synchronized(LOCK) {
+                    tmpStagePeer = stagePeer;
+                }
+                if (tmpStagePeer != null && JFXPanel.this.isFocusOwner()) {
+                    tmpStagePeer.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
                 }
             });
             sendMoveEventToFX();
@@ -1015,11 +1058,15 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedScene(EmbeddedSceneInterface embeddedScene) {
-            if (scenePeer == embeddedScene) {
+            EmbeddedSceneInterface lScenePeer;
+            synchronized(LOCK) {
+                lScenePeer = scenePeer;
+            }
+            if (lScenePeer == embeddedScene) {
                 return;
             }
-            scenePeer = embeddedScene;
-            if (scenePeer == null) {
+            lScenePeer = embeddedScene;
+            if (lScenePeer == null) {
                 invokeOnClientEDT(() -> {
                     if (dnd != null) {
                         dnd.removeNotify();
@@ -1029,15 +1076,22 @@ public class JFXPanel extends JComponent {
                 return;
             }
             if (pWidth > 0 && pHeight > 0) {
-                scenePeer.setSize(pWidth, pHeight);
+                lScenePeer.setSize(pWidth, pHeight);
             }
-            scenePeer.setPixelScaleFactors((float) scaleFactorX, (float) scaleFactorY);
+            lScenePeer.setPixelScaleFactors((float) scaleFactorX, (float) scaleFactorY);
+            synchronized(LOCK) {
+                scenePeer = lScenePeer;
+            }
 
             invokeOnClientEDT(() -> {
-                dnd = new SwingDnD(JFXPanel.this, scenePeer);
+                EmbeddedSceneInterface tmpScenePeer;
+                synchronized(LOCK) {
+                    tmpScenePeer = scenePeer;
+                }
+                dnd = new SwingDnD(JFXPanel.this, tmpScenePeer);
                 dnd.addNotify();
-                if (scenePeer != null) {
-                    scenePeer.setDragStartListener(dnd.getDragStartListener());
+                if (tmpScenePeer != null) {
+                    tmpScenePeer.setDragStartListener(dnd.getDragStartListener());
                 }
             });
         }
