@@ -28,10 +28,10 @@ package javafx.scene.control.rich.model;
 import com.sun.javafx.scene.control.rich.StringStyledInput;
 
 /**
- * Class represents a source of styled text segments for the purposes of
+ * This interface represents a source of styled text segments for the purposes of
  * pasting, importing, or loading from a file.
  */
-public abstract class StyledInput {
+public interface StyledInput {
     /**
      * Returns the next segment, or null if no more segments.
      */

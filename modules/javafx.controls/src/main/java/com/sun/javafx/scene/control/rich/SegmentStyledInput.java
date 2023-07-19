@@ -22,34 +22,24 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.javafx.scene.control.rich.model;
 
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyleInfo;
+package com.sun.javafx.scene.control.rich;
+
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledSegment;
 
-/**
- * Test Styled Input gets its data from string-style pairs.
- */
-public class TStyledInput implements StyledInput {
-    private final Object[] items;
+public class SegmentStyledInput implements StyledInput {
+    private final StyledSegment[] segments;
     private int index;
-    
-    public TStyledInput(Object[] items) {
-        this.items = items;
+
+    public SegmentStyledInput(StyledSegment[] segments) {
+        this.segments = segments;
     }
 
     @Override
     public StyledSegment nextSegment() {
-        if(index < items.length) {
-            String text = (String)items[index++];
-            if("\n".equals(text)) {
-                return StyledSegment.LINE_BREAK;
-            }
-
-            StyleAttrs a = (StyleAttrs)items[index++];
-            return StyledSegment.of(text, StyleInfo.of(a));
+        if (index < segments.length) {
+            return segments[index++];
         }
         return null;
     }

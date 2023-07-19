@@ -968,13 +968,13 @@ public class RichTextArea extends Control {
     }
     
     public boolean isUndoable() {
-        // TODO
-        return false;
+        StyledTextModel m = getModel();
+        return m == null ? false : m.isUndoable();
     }
     
     public boolean isRedoable() {
-        // TODO
-        return false;
+        StyledTextModel m = getModel();
+        return m == null ? false : m.isRedoable();
     }
 
     /**
@@ -1002,11 +1002,6 @@ public class RichTextArea extends Control {
     public void applyStyle(TextPos start, TextPos end, StyleAttrs attrs) {
         if (canEdit()) {
             StyledTextModel m = getModel();
-            if (start.compareTo(end) > 0) {
-                TextPos p = start;
-                start = end;
-                end = p;
-            }
             m.applyStyle(start, end, attrs);
         }
     }

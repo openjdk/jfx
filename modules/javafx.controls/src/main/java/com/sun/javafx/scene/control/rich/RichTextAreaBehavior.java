@@ -27,44 +27,7 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import static javafx.scene.control.rich.RichTextArea.BACKSPACE;
-import static javafx.scene.control.rich.RichTextArea.COPY;
-import static javafx.scene.control.rich.RichTextArea.CUT;
-import static javafx.scene.control.rich.RichTextArea.DELETE;
-import static javafx.scene.control.rich.RichTextArea.DELETE_PARAGRAPH;
-import static javafx.scene.control.rich.RichTextArea.INSERT_LINE_BREAK;
-import static javafx.scene.control.rich.RichTextArea.INSERT_TAB;
-import static javafx.scene.control.rich.RichTextArea.MOVE_DOCUMENT_END;
-import static javafx.scene.control.rich.RichTextArea.MOVE_DOCUMENT_START;
-import static javafx.scene.control.rich.RichTextArea.MOVE_DOWN;
-import static javafx.scene.control.rich.RichTextArea.MOVE_LEFT;
-import static javafx.scene.control.rich.RichTextArea.MOVE_LINE_END;
-import static javafx.scene.control.rich.RichTextArea.MOVE_LINE_START;
-import static javafx.scene.control.rich.RichTextArea.MOVE_RIGHT;
-import static javafx.scene.control.rich.RichTextArea.MOVE_UP;
-import static javafx.scene.control.rich.RichTextArea.MOVE_WORD_NEXT;
-import static javafx.scene.control.rich.RichTextArea.MOVE_WORD_NEXT_END;
-import static javafx.scene.control.rich.RichTextArea.MOVE_WORD_PREVIOUS;
-import static javafx.scene.control.rich.RichTextArea.PAGE_DOWN;
-import static javafx.scene.control.rich.RichTextArea.PAGE_UP;
-import static javafx.scene.control.rich.RichTextArea.PASTE;
-import static javafx.scene.control.rich.RichTextArea.PASTE_PLAIN_TEXT;
-import static javafx.scene.control.rich.RichTextArea.REDO;
-import static javafx.scene.control.rich.RichTextArea.SELECT_ALL;
-import static javafx.scene.control.rich.RichTextArea.SELECT_DOCUMENT_END;
-import static javafx.scene.control.rich.RichTextArea.SELECT_DOCUMENT_START;
-import static javafx.scene.control.rich.RichTextArea.SELECT_DOWN;
-import static javafx.scene.control.rich.RichTextArea.SELECT_LEFT;
-import static javafx.scene.control.rich.RichTextArea.SELECT_PAGE_DOWN;
-import static javafx.scene.control.rich.RichTextArea.SELECT_PAGE_UP;
-import static javafx.scene.control.rich.RichTextArea.SELECT_PARAGRAPH;
-import static javafx.scene.control.rich.RichTextArea.SELECT_RIGHT;
-import static javafx.scene.control.rich.RichTextArea.SELECT_UP;
-import static javafx.scene.control.rich.RichTextArea.SELECT_WORD;
-import static javafx.scene.control.rich.RichTextArea.SELECT_WORD_NEXT;
-import static javafx.scene.control.rich.RichTextArea.SELECT_WORD_NEXT_END;
-import static javafx.scene.control.rich.RichTextArea.SELECT_WORD_PREVIOUS;
-import static javafx.scene.control.rich.RichTextArea.UNDO;
+import static javafx.scene.control.rich.RichTextArea.*;
 import java.text.BreakIterator;
 import java.util.HashMap;
 import javafx.animation.KeyFrame;
@@ -1280,14 +1243,20 @@ public class RichTextAreaBehavior {
 
         return new TextPos(index, textLength);
     }
-    
+
     public void redo() {
-        // TODO
-        System.out.println("redo");
+        StyledTextModel m = control.getModel();
+        if (m != null) {
+            m.redo(vflow);
+            // TODO restore selection
+        }
     }
-    
+
     public void undo() {
-        // TODO
-        System.out.println("undo");
+        StyledTextModel m = control.getModel();
+        if (m != null) {
+            m.undo(vflow);
+            // TODO restore selection
+        }
     }
 }

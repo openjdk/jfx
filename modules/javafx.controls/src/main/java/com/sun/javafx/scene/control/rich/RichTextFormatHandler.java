@@ -115,7 +115,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     }
 
     /** importer */
-    private static class RichStyledInput extends StyledInput {
+    private static class RichStyledInput implements StyledInput {
         private final String text;
         private int index;
         private StringBuilder sb;

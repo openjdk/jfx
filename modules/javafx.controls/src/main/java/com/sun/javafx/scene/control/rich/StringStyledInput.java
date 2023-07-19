@@ -29,7 +29,7 @@ import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledSegment;
 
-public class StringStyledInput extends StyledInput {
+public class StringStyledInput implements StyledInput {
     private final String text;
     private final StyleInfo style;
     private int offset;

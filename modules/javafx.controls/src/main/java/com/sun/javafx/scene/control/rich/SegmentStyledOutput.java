@@ -22,35 +22,34 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.javafx.scene.control.rich.model;
 
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyleInfo;
-import javafx.scene.control.rich.model.StyledInput;
+package com.sun.javafx.scene.control.rich;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 
 /**
- * Test Styled Input gets its data from string-style pairs.
+ * This StyledOutput simply collects StyledSegments in a list.
  */
-public class TStyledInput implements StyledInput {
-    private final Object[] items;
-    private int index;
+public class SegmentStyledOutput implements StyledOutput {
+    private ArrayList<StyledSegment> segments;
     
-    public TStyledInput(Object[] items) {
-        this.items = items;
+    public SegmentStyledOutput(int initialCapacity) {
+        segments = new ArrayList<>(initialCapacity);
     }
 
     @Override
-    public StyledSegment nextSegment() {
-        if(index < items.length) {
-            String text = (String)items[index++];
-            if("\n".equals(text)) {
-                return StyledSegment.LINE_BREAK;
-            }
+    public void append(StyledSegment s) throws IOException {
+        segments.add(s);
+    }
 
-            StyleAttrs a = (StyleAttrs)items[index++];
-            return StyledSegment.of(text, StyleInfo.of(a));
-        }
-        return null;
+    @Override
+    public void flush() throws IOException {
+    }
+    
+    public StyledSegment[] getSegments() {
+        return segments.toArray(new StyledSegment[segments.size()]);
     }
 }

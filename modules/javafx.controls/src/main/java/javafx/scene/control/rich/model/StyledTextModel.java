@@ -39,9 +39,11 @@ import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.util.Util;
 import javafx.scene.input.DataFormat;
 import com.sun.javafx.scene.control.rich.Markers;
 import com.sun.javafx.scene.control.rich.RichUtils;
+import com.sun.javafx.scene.control.rich.UndoableChange;
 
 /**
  * Base class for a styled text model for {@link RichTextArea}.
@@ -184,6 +186,8 @@ public abstract class StyledTextModel {
     private final CopyOnWriteArrayList<ChangeListener> listeners = new CopyOnWriteArrayList();
     private final HashMap<FHKey,FHPriority> handlers = new HashMap<>(2);
     private final Markers markers = new Markers();
+    private final UndoableChange head = UndoableChange.createHead();
+    private UndoableChange undo = head;
 
     public StyledTextModel() {
     }
@@ -268,89 +272,6 @@ public abstract class StyledTextModel {
         FHKey k = new FHKey(format, forExport);
         FHPriority p = handlers.get(k);
         return p == null ? null : p.handler();
-    }
-
-    /**
-     * Replaces the given range with the provided plain text.
-     * This is a convenience method that calls
-     * {@link #replace(StyleResolver,TextPos,TextPos,StyledInput)}.
-     * The caller must ensure that the start position precedes the end.
-     *
-     * @param resolver
-     * @param start
-     * @param end
-     * @param text
-     * @return
-     */
-    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text) {
-        if (isEditable()) {
-            StyleInfo si = getStyleInfo(start);
-            return replace(resolver, start, end, StyledInput.of(text, si));
-        }
-        return null;
-    }
-    
-    /**
-     * Replaces the given range with the provided styled text input.
-     * When inserting plain text, the style is taken from the preceding text segment, or, if the text is being
-     * inserted in the beginning of the document, the style is taken from the following text segment.
-     * <p>
-     * After the model applies the requested changes, an event is sent to all the registered ChangeListeners.
-     * <p>
-     * @param resolver
-     * @param start start position
-     * @param end end position
-     * @param input StyledInput
-     * @return text position at the end of the inserted text, or null if the model is read only
-     */
-    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input) {
-        // TODO create UndoableEvent
-        if (isEditable()) {
-            int cmp = start.compareTo(end);
-            if(cmp < 0) {
-                removeRegion(start, end);
-            } else if(cmp > 0) {
-                removeRegion(end, start);
-            }
-
-            int index = start.index();
-            int offset = start.offset();
-            int top = 0;
-            int btm = 0;
-            
-            StyledSegment seg;
-            while ((seg = input.nextSegment()) != null) {
-                if(seg.isParagraph()) {
-                    offset = 0;
-                    btm = 0;
-                    index++;
-                    Supplier<Node> gen = seg.getNodeGenerator();
-                    insertParagraph(index, gen);
-                } else if(seg.isText()) {
-                    int len = insertTextSegment(resolver, index, offset, seg);
-                    if(index == start.index()) {
-                        top += len;
-                    }
-                    offset += len;
-                    btm += len;
-                } else if(seg.isLineBreak()) {
-                    insertLineBreak(index, offset);
-                    index++;
-                    offset = 0;
-                    btm = 0;
-                }
-            }
-
-            int lines = index - start.index();
-            if (lines == 0) {
-                btm = 0;
-            }
-
-            fireChangeEvent(start, end, top, lines, btm);
-
-            return new TextPos(index, offset);
-        }
-        return null;
     }
 
     /**
@@ -506,6 +427,96 @@ public abstract class StyledTextModel {
     }
 
     /**
+     * Replaces the given range with the provided plain text.
+     * This is a convenience method that calls
+     * {@link #replace(StyleResolver,TextPos,TextPos,StyledInput)}.
+     * The caller must ensure that the start position precedes the end.
+     *
+     * @param resolver
+     * @param start
+     * @param end
+     * @param text
+     * @return
+     */
+    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text) {
+        if (isEditable()) {
+            StyleInfo si = getStyleInfo(start);
+            return replace(resolver, start, end, StyledInput.of(text, si));
+        }
+        return null;
+    }
+    
+    /**
+     * Replaces the given range with the provided styled text input.
+     * When inserting plain text, the style is taken from the preceding text segment, or, if the text is being
+     * inserted in the beginning of the document, the style is taken from the following text segment.
+     * <p>
+     * After the model applies the requested changes, an event is sent to all the registered ChangeListeners.
+     * <p>
+     * @param resolver
+     * @param start start position
+     * @param end end position
+     * @param input StyledInput
+     * @return text position at the end of the inserted text, or null if the model is read only
+     */
+    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input) {
+        if (isEditable()) {
+            int cmp = start.compareTo(end);
+            if (cmp > 0) {
+                TextPos p = start;
+                start = end;
+                end = p;
+            }
+
+            UndoableChange ch = UndoableChange.create(this, start, end);
+
+            if (cmp != 0) {
+                removeRegion(start, end);
+            }
+
+            int index = start.index();
+            int offset = start.offset();
+            int top = 0;
+            int btm = 0;
+
+            StyledSegment seg;
+            while ((seg = input.nextSegment()) != null) {
+                if (seg.isParagraph()) {
+                    offset = 0;
+                    btm = 0;
+                    index++;
+                    Supplier<Node> gen = seg.getNodeGenerator();
+                    insertParagraph(index, gen);
+                } else if (seg.isText()) {
+                    int len = insertTextSegment(resolver, index, offset, seg);
+                    if (index == start.index()) {
+                        top += len;
+                    }
+                    offset += len;
+                    btm += len;
+                } else if (seg.isLineBreak()) {
+                    insertLineBreak(index, offset);
+                    index++;
+                    offset = 0;
+                    btm = 0;
+                }
+            }
+
+            int lines = index - start.index();
+            if (lines == 0) {
+                btm = 0;
+            }
+
+            fireChangeEvent(start, end, top, lines, btm);
+
+            TextPos newEnd = new TextPos(index, offset);
+            add(ch, newEnd);
+            return newEnd;
+        }
+        return null;
+    }
+
+    /**
      * Applies a style to the specified text range.
      * 
      * @param start start position
@@ -513,10 +524,70 @@ public abstract class StyledTextModel {
      * @param attrs non-null attribute map
      */
     public final void applyStyle(TextPos start, TextPos end, StyleAttrs attrs) {
-        // TODO create UndoableEvent
-        boolean changed = applyStyleImpl(start, end, attrs);
-        if (changed) {
-            fireStyleChangeEvent(start, end);
+        if (isEditable()) {
+            if (start.compareTo(end) > 0) {
+                TextPos p = start;
+                start = end;
+                end = p;
+            }
+
+            UndoableChange ch = UndoableChange.create(this, start, end);
+            boolean changed = applyStyleImpl(start, end, attrs);
+            if (changed) {
+                // TODO undo end
+                fireStyleChangeEvent(start, end);
+                add(ch, end);
+            }
         }
+    }
+
+    // we are going to try putting undo management in the model
+    private void add(UndoableChange ch, TextPos end) {
+        if (ch == null) {
+            // the undo-redo system is in inconsistent state, let's drop everything
+            clearUndoRedo();
+            return;
+        }
+
+        ch.setUndoEnd(end);
+        ch.setPrev(undo);
+        undo.setNext(ch);
+        undo = ch;
+    }
+
+    public final boolean isUndoable() {
+        return (undo != head);
+    }
+
+    public final void undo(StyleResolver resolver) {
+        if (undo != head) {
+            try {
+                undo.undo(resolver);
+                undo = undo.getPrev();
+            } catch (IOException e) {
+                // undo-redo is in inconsistent state, clear
+                clearUndoRedo();
+            }
+        }
+    }
+
+    public final boolean isRedoable() {
+        return (undo.getNext() != null);
+    }
+
+    public final void redo(StyleResolver resolver) {
+        if (undo.getNext() != null) {
+            try {
+                undo.getNext().redo(resolver);
+                undo = undo.getNext();
+            } catch (IOException e) {
+                // undo-redo is in inconsistent state, clear
+                clearUndoRedo();
+            }
+        }
+    }
+    
+    private void clearUndoRedo() {
+        undo = head;
     }
 }

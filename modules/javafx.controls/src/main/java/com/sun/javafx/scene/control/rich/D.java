@@ -61,6 +61,8 @@ public class D {
         sb.append(c);
         sb.append('.');
         sb.append(s.getMethodName());
+        sb.append(':');
+        sb.append(s.getLineNumber());
         sb.append(' ');
     }
 

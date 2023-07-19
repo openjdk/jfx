@@ -24,6 +24,6 @@
  */
 
 /**
-<p>Provides a number of common RichTextArea models and the related classes.</p>
-*/
+ * <p>Provides common models for {@code RichTextArea} and support classes.</p>
+ */
 package javafx.scene.control.rich.model;
