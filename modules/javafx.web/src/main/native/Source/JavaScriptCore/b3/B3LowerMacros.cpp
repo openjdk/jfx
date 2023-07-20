@@ -372,7 +372,7 @@ private:
                         break;
                 }
 
-                if (isARM64E()) {
+                if (isARM64_LSE()) {
                     if (m_value->opcode() == AtomicXchgSub) {
                         m_value->setOpcodeUnsafely(AtomicXchgAdd);
                         m_value->child(0) = m_insertionSet.insert<Value>(
@@ -418,11 +418,133 @@ private:
                 break;
             }
 
+            case VectorPopcnt: {
+                if (!isX86())
+                    break;
+                ASSERT(m_value->as<SIMDValue>()->simdLane() == SIMDLane::i8x16);
+
+                // x86_64 does not natively support vector lanewise popcount, so we emulate it using multiple
+                // masks.
+
+                v128_t bottomNibbleConst;
+                v128_t popcntConst;
+                bottomNibbleConst.u64x2[0] = 0x0f0f0f0f0f0f0f0f;
+                bottomNibbleConst.u64x2[1] = 0x0f0f0f0f0f0f0f0f;
+                popcntConst.u64x2[0] = 0x0302020102010100;
+                popcntConst.u64x2[1] = 0x0403030203020201;
+                Value* bottomNibbleMask = m_insertionSet.insert<Const128Value>(m_index, m_origin, bottomNibbleConst);
+                Value* popcntMask = m_insertionSet.insert<Const128Value>(m_index, m_origin, popcntConst);
+
+                Value* four = m_insertionSet.insert<Const32Value>(m_index, m_origin, 4);
+                Value* v = m_value->child(0);
+                Value* upper = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorAndnot, B3::V128, SIMDLane::v128, SIMDSignMode::None, v, bottomNibbleMask);
+                Value* lower = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorAnd, B3::V128, SIMDLane::v128, SIMDSignMode::None, v, bottomNibbleMask);
+                upper = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorShr, B3::V128, SIMDLane::i16x8, SIMDSignMode::Unsigned, upper, four);
+                lower = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorSwizzle, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, popcntMask, lower);
+                upper = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorSwizzle, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, popcntMask, upper);
+                Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorAdd, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, upper, lower);
+                m_value->replaceWithIdentity(result);
+                m_changed = true;
+                break;
+            }
+
+            case VectorNot: {
+                if (!isX86())
+                    break;
+                // x86_64 has no vector bitwise NOT instruction, so we expand vxv.not v into vxv.xor -1, v
+                // here to give B3/Air a chance to optimize out repeated usage of the mask.
+                v128_t mask;
+                mask.u64x2[0] = 0xffffffffffffffff;
+                mask.u64x2[1] = 0xffffffffffffffff;
+                Value* ones = m_insertionSet.insert<Const128Value>(m_index, m_origin, mask);
+                Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, ones, m_value->child(0));
+                m_value->replaceWithIdentity(result);
+                m_changed = true;
+                break;
+            }
+
+            case VectorNeg: {
+                if (!isX86())
+                    break;
+                // x86_64 has no vector negate instruction. For integer vectors, we can replicate negation by
+                // subtracting from zero. For floating-point vectors, we need to toggle the sign using packed
+                // XOR.
+                SIMDValue* value = m_value->as<SIMDValue>();
+                switch (value->simdLane()) {
+                case SIMDLane::i8x16:
+                case SIMDLane::i16x8:
+                case SIMDLane::i32x4:
+                case SIMDLane::i64x2: {
+                    Value* zero = m_insertionSet.insert<Const128Value>(m_index, m_origin, v128_t());
+                    Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorSub, B3::V128, value->simdInfo(), zero, m_value->child(0));
+                    m_value->replaceWithIdentity(result);
+                    m_changed = true;
+                    break;
+                }
+                case SIMDLane::f32x4: {
+                    Value* topBit = m_insertionSet.insert<Const32Value>(m_index, m_origin, 0x80000000u);
+                    Value* floatMask = m_insertionSet.insert<Value>(m_index, BitwiseCast, m_origin, topBit);
+                    Value* vectorMask = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorSplat, B3::V128, SIMDLane::f32x4, SIMDSignMode::None, floatMask);
+                    Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, m_value->child(0), vectorMask);
+                    m_value->replaceWithIdentity(result);
+                    m_changed = true;
+                    break;
+                }
+                case SIMDLane::f64x2: {
+                    Value* topBit = m_insertionSet.insert<Const64Value>(m_index, m_origin, 0x8000000000000000ull);
+                    Value* doubleMask = m_insertionSet.insert<Value>(m_index, BitwiseCast, m_origin, topBit);
+                    Value* vectorMask = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorSplat, B3::V128, SIMDLane::f64x2, SIMDSignMode::None, doubleMask);
+                    Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, m_value->child(0), vectorMask);
+                    m_value->replaceWithIdentity(result);
+                    m_changed = true;
+                    break;
+                }
+                default:
+                    RELEASE_ASSERT_NOT_REACHED();
+                }
+                break;
+            }
+
+            case VectorNotEqual:
+                if (isX86())
+                    invertedComparisonByXor(VectorEqual, m_value->child(0), m_value->child(1));
+                break;
+            case VectorAbove:
+                if (isX86())
+                    invertedComparisonByXor(VectorBelowOrEqual, m_value->child(0), m_value->child(1));
+                break;
+            case VectorBelow:
+                if (isX86())
+                    invertedComparisonByXor(VectorAboveOrEqual, m_value->child(0), m_value->child(1));
+                break;
+            case VectorGreaterThanOrEqual:
+                if (isX86() && m_value->as<SIMDValue>()->simdLane() == SIMDLane::i64x2) {
+                    // Note: rhs and lhs are reversed here, we are semantically negating LessThan. GreaterThan is
+                    // just better supported on AVX.
+                    invertedComparisonByXor(VectorGreaterThan, m_value->child(1), m_value->child(0));
+                }
+                break;
+            case VectorLessThanOrEqual:
+                if (isX86() && m_value->as<SIMDValue>()->simdLane() == SIMDLane::i64x2)
+                    invertedComparisonByXor(VectorGreaterThan, m_value->child(0), m_value->child(1));
+                break;
             default:
                 break;
             }
         }
         m_insertionSet.execute(m_block);
+    }
+
+    void invertedComparisonByXor(Opcode opcodeToBeInverted, Value* lhs, Value* rhs)
+    {
+        v128_t allOnes;
+        allOnes.u64x2[0] = 0xffffffffffffffff;
+        allOnes.u64x2[1] = 0xffffffffffffffff;
+        Value* allOnesConst = m_insertionSet.insert<Const128Value>(m_index, m_origin, allOnes);
+        Value* compareResult = m_insertionSet.insert<SIMDValue>(m_index, m_origin, opcodeToBeInverted, B3::V128, m_value->as<SIMDValue>()->simdInfo(), lhs, rhs);
+        Value* result = m_insertionSet.insert<SIMDValue>(m_index, m_origin, VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, compareResult, allOnesConst);
+        m_value->replaceWithIdentity(result);
+        m_changed = true;
     }
 
     void makeDivisionChill(Opcode nonChillOpcode)
@@ -575,7 +697,7 @@ private:
                 patchpoint->numGPScratchRegisters = 2;
                 // Technically, we don't have to clobber macro registers on X86_64. This is probably
                 // OK though.
-                patchpoint->clobber(RegisterSet::macroScratchRegisters());
+                patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
 
                 BitVector handledIndices;
                 for (unsigned i = start; i < end; ++i) {
@@ -602,7 +724,7 @@ private:
                     [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
                         AllowMacroScratchRegisterUsage allowScratch(jit);
 
-                        using JumpTableCodePtr = MacroAssemblerCodePtr<JSSwitchPtrTag>;
+                        using JumpTableCodePtr = CodePtr<JSSwitchPtrTag>;
                         JumpTableCodePtr* jumpTable = static_cast<JumpTableCodePtr*>(
                             params.proc().addDataSection(sizeof(JumpTableCodePtr) * tableSize));
 
@@ -610,7 +732,7 @@ private:
                         GPRReg scratch = params.gpScratch(0);
 
                         jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
-                        jit.load64(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::ScalePtr), scratch);
+                        jit.loadPtr(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::ScalePtr), scratch);
                         jit.farJump(scratch, JSSwitchPtrTag);
 
                         // These labels are guaranteed to be populated before either late paths or

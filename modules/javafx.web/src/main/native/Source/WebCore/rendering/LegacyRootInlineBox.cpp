@@ -820,7 +820,7 @@ LayoutUnit LegacyRootInlineBox::verticalPositionForBox(LegacyInlineBox* box, Ver
         const RenderStyle& parentLineStyle = firstLine ? parent->firstLineStyle() : parent->style();
         const FontCascade& font = parentLineStyle.fontCascade();
         const FontMetrics& fontMetrics = font.metricsOfPrimaryFont();
-        int fontSize = font.pixelSize();
+        auto fontSize = font.size();
 
         LineDirectionMode lineDirection = parent->isHorizontalWritingMode() ? HorizontalLine : VerticalLine;
 
@@ -915,6 +915,11 @@ bool LegacyRootInlineBox::fitsToGlyphs() const
 bool LegacyRootInlineBox::includesRootLineBoxFontOrLeading() const
 {
     return renderer().style().lineBoxContain().containsAny({ LineBoxContain::Block, LineBoxContain::Inline, LineBoxContain::Font });
+}
+
+LayoutUnit LegacyRootInlineBox::lineBoxWidth() const
+{
+    return blockFlow().availableLogicalWidthForLine(lineBoxTop(), isFirstLine() ? IndentText : DoNotIndentText, lineBoxHeight());
 }
 
 #if ENABLE(TREE_DEBUGGING)

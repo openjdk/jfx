@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,11 +35,11 @@
 #include "Logging.h"
 #include "VideoFrameCV.h"
 #include <pal/spi/cf/CoreVideoSPI.h>
-#include <pal/spi/cocoa/IOSurfaceSPI.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/StdMap.h>
 #include <wtf/cf/TypeCastsCF.h>
+#include <wtf/spi/cocoa/IOSurfaceSPI.h>
 #include <wtf/text/StringBuilder.h>
 
 #include "CoreVideoSoftLink.h"
@@ -455,7 +455,7 @@ inline bool GraphicsContextGLCVCocoa::TextureContent::operator==(const TextureCo
         && format == other.format
         && type == other.type
         && unpackFlipY == other.unpackFlipY
-        && ImageOrientation::Orientation(orientation) == ImageOrientation::Orientation(other.orientation);
+        && orientation == other.orientation;
 }
 
 std::unique_ptr<GraphicsContextGLCVCocoa> GraphicsContextGLCVCocoa::create(GraphicsContextGLCocoa& context)
@@ -589,6 +589,7 @@ GraphicsContextGLCVCocoa::GraphicsContextGLCVCocoa(GraphicsContextGLCocoa& owner
 
 bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& videoFrame, PlatformGLObject outputTexture, GLint level, GLenum internalFormat, GLenum format, GLenum type, FlipY unpackFlipY)
 {
+    RetainPtr<CVPixelBufferRef> convertedImage;
     auto image = videoFrame.pixelBuffer();
     // FIXME: This currently only supports '420v' and '420f' pixel formats. Investigate supporting more pixel formats.
     OSType pixelFormat = CVPixelBufferGetPixelFormatType(image);
@@ -599,8 +600,14 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
         && pixelFormat != kCVPixelFormatType_AGX_420YpCbCr8BiPlanarFullRange
 #endif
         ) {
-        LOG(WebGL, "GraphicsContextGLCVCocoa::copyVideoTextureToPlatformTexture(%p) - Asked to copy an unsupported pixel format ('%s').", this, FourCC(pixelFormat).string().data());
+        convertedImage = convertPixelBuffer(image);
+        if (!convertedImage) {
+            LOG(WebGL, "GraphicsContextGLCVCocoa::copyVideoTextureToPlatformTexture(%p) - failed converting an image with pixel format ('%s').", this, FourCC(pixelFormat).string().data());
         return false;
+    }
+        image = convertedImage.get();
+        pixelFormat = CVPixelBufferGetPixelFormatType(image);
+        ASSERT(pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange);
     }
     IOSurfaceRef surface = CVPixelBufferGetIOSurface(image);
     if (!surface)
@@ -626,38 +633,38 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
     bool flipY = false; // Flip y coordinate, i.e. mirrored along the x-axis.
     bool flipX = false; // Flip x coordinate, i.e. mirrored along the y-axis.
     bool swapXY = false;
-    switch (videoFrame.orientation()) {
-    case ImageOrientation::FromImage:
-    case ImageOrientation::OriginTopLeft:
+    switch (videoFrame.orientation().orientation()) {
+    case ImageOrientation::Orientation::FromImage:
+    case ImageOrientation::Orientation::OriginTopLeft:
         break;
-    case ImageOrientation::OriginTopRight:
+    case ImageOrientation::Orientation::OriginTopRight:
         flipX = true;
         break;
-    case ImageOrientation::OriginBottomRight:
+    case ImageOrientation::Orientation::OriginBottomRight:
         // Rotated 180 degrees.
         flipY = true;
         flipX = true;
         break;
-    case ImageOrientation::OriginBottomLeft:
+    case ImageOrientation::Orientation::OriginBottomLeft:
         // Mirrored along the x-axis.
         flipY = true;
         break;
-    case ImageOrientation::OriginLeftTop:
+    case ImageOrientation::Orientation::OriginLeftTop:
         // Mirrored along x-axis and rotated 270 degrees clock-wise.
         swapXY = true;
         break;
-    case ImageOrientation::OriginRightTop:
+    case ImageOrientation::Orientation::OriginRightTop:
         // Rotated 90 degrees clock-wise.
         flipX = true;
         swapXY = true;
         break;
-    case ImageOrientation::OriginRightBottom:
+    case ImageOrientation::Orientation::OriginRightBottom:
         // Mirror along x-axis and rotated 90 degrees clockwise.
         flipY = true;
         flipX = true;
         swapXY = true;
         break;
-    case ImageOrientation::OriginLeftBottom:
+    case ImageOrientation::Orientation::OriginLeftBottom:
         // Rotated 270 degrees clock-wise.
         flipY = true;
         swapXY = true;
@@ -683,10 +690,6 @@ bool GraphicsContextGLCVCocoa::copyVideoSampleToTexture(const VideoFrameCV& vide
     });
     // Allocate memory for the output texture.
     GL_BindTexture(GL_TEXTURE_2D, outputTexture);
-    GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    GL_TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     GL_TexImage2D(GL_TEXTURE_2D, level, internalFormat, width, height, 0, format, type, nullptr);
 
     GL_FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, outputTexture, level);

@@ -42,7 +42,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEImageElement);
 
 inline SVGFEImageElement::SVGFEImageElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGURIReference(this)
 {
     ASSERT(hasTagName(SVGNames::feImageTag));
@@ -63,12 +63,12 @@ SVGFEImageElement::~SVGFEImageElement()
     clearResourceReferences();
 }
 
-bool SVGFEImageElement::hasSingleSecurityOrigin() const
+bool SVGFEImageElement::renderingTaintsOrigin() const
 {
     if (!m_cachedImage)
-        return true;
+        return false;
     auto* image = m_cachedImage->image();
-    return !image || image->hasSingleSecurityOrigin();
+    return image && image->renderingTaintsOrigin();
 }
 
 void SVGFEImageElement::clearResourceReferences()

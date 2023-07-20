@@ -45,6 +45,9 @@ static constexpr int64_t nsPerSecond = 1000LL * 1000 * 1000;
 static constexpr int64_t nsPerMillisecond = 1000LL * 1000;
 static constexpr int64_t nsPerMicrosecond = 1000LL;
 
+static constexpr int32_t maxYear = 275760;
+static constexpr int32_t minYear = -271821;
+
 std::optional<TimeZoneID> parseTimeZoneName(StringView string)
 {
     const auto& timeZones = intlAvailableTimeZones();
@@ -1166,8 +1169,7 @@ uint8_t weekOfYear(PlainDate plainDate)
 
     if (week == 53) {
         // Check whether this is in next year's week 1.
-        int32_t daysInYear = isLeapYear(plainDate.year()) ? 366 : 365;
-        if ((daysInYear - dayOfYear) < (4 - dayOfWeek))
+        if ((daysInYear(plainDate.year()) - dayOfYear) < (4 - dayOfWeek))
             return 1;
     }
 
@@ -1269,12 +1271,42 @@ String temporalTimeToString(PlainTime plainTime, std::tuple<Precision, unsigned>
 
 String temporalDateToString(PlainDate plainDate)
 {
-    return makeString(pad('0', 4, plainDate.year()), '-', pad('0', 2, plainDate.month()), '-', pad('0', 2, plainDate.day()));
+    auto year = plainDate.year();
+
+    String prefix;
+    auto yearDigits = 4;
+    if (year < 0 || year > 9999) {
+        prefix = year < 0 ? "-"_s : "+"_s;
+        yearDigits = 6;
+        year = abs(year);
+    }
+
+    return makeString(prefix, pad('0', yearDigits, year), '-', pad('0', 2, plainDate.month()), '-', pad('0', 2, plainDate.day()));
+}
+
+String temporalDateTimeToString(PlainDate plainDate, PlainTime plainTime, std::tuple<Precision, unsigned> precision)
+{
+    return makeString(temporalDateToString(plainDate), 'T', temporalTimeToString(plainTime, precision));
 }
 
 String monthCode(uint32_t month)
 {
     return makeString('M', pad('0', 2, month));
+}
+
+// returns 0 for any invalid string
+uint8_t monthFromCode(StringView monthCode)
+{
+    if (monthCode.length() != 3 || !monthCode.startsWith('M') || !isASCIIDigit(monthCode[2]))
+        return 0;
+
+    uint8_t result = monthCode[2] - '0';
+    if (monthCode[1] == '1')
+        result += 10;
+    else if (monthCode[1] != '0')
+        return 0;
+
+    return result;
 }
 
 // IsValidDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds )
@@ -1428,6 +1460,12 @@ bool isDateTimeWithinLimits(int32_t year, uint8_t month, uint8_t day, unsigned h
     if (nanoseconds >= (ExactTime::maxValue + ExactTime::nsPerDay))
         return false;
     return true;
+}
+
+// More effective for our purposes than isInBounds<int32_t>.
+bool isYearWithinLimits(double year)
+{
+    return year >= minYear && year <= maxYear;
 }
 
 } // namespace ISO8601

@@ -130,18 +130,9 @@ void SWClientConnection::postMessageToServiceWorkerClient(ScriptExecutionContext
         return;
     }
 
-    if (auto* worker = Worker::byIdentifier(destinationContextIdentifier)) {
-        worker->postTaskToWorkerGlobalScope([message = WTFMove(message), sourceData = WTFMove(sourceData).isolatedCopy(), sourceOrigin = WTFMove(sourceOrigin).isolatedCopy()] (auto& context) mutable {
+    ScriptExecutionContext::postTaskTo(destinationContextIdentifier, [message = WTFMove(message), sourceData = WTFMove(sourceData).isolatedCopy(), sourceOrigin = WTFMove(sourceOrigin).isolatedCopy()](auto& context) mutable {
             postMessageToContainer(context, WTFMove(message), WTFMove(sourceData), WTFMove(sourceOrigin));
         });
-        return;
-    }
-
-    if (auto* sharedWorker = SharedWorkerThreadProxy::byIdentifier(destinationContextIdentifier)) {
-        sharedWorker->thread().runLoop().postTask([message = WTFMove(message), sourceData = WTFMove(sourceData).isolatedCopy(), sourceOrigin = WTFMove(sourceOrigin).isolatedCopy()] (auto& context) mutable {
-            postMessageToContainer(context, WTFMove(message), WTFMove(sourceData), WTFMove(sourceOrigin));
-        });
-    }
 }
 
 static void forAllWorkers(const Function<Function<void(ScriptExecutionContext&)>()>& callback)
@@ -261,12 +252,11 @@ void SWClientConnection::notifyClientsOfControllerChange(const HashSet<ScriptExe
             updateController(*document, ServiceWorkerData { newController });
             continue;
         }
-        if (auto* worker = Worker::byIdentifier(clientIdentifier)) {
-            worker->postTaskToWorkerGlobalScope([newController = newController.isolatedCopy()] (auto& context) mutable {
+        bool wasDispatched = ScriptExecutionContext::postTaskTo(clientIdentifier, [newController = newController.isolatedCopy()](auto& context) mutable {
                 updateController(context, WTFMove(newController));
             });
+        if (wasDispatched)
             continue;
-        }
         if (auto* sharedWorker = SharedWorkerThreadProxy::byIdentifier(clientIdentifier)) {
             sharedWorker->thread().runLoop().postTask([newController = newController.isolatedCopy()] (auto& context) mutable {
                 updateController(context, WTFMove(newController));

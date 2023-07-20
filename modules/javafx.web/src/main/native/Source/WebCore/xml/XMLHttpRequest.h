@@ -22,12 +22,12 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "BlobURL.h"
 #include "ExceptionOr.h"
 #include "FormData.h"
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
 #include "ThreadableLoaderClient.h"
+#include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
@@ -207,6 +207,7 @@ private:
     unsigned m_error : 1;
     unsigned m_uploadListenerFlag : 1;
     unsigned m_uploadComplete : 1;
+    unsigned m_wasAbortedByClient : 1;
     unsigned m_responseCacheIsValid : 1;
     unsigned m_readyState : 3; // State
     unsigned m_responseType : 3; // ResponseType
@@ -215,8 +216,7 @@ private:
 
     std::unique_ptr<XMLHttpRequestUpload> m_upload;
 
-    URL m_url;
-    BlobURLHandle m_blobURLLifetimeExtension;
+    URLKeepingBlobAlive m_url;
     String m_method;
     HTTPHeaderMap m_requestHeaders;
     RefPtr<FormData> m_requestEntityBody;
@@ -253,7 +253,6 @@ private:
 
     std::optional<ExceptionCode> m_exceptionCode;
     RefPtr<UserGestureToken> m_userGestureToken;
-    TaskCancellationGroup m_pendingAbortEvent;
     std::atomic<bool> m_hasRelevantEventListener;
     bool m_wasDidSendDataCalledForTotalBytes { false };
 };

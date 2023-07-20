@@ -105,6 +105,13 @@ void ThreadTimers::updateSharedTimer()
 void ThreadTimers::sharedTimerFiredInternal()
 {
     ASSERT(isMainThread() || (!isWebThread() && !isUIThread()));
+
+#if PLATFORM(JAVA)
+    if(!isMainThread()) {
+        return;
+    }
+#endif
+
     // Do a re-entrancy check.
     if (m_firingTimers)
         return;

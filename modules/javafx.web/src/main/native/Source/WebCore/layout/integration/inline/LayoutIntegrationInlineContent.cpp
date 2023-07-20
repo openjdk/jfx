@@ -26,8 +26,6 @@
 #include "config.h"
 #include "LayoutIntegrationInlineContent.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineIteratorBox.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "TextPainter.h"
@@ -95,7 +93,7 @@ const RenderObject& InlineContent::rendererForLayoutBox(const Layout::Box& layou
     return lineLayout().rendererForLayoutBox(layoutBox);
 }
 
-const RenderBlockFlow& InlineContent::containingBlock() const
+const RenderBlockFlow& InlineContent::formattingContextRoot() const
 {
     return lineLayout().flow();
 }
@@ -145,7 +143,7 @@ std::optional<size_t> InlineContent::firstBoxIndexForLayoutBox(const Layout::Box
 
 const Vector<size_t>& InlineContent::nonRootInlineBoxIndexesForLayoutBox(const Layout::Box& layoutBox) const
 {
-    ASSERT(layoutBox.isContainerBox());
+    ASSERT(layoutBox.isElementBox());
 
     if (!m_inlineBoxIndexCache) {
         m_inlineBoxIndexCache = makeUnique<InlineBoxIndexCache>();
@@ -185,4 +183,3 @@ void InlineContent::shrinkToFit()
 }
 }
 
-#endif

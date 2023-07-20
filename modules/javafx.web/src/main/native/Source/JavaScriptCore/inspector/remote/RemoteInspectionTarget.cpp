@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,21 +32,63 @@
 #include "RemoteInspector.h"
 #include <wtf/RunLoop.h>
 
+#if PLATFORM(COCOA)
+#include <wtf/spi/darwin/OSVariantSPI.h>
+#endif
+
 namespace Inspector {
 
 bool RemoteInspectionTarget::remoteControlAllowed() const
 {
-    return remoteDebuggingAllowed() || hasLocalDebugger();
+    return allowsInspectionByPolicy() || hasLocalDebugger();
 }
 
-void RemoteInspectionTarget::setRemoteDebuggingAllowed(bool allowed)
+bool RemoteInspectionTarget::allowsInspectionByPolicy() const
 {
-    if (m_allowed == allowed)
-        return;
+    switch (m_inspectable) {
+    case Inspectable::Yes:
+        return true;
+    case Inspectable::No:
+#if PLATFORM(COCOA)
+        static bool allowInternalSecurityPolicies = os_variant_allows_internal_security_policies("com.apple.WebInspector");
+        if (allowInternalSecurityPolicies && !RemoteInspector::singleton().isSimulatingCustomerInstall())
+            return true;
+        FALLTHROUGH;
+#endif
+    case Inspectable::NoIgnoringInternalPolicies:
+        return false;
+    }
 
-    m_allowed = allowed;
+    ASSERT_NOT_REACHED();
+    return false;
+}
 
-    if (m_allowed && automaticInspectionAllowed())
+bool RemoteInspectionTarget::inspectable() const
+{
+    switch (m_inspectable) {
+    case Inspectable::Yes:
+        return true;
+    case Inspectable::No:
+    case Inspectable::NoIgnoringInternalPolicies:
+        return false;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+void RemoteInspectionTarget::setInspectable(bool inspectable)
+{
+    if (inspectable)
+        m_inspectable = Inspectable::Yes;
+    else {
+        if (!JSRemoteInspectorGetInspectionFollowsInternalPolicies())
+            m_inspectable = Inspectable::NoIgnoringInternalPolicies;
+        else
+            m_inspectable = Inspectable::No;
+    }
+
+    if (allowsInspectionByPolicy() && automaticInspectionAllowed())
         RemoteInspector::singleton().updateAutomaticInspectionCandidate(this);
     else
         RemoteInspector::singleton().updateTarget(this);
@@ -55,7 +97,7 @@ void RemoteInspectionTarget::setRemoteDebuggingAllowed(bool allowed)
 void RemoteInspectionTarget::pauseWaitingForAutomaticInspection()
 {
     ASSERT(targetIdentifier());
-    ASSERT(m_allowed);
+    ASSERT(allowsInspectionByPolicy());
     ASSERT(automaticInspectionAllowed());
 
     while (RemoteInspector::singleton().waitingForAutomaticInspection(targetIdentifier())) {

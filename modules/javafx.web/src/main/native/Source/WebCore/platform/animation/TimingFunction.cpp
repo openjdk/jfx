@@ -26,9 +26,12 @@
 #include "config.h"
 #include "TimingFunction.h"
 
+#include "CSSParserContext.h"
+#include "CSSPrimitiveValue.h"
 #include "CSSTimingFunctionValue.h"
+#include "CSSValueKeywords.h"
+#include "MutableStyleProperties.h"
 #include "SpringSolver.h"
-#include "StyleProperties.h"
 #include "UnitBezier.h"
 #include <wtf/text/StringConcatenateNumbers.h>
 #include <wtf/text/TextStream.h>
@@ -38,15 +41,15 @@ namespace WebCore {
 TextStream& operator<<(TextStream& ts, const TimingFunction& timingFunction)
 {
     switch (timingFunction.type()) {
-    case TimingFunction::LinearFunction:
+    case TimingFunction::Type::LinearFunction:
         ts << "linear";
         break;
-    case TimingFunction::CubicBezierFunction: {
+    case TimingFunction::Type::CubicBezierFunction: {
         auto& function = downcast<CubicBezierTimingFunction>(timingFunction);
         ts << "cubic-bezier(" << function.x1() << ", " << function.y1() << ", " <<  function.x2() << ", " << function.y2() << ")";
         break;
     }
-    case TimingFunction::StepsFunction: {
+    case TimingFunction::Type::StepsFunction: {
         auto& function = downcast<StepsTimingFunction>(timingFunction);
         ts << "steps(" << function.numberOfSteps();
         if (auto stepPosition = function.stepPosition()) {
@@ -80,7 +83,7 @@ TextStream& operator<<(TextStream& ts, const TimingFunction& timingFunction)
         ts << ")";
         break;
     }
-    case TimingFunction::SpringFunction: {
+    case TimingFunction::Type::SpringFunction: {
         auto& function = downcast<SpringTimingFunction>(timingFunction);
         ts << "spring(" << function.mass() << " " << function.stiffness() << " " <<  function.damping() << " " << function.initialVelocity() << ")";
         break;
@@ -91,8 +94,8 @@ TextStream& operator<<(TextStream& ts, const TimingFunction& timingFunction)
 
 double TimingFunction::transformProgress(double progress, double duration, bool before) const
 {
-    switch (m_type) {
-    case TimingFunction::CubicBezierFunction: {
+    switch (type()) {
+    case Type::CubicBezierFunction: {
         auto& function = downcast<CubicBezierTimingFunction>(*this);
         if (function.isLinear())
             return progress;
@@ -101,7 +104,7 @@ double TimingFunction::transformProgress(double progress, double duration, bool 
         auto epsilon = 1.0 / (1000.0 * duration);
         return UnitBezier(function.x1(), function.y1(), function.x2(), function.y2()).solve(progress, epsilon);
     }
-    case TimingFunction::StepsFunction: {
+    case Type::StepsFunction: {
         // https://drafts.csswg.org/css-easing-1/#step-timing-functions
         auto& function = downcast<StepsTimingFunction>(*this);
         auto steps = function.numberOfSteps();
@@ -131,11 +134,11 @@ double TimingFunction::transformProgress(double progress, double duration, bool 
         // 7. The output progress value is current step / jumps.
         return currentStep / steps;
     }
-    case TimingFunction::SpringFunction: {
+    case Type::SpringFunction: {
         auto& function = downcast<SpringTimingFunction>(*this);
         return SpringSolver(function.mass(), function.stiffness(), function.damping(), function.initialVelocity()).solve(progress * duration);
     }
-    case TimingFunction::LinearFunction:
+    case Type::LinearFunction:
         return progress;
     }
 
@@ -163,11 +166,11 @@ RefPtr<TimingFunction> TimingFunction::createFromCSSValue(const CSSValue& value)
         case CSSValueEase:
             return CubicBezierTimingFunction::create();
         case CSSValueEaseIn:
-            return CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseIn);
+            return CubicBezierTimingFunction::create(CubicBezierTimingFunction::TimingFunctionPreset::EaseIn);
         case CSSValueEaseOut:
-            return CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseOut);
+            return CubicBezierTimingFunction::create(CubicBezierTimingFunction::TimingFunctionPreset::EaseOut);
         case CSSValueEaseInOut:
-            return CubicBezierTimingFunction::create(CubicBezierTimingFunction::EaseInOut);
+            return CubicBezierTimingFunction::create(CubicBezierTimingFunction::TimingFunctionPreset::EaseInOut);
         case CSSValueStepStart:
             return StepsTimingFunction::create(1, StepsTimingFunction::StepPosition::Start);
         case CSSValueStepEnd:
@@ -179,7 +182,7 @@ RefPtr<TimingFunction> TimingFunction::createFromCSSValue(const CSSValue& value)
 
     if (is<CSSCubicBezierTimingFunctionValue>(value)) {
         auto& cubicTimingFunction = downcast<CSSCubicBezierTimingFunctionValue>(value);
-        return CubicBezierTimingFunction::create(cubicTimingFunction.x1(), cubicTimingFunction.y1(), cubicTimingFunction.x2(), cubicTimingFunction.y2());
+        return CubicBezierTimingFunction::create(CubicBezierTimingFunction::TimingFunctionPreset::Custom, cubicTimingFunction.x1(), cubicTimingFunction.y1(), cubicTimingFunction.x2(), cubicTimingFunction.y2());
     }
     if (is<CSSStepsTimingFunctionValue>(value)) {
         auto& stepsTimingFunction = downcast<CSSStepsTimingFunctionValue>(value);
@@ -195,7 +198,7 @@ RefPtr<TimingFunction> TimingFunction::createFromCSSValue(const CSSValue& value)
 
 String TimingFunction::cssText() const
 {
-    if (m_type == TimingFunction::CubicBezierFunction) {
+    if (type() == Type::CubicBezierFunction) {
         auto& function = downcast<CubicBezierTimingFunction>(*this);
         if (function.x1() == 0.25 && function.y1() == 0.1 && function.x2() == 0.25 && function.y2() == 1.0)
             return "ease"_s;
@@ -208,7 +211,7 @@ String TimingFunction::cssText() const
         return makeString("cubic-bezier(", function.x1(), ", ", function.y1(), ", ", function.x2(), ", ", function.y2(), ')');
     }
 
-    if (m_type == TimingFunction::StepsFunction) {
+    if (type() == Type::StepsFunction) {
         auto& function = downcast<StepsTimingFunction>(*this);
         if (function.stepPosition() == StepsTimingFunction::StepPosition::JumpEnd || function.stepPosition() == StepsTimingFunction::StepPosition::End)
             return makeString("steps(", function.numberOfSteps(), ')');

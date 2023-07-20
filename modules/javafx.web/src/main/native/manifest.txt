@@ -82,7 +82,7 @@ exclude Source/WebKit/Resources
 exclude Source/WebCore/Modules/modern-media-controls/images/(iOS|macOS)/*
 
 # Include Versions.xconfig
-file Source/WebKitLegacy/mac/Configurations/Version.xcconfig
+file Configurations/Version.xcconfig
 file Source/WebCore/en.lproj/mediaControlsLocalizedStrings.js
 file Source/WebCore/Resources/plugIns.js
 

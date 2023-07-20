@@ -97,7 +97,7 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
         if (!equalIgnoringASCIICase(lastHTTPMethod, request.httpMethod())) {
             request.setHTTPMethod(lastHTTPMethod);
 
-            FormData* body = d->m_firstRequest.httpBody();
+            FormData* body = d->m_firstRequest.httpBody().get();
             if (!equalLettersIgnoringASCIICase(lastHTTPMethod, "get"_s) && body && !body->isEmpty())
                 request.setHTTPBody(body);
 
@@ -160,6 +160,7 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
                                                ResourceResponse& response,
                                                Vector<uint8_t>& data)
 {
+    UNUSED_PARAM(origin);
     URLLoader::loadSynchronously(context, request, error, response, data);
 }
 

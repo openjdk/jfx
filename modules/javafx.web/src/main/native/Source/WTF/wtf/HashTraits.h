@@ -248,8 +248,8 @@ template<typename P> struct HashTraits<Packed<P*>> : SimpleClassHashTraits<Packe
     static Packed<P*> emptyValue() { return nullptr; }
     static bool isEmptyValue(const TargetType& value) { return value.get() == nullptr; }
 
-    using PeekType = P*;
-    static PeekType peek(const TargetType& value) { return value.get(); }
+    using PeekType = Packed<P*>;
+    static PeekType peek(const TargetType& value) { return value; }
     static PeekType peek(P* value) { return value; }
 };
 
@@ -260,8 +260,8 @@ template<typename P> struct HashTraits<CompactPtr<P>> : SimpleClassHashTraits<Co
     static CompactPtr<P> emptyValue() { return nullptr; }
     static bool isEmptyValue(const TargetType& value) { return !value; }
 
-    using PeekType = P*;
-    static PeekType peek(const TargetType& value) { return value.get(); }
+    using PeekType = CompactPtr<P>;
+    static PeekType peek(const TargetType& value) { return value; }
     static PeekType peek(P* value) { return value; }
 };
 
@@ -308,18 +308,14 @@ struct HashTraitHasCustomDelete {
 };
 
 template<typename Traits, typename T>
-typename std::enable_if<HashTraitHasCustomDelete<Traits, T>::value>::type
-hashTraitsDeleteBucket(T& value)
+void hashTraitsDeleteBucket(T& value)
 {
+    if constexpr (HashTraitHasCustomDelete<Traits, T>::value)
     Traits::customDeleteBucket(value);
-}
-
-template<typename Traits, typename T>
-typename std::enable_if<!HashTraitHasCustomDelete<Traits, T>::value>::type
-hashTraitsDeleteBucket(T& value)
-{
+    else {
     value.~T();
     Traits::constructDeletedValue(value);
+    }
 }
 
 template<typename FirstTraitsArg, typename SecondTraitsArg>

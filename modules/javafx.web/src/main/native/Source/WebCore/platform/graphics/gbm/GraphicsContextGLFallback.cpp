@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2019 Google Inc. All rights reserved.
  * Copyright (C) 2022 Metrological Group B.V.
  * Copyright (C) 2022 Igalia S.L.
@@ -29,7 +29,7 @@
 #include "config.h"
 #include "GraphicsContextGLFallback.h"
 
-#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && USE(ANGLE)
+#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER)
 
 #include "ANGLEHeaders.h"
 #include "Logging.h"
@@ -85,9 +85,7 @@ RefPtr<VideoFrame> GraphicsContextGLFallback::paintCompositedResultsToVideoFrame
 
 bool GraphicsContextGLFallback::platformInitializeContext()
 {
-#if ENABLE(WEBGL2)
     m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
-#endif
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
@@ -112,6 +110,7 @@ bool GraphicsContextGLFallback::platformInitializeContext()
 
     EGLint configAttributes[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
@@ -276,4 +275,4 @@ void GraphicsContextGLFallback::prepareForDisplay()
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && USE(ANGLE)
+#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER)

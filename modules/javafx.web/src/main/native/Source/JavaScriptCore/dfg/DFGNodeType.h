@@ -165,8 +165,8 @@ namespace JSC { namespace DFG {
     macro(ArithDiv, NodeResultNumber | NodeMustGenerate) \
     macro(ArithMod, NodeResultNumber | NodeMustGenerate) \
     macro(ArithAbs, NodeResultNumber | NodeMustGenerate) \
-    macro(ArithMin, NodeResultNumber) \
-    macro(ArithMax, NodeResultNumber) \
+    macro(ArithMin, NodeResultNumber | NodeHasVarArgs) \
+    macro(ArithMax, NodeResultNumber | NodeHasVarArgs) \
     macro(ArithFRound, NodeResultDouble | NodeMustGenerate) \
     macro(ArithPow, NodeResultDouble) \
     macro(ArithRandom, NodeResultDouble | NodeMustGenerate) \
@@ -267,6 +267,7 @@ namespace JSC { namespace DFG {
     macro(GetVectorLength, NodeResultInt32) \
     macro(GetTypedArrayByteOffset, NodeResultInt32) \
     macro(GetTypedArrayByteOffsetAsInt52, NodeResultInt52) \
+    macro(GetWebAssemblyInstanceExports, NodeResultJS) \
     macro(GetScope, NodeResultJS) \
     macro(SkipScope, NodeResultJS) \
     macro(ResolveScope, NodeResultJS | NodeMustGenerate) \
@@ -301,6 +302,7 @@ namespace JSC { namespace DFG {
     macro(ObjectCreate, NodeMustGenerate | NodeResultJS) \
     macro(ObjectKeys, NodeMustGenerate | NodeResultJS) \
     macro(ObjectGetOwnPropertyNames, NodeMustGenerate | NodeResultJS) \
+    macro(ObjectToString, NodeMustGenerate | NodeResultJS) \
     \
     /* Atomics object functions. */\
     macro(AtomicsAdd, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
@@ -329,6 +331,7 @@ namespace JSC { namespace DFG {
     macro(RegExpMatchFastGlobal, NodeResultJS) \
     macro(StringReplace, NodeResultJS | NodeMustGenerate) \
     macro(StringReplaceRegExp, NodeResultJS | NodeMustGenerate) \
+    macro(StringReplaceString, NodeResultJS | NodeMustGenerate) \
     \
     /* Optimizations for string access */ \
     macro(StringCharCodeAt, NodeResultInt32) \
@@ -361,7 +364,8 @@ namespace JSC { namespace DFG {
     macro(DirectTailCallInlinedCaller, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     macro(TailCallVarargsInlinedCaller, NodeResultJS | NodeMustGenerate) \
     macro(TailCallForwardVarargsInlinedCaller, NodeResultJS | NodeMustGenerate) \
-    macro(CallEval, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
+    macro(CallDirectEval, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
+    macro(CallWasm, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
     \
     /* Shadow Chicken */\
     macro(LogShadowChickenPrologue, NodeMustGenerate) \
@@ -373,6 +377,7 @@ namespace JSC { namespace DFG {
     macro(NewAsyncGenerator, NodeResultJS) \
     macro(NewArray, NodeResultJS | NodeHasVarArgs) \
     macro(NewArrayWithSpread, NodeResultJS | NodeHasVarArgs) \
+    macro(NewArrayWithSpecies, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayWithSize, NodeResultJS | NodeMustGenerate) \
     macro(NewArrayBuffer, NodeResultJS) \
     macro(NewInternalFieldObject, NodeResultJS) \
@@ -461,7 +466,7 @@ namespace JSC { namespace DFG {
     macro(CreateScopedArguments, NodeResultJS) \
     macro(CreateClonedArguments, NodeResultJS) \
     macro(PhantomClonedArguments, NodeResultJS | NodeMustGenerate) \
-    macro(CreateArgumentsButterfly, NodeResultJS) \
+    macro(CreateArgumentsButterflyExcludingThis, NodeResultJS) \
     macro(GetFromArguments, NodeResultJS) \
     macro(PutToArguments, NodeMustGenerate) \
     macro(GetArgument, NodeResultJS) \
@@ -528,6 +533,7 @@ namespace JSC { namespace DFG {
     macro(LoadValueFromMapBucket, NodeResultJS) \
     macro(SetAdd, NodeMustGenerate | NodeResultJS) \
     macro(MapSet, NodeMustGenerate | NodeHasVarArgs | NodeResultJS) \
+    macro(MapOrSetDelete, NodeMustGenerate | NodeResultBoolean) \
     /* Nodes for JSWeakMap and JSWeakSet */ \
     macro(WeakMapGet, NodeResultJS) \
     macro(WeakSetAdd, NodeMustGenerate) \
@@ -536,6 +542,8 @@ namespace JSC { namespace DFG {
     \
     macro(StringValueOf, NodeMustGenerate | NodeResultJS) \
     macro(StringSlice, NodeResultJS) \
+    macro(StringSubstring, NodeResultJS) \
+    macro(StringLocaleCompare, NodeMustGenerate | NodeResultInt32) \
     macro(ToLowerCase, NodeResultJS) \
     /* Nodes for DOM JIT */\
     macro(CallDOMGetter, NodeResultJS | NodeMustGenerate) \

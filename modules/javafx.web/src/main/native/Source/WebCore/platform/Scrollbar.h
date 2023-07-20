@@ -48,6 +48,8 @@ public:
     void offsetDidChange();
 
     static int pixelsPerLineStep() { return 40; }
+    WEBCORE_EXPORT static int pixelsPerLineStep(int viewWidthOrHeight);
+    WEBCORE_EXPORT static void setShouldUseFixedPixelsPerLineStepForTesting(bool);
     static float minFractionToStepWhenPaging() { return 0.8; }
     WEBCORE_EXPORT static int maxOverlapBetweenPages();
     static int pageStep(int viewWidthOrHeight, int contentWidthOrHeight) { return std::max(std::max<int>(lroundf(viewWidthOrHeight * Scrollbar::minFractionToStepWhenPaging()), lroundf(contentWidthOrHeight - Scrollbar::maxOverlapBetweenPages())), 1); }
@@ -131,6 +133,7 @@ public:
 #endif
 
     bool supportsUpdateOnSecondaryThread() const;
+    static NativeScrollbarVisibility nativeScrollbarVisibility(const Scrollbar*);
 
 protected:
     Scrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize, ScrollbarTheme* = nullptr, bool isCustomScrollbar = false);

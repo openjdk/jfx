@@ -158,25 +158,22 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getContentW
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getLocationImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->location().string());
+    return nullptr;
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_setLocationImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
-    WebCore::JSMainThreadNullState state;
-    IMPL->setLocation(AtomString {String(env, value)});
+    return;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getWidthImpl(JNIEnv*, jclass, jlong peer)
 {
-    WebCore::JSMainThreadNullState state;
-    return IMPL->width();
+    return 0;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getHeightImpl(JNIEnv*, jclass, jlong peer)
 {
-    WebCore::JSMainThreadNullState state;
-    return IMPL->height();
+    return 0;
 }
 
 }

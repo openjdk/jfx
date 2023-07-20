@@ -71,8 +71,6 @@ private:
     void postExceptionToWorkerObject(const String&, int, int, const String&) final { };
     void workerGlobalScopeDestroyed() final { };
     void postMessageToWorkerObject(MessageWithMessagePorts&&) final { };
-    void confirmMessageFromWorkerObject(bool) final { };
-    void reportPendingActivity(bool) final { };
 };
 
 // FIXME: Use a valid WorkerReportingProxy
@@ -103,8 +101,8 @@ static WorkerParameters generateWorkerParameters(const ServiceWorkerContextData&
     };
 }
 
-ServiceWorkerThread::ServiceWorkerThread(ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode, const Settings::Values& settingsValues, WorkerLoaderProxy& loaderProxy, WorkerDebuggerProxy& debuggerProxy, IDBClient::IDBConnectionProxy* idbConnectionProxy, SocketProvider* socketProvider, std::unique_ptr<NotificationClient>&& notificationClient, PAL::SessionID sessionID)
-    : WorkerThread(generateWorkerParameters(contextData, WTFMove(userAgent), workerThreadMode, settingsValues, sessionID), contextData.script, loaderProxy, debuggerProxy, DummyServiceWorkerThreadProxy::shared(), WorkerThreadStartMode::Normal, contextData.registration.key.topOrigin().securityOrigin().get(), idbConnectionProxy, socketProvider, JSC::RuntimeFlags::createAllEnabled())
+ServiceWorkerThread::ServiceWorkerThread(ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode, const Settings::Values& settingsValues, WorkerLoaderProxy& loaderProxy, WorkerDebuggerProxy& debuggerProxy, WorkerBadgeProxy& badgeProxy, IDBClient::IDBConnectionProxy* idbConnectionProxy, SocketProvider* socketProvider, std::unique_ptr<NotificationClient>&& notificationClient, PAL::SessionID sessionID)
+    : WorkerThread(generateWorkerParameters(contextData, WTFMove(userAgent), workerThreadMode, settingsValues, sessionID), contextData.script, loaderProxy, debuggerProxy, DummyServiceWorkerThreadProxy::shared(), badgeProxy, WorkerThreadStartMode::Normal, contextData.registration.key.topOrigin().securityOrigin().get(), idbConnectionProxy, socketProvider, JSC::RuntimeFlags::createAllEnabled())
     , m_serviceWorkerIdentifier(contextData.serviceWorkerIdentifier)
     , m_jobDataIdentifier(contextData.jobDataIdentifier)
     , m_contextData(crossThreadCopy(WTFMove(contextData)))
@@ -143,9 +141,9 @@ void ServiceWorkerThread::queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Clie
 static void fireMessageEvent(ServiceWorkerGlobalScope& scope, MessageWithMessagePorts&& message, ExtendableMessageEventSource&& source, const URL& sourceURL)
 {
     auto ports = MessagePort::entanglePorts(scope, WTFMove(message.transferredPorts));
+    // FIXME: Add support for messageerror event when message deserialization fails.
     auto messageEvent = ExtendableMessageEvent::create(WTFMove(ports), WTFMove(message.message), SecurityOriginData::fromURL(sourceURL).toString(), { }, source);
     scope.dispatchEvent(messageEvent);
-    scope.thread().workerObjectProxy().confirmMessageFromWorkerObject(scope.hasPendingActivity());
     scope.updateExtendedEventsSet(messageEvent.ptr());
 }
 

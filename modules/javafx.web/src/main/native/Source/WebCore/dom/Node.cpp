@@ -65,6 +65,7 @@
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderTextControl.h"
+#include "RenderTreeUpdater.h"
 #include "RenderView.h"
 #include "SVGElement.h"
 #include "ScopedEventQueue.h"
@@ -106,36 +107,64 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Node);
 
 using namespace HTMLNames;
 
+struct SameSizeAsNode : public EventTarget {
+#if ASSERT_ENABLED
+    bool deletionHasBegun;
+    bool inRemovedLastRefFunction;
+    bool adoptionIsRequired;
+#endif
+    uint32_t refCountAndParentBit;
+    uint32_t nodeFlags;
+    void* parentNode;
+    void* treeScope;
+    void* previous;
+    void* next;
+    uint8_t rendererWithStyleFlags[8];
+    uint8_t rareDataWithBitfields[8];
+};
+
+static_assert(sizeof(Node) == sizeof(SameSizeAsNode), "Node should stay small");
+
 #if DUMP_NODE_STATISTICS
-static WeakHashSet<Node>& liveNodeSet()
+static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& liveNodeSet()
 {
-    static NeverDestroyed<WeakHashSet<Node>> liveNodes;
+    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> liveNodes;
     return liveNodes;
 }
 
 static const char* stringForRareDataUseType(NodeRareData::UseType useType)
 {
     switch (useType) {
+    case NodeRareData::UseType::TabIndex:
+        return "TabIndex";
+    case NodeRareData::UseType::ChildIndex:
+        return "ChildIndex";
     case NodeRareData::UseType::NodeList:
         return "NodeList";
     case NodeRareData::UseType::MutationObserver:
         return "MutationObserver";
-    case NodeRareData::UseType::TabIndex:
-        return "TabIndex";
-    case NodeRareData::UseType::MinimumSize:
-        return "MinimumSize";
+    case NodeRareData::UseType::ManuallyAssignedSlot:
+        return "ManuallyAssignedSlot";
     case NodeRareData::UseType::ScrollingPosition:
         return "ScrollingPosition";
     case NodeRareData::UseType::ComputedStyle:
         return "ComputedStyle";
+    case NodeRareData::UseType::DisplayContentsStyle:
+        return "DisplayContentsStyle";
+    case NodeRareData::UseType::EffectiveLang:
+        return "EffectiveLang";
     case NodeRareData::UseType::Dataset:
         return "Dataset";
     case NodeRareData::UseType::ClassList:
         return "ClassList";
     case NodeRareData::UseType::ShadowRoot:
         return "ShadowRoot";
-    case NodeRareData::UseType::CustomElementQueue:
-        return "CustomElementQueue";
+    case NodeRareData::UseType::CustomElementReactionQueue:
+        return "CustomElementReactionQueue";
+    case NodeRareData::UseType::CustomElementDefaultARIA:
+        return "CustomElementDefaultARIA";
+    case NodeRareData::UseType::FormAssociatedCustomElement:
+        return "FormAssociatedCustomElement";
     case NodeRareData::UseType::AttributeMap:
         return "AttributeMap";
     case NodeRareData::UseType::InteractionObserver:
@@ -146,12 +175,16 @@ static const char* stringForRareDataUseType(NodeRareData::UseType useType)
         return "Animations";
     case NodeRareData::UseType::PseudoElements:
         return "PseudoElements";
-    case NodeRareData::UseType::StyleMap:
-        return "StyleMap";
+    case NodeRareData::UseType::AttributeStyleMap:
+        return "AttributeStyleMap";
+    case NodeRareData::UseType::ComputedStyleMap:
+        return "ComputedStyleMap";
     case NodeRareData::UseType::PartList:
         return "PartList";
     case NodeRareData::UseType::PartNames:
         return "PartNames";
+    case NodeRareData::UseType::Nonce:
+        return "Nonce";
     case NodeRareData::UseType::ExplicitlySetAttrElementsMap:
         return "ExplicitlySetAttrElementsMap";
     }
@@ -184,7 +217,7 @@ void Node::dumpStatistics()
     size_t elementsWithRareData = 0;
     size_t elementsWithNamedNodeMap = 0;
 
-    HashMap<uint16_t, size_t> rareDataSingleUseTypeCounts;
+    HashMap<uint32_t, size_t> rareDataSingleUseTypeCounts;
     size_t mixedRareDataUseCount = 0;
 
     for (auto& node : liveNodeSet()) {
@@ -203,7 +236,7 @@ void Node::dumpStatistics()
                 useTypeCount++;
             }
             if (useTypeCount == 1) {
-                auto result = rareDataSingleUseTypeCounts.add(static_cast<uint16_t>(*useTypes.begin()), 0);
+                auto result = rareDataSingleUseTypeCounts.add(static_cast<uint32_t>(*useTypes.begin()), 0);
                 result.iterator->value++;
             } else
                 mixedRareDataUseCount++;
@@ -307,9 +340,9 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, nodeCounter, ("WebCoreNode"
 #ifndef NDEBUG
 static bool shouldIgnoreLeaks = false;
 
-static WeakHashSet<Node>& ignoreSet()
+static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& ignoreSet()
 {
-    static NeverDestroyed<WeakHashSet<Node>> ignore;
+    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> ignore;
     return ignore;
 }
 
@@ -343,15 +376,29 @@ void Node::trackForDebugging()
 #endif
 }
 
+inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destroying_delete_t)
+{
+    auto destroyAndFree = [&](auto& value) {
+        std::destroy_at(&value);
+        std::decay_t<decltype(value)>::freeAfterDestruction(&value);
+    };
+
+    if (nodeRareData->m_isElementRareData)
+        destroyAndFree(static_cast<ElementRareData&>(*nodeRareData));
+    else
+        destroyAndFree(*nodeRareData);
+}
+
 Node::Node(Document& document, ConstructionType type)
-    : m_nodeFlags(type)
+    : EventTarget(ConstructNode)
+    , m_nodeFlags(type)
     , m_treeScope(&document)
 {
     ASSERT(isMainThread());
 
     document.incrementReferencingNodeCount();
 
-#if !defined(NDEBUG) || (defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS)
+#if !defined(NDEBUG) || DUMP_NODE_STATISTICS
     trackForDebugging();
 #endif
 }
@@ -381,9 +428,6 @@ Node::~Node()
 
     if (auto* textManipulationController = document().textManipulationControllerIfExists(); UNLIKELY(textManipulationController))
         textManipulationController->removeNode(*this);
-
-    if (hasEventTargetData())
-        clearEventTargetData();
 
     document().decrementReferencingNodeCount();
 
@@ -419,30 +463,17 @@ void Node::willBeDeletedFrom(Document& document)
 void Node::materializeRareData()
 {
     if (is<Element>(*this))
-        m_rareDataWithBitfields.setPointer(std::unique_ptr<NodeRareData, NodeRareDataDeleter>(new ElementRareData));
+        m_rareDataWithBitfields.setPointer(makeUnique<ElementRareData>());
     else
-        m_rareDataWithBitfields.setPointer(std::unique_ptr<NodeRareData, NodeRareDataDeleter>(new NodeRareData));
-}
-
-inline void Node::NodeRareDataDeleter::operator()(NodeRareData* rareData) const
-{
-    if (rareData->isElementRareData())
-        delete static_cast<ElementRareData*>(rareData);
-    else
-        delete static_cast<NodeRareData*>(rareData);
+        m_rareDataWithBitfields.setPointer(makeUnique<NodeRareData>());
 }
 
 void Node::clearRareData()
 {
     ASSERT(hasRareData());
-    ASSERT(!transientMutationObserverRegistry() || transientMutationObserverRegistry()->isEmpty());
+    ASSERT(!transientMutationObserverRegistry() || transientMutationObserverRegistry()->isEmptyIgnoringNullReferences());
 
     m_rareDataWithBitfields.setPointer(nullptr);
-}
-
-bool Node::isNode() const
-{
-    return true;
 }
 
 String Node::nodeValue() const
@@ -779,7 +810,7 @@ static Node::Editability computeEditabilityFromComputedStyle(const RenderStyle& 
         return Node::Editability::ReadOnly;
 }
 
-Node::Editability Node::computeEditabilityWithStyle(const RenderStyle* style, UserSelectAllTreatment treatment, ShouldUpdateStyle shouldUpdateStyle) const
+Node::Editability Node::computeEditabilityWithStyle(const RenderStyle* incomingStyle, UserSelectAllTreatment treatment, ShouldUpdateStyle shouldUpdateStyle) const
 {
     if (!document().hasLivingRenderTree() || isPseudoElement())
         return Editability::ReadOnly;
@@ -796,8 +827,15 @@ Node::Editability Node::computeEditabilityWithStyle(const RenderStyle* style, Us
         document->updateStyleIfNeeded();
     }
 
-    if (!style)
-        style = isDocumentNode() ? renderStyle() : const_cast<Node*>(this)->computedStyle();
+    auto* style = [&] {
+        if (incomingStyle)
+            return incomingStyle;
+        if (isDocumentNode())
+            return renderStyle();
+        auto* element = is<Element>(this) ? downcast<Element>(this) : parentElementInComposedTree();
+        return element ? const_cast<Element&>(*element).computedStyleForEditability() : nullptr;
+    }();
+
     if (!style)
         return Editability::ReadOnly;
 
@@ -860,7 +898,20 @@ void Node::adjustStyleValidity(Style::Validity validity, Style::InvalidationMode
         setStyleFlag(NodeStyleFlag::StyleResolutionShouldRecompositeLayer);
 }
 
-inline void Node::updateAncestorsForStyleRecalc()
+void Node::updateAncestorsForStyleRecalc()
+{
+    markAncestorsForInvalidatedStyle();
+
+    auto* documentElement = document().documentElement();
+    if (!documentElement)
+        return;
+    if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
+        return;
+    document().setChildNeedsStyleRecalc();
+    document().scheduleStyleRecalc();
+}
+
+void Node::markAncestorsForInvalidatedStyle()
 {
     auto composedAncestors = composedTreeAncestors(*this);
     auto it = composedAncestors.begin();
@@ -877,14 +928,6 @@ inline void Node::updateAncestorsForStyleRecalc()
             it->setChildNeedsStyleRecalc();
         }
     }
-
-    auto* documentElement = document().documentElement();
-    if (!documentElement)
-        return;
-    if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
-        return;
-    document().setChildNeedsStyleRecalc();
-    document().scheduleStyleRecalc();
 }
 
 void Node::invalidateStyle(Style::Validity validity, Style::InvalidationMode mode)
@@ -1124,7 +1167,7 @@ Node* Node::pseudoAwareLastChild() const
 
 const RenderStyle* Node::computedStyle(PseudoId pseudoElementSpecifier)
 {
-    auto* composedParent = composedTreeAncestors(*this).first();
+    auto* composedParent = parentElementInComposedTree();
     if (!composedParent)
         return nullptr;
     return composedParent->computedStyle(pseudoElementSpecifier);
@@ -1215,6 +1258,23 @@ HTMLSlotElement* Node::assignedSlotForBindings() const
     if (shadowRoot && shadowRoot->mode() == ShadowRootMode::Open)
         return shadowRoot->findAssignedSlot(*this);
     return nullptr;
+}
+
+HTMLSlotElement* Node::manuallyAssignedSlot() const
+{
+    if (!hasRareData())
+        return nullptr;
+    return rareData()->manuallyAssignedSlot();
+}
+
+void Node::setManuallyAssignedSlot(HTMLSlotElement* slotElement)
+{
+    if (RefPtr element = dynamicDowncast<Element>(*this))
+        RenderTreeUpdater::tearDownRenderers(*element);
+    else if (RefPtr text = dynamicDowncast<Text>(*this))
+        RenderTreeUpdater::tearDownRenderer(*text);
+
+    ensureRareData().setManuallyAssignedSlot(slotElement);
 }
 
 ContainerNode* Node::parentInComposedTree() const
@@ -2021,7 +2081,7 @@ inline void Node::moveShadowTreeToNewDocument(ShadowRoot& shadowRoot, Document& 
         node.moveNodeToNewDocument(oldDocument, newDocument);
     }, [&oldDocument, &newDocument](ShadowRoot& innerShadowRoot) {
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&innerShadowRoot.document() == &oldDocument);
-        innerShadowRoot.moveShadowRootToNewDocument(newDocument);
+        innerShadowRoot.moveShadowRootToNewDocument(oldDocument, newDocument);
         moveShadowTreeToNewDocument(innerShadowRoot, oldDocument, newDocument);
     });
 }
@@ -2080,7 +2140,7 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
         }
         if (auto* transientRegistry = transientMutationObserverRegistry()) {
             for (auto& registration : *transientRegistry)
-                newDocument.addMutationObserverTypes(registration->mutationTypes());
+                newDocument.addMutationObserverTypes(registration.mutationTypes());
         }
     } else {
         ASSERT(!mutationObserverRegistry());
@@ -2178,6 +2238,8 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
         targetNode->document().didAddWheelEventHandler(*targetNode);
     else if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
         targetNode->document().didAddTouchEventHandler(*targetNode);
+    else if (eventNames.isMouseClickRelatedEventType(eventType))
+        targetNode->document().didAddOrRemoveMouseEventHandler(*targetNode);
 
 #if PLATFORM(IOS_FAMILY)
     if (targetNode == &targetNode->document() && eventType == eventNames.scrollEvent) {
@@ -2216,6 +2278,8 @@ static inline bool tryRemoveEventListener(Node* targetNode, const AtomString& ev
         targetNode->document().didRemoveWheelEventHandler(*targetNode);
     else if (eventNames.isTouchRelatedEventType(eventType, *targetNode))
         targetNode->document().didRemoveTouchEventHandler(*targetNode);
+    else if (eventNames.isMouseClickRelatedEventType(eventType))
+        targetNode->document().didAddOrRemoveMouseEventHandler(*targetNode);
 
 #if PLATFORM(IOS_FAMILY)
     if (targetNode == &targetNode->document() && eventType == eventNames.scrollEvent) {
@@ -2242,111 +2306,58 @@ bool Node::removeEventListener(const AtomString& eventType, EventListener& liste
     return tryRemoveEventListener(this, eventType, listener, options);
 }
 
-typedef HashMap<Node*, std::unique_ptr<EventTargetData>> EventTargetDataMap;
-
-static EventTargetDataMap& eventTargetDataMap()
-{
-    static NeverDestroyed<EventTargetDataMap> map;
-
-    return map;
-}
-
-static Lock s_eventTargetDataMapLock;
-
-EventTargetData* Node::eventTargetData()
-{
-    return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-}
-
-EventTargetData* Node::eventTargetDataConcurrently()
-{
-    // Not holding the lock when the world is stopped accelerates parallel constraint solving, which
-    // calls this function from many threads. Parallel constraint solving can happen with the world
-    // running or stopped, but if we do it with a running world, then we're usually mixing constraint
-    // solving with other work. Therefore, the most likely time for contention on this lock is when the
-    // world is stopped. We don't have to hold the lock when the world is stopped, because a stopped world
-    // means that we will never mutate the event target data map.
-    JSC::VM* vm = commonVMOrNull();
-    if (vm && vm->heap.worldIsRunning()) {
-        Locker locker { s_eventTargetDataMapLock };
-        return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-    }
-    return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-}
-
-EventTargetData& Node::ensureEventTargetData()
-{
-    if (hasEventTargetData())
-        return *eventTargetDataMap().get(this);
-
-    JSC::VM* vm = commonVMOrNull();
-    RELEASE_ASSERT(!vm || vm->heap.worldIsRunning());
-
-    Locker locker { s_eventTargetDataMapLock };
-    setHasEventTargetData(true);
-    return *eventTargetDataMap().add(this, makeUnique<EventTargetData>()).iterator->value;
-}
-
-void Node::clearEventTargetData()
-{
-    JSC::VM* vm = commonVMOrNull();
-    RELEASE_ASSERT(!vm || vm->heap.worldIsRunning());
-    Locker locker { s_eventTargetDataMapLock };
-    eventTargetDataMap().remove(this);
-}
-
 Vector<std::unique_ptr<MutationObserverRegistration>>* Node::mutationObserverRegistry()
 {
     if (!hasRareData())
         return nullptr;
-    auto* data = rareData()->mutationObserverData();
+    auto* data = rareData()->mutationObserverDataIfExists();
     if (!data)
         return nullptr;
     return &data->registry;
 }
 
-HashSet<MutationObserverRegistration*>* Node::transientMutationObserverRegistry()
+WeakHashSet<MutationObserverRegistration>* Node::transientMutationObserverRegistry()
 {
     if (!hasRareData())
         return nullptr;
-    auto* data = rareData()->mutationObserverData();
+    auto* data = rareData()->mutationObserverDataIfExists();
     if (!data)
         return nullptr;
     return &data->transientRegistry;
 }
 
-template<typename Registry> static inline void collectMatchingObserversForMutation(HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions>& observers, Registry* registry, Node& target, MutationObserverOptionType type, const QualifiedName* attributeName)
+HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> Node::registeredMutationObservers(MutationObserverOptionType type, const QualifiedName* attributeName)
 {
-    if (!registry)
-        return;
+    HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> observers;
+    ASSERT((type == MutationObserverOptionType::Attributes && attributeName) || !attributeName);
 
-    for (auto& registration : *registry) {
-        if (registration->shouldReceiveMutationFrom(target, type, attributeName)) {
-            auto deliveryOptions = registration->deliveryOptions();
-            auto result = observers.add(registration->observer(), deliveryOptions);
+    auto collectMatchingObserversForMutation = [&](MutationObserverRegistration& registration) {
+        if (registration.shouldReceiveMutationFrom(*this, type, attributeName)) {
+            auto deliveryOptions = registration.deliveryOptions();
+            auto result = observers.add(registration.observer(), deliveryOptions);
             if (!result.isNewEntry)
                 result.iterator->value.add(deliveryOptions);
         }
-    }
-}
+    };
 
-HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> Node::registeredMutationObservers(MutationObserverOptionType type, const QualifiedName* attributeName)
-{
-    HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> result;
-    ASSERT((type == MutationObserverOptionType::Attributes && attributeName) || !attributeName);
-    collectMatchingObserversForMutation(result, mutationObserverRegistry(), *this, type, attributeName);
-    collectMatchingObserversForMutation(result, transientMutationObserverRegistry(), *this, type, attributeName);
-    for (Node* node = parentNode(); node; node = node->parentNode()) {
-        collectMatchingObserversForMutation(result, node->mutationObserverRegistry(), *this, type, attributeName);
-        collectMatchingObserversForMutation(result, node->transientMutationObserverRegistry(), *this, type, attributeName);
+    for (RefPtr node = this; node; node = node->parentNode()) {
+        if (auto* registry = node->mutationObserverRegistry()) {
+            for (auto& registration : *registry)
+                collectMatchingObserversForMutation(*registration);
     }
-    return result;
+        if (auto* registry = node->transientMutationObserverRegistry()) {
+            for (auto& registration : *registry)
+                collectMatchingObserversForMutation(registration);
+        }
+    }
+
+    return observers;
 }
 
 void Node::registerMutationObserver(MutationObserver& observer, MutationObserverOptions options, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter)
 {
     MutationObserverRegistration* registration = nullptr;
-    auto& registry = ensureRareData().ensureMutationObserverData().registry;
+    auto& registry = ensureRareData().mutationObserverData().registry;
 
     for (auto& candidateRegistration : registry) {
         if (&candidateRegistration->observer() == &observer) {
@@ -2377,7 +2388,7 @@ void Node::unregisterMutationObserver(MutationObserverRegistration& registration
 
 void Node::registerTransientMutationObserver(MutationObserverRegistration& registration)
 {
-    ensureRareData().ensureMutationObserverData().transientRegistry.add(&registration);
+    ensureRareData().mutationObserverData().transientRegistry.add(registration);
 }
 
 void Node::unregisterTransientMutationObserver(MutationObserverRegistration& registration)
@@ -2387,8 +2398,8 @@ void Node::unregisterTransientMutationObserver(MutationObserverRegistration& reg
     if (!transientRegistry)
         return;
 
-    ASSERT(transientRegistry->contains(&registration));
-    transientRegistry->remove(&registration);
+    ASSERT(transientRegistry->contains(registration));
+    transientRegistry->remove(registration);
 }
 
 void Node::notifyMutationObserversNodeWillDetach()
@@ -2402,8 +2413,8 @@ void Node::notifyMutationObserversNodeWillDetach()
                 registration->observedSubtreeNodeWillDetach(*this);
         }
         if (auto* transientRegistry = node->transientMutationObserverRegistry()) {
-            for (auto* registration : *transientRegistry)
-                registration->observedSubtreeNodeWillDetach(*this);
+            for (auto& registration : *transientRegistry)
+                registration.observedSubtreeNodeWillDetach(*this);
         }
     }
 }
@@ -2542,7 +2553,9 @@ bool Node::willRespondToMouseMoveEvents() const
         return false;
 #endif
     auto& eventNames = WebCore::eventNames();
-    return hasEventListeners(eventNames.mousemoveEvent) || hasEventListeners(eventNames.mouseoverEvent) || hasEventListeners(eventNames.mouseoutEvent);
+    return eventTypes().containsIf([&](const auto& type) {
+        return eventNames.isMouseMoveRelatedEventType(type);
+    });
 }
 
 bool Node::willRespondToTouchEvents() const
@@ -2581,19 +2594,11 @@ bool Node::willRespondToMouseClickEventsWithEditability(Editability editability)
 #endif
     if (editability != Editability::ReadOnly)
         return true;
-    auto& eventNames = WebCore::eventNames();
-    return hasEventListeners(eventNames.mouseupEvent)
-        || hasEventListeners(eventNames.mousedownEvent)
-        || hasEventListeners(eventNames.clickEvent)
-#if !PLATFORM(IOS_FAMILY)
-        || hasEventListeners(eventNames.DOMActivateEvent)
-#endif
-    ;
-}
 
-bool Node::willRespondToMouseWheelEvents() const
-{
-    return hasEventListeners(eventNames().mousewheelEvent);
+    auto& eventNames = WebCore::eventNames();
+    return eventTypes().containsIf([&](const auto& type) {
+        return eventNames.isMouseClickRelatedEventType(type);
+    });
 }
 
 // It's important not to inline removedLastRef, because we don't want to inline the code to
@@ -2624,7 +2629,7 @@ void Node::removedLastRef()
 
 void Node::incrementConnectedSubframeCount(unsigned amount)
 {
-    static_assert(RareDataBitFields { Page::maxNumberOfFrames, 0, 0 }.connectedSubframeCount == Page::maxNumberOfFrames, "connectedSubframeCount must fit Page::maxNumberOfFrames");
+    static_assert(RareDataBitFields { Page::maxNumberOfFrames, 0, 0, 0, 0 }.connectedSubframeCount == Page::maxNumberOfFrames, "connectedSubframeCount must fit Page::maxNumberOfFrames");
 
     ASSERT(isContainerNode());
     auto bitfields = rareDataBitfields();
@@ -2662,6 +2667,27 @@ void Node::updateAncestorConnectedSubframeCountForInsertion() const
 
     for (Node* node = parentOrShadowHostNode(); node; node = node->parentOrShadowHostNode())
         node->incrementConnectedSubframeCount(count);
+}
+
+TextDirection Node::effectiveTextDirection() const
+{
+    if (rareDataBitfields().usesEffectiveTextDirection)
+        return static_cast<TextDirection>(rareDataBitfields().effectiveTextDirection);
+    return document().documentElementTextDirection();
+}
+
+void Node::setEffectiveTextDirection(TextDirection direction)
+{
+    auto bitfields = rareDataBitfields();
+    bitfields.effectiveTextDirection = static_cast<uint16_t>(direction);
+    setRareDataBitfields(bitfields);
+}
+
+void Node::setUsesEffectiveTextDirection(bool value)
+{
+    auto bitfields = rareDataBitfields();
+    bitfields.usesEffectiveTextDirection = value;
+    setRareDataBitfields(bitfields);
 }
 
 bool Node::inRenderedDocument() const

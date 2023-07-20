@@ -548,7 +548,6 @@ TextStream& operator<<(TextStream& ts, GridAutoFlow gridAutoFlow)
 TextStream& operator<<(TextStream& ts, HangingPunctuation punctuation)
 {
     switch (punctuation) {
-    case HangingPunctuation::None: ts << "none"; break;
     case HangingPunctuation::First: ts << "first"; break;
     case HangingPunctuation::Last: ts << "last"; break;
     case HangingPunctuation::AllowEnd: ts << "allow-end"; break;
@@ -672,7 +671,18 @@ TextStream& operator<<(TextStream& ts, ListStylePosition position)
 
 TextStream& operator<<(TextStream& ts, ListStyleType styleType)
 {
-    return ts << getValueName(toCSSValueID(styleType)).characters();
+    return ts << nameLiteral(toCSSValueID(styleType)).characters();
+}
+
+TextStream& operator<<(TextStream& ts, MarginTrimType marginTrimType)
+{
+    switch (marginTrimType) {
+    case MarginTrimType::BlockStart: ts << "block-start"; break;
+    case MarginTrimType::BlockEnd: ts << "block-end"; break;
+    case MarginTrimType::InlineStart: ts << "inline-start"; break;
+    case MarginTrimType::InlineEnd: ts << "inline-end"; break;
+    }
+    return ts;
 }
 
 TextStream& operator<<(TextStream& ts, MarqueeBehavior marqueeBehavior)
@@ -944,7 +954,6 @@ TextStream& operator<<(TextStream& ts, ScrollSnapStop stop)
 TextStream& operator<<(TextStream& ts, SpeakAs speakAs)
 {
     switch (speakAs) {
-    case SpeakAs::Normal: ts << "normal"; break;
     case SpeakAs::SpellOut: ts << "spell-out"; break;
     case SpeakAs::Digits: ts << "digits"; break;
     case SpeakAs::LiteralPunctuation: ts << "literal-punctuation"; break;
@@ -1087,6 +1096,20 @@ TextStream& operator<<(TextStream& ts, TextEmphasisPosition position)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, TextGroupAlign textGroupAlign)
+{
+    switch (textGroupAlign) {
+    case TextGroupAlign::None: ts << "none"; break;
+    case TextGroupAlign::Start: ts << "start"; break;
+    case TextGroupAlign::End: ts << "end"; break;
+    case TextGroupAlign::Left: ts << "left"; break;
+    case TextGroupAlign::Right: ts << "right"; break;
+    case TextGroupAlign::Center: ts << "center"; break;
+    }
+
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, TextJustify justify)
 {
     switch (justify) {
@@ -1134,6 +1157,7 @@ TextStream& operator<<(TextStream& ts, TextTransform textTransform)
     case TextTransform::Capitalize: ts << "capitalize"; break;
     case TextTransform::Uppercase: ts << "uppercase"; break;
     case TextTransform::Lowercase: ts << "lowercase"; break;
+    case TextTransform::FullSizeKana: ts << "full-size-kana"; break;
     case TextTransform::None: ts << "none"; break;
     }
     return ts;
@@ -1145,6 +1169,43 @@ TextStream& operator<<(TextStream& ts, TextUnderlinePosition underlinePosition)
     case TextUnderlinePosition::Auto: ts << "Auto"; break;
     case TextUnderlinePosition::Under: ts << "Under"; break;
     case TextUnderlinePosition::FromFont: ts << "FromFont"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, TextWrap wrap)
+{
+    switch (wrap) {
+    case TextWrap::Wrap: ts << "wrap"; break;
+    case TextWrap::NoWrap: ts << "nowrap"; break;
+    case TextWrap::Balance: ts << "balance"; break;
+    case TextWrap::Stable: ts << "stable"; break;
+    case TextWrap::Pretty: ts << "pretty"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, LeadingTrim leadingTrim)
+{
+    switch (leadingTrim) {
+    case LeadingTrim::Normal: ts << "Normal"; break;
+    case LeadingTrim::Start: ts << "Start"; break;
+    case LeadingTrim::End: ts << "End"; break;
+    case LeadingTrim::Both: ts << "Both"; break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, TextEdgeType textEdgeType)
+{
+    switch (textEdgeType) {
+    case TextEdgeType::Leading: ts << "half-leading"; break;
+    case TextEdgeType::Text: ts << "text-over/under baseline"; break;
+    case TextEdgeType::CapHeight: ts << "cap-height baseline"; break;
+    case TextEdgeType::ExHeight: ts << "x-height baseline"; break;
+    case TextEdgeType::Alphabetic: ts << "alphabetic baseline"; break;
+    case TextEdgeType::CJKIdeographic: ts << "ideographic-over baseline"; break;
+    case TextEdgeType::CJKIdeographicInk: ts << "ideographic-ink-over/ink-under baseline"; break;
     }
     return ts;
 }
@@ -1248,7 +1309,6 @@ TextStream& operator<<(TextStream& ts, WhiteSpace whiteSpace)
     case WhiteSpace::PreWrap: ts << "pre-wrap"; break;
     case WhiteSpace::PreLine: ts << "pre-line"; break;
     case WhiteSpace::NoWrap: ts << "nowrap"; break;
-    case WhiteSpace::KHTMLNoWrap: ts << "khtml-nowrap"; break;
     case WhiteSpace::BreakSpaces: ts << "break-spaces"; break;
     }
     return ts;

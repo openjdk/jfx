@@ -60,6 +60,7 @@
 #include <WebCore/XPathResult.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/JSExecState.h>
+#include <WebCore/VisibilityState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
@@ -69,6 +70,8 @@
 #include <wtf/java/JavaEnv.h>
 
 using namespace WebCore;
+
+enum class VisibilityState : bool;
 
 extern "C" {
 

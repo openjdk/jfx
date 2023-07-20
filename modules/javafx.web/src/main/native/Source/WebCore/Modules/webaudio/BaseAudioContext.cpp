@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2014 Google Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -94,6 +94,19 @@
 #include "GStreamerCommon.h"
 #endif
 
+#if __has_include(<WebKitAdditions/BaseAudioContextAdditions.cpp>)
+#include <WebKitAdditions/BaseAudioContextAdditions.cpp>
+#else
+namespace WebCore {
+
+static NoiseInjectionPolicy noiseInjectionPolicy(const Document&)
+{
+    return NoiseInjectionPolicy::None;
+}
+
+} // namespace WebCore
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(BaseAudioContext);
@@ -126,6 +139,7 @@ BaseAudioContext::BaseAudioContext(Document& document)
     , m_contextID(generateContextID())
     , m_worklet(AudioWorklet::create(*this))
     , m_listener(AudioListener::create(*this))
+    , m_noiseInjectionPolicy(WebCore::noiseInjectionPolicy(document))
 {
     liveAudioContexts().add(m_contextID);
 
@@ -176,8 +190,8 @@ void BaseAudioContext::clear()
 
     // Audio thread is dead. Nobody will schedule node deletion action. Let's do it ourselves.
     do {
-        deleteMarkedNodes();
         m_nodesToDelete = std::exchange(m_nodesMarkedForDeletion, { });
+        deleteMarkedNodes();
     } while (!m_nodesToDelete.isEmpty());
 }
 
@@ -279,6 +293,11 @@ bool BaseAudioContext::wouldTaintOrigin(const URL& url) const
 ExceptionOr<Ref<AudioBuffer>> BaseAudioContext::createBuffer(unsigned numberOfChannels, unsigned length, float sampleRate)
 {
     return AudioBuffer::create(AudioBufferOptions {numberOfChannels, length, sampleRate});
+}
+
+void BaseAudioContext::decodeAudioData(Ref<ArrayBuffer>&& audioData, RefPtr<AudioBufferCallback>&& successCallback, RefPtr<AudioBufferCallback>&& errorCallback)
+{
+    decodeAudioData(WTFMove(audioData), WTFMove(successCallback), WTFMove(errorCallback), std::nullopt);
 }
 
 void BaseAudioContext::decodeAudioData(Ref<ArrayBuffer>&& audioData, RefPtr<AudioBufferCallback>&& successCallback, RefPtr<AudioBufferCallback>&& errorCallback, std::optional<Ref<DeferredPromise>>&& promise)

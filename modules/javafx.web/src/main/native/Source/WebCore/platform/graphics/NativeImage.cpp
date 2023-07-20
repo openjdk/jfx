@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "NativeImage.h"
+#include "GraphicsContext.h"
 
 #include <wtf/NeverDestroyed.h>
 
@@ -41,12 +42,24 @@ NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIden
     : m_platformImage(WTFMove(platformImage))
     , m_renderingResourceIdentifier(renderingResourceIdentifier)
 {
+    ASSERT(m_platformImage);
 }
 
 NativeImage::~NativeImage()
 {
     for (auto observer : m_observers)
         observer->releaseNativeImage(m_renderingResourceIdentifier);
+}
+
+void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
+{
+    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+}
+
+void NativeImage::setPlatformImage(PlatformImagePtr&& platformImage)
+{
+    ASSERT(platformImage);
+    m_platformImage = WTFMove(platformImage);
 }
 
 } // namespace WebCore

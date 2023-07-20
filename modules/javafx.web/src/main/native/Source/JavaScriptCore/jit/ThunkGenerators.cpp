@@ -55,7 +55,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionGenerator(VM& vm)
     jit.jumpToExceptionHandler(vm);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::ExtraCTIThunk);
-    patchBuffer.link(operation, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler));
+    patchBuffer.link<OperationPtrTag>(operation, operationLookupExceptionHandler);
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "handleException");
 }
 
@@ -71,7 +71,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenera
     jit.jumpToExceptionHandler(vm);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::ExtraCTIThunk);
-    patchBuffer.link(operation, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame));
+    patchBuffer.link<OperationPtrTag>(operation, operationLookupExceptionHandlerFromCallerFrame);
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "handleExceptionWithCallFrameRollback");
 }
 
@@ -317,7 +317,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> virtualThunkFor(VM& vm, CallMode mo
     // NullSetterFunctionType does not get the fast path support. But it is OK since using NullSetterFunctionType is extremely rare.
     notJSFunction.link(&jit);
     slowCase.append(jit.branchIfNotType(GPRInfo::regT0, InternalFunctionType));
-    void* executableAddress = vm.getCTIInternalFunctionTrampolineFor(kind).executableAddress();
+    void* executableAddress = vm.getCTIInternalFunctionTrampolineFor(kind).taggedPtr();
     jit.move(CCallHelpers::TrustedImmPtr(executableAddress), GPRInfo::regT4);
 
     isNative.link(&jit);
@@ -373,8 +373,9 @@ MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunkFor(VM& vm, CallMode cal
 
 enum ThunkEntryType { EnterViaCall, EnterViaJumpWithSavedTags, EnterViaJumpWithoutSavedTags };
 enum class ThunkFunctionType { JSFunction, InternalFunction };
+enum class IncludeDebuggerHook { No, Yes };
 
-static MacroAssemblerCodeRef<JITThunkPtrTag> nativeForGenerator(VM& vm, ThunkFunctionType thunkFunctionType, CodeSpecializationKind kind, ThunkEntryType entryType = EnterViaCall)
+static MacroAssemblerCodeRef<JITThunkPtrTag> nativeForGenerator(VM& vm, ThunkFunctionType thunkFunctionType, CodeSpecializationKind kind, ThunkEntryType entryType = EnterViaCall, IncludeDebuggerHook includeDebuggerHook = IncludeDebuggerHook::No)
 {
     // FIXME: This should be able to log ShadowChicken prologue packets.
     // https://bugs.webkit.org/show_bug.cgi?id=155689
@@ -402,6 +403,14 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> nativeForGenerator(VM& vm, ThunkFun
     jit.emitPutToCallFrameHeader(nullptr, CallFrameSlot::codeBlock);
     jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
 
+    if (includeDebuggerHook == IncludeDebuggerHook::Yes) {
+        jit.move(JSInterfaceJIT::framePointerRegister, GPRInfo::argumentGPR0);
+        auto debuggerWillCallNativeExecutable = jit.call(OperationPtrTag);
+        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+            linkBuffer.link<OperationPtrTag>(debuggerWillCallNativeExecutable, operationDebuggerWillCallNativeExecutable);
+        });
+    }
+
     // Host function signature: f(JSGlobalObject*, CallFrame*);
 #if CPU(X86_64) && OS(WINDOWS)
     // Leave space for the callee parameter home addresses.
@@ -425,7 +434,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> nativeForGenerator(VM& vm, ThunkFun
             jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, executableOffsetToFunction), GPRInfo::argumentGPR2);
             auto operationCall = jit.call(OperationPtrTag);
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryHostFunction));
+                linkBuffer.link<OperationPtrTag>(operationCall, vmEntryHostFunction);
             });
         } else
             jit.call(CCallHelpers::Address(GPRInfo::argumentGPR2, executableOffsetToFunction), HostFunctionPtrTag);
@@ -436,7 +445,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> nativeForGenerator(VM& vm, ThunkFun
             jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, InternalFunction::offsetOfNativeFunctionFor(kind)), GPRInfo::argumentGPR2);
             auto operationCall = jit.call(OperationPtrTag);
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryHostFunction));
+                linkBuffer.link<OperationPtrTag>(operationCall, vmEntryHostFunction);
             });
         } else
             jit.call(CCallHelpers::Address(GPRInfo::argumentGPR2, InternalFunction::offsetOfNativeFunctionFor(kind)), HostFunctionPtrTag);
@@ -487,12 +496,17 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> nativeForGenerator(VM& vm, ThunkFun
     jit.jumpToExceptionHandler(vm);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Thunk);
-    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "%s %s%s trampoline", thunkFunctionType == ThunkFunctionType::JSFunction ? "native" : "internal", entryType == EnterViaJumpWithSavedTags ? "Tail With Saved Tags " : entryType == EnterViaJumpWithoutSavedTags ? "Tail Without Saved Tags " : "", toCString(kind).data());
+    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "%s %s%s%s trampoline", thunkFunctionType == ThunkFunctionType::JSFunction ? "native" : "internal", entryType == EnterViaJumpWithSavedTags ? "Tail With Saved Tags " : entryType == EnterViaJumpWithoutSavedTags ? "Tail Without Saved Tags " : "", toCString(kind).data(), includeDebuggerHook == IncludeDebuggerHook::Yes ? " Debugger" : "");
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeCallGenerator(VM& vm)
 {
     return nativeForGenerator(vm, ThunkFunctionType::JSFunction, CodeForCall);
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> nativeCallWithDebuggerHookGenerator(VM& vm)
+{
+    return nativeForGenerator(vm, ThunkFunctionType::JSFunction, CodeForCall, EnterViaCall, IncludeDebuggerHook::Yes);
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeTailCallGenerator(VM& vm)
@@ -508,6 +522,11 @@ MacroAssemblerCodeRef<JITThunkPtrTag> nativeTailCallWithoutSavedTagsGenerator(VM
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeConstructGenerator(VM& vm)
 {
     return nativeForGenerator(vm, ThunkFunctionType::JSFunction, CodeForConstruct);
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> nativeConstructWithDebuggerHookGenerator(VM& vm)
+{
+    return nativeForGenerator(vm, ThunkFunctionType::JSFunction, CodeForConstruct, EnterViaCall, IncludeDebuggerHook::Yes);
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> internalFunctionCallGenerator(VM& vm)
@@ -532,9 +551,10 @@ MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupGenerator(VM& vm)
 #else
     const GPRReg extraTemp = JSInterfaceJIT::regT5;
 #endif
-#  if CPU(X86_64)
+    static_assert(noOverlap(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1, GPRInfo::argumentGPR2, GPRInfo::regT3, GPRInfo::regT4, extraTemp));
+#if CPU(X86_64)
     jit.pop(JSInterfaceJIT::regT4);
-#  endif
+#endif
     jit.tagReturnAddress();
 #if CPU(ARM64E)
     jit.loadPtr(JSInterfaceJIT::Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()), GPRInfo::regT3);
@@ -551,17 +571,21 @@ MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupGenerator(VM& vm)
     jit.add32(JSInterfaceJIT::TrustedImm32(CallFrame::headerSizeInRegisters), JSInterfaceJIT::argumentGPR2);
 
     // Check to see if we have extra slots we can use
-    jit.move(JSInterfaceJIT::argumentGPR0, JSInterfaceJIT::argumentGPR1);
-    jit.and32(JSInterfaceJIT::TrustedImm32(stackAlignmentRegisters() - 1), JSInterfaceJIT::argumentGPR1);
-    JSInterfaceJIT::Jump noExtraSlot = jit.branchTest32(MacroAssembler::Zero, JSInterfaceJIT::argumentGPR1);
+    //
+    // argumentGPR0's padding is `align2(numParameters + CallFrame::headerSizeInRegisters) - (argumentCountIncludingThis + CallFrame::headerSizeInRegisters)`
+    // And extra slot means the above padding is an odd number. And after filling extra slot, it becomes +1, thus even number.
+    JSInterfaceJIT::Jump noExtraSlot = jit.branchTest32(MacroAssembler::Zero, JSInterfaceJIT::argumentGPR0, JSInterfaceJIT::TrustedImm32(stackAlignmentRegisters() - 1));
     jit.move(JSInterfaceJIT::TrustedImm64(JSValue::ValueUndefined), extraTemp);
-    JSInterfaceJIT::Label fillExtraSlots(jit.label());
+    static_assert(stackAlignmentRegisters() == 2);
     jit.store64(extraTemp, MacroAssembler::BaseIndex(JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::argumentGPR2, JSInterfaceJIT::TimesEight));
     jit.add32(JSInterfaceJIT::TrustedImm32(1), JSInterfaceJIT::argumentGPR2);
-    jit.branchSub32(JSInterfaceJIT::NonZero, JSInterfaceJIT::TrustedImm32(1), JSInterfaceJIT::argumentGPR1).linkTo(fillExtraSlots, &jit);
     jit.and32(JSInterfaceJIT::TrustedImm32(-stackAlignmentRegisters()), JSInterfaceJIT::argumentGPR0);
     JSInterfaceJIT::Jump done = jit.branchTest32(MacroAssembler::Zero, JSInterfaceJIT::argumentGPR0);
     noExtraSlot.link(&jit);
+
+    // At this point, argumentGPR2 is `align2(argumentCountIncludingThis + CallFrame::headerSizeInRegisters)`,
+    // and argumentGPR0 is `align2(numParameters + CallFrame::headerSizeInRegisters) - align2(argumentCountIncludingThis + CallFrame::headerSizeInRegisters)`
+    // Thus both argumentGPR0 and argumentGPR2 are align2-ed.
 
     jit.neg64(JSInterfaceJIT::argumentGPR0);
 
@@ -569,14 +593,26 @@ MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupGenerator(VM& vm)
     // We need to change the stack pointer first before performing copy/fill loops.
     // This stack space below the stack pointer is considered unused by OS. Therefore,
     // OS may corrupt this space when constructing a signal stack.
-    jit.move(JSInterfaceJIT::argumentGPR0, extraTemp);
-    jit.lshift64(JSInterfaceJIT::TrustedImm32(3), extraTemp);
+    jit.lshift64(JSInterfaceJIT::argumentGPR0, JSInterfaceJIT::TrustedImm32(3), extraTemp);
     jit.addPtr(extraTemp, JSInterfaceJIT::callFrameRegister);
     jit.untagReturnAddress();
     jit.addPtr(extraTemp, JSInterfaceJIT::stackPointerRegister);
     jit.tagReturnAddress();
 
     // Move current frame down argumentGPR0 number of slots
+#if CPU(ARM64)
+    jit.addPtr(JSInterfaceJIT::regT3, extraTemp);
+    JSInterfaceJIT::Label copyLoop(jit.label());
+    jit.loadPair64(CCallHelpers::PostIndexAddress(JSInterfaceJIT::regT3, 16), GPRInfo::argumentGPR1, GPRInfo::regT6);
+    jit.storePair64(GPRInfo::argumentGPR1, GPRInfo::regT6, CCallHelpers::PostIndexAddress(extraTemp, 16));
+    jit.branchSub32(MacroAssembler::NonZero, JSInterfaceJIT::TrustedImm32(2), JSInterfaceJIT::argumentGPR2).linkTo(copyLoop, &jit);
+
+    // Fill in argumentGPR0 missing arg slots with undefined
+    jit.move(JSInterfaceJIT::TrustedImm64(JSValue::ValueUndefined), GPRInfo::argumentGPR1);
+    JSInterfaceJIT::Label fillUndefinedLoop(jit.label());
+    jit.storePair64(GPRInfo::argumentGPR1, GPRInfo::argumentGPR1, CCallHelpers::PostIndexAddress(extraTemp, 16));
+    jit.branchAdd32(MacroAssembler::NonZero, JSInterfaceJIT::TrustedImm32(2), JSInterfaceJIT::argumentGPR0).linkTo(fillUndefinedLoop, &jit);
+#else
     JSInterfaceJIT::Label copyLoop(jit.label());
     jit.load64(CCallHelpers::Address(JSInterfaceJIT::regT3), extraTemp);
     jit.store64(extraTemp, MacroAssembler::BaseIndex(JSInterfaceJIT::regT3, JSInterfaceJIT::argumentGPR0, JSInterfaceJIT::TimesEight));
@@ -590,6 +626,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupGenerator(VM& vm)
     jit.store64(extraTemp, MacroAssembler::BaseIndex(JSInterfaceJIT::regT3, JSInterfaceJIT::argumentGPR0, JSInterfaceJIT::TimesEight));
     jit.addPtr(JSInterfaceJIT::TrustedImm32(8), JSInterfaceJIT::regT3);
     jit.branchAdd32(MacroAssembler::NonZero, JSInterfaceJIT::TrustedImm32(1), JSInterfaceJIT::argumentGPR2).linkTo(fillUndefinedLoop, &jit);
+#endif
 
     done.link(&jit);
 
@@ -603,9 +640,9 @@ MacroAssemblerCodeRef<JITThunkPtrTag> arityFixupGenerator(VM& vm)
     jit.storePtr(GPRInfo::regT3, JSInterfaceJIT::Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()));
 #endif
 
-#  if CPU(X86_64)
+#if CPU(X86_64)
     jit.push(JSInterfaceJIT::regT4);
-#  endif
+#endif
     jit.ret();
 #else // USE(JSVALUE64) section above, USE(JSVALUE32_64) section below.
     jit.move(JSInterfaceJIT::callFrameRegister, JSInterfaceJIT::regT3);
@@ -1117,6 +1154,25 @@ MacroAssemblerCodeRef<JITThunkPtrTag> truncThunkGenerator(VM& vm)
     return jit.finalize(vm.jitStubs->ctiNativeTailCall(vm), "trunc");
 }
 
+MacroAssemblerCodeRef<JITThunkPtrTag> numberConstructorCallThunkGenerator(VM& vm)
+{
+    SpecializedThunkJIT jit(vm, 1);
+    jit.loadJSArgument(0, JSRInfo::jsRegT10);
+    jit.appendFailure(jit.branchIfNotNumber(JSRInfo::jsRegT10, JSRInfo::jsRegT32.payloadGPR()));
+    jit.returnJSValue(JSRInfo::jsRegT10);
+    return jit.finalize(vm.jitStubs->ctiNativeTailCall(vm), "Number");
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> stringConstructorCallThunkGenerator(VM& vm)
+{
+    SpecializedThunkJIT jit(vm, 1);
+    jit.loadJSArgument(0, JSRInfo::jsRegT10);
+    jit.appendFailure(jit.branchIfNotCell(JSRInfo::jsRegT10));
+    jit.appendFailure(jit.branchIfNotString(JSRInfo::jsRegT10.payloadGPR()));
+    jit.returnJSValue(JSRInfo::jsRegT10);
+    return jit.finalize(vm.jitStubs->ctiNativeTailCall(vm), "String");
+}
+
 MacroAssemblerCodeRef<JITThunkPtrTag> roundThunkGenerator(VM& vm)
 {
     SpecializedThunkJIT jit(vm, 1);
@@ -1321,7 +1377,6 @@ MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM& vm)
     auto noArgs = jit.branchTestPtr(CCallHelpers::Zero, GPRInfo::regT2);
     jit.load32(CCallHelpers::Address(GPRInfo::regT2, JSImmutableButterfly::offsetOfPublicLength()), GPRInfo::regT2);
     jit.add32(GPRInfo::regT2, GPRInfo::regT1);
-    jit.sub32(CCallHelpers::TrustedImm32(1), GPRInfo::regT1);
     noArgs.link(&jit);
     jit.add32(CCallHelpers::TrustedImm32(CallFrame::headerSizeInRegisters - CallerFrameAndPC::sizeInRegisters), GPRInfo::regT1, GPRInfo::regT2);
     jit.lshift32(CCallHelpers::TrustedImm32(3), GPRInfo::regT2);
@@ -1380,7 +1435,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM& vm)
 
     CCallHelpers::Label loopBound = jit.label();
     jit.sub32(CCallHelpers::TrustedImm32(1), GPRInfo::regT1);
-    jit.loadValue(CCallHelpers::BaseIndex(GPRInfo::regT3, GPRInfo::regT1, CCallHelpers::TimesEight, JSImmutableButterfly::offsetOfData() + sizeof(WriteBarrier<Unknown>)), valueRegs);
+    jit.loadValue(CCallHelpers::BaseIndex(GPRInfo::regT3, GPRInfo::regT1, CCallHelpers::TimesEight, JSImmutableButterfly::offsetOfData()), valueRegs);
     jit.storeValue(valueRegs, CCallHelpers::calleeArgumentSlot(1).indexedBy(GPRInfo::regT1, CCallHelpers::TimesEight));
     jit.branchTest32(CCallHelpers::NonZero, GPRInfo::regT1).linkTo(loopBound, &jit);
 

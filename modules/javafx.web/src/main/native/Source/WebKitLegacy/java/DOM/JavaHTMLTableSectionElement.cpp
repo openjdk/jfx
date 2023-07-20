@@ -32,6 +32,7 @@
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLTableSectionElement.h>
 #include <WebCore/JSExecState.h>
+#include <WebCore/HTMLTableRowElement.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
@@ -107,7 +108,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableSectionElementImpl_inse
     , jint index)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLElement>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->insertRow(index))));
+    return JavaReturn<HTMLTableRowElement>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->insertRow(index))));
 }
 
 

@@ -114,6 +114,9 @@ public:
     bool openedByDOMWithOpener() const { return m_openedByDOMWithOpener; }
     void setOpenedByDOMWithOpener() { m_openedByDOMWithOpener = true; }
 
+    NewFrameOpenerPolicy newFrameOpenerPolicy() const { return m_newFrameOpenerPolicy; }
+    void setNewFrameOpenerPolicy(NewFrameOpenerPolicy newFrameOpenerPolicy) { m_newFrameOpenerPolicy = newFrameOpenerPolicy; }
+
     void setTargetBackForwardItem(HistoryItem&);
     const std::optional<BackForwardItemIdentifier>& targetBackForwardItemIdentifier() const { return m_targetBackForwardItemIdentifier; }
 
@@ -137,28 +140,35 @@ public:
     bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
     void setIsRequestFromClientOrUserInput(bool isRequestFromClientOrUserInput) { m_isRequestFromClientOrUserInput = isRequestFromClientOrUserInput; }
 
+    bool isInitialFrameSrcLoad() const { return m_isInitialFrameSrcLoad; }
+    void setIsInitialFrameSrcLoad(bool isInitialFrameSrcLoad) { m_isInitialFrameSrcLoad = isInitialFrameSrcLoad; }
+
 private:
     // Do not add a strong reference to the originating document or a subobject that holds the
     // originating document. See comment above the class for more details.
     std::optional<NavigationRequester> m_requester;
     ResourceRequest m_resourceRequest;
-    NavigationType m_type;
-    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy;
-    InitiatedByMainFrame m_initiatedByMainFrame;
     std::optional<UIEventWithKeyStateData> m_keyStateEventData;
     std::optional<MouseEventData> m_mouseEventData;
     RefPtr<UserGestureToken> m_userGestureToken { UserGestureIndicator::currentUserGesture() };
     AtomString m_downloadAttribute;
-    bool m_treatAsSameOriginNavigation;
+    std::optional<BackForwardItemIdentifier> m_targetBackForwardItemIdentifier;
+    std::optional<BackForwardItemIdentifier> m_sourceBackForwardItemIdentifier;
+    std::optional<PrivateClickMeasurement> m_privateClickMeasurement;
+    ShouldReplaceDocumentIfJavaScriptURL m_shouldReplaceDocumentIfJavaScriptURL { ReplaceDocumentIfJavaScriptURL };
+
+    NavigationType m_type;
+    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy;
+    InitiatedByMainFrame m_initiatedByMainFrame;
+
+    bool m_treatAsSameOriginNavigation { false };
     bool m_hasOpenedFrames { false };
     bool m_openedByDOMWithOpener { false };
     bool m_isRequestFromClientOrUserInput { false };
-    std::optional<BackForwardItemIdentifier> m_targetBackForwardItemIdentifier;
-    std::optional<BackForwardItemIdentifier> m_sourceBackForwardItemIdentifier;
+    bool m_isInitialFrameSrcLoad { false };
     LockHistory m_lockHistory { LockHistory::No };
     LockBackForwardList m_lockBackForwardList { LockBackForwardList::No };
-    std::optional<PrivateClickMeasurement> m_privateClickMeasurement;
-    ShouldReplaceDocumentIfJavaScriptURL m_shouldReplaceDocumentIfJavaScriptURL { ReplaceDocumentIfJavaScriptURL };
+    NewFrameOpenerPolicy m_newFrameOpenerPolicy { NewFrameOpenerPolicy::Allow };
 };
 
 } // namespace WebCore

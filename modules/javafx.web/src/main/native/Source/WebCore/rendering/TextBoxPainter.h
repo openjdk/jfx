@@ -25,9 +25,12 @@
 #pragma once
 
 #include "FloatRect.h"
+#include "FloatRoundedRect.h"
+#include "InlineIteratorInlineBox.h"
 #include "InlineIteratorTextBox.h"
 #include "RenderObject.h"
 #include "TextBoxSelectableRange.h"
+#include "TextDecorationPainter.h"
 #include "TextRun.h"
 
 namespace WebCore {
@@ -39,7 +42,6 @@ class RenderCombineText;
 class RenderStyle;
 class RenderText;
 class ShadowData;
-class TextDecorationPainter;
 struct CompositionUnderline;
 struct MarkedText;
 struct PaintInfo;
@@ -67,10 +69,11 @@ protected:
     void paintBackground(unsigned startOffset, unsigned endOffset, const Color&, BackgroundStyle = BackgroundStyle::Normal);
     void paintBackground(const StyledMarkedText&);
     void paintForeground(const StyledMarkedText&);
-    TextDecorationPainter createDecorationPainter(const StyledMarkedText&, const FloatRect&, const FloatRect&);
+    TextDecorationPainter createDecorationPainter(const StyledMarkedText&, const FloatRect&);
     void paintBackgroundDecorations(TextDecorationPainter&, const StyledMarkedText&, const FloatRect&);
-    void paintForegroundDecorations(TextDecorationPainter&, const FloatRect&);
-    void paintCompositionUnderline(const CompositionUnderline&);
+    void paintForegroundDecorations(TextDecorationPainter&, const StyledMarkedText&, const FloatRect&);
+    void paintCompositionUnderline(const CompositionUnderline&, const FloatRoundedRect::Radii&, bool hasLiveConversion);
+    void fillCompositionUnderline(float start, float width, const CompositionUnderline&, const FloatRoundedRect::Radii&, bool hasLiveConversion) const;
     void paintPlatformDocumentMarker(const MarkedText&);
 
     float textPosition();
@@ -79,6 +82,15 @@ protected:
     MarkedText createMarkedTextFromSelectionInBox();
     const FontCascade& fontCascade() const;
     FloatPoint textOriginFromPaintRect(const FloatRect&) const;
+
+    struct DecoratingBox {
+        InlineIterator::InlineBoxIterator inlineBox;
+        const RenderStyle& style;
+        TextDecorationPainter::Styles textDecorationStyles;
+        FloatPoint location;
+    };
+    using DecoratingBoxList = Vector<DecoratingBox>;
+    void collectDecoratingBoxesForTextBox(DecoratingBoxList&, const InlineIterator::TextBoxIterator&, FloatPoint textBoxLocation, const TextDecorationPainter::Styles&);
 
     const ShadowData* debugTextShadow() const;
 
@@ -90,6 +102,7 @@ protected:
     const TextRun m_paintTextRun;
     PaintInfo& m_paintInfo;
     const TextBoxSelectableRange m_selectableRange;
+    const LayoutPoint m_paintOffset;
     const FloatRect m_paintRect;
     const bool m_isFirstLine;
     const bool m_isCombinedText;
@@ -107,11 +120,9 @@ public:
     static FloatRect calculateUnionOfAllDocumentMarkerBounds(const LegacyInlineTextBox&);
 };
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 class ModernTextBoxPainter : public TextBoxPainter<InlineIterator::BoxModernPath> {
 public:
     ModernTextBoxPainter(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&, PaintInfo&, const LayoutPoint& paintOffset);
 };
-#endif
 
 }

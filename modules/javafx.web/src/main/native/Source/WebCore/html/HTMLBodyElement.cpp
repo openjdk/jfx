@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann (hausmann@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -36,7 +36,8 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSHTMLBodyElement.h"
-#include "StyleProperties.h"
+#include "MutableStyleProperties.h"
+#include "ResourceLoaderOptions.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -66,7 +67,7 @@ HTMLBodyElement::~HTMLBodyElement() = default;
 
 bool HTMLBodyElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
-    if (name == backgroundAttr || name == marginwidthAttr || name == leftmarginAttr || name == marginheightAttr || name == topmarginAttr || name == bgcolorAttr || name == textAttr || name == bgpropertiesAttr)
+    if (name == backgroundAttr || name == marginwidthAttr || name == leftmarginAttr || name == marginheightAttr || name == topmarginAttr || name == bgcolorAttr || name == textAttr)
         return true;
     return HTMLElement::hasPresentationalHintsForAttribute(name);
 }
@@ -76,8 +77,7 @@ void HTMLBodyElement::collectPresentationalHintsForAttribute(const QualifiedName
     if (name == backgroundAttr) {
         String url = stripLeadingAndTrailingHTMLSpaces(value);
         if (!url.isEmpty()) {
-            auto imageValue = CSSImageValue::create(document().completeURL(url), LoadedFromOpaqueSource::No);
-            imageValue.get().setInitiator(localName());
+            auto imageValue = CSSImageValue::create(document().completeURL(url), LoadedFromOpaqueSource::No, localName());
             style.setProperty(CSSProperty(CSSPropertyBackgroundImage, WTFMove(imageValue)));
         }
     } else if (name == marginwidthAttr || name == leftmarginAttr) {
@@ -90,9 +90,6 @@ void HTMLBodyElement::collectPresentationalHintsForAttribute(const QualifiedName
         addHTMLColorToStyle(style, CSSPropertyBackgroundColor, value);
     } else if (name == textAttr) {
         addHTMLColorToStyle(style, CSSPropertyColor, value);
-    } else if (name == bgpropertiesAttr) {
-        if (equalLettersIgnoringASCIICase(value, "fixed"_s))
-            addPropertyToPresentationalHintStyle(style, CSSPropertyBackgroundAttachment, CSSValueFixed);
     } else
         HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@
 #include "LinkBuffer.h"
 #include "ModuleNamespaceAccessCase.h"
 #include "PolymorphicAccess.h"
+#include "ProxyObjectAccessCase.h"
 #include "ScopedArguments.h"
 #include "ScratchRegisterAllocator.h"
 #include "StructureStubInfo.h"
@@ -81,6 +82,7 @@ Ref<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, Cache
     case DirectArgumentsLength:
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
+    case ProxyObjectLoad:
     case Replace:
     case InstanceOfGeneric:
     case IndexedInt32Load:
@@ -98,6 +100,15 @@ Ref<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, Cache
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case IndexedNoIndexingMiss:
     case IndexedInt32Store:
@@ -113,6 +124,15 @@ Ref<AccessCase> AccessCase::create(VM& vm, JSCell* owner, AccessType type, Cache
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
         RELEASE_ASSERT(!prototypeAccessChain);
         break;
     default:
@@ -193,8 +213,11 @@ Ref<AccessCase> AccessCase::createSetPrivateBrand(
     return adoptRef(*new AccessCase(vm, owner, SetPrivateBrand, identifier, invalidOffset, newStructure, { }, { }));
 }
 
-AccessCase::~AccessCase()
+Ref<AccessCase> AccessCase::createReplace(VM& vm, JSCell* owner, CacheableIdentifier identifier, PropertyOffset offset, Structure* oldStructure, bool viaProxy)
 {
+    auto result = adoptRef(*new AccessCase(vm, owner, Replace, identifier, offset, oldStructure, { }, { }));
+    result->m_viaProxy = viaProxy;
+    return result;
 }
 
 RefPtr<AccessCase> AccessCase::fromStructureStubInfo(
@@ -207,7 +230,7 @@ RefPtr<AccessCase> AccessCase::fromStructureStubInfo(
 
     case CacheType::PutByIdReplace:
         RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
-        return AccessCase::create(vm, owner, Replace, identifier, stubInfo.byIdSelfOffset, stubInfo.inlineAccessBaseStructure());
+        return AccessCase::createReplace(vm, owner, identifier, stubInfo.byIdSelfOffset, stubInfo.inlineAccessBaseStructure(), false);
 
     case CacheType::InByIdSelf:
         RELEASE_ASSERT(stubInfo.hasConstantIdentifier);
@@ -226,17 +249,17 @@ RefPtr<AccessCase> AccessCase::fromStructureStubInfo(
     }
 }
 
-bool AccessCase::hasAlternateBase() const
+bool AccessCase::hasAlternateBaseImpl() const
 {
     return !conditionSet().isEmpty();
 }
 
-JSObject* AccessCase::alternateBase() const
+JSObject* AccessCase::alternateBaseImpl() const
 {
     return conditionSet().slotBaseCondition().object();
 }
 
-Ref<AccessCase> AccessCase::clone() const
+Ref<AccessCase> AccessCase::cloneImpl() const
 {
     auto result = adoptRef(*new AccessCase(*this));
     result->resetState();
@@ -301,6 +324,7 @@ bool AccessCase::guardedByStructureCheckSkippingConstantIdentifierCheck() const
     case DirectArgumentsLength:
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
+    case ProxyObjectLoad:
     case InstanceOfHit:
     case InstanceOfMiss:
     case InstanceOfGeneric:
@@ -319,6 +343,15 @@ bool AccessCase::guardedByStructureCheckSkippingConstantIdentifierCheck() const
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case IndexedInt32Store:
     case IndexedDoubleStore:
@@ -333,6 +366,15 @@ bool AccessCase::guardedByStructureCheckSkippingConstantIdentifierCheck() const
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
         return false;
     case IndexedNoIndexingMiss:
     default:
@@ -366,6 +408,7 @@ bool AccessCase::requiresIdentifierNameMatch() const
     case DirectArgumentsLength:
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
+    case ProxyObjectLoad:
     case CheckPrivateBrand:
     case SetPrivateBrand:
         return true;
@@ -387,6 +430,15 @@ bool AccessCase::requiresIdentifierNameMatch() const
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case IndexedNoIndexingMiss:
     case IndexedInt32Store:
@@ -402,6 +454,15 @@ bool AccessCase::requiresIdentifierNameMatch() const
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
         return false;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -432,6 +493,7 @@ bool AccessCase::requiresInt32PropertyCheck() const
     case DirectArgumentsLength:
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
+    case ProxyObjectLoad:
     case InstanceOfHit:
     case InstanceOfMiss:
     case InstanceOfGeneric:
@@ -453,6 +515,15 @@ bool AccessCase::requiresInt32PropertyCheck() const
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case IndexedNoIndexingMiss:
     case IndexedInt32Store:
@@ -468,6 +539,15 @@ bool AccessCase::requiresInt32PropertyCheck() const
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
         return true;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -499,6 +579,7 @@ bool AccessCase::needsScratchFPR() const
     case DirectArgumentsLength:
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
+    case ProxyObjectLoad:
     case InstanceOfHit:
     case InstanceOfMiss:
     case InstanceOfGeneric:
@@ -513,6 +594,12 @@ bool AccessCase::needsScratchFPR() const
     case IndexedTypedArrayInt16Load:
     case IndexedTypedArrayUint16Load:
     case IndexedTypedArrayInt32Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
     case IndexedStringLoad:
     case IndexedNoIndexingMiss:
     case IndexedInt32Store:
@@ -524,15 +611,27 @@ bool AccessCase::needsScratchFPR() const
     case IndexedTypedArrayInt16Store:
     case IndexedTypedArrayUint16Store:
     case IndexedTypedArrayInt32Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
         return false;
     case IndexedDoubleLoad:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
     case IndexedTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayUint32Load:
     case IndexedDoubleStore:
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
     // Used by TypedArrayLength/TypedArrayByteOffset in the process of boxing their result as a double
     case IntrinsicGetter:
         return true;
@@ -580,6 +679,12 @@ void AccessCase::forEachDependentCell(VM&, const Functor& functor) const
             functor(accessCase.moduleEnvironment());
         break;
     }
+    case ProxyObjectLoad: {
+        auto& accessor = this->as<ProxyObjectAccessCase>();
+        if (accessor.callLinkInfo())
+            accessor.callLinkInfo()->forEachDependentCell(functor);
+        break;
+    }
     case InstanceOfHit:
     case InstanceOfMiss:
         if (as<InstanceOfAccessCase>().prototype())
@@ -619,6 +724,15 @@ void AccessCase::forEachDependentCell(VM&, const Functor& functor) const
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case IndexedNoIndexingMiss:
     case IndexedInt32Store:
@@ -634,6 +748,15 @@ void AccessCase::forEachDependentCell(VM&, const Functor& functor) const
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
         break;
     }
 }
@@ -651,15 +774,19 @@ bool AccessCase::doesCalls(VM& vm, Vector<JSCell*>* cellsToMarkIfDoesCalls) cons
     case CustomAccessorGetter:
     case CustomValueSetter:
     case CustomAccessorSetter:
+    case ProxyObjectLoad:
         doesCalls = true;
         break;
+    case IntrinsicGetter: {
+        doesCalls = this->as<IntrinsicGetterAccessCase>().doesCalls();
+        break;
+    }
     case Delete:
     case DeleteNonConfigurable:
     case DeleteMiss:
     case Load:
     case Miss:
     case GetGetter:
-    case IntrinsicGetter:
     case InHit:
     case InMiss:
     case CheckPrivateBrand:
@@ -687,6 +814,15 @@ bool AccessCase::doesCalls(VM& vm, Vector<JSCell*>* cellsToMarkIfDoesCalls) cons
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case IndexedNoIndexingMiss:
     case IndexedInt32Store:
@@ -702,6 +838,15 @@ bool AccessCase::doesCalls(VM& vm, Vector<JSCell*>* cellsToMarkIfDoesCalls) cons
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
         doesCalls = false;
         break;
     case Replace:
@@ -782,6 +927,15 @@ bool AccessCase::canReplace(const AccessCase& other) const
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case IndexedInt32Store:
     case IndexedDoubleStore:
@@ -796,6 +950,16 @@ bool AccessCase::canReplace(const AccessCase& other) const
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
+    case ProxyObjectLoad:
         return other.type() == type();
 
     case ModuleNamespaceLoad: {
@@ -889,7 +1053,9 @@ void AccessCase::dump(PrintStream& out) const
     if (!m_conditionSet.isEmpty())
         out.print("\n", indent, "conditions = ", m_conditionSet);
 
-    dumpImpl(out, comma, indent);
+    const_cast<AccessCase*>(this)->runWithDowncast([&](auto* accessCase) {
+        accessCase->dumpImpl(out, comma, indent);
+    });
 
     out.print("}");
 }
@@ -957,13 +1123,13 @@ void AccessCase::generateWithGuard(
     CCallHelpers& jit = *state.jit;
     StructureStubInfo& stubInfo = *state.stubInfo;
     VM& vm = state.m_vm;
-    JSValueRegs valueRegs = state.valueRegs;
-    GPRReg baseGPR = state.baseGPR;
+    JSValueRegs valueRegs = stubInfo.valueRegs();
+    GPRReg baseGPR = stubInfo.m_baseGPR;
     GPRReg scratchGPR = state.scratchGPR;
 
     if (requiresIdentifierNameMatch() && !stubInfo.hasConstantIdentifier) {
         RELEASE_ASSERT(m_identifier);
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
         // non-rope string check done inside polymorphic access.
 
         if (uid()->isSymbol())
@@ -977,7 +1143,7 @@ void AccessCase::generateWithGuard(
         if (m_polyProtoAccessChain) {
             ASSERT(!viaProxy());
             GPRReg baseForAccessGPR = state.scratchGPR;
-            jit.move(state.baseGPR, baseForAccessGPR);
+            jit.move(baseGPR, baseForAccessGPR);
             m_polyProtoAccessChain->forEach(vm, structure(), [&] (Structure* structure, bool atEnd) {
                 fallThrough.append(
                     jit.branchStructure(
@@ -1099,10 +1265,16 @@ void AccessCase::generateWithGuard(
         return;
     }
 
+    case ProxyObjectLoad: {
+        ASSERT(!viaProxy());
+        this->as<ProxyObjectAccessCase>().emit(state, fallThrough);
+        return;
+    }
+
     case IndexedScopedArgumentsLoad: {
         ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
 
         jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
         fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(ScopedArgumentsType)));
@@ -1164,7 +1336,7 @@ void AccessCase::generateWithGuard(
     case IndexedDirectArgumentsLoad: {
         ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
         jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
         fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(DirectArgumentsType)));
 
@@ -1185,17 +1357,28 @@ void AccessCase::generateWithGuard(
     case IndexedTypedArrayInt32Load:
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
-    case IndexedTypedArrayFloat64Load: {
+    case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load: {
         ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
 
         TypedArrayType type = toTypedArrayType(m_type);
+        bool isResizableOrGrowableShared = forResizableTypedArray(m_type);
 
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
 
-        jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
-        fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(typeForTypedArrayType(type))));
+        fallThrough.append(jit.branch8(CCallHelpers::NotEqual, CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), CCallHelpers::TrustedImm32(typeForTypedArrayType(type))));
 
+        if (!isResizableOrGrowableShared) {
+            fallThrough.append(jit.branchTest8(CCallHelpers::NonZero, CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfMode()), CCallHelpers::TrustedImm32(isResizableOrGrowableSharedMode)));
         CCallHelpers::Address addressOfLength = CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength());
         jit.signExtend32ToPtr(propertyGPR, scratchGPR);
 #if USE(LARGE_TYPED_ARRAYS)
@@ -1204,6 +1387,7 @@ void AccessCase::generateWithGuard(
 #else
         state.failAndRepatch.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, addressOfLength));
 #endif
+        }
 
         auto allocator = state.makeDefaultScratchAllocator(scratchGPR);
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
@@ -1211,10 +1395,22 @@ void AccessCase::generateWithGuard(
         ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(
             jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
 
+        CCallHelpers::JumpList failAndRepatchAfterRestore;
+        if (isResizableOrGrowableShared) {
+            jit.loadTypedArrayLength(baseGPR, scratch2GPR, scratchGPR, scratch2GPR, type);
+            jit.signExtend32ToPtr(propertyGPR, scratchGPR);
 #if USE(LARGE_TYPED_ARRAYS)
-        jit.load64(addressOfLength, scratchGPR);
+            // The length is a size_t, so either 32 or 64 bits depending on the platform.
+            failAndRepatchAfterRestore.append(jit.branch64(CCallHelpers::AboveOrEqual, scratchGPR, scratch2GPR));
 #else
-        jit.load32(addressOfLength, scratchGPR);
+            failAndRepatchAfterRestore.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratch2GPR));
+#endif
+        }
+
+#if USE(LARGE_TYPED_ARRAYS)
+        jit.load64(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
+#else
+        jit.load32(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
 #endif
         jit.loadPtr(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfVector()), scratch2GPR);
         jit.cageConditionallyAndUntag(Gigacage::Primitive, scratch2GPR, scratchGPR, scratchGPR, false);
@@ -1278,13 +1474,18 @@ void AccessCase::generateWithGuard(
         allocator.restoreReusedRegistersByPopping(jit, preservedState);
         state.succeed();
 
+        if (isResizableOrGrowableShared) {
+            failAndRepatchAfterRestore.link(&jit);
+            allocator.restoreReusedRegistersByPopping(jit, preservedState);
+            state.failAndRepatch.append(jit.jump());
+        }
         return;
     }
 
     case IndexedStringLoad: {
         ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
 
         fallThrough.append(jit.branchIfNotString(baseGPR));
 
@@ -1332,7 +1533,7 @@ void AccessCase::generateWithGuard(
 
     case IndexedNoIndexingMiss: {
         emitDefaultGuard();
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
         state.failAndIgnore.append(jit.branch32(CCallHelpers::LessThan, propertyGPR, CCallHelpers::TrustedImm32(0)));
         break;
     }
@@ -1343,7 +1544,7 @@ void AccessCase::generateWithGuard(
     case IndexedArrayStorageLoad: {
         ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
 
         // int32 check done in polymorphic access.
         jit.load8(CCallHelpers::Address(baseGPR, JSCell::indexingTypeAndMiscOffset()), scratchGPR);
@@ -1389,6 +1590,7 @@ void AccessCase::generateWithGuard(
                 expectedShape = Int32Shape;
                 break;
             case IndexedDoubleLoad:
+                ASSERT(Options::allowDoubleShape());
                 expectedShape = DoubleShape;
                 break;
             case IndexedContiguousLoad:
@@ -1442,7 +1644,7 @@ void AccessCase::generateWithGuard(
     case IndexedContiguousStore:
     case IndexedArrayStorageStore: {
         ASSERT(!viaProxy());
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
 
         // int32 check done in polymorphic access.
         jit.load8(CCallHelpers::Address(baseGPR, JSCell::indexingTypeAndMiscOffset()), scratchGPR);
@@ -1487,6 +1689,7 @@ void AccessCase::generateWithGuard(
                 expectedShape = Int32Shape;
                 break;
             case IndexedDoubleStore:
+                ASSERT(Options::allowDoubleShape());
                 expectedShape = DoubleShape;
                 break;
             case IndexedContiguousStore:
@@ -1545,7 +1748,7 @@ void AccessCase::generateWithGuard(
         if (m_type == IndexedArrayStorageStore) {
             isOutOfBounds.link(&jit);
             if (stubInfo.m_arrayProfileGPR != InvalidGPRReg)
-                jit.store8(CCallHelpers::TrustedImm32(1), CCallHelpers::Address(stubInfo.m_arrayProfileGPR, ArrayProfile::offsetOfMayStoreToHole()));
+                jit.or32(CCallHelpers::TrustedImm32(static_cast<uint32_t>(ArrayProfileFlag::MayStoreHole)), CCallHelpers::Address(stubInfo.m_arrayProfileGPR, ArrayProfile::offsetOfArrayProfileFlags()));
             jit.add32(CCallHelpers::TrustedImm32(1), CCallHelpers::Address(scratchGPR, ArrayStorage::numValuesInVectorOffset()));
             jit.branch32(CCallHelpers::Below, scratch2GPR, CCallHelpers::Address(scratchGPR, ArrayStorage::lengthOffset())).linkTo(storeResult, &jit);
 
@@ -1557,7 +1760,7 @@ void AccessCase::generateWithGuard(
             isOutOfBounds.link(&jit);
             failAndIgnore.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, CCallHelpers::Address(scratchGPR, Butterfly::offsetOfVectorLength())));
             if (stubInfo.m_arrayProfileGPR != InvalidGPRReg)
-                jit.store8(CCallHelpers::TrustedImm32(1), CCallHelpers::Address(stubInfo.m_arrayProfileGPR, ArrayProfile::offsetOfMayStoreToHole()));
+                jit.or32(CCallHelpers::TrustedImm32(static_cast<uint32_t>(ArrayProfileFlag::MayStoreHole)), CCallHelpers::Address(stubInfo.m_arrayProfileGPR, ArrayProfile::offsetOfArrayProfileFlags()));
             jit.add32(CCallHelpers::TrustedImm32(1), propertyGPR, scratch2GPR);
             jit.store32(scratch2GPR, CCallHelpers::Address(scratchGPR, Butterfly::offsetOfPublicLength()));
             jit.jump().linkTo(storeResult, &jit);
@@ -1590,16 +1793,27 @@ void AccessCase::generateWithGuard(
     case IndexedTypedArrayInt32Store:
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
-    case IndexedTypedArrayFloat64Store: {
+    case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store: {
         ASSERT(!viaProxy());
         // This code is written such that the result could alias with the base or the property.
 
         TypedArrayType type = toTypedArrayType(m_type);
+        bool isResizableOrGrowableShared = forResizableTypedArray(m_type);
 
-        GPRReg propertyGPR = state.propertyGPR();
+        GPRReg propertyGPR = stubInfo.propertyGPR();
 
-        jit.load8(CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), scratchGPR);
-        fallThrough.append(jit.branch32(CCallHelpers::NotEqual, scratchGPR, CCallHelpers::TrustedImm32(typeForTypedArrayType(type))));
+        fallThrough.append(jit.branch8(CCallHelpers::NotEqual, CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), CCallHelpers::TrustedImm32(typeForTypedArrayType(type))));
+        if (!isResizableOrGrowableShared)
+            fallThrough.append(jit.branchTest8(CCallHelpers::NonZero, CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfMode()), CCallHelpers::TrustedImm32(isResizableOrGrowableSharedMode)));
 
         if (isInt(type))
             state.failAndRepatch.append(jit.branchIfNotInt32(valueRegs));
@@ -1620,6 +1834,7 @@ void AccessCase::generateWithGuard(
             ready.link(&jit);
         }
 
+        if (!isResizableOrGrowableShared) {
         CCallHelpers::Address addressOfLength = CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength());
         jit.signExtend32ToPtr(propertyGPR, scratchGPR);
 #if USE(LARGE_TYPED_ARRAYS)
@@ -1628,6 +1843,7 @@ void AccessCase::generateWithGuard(
 #else
         state.failAndRepatch.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, addressOfLength));
 #endif
+        }
 
         auto allocator = state.makeDefaultScratchAllocator(scratchGPR);
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
@@ -1635,10 +1851,22 @@ void AccessCase::generateWithGuard(
         ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(
             jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
 
+        CCallHelpers::JumpList failAndRepatchAfterRestore;
+        if (isResizableOrGrowableShared) {
+            jit.loadTypedArrayLength(baseGPR, scratch2GPR, scratchGPR, scratch2GPR, type);
+            jit.signExtend32ToPtr(propertyGPR, scratchGPR);
 #if USE(LARGE_TYPED_ARRAYS)
-        jit.load64(addressOfLength, scratchGPR);
+            // The length is a size_t, so either 32 or 64 bits depending on the platform.
+            failAndRepatchAfterRestore.append(jit.branch64(CCallHelpers::AboveOrEqual, scratchGPR, scratch2GPR));
 #else
-        jit.load32(addressOfLength, scratchGPR);
+            failAndRepatchAfterRestore.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratch2GPR));
+#endif
+        }
+
+#if USE(LARGE_TYPED_ARRAYS)
+        jit.load64(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
+#else
+        jit.load32(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength()), scratchGPR);
 #endif
         jit.loadPtr(CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfVector()), scratch2GPR);
         jit.cageConditionallyAndUntag(Gigacage::Primitive, scratch2GPR, scratchGPR, scratchGPR, false);
@@ -1692,6 +1920,12 @@ void AccessCase::generateWithGuard(
 
         allocator.restoreReusedRegistersByPopping(jit, preservedState);
         state.succeed();
+
+        if (isResizableOrGrowableShared) {
+            failAndRepatchAfterRestore.link(&jit);
+            allocator.restoreReusedRegistersByPopping(jit, preservedState);
+            state.failAndRepatch.append(jit.jump());
+        }
         return;
     }
 
@@ -1701,13 +1935,13 @@ void AccessCase::generateWithGuard(
 
         fallThrough.append(
             jit.branchPtr(
-                CCallHelpers::NotEqual, state.prototypeGPR(),
+                CCallHelpers::NotEqual, stubInfo.prototypeGPR(),
                 CCallHelpers::TrustedImmPtr(as<InstanceOfAccessCase>().prototype())));
         break;
 
     case InstanceOfGeneric: {
         ASSERT(!viaProxy());
-        GPRReg prototypeGPR = state.prototypeGPR();
+        GPRReg prototypeGPR = stubInfo.prototypeGPR();
         // Legend: value = `base instanceof prototypeGPR`.
 
         GPRReg valueGPR = valueRegs.payloadGPR();
@@ -1802,9 +2036,9 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     CodeBlock* codeBlock = jit.codeBlock();
     ECMAMode ecmaMode = state.m_ecmaMode;
     StructureStubInfo& stubInfo = *state.stubInfo;
-    JSValueRegs valueRegs = state.valueRegs;
-    GPRReg baseGPR = state.baseGPR;
-    GPRReg thisGPR = stubInfo.thisValueIsInExtraGPR() ? state.thisGPR() : baseGPR;
+    JSValueRegs valueRegs = stubInfo.valueRegs();
+    GPRReg baseGPR = stubInfo.m_baseGPR;
+    GPRReg thisGPR = stubInfo.thisValueIsInExtraGPR() ? stubInfo.thisGPR() : baseGPR;
     GPRReg scratchGPR = state.scratchGPR;
 
     for (const ObjectPropertyCondition& condition : m_conditionSet) {
@@ -1981,7 +2215,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             if (callHasReturnValue) {
                 // This is the result value. We don't want to overwrite the result with what we stored to the stack.
                 // We sometimes have to store it to the stack just in case we throw an exception and need the original value.
-                dontRestore.set(valueRegs);
+                dontRestore.add(valueRegs, IgnoreVectors);
             }
             state.restoreLiveRegistersFromStackForCall(spillState, dontRestore);
         };
@@ -2011,7 +2245,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             // Therefore, we temporarily grow the stack for the purpose of the call and then
             // shrink it after.
 
-            state.setSpillStateForJSGetterSetter(spillState);
+            state.setSpillStateForJSCall(spillState);
 
             RELEASE_ASSERT(!access.callLinkInfo());
             auto* callLinkInfo = state.m_callLinkInfos.add(stubInfo.codeOrigin, codeBlock->useDataIC() ? CallLinkInfo::UseDataIC::Yes : CallLinkInfo::UseDataIC::No);
@@ -2089,7 +2323,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
                         virtualRegisterForArgumentIncludingThis(1).offset() * sizeof(Register)));
             }
 
-            auto slowCase = access.callLinkInfo()->emitFastPath(jit, loadedValueGPR, loadedValueGPR == GPRInfo::regT2 ? GPRInfo::regT0 : GPRInfo::regT2);
+            auto slowCase = CallLinkInfo::emitFastPath(jit, access.callLinkInfo(), loadedValueGPR, loadedValueGPR == GPRInfo::regT2 ? GPRInfo::regT0 : GPRInfo::regT2);
             auto doneLocation = jit.label();
 
             if (m_type == Getter)
@@ -2154,27 +2388,27 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             if (m_type == CustomValueGetter || m_type == CustomAccessorGetter) {
                 RELEASE_ASSERT(m_identifier);
                 if (Options::useJITCage()) {
-                    jit.setupArguments<PropertySlot::GetValueFuncWithPtr>(
+                    jit.setupArguments<GetValueFuncWithPtr>(
                         CCallHelpers::TrustedImmPtr(globalObject),
                         CCallHelpers::CellValue(baseForCustom),
                         CCallHelpers::TrustedImmPtr(uid()),
-                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.executableAddress()));
+                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.taggedPtr()));
                 } else {
-                    jit.setupArguments<PropertySlot::GetValueFunc>(
+                    jit.setupArguments<GetValueFunc>(
                         CCallHelpers::TrustedImmPtr(globalObject),
                         CCallHelpers::CellValue(baseForCustom),
                         CCallHelpers::TrustedImmPtr(uid()));
                 }
             } else {
                 if (Options::useJITCage()) {
-                    jit.setupArguments<PutPropertySlot::PutValueFuncWithPtr>(
+                    jit.setupArguments<PutValueFuncWithPtr>(
                         CCallHelpers::TrustedImmPtr(globalObject),
                         CCallHelpers::CellValue(baseForCustom),
                         valueRegs,
                         CCallHelpers::TrustedImmPtr(uid()),
-                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.executableAddress()));
+                        CCallHelpers::TrustedImmPtr(this->as<GetterSetterAccessCase>().m_customAccessor.taggedPtr()));
                 } else {
-                    jit.setupArguments<PutPropertySlot::PutValueFunc>(
+                    jit.setupArguments<PutValueFunc>(
                         CCallHelpers::TrustedImmPtr(globalObject),
                         CCallHelpers::CellValue(baseForCustom),
                         valueRegs,
@@ -2190,9 +2424,9 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
                 if (Options::useJITCage()) {
                     if (m_type == CustomValueGetter || m_type == CustomAccessorGetter)
-                        linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryCustomGetter));
+                        linkBuffer.link<OperationPtrTag>(operationCall, vmEntryCustomGetter);
                     else
-                        linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(vmEntryCustomSetter));
+                        linkBuffer.link<OperationPtrTag>(operationCall, vmEntryCustomSetter);
                 } else
                     linkBuffer.link(operationCall, this->as<GetterSetterAccessCase>().m_customAccessor);
             });
@@ -2252,7 +2486,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             jit.prepareCallOperation(vm);
             auto operationCall = jit.call(OperationPtrTag);
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                linkBuffer.link(operationCall, FunctionPtr<OperationPtrTag>(operationWriteBarrierSlowPath));
+                linkBuffer.link<OperationPtrTag>(operationCall, operationWriteBarrierSlowPath);
             });
             state.restoreLiveRegistersFromStackForCall(spillState);
 
@@ -2330,8 +2564,8 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             } else {
                 // Handle the case where we are allocating out-of-line using an operation.
                 RegisterSet extraRegistersToPreserve;
-                extraRegistersToPreserve.set(baseGPR);
-                extraRegistersToPreserve.set(valueRegs);
+                extraRegistersToPreserve.add(baseGPR, IgnoreVectors);
+                extraRegistersToPreserve.add(valueRegs, IgnoreVectors);
                 AccessGenerationState::SpillState spillState = state.preserveLiveRegistersToStackForCall(extraRegistersToPreserve);
 
                 jit.store32(
@@ -2347,9 +2581,9 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
                     CCallHelpers::Call operationCall = jit.call(OperationPtrTag);
                     jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                        linkBuffer.link(
+                        linkBuffer.link<OperationPtrTag>(
                             operationCall,
-                            FunctionPtr<OperationPtrTag>(operationReallocateButterflyToHavePropertyStorageWithInitialCapacity));
+                            operationReallocateButterflyToHavePropertyStorageWithInitialCapacity);
                     });
                 } else {
                     // Handle the case where we are reallocating (i.e. the old structure/butterfly
@@ -2359,9 +2593,9 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
                     CCallHelpers::Call operationCall = jit.call(OperationPtrTag);
                     jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                        linkBuffer.link(
+                        linkBuffer.link<OperationPtrTag>(
                             operationCall,
-                            FunctionPtr<OperationPtrTag>(operationReallocateButterflyToGrowPropertyStorage));
+                            operationReallocateButterflyToGrowPropertyStorage);
                     });
                 }
 
@@ -2375,7 +2609,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
 
                 noException.link(&jit);
                 RegisterSet resultRegisterToExclude;
-                resultRegisterToExclude.set(scratchGPR);
+                resultRegisterToExclude.add(scratchGPR, IgnoreVectors);
                 state.restoreLiveRegistersFromStackForCall(spillState, resultRegisterToExclude);
             }
         }
@@ -2533,6 +2767,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case DirectArgumentsLength:
     case ScopedArgumentsLength:
     case ModuleNamespaceLoad:
+    case ProxyObjectLoad:
     case InstanceOfGeneric:
     case IndexedInt32Load:
     case IndexedDoubleLoad:
@@ -2549,6 +2784,15 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedStringLoad:
     case CheckPrivateBrand:
     case IndexedInt32Store:
@@ -2564,6 +2808,15 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
         // These need to be handled by generateWithGuard(), since the guard is part of the
         // algorithm. We can be sure that nobody will call generate() directly for these since they
         // are not guarded by structure checks.
@@ -2578,33 +2831,181 @@ TypedArrayType AccessCase::toTypedArrayType(AccessType accessType)
     switch (accessType) {
     case IndexedTypedArrayInt8Load:
     case IndexedTypedArrayInt8Store:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayInt8Store:
         return TypeInt8;
     case IndexedTypedArrayUint8Load:
     case IndexedTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8Store:
         return TypeUint8;
     case IndexedTypedArrayUint8ClampedLoad:
     case IndexedTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayUint8ClampedStore:
         return TypeUint8Clamped;
     case IndexedTypedArrayInt16Load:
     case IndexedTypedArrayInt16Store:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayInt16Store:
         return TypeInt16;
     case IndexedTypedArrayUint16Load:
     case IndexedTypedArrayUint16Store:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayUint16Store:
         return TypeUint16;
     case IndexedTypedArrayInt32Load:
     case IndexedTypedArrayInt32Store:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayInt32Store:
         return TypeInt32;
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayUint32Store:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayUint32Store:
         return TypeUint32;
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat32Store:
         return TypeFloat32;
     case IndexedTypedArrayFloat64Load:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayFloat64Store:
         return TypeFloat64;
     default:
         RELEASE_ASSERT_NOT_REACHED();
+    }
+}
+
+bool AccessCase::forResizableTypedArray(AccessType accessType)
+{
+    switch (accessType) {
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
+        return true;
+    default:
+        return false;
+    }
+}
+
+template<typename Func>
+inline void AccessCase::runWithDowncast(const Func& func)
+{
+    switch (m_type) {
+    case Transition:
+    case Delete:
+    case DeleteNonConfigurable:
+    case DeleteMiss:
+    case Replace:
+    case InHit:
+    case InMiss:
+    case ArrayLength:
+    case StringLength:
+    case DirectArgumentsLength:
+    case ScopedArgumentsLength:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
+    case IndexedInt32Load:
+    case IndexedDoubleLoad:
+    case IndexedContiguousLoad:
+    case IndexedArrayStorageLoad:
+    case IndexedScopedArgumentsLoad:
+    case IndexedDirectArgumentsLoad:
+    case IndexedTypedArrayInt8Load:
+    case IndexedTypedArrayUint8Load:
+    case IndexedTypedArrayUint8ClampedLoad:
+    case IndexedTypedArrayInt16Load:
+    case IndexedTypedArrayUint16Load:
+    case IndexedTypedArrayInt32Load:
+    case IndexedTypedArrayUint32Load:
+    case IndexedTypedArrayFloat32Load:
+    case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
+    case IndexedInt32Store:
+    case IndexedDoubleStore:
+    case IndexedContiguousStore:
+    case IndexedArrayStorageStore:
+    case IndexedTypedArrayInt8Store:
+    case IndexedTypedArrayUint8Store:
+    case IndexedTypedArrayUint8ClampedStore:
+    case IndexedTypedArrayInt16Store:
+    case IndexedTypedArrayUint16Store:
+    case IndexedTypedArrayInt32Store:
+    case IndexedTypedArrayUint32Store:
+    case IndexedTypedArrayFloat32Store:
+    case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
+    case IndexedStringLoad:
+    case IndexedNoIndexingMiss:
+    case InstanceOfGeneric:
+        func(static_cast<AccessCase*>(this));
+        break;
+
+    case Load:
+    case Miss:
+    case GetGetter:
+        func(static_cast<ProxyableAccessCase*>(this));
+        break;
+
+    case Getter:
+    case Setter:
+    case CustomValueGetter:
+    case CustomAccessorGetter:
+    case CustomValueSetter:
+    case CustomAccessorSetter:
+        func(static_cast<GetterSetterAccessCase*>(this));
+        break;
+
+    case IntrinsicGetter:
+        func(static_cast<IntrinsicGetterAccessCase*>(this));
+        break;
+
+    case ModuleNamespaceLoad:
+        func(static_cast<ModuleNamespaceAccessCase*>(this));
+        break;
+
+    case InstanceOfHit:
+    case InstanceOfMiss:
+        func(static_cast<InstanceOfAccessCase*>(this));
+        break;
+
+    case ProxyObjectLoad:
+        func(static_cast<ProxyObjectAccessCase*>(this));
+        break;
     }
 }
 
@@ -2674,6 +3075,15 @@ bool AccessCase::canBeShared(const AccessCase& lhs, const AccessCase& rhs)
     case IndexedTypedArrayUint32Load:
     case IndexedTypedArrayFloat32Load:
     case IndexedTypedArrayFloat64Load:
+    case IndexedResizableTypedArrayInt8Load:
+    case IndexedResizableTypedArrayUint8Load:
+    case IndexedResizableTypedArrayUint8ClampedLoad:
+    case IndexedResizableTypedArrayInt16Load:
+    case IndexedResizableTypedArrayUint16Load:
+    case IndexedResizableTypedArrayInt32Load:
+    case IndexedResizableTypedArrayUint32Load:
+    case IndexedResizableTypedArrayFloat32Load:
+    case IndexedResizableTypedArrayFloat64Load:
     case IndexedInt32Store:
     case IndexedDoubleStore:
     case IndexedContiguousStore:
@@ -2687,14 +3097,24 @@ bool AccessCase::canBeShared(const AccessCase& lhs, const AccessCase& rhs)
     case IndexedTypedArrayUint32Store:
     case IndexedTypedArrayFloat32Store:
     case IndexedTypedArrayFloat64Store:
+    case IndexedResizableTypedArrayInt8Store:
+    case IndexedResizableTypedArrayUint8Store:
+    case IndexedResizableTypedArrayUint8ClampedStore:
+    case IndexedResizableTypedArrayInt16Store:
+    case IndexedResizableTypedArrayUint16Store:
+    case IndexedResizableTypedArrayInt32Store:
+    case IndexedResizableTypedArrayUint32Store:
+    case IndexedResizableTypedArrayFloat32Store:
+    case IndexedResizableTypedArrayFloat64Store:
     case IndexedStringLoad:
     case IndexedNoIndexingMiss:
     case InstanceOfGeneric:
         return true;
 
     case Getter:
-    case Setter: {
-        // Getter and Setter relies on CodeBlock, which makes sharing impossible.
+    case Setter:
+    case ProxyObjectLoad: {
+        // Getter, Setter, and ProxyObjectLoad relies on CodeBlock, which makes sharing impossible.
         return false;
     }
 
@@ -2729,6 +3149,50 @@ bool AccessCase::canBeShared(const AccessCase& lhs, const AccessCase& rhs)
     }
 
     return true;
+}
+
+void AccessCase::operator delete(AccessCase* accessCase, std::destroying_delete_t)
+{
+    accessCase->runWithDowncast([](auto* accessCase) {
+        std::destroy_at(accessCase);
+        std::decay_t<decltype(*accessCase)>::freeAfterDestruction(accessCase);
+    });
+}
+
+Ref<AccessCase> AccessCase::clone() const
+{
+    RefPtr<AccessCase> result;
+    const_cast<AccessCase*>(this)->runWithDowncast([&](auto* accessCase) {
+        result = accessCase->cloneImpl();
+    });
+    return result.releaseNonNull();
+}
+
+WatchpointSet* AccessCase::additionalSet() const
+{
+    WatchpointSet* result = nullptr;
+    const_cast<AccessCase*>(this)->runWithDowncast([&](auto* accessCase) {
+        result = accessCase->additionalSetImpl();
+    });
+    return result;
+}
+
+bool AccessCase::hasAlternateBase() const
+{
+    bool result = false;
+    const_cast<AccessCase*>(this)->runWithDowncast([&](auto* accessCase) {
+        result = accessCase->hasAlternateBaseImpl();
+    });
+    return result;
+}
+
+JSObject* AccessCase::alternateBase() const
+{
+    JSObject* result = nullptr;
+    const_cast<AccessCase*>(this)->runWithDowncast([&](auto* accessCase) {
+        result = accessCase->alternateBaseImpl();
+    });
+    return result;
 }
 
 } // namespace JSC

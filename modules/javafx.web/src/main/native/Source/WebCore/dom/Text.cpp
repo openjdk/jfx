@@ -188,26 +188,9 @@ RenderPtr<RenderText> Text::createTextRenderer(const RenderStyle& style)
     return createRenderer<RenderText>(*this, data());
 }
 
-bool Text::childTypeAllowed(NodeType) const
-{
-    return false;
-}
-
 Ref<Text> Text::virtualCreate(String&& data)
 {
     return create(document(), WTFMove(data));
-}
-
-Ref<Text> Text::createWithLengthLimit(Document& document, const String& data, unsigned start, unsigned lengthLimit)
-{
-    unsigned dataLength = data.length();
-
-    if (!start && dataLength <= lengthLimit)
-        return create(document, String { data });
-
-    Ref<Text> result = Text::create(document, String());
-    result->parserAppendData(data, start, lengthLimit);
-    return result;
 }
 
 void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)

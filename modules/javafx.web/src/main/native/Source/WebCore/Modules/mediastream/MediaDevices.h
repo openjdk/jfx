@@ -56,7 +56,7 @@ struct MediaTrackSupportedConstraints;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
-class MediaDevices final : public RefCounted<MediaDevices>, public ActiveDOMObject, public EventTargetWithInlineData {
+class MediaDevices final : public RefCounted<MediaDevices>, public ActiveDOMObject, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(MediaDevices);
 public:
     static Ref<MediaDevices> create(Document&);
@@ -101,7 +101,7 @@ private:
     void scheduledEventTimerFired();
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
 
-    void exposeDevices(const Vector<CaptureDevice>&, const String&, EnumerateDevicesPromise&&);
+    void exposeDevices(const Vector<CaptureDevice>&, MediaDeviceHashSalts&&, EnumerateDevicesPromise&&);
     void listenForDeviceChanges();
 
     friend class JSMediaDevicesOwner;
@@ -111,7 +111,7 @@ private:
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
-    // EventTargetWithInlineData.
+    // EventTarget.
     EventTargetInterface eventTargetInterface() const final { return MediaDevicesEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
@@ -124,7 +124,7 @@ private:
     };
     bool computeUserGesturePriviledge(GestureAllowedRequest);
 
-    RunLoop::Timer<MediaDevices> m_scheduledEventTimer;
+    RunLoop::Timer m_scheduledEventTimer;
     UserMediaClient::DeviceChangeObserverToken m_deviceChangeToken;
     const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
     bool m_listeningForDeviceChanges { false };

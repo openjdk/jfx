@@ -1,7 +1,8 @@
 /*
  * This file is part of the select element renderer in WebCore.
  *
- * Copyright (C) 2006, 2007, 2009, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +36,8 @@
 
 namespace WebCore {
 
+class HTMLOptGroupElement;
+class HTMLOptionElement;
 class HTMLSelectElement;
 
 class RenderListBox final : public RenderBlockFlow, public ScrollableArea {
@@ -49,8 +52,11 @@ public:
 
     void setOptionsChanged(bool changed) { m_optionsChanged = changed; }
 
-    int listIndexAtOffset(const LayoutSize&);
-    LayoutRect itemBoundingBoxRect(const LayoutPoint&, int index);
+    int listIndexAtOffset(const LayoutSize&) const;
+    LayoutRect itemBoundingBoxRect(const LayoutPoint&, int index) const;
+
+    std::optional<LayoutRect> localBoundsOfOption(const HTMLOptionElement&) const;
+    std::optional<LayoutRect> localBoundsOfOptGroup(const HTMLOptGroupElement&) const;
 
     bool scrollToRevealElementAtListIndex(int index);
     bool listIndexIsVisible(int index);
@@ -93,7 +99,7 @@ private:
 
     void layout() override;
 
-    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = nullptr) override;
+    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = nullptr) const override;
 
     bool canBeProgramaticallyScrolled() const override { return true; }
     void autoscroll(const IntPoint&) override;
@@ -165,12 +171,14 @@ private:
     void computeFirstIndexesVisibleInPaddingTopBottomAreas();
 
     LayoutUnit itemHeight() const;
-    void valueChanged(unsigned listIndex);
 
     enum class ConsiderPadding { Yes, No };
     int numVisibleItems(ConsiderPadding = ConsiderPadding::No) const;
     int numItems() const;
     LayoutUnit listHeight() const;
+
+    std::optional<int> optionRowIndex(const HTMLOptionElement&) const;
+
     void paintScrollbar(PaintInfo&, const LayoutPoint&);
     void paintItemForeground(PaintInfo&, const LayoutPoint&, int listIndex);
     void paintItemBackground(PaintInfo&, const LayoutPoint&, int listIndex);

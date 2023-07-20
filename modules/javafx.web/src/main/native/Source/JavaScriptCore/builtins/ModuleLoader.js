@@ -104,6 +104,7 @@ function newRegistryEntry(key)
     };
 }
 
+@visibility=PrivateRecursive
 function ensureRegistered(key)
 {
     // https://whatwg.github.io/loader/#ensure-registered
@@ -120,6 +121,7 @@ function ensureRegistered(key)
     return entry;
 }
 
+@linkTimeConstant
 function forceFulfillPromise(promise, value)
 {
     "use strict";
@@ -130,6 +132,7 @@ function forceFulfillPromise(promise, value)
         @fulfillPromise(promise, value);
 }
 
+@linkTimeConstant
 function fulfillFetch(entry, source)
 {
     // https://whatwg.github.io/loader/#fulfill-fetch
@@ -138,12 +141,13 @@ function fulfillFetch(entry, source)
 
     if (!entry.fetch)
         entry.fetch = @newPromiseCapability(@InternalPromise).@promise;
-    this.forceFulfillPromise(entry.fetch, source);
+    @forceFulfillPromise(entry.fetch, source);
     @setStateToMax(entry, @ModuleInstantiate);
 }
 
 // Loader.
 
+@visibility=PrivateRecursive
 function requestFetch(entry, parameters, fetcher)
 {
     // https://whatwg.github.io/loader/#request-fetch
@@ -181,6 +185,7 @@ function requestFetch(entry, parameters, fetcher)
     return fetchPromise;
 }
 
+@visibility=PrivateRecursive
 function requestInstantiate(entry, parameters, fetcher)
 {
     // https://whatwg.github.io/loader/#request-instantiate
@@ -207,7 +212,7 @@ function requestInstantiate(entry, parameters, fetcher)
         var dependencies = @newArrayWithSize(requestedModules.length);
         for (var i = 0, length = requestedModules.length; i < length; ++i) {
             var depName = requestedModules[i];
-            var depKey = this.resolveSync(depName, key, fetcher);
+            var depKey = this.resolve(depName, key, fetcher);
             var depEntry = this.ensureRegistered(depKey);
             @putByValDirect(dependencies, i, depEntry);
             dependenciesMap.@set(depName, depEntry);
@@ -220,6 +225,7 @@ function requestInstantiate(entry, parameters, fetcher)
     return instantiatePromise;
 }
 
+@visibility=PrivateRecursive
 function requestSatisfy(entry, parameters, fetcher, visited)
 {
     // https://html.spec.whatwg.org/#internal-module-script-graph-fetching-procedure
@@ -234,8 +240,9 @@ function requestSatisfy(entry, parameters, fetcher, visited)
         if (entry.satisfy)
             return entry.satisfy;
 
-        var depLoads = @newArrayWithSize(entry.dependencies.length);
+        var depLoads = this.requestedModuleParameters(entry.module);
         for (var i = 0, length = entry.dependencies.length; i < length; ++i) {
+            var parameters = depLoads[i];
             var depEntry = entry.dependencies[i];
             var promise;
 
@@ -249,10 +256,10 @@ function requestSatisfy(entry, parameters, fetcher, visited)
             // rejected by the Promises runtime. Since only we need is the instantiated module, instead of waiting
             // the Satisfy for this module, we just wait Instantiate for this.
             if (visited.@has(depEntry))
-                promise = this.requestInstantiate(depEntry, @undefined, fetcher);
+                promise = this.requestInstantiate(depEntry, parameters, fetcher);
             else {
                 // Currently, module loader do not pass any information for non-top-level module fetching.
-                promise = this.requestSatisfy(depEntry, @undefined, fetcher, visited);
+                promise = this.requestSatisfy(depEntry, parameters, fetcher, visited);
             }
             @putByValDirect(depLoads, i, promise);
         }
@@ -271,6 +278,7 @@ function requestSatisfy(entry, parameters, fetcher, visited)
 
 // Linking semantics.
 
+@visibility=PrivateRecursive
 function link(entry, fetcher)
 {
     // https://html.spec.whatwg.org/#fetch-the-descendants-of-and-instantiate-a-module-script
@@ -305,6 +313,7 @@ function link(entry, fetcher)
 
 // Module semantics.
 
+@visibility=PrivateRecursive
 function moduleEvaluation(entry, fetcher)
 {
     // http://www.ecma-international.org/ecma-262/6.0/#sec-moduleevaluation
@@ -330,6 +339,7 @@ function moduleEvaluation(entry, fetcher)
         return this.asyncModuleEvaluation(entry, fetcher, dependencies);
 }
 
+@visibility=PrivateRecursive
 async function asyncModuleEvaluation(entry, fetcher, dependencies)
 {
     "use strict";
@@ -355,6 +365,7 @@ async function asyncModuleEvaluation(entry, fetcher, dependencies)
 
 // APIs to control the module loader.
 
+@visibility=PrivateRecursive
 function provideFetch(key, value)
 {
     "use strict";
@@ -363,22 +374,22 @@ function provideFetch(key, value)
 
     if (entry.state > @ModuleFetch)
         @throwTypeError("Requested module is already fetched.");
-    this.fulfillFetch(entry, value);
+    @fulfillFetch(entry, value);
 }
 
-async function loadModule(moduleName, parameters, fetcher)
+@visibility=PrivateRecursive
+async function loadModule(key, parameters, fetcher)
 {
     "use strict";
 
-    // Loader.resolve hook point.
-    // resolve: moduleName => Promise(moduleKey)
-    // Take the name and resolve it to the unique identifier for the resource location.
-    // For example, take the "jquery" and return the URL for the resource.
-    var key = await this.resolve(moduleName, @undefined, fetcher);
+    var importMap = @importMapStatus();
+    if (importMap)
+        await importMap;
     var entry = await this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set);
     return entry.key;
 }
 
+@visibility=PrivateRecursive
 function linkAndEvaluateModule(key, fetcher)
 {
     "use strict";
@@ -391,23 +402,34 @@ function linkAndEvaluateModule(key, fetcher)
     return this.moduleEvaluation(entry, fetcher);
 }
 
+@visibility=PrivateRecursive
 async function loadAndEvaluateModule(moduleName, parameters, fetcher)
 {
     "use strict";
 
-    var key = await this.loadModule(moduleName, parameters, fetcher);
+    var importMap = @importMapStatus();
+    if (importMap)
+        await importMap;
+    var key = this.resolve(moduleName, @undefined, fetcher);
+    key = await this.loadModule(key, parameters, fetcher);
     return await this.linkAndEvaluateModule(key, fetcher);
 }
 
-async function requestImportModule(key, parameters, fetcher)
+@visibility=PrivateRecursive
+async function requestImportModule(moduleName, referrer, parameters, fetcher)
 {
     "use strict";
 
+    var importMap = @importMapStatus();
+    if (importMap)
+        await importMap;
+    var key = this.resolve(moduleName, referrer, fetcher);
     var entry = await this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set);
     await this.linkAndEvaluateModule(entry.key, fetcher);
     return this.getModuleNamespaceObject(entry.module);
 }
 
+@visibility=PrivateRecursive
 function dependencyKeysIfEvaluated(key)
 {
     "use strict";

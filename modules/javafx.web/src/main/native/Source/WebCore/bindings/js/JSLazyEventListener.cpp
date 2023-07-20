@@ -46,7 +46,7 @@ struct JSLazyEventListener::CreationArguments {
     const QualifiedName& attributeName;
     const AtomString& attributeValue;
     Document& document;
-    WeakPtr<ContainerNode> node;
+    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> node;
     JSObject* wrapper;
     bool shouldUseSVGEventName;
 };
@@ -138,7 +138,12 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
 
     if (!executionContextDocument.frame())
         return nullptr;
-    auto* globalObject = toJSDOMWindow(*executionContextDocument.frame(), isolatedWorld());
+
+    auto* isolatedWorld = this->isolatedWorld();
+    if (UNLIKELY(!isolatedWorld))
+        return nullptr;
+
+    auto* globalObject = toJSDOMWindow(*executionContextDocument.frame(), *isolatedWorld);
     if (!globalObject)
         return nullptr;
 

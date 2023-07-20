@@ -41,7 +41,7 @@ static inline SVGDocumentExtensions& svgExtensionsFromElement(SVGElement& elemen
 }
 
 RenderSVGResourceContainer::RenderSVGResourceContainer(SVGElement& element, RenderStyle&& style)
-    : RenderSVGHiddenContainer(element, WTFMove(style))
+    : LegacyRenderSVGHiddenContainer(element, WTFMove(style))
     , m_id(element.getIdAttribute())
 {
 }
@@ -55,7 +55,7 @@ void RenderSVGResourceContainer::layout()
     if (selfNeedsClientInvalidation())
         LegacyRenderSVGRoot::addResourceForClientInvalidation(this);
 
-    RenderSVGHiddenContainer::layout();
+    LegacyRenderSVGHiddenContainer::layout();
 }
 
 void RenderSVGResourceContainer::willBeDestroyed()
@@ -67,12 +67,12 @@ void RenderSVGResourceContainer::willBeDestroyed()
         m_registered = false;
     }
 
-    RenderSVGHiddenContainer::willBeDestroyed();
+    LegacyRenderSVGHiddenContainer::willBeDestroyed();
 }
 
 void RenderSVGResourceContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
+    LegacyRenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
 
     if (!m_registered) {
         m_registered = true;
@@ -201,7 +201,7 @@ void RenderSVGResourceContainer::registerResource()
         return;
     }
 
-    auto elements = copyToVectorOf<Ref<Element>>(extensions.removePendingResource(m_id));
+    auto elements = copyToVectorOf<Ref<SVGElement>>(extensions.removePendingResource(m_id));
 
     // Cache us with the new id.
     extensions.addResource(m_id, *this);

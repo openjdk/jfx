@@ -47,8 +47,15 @@ public:
 
     DECLARE_INFO;
 
+    static ISO8601::PlainTime toPlainTime(JSGlobalObject*, const ISO8601::Duration&);
+    static ISO8601::Duration roundTime(ISO8601::PlainTime, double increment, TemporalUnit, RoundingMode, std::optional<double> dayLengthNs);
+    static ISO8601::Duration toTemporalTimeRecord(JSGlobalObject*, JSObject*, bool skipRelevantPropertyCheck = false);
+    static std::array<std::optional<double>, numberOfTemporalPlainTimeUnits> toPartialTime(JSGlobalObject*, JSObject*, bool skipRelevantPropertyCheck = false);
+    static ISO8601::PlainTime regulateTime(JSGlobalObject*, ISO8601::Duration&&, TemporalOverflow);
+    static ISO8601::Duration addTime(const ISO8601::PlainTime&, const ISO8601::Duration&);
+
     static TemporalPlainTime* from(JSGlobalObject*, JSValue, std::optional<TemporalOverflow>);
-    static int32_t compare(TemporalPlainTime*, TemporalPlainTime*);
+    static int32_t compare(const ISO8601::PlainTime&, const ISO8601::PlainTime&);
 
     TemporalCalendar* calendar() { return m_calendar.get(this); }
     ISO8601::PlainTime plainTime() const { return m_plainTime; }
@@ -59,8 +66,6 @@ public:
 #undef JSC_DEFINE_TEMPORAL_PLAIN_TIME_FIELD
 
     ISO8601::PlainTime with(JSGlobalObject*, JSObject* temporalTimeLike, JSValue options) const;
-    ISO8601::PlainTime add(JSGlobalObject*, JSValue) const;
-    ISO8601::PlainTime subtract(JSGlobalObject*, JSValue) const;
     ISO8601::PlainTime round(JSGlobalObject*, JSValue options) const;
     String toString(JSGlobalObject*, JSValue options) const;
     String toString(std::tuple<Precision, unsigned> precision = { Precision::Auto, 0 }) const

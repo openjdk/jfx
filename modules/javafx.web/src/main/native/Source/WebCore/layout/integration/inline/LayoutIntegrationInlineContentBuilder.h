@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineFormattingState.h"
 #include <wtf/Vector.h>
 
@@ -44,9 +42,10 @@ public:
     InlineContentBuilder(const RenderBlockFlow&, BoxTree&);
 
     void build(Layout::InlineFormattingState&, InlineContent&) const;
+    void updateLineOverflow(InlineContent&) const;
 
 private:
-    void createDisplayLines(Layout::InlineFormattingState&, InlineContent&) const;
+    void adjustDisplayLines(InlineContent&) const;
 
     const RenderBlockFlow& m_blockFlow;
     BoxTree& m_boxTree;
@@ -54,4 +53,3 @@ private:
 
 }
 }
-#endif

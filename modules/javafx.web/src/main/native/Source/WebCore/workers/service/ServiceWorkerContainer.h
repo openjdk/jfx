@@ -31,7 +31,8 @@
 #include "AddEventListenerOptions.h"
 #include "EventTarget.h"
 #include "IDLTypes.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
+#include "MessageEvent.h"
 #include "PushPermissionState.h"
 #include "PushSubscription.h"
 #include "SWClientConnection.h"
@@ -52,9 +53,7 @@ class ServiceWorker;
 enum class ServiceWorkerUpdateViaCache : uint8_t;
 enum class WorkerType : bool;
 
-template<typename IDLType> class DOMPromiseProxy;
-
-class ServiceWorkerContainer final : public EventTargetWithInlineData, public ActiveDOMObject, public ServiceWorkerJobClient {
+class ServiceWorkerContainer final : public EventTarget, public ActiveDOMObject, public ServiceWorkerJobClient {
     WTF_MAKE_NONCOPYABLE(ServiceWorkerContainer);
     WTF_MAKE_ISO_ALLOCATED(ServiceWorkerContainer);
 public:
@@ -166,7 +165,7 @@ private:
     uint64_t m_lastOngoingSettledRegistrationIdentifier { 0 };
     HashMap<uint64_t, ServiceWorkerRegistrationKey> m_ongoingSettledRegistrations;
     bool m_shouldDeferMessageEvents { false };
-    Vector<Ref<Event>> m_deferredMessageEvents;
+    Vector<MessageEvent::MessageEventWithStrongData> m_deferredMessageEvents;
 };
 
 } // namespace WebCore

@@ -37,9 +37,13 @@
 #include "HTTPHeaderField.h"
 #include "HTTPHeaderNames.h"
 #include "ParsedContentType.h"
+#include "RFC7230.h"
+#include "ResourceResponse.h"
+#include "SecurityOrigin.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/DateMath.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/OptionSet.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -62,7 +66,7 @@ static inline bool skipWhile(const String& str, unsigned& pos, const Function<bo
 // Note: Might return pos == str.length()
 static inline bool skipWhiteSpace(const String& str, unsigned& pos)
 {
-    skipWhile(str, pos, RFC7230::isWhitespace);
+    skipWhile(str, pos, RFC7230::isWhitespace<UChar>);
     return pos < str.length();
 }
 
@@ -579,92 +583,31 @@ XFrameOptionsDisposition parseXFrameOptionsHeader(StringView header)
     return result;
 }
 
-// https://fetch.spec.whatwg.org/#concept-header-list-get-structured-header
-// FIXME: For now, this assumes the type is "item".
-std::optional<std::pair<StringView, HashMap<String, String>>> parseStructuredFieldValue(StringView header)
+OptionSet<ClearSiteDataValue> parseClearSiteDataHeader(const ResourceResponse& response)
 {
-    header = stripLeadingAndTrailingHTTPSpaces(header);
-    if (header.isEmpty())
-        return std::nullopt;
+    OptionSet<ClearSiteDataValue> result;
 
-    // Parse a token (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.6).
-    if (!isASCIIAlpha(header[0]) && header[0] != '*')
-        return std::nullopt;
-    size_t index = 1;
-    while (index < header.length()) {
-        UChar c = header[index];
-        if (!RFC7230::isTokenCharacter(c) && c != ':' && c != '/')
-            break;
-        ++index;
-    }
-    StringView bareItem = header.left(index);
+    auto headerValue = response.httpHeaderField(HTTPHeaderName::ClearSiteData);
+    if (headerValue.isEmpty())
+        return result;
 
-    // Parse parameters (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3.2).
-    HashMap<String, String> parameters;
-    while (index < header.length()) {
-        if (header[index] != ';')
-            break;
-        ++index; // Consume ';'.
-        while (index < header.length() && header[index] == ' ')
-            ++index;
-        if (index == header.length())
-            return std::nullopt;
-        // Parse a key (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3.3)
-        if (!isASCIILower(header[index]))
-            return std::nullopt;
-        size_t keyStart = index++;
-        while (index < header.length()) {
-            UChar c = header[index];
-            if (!isASCIILower(c) && !isASCIIDigit(c) && c != '_' && c != '-' && c != '.' && c != '*')
-                break;
-            ++index;
-        }
-        StringView key = header.substring(keyStart, index - keyStart);
-        String value = trueAtom();
-        if (index < header.length() && header[index] == '=') {
-            ++index; // Consume '='.
-            if (isASCIIAlpha(header[index]) || header[index] == '*') {
-                // https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.6
-                size_t valueStart = index++;
-                while (index < header.length()) {
-                    UChar c = header[index];
-                    if (!RFC7230::isTokenCharacter(c) && c != ':' && c != '/')
-                        break;
-                    ++index;
-                }
-                value = header.substring(valueStart, index - valueStart).toString();
-            } else if (header[index] == '"') {
-                // https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.5
-                StringBuilder valueBuilder;
-                ++index; // Skip DQUOTE.
-                while (index < header.length()) {
-                    if (header[index] == '\\') {
-                        ++index;
-                        if (index == header.length())
-                            return std::nullopt;
-                        if (header[index] != '\\' && header[index] != '"')
-                            return std::nullopt;
-                        valueBuilder.append(header[index]);
-                    } else if (header[index] == '\"') {
-                        value = valueBuilder.toString();
-                        break;
-                    } else if (header[index] <= 0x1F || (header[index] >= 0x7F && header[index] <= 0xFF)) // Not in VCHAR or SP.
-                        return std::nullopt;
-                    else
-                        valueBuilder.append(header[index]);
-                    ++index;
-                }
-                if (index == header.length())
-                    return std::nullopt;
-                ++index; // Skip DQUOTE.
-            } else
-                return std::nullopt;
-        }
-        parameters.set(key.toString(), WTFMove(value));
+    if (!WebCore::shouldTreatAsPotentiallyTrustworthy(response.url()))
+        return result;
+
+    for (auto value : StringView(headerValue).split(',')) {
+        auto trimmedValue = value.stripLeadingAndTrailingMatchedCharacters(isHTTPSpace);
+        if (trimmedValue == "\"cache\""_s)
+            result.add(ClearSiteDataValue::Cache);
+        else if (trimmedValue == "\"cookies\""_s)
+            result.add(ClearSiteDataValue::Cookies);
+        else if (trimmedValue == "\"executionContexts\""_s)
+            result.add(ClearSiteDataValue::ExecutionContexts);
+        else if (trimmedValue == "\"storage\""_s)
+            result.add(ClearSiteDataValue::Storage);
+        else if (trimmedValue == "\"*\""_s)
+            result.add({ ClearSiteDataValue::Cache, ClearSiteDataValue::Cookies, ClearSiteDataValue::ExecutionContexts, ClearSiteDataValue::Storage });
     }
-    if (index != header.length())
-        return std::nullopt;
-    return std::make_pair(bareItem, parameters);
+    return result;
 }
 
 bool parseRange(StringView range, long long& rangeOffset, long long& rangeEnd, long long& rangeSuffixLength)
@@ -867,6 +810,7 @@ bool isForbiddenHeaderName(const String& name)
         case HTTPHeaderName::KeepAlive:
         case HTTPHeaderName::Origin:
         case HTTPHeaderName::Referer:
+        case HTTPHeaderName::SetCookie:
         case HTTPHeaderName::TE:
         case HTTPHeaderName::Trailer:
         case HTTPHeaderName::TransferEncoding:
@@ -878,6 +822,20 @@ bool isForbiddenHeaderName(const String& name)
         }
     }
     return startsWithLettersIgnoringASCIICase(name, "sec-"_s) || startsWithLettersIgnoringASCIICase(name, "proxy-"_s);
+}
+
+bool isForbiddenHeader(const String& name, StringView value)
+{
+    if (isForbiddenHeaderName(name))
+        return true;
+    if (equalLettersIgnoringASCIICase(name, "x-http-method-override"_s) || equalLettersIgnoringASCIICase(name, "x-http-method"_s) || equalLettersIgnoringASCIICase(name, "x-method-override"_s)) {
+        for (auto methodValue : StringView(value).split(',')) {
+            auto method = methodValue.stripWhiteSpace();
+            if (isForbiddenMethod(method))
+                return true;
+        }
+    }
+    return false;
 }
 
 // Implements <https://fetch.spec.whatwg.org/#no-cors-safelisted-request-header-name>.
@@ -911,7 +869,7 @@ bool isForbiddenResponseHeaderName(const String& name)
 }
 
 // Implements <https://fetch.spec.whatwg.org/#forbidden-method>.
-bool isForbiddenMethod(const String& name)
+bool isForbiddenMethod(StringView name)
 {
     return equalLettersIgnoringASCIICase(name, "connect"_s) || equalLettersIgnoringASCIICase(name, "trace"_s) || equalLettersIgnoringASCIICase(name, "track"_s);
 }

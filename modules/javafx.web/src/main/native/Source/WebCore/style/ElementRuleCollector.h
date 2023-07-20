@@ -81,11 +81,13 @@ public:
 
     void setMode(SelectorChecker::Mode mode) { m_mode = mode; }
     void setPseudoElementRequest(const PseudoElementRequest& request) { m_pseudoElementRequest = request; }
-    void setMedium(const MediaQueryEvaluator* medium) { m_isPrintStyle = medium->mediaTypeMatchSpecific("print"_s); }
+    void setMedium(const MQ::MediaQueryEvaluator& medium) { m_isPrintStyle = medium.isPrintMedia(); }
 
     bool hasAnyMatchingRules(const RuleSet&);
 
     const MatchResult& matchResult() const;
+    std::unique_ptr<MatchResult> releaseMatchResult();
+
     const Vector<RefPtr<const StyleRule>>& matchedRuleList() const;
 
     void clearMatchedRules();
@@ -120,7 +122,7 @@ private:
     void sortMatchedRules();
 
     enum class DeclarationOrigin { UserAgent, User, Author };
-    static Vector<MatchedProperties>& declarationsForOrigin(MatchResult&, DeclarationOrigin);
+    Vector<MatchedProperties>& declarationsForOrigin(DeclarationOrigin);
     void sortAndTransferMatchedRules(DeclarationOrigin);
     void transferMatchedRules(DeclarationOrigin, std::optional<ScopeOrdinal> forScope = { });
 
@@ -146,7 +148,7 @@ private:
     // Output.
     Vector<RefPtr<const StyleRule>> m_matchedRuleList;
     bool m_didMatchUncommonAttributeSelector { false };
-    MatchResult m_result;
+    std::unique_ptr<MatchResult> m_result;
     Relations m_styleRelations;
     PseudoIdSet m_matchedPseudoElementIds;
 };

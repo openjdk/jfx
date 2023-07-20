@@ -21,7 +21,7 @@
                __ZN3WTF14RefCountedBase33areThreadingChecksEnabledGloballyE
                __ZN3WTF16fastZeroedMallocEm
                __ZN3WTF26getAndResetAccumulatedLogsEv
-               __ZNK3WTF6String4utf8Ev
+               __ZNK3WTF6String4utf8ENS_14ConversionModeE
                __ZNK14OpaqueJSString6stringEv
                __ZN3WTF5equalEPKNS_10StringImplEPKh
                __ZN3WTF26setPermissionsOfConfigPageEv
@@ -128,6 +128,7 @@
                __ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext
                __ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE
                __ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb
+               __ZN18WebCoreTestSupport23allowsAnySSLCertificateEv
                _Java_com_sun_webkit_dom_AttrImpl_getNameImpl
                _Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl
                _Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl

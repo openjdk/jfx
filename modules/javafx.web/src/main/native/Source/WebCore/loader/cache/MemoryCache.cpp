@@ -28,6 +28,7 @@
 #include "CachedImageClient.h"
 #include "CachedResource.h"
 #include "CachedResourceHandle.h"
+#include "ClientOrigin.h"
 #include "Document.h"
 #include "FrameLoader.h"
 #include "FrameLoaderTypes.h"
@@ -270,9 +271,9 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
     // For more details see: https://bugs.webkit.org/show_bug.cgi?id=30209
     auto it = m_liveDecodedResources.begin();
     while (it != m_liveDecodedResources.end()) {
-        auto* current = *it;
+        auto& current = *it;
 
-        LOG(ResourceLoading, " live resource %p %.255s - loaded %d, decodedSize %u", current, current->url().string().utf8().data(), current->isLoaded(), current->decodedSize());
+        LOG(ResourceLoading, " live resource %p %.255s - loaded %d, decodedSize %u", &current, current.url().string().utf8().data(), current.isLoaded(), current.decodedSize());
 
         // Increment the iterator now because the call to destroyDecodedData() below
         // may cause a call to ListHashSet::remove() and invalidate the current
@@ -282,10 +283,10 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
         // by a given iterator.
         ++it;
 
-        ASSERT(current->hasClients());
-        if (current->isLoaded() && current->decodedSize()) {
+        ASSERT(current.hasClients());
+        if (current.isLoaded() && current.decodedSize()) {
             // Check to see if the remaining resources are too new to prune.
-            Seconds elapsedTime = currentTime - current->m_lastDecodedAccessTime;
+            Seconds elapsedTime = currentTime - current.m_lastDecodedAccessTime;
             if (!shouldDestroyDecodedDataForAllLiveResources && elapsedTime < cMinDelayBeforeLiveDecodedPrune) {
                 LOG(ResourceLoading, " current time is less than min delay before pruning (%.3fms)", elapsedTime.milliseconds());
                 return;
@@ -293,7 +294,7 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
 
             // Destroy our decoded data. This will remove us from m_liveDecodedResources, and possibly move us
             // to a different LRU list in m_allResources.
-            current->destroyDecodedData();
+            current.destroyDecodedData();
 
             if (targetSize && m_liveSize <= targetSize)
                 return;
@@ -336,7 +337,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
         // First flush all the decoded data in this queue.
         // Remove from the head, since this is the least frequently accessed of the objects.
         for (auto& resource : lruList) {
-            LOG(ResourceLoading, " lru resource %p - in cache %d, has clients %d, preloaded %d, loaded %d", resource, resource->inCache(), resource->hasClients(), resource->isPreloaded(), resource->isLoaded());
+            LOG(ResourceLoading, " lru resource %p - in cache %d, has clients %d, preloaded %d, loaded %d", resource.get(), resource->inCache(), resource->hasClients(), resource->isPreloaded(), resource->isLoaded());
             if (!resource->inCache())
                 continue;
 
@@ -345,7 +346,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
                 // m_liveDecodedResources, and possibly move us to a different
                 // LRU list in m_allResources.
 
-                LOG(ResourceLoading, " lru resource %p destroyDecodedData", resource);
+                LOG(ResourceLoading, " lru resource %p destroyDecodedData", resource.get());
 
                 resource->destroyDecodedData();
 
@@ -359,7 +360,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
         // Now evict objects from this list.
         // Remove from the head, since this is the least frequently accessed of the objects.
         for (auto& resource : lruList) {
-            LOG(ResourceLoading, " lru resource %p - in cache %d, has clients %d, preloaded %d, loaded %d", resource, resource->inCache(), resource->hasClients(), resource->isPreloaded(), resource->isLoaded());
+            LOG(ResourceLoading, " lru resource %p - in cache %d, has clients %d, preloaded %d, loaded %d", resource.get(), resource->inCache(), resource->hasClients(), resource->isPreloaded(), resource->isLoaded());
             if (!resource->inCache())
                 continue;
 
@@ -372,7 +373,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
 
         // Shrink the vector back down so we don't waste time inspecting
         // empty LRU lists on future prunes.
-        if (!m_allResources[i]->isEmpty())
+        if (!m_allResources[i]->isEmptyIgnoringNullReferences())
             canShrinkLRULists = false;
         else if (canShrinkLRULists)
             m_allResources.shrink(i);
@@ -452,7 +453,7 @@ void MemoryCache::removeFromLRUList(CachedResource& resource)
     // Verify that the list we got is the list we want.
     ASSERT(resource.m_lruIndex == oldListIndex);
 
-    bool removed = list.remove(&resource);
+    bool removed = list.remove(resource);
     ASSERT_UNUSED(removed, removed);
 }
 
@@ -461,7 +462,7 @@ void MemoryCache::insertInLRUList(CachedResource& resource)
     ASSERT(resource.inCache());
     ASSERT(resource.accessCount() > 0);
 
-    auto addResult = lruListFor(resource).add(&resource);
+    auto addResult = lruListFor(resource).add(resource);
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
@@ -484,16 +485,19 @@ void MemoryCache::resourceAccessed(CachedResource& resource)
     insertInLRUList(resource);
 }
 
-void MemoryCache::removeResourcesWithOrigin(SecurityOrigin& origin)
+bool MemoryCache::inLiveDecodedResourcesList(CachedResource& resource) const
 {
-    String originPartition = ResourceRequest::partitionName(origin.host());
+    return m_liveDecodedResources.contains(resource);
+}
 
+void MemoryCache::removeResourcesWithOrigin(const SecurityOrigin& origin, const String& cachePartition)
+{
     Vector<CachedResource*> resourcesWithOrigin;
     for (auto& resources : m_sessionResources.values()) {
         for (auto& keyValue : *resources) {
             auto& resource = *keyValue.value;
             auto& partitionName = keyValue.key.second;
-            if (partitionName == originPartition) {
+            if (partitionName == cachePartition) {
                 resourcesWithOrigin.append(&resource);
                 continue;
             }
@@ -505,6 +509,18 @@ void MemoryCache::removeResourcesWithOrigin(SecurityOrigin& origin)
 
     for (auto* resource : resourcesWithOrigin)
         remove(*resource);
+}
+
+void MemoryCache::removeResourcesWithOrigin(const SecurityOrigin& origin)
+{
+    String originPartition = ResourceRequest::partitionName(origin.host());
+    removeResourcesWithOrigin(origin, originPartition);
+}
+
+void MemoryCache::removeResourcesWithOrigin(const ClientOrigin& origin)
+{
+    auto cachePartition = origin.topOrigin == origin.clientOrigin ? emptyString() : ResourceRequest::partitionName(origin.topOrigin.host());
+    removeResourcesWithOrigin(origin.clientOrigin.securityOrigin(), cachePartition);
 }
 
 void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const HashSet<RefPtr<SecurityOrigin>>& origins)
@@ -569,14 +585,14 @@ HashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID ses
 
 void MemoryCache::removeFromLiveDecodedResourcesList(CachedResource& resource)
 {
-    m_liveDecodedResources.remove(&resource);
+    m_liveDecodedResources.remove(resource);
 }
 
 void MemoryCache::insertInLiveDecodedResourcesList(CachedResource& resource)
 {
     // Make sure we aren't in the list already.
-    ASSERT(!m_liveDecodedResources.contains(&resource));
-    m_liveDecodedResources.add(&resource);
+    ASSERT(!m_liveDecodedResources.contains(resource));
+    m_liveDecodedResources.add(resource);
 }
 
 void MemoryCache::addToLiveResourcesSize(CachedResource& resource)
@@ -750,9 +766,9 @@ void MemoryCache::dumpLRULists(bool includeLive) const
     int size = m_allResources.size();
     for (int i = size - 1; i >= 0; i--) {
         WTFLogAlways("\nList %d:\n", i);
-        for (auto* resource : *m_allResources[i]) {
-            if (includeLive || !resource->hasClients())
-                WTFLogAlways("  %p %.255s %.1fK, %.1fK, accesses: %u, clients: %d\n", resource, resource->url().string().utf8().data(), resource->decodedSize() / 1024.0f, (resource->encodedSize() + resource->overheadSize()) / 1024.0f, resource->accessCount(), resource->numberOfClients());
+        for (auto& resource : *m_allResources[i]) {
+            if (includeLive || !resource.hasClients())
+                WTFLogAlways("  %p %.255s %.1fK, %.1fK, accesses: %u, clients: %d\n", &resource, resource.url().string().utf8().data(), resource.decodedSize() / 1024.0f, (resource.encodedSize() + resource.overheadSize()) / 1024.0f, resource.accessCount(), resource.numberOfClients());
         }
     }
 }

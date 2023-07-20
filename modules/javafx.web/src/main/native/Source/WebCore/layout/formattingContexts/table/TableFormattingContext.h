@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingContext.h"
 #include "TableFormattingGeometry.h"
 #include "TableFormattingQuirks.h"
@@ -43,7 +41,7 @@ namespace Layout {
 class TableFormattingContext final : public FormattingContext {
     WTF_MAKE_ISO_ALLOCATED(TableFormattingContext);
 public:
-    TableFormattingContext(const ContainerBox& formattingContextRoot, TableFormattingState&);
+    TableFormattingContext(const ElementBox& formattingContextRoot, TableFormattingState&);
     void layoutInFlowContent(const ConstraintsForInFlowContent&) override;
     LayoutUnit usedContentHeight() const override;
 
@@ -88,4 +86,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_CONTEXT(TableFormattingContext, isTableFormattingContext())
 
-#endif

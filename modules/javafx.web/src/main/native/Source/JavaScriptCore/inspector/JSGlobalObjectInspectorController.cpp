@@ -42,6 +42,7 @@
 #include "JSGlobalObject.h"
 #include "JSGlobalObjectAuditAgent.h"
 #include "JSGlobalObjectConsoleClient.h"
+#include "JSGlobalObjectDebugger.h"
 #include "JSGlobalObjectDebuggerAgent.h"
 #include "JSGlobalObjectRuntimeAgent.h"
 #include "ScriptCallStack.h"
@@ -62,7 +63,6 @@ JSGlobalObjectInspectorController::JSGlobalObjectInspectorController(JSGlobalObj
     : m_globalObject(globalObject)
     , m_injectedScriptManager(makeUnique<InjectedScriptManager>(*this, InjectedScriptHost::create()))
     , m_executionStopwatch(Stopwatch::create())
-    , m_debugger(globalObject)
     , m_frontendRouter(FrontendRouter::create())
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
 {
@@ -92,6 +92,8 @@ void JSGlobalObjectInspectorController::globalObjectDestroyed()
     m_injectedScriptManager->disconnect();
 
     m_agents.discardValues();
+
+    m_debugger = nullptr;
 }
 
 void JSGlobalObjectInspectorController::connectFrontend(FrontendChannel& frontendChannel, bool isAutomaticInspection, bool immediatelyPause)
@@ -161,7 +163,7 @@ void JSGlobalObjectInspectorController::appendAPIBacktrace(ScriptCallStack& call
     void** stack = samples + framesToSkip;
     int size = frames - framesToSkip;
     for (int i = 0; i < size; ++i) {
-        auto demangled = StackTrace::demangle(stack[i]);
+        auto demangled = StackTraceSymbolResolver::demangle(stack[i]);
         if (demangled)
             callStack.append(ScriptCallFrame(String::fromLatin1(demangled->demangledName() ? demangled->demangledName() : demangled->mangledName()), "[native code]"_s, noSourceID, 0, 0));
         else
@@ -209,7 +211,7 @@ bool JSGlobalObjectInspectorController::developerExtrasEnabled() const
     if (!RemoteInspector::singleton().enabled())
         return false;
 
-    if (!m_globalObject.inspectorDebuggable().remoteDebuggingAllowed())
+    if (!m_globalObject.inspectorDebuggable().allowsInspectionByPolicy())
         return false;
 #endif
 
@@ -246,9 +248,10 @@ Stopwatch& JSGlobalObjectInspectorController::executionStopwatch() const
     return m_executionStopwatch;
 }
 
-JSGlobalObjectDebugger& JSGlobalObjectInspectorController::debugger()
+JSC::Debugger* JSGlobalObjectInspectorController::debugger()
 {
-    return m_debugger;
+    ASSERT_IMPLIES(m_didCreateLazyAgents, m_debugger);
+    return m_debugger.get();
 }
 
 VM& JSGlobalObjectInspectorController::vm()
@@ -312,6 +315,8 @@ void JSGlobalObjectInspectorController::createLazyAgents()
         return;
 
     m_didCreateLazyAgents = true;
+
+    m_debugger = makeUnique<JSGlobalObjectDebugger>(m_globalObject);
 
     auto context = jsAgentContext();
 

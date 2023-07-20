@@ -26,10 +26,9 @@
 #include "config.h"
 #include "CSSMathInvert.h"
 
+#include "CSSCalcInvertNode.h"
 #include "CSSNumericValue.h"
-
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSPrimitiveValue.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -112,9 +111,13 @@ bool CSSMathInvert::equals(const CSSNumericValue& other) const
     if (!otherInvert)
         return false;
     return m_value->equals(otherInvert->value());
+}
 
+RefPtr<CSSCalcExpressionNode> CSSMathInvert::toCalcExpressionNode() const
+{
+    if (auto value = m_value->toCalcExpressionNode())
+        return CSSCalcInvertNode::create(value.releaseNonNull());
+    return nullptr;
 }
 
 } // namespace WebCore
-
-#endif

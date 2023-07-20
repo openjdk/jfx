@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGL2)
+#if ENABLE(WEBGL)
 
 #include "WebGLRenderingContextBase.h"
 #include <memory>
@@ -33,6 +33,9 @@
 
 namespace WebCore {
 
+#if ENABLE(WEB_CODECS)
+class WebCodecsVideoFrame;
+#endif
 class WebGLQuery;
 class WebGLSampler;
 class WebGLSync;
@@ -77,11 +80,14 @@ public:
     void texStorage2D(GCGLenum target, GCGLsizei levels, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height);
     void texStorage3D(GCGLenum target, GCGLsizei levels, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLsizei depth);
 
+    using TexImageSource = std::variant<RefPtr<ImageBitmap>, RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>
 #if ENABLE(VIDEO)
-    using TexImageSource = std::variant<RefPtr<ImageBitmap>, RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>, RefPtr<HTMLVideoElement>>;
-#else
-    using TexImageSource = std::variant<RefPtr<ImageBitmap>, RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>>;
+        , RefPtr<HTMLVideoElement>
 #endif
+#if ENABLE(WEB_CODECS)
+        , RefPtr<WebCodecsVideoFrame>
+#endif
+    >;
 
     // Must override the WebGL 1.0 signatures to add extra validation.
     void texImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&&) override;
@@ -197,7 +203,7 @@ public:
     GCGLboolean isQuery(WebGLQuery*);
     void beginQuery(GCGLenum target, WebGLQuery&);
     void endQuery(GCGLenum target);
-    RefPtr<WebGLQuery> getQuery(GCGLenum target, GCGLenum pname);
+    WebGLAny getQuery(GCGLenum target, GCGLenum pname);
     WebGLAny getQueryParameter(WebGLQuery&, GCGLenum pname);
 
     // Sampler objects
@@ -251,7 +257,7 @@ public:
     WebGLAny getParameter(GCGLenum pname) final;
 
     // Must override the WebGL 1.0 signature in order to add extra validation.
-    void readPixels(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, ArrayBufferView& pixels) override;
+    void readPixels(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&& pixels) override;
     void readPixels(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLintptr offset);
     void readPixels(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, ArrayBufferView& dstData, GCGLuint dstOffset);
 
@@ -282,7 +288,7 @@ private:
     RefPtr<ArrayBufferView> arrayBufferViewSliceFactory(const char* const functionName, const ArrayBufferView& data, unsigned startByte, unsigned bytelength);
     RefPtr<ArrayBufferView> sliceArrayBufferView(const char* const functionName, const ArrayBufferView& data, GCGLuint srcOffset, GCGLuint length);
 
-    long long getInt64Parameter(GCGLenum);
+    long long getInt64Parameter(GCGLenum) final;
     Vector<bool> getIndexedBooleanArrayParameter(GCGLenum pname, GCGLuint index);
 
     void initializeVertexArrayObjects() final;
@@ -302,7 +308,7 @@ private:
     WebGLFramebuffer* getReadFramebufferBinding() final;
     void restoreCurrentFramebuffer() final;
     bool validateNonDefaultFramebufferAttachment(const char* functionName, GCGLenum attachment);
-    enum ActiveQueryKey { SamplesPassed = 0, PrimitivesWritten = 1, NumKeys = 2 };
+    enum ActiveQueryKey { SamplesPassed = 0, PrimitivesWritten = 1, TimeElapsed = 2, NumKeys = 3 };
     std::optional<ActiveQueryKey> validateQueryTarget(const char* functionName, GCGLenum target);
     void renderbufferStorageImpl(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, const char* functionName) final;
     void renderbufferStorageHelper(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height);
@@ -371,4 +377,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::WebGL2RenderingContext, isWebGL2())
 
-#endif // WEBGL2
+#endif // WEBGL

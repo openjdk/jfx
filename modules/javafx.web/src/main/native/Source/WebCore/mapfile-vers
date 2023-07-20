@@ -24,8 +24,8 @@ SUNWprivate_1.0 {
                _ZN3WTF16fastZeroedMallocEj;
                _ZN3WTF16fastZeroedMallocEm;
                _ZN3WTF26getAndResetAccumulatedLogsEv;
+               _ZNK3WTF6String4utf8ENS_14ConversionModeE;
                _ZNK14OpaqueJSString6stringEv;
-               _ZNK3WTF6String4utf8Ev;
                _ZNK3WTF10StringView23underlyingStringIsValidEv;
                _ZN3WTF26setPermissionsOfConfigPageEv;
                JSCheckScriptSyntax;
@@ -130,6 +130,7 @@ SUNWprivate_1.0 {
                _ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext;
                _ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE;
                _ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb;
+               _ZN18WebCoreTestSupport23allowsAnySSLCertificateEv;
                Java_com_sun_webkit_dom_AttrImpl_getNameImpl;
                Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl;
                Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl;

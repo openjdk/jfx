@@ -59,11 +59,44 @@ class Section
               raise "Bytecodes with checkpoints should have metadata: #{a.name}" if a.checkpoints and a.metadata.empty?
               raise "Bytecodes with checkpoints should have metadata: #{b.name}" if b.checkpoints and b.metadata.empty?
               result = a.checkpoints ? b.checkpoints ? 0 : -1 : 1
-          elsif
+          # SIMD opcodes should always use higher bytecode ids since they are more rare.
+          elsif a.name.downcase.include?("simd") or b.name.downcase.include?("simd")
+              result = a.name.include?("simd") ? b.name.include?("simd") ? 0 : 1 : -1 
+          else
               result = a.metadata.empty? ? b.metadata.empty? ? 0 : 1 : -1
           end
           result
       }
+  end
+
+  def validate
+      first_non_checkpoint = nil
+      first_non_metadata = nil
+      last_simd = nil
+      # validate that opcodes are ordered as
+      # [opcodes_with_checkpoint] ++ [opcodes_with_metadata] ++ [non_simd_opcodes] ++ [simd_opcodes]
+      @opcodes.each do |opcode|
+        if opcode.checkpoints.nil?
+              first_non_checkpoint ||= opcode
+          elsif first_non_checkpoint
+              assert("invalid order of bytecodes in section '#{name}': found opcode '#{opcode.name}' with checkpoints after '#{first_non_checkpoint.name}', which doesn't contain checkpoints") { false }
+          end
+
+          if opcode.metadata.empty?
+              first_non_metadata ||= opcode
+          elsif first_non_metadata
+              assert("invalid order of bytecodes in section '#{name}': found opcode '#{opcode.name}' with metadata after '#{first_non_metadata.name}', which doesn't contain metadata") { false }
+          end
+
+          if opcode.name.downcase.include?("simd")
+              last_simd = opcode
+          elsif last_simd
+              assert("invalid order of bytecodes in section '#{name}': found non-simd opcode '#{opcode.name}' after '#{last_simd.name}'") { false }
+          end
+      end
+  end
+
+  def create_ids!
       @opcodes.each(&:create_id!)
   end
 

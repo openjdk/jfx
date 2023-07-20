@@ -28,6 +28,7 @@
 #include <wtf/RunLoop.h>
 
 #include <wtf/DataLog.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/ProcessID.h>
 
 namespace WTF {
@@ -176,10 +177,10 @@ void RunLoop::runImpl(RunMode runMode)
     ASSERT(this == &RunLoop::current());
 
     if constexpr (report) {
-        static NeverDestroyed<DispatchTimer> reporter { *this };
+        static LazyNeverDestroyed<Timer> reporter;
         static std::once_flag onceKey;
         std::call_once(onceKey, [&] {
-            reporter->setFunction([this] {
+            reporter.construct(*this, [this] {
                 unsigned count = 0;
                 unsigned active = 0;
                 for (auto task = m_schedules.first(); task; task = task->successor()) {
@@ -235,11 +236,6 @@ void RunLoop::run()
     RunLoop::current().runImpl(RunMode::Drain);
 }
 
-void RunLoop::iterate()
-{
-    RunLoop::current().runImpl(RunMode::Iterate);
-}
-
 void RunLoop::setWakeUpCallback(WTF::Function<void()>&& function)
 {
     RunLoop::current().m_wakeUpCallback = WTFMove(function);
@@ -279,7 +275,7 @@ void RunLoop::wakeUp()
 
 RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
 {
-    iterate();
+    RunLoop::current().runImpl(RunMode::Iterate);
     return CycleResult::Continue;
 }
 

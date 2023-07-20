@@ -136,7 +136,7 @@ void ScopeRuleSets::initializeUserStyle()
         m_userStyle = WTFMove(userStyle);
 }
 
-void ScopeRuleSets::collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& userSheets, RuleSet& userStyle, const MediaQueryEvaluator& mediaQueryEvaluator)
+void ScopeRuleSets::collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& userSheets, RuleSet& userStyle, const MQ::MediaQueryEvaluator& mediaQueryEvaluator)
 {
     RuleSetBuilder builder(userStyle, mediaQueryEvaluator, &m_styleResolver);
     for (auto& sheet : userSheets) {
@@ -193,7 +193,7 @@ bool ScopeRuleSets::hasContainerQueries() const
     return false;
 }
 
-std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamicMediaQueryRules(const MediaQueryEvaluator& evaluator)
+std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamicMediaQueryRules(const MQ::MediaQueryEvaluator& evaluator)
 {
     std::optional<DynamicMediaQueryEvaluationChanges> evaluationChanges;
 
@@ -215,7 +215,7 @@ std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamic
     return evaluationChanges;
 }
 
-void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& styleSheets, MediaQueryEvaluator* mediaQueryEvaluator, InspectorCSSOMWrappers& inspectorCSSOMWrappers)
+void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& styleSheets, MQ::MediaQueryEvaluator* mediaQueryEvaluator, InspectorCSSOMWrappers& inspectorCSSOMWrappers)
 {
     RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver);
 
@@ -295,8 +295,10 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& ke
         auto invalidationRuleSets = makeUnique<Vector<InvalidationRuleSet>>();
         invalidationRuleSets->reserveInitialCapacity(invalidationRuleSetMap.size());
 
-        for (auto& invalidationRuleSet : invalidationRuleSetMap.values())
+        for (auto& invalidationRuleSet : invalidationRuleSetMap.values()) {
+            invalidationRuleSet.ruleSet->shrinkToFit();
             invalidationRuleSets->uncheckedAppend(WTFMove(invalidationRuleSet));
+        }
 
         return invalidationRuleSets;
     }).iterator->value.get();
