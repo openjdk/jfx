@@ -424,8 +424,11 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendMouseEventToFX(MouseEvent e) {
+        if (!isFxEnabled()) {
+            return;
+        }
         EmbeddedSceneInterface lScenePeer = getScenePeer();
-        if (lScenePeer == null || !isFxEnabled()) {
+        if (lScenePeer == null) {
             return;
         }
 
@@ -559,8 +562,11 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendKeyEventToFX(final KeyEvent e) {
+        if (!isFxEnabled()) {
+            return;
+        }
         EmbeddedSceneInterface lScenePeer = getScenePeer();
-        if (lScenePeer == null || !isFxEnabled()) {
+        if (lScenePeer == null) {
             return;
         }
 
@@ -720,8 +726,11 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendFocusEventToFX(final FocusEvent e) {
+        if (!isFxEnabled()) {
+            return;
+        }
         EmbeddedStageInterface lStagePeer = getStagePeer();
-        if ((stage == null) || (lStagePeer == null) || !isFxEnabled()) {
+        if ((stage == null) || (lStagePeer == null)) {
             return;
         }
 
