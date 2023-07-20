@@ -369,17 +369,17 @@ public class TreeTableRowSkinTest {
         tree.setRoot(new TreeItem("Root"));
 
         for (int i = 0; i < 4; i++) {
-            TreeItem parent = new TreeItem("item - " + i, new Rectangle(10, 10));
-            TreeItem subNode = new TreeItem("sub-node - " + i, new Rectangle(10, 10));
+            TreeItem<String> parent = new TreeItem<>("item - " + i, new Rectangle(10, 10));
+            TreeItem<String> subNode = new TreeItem<>("sub-node - " + i, new Rectangle(10, 10));
             parent.getChildren().addAll(subNode);
             tree.getRoot().getChildren().add(parent);
         }
         tree.getRoot().setExpanded(true);
 
         int itemNodeSize = tree.getRoot().getChildren().size();
-        TreeItem treeItem = (TreeItem)tree.getRoot().getChildren().get(itemNodeSize - 2);
-        TreeItem treeItemSubNode = (TreeItem)tree.getRoot().getChildren().get(itemNodeSize - 2).getChildren().get(0);
-        TreeItem lastItem = (TreeItem)tree.getRoot().getChildren().get(itemNodeSize - 1);
+        TreeItem treeItem = tree.getRoot().getChildren().get(itemNodeSize - 2);
+        TreeItem treeItemSubNode = tree.getRoot().getChildren().get(itemNodeSize - 2).getChildren().get(0);
+        TreeItem lastItem = tree.getRoot().getChildren().get(itemNodeSize - 1);
 
         Toolkit.getToolkit().firePulse();
         assertFalse(treeItem.isExpanded());
