@@ -602,4 +602,28 @@ public abstract class StyledTextModel {
         }
         return null;
     }
+
+    /** for debugging */
+    private String dump() {
+        StringBuilder sb = new StringBuilder(2048);
+        try {
+            sb.append("\n");
+            TextPos end = getEndTextPos();
+            exportText(TextPos.ZERO, end, new StyledOutput() {
+                @Override
+                public void append(StyledSegment seg) throws IOException {
+                    sb.append(" ");
+                    sb.append(seg);
+                    sb.append("\n");
+                }
+
+                @Override
+                public void flush() throws IOException {
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return sb.toString();
+    }
 }

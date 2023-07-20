@@ -227,8 +227,9 @@ public class EditableRichTextModel extends StyledTextModel {
             return text.length();
         }
 
+        /** returns true if this segment becomes empty as a result */
         // TODO unit test
-        public void removeRegion(int start, int end) {
+        public boolean removeRegion(int start, int end) {
             int len = text.length();
             if (end > len) {
                 end = len;
@@ -247,6 +248,8 @@ public class EditableRichTextModel extends StyledTextModel {
                     text = text.substring(0, start);
                 }
             }
+
+            return (text.length() == 0);
         }
 
         public void append(String s) {
@@ -459,21 +462,30 @@ public class EditableRichTextModel extends StyledTextModel {
             if (ix0 == ix1) {
                 // same segment
                 RSegment seg = get(ix0);
-                seg.removeRegion(off0, off1);
+                if (seg.removeRegion(off0, off1)) {
+                    remove(ix0);
+                }
             } else {
                 // spans multiple segments
                 // first segment
                 if (off0 > 0) {
                     RSegment seg = get(ix0);
-                    seg.removeRegion(off0, Integer.MAX_VALUE);
-                    ix0++;
+                    if (seg.removeRegion(off0, Integer.MAX_VALUE)) {
+                        remove(ix0);
+                        ix1--;
+                    } else {
+                        ix0++;
+                    }
                 }
                 // last segment
-                if(ix1 < 0) {
+                if (ix1 < 0) {
                     ix1 = ct;
                 } else {
                     RSegment seg = get(ix1);
-                    seg.removeRegion(0, off1);
+                    if (seg.removeRegion(0, off1)) {
+                        remove(ix1);
+                        ix1--;
+                    }
                 }
                 // remove in-between segments
                 removeRange(ix0, ix1);

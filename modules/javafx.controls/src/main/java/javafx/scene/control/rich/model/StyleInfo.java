@@ -62,6 +62,36 @@ public abstract class StyleInfo {
                 }
                 return resolver.convert(direct, css);
             }
+
+            @Override
+            public String toString() {
+                StringBuilder sb = new StringBuilder(64);
+                sb.append("StyleInfo{");
+                boolean sep = false;
+                if (direct != null) {
+                    sb.append("direct=");
+                    sb.append(direct);
+                    sep = true;
+                }
+                if (sep) {
+                    sb.append(", ");
+                }
+                if (css != null) {
+                    sb.append("[");
+                    sep = false;
+                    for (String s : css) {
+                        if (sep) {
+                            sb.append(",");
+                        } else {
+                            sep = true;
+                        }
+                        sb.append(s);
+                    }
+                    sb.append("]");
+                }
+                sb.append("}");
+                return sb.toString();
+            }
         };
     }
 
@@ -75,6 +105,11 @@ public abstract class StyleInfo {
             @Override
             public StyleAttrs getStyleAttrs(StyleResolver resolver) {
                 return attrs;
+            }
+
+            @Override
+            public String toString() {
+                return "StyleInfo{attrs=" + attrs + "}";
             }
         };
     }
