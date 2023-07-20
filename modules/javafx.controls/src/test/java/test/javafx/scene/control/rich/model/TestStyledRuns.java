@@ -92,7 +92,7 @@ public class TestStyledRuns {
         EditableRichTextModel m = new EditableRichTextModel();
         TStyledInput in = new TStyledInput(initial);
         TextPos fin = m.getEndTextPos();
-        m.replace(null, TextPos.ZERO, fin, in);
+        m.replace(null, TextPos.ZERO, fin, in, false);
         
         {
             fin = m.getEndTextPos();
@@ -119,7 +119,7 @@ public class TestStyledRuns {
         EditableRichTextModel m = new EditableRichTextModel();
         TStyledInput in = new TStyledInput(initial);
         TextPos fin = m.getEndTextPos();
-        m.replace(null, TextPos.ZERO, fin, in);
+        m.replace(null, TextPos.ZERO, fin, in, false);
         
         TStyledOutput out = new TStyledOutput(null); // TODO resolver
         TextPos last = m.getEndTextPos();

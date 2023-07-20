@@ -315,7 +315,7 @@ public class RichTextAreaBehavior {
                 end = p;
             }
 
-            m.replace(vflow, start, end, typed);
+            m.replace(vflow, start, end, typed, true);
 
             int off = start.offset() + typed.length();
             TextPos p = new TextPos(start.index(), off);
@@ -349,7 +349,8 @@ public class RichTextAreaBehavior {
             end = p;
         }
 
-        TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"));
+        // TODO specify style?
+        TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
         control.moveCaret(pos, false);
         clearPhantomX();
     }
@@ -768,7 +769,7 @@ public class RichTextAreaBehavior {
 
             TextPos start = nextCharacterVisually(end, false);
             if (start != null) {
-                control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
+                control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
                 control.moveCaret(start, false);
                 clearPhantomX();
             }
@@ -786,7 +787,7 @@ public class RichTextAreaBehavior {
             TextPos start = control.getCaretPosition();
             TextPos end = nextCharacterVisually(start, true);
             if (end != null) {
-                control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
+                control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
                 control.moveCaret(start, false);
                 clearPhantomX();
             }
@@ -810,7 +811,7 @@ public class RichTextAreaBehavior {
             start = end;
             end = p;
         }
-        control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
+        control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
         control.moveCaret(start, false);
         clearPhantomX();
     }
@@ -949,7 +950,7 @@ public class RichTextAreaBehavior {
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
                 Object src = Clipboard.getSystemClipboard().getContent(f);
                 StyledInput in = h.createStyledInput(src);
-                TextPos p = m.replace(vflow, start, end, in);
+                TextPos p = m.replace(vflow, start, end, in, true);
                 control.moveCaret(p, false);
             }
         }
@@ -973,17 +974,12 @@ public class RichTextAreaBehavior {
                     end = p;
                 }
 
-                if (control.hasNonEmptySelection()) {
-                    // FIX not needed?
-                    deleteSelection();
-                }
-
                 StyledTextModel m = control.getModel();
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
                 Object src = c.getContent(f);
                 StyledInput in = h.createStyledInput(src);
 
-                TextPos p = m.replace(vflow, start, end, in);
+                TextPos p = m.replace(vflow, start, end, in, true);
                 control.moveCaret(p, false);
             }
         }
@@ -1247,16 +1243,20 @@ public class RichTextAreaBehavior {
     public void redo() {
         StyledTextModel m = control.getModel();
         if (m != null) {
-            m.redo(vflow);
-            // TODO restore selection
+            TextPos[] sel = m.redo(vflow);
+            if (sel != null) {
+                control.select(sel[0], sel[1]);
+            }
         }
     }
 
     public void undo() {
         StyledTextModel m = control.getModel();
         if (m != null) {
-            m.undo(vflow);
-            // TODO restore selection
+            TextPos[] sel = m.undo(vflow);
+            if (sel != null) {
+                control.select(sel[0], sel[1]);
+            }
         }
     }
 }

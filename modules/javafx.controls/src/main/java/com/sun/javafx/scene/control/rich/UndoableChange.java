@@ -39,15 +39,15 @@ public class UndoableChange {
     private final TextPos start;
     private final StyledSegment[] undo;
     private StyledSegment[] redo;
-    private TextPos undoEnd; // FIX rename: endBefore, endAfter
-    private final TextPos redoEnd;
+    private final TextPos endBefore;
+    private TextPos endAfter;
     private UndoableChange prev;
     private UndoableChange next;
 
     private UndoableChange(StyledTextModel model, TextPos start, TextPos end, StyledSegment[] undo) {
         this.model = model;
         this.start = start;
-        this.redoEnd = end;
+        this.endBefore = end;
         this.undo = undo;
     }
 
@@ -79,26 +79,34 @@ public class UndoableChange {
         return new UndoableChange(null, null, null, null);
     }
 
-    public void setUndoEnd(TextPos p) {
-        undoEnd = p;
+    public String toString() {
+        return
+            "UndoableChange{" +
+            "start=" + start +
+            ", endBefore=" + endBefore +
+            ", endAfter=" + endAfter;
+    }
+
+    public void setEndAfter(TextPos p) {
+        endAfter = p;
     }
 
     public void undo(StyleResolver resolver) throws IOException {
         if (redo == null) {
             // create redo
             SegmentStyledOutput out = new SegmentStyledOutput(128);
-            model.exportText(start, undoEnd, out);
+            model.exportText(start, endAfter, out);
             redo = out.getSegments();
         }
 
         // undo
         SegmentStyledInput in = new SegmentStyledInput(undo);
-        model.replace(resolver, start, redoEnd, in);
+        model.replace(resolver, start, endAfter, in, false);
     }
     
     public void redo(StyleResolver resolver) throws IOException {
         SegmentStyledInput in = new SegmentStyledInput(redo);
-        model.replace(resolver, start, undoEnd, in);
+        model.replace(resolver, start, endBefore, in, false);
     }
 
     public UndoableChange getPrev() {
@@ -115,5 +123,19 @@ public class UndoableChange {
     
     public void setNext(UndoableChange ch) {
         next = ch;
+    }
+
+    public TextPos[] getSelectionBefore() {
+        return new TextPos[] {
+            start,
+            endBefore
+        };
+    }
+
+    public TextPos[] getSelectionAfter() {
+        return new TextPos[] {
+            start,
+            endAfter
+        };
     }
 }

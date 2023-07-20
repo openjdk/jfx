@@ -39,7 +39,6 @@ import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.util.Util;
 import javafx.scene.input.DataFormat;
 import com.sun.javafx.scene.control.rich.Markers;
 import com.sun.javafx.scene.control.rich.RichUtils;
@@ -57,7 +56,6 @@ import com.sun.javafx.scene.control.rich.UndoableChange;
  * <li>managing {@link Marker}s
  * </ul>
  */
-// TODO printing
 public abstract class StyledTextModel {
     /**
      * Receives information about modifications of the model.
@@ -379,8 +377,13 @@ public abstract class StyledTextModel {
         if (ix < 0) {
             return TextPos.ZERO;
         } else if (ix < ct) {
-            // TODO clamp to paragraph length?
-            return p;
+            // clamp to paragraph length
+            String s = getPlainText(ix);
+            int len = s.length();
+            if (p.offset() < len) {
+                return p;
+            }
+            return new TextPos(ix, len);
         } else {
             if (ct == 0) {
                 return TextPos.ZERO;
@@ -428,20 +431,19 @@ public abstract class StyledTextModel {
 
     /**
      * Replaces the given range with the provided plain text.
-     * This is a convenience method that calls
-     * {@link #replace(StyleResolver,TextPos,TextPos,StyledInput)}.
-     * The caller must ensure that the start position precedes the end.
      *
      * @param resolver
-     * @param start
-     * @param end
-     * @param text
-     * @return
+     * @param start start text position
+     * @param end end text position
+     * @param text text string to insert
+     * @param createUndo when true, creates an undo-redo entry
+     * @return text position at the end of the inserted text, or null if the model is read only
      */
-    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text) {
+    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean createUndo) {
         if (isEditable()) {
             StyleInfo si = getStyleInfo(start);
-            return replace(resolver, start, end, StyledInput.of(text, si));
+            StyledInput in = StyledInput.of(text, si);
+            return replace(resolver, start, end, in, createUndo);
         }
         return null;
     }
@@ -454,12 +456,13 @@ public abstract class StyledTextModel {
      * After the model applies the requested changes, an event is sent to all the registered ChangeListeners.
      * <p>
      * @param resolver
-     * @param start start position
-     * @param end end position
+     * @param start start text position
+     * @param end end text position
      * @param input StyledInput
+     * @param createUndo when true, creates an undo-redo entry
      * @return text position at the end of the inserted text, or null if the model is read only
      */
-    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input) {
+    public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean createUndo) {
         if (isEditable()) {
             int cmp = start.compareTo(end);
             if (cmp > 0) {
@@ -468,7 +471,7 @@ public abstract class StyledTextModel {
                 end = p;
             }
 
-            UndoableChange ch = UndoableChange.create(this, start, end);
+            UndoableChange ch = createUndo ? UndoableChange.create(this, start, end) : null;
 
             if (cmp != 0) {
                 removeRegion(start, end);
@@ -510,7 +513,9 @@ public abstract class StyledTextModel {
             fireChangeEvent(start, end, top, lines, btm);
 
             TextPos newEnd = new TextPos(index, offset);
-            add(ch, newEnd);
+            if (createUndo) {
+                add(ch, newEnd);
+            }
             return newEnd;
         }
         return null;
@@ -534,11 +539,14 @@ public abstract class StyledTextModel {
             UndoableChange ch = UndoableChange.create(this, start, end);
             boolean changed = applyStyleImpl(start, end, attrs);
             if (changed) {
-                // TODO undo end
                 fireStyleChangeEvent(start, end);
                 add(ch, end);
             }
         }
+    }
+
+    private void clearUndoRedo() {
+        undo = head;
     }
 
     // we are going to try putting undo management in the model
@@ -549,45 +557,49 @@ public abstract class StyledTextModel {
             return;
         }
 
-        ch.setUndoEnd(end);
+        ch.setEndAfter(end);
         ch.setPrev(undo);
         undo.setNext(ch);
         undo = ch;
     }
 
+    /** return true if the model can undo the most recent change */
     public final boolean isUndoable() {
         return (undo != head);
     }
 
-    public final void undo(StyleResolver resolver) {
+    public final TextPos[] undo(StyleResolver resolver) {
         if (undo != head) {
             try {
                 undo.undo(resolver);
+                TextPos[] sel = undo.getSelectionBefore();
                 undo = undo.getPrev();
+                return sel;
             } catch (IOException e) {
                 // undo-redo is in inconsistent state, clear
                 clearUndoRedo();
             }
         }
+        return null;
     }
 
+    /** return true if the model can redo a recently undone change */
     public final boolean isRedoable() {
         return (undo.getNext() != null);
     }
 
-    public final void redo(StyleResolver resolver) {
+    public final TextPos[] redo(StyleResolver resolver) {
         if (undo.getNext() != null) {
             try {
                 undo.getNext().redo(resolver);
+                TextPos[] sel = undo.getNext().getSelectionAfter();
                 undo = undo.getNext();
+                return sel;
             } catch (IOException e) {
                 // undo-redo is in inconsistent state, clear
                 clearUndoRedo();
             }
         }
-    }
-    
-    private void clearUndoRedo() {
-        undo = head;
+        return null;
     }
 }

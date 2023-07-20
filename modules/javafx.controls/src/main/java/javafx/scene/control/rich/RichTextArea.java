@@ -614,13 +614,17 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Replaces selected text.
-     * @return new caret position if a change has been made, or null.
+     * Replaces the specified range with the new text.
+     * @param start start text position
+     * @param end end text position
+     * @param text text string to insert
+     * @param createUndo when true, creates an undo-redo entry
+     * @return new caret position at the end of inserted text, or null if the change cannot be made
      */
-    public TextPos replaceText(TextPos start, TextPos end, String text) {
+    public TextPos replaceText(TextPos start, TextPos end, String text, boolean createUndo) {
         if (canEdit()) {
             StyledTextModel m = getModel();
-            return m.replace(vflow(), start, end, text);
+            return m.replace(vflow(), start, end, text, createUndo);
         }
         return null;
     }

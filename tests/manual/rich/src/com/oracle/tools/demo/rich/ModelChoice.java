@@ -195,6 +195,6 @@ public enum ModelChoice {
     // TODO add to StyledModel
     private static void append(StyledTextModel m, String text, StyleInfo style) {
         TextPos p = m.getEndTextPos();
-        m.replace(null, p, p, StyledInput.of(text, style));
+        m.replace(null, p, p, StyledInput.of(text, style), false);
     }
 }
