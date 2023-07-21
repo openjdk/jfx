@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,14 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.fail;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.ButtonBehavior;
-import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
-import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
-
-import static java.util.stream.Collectors.*;
-import static org.junit.Assert.*;
-
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -125,6 +118,9 @@ import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.control.skin.TreeTableRowSkin;
 import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.ButtonBehavior;
+import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 
 /**
  * Utility class to create Controls, alternative Skins and access/create behaviors.
@@ -241,7 +237,7 @@ public class ControlSkinFactory {
         specialBehaviorMap.put(ToggleButton.class, (Function<Control, BehaviorBase>) c -> new ToggleButtonBehavior((ToggleButton) c));
     }
 
-    // list of control classes that have no behavior
+    /** list of control classes that have no behavior, or use BehaviorBase2 */
     static List<Class<? extends Control>> withoutBehaviors = List.of(
             ButtonBar.class,
             Label.class,
@@ -249,7 +245,14 @@ public class ControlSkinFactory {
             ProgressBar.class,
             ProgressIndicator.class,
             Separator.class,
-            SplitPane.class
+            SplitPane.class,
+            // these use BehaviorBase2
+            ColorPicker.class,
+            ComboBox.class,
+            DatePicker.class,
+            PasswordField.class,
+            TextArea.class,
+            TextField.class
             );
 
 ///---------------- misc
