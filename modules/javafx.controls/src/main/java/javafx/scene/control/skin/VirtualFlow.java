@@ -862,6 +862,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 oldIndex = cellCount;
             }
             resetSizeEstimates();
+            getOrCreateCellSize(oldIndex);
             recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT, oldIndex, oldOffset);
 
             boolean countChanged = oldCount != cellCount;

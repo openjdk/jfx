@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -608,15 +608,15 @@ public class JFXPanel extends JComponent {
     private void updateComponentSize() {
         int oldWidth = pWidth;
         int oldHeight = pHeight;
-        // It's quite possible to get negative values here, this is not
-        // what JavaFX embedded scenes/stages are ready to
-        pWidth = Math.max(0, getWidth());
-        pHeight = Math.max(0, getHeight());
         if (getBorder() != null) {
             Insets i = getBorder().getBorderInsets(this);
             pWidth -= (i.left + i.right);
             pHeight -= (i.top + i.bottom);
         }
+        // It's quite possible to get negative values here, this is not
+        // what JavaFX embedded scenes/stages are ready to
+        pWidth = Math.max(0, getWidth());
+        pHeight = Math.max(0, getHeight());
         double newScaleFactorX = scaleFactorX;
         double newScaleFactorY = scaleFactorY;
         Graphics g = getGraphics();
@@ -626,6 +626,9 @@ public class JFXPanel extends JComponent {
         newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
                           getDefaultScreenDevice().getDefaultConfiguration().
                           getDefaultTransform().getScaleY();
+        if (oldWidth == 0 && oldHeight == 0 && pWidth == 0 && pHeight == 0) {
+            return;
+        }
         if (oldWidth != pWidth || oldHeight != pHeight ||
             newScaleFactorX != scaleFactorX || newScaleFactorY != scaleFactorY)
         {
