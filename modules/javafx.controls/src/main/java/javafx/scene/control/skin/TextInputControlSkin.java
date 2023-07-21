@@ -25,7 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import static com.sun.javafx.PlatformUtil.isWindows;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -82,7 +81,6 @@ import javafx.stage.Window;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.tk.FontMetrics;
@@ -232,7 +230,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             @Override protected boolean computeValue() {
                 // RT-10682: On Windows, we show the caret during selection, but on others we hide it
                 return !blinkProperty().get() && displayCaret.get() && control.isFocused() &&
-                        (isWindows() || (control.getCaretPosition() == control.getAnchor())) &&
+                        (PlatformUtil.isWindows() || (control.getCaretPosition() == control.getAnchor())) &&
                         !control.isDisabled() &&
                         control.isEditable();
             }

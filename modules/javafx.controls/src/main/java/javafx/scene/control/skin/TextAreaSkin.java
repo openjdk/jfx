@@ -25,8 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
 import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -52,7 +50,6 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.input.FunctionTag;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
@@ -61,6 +58,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
 /**
@@ -512,10 +510,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                         nextLine(select);
                         break;
                     case BEGINNING:
-                        lineStart(select, select && isMac());
+                        lineStart(select, select && PlatformUtil.isMac());
                         break;
                     case END:
-                        lineEnd(select, select && isMac());
+                        lineEnd(select, select && PlatformUtil.isMac());
                         break;
                     default:
                         throw new IllegalArgumentException(""+dir);
@@ -705,7 +703,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         int pos = textArea.getCaretPosition();
         int len = text.length();
         boolean wentPastInitialNewline = false;
-        boolean goPastTrailingNewline = isWindows();
+        boolean goPastTrailingNewline = PlatformUtil.isWindows();
 
         if (pos < len) {
             if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {

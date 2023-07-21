@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,28 +24,15 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.control.Control;
-import javafx.scene.control.input.FunctionTag;
-import javafx.scene.control.input.IBehavior;
-import javafx.scene.control.input.KeyBinding2;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
 
-/**
- * Class provides a foundation for behaviors.
- *
- * @param <N> the actual class for which this behavior is intended
- */
-public abstract class BehaviorBase<N extends Control> implements IBehavior {
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+public abstract class BehaviorBase<N extends Node> {
 
     private final N node;
     private final List<Mapping<?>> installedDefaultMappings;
@@ -60,13 +47,6 @@ public abstract class BehaviorBase<N extends Control> implements IBehavior {
 
     public abstract InputMap<N> getInputMap();
 
-    /** invoked just before running a KeyMap function */
-    protected void onKeyFunctionStart() { }
-
-    /** invoked right after running a KeyMap function */
-    protected void onKeyFunctionEnd() { }
-
-    // TODO rename getControl()
     public final N getNode() {
         return node;
     }
@@ -93,7 +73,11 @@ public abstract class BehaviorBase<N extends Control> implements IBehavior {
 //            inputMap.dispose();
 //        }
     }
-    
+
+    protected void addDefaultMapping(List<Mapping<?>> newMapping) {
+        addDefaultMapping(getInputMap(), newMapping.toArray(new Mapping[newMapping.size()]));
+    }
+
     protected void addDefaultMapping(Mapping<?>... newMapping) {
         addDefaultMapping(getInputMap(), newMapping);
     }

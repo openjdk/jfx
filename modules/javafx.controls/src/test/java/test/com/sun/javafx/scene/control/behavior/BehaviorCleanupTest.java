@@ -233,10 +233,10 @@ public class BehaviorCleanupTest {
     /**
      * Sanity test: child mappings to key pad keys.
      */
+    /*
+    // this test relies on too many internal assumptions 
     @Test
     public void testKeyPadMappingChildInputMap() {
-        /*
-        // this test relies on too many internal assumptions 
         TextField control = new TextField("some text");
         TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
         InputMap<?> inputMap = behavior.getInputMap();
@@ -252,8 +252,8 @@ public class BehaviorCleanupTest {
         InputMap<?> childInputMapNotMac = inputMap.getChildInputMaps().get(1);
         KeyMapping expectedNotMac = new KeyMapping(new KeyBinding(expectedCode).ctrl(), null);
         assertTrue(childInputMapNotMac.getMappings().contains(expectedNotMac));
-        */
     }
+    */
 
     /**
      * Ensures that ctrl- key pad keys are also mapped.
