@@ -77,8 +77,7 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * Maps a function to the function tag.
      * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
      *
-     * @param behavior
-     * @param tag
+     * @param tag function tag
      * @param function
      */
     protected void func(FunctionTag tag, Runnable function) {
@@ -90,7 +89,6 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * A null key binding will result in no change to this input map.
      * This method will not override a user mapping.
      *
-     * @param behavior
      * @param k key binding, can be null
      * @param tag function tag
      */
@@ -102,7 +100,6 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * Maps a key binding to the specified function tag.
      * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      *
-     * @param behavior
      * @param code key code to construct a {@link KeyBinding2}
      * @param tag function tag
      */
@@ -165,7 +162,7 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * This is a more specific version of {@link #map(EventType,EventHandler)} method.
      * The handler will get removed in {@link#dispose()} method.
      *
-     * @param type
+     * @param criteria matching criteria
      * @param consume determines whether the matching event is consumed or not
      * @param handler
      */
