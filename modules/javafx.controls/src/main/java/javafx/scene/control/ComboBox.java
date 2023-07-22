@@ -310,7 +310,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<>(this, "items");
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
-    public final ObservableList<T> getItems() {return items.get(); }
+    public final ObservableList<T> getItems() {return itemsProperty().get(); }
     public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
 
 
