@@ -28,6 +28,7 @@ package com.sun.javafx.application.preferences;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -38,112 +39,19 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Contains derived preferences, which are calculated from a common set of platform preferences.
+ * Contains {@link Property}-based preference implementations.
  */
-final class DerivedPreferences {
+final class PreferenceProperties {
 
-    private final ColorProperty backgroundColor = new ColorProperty(
-            "backgroundColor", "javafx.backgroundColor", Color.WHITE);
-
-    private final ColorProperty foregroundColor = new ColorProperty(
-            "foregroundColor", "javafx.foregroundColor", Color.BLACK);
-
-    private final ColorProperty accentColor = new ColorProperty(
-            "accentColor", "javafx.accentColor", Color.rgb(21, 126, 251));
-
+    private final ColorProperty backgroundColor = new ColorProperty("backgroundColor", Color.WHITE);
+    private final ColorProperty foregroundColor = new ColorProperty("foregroundColor", Color.BLACK);
+    private final ColorProperty accentColor = new ColorProperty("accentColor", Color.rgb(21, 126, 251));
     private final List<ColorProperty> allColors = List.of(backgroundColor, foregroundColor, accentColor);
-
+    private final AppearanceProperty appearance = new AppearanceProperty();
     private final Object bean;
 
-    public DerivedPreferences(Object bean) {
+    public PreferenceProperties(Object bean) {
         this.bean = bean;
-    }
-
-    private final class ColorProperty extends ReadOnlyObjectPropertyBase<Color> {
-        private final String name;
-        private final String key;
-        private final Color defaultValue;
-        private Color overrideValue;
-        private Color effectiveValue;
-        private Color platformValue;
-
-        ColorProperty(String name, String key, Color initialValue) {
-            this.name = name;
-            this.key = key;
-            this.defaultValue = initialValue;
-            this.effectiveValue = initialValue;
-            this.platformValue = initialValue;
-        }
-
-        @Override
-        public Object getBean() {
-            return bean;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        public String getKey() {
-            return key;
-        }
-
-        @Override
-        public Color get() {
-            return effectiveValue;
-        }
-
-        public void setValue(Color value) {
-            this.platformValue = value;
-            update();
-        }
-
-        public void setValueOverride(Color value) {
-            this.overrideValue = value;
-            update();
-        }
-
-        private void update() {
-            Color newValue = Objects.requireNonNullElse(
-                overrideValue != null ? overrideValue : platformValue,
-                defaultValue);
-
-            if (!Objects.equals(effectiveValue, newValue)) {
-                effectiveValue = newValue;
-                fireValueChangedEvent();
-            }
-        }
-    }
-
-    private final AppearanceProperty appearance = new AppearanceProperty();
-
-    private class AppearanceProperty extends ReadOnlyObjectWrapper<Appearance> {
-        private Appearance appearanceOverride;
-
-        AppearanceProperty() {
-            super(bean, "appearance");
-            InvalidationListener listener = observable -> update();
-            backgroundColor.addListener(listener);
-            foregroundColor.addListener(listener);
-            update();
-        }
-
-        public void setValueOverride(Appearance appearance) {
-            appearanceOverride = appearance;
-            update();
-        }
-
-        private void update() {
-            if (appearanceOverride != null) {
-                set(appearanceOverride);
-            } else {
-                Color background = backgroundColor.get();
-                Color foreground = foregroundColor.get();
-                boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
-                set(isDark ? Appearance.DARK : Appearance.LIGHT);
-            }
-        }
     }
 
     public ReadOnlyObjectProperty<Appearance> appearanceProperty() {
@@ -194,11 +102,14 @@ final class DerivedPreferences {
         accentColor.setValueOverride(color);
     }
 
-    void update(Map<String, ChangedValue> changedPreferences) {
+    public void update(Map<String, ChangedValue> changedPreferences, Map<String, String> wellKnownKeys) {
         for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
-            for (ColorProperty colorProperty : allColors) {
-                if (colorProperty.getKey().equals(entry.getKey())) {
-                    updateColorPreference(colorProperty, entry.getValue().newValue());
+            String key = wellKnownKeys.get(entry.getKey());
+            if (key != null) {
+                for (ColorProperty colorProperty : allColors) {
+                    if (colorProperty.getName().equals(key)) {
+                        updateColorPreference(colorProperty, entry.getValue().newValue());
+                    }
                 }
             }
         }
@@ -210,12 +121,91 @@ final class DerivedPreferences {
         } else {
             if (value != null) {
                 Logging.getJavaFXLogger().warning(
-                    "Unexpected value of " + property.getKey() + " platform preference, " +
+                    "Unexpected value of " + property.getName() + " platform preference, " +
                     "using default value instead (expected = " + Color.class.getName() +
                     ", actual = " + value.getClass().getName() + ")");
             }
 
             property.setValue(null);
+        }
+    }
+
+    private final class ColorProperty extends ReadOnlyObjectPropertyBase<Color> {
+        private final String name;
+        private final Color defaultValue;
+        private Color overrideValue;
+        private Color effectiveValue;
+        private Color platformValue;
+
+        ColorProperty(String name, Color initialValue) {
+            this.name = name;
+            this.defaultValue = initialValue;
+            this.effectiveValue = initialValue;
+            this.platformValue = initialValue;
+        }
+
+        @Override
+        public Object getBean() {
+            return bean;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public Color get() {
+            return effectiveValue;
+        }
+
+        public void setValue(Color value) {
+            this.platformValue = value;
+            update();
+        }
+
+        public void setValueOverride(Color value) {
+            this.overrideValue = value;
+            update();
+        }
+
+        private void update() {
+            Color newValue = Objects.requireNonNullElse(
+                overrideValue != null ? overrideValue : platformValue,
+                defaultValue);
+
+            if (!Objects.equals(effectiveValue, newValue)) {
+                effectiveValue = newValue;
+                fireValueChangedEvent();
+            }
+        }
+    }
+
+    private class AppearanceProperty extends ReadOnlyObjectWrapper<Appearance> {
+        private Appearance appearanceOverride;
+
+        AppearanceProperty() {
+            super(bean, "appearance");
+            InvalidationListener listener = observable -> update();
+            backgroundColor.addListener(listener);
+            foregroundColor.addListener(listener);
+            update();
+        }
+
+        public void setValueOverride(Appearance appearance) {
+            appearanceOverride = appearance;
+            update();
+        }
+
+        private void update() {
+            if (appearanceOverride != null) {
+                set(appearanceOverride);
+            } else {
+                Color background = backgroundColor.get();
+                Color foreground = foregroundColor.get();
+                boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
+                set(isDark ? Appearance.DARK : Appearance.LIGHT);
+            }
         }
     }
 

@@ -1047,23 +1047,46 @@ public class PlatformImpl {
         }
     }
 
-    private static final PlatformPreferences platformPreferences = new PlatformPreferences();
+    private static PlatformPreferences platformPreferences;
 
     public static PlatformPreferences getPlatformPreferences() {
+        if (applicationPreferences == null) {
+            throw new IllegalStateException("Toolkit not initialized");
+        }
+
         return platformPreferences;
     }
 
-    private static final ApplicationPreferences applicationPreferences = new ApplicationPreferences();
+    private static ApplicationPreferences applicationPreferences;
 
     public static ApplicationPreferences getApplicationPreferences() {
+        if (applicationPreferences == null) {
+            throw new IllegalStateException("Toolkit not initialized");
+        }
+
         return applicationPreferences;
+    }
+
+    /**
+     * Called by Glass when the toolkit is initialized.
+     *
+     * @param wellKnownKeys a map of platform-specific keys to well-known keys
+     * @param preferences the initial set of platform preferences
+     */
+    public static void initPreferences(Map<String, String> wellKnownKeys, Map<String, Object> preferences) {
+        platformPreferences = new PlatformPreferences(wellKnownKeys);
+        platformPreferences.update(preferences);
+
+        applicationPreferences = new ApplicationPreferences(wellKnownKeys);
+        applicationPreferences.update(preferences);
     }
 
     /**
      * Called by Glass when one or several platform preferences have changed.
      * <p>
      * This method can be called on any thread. The supplied {@code preferences} map may
-     * include all platform preferences, or only the changed preferences.
+     * include all platform preferences, or only the changed preferences. If a preference
+     * was removed, the corresponding key is mapped to {@code null}.
      *
      * @param preferences a map that includes the changed preferences
      */

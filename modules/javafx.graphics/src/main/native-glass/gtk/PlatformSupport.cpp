@@ -63,12 +63,6 @@ jobject PlatformSupport::collectPreferences() const {
     if (EXCEPTION_OCCURED(env)) return NULL;
 
     GtkStyle* style = gtk_style_new();
-
-    // Platform-independent color keys
-    putColor(env, prefs, style, "theme_bg_color", "javafx.backgroundColor");
-    putColor(env, prefs, style, "theme_fg_color", "javafx.foregroundColor");
-
-    // Platform-specific color keys
     putColor(env, prefs, style, "theme_fg_color", "GTK.theme_fg_color");
     putColor(env, prefs, style, "theme_bg_color", "GTK.theme_bg_color");
     putColor(env, prefs, style, "theme_base_color", "GTK.theme_base_color");
@@ -87,7 +81,6 @@ jobject PlatformSupport::collectPreferences() const {
     putColor(env, prefs, style, "warning_color", "GTK.warning_color");
     putColor(env, prefs, style, "error_color", "GTK.error_color");
     putColor(env, prefs, style, "success_color", "GTK.success_color");
-
     g_object_unref(style);
 
     GtkSettings* settings = gtk_settings_get_default();

@@ -754,7 +754,25 @@ public abstract class Application {
         }
     }
 
+    /**
+     * Returns the current set of platform properties as a map of platform-specific
+     * keys to arbitrary values.
+     */
     public Map<String, Object> getPlatformPreferences() {
+        return Map.of();
+    }
+
+    /**
+     * Returns a map of platform-specific preference keys to well-known keys.
+     * <p>
+     * The following well-known keys are currently supported:
+     * <ul>
+     *     <li>foregroundColor
+     *     <li>backgroundColor
+     *     <li>accentColor
+     * </ul>
+     */
+    public Map<String, String> getWellKnownPlatformPreferenceKeys() {
         return Map.of();
     }
 }

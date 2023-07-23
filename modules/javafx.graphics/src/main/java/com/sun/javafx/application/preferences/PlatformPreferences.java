@@ -50,11 +50,16 @@ import java.util.Optional;
  */
 public class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
 
-    final DerivedPreferences derivedPreferences = new DerivedPreferences(this);
+    final PreferenceProperties properties = new PreferenceProperties(this);
     final Map<String, Object> effectivePreferences = new HashMap<>();
     final Map<String, Object> unmodifiableEffectivePreferences = Collections.unmodifiableMap(effectivePreferences);
+    final Map<String, String> wellKnownKeys;
 
     private MapListenerHelper<String, Object> helper;
+
+    public PlatformPreferences(Map<String, String> wellKnownKeys) {
+        this.wellKnownKeys = wellKnownKeys;
+    }
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
@@ -137,42 +142,42 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
 
     @Override
     public ReadOnlyObjectProperty<Appearance> appearanceProperty() {
-        return derivedPreferences.appearanceProperty();
+        return properties.appearanceProperty();
     }
 
     @Override
     public Appearance getAppearance() {
-        return derivedPreferences.getAppearance();
+        return properties.getAppearance();
     }
 
     @Override
     public ReadOnlyObjectProperty<Color> backgroundColorProperty() {
-        return derivedPreferences.backgroundColorProperty();
+        return properties.backgroundColorProperty();
     }
 
     @Override
     public Color getBackgroundColor() {
-        return derivedPreferences.getBackgroundColor();
+        return properties.getBackgroundColor();
     }
 
     @Override
     public ReadOnlyObjectProperty<Color> foregroundColorProperty() {
-        return derivedPreferences.foregroundColorProperty();
+        return properties.foregroundColorProperty();
     }
 
     @Override
     public Color getForegroundColor() {
-        return derivedPreferences.getForegroundColor();
+        return properties.getForegroundColor();
     }
 
     @Override
     public ReadOnlyObjectProperty<Color> accentColorProperty() {
-        return derivedPreferences.accentColorProperty();
+        return properties.accentColorProperty();
     }
 
     @Override
     public Color getAccentColor() {
-        return derivedPreferences.getAccentColor();
+        return properties.getAccentColor();
     }
 
     /**
@@ -191,7 +196,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
             ChangedValue.getEffectiveChanges(currentPreferences, effectivePreferences);
 
         if (!effectivelyChangedPreferences.isEmpty()) {
-            derivedPreferences.update(effectivelyChangedPreferences);
+            properties.update(effectivelyChangedPreferences, wellKnownKeys);
             fireValueChangedEvent(effectivelyChangedPreferences);
         }
     }

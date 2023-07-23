@@ -26,7 +26,6 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.PlatformPreferences;
-import org.junit.jupiter.api.Test;
 import test.javafx.collections.MockMapObserver;
 import javafx.beans.InvalidationListener;
 import javafx.collections.MapChangeListener;
@@ -34,15 +33,27 @@ import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static test.javafx.collections.MockMapObserver.Tuple.tup;
 
 public class PlatformPreferencesTest {
 
+    PlatformPreferences prefs;
+
+    @BeforeEach
+    void setup() {
+        prefs = new PlatformPreferences(Map.of(
+            "test.foregroundColor", "foregroundColor",
+            "test.backgroundColor", "backgroundColor",
+            "test.accentColor", "accentColor"
+        ));
+    }
+
     @Test
     void testMapIsImmutable() {
-        var prefs = new PlatformPreferences();
         prefs.update(Map.of("k1", 5, "k2", 7.5));
         assertThrows(UnsupportedOperationException.class, () -> prefs.put("k1", 4));
         assertThrows(UnsupportedOperationException.class, () -> prefs.remove("k1"));
@@ -55,7 +66,6 @@ public class PlatformPreferencesTest {
 
     @Test
     void testUnknownKeyReturnsEmptyValue() {
-        var prefs = new PlatformPreferences();
         assertEquals(Optional.empty(), prefs.getInteger("does_not_exist"));
         assertEquals(Optional.empty(), prefs.getDouble("does_not_exist"));
         assertEquals(Optional.empty(), prefs.getBoolean("does_not_exist"));
@@ -66,14 +76,12 @@ public class PlatformPreferencesTest {
 
     @Test
     void testGetValueWithWrongTypeFails() {
-        var prefs = new PlatformPreferences();
         prefs.update(Map.of("k", 5));
         assertThrows(IllegalArgumentException.class, () -> prefs.getValue("k", Double.class));
     }
 
     @Test
     void testOptionalKeys() {
-        var prefs = new PlatformPreferences();
         prefs.update(Map.of(
             "k1", 5,
             "k2", 7.5,
@@ -90,7 +98,6 @@ public class PlatformPreferencesTest {
 
     @Test
     void testUpdatePreferencesWithNewContent() {
-        var prefs = new PlatformPreferences();
         var content = Map.of(
             "red", Color.RED,
             "blue", Color.BLUE,
@@ -102,7 +109,6 @@ public class PlatformPreferencesTest {
 
     @Test
     void testUpdatePreferencesWithSameContent() {
-        var prefs = new PlatformPreferences();
         var content = Map.of(
             "red", Color.RED,
             "blue", Color.BLUE,
@@ -115,7 +121,6 @@ public class PlatformPreferencesTest {
 
     @Test
     void testPlatformPreferencesInvalidationListener() {
-        var prefs = new PlatformPreferences();
         int[] count = new int[1];
         InvalidationListener listener = observable -> count[0]++;
         prefs.addListener(listener);
@@ -129,7 +134,6 @@ public class PlatformPreferencesTest {
 
     @Test
     void testPlatformPreferencesChangeListener() {
-        var prefs = new PlatformPreferences();
         var observer = new MockMapObserver<String, Object>();
         prefs.addListener(observer);
 
@@ -159,7 +163,6 @@ public class PlatformPreferencesTest {
 
     @Test
     void testPreferenceUpdatesAreAtomicWhenObserved() {
-        var prefs = new PlatformPreferences();
         var trace = new ArrayList<Color[]>();
         Color[] expectedColors;
 
@@ -167,9 +170,9 @@ public class PlatformPreferencesTest {
             trace.add(new Color[] {prefs.getBackgroundColor(), prefs.getForegroundColor(), prefs.getAccentColor()}));
 
         prefs.update(Map.of(
-            "javafx.foregroundColor", Color.RED,
-            "javafx.backgroundColor", Color.BLUE,
-            "javafx.accentColor", Color.GREEN));
+            "test.foregroundColor", Color.RED,
+            "test.backgroundColor", Color.BLUE,
+            "test.accentColor", Color.GREEN));
         assertEquals(3, trace.size());
         expectedColors = new Color[] { Color.BLUE, Color.RED, Color.GREEN };
         assertArrayEquals(expectedColors, trace.get(0));
@@ -177,9 +180,9 @@ public class PlatformPreferencesTest {
         assertArrayEquals(expectedColors, trace.get(2));
 
         prefs.update(Map.of(
-            "javafx.backgroundColor", Color.YELLOW,
-            "javafx.foregroundColor", Color.BLUE,
-            "javafx.accentColor", Color.PURPLE));
+            "test.backgroundColor", Color.YELLOW,
+            "test.foregroundColor", Color.BLUE,
+            "test.accentColor", Color.PURPLE));
         assertEquals(6, trace.size());
         expectedColors = new Color[] { Color.YELLOW, Color.BLUE, Color.PURPLE };
         assertArrayEquals(expectedColors, trace.get(3));

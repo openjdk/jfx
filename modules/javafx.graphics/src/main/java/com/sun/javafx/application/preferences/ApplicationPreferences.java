@@ -28,7 +28,6 @@ package com.sun.javafx.application.preferences;
 import javafx.application.Application;
 import javafx.scene.paint.Color;
 import javafx.stage.Appearance;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,6 +49,10 @@ public final class ApplicationPreferences extends PlatformPreferences implements
     private Map<String, Object> lastEffectivePreferences = Map.of();
     private boolean effectivePreferencesChanged;
 
+    public ApplicationPreferences(Map<String, String> wellKnownKeys) {
+        super(wellKnownKeys);
+    }
+
     @Override
     public Object put(String key, Object value) {
         Objects.requireNonNull(key, "key cannot be null");
@@ -67,7 +70,7 @@ public final class ApplicationPreferences extends PlatformPreferences implements
 
         if (!Objects.equals(effectiveValue, value)) {
             var changedPreferences = Map.of(key, new ChangedValue(effectiveValue, value));
-            derivedPreferences.update(changedPreferences);
+            properties.update(changedPreferences, wellKnownKeys);
             fireValueChangedEvent(changedPreferences);
             effectivePreferencesChanged = true;
         }
@@ -96,7 +99,7 @@ public final class ApplicationPreferences extends PlatformPreferences implements
 
         if (changed) {
             var changedPreferences = Map.of(key, new ChangedValue(oldValue, newValue));
-            derivedPreferences.update(changedPreferences);
+            properties.update(changedPreferences, wellKnownKeys);
             fireValueChangedEvent(changedPreferences);
             effectivePreferencesChanged = true;
         }
@@ -127,7 +130,7 @@ public final class ApplicationPreferences extends PlatformPreferences implements
             ChangedValue.getEffectiveChanges(currentEffectivePreferences, effectivePreferences);
 
         if (!effectivelyChangedPreferences.isEmpty()) {
-            derivedPreferences.update(effectivelyChangedPreferences);
+            properties.update(effectivelyChangedPreferences, wellKnownKeys);
             fireValueChangedEvent(effectivelyChangedPreferences);
             effectivePreferencesChanged = true;
         }
@@ -153,22 +156,22 @@ public final class ApplicationPreferences extends PlatformPreferences implements
 
     @Override
     public void setAppearance(Appearance appearance) {
-        derivedPreferences.setAppearance(appearance);
+        properties.setAppearance(appearance);
     }
 
     @Override
     public void setBackgroundColor(Color color) {
-        derivedPreferences.setBackgroundColor(color);
+        properties.setBackgroundColor(color);
     }
 
     @Override
     public void setForegroundColor(Color color) {
-        derivedPreferences.setForegroundColor(color);
+        properties.setForegroundColor(color);
     }
 
     @Override
     public void setAccentColor(Color color) {
-        derivedPreferences.setAccentColor(color);
+        properties.setAccentColor(color);
     }
 
 }

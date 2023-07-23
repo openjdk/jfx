@@ -474,11 +474,6 @@ public final class Platform {
      * <table>
      *     <caption></caption>
      *     <tbody>
-     *         <tr><th colspan="2" scope="colgroup">Platform-independent preferences</th></tr>
-     *         <tr><td>{@code javafx.backgroundColor}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code javafx.foregroundColor}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code javafx.accentColor}</td><td>{@link Color}</td></tr>
-     *         <tr></tr>
      *         <tr><th colspan="2" scope="colgroup">Windows</th></tr>
      *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code Windows.SPI.HighContrastColorScheme}</td><td>{@link String}</td></tr>

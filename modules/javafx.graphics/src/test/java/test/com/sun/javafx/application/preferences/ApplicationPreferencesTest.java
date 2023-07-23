@@ -26,18 +26,29 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.ApplicationPreferences;
-import org.junit.jupiter.api.Test;
 import javafx.scene.paint.Color;
 import javafx.stage.Appearance;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ApplicationPreferencesTest {
 
+    ApplicationPreferences prefs;
+
+    @BeforeEach
+    void setup() {
+        prefs = new ApplicationPreferences(Map.of(
+            "test.foregroundColor", "foregroundColor",
+            "test.backgroundColor", "backgroundColor",
+            "test.accentColor", "accentColor"
+        ));
+    }
+
     @Test
     void testDefaultValues() {
-        var prefs = new ApplicationPreferences();
         assertEquals(Color.WHITE, prefs.getBackgroundColor());
         assertEquals(Color.BLACK, prefs.getForegroundColor());
         assertEquals(Color.web("#157EFB"), prefs.getAccentColor());
@@ -46,7 +57,6 @@ public class ApplicationPreferencesTest {
 
     @Test
     void testResetSingleMapping() {
-        var prefs = new ApplicationPreferences();
         prefs.update(Map.of("k1", 5, "k2", 7.5));
 
         // Override the "k1" mapping with a user value
@@ -60,7 +70,6 @@ public class ApplicationPreferencesTest {
 
     @Test
     void testResetAllMappings() {
-        var prefs = new ApplicationPreferences();
         prefs.update(Map.of("k1", 5, "k2", 7.5));
 
         prefs.put("k1", 10);
@@ -75,38 +84,33 @@ public class ApplicationPreferencesTest {
 
     @Test
     void testCannotOverrideValueWithDifferentType() {
-        var prefs = new ApplicationPreferences();
         prefs.update(Map.of("k", 5));
         assertThrows(IllegalArgumentException.class, () -> prefs.put("k", 3.141));
     }
 
     @Test
     void testCannotOverrideWithNullValue() {
-        var prefs = new ApplicationPreferences();
         prefs.update(Map.of("k", 5));
         assertThrows(NullPointerException.class, () -> prefs.put("k", null));
     }
 
     @Test
     void testAppearanceReflectsForegroundAndBackgroundColors() {
-        var prefs = new ApplicationPreferences();
-
-        prefs.update(Map.of("javafx.foregroundColor", Color.BLACK, "javafx.backgroundColor", Color.WHITE));
+        prefs.update(Map.of("test.foregroundColor", Color.BLACK, "test.backgroundColor", Color.WHITE));
         assertEquals(Appearance.LIGHT, prefs.getAppearance());
 
-        prefs.update(Map.of("javafx.foregroundColor", Color.WHITE, "javafx.backgroundColor", Color.BLACK));
+        prefs.update(Map.of("test.foregroundColor", Color.WHITE, "test.backgroundColor", Color.BLACK));
         assertEquals(Appearance.DARK, prefs.getAppearance());
 
-        prefs.update(Map.of("javafx.foregroundColor", Color.DARKGRAY, "javafx.backgroundColor", Color.LIGHTGRAY));
+        prefs.update(Map.of("test.foregroundColor", Color.DARKGRAY, "test.backgroundColor", Color.LIGHTGRAY));
         assertEquals(Appearance.LIGHT, prefs.getAppearance());
 
-        prefs.update(Map.of("javafx.foregroundColor", Color.RED, "javafx.backgroundColor", Color.BLUE));
+        prefs.update(Map.of("test.foregroundColor", Color.RED, "test.backgroundColor", Color.BLUE));
         assertEquals(Appearance.DARK, prefs.getAppearance());
     }
 
     @Test
     void testOverriddenAppearanceIsNotAffectedByBackgroundAndForegroundColors() {
-        var prefs = new ApplicationPreferences();
         prefs.setAppearance(Appearance.DARK);
         prefs.setBackgroundColor(Color.WHITE);
         prefs.setForegroundColor(Color.BLACK);
@@ -117,7 +121,6 @@ public class ApplicationPreferencesTest {
 
     @Test
     void testOverrideAppearance() {
-        var prefs = new ApplicationPreferences();
         assertEquals(Appearance.LIGHT, prefs.getAppearance());
         prefs.setAppearance(Appearance.DARK);
         assertEquals(Appearance.DARK, prefs.getAppearance());
@@ -127,7 +130,6 @@ public class ApplicationPreferencesTest {
 
     @Test
     void testOverrideBackgroundColor() {
-        var prefs = new ApplicationPreferences();
         assertEquals(Color.WHITE, prefs.getBackgroundColor());
         prefs.setBackgroundColor(Color.GREEN);
         assertEquals(Color.GREEN, prefs.getBackgroundColor());
@@ -137,7 +139,6 @@ public class ApplicationPreferencesTest {
 
     @Test
     void testOverrideForegroundColor() {
-        var prefs = new ApplicationPreferences();
         assertEquals(Color.BLACK, prefs.getForegroundColor());
         prefs.setForegroundColor(Color.GREEN);
         assertEquals(Color.GREEN, prefs.getForegroundColor());

@@ -113,13 +113,6 @@ static jobject currentPreferences = nil;
 }
 
 + (void)queryNSColors:(jobject)preferences {
-    // Platform-independent color keys
-    [PlatformSupport putColor:preferences key:"javafx.backgroundColor" value:[NSColor textBackgroundColor]];
-    [PlatformSupport putColor:preferences key:"javafx.foregroundColor" value:[NSColor textColor]];
-    if (MACOS_10_14) {
-        [PlatformSupport putColor:preferences key:"javafx.accentColor" value:[NSColor controlAccentColor]];
-    }
-
     // Label colors
     [PlatformSupport putColor:preferences key:"macOS.NSColor.labelColor" value:[NSColor labelColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.secondaryLabelColor" value:[NSColor secondaryLabelColor]];

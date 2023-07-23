@@ -176,12 +176,6 @@ void PlatformSupport::queryUIColors(jobject properties) const
         settings3->GetColorValue(UIColorType::UIColorType_AccentLight2, &accentLight2);
         settings3->GetColorValue(UIColorType::UIColorType_AccentLight3, &accentLight3);
 
-        // Platform-independent color keys
-        putColor(properties, "javafx.backgroundColor", background);
-        putColor(properties, "javafx.foregroundColor", foreground);
-        putColor(properties, "javafx.accentColor", accent);
-
-        // Platform-specific color keys
         putColor(properties, "Windows.UIColor.Background", background);
         putColor(properties, "Windows.UIColor.Foreground", foreground);
         putColor(properties, "Windows.UIColor.AccentDark3", accentDark3);
