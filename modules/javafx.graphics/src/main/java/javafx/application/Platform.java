@@ -35,7 +35,6 @@ import javafx.collections.ObservableMap;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.stage.Appearance;
 
 /**
  * Application platform support class.

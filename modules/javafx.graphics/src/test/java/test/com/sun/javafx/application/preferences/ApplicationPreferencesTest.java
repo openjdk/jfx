@@ -26,8 +26,8 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.ApplicationPreferences;
+import javafx.application.Appearance;
 import javafx.scene.paint.Color;
-import javafx.stage.Appearance;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

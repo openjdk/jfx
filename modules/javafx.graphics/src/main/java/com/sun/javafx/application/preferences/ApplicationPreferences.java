@@ -25,9 +25,9 @@
 
 package com.sun.javafx.application.preferences;
 
+import javafx.application.Appearance;
 import javafx.application.Application;
 import javafx.scene.paint.Color;
-import javafx.stage.Appearance;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;

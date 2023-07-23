@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.stage;
+package javafx.application;
 
 /**
  * Defines the appearance of the user interface.

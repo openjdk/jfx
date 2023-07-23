@@ -27,13 +27,13 @@ package com.sun.javafx.application.preferences;
 
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
+import javafx.application.Appearance;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.paint.Color;
-import javafx.stage.Appearance;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

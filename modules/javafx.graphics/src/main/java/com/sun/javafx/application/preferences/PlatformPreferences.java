@@ -27,13 +27,13 @@ package com.sun.javafx.application.preferences;
 
 import com.sun.javafx.binding.MapExpressionHelper;
 import com.sun.javafx.collections.MapListenerHelper;
+import javafx.application.Appearance;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.stage.Appearance;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
