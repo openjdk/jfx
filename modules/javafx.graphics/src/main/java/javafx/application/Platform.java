@@ -444,11 +444,12 @@ public final class Platform {
      * The map returned from this method is unmodifiable, which means that keys and values cannot
      * be added, removed, or updated. Calling any mutator method on the map will always cause
      * {@code UnsupportedOperationException} to be thrown. However, the mappings will be updated
-     * by JavaFX when the operating system reports a different value for a platform preference.
+     * by JavaFX when the operating system reports that a platform preference has changed.
      * <p>
-     * Applications and libraries are encouraged to use {@link Application#getPreferences()
-     * application preferences} instead of platform preferences, as application preferences can be
-     * overridden by user code.
+     * Applications and libraries are encouraged to use {@link Application#getPreferences()} instead,
+     * which allows applications to override preference mappings with custom values. For example,
+     * an application might override {@link Application.Preferences#appearanceProperty()} to switch
+     * between dark or light mode independent of the operating system setting.
      *
      * @see Application#getPreferences()
      * @return the {@code Preferences} instance
@@ -589,11 +590,12 @@ public final class Platform {
         Appearance getAppearance();
 
         /**
-         * The color used for background regions. The value of this property corresponds to the
-         * reported color value for the {@code javafx.backgroundColor} key. If the platform does
-         * not report a background color, this property defaults to {@code Color.WHITE}.
+         * The color used for background regions.
+         * <p>
+         * If the platform does not report a background color, this property defaults to {@code Color.WHITE}.
          *
          * @return the {@code backgroundColor} property
+         * @defaultValue {@link Color#WHITE}
          */
         ReadOnlyObjectProperty<Color> backgroundColorProperty();
 
@@ -605,11 +607,12 @@ public final class Platform {
         Color getBackgroundColor();
 
         /**
-         * The color used for foreground elements like text. The value of this property corresponds
-         * to the reported color value for the {@code javafx.foregroundColor} key. If the platform
-         * does not report a foreground color, this property defaults to {@code Color.BLACK}.
+         * The color used for foreground elements like text.
+         * <p>
+         * If the platform does not report a foreground color, this property defaults to {@code Color.BLACK}.
          *
          * @return the {@code foregroundColor} property
+         * @defaultValue {@code Color.BLACK}
          */
         ReadOnlyObjectProperty<Color> foregroundColorProperty();
 
@@ -621,11 +624,12 @@ public final class Platform {
         Color getForegroundColor();
 
         /**
-         * The accent color. The value of this property corresponds to the reported color value
-         * for the {@code javafx.accentColor} key. If the platform does not report an accent color,
-         * this property defaults to {@code #157EFB}.
+         * The accent color.
+         * <p>
+         * If the platform does not report an accent color, this property defaults to {@code #157EFB}.
          *
          * @return the {@code accentColor} property
+         * @defaultValue {@code #157EFB}
          */
         ReadOnlyObjectProperty<Color> accentColorProperty();
 

@@ -67,7 +67,7 @@ public class PlatformPreferencesTest extends Application {
         box.getChildren().add(new VBox(10,
             new VBox(
                 new Label("1. On a supported platform, change any of the platform preferences."),
-                new Label("    See javafx.application.PlatformPreferences for a list of supported platforms.")),
+                new Label("    See javafx.application.Platform.Preferences for a list of supported platforms.")),
             new Label("2. Observe whether the changed preferences are reported in the log below."),
             new Label("3. Click \"Pass\" if the changes were correctly reported, otherwise click \"Fail\"."),
             new HBox(5, passButton, failButton, clearButton)

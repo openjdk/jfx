@@ -545,12 +545,13 @@ public abstract class Application {
      * Gets the preferences of the current application.
      * <p>
      * The map returned from this method includes all platform preferences, and is updated by JavaFX
-     * when the operating system reports a different value for a platform preference. In contrast to
+     * when the operating system reports that a platform preference has changed. In contrast to
      * {@link Platform#getPreferences()}, the mappings in the application preferences map can be
      * overridden by user code. An overridden value always takes precedence over a platform-provided
      * value.
      *
      * @return the {@code Preferences} instance
+     * @see Platform#getPreferences()
      * @since 22
      */
     public static Preferences getPreferences() {
@@ -560,6 +561,7 @@ public abstract class Application {
     /**
      * Contains UI preferences of the current application.
      *
+     * @see Platform.Preferences
      * @since 22
      */
     public interface Preferences extends Platform.Preferences {
@@ -572,9 +574,9 @@ public abstract class Application {
          * Note that {@code appearance} is a derived property: its value is computed by comparing
          * the {@link #backgroundColorProperty() background} and {@link #foregroundColorProperty() foreground}
          * properties. However, overriding the {@code appearance} property does not change the value
-         * of the {@code background} or {@code foreground} properties. An application should consider
-         * overriding {@code background} and {@code foreground} to match the value of the overridden
-         * {@code appearance} property.
+         * of the {@code background} or {@code foreground} properties. If an application overrides
+         * the {@code appearance} property, it should also consider overriding {@code background} and
+         * {@code foreground} to match the value of the overridden {@code appearance} property.
          *
          * @param appearance the platform appearance override, or {@code null} to clear the override
          */
@@ -586,7 +588,7 @@ public abstract class Application {
          * Specifying {@code null} clears the override, which restores the value of the
          * {@code backgroundColor} property to the platform-provided value.
          * <p>
-         * Overriding this property will not override key-value mappings that represent the
+         * Overriding this property will not override the key-value mapping that represents the
          * background color in the underlying map.
          *
          * @param color the background color override, or {@code null} to clear the override
@@ -599,7 +601,7 @@ public abstract class Application {
          * Specifying {@code null} clears the override, which restores the value of the
          * {@code foregroundColor} property to the platform-provided value.
          * <p>
-         * Overriding this property will not override key-value mappings that represent the
+         * Overriding this property will not override the key-value mapping that represents the
          * foreground color in the underlying map.
          *
          * @param color the foreground color override, or {@code null} to clear the override
@@ -612,7 +614,7 @@ public abstract class Application {
          * Specifying {@code null} clears the override, which restores the value of the
          * {@code accentColor} property to the platform-provided value.
          * <p>
-         * Overriding this property will not override key-value mappings that represent the
+         * Overriding this property will not override the key-value mapping that represents the
          * accent color in the underlying map.
          *
          * @param color the accent color override, or {@code null} to clear the override
