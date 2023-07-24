@@ -25,7 +25,11 @@
 
 #pragma once
 
-#define _ROAPI_ // this flag gives us function prototypes without __declspec(dllimport)
+/*
+ * This flag gives us function prototypes without the __declspec(dllimport) storage class specifier.
+ * We're using GetProcAddress to load the functions at runtime.
+ */
+#define _ROAPI_
 
 #include <roapi.h>
 #include <wrl.h>

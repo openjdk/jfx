@@ -769,7 +769,8 @@ public abstract class Application {
      * well-known key "foregroundColor", which makes it easier to write shared code without
      * depending on platform-specific details.
      * <p>
-     * The following well-known keys are currently supported:
+     * The following well-known keys are currently supported, which correspond to the names
+     * of color properties on the PreferenceProperties class:
      * <ul>
      *     <li>foregroundColor
      *     <li>backgroundColor
