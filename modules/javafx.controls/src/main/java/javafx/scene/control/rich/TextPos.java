@@ -39,6 +39,13 @@ public final class TextPos implements Comparable<TextPos> {
     private final boolean leading;
 
     public TextPos(int index, int offset, int charIndex, boolean leading) {
+        if (index < 0) {
+            throw new IllegalArgumentException("index cannot be negative");
+        } else if (offset < 0) {
+            throw new IllegalArgumentException("offset cannot be negative");
+        } else if (charIndex < 0) {
+            throw new IllegalArgumentException("charIndex cannot be negative");
+        }
         this.index = index;
         this.offset = offset;
         this.charIndex = charIndex;
@@ -111,15 +118,6 @@ public final class TextPos implements Comparable<TextPos> {
         }
         return d;
     }
-
-//    public static TextPos min(TextPos a, TextPos b) {
-//        int cmp = a.compareTo(b);
-//        if (cmp <= 0) {
-//            return a;
-//        } else {
-//            return b;
-//        }
-//    }
 
     public String toString() {
         return

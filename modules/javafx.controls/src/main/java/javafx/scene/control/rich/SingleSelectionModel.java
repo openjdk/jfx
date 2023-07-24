@@ -92,6 +92,10 @@ public class SingleSelectionModel implements SelectionModel {
             m.textPosProperty().removeListener(listener);
         }
 
+        // due to the fact that caretPosition and anchorPosition are two different properties,
+        // there is a possibility that one is null and another is not (for example, in a listener).
+        // to combat this issue, the caretPosition is updated last, so any listener monitoring this
+        // property would see the right value for anchor.
         if (seg == null) {
             anchorPosition.set(null);
             caretPosition.set(null);

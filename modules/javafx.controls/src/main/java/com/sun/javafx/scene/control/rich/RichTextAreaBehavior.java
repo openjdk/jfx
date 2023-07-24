@@ -343,11 +343,6 @@ public class RichTextAreaBehavior {
         if (end == null) {
             return;
         }
-        if (start.compareTo(end) > 0) {
-            TextPos p = start;
-            start = end;
-            end = p;
-        }
 
         // TODO specify style?
         TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
@@ -793,14 +788,31 @@ public class RichTextAreaBehavior {
             }
         }
     }
+    
+    private SelInfo sel() {
+        return SelInfo.get(control);
+    }
+    
+    private TextPos clamp(TextPos p) {
+        return control.getModel().clamp(p);
+    }
 
     public void deleteParagraph() {
-        if (!canEdit()) {
-            return;
+        if (canEdit()) {
+            SelInfo sel = sel();
+            if(sel == null) {
+                return;
+            }
+            
+            int ix0 = sel.getMin().index();
+            int ix1 = sel.getMax().index();
+            
+            TextPos p0 = new TextPos(ix0, 0);
+            TextPos p1 = clamp(new TextPos(ix1 + 1, 0));
+            control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
+            control.moveCaret(p0, false);
+            clearPhantomX();
         }
-
-        // TODO
-        System.out.println("deleteParagraph");
     }
 
     protected void deleteSelection() {

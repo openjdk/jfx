@@ -452,7 +452,13 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Tracks the caret position within the document.  Can be null.
+     * Tracks the caret position within the document.  The value can be null.
+     * <p>
+     * Important note: setting a {@link SelectionSegment} causes an update to both anchor and caret properties.
+     * Typically, they both should be either null (corresponding to a null selection segment) or non-null.
+     * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
+     * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
+     * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
      */
     public final ReadOnlyProperty<TextPos> caretPositionProperty() {
         return selectionModel.caretPositionProperty();
@@ -467,7 +473,13 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Tracks the selection anchor position within the document.  Can be null.
+     * Tracks the selection anchor position within the document.  The value can be null.
+     * <p>
+     * Important note: setting a {@link SelectionSegment} causes an update to both anchor and caret properties.
+     * Typically, they both should be either null (corresponding to a null selection segment) or non-null.
+     * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
+     * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
+     * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
      */
     public final ReadOnlyProperty<TextPos> anchorPositionProperty() {
         return selectionModel.anchorPositionProperty();

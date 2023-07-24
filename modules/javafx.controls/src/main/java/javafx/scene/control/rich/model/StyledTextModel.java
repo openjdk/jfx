@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 import javafx.scene.Node;
@@ -369,9 +370,11 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Returns a text position guaranteed to be within the document limits.
+     * Returns a text position guaranteed to be within the document and paragraph limits.
+     * @param p text position, cannot be null
      */
-    protected TextPos clamp(TextPos p) {
+    public TextPos clamp(TextPos p) {
+        Objects.nonNull(p);
         int ct = size();
         int ix = p.index();
         if (ix < 0) {

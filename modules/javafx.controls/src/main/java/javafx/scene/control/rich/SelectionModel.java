@@ -30,8 +30,8 @@ package javafx.scene.control.rich;
 import javafx.beans.property.ReadOnlyProperty;
 
 /**
- * Single selection model.
- * 
+ * A Selection model that maintains a single {@link SelectionSegment}.
+ * <pre>
  * TODO perhaps we should support, at least theoretically, the concept of multiple selection
  * and multiple carets.  The impacted areas:
  * - this interface
@@ -40,7 +40,7 @@ import javafx.beans.property.ReadOnlyProperty;
  */
 public interface SelectionModel {
     /**
-     * Clears the selection
+     * Clears the selection.
      */
     public void clear();
 
@@ -56,15 +56,27 @@ public interface SelectionModel {
     public void extendSelection(Marker pos);
     
     /**
-     * Anchor position property.
-     */
-    public ReadOnlyProperty<TextPos> anchorPositionProperty();
-
-    /**
-     * Caret position property.
+     * Caret position property.  The value can be null.
+     * <p>
+     * Important note: setting a {@link SelectionSegment} causes an update to both anchor and caret properties.
+     * Typically, they both should be either null (corresponding to a null selection segment) or non-null.
+     * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
+     * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
+     * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
      */
     public ReadOnlyProperty<TextPos> caretPositionProperty();
     
+    /**
+     * Anchor position property.  The value can be null.
+     * <p>
+     * Important note: setting a {@link SelectionSegment} causes an update to both anchor and caret properties.
+     * Typically, they both should be either null (corresponding to a null selection segment) or non-null.
+     * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
+     * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
+     * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
+     */
+    public ReadOnlyProperty<TextPos> anchorPositionProperty();
+
     /**
      * Selection segment property.  The value can be null.
      */
