@@ -89,45 +89,73 @@ public class RichTextArea extends Control {
     public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();
     /** Moves the caret to beginning of the document */
     public static final FunctionTag MOVE_DOCUMENT_START = new FunctionTag();
+    /** Moves the caret one visual text line down */
     public static final FunctionTag MOVE_DOWN = new FunctionTag();
+    /** Moves the caret one symbol to the left */
     public static final FunctionTag MOVE_LEFT = new FunctionTag();
-    public static final FunctionTag MOVE_LINE_END = new FunctionTag();
-    public static final FunctionTag MOVE_LINE_START = new FunctionTag();
+    /** Moves the caret to the end of the current paragraph */
+    public static final FunctionTag MOVE_PARAGRAPH_END = new FunctionTag();
+    /** Moves the caret to the beginning of the current paragraph */
+    public static final FunctionTag MOVE_PARAGRAPH_START = new FunctionTag();
+    /** Moves the caret one symbol to the right */
     public static final FunctionTag MOVE_RIGHT = new FunctionTag();
+    /** Moves the caret one visual text line up */
     public static final FunctionTag MOVE_UP = new FunctionTag();
-    /** moves the caret one word left (previous word if LTR, next word if RTL) */
+    /** Moves the caret one word left (previous word if LTR, next word if RTL) */
     public static final FunctionTag MOVE_WORD_LEFT = new FunctionTag();
+    /** Moves the caret to the next word */
     public static final FunctionTag MOVE_WORD_NEXT = new FunctionTag();
+    /** Moves the caret to the end of next word */
     public static final FunctionTag MOVE_WORD_NEXT_END = new FunctionTag();
+    /** Moves the caret to the previous word */
     public static final FunctionTag MOVE_WORD_PREVIOUS = new FunctionTag();
-    /** moves the caret one word right (next word if LTR, previous word if RTL) */
+    /** Moves the caret one word right (next word if LTR, previous word if RTL) */
     public static final FunctionTag MOVE_WORD_RIGHT = new FunctionTag();
+    /** Moves the caret one page down */
     public static final FunctionTag PAGE_DOWN = new FunctionTag();
+    /** Moves the caret one page up */
     public static final FunctionTag PAGE_UP = new FunctionTag();
+    /** Inserts rich text from the clipboard */
     public static final FunctionTag PASTE = new FunctionTag();
+    /** Inserts plain text from the clipboard */
     public static final FunctionTag PASTE_PLAIN_TEXT = new FunctionTag();
+    /** Reverts the last undo operation */
     public static final FunctionTag REDO = new FunctionTag();
+    /** Selects all text in the document */
     public static final FunctionTag SELECT_ALL = new FunctionTag();
+    /** Selects text (or extends selection) from the current caret position to the end of document */
     public static final FunctionTag SELECT_DOCUMENT_END = new FunctionTag();
+    /** Selects text (or extends selection) from the current caret position to the start of document */
     public static final FunctionTag SELECT_DOCUMENT_START = new FunctionTag();
+    /** Selects text (or extends selection) from the current caret position one visual text line down */
     public static final FunctionTag SELECT_DOWN = new FunctionTag();
+    /** Selects text (or extends selection) from the current position to one symbol to the left */
     public static final FunctionTag SELECT_LEFT = new FunctionTag();
+    /** Selects text (or extends selection) from the current position to one page down */
     public static final FunctionTag SELECT_PAGE_DOWN = new FunctionTag();
+    /** Selects text (or extends selection) from the current position to one page up */
     public static final FunctionTag SELECT_PAGE_UP = new FunctionTag();
+    /** Selects text (or extends selection) of the current paragraph */
     public static final FunctionTag SELECT_PARAGRAPH = new FunctionTag();
+    /** Selects text (or extends selection) from the current position to one symbol to the right */
     public static final FunctionTag SELECT_RIGHT = new FunctionTag();
+    /** Selects text (or extends selection) from the current caret position one visual text line up */
     public static final FunctionTag SELECT_UP = new FunctionTag();
+    /** Selects word at the caret position */
     public static final FunctionTag SELECT_WORD = new FunctionTag();
-    /** extend selection to the previous word (LTR) or next word (RTL) */
+    /** Extends selection to the previous word (LTR) or next word (RTL) */
     public static final FunctionTag SELECT_WORD_LEFT = new FunctionTag();
+    /** Extends selection to the next word */
     public static final FunctionTag SELECT_WORD_NEXT = new FunctionTag();
+    /** Extends selection to the end of next word */
     public static final FunctionTag SELECT_WORD_NEXT_END = new FunctionTag();
+    /** Extends selection to the previous word */
     public static final FunctionTag SELECT_WORD_PREVIOUS = new FunctionTag();
-    /** extend selection to the next word (LTR) or previous word (RTL) */
+    /** Extends selection to the next word (LTR) or previous word (RTL) */
     public static final FunctionTag SELECT_WORD_RIGHT = new FunctionTag();
+    /** Undoes the last edit operation */
     public static final FunctionTag UNDO = new FunctionTag();
 
-    private static final double DEFAULT_LINE_SPACING = 0.0;
     private final ConfigurationParameters config;
     private final KeyMap inputMap = new KeyMap();
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
@@ -754,21 +782,21 @@ public class RichTextArea extends Control {
     }
     
     /**
-     * Moves the caret to the end of the current line of text.
+     * Moves the caret to the end of the current paragraph.
      * This method has a side effect of clearing an existing selection.
      * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
      */
-    public void moveLineEnd() {
-        execute(MOVE_LINE_END);
+    public void moveParagraphEnd() {
+        execute(MOVE_PARAGRAPH_END);
     }
     
     /**
-     * Moves the caret to the start of the current line of text.
+     * Moves the caret to the start of the current paragraph.
      * This method has a side effect of clearing an existing selection.
      * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
      */
     public void moveLineStart() {
-        execute(MOVE_LINE_START);
+        execute(MOVE_PARAGRAPH_START);
     }
     
     /**
@@ -1231,7 +1259,7 @@ public class RichTextArea extends Control {
                 StyleableProperties.LINE_SPACING,
                 this,
                 "lineSpacing",
-                DEFAULT_LINE_SPACING
+                Params.DEFAULT_LINE_SPACING
             );
         }
         return lineSpacing;
@@ -1243,7 +1271,7 @@ public class RichTextArea extends Control {
 
     public final double getLineSpacing() {
         if (lineSpacing == null) {
-            return DEFAULT_LINE_SPACING;
+            return Params.DEFAULT_LINE_SPACING;
         }
         return lineSpacing.get();
     }

@@ -132,8 +132,8 @@ public class RichTextAreaBehavior {
         m.func(MOVE_DOCUMENT_START, this::moveDocumentStart);
         m.func(MOVE_DOWN, this::moveDown);
         m.func(MOVE_LEFT, this::moveLeft);
-        m.func(MOVE_LINE_END, this::moveLineEnd);
-        m.func(MOVE_LINE_START, this::moveLineStart);
+        m.func(MOVE_PARAGRAPH_END, this::moveParagraphEnd);
+        m.func(MOVE_PARAGRAPH_START, this::moveParagraphStart);
         m.func(MOVE_RIGHT, this::moveRight);
         m.func(MOVE_UP, this::moveUp);
         m.func(MOVE_WORD_NEXT, this::nextWord);
@@ -175,8 +175,8 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyCode.RIGHT, MOVE_RIGHT);
         m.key(skin, KeyCode.UP, MOVE_UP);
         m.key(skin, KeyCode.DOWN, MOVE_DOWN);
-        m.key(skin, KeyCode.HOME, MOVE_LINE_START);
-        m.key(skin, KeyCode.END, MOVE_LINE_END);
+        m.key(skin, KeyCode.HOME, MOVE_PARAGRAPH_START);
+        m.key(skin, KeyCode.END, MOVE_PARAGRAPH_END);
         m.key(skin, KeyBinding.with(KeyCode.HOME).ctrl().notForMac().build(), MOVE_DOCUMENT_START);
         m.key(skin, KeyBinding.with(KeyCode.UP).shortcut().forMac().build(), MOVE_DOCUMENT_START);
         m.key(skin, KeyBinding.with(KeyCode.END).ctrl().notForMac().build(), MOVE_DOCUMENT_END);
@@ -516,7 +516,7 @@ public class RichTextAreaBehavior {
         moveCharacter(false, false);
     }
     
-    public void moveLineStart() {
+    public void moveParagraphStart() {
         TextPos p = control.getCaretPosition();
         if (p != null) {
             TextPos p2 = new TextPos(p.index(), 0);
@@ -525,7 +525,7 @@ public class RichTextAreaBehavior {
         }
     }
 
-    public void moveLineEnd() {
+    public void moveParagraphEnd() {
         TextPos p = control.getCaretPosition();
         if (p != null) {
             int ix = p.index();
@@ -579,6 +579,7 @@ public class RichTextAreaBehavior {
     }
 
     protected void moveCharacter(boolean moveRight, boolean extendSelection) {
+        // TODO bidi
         TextPos caret = control.getCaretPosition();
         if (caret == null) {
             return;

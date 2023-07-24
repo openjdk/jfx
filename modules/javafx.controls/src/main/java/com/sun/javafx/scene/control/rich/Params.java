@@ -47,6 +47,9 @@ public class Params {
     /** default caret blink period, in milliseconds. */
     public static final int DEFAULT_CARET_BLINK_PERIOD = 500;
 
+    /** default line spacing */
+    public static final double DEFAULT_LINE_SPACING = 0.0;
+
     /** small space between the end of last character and the right edge when typing, in pixels. */
     public static final double HORIZONTAL_GUARD = 20;
 
