@@ -71,15 +71,23 @@ import com.sun.javafx.scene.control.rich.VFlow;
  * Text input component that allows a user to enter multiple lines of rich text.
  */
 public class RichTextArea extends Control {
-    /** Each of these tags must get a meaningful description TODO */
+    /** Deletes previous symbol */
     public static final FunctionTag BACKSPACE = new FunctionTag();
+    /** Copies selected text to the clipboard */
     public static final FunctionTag COPY = new FunctionTag();
+    /** Cuts selected text and places it to the clipboard */
     public static final FunctionTag CUT = new FunctionTag();
+    /** Deletes symbol at the caret */
     public static final FunctionTag DELETE = new FunctionTag();
+    /** Deletes paragraph at the caret, or selected paragraphs */
     public static final FunctionTag DELETE_PARAGRAPH = new FunctionTag();
+    /** Inserts a single line break */
     public static final FunctionTag INSERT_LINE_BREAK = new FunctionTag();
+    /** Inserts a TAB symbol */
     public static final FunctionTag INSERT_TAB = new FunctionTag();
+    /** Moves the caret to end of the document */
     public static final FunctionTag MOVE_DOCUMENT_END = new FunctionTag();
+    /** Moves the caret to beginning of the document */
     public static final FunctionTag MOVE_DOCUMENT_START = new FunctionTag();
     public static final FunctionTag MOVE_DOWN = new FunctionTag();
     public static final FunctionTag MOVE_LEFT = new FunctionTag();
@@ -87,9 +95,13 @@ public class RichTextArea extends Control {
     public static final FunctionTag MOVE_LINE_START = new FunctionTag();
     public static final FunctionTag MOVE_RIGHT = new FunctionTag();
     public static final FunctionTag MOVE_UP = new FunctionTag();
+    /** moves the caret one word left (previous word if LTR, next word if RTL) */
+    public static final FunctionTag MOVE_WORD_LEFT = new FunctionTag();
     public static final FunctionTag MOVE_WORD_NEXT = new FunctionTag();
     public static final FunctionTag MOVE_WORD_NEXT_END = new FunctionTag();
     public static final FunctionTag MOVE_WORD_PREVIOUS = new FunctionTag();
+    /** moves the caret one word right (next word if LTR, previous word if RTL) */
+    public static final FunctionTag MOVE_WORD_RIGHT = new FunctionTag();
     public static final FunctionTag PAGE_DOWN = new FunctionTag();
     public static final FunctionTag PAGE_UP = new FunctionTag();
     public static final FunctionTag PASTE = new FunctionTag();
@@ -106,9 +118,13 @@ public class RichTextArea extends Control {
     public static final FunctionTag SELECT_RIGHT = new FunctionTag();
     public static final FunctionTag SELECT_UP = new FunctionTag();
     public static final FunctionTag SELECT_WORD = new FunctionTag();
+    /** extend selection to the previous word (LTR) or next word (RTL) */
+    public static final FunctionTag SELECT_WORD_LEFT = new FunctionTag();
     public static final FunctionTag SELECT_WORD_NEXT = new FunctionTag();
     public static final FunctionTag SELECT_WORD_NEXT_END = new FunctionTag();
     public static final FunctionTag SELECT_WORD_PREVIOUS = new FunctionTag();
+    /** extend selection to the next word (LTR) or previous word (RTL) */
+    public static final FunctionTag SELECT_WORD_RIGHT = new FunctionTag();
     public static final FunctionTag UNDO = new FunctionTag();
 
     private static final double DEFAULT_LINE_SPACING = 0.0;
@@ -774,6 +790,26 @@ public class RichTextArea extends Control {
     }
     
     /**
+     * Moves the caret to the beginning of previous word in a left-to-right setting,
+     * or the beginning of the next word in a right-to-left setting.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveLeftWord() {
+        execute(MOVE_WORD_PREVIOUS);
+    }
+
+    /**
+     * Moves the caret to the beginning of next word in a left-to-right setting,
+     * or the beginning of the previous word in a right-to-left setting.
+     * This method has a side effect of clearing an existing selection.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void moveRightWord() {
+        execute(MOVE_WORD_NEXT);
+    }
+    
+    /**
      * Moves the caret to the beginning of previous word.
      * This method has a side effect of clearing an existing selection.
      * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
@@ -943,6 +979,30 @@ public class RichTextArea extends Control {
      */
     public void selectWord() {
         execute(SELECT_WORD);
+    }
+    
+    /**
+     * Moves the caret to the beginning of previous word in a left-to-right setting,
+     * or to the beginning of the next word in a right-to-left setting.
+     * This does not cause
+     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
+     * moved to the beginning of next word.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectLeftWord() {
+        execute(SELECT_WORD_LEFT);
+    }
+    
+    /**
+     * Moves the caret to the beginning of next word in a left-to-right setting,
+     * or to the beginning of the previous word in a right-to-left setting.
+     * This does not cause
+     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
+     * moved to the beginning of next word.
+     * <p>This action can be changed by remapping the default behavior, @see {@link #getKeyMap()}.
+     */
+    public void selectRightWord() {
+        execute(SELECT_WORD_RIGHT);
     }
     
     /**

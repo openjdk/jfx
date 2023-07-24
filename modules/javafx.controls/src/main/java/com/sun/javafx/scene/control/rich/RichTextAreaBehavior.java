@@ -27,7 +27,10 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import static com.sun.javafx.PlatformUtil.isLinux;
+import static com.sun.javafx.PlatformUtil.isMac;
 import static javafx.scene.control.rich.RichTextArea.*;
+import java.text.Bidi;
 import java.text.BreakIterator;
 import java.util.HashMap;
 import javafx.animation.KeyFrame;
@@ -135,7 +138,9 @@ public class RichTextAreaBehavior {
         m.func(MOVE_UP, this::moveUp);
         m.func(MOVE_WORD_NEXT, this::nextWord);
         m.func(MOVE_WORD_NEXT_END, this::endOfNextWord);
+        m.func(MOVE_WORD_LEFT, this::leftWord);
         m.func(MOVE_WORD_PREVIOUS, this::previousWord);
+        m.func(MOVE_WORD_RIGHT, this::rightWord);
         m.func(PAGE_DOWN, this::pageDown);
         m.func(PAGE_UP, this::pageUp);
         m.func(PASTE, this::paste);
@@ -152,9 +157,11 @@ public class RichTextAreaBehavior {
         m.func(SELECT_RIGHT, this::selectRight);
         m.func(SELECT_UP, this::selectUp);
         m.func(SELECT_WORD, this::selectWord);
+        m.func(SELECT_WORD_LEFT, this::selectLeftWord);
         m.func(SELECT_WORD_NEXT, this::selectNextWord);
         m.func(SELECT_WORD_NEXT_END, this::selectEndOfNextWord);
         m.func(SELECT_WORD_PREVIOUS, this::selectPreviousWord);
+        m.func(SELECT_WORD_RIGHT, this::selectRightWord);
         m.func(UNDO, this::undo);
         // keys
         m.key(skin, KeyCode.BACK_SPACE, BACKSPACE);
@@ -174,10 +181,10 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyBinding.with(KeyCode.UP).shortcut().forMac().build(), MOVE_DOCUMENT_START);
         m.key(skin, KeyBinding.with(KeyCode.END).ctrl().notForMac().build(), MOVE_DOCUMENT_END);
         m.key(skin, KeyBinding.with(KeyCode.DOWN).shortcut().forMac().build(), MOVE_DOCUMENT_END);
-        m.key(skin, KeyBinding.with(KeyCode.RIGHT).ctrl().notForMac().build(), MOVE_WORD_NEXT);
-        m.key(skin, KeyBinding.with(KeyCode.RIGHT).option().forMac().build(), MOVE_WORD_NEXT);
-        m.key(skin, KeyBinding.with(KeyCode.LEFT).ctrl().notForMac().build(), MOVE_WORD_PREVIOUS);
-        m.key(skin, KeyBinding.with(KeyCode.LEFT).option().forMac().build(), MOVE_WORD_PREVIOUS);
+        m.key(skin, KeyBinding.with(KeyCode.LEFT).ctrl().notForMac().build(), MOVE_WORD_LEFT);
+        m.key(skin, KeyBinding.with(KeyCode.LEFT).option().forMac().build(), MOVE_WORD_LEFT);
+        m.key(skin, KeyBinding.with(KeyCode.RIGHT).ctrl().notForMac().build(), MOVE_WORD_RIGHT);
+        m.key(skin, KeyBinding.with(KeyCode.RIGHT).option().forMac().build(), MOVE_WORD_RIGHT);
         m.key(skin, KeyCode.PAGE_DOWN, PAGE_DOWN);
         m.key(skin, KeyCode.PAGE_UP, PAGE_UP);
         m.key(skin, KeyBinding.shortcut(KeyCode.V), PASTE);
@@ -190,6 +197,10 @@ public class RichTextAreaBehavior {
         m.key(skin, KeyBinding.shift(KeyCode.DOWN), SELECT_DOWN);
         m.key(skin, KeyBinding.shift(KeyCode.PAGE_UP), SELECT_PAGE_UP);
         m.key(skin, KeyBinding.shift(KeyCode.PAGE_DOWN), SELECT_PAGE_DOWN);
+        m.key(skin, KeyBinding.with(KeyCode.LEFT).shift().ctrl().notForMac().build(), SELECT_WORD_LEFT);
+        m.key(skin, KeyBinding.with(KeyCode.LEFT).shift().option().forMac().build(), SELECT_WORD_LEFT);
+        m.key(skin, KeyBinding.with(KeyCode.RIGHT).shift().ctrl().notForMac().build(), SELECT_WORD_RIGHT);
+        m.key(skin, KeyBinding.with(KeyCode.RIGHT).shift().option().forMac().build(), SELECT_WORD_RIGHT);
         m.key(skin, KeyBinding.with(KeyCode.HOME).ctrl().shift().notForMac().build(), SELECT_DOCUMENT_START);
         m.key(skin, KeyBinding.with(KeyCode.UP).shift().shortcut().forMac().build(), SELECT_DOCUMENT_START);
         m.key(skin, KeyBinding.with(KeyCode.END).ctrl().shift().notForMac().build(), SELECT_DOCUMENT_END);
@@ -800,13 +811,13 @@ public class RichTextAreaBehavior {
     public void deleteParagraph() {
         if (canEdit()) {
             SelInfo sel = sel();
-            if(sel == null) {
+            if (sel == null) {
                 return;
             }
-            
+
             int ix0 = sel.getMin().index();
             int ix1 = sel.getMax().index();
-            
+
             TextPos p0 = new TextPos(ix0, 0);
             TextPos p1 = clamp(new TextPos(ix1 + 1, 0));
             control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
@@ -816,13 +827,13 @@ public class RichTextAreaBehavior {
     }
 
     protected void deleteSelection() {
-        TextPos start = control.getCaretPosition();
-        TextPos end = control.getAnchorPosition();
-        if (start.compareTo(end) > 0) {
-            TextPos p = start;
-            start = end;
-            end = p;
+        SelInfo sel = sel();
+        if (sel == null) {
+            return;
         }
+
+        TextPos start = sel.getMin();
+        TextPos end = sel.getMax();
         control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
         control.moveCaret(start, false);
         clearPhantomX();
@@ -940,19 +951,13 @@ public class RichTextAreaBehavior {
         if (canEdit()) {
             DataFormat f = findFormatForPaste();
             if (f != null) {
-                TextPos start = control.getCaretPosition();
-                if (start == null) {
+                SelInfo sel = sel();
+                if (sel == null) {
                     return;
                 }
-                TextPos end = control.getAnchorPosition();
-                if (end == null) {
-                    return;
-                }
-                if (start.compareTo(end) > 0) {
-                    TextPos p = start;
-                    start = end;
-                    end = p;
-                }
+                
+                TextPos start = sel.getMin();
+                TextPos end = sel.getMax();
 
                 if (control.hasNonEmptySelection()) {
                     deleteSelection();
@@ -972,19 +977,13 @@ public class RichTextAreaBehavior {
         if (canEdit()) {
             Clipboard c = Clipboard.getSystemClipboard();
             if (c.hasContent(f)) {
-                TextPos start = control.getCaretPosition();
-                if (start == null) {
+                SelInfo sel = sel();
+                if (sel == null) {
                     return;
                 }
-                TextPos end = control.getAnchorPosition();
-                if (end == null) {
-                    return;
-                }
-                if (start.compareTo(end) > 0) {
-                    TextPos p = start;
-                    start = end;
-                    end = p;
-                }
+                
+                TextPos start = sel.getMin();
+                TextPos end = sel.getMax();
 
                 StyledTextModel m = control.getModel();
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
@@ -1024,13 +1023,13 @@ public class RichTextAreaBehavior {
             StyledTextModel m = control.getModel(); // non null at this point
             DataFormat[] fs = m.getSupportedDataFormats(true);
             if (fs.length > 0) {
-                TextPos start = control.getAnchorPosition();
-                TextPos end = control.getCaretPosition();
-                if (start.compareTo(end) > 0) {
-                    TextPos p = start;
-                    start = end;
-                    end = p;
+                SelInfo sel = sel();
+                if (sel == null) {
+                    return;
                 }
+                
+                TextPos start = sel.getMin();
+                TextPos end = sel.getMax();
 
                 try {
                     ClipboardContent c = new ClipboardContent();
@@ -1061,13 +1060,14 @@ public class RichTextAreaBehavior {
                 StyledTextModel m = control.getModel(); // not null at this point
                 DataFormatHandler h = m.getDataFormatHandler(f, true);
                 if (h != null) {
-                    TextPos start = control.getAnchorPosition();
-                    TextPos end = control.getCaretPosition();
-                    if (start.compareTo(end) > 0) {
-                        TextPos p = start;
-                        start = end;
-                        end = p;
+                    SelInfo sel = sel();
+                    if (sel == null) {
+                        return;
                     }
+                    
+                    TextPos start = sel.getMin();
+                    TextPos end = sel.getMax();
+
                     Object v = h.copy(m, vflow, start, end);
                     ClipboardContent c = new ClipboardContent();
                     c.put(f, v);
@@ -1087,6 +1087,16 @@ public class RichTextAreaBehavior {
      */
     public void previousWord() {
         previousWord(false);
+    }
+    
+    /** moves the caret to the beginning of the previos word (LTR) or next word (RTL) */
+    public void leftWord() {
+        leftWord(false);
+    }
+    
+    /** moves the caret to the beginning of the next word (LTR) or previous word (RTL) */
+    public void rightWord() {
+        rightWord(false);
     }
 
     /**
@@ -1122,6 +1132,26 @@ public class RichTextAreaBehavior {
     public void selectNextWord() {
         nextWord(true);
     }
+    
+    /**
+     * Moves the caret to the beginning of previous word (LTR) or next word (LTR).
+     * This does not cause
+     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
+     * moved to the beginning of previous word.
+     */
+    public void selectLeftWord() {
+        previousWord(true);
+    }
+
+    /**
+     * Moves the caret to the beginning of next word (LTR) or previous word (RTL).
+     * This does not cause
+     * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
+     * moved to the beginning of next word.
+     */
+    public void selectRightWord() {
+        nextWord(true);
+    }
 
     /**
      * Moves the caret to the end of the next word. This does not cause
@@ -1129,6 +1159,22 @@ public class RichTextAreaBehavior {
      */
     public void selectEndOfNextWord() {
         endOfNextWord(true);
+    }
+    
+    protected void leftWord(boolean extendSelection) {
+        if (isRTLText()) {
+            nextWord(extendSelection);
+        } else {
+            previousWord(extendSelection);
+        }
+    }
+    
+    protected void rightWord(boolean extendSelection) {
+        if (isRTLText()) {
+            previousWord(extendSelection);
+        } else {
+            nextWord(extendSelection);
+        }
     }
 
     protected void previousWord(boolean extendSelection) {
@@ -1148,6 +1194,12 @@ public class RichTextAreaBehavior {
         if (caret != null) {
             clearPhantomX();
 
+            // TODO
+//            if (isMac() || isLinux()) {
+//                textInputControl.endOfNextWord();
+//            } else {
+//                textInputControl.nextWord();
+//            }
             TextPos p = nextWordFrom(caret);
             if (p != null) {
                 control.moveCaret(p, extendSelection);
@@ -1270,5 +1322,35 @@ public class RichTextAreaBehavior {
                 control.select(sel[0], sel[1]);
             }
         }
+    }
+
+    private Bidi getBidi() {
+        String paragraph = getTextAtCaret();
+        int flags = (control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) ?
+            Bidi.DIRECTION_RIGHT_TO_LEFT :
+            Bidi.DIRECTION_LEFT_TO_RIGHT;
+        return new Bidi(paragraph, flags);
+    }
+
+    private String getTextAtCaret() {
+        TextPos p = control.getCaretPosition();
+        if (p != null) {
+            String s = control.getPlainText(p.index());
+            if (s != null) {
+                return s;
+            }
+        }
+        return "";
+    }
+
+    private boolean isMixed() {
+        return getBidi().isMixed();
+    }
+
+    private boolean isRTLText() {
+        Bidi bidi = getBidi();
+        return
+            (bidi.isRightToLeft() ||
+            (isMixed() && control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
     }
 }
