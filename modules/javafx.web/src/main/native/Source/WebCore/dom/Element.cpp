@@ -2295,11 +2295,7 @@ URL Element::absoluteLinkURL() const
 
     if (linkAttribute.isEmpty())
         return URL();
-#if PLATFORM(JAVA)
     return document().completeURL(linkAttribute);
-#else
-    return document().completeURL(stripLeadingAndTrailingHTMLSpaces(linkAttribute));
-#endif
 }
 
 #if ENABLE(TOUCH_EVENTS)
