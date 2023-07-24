@@ -31,6 +31,7 @@ import javafx.beans.InvalidationListener;
 import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -164,36 +165,16 @@ public class PlatformPreferencesTest {
     @Test
     void testColorPropertyChangesAreAtomicWhenMapIsObserved() {
         var trace = new ArrayList<Color[]>();
-        Color[] expectedColors;
 
         prefs.addListener((MapChangeListener<? super String, ? super Object>) change ->
             trace.add(new Color[] {prefs.getForegroundColor(), prefs.getBackgroundColor(), prefs.getAccentColor()}));
 
-        prefs.update(Map.of(
-            "test.foregroundColor", Color.RED,
-            "test.backgroundColor", Color.GREEN,
-            "test.accentColor", Color.BLUE));
-        assertEquals(3, trace.size());
-        expectedColors = new Color[] { Color.RED, Color.GREEN, Color.BLUE };
-        assertArrayEquals(expectedColors, trace.get(0));
-        assertArrayEquals(expectedColors, trace.get(1));
-        assertArrayEquals(expectedColors, trace.get(2));
-
-        prefs.update(Map.of(
-            "test.foregroundColor", Color.BLUE,
-            "test.backgroundColor", Color.YELLOW,
-            "test.accentColor", Color.PURPLE));
-        assertEquals(6, trace.size());
-        expectedColors = new Color[] { Color.BLUE, Color.YELLOW, Color.PURPLE };
-        assertArrayEquals(expectedColors, trace.get(3));
-        assertArrayEquals(expectedColors, trace.get(4));
-        assertArrayEquals(expectedColors, trace.get(5));
+        testColorPropertyChangesAreAtomic(trace, 3);
     }
 
     @Test
-    void testColorPropertyChangesAreAtomicWhenPropertiesAreObserved() {
+    void testColorPropertyChangesAreAtomicWhenColorPropertiesAreObserved() {
         var trace = new ArrayList<Color[]>();
-        Color[] expectedColors;
 
         InvalidationListener listener = observable -> trace.add(
             new Color[] { prefs.getForegroundColor(), prefs.getBackgroundColor(), prefs.getAccentColor() });
@@ -201,25 +182,46 @@ public class PlatformPreferencesTest {
         prefs.backgroundColorProperty().addListener(listener);
         prefs.accentColorProperty().addListener(listener);
 
+        testColorPropertyChangesAreAtomic(trace, 3);
+    }
+
+    @Test
+    void testColorPropertyChangesAreAtomicWhenAppearancePropertyIsObserved() {
+        var trace = new ArrayList<Color[]>();
+
+        prefs.appearanceProperty().addListener((observable, oldValue, newValue) -> trace.add(
+            new Color[] { prefs.getForegroundColor(), prefs.getBackgroundColor(), prefs.getAccentColor() }));
+
+        testColorPropertyChangesAreAtomic(trace, 1);
+    }
+
+    /**
+     * Asserts that color properties are never observed in a transient state: change notifications
+     * are only received after all properties have been set to their new values.
+     */
+    private void testColorPropertyChangesAreAtomic(List<Color[]> trace, int listenerInvocations) {
+        Color[] expectedColors;
+        int i = 0;
+
         prefs.update(Map.of(
             "test.foregroundColor", Color.RED,
             "test.backgroundColor", Color.GREEN,
             "test.accentColor", Color.BLUE));
-        assertEquals(3, trace.size());
+        assertEquals(listenerInvocations, trace.size());
         expectedColors = new Color[] { Color.RED, Color.GREEN, Color.BLUE };
-        assertArrayEquals(expectedColors, trace.get(0));
-        assertArrayEquals(expectedColors, trace.get(1));
-        assertArrayEquals(expectedColors, trace.get(2));
+        while (i < listenerInvocations) {
+            assertArrayEquals(expectedColors, trace.get(i++));
+        }
 
         prefs.update(Map.of(
             "test.foregroundColor", Color.BLUE,
             "test.backgroundColor", Color.YELLOW,
             "test.accentColor", Color.PURPLE));
-        assertEquals(6, trace.size());
+        assertEquals(listenerInvocations * 2, trace.size());
         expectedColors = new Color[] { Color.BLUE, Color.YELLOW, Color.PURPLE };
-        assertArrayEquals(expectedColors, trace.get(3));
-        assertArrayEquals(expectedColors, trace.get(4));
-        assertArrayEquals(expectedColors, trace.get(5));
+        while (i < listenerInvocations * 2) {
+            assertArrayEquals(expectedColors, trace.get(i++));
+        }
     }
 
 }
