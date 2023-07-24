@@ -162,29 +162,61 @@ public class PlatformPreferencesTest {
     }
 
     @Test
-    void testPreferenceUpdatesAreAtomicWhenObserved() {
+    void testColorPropertyChangesAreAtomicWhenMapIsObserved() {
         var trace = new ArrayList<Color[]>();
         Color[] expectedColors;
 
         prefs.addListener((MapChangeListener<? super String, ? super Object>) change ->
-            trace.add(new Color[] {prefs.getBackgroundColor(), prefs.getForegroundColor(), prefs.getAccentColor()}));
+            trace.add(new Color[] {prefs.getForegroundColor(), prefs.getBackgroundColor(), prefs.getAccentColor()}));
 
         prefs.update(Map.of(
             "test.foregroundColor", Color.RED,
-            "test.backgroundColor", Color.BLUE,
-            "test.accentColor", Color.GREEN));
+            "test.backgroundColor", Color.GREEN,
+            "test.accentColor", Color.BLUE));
         assertEquals(3, trace.size());
-        expectedColors = new Color[] { Color.BLUE, Color.RED, Color.GREEN };
+        expectedColors = new Color[] { Color.RED, Color.GREEN, Color.BLUE };
         assertArrayEquals(expectedColors, trace.get(0));
         assertArrayEquals(expectedColors, trace.get(1));
         assertArrayEquals(expectedColors, trace.get(2));
 
         prefs.update(Map.of(
-            "test.backgroundColor", Color.YELLOW,
             "test.foregroundColor", Color.BLUE,
+            "test.backgroundColor", Color.YELLOW,
             "test.accentColor", Color.PURPLE));
         assertEquals(6, trace.size());
-        expectedColors = new Color[] { Color.YELLOW, Color.BLUE, Color.PURPLE };
+        expectedColors = new Color[] { Color.BLUE, Color.YELLOW, Color.PURPLE };
+        assertArrayEquals(expectedColors, trace.get(3));
+        assertArrayEquals(expectedColors, trace.get(4));
+        assertArrayEquals(expectedColors, trace.get(5));
+    }
+
+    @Test
+    void testColorPropertyChangesAreAtomicWhenPropertiesAreObserved() {
+        var trace = new ArrayList<Color[]>();
+        Color[] expectedColors;
+
+        InvalidationListener listener = observable -> trace.add(
+            new Color[] { prefs.getForegroundColor(), prefs.getBackgroundColor(), prefs.getAccentColor() });
+        prefs.foregroundColorProperty().addListener(listener);
+        prefs.backgroundColorProperty().addListener(listener);
+        prefs.accentColorProperty().addListener(listener);
+
+        prefs.update(Map.of(
+            "test.foregroundColor", Color.RED,
+            "test.backgroundColor", Color.GREEN,
+            "test.accentColor", Color.BLUE));
+        assertEquals(3, trace.size());
+        expectedColors = new Color[] { Color.RED, Color.GREEN, Color.BLUE };
+        assertArrayEquals(expectedColors, trace.get(0));
+        assertArrayEquals(expectedColors, trace.get(1));
+        assertArrayEquals(expectedColors, trace.get(2));
+
+        prefs.update(Map.of(
+            "test.foregroundColor", Color.BLUE,
+            "test.backgroundColor", Color.YELLOW,
+            "test.accentColor", Color.PURPLE));
+        assertEquals(6, trace.size());
+        expectedColors = new Color[] { Color.BLUE, Color.YELLOW, Color.PURPLE };
         assertArrayEquals(expectedColors, trace.get(3));
         assertArrayEquals(expectedColors, trace.get(4));
         assertArrayEquals(expectedColors, trace.get(5));

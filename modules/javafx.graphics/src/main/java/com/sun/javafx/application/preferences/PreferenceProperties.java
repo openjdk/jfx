@@ -108,14 +108,17 @@ public final class PreferenceProperties {
             if (key != null) {
                 for (ColorProperty colorProperty : allColors) {
                     if (colorProperty.getName().equals(key)) {
-                        updateColorPreference(colorProperty, entry.getValue().newValue());
+                        updateColorProperty(colorProperty, entry.getValue().newValue());
+                        break;
                     }
                 }
             }
         }
+
+        fireValueChangedEvent();
     }
 
-    private void updateColorPreference(ColorProperty property, Object value) {
+    private void updateColorProperty(ColorProperty property, Object value) {
         if (value instanceof Color color) {
             property.setValue(color);
         } else {
@@ -126,22 +129,38 @@ public final class PreferenceProperties {
                     ", actual = " + value.getClass().getName() + ")");
             }
 
+            // Setting a ColorProperty to 'null' restores its platform value or default value.
             property.setValue(null);
         }
     }
 
+    private void fireValueChangedEvent() {
+        for (ColorProperty colorProperty : allColors) {
+            colorProperty.fireValueChangedEvent();
+        }
+    }
+
+    /**
+     * ColorProperty implements a deferred notification mechanism, where change notifications
+     * are only fired after changes of all color properties have been applied.
+     * This ensures that observers will never see a transient state where two color properties
+     * are inconsistent (for example, both foreground and background could be the same color
+     * when going from light to dark mode).
+     */
     private final class ColorProperty extends ReadOnlyObjectPropertyBase<Color> {
         private final String name;
         private final Color defaultValue;
         private Color overrideValue;
-        private Color effectiveValue;
         private Color platformValue;
+        private Color effectiveValue;
+        private Color lastEffectiveValue;
 
         ColorProperty(String name, Color initialValue) {
             this.name = name;
             this.defaultValue = initialValue;
-            this.effectiveValue = initialValue;
             this.platformValue = initialValue;
+            this.effectiveValue = initialValue;
+            this.lastEffectiveValue = initialValue;
         }
 
         @Override
@@ -159,24 +178,33 @@ public final class PreferenceProperties {
             return effectiveValue;
         }
 
+        /**
+         * Only called by {@link #updateColorProperty}, this method doesn't fire a change notification.
+         * Change notifications are fired after the new values of all color properties have been set.
+         */
         public void setValue(Color value) {
             this.platformValue = value;
-            update();
+            updateEffectiveValue();
         }
 
         public void setValueOverride(Color value) {
             this.overrideValue = value;
-            update();
+            updateEffectiveValue();
+            fireValueChangedEvent();
         }
 
-        private void update() {
-            Color newValue = Objects.requireNonNullElse(
+        private void updateEffectiveValue() {
+            // Choose the first non-null value in this order: overrideValue, platformValue, defaultValue.
+            effectiveValue = Objects.requireNonNullElse(
                 overrideValue != null ? overrideValue : platformValue,
                 defaultValue);
+        }
 
-            if (!Objects.equals(effectiveValue, newValue)) {
-                effectiveValue = newValue;
-                fireValueChangedEvent();
+        @Override
+        public void fireValueChangedEvent() {
+            if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
+                lastEffectiveValue = effectiveValue;
+                super.fireValueChangedEvent();
             }
         }
     }
