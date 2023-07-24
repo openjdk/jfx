@@ -755,8 +755,8 @@ public abstract class Application {
     }
 
     /**
-     * Returns the current set of platform properties as a map of platform-specific
-     * keys to arbitrary values.
+     * Returns the current set of platform properties as a map of platform-specific keys to
+     * arbitrary values.
      */
     public Map<String, Object> getPlatformPreferences() {
         return Map.of();
@@ -765,12 +765,18 @@ public abstract class Application {
     /**
      * Returns a map of platform-specific preference keys to well-known keys.
      * <p>
+     * For example, the platform-specific key "Windows.UIColor.Foreground" is mapped to the
+     * well-known key "foregroundColor", which makes it easier to write shared code without
+     * depending on platform-specific details.
+     * <p>
      * The following well-known keys are currently supported:
      * <ul>
      *     <li>foregroundColor
      *     <li>backgroundColor
      *     <li>accentColor
      * </ul>
+     *
+     * @see com.sun.javafx.application.preferences.PreferenceProperties
      */
     public Map<String, String> getWellKnownPlatformPreferenceKeys() {
         return Map.of();

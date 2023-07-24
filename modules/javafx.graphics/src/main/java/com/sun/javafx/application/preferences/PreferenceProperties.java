@@ -41,7 +41,7 @@ import java.util.Objects;
 /**
  * Contains {@link Property}-based preference implementations.
  */
-final class PreferenceProperties {
+public final class PreferenceProperties {
 
     private final ColorProperty backgroundColor = new ColorProperty("backgroundColor", Color.WHITE);
     private final ColorProperty foregroundColor = new ColorProperty("foregroundColor", Color.BLACK);

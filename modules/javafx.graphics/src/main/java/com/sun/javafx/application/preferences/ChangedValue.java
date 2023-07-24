@@ -36,16 +36,16 @@ import java.util.Objects;
 public record ChangedValue(Object oldValue, Object newValue) {
 
     /**
-     * Returns a map that contains the new or changed mappings of {@code change} compared to {@code base}.
+     * Returns a map that contains the new or changed mappings of {@code current} compared to {@code old}.
      * A value has changed if {@link Objects#equals(Object, Object)} or {@link Arrays#equals(Object[], Object[])}
      * returns {@code false} when invoked with the old and new value.
      */
-    public static Map<String, ChangedValue> getEffectiveChanges(Map<String, Object> base, Map<String, Object> change) {
+    public static Map<String, ChangedValue> getEffectiveChanges(Map<String, Object> old, Map<String, Object> current) {
         Map<String, ChangedValue> changed = null;
 
-        for (Map.Entry<String, Object> entry : change.entrySet()) {
+        for (Map.Entry<String, Object> entry : current.entrySet()) {
             Object newValue = entry.getValue();
-            Object oldValue = base.get(entry.getKey());
+            Object oldValue = old.get(entry.getKey());
             boolean equals;
 
             if (oldValue instanceof Object[] oldArray && newValue instanceof Object[] newArray) {

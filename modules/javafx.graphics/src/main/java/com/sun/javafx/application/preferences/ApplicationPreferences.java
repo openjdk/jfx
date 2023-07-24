@@ -46,9 +46,6 @@ public final class ApplicationPreferences extends PlatformPreferences implements
     private final Map<String, Object> platformPreferences = new HashMap<>();
     private final Map<String, Object> userPreferences = new HashMap<>();
 
-    private Map<String, Object> lastEffectivePreferences = Map.of();
-    private boolean effectivePreferencesChanged;
-
     public ApplicationPreferences(Map<String, String> wellKnownKeys) {
         super(wellKnownKeys);
     }
@@ -72,7 +69,6 @@ public final class ApplicationPreferences extends PlatformPreferences implements
             var changedPreferences = Map.of(key, new ChangedValue(effectiveValue, value));
             properties.update(changedPreferences, wellKnownKeys);
             fireValueChangedEvent(changedPreferences);
-            effectivePreferencesChanged = true;
         }
 
         return effectiveValue;
@@ -101,7 +97,6 @@ public final class ApplicationPreferences extends PlatformPreferences implements
             var changedPreferences = Map.of(key, new ChangedValue(oldValue, newValue));
             properties.update(changedPreferences, wellKnownKeys);
             fireValueChangedEvent(changedPreferences);
-            effectivePreferencesChanged = true;
         }
     }
 
@@ -132,26 +127,7 @@ public final class ApplicationPreferences extends PlatformPreferences implements
         if (!effectivelyChangedPreferences.isEmpty()) {
             properties.update(effectivelyChangedPreferences, wellKnownKeys);
             fireValueChangedEvent(effectivelyChangedPreferences);
-            effectivePreferencesChanged = true;
         }
-    }
-
-    /**
-     * Returns an unmodifiable map that contains all effectively changed mappings since the
-     * last time this method was called.
-     */
-    public Map<String, ChangedValue> pollChanges() {
-        if (!effectivePreferencesChanged) {
-            return Map.of();
-        }
-
-        Map<String, ChangedValue> effectiveChanges =
-            ChangedValue.getEffectiveChanges(lastEffectivePreferences, effectivePreferences);
-
-        effectivePreferencesChanged = false;
-        lastEffectivePreferences = Map.copyOf(effectivePreferences);
-
-        return effectiveChanges;
     }
 
     @Override
