@@ -37,6 +37,7 @@ import javafx.beans.property.ReadOnlyProperty;
  * - this interface
  * - changes in VFlow to handle multiple carets and decorations
  * - changes in RichTextAreaBehavior to handle selection and keyboard navigation
+ * </pre>
  */
 public interface SelectionModel {
     /**
