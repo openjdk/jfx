@@ -148,7 +148,7 @@ public class JFXPanel extends JComponent {
     private transient volatile EmbeddedWindow stage;
     private transient volatile Scene scene;
 
-    private static final Object LOCK = new Object();
+    private final Object LOCK = new Object();
 
     // Accessed on EDT only
     private transient SwingDnD dnd;
@@ -408,19 +408,15 @@ public class JFXPanel extends JComponent {
     }
 
     private EmbeddedSceneInterface getScenePeer() {
-        EmbeddedSceneInterface lScenePeer;
         synchronized(LOCK) {
-            lScenePeer = scenePeer;
+            return scenePeer;
         }
-        return lScenePeer;
     }
 
     private EmbeddedStageInterface getStagePeer() {
-        EmbeddedStageInterface lStagePeer;
         synchronized(LOCK) {
-            lStagePeer = stagePeer;
+            return stagePeer;
         }
-        return lStagePeer;
     }
 
     private void sendMouseEventToFX(MouseEvent e) {
@@ -1039,27 +1035,18 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedStage(EmbeddedStageInterface embeddedStage) {
-            EmbeddedStageInterface lStagePeer;
             synchronized(LOCK) {
-                lStagePeer = stagePeer;
-            }
-            lStagePeer = embeddedStage;
-            if (lStagePeer == null) {
-                return;
+                stagePeer = embeddedStage;
+                if (stagePeer == null) {
+                    return;
+                }
             }
             if (pWidth > 0 && pHeight > 0) {
-                lStagePeer.setSize(pWidth, pHeight);
-            }
-            synchronized(LOCK) {
-                stagePeer = lStagePeer;
+                embeddedStage.setSize(pWidth, pHeight);
             }
             invokeOnClientEDT(() -> {
-                EmbeddedStageInterface tmpStagePeer;
-                synchronized(LOCK) {
-                    tmpStagePeer = stagePeer;
-                }
-                if (tmpStagePeer != null && JFXPanel.this.isFocusOwner()) {
-                    tmpStagePeer.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
+                if (JFXPanel.this.isFocusOwner()) {
+                    embeddedStage.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
                 }
             });
             sendMoveEventToFX();
@@ -1067,15 +1054,13 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedScene(EmbeddedSceneInterface embeddedScene) {
-            EmbeddedSceneInterface lScenePeer;
             synchronized(LOCK) {
-                lScenePeer = scenePeer;
+                if (scenePeer == embeddedScene) {
+                    return;
+                }
+                scenePeer = embeddedScene;
             }
-            if (lScenePeer == embeddedScene) {
-                return;
-            }
-            lScenePeer = embeddedScene;
-            if (lScenePeer == null) {
+            if (embeddedScene == null) {
                 invokeOnClientEDT(() -> {
                     if (dnd != null) {
                         dnd.removeNotify();
@@ -1085,23 +1070,14 @@ public class JFXPanel extends JComponent {
                 return;
             }
             if (pWidth > 0 && pHeight > 0) {
-                lScenePeer.setSize(pWidth, pHeight);
+                embeddedScene.setSize(pWidth, pHeight);
             }
-            lScenePeer.setPixelScaleFactors((float) scaleFactorX, (float) scaleFactorY);
-            synchronized(LOCK) {
-                scenePeer = lScenePeer;
-            }
+            embeddedScene.setPixelScaleFactors((float) scaleFactorX, (float) scaleFactorY);
 
             invokeOnClientEDT(() -> {
-                EmbeddedSceneInterface tmpScenePeer;
-                synchronized(LOCK) {
-                    tmpScenePeer = scenePeer;
-                }
-                dnd = new SwingDnD(JFXPanel.this, tmpScenePeer);
+                dnd = new SwingDnD(JFXPanel.this, embeddedScene);
                 dnd.addNotify();
-                if (tmpScenePeer != null) {
-                    tmpScenePeer.setDragStartListener(dnd.getDragStartListener());
-                }
+                embeddedScene.setDragStartListener(dnd.getDragStartListener());
             });
         }
 
