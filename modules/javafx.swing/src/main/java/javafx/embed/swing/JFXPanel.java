@@ -419,6 +419,42 @@ public class JFXPanel extends JComponent {
         }
     }
 
+    private SwingDnD getDnD() {
+        synchronized(LOCK) {
+            return dnd;
+        }
+    }
+
+    private void setDnD(SwingDnD val) {
+        synchronized(LOCK) {
+            dnd = val;
+        }
+    }
+
+    private int getCompWidth() {
+        synchronized(LOCK) {
+            return pWidth;
+        }
+    }
+
+    private int getCompHeight() {
+        synchronized(LOCK) {
+            return pHeight;
+        }
+    }
+
+    private double getScaleFactorX() {
+        synchronized(LOCK) {
+            return scaleFactorX;
+        }
+    }
+
+    private double getScaleFactorY() {
+        synchronized(LOCK) {
+            return scaleFactorY;
+        }
+    }
+
     private void sendMouseEventToFX(MouseEvent e) {
         if (!isFxEnabled()) {
             return;
@@ -592,11 +628,13 @@ public class JFXPanel extends JComponent {
     private void sendResizeEventToFX() {
         EmbeddedSceneInterface lScenePeer = getScenePeer();
         EmbeddedStageInterface lStagePeer = getStagePeer();
+        int lWidth = getCompWidth();
+        int lHeight = getCompHeight();
         if (lStagePeer != null) {
-            lStagePeer.setSize(pWidth, pHeight);
+            lStagePeer.setSize(lWidth, lHeight);
         }
         if (lScenePeer != null) {
-            lScenePeer.setSize(pWidth, pHeight);
+            lScenePeer.setSize(lWidth, lHeight);
         }
     }
 
@@ -632,19 +670,27 @@ public class JFXPanel extends JComponent {
     // called on EDT only
     private void updateComponentSize() {
         EmbeddedSceneInterface lScenePeer = getScenePeer();
-        int oldWidth = pWidth;
-        int oldHeight = pHeight;
+        int lWidth = getCompWidth();
+        int lHeight = getCompHeight();
+        double lScaleFactorX = getScaleFactorX();
+        double lScaleFactorY = getScaleFactorY();
+        int oldWidth = lWidth;
+        int oldHeight = lHeight;
         if (getBorder() != null) {
             Insets i = getBorder().getBorderInsets(this);
-            pWidth -= (i.left + i.right);
-            pHeight -= (i.top + i.bottom);
+            lWidth -= (i.left + i.right);
+            lHeight -= (i.top + i.bottom);
         }
         // It's quite possible to get negative values here, this is not
         // what JavaFX embedded scenes/stages are ready to
-        pWidth = Math.max(0, getWidth());
-        pHeight = Math.max(0, getHeight());
-        double newScaleFactorX = scaleFactorX;
-        double newScaleFactorY = scaleFactorY;
+        lWidth = Math.max(0, getWidth());
+        lHeight = Math.max(0, getHeight());
+        synchronized(LOCK) {
+            pWidth = lWidth;
+            pHeight = lHeight;
+        }
+        double newScaleFactorX = lScaleFactorX;
+        double newScaleFactorY = lScaleFactorY;
         Graphics g = getGraphics();
         newScaleFactorX = GraphicsEnvironment.getLocalGraphicsEnvironment().
                           getDefaultScreenDevice().getDefaultConfiguration().
@@ -652,19 +698,21 @@ public class JFXPanel extends JComponent {
         newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
                           getDefaultScreenDevice().getDefaultConfiguration().
                           getDefaultTransform().getScaleY();
-        if (oldWidth == 0 && oldHeight == 0 && pWidth == 0 && pHeight == 0) {
+        if (oldWidth == 0 && oldHeight == 0 && lWidth == 0 && lHeight == 0) {
             return;
         }
-        if (oldWidth != pWidth || oldHeight != pHeight ||
-            newScaleFactorX != scaleFactorX || newScaleFactorY != scaleFactorY)
+        if (oldWidth != lWidth || oldHeight != lHeight ||
+            newScaleFactorX != lScaleFactorX || newScaleFactorY != lScaleFactorY)
         {
             createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
             if (lScenePeer != null) {
                 lScenePeer.setPixelScaleFactors((float) newScaleFactorX,
                                                (float) newScaleFactorY);
             }
-            scaleFactorX = newScaleFactorX;
-            scaleFactorY = newScaleFactorY;
+            synchronized(LOCK) {
+                scaleFactorX = newScaleFactorX;
+                scaleFactorY = newScaleFactorY;
+	    }
             sendResizeEventToFX();
         }
     }
@@ -761,18 +809,22 @@ public class JFXPanel extends JComponent {
     // called on EDT only
     private void createResizePixelBuffer(double newScaleFactorX, double newScaleFactorY) {
         EmbeddedSceneInterface lScenePeer = getScenePeer();
-        if (lScenePeer == null || pWidth <= 0 || pHeight <= 0) {
+        int lWidth = getCompWidth();
+        int lHeight = getCompHeight();
+        double lScaleFactorX = getScaleFactorX();
+        double lScaleFactorY = getScaleFactorY();
+        if (lScenePeer == null || lWidth <= 0 || lHeight <= 0) {
             pixelsIm = null;
         } else {
             BufferedImage oldIm = pixelsIm;
-            int newPixelW = (int) Math.ceil(pWidth * newScaleFactorX);
-            int newPixelH = (int) Math.ceil(pHeight * newScaleFactorY);
+            int newPixelW = (int) Math.ceil(lWidth * newScaleFactorX);
+            int newPixelH = (int) Math.ceil(lHeight * newScaleFactorY);
             pixelsIm = new BufferedImage(newPixelW, newPixelH,
                                          SwingFXUtils.getBestBufferedImageType(
                                              lScenePeer.getPixelFormat(), null, false));
             if (oldIm != null) {
-                double ratioX = newScaleFactorX / scaleFactorX;
-                double ratioY = newScaleFactorY / scaleFactorY;
+                double ratioX = newScaleFactorX / lScaleFactorX;
+                double ratioY = newScaleFactorY / lScaleFactorY;
                 // Transform old size to the new coordinate space.
                 int oldW = (int)Math.ceil(oldIm.getWidth() * ratioX);
                 int oldH = (int)Math.ceil(oldIm.getHeight() * ratioY);
@@ -822,11 +874,15 @@ public class JFXPanel extends JComponent {
     @Override
     protected void paintComponent(Graphics g) {
         EmbeddedSceneInterface lScenePeer = getScenePeer();
+        int lWidth = getCompWidth();
+        int lHeight = getCompHeight();
+        double lScaleFactorX = getScaleFactorX();
+        double lScaleFactorY = getScaleFactorY();
         if (lScenePeer == null) {
             return;
         }
         if (pixelsIm == null) {
-            createResizePixelBuffer(scaleFactorX, scaleFactorY);
+            createResizePixelBuffer(lScaleFactorX, lScaleFactorY);
             if (pixelsIm == null) {
                 return;
             }
@@ -834,7 +890,7 @@ public class JFXPanel extends JComponent {
         DataBufferInt dataBuf = (DataBufferInt)pixelsIm.getRaster().getDataBuffer();
         int[] pixelsData = dataBuf.getData();
         IntBuffer buf = IntBuffer.wrap(pixelsData);
-        if (!lScenePeer.getPixels(buf, pWidth, pHeight)) {
+        if (!lScenePeer.getPixels(buf, lWidth, lHeight)) {
             // In this case we just render what we have so far in the buffer.
         }
 
@@ -850,23 +906,25 @@ public class JFXPanel extends JComponent {
                 Insets i = getBorder().getBorderInsets(this);
                 gg.translate(i.left, i.top);
             }
-            gg.drawImage(pixelsIm, 0, 0, pWidth, pHeight, null);
+            gg.drawImage(pixelsIm, 0, 0, lWidth, lHeight, null);
 
-            double newScaleFactorX = scaleFactorX;
-            double newScaleFactorY = scaleFactorY;
+            double newScaleFactorX = lScaleFactorX;
+            double newScaleFactorY = lScaleFactorY;
             newScaleFactorX = GraphicsEnvironment.getLocalGraphicsEnvironment().
                               getDefaultScreenDevice().getDefaultConfiguration().
                               getDefaultTransform().getScaleX();
             newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
                               getDefaultScreenDevice().getDefaultConfiguration().
                               getDefaultTransform().getScaleY();
-            if (scaleFactorX != newScaleFactorX || scaleFactorY != newScaleFactorY) {
+            if (lScaleFactorX != newScaleFactorX || lScaleFactorY != newScaleFactorY) {
                 createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
                 // The scene will request repaint.
                 lScenePeer.setPixelScaleFactors((float) newScaleFactorX,
                                                (float) newScaleFactorY);
-                scaleFactorX = newScaleFactorX;
-                scaleFactorY = newScaleFactorY;
+                synchronized(LOCK) {
+                    scaleFactorX = newScaleFactorX;
+                    scaleFactorY = newScaleFactorY;
+		}
             }
         } catch (Throwable th) {
             th.printStackTrace();
@@ -899,10 +957,11 @@ public class JFXPanel extends JComponent {
     }
 
     private void setFxEnabled(boolean enabled) {
+        SwingDnD lDnD = getDnD();
         if (!enabled) {
             if (disableCount.incrementAndGet() == 1) {
-                if (dnd != null) {
-                    dnd.removeNotify();
+                if (lDnD != null) {
+                    lDnD.removeNotify();
                 }
             }
         } else {
@@ -911,8 +970,8 @@ public class JFXPanel extends JComponent {
                 return;
             }
             if (disableCount.decrementAndGet() == 0) {
-                if (dnd != null) {
-                    dnd.addNotify();
+                if (lDnD != null) {
+                    lDnD.addNotify();
                 }
             }
         }
@@ -1006,8 +1065,10 @@ public class JFXPanel extends JComponent {
         });
 
         pixelsIm = null;
-        pWidth = 0;
-        pHeight = 0;
+        synchronized(LOCK) {
+            pWidth = 0;
+            pHeight = 0;
+	}
 
         super.removeNotify();
 
@@ -1041,8 +1102,10 @@ public class JFXPanel extends JComponent {
                     return;
                 }
             }
-            if (pWidth > 0 && pHeight > 0) {
-                embeddedStage.setSize(pWidth, pHeight);
+            int lWidth = getCompWidth();
+            int lHeight = getCompHeight();
+            if (lWidth > 0 && lHeight > 0) {
+                embeddedStage.setSize(lWidth, lHeight);
             }
             invokeOnClientEDT(() -> {
                 if (JFXPanel.this.isFocusOwner()) {
@@ -1062,22 +1125,30 @@ public class JFXPanel extends JComponent {
             }
             if (embeddedScene == null) {
                 invokeOnClientEDT(() -> {
-                    if (dnd != null) {
-                        dnd.removeNotify();
-                        dnd = null;
+                    SwingDnD lDnD = getDnD();
+                    if (lDnD != null) {
+                        lDnD.removeNotify();
+                        lDnD = null;
                     }
+                    setDnD(lDnD);
                 });
                 return;
             }
-            if (pWidth > 0 && pHeight > 0) {
-                embeddedScene.setSize(pWidth, pHeight);
+            int lWidth = getCompWidth();
+            int lHeight = getCompHeight();
+            double lScaleFactorX = getScaleFactorX();
+            double lScaleFactorY = getScaleFactorY();
+            if (lWidth > 0 && lHeight > 0) {
+                embeddedScene.setSize(lWidth, lHeight);
             }
-            embeddedScene.setPixelScaleFactors((float) scaleFactorX, (float) scaleFactorY);
+            embeddedScene.setPixelScaleFactors((float) lScaleFactorX, (float) lScaleFactorY);
 
             invokeOnClientEDT(() -> {
-                dnd = new SwingDnD(JFXPanel.this, embeddedScene);
-                dnd.addNotify();
-                embeddedScene.setDragStartListener(dnd.getDragStartListener());
+                SwingDnD lDnD = getDnD();
+                lDnD = new SwingDnD(JFXPanel.this, embeddedScene);
+                lDnD.addNotify();
+                setDnD(lDnD);
+                embeddedScene.setDragStartListener(lDnD.getDragStartListener());
             });
         }
 
