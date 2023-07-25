@@ -26,7 +26,7 @@
 package javafx.animation;
 
 import javafx.util.Duration;
-
+import com.sun.javafx.animation.InterpolatorHelper;
 import com.sun.scenario.animation.NumberTangentInterpolator;
 import com.sun.scenario.animation.SplineInterpolator;
 import com.sun.scenario.animation.StepInterpolator;
@@ -44,6 +44,15 @@ import com.sun.scenario.animation.StepInterpolator;
 public abstract class Interpolator {
 
     private static final double EPSILON = 1e-12;
+
+    static {
+        InterpolatorHelper.setAccessor(new InterpolatorHelper.Accessor() {
+            @Override
+            public double curve(Interpolator interpolator, double t) {
+                return interpolator.curve(t);
+            }
+        });
+    }
 
     /**
      * The constructor of {@code Interpolator}.

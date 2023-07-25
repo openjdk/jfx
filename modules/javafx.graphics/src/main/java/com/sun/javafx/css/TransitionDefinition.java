@@ -34,36 +34,18 @@ import java.util.Objects;
  * {@code TransitionDefinition} describes how a {@link StyleableProperty} changes from one value to
  * another when its value is changed implicitly by the CSS subsystem. The transition can be smooth,
  * for example using linear or Bézier interpolation, or discrete using stepwise interpolation.
- * <p>
- * In this example, the button's opacity property is configured to change smoothly using linear
- * interpolation over a duration of 0.5 seconds:
  *
- * <pre>{@code
- * var button = new Button();
- *
- * button.getTransitions().add(
- *     new TransitionDefinition(
- *         "-fx-opacity",
- *         Duration.seconds(0.5),
- *         Duration.ZERO,
- *         Interpolator.LINEAR));
- * }</pre>
+ * @param propertyName the CSS property name, or "all" to target any property
+ * @param duration duration of the transition
+ * @param delay delay after which the transition is started; if negative, the transition starts
+ *              immediately, but will appear to have begun at an earlier point in time
+ * @param interpolator interpolator for the transition
  */
-public class TransitionDefinition {
-
-    private final String propertyName;
-    private final Duration duration;
-    private final Duration delay;
-    private final Interpolator interpolator;
+public record TransitionDefinition(String propertyName, Duration duration,
+                                   Duration delay, Interpolator interpolator) {
 
     /**
      * Creates a new {@code TransitionDefinition} instance.
-     *
-     * @param propertyName the CSS property name, or "all" to target any property
-     * @param duration duration of the transition
-     * @param delay delay after which the transition is started; if negative, the transition starts
-     *              immediately, but will appear to have begun at an earlier point in time
-     * @param interpolator interpolator for the transition
      *
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
@@ -79,42 +61,6 @@ public class TransitionDefinition {
         if (duration.lessThan(Duration.ZERO)) {
             throw new IllegalArgumentException("duration cannot be negative");
         }
-    }
-
-    /**
-     * Gets the name of the CSS property targeted by this transition.
-     *
-     * @return the property name
-     */
-    public String getPropertyName() {
-        return propertyName;
-    }
-
-    /**
-     * Gets the duration of the transition.
-     *
-     * @return the duration of the transition
-     */
-    public Duration getDuration() {
-        return duration;
-    }
-
-    /**
-     * Gets the delay after which the transition starts.
-     *
-     * @return the delay after which the transition starts
-     */
-    public Duration getDelay() {
-        return delay;
-    }
-
-    /**
-     * Gets the interpolator for the transition.
-     *
-     * @return the {@code Interpolator}
-     */
-    public Interpolator getInterpolator() {
-        return interpolator;
     }
 
 }

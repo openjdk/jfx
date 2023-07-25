@@ -8931,7 +8931,7 @@ public abstract class Node implements EventTarget, Styleable {
     private List<TransitionTimer<?, ?>> transitionTimers;
 
     /**
-     * Called by animatable {@code StyleableProperty} implementations in order to register
+     * Called by animatable {@link StyleableProperty} implementations in order to register
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
      */
@@ -9023,8 +9023,8 @@ public abstract class Node implements EventTarget, Styleable {
             for (int i = size - 1; i >= 0; --i) {
                 TransitionDefinition transition = get(i);
 
-                boolean selected = "all".equals(transition.getPropertyName())
-                    || metadata.getProperty().equals(transition.getPropertyName());
+                boolean selected = "all".equals(transition.propertyName())
+                    || metadata.getProperty().equals(transition.propertyName());
 
                 if (selected) {
                     return transition;

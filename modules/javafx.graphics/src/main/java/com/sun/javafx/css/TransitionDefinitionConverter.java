@@ -123,15 +123,29 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
                 return EMPTY;
             }
 
+            // The length of the 'transition-property' list determines the number of transitions in the sequence.
             TransitionDefinition[] transitions = new TransitionDefinition[properties.length];
 
+            // If any of the remaining sub-properties doesn't have enough values, missing values are filled in
+            // by repeating the list of values until we have enough values for the sequence.
             for (int i = 0; i < transitions.length; ++i) {
-                Duration delay = delays == null || delays.length == 0 ? Duration.ZERO : delays[i % delays.length];
-                Interpolator timingFunction = timingFunctions == null || timingFunctions.length == 0 ?
-                    InterpolatorConverter.CSS_EASE : timingFunctions[i % timingFunctions.length];
+                Interpolator timingFunction;
+                Duration delay;
 
-                transitions[i] = new TransitionDefinition(
-                    properties[i], durations[i % durations.length], delay, timingFunction);
+                if (delays == null || delays.length == 0) {
+                    delay = Duration.ZERO;
+                } else {
+                    delay = delays[i % delays.length];
+                }
+
+                if (timingFunctions == null || timingFunctions.length == 0) {
+                    timingFunction = InterpolatorConverter.CSS_EASE;
+                } else {
+                    timingFunction = timingFunctions[i % timingFunctions.length];
+                }
+
+                Duration duration = durations[i % durations.length];
+                transitions[i] = new TransitionDefinition(properties[i], duration, delay, timingFunction);
             }
 
             return transitions;

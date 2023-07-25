@@ -28,8 +28,8 @@ package test.com.sun.javafx.css;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.tk.Toolkit;
-import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.StyleableDoubleProperty;
+import javafx.css.TransitionEvent;
 import javafx.scene.Group;
 import javafx.scene.NodeShim;
 import javafx.scene.Scene;
@@ -50,12 +50,18 @@ public class TransitionTimerTest {
     private Stage stage;
     private Rectangle node;
 
-    private abstract class TransitionTimerMock extends TransitionTimer<Number, StyleableDoubleProperty> {
+    private class TestTransitionTimer extends TransitionTimer<Number, StyleableDoubleProperty> {
         long now = Toolkit.getToolkit().getPrimaryTimer().nanos();
 
-        TransitionTimerMock() {
-            super(new SimpleStyleableDoubleProperty(null, node, "test"));
+        TestTransitionTimer() {
+            super((StyleableDoubleProperty)node.opacityProperty());
         }
+
+        @Override
+        protected void onUpdate(StyleableDoubleProperty property, double progress) {}
+
+        @Override
+        protected void onStop(StyleableDoubleProperty property) {}
 
         public void fire(Duration elapsedTime) {
             now += (long)(elapsedTime.toMillis()) * 1_000_000;
@@ -73,21 +79,18 @@ public class TransitionTimerTest {
 
     @AfterEach
     public void teardown() {
+        ((Group)stage.getScene().getRoot()).getChildren().clear(); // stops running timers
         stage.close();
     }
 
     @Test
     public void testTimerEndsWithProgressExactlyOne() {
         var trace = new ArrayList<Double>();
-        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock() {
-            @Override
-            protected void onUpdate(StyleableDoubleProperty property, double progress) {
+        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
+        var timer = new TestTransitionTimer() {
+            @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {
                 trace.add(progress);
             }
-
-            @Override
-            protected void onStop(StyleableDoubleProperty property) {}
         };
 
         TransitionTimer.run(timer, transition);
@@ -99,20 +102,14 @@ public class TransitionTimerTest {
         timer.fire(seconds(0.7));
         assertEquals(2, trace.size());
         assertTrue(trace.get(1) == 1.0); // must be exactly 1
-
-        timer.stop();
     }
 
     @Test
     public void testTimerStopsWhenProgressIsOne() {
         var flag = new boolean[1];
-        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock() {
-            @Override
-            protected void onUpdate(StyleableDoubleProperty property, double progress) {}
-
-            @Override
-            public void onStop(StyleableDoubleProperty property) {
+        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
+        var timer = new TestTransitionTimer() {
+            @Override public void onStop(StyleableDoubleProperty property) {
                 flag[0] = true;
             }
         };
@@ -122,7 +119,6 @@ public class TransitionTimerTest {
         assertFalse(flag[0]);
         timer.fire(seconds(0.2));
         assertTrue(flag[0]);
-        timer.stop();
     }
 
     @Test
@@ -132,11 +128,8 @@ public class TransitionTimerTest {
 
     @Test
     public void testRunningTimerCanBeCancelled() {
-        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock() {
-            @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {}
-            @Override protected void onStop(StyleableDoubleProperty property) {}
-        };
+        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
+        var timer = new TestTransitionTimer();
 
         TransitionTimer.run(timer, transition);
         timer.fire(seconds(0.2));
@@ -148,19 +141,70 @@ public class TransitionTimerTest {
     @Test
     public void testTimerDoesNotStopItselfWhenSettingValue() {
         var flag = new boolean[1];
-        var transition = new TransitionDefinition("test", seconds(1), ZERO, LINEAR);
-        var timer = new TransitionTimerMock() {
+        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
+        var timer = new TestTransitionTimer() {
             @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {
                 flag[0] = TransitionTimer.cancel(this, false);
             }
-
-            @Override protected void onStop(StyleableDoubleProperty property) {}
         };
 
         TransitionTimer.run(timer, transition);
         timer.fire(seconds(0.2));
         assertFalse(flag[0]);
-        timer.stop();
+    }
+
+    @Test
+    public void testTimerFollowsExpectedOutputProgressCurve() {
+        final int steps = 100;
+        var expectedOutput = new ArrayList<Double>(steps);
+        var actualOutput = new ArrayList<>(steps);
+        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, EASE_BOTH);
+        var timer = new TestTransitionTimer() {
+            @Override protected void onUpdate(StyleableDoubleProperty property, double progress) {
+                actualOutput.add(progress);
+            }
+        };
+
+        TransitionTimer.run(timer, transition);
+
+        for (int i = 0; i < steps; ++i) {
+            double elapsed = 1D / (double)steps;
+            timer.fire(seconds(elapsed));
+
+            double progress = (double)(i + 1) / (double)steps;
+            expectedOutput.add(EASE_BOTH.interpolate(0D, 1D, progress));
+        }
+
+        assertEquals(expectedOutput, actualOutput);
+    }
+
+    @Test
+    public void testInterruptingTransitionIsShortened() {
+        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
+        var timer1 = new TestTransitionTimer();
+        var timer2 = new TestTransitionTimer();
+        var trace = new ArrayList<TransitionEvent>();
+        node.addEventHandler(TransitionEvent.ANY, trace::add);
+
+        // Start timer1 and advance 0.25s into the first transition.
+        TransitionTimer.run(timer1, transition);
+        timer1.fire(seconds(0.25));
+        assertEquals(2, trace.size());
+        assertSame(TransitionEvent.RUN, trace.get(0).getEventType());
+        assertSame(TransitionEvent.START, trace.get(1).getEventType());
+
+        // Now we start timer2. This immediately cancels timer1 and adjusts the duration
+        // of timer2 so that it completes in less time than specified.
+        TransitionTimer.run(timer2, transition);
+        assertEquals(4, trace.size());
+        assertSame(TransitionEvent.CANCEL, trace.get(2).getEventType());
+        assertSame(TransitionEvent.RUN, trace.get(3).getEventType());
+
+        // Advance 0.25s into the second transition, completing timer2.
+        timer2.fire(seconds(0.25));
+        assertEquals(6, trace.size());
+        assertSame(TransitionEvent.START, trace.get(4).getEventType());
+        assertSame(TransitionEvent.END, trace.get(5).getEventType());
     }
 
 }

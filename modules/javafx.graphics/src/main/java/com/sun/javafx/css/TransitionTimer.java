@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.animation.AnimationTimerHelper;
+import com.sun.javafx.animation.InterpolatorHelper;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.util.Utils;
 import javafx.animation.AnimationTimer;
@@ -56,17 +57,17 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     }
 
     /**
-     * Adds the specified transition timer to the list of running timers and fires the
-     * {@link TransitionEvent#RUN} event. If the combined duration of the transition is
-     * zero or if the targeted node is not showing, no transition timer is started, no
-     * event is dispatched, and this method returns {@code null}.
+     * Starts the specified transition timer with the specified transition definition.
+     * If the combined duration of the transition is zero or if the targeted node is not
+     * showing, no transition timer is started, no events are dispatched, and this method
+     * returns {@code null}.
      */
     public static <T, P extends Property<T> & StyleableProperty<T>> TransitionTimer<T, P> run(
             TransitionTimer<T, P> timer, TransitionDefinition transition) {
         long now = AnimationTimerHelper.getPrimaryTimer(timer).nanos();
-        timer.interpolator = transition.getInterpolator();
-        timer.delay = (long)(transition.getDelay().toMillis() * 1_000_000);
-        timer.duration = (long)(transition.getDuration().toMillis() * 1_000_000);
+        timer.interpolator = transition.interpolator();
+        timer.delay = (long)(transition.delay().toMillis() * 1_000_000);
+        timer.duration = (long)(transition.duration().toMillis() * 1_000_000);
         timer.currentTime = now;
         timer.startTime = now + timer.delay;
         timer.endTime = timer.startTime + timer.duration;
@@ -83,12 +84,10 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
                     adjustReversingTransition(existingTimer, timer, transition, now);
                 }
 
-                existingTimer.cancel();
+                existingTimer.stop(TransitionEvent.CANCEL);
             }
 
             if (combinedDuration > 0) {
-                NodeHelper.addTransitionTimer(node, timer);
-                fireTransitionEvent(timer, TransitionEvent.RUN);
                 timer.start();
                 return timer;
             }
@@ -105,8 +104,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * Cancels the specified timer if it is currently running. If {@code forceStop} is {@code false}, the
      * timer will only be stopped if this method was not called from the timer's {@link #update(double)}
      * method (i.e. a timer will not stop itself while trying to set the new value of a styleable property).
-     * If {@code timer} is {@code null}, it is considered to be trivially cancelled, so the
-     * method returns {@code true}.
+     * If {@code timer} is {@code null}, it is considered to be trivially cancelled, so the method
+     * returns {@code true}.
      *
      * @param timer the timer
      * @param forceStop if {@code true}, the timer is stopped unconditionally
@@ -119,7 +118,7 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         }
 
         if (forceStop || !timer.pollUpdating()) {
-            timer.cancel();
+            timer.stop(TransitionEvent.CANCEL);
             return true;
         }
 
@@ -131,30 +130,32 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * end time of the new transition with the reversing shortening factor of the old transition.
      * Note that the reversing shortening factor is computed in output progress space (value),
      * not in input progress space (time).
+     * <p>
+     * This algorithm fixes transition asymmetries that can happen when a transition is interrupted
+     * by a reverse transition. Consider a linear transition that animates a value over 4s, but is
+     * interrupted after 1s. When the transition is interrupted, the value has progressed one
+     * quarter of the value space in one quarter of the duration. However, the reverse transition
+     * now takes the entire duration (4s) to progress just one quarter of the original value space,
+     * which means that the transition speed is much slower than what would be expected.
      *
      * @see <a href="https://www.w3.org/TR/css-transitions-1/#reversing">Faster reversing of interrupted transitions</a>
      */
     private static void adjustReversingTransition(TransitionTimer<?, ?> existingTimer, TransitionTimer<?, ?> newTimer,
                                                   TransitionDefinition transition, long now) {
-        double valueProgress = 0;
-        double timeProgress = existingTimer.getTimeProgress();
+        double progress = InterpolatorHelper.curve(existingTimer.interpolator, existingTimer.getProgress());
 
-        if (timeProgress > 0 && timeProgress < 1) {
-            valueProgress = existingTimer.interpolator.interpolate(0D, 1D, timeProgress);
-        }
-
-        if (valueProgress > 0 && valueProgress < 1) {
-            double newReversingShorteningFactor = valueProgress * existingTimer.reversingShorteningFactor
-                    + (1 - existingTimer.reversingShorteningFactor);
-            newTimer.reversingShorteningFactor = Utils.clamp(0, newReversingShorteningFactor, 1);
+        if (progress > 0 && progress < 1) {
+            double oldFactor = existingTimer.reversingShorteningFactor;
+            double newFactor = progress * oldFactor + (1 - oldFactor);
+            newTimer.reversingShorteningFactor = Utils.clamp(0, newFactor, 1);
         }
 
         if (newTimer.delay < 0) {
-            double adjustedDelay = transition.getDelay().toMillis() * newTimer.reversingShorteningFactor;
+            double adjustedDelay = transition.delay().toMillis() * newTimer.reversingShorteningFactor;
             newTimer.startTime = now + (long)(adjustedDelay * 1_000_000);
         }
 
-        double adjustedDuration = transition.getDuration().toMillis() * newTimer.reversingShorteningFactor;
+        double adjustedDuration = transition.duration().toMillis() * newTimer.reversingShorteningFactor;
         newTimer.endTime = newTimer.startTime + (long)(adjustedDuration * 1_000_000);
     }
 
@@ -183,21 +184,10 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     }
 
     /**
-     * Gets the styleable property targeted by this timer, or {@code null} if the
-     * targeted property was garbage-collected.
+     * Gets the styleable property targeted by this {@code TransitionTimer}.
      */
     public final P getProperty() {
         return property;
-    }
-
-    /**
-     * Polls whether the timer is currently updating the value of the property.
-     * After this method is called, the {@link #updating} flag is {@code false}.
-     */
-    public final boolean pollUpdating() {
-        boolean updating = this.updating;
-        this.updating = false;
-        return updating;
     }
 
     /**
@@ -211,24 +201,62 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      */
     @Override
     public final void handle(long now) {
-        currentTime = now;
+        currentTime = Math.min(now, endTime);
 
-        if (!started && now - startTime > 0) {
+        if (!started && currentTime >= startTime) {
             started = true;
             fireTransitionEvent(this, TransitionEvent.START);
         }
 
         if (started) {
-            double progress = getTimeProgress();
+            double progress = getProgress();
             if (progress >= 0) {
                 update(progress);
             }
 
             if (progress == 1) {
-                stop();
-                fireTransitionEvent(this, TransitionEvent.END);
+                stop(TransitionEvent.END);
             }
         }
+    }
+
+    /**
+     * Starts this timer, and adds it to the list of running transitions.
+     */
+    @Override
+    public final void start() {
+        super.start();
+        NodeHelper.addTransitionTimer((Node)property.getBean(), this);
+        fireTransitionEvent(this, TransitionEvent.RUN);
+    }
+
+    /**
+     * This method is unused, calling it will throw {@link UnsupportedOperationException}.
+     */
+    @Override
+    public final void stop() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Stops the running transition and fires the specified event.
+     * This happens when the value of a CSS property targeted by a transition is changed by the user,
+     * when the transition is interrupted by another transition, or when it ends normally.
+     */
+    public final void stop(EventType<TransitionEvent> eventType) {
+        super.stop();
+        onStop(property);
+        NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
+        fireTransitionEvent(this, eventType);
+    }
+
+    /**
+     * Skips the rest of a running transition and updates the property to the target value.
+     * This happens when the targeted node is removed from the scene graph or becomes invisible.
+     */
+    public final void complete() {
+        update(1);
+        stop(TransitionEvent.CANCEL);
     }
 
     /**
@@ -238,10 +266,10 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      *
      * @param progress the input progress value
      */
-    public final void update(double progress) {
+    private void update(double progress) {
         try {
             updating = true;
-            onUpdate(property, interpolator.interpolate(0D, 1D, progress));
+            onUpdate(property, InterpolatorHelper.curve(interpolator, progress));
         } catch (Throwable ex) {
             Thread currentThread = Thread.currentThread();
             currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
@@ -251,40 +279,28 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     }
 
     /**
-     * Skips the rest of a running transition and updates the property to the target value.
-     * This happens when the targeted node is removed from the scene graph or becomes invisible.
-     * <p>
-     * Calling this method fires the {@link TransitionEvent#CANCEL} event.
+     * Polls whether the timer is currently updating the value of the property.
+     * After this method is called, the {@link #updating} flag is {@code false}.
      */
-    public final void complete() {
-        stop();
-        update(1);
-        fireTransitionEvent(this, TransitionEvent.CANCEL);
+    private boolean pollUpdating() {
+        boolean updating = this.updating;
+        this.updating = false;
+        return updating;
     }
 
     /**
-     * Cancels the running transition without updating the target value.
-     * This happens when the value of a CSS property targeted by a transition is changed by the user,
-     * or if the transition is interrupted by another transition.
-     * <p>
-     * Calling this method fires the {@link TransitionEvent#CANCEL} event.
+     * Gets the progress of this timer along the input progress axis, ranging from 0 to 1.
      */
-    public final void cancel() {
-        stop();
-        fireTransitionEvent(this, TransitionEvent.CANCEL);
-    }
+    private double getProgress() {
+        if (currentTime <= startTime) {
+            return 0.0;
+        }
 
-    /**
-     * Stops this {@code TransitionTimer} and removes it from the list of running timers.
-     * This method is implicitly called by {@link #complete()} and {@link #cancel()}.
-     * <p>
-     * Calling this method does not fire a {@link TransitionEvent}.
-     */
-    @Override
-    public final void stop() {
-        super.stop();
-        onStop(property);
-        NodeHelper.removeTransitionTimer((Node)property.getBean(), this);
+        if (currentTime < endTime) {
+            return (double)(currentTime - startTime) / (double)(endTime - startTime);
+        }
+
+        return 1.0;
     }
 
     /**
@@ -303,20 +319,5 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * @param property the targeted {@code StyleableProperty}
      */
     protected abstract void onStop(P property);
-
-    /**
-     * Gets the progress of this timer along the time axis, ranging from 0 to 1.
-     */
-    private double getTimeProgress() {
-        if (currentTime <= startTime) {
-            return 0.0;
-        }
-
-        if (currentTime < endTime) {
-            return (double)(currentTime - startTime) / (double)(endTime - startTime);
-        }
-
-        return 1.0;
-    }
 
 }

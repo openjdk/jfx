@@ -61,10 +61,10 @@ public class CssParser_transition_Test {
     }
 
     private void assertTransition(TransitionDefinition expected, TransitionDefinition actual) {
-        assertEquals(expected.getPropertyName(), actual.getPropertyName());
-        assertEquals(expected.getDuration(), actual.getDuration());
-        assertEquals(expected.getDelay(), actual.getDelay());
-        assertInterpolatorEquals(expected.getInterpolator(), actual.getInterpolator());
+        assertEquals(expected.propertyName(), actual.propertyName());
+        assertEquals(expected.duration(), actual.duration());
+        assertEquals(expected.delay(), actual.delay());
+        assertInterpolatorEquals(expected.interpolator(), actual.interpolator());
     }
 
     private void assertStartsWith(String expected, String actual) {

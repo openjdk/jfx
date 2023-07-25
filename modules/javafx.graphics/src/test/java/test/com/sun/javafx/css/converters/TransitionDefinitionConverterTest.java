@@ -54,10 +54,10 @@ public class TransitionDefinitionConverterTest {
     private static void assertTransitionEquals(
             String property, Duration duration, Duration delay, Interpolator interpolator,
             TransitionDefinition transition) {
-        assertEquals(property, transition.getPropertyName());
-        assertEquals(duration, transition.getDuration());
-        assertEquals(delay, transition.getDelay());
-        assertInterpolatorEquals(interpolator, transition.getInterpolator());
+        assertEquals(property, transition.propertyName());
+        assertEquals(duration, transition.duration());
+        assertEquals(delay, transition.delay());
+        assertInterpolatorEquals(interpolator, transition.interpolator());
     }
 
     @Test
@@ -96,7 +96,7 @@ public class TransitionDefinitionConverterTest {
         }, null);
 
         var transition = TransitionDefinitionConverter.getInstance().convert(value, null);
-        assertEquals(Duration.ZERO, transition.getDuration());
+        assertEquals(Duration.ZERO, transition.duration());
     }
 
     @Nested
