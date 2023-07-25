@@ -712,7 +712,7 @@ public class JFXPanel extends JComponent {
             synchronized(LOCK) {
                 scaleFactorX = newScaleFactorX;
                 scaleFactorY = newScaleFactorY;
-	    }
+            }
             sendResizeEventToFX();
         }
     }
@@ -924,7 +924,7 @@ public class JFXPanel extends JComponent {
                 synchronized(LOCK) {
                     scaleFactorX = newScaleFactorX;
                     scaleFactorY = newScaleFactorY;
-		}
+                }
             }
         } catch (Throwable th) {
             th.printStackTrace();
@@ -1068,7 +1068,7 @@ public class JFXPanel extends JComponent {
         synchronized(LOCK) {
             pWidth = 0;
             pHeight = 0;
-	}
+        }
 
         super.removeNotify();
 
