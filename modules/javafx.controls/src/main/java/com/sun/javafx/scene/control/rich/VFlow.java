@@ -161,7 +161,6 @@ public class VFlow extends Pane implements StyleResolver {
         offsetX.addListener((p) -> updateHorizontalScrollBar());
         origin.addListener((p) -> handleOriginChange());
         widthProperty().addListener((p) -> updateWidth()); // TODO check for use content width?
-        heightProperty().addListener((p) -> updateHeight());
         
         vscroll.addEventFilter(MouseEvent.ANY, this::handleVScrollMouseEvent);
         
@@ -360,12 +359,6 @@ public class VFlow extends Pane implements StyleResolver {
             }
             updateHorizontalScrollBar();
         }
-    }
-    
-    /** reacts to height changes */
-    protected void updateHeight() {
-        // TODO what to do? do we still have enough nodes in the cell layout?
-//        checkForExcessiveWhitespaceAtTheEnd();
     }
     
     public void handleSelectionChange() {
@@ -1017,7 +1010,7 @@ public class VFlow extends Pane implements StyleResolver {
             layoutInArea(leftGutter, 0.0, 0.0, leftSide, height, 0.0, HPos.CENTER, VPos.CENTER);
         }
         
-        if (rightGutter == null) {
+        if (rightDecorator == null) {
             rightGutter.setVisible(false);
         } else {
             rightGutter.setVisible(true);
