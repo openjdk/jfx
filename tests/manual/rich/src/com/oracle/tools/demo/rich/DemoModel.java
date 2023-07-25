@@ -114,7 +114,21 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         addSegment("ABCDEFGHIJKLMNO", "-fx-font-family:monospaced;").nl();
         addSegment("        leading and trailing whitespace         ", null, CODE).nl();
         nl(3);
-
+        addSegment("Behold various types of highlights, including overlapping highlights.", null, LARGE);
+        underline(0, 6, Color.DARKGREEN);
+        highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
+        squiggly(36, 100, Color.RED);
+        highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
+        highlight(50, 20, Color.rgb(0, 0, 128, 0.1));
+        nl(2);
+        addSegment("Behold various types of highlights, including overlapping highlights.");
+        underline(0, 6, Color.DARKGREEN);
+        highlight(7, 7, Color.rgb(255, 255, 128, 0.7));
+        squiggly(36, 100, Color.RED);
+        highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
+        highlight(50, 20, Color.rgb(0, 0, 128, 0.1));
+        nl(2);
+        
         addParagraph(this::createRect);
 
         // TODO unicode codepoints

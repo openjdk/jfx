@@ -543,6 +543,7 @@ public class VFlow extends Pane implements StyleResolver {
             endOffset = cell.getTextLength();
         }
 
+        // TODO don't need helper here: can get TextFlow instance!
         PathElement[] pe;
         if (startOffset == endOffset) {
             pe = TextCellHelper.getCaretShape(cell, startOffset, true);

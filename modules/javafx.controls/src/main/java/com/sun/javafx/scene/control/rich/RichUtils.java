@@ -77,7 +77,7 @@ public class RichUtils {
             );
         } else {
             return String.format(
-                "rgba(%d,%d,%d,%d)",
+                "rgba(%d,%d,%d,%f)",
                 eightBit(c.getRed()),
                 eightBit(c.getGreen()),
                 eightBit(c.getBlue()),

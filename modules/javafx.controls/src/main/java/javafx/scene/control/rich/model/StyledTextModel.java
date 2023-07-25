@@ -382,7 +382,7 @@ public abstract class StyledTextModel {
         } else if (ix < ct) {
             // clamp to paragraph length
             String s = getPlainText(ix);
-            int len = s.length();
+            int len = (s == null ? 0 : s.length());
             if (p.offset() < len) {
                 return p;
             }

@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.TextCell;
@@ -44,6 +45,7 @@ import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.model.StyledTextModelReadOnlyBase;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 
 /**
  * A simple, read-only, in-memory, styled text model.
@@ -101,6 +103,27 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
         SParagraph p = lastSegmentStyledTextParagraph();
         p.addSegment(text, style, css);
+        return this;
+    }
+    
+    public SimpleReadOnlyStyledModel underline(int start, int length, Color c) {
+        int end = start + length;
+        SParagraph p = lastSegmentStyledTextParagraph();
+        p.addHighlight((cell) -> cell.addUnderline(start, end, c));
+        return this;
+    }
+    
+    public SimpleReadOnlyStyledModel highlight(int start, int length, Color c) {
+        int end = start + length;
+        SParagraph p = lastSegmentStyledTextParagraph();
+        p.addHighlight((cell) -> cell.addHighlight(start, end, c));
+        return this;
+    }
+    
+    public SimpleReadOnlyStyledModel squiggly(int start, int length, Color c) {
+        int end = start + length;
+        SParagraph p = lastSegmentStyledTextParagraph();
+        p.addHighlight((cell) -> cell.addSquiggly(start, end, c));
         return this;
     }
     
@@ -188,26 +211,34 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     /** Styled Paragraph Based on SSegments */
     protected static class SParagraph extends StyledParagraph {
         private ArrayList<SSegment> segments;
+        private ArrayList<Consumer<TextCell>> highlighters;
 
         @Override
         public TextCell createTextCell(int ix) {
-            TextCell b = new TextCell(ix);
-            if(segments == null) {
+            TextCell cell = new TextCell(ix);
+
+            if (highlighters != null) {
+                for (Consumer<TextCell> hl : highlighters) {
+                    hl.accept(cell);
+                }
+            }
+
+            if (segments == null) {
                 // avoid zero height
-                b.addSegment("");
+                cell.addSegment("");
             } else {
-                for(SSegment s: segments) {
+                for (SSegment s : segments) {
                     // TODO Segment.createNode()
-                    if(s instanceof TextSSegment t) {
-                        b.addSegment(t.text, t.direct, t.css);
-                    } else if(s instanceof NodeSSegment n) {
-                        b.addInlineNode(n.generator.get());
+                    if (s instanceof TextSSegment t) {
+                        cell.addSegment(t.text, t.direct, t.css);
+                    } else if (s instanceof NodeSSegment n) {
+                        cell.addInlineNode(n.generator.get());
                     }
                 }
             }
-            return b;
+            return cell;
         }
-        
+
         public void export(int start, int end, StyledOutput out) throws IOException {
             if(segments == null) {
                 out.append(StyledSegment.of(""));
@@ -264,6 +295,13 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         
         public void addSegment(Supplier<Node> generator) {
             segments().add(new NodeSSegment(generator));
+        }
+        
+        public void addHighlight(Consumer<TextCell> highlighter) {
+            if(highlighters == null) {
+                highlighters = new ArrayList<>();
+            }
+            highlighters.add(highlighter);
         }
     }
 
