@@ -717,8 +717,8 @@ public class VFlow extends Pane implements StyleResolver {
     public TextCell getCell(int modelIndex) {
         TextCell cell = cellCache.get(modelIndex);
         if (cell == null) {
-            cell = RichTextAreaHelper.createTextCell(control, modelIndex);
-
+            cell = control.getModel().createTextCell(modelIndex);
+            
             // a bit of a hack: avoid TextCells with an empty TextFlow,
             // as it makes the caret collapse to a single point
             {

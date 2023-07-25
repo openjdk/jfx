@@ -69,7 +69,6 @@ import javafx.scene.text.Font;
 import javafx.util.Duration;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.rich.Params;
-import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
 import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
 import com.sun.javafx.scene.control.rich.VFlow;
 
@@ -178,15 +177,6 @@ public class RichTextArea extends Control {
     private BooleanProperty highlightCurrentLine;
     private BooleanProperty useContentWidth;
     private BooleanProperty useContentHeight;
-
-    static {
-        RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
-            @Override
-            public TextCell createTextCell(RichTextArea a, int index) {
-                return a.createTextCell(index);
-            }
-        });
-    }
 
     /**
      * Creates an editable instance with default configuration parameters,
@@ -1372,17 +1362,5 @@ public class RichTextArea extends Control {
             return Params.DEFAULT_LINE_SPACING;
         }
         return lineSpacing.get();
-    }
-
-    /** 
-     * Creates a visual representation of the model paragraph.
-     * By default, delegates to the model.
-     * Subclasses may override this method to provide, for instance, additional styling specific to this instance.
-     * 
-     * @param modelIndex paragraph index
-     * @return a new {@link TextCell} instance
-     */
-    protected TextCell createTextCell(int modelIndex) {
-        return getModel().createTextCell(modelIndex);
     }
 }
