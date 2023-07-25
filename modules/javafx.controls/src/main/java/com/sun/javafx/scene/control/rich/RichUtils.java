@@ -165,4 +165,40 @@ public class RichUtils {
         }
         return elements;
     }
+
+    // [ normal | italic | oblique ]
+    public static String guessFontStyle(String name) {
+        // can these names be localized??
+        if (name.contains("italic")) {
+            return "italic";
+        } else if (name.contains("oblique")) {
+            return "oblique";
+        }
+        return "normal";
+    }
+
+    // [ normal | bold | bolder | lighter | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 ]
+    public static String guessFontWeight(String name) {
+        // can these names be localized??
+        if (name.contains("thin")) {
+            return "100";
+        } else if (name.contains("extralight")) {
+            return "200";
+        } else if (name.contains("light")) {
+            return "300";
+        } else if (name.contains("medium")) {
+            return "500";
+        } else if (name.contains("semibold")) {
+            return "600";
+        } else if (name.contains("demibold")) {
+            return "600";
+        } else if (name.contains("bold")) {
+            return "700";
+        } else if (name.contains("extrabold")) {
+            return "800";
+        } else if (name.contains("heavy")) {
+            return "900";
+        }
+        return "normal"; // 400, see FontWeight
+    }
 }

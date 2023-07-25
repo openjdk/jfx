@@ -38,12 +38,16 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
 import javafx.css.SimpleStyleableDoubleProperty;
 import javafx.css.SimpleStyleableObjectProperty;
 import javafx.css.StyleConverter;
+import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.InsetsConverter;
 import javafx.css.converter.SizeConverter;
@@ -61,7 +65,9 @@ import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.util.Util;
 import javafx.scene.input.DataFormat;
+import javafx.scene.text.Font;
 import javafx.util.Duration;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.rich.Params;
 import com.sun.javafx.scene.control.rich.RichTextAreaHelper;
 import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
@@ -161,6 +167,7 @@ public class RichTextArea extends Control {
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
     private SimpleBooleanProperty editableProperty;
+    private StyleableObjectProperty<Font> font;
     private final ReadOnlyObjectWrapper<Duration> caretBlinkPeriod;
     private final SelectionModel selectionModel = new SingleSelectionModel();
     private ReadOnlyIntegerWrapper tabSizeProperty;
@@ -260,6 +267,82 @@ public class RichTextArea extends Control {
 
     public final StyledTextModel getModel() {
         return model.get();
+    }
+
+    /**
+     * The default font to use for text in the RichTextArea.
+     * If the RichTextArea's text is
+     * rich text then this font may or may not be used depending on the font
+     * information embedded in the rich text, but in any case where a default
+     * font is required, this font will be used.
+     * @return the font property
+     */
+    public final ObjectProperty<Font> fontProperty() {
+        if (font == null) {
+            font = new StyleableObjectProperty<Font>(Font.getDefault()) {
+                private boolean fontSetByCss;
+
+                @Override
+                public void applyStyle(StyleOrigin newOrigin, Font value) {
+                    // RT-20727 JDK-8127428
+                    // if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
+                    try {
+                        // super.applyStyle calls set which might throw if value is bound.
+                        // Have to make sure fontSetByCss is reset.
+                        fontSetByCss = true;
+                        super.applyStyle(newOrigin, value);
+                    } catch (Exception e) {
+                        throw e;
+                    } finally {
+                        fontSetByCss = false;
+                    }
+                }
+
+                @Override
+                public void set(Font value) {
+                    Font old = get();
+                    if (value == null ? old == null : value.equals(old)) {
+                        return;
+                    }
+                    super.set(value);
+                }
+
+                @Override
+                protected void invalidated() {
+                    // RT-20727 JDK-8127428
+                    // if font is changed by calling setFont, then
+                    // css might need to be reapplied since font size affects
+                    // calculated values for styles with relative values
+                    if (fontSetByCss == false) {
+                        NodeHelper.reapplyCSS(RichTextArea.this);
+                    }
+                }
+
+                @Override
+                public CssMetaData<RichTextArea, Font> getCssMetaData() {
+                    return StyleableProperties.FONT;
+                }
+
+                @Override
+                public Object getBean() {
+                    return RichTextArea.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "font";
+                }
+            };
+        }
+        return font;
+    }
+
+    public final void setFont(Font value) {
+        fontProperty().setValue(value);
+    }
+
+    public final Font getFont() {
+        return font == null ? Font.getDefault() : font.getValue();
     }
 
     /**
@@ -403,6 +486,20 @@ public class RichTextArea extends Control {
                 return (StyleableProperty<Insets>)t.contentPaddingProperty();
             }
         };
+        
+        private static final FontCssMetaData<RichTextArea> FONT =
+            new FontCssMetaData<>("-fx-font", Font.getDefault()) {
+
+            @Override
+            public boolean isSettable(RichTextArea n) {
+                return n.font == null || !n.font.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Font> getStyleableProperty(RichTextArea n) {
+                return (StyleableProperty<Font>)(WritableValue<Font>)n.fontProperty();
+            }
+        };
 
         private static final CssMetaData<RichTextArea, Number> LINE_SPACING =
             new CssMetaData<>("-fx-line-spacing", SizeConverter.getInstance(), 0) {
@@ -435,6 +532,7 @@ public class RichTextArea extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES = Util.initStyleables(
             Control.getClassCssMetaData(),
             CONTENT_PADDING,
+            FONT,
             LINE_SPACING,
             WRAP_TEXT
         );

@@ -41,11 +41,12 @@ import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.text.Font;
 import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.rich.D;
 import com.sun.javafx.scene.control.rich.Params;
 import com.sun.javafx.scene.control.rich.RichTextAreaBehavior;
 import com.sun.javafx.scene.control.rich.RichTextAreaSkinHelper;
+import com.sun.javafx.scene.control.rich.RichUtils;
 import com.sun.javafx.scene.control.rich.VFlow;
 
 /**
@@ -151,7 +152,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     h = snapSizeY(getHeight() - y0 - snappedBottomInset() - snapSizeY(hscrollHeight) - snapSizeY(Params.LAYOUT_FOCUS_BORDER));
                 }
 
-                D.f("w=%.1f h=%.1f pref=%.1f", w, h, prefHeight(-1)); // FIX
+                //D.f("w=%.1f h=%.1f pref=%.1f", w, h, prefHeight(-1)); // FIX
 
                 layoutInArea(vscroll, w, y0 + 1.0, vscrollWidth, h, -1, null, true, true, HPos.RIGHT, VPos.TOP);
                 layoutInArea(hscroll, x0 + 1, h, w, hscrollHeight, -1, null, true, true, HPos.LEFT, VPos.BOTTOM);
@@ -159,6 +160,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             }
         };
         getChildren().add(mainPane);
+        mainPane.setStyle("-fx-font-family: 'Iosevka Fixed SS16'; -fx-font-size: 9;");
 
         // TODO can use ConfigurationParameters generator to create custom behavior
         behavior = createBehavior();
@@ -179,6 +181,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         listenerHelper.addInvalidationListener(vflow::handleHorizontalScroll, hscroll.valueProperty());
         listenerHelper.addInvalidationListener(vflow::handleWrapText, control.wrapTextProperty());
         listenerHelper.addInvalidationListener(vflow::handleModelChange, control.modelProperty());
+        listenerHelper.addInvalidationListener(this::handleFontChange, true, getSkinnable().fontProperty());
     }
 
     /**
@@ -187,20 +190,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      */
     private RichTextAreaBehavior createBehavior() {
         return new RichTextAreaBehavior(getSkinnable());
-    }
-    
-    private final ScrollBar createVScrollBar() {
-        Supplier<ScrollBar> gen = config.scrollBarGeneratorVertical;
-        return gen == null ? new ScrollBar() : gen.get();
-    }
-
-    private final ScrollBar createHScrollBar() {
-        Supplier<ScrollBar> gen = config.scrollBarGeneratorHorizontal;
-        return gen == null ? new ScrollBar() : gen.get();
-    }
-
-    private VFlow getVFlow() {
-        return vflow;
     }
 
     @Override
@@ -217,6 +206,45 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     
             super.dispose();
         }
+    }
+    
+    private final ScrollBar createVScrollBar() {
+        Supplier<ScrollBar> gen = config.scrollBarGeneratorVertical;
+        return gen == null ? new ScrollBar() : gen.get();
+    }
+
+    private final ScrollBar createHScrollBar() {
+        Supplier<ScrollBar> gen = config.scrollBarGeneratorHorizontal;
+        return gen == null ? new ScrollBar() : gen.get();
+    }
+
+    private VFlow getVFlow() {
+        return vflow;
+    }
+
+    /**
+     * Returns the skin's {@link StyleResolver}.
+     */
+    public StyleResolver getStyleResolver() {
+        return vflow;
+    }
+
+    private void handleFontChange() {
+        Font f = getSkinnable().getFont();
+        String family = f.getFamily();
+        double size = f.getSize();
+        String name = f.getName().toLowerCase();
+        String style = RichUtils.guessFontStyle(name);
+        String weight = RichUtils.guessFontWeight(name);
+        String s =
+            "-fx-font-family:'" + family +
+            "'; -fx-font-size:" + size +
+            "; -fx-font-style:" + style +
+            "; -fx-font-weight:" + weight +
+            ";";
+        mainPane.setStyle(s);
+        getSkinnable().requestLayout();
+        vflow.requestLayout();
     }
 
     // TODO is this needed?
@@ -265,12 +293,5 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      */
     public void paste(DataFormat format) {
         behavior.paste(format);
-    }
-
-    /**
-     * Returns the skin's {@link StyleResolver}.
-     */
-    public StyleResolver getStyleResolver() {
-        return vflow;
     }
 }
