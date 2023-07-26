@@ -28,8 +28,8 @@ package com.sun.javafx.binding;
 import java.util.Objects;
 import java.util.function.Function;
 
-import javafx.beans.Subscription;
 import javafx.beans.value.ObservableValue;
+import javafx.util.Subscription;
 
 public class MappedBinding<S, T> extends LazyObjectBinding<T> {
 
