@@ -62,7 +62,7 @@ public class CssTransitionsTest extends Application {
               -fx-background-color: red;
               transition: -fx-min-width 2s, -fx-min-height 4s;
             }
-    
+
             .rect:hover {
               -fx-min-width: 300;
               -fx-min-height: 300;
