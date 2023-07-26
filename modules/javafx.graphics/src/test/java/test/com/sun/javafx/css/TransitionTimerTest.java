@@ -63,6 +63,11 @@ public class TransitionTimerTest {
         @Override
         protected void onStop(StyleableDoubleProperty property) {}
 
+        @Override
+        protected boolean equalsTargetValue(TransitionTimer<Number, StyleableDoubleProperty> timer) {
+            return false;
+        }
+
         public void fire(Duration elapsedTime) {
             now += (long)(elapsedTime.toMillis()) * 1_000_000;
             handle(now);
@@ -205,6 +210,27 @@ public class TransitionTimerTest {
         assertEquals(6, trace.size());
         assertSame(TransitionEvent.START, trace.get(4).getEventType());
         assertSame(TransitionEvent.END, trace.get(5).getEventType());
+    }
+
+    @Test
+    public void testRedundantTransitionIsDiscarded() {
+        var transition = new TransitionDefinition("-fx-opacity", seconds(1), ZERO, LINEAR);
+
+        var timer1 = new TestTransitionTimer() {
+            @Override
+            protected boolean equalsTargetValue(TransitionTimer<Number, StyleableDoubleProperty> timer) {
+                return true;
+            }
+        };
+
+        var timer2 = new TestTransitionTimer();
+
+        // Start timer1. This adds it to the list of running timers.
+        assertSame(timer1, TransitionTimer.run(timer1, transition));
+
+        // Now we start timer2. Since both timers target the same property of the same node, and timer2
+        // has the same target value as timer1, it is discarded and timer1 is returned instead.
+        assertSame(timer1, TransitionTimer.run(timer2, transition));
     }
 
 }

@@ -127,6 +127,11 @@ public abstract class StyleableDoubleProperty
         public void onStop(StyleableDoubleProperty property) {
             property.timer = null;
         }
+
+        @Override
+        protected boolean equalsTargetValue(TransitionTimer<Number, StyleableDoubleProperty> timer) {
+            return newValue == ((TransitionTimerImpl)timer).newValue;
+        }
     }
 
 }

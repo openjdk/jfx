@@ -125,6 +125,11 @@ public abstract class StyleableFloatProperty
         public void onStop(StyleableFloatProperty property) {
             property.timer = null;
         }
+
+        @Override
+        protected boolean equalsTargetValue(TransitionTimer<Number, StyleableFloatProperty> timer) {
+            return newValue == ((TransitionTimerImpl)timer).newValue;
+        }
     }
 
 }

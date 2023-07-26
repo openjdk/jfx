@@ -125,6 +125,11 @@ public abstract class StyleableBooleanProperty
         public void onStop(StyleableBooleanProperty property) {
             property.timer = null;
         }
+
+        @Override
+        protected boolean equalsTargetValue(TransitionTimer<Boolean, StyleableBooleanProperty> timer) {
+            return newValue == ((TransitionTimerImpl)timer).newValue;
+        }
     }
 
 }

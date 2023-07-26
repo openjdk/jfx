@@ -125,6 +125,11 @@ public abstract class StyleableIntegerProperty
         public void onStop(StyleableIntegerProperty property) {
             property.timer = null;
         }
+
+        @Override
+        protected boolean equalsTargetValue(TransitionTimer<Number, StyleableIntegerProperty> timer) {
+            return newValue == ((TransitionTimerImpl)timer).newValue;
+        }
     }
 
 }

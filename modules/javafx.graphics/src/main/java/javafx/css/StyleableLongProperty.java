@@ -127,6 +127,11 @@ public abstract class StyleableLongProperty
         public void onStop(StyleableLongProperty property) {
             property.timer = null;
         }
+
+        @Override
+        protected boolean equalsTargetValue(TransitionTimer<Number, StyleableLongProperty> timer) {
+            return newValue == ((TransitionTimerImpl)timer).newValue;
+        }
     }
 
 }

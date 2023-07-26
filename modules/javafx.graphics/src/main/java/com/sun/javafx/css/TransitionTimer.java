@@ -62,6 +62,7 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * showing, no transition timer is started, no events are dispatched, and this method
      * returns {@code null}.
      */
+    @SuppressWarnings("unchecked")
     public static <T, P extends Property<T> & StyleableProperty<T>> TransitionTimer<T, P> run(
             TransitionTimer<T, P> timer, TransitionDefinition transition) {
         long now = AnimationTimerHelper.getPrimaryTimer(timer).nanos();
@@ -78,10 +79,22 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         // The transition timer is only started if the targeted node is showing, i.e. if it is part
         // of the scene graph and the node is visible.
         if (property.getBean() instanceof Node node && NodeHelper.isTreeShowing(node)) {
-            TransitionTimer<?, ?> existingTimer = NodeHelper.findTransitionTimer(node, property);
+            var existingTimer = (TransitionTimer<T, P>)NodeHelper.findTransitionTimer(node, property);
             if (existingTimer != null) {
+                // If we already have a timer that targets the specified property, and the existing
+                // timer has the same target value as the new timer, we discard the new timer and
+                // return the existing timer. This scenario can sometimes happen when a CSS value
+                // is redundantly applied, which would cause unexpected animations if we allowed
+                // the new timer to interrupt the existing timer.
+                if (existingTimer.equalsTargetValue(timer)) {
+                    return existingTimer;
+                }
+
+                // Here we know that the new timer has a different target value than the existing
+                // timer, which means that the new timer is a reversing timer that needs to be
+                // adjusted by the reversing shortening algorithm.
                 if (combinedDuration > 0) {
-                    adjustReversingTransition(existingTimer, timer, transition, now);
+                    adjustReversingTimer(existingTimer, timer, transition, now);
                 }
 
                 existingTimer.stop(TransitionEvent.CANCEL);
@@ -140,8 +153,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      *
      * @see <a href="https://www.w3.org/TR/css-transitions-1/#reversing">Faster reversing of interrupted transitions</a>
      */
-    private static void adjustReversingTransition(TransitionTimer<?, ?> existingTimer, TransitionTimer<?, ?> newTimer,
-                                                  TransitionDefinition transition, long now) {
+    private static void adjustReversingTimer(TransitionTimer<?, ?> existingTimer, TransitionTimer<?, ?> newTimer,
+                                             TransitionDefinition transition, long now) {
         double progress = InterpolatorHelper.curve(existingTimer.interpolator, existingTimer.getProgress());
 
         if (progress > 0 && progress < 1) {
@@ -159,6 +172,10 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         newTimer.endTime = newTimer.startTime + (long)(adjustedDuration * 1_000_000);
     }
 
+    /**
+     * Fires a {@link TransitionEvent} of the specified type.
+     * The elapsed time is computed according to the CSS Transitions specification.
+     */
     private static <T, P extends Property<T> & StyleableProperty<T>> void fireTransitionEvent(
             TransitionTimer<T, P> timer, EventType<TransitionEvent> eventType) {
         try {
@@ -319,5 +336,14 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * @param property the targeted {@code StyleableProperty}
      */
     protected abstract void onStop(P property);
+
+    /**
+     * Returns whether the target value of the specified timer equals the target value
+     * of this timer.
+     *
+     * @param timer the other timer
+     * @return {@code true} if the target values are equal, {@code false} otherwise
+     */
+    protected abstract boolean equalsTargetValue(TransitionTimer<T, P> timer);
 
 }

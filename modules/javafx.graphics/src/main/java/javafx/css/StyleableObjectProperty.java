@@ -32,6 +32,7 @@ import javafx.animation.Interpolatable;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import java.util.Objects;
 
 /**
  * This class extends {@code ObjectPropertyBase} and provides a partial
@@ -69,6 +70,7 @@ public abstract class StyleableObjectProperty<T>
 
     /** {@inheritDoc} */
     @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void applyStyle(StyleOrigin origin, T v) {
         T oldValue;
 
@@ -84,7 +86,9 @@ public abstract class StyleableObjectProperty<T>
                 && getBean() instanceof Node node ? NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
             if (transition != null) {
-                timer = TransitionTimer.run(new TransitionTimerImpl<>(this, oldValue, v), transition);
+                // At this point we know that T implements Interpolatable, so the unchecked cast will succeed.
+                var timerImpl = new TransitionTimerImpl(this, (Interpolatable)oldValue, (Interpolatable)v);
+                timer = TransitionTimer.run(timerImpl, transition);
             } else {
                 set(v);
             }
@@ -125,9 +129,8 @@ public abstract class StyleableObjectProperty<T>
     private StyleOrigin origin = null;
     private TransitionTimer<?, ?> timer = null;
 
-    // This class must not retain a strong reference to the enclosing property, because transitions
-    // don't keep properties (and their scene graph nodes) alive.
-    private static class TransitionTimerImpl<T> extends TransitionTimer<T, StyleableObjectProperty<T>> {
+    private static class TransitionTimerImpl<T extends Interpolatable<T>>
+            extends TransitionTimer<T, StyleableObjectProperty<T>> {
         final T oldValue;
         final T newValue;
 
@@ -138,14 +141,18 @@ public abstract class StyleableObjectProperty<T>
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         protected void onUpdate(StyleableObjectProperty<T> property, double progress) {
-            property.set(progress < 1 ? ((Interpolatable<T>)oldValue).interpolate(newValue, progress) : newValue);
+            property.set(progress < 1 ? oldValue.interpolate(newValue, progress) : newValue);
         }
 
         @Override
         public void onStop(StyleableObjectProperty<T> property) {
             property.timer = null;
+        }
+
+        @Override
+        protected boolean equalsTargetValue(TransitionTimer<T, StyleableObjectProperty<T>> timer) {
+            return Objects.equals(newValue, ((TransitionTimerImpl<T>)timer).newValue);
         }
     }
 
