@@ -25,10 +25,16 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.util.ArrayList;
+import java.util.List;
+import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 /**
@@ -43,7 +49,6 @@ public class HighlightShape extends Path {
     public enum Type {
         HIGHLIGHT,
         SQUIGGLY,
-        UNDERLINE
     }
     
     private final Type type;
@@ -56,22 +61,113 @@ public class HighlightShape extends Path {
         this.end = end;
     }
 
-    // TODO underlineShape returns rectangulars shapes!
-    // we need to convert to single lines + squiggly lines
     private PathElement[] createPath(TextFlow f) {
-        switch(type) {
+        switch (type) {
         case HIGHLIGHT:
             return f.rangeShape(start, end);
         case SQUIGGLY:
-            // FIX
-            return f.underlineShape(start, end);
-        case UNDERLINE:
+            PathElement[] pe = f.underlineShape(start, end);
+            return generateSquiggly(pe);
         default:
             return f.underlineShape(start, end);
         }
     }
 
-    protected void updatePath(TextFlow f) {
+    // underlineShape returns a series of rectangular shapes (MLLLL,MLLLL,...)
+    // first we convert each rectangle to a line at its vertical midpoint,
+    // then generate squiggly line (saw tooth, actually, for now)
+    private PathElement[] generateSquiggly(PathElement[] in) {
+        ArrayList<PathElement> list = new ArrayList<>(in.length * 8);
+        double x0 = Integer.MAX_VALUE;
+        double x1 = Integer.MIN_VALUE;
+        double y0 = Integer.MAX_VALUE;
+        double y1 = Integer.MIN_VALUE;
+        int sz = in.length + 1;
+
+        for (int i = 0; i < sz; i++) {
+            PathElement p = i < in.length ? in[i] : null;
+
+            if ((p == null) || (p instanceof MoveTo)) {
+                if (x0 < x1) {
+                    generateSquiggly(list, x0, x1, (y0 + y1) / 2.0, 1.0);
+                }
+
+                if (p == null) {
+                    break;
+                }
+
+                x0 = Integer.MAX_VALUE;
+                x1 = Integer.MIN_VALUE;
+                y0 = Integer.MAX_VALUE;
+                y1 = Integer.MIN_VALUE;
+            }
+            
+            if (p instanceof MoveTo mt) {
+                double x = mt.getX();
+                if (x < x0) {
+                    x0 = x;
+                }
+                if (x > x1) {
+                    x1 = x;
+                }
+                double y = mt.getY();
+                if (y < y0) {
+                    y0 = y;
+                }
+                if (y > y1) {
+                    y1 = y;
+                }
+            } else if (p instanceof LineTo lt) {
+                double x = lt.getX();
+                if (x < x0) {
+                    x0 = x;
+                }
+                if (x > x1) {
+                    x1 = x;
+                }
+                double y = lt.getY();
+                if (y < y0) {
+                    y0 = y;
+                }
+                if (y > y1) {
+                    y1 = y;
+                }
+            }
+        }
+
+        return list.toArray(new PathElement[list.size()]);
+    }
+
+    private void generateSquiggly(List<PathElement> list, double xmin, double xmax, double ycenter, double sz) {
+        double x = xmin;
+        double y = ycenter;
+        double y0 = ycenter - sz;
+        double y1 = ycenter + sz;
+        boolean up = true;
+        boolean run = true;
+
+        list.add(new MoveTo(x, y));
+
+        while (run) {
+            double delta = up ? (y - y0) : (y1 - y);
+            if (x + delta > xmax) {
+                delta = xmax - x;
+                run = false;
+            }
+
+            x += delta;
+            if (up) {
+                y -= delta;
+            } else {
+                y += delta;
+            }
+            up = !up;
+
+            list.add(new LineTo(x, y));
+        }
+    }
+
+    private void updatePath(TextFlow f) {
         PathElement[] pe = createPath(f);
         getElements().setAll(pe);
     }
@@ -79,7 +175,6 @@ public class HighlightShape extends Path {
     public static void addTo(Region r, Type t, int start, int end, Color c) {
         if (r instanceof TextFlow f) {
             String style = createStyle(t, c);
-            //
             addHighlight(f, t, start, end, style, null);
         }
     }
@@ -91,14 +186,14 @@ public class HighlightShape extends Path {
     }
 
     private static String createStyle(Type t, Color c) {
-//        switch(t) {
-//        case HIGHLIGHT:
+        switch (t) {
+        case HIGHLIGHT:
             // filled shape
             return "-fx-fill: " + RichUtils.toCssColor(c) + "; -fx-stroke-width:0;";
-//        default:
-//            // stroke
-//            return "-fx-stroke: " + RichUtils.toCssColor(c) + "; -fx-stroke-width:1;";
-//        }
+        default:
+            // stroke
+            return "-fx-stroke: " + RichUtils.toCssColor(c) + "; -fx-stroke-width:1;";
+        }
     }
 
     private static void addHighlight(TextFlow f, Type t, int start, int end, String directStyle, String[] styles) {
@@ -111,7 +206,21 @@ public class HighlightShape extends Path {
         f.widthProperty().addListener((x) -> p.updatePath(f));
         p.updatePath(f);
         p.setManaged(false);
-        // FIX must add before the first TextNode!
-        f.getChildren().add(p);
+        
+        // highlights must be added before any Text nodes
+        List<Node> children = f.getChildren();
+        int sz = children.size();
+        int ix = -1;
+        for (int i = 0; i < sz; i++) {
+            if (children.get(i) instanceof Text) {
+                ix = i;
+                break;
+            }
+        }
+        if (ix < 0) {
+            children.add(p);
+        } else {
+            children.add(ix, p);
+        }
     }
 }

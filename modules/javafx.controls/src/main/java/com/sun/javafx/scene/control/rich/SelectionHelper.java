@@ -132,36 +132,6 @@ public class SelectionHelper {
         }
     }
 
-    @Deprecated // debugging
-    private static int r(double x) {
-        return (int)Math.round(x);
-    }
-
-    @Deprecated // debugging
-    private static String dump(PathElement[] elements) {
-        StringBuilder sb = new StringBuilder();
-        if (elements == null) {
-            sb.append("null");
-        } else {
-            for (PathElement em : elements) {
-                if (em instanceof MoveTo p) {
-                    sb.append("M");
-                    sb.append(r(p.getX()));
-                    sb.append(",");
-                    sb.append(r(p.getY()));
-                    sb.append(" ");
-                } else if (em instanceof LineTo p) {
-                    sb.append("L");
-                    sb.append(r(p.getX()));
-                    sb.append(",");
-                    sb.append(r(p.getY()));
-                    sb.append(" ");
-                }
-            }
-        }
-        return sb.toString();
-    }
-
     private boolean isNear(double a, double b) {
         return Math.abs(a - b) < EPSILON;
     }

@@ -234,6 +234,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         String family = f.getFamily();
         double size = f.getSize();
         String name = f.getName().toLowerCase();
+        // FIX once JDK-8092191 is in
         String style = RichUtils.guessFontStyle(name);
         String weight = RichUtils.guessFontWeight(name);
         String s =

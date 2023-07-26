@@ -292,26 +292,6 @@ public final class TextCell {
     }
 
     /**
-     * Underlines the specified text range.
-     * @param start start offset for the range
-     * @param end end offset for the range
-     * @param color highlight color
-     */
-    public void addUnderline(int start, int end, Color color) {
-        HighlightShape.addTo(content, HighlightShape.Type.UNDERLINE, start, end, color);
-    }
-
-    /**
-     * Underlines the specified text range, using style names.
-     * @param start start offset for the range
-     * @param end end offset for the range
-     * @param styles CSS style names
-     */
-    public void addUnderline(int start, int end, String... styles) {
-        HighlightShape.addTo(content, HighlightShape.Type.UNDERLINE, start, end, styles);
-    }
-
-    /**
      * Underlines the specified text range using squiggly line (as typically used by a spell checker).
      * @param start start offset for the range
      * @param end end offset for the range

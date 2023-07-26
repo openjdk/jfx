@@ -105,28 +105,21 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         p.addSegment(text, style, css);
         return this;
     }
-    
-    public SimpleReadOnlyStyledModel underline(int start, int length, Color c) {
-        int end = start + length;
-        SParagraph p = lastSegmentStyledTextParagraph();
-        p.addHighlight((cell) -> cell.addUnderline(start, end, c));
-        return this;
-    }
-    
+
     public SimpleReadOnlyStyledModel highlight(int start, int length, Color c) {
         int end = start + length;
         SParagraph p = lastSegmentStyledTextParagraph();
         p.addHighlight((cell) -> cell.addHighlight(start, end, c));
         return this;
     }
-    
+
     public SimpleReadOnlyStyledModel squiggly(int start, int length, Color c) {
         int end = start + length;
         SParagraph p = lastSegmentStyledTextParagraph();
         p.addHighlight((cell) -> cell.addSquiggly(start, end, c));
         return this;
     }
-    
+
     protected StyledParagraph lastParagraph() {
         int sz = paragraphs.size();
         if (sz == 0) {
@@ -134,10 +127,10 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         }
         return paragraphs.get(sz - 1);
     }
-    
+
     protected SParagraph lastSegmentStyledTextParagraph() {
         StyledParagraph last = lastParagraph();
-        if(last instanceof SParagraph ss) {
+        if (last instanceof SParagraph ss) {
             return ss;
         } else {
             int ix = paragraphs.size();
@@ -154,14 +147,14 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         paragraphs.add(p);
         return this;
     }
-    
+
     public SimpleReadOnlyStyledModel addParagraph(Supplier<Region> generator) {
         int ix = paragraphs.size();
         NodeStyledParagraph p = new NodeStyledParagraph(generator);
         paragraphs.add(p);
         return this;
     }
-    
+
     /** adds inline node segment */
     public SimpleReadOnlyStyledModel addNodeSegment(Supplier<Node> generator) {
         SParagraph p = lastSegmentStyledTextParagraph();
@@ -180,34 +173,34 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         }
         return this;
     }
-    
+
     @Override
     public StyleInfo getStyleInfo(TextPos pos) {
         // TODO use segments
         return StyleInfo.NONE;
     }
-    
+
     @Override
     protected void exportParagraph(int index, int start, int end, StyledOutput out) throws IOException {
         StyledParagraph par = paragraphs.get(index);
         if (par instanceof SParagraph p) {
             p.export(start, end, out);
-        } else if(par instanceof SimpleStyledImageParagraph p) {
+        } else if (par instanceof SimpleStyledImageParagraph p) {
             StyledSegment s = StyledSegment.nodeParagraph(() -> p.createTextCell(index).getContent());
             out.append(s);
-        } else if(par instanceof NodeStyledParagraph p) {
+        } else if (par instanceof NodeStyledParagraph p) {
             StyledSegment s = StyledSegment.nodeParagraph(() -> p.createTextCell(index).getContent());
             out.append(s);
         }
     }
-    
+
     /** Base Class */
     protected abstract static class StyledParagraph {
         public abstract String getText();
 
         public abstract TextCell createTextCell(int index);
     }
-    
+
     /** Styled Paragraph Based on SSegments */
     protected static class SParagraph extends StyledParagraph {
         private ArrayList<SSegment> segments;
@@ -240,7 +233,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         }
 
         public void export(int start, int end, StyledOutput out) throws IOException {
-            if(segments == null) {
+            if (segments == null) {
                 out.append(StyledSegment.of(""));
             } else {
                 int off = 0;
@@ -252,7 +245,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
                     SSegment seg = segments.get(i);
                     String text = seg.getText();
-                    int len = (text == null ? 0: text.length());
+                    int len = (text == null ? 0 : text.length());
                     if (start <= (off + len)) {
                         int ix0 = Math.max(0, start - off);
                         int ix1 = Math.min(len, end - off);
@@ -276,14 +269,14 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
             }
             return sb.toString();
         }
-        
+
         protected List<SSegment> segments() {
-            if(segments == null) {
+            if (segments == null) {
                 segments = new ArrayList<>();
             }
             return segments;
         }
-        
+
         protected int size() {
             return segments == null ? 0 : segments.size();
         }
@@ -292,13 +285,13 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
             // TODO check for newlines/formfeed chars
             segments().add(new TextSSegment(text, style, css));
         }
-        
+
         public void addSegment(Supplier<Node> generator) {
             segments().add(new NodeSSegment(generator));
         }
-        
+
         public void addHighlight(Consumer<TextCell> highlighter) {
-            if(highlighters == null) {
+            if (highlighters == null) {
                 highlighters = new ArrayList<>();
             }
             highlighters.add(highlighter);
@@ -311,7 +304,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
         protected abstract StyledSegment createStyledSegment(int start, int end);
     }
-    
+
     /** text segment */
     protected static class TextSSegment extends SSegment {
         public final String text;
@@ -366,11 +359,11 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
     public class SimpleStyledImageParagraph extends StyledParagraph {
         private final Image image;
-        
+
         public SimpleStyledImageParagraph(Image image) {
             this.image = image;
         }
-        
+
         @Override
         public TextCell createTextCell(int index) {
             return new TextCell(index, new ImageCellPane(image));
@@ -385,11 +378,11 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     /** inline node segment */
     protected static class NodeSSegment extends SSegment {
         public final Supplier<Node> generator;
-        
+
         public NodeSSegment(Supplier<Node> generator) {
             this.generator = generator;
         }
-        
+
         @Override
         public String getText() {
             // must be one character

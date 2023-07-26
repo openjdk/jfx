@@ -166,9 +166,13 @@ public class RichUtils {
         return elements;
     }
 
-    // [ normal | italic | oblique ]
+    /**
+     * Guesses the font style from the font name, until JDK-8092191 is implemented.
+     * @param name font name, must be lowercase'd
+     * @return font style: [ normal | italic | oblique ]
+     */
     public static String guessFontStyle(String name) {
-        // can these names be localized??
+        // are we going to encounter a localized font name?
         if (name.contains("italic")) {
             return "italic";
         } else if (name.contains("oblique")) {
@@ -177,9 +181,13 @@ public class RichUtils {
         return "normal";
     }
 
-    // [ normal | bold | bolder | lighter | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 ]
+    /**
+     * Guesses the font weight from the font name, until JDK-8092191 is implemented.
+     * @param name font name, must be lowercase'd
+     * @return font weight: [ normal | bold | bolder | lighter | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 ]
+     */
     public static String guessFontWeight(String name) {
-        // can these names be localized??
+        // are we going to encounter a localized font name?
         if (name.contains("thin")) {
             return "100";
         } else if (name.contains("extralight")) {
@@ -200,5 +208,37 @@ public class RichUtils {
             return "900";
         }
         return "normal"; // 400, see FontWeight
+    }
+
+    /** dumps the path element array to a compact human-readable string */
+    public static String dump(PathElement[] elements) {
+        StringBuilder sb = new StringBuilder();
+        if (elements == null) {
+            sb.append("null");
+        } else {
+            for (PathElement em : elements) {
+                if (em instanceof MoveTo p) {
+                    sb.append('M');
+                    sb.append(r(p.getX()));
+                    sb.append(',');
+                    sb.append(r(p.getY()));
+                    sb.append(' ');
+                } else if (em instanceof LineTo p) {
+                    sb.append('L');
+                    sb.append(r(p.getX()));
+                    sb.append(',');
+                    sb.append(r(p.getY()));
+                    sb.append(' ');
+                } else {
+                    sb.append(em);
+                    sb.append(' ');
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    private static int r(double x) {
+        return (int)Math.round(x);
     }
 }
