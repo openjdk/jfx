@@ -26,9 +26,9 @@
 package com.sun.javafx.binding;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Subscription;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.value.ChangeListener;
+import javafx.util.Subscription;
 
 /**
  * Extends {@link ObjectBinding} with the ability to lazily register and eagerly unregister listeners on its
