@@ -45,10 +45,8 @@ import java.util.Base64;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import static javafx.animation.Interpolator.*;
 import static com.sun.javafx.css.InterpolatorConverter.*;
 import static test.javafx.animation.InterpolatorUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -249,25 +247,6 @@ public class Node_transition_Test {
         node.setVisible(false);
         assertEquals(0, NodeShim.getTransitionTimers(node).size());
         assertEquals(1, node.getOpacity(), 0.001);
-    }
-
-    @Test
-    @Disabled("CssParser cannot handle mixed long-hand/short-hand declarations")
-    public void testLonghandDeclarationIsMergedWithShorthandDeclaration() {
-        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
-            .testClass {
-                transition: -fx-background-color 1s, -fx-scale-x 2s, -fx-scale-y 3s;
-                transition-property: -fx-scale-x;
-            }
-            """.getBytes(StandardCharsets.UTF_8));
-
-        scene.getStylesheets().add(url);
-        node.getStyleClass().add("testClass");
-        node.applyCss();
-
-        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
-        assertEquals(1, transitions.size());
-        assertTransitionEquals("-fx-scale-x", Duration.seconds(2), Duration.ZERO, LINEAR, transitions.get(0));
     }
 
 }
