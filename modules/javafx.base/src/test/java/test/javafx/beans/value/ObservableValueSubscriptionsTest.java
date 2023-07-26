@@ -35,9 +35,9 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
-import javafx.beans.Subscription;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.util.Subscription;
 
 public class ObservableValueSubscriptionsTest {
     private final StringProperty value = new SimpleStringProperty("Initial");

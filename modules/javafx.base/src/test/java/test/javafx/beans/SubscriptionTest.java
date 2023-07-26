@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import javafx.beans.Subscription;
+import javafx.util.Subscription;
 
 public class SubscriptionTest {
 
