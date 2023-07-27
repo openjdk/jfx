@@ -50,7 +50,7 @@ import com.sun.javafx.scene.control.input.HList;
  */
 public class InputMap2<C extends Control> {
     /** contains user- and behavior-set key binding or function mappings */
-    private static class Entry { // TODO possible rename Mapping
+    private static class Entry { // TODO prename to Mapping?
         Object value;
         IBehavior behavior;
         Object behaviorValue;
@@ -84,12 +84,8 @@ public class InputMap2<C extends Control> {
     /**
      * The Control to which this InputMap is attached.
      */
-    public final C getControl() {
+    private final C getControl() {
         return control;
-    }
-    
-    public final InputMap2 getInputMap2() {
-        return control.getInputMap2();
     }
 
     private void handleEvent(Event ev) {
@@ -109,7 +105,7 @@ public class InputMap2<C extends Control> {
         }
     }
 
-    public void handleKeyEvent(Event ev) {
+    private void handleKeyEvent(Event ev) {
         if (ev == null || ev.isConsumed()) {
             return;
         }
@@ -341,6 +337,22 @@ public class InputMap2<C extends Control> {
     }
 
     /**
+     * Returns a default {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
+     *
+     * @param tag
+     */
+    public Runnable getDefaultFunction(FunctionTag tag) {
+        Entry en = map.get(tag);
+        if (en != null) {
+            Object v = en.behaviorValue;
+            if (v instanceof Runnable r) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns a {@code Runnable} mapped to the specified {@link KeyBinding2},
      * or null if no such mapping exists.
      *
@@ -352,6 +364,24 @@ public class InputMap2<C extends Control> {
             Object v = en.getValue();
             if (v instanceof FunctionTag tag) {
                 return getFunction(tag);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns a default {@code Runnable} mapped to the specified {@link KeyBinding2},
+     * or null if no such mapping exists.
+     *
+     * @param k
+     */
+    public Runnable getDefaultFunction(KeyBinding2 k) {
+        // TODO this needs to be tested
+        Entry en = map.get(k);
+        if (en != null) {
+            Object v = en.behaviorValue;
+            if (v instanceof FunctionTag tag) {
+                return getDefaultFunction(tag);
             }
         }
         return null;
@@ -415,7 +445,7 @@ public class InputMap2<C extends Control> {
      *
      * @param k
      */
-    public void restoreDefaultBinding(KeyBinding2 k) {
+    public void restoreDefaultKeyBinding(KeyBinding2 k) {
         Entry en = map.get(k);
         if (en != null) {
             en.value = null;
@@ -456,6 +486,7 @@ public class InputMap2<C extends Control> {
     /**
      * Maps a new KeyBinding as an alias to the existing one with the same owner and function tag.
      * This method does nothing if there is no mapping for k1.
+     * Subsequent changes to the original mapping are not propagated to the alias.
      *
      * @param k1 existing key binding
      * @param k2 new key binding
