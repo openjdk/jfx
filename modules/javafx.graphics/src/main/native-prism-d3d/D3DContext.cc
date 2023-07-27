@@ -758,6 +758,9 @@ D3DContext::TestCooperativeLevel()
     case D3DERR_DEVICEREMOVED:
         TraceLn1(NWT_TRACE_INFO, "  device %d has been removed", adapterOrdinal);
         break;
+    case D3DERR_DEVICEHUNG:
+        TraceLn1(NWT_TRACE_INFO, "  device %d is hung", adapterOrdinal);
+        break;
     case S_PRESENT_OCCLUDED:
         break;
     case S_PRESENT_MODE_CHANGED:

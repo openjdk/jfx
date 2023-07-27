@@ -38,6 +38,7 @@ import java.security.PrivilegedAction;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 import com.sun.glass.ui.Screen;
 import com.sun.prism.Image;
@@ -54,11 +55,10 @@ import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.d3d.D3DResource.D3DRecord;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.ps.BaseShaderFactory;
 import com.sun.prism.impl.TextureResourcePool;
+import com.sun.prism.impl.ps.BaseShaderFactory;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
-import java.util.WeakHashMap;
 
 class D3DResourceFactory extends BaseShaderFactory {
     private static final Map<Image,Texture> clampTexCache = new WeakHashMap<>();
@@ -307,8 +307,14 @@ class D3DResourceFactory extends BaseShaderFactory {
     public D3DRTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean msaa) {
         if (checkDisposed()) return null;
 
-        if (PrismSettings.verbose && context.isLost()) {
-            System.err.println("RT Texture allocation while the device is lost");
+        if (PrismSettings.verbose) {
+            if (context.isLost()) {
+                System.err.println("RT Texture allocation while the device is lost");
+            }
+            
+            if (context.isHung()) {
+                System.err.println("RT Texture allocation while the device is hung");
+            }
         }
 
         int createw = width;
@@ -367,8 +373,14 @@ class D3DResourceFactory extends BaseShaderFactory {
     public Presentable createPresentable(PresentableState pState) {
         if (checkDisposed()) return null;
 
-        if (PrismSettings.verbose && context.isLost()) {
-            System.err.println("SwapChain allocation while the device is lost");
+        if (PrismSettings.verbose) {
+            if (context.isLost()) {
+                System.err.println("SwapChain allocation while the device is lost");
+            }
+            
+            if (context.isHung()) {
+                System.err.println("SwapChain allocation while the device is hung");
+            }
         }
 
         long pResource = nCreateSwapChain(context.getContextHandle(),

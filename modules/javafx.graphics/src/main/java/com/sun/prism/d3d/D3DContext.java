@@ -45,11 +45,13 @@ import com.sun.prism.ps.Shader;
 
 class D3DContext extends BaseShaderContext {
 
-    public static final int D3DERR_DEVICEREMOVED    = 0x88760870;
-    public static final int D3DERR_DEVICENOTRESET   = 0x88760869;
     public static final int D3DERR_DEVICELOST       = 0x88760868;
-    public static final int E_FAIL                  = 0x80004005;
+    public static final int D3DERR_DEVICENOTRESET   = 0x88760869;
+    public static final int D3DERR_DEVICEREMOVED    = 0x88760870;
+    public static final int D3DERR_DEVICEHUNG       = 0X88760874;
     public static final int D3DERR_OUTOFVIDEOMEMORY = 0x8876017c;
+    
+    public static final int E_FAIL                  = 0x80004005;
     public static final int D3D_OK                  = 0x0;
 
     public static final int D3DCOMPMODE_CLEAR           = 0;
@@ -84,6 +86,7 @@ class D3DContext extends BaseShaderContext {
 
     private State state;
     private boolean isLost = false;
+    private boolean isHung = false;
 
     private final long pContext;
 
@@ -124,6 +127,14 @@ class D3DContext extends BaseShaderContext {
     boolean isLost() {
         return isLost;
     }
+    
+    /**
+     * Returns whether D3DERR_DEVICEHUNG error has been occurred.
+     * @return true if hung error occurred, false otherwise
+     */
+    boolean isHung() {
+        return isHung;
+    }
 
     /**
      * Does D3D native return value validation for DEBUG interests
@@ -140,6 +151,13 @@ class D3DContext extends BaseShaderContext {
      */
     private void setLost() {
         isLost = true;
+    }
+    
+    /**
+     * set device to hung state
+     */
+    private void setHung() {
+        isHung = true;
     }
 
     /**
@@ -169,6 +187,9 @@ class D3DContext extends BaseShaderContext {
                     break;
                 case D3DERR_DEVICENOTRESET:
                     System.err.println("D3DERR_DEVICENOTRESET");
+                    break;
+                case D3DERR_DEVICEHUNG:
+                    System.err.println("D3DERR_DEVICEHUNG");
                     break;
                 case E_FAIL:
                     System.err.println("E_FAIL");
@@ -201,6 +222,18 @@ class D3DContext extends BaseShaderContext {
 
         if (hr == D3DERR_DEVICEREMOVED) {
             setLost();
+
+            // Reinitialize the D3DPipeline. This will dispose and recreate
+            // the resource factory and context for each adapter.
+            D3DPipeline.getInstance().reinitialize();
+        }
+        
+        if (hr == D3DERR_DEVICEHUNG) {
+            setHung();
+        }
+        
+        if (isHung && hr == D3D_OK) {
+            isHung = false;
 
             // Reinitialize the D3DPipeline. This will dispose and recreate
             // the resource factory and context for each adapter.
