@@ -36,11 +36,12 @@ import javafx.scene.control.rich.StyleResolver;
 public abstract class StyleInfo {
     /**
      * Returns the actual style attributes for the given {@link StyleResolver}.
-     * @param resolver
+     * @param resolver the style resolver to use
      * @return attributes instance, or null
      */
     public abstract StyleAttrs getStyleAttrs(StyleResolver resolver);
 
+    /** A StyleInfo with no styling. */
     public static final StyleInfo NONE = StyleInfo.of(null, null);
 
     private StyleInfo() {
@@ -52,6 +53,7 @@ public abstract class StyleInfo {
      *
      * @param direct direct style
      * @param css stylesheet style names
+     * @return the instance
      */
     public static StyleInfo of(String direct, String[] css) {
         return new StyleInfo() {
@@ -98,7 +100,8 @@ public abstract class StyleInfo {
     /**
      * Creates a {@code StyleInfo} instance from a set of attributes.
      *
-     * @param attrs
+     * @param attrs the style attributes
+     * @return the StyleInfo instance
      */
     public static StyleInfo of(StyleAttrs attrs) {
         return new StyleInfo() {

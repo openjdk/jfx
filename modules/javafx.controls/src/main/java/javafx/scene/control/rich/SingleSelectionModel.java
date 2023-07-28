@@ -41,6 +41,7 @@ public class SingleSelectionModel implements SelectionModel {
     private final ReadOnlyObjectWrapper<TextPos> caretPosition = new ReadOnlyObjectWrapper<>();
     private final ChangeListener<TextPos> listener;
 
+    /** The constructor. */
     public SingleSelectionModel() {
         this.listener = (src, old, val) -> {
             if (isAnchor(src)) {

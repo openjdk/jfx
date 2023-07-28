@@ -37,6 +37,7 @@ import com.sun.javafx.scene.control.rich.StringBuilderStyledOutput;
  * {@link DataFormatHandler} which operates with plain text. 
  */
 public class PlainTextFormatHandler extends DataFormatHandler {
+    /** The constructor. */
     public PlainTextFormatHandler() {
         super(DataFormat.PLAIN_TEXT);
     }

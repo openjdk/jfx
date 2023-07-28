@@ -80,6 +80,11 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         });
     }
 
+    /**
+     * Constructs the skin.
+     * @param control the owner
+     * @param cnf the configuration parameters
+     */
     public RichTextAreaSkin(RichTextArea control, ConfigurationParameters cnf) {
         super(control);
         
@@ -168,7 +173,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         listenerHelper.addInvalidationListener(vflow::handleSelectionChange, control.selectionSegmentProperty());
         listenerHelper.addInvalidationListener(vflow::updateRateRestartBlink, true, control.caretBlinkPeriodProperty());
         listenerHelper.addInvalidationListener(vflow::updateTabSize, control.tabSizeProperty());
-        listenerHelper.addInvalidationListener(vflow::updateCaretAndSelection, control.highlightCurrentLineProperty());
+        listenerHelper.addInvalidationListener(vflow::updateCaretAndSelection, control.highlightCurrentParagraphProperty());
         listenerHelper.addInvalidationListener(vflow::handleContentPadding, true, control.contentPaddingProperty());
         listenerHelper.addInvalidationListener(vflow::handleLineSpacing, control.lineSpacingProperty());
         listenerHelper.addInvalidationListener(vflow::handleDecoratorChange,
@@ -224,6 +229,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     /**
      * Returns the skin's {@link StyleResolver}.
+     * @return style resolver instance
      */
     public StyleResolver getStyleResolver() {
         return vflow;
@@ -280,7 +286,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     /**
      * Copies the text in the specified format when selection exists and when the export in this format
      * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
-     * @param format
+     * @param format data format
      */
     public void copy(DataFormat format) {
         behavior.copy(format);
@@ -290,7 +296,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * The format must be supported by the model, and the skin must be installed,
      * otherwise this method has no effect.
-     * @param format
+     * @param format data format
      */
     public void paste(DataFormat format) {
         behavior.paste(format);

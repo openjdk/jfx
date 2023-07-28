@@ -43,6 +43,11 @@ public abstract class StyleAttribute {
     private final String name;
     private final Class<?> type;
 
+    /**
+     * Constructs a style attribute.
+     * @param name the attribute name
+     * @param type the attribute type
+     */
     public StyleAttribute(String name, Class<?> type) {
         this.name = name;
         this.type = type;
@@ -51,11 +56,16 @@ public abstract class StyleAttribute {
     /**
      * Returns the class corresponding to the attribute value.
      * The value must be Serializable.
+     * @return attribute type
      */
     public final Class<?> getType() {
         return type;
     }
 
+    /**
+     * Attribute name.
+     * @return attribute name
+     */
     public String getName() {
         return name;
     }

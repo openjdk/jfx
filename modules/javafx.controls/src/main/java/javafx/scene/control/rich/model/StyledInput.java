@@ -34,9 +34,11 @@ import com.sun.javafx.scene.control.rich.StringStyledInput;
 public interface StyledInput {
     /**
      * Returns the next segment, or null if no more segments.
+     * @return the next segment, or null if no more segments
      */
     public abstract StyledSegment nextSegment();
-    
+
+    /** An empty StyledInput. */
     public static final StyledInput EMPTY = new StyledInput() {
         @Override
         public StyledSegment nextSegment() {
@@ -46,13 +48,18 @@ public interface StyledInput {
     
     /**
      * Creates a plain text styled input with the specified style.
+     * @param text the source text
+     * @param si the source style info
+     * @return the StyledInput instance
      */
-    public static StyledInput of(String text, StyleInfo s) {
-        return new StringStyledInput(text, s);
+    public static StyledInput of(String text, StyleInfo si) {
+        return new StringStyledInput(text, si);
     }
     
     /**
      * Creates a plain text styled input with no set style.
+     * @param text the source text
+     * @return the StyledInput instance
      */
     public static StyledInput of(String text) {
         return new StringStyledInput(text, StyleInfo.NONE);

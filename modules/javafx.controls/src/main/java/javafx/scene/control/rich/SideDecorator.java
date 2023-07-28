@@ -44,6 +44,8 @@ public interface SideDecorator {
     /**
      * Returns the width for all the side Nodes, or 0 if a measurer Node needs to be obtained via
      * {@link #getNode(int, boolean)}.
+     * @param viewWidth width of the view
+     * @return preferred width
      */
     public double getPrefWidth(double viewWidth);
 

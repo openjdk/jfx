@@ -144,7 +144,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         CheckBox highlightCurrentLine = new CheckBox("highlight current line");
         FX.name(highlightCurrentLine, "highlightCurrentLine");
         highlightCurrentLine.selectedProperty().addListener((s,p,on) -> {
-            control.setHighlightCurrentLine(on);
+            control.setHighlightCurrentParagraph(on);
         });
         
         ComboBox<Integer> tabSize = new ComboBox<>();

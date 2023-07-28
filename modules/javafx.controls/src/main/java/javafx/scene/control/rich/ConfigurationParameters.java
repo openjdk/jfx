@@ -42,17 +42,26 @@ public final class ConfigurationParameters {
     /** creates a vertical scroll bar.  when set to null (default) a standard ScrollBar will be created */
     public final Supplier<ScrollBar> scrollBarGeneratorVertical;
 
+    /**
+     * Creates a {@link Builder} instance.
+     * @return the instance
+     */
     public static Builder builder() {
         return new Builder();
     }
 
     /**
      * Creates default configuration parameters.
+     * @return default parameters
      */
     public static ConfigurationParameters defaultConfig() {
         return ConfigurationParameters.builder().create();
     }
-    
+
+    /**
+     * Creates an immutable instance from the {@code Builder}.
+     * @param b configured builder
+     */
     private ConfigurationParameters(Builder b) {
         scrollBarGeneratorVertical = b.verticalScrollBarGenerator;
         scrollBarGeneratorHorizontal = b.horizontalScrollBarGenerator;
@@ -68,17 +77,24 @@ public final class ConfigurationParameters {
 
         /**
          * Creates an immutable instance of {@link ConfigurationParameters}
+         * @return the new instance
          */
         public ConfigurationParameters create() {
             return new ConfigurationParameters(this);
         }
 
-        /** Allows for creating custom vertical scroll bar.  A null (default) results in a standard ScrollBar */
+        /**
+         * Allows for creating custom vertical scroll bar.  A null (default) results in a standard ScrollBar.
+         * @param gen the code to generate the ScrollBar, or null
+         */
         public void setVerticalScrollBarGenerator(Supplier<ScrollBar> gen) {
             verticalScrollBarGenerator = gen;
         }
 
-        /** Allows for creating custom horizontal scroll bar.  A null (default) results in a standard ScrollBar */
+        /**
+         * Allows for creating custom horizontal scroll bar.  A null (default) results in a standard ScrollBar.
+         * @param gen the code to generate the ScrollBar, or null
+         */
         public void setHorizontalScrollBarGenerator(Supplier<ScrollBar> gen) {
             horizontalScrollBarGenerator = gen;
         }

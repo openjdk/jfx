@@ -112,7 +112,7 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /**
      * Utility method creates a KeyBinding corresponding to a key press.
      *
-     * @param code
+     * @param code key code
      * @return KeyBinding
      */
     public static KeyBinding of(KeyCode code) {
@@ -122,7 +122,7 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /**
      * Utility method creates a KeyBinding corresponding to a command-code key press.
      *
-     * @param code
+     * @param code key code
      * @return KeyBinding
      */
     public static KeyBinding command(KeyCode code) {
@@ -132,7 +132,7 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /**
      * Utility method creates a KeyBinding corresponding to a alt-code key press.
      *
-     * @param code
+     * @param code key code
      * @return KeyBinding
      */
     public static KeyBinding alt(KeyCode code) {
@@ -142,7 +142,7 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /**
      * Utility method creates a KeyBinding corresponding to a ctrl-code key press.
      *
-     * @param code
+     * @param code key code
      * @return KeyBinding
      */
     public static KeyBinding ctrl(KeyCode code) {
@@ -152,7 +152,7 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /**
      * Utility method creates a KeyBinding corresponding to a shift-code key press.
      *
-     * @param code
+     * @param code key code
      * @return KeyBinding
      */
     public static KeyBinding shift(KeyCode code) {
@@ -162,7 +162,7 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /**
      * Utility method creates a KeyBinding corresponding to a shortcut-code key press.
      *
-     * @param code
+     * @param code key code
      * @return KeyBinding
      */
     public static KeyBinding shortcut(KeyCode code) {
@@ -173,26 +173,34 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
         return builder().init(key, mods).build();
     }
 
-    public boolean isControl() {
-        return modifiers.contains(KCondition.CTRL);
-    }
-
-    public boolean isCommand() {
-        return modifiers.contains(KCondition.COMMAND);
-    }
-
+    /**
+     * Determines whether this key binding if for the key press event.
+     * @return true if this key binding if for the key press event
+     */
     public boolean isKeyPress() {
         return modifiers.contains(KCondition.KEY_PRESS);
     }
 
+    /**
+     * Determines whether this key binding if for the key release event.
+     * @return true if this key binding if for the key release event
+     */
     public boolean isKeyRelease() {
         return modifiers.contains(KCondition.KEY_RELEASE);
     }
-    
+
+    /**
+     * Determines whether this key binding if for the key typed event.
+     * @return true if this key binding if for the key typed event
+     */
     public boolean isKeyTyped() {
         return modifiers.contains(KCondition.KEY_TYPED);
     }
 
+    /**
+     * Determines whether {@code shortcut} key is down in this key binding.
+     * @return true if {@code shortcut} key is down in this key binding
+     */
     public boolean isShortcut() {
         if (PlatformUtil.isMac()) {
             return modifiers.contains(KCondition.COMMAND);
@@ -200,28 +208,59 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
         return modifiers.contains(KCondition.CTRL);
     }
 
+    /**
+     * Determines whether {@code alt} key is down in this key binding.
+     * @return true if {@code alt} key is down in this key binding
+     */
     public boolean isAlt() {
         return modifiers.contains(KCondition.ALT);
     }
 
-    public boolean isCtrl() {
+    /**
+     * Determines whether {@code control} key is down in this key binding.
+     * @return true if {@code control} key is down in this key binding
+     */
+    public boolean isControl() {
         return modifiers.contains(KCondition.CTRL);
     }
 
+    /**
+     * Determines whether {@code control} key is down in this key binding.
+     * Applies to macOS platform only.
+     * @return true if {@code control} key is down in this key binding
+     */
+    public boolean isCommand() {
+        return modifiers.contains(KCondition.COMMAND);
+    }
+
+    /**
+     * Determines whether {@code meta} key is down in this key binding.
+     * @return true if {@code meta} key is down in this key binding
+     */
     public boolean isMeta() {
         return modifiers.contains(KCondition.META);
     }
 
+    /**
+     * Determines whether {@code option} key is down in this key binding.
+     * Applies to macOS only.
+     * @return true if {@code option} key is down in this key binding
+     */
     public boolean isOption() {
         return modifiers.contains(KCondition.OPTION);
     }
 
+    /**
+     * Determines whether {@code shift} key is down in this key binding.
+     * @return true if {@code shift} key is down in this key binding
+     */
     public boolean isShift() {
         return modifiers.contains(KCondition.SHIFT);
     }
 
     /**
      * Returns a {@link KeyCode} or null if the key binding is not for a key code.
+     * @return key code
      */
     public KeyCode getKeyCode() {
         if (key instanceof KeyCode c) {
@@ -230,7 +269,10 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
         return null;
     }
 
-    /** creates a builder */
+    /**
+     * Creates a {@link Builder}.
+     * @return the Builder instance
+     */
     public static Builder builder() {
         return new Builder();
     }
@@ -255,14 +297,29 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
         return false;
     }
 
+    /**
+     * Creates a Builder with a key pressed event.
+     * @param c key code
+     * @return Builder instance
+     */
     public static Builder with(KeyCode c) {
         return builder().with(c);
     }
 
+    /**
+     * Creates a Builder with a key released event.
+     * @param c key code
+     * @return Builder instance
+     */
     public static Builder withRelease(KeyCode c) {
         return builder().withRelease(c);
     }
 
+    /**
+     * Creates a Builder with a key pressed event.
+     * @param c character pressed
+     * @return Builder instance
+     */
     public static Builder with(String c) {
         return builder().with(c);
     }
@@ -270,6 +327,8 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
     /** 
      * Creates a KeyBinding from a KeyEvent.  This call drops multiple key modifiers, performing
      * translation when necessary.  May return null if the event does not correspond to a valid KeyBinding.
+     * @param ev key event
+     * @return the key binding
      */
     public static KeyBinding from(KeyEvent ev) {
         Object key;
@@ -391,6 +450,10 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
         return sb.toString();
     }
 
+    /**
+     * Returns the event type for this key binding.
+     * @return KeyEvent
+     */
 //    @Override
     public EventType<KeyEvent> getEventType() {
         if (isKeyPress()) {
@@ -414,9 +477,15 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
         private Object key; // KeyCode or String
         private final EnumSet<KCondition> m = EnumSet.noneOf(KCondition.class);
 
+        /** Constructs a Builder */
         public Builder() {
         }
 
+        /**
+         * Creates a Builder with key pressed event.
+         * @param c key code
+         * @return the Builder instance
+         */
         public Builder with(KeyCode c) {
             if (key != null) {
                 throw new IllegalArgumentException("only one KeyCode or character can be set");
@@ -425,6 +494,11 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
+        /**
+         * Creates a Builder with key released event.
+         * @param c key code
+         * @return the Builder instance
+         */
         public Builder withRelease(KeyCode c) {
             if (key != null) {
                 throw new IllegalArgumentException("only one KeyCode or character can be set");
@@ -434,6 +508,11 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
+        /**
+         * Creates a Builder with a key pressed event.
+         * @param c key character
+         * @return the Builder instance
+         */
         public Builder with(String c) {
             if (key != null) {
                 throw new IllegalArgumentException("only one KeyCode or character can be set");
@@ -442,11 +521,20 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
+        /**
+         * Sets {@code alt} key down condition.
+         * @return this Builder
+         */
         public Builder alt() {
             m.add(KCondition.ALT);
             return this;
         }
 
+        /**
+         * Sets {@code alt} key down condition.
+         * @param on condition
+         * @return this Builder
+         */
         public Builder alt(boolean on) {
             if (on) {
                 m.add(KCondition.ALT);
@@ -454,11 +542,20 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
+        /**
+         * Sets {@code command} key down condition.
+         * @return this Builder
+         */
         public Builder command() {
             m.add(KCondition.COMMAND);
             return this;
         }
 
+        /**
+         * Sets {@code command} key down condition.
+         * @param on condition
+         * @return this Builder
+         */
         public Builder command(boolean on) {
             if (on) {
                 m.add(KCondition.COMMAND);
@@ -466,23 +563,41 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
-        public Builder ctrl() {
+        /**
+         * Sets {@code control} key down condition.
+         * @return this Builder
+         */
+        public Builder control() {
             m.add(KCondition.CTRL);
             return this;
         }
 
-        public Builder ctrl(boolean on) {
+        /**
+         * Sets {@code control} key down condition.
+         * @param on condition
+         * @return this Builder
+         */
+        public Builder control(boolean on) {
             if (on) {
                 m.add(KCondition.CTRL);
             }
             return this;
         }
-        
+
+        /**
+         * Sets {@code meta} key down condition.
+         * @return this Builder
+         */
         public Builder meta() {
             m.add(KCondition.META);
             return this;
         }
 
+        /**
+         * Sets {@code meta} key down condition.
+         * @param on condition
+         * @return this Builder
+         */
         public Builder meta(boolean on) {
             if (on) {
                 m.add(KCondition.META);
@@ -490,11 +605,20 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
+        /**
+         * Sets {@code option} key down condition.
+         * @return this Builder
+         */
         public Builder option() {
             m.add(KCondition.OPTION);
             return this;
         }
 
+        /**
+         * Sets {@code option} key down condition.
+         * @param on condition
+         * @return this Builder
+         */
         public Builder option(boolean on) {
             if (on) {
                 m.add(KCondition.OPTION);
@@ -502,11 +626,20 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
+        /**
+         * Sets {@code shift} key down condition.
+         * @return this Builder
+         */
         public Builder shift() {
             m.add(KCondition.SHIFT);
             return this;
         }
 
+        /**
+         * Sets {@code shift} key down condition.
+         * @param on condition
+         * @return this Builder
+         */
         public Builder shift(boolean on) {
             if (on) {
                 m.add(KCondition.SHIFT);
@@ -514,36 +647,76 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             return this;
         }
 
+        /**
+         * Sets {@code shortcut} key down condition.
+         * @return this Builder
+         */
         public Builder shortcut() {
             m.add(KCondition.SHORTCUT);
             return this;
         }
 
+        /**
+         * Sets {@code shortcut} key down condition.
+         * @param on condition
+         * @return this Builder
+         */
+        public Builder shortcut(boolean on) {
+            if (on) {
+                m.add(KCondition.SHORTCUT);
+            }
+            return this;
+        }
+
+        /**
+         * Sets this key binding applicable to the macOS platform.
+         * @return this Builder
+         */
         public Builder forMac() {
             m.add(KCondition.FOR_MAC);
             return this;
         }
 
+        /**
+         * Sets this key binding applicable to any but the macOS platform.
+         * @return this Builder
+         */
         public Builder notForMac() {
             m.add(KCondition.NOT_FOR_MAC);
             return this;
         }
 
+        /**
+         * Sets this key binding applicable to the Windows platform.
+         * @return this Builder
+         */
         public Builder forWindows() {
             m.add(KCondition.FOR_WIN);
             return this;
         }
 
+        /**
+         * Sets this key binding applicable to any but the Windows platform.
+         * @return this Builder
+         */
         public Builder notForWindows() {
             m.add(KCondition.NOT_FOR_WIN);
             return this;
         }
 
+        /**
+         * Sets this key binding applicable to the Linux platform.
+         * @return this Builder
+         */
         public Builder forLinux() {
             m.add(KCondition.FOR_LINUX);
             return this;
         }
 
+        /**
+         * Sets this key binding applicable to any but the Linux platform.
+         * @return this Builder
+         */
         public Builder notForLinux() {
             m.add(KCondition.NOT_FOR_LINUX);
             return this;
@@ -564,6 +737,11 @@ public class KeyBinding /*implements EventCriteria<KeyEvent>*/ {
             }
         }
 
+        /**
+         * Creates a new {@link KeyBinding} instance, or null if the key binding is not applicable to this platform.
+         * @return a new key binding instance.
+         */
+        // TODO variant: KeyBinding.NA
         public KeyBinding build() {
             // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();

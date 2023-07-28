@@ -50,8 +50,8 @@ public class SelectionSegment {
 
     /**
      * Creates a new selection segment.
-     * @param anchor
-     * @param caret
+     * @param anchor anchor marker
+     * @param caret caret marker
      */
     public SelectionSegment(Marker anchor, Marker caret) {
         Objects.requireNonNull(anchor, "anchor cannot be null");
@@ -70,6 +70,7 @@ public class SelectionSegment {
 
     /**
      * Returns the selection anchor.
+     * @return the anchor position
      */
     public Marker getAnchor() {
         return caretAtMin ? max : min;
@@ -77,6 +78,7 @@ public class SelectionSegment {
 
     /**
      * Returns the caret position.
+     * @return the caret position
      */
     public Marker getCaret() {
         return caretAtMin ? min : max;
@@ -84,6 +86,7 @@ public class SelectionSegment {
 
     /**
      * Returns the marker which is closer to the start of the document.
+     * @return the text position
      */
     public Marker getMin() {
         return min;
@@ -91,6 +94,7 @@ public class SelectionSegment {
 
     /**
      * Returns the marker which is closer to the end of the document.
+     * @return the text position
      */
     public Marker getMax() {
         return max;

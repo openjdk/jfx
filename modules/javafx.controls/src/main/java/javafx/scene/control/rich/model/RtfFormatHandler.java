@@ -40,6 +40,7 @@ import com.sun.javafx.scene.control.rich.RtfStyledOutput;
  * This {@link DataFormatHandler} provides export/import support for RTF format.
  */
 public class RtfFormatHandler extends DataFormatHandler {
+    /** The constructor */
     public RtfFormatHandler() {
         super(DataFormat.RTF);
     }

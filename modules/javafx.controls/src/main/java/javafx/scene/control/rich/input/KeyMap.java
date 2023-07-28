@@ -72,12 +72,15 @@ public class KeyMap {
     private final HashMap<Object,Entry> map = new HashMap<>();
     private static final Object NULL = new Object();
 
+    /** The constructor. */
     public KeyMap() {
     }
 
     /**
      * Adds a user-specified function under the given function tag.
      * This function will override any function set by the skin.
+     * @param tag function tag
+     * @param function the function
      */
     public void func(FunctionTag tag, Runnable function) {
         Objects.requireNonNull(tag, "function tag must not be null");
@@ -89,9 +92,9 @@ public class KeyMap {
      * Maps a function to the function tag, for use by the skin.
      * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
      *
-     * @param skin
-     * @param tag
-     * @param function
+     * @param skin skin
+     * @param tag function tag
+     * @param function the function
      */
     public void func(Skin<?> skin, FunctionTag tag, Runnable function) {
         Objects.requireNonNull(skin, "skin must not be null");
@@ -104,8 +107,8 @@ public class KeyMap {
      * Link a key binding to the specified function tag.
      * This method will override a mapping set by the skin.
      *
-     * @param k
-     * @param tag
+     * @param k key binding
+     * @param tag function tag
      */
     public void key(KeyBinding k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
@@ -118,9 +121,9 @@ public class KeyMap {
      * A null key binding will result in no change to this input map.
      * This method will not override a user mapping added by {@link #key(KeyBinding,FunctionTag)}.
      *
-     * @param skin
-     * @param k key binding, can be null
-     * @param tag function tag
+     * @param skin the skin
+     * @param k the key binding, can be null
+     * @param tag the function tag
      */
     public void key(Skin<?> skin, KeyBinding k, FunctionTag tag) {
         if (k == null) {
@@ -135,7 +138,7 @@ public class KeyMap {
      * Maps a key binding to the specified function tag, for use by the skin.
      * This method will not override a user mapping added by {@link #key(KeyBinding,FunctionTag)}.
      * 
-     * @param skin
+     * @param skin the skin
      * @param code key code to construct a {@link KeyBinding}
      * @param tag function tag
      */
@@ -180,7 +183,8 @@ public class KeyMap {
     /**
      * Returns a {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
      *
-     * @param tag
+     * @param tag the function tag
+     * @return the mapped function, or null
      */
     public Runnable getFunction(FunctionTag tag) {
         Entry en = map.get(tag);
@@ -196,7 +200,8 @@ public class KeyMap {
     /**
      * Returns a {@code Runnable} mapped to the specified {@link KeyBinding}, or null if no such mapping exists.
      *
-     * @param k
+     * @param k the key binding
+     * @return the mapped function, or null
      */
     public Runnable getFunction(KeyBinding k) {
         Entry en = map.get(k);
@@ -212,7 +217,7 @@ public class KeyMap {
     /**
      * Removes all the mappings set by the skin.
      *
-     * @param skin
+     * @param skin the skin
      */
     public void unregister(Skin<?> skin) {
         Objects.nonNull(skin);
@@ -229,7 +234,7 @@ public class KeyMap {
     /**
      * Unbinds the specified key binding.
      *
-     * @param k
+     * @param k the key binding
      */
     public void unbind(KeyBinding k) {
         Entry en = map.get(k);
@@ -255,7 +260,7 @@ public class KeyMap {
     /**
      * Restores the specified key binding to the value set by the skin, if any.
      *
-     * @param k
+     * @param k the key binding
      */
     public void restoreDefaultBinding(KeyBinding k) {
         Entry en = map.get(k);
@@ -270,7 +275,7 @@ public class KeyMap {
     /**
      * Restores the specified function tag to the value set by the skin, if any.
      *
-     * @param tag
+     * @param tag the function tag
      */
     public void restoreDefaultFunction(FunctionTag tag) {
         Objects.requireNonNull(tag, "function tag must not be null");

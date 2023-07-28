@@ -384,7 +384,7 @@ public class VFlow extends Pane implements StyleResolver {
         }
         
         // current line highlight
-        if (control.isHighlightCurrentLine()) {
+        if (control.isHighlightCurrentParagraph()) {
             FxPathBuilder b = new FxPathBuilder();
             createCurrentLineHighlight(b, caret);
             caretLineHighlight.getElements().setAll(b.getPathElements());

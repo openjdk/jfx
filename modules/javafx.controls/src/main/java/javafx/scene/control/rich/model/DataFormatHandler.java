@@ -56,7 +56,7 @@ public abstract class DataFormatHandler {
      * @param start start text position
      * @param end end text position
      * @return an object to be placed to the Clipboard
-     * @throws IOException 
+     * @throws IOException when an I/O error occurs
      */
     // TODO throw UnsupportedMethodException if export operation is not supported?
     public abstract Object copy(StyledTextModel model, StyleResolver resolver, TextPos start, TextPos end)
@@ -75,7 +75,7 @@ public abstract class DataFormatHandler {
      * @param start start text position
      * @param end end text position
      * @param out target {@code OutputStream}
-     * @throws IOException
+     * @throws IOException when an I/O error occurs
      */
     // TODO throw UnsupportedMethodException if export operation is not supported?
     public abstract void save(
@@ -87,12 +87,17 @@ public abstract class DataFormatHandler {
 
     private final DataFormat format;
 
+    /**
+     * Creates a DataHandler instance for the specified format.
+     * @param f data format
+     */
     public DataFormatHandler(DataFormat f) {
         this.format = f;
     }
 
     /**
      * Returns the {@link DataFormat} associated with this handler.
+     * @return the data format
      */
     public final DataFormat getDataFormat() {
         return format;

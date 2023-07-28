@@ -62,7 +62,10 @@ public final class Marker implements Comparable<Marker> {
         return "Marker{" + getIndex() + "," + getOffset() + "}";
     }
 
-    /** This property tracks the marker's position within the model (value is always non-null). */
+    /**
+     * This property tracks the marker's position within the model (value is never null).
+     * @return the text position property
+     */
     public final ReadOnlyObjectProperty<TextPos> textPosProperty() {
         return pos.getReadOnlyProperty();
     }
@@ -99,6 +102,7 @@ public final class Marker implements Comparable<Marker> {
 
     /**
      * Returns the model paragraph index.
+     * @return paragraph index
      */
     public final int getIndex() {
         return getTextPos().index();
@@ -106,6 +110,7 @@ public final class Marker implements Comparable<Marker> {
 
     /**
      * Returns the insert offset within the paragraph.
+     * @return offset value
      */
     public final int getOffset() {
         return getTextPos().offset();

@@ -35,14 +35,14 @@ public interface StyledOutput {
     /**
      * Appends the next styled segment to the output.
      * 
-     * @param segment
-     * @throws IOException 
+     * @param segment the segment to output
+     * @throws IOException when an I/O error occurs
      */
     public void append(StyledSegment segment) throws IOException;
 
     /**
      * Flushes this output stream, if any, and forces any buffered output bytes to be written out. 
-     * @throws IOException
+     * @throws IOException when an I/O error occurs
      */
     public void flush() throws IOException;
 }

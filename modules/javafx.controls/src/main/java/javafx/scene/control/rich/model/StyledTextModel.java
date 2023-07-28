@@ -86,11 +86,15 @@ public abstract class StyledTextModel {
      * Indicates whether the model is editable.
      * <p>
      * When this method returns false, the model must silently ignore any modification attempts.
+     *
+     * @return true if the model is editable
      */
     public abstract boolean isEditable();
 
     /**
      * Returns the number of paragraphs in the model.
+     *
+     * @return number of paragraphs
      */
     public abstract int size();
 
@@ -100,11 +104,12 @@ public abstract class StyledTextModel {
      * The caller should never attempt to ask for a paragraph outside of the valid range.
      *
      * @param index paragraph index in the range (0...{@link #size()})
+     * @return paragraph text string or null
      */
     public abstract String getPlainText(int index);
 
     /**
-     * Creates a TextCell which provides a visual representation of the paragraph.
+     * Creates a {@link TextCell} which provides a visual representation of the paragraph.
      * This method must create new instance each time, in order to support multiple RichTextArea instances
      * connected to the same model.
      * <p>
@@ -112,6 +117,7 @@ public abstract class StyledTextModel {
      * so the model must not keep strong references to these nodes.
      *
      * @param index paragraph index in the range (0...{@link #size()})
+     * @return a new instance of TextCell created
      */
     public abstract TextCell createTextCell(int index);
     
@@ -126,14 +132,27 @@ public abstract class StyledTextModel {
 
     /**
      * This method is called to insert a single text segment at the given position.
-     * @return the character count of the inserted text
+     *
+     * @param resolver style resolver to use
+     * @param index paragraph index
+     * @param offset insertion offset within the paragraph
+     * @param text segment to insert
+     * @return the number of characters inserted
      */
     protected abstract int insertTextSegment(StyleResolver resolver, int index, int offset, StyledSegment text);
 
-    /** inserts a line break */
+    /**
+     * Inserts a line break.
+     * @param index model index
+     * @param offset text offset
+     */
     protected abstract void insertLineBreak(int index, int offset);
     
-    /** inserts a paragraph node */
+    /**
+     * Inserts a paragraph that contains a single {@link Node}.
+     * @param index model index
+     * @param generator code that will be used to create a Node instance
+     */
     protected abstract void insertParagraph(int index, Supplier<Node> generator);
     
     /**
@@ -143,8 +162,8 @@ public abstract class StyledTextModel {
      * @param index paragraph's model index
      * @param startOffset start offset
      * @param endOffset end offset (may exceed the paragraph text length)
-     * @param out
-     * @throws IOException 
+     * @param out receiving StyledOutput
+     * @throws IOException when an I/O error occurs
      */
     protected abstract void exportParagraph(int index, int startOffset, int endOffset, StyledOutput out) throws IOException;
     
@@ -162,6 +181,7 @@ public abstract class StyledTextModel {
      * Returns the {@link StyleInfo} of the first character at the specified position.
      * When at the end of the document, returns the attributes of the last character.
      *
+     * @param pos text position
      * @return non-null {@link StyleInfo}
      */
     public abstract StyleInfo getStyleInfo(TextPos pos);
@@ -188,12 +208,13 @@ public abstract class StyledTextModel {
     private final UndoableChange head = UndoableChange.createHead();
     private UndoableChange undo = head;
 
+    /** The constructor. */
     public StyledTextModel() {
     }
 
     /**
      * Adds a {@link ChangeListener} to this model.
-     * @param listener
+     * @param listener a non-null listener
      */
     public void addChangeListener(StyledTextModel.ChangeListener listener) {
         listeners.add(listener);
@@ -202,7 +223,7 @@ public abstract class StyledTextModel {
     /**
      * Removes a {@link ChangeListener} from this model.
      * This method does nothing if this listener has never been added.
-     * @param listener
+     * @param listener a non-null listener
      */
     public void removeChangeListener(StyledTextModel.ChangeListener listener) {
         listeners.remove(listener);
@@ -233,7 +254,7 @@ public abstract class StyledTextModel {
      *
      * @param h data format handler
      * @param forExport determines the class of operations this handler supports
-     * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}.
+     * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}
      */
     protected void registerDataFormatHandler(DataFormatHandler h, boolean forExport, int priority) {
         FHPriority p = new FHPriority(h, priority);
@@ -244,6 +265,7 @@ public abstract class StyledTextModel {
      * Returns an array of supported data formats for either export or import operations,
      * in the order of priority - from high to low.
      * @param forExport determines whether the operation is export (true) or import (false)
+     * @return supported formats
      */
     public DataFormat[] getSupportedDataFormats(boolean forExport) {
         ArrayList<FHPriority> fs = new ArrayList<>(handlers.size());
@@ -264,7 +286,8 @@ public abstract class StyledTextModel {
     /**
      * Returns a {@link DataFormatHandler} instance corresponding to the given {@link DataFormat}.
      * This method will return {@code null} if the data format is not supported.
-     * @param format
+     * @param format data format
+     * @param forExport for export (true) or for input (false)
      * @return DataFormatHandler or null
      */
     public DataFormatHandler getDataFormatHandler(DataFormat format, boolean forExport) {
@@ -315,7 +338,7 @@ public abstract class StyledTextModel {
      * @param start start of the range
      * @param end end of the range
      * @param out {@link StyledOutput} to receive the stream
-     * @throws IOException
+     * @throws IOException when an I/O error occurs
      */
     public void exportText(TextPos start, TextPos end, StyledOutput out) throws IOException {
         int cmp = start.compareTo(end);
@@ -363,6 +386,9 @@ public abstract class StyledTextModel {
 
     /**
      * Returns a {@link Marker} at the specified position.
+     *
+     * @param pos text position
+     * @return Marker instance
      */
     public Marker getMarker(TextPos pos) {
         TextPos p = clamp(pos);
@@ -372,6 +398,7 @@ public abstract class StyledTextModel {
     /**
      * Returns a text position guaranteed to be within the document and paragraph limits.
      * @param p text position, cannot be null
+     * @return text position
      */
     public TextPos clamp(TextPos p) {
         Objects.nonNull(p);
@@ -400,8 +427,13 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * exports plain text segments only 
-     * @throws IOException
+     * Convenience method exports plain text segments within a single paragraph.
+     *
+     * @param index paragraph index
+     * @param start start offset
+     * @param end end offset
+     * @param out receiving {@link StyledOutput}
+     * @throws IOException when an I/O error occurs
      */
     protected void exportPlaintextSegments(int index, int start, int end, StyledOutput out) throws IOException {
         String text = getPlainText(index);
@@ -410,7 +442,10 @@ public abstract class StyledTextModel {
         out.append(seg);
     }
 
-    /** Returns a TextPos corresponding to the end of the document */
+    /**
+     * Returns a TextPos corresponding to the end of the document.
+     * @return the text position
+     */
     public TextPos getEndTextPos() {
         int ix = size() - 1;
         if (ix < 0) {
@@ -420,7 +455,11 @@ public abstract class StyledTextModel {
         }
     }
 
-    /** Returns a TextPos corresponding to the end of paragraph at the given index */
+    /**
+     * Returns a TextPos corresponding to the end of paragraph at the given index.
+     * @param index the paragraph index
+     * @return the text position
+     */
     public TextPos getEndOfParagraphTextPos(int index) {
         String text = getPlainText(index);
         int off = (text == null ? 0 : text.length());
@@ -435,12 +474,12 @@ public abstract class StyledTextModel {
     /**
      * Replaces the given range with the provided plain text.
      *
-     * @param resolver
+     * @param resolver the StyleResolver to use
      * @param start start text position
      * @param end end text position
      * @param text text string to insert
      * @param createUndo when true, creates an undo-redo entry
-     * @return text position at the end of the inserted text, or null if the model is read only
+     * @return the text position at the end of the inserted text, or null if the model is read only
      */
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean createUndo) {
         if (isEditable()) {
@@ -452,18 +491,20 @@ public abstract class StyledTextModel {
     }
     
     /**
+     * <p>
      * Replaces the given range with the provided styled text input.
      * When inserting plain text, the style is taken from the preceding text segment, or, if the text is being
      * inserted in the beginning of the document, the style is taken from the following text segment.
+     * </p>
      * <p>
      * After the model applies the requested changes, an event is sent to all the registered ChangeListeners.
-     * <p>
-     * @param resolver
+     * </p>
+     * @param resolver the StyleResolver to use
      * @param start start text position
      * @param end end text position
      * @param input StyledInput
      * @param createUndo when true, creates an undo-redo entry
-     * @return text position at the end of the inserted text, or null if the model is read only
+     * @return the text position at the end of the inserted text, or null if the model is read only
      */
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean createUndo) {
         if (isEditable()) {
@@ -491,7 +532,7 @@ public abstract class StyledTextModel {
                     offset = 0;
                     btm = 0;
                     index++;
-                    Supplier<Node> gen = seg.getNodeGenerator();
+                    Supplier<Node> gen = seg.getParagraphNodeGenerator();
                     insertParagraph(index, gen);
                 } else if (seg.isText()) {
                     int len = insertTextSegment(resolver, index, offset, seg);
@@ -566,11 +607,21 @@ public abstract class StyledTextModel {
         undo = ch;
     }
 
-    /** return true if the model can undo the most recent change */
+    /**
+     * Returns true if the model can undo the most recent change.
+     * @return true if undoable
+     */
     public final boolean isUndoable() {
         return (undo != head);
     }
 
+    /**
+     * Undoes the recent change, if possible, returning an array comprising [start, end] text positions
+     * prior to the change.
+     * Returns null when the undo operation is not possible. 
+     * @param resolver the StyleResolver to use
+     * @return the [start, end] text positions prior to the change
+     */
     public final TextPos[] undo(StyleResolver resolver) {
         if (undo != head) {
             try {
@@ -586,11 +637,21 @@ public abstract class StyledTextModel {
         return null;
     }
 
-    /** return true if the model can redo a recently undone change */
+    /**
+     * Returns true if the model can redo the most recent change.
+     * @return true if redoable
+     */
     public final boolean isRedoable() {
         return (undo.getNext() != null);
     }
 
+    /**
+     * Redoes the recent change, if possible, returning an array comprising [start, end] text positions
+     * prior to the change.
+     * Returns null when the redo operation is not possible. 
+     * @param resolver the StyleResolver to use
+     * @return the [start, end] text positions prior to the change
+     */
     public final TextPos[] redo(StyleResolver resolver) {
         if (undo.getNext() != null) {
             try {

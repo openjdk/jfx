@@ -50,8 +50,8 @@ public interface StyleResolver {
 
     /**
      * Creates a snapshot of the specified Node.
-     * @param node
-     * @return snapshot
+     * @param node the {@link Node} to make a snapshot of
+     * @return snapshot the generated {@link WritableImage}
      */
     public WritableImage snapshot(Node node);
 }

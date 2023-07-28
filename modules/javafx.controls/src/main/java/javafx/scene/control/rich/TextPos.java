@@ -32,12 +32,20 @@ package javafx.scene.control.rich;
  * For that, use {@link Marker}. 
  */
 public final class TextPos implements Comparable<TextPos> {
+    /** A text position at the start of the document. */
     public static final TextPos ZERO = new TextPos(0, 0, 0, true);
     private final int index;
     private final int offset;
     private final int charIndex;
     private final boolean leading;
 
+    /**
+     * Creates a new text position.
+     * @param index the paragraph index
+     * @param offset the text offset
+     * @param charIndex the character index
+     * @param leading true if leading
+     */
     public TextPos(int index, int offset, int charIndex, boolean leading) {
         if (index < 0) {
             throw new IllegalArgumentException("index cannot be negative");
@@ -52,26 +60,43 @@ public final class TextPos implements Comparable<TextPos> {
         this.leading = leading;
     }
 
+    /**
+     * Constructs a new text position.
+     * @param index the paragraph index
+     * @param offset the text offset
+     */
     public TextPos(int index, int offset) {
         this(index, offset, offset, true);
     }
 
-    /** returns the model paragraph index */
+    /**
+     * Returns the model paragraph index.
+     * @return the paragraph index
+     */
     public int index() {
         return index;
     }
 
-    /** returns the offset into the plain text string (insertion index) */
+    /**
+     * Returns the offset into the plain text string (insertion index).
+     * @return the offset
+     */
     public int offset() {
         return offset;
     }
 
-    /** returns the character index index */
+    /**
+     * Returns the character index.
+     * @return the character index
+     */
     public int charIndex() {
         return charIndex;
     }
 
-    /** returns whether the text position is leading or trailing */
+    /**
+     * Determines whether the text position is leading or trailing.
+     * @return true if leading text position
+     */
     public boolean isLeading() {
         return leading;
     }
@@ -129,7 +154,11 @@ public final class TextPos implements Comparable<TextPos> {
             "}";
     }
 
-    /** returns true if the specified insertion point is the same. */
+    /**
+     * Returns true if the specified insertion point is the same.
+     * @param p text position
+     * @return true if same insertion index
+     */
     public boolean isSameInsertionIndex(TextPos p) {
         // added this method in case we need to add leading/trailing flag
         // semantics of this test is the insertion points are the same.

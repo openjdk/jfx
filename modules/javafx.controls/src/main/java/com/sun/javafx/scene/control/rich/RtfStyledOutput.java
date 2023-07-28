@@ -178,7 +178,7 @@ public class RtfStyledOutput implements StyledOutput {
         } else if (seg.isText()) {
             writeTextSegment(seg);
         } else if (seg.isParagraph()) {
-            Node n = seg.getNodeGenerator().get();
+            Node n = seg.getParagraphNodeGenerator().get();
             writeParagraph(n);
             writeNewLine();
         }

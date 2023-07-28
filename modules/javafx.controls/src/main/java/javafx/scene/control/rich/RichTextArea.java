@@ -174,7 +174,7 @@ public class RichTextArea extends Control {
     private ObjectProperty<SideDecorator> rightDecorator;
     private ObjectProperty<Insets> contentPadding;
     private DoubleProperty lineSpacing;
-    private BooleanProperty highlightCurrentLine;
+    private BooleanProperty highlightCurrentParagraph;
     private BooleanProperty useContentWidth;
     private BooleanProperty useContentHeight;
 
@@ -217,6 +217,7 @@ public class RichTextArea extends Control {
      * Returns the KeyMap associated with this instance.
      * <p>
      * TODO this should be moved to Control.getInputMap()
+     * @return the key map
      */
     // TODO move to Control
     public final KeyMap getKeyMap() {
@@ -246,6 +247,7 @@ public class RichTextArea extends Control {
     /**
      * Determines the {@link StyledTextModel} to use with this RichTextArea.
      * The model can be null.
+     * @return the model property
      */
     public final ObjectProperty<StyledTextModel> modelProperty() {
         return model;
@@ -336,9 +338,12 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Indicates whether text should be wrapped in this RichTextArea.
      * If a run of text exceeds the width of the {@code RichTextArea},
      * then this variable indicates whether the text should wrap onto
      * another line.
+     * Setting this property to {@code true} has a side effect of hiding the horizontal scroll bar.
+     * @defaultValue false
      */
     private StyleableBooleanProperty wrapText = new StyleableBooleanProperty(false) {
         @Override
@@ -357,10 +362,6 @@ public class RichTextArea extends Control {
         }
     };
 
-    /**
-     * Indicates whether text should be wrapped in this RichTextArea.
-     * Setting this property to {@code true} has a side effect of hiding the horizontal scroll bar.
-     */
     public final BooleanProperty wrapTextProperty() {
         return wrapText;
     }
@@ -376,6 +377,7 @@ public class RichTextArea extends Control {
     /**
      * This property controls whether caret will be displayed or not.
      * TODO StyleableProperty ?
+     * @return the display caret property
      */
     public final BooleanProperty displayCaretProperty() {
         return displayCaretProperty;
@@ -391,6 +393,7 @@ public class RichTextArea extends Control {
 
     /**
      * Indicates whether this RichTextArea can be edited by the user.
+     * @return the editable property
      */
     public final BooleanProperty editableProperty() {
         if (editableProperty == null) {
@@ -413,23 +416,24 @@ public class RichTextArea extends Control {
     /**
      * Indicates whether the current paragraph will be visually highlighted.
      * TODO StyleableProperty ?
+     * @return the highlight current paragraph property
      */
-    public final BooleanProperty highlightCurrentLineProperty() {
-        if (highlightCurrentLine == null) {
-            highlightCurrentLine = new SimpleBooleanProperty(this, "highlightCurrentLine", true);
+    public final BooleanProperty highlightCurrentParagraphProperty() {
+        if (highlightCurrentParagraph == null) {
+            highlightCurrentParagraph = new SimpleBooleanProperty(this, "highlightCurrentParagraph", true);
         }
-        return highlightCurrentLine;
+        return highlightCurrentParagraph;
     }
 
-    public final boolean isHighlightCurrentLine() {
-        if (highlightCurrentLine == null) {
+    public final boolean isHighlightCurrentParagraph() {
+        if (highlightCurrentParagraph == null) {
             return true;
         }
-        return highlightCurrentLine.get();
+        return highlightCurrentParagraph.get();
     }
     
-    public final void setHighlightCurrentLine(boolean on) {
-        highlightCurrentLineProperty().set(on);
+    public final void setHighlightCurrentParagraph(boolean on) {
+        highlightCurrentParagraphProperty().set(on);
     }
 
     @Override
@@ -546,6 +550,12 @@ public class RichTextArea extends Control {
         return RichTextAreaSkinHelper.getVFlow(getSkin());
     }
 
+    /**
+     * Finds a text position corresponding to the specified screen coordinates.
+     * @param screenX screen x coordinate
+     * @param screenY screen y coordinate
+     * @return the TextPosition
+     */
     public TextPos getTextPosition(double screenX, double screenY) {
         Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
         return vflow().getTextPosLocal(local.getX(), local.getY());
@@ -553,6 +563,7 @@ public class RichTextArea extends Control {
 
     /**
      * Determines the caret blink rate.
+     * @return the caret blunk period property
      */
     public final ReadOnlyObjectProperty<Duration> caretBlinkPeriodProperty() {
         return caretBlinkPeriod.getReadOnlyProperty();
@@ -591,6 +602,8 @@ public class RichTextArea extends Control {
      * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
      * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
      * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
+     *
+     * @return the caret position property
      */
     public final ReadOnlyProperty<TextPos> caretPositionProperty() {
         return selectionModel.caretPositionProperty();
@@ -612,13 +625,17 @@ public class RichTextArea extends Control {
      * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
      * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
      * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
+     *
+     * @return the anchor position property
      */
     public final ReadOnlyProperty<TextPos> anchorPositionProperty() {
         return selectionModel.anchorPositionProperty();
     }
 
     /**
-     * Tracks the current selection segment position.  Can be null.
+     * Tracks the current selection segment position.
+     * The value can be null.
+     * @return the selection segment property
      */
     public final ReadOnlyProperty<SelectionSegment> selectionSegmentProperty() {
         return selectionModel.selectionSegmentProperty();
@@ -631,7 +648,10 @@ public class RichTextArea extends Control {
         selectionModel.clear();
     }
 
-    /** Moves the caret to the specified position, clearing the selection */
+    /**
+     * Moves the caret to the specified position, clearing the selection.
+     * @param pos the text position
+     */
     public void select(TextPos pos) {
         StyledTextModel model = getModel();
         if (model != null) {
@@ -640,7 +660,11 @@ public class RichTextArea extends Control {
         }
     }
 
-    /** Selects the specified range */
+    /**
+     * Selects the specified range and places the caret at the new position.
+     * @param anchor the new selection anchor position
+     * @param caret the new caret position
+     */
     public void select(TextPos anchor, TextPos caret) {
         StyledTextModel model = getModel();
         if (model != null) {
@@ -650,7 +674,10 @@ public class RichTextArea extends Control {
         }
     }
     
-    /** Extends selection from the existing anchor to the new position. */
+    /**
+     * Extends selection from the existing anchor to the new position.
+     * @param pos the text position
+     */
     public void extendSelection(TextPos pos) {
         StyledTextModel model = getModel();
         if (model != null) {
@@ -661,6 +688,7 @@ public class RichTextArea extends Control {
 
     /**
      * Returns the number of paragraphs in the model.  If model is null, returns 0.
+     * @return the paragraph count
      */
     public int getParagraphCount() {
         StyledTextModel m = getModel();
@@ -670,6 +698,7 @@ public class RichTextArea extends Control {
     /**
      * Returns the plain text at the specified paragraph index.
      * @param modelIndex paragraph index
+     * @return plain text string, or null
      * @throws IllegalArgumentException if the modelIndex is outside of the range supported by the model
      */
     public String getPlainText(int modelIndex) {
@@ -720,6 +749,7 @@ public class RichTextArea extends Control {
      * When set to true, the horizontal scroll bar is disabled.
      *
      * @defaultValue false
+     * @return the use content width property
      */
     public final BooleanProperty useContentWidthProperty() {
         if (useContentWidth == null) {
@@ -741,6 +771,7 @@ public class RichTextArea extends Control {
      * When set to true, the vertical scroll bar is disabled.
      *
      * @defaultValue false
+     * @return the use content height property
      */
     public final BooleanProperty useContentHeightProperty() {
         if (useContentHeight == null) {
@@ -793,7 +824,7 @@ public class RichTextArea extends Control {
     /**
      * Copies the text in the specified format when selection exists and when the export in this format
      * is supported by the model, and the skin must be installed; otherwise, this method is a no-op.
-     * @param format
+     * @param format the data format to use
      */
     public void copy(DataFormat format) {
         RichTextAreaSkin skin = richTextAreaSkin();
@@ -983,7 +1014,7 @@ public class RichTextArea extends Control {
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * The format must be supported by the model, and the skin must be installed,
      * otherwise this method has no effect.
-     * @param format
+     * @param format the data format to use
      */
     public void paste(DataFormat format) {
         RichTextAreaSkin skin = richTextAreaSkin();
@@ -1159,11 +1190,19 @@ public class RichTextArea extends Control {
         execute(UNDO);
     }
     
+    /**
+     * Determines whether the last edit operation is undoable.
+     * @return true if undoable
+     */
     public boolean isUndoable() {
         StyledTextModel m = getModel();
         return m == null ? false : m.isUndoable();
     }
-    
+
+    /**
+     * Determines whether the last edit operation is redoable.
+     * @return true if redoable
+     */
     public boolean isRedoable() {
         StyledTextModel m = getModel();
         return m == null ? false : m.isRedoable();
@@ -1171,8 +1210,7 @@ public class RichTextArea extends Control {
 
     /**
      * Returns true if a non-empty selection exists.
-     * <p>
-     * This method has additional benefit: it can return true only when the model is not null.
+     * @return true if selection exists
      */
     public boolean hasNonEmptySelection() {
         TextPos ca = getCaretPosition();
@@ -1201,6 +1239,7 @@ public class RichTextArea extends Control {
     /**
      * Returns true if this control's {@link #isEditable()} returns true and the model's
      * {@link StyledTextModel#isEditable()} also returns true.
+     * @return true if model is not null and is editable
      */
     protected boolean canEdit() {
         if (isEditable()) {
@@ -1260,20 +1299,31 @@ public class RichTextArea extends Control {
         return null;
     }
 
-    /** Returns a TextPos corresponding to the end of the document */
+    /**
+     * Returns a TextPos corresponding to the end of the document.
+     *
+     * @return the text position
+     */
     public TextPos getEndTextPos() {
         StyledTextModel m = getModel();
         return (m == null) ? TextPos.ZERO : m.getEndTextPos();
     }
 
-    /** Returns a TextPos corresponding to the end of paragraph */
+    /**
+     * Returns a TextPos corresponding to the end of paragraph.
+     *
+     * @param index paragraph index
+     * @return text position
+     */
     public TextPos getEndOfParagraph(int index) {
         StyledTextModel m = getModel();
         return (m == null) ? TextPos.ZERO : m.getEndOfParagraphTextPos(index);
     }
 
     /**
-     * Specifies the left-side paragraph decorator.  Can be null.
+     * Specifies the left-side paragraph decorator.
+     * The value can be null.
+     * @return the left decorator property
      */
     public final ObjectProperty<SideDecorator> leftDecoratorProperty() {
         if (leftDecorator == null) {
@@ -1294,7 +1344,9 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Specifies the right-side paragraph decorator.  Can be null.
+     * Specifies the right-side paragraph decorator.
+     * The value can be null.
+     * @return the right decorator property
      */
     public final ObjectProperty<SideDecorator> rightDecoratorProperty() {
         if (rightDecorator == null) {
@@ -1315,7 +1367,9 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Specifies the padding for the RichTextArea content.  Can be null.
+     * Specifies the padding for the RichTextArea content.
+     * The value an be null.
+     * @return the content padding property
      */
     public final ObjectProperty<Insets> contentPaddingProperty() {
         if (contentPadding == null) {
@@ -1340,6 +1394,7 @@ public class RichTextArea extends Control {
 
     /**
      * Determines the spacing between text lines, in pixels.
+     * @return the line spacing property
      */
     public final DoubleProperty lineSpacingProperty() {
         if (lineSpacing == null) {

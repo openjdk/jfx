@@ -29,7 +29,8 @@ package javafx.scene.control.rich.input;
  * A public handle for a function in the context of InputMap.
  */
 public final class FunctionTag {
-    // TODO Phil: maybe include tag name for the sake of debugging and toString()
+    // TODO from Phil: maybe include tag name for the sake of debugging and toString()
+    /** Constructor */
     public FunctionTag() {
     }
 }

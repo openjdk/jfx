@@ -47,12 +47,15 @@ public interface SelectionModel {
 
     /**
      * Replaced existing selection, if any, with the new one.
+     * @param anchor anchor position
+     * @param caret caret position
      */
     public void setSelection(Marker anchor, Marker caret);
 
     /**
      * Replaces the existing selection, if any, with a new one
      * from the anchor to the specified position.
+     * @param pos the new caret position
      */
     public void extendSelection(Marker pos);
     
@@ -64,6 +67,8 @@ public interface SelectionModel {
      * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
      * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
      * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
+     *
+     * @return the caret position property
      */
     public ReadOnlyProperty<TextPos> caretPositionProperty();
     
@@ -75,16 +80,20 @@ public interface SelectionModel {
      * However, it is possible to read one null value and one non-null value in a listener.  To lessen the impact,
      * the caretProperty is updated last, so any listener monitoring the caret property would read the right anchor
      * value.  A listener monitoring the anchorProperty might see erroneous value for the caret, so keep that in mind.
+     *
+     * @return the anchor position property
      */
     public ReadOnlyProperty<TextPos> anchorPositionProperty();
 
     /**
      * Selection segment property.  The value can be null.
+     * @return the selection segment property
      */
     public ReadOnlyProperty<SelectionSegment> selectionSegmentProperty();
 
     /**
      * Returns the current selection segment, or null.
+     * @return current selection segment, or null
      */
     public SelectionSegment getSelectionSegment();
 }

@@ -96,7 +96,7 @@ public final class TextCell {
 
     /**
      * Creates a text cell with the specified {@code Region} as its content.
-     * @param index
+     * @param index paragraph index
      * @param content non-null content
      */
     public TextCell(int index, Region content) {
@@ -108,7 +108,7 @@ public final class TextCell {
 
     /**
      * Creates a text cell with {@link TextFlow} as its content.
-     * @param index
+     * @param index paragraph index
      */
     public TextCell(int index) {
         this(index, new TextFlow());
@@ -116,6 +116,7 @@ public final class TextCell {
 
     /**
      * Returns the content of this cell.
+     * @return the content Region
      */
     public final Region getContent() {
         return content;
@@ -148,7 +149,7 @@ public final class TextCell {
      * Adds a text segment with no styling (i.e. using default style).
      * This method is an alias for {@code addSegment(text, null, null)}.
      *
-     * @param text
+     * @param text segment text
      * @return {@link Text} node added
      */
     public Text addSegment(String text) {
@@ -160,6 +161,7 @@ public final class TextCell {
     /**
      * Adds an inline node to a {@link TextFlow}-based text cell.
      *
+     * @param <T> actual Node type
      * @param node node to add
      * @return added {@code Node}
      */
@@ -178,6 +180,7 @@ public final class TextCell {
 
     /**
      * Returns the length of text in this cell.  A cell containing a non-text content will return 0.
+     * @return the text length
      */
     public int getTextLength() {
         if (content instanceof TextFlow f) {

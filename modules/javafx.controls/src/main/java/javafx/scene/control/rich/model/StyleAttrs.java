@@ -123,8 +123,9 @@ public class StyleAttrs {
 
     /**
      * Convenience method creates an instance with a single attribute.
-     * @param attribute
-     * @param value
+     * @param attribute the attribute
+     * @param value the attribute value
+     * @return a new instance of StyleAttrs
      */
     public static StyleAttrs of(StyleAttribute attribute, Object value) {
         return new Builder().set(attribute, value).create();
@@ -148,6 +149,7 @@ public class StyleAttrs {
 
     /**
      * Returns {@code true} if this instance contains no attributes.
+     * @return true is no attributes are present
      */
     public boolean isEmpty() {
         return attributes.isEmpty();
@@ -162,12 +164,17 @@ public class StyleAttrs {
         return attributes.get(a);
     }
 
+    /**
+     * Returns the set of attributes.
+     * @return attribute set
+     */
     public Set<StyleAttribute> getAttributes() {
         return new HashSet<>(attributes.keySet());
     }
 
     /**
      * Converts the attributes into a single direct style string and returns the resulting (can be null).
+     * @return the style string
      */
     public String getStyle() {
         if (style == null) {
@@ -192,6 +199,8 @@ public class StyleAttrs {
     /** 
      * Creates a new StyleAttrs instance by first copying attrirutes from this instance,
      * then adding (and/or overwriting) the attributes from the specified instance.
+     * @param attrs the attributes to combine
+     * @return a new instance combining the attributes
      */
     public StyleAttrs combine(StyleAttrs attrs) {
         return 
@@ -205,7 +214,8 @@ public class StyleAttrs {
      * Returns true if the specified attribute has a boolean value of {@code Boolean.TRUE},
      * false otherwise.
      *
-     * @param a attribute
+     * @param a the attribute
+     * @return true if the attribute value is {@code Boolean.TRUE}
      */
     public boolean getBoolean(StyleAttribute a) {
         Object v = attributes.get(a);
@@ -234,6 +244,7 @@ public class StyleAttrs {
 
     /**
      * This convenience method returns the value of {@link #TEXT_COLOR} attribute, or null.
+     * @return the text color attribute value
      */
     public final Color getTextColor() {
         return (Color)get(TEXT_COLOR);
@@ -242,6 +253,7 @@ public class StyleAttrs {
     /**
      * This convenience method returns true if the value of {@link #BOLD} attribute is {@code Boolean.TRUE},
      * false otherwise.
+     * @return the bold attribute value
      */
     public final boolean isBold() {
         return getBoolean(BOLD);
@@ -250,6 +262,7 @@ public class StyleAttrs {
     /**
      * This convenience method returns true if the value of {@link #ITALIC} attribute is {@code Boolean.TRUE},
      * false otherwise.
+     * @return the italic attribute value
      */
     public final boolean isItalic() {
         return getBoolean(ITALIC);
@@ -258,6 +271,7 @@ public class StyleAttrs {
     /**
      * This convenience method returns true if the value of {@link #UNDERLINE} attribute is {@code Boolean.TRUE},
      * false otherwise.
+     * @return the underline attribute value
      */
     public final boolean isUnderline() {
         return getBoolean(UNDERLINE);
@@ -266,6 +280,7 @@ public class StyleAttrs {
     /**
      * This convenience method returns true if the value of {@link #STRIKE_THROUGH} attribute is {@code Boolean.TRUE},
      * false otherwise.
+     * @return the strike through attribute value
      */
     public final boolean isStrikeThrough() {
         return getBoolean(STRIKE_THROUGH);
@@ -274,6 +289,7 @@ public class StyleAttrs {
     /**
      * This convenience method returns true if the value of {@link #FONT_SIZE} attribute is {@code Boolean.TRUE},
      * false otherwise.
+     * @return the font size
      */
     public final Integer getFontSize() {
         return (Integer)get(FONT_SIZE);
@@ -282,15 +298,20 @@ public class StyleAttrs {
     /**
      * This convenience method returns true if the value of {@link #FONT_FAMILY} attribute is {@code Boolean.TRUE},
      * false otherwise.
+     * @return the font family name
      */
     public final String getFontFamily() {
         return (String)get(FONT_FAMILY);
     }
 
-    /** Creates a style attributes instance from a Text node. */
-    public static StyleAttrs from(Text t) {
+    /**
+     * Creates a style attributes instance from a Text node.
+     * @param textNode the text node
+     * @return a StyleAttrs instance
+     */
+    public static StyleAttrs from(Text textNode) {
         StyleAttrs.Builder b = StyleAttrs.builder();
-        Font f = t.getFont();
+        Font f = textNode.getFont();
         String st = f.getStyle().toLowerCase(Locale.US);
         boolean bold = st.contains("bold");
         boolean italic = st.contains("italic"); // oblique? any other names?
@@ -303,11 +324,11 @@ public class StyleAttrs {
             b.set(ITALIC, true);
         }
 
-        if (t.isStrikethrough()) {
+        if (textNode.isStrikethrough()) {
             b.set(STRIKE_THROUGH, true);
         }
 
-        if (t.isUnderline()) {
+        if (textNode.isUnderline()) {
             b.set(UNDERLINE, true);
         }
 
@@ -321,7 +342,7 @@ public class StyleAttrs {
             b.set(FONT_SIZE, size);
         }
 
-        Paint x = t.getFill();
+        Paint x = textNode.getFill();
         if (x instanceof Color c) {
             // we do not support gradients (although we could get the first color, for example)
             b.set(TEXT_COLOR, c);
@@ -330,6 +351,10 @@ public class StyleAttrs {
         return b.create();
     }
 
+    /**
+     * Creates a new Builder instance.
+     * @return the new instance
+     */
     public static Builder builder() {
         return new Builder();
     }
@@ -340,15 +365,20 @@ public class StyleAttrs {
 
         private Builder() {
         }
-        
+
+        /**
+         * Creates an immutable instance of {@link StyleAttrs}.
+         * @return the new instance
+         */
         public StyleAttrs create() {
             return new StyleAttrs(attributes);
         }
         
         /**
          * Sets a boolean attribute.
-         * @param a attribute
-         * @param value
+         * @param a the attribute
+         * @param value the attribute value
+         * @return a new Builder instance
          */
         public Builder set(StyleAttribute a, boolean value) {
             return set(a, Boolean.valueOf(value));
@@ -359,8 +389,9 @@ public class StyleAttrs {
          * This method will throw an {@code IllegalArgumentException} if the value cannot be cast to the
          * type specified by the attribute.
          *
-         * @param a attribute
-         * @param value
+         * @param a the attribute
+         * @param value the attribute value
+         * @return a new Builder instance
          */
         public Builder set(StyleAttribute a, Object value) {
             if (value == null) {
@@ -376,6 +407,8 @@ public class StyleAttrs {
         /** 
          * Merges the specified attributes with the attributes in this instance.
          * The new values override any existing ones.
+         * @param attrs the attributes to merge
+         * @return a new Builder instance
          */
         public Builder merge(StyleAttrs attrs) {
             for (StyleAttribute a : attrs.attributes.keySet()) {

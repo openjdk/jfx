@@ -46,22 +46,26 @@ import javafx.scene.control.rich.StyleResolver;
 public abstract class StyledSegment {
     /**
      * Returns true if this segment is a text segment.
+     * @return true for a text segment
      */
     public boolean isText() { return false; }
 
     /**
      * Returns true if this segment is a paragraph which contains a single Node.
+     * @return true for a paragraph segment
      */
     public boolean isParagraph() { return false; }
 
     /**
      * Returns true if this segment is a line break.
+     * @return true for a line break segment
      */
     public boolean isLineBreak() { return false; }
 
     /**
      * Returns true if this segment represents an inline Node.
      * TODO not yet supported due to https://bugs.openjdk.org/browse/JDK-8305001
+     * @return true for an inline node segment
      */
     public boolean isInlineNode() { return false; }
 
@@ -69,6 +73,7 @@ public abstract class StyledSegment {
      * Returns the text associated with this segment.
      * Must be one character for inline nodes, must be null for node paragraphs.
      * TODO can it be null for text segments?
+     * @return the segment plain text
      */
     public String getText() { return null; }
 
@@ -76,8 +81,9 @@ public abstract class StyledSegment {
      * This method must return a non-null value when {@link isParagraph()} is true, 
      * or null in any other case.
      * TODO inline node?
+     * @return code that creates a Node instance, or null
      */
-    public Supplier<Node> getNodeGenerator() { return null; }
+    public Supplier<Node> getParagraphNodeGenerator() { return null; }
 
     /**
      * This method returns StyleAttrs (or null) for this segment.
@@ -85,6 +91,8 @@ public abstract class StyledSegment {
      * may be used to convert the style names to the attributes.
      * Keep in mind that different views might have different CSS styles applied and as a result a different
      * set of attributes might be produced for the same segment.
+     * @param resolver the style resolver to use
+     * @return style attributes
      */
     public StyleAttrs getStyleAttrs(StyleResolver resolver) { return null; }
 
@@ -107,6 +115,9 @@ public abstract class StyledSegment {
     /** 
      * Creates a StyleSegment from a non-null text and non-null attributes.
      * Important: text must not contain any characters &lt; 0x20, except for TAB.
+     * @param text the segment text
+     * @param si the segment style info object
+     * @return a new StyledSegment instance
      */
     public static StyledSegment of(String text, StyleInfo si) {
         return new StyledSegment() {
@@ -135,6 +146,8 @@ public abstract class StyledSegment {
     /** 
      * Creates a StyleSegment from a non-null plain text.
      * Important: text must not contain any characters &lt; 0x20, except for TAB.
+     * @param text the segment text
+     * @return a new StyledSegment instance
      */
     public static StyledSegment of(String text) {
         return of(text, StyleInfo.NONE);
@@ -143,8 +156,12 @@ public abstract class StyledSegment {
     /**
      * Creates a StyleSegment from a non-null plain text and style attributes.
      * Important: text must not contain any characters &lt; 0x20, except for TAB.
+     *
+     * @param text the segment text
+     * @param attrs the segment style attributes
+     * @return a new StyledSegment instance
      */
-    public static StyledSegment of(String text, StyleAttrs a) {
+    public static StyledSegment of(String text, StyleAttrs attrs) {
         return new StyledSegment() {
             @Override
             public boolean isText() {
@@ -158,13 +175,12 @@ public abstract class StyledSegment {
             
             @Override
             public StyleAttrs getStyleAttrs(StyleResolver r) {
-                // TODO must be immutable
-                return a;
+                return attrs;
             }
             
             @Override
             public String toString() {
-                return "StyledSegment{text=" + getText() + ", attrs=" + a + "}";
+                return "StyledSegment{text=" + getText() + ", attrs=" + attrs + "}";
             }
         };
     }
@@ -224,6 +240,8 @@ public abstract class StyledSegment {
 
     /**
      * Creates a StyledSegment which consists of a single inline Node.
+     * @param generator the code to create a Node instance
+     * @return a new StyledSegment instance
      */
     public static StyledSegment inlineNode(Supplier<Node> generator) {
         return new StyledSegment() {
@@ -238,7 +256,7 @@ public abstract class StyledSegment {
             }
 
             @Override
-            public Supplier<Node> getNodeGenerator() {
+            public Supplier<Node> getParagraphNodeGenerator() {
                 return generator;
             }
         };
@@ -246,6 +264,8 @@ public abstract class StyledSegment {
     
     /**
      * Creates a StyledSegment for a paragraph that contains a Node.
+     * @param generator the code to create a Node instance
+     * @return a new StyledSegment instance
      */
     public static StyledSegment nodeParagraph(Supplier<Node> generator) {
         return new StyledSegment() {
@@ -255,7 +275,7 @@ public abstract class StyledSegment {
             }
 
             @Override
-            public Supplier<Node> getNodeGenerator() {
+            public Supplier<Node> getParagraphNodeGenerator() {
                 return generator;
             }
         };

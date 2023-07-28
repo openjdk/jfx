@@ -57,6 +57,7 @@ public final class CaretInfo {
      * @param dx translation x offset
      * @param dy translation y offset
      * @param path caret path
+     * @return CaretInfo instance
      */
     public static CaretInfo create(double dx, double dy, PathElement[] path) {
         Objects.requireNonNull(path);
@@ -120,6 +121,7 @@ public final class CaretInfo {
 
     /**
      * Returns the smallest x coordinate of the caret shape bounding box.
+     * @return minimum x coordinate
      */
     public final double getMinX() {
         return xmin;
@@ -127,6 +129,7 @@ public final class CaretInfo {
 
     /**
      * Returns the largest x coordinate of the caret shape bounding box.
+     * @return maximum x coordinate
      */
     public final double getMaxX() {
         return xmax;
@@ -134,6 +137,7 @@ public final class CaretInfo {
 
     /**
      * Returns the smallest y coordinate of the caret shape bounding box.
+     * @return minimum y coordinate
      */
     public final double getMinY() {
         return ymin;
@@ -141,12 +145,17 @@ public final class CaretInfo {
 
     /**
      * Returns the largest y coordinate of the caret shape bounding box.
+     * @return maximum y coordinate
      */
     public final double getMaxY() {
         return ymax;
     }
 
-    /** returns the caret path in vflow coordinates */
+    /**
+     * Returns the caret path in the visual flow coordinates.
+     *
+     * @return array of path elements
+     */
     public final PathElement[] path() {
         return path;
     }
@@ -154,7 +163,9 @@ public final class CaretInfo {
     /**
      * Returns true if the specified y coordinate is between the smallest and largest y coordinate of the
      * caret bounding box.
-     * @param y
+     *
+     * @param y y coordinate
+     * @return true if the coordinate is within the caret bounding box
      */
     public final boolean containsY(double y) {
         return (y >= ymin) && (y < ymax);

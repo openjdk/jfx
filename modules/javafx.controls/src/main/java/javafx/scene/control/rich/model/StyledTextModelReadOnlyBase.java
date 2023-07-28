@@ -35,6 +35,7 @@ import javafx.scene.control.rich.TextPos;
  * A base class for read-only {@link StyledTextModel}s.
  */
 public abstract class StyledTextModelReadOnlyBase extends StyledTextModel {
+    /** The constructor. */
     public StyledTextModelReadOnlyBase() {
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }

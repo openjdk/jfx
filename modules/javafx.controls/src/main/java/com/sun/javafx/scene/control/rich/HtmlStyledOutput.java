@@ -43,7 +43,7 @@ import javafx.scene.paint.Color;
  * A {@link StyledOutput} which generates HTML output.
  */
 public class HtmlStyledOutput implements StyledOutput {
-    // a synthetic attrbiute used only in Key
+    // a synthetic attribute used only in Key
     private static final StyleAttribute STRIKE_THROUGH_AND_UNDERLINE = 
         new StyleAttribute("STRIKE_THROUGH_AND_UNDERLINE", Key.class) {
         @Override
@@ -81,10 +81,10 @@ public class HtmlStyledOutput implements StyledOutput {
                 wr.write("</span>");
             }
         } else if (seg.isInlineNode()) {
-            Node n = seg.getNodeGenerator().get();
+            Node n = seg.getParagraphNodeGenerator().get();
             writeInlineNode(n);
         } else if (seg.isParagraph()) {
-            Node n = seg.getNodeGenerator().get();
+            Node n = seg.getParagraphNodeGenerator().get();
             writeParagraph(n);
         }
     }

@@ -44,6 +44,9 @@ import com.sun.javafx.util.Utils;
  * TODO to be moved to javafx.scene  or  javafx.scene.control
  */
 public class Util {
+    private Util() {
+    }
+
     /**
      * Combines CssMetaData items in one unmodifiable list with the size equal to the number
      * of items it holds (i.e. with no unnecessary overhead).
@@ -68,6 +71,11 @@ public class Util {
     /**
      * Simple utility function which clamps the given value to be strictly
      * between the min and max values.
+     *
+     * @param min minimum allowed value
+     * @param value value to check against min,max
+     * @param max maximum allowed value
+     * @return value guaranteed to be in the range of [min .. max] (inclusive)
      */
     // see com.sun.javafx.util.Utils:77
     public static int clamp(int min, int value, int max) {
@@ -79,6 +87,12 @@ public class Util {
         return value;
     }
 
+    /**
+     * Determines the {@link Screen} for the given screen coordinates.
+     * @param x the screen x coordinate
+     * @param y the screen y coordinate
+     * @return the Screen instance
+     */
     // com.sun.javafx.util.Utils:769
     public static Screen getScreenForPoint(double x, double y) {
         ObservableList<Screen> screens = Screen.getScreens();
@@ -139,6 +153,7 @@ public class Util {
         beep();
     }
 
+    /** Emits a short audible alert, if supported by the platform. */
     public static void beep() {
         // TODO not supported in FX
     }
@@ -148,7 +163,7 @@ public class Util {
      *
      * @param im source image
      * @return byte array containing PNG image
-     * @throws IOException
+     * @throws IOException if an I/O error occurs
      */
     public static byte[] writePNG(Image im) throws IOException {
         // TODO move it here and fix the exports

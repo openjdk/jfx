@@ -47,6 +47,9 @@ public class BasePlainTextModel extends StyledTextModel {
     private final ArrayList<String> paragraphs = new ArrayList<>();
     private final SimpleBooleanProperty editable = new SimpleBooleanProperty(true);
 
+    /**
+     * Constructs an empty model.
+     */
     public BasePlainTextModel() {
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }
@@ -82,6 +85,10 @@ public class BasePlainTextModel extends StyledTextModel {
         editable.set(on);
     }
 
+    /**
+     * Determines whether the model is editable.
+     * @return the editable property
+     */
     public BooleanProperty editableProperty() {
         return editable;
     }

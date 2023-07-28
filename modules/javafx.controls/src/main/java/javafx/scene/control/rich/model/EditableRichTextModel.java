@@ -48,7 +48,10 @@ public class EditableRichTextModel extends StyledTextModel {
     public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text-model");
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     private final HashMap<StyleAttrs,StyleAttrs> styleCache = new HashMap<>();
-    
+
+    /**
+     * Creates an empty model.
+     */
     public EditableRichTextModel() {
         paragraphs.add(new RParagraph());
 
@@ -202,34 +205,34 @@ public class EditableRichTextModel extends StyledTextModel {
         private String text;
         private StyleAttrs attrs;
         
-        public RSegment(String text, StyleAttrs attrs) {
+        private RSegment(String text, StyleAttrs attrs) {
             this.text = text;
             this.attrs = attrs;
         }
         
-        public String text() {
+        private String text() {
             return text;
         }
         
-        public StyleAttrs attrs() {
+        private StyleAttrs attrs() {
             return attrs;
         }
         
-        public void setAttrs(StyleAttrs a) {
+        private void setAttrs(StyleAttrs a) {
             attrs = a;
         }
         
-        public StyleInfo getStyleInfo() {
+        private StyleInfo getStyleInfo() {
             return StyleInfo.of(attrs);
         }
         
-        public int length() {
+        private int length() {
             return text.length();
         }
 
         /** returns true if this segment becomes empty as a result */
         // TODO unit test
-        public boolean removeRegion(int start, int end) {
+        private boolean removeRegion(int start, int end) {
             int len = text.length();
             if (end > len) {
                 end = len;
@@ -252,11 +255,11 @@ public class EditableRichTextModel extends StyledTextModel {
             return (text.length() == 0);
         }
 
-        public void append(String s) {
+        private void append(String s) {
             text = text + s;
         }
 
-        public StyledSegment createStyledSegment(int start, int end) {
+        private StyledSegment createStyledSegment(int start, int end) {
             String s;
             if ((start == 0) && (end == text.length())) {
                 s = text;
@@ -271,7 +274,11 @@ public class EditableRichTextModel extends StyledTextModel {
      * Model paragraph is a list of RSegments.
      */
     protected static class RParagraph extends ArrayList<RSegment> {
-        public String getPlainText() {
+        /** Creates an instance */
+        private RParagraph() {
+        }
+
+        private String getPlainText() {
             StringBuilder sb = new StringBuilder();
             for(RSegment s: this) {
                 sb.append(s.text());
@@ -279,12 +286,16 @@ public class EditableRichTextModel extends StyledTextModel {
             return sb.toString();
         }
 
-        public int length() {
+        private int length() {
             return getPlainText().length();
         }
 
-        /** retrieves the style info from the previous character (or next, if at the beginning) */
-        public StyleInfo getStyleInfo(int offset) {
+        /**
+         * Retrieves the style info from the previous character (or next, if at the beginning).
+         * @param offset the offset
+         * @return the style info
+         */
+        private StyleInfo getStyleInfo(int offset) {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
@@ -298,7 +309,14 @@ public class EditableRichTextModel extends StyledTextModel {
             return StyleInfo.NONE;
         }
 
-        public void export(int start, int end, StyledOutput out) throws IOException {
+        /**
+         * Exports the text range in this paragraph. 
+         * @param start the start of the range
+         * @param end the end of the range
+         * @param out the receiving StyledOutput
+         * @throws IOException when an I/O error occurs
+         */
+        private void export(int start, int end, StyledOutput out) throws IOException {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
@@ -318,7 +336,13 @@ public class EditableRichTextModel extends StyledTextModel {
             }
         }
 
-        public void insertText(int offset, String text, StyleAttrs attrs) {
+        /**
+         * Inserts styled text at the specified offset.
+         * @param offset the insertion offset
+         * @param text the plain text
+         * @param attrs the style attributes
+         */
+        private void insertText(int offset, String text, StyleAttrs attrs) {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
@@ -358,6 +382,10 @@ public class EditableRichTextModel extends StyledTextModel {
         /**
          * Inserts a new segment, or appends to the previous segment if style is the same.
          * Returns true if a segment has been added.
+         * @param ix the offset
+         * @param text the plain text
+         * @param a the style attributes
+         * @return true if a segment has been added.
          */
         private boolean insert(int ix, String text, StyleAttrs a) {
             if (ix > 0) {
@@ -378,8 +406,12 @@ public class EditableRichTextModel extends StyledTextModel {
             return true;
         }
 
-        /** trims this paragraph and returns the remainder to be inserted next */
-        public RParagraph insertLineBreak(int offset) {
+        /**
+         * Trims this paragraph and returns the remaining text to be inserted after the line break.
+         * @param offset the offset
+         * @return the remaining portion of paragraph
+         */
+        private RParagraph insertLineBreak(int offset) {
             int off = 0;
             // FIX styles!
             // problem: has no segments to store style info, initially.
@@ -417,11 +449,15 @@ public class EditableRichTextModel extends StyledTextModel {
             return next;
         }
 
-        public void append(RParagraph p) {
+        /**
+         * Appends the specified paragraph.
+         * @param p paragraph to append
+         */
+        private void append(RParagraph p) {
             addAll(p);
         }
 
-        public void removeRegion(int start, int end) {
+        private void removeRegion(int start, int end) {
             int ix0 = -1;
             int off0 = 0;
             int off = 0;
@@ -492,7 +528,7 @@ public class EditableRichTextModel extends StyledTextModel {
             }
         }
 
-        public void applyStyle(int start, int end, StyleAttrs attrs, Function<StyleAttrs,StyleAttrs> dedup) {
+        private void applyStyle(int start, int end, StyleAttrs attrs, Function<StyleAttrs,StyleAttrs> dedup) {
             int off = 0;
             int i = 0;
             for ( ; i < size(); i++) {
