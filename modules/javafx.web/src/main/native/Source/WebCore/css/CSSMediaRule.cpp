@@ -25,6 +25,7 @@
 
 #include "CSSStyleSheet.h"
 #include "MediaList.h"
+#include "MediaQueryParser.h"
 #include "StyleRule.h"
 #include <wtf/text/StringBuilder.h>
 
@@ -38,40 +39,39 @@ CSSMediaRule::CSSMediaRule(StyleRuleMedia& mediaRule, CSSStyleSheet* parent)
 CSSMediaRule::~CSSMediaRule()
 {
     if (m_mediaCSSOMWrapper)
-        m_mediaCSSOMWrapper->clearParentRule();
+        m_mediaCSSOMWrapper->detachFromParent();
 }
 
-MediaQuerySet& CSSMediaRule::mediaQueries() const
+const MQ::MediaQueryList& CSSMediaRule::mediaQueries() const
 {
     return downcast<StyleRuleMedia>(groupRule()).mediaQueries();
 }
 
+void CSSMediaRule::setMediaQueries(MQ::MediaQueryList&& queries)
+{
+    downcast<StyleRuleMedia>(groupRule()).setMediaQueries(WTFMove(queries));
+}
+
 String CSSMediaRule::cssText() const
 {
-    StringBuilder result;
-    result.append("@media ", conditionText(), " {\n");
-    appendCSSTextForItems(result);
-    result.append('}');
-    return result.toString();
+    StringBuilder builder;
+    builder.append("@media ", conditionText());
+    appendCSSTextForItems(builder);
+    return builder.toString();
 }
 
 String CSSMediaRule::conditionText() const
 {
-    return mediaQueries().mediaText();
+    StringBuilder builder;
+    MQ::serialize(builder, mediaQueries());
+    return builder.toString();
 }
 
 MediaList* CSSMediaRule::media() const
 {
     if (!m_mediaCSSOMWrapper)
-        m_mediaCSSOMWrapper = MediaList::create(&mediaQueries(), const_cast<CSSMediaRule*>(this));
+        m_mediaCSSOMWrapper = MediaList::create(const_cast<CSSMediaRule*>(this));
     return m_mediaCSSOMWrapper.get();
-}
-
-void CSSMediaRule::reattach(StyleRuleBase& rule)
-{
-    CSSConditionRule::reattach(rule);
-    if (m_mediaCSSOMWrapper)
-        m_mediaCSSOMWrapper->reattach(&mediaQueries());
 }
 
 } // namespace WebCore

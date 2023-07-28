@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,6 +54,8 @@ class CommandBuffer;
 class CommandEncoder;
 enum class CompareFunction : uint8_t;
 enum class CompilationMessageType : uint8_t;
+class CompositorIntegration;
+class CompositorIntegrationImpl;
 enum class ComputePassTimestampLocation : uint8_t;
 class ComputePassEncoder;
 class ComputePipeline;
@@ -66,8 +68,10 @@ enum class FrontFace : uint8_t;
 class GPU;
 enum class IndexFormat : uint8_t;
 enum class LoadOp : uint8_t;
+enum class MipmapFilterMode : uint8_t;
 class PipelineLayout;
-enum class PowerPreference : uint8_t;
+enum class PowerPreference : bool;
+class PresentationContext;
 enum class PrimitiveTopology : uint8_t;
 class QuerySet;
 enum class QueryType : uint8_t;
@@ -109,6 +113,7 @@ public:
     WGPUErrorFilter convertToBacking(ErrorFilter);
     WGPUFeatureName convertToBacking(FeatureName);
     WGPUFilterMode convertToBacking(FilterMode);
+    WGPUMipmapFilterMode convertToBacking(MipmapFilterMode);
     WGPUFrontFace convertToBacking(FrontFace);
     WGPUIndexFormat convertToBacking(IndexFormat);
     WGPULoadOp convertToBacking(LoadOp);
@@ -145,6 +150,7 @@ public:
     virtual WGPUBuffer convertToBacking(const Buffer&) = 0;
     virtual WGPUCommandBuffer convertToBacking(const CommandBuffer&) = 0;
     virtual WGPUCommandEncoder convertToBacking(const CommandEncoder&) = 0;
+    virtual CompositorIntegrationImpl& convertToBacking(CompositorIntegration&) = 0;
     virtual WGPUComputePassEncoder convertToBacking(const ComputePassEncoder&) = 0;
     virtual WGPUComputePipeline convertToBacking(const ComputePipeline&) = 0;
     virtual WGPUDevice convertToBacking(const Device&) = 0;
@@ -158,6 +164,7 @@ public:
     virtual WGPURenderPipeline convertToBacking(const RenderPipeline&) = 0;
     virtual WGPUSampler convertToBacking(const Sampler&) = 0;
     virtual WGPUShaderModule convertToBacking(const ShaderModule&) = 0;
+    virtual WGPUSurface convertToBacking(const PresentationContext&) = 0;
     virtual WGPUTexture convertToBacking(const Texture&) = 0;
     virtual WGPUTextureView convertToBacking(const TextureView&) = 0;
 };

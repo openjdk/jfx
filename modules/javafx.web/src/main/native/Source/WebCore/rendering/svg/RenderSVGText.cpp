@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
@@ -196,7 +196,7 @@ static inline void checkLayoutAttributesConsistency(RenderSVGText* text, Vector<
 #ifndef NDEBUG
     Vector<SVGTextLayoutAttributes*> newLayoutAttributes;
     collectLayoutAttributes(text, newLayoutAttributes);
-    ASSERT(newLayoutAttributes == expectedLayoutAttributes);
+    ASSERT_UNUSED(expectedLayoutAttributes, newLayoutAttributes == expectedLayoutAttributes);
 #else
     UNUSED_PARAM(text);
     UNUSED_PARAM(expectedLayoutAttributes);
@@ -256,9 +256,8 @@ void RenderSVGText::subtreeChildWasRemoved(const Vector<SVGTextLayoutAttributes*
         m_layoutAttributesBuilder.buildLayoutAttributesForTextRenderer(affectedAttributes[i]->context());
 }
 
-void RenderSVGText::subtreeStyleDidChange(RenderSVGInlineText* text)
+void RenderSVGText::willLayout()
 {
-    ASSERT(text);
     if (!shouldHandleSubtreeMutations() || renderTreeBeingDestroyed())
         return;
 
@@ -266,7 +265,7 @@ void RenderSVGText::subtreeStyleDidChange(RenderSVGInlineText* text)
 
     // Only update the metrics cache, but not the text positioning element cache
     // nor the layout attributes cached in the leaf #text renderers.
-    for (RenderObject* descendant = text; descendant; descendant = descendant->nextInPreOrder(text)) {
+    for (RenderObject* descendant = firstChild(); descendant; descendant = descendant->nextInPreOrder(this)) {
         if (is<RenderSVGInlineText>(*descendant))
             m_layoutAttributesBuilder.rebuildMetricsForTextRenderer(downcast<RenderSVGInlineText>(*descendant));
     }
@@ -322,19 +321,23 @@ void RenderSVGText::layout()
 
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
+
+    willLayout();
+
     LayoutRepainter repainter(*this, isLayerBasedSVGEngineEnabled() ? checkForRepaintDuringLayout() : SVGRenderSupport::checkForSVGRepaintDuringLayout(*this));
 
     // FIXME: [LBSE] Upstream SVGLengthContext changes
     // textElement().updateLengthContext();
 
     bool updateCachedBoundariesInParents = false;
-    if (!isLayerBasedSVGEngineEnabled()) {
-        if (m_needsTransformUpdate) {
+    auto previousReferenceBoxRect = transformReferenceBoxRect();
+
+    // We update the transform now because updateScaledFont() needs it, but we do it a second time at the end of the layout,
+    // since the transform reference box may change because of the font change.
+    if (!isLayerBasedSVGEngineEnabled() && m_needsTransformUpdate) {
             m_localTransform = textElement().animatedLocalTransform();
-            m_needsTransformUpdate = false;
             updateCachedBoundariesInParents = true;
         }
-    }
 
     if (!everHadLayout()) {
         // When laying out initially, collect all layout attributes, build the character data map,
@@ -419,8 +422,15 @@ void RenderSVGText::layout()
     if (isLayerBasedSVGEngineEnabled()) {
         updateLayerTransform();
         updateCachedBoundariesInParents = false; // No longer needed for LBSE.
-    } else if (!updateCachedBoundariesInParents)
+    } else {
+        if (m_needsTransformUpdate) {
+            if (previousReferenceBoxRect != transformReferenceBoxRect())
+                m_localTransform = textElement().animatedLocalTransform();
+            m_needsTransformUpdate = false;
+        }
+        if (!updateCachedBoundariesInParents)
         updateCachedBoundariesInParents = oldBoundaries != objectBoundingBox();
+    }
 
     // Invalidate all resources of this client if our layout changed.
     if (layoutChanged)
@@ -484,6 +494,12 @@ bool RenderSVGText::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
 
     return false;
 }
+
+void RenderSVGText::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+{
+    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+    applySVGTransform(transform, textElement(), style, boundingBox, std::nullopt, std::nullopt, options);
+}
 #endif
 
 VisiblePosition RenderSVGText::positionForPoint(const LayoutPoint& pointInContents, const RenderFragmentContainer* fragment)
@@ -504,23 +520,11 @@ VisiblePosition RenderSVGText::positionForPoint(const LayoutPoint& pointInConten
 
 void RenderSVGText::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (paintInfo.context().paintingDisabled())
-        return;
-
-    if (paintInfo.phase != PaintPhase::ClippingMask && paintInfo.phase != PaintPhase::Mask && paintInfo.phase != PaintPhase::Foreground && paintInfo.phase != PaintPhase::Outline && paintInfo.phase != PaintPhase::SelfOutline)
-        return;
-
-    if (!paintInfo.shouldPaintWithinRoot(*this))
-        return;
-
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled()) {
-        if (style().visibility() == Visibility::Hidden || style().display() == DisplayType::None)
+        OptionSet<PaintPhase> relevantPaintPhases { PaintPhase::Foreground, PaintPhase::ClippingMask, PaintPhase::Mask, PaintPhase::Outline, PaintPhase::SelfOutline };
+        if (!shouldPaintSVGRenderer(paintInfo, relevantPaintPhases))
             return;
-
-        // FIXME: [LBSE] Upstream SVGRenderSupport changes
-        // if (!SVGRenderSupport::shouldPaintHiddenRenderer(*this))
-        //     return;
 
         if (paintInfo.phase == PaintPhase::ClippingMask) {
             // FIXME: [LBSE] Upstream SVGRenderSupport changes
@@ -540,6 +544,7 @@ void RenderSVGText::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
             return;
         }
 
+        ASSERT(paintInfo.phase == PaintPhase::Foreground);
         GraphicsContextStateSaver stateSaver(paintInfo.context());
 
         auto coordinateSystemOriginTranslation = adjustedPaintOffset - nominalSVGLayoutLocation();
@@ -551,6 +556,15 @@ void RenderSVGText::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 #else
     UNUSED_PARAM(paintOffset);
 #endif
+
+    if (paintInfo.context().paintingDisabled())
+        return;
+
+    if (paintInfo.phase != PaintPhase::ClippingMask && paintInfo.phase != PaintPhase::Mask && paintInfo.phase != PaintPhase::Foreground && paintInfo.phase != PaintPhase::Outline && paintInfo.phase != PaintPhase::SelfOutline)
+        return;
+
+    if (!paintInfo.shouldPaintWithinRoot(*this))
+        return;
 
     PaintInfo blockInfo(paintInfo);
     GraphicsContextStateSaver stateSaver(blockInfo.context());

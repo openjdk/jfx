@@ -38,6 +38,7 @@ enum class HysteresisState {
 };
 
 class HysteresisActivity {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit HysteresisActivity(Function<void(HysteresisState)>&& callback = [](HysteresisState) { }, Seconds hysteresisSeconds = defaultHysteresisDuration)
         : m_callback(WTFMove(callback))
@@ -91,7 +92,7 @@ private:
     Function<void(HysteresisState)> m_callback;
     Seconds m_hysteresisSeconds;
     bool m_active;
-    RunLoop::Timer<HysteresisActivity> m_timer;
+    RunLoop::Timer m_timer;
 };
 
 } // namespace PAL

@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "ClientOrigin.h"
 #include "Document.h"
+#include "FocusOptions.h"
 #include "FrameDestructionObserverInlines.h"
 #include "MediaProducer.h"
 #include "SecurityOrigin.h"
@@ -59,7 +61,9 @@ inline AXObjectCache* Document::existingAXObjectCache() const
 
 inline Ref<Document> Document::create(const Settings& settings, const URL& url)
 {
-    return adoptRef(*new Document(nullptr, settings, url));
+    auto document = adoptRef(*new Document(nullptr, settings, url));
+    document->addToContextsMap();
+    return document;
 }
 
 inline void Document::invalidateAccessKeyCache()
@@ -77,6 +81,8 @@ inline bool Document::hasMutationObserversOfType(MutationObserverOptionType type
 {
     return m_mutationObserverTypes.containsAny(type);
 }
+
+inline ClientOrigin Document::clientOrigin() const { return { topOrigin().data(), securityOrigin().data() }; }
 
 inline bool Document::isSameOriginAsTopDocument() const { return securityOrigin().isSameOriginAs(topOrigin()); }
 
@@ -114,5 +120,8 @@ inline WebCoreOpaqueRoot Node::opaqueRoot() const
         return WebCoreOpaqueRoot { &document() };
     return traverseToOpaqueRoot();
 }
+
+inline bool Document::wasLastFocusByClick() const { return m_latestFocusTrigger == FocusTrigger::Click; }
+
 
 } // namespace WebCore

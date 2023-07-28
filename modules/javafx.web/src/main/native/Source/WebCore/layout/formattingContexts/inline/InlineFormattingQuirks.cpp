@@ -26,8 +26,6 @@
 #include "config.h"
 #include "InlineFormattingQuirks.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineFormattingContext.h"
 #include "LayoutBoxGeometry.h"
 
@@ -39,18 +37,44 @@ InlineFormattingQuirks::InlineFormattingQuirks(const InlineFormattingContext& in
 {
 }
 
+bool InlineFormattingQuirks::shouldPreserveTrailingWhitespace(bool isInIntrinsicWidthMode, bool lineHasBidiContent, bool lineHasOverflow, bool lineEndWithLineBreak) const
+{
+    // Legacy line layout quirk: keep the trailing whitespace around when it is followed by a line break, unless the content overflows the line.
+    // This quirk however should not be applied when running intrinsic width computation.
+    // FIXME: webkit.org/b/233261
+    if (isInIntrinsicWidthMode || !layoutState().isInlineFormattingContextIntegration())
+        return false;
+    if (lineHasBidiContent)
+        return false;
+    if (lineHasOverflow)
+        return false;
+
+    auto isTextAlignRight = [&] {
+        auto textAlign = formattingContext().root().style().textAlign();
+        return textAlign == TextAlignMode::Right
+            || textAlign == TextAlignMode::WebKitRight
+            || textAlign == TextAlignMode::End;
+    };
+    return lineEndWithLineBreak && !isTextAlignRight();
+}
+
+bool InlineFormattingQuirks::trailingNonBreakingSpaceNeedsAdjustment(bool isInIntrinsicWidthMode, bool lineHasOverflow) const
+{
+    if (isInIntrinsicWidthMode || !lineHasOverflow)
+        return false;
+    auto& rootStyle = formattingContext().root().style();
+    auto whiteSpace = rootStyle.whiteSpace();
+    return rootStyle.nbspMode() == NBSPMode::Space && (whiteSpace == WhiteSpace::Normal || whiteSpace == WhiteSpace::PreWrap || whiteSpace == WhiteSpace::PreLine);
+}
+
 InlineLayoutUnit InlineFormattingQuirks::initialLineHeight() const
 {
     ASSERT(!layoutState().inStandardsMode());
-    // Negative lineHeight value means the line-height is not set
-    auto& rootStyle = formattingContext().root().style();
-    return rootStyle.lineHeight().isNegative() ? rootStyle.metricsOfPrimaryFont().floatHeight() : rootStyle.computedLineHeight();
+    return 0.f;
 }
 
-bool InlineFormattingQuirks::inlineLevelBoxAffectsLineBox(const InlineLevelBox& inlineLevelBox, const LineBox& lineBox) const
+bool InlineFormattingQuirks::lineBreakBoxAffectsParentInlineBox(const LineBox& lineBox)
 {
-    ASSERT(!layoutState().inStandardsMode());
-    if (inlineLevelBox.isLineBreakBox()) {
         // In quirks mode linebreak boxes (<br>) stop affecting the line box when (assume <br> is nested e.g. <span style="font-size: 100px"><br></span>)
         // 1. the root inline box has content <div>content<br>/div>
         // 2. there's at least one atomic inline level box on the line e.g <div><img><br></div> or <div><span><img></span><br></div>
@@ -70,8 +94,12 @@ bool InlineFormattingQuirks::inlineLevelBoxAffectsLineBox(const InlineLevelBox& 
                 return false;
         }
         return true;
-    }
-    if (inlineLevelBox.isInlineBox()) {
+}
+
+bool InlineFormattingQuirks::inlineBoxAffectsLineBox(const InlineLevelBox& inlineLevelBox) const
+{
+    ASSERT(!layoutState().inStandardsMode());
+    ASSERT(inlineLevelBox.isInlineBox());
         // Inline boxes (e.g. root inline box or <span>) affects line boxes either through the strut or actual content.
         if (inlineLevelBox.hasContent())
             return true;
@@ -91,18 +119,23 @@ bool InlineFormattingQuirks::inlineLevelBoxAffectsLineBox(const InlineLevelBox& 
             return true;
         }
         return false;
-    }
-    ASSERT_NOT_REACHED();
-    return false;
 }
 
-bool InlineFormattingQuirks::hasSoftWrapOpportunityAtImage() const
+std::optional<LayoutUnit> InlineFormattingQuirks::initialLetterAlignmentOffset(const Box& floatBox, const RenderStyle& lineBoxStyle) const
 {
-    ASSERT(layoutState().inQuirksMode());
-    return !formattingContext().root().isTableCell();
+    ASSERT(floatBox.isFloatingPositioned());
+    if (!floatBox.style().lineBoxContain().contains(LineBoxContain::InitialLetter))
+        return { };
+    auto& primaryFontMetrics = lineBoxStyle.fontCascade().metricsOfPrimaryFont();
+    auto lineHeight = [&]() -> InlineLayoutUnit {
+        if (lineBoxStyle.lineHeight().isNegative())
+            return primaryFontMetrics.ascent() + primaryFontMetrics.descent();
+        return lineBoxStyle.computedLineHeight();
+    };
+    auto& floatBoxGeometry = formattingContext().geometryForBox(floatBox);
+    return LayoutUnit { primaryFontMetrics.ascent() + (lineHeight() - primaryFontMetrics.height()) / 2 - primaryFontMetrics.capHeight() - floatBoxGeometry.marginBorderAndPaddingBefore() };
 }
 
 }
 }
 
-#endif

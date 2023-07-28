@@ -27,12 +27,10 @@
 #include "CSSNumericArray.h"
 
 #include "ExceptionOr.h"
+#include <wtf/FixedVector.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
-
-#if ENABLE(CSS_TYPED_OM)
-
-#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
@@ -72,5 +70,3 @@ void CSSNumericArray::forEach(Function<void(const CSSNumericValue&, bool first)>
 }
 
 } // namespace WebCore
-
-#endif

@@ -30,6 +30,7 @@
 #include "FloatRect.h"
 #include "InlinePathData.h"
 #include "WindRule.h"
+#include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
@@ -69,8 +70,19 @@ using PlatformPathStorageType = PlatformPathPtr;
 #endif
 #endif
 
+namespace WebCore {
+enum class PathElementType : uint8_t {
+    MoveToPoint, // The points member will contain 1 value.
+    AddLineToPoint, // The points member will contain 1 value.
+    AddQuadCurveToPoint, // The points member will contain 2 values.
+    AddCurveToPoint, // The points member will contain 3 values.
+    CloseSubpath // The points member will contain no values.
+};
+}
+
 namespace WTF {
 class TextStream;
+template<> bool isValidEnum<WebCore::PathElementType, void>(uint8_t);
 }
 
 namespace WebCore {
@@ -87,19 +99,45 @@ class RoundedRect;
 // add... method. For example, a line returns the endpoint, while a cubic returns
 // two tangent points and the endpoint.
 struct PathElement {
-    enum class Type : uint8_t {
-        MoveToPoint, // The points member will contain 1 value.
-        AddLineToPoint, // The points member will contain 1 value.
-        AddQuadCurveToPoint, // The points member will contain 2 values.
-        AddCurveToPoint, // The points member will contain 3 values.
-        CloseSubpath // The points member will contain no values.
-    };
+    using Type = PathElementType;
 
     FloatPoint points[3];
     Type type;
 };
 
 using PathApplierFunction = Function<void(const PathElement&)>;
+
+class EncodedPathElementType {
+public:
+    EncodedPathElementType()
+        : m_type(std::nullopt)
+    {
+    }
+
+    EncodedPathElementType(PathElement::Type type)
+        : m_type(type)
+    {
+        ASSERT(isValidPathElementType());
+    }
+
+    EncodedPathElementType(std::optional<PathElement::Type>&& type)
+        : m_type(WTFMove(type))
+    {
+    }
+
+    bool isEndOfPath() const { return !m_type.has_value(); }
+    bool isValidPathElementType() const { return m_type.has_value(); }
+
+    PathElement::Type type() const
+    {
+        ASSERT(isValidPathElementType());
+        return *m_type;
+    }
+
+private:
+    friend struct IPC::ArgumentCoder<EncodedPathElementType, void>;
+    std::optional<PathElement::Type> m_type;
+};
 
 class Path {
     WTF_MAKE_FAST_ALLOCATED;
@@ -285,10 +323,8 @@ template<class Encoder> void Path::encode(Encoder& encoder) const
     }
 #endif
 
-    encoder << static_cast<uint64_t>(elementCount());
-
     apply([&](auto& element) {
-        encoder << element.type;
+        encoder << EncodedPathElementType(element.type);
 
         switch (element.type) {
         case PathElement::Type::MoveToPoint:
@@ -310,6 +346,8 @@ template<class Encoder> void Path::encode(Encoder& encoder) const
             break;
         }
     });
+
+    encoder << EncodedPathElementType();
 }
 
 template<class Decoder> std::optional<Path> Path::decode(Decoder& decoder)
@@ -329,18 +367,17 @@ template<class Decoder> std::optional<Path> Path::decode(Decoder& decoder)
     }
 #endif
 
-    uint64_t numPoints;
-    if (!decoder.decode(numPoints))
-        return std::nullopt;
-
     path.clear();
 
-    for (uint64_t i = 0; i < numPoints; ++i) {
-        PathElement::Type elementType;
+    while (true) {
+        EncodedPathElementType elementType;
         if (!decoder.decode(elementType))
             return std::nullopt;
 
-        switch (elementType) {
+        if (elementType.isEndOfPath())
+            break;
+
+        switch (elementType.type()) {
         case PathElement::Type::MoveToPoint: {
             FloatPoint point;
             if (!decoder.decode(point))
@@ -417,18 +454,3 @@ inline bool Path::hasInlineData() const
 #endif
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PathElement::Type> {
-    using values = EnumValues<
-        WebCore::PathElement::Type,
-        WebCore::PathElement::Type::MoveToPoint,
-        WebCore::PathElement::Type::AddLineToPoint,
-        WebCore::PathElement::Type::AddQuadCurveToPoint,
-        WebCore::PathElement::Type::AddCurveToPoint,
-        WebCore::PathElement::Type::CloseSubpath
-    >;
-};
-
-} // namespace WTF

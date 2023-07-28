@@ -39,6 +39,7 @@
 #include "WasmCallee.h"
 #include "WasmLLIntGenerator.h"
 #include "WasmTypeDefinitionInlines.h"
+#include <wtf/GraphNodeWorklist.h>
 
 namespace JSC { namespace Wasm {
 
@@ -97,6 +98,14 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
         return;
     }
 
+    Locker locker { m_lock };
+
+    for (auto successor : parseAndCompileResult->get()->tailCallSuccessors())
+        addTailCallEdge(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex(), successor);
+
+    if (parseAndCompileResult->get()->tailCallClobbersInstance())
+        m_moduleInformation->addClobberingTailCall(m_moduleInformation->importFunctionCount() + parseAndCompileResult->get()->functionIndex());
+
     m_wasmInternalFunctions[functionIndex] = WTFMove(*parseAndCompileResult);
 }
 
@@ -116,14 +125,12 @@ void LLIntPlan::didCompleteCompilation()
                 BytecodeDumper::dumpBlock(m_wasmInternalFunctions[i].get(), m_moduleInformation, WTF::dataFile());
 
             m_calleesVector[i] = LLIntCallee::create(*m_wasmInternalFunctions[i], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
+            ASSERT(!m_calleesVector[i]->entrypoint());
             entrypoints[i] = jit.label();
-#if CPU(X86_64)
-            CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CPURegister));
-#elif CPU(ARM64) || CPU(RISCV64) || CPU(ARM)
-            CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - sizeof(CallerFrameAndPC));
-#else
-#error Unsupported architecture.
-#endif
+            if (m_moduleInformation->isSIMDFunction(i))
+                JIT_COMMENT(jit, "SIMD function entrypoint");
+            JIT_COMMENT(jit, "Entrypoint for function[", i, "]");
+            CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - prologueStackPointerDelta());
             jit.storePtr(CCallHelpers::TrustedImmPtr(CalleeBits::boxWasm(m_calleesVector[i].ptr())), calleeSlot.withOffset(PayloadOffset));
 #if USE(JSVALUE32_64)
             jit.store32(CCallHelpers::TrustedImm32(JSValue::WasmTag), calleeSlot.withOffset(TagOffset));
@@ -139,24 +146,31 @@ void LLIntPlan::didCompleteCompilation()
 
         for (unsigned i = 0; i < functionCount; ++i) {
             m_calleesVector[i]->setEntrypoint(linkBuffer.locationOf<WasmEntryPtrTag>(entrypoints[i]));
+            if (m_moduleInformation->isSIMDFunction(i))
+                linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunkSIMD().code()));
+            else
             linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunk().code()));
         }
 
         m_entryThunks = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Wasm LLInt entry thunks");
         m_callees = m_calleesVector.data();
+        if (!m_moduleInformation->clobberingTailCalls().isEmpty())
+            computeTransitiveTailCalls();
     }
 
     if (m_compilerMode == CompilerMode::Validation)
         return;
 
     for (uint32_t functionIndex = 0; functionIndex < m_moduleInformation->functions.size(); functionIndex++) {
-        if (m_exportedFunctionIndices.contains(functionIndex) || m_moduleInformation->referencedFunctions().contains(functionIndex)) {
+        const uint32_t functionIndexSpace = functionIndex + m_moduleInformation->importFunctionCount();
+        if (m_exportedFunctionIndices.contains(functionIndex) || m_moduleInformation->hasReferencedFunction(functionIndexSpace)) {
             TypeIndex typeIndex = m_moduleInformation->internalFunctionTypeIndices[functionIndex];
-            const TypeDefinition& signature = TypeInformation::get(typeIndex);
+            const TypeDefinition& signature = TypeInformation::get(typeIndex).expand();
             CCallHelpers jit;
             // The LLInt always bounds checks
             MemoryMode mode = MemoryMode::BoundsChecking;
-            std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
+            Ref<JSEntrypointCallee> callee = JSEntrypointCallee::create();
+            std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, callee.get(), signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
 
             LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
             if (UNLIKELY(linkBuffer.didFailToAllocate())) {
@@ -165,23 +179,19 @@ void LLIntPlan::didCompleteCompilation()
             }
 
             function->entrypoint.compilation = makeUnique<Compilation>(
-                FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s", functionIndex, signature.toString().ascii().data()),
+                FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "JS->WebAssembly entrypoint[%i] %s", functionIndex, signature.toString().ascii().data()),
                 nullptr);
 
-            Ref<EmbedderEntrypointCallee> callee = EmbedderEntrypointCallee::create(WTFMove(function->entrypoint));
-            // FIXME: remove this repatchPointer - just pass in the callee directly
-            // https://bugs.webkit.org/show_bug.cgi?id=166462
-            for (auto& moveLocation : function->calleeMoveLocations)
-                MacroAssembler::repatchPointer(moveLocation, CalleeBits::boxWasm(callee.ptr()));
+            callee->setEntrypoint(WTFMove(function->entrypoint));
 
-            auto result = m_embedderCallees.add(functionIndex, WTFMove(callee));
+            auto result = m_jsEntrypointCallees.add(functionIndex, WTFMove(callee));
             ASSERT_UNUSED(result, result.isNewEntry);
         }
     }
 
     for (auto& unlinked : m_unlinkedWasmToWasmCalls) {
         for (auto& call : unlinked) {
-            MacroAssemblerCodePtr<WasmEntryPtrTag> executableAddress;
+            CodePtr<WasmEntryPtrTag> executableAddress;
             if (m_moduleInformation->isImportedFunctionFromFunctionIndexSpace(call.functionIndexSpace)) {
                 // FIXME: imports could have been linked in B3, instead of generating a patchpoint. This condition should be replaced by a RELEASE_ASSERT.
                 // https://bugs.webkit.org/show_bug.cgi?id=166462
@@ -231,6 +241,34 @@ bool LLIntPlan::didReceiveFunctionData(unsigned, const FunctionData&)
     return true;
 }
 
+void LLIntPlan::addTailCallEdge(uint32_t callerIndex, uint32_t calleeIndex)
+{
+    auto it = m_tailCallGraph.find(calleeIndex);
+    if (it == m_tailCallGraph.end())
+        it = m_tailCallGraph.add(calleeIndex, TailCallGraph::MappedType()).iterator;
+    it->value.add(callerIndex);
+}
+
+void LLIntPlan::computeTransitiveTailCalls() const
+{
+    GraphNodeWorklist<uint32_t, HashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>> worklist;
+
+    for (auto clobberingTailCall : m_moduleInformation->clobberingTailCalls())
+        worklist.push(clobberingTailCall);
+
+    while (worklist.notEmpty()) {
+        auto node = worklist.pop();
+        auto it = m_tailCallGraph.find(node);
+        if (it == m_tailCallGraph.end())
+            continue;
+        for (const auto &successor : it->value) {
+            if (worklist.saw(successor))
+                continue;
+            m_moduleInformation->addClobberingTailCall(successor);
+            worklist.push(successor);
+        }
+    }
+}
 } } // namespace JSC::Wasm
 
 #endif // ENABLE(WEBASSEMBLY)

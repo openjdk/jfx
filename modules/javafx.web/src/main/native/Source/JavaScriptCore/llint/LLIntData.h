@@ -66,9 +66,9 @@ private:
     friend const Opcode* getOpcodeAddress(OpcodeID);
     friend const Opcode* getOpcodeWide16Address(OpcodeID);
     friend const Opcode* getOpcodeWide32Address(OpcodeID);
-    template<PtrTag tag> friend MacroAssemblerCodePtr<tag> getCodePtr(OpcodeID);
-    template<PtrTag tag> friend MacroAssemblerCodePtr<tag> getWide16CodePtr(OpcodeID);
-    template<PtrTag tag> friend MacroAssemblerCodePtr<tag> getWide32CodePtr(OpcodeID);
+    template<PtrTag tag> friend CodePtr<tag> getCodePtr(OpcodeID);
+    template<PtrTag tag> friend CodePtr<tag> getWide16CodePtr(OpcodeID);
+    template<PtrTag tag> friend CodePtr<tag> getWide32CodePtr(OpcodeID);
     template<PtrTag tag> friend MacroAssemblerCodeRef<tag> getCodeRef(OpcodeID);
 };
 
@@ -145,12 +145,12 @@ inline const Opcode* getOpcodeWide32Address(OpcodeID id)
 #endif
 
 template<PtrTag tag>
-ALWAYS_INLINE MacroAssemblerCodePtr<tag> getCodePtrImpl(const Opcode opcode, const void* opcodeAddress)
+ALWAYS_INLINE CodePtr<tag> getCodePtrImpl(const Opcode opcode, const void* opcodeAddress)
 {
     void* opcodeValue = reinterpret_cast<void*>(opcode);
     void* untaggedOpcode = untagAddressDiversifiedCodePtr<BytecodePtrTag>(opcodeValue, opcodeAddress);
     void* retaggedOpcode = tagCodePtr<tag>(untaggedOpcode);
-    return MacroAssemblerCodePtr<tag>::createFromExecutableAddress(retaggedOpcode);
+    return CodePtr<tag>::fromTaggedPtr(retaggedOpcode);
 }
 
 #if ENABLE(ARM64E) && !ENABLE(COMPUTED_GOTO_OPCODES)
@@ -158,7 +158,7 @@ ALWAYS_INLINE MacroAssemblerCodePtr<tag> getCodePtrImpl(const Opcode opcode, con
 #endif
 
 template<PtrTag tag>
-ALWAYS_INLINE MacroAssemblerCodePtr<tag> getCodePtr(OpcodeID opcodeID)
+ALWAYS_INLINE CodePtr<tag> getCodePtr(OpcodeID opcodeID)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     const Opcode* opcode = getOpcodeAddress(opcodeID);
@@ -169,7 +169,7 @@ ALWAYS_INLINE MacroAssemblerCodePtr<tag> getCodePtr(OpcodeID opcodeID)
 }
 
 template<PtrTag tag>
-ALWAYS_INLINE MacroAssemblerCodePtr<tag> getWide16CodePtr(OpcodeID opcodeID)
+ALWAYS_INLINE CodePtr<tag> getWide16CodePtr(OpcodeID opcodeID)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     const Opcode* opcode = getOpcodeWide16Address(opcodeID);
@@ -180,7 +180,7 @@ ALWAYS_INLINE MacroAssemblerCodePtr<tag> getWide16CodePtr(OpcodeID opcodeID)
 }
 
 template<PtrTag tag>
-ALWAYS_INLINE MacroAssemblerCodePtr<tag> getWide32CodePtr(OpcodeID opcodeID)
+ALWAYS_INLINE CodePtr<tag> getWide32CodePtr(OpcodeID opcodeID)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     const Opcode* opcode = getOpcodeWide32Address(opcodeID);
@@ -213,9 +213,9 @@ template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getCodeFunctionPtr(OpcodeID opcodeID)
 {
 #if COMPILER(MSVC)
-    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).executableAddress());
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).taggedPtr());
 #else
-    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template executableAddress());
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
 
@@ -223,9 +223,9 @@ template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide16CodeFunctionPtr(OpcodeID opcodeID)
 {
 #if COMPILER(MSVC)
-    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).taggedPtr());
 #else
-    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
 
@@ -233,9 +233,9 @@ template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide32CodeFunctionPtr(OpcodeID opcodeID)
 {
 #if COMPILER(MSVC)
-    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).taggedPtr());
 #else
-    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
 
@@ -288,7 +288,7 @@ inline const Opcode* getOpcodeWide32Address(WasmOpcodeID id)
 #endif
 
 template<PtrTag tag>
-ALWAYS_INLINE MacroAssemblerCodePtr<tag> getCodePtr(WasmOpcodeID opcodeID)
+ALWAYS_INLINE CodePtr<tag> getCodePtr(WasmOpcodeID opcodeID)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     const Opcode* opcode = getOpcodeAddress(opcodeID);
@@ -299,7 +299,7 @@ ALWAYS_INLINE MacroAssemblerCodePtr<tag> getCodePtr(WasmOpcodeID opcodeID)
 }
 
 template<PtrTag tag>
-ALWAYS_INLINE MacroAssemblerCodePtr<tag> getWide16CodePtr(WasmOpcodeID opcodeID)
+ALWAYS_INLINE CodePtr<tag> getWide16CodePtr(WasmOpcodeID opcodeID)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     const Opcode* opcode = getOpcodeWide16Address(opcodeID);
@@ -310,7 +310,7 @@ ALWAYS_INLINE MacroAssemblerCodePtr<tag> getWide16CodePtr(WasmOpcodeID opcodeID)
 }
 
 template<PtrTag tag>
-ALWAYS_INLINE MacroAssemblerCodePtr<tag> getWide32CodePtr(WasmOpcodeID opcodeID)
+ALWAYS_INLINE CodePtr<tag> getWide32CodePtr(WasmOpcodeID opcodeID)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     const Opcode* opcode = getOpcodeWide32Address(opcodeID);
@@ -342,9 +342,9 @@ template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getCodeFunctionPtr(WasmOpcodeID opcodeID)
 {
 #if COMPILER(MSVC)
-    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).executableAddress());
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).taggedPtr());
 #else
-    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template executableAddress());
+    return reinterpret_cast<LLIntCode>(getCodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
 
@@ -352,9 +352,9 @@ template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide16CodeFunctionPtr(WasmOpcodeID opcodeID)
 {
 #if COMPILER(MSVC)
-    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).taggedPtr());
 #else
-    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide16CodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
 
@@ -362,9 +362,9 @@ template<PtrTag tag>
 ALWAYS_INLINE LLIntCode getWide32CodeFunctionPtr(WasmOpcodeID opcodeID)
 {
 #if COMPILER(MSVC)
-    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).taggedPtr());
 #else
-    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template executableAddress());
+    return reinterpret_cast<LLIntCode>(getWide32CodePtr<tag>(opcodeID).template taggedPtr());
 #endif
 }
 

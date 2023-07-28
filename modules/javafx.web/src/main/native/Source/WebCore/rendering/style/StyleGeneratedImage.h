@@ -23,48 +23,61 @@
 
 #pragma once
 
+#include "FloatSize.h"
+#include "FloatSizeHash.h"
 #include "StyleImage.h"
+#include <wtf/HashCountedSet.h>
+#include <wtf/HashMap.h>
 
 namespace WebCore {
 
 class CSSValue;
-class CSSImageGeneratorValue;
+class CachedImage;
+class CachedResourceLoader;
+class GeneratedImage;
+class Image;
+class RenderElement;
 
-class StyleGeneratedImage final : public StyleImage {
+struct ResourceLoaderOptions;
+
+class StyleGeneratedImage : public StyleImage {
 public:
-    static Ref<StyleGeneratedImage> create(Ref<CSSImageGeneratorValue>&& value)
-    {
-        return adoptRef(*new StyleGeneratedImage(WTFMove(value)));
-    }
+    const HashCountedSet<RenderElement*>& clients() const { return m_clients; }
 
-    CSSImageGeneratorValue& imageValue() { return m_imageGeneratorValue; }
+protected:
+    explicit StyleGeneratedImage(StyleImage::Type, bool fixedSize);
+    virtual ~StyleGeneratedImage();
 
-private:
-    bool operator==(const StyleImage& other) const final;
+    WrappedImagePtr data() const final { return this; }
 
-    WrappedImagePtr data() const final { return m_imageGeneratorValue.ptr(); }
-
-    Ref<CSSValue> cssValue() const final;
-
-    bool isPending() const override;
-    void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
     FloatSize imageSize(const RenderElement*, float multiplier) const final;
+    void computeIntrinsicDimensions(const RenderElement*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) final;
     bool imageHasRelativeWidth() const final { return !m_fixedSize; }
     bool imageHasRelativeHeight() const final { return !m_fixedSize; }
-    void computeIntrinsicDimensions(const RenderElement*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) final;
     bool usesImageContainerSize() const final { return !m_fixedSize; }
     void setContainerContextForRenderer(const RenderElement&, const FloatSize& containerSize, float) final { m_containerSize = containerSize; }
+    bool imageHasNaturalDimensions() const final { return !usesImageContainerSize(); }
+
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;
     bool hasClient(RenderElement&) const final;
-    RefPtr<Image> image(RenderElement*, const FloatSize&) const final;
-    bool knownToBeOpaque(const RenderElement&) const final;
 
-    explicit StyleGeneratedImage(Ref<CSSImageGeneratorValue>&&);
+    // Allow subclasses to react to clients being added/removed.
+    virtual void didAddClient(RenderElement&) = 0;
+    virtual void didRemoveClient(RenderElement&) = 0;
 
-    Ref<CSSImageGeneratorValue> m_imageGeneratorValue;
+    // All generated images must be able to compute their fixed size.
+    virtual FloatSize fixedSize(const RenderElement&) const = 0;
+
+    class CachedGeneratedImage;
+    GeneratedImage* cachedImageForSize(FloatSize);
+    void saveCachedImageForSize(FloatSize, GeneratedImage&);
+    void evictCachedGeneratedImage(FloatSize);
+
     FloatSize m_containerSize;
     bool m_fixedSize;
+    HashCountedSet<RenderElement*> m_clients;
+    HashMap<FloatSize, std::unique_ptr<CachedGeneratedImage>> m_images;
 };
 
 } // namespace WebCore

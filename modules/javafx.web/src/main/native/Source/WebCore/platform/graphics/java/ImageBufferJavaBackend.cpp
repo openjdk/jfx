@@ -35,7 +35,7 @@
 namespace WebCore {
 
 std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
-    const Parameters& parameters, const ImageBuffer::CreationContext&)
+    const Parameters& parameters, const ImageBufferCreationContext&)
 {
     IntSize backendSize = ImageBufferBackend::calculateBackendSize(parameters);
     if (backendSize.isEmpty())

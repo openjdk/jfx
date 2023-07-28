@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,10 +82,11 @@ void initialize()
             VM::computeCanUseJIT();
             if (!g_jscConfig.vm.canUseJIT) {
                 Options::useJIT() = false;
-                Options::recomputeDependentOptions();
+                Options::notifyOptionsChanged();
             } else {
 #if CPU(ARM64E) && ENABLE(JIT)
                 g_jscConfig.arm64eHashPins.initializeAtStartup();
+                isARM64E_FPAC(); // Call this to initialize g_jscConfig.canUseFPAC.
 #endif
             }
             StructureAlignedMemoryAllocator::initializeStructureAddressSpace();

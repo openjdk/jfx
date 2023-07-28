@@ -258,12 +258,12 @@ const char* EditorClientJava::interpretKeyEvent(const KeyboardEvent* evt)
         keyDownCommandsMap = new HashMap<int, const char*>;
         keyPressCommandsMap = new HashMap<int, const char*>;
 
-        for (unsigned i = 0; i < WTF_ARRAY_LENGTH(keyDownEntries); i++) {
+        for (unsigned i = 0; i < std::size(keyDownEntries); i++) {
             keyDownCommandsMap->set(keyDownEntries[i].modifiers << 16 | keyDownEntries[i].virtualKey,
                                     keyDownEntries[i].name);
         }
 
-        for (unsigned i = 0; i < WTF_ARRAY_LENGTH(keyPressEntries); i++) {
+        for (unsigned i = 0; i < std::size(keyPressEntries); i++) {
             keyPressCommandsMap->set(keyPressEntries[i].modifiers << 16 | keyPressEntries[i].charCode,
                                      keyPressEntries[i].name);
         }
@@ -279,7 +279,7 @@ const char* EditorClientJava::interpretKeyEvent(const KeyboardEvent* evt)
     if (keyEvent->metaKey())
         modifiers |= MetaKey;
 
-    if (keyEvent->type() == PlatformKeyboardEvent::RawKeyDown) {
+    if (keyEvent->type() == PlatformEvent::Type::RawKeyDown) {
         int mapKey = modifiers << 16 | evt->keyCode();
         return mapKey ? keyDownCommandsMap->get(mapKey) : 0;
     }
@@ -301,7 +301,7 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     String commandName = String::fromLatin1(interpretKeyEvent(evt));
     Editor::Command command = frame->editor().command(commandName);
 
-    if (keyEvent->type() == PlatformKeyboardEvent::RawKeyDown) {
+    if (keyEvent->type() == PlatformEvent::Type::RawKeyDown) {
         // WebKit doesn't have enough information about mode to decide how
         // commands that just insert text if executed via Editor should be treated,
         // so we leave it upon WebCore to either handle them immediately

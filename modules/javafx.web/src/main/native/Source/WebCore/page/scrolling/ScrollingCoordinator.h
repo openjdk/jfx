@@ -31,6 +31,7 @@
 #include "ScrollSnapOffsetsInfo.h"
 #include "ScrollTypes.h"
 #include "ScrollingCoordinatorTypes.h"
+#include "WheelEventTestMonitor.h"
 #include <variant>
 #include <wtf/Forward.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -48,6 +49,7 @@ class Document;
 class Frame;
 class FrameView;
 class GraphicsLayer;
+struct KeyboardScroll;
 class Page;
 class Region;
 class RenderObject;
@@ -119,11 +121,14 @@ public:
     // These virtual functions are currently unique to the threaded scrolling architecture.
     virtual void commitTreeStateIfNeeded() { }
 
+    virtual bool requestStartKeyboardScrollAnimation(ScrollableArea&, const KeyboardScroll&) { return false; }
+    virtual bool requestStopKeyboardScrollAnimation(ScrollableArea&, bool) { return false; }
+
     virtual bool requestScrollPositionUpdate(ScrollableArea&, const ScrollPosition&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped) { return false; }
     virtual bool requestAnimatedScrollToPosition(ScrollableArea&, const ScrollPosition&, ScrollClamping) { return false; }
     virtual void stopAnimatedScroll(ScrollableArea&) { }
 
-    virtual bool handleWheelEventForScrolling(const PlatformWheelEvent&, ScrollingNodeID, std::optional<WheelScrollGestureState>) { return false; }
+    virtual WheelEventHandlingResult handleWheelEventForScrolling(const PlatformWheelEvent&, ScrollingNodeID, std::optional<WheelScrollGestureState>) { return WheelEventHandlingResult::unhandled(WheelEventProcessingSteps::MainThreadForScrolling); }
     virtual void wheelEventWasProcessedByMainThread(const PlatformWheelEvent&, std::optional<WheelScrollGestureState>) { }
 
     // Create an unparented node.
@@ -168,6 +173,7 @@ public:
     virtual void reconcileViewportConstrainedLayerPositions(ScrollingNodeID, const LayoutRect&, ScrollingLayerPositionAction) { }
     virtual String scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const;
     virtual String scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const;
+    virtual bool haveScrollingTree() const { return false; }
     virtual bool isRubberBandInProgress(ScrollingNodeID) const { return false; }
     virtual bool isUserScrollInProgress(ScrollingNodeID) const { return false; }
     virtual bool isScrollSnapInProgress(ScrollingNodeID) const { return false; }
@@ -193,6 +199,10 @@ public:
 
     virtual void startMonitoringWheelEvents(bool /* clearLatchingState */) { }
     virtual void stopMonitoringWheelEvents() { }
+
+    void receivedWheelEventWithPhases(PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase);
+    void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason);
+    void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason);
 
 protected:
     explicit ScrollingCoordinator(Page*);
@@ -220,11 +230,6 @@ private:
 
     bool m_forceSynchronousScrollLayerPositionUpdates { false };
 };
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollableAreaParameters);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingNodeType);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollingLayerPositionAction);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ViewportRectStability);
 
 } // namespace WebCore
 

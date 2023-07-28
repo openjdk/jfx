@@ -114,6 +114,7 @@ public:
     virtual bool isMouseEvent() const { return false; }
     virtual bool isPointerEvent() const { return false; }
     virtual bool isTextEvent() const { return false; }
+    virtual bool isToggleEvent() const { return false; }
     virtual bool isTouchEvent() const { return false; }
     virtual bool isUIEvent() const { return false; }
     virtual bool isVersionChangeEvent() const { return false; }
@@ -151,7 +152,7 @@ public:
     bool isBeingDispatched() const { return eventPhase(); }
 
     virtual EventTarget* relatedTarget() const { return nullptr; }
-    virtual void setRelatedTarget(EventTarget*) { }
+    virtual void setRelatedTarget(RefPtr<EventTarget>&&) { }
 
     virtual String debugDescription() const;
 

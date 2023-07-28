@@ -31,6 +31,7 @@
 #include "EventTarget.h"
 #include "WebCoreOpaqueRoot.h"
 #include <wtf/HashMap.h>
+#include <wtf/LoggerHelper.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -42,7 +43,11 @@ class MediaPlaybackTarget;
 class Node;
 class RemotePlaybackAvailabilityCallback;
 
-class RemotePlayback final : public RefCounted<RemotePlayback>, public ActiveDOMObject, public EventTargetWithInlineData {
+class RemotePlayback final
+    : public RefCounted<RemotePlayback>
+    , public ActiveDOMObject
+    , public EventTarget
+{
     WTF_MAKE_ISO_ALLOCATED(RemotePlayback);
 public:
     static Ref<RemotePlayback> create(HTMLMediaElement&);
@@ -86,11 +91,21 @@ private:
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
 
-    // EventTargetWithInlineData.
+    // EventTarget.
     EventTargetInterface eventTargetInterface() const final { return RemotePlaybackEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const { return m_logger.get(); }
+    const void* logIdentifier() const { return m_logIdentifier; }
+    WTFLogChannel& logChannel() const;
+    const char* logClassName() const { return "RemotePlayback"; }
+
+    Ref<const Logger> m_logger;
+    const void* m_logIdentifier { nullptr };
+#endif
+
+    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
     uint32_t m_nextId { 0 };
 
     using CallbackMap = HashMap<int32_t, Ref<RemotePlaybackAvailabilityCallback>>;

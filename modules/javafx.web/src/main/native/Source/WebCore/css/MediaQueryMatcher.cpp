@@ -25,9 +25,9 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "Logging.h"
-#include "MediaList.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryList.h"
+#include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
@@ -54,10 +54,10 @@ void MediaQueryMatcher::documentDestroyed()
     }
 }
 
-String MediaQueryMatcher::mediaType() const
+AtomString MediaQueryMatcher::mediaType() const
 {
     if (!m_document || !m_document->frame() || !m_document->frame()->view())
-        return String();
+        return nullAtom();
 
     return m_document->frame()->view()->mediaType();
 }
@@ -71,15 +71,15 @@ std::unique_ptr<RenderStyle> MediaQueryMatcher::documentElementUserAgentStyle() 
     if (!documentElement)
         return nullptr;
 
-    return m_document->styleScope().resolver().styleForElement(*documentElement, { m_document->renderStyle() }, RuleMatchingBehavior::MatchOnlyUserAgentRules).renderStyle;
+    return m_document->styleScope().resolver().styleForElement(*documentElement, { m_document->renderStyle() }, RuleMatchingBehavior::MatchOnlyUserAgentRules).style;
 }
 
-bool MediaQueryMatcher::evaluate(const MediaQuerySet& media)
+bool MediaQueryMatcher::evaluate(const MQ::MediaQueryList& queries)
 {
     auto style = documentElementUserAgentStyle();
     if (!style)
         return false;
-    return MediaQueryEvaluator { mediaType(), *m_document, style.get() }.evaluate(media);
+    return MQ::MediaQueryEvaluator { mediaType(), *m_document, style.get() }.evaluate(queries);
 }
 
 void MediaQueryMatcher::addMediaQueryList(MediaQueryList& list)
@@ -98,9 +98,9 @@ RefPtr<MediaQueryList> MediaQueryMatcher::matchMedia(const String& query)
     if (!m_document)
         return nullptr;
 
-    auto media = MediaQuerySet::create(query, MediaQueryParserContext(*m_document));
-    bool matches = evaluate(media.get());
-    return MediaQueryList::create(*m_document, *this, WTFMove(media), matches);
+    auto queries = MQ::MediaQueryParser::parse(query, MediaQueryParserContext(*m_document));
+    bool matches = evaluate(queries);
+    return MediaQueryList::create(*m_document, *this, WTFMove(queries), matches);
 }
 
 void MediaQueryMatcher::evaluateAll(EventMode eventMode)
@@ -115,12 +115,15 @@ void MediaQueryMatcher::evaluateAll(EventMode eventMode)
 
     LOG_WITH_STREAM(MediaQueries, stream << "MediaQueryMatcher::styleResolverChanged " << m_document->url());
 
-    MediaQueryEvaluator evaluator { mediaType(), *m_document, style.get() };
+    MQ::MediaQueryEvaluator evaluator { mediaType(), *m_document, style.get() };
 
     auto mediaQueryLists = m_mediaQueryLists;
     for (auto& list : mediaQueryLists) {
-        if (RefPtr protectedList = list.get())
+        if (RefPtr protectedList = list.get()) {
             protectedList->evaluate(evaluator, eventMode);
+            if (!m_document)
+                break;
+        }
     }
 }
 

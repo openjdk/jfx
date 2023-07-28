@@ -57,7 +57,7 @@ private:
 
     Function<void()> m_firedFunction;
 #if !USE(CF) && !OS(WINDOWS) && !PLATFORM(JAVA)
-    RunLoop::Timer<MainThreadSharedTimer> m_timer;
+    RunLoop::Timer m_timer;
 #endif
 };
 

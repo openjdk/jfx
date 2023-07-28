@@ -34,6 +34,8 @@
 #include "B3StackmapGenerationParams.h"
 #include "B3ValueInlines.h"
 
+#include <wtf/ListDump.h>
+
 namespace JSC { namespace B3 {
 
 using Arg = Air::Arg;
@@ -71,7 +73,7 @@ void PatchpointSpecial::forEachArg(Inst& inst, const ScopedLambda<Inst::EachArgC
     for (unsigned i = patchpoint->numGPScratchRegisters; i--;)
         callback(inst.args[argIndex++], Arg::Scratch, GP, conservativeWidth(GP));
     for (unsigned i = patchpoint->numFPScratchRegisters; i--;)
-        callback(inst.args[argIndex++], Arg::Scratch, FP, conservativeWidth(FP));
+        callback(inst.args[argIndex++], Arg::Scratch, FP, procedure.usesSIMD() ? conservativeWidth(FP) : conservativeWidthWithoutVectors(FP));
 }
 
 bool PatchpointSpecial::isValid(Inst& inst)
@@ -162,6 +164,7 @@ MacroAssembler::Jump PatchpointSpecial::generate(Inst& inst, CCallHelpers& jit, 
     offset += value->numChildren();
 
     StackmapGenerationParams params(value, reps, context);
+    JIT_COMMENT(jit, "Patchpoint body start, with arg value reps: ", listDump(reps));
 
     for (unsigned i = value->numGPScratchRegisters; i--;)
         params.m_gpScratch.append(inst.args[offset++].gpr());

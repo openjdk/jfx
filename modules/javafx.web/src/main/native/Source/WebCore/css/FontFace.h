@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "CSSFontFace.h"
 #include "CSSPropertyNames.h"
+#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include <variant>
 #include <wtf/UniqueRef.h>
@@ -42,7 +43,7 @@ namespace WebCore {
 
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 
-class FontFace final : public RefCounted<FontFace>, public CanMakeWeakPtr<FontFace>, public ActiveDOMObject, private CSSFontFace::Client {
+class FontFace final : public RefCounted<FontFace>, public ActiveDOMObject, public CSSFontFace::Client {
 public:
     struct Descriptors {
         String style;
@@ -72,7 +73,7 @@ public:
     String stretch() const;
     String unicodeRange() const;
     String featureSettings() const;
-    String display(ScriptExecutionContext&) const;
+    String display() const;
 
     enum class LoadStatus { Unloaded, Loading, Loaded, Error };
     LoadStatus status() const;
@@ -101,6 +102,7 @@ private:
     // Callback for LoadedPromise.
     FontFace& loadedPromiseResolve();
     void setErrorState();
+
     Ref<CSSFontFace> m_backing;
     UniqueRef<LoadedPromise> m_loadedPromise;
     bool m_mayLoadedPromiseBeScriptObservable { false };

@@ -28,6 +28,7 @@
 #include "IDBDatabaseIdentifier.h"
 #include "IDBResourceIdentifier.h"
 #include "IndexedDB.h"
+#include <wtf/ArgumentCoder.h>
 
 namespace WebCore {
 
@@ -63,7 +64,7 @@ public:
     IndexedDB::IndexRecordType indexRecordType() const;
     IDBResourceIdentifier cursorIdentifier() const;
 
-    const IDBDatabaseIdentifier& databaseIdentifier() const;
+    WEBCORE_EXPORT IDBDatabaseIdentifier databaseIdentifier() const;
     uint64_t requestedVersion() const;
 
     bool isOpenRequest() const { return m_requestType == IndexedDB::RequestType::Open; }
@@ -71,114 +72,22 @@ public:
 
     IDBRequestData isolatedCopy();
 
-    WEBCORE_EXPORT IDBRequestData();
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBRequestData&);
-
 private:
+    friend struct IPC::ArgumentCoder<IDBRequestData, void>;
+    WEBCORE_EXPORT IDBRequestData(IDBConnectionIdentifier serverConnectionIdentifier, IDBResourceIdentifier requestIdentifier, std::optional<IDBResourceIdentifier>&& transactionIdentifier, std::optional<IDBResourceIdentifier>&& cursorIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, IndexedDB::IndexRecordType, std::optional<IDBDatabaseIdentifier>&&, uint64_t requestedVersion, IndexedDB::RequestType);
     static void isolatedCopy(const IDBRequestData& source, IDBRequestData& destination);
 
     IDBConnectionIdentifier m_serverConnectionIdentifier;
-    std::unique_ptr<IDBResourceIdentifier> m_requestIdentifier;
-    std::unique_ptr<IDBResourceIdentifier> m_transactionIdentifier;
-    std::unique_ptr<IDBResourceIdentifier> m_cursorIdentifier;
+    IDBResourceIdentifier m_requestIdentifier;
+    std::optional<IDBResourceIdentifier> m_transactionIdentifier;
+    std::optional<IDBResourceIdentifier> m_cursorIdentifier;
     uint64_t m_objectStoreIdentifier { 0 };
     uint64_t m_indexIdentifier { 0 };
     IndexedDB::IndexRecordType m_indexRecordType { IndexedDB::IndexRecordType::Key };
-
-    mutable std::optional<IDBDatabaseIdentifier> m_databaseIdentifier;
+    std::optional<IDBDatabaseIdentifier> m_databaseIdentifier;
     uint64_t m_requestedVersion { 0 };
 
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };
 };
-
-inline const IDBDatabaseIdentifier& IDBRequestData::databaseIdentifier() const
-{
-    ASSERT(m_databaseIdentifier);
-    if (!m_databaseIdentifier)
-        m_databaseIdentifier = IDBDatabaseIdentifier { };
-    return *m_databaseIdentifier;
-}
-
-template<class Encoder>
-void IDBRequestData::encode(Encoder& encoder) const
-{
-    encoder << m_serverConnectionIdentifier << m_objectStoreIdentifier << m_indexIdentifier << m_databaseIdentifier << m_requestedVersion;
-
-    encoder << m_indexRecordType;
-    encoder << m_requestType;
-
-    encoder << !!m_requestIdentifier;
-    if (m_requestIdentifier)
-        encoder << *m_requestIdentifier;
-
-    encoder << !!m_transactionIdentifier;
-    if (m_transactionIdentifier)
-        encoder << *m_transactionIdentifier;
-
-    encoder << !!m_cursorIdentifier;
-    if (m_cursorIdentifier)
-        encoder << *m_cursorIdentifier;
-}
-
-template<class Decoder>
-bool IDBRequestData::decode(Decoder& decoder, IDBRequestData& request)
-{
-    if (!decoder.decode(request.m_serverConnectionIdentifier))
-        return false;
-
-    if (!decoder.decode(request.m_objectStoreIdentifier))
-        return false;
-
-    if (!decoder.decode(request.m_indexIdentifier))
-        return false;
-
-    std::optional<std::optional<IDBDatabaseIdentifier>> databaseIdentifier;
-    decoder >> databaseIdentifier;
-    if (!databaseIdentifier)
-        return false;
-    request.m_databaseIdentifier = WTFMove(*databaseIdentifier);
-
-    if (!decoder.decode(request.m_requestedVersion))
-        return false;
-
-    if (!decoder.decode(request.m_indexRecordType))
-        return false;
-
-    if (!decoder.decode(request.m_requestType))
-        return false;
-
-    bool hasObject;
-
-    if (!decoder.decode(hasObject))
-        return false;
-    if (hasObject) {
-        std::unique_ptr<IDBResourceIdentifier> object = makeUnique<IDBResourceIdentifier>();
-        if (!decoder.decode(*object))
-            return false;
-        request.m_requestIdentifier = WTFMove(object);
-    }
-
-    if (!decoder.decode(hasObject))
-        return false;
-    if (hasObject) {
-        std::unique_ptr<IDBResourceIdentifier> object = makeUnique<IDBResourceIdentifier>();
-        if (!decoder.decode(*object))
-            return false;
-        request.m_transactionIdentifier = WTFMove(object);
-    }
-
-    if (!decoder.decode(hasObject))
-        return false;
-    if (hasObject) {
-        std::unique_ptr<IDBResourceIdentifier> object = makeUnique<IDBResourceIdentifier>();
-        if (!decoder.decode(*object))
-            return false;
-        request.m_cursorIdentifier = WTFMove(object);
-    }
-
-    return true;
-}
 
 } // namespace WebCore

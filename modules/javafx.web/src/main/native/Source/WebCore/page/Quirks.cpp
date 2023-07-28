@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Quirks.h"
 
+#include "AllowedFonts.h"
 #include "Attr.h"
 #include "DOMTokenList.h"
 #include "DOMWindow.h"
@@ -176,6 +177,22 @@ bool Quirks::hasBrokenEncryptedMediaAPISupportQuirk() const
     return m_hasBrokenEncryptedMediaAPISupportQuirk.value();
 }
 
+bool Quirks::shouldDisableContentChangeObserver() const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto& topDocument = m_document->topDocument();
+
+    auto host = topDocument.url().host();
+    auto isYouTube = host.endsWith(".youtube.com"_s) || host == "youtube.com"_s;
+
+    if (isYouTube && (topDocument.url().path().startsWithIgnoringASCIICase("/results"_s) || topDocument.url().path().startsWithIgnoringASCIICase("/watch"_s)))
+        return true;
+
+    return false;
+}
+
 bool Quirks::shouldDisableContentChangeObserverTouchEventAdjustment() const
 {
     if (!needsQuirks())
@@ -263,7 +280,7 @@ bool Quirks::isNeverRichlyEditableForTouchBar() const
     return false;
 }
 
-static bool shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreasForHost(StringView host)
+static bool shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasForHost(StringView host)
 {
 #if PLATFORM(IOS_FAMILY)
     return equalLettersIgnoringASCIICase(host, "docs.google.com"_s);
@@ -319,12 +336,12 @@ bool Quirks::shouldAvoidUsingIOS13ForGmail() const
 #endif
 }
 
-bool Quirks::shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreas() const
+bool Quirks::shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreas() const
 {
     if (!needsQuirks())
         return false;
 
-    return shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreasForHost(m_document->topDocument().url().host());
+    return shouldSuppressAutocorrectionAndAutocapitalizationInHiddenEditableAreasForHost(m_document->topDocument().url().host());
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -341,7 +358,7 @@ bool Quirks::isGoogleMaps() const
 
 bool Quirks::shouldDispatchSimulatedMouseEvents(const EventTarget* target) const
 {
-    if (DeprecatedGlobalSettings::mouseEventsSimulationEnabled())
+    if (m_document->settings().mouseEventsSimulationEnabled())
         return true;
 
     if (!needsQuirks())
@@ -985,7 +1002,7 @@ bool Quirks::shouldAvoidPastingImagesAsWebContent() const
 #endif
 }
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
 static bool isKinjaLoginAvatarElement(const Element& element)
 {
     // The click event handler has been found to trigger on a div or
@@ -1121,10 +1138,11 @@ Quirks::StorageAccessResult Quirks::requestStorageAccessAndHandleClick(Completio
 
 Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(Element& element, const PlatformMouseEvent& platformEvent, const AtomString& eventType, int detail, Element* relatedTarget, bool isParentProcessAFullWebBrowser, IsSyntheticClick isSyntheticClick) const
 {
-    if (!DeprecatedGlobalSettings::resourceLoadStatisticsEnabled() || !isParentProcessAFullWebBrowser)
+    UNUSED_PARAM(isSyntheticClick);
+    if (!DeprecatedGlobalSettings::trackingPreventionEnabled() || !isParentProcessAFullWebBrowser)
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
     if (!needsQuirks())
         return Quirks::StorageAccessResult::ShouldNotCancelEvent;
 
@@ -1265,18 +1283,6 @@ bool Quirks::needsHDRPixelDepthQuirk() const
     return *m_needsHDRPixelDepthQuirk;
 }
 
-// FIXME: remove this once rdar://92531240 has been fixed.
-bool Quirks::needsFlightAwareSerializationQuirk() const
-{
-    if (!needsQuirks())
-        return false;
-
-    if (!m_needsFlightAwareSerializationQuirk)
-        m_needsFlightAwareSerializationQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "flightaware.com"_s);
-
-    return *m_needsFlightAwareSerializationQuirk;
-}
-
 bool Quirks::requiresUserGestureToPauseInPictureInPicture() const
 {
 #if ENABLE(VIDEO_PRESENTATION_MODE)
@@ -1362,7 +1368,7 @@ bool Quirks::shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFull
 
 bool Quirks::shouldAllowNavigationToCustomProtocolWithoutUserGesture(StringView protocol, const SecurityOriginData& requesterOrigin)
 {
-    return protocol == "msteams"_s && (requesterOrigin.host == "teams.live.com"_s || requesterOrigin.host == "teams.microsoft.com"_s);
+    return protocol == "msteams"_s && (requesterOrigin.host() == "teams.live.com"_s || requesterOrigin.host() == "teams.microsoft.com"_s);
 }
 
 #if ENABLE(IMAGE_ANALYSIS)
@@ -1401,19 +1407,6 @@ bool Quirks::allowLayeredFullscreenVideos() const
 }
 #endif
 
-bool Quirks::hasBrokenPermissionsAPISupportQuirk() const
-{
-    if (!needsQuirks())
-        return false;
-
-    if (!m_hasBrokenPermissionsAPISupportQuirk) {
-        auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
-        m_hasBrokenPermissionsAPISupportQuirk = domain.endsWith(".nfl.com"_s);
-    }
-
-    return m_hasBrokenPermissionsAPISupportQuirk.value();
-}
-
 bool Quirks::shouldEnableApplicationCacheQuirk() const
 {
     bool shouldEnableBySetting = m_document && m_document->settings().offlineWebApplicationCacheEnabled();
@@ -1433,6 +1426,17 @@ bool Quirks::shouldEnableApplicationCacheQuirk() const
 #else
     return shouldEnableBySetting;
 #endif
+}
+
+bool Quirks::shouldEnableFontLoadingAPIQuirk() const
+{
+    if (!needsQuirks() || m_document->settings().downloadableBinaryFontAllowedTypes() == DownloadableBinaryFontAllowedTypes::Any)
+        return false;
+
+    if (!m_shouldEnableFontLoadingAPIQuirk)
+        m_shouldEnableFontLoadingAPIQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "play.hbomax.com"_s);
+
+    return m_shouldEnableFontLoadingAPIQuirk.value();
 }
 
 bool Quirks::needsVideoShouldMaintainAspectRatioQuirk() const
@@ -1461,6 +1465,38 @@ bool Quirks::shouldExposeShowModalDialog() const
         m_shouldExposeShowModalDialog = domain == "pandora.com"_s || domain == "marcus.com"_s || domain == "soundcloud.com"_s;
     }
     return *m_shouldExposeShowModalDialog;
+}
+
+bool Quirks::shouldNavigatorPluginsBeEmpty() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return false;
+    if (!m_shouldNavigatorPluginsBeEmpty) {
+        auto domain = RegistrableDomain(m_document->url()).string();
+        // Marcus login issue: <rdar://103011164>.
+        m_shouldNavigatorPluginsBeEmpty = domain == "marcus.com"_s;
+    }
+    return *m_shouldNavigatorPluginsBeEmpty;
+#else
+    return false;
+#endif
+}
+
+// Fix for the UNIQLO app (rdar://104519846).
+bool Quirks::shouldDisableLazyIframeLoadingQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!m_shouldDisableLazyIframeLoadingQuirk) {
+#if PLATFORM(IOS_FAMILY)
+        m_shouldDisableLazyIframeLoadingQuirk = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoUNIQLOLazyIframeLoadingQuirk) && IOSApplication::isUNIQLOApp();
+#else
+        m_shouldDisableLazyIframeLoadingQuirk = false;
+#endif
+    }
+    return *m_shouldDisableLazyIframeLoadingQuirk;
 }
 
 bool Quirks::shouldDisableLazyImageLoadingQuirk() const

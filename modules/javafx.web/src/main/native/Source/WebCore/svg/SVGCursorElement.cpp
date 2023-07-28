@@ -22,10 +22,10 @@
 #include "config.h"
 #include "SVGCursorElement.h"
 
-#include "CSSCursorImageValue.h"
 #include "Document.h"
 #include "SVGNames.h"
 #include "SVGStringList.h"
+#include "StyleCursorImage.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -34,7 +34,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGCursorElement);
 
 inline SVGCursorElement::SVGCursorElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGTests(this)
     , SVGURIReference(this)
 {
@@ -74,12 +74,12 @@ void SVGCursorElement::parseAttribute(const QualifiedName& name, const AtomStrin
     SVGURIReference::parseAttribute(name, value);
 }
 
-void SVGCursorElement::addClient(CSSCursorImageValue& value)
+void SVGCursorElement::addClient(StyleCursorImage& value)
 {
     m_clients.add(&value);
 }
 
-void SVGCursorElement::removeClient(CSSCursorImageValue& value)
+void SVGCursorElement::removeClient(StyleCursorImage& value)
 {
     m_clients.remove(&value);
 }

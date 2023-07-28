@@ -51,31 +51,40 @@ public:
     {
 /* removing zlib dependency , as newly added module compression requires zlib */
 #if !PLATFORM(JAVA)
-        if (initailized)
-            deflateEnd(&zstream);
+        if (m_initialized)
+            deflateEnd(&m_zstream);
 #endif
     }
 
 private:
+#if !PLATFORM(JAVA)
     // If the user provides too small of an input size we will automatically allocate a page worth of memory instead.
     // Very small input sizes can result in a larger output than their input. This would require an additional
     // encode call then, which is not desired.
     const size_t startingAllocationSize = 16384; // 16KB
-
-    bool initailized { false };
-    bool finish { false };
-#if !PLATFORM(JAVA)
-    z_stream zstream;
-#endif
+    const size_t maxAllocationSize = 1073741824; // 1GB
 
     Formats::CompressionFormat m_format;
 
-    ExceptionOr<Vector<uint8_t>> compress(const uint8_t* input, const size_t inputLength);
+    bool m_initialized { false };
+
+
+    z_stream m_zstream;
+#endif
+     bool m_finish { false };
+
+    ExceptionOr<RefPtr<JSC::ArrayBuffer>> compress(const uint8_t* input, const size_t inputLength);
     ExceptionOr<bool> initialize();
 
     explicit CompressionStreamEncoder(unsigned char format)
+#if !PLATFORM(JAVA)
         : m_format(static_cast<Formats::CompressionFormat>(format))
+#endif
     {
+         UNUSED_PARAM(format);
+#if !PLATFORM(JAVA)
+        std::memset(&m_zstream, 0, sizeof(m_zstream));
+#endif
     }
 };
 } // namespace WebCore

@@ -83,8 +83,6 @@ enum ShouldSerializeSelectedTextForDataTransfer { DefaultSelectedTextType, Inclu
 
 struct PasteboardWebContent {
 #if PLATFORM(COCOA)
-    WEBCORE_EXPORT PasteboardWebContent();
-    WEBCORE_EXPORT ~PasteboardWebContent();
     String contentOrigin;
     bool canSmartCopyOrDelete;
     RefPtr<SharedBuffer> dataInWebArchiveFormat;
@@ -120,8 +118,6 @@ struct PasteboardURL {
 };
 
 struct PasteboardImage {
-    WEBCORE_EXPORT PasteboardImage();
-    WEBCORE_EXPORT ~PasteboardImage();
     RefPtr<Image> image;
 #if PLATFORM(MAC)
     RefPtr<SharedBuffer> dataInWebArchiveFormat;
@@ -141,9 +137,6 @@ struct PasteboardImage {
 };
 
 struct PasteboardBuffer {
-    WEBCORE_EXPORT PasteboardBuffer();
-    WEBCORE_EXPORT ~PasteboardBuffer();
-
 #if PLATFORM(COCOA)
     String contentOrigin;
 #endif
@@ -272,6 +265,7 @@ public:
 #if PLATFORM(GTK)
     const SelectionData& selectionData() const;
     static std::unique_ptr<Pasteboard> createForGlobalSelection(std::unique_ptr<PasteboardContext>&&);
+    int64_t changeCount() const;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -294,19 +288,21 @@ public:
     WEBCORE_EXPORT static NSArray *supportedFileUploadPasteboardTypes();
     int64_t changeCount() const;
     const PasteboardCustomData& readCustomData();
-#else
+#elif !PLATFORM(GTK)
     int64_t changeCount() const { return 0; }
 #endif
 
 #if PLATFORM(COCOA)
     const String& name() const { return m_pasteboardName; }
+#elif PLATFORM(GTK)
+    const String& name() const { return m_name; }
 #else
     const String& name() const { return emptyString(); }
 #endif
 
 #if PLATFORM(WIN)
     COMPtr<IDataObject> dataObject() const { return m_dataObject; }
-    void setExternalDataObject(IDataObject*);
+    WEBCORE_EXPORT void setExternalDataObject(IDataObject*);
     const DragDataMap& dragDataMap() const { return m_dragDataMap; }
     void writeURLToWritableDataObject(const URL&, const String&);
     COMPtr<WCDataObject> writableDataObject() const { return m_writableDataObject; }
@@ -362,6 +358,7 @@ private:
 #if PLATFORM(GTK)
     std::optional<SelectionData> m_selectionData;
     String m_name;
+    int64_t m_changeCount { 0 };
 #endif
 
 #if PLATFORM(COCOA)

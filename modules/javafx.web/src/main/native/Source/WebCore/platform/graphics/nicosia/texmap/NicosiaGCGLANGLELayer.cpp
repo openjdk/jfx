@@ -29,7 +29,7 @@
 #include "config.h"
 #include "NicosiaGCGLANGLELayer.h"
 
-#if USE(NICOSIA) && USE(TEXTURE_MAPPER) && USE(LIBGBM) && USE(ANGLE)
+#if USE(NICOSIA) && USE(TEXTURE_MAPPER)
 
 #include "GraphicsContextGLFallback.h"
 #include "GraphicsContextGLGBM.h"
@@ -115,12 +115,14 @@ GCGLANGLELayer::GCGLANGLELayer(GraphicsContextGLFallback& context)
 {
 }
 
+#if USE(GBM)
 GCGLANGLELayer::GCGLANGLELayer(GraphicsContextGLGBM& context)
     : m_contextType(ContextType::Gbm)
     , m_context(context)
     , m_contentLayer(Nicosia::ContentLayer::create(Nicosia::ContentLayerTextureMapperImpl::createFactory(*this, adoptRef(*new TextureMapperPlatformLayerProxyDMABuf))))
 {
 }
+#endif
 
 GCGLANGLELayer::~GCGLANGLELayer()
 {
@@ -129,4 +131,4 @@ GCGLANGLELayer::~GCGLANGLELayer()
 
 } // namespace Nicosia
 
-#endif // USE(NICOSIA) && USE(TEXTURE_MAPPER) && USE(LIBGBM) && USE(ANGLE)
+#endif // USE(NICOSIA) && USE(TEXTURE_MAPPER)

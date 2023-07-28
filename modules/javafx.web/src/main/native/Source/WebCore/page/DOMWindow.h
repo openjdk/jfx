@@ -185,7 +185,8 @@ public:
     MonotonicTime lastActivationTimestamp() const { return m_lastActivationTimestamp; }
     void notifyActivated(MonotonicTime);
     WEBCORE_EXPORT bool hasTransientActivation() const;
-    bool consumeTransientActivation();
+    bool hasStickyActivation() const;
+    WEBCORE_EXPORT bool consumeTransientActivation();
 
     WEBCORE_EXPORT Location& location();
     void setLocation(DOMWindow& activeWindow, const URL& completedURL, SetLocationLocking = LockHistoryBasedOnGestureState);
@@ -318,8 +319,8 @@ public:
 
     // Events
     // EventTarget API
-    bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
-    bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
+    WEBCORE_EXPORT bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
+    WEBCORE_EXPORT bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
     void removeAllEventListeners() final;
 
     using EventTarget::dispatchEvent;
@@ -347,12 +348,10 @@ public:
     ExceptionOr<Ref<NodeList>> collectMatchingElementsInFlatTree(Node&, const String& selectors);
     ExceptionOr<RefPtr<Element>> matchingElementInFlatTree(Node&, const String& selectors);
 
-#if ENABLE(ORIENTATION_EVENTS)
     // This is the interface orientation in degrees. Some examples are:
     //  0 is straight up; -90 is when the device is rotated 90 clockwise;
     //  90 is when rotated counter clockwise.
     int orientation() const;
-#endif
 
     Performance& performance() const;
     WEBCORE_EXPORT ReducedResolutionSeconds nowTimestamp() const;

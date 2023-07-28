@@ -92,6 +92,7 @@ public:
         Entry& mark() const { ASSERT(m_mark); return *m_mark; }
 
     private:
+        friend class HTMLFormattingElementList;
         bool m_hasBeenMoved;
         Entry* m_mark;
     };
@@ -99,12 +100,13 @@ public:
     bool isEmpty() const { return !size(); }
     size_t size() const { return m_entries.size(); }
 
-    Element* closestElementInScopeWithName(const AtomString&);
+    Element* closestElementInScopeWithName(ElementName);
 
     Entry* find(Element&);
     bool contains(Element&);
     void append(HTMLStackItem&&);
     void remove(Element&);
+    void removeUpdatingBookmark(Element&, Bookmark&);
 
     Bookmark bookmarkFor(Element&);
     void swapTo(Element& oldElement, HTMLStackItem&& newItem, const Bookmark&);

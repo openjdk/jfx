@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,8 @@ namespace WebCore {
 
 class ImageTransferSessionVT;
 
+enum class VideoFrameRotation : uint16_t;
+
 class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource {
 public:
     virtual ~RealtimeVideoCaptureSource();
@@ -45,7 +47,7 @@ public:
 
     bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
     virtual void generatePresets() = 0;
-    virtual VideoFrame::Rotation videoFrameRotation() const { return VideoFrame::Rotation::None; }
+    virtual VideoFrameRotation videoFrameRotation() const;
 
     double observedFrameRate() const { return m_observedFrameRate; }
     Vector<VideoPresetData> presetsData();
@@ -55,7 +57,7 @@ public:
     const VideoPreset* currentPreset() const { return m_currentPreset.get(); }
 
 protected:
-    RealtimeVideoCaptureSource(AtomString&& name, String&& id, String&& hashSalt, PageIdentifier);
+    RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, PageIdentifier);
 
     void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
 

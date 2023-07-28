@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "AbstractPC.h"
 #include "CPU.h"
 #include "CalleeBits.h"
 #include "MacroAssemblerCodeRef.h"
@@ -32,6 +31,9 @@
 #include <wtf/EnumClassOperatorOverloads.h>
 
 namespace JSC  {
+namespace Wasm {
+class Instance;
+}
 
 template<typename> struct BaseInstruction;
 struct JSOpcodeTraits;
@@ -178,8 +180,6 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         inline SUPPRESS_ASAN CodeBlock* unsafeCodeBlock() const;
         inline JSScope* scope(int scopeRegisterOffset) const;
 
-        JS_EXPORT_PRIVATE bool isAnyWasmCallee();
-
         // Global object in which the currently executing code was defined.
         // Differs from VM::deprecatedVMEntryGlobalObject() during function calls across web browser frames.
         JSGlobalObject* lexicalGlobalObject(VM&) const;
@@ -205,11 +205,11 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 
         static ptrdiff_t callerFrameOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, callerFrame); }
 
-        ReturnAddressPtr returnPC() const { return ReturnAddressPtr::fromTaggedPC(callerFrameAndPC().returnPC, this + CallerFrameAndPC::sizeInRegisters); }
+        void* rawReturnPCForInspection() const { return callerFrameAndPC().returnPC; }
+        void* returnPCForInspection() const { return removeCodePtrTag(callerFrameAndPC().returnPC); }
         bool hasReturnPC() const { return !!callerFrameAndPC().returnPC; }
         void clearReturnPC() { callerFrameAndPC().returnPC = nullptr; }
         static ptrdiff_t returnPCOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, returnPC); }
-        AbstractPC abstractReturnPC(VM& vm) { return AbstractPC(vm, this); }
 
         bool callSiteBitsAreBytecodeOffset() const;
         bool callSiteBitsAreCodeOriginIndex() const;
@@ -218,6 +218,11 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         unsigned unsafeCallSiteAsRawBits() const;
         CallSiteIndex callSiteIndex() const;
         CallSiteIndex unsafeCallSiteIndex() const;
+
+#if ENABLE(WEBASSEMBLY)
+        Wasm::Instance* wasmInstance() const;
+#endif
+
     private:
         unsigned callSiteBitsAsBytecodeOffset() const;
 #if ENABLE(WEBASSEMBLY)
@@ -321,19 +326,6 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
         JS_EXPORT_PRIVATE static JSGlobalObject* globalObjectOfClosestCodeBlock(VM&, CallFrame*);
         String friendlyFunctionName();
 
-        // CallFrame::iterate() expects a Functor that implements the following method:
-        //     IterationStatus operator()(StackVisitor&) const;
-        // FIXME: This method is improper. We rely on the fact that we can call it with a null
-        // receiver. We should always be using StackVisitor directly.
-        // It's only valid to call this from a non-wasm top frame.
-        template <StackVisitor::EmptyEntryFrameAction action = StackVisitor::ContinueIfTopEntryFrameIsEmpty, typename Functor> void iterate(VM& vm, const Functor& functor)
-        {
-            void* rawThis = this;
-            if (!!rawThis)
-                RELEASE_ASSERT(callee().isCell());
-            StackVisitor::visit<action, Functor>(this, vm, functor);
-        }
-
         void dump(PrintStream&) const;
 
         // This function is used in LLDB btjs.
@@ -385,6 +377,11 @@ JS_EXPORT_PRIVATE bool isFromJSCode(void* returnAddress);
 #define DECLARE_CALL_FRAME(vm) ((vm).topCallFrame)
 #endif
 
+#if USE(BUILTIN_FRAME_ADDRESS)
+#define DECLARE_WASM_CALL_FRAME(instance) DECLARE_CALL_FRAME(instance->vm())
+#else
+#define DECLARE_WASM_CALL_FRAME(instance) ((instance)->temporaryCallFrame())
+#endif
 
 } // namespace JSC
 

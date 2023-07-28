@@ -61,7 +61,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     case FileOpenMode::Read:
         platformFlag |= O_RDONLY;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         platformFlag |= (O_WRONLY | O_CREAT | O_TRUNC);
         break;
     case FileOpenMode::ReadWrite:
@@ -92,6 +92,11 @@ void closeFile(PlatformFileHandle& handle)
         close(handle);
         handle = invalidPlatformFileHandle;
     }
+}
+
+int posixFileDescriptor(PlatformFileHandle handle)
+{
+    return handle;
 }
 
 long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
@@ -188,6 +193,20 @@ std::optional<WallTime> fileCreationTime(const String& path)
     UNUSED_PARAM(path);
     return std::nullopt;
 #endif
+}
+
+std::optional<PlatformFileID> fileID(PlatformFileHandle handle)
+{
+    struct stat fileInfo;
+    if (fstat(handle, &fileInfo))
+        return std::nullopt;
+
+    return fileInfo.st_ino;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    return a == b;
 }
 
 std::optional<uint32_t> volumeFileBlockSize(const String& path)

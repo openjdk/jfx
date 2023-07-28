@@ -44,6 +44,19 @@ public:
     bool preserves3D { false };
 };
 
+struct TextureMapperLayer::ComputeTransformData {
+    double zNear { 0 };
+    double zFar { 0 };
+
+    void updateDepthRange(double z)
+    {
+        if (zNear < z)
+            zNear = z;
+        else if (zFar > z)
+            zFar = z;
+    }
+};
+
 TextureMapperLayer::TextureMapperLayer() = default;
 
 TextureMapperLayer::~TextureMapperLayer()
@@ -54,7 +67,7 @@ TextureMapperLayer::~TextureMapperLayer()
     removeFromParent();
 }
 
-void TextureMapperLayer::computeTransformsRecursive()
+void TextureMapperLayer::computeTransformsRecursive(ComputeTransformData& data)
 {
     if (m_state.size.isEmpty() && m_state.masksToBounds)
         return;
@@ -111,18 +124,37 @@ void TextureMapperLayer::computeTransformsRecursive()
 
     m_state.visible = m_state.backfaceVisibility || !m_layerTransforms.combined.isBackFaceVisible();
 
+    auto calculateZ = [&](double x, double y) -> double {
+        double z = 0;
+        double w = 1;
+        m_layerTransforms.combined.map4ComponentPoint(x, y, z, w);
+        if (w <= 0) {
+            if (!z)
+                return 0;
+            if (z < 0)
+                return -std::numeric_limits<double>::infinity();
+            return std::numeric_limits<double>::infinity();
+        }
+        return z / w;
+    };
+
+    data.updateDepthRange(calculateZ(0, 0));
+    data.updateDepthRange(calculateZ(m_state.size.width(), 0));
+    data.updateDepthRange(calculateZ(0, m_state.size.height()));
+    data.updateDepthRange(calculateZ(m_state.size.width(), m_state.size.height()));
+
     if (m_parent && m_parent->m_state.preserves3D)
-        m_centerZ = m_layerTransforms.combined.mapPoint(FloatPoint3D(m_state.size.width() / 2, m_state.size.height() / 2, 0)).z();
+        m_centerZ = calculateZ(m_state.size.width() / 2, m_state.size.height() / 2);
 
     if (m_state.maskLayer)
-        m_state.maskLayer->computeTransformsRecursive();
+        m_state.maskLayer->computeTransformsRecursive(data);
     if (m_state.replicaLayer)
-        m_state.replicaLayer->computeTransformsRecursive();
+        m_state.replicaLayer->computeTransformsRecursive(data);
     if (m_state.backdropLayer)
-        m_state.backdropLayer->computeTransformsRecursive();
+        m_state.backdropLayer->computeTransformsRecursive(data);
     for (auto* child : m_children) {
         ASSERT(child->m_parent == this);
-        child->computeTransformsRecursive();
+        child->computeTransformsRecursive(data);
     }
 
     // Reorder children if needed on the way back up.
@@ -137,7 +169,9 @@ void TextureMapperLayer::computeTransformsRecursive()
 
 void TextureMapperLayer::paint(TextureMapper& textureMapper)
 {
-    computeTransformsRecursive();
+    ComputeTransformData data;
+    computeTransformsRecursive(data);
+    textureMapper.setDepthRange(data.zNear, data.zFar);
 
     TextureMapperPaintOptions options(textureMapper);
     options.textureMapper.bindSurface(0);
@@ -220,27 +254,6 @@ void TextureMapperLayer::paintSelfAndChildren(TextureMapperPaintOptions& options
 {
     if (m_state.backdropLayer && m_state.backdropLayer == options.backdropLayer)
         return;
-
-    struct Preserves3DScope {
-        Preserves3DScope(TextureMapperPaintOptions& passedOptions, bool passedEnable)
-            : options(passedOptions)
-            , enable(passedEnable)
-        {
-            if (enable) {
-                options.preserves3D = true;
-                options.textureMapper.beginPreserves3D();
-            }
-        }
-        ~Preserves3DScope()
-        {
-            if (enable) {
-                options.preserves3D = false;
-                options.textureMapper.endPreserves3D();
-            }
-        }
-        TextureMapperPaintOptions& options;
-        bool enable;
-    } scopedPreserves3D(options, m_state.preserves3D && !options.preserves3D);
 
     if (m_state.backdropLayer && !options.backdropLayer) {
         TransformationMatrix clipTransform;
@@ -741,10 +754,60 @@ void TextureMapperLayer::paintRecursive(TextureMapperPaintOptions& options)
 
     SetForScope scopedOpacity(options.opacity, options.opacity * m_currentOpacity);
 
-    if (shouldBlend())
+    if (m_state.preserves3D)
+        paintWith3DRenderingContext(options);
+    else if (shouldBlend())
         paintUsingOverlapRegions(options);
     else
         paintSelfChildrenReplicaFilterAndMask(options);
+}
+
+void TextureMapperLayer::paintWith3DRenderingContext(TextureMapperPaintOptions& options)
+{
+    if (options.preserves3D) {
+        paintSelfAndChildrenWithReplica(options);
+        return;
+    }
+    SetForScope scopedPreserves3D(options.preserves3D, true);
+
+    Region overlapRegion;
+    Region nonOverlapRegion;
+    ComputeOverlapRegionData data {
+        ComputeOverlapRegionMode::Union,
+        options.textureMapper.clipBounds(),
+        overlapRegion,
+        nonOverlapRegion
+    };
+    data.clipBounds.move(-options.offset);
+    computeOverlapRegions(data, options.transform, false);
+    ASSERT(nonOverlapRegion.isEmpty());
+
+    auto rects = overlapRegion.rects();
+    static const size_t OverlapRegionConsolidationThreshold = 4;
+    if (rects.size() > OverlapRegionConsolidationThreshold) {
+        rects.clear();
+        rects.append(overlapRegion.bounds());
+    }
+
+    IntSize maxTextureSize = options.textureMapper.maxTextureSize();
+    for (auto& rect : rects) {
+        for (int x = rect.x(); x < rect.maxX(); x += maxTextureSize.width()) {
+            for (int y = rect.y(); y < rect.maxY(); y += maxTextureSize.height()) {
+                IntRect tileRect(IntPoint(x, y), maxTextureSize);
+                tileRect.intersect(rect);
+                auto surface = options.textureMapper.acquireTextureFromPool(tileRect.size(), BitmapTexture::SupportsAlpha | BitmapTexture::DepthBuffer);
+                {
+                    SetForScope scopedSurface(options.surface, surface);
+                    SetForScope scopedOffset(options.offset, -toIntSize(tileRect.location()));
+                    SetForScope scopedOpacity(options.opacity, 1);
+
+                    options.textureMapper.bindSurface(options.surface.get());
+                    paintSelfAndChildrenWithReplica(options);
+                }
+                commitSurface(options, *surface, tileRect, options.opacity);
+            }
+        }
+    }
 }
 
 void TextureMapperLayer::setChildren(const Vector<TextureMapperLayer*>& newChildren)

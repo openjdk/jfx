@@ -413,6 +413,8 @@ String openTemporaryFile(StringView prefix, PlatformFileHandle& handle, StringVi
 {
     fprintf(stderr, "openTemporaryFile(const String&, PlatformFileHandle& handle, const String&) NOT IMPLEMENTED\n");
     handle = invalidPlatformFileHandle;
+        UNUSED_PARAM(prefix);
+        UNUSED_PARAM(suffix);
     return String();
 }
 
@@ -441,6 +443,7 @@ bool isHiddenFile(const String& path)
 
 String pathFileName(const String& path)
 {
+    UNUSED_PARAM(path);
    // return path.substring(path.reverseFind('/') + 1);
    return nullString();
 }
@@ -509,6 +512,21 @@ std::optional<uint64_t> fileSize(PlatformFileHandle handle)
     fprintf(stderr, "readEntireFile(PlatformFileHandle) NOT IMPLEMENTED\n");
     UNUSED_PARAM(handle);
     return size;
+}
+
+std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
+{
+    fprintf(stderr, "fileID(PlatformFileHandle) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(fileHandle);
+    return std::nullopt;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    fprintf(stderr, "fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b) NOT IMPLEMENTED\n");
+    UNUSED_PARAM(a);
+    UNUSED_PARAM(b);
+    return true;
 }
 
 } // namespace FileSystemImpl

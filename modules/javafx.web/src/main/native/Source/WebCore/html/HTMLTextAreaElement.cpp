@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTMLTextAreaElement.h"
 
+#include "AXObjectCache.h"
 #include "BeforeTextInsertedEvent.h"
 #include "CSSValueKeywords.h"
 #include "DOMFormData.h"
@@ -60,7 +61,7 @@ using namespace HTMLNames;
 // This function returns number of characters considering this.
 static unsigned computeLengthForSubmission(StringView text, unsigned numberOfLineBreaks)
 {
-    return numGraphemeClusters(text) + numberOfLineBreaks;
+    return text.length() + numberOfLineBreaks;
 }
 
 static unsigned numberOfLineBreaks(StringView text)
@@ -76,7 +77,7 @@ static unsigned numberOfLineBreaks(StringView text)
 
 static unsigned computeLengthForSubmission(StringView text)
 {
-    return numGraphemeClusters(text) + numberOfLineBreaks(text);
+    return text.length() + numberOfLineBreaks(text);
 }
 
 static unsigned upperBoundForLengthForSubmission(StringView text, unsigned numberOfLineBreaks)
@@ -250,6 +251,7 @@ void HTMLTextAreaElement::subtreeHasChanged()
 {
     setFormControlValueMatchesRenderer(false);
     updateValidity();
+    updatePlaceholderVisibility();
 
     if (!focused())
         return;
@@ -259,7 +261,8 @@ void HTMLTextAreaElement::subtreeHasChanged()
     if (RefPtr frame = document().frame())
         frame->editor().textDidChangeInTextArea(*this);
     // When typing in a textarea, childrenChanged is not called, so we need to force the directionality check.
-    calculateAndAdjustDirectionality();
+    if (selfOrPrecedingNodesAffectDirAuto())
+        updateEffectiveDirectionalityOfDirAuto();
 }
 
 void HTMLTextAreaElement::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent& event) const
@@ -359,6 +362,8 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventB
     setLastChangeWasNotUserEdit();
     updatePlaceholderVisibility();
     invalidateStyleForSubtree();
+    if (selfOrPrecedingNodesAffectDirAuto())
+        updateEffectiveDirectionalityOfDirAuto();
     setFormControlValueMatchesRenderer(true);
 
     auto endOfString = m_value.length();
@@ -372,6 +377,9 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventB
         cacheSelection(std::min(endOfString, selectionStartValue), std::min(endOfString, selectionEndValue), SelectionHasNoDirection);
 
     setTextAsOfLastFormControlChangeEvent(normalizedValue);
+
+    if (auto* cache = document().existingAXObjectCache())
+        cache->valueChanged(this);
 }
 
 String HTMLTextAreaElement::defaultValue() const
@@ -406,17 +414,17 @@ String HTMLTextAreaElement::validationMessage() const
 
 bool HTMLTextAreaElement::valueMissing() const
 {
-    return willValidate() && valueMissing({ });
+    return valueMissing({ });
 }
 
 bool HTMLTextAreaElement::tooShort() const
 {
-    return willValidate() && tooShort({ }, CheckDirtyFlag);
+    return tooShort({ }, CheckDirtyFlag);
 }
 
 bool HTMLTextAreaElement::tooLong() const
 {
-    return willValidate() && tooLong({ }, CheckDirtyFlag);
+    return tooLong({ }, CheckDirtyFlag);
 }
 
 bool HTMLTextAreaElement::valueMissing(StringView value) const

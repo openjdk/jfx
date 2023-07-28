@@ -60,6 +60,7 @@ enum class AccessType : int8_t {
     GetByIdDirect,
     TryGetById,
     GetByVal,
+    GetByValWithThis,
     PutById,
     PutByVal,
     PutPrivateName,
@@ -71,6 +72,7 @@ enum class AccessType : int8_t {
     DeleteByID,
     DeleteByVal,
     GetPrivateName,
+    GetPrivateNameById,
     CheckPrivateBrand,
     SetPrivateBrand,
 };
@@ -95,12 +97,15 @@ public:
     StructureStubInfo(AccessType accessType, CodeOrigin codeOrigin)
         : codeOrigin(codeOrigin)
         , accessType(accessType)
-        , bufferingCountdown(Options::repatchBufferingCountdown())
+        , bufferingCountdown(Options::initialRepatchBufferingCountdown())
+#if PLATFORM(JAVA)
         , resetByGC(false), tookSlowPath(false)
         , everConsidered(false), prototypeIsKnownObject(false) // Only relevant for InstanceOf.
         , sawNonCell(false), hasConstantIdentifier(true)
         , propertyIsString(false), propertyIsInt32(false)
         , propertyIsSymbol(false), useDataIC(false)
+#else
+#endif
     {
     }
 
@@ -180,9 +185,9 @@ public:
     {
         return JSValueRegs(
 #if USE(JSVALUE32_64)
-            m_extraTagGPR,
+            propertyTagGPR(),
 #endif
-            m_extraGPR);
+            propertyGPR());
     }
 
     JSValueRegs baseRegs() const
@@ -194,7 +199,7 @@ public:
             m_baseGPR);
     }
 
-    bool thisValueIsInExtraGPR() const { return accessType == AccessType::GetByIdWithThis; }
+    bool thisValueIsInExtraGPR() const { return accessType == AccessType::GetByIdWithThis || accessType == AccessType::GetByValWithThis; }
 
 #if ASSERT_ENABLED
     void checkConsistency();
@@ -369,19 +374,35 @@ public:
 
     GPRReg thisGPR() const { return m_extraGPR; }
     GPRReg prototypeGPR() const { return m_extraGPR; }
-    GPRReg propertyGPR() const { return m_extraGPR; }
     GPRReg brandGPR() const { return m_extraGPR; }
+    GPRReg propertyGPR() const
+    {
+        switch (accessType) {
+        case AccessType::GetByValWithThis:
+            return m_extra2GPR;
+        default:
+            return m_extraGPR;
+        }
+    }
 
 #if USE(JSVALUE32_64)
     GPRReg thisTagGPR() const { return m_extraTagGPR; }
     GPRReg prototypeTagGPR() const { return m_extraTagGPR; }
-    GPRReg propertyTagGPR() const { return m_extraTagGPR; }
+    GPRReg propertyTagGPR() const
+    {
+        switch (accessType) {
+        case AccessType::GetByValWithThis:
+            return m_extra2TagGPR;
+        default:
+            return m_extraTagGPR;
+        }
+    }
 #endif
 
-    CodeOrigin codeOrigin;
+    CodeOrigin codeOrigin { };
     PropertyOffset byIdSelfOffset;
-    std::unique_ptr<PolymorphicAccess> m_stub;
     WriteBarrierStructureID m_inlineAccessBaseStructureID;
+    std::unique_ptr<PolymorphicAccess> m_stub;
 private:
     CacheableIdentifier m_identifier;
     // Represents those structures that already have buffered AccessCases in the PolymorphicAccess.
@@ -398,16 +419,19 @@ public:
 
     union {
         CodeLocationCall<JSInternalPtrTag> m_slowPathCallLocation;
-        FunctionPtr<OperationPtrTag> m_slowOperation;
+        CodePtr<OperationPtrTag> m_slowOperation;
     };
 
-    MacroAssemblerCodePtr<JITStubRoutinePtrTag> m_codePtr;
+    CodePtr<JITStubRoutinePtrTag> m_codePtr;
 
-    RegisterSet usedRegisters;
+    ScalarRegisterSet usedRegisters;
+
+    CallSiteIndex callSiteIndex;
 
     GPRReg m_baseGPR { InvalidGPRReg };
     GPRReg m_valueGPR { InvalidGPRReg };
     GPRReg m_extraGPR { InvalidGPRReg };
+    GPRReg m_extra2GPR { InvalidGPRReg };
     GPRReg m_stubInfoGPR { InvalidGPRReg };
     GPRReg m_arrayProfileGPR { InvalidGPRReg };
 #if USE(JSVALUE32_64)
@@ -416,9 +440,10 @@ public:
     // https://bugs.webkit.org/show_bug.cgi?id=204726
     GPRReg m_baseTagGPR { InvalidGPRReg };
     GPRReg m_extraTagGPR { InvalidGPRReg };
+    GPRReg m_extra2TagGPR { InvalidGPRReg };
 #endif
 
-    AccessType accessType;
+    AccessType accessType { AccessType::GetById };
 private:
     CacheType m_cacheType { CacheType::Unset };
 public:
@@ -431,7 +456,7 @@ public:
 private:
     Lock m_bufferedStructuresLock;
 public:
-    CallSiteIndex callSiteIndex;
+#if PLATFORM(JAVA)
     bool resetByGC : 1;
     bool tookSlowPath : 1;
     bool everConsidered : 1;
@@ -442,6 +467,18 @@ public:
     bool propertyIsInt32 : 1;
     bool propertyIsSymbol : 1;
     bool useDataIC : 1;
+#else
+    bool resetByGC : 1 { false };
+    bool tookSlowPath : 1 { false };
+    bool everConsidered : 1 { false };
+    bool prototypeIsKnownObject : 1 { false }; // Only relevant for InstanceOf.
+    bool sawNonCell : 1 { false };
+    bool hasConstantIdentifier : 1 { true };
+    bool propertyIsString : 1 { false };
+    bool propertyIsInt32 : 1 { false };
+    bool propertyIsSymbol : 1 { false };
+    bool useDataIC : 1 { false };
+#endif
 };
 
 inline CodeOrigin getStructureStubInfoCodeOrigin(StructureStubInfo& structureStubInfo)
@@ -458,7 +495,7 @@ inline auto appropriateOptimizingGetByIdFunction(AccessType type) -> decltype(&o
         return operationTryGetByIdOptimize;
     case AccessType::GetByIdDirect:
         return operationGetByIdDirectOptimize;
-    case AccessType::GetPrivateName:
+    case AccessType::GetPrivateNameById:
         return operationGetPrivateNameByIdOptimize;
     case AccessType::GetByIdWithThis:
     default:
@@ -476,7 +513,7 @@ inline auto appropriateGenericGetByIdFunction(AccessType type) -> decltype(&oper
         return operationTryGetByIdGeneric;
     case AccessType::GetByIdDirect:
         return operationGetByIdDirectGeneric;
-    case AccessType::GetPrivateName:
+    case AccessType::GetPrivateNameById:
         return operationGetPrivateNameByIdGeneric;
     case AccessType::GetByIdWithThis:
     default:
@@ -486,22 +523,33 @@ inline auto appropriateGenericGetByIdFunction(AccessType type) -> decltype(&oper
 }
 
 struct UnlinkedStructureStubInfo {
+#if PLATFORM(JAVA)
     UnlinkedStructureStubInfo() : propertyIsInt32(false)
                                 , propertyIsString(false)
                                 , propertyIsSymbol(false)
                                 , prototypeIsKnownObject(false)
                                 , tookSlowPath(false)
+#else
+#endif
     {}
 
     AccessType accessType;
     PutKind putKind { PutKind::Direct };
     PrivateFieldPutKind privateFieldPutKind { PrivateFieldPutKind::none() };
     ECMAMode ecmaMode { ECMAMode::sloppy() };
+#if PLATFORM(JAVA)
     bool propertyIsInt32 : 1;
     bool propertyIsString : 1;
     bool propertyIsSymbol : 1;
     bool prototypeIsKnownObject : 1;
     bool tookSlowPath : 1;
+#else
+    bool propertyIsInt32 : 1 { false };
+    bool propertyIsString : 1 { false };
+    bool propertyIsSymbol : 1 { false };
+    bool prototypeIsKnownObject : 1 { false };
+    bool tookSlowPath : 1 { false };
+#endif
     CodeLocationLabel<JSInternalPtrTag> doneLocation;
     CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation;
 };

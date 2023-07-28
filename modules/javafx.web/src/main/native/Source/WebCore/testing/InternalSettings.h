@@ -59,9 +59,6 @@ public:
     using EditingBehaviorType = WebCore::EditingBehaviorType;
     ExceptionOr<void> setEditingBehavior(EditingBehaviorType);
 
-    using PDFImageCachingPolicy = WebCore::PDFImageCachingPolicy;
-    ExceptionOr<void> setPDFImageCachingPolicy(PDFImageCachingPolicy);
-
     using StorageBlockingPolicy = WebCore::StorageBlockingPolicy;
     ExceptionOr<void> setStorageBlockingPolicy(StorageBlockingPolicy);
 
@@ -73,9 +70,6 @@ public:
 
     using FontLoadTimingOverride = WebCore::FontLoadTimingOverride;
     ExceptionOr<void> setFontLoadTimingOverride(FontLoadTimingOverride);
-
-    using FrameFlatteningValue = FrameFlattening;
-    ExceptionOr<void> setFrameFlattening(FrameFlatteningValue);
 
     using ForcedAccessibilityValue = WebCore::ForcedAccessibilityValue;
     ForcedAccessibilityValue forcedColorsAreInvertedAccessibilityValue() const;
@@ -153,13 +147,11 @@ private:
         WebCore::StorageBlockingPolicy m_storageBlockingPolicy;
         WebCore::UserInterfaceDirectionPolicy m_userInterfaceDirectionPolicy;
         TextDirection m_systemLayoutDirection;
-        WebCore::PDFImageCachingPolicy m_pdfImageCachingPolicy;
         WebCore::ForcedAccessibilityValue m_forcedColorsAreInvertedAccessibilityValue;
         WebCore::ForcedAccessibilityValue m_forcedDisplayIsMonochromeAccessibilityValue;
         WebCore::ForcedAccessibilityValue m_forcedPrefersContrastAccessibilityValue;
         WebCore::ForcedAccessibilityValue m_forcedPrefersReducedMotionAccessibilityValue;
         WebCore::FontLoadTimingOverride m_fontLoadTimingOverride;
-        WebCore::FrameFlattening m_frameFlattening;
 
         // DeprecatedGlobalSettings
         bool m_fetchAPIKeepAliveAPIEnabled;

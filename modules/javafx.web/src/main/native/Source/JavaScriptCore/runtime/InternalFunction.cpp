@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -35,8 +35,8 @@ const ClassInfo InternalFunction::s_info = { "Function"_s, &Base::s_info, nullpt
 
 InternalFunction::InternalFunction(VM& vm, Structure* structure, NativeFunction functionForCall, NativeFunction functionForConstruct)
     : Base(vm, structure)
-    , m_functionForCall(functionForCall)
-    , m_functionForConstruct(functionForConstruct ? functionForConstruct : callHostFunctionAsConstructor)
+    , m_functionForCall(toTagged(functionForCall))
+    , m_functionForConstruct(functionForConstruct ? toTagged(functionForConstruct) : callHostFunctionAsConstructor)
     , m_globalObject(vm, this, structure->globalObject())
 {
     ASSERT_WITH_MESSAGE(m_functionForCall, "[[Call]] must be implemented");
@@ -108,6 +108,7 @@ CallData InternalFunction::getCallData(JSCell* cell)
     CallData callData;
     callData.type = CallData::Type::Native;
     callData.native.function = function->m_functionForCall;
+    callData.native.isBoundFunction = false;
     return callData;
 }
 
@@ -119,6 +120,7 @@ CallData InternalFunction::getConstructData(JSCell* cell)
     if (function->m_functionForConstruct != callHostFunctionAsConstructor) {
         constructData.type = CallData::Type::Native;
         constructData.native.function = function->m_functionForConstruct;
+        constructData.native.isBoundFunction = false;
     }
     return constructData;
 }
@@ -171,7 +173,7 @@ Structure* InternalFunction::createSubclassStructure(JSGlobalObject* globalObjec
 InternalFunction* InternalFunction::createFunctionThatMasqueradesAsUndefined(VM& vm, JSGlobalObject* globalObject, unsigned length, const String& name, NativeFunction nativeFunction)
 {
     Structure* structure = Structure::create(vm, globalObject, globalObject->objectPrototype(), TypeInfo(InternalFunctionType, InternalFunction::StructureFlags | MasqueradesAsUndefined), InternalFunction::info());
-    globalObject->masqueradesAsUndefinedWatchpoint()->fireAll(globalObject->vm(), "Allocated masquerading object");
+    globalObject->masqueradesAsUndefinedWatchpointSet().fireAll(globalObject->vm(), "Allocated masquerading object");
     InternalFunction* function = new (NotNull, allocateCell<InternalFunction>(vm)) InternalFunction(vm, structure, nativeFunction);
     function->finishCreation(vm, length, name, PropertyAdditionMode::WithoutStructureTransition);
     return function;

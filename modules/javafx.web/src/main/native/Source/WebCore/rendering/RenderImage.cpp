@@ -442,6 +442,13 @@ bool RenderImage::hasNonBitmapImage() const
     return image && !is<BitmapImage>(image);
 }
 
+bool RenderImage::hasAnimatedImage() const
+{
+    if (auto* image = cachedImage() ? cachedImage()->image() : nullptr)
+        return image->isAnimated();
+    return false;
+}
+
 void RenderImage::paintIncompleteImageOutline(PaintInfo& paintInfo, LayoutPoint paintOffset, LayoutUnit borderWidth) const
 {
     auto contentSize = this->contentSize();
@@ -455,7 +462,7 @@ void RenderImage::paintIncompleteImageOutline(PaintInfo& paintInfo, LayoutPoint 
 
     // Draw an outline rect where the image should be.
     GraphicsContext& context = paintInfo.context();
-    context.setStrokeStyle(SolidStroke);
+    context.setStrokeStyle(StrokeStyle::SolidStroke);
     context.setStrokeColor(Color::lightGray);
     context.setFillColor(Color::transparentBlack);
     context.drawRect(snapRectToDevicePixels(LayoutRect({ paintOffset.x() + leftBorder + leftPadding, paintOffset.y() + topBorder + topPadding }, contentSize), document().deviceScaleFactor()), borderWidth);
@@ -479,14 +486,17 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
     float deviceScaleFactor = document().deviceScaleFactor();
     LayoutUnit missingImageBorderWidth(1 / deviceScaleFactor);
 
+    if (isDeferredImage(element()))
+        return;
+
     if (context.detectingContentfulPaint()) {
-        if (!context.contenfulPaintDetected() && !isDeferredImage(element()) && cachedImage() && cachedImage()->canRender(this, deviceScaleFactor) && !contentSize.isEmpty())
+        if (!context.contentfulPaintDetected() && cachedImage() && cachedImage()->canRender(this, deviceScaleFactor) && !contentSize.isEmpty())
             context.setContentfulPaintDetected();
 
         return;
     }
 
-    if (!imageResource().cachedImage() || isDeferredImage(element()) || shouldDisplayBrokenImageIcon()) {
+    if (!imageResource().cachedImage() || shouldDisplayBrokenImageIcon()) {
         if (paintInfo.phase == PaintPhase::Selection)
             return;
 
@@ -646,12 +656,9 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo, const LayoutPo
     path.translate(toFloatSize(adjustedOffset));
 
 #if PLATFORM(MAC)
-    bool needsRepaint;
-    paintInfo.context().drawFocusRing(path, page().focusController().timeSinceFocusWasSet().seconds(), needsRepaint, RenderTheme::singleton().focusRingColor(styleColorOptions()));
-    if (needsRepaint)
-        page().focusController().setFocusedElementNeedsRepaint();
+    paintInfo.context().drawFocusRing(path, outlineWidth, RenderTheme::singleton().focusRingColor(styleColorOptions()));
 #else
-    paintInfo.context().drawFocusRing(path, outlineWidth, areaElementStyle->outlineOffset(), areaElementStyle->visitedDependentColorWithColorFilter(CSSPropertyOutlineColor));
+    paintInfo.context().drawFocusRing(path, outlineWidth, areaElementStyle->visitedDependentColorWithColorFilter(CSSPropertyOutlineColor));
 #endif // PLATFORM(MAC)
 }
 
@@ -679,11 +686,6 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
     // FIXME: Document when image != img.get().
     Image* image = imageResource().image().get();
 
-#if USE(CG)
-    if (is<PDFDocumentImage>(image))
-        downcast<PDFDocumentImage>(*image).setPdfImageCachingPolicy(settings().pdfImageCachingPolicy());
-#endif
-
     if (is<BitmapImage>(image))
         downcast<BitmapImage>(*image).updateFromSettings(settings());
 
@@ -704,14 +706,6 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
 #endif
 
     return drawResult;
-}
-
-bool RenderImage::boxShadowShouldBeAppliedToBackground(const LayoutPoint& paintOffset, BackgroundBleedAvoidance bleedAvoidance, const InlineIterator::InlineBoxIterator&) const
-{
-    if (!RenderBoxModelObject::boxShadowShouldBeAppliedToBackground(paintOffset, bleedAvoidance, { }))
-        return false;
-
-    return !const_cast<RenderImage*>(this)->backgroundIsKnownToBeObscured(paintOffset);
 }
 
 bool RenderImage::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const
@@ -845,7 +839,7 @@ void RenderImage::layoutShadowContent(const LayoutSize& oldSize)
         // When calling layout() on a child node, a parent must either push a LayoutStateMaintainer, or
         // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
         // and this method might be called many times per second during video playback, use a LayoutStateMaintainer:
-        LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+        LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
         renderBox.setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
         renderBox.mutableStyle().setHeight(Length(newSize.height(), LengthType::Fixed));
         renderBox.mutableStyle().setWidth(Length(newSize.width(), LengthType::Fixed));
@@ -856,7 +850,7 @@ void RenderImage::layoutShadowContent(const LayoutSize& oldSize)
     clearChildNeedsLayout();
 }
 
-void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const
+void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
 {
     ASSERT(!shouldApplySizeContainment());
     RenderReplaced::computeIntrinsicRatioInformation(intrinsicSize, intrinsicRatio);
@@ -875,9 +869,9 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, dou
     if (shouldDisplayBrokenImageIcon()) {
         if (settings().aspectRatioOfImgFromWidthAndHeightEnabled()
             && style().aspectRatioType() == AspectRatioType::AutoAndRatio && !isShowingAltText())
-            intrinsicRatio = style().logicalAspectRatio();
+            intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
         else
-            intrinsicRatio = 1;
+            intrinsicRatio = { 1.0, 1.0 };
         return;
     }
 }

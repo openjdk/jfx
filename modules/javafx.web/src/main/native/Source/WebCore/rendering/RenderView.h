@@ -38,6 +38,11 @@ class RenderLayerCompositor;
 class RenderLayoutState;
 class RenderQuote;
 
+namespace Layout {
+class InitialContainingBlock;
+class LayoutState;
+}
+
 class RenderView final : public RenderBlockFlow {
     WTF_MAKE_ISO_ALLOCATED(RenderView);
 public:
@@ -68,6 +73,11 @@ public:
     float zoomFactor() const;
 
     FrameView& frameView() const { return m_frameView; }
+
+    Layout::InitialContainingBlock& initialContainingBlock() { return m_initialContainingBlock.get(); }
+    const Layout::InitialContainingBlock& initialContainingBlock() const { return m_initialContainingBlock.get(); }
+    Layout::LayoutState& ensureLayoutState();
+    void updateQuirksMode();
 
     bool needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly() const { return m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly; };
     void setNeedsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly(bool value = true) { m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly = value; }
@@ -171,7 +181,11 @@ public:
     void updateVisibleViewportRect(const IntRect&);
     void registerForVisibleInViewportCallback(RenderElement&);
     void unregisterForVisibleInViewportCallback(RenderElement&);
+
     void resumePausedImageAnimationsIfNeeded(const IntRect& visibleRect);
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    void updatePlayStateForAllAnimations(const IntRect& visibleRect);
+#endif
     void addRendererWithPausedImageAnimations(RenderElement&, CachedImage&);
     void removeRendererWithPausedImageAnimations(RenderElement&);
     void removeRendererWithPausedImageAnimations(RenderElement&, CachedImage&);
@@ -193,9 +207,6 @@ public:
     void layerChildrenChangedDuringStyleChange(RenderLayer&);
     RenderLayer* takeStyleChangeLayerTreeMutationRoot();
 
-    void protectRenderWidgetUntilLayoutIsDone(RenderWidget& widget) { m_protectedRenderWidgets.append(&widget); }
-    void releaseProtectedRenderWidgets() { m_protectedRenderWidgets.clear(); }
-
     void registerBoxWithScrollSnapPositions(const RenderBox&);
     void unregisterBoxWithScrollSnapPositions(const RenderBox&);
     const HashSet<const RenderBox*>& boxesWithScrollSnapPositions() { return m_boxesWithScrollSnapPositions; }
@@ -205,6 +216,8 @@ public:
     const WeakHashSet<const RenderBox>& containerQueryBoxes() const { return m_containerQueryBoxes; }
 
 private:
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
@@ -225,6 +238,9 @@ private:
 
     // Include this RenderView.
     uint64_t m_rendererCount { 1 };
+
+    UniqueRef<Layout::InitialContainingBlock> m_initialContainingBlock;
+    std::unique_ptr<Layout::LayoutState> m_layoutState;
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
     SelectionRangeData m_selection;
@@ -264,8 +280,8 @@ private:
     bool m_needsEventRegionUpdateForNonCompositedFrame { false };
 
     HashMap<RenderElement*, Vector<CachedImage*>> m_renderersWithPausedImageAnimation;
+    WeakHashSet<SVGSVGElement, WeakPtrImplWithEventTargetData> m_SVGSVGElementsWithPausedImageAnimation;
     HashSet<RenderElement*> m_visibleInViewportRenderers;
-    Vector<RefPtr<RenderWidget>> m_protectedRenderWidgets;
 
     HashSet<const RenderBox*> m_boxesWithScrollSnapPositions;
     WeakHashSet<const RenderBox> m_containerQueryBoxes;

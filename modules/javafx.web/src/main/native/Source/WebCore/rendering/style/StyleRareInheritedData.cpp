@@ -39,15 +39,15 @@ namespace WebCore {
 struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<GreaterThanOrSameSizeAsStyleRareInheritedData> {
     float firstFloat;
     void* styleImage;
-    Color firstColor;
-    Color colors[10];
+    StyleColor firstColor;
+    StyleColor colors[10];
     void* ownPtrs[1];
     AtomString atomStrings[6];
     void* refPtrs[3];
     Length lengths[2];
     float secondFloat;
     TextUnderlineOffset offset;
-    TextDecorationThickness thickness;
+    TextEdge textEdge;
     void* customPropertyDataRefs[1];
     unsigned bitfields[7];
     short pagedMediaShorts[2];
@@ -63,12 +63,14 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-    Color tapHighlightColor;
+    StyleColor tapHighlightColor;
 #endif
 
 #if ENABLE(DARK_MODE_CSS)
     StyleColorScheme colorScheme;
 #endif
+    TextSpacingTrim textSpacingTrim;
+    TextAutospace textAutospace;
 };
 
 static_assert(sizeof(StyleRareInheritedData) <= sizeof(GreaterThanOrSameSizeAsStyleRareInheritedData), "StyleRareInheritedData should bit pack");
@@ -91,7 +93,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , indent(RenderStyle::initialTextIndent())
     , effectiveZoom(RenderStyle::initialZoom())
     , textUnderlineOffset(RenderStyle::initialTextUnderlineOffset())
-    , textDecorationThickness(RenderStyle::initialTextDecorationThickness())
+    , textEdge(RenderStyle::initialTextEdge())
     , miterLimit(RenderStyle::initialStrokeMiterLimit())
     , customProperties(StyleCustomPropertyData::create())
     , widows(RenderStyle::initialWidows())
@@ -130,6 +132,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textJustify(static_cast<unsigned>(RenderStyle::initialTextJustify()))
     , textDecorationSkipInk(static_cast<unsigned>(RenderStyle::initialTextDecorationSkipInk()))
     , textUnderlinePosition(static_cast<unsigned>(RenderStyle::initialTextUnderlinePosition()))
+    , textWrap(static_cast<unsigned>(RenderStyle::initialTextWrap()))
     , rubyPosition(static_cast<unsigned>(RenderStyle::initialRubyPosition()))
     , textZoom(static_cast<unsigned>(RenderStyle::initialTextZoom()))
 #if PLATFORM(IOS_FAMILY)
@@ -147,6 +150,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , hasAutoAccentColor(true)
     , effectiveInert(false)
     , isInSubtreeWithBlendMode(false)
+    , effectiveSkipsContent(false)
     , effectiveTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
@@ -165,6 +169,8 @@ StyleRareInheritedData::StyleRareInheritedData()
 #if ENABLE(TOUCH_EVENTS)
     , tapHighlightColor(RenderStyle::initialTapHighlightColor())
 #endif
+    , textSpacingTrim(RenderStyle::initialTextSpacingTrim())
+    , textAutospace(RenderStyle::initialTextAutospace())
 {
 }
 
@@ -187,7 +193,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , indent(o.indent)
     , effectiveZoom(o.effectiveZoom)
     , textUnderlineOffset(o.textUnderlineOffset)
-    , textDecorationThickness(o.textDecorationThickness)
+    , textEdge(o.textEdge)
     , miterLimit(o.miterLimit)
     , customProperties(o.customProperties)
     , widows(o.widows)
@@ -226,6 +232,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textJustify(o.textJustify)
     , textDecorationSkipInk(o.textDecorationSkipInk)
     , textUnderlinePosition(o.textUnderlinePosition)
+    , textWrap(o.textWrap)
     , rubyPosition(o.rubyPosition)
     , textZoom(o.textZoom)
 #if PLATFORM(IOS_FAMILY)
@@ -243,6 +250,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , hasAutoAccentColor(o.hasAutoAccentColor)
     , effectiveInert(o.effectiveInert)
     , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
+    , effectiveSkipsContent(o.effectiveSkipsContent)
     , effectiveTouchActions(o.effectiveTouchActions)
     , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
@@ -268,6 +276,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
 #if ENABLE(TOUCH_EVENTS)
     , tapHighlightColor(o.tapHighlightColor)
 #endif
+    , textSpacingTrim(o.textSpacingTrim)
+    , textAutospace(o.textAutospace)
 {
 }
 
@@ -298,7 +308,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && indent == o.indent
         && effectiveZoom == o.effectiveZoom
         && textUnderlineOffset == o.textUnderlineOffset
-        && textDecorationThickness == o.textDecorationThickness
+        && textEdge == o.textEdge
         && wordSpacing == o.wordSpacing
         && miterLimit == o.miterLimit
         && widows == o.widows
@@ -354,6 +364,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && textJustify == o.textJustify
         && textDecorationSkipInk == o.textDecorationSkipInk
         && textUnderlinePosition == o.textUnderlinePosition
+        && textWrap == o.textWrap
         && rubyPosition == o.rubyPosition
         && textZoom == o.textZoom
         && lineSnap == o.lineSnap
@@ -372,12 +383,15 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && effectiveTouchActions == o.effectiveTouchActions
         && eventListenerRegionTypes == o.eventListenerRegionTypes
         && effectiveInert == o.effectiveInert
+        && effectiveSkipsContent == o.effectiveSkipsContent
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor
         && customProperties == o.customProperties
         && arePointingToEqualData(listStyleImage, o.listStyleImage)
-        && listStyleStringValue == o.listStyleStringValue;
+        && listStyleStringValue == o.listStyleStringValue
+        && textSpacingTrim == o.textSpacingTrim
+        && textAutospace == o.textAutospace;
 }
 
 bool StyleRareInheritedData::hasColorFilters() const

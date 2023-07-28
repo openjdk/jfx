@@ -37,6 +37,7 @@ namespace WebCore {
 
 class ScrollingTree;
 class ScrollingStateScrollingNode;
+class ScrollingTreeScrollingNodeDelegate;
 struct WheelEventHandlingResult;
 
 struct ScrollPropagationInfo {
@@ -49,8 +50,8 @@ class WEBCORE_EXPORT ScrollingTreeScrollingNode : public ScrollingTreeNode {
 #if PLATFORM(MAC)
     friend class ScrollingTreeScrollingNodeDelegateMac;
 #endif
-#if USE(NICOSIA)
-    friend class ScrollingTreeScrollingNodeDelegateNicosia;
+#if ENABLE(SCROLLING_THREAD)
+    friend class ThreadedScrollingTreeScrollingNodeDelegate;
 #endif
     friend class ScrollingTree;
     friend class ThreadedScrollingTree;
@@ -58,8 +59,10 @@ class WEBCORE_EXPORT ScrollingTreeScrollingNode : public ScrollingTreeNode {
 public:
     virtual ~ScrollingTreeScrollingNode();
 
-    void commitStateBeforeChildren(const ScrollingStateNode&) override;
-    void commitStateAfterChildren(const ScrollingStateNode&) override;
+    void handleKeyboardScrollRequest(const RequestedKeyboardScrollData&);
+
+    bool commitStateBeforeChildren(const ScrollingStateNode&) override;
+    bool commitStateAfterChildren(const ScrollingStateNode&) override;
     void didCompleteCommitForNode() final;
 
     virtual bool canHandleWheelEvent(const PlatformWheelEvent&, EventTargeting) const;
@@ -80,7 +83,7 @@ public:
     bool isScrollSnapInProgress() const;
     void setScrollSnapInProgress(bool);
 
-    virtual void serviceScrollAnimation(MonotonicTime) { }
+    virtual void serviceScrollAnimation(MonotonicTime);
 
     // These are imperative; they adjust the scrolling layers.
     void scrollTo(const FloatPoint&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped);
@@ -99,8 +102,8 @@ public:
     const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
     const FloatSize& totalContentsSize() const { return m_totalContentsSize; }
 
-    bool horizontalScrollbarHiddenByStyle() const { return m_scrollableAreaParameters.horizontalScrollbarHiddenByStyle; }
-    bool verticalScrollbarHiddenByStyle() const { return m_scrollableAreaParameters.verticalScrollbarHiddenByStyle; }
+    NativeScrollbarVisibility horizontalNativeScrollbarVisibility() const { return m_scrollableAreaParameters.horizontalNativeScrollbarVisibility; }
+    NativeScrollbarVisibility verticalNativeScrollbarVisibility() const { return m_scrollableAreaParameters.verticalNativeScrollbarVisibility; }
     bool canHaveHorizontalScrollbar() const { return m_scrollableAreaParameters.horizontalScrollbarMode != ScrollbarMode::AlwaysOff; }
     bool canHaveVerticalScrollbar() const { return m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarMode::AlwaysOff; }
     bool canHaveScrollbars() const { return m_scrollableAreaParameters.horizontalScrollbarMode != ScrollbarMode::AlwaysOff || m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarMode::AlwaysOff; }
@@ -133,13 +136,15 @@ protected:
 
     virtual void willDoProgrammaticScroll(const FloatPoint&) { }
 
-    virtual FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped) const;
+    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped) const;
 
-    virtual bool startAnimatedScrollToPosition(FloatPoint) { return false; }
-    virtual void stopAnimatedScroll() { }
+    virtual bool startAnimatedScrollToPosition(FloatPoint);
+    virtual void stopAnimatedScroll();
 
     void willStartAnimatedScroll();
     void didStopAnimatedScroll();
+    void willStartWheelEventScroll();
+    void didStopWheelEventScroll();
 
     void setScrollAnimationInProgress(bool);
 
@@ -174,6 +179,8 @@ protected:
     bool overscrollBehaviorAllowsRubberBand() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior != OverscrollBehavior::None ||  m_scrollableAreaParameters.verticalOverscrollBehavior != OverscrollBehavior::None; }
     bool shouldRubberBand(const PlatformWheelEvent&, EventTargeting) const;
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
+
+    std::unique_ptr<ScrollingTreeScrollingNodeDelegate> m_delegate;
 
 private:
     FloatSize m_scrollableAreaSize;

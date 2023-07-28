@@ -89,40 +89,15 @@ template<typename ComponentType> inline ComponentType normalizeHue(ComponentType
 
 template<typename ColorType> inline ColorType makeColorTypeByNormalizingComponents(const ColorComponents<float, 4>& colorComponents)
 {
-    return makeFromComponents<ColorType>(colorComponents);
+    return makeFromComponentsClamping<ColorType>(colorComponents);
 }
 
 template<> inline HWBA<float> makeColorTypeByNormalizingComponents<HWBA<float>>(const ColorComponents<float, 4>& colorComponents)
 {
     auto [hue, whiteness, blackness, alpha] = colorComponents;
     auto [normalizedWhitness, normalizedBlackness] = normalizeWhitenessBlackness(whiteness, blackness);
-    float normalizedHue = normalizeHue(hue);
 
-    return { normalizedHue, normalizedWhitness, normalizedBlackness, alpha };
-}
-
-template<> inline HSLA<float> makeColorTypeByNormalizingComponents<HSLA<float>>(const ColorComponents<float, 4>& colorComponents)
-{
-    auto [hue, saturation, lightness, alpha] = colorComponents;
-    float normalizedHue = normalizeHue(hue);
-
-    return { normalizedHue, saturation, lightness, alpha };
-}
-
-template<> inline LCHA<float> makeColorTypeByNormalizingComponents<LCHA<float>>(const ColorComponents<float, 4>& colorComponents)
-{
-    auto [lightness, chroma, hue, alpha] = colorComponents;
-    float normalizedHue = normalizeHue(hue);
-
-    return { lightness, chroma, normalizedHue, alpha };
-}
-
-template<> inline OKLCHA<float> makeColorTypeByNormalizingComponents<OKLCHA<float>>(const ColorComponents<float, 4>& colorComponents)
-{
-    auto [lightness, chroma, hue, alpha] = colorComponents;
-    float normalizedHue = normalizeHue(hue);
-
-    return { lightness, chroma, normalizedHue, alpha };
+    return makeFromComponentsClamping<HWBA<float>>(hue, normalizedWhitness, normalizedBlackness, alpha);
 }
 
 // MARK: - Canonicalization

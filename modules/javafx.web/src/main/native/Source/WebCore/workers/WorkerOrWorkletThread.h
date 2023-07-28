@@ -29,6 +29,7 @@
 #include "WorkerThreadMode.h"
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
+#include <wtf/FunctionDispatcher.h>
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/threads/BinarySemaphore.h>
@@ -42,9 +43,14 @@ namespace WebCore {
 class WorkerDebuggerProxy;
 class WorkerLoaderProxy;
 
-class WorkerOrWorkletThread : public ThreadSafeRefCounted<WorkerOrWorkletThread> {
+class WorkerOrWorkletThread : public SerialFunctionDispatcher, public ThreadSafeRefCounted<WorkerOrWorkletThread> {
 public:
     virtual ~WorkerOrWorkletThread();
+
+    void dispatch(Function<void()>&&) final;
+#if ASSERT_ENABLED
+    void assertIsCurrent() const final;
+#endif
 
     Thread* thread() const { return m_thread.get(); }
 
@@ -69,6 +75,9 @@ public:
     static Lock& workerOrWorkletThreadsLock() WTF_RETURNS_LOCK(s_workerOrWorkletThreadsLock);
     static void releaseFastMallocFreeMemoryInAllThreads();
 
+    void addChildThread(WorkerOrWorkletThread&);
+    void removeChildThread(WorkerOrWorkletThread&);
+
 protected:
     explicit WorkerOrWorkletThread(const String& inspectorIdentifier, WorkerThreadMode = WorkerThreadMode::CreateNewThread);
     void workerOrWorkletThread();
@@ -81,6 +90,7 @@ private:
     virtual RefPtr<WorkerOrWorkletGlobalScope> createGlobalScope() = 0;
     virtual void evaluateScriptIfNecessary(String&) { }
     virtual bool shouldWaitForWebInspectorOnStartup() const { return false; }
+    void destroyWorkerGlobalScope(Ref<WorkerOrWorkletThread>&& protectedThis);
 
     static Lock s_workerOrWorkletThreadsLock;
 
@@ -92,6 +102,8 @@ private:
     Function<void(const String&)> m_evaluateCallback;
     Function<void()> m_stoppedCallback;
     BinarySemaphore m_suspensionSemaphore;
+    HashSet<WorkerOrWorkletThread*> m_childThreads;
+    Function<void()> m_runWhenLastChildThreadIsGone;
     bool m_isSuspended { false };
     bool m_pausedForDebugger { false };
 };

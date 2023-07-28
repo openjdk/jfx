@@ -32,6 +32,7 @@ class AtomStringImpl;
 class BinarySemaphore;
 class CString;
 class CrashOnOverflow;
+class DefaultWeakPtrImpl;
 class FunctionDispatcher;
 class Hasher;
 class Lock;
@@ -53,7 +54,6 @@ class UniquedStringImpl;
 class WallTime;
 
 struct AnyThreadsAccessTraits;
-struct EmptyCounter;
 struct FastMalloc;
 struct MainThreadAccessTraits;
 
@@ -67,9 +67,11 @@ template<typename> struct DefaultRefDerefTraits;
 
 template<typename> class CompactPtr;
 template<typename> class CompletionHandler;
+template<typename Key, typename, Key> class EnumeratedArray;
 template<typename> class FixedVector;
 template<typename> class Function;
 template<typename, typename = AnyThreadsAccessTraits> class LazyNeverDestroyed;
+template<typename T, typename Traits = typename T::MarkableTraits> class Markable;
 template<typename, typename = AnyThreadsAccessTraits> class NeverDestroyed;
 template<typename> class ObjectIdentifier;
 template<typename> class OptionSet;
@@ -87,7 +89,7 @@ template<typename> class StringParsingBuffer;
 template<typename, typename = void> class StringTypeAdapter;
 template<typename> class UniqueRef;
 template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16, typename Malloc = VectorMalloc> class Vector;
-template<typename, typename = EmptyCounter> class WeakPtr;
+template<typename, typename = DefaultWeakPtrImpl> class WeakPtr;
 
 template<typename> struct DefaultHash;
 template<> struct DefaultHash<AtomString>;
@@ -99,6 +101,7 @@ template<typename T, size_t inlineCapacity> struct DefaultHash<Vector<T, inlineC
 
 template<typename> struct RawValueTraits;
 template<typename> struct EnumTraits;
+template<typename> struct EnumTraitsForPersistence;
 template<typename E, E...> struct EnumValues;
 template<typename> struct HashTraits;
 
@@ -128,6 +131,7 @@ using WTF::AtomStringImpl;
 using WTF::BinarySemaphore;
 using WTF::CString;
 using WTF::CompletionHandler;
+using WTF::EnumeratedArray;
 using WTF::FixedVector;
 using WTF::Function;
 using WTF::FunctionDispatcher;

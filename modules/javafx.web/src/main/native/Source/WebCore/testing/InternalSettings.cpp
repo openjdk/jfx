@@ -54,13 +54,11 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_storageBlockingPolicy(settings.storageBlockingPolicy())
     , m_userInterfaceDirectionPolicy(settings.userInterfaceDirectionPolicy())
     , m_systemLayoutDirection(settings.systemLayoutDirection())
-    , m_pdfImageCachingPolicy(settings.pdfImageCachingPolicy())
     , m_forcedColorsAreInvertedAccessibilityValue(settings.forcedColorsAreInvertedAccessibilityValue())
     , m_forcedDisplayIsMonochromeAccessibilityValue(settings.forcedDisplayIsMonochromeAccessibilityValue())
     , m_forcedPrefersContrastAccessibilityValue(settings.forcedPrefersContrastAccessibilityValue())
     , m_forcedPrefersReducedMotionAccessibilityValue(settings.forcedPrefersReducedMotionAccessibilityValue())
     , m_fontLoadTimingOverride(settings.fontLoadTimingOverride())
-    , m_frameFlattening(settings.frameFlattening())
     , m_fetchAPIKeepAliveAPIEnabled(DeprecatedGlobalSettings::fetchAPIKeepAliveEnabled())
     , m_customPasteboardDataEnabled(DeprecatedGlobalSettings::customPasteboardDataEnabled())
     , m_originalMockScrollbarsEnabled(DeprecatedGlobalSettings::mockScrollbarsEnabled())
@@ -109,13 +107,11 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     settings.setStorageBlockingPolicy(m_storageBlockingPolicy);
     settings.setUserInterfaceDirectionPolicy(m_userInterfaceDirectionPolicy);
     settings.setSystemLayoutDirection(m_systemLayoutDirection);
-    settings.setPdfImageCachingPolicy(m_pdfImageCachingPolicy);
     settings.setForcedColorsAreInvertedAccessibilityValue(m_forcedColorsAreInvertedAccessibilityValue);
     settings.setForcedDisplayIsMonochromeAccessibilityValue(m_forcedDisplayIsMonochromeAccessibilityValue);
     settings.setForcedPrefersContrastAccessibilityValue(m_forcedPrefersContrastAccessibilityValue);
     settings.setForcedPrefersReducedMotionAccessibilityValue(m_forcedPrefersReducedMotionAccessibilityValue);
     settings.setFontLoadTimingOverride(m_fontLoadTimingOverride);
-    settings.setFrameFlattening(m_frameFlattening);
 
     DeprecatedGlobalSettings::setFetchAPIKeepAliveEnabled(m_fetchAPIKeepAliveAPIEnabled);
     DeprecatedGlobalSettings::setCustomPasteboardDataEnabled(m_customPasteboardDataEnabled);
@@ -312,14 +308,6 @@ ExceptionOr<void> InternalSettings::setStorageBlockingPolicy(StorageBlockingPoli
     return { };
 }
 
-ExceptionOr<void> InternalSettings::setPDFImageCachingPolicy(PDFImageCachingPolicy policy)
-{
-    if (!m_page)
-        return Exception { InvalidAccessError };
-    settings().setPdfImageCachingPolicy(policy);
-    return { };
-}
-
 ExceptionOr<void> InternalSettings::setMinimumTimerInterval(double intervalInSeconds)
 {
     if (!m_page)
@@ -357,14 +345,6 @@ ExceptionOr<void> InternalSettings::setSystemLayoutDirection(SystemLayoutDirecti
     if (!m_page)
         return Exception { InvalidAccessError };
     settings().setSystemLayoutDirection(direction);
-    return { };
-}
-
-ExceptionOr<void> InternalSettings::setFrameFlattening(FrameFlatteningValue frameFlattening)
-{
-    if (!m_page)
-        return Exception { InvalidAccessError };
-    settings().setFrameFlattening(frameFlattening);
     return { };
 }
 

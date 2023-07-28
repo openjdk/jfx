@@ -29,6 +29,7 @@
 #include "RenderStyleConstants.h"
 #include "StyleScopeOrdinal.h"
 #include "TimingFunction.h"
+#include "WebAnimationTypes.h"
 
 namespace WebCore {
 
@@ -106,7 +107,7 @@ public:
 
     struct TransitionProperty {
         TransitionMode mode;
-        CSSPropertyID id;
+        AnimatableProperty animatableProperty;
     };
 
     enum AnimationDirection {
@@ -135,7 +136,6 @@ public:
     Style::ScopeOrdinal nameStyleScopeOrdinal() const { return m_nameStyleScopeOrdinal; }
     AnimationPlayState playState() const { return static_cast<AnimationPlayState>(m_playState); }
     TransitionProperty property() const { return m_property; }
-    const String& unknownProperty() const { return m_unknownProperty; }
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
     TimingFunction* defaultTimingFunctionForKeyframes() const { return m_defaultTimingFunctionForKeyframes.get(); }
 
@@ -153,7 +153,6 @@ public:
     }
     void setPlayState(AnimationPlayState d) { m_playState = static_cast<unsigned>(d); m_playStateSet = true; }
     void setProperty(TransitionProperty t) { m_property = t; m_propertySet = true; }
-    void setUnknownProperty(const String& property) { m_unknownProperty = property; }
     void setTimingFunction(RefPtr<TimingFunction>&& function) { m_timingFunction = WTFMove(function); m_timingFunctionSet = true; }
     void setDefaultTimingFunctionForKeyframes(RefPtr<TimingFunction>&& function) { m_defaultTimingFunctionForKeyframes = WTFMove(function); }
 
@@ -200,7 +199,6 @@ private:
     TransitionProperty m_property { TransitionMode::All, CSSPropertyInvalid };
 
     Name m_name;
-    String m_unknownProperty;
     double m_iterationCount;
     double m_delay;
     double m_duration;

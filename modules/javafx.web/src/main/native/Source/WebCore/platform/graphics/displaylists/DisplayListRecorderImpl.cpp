@@ -42,8 +42,8 @@
 namespace WebCore {
 namespace DisplayList {
 
-RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, DrawGlyphsMode drawGlyphsMode)
-    : Recorder(state, initialClip, initialCTM, drawGlyphsMode)
+RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, const DestinationColorSpace& colorSpace, DrawGlyphsMode drawGlyphsMode)
+    : Recorder(state, initialClip, initialCTM, colorSpace, drawGlyphsMode)
     , m_displayList(displayList)
 {
     LOG_WITH_STREAM(DisplayLists, stream << "\nRecording with clip " << initialClip);
@@ -237,14 +237,14 @@ void RecorderImpl::recordDrawPath(const Path& path)
     append<DrawPath>(path);
 }
 
-void RecorderImpl::recordDrawFocusRingPath(const Path& path, float width, float offset, const Color& color)
+void RecorderImpl::recordDrawFocusRingPath(const Path& path, float outlineWidth, const Color& color)
 {
-    append<DrawFocusRingPath>(path, width, offset, color);
+    append<DrawFocusRingPath>(path, outlineWidth, color);
 }
 
-void RecorderImpl::recordDrawFocusRingRects(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
+void RecorderImpl::recordDrawFocusRingRects(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color)
 {
-    append<DrawFocusRingRects>(rects, width, offset, color);
+    append<DrawFocusRingRects>(rects, outlineOffset, outlineWidth, color);
 }
 
 void RecorderImpl::recordFillRect(const FloatRect& rect)
@@ -316,6 +316,11 @@ void RecorderImpl::recordPaintFrameForMedia(MediaPlayer& player, const FloatRect
 {
     append<PaintFrameForMedia>(player, destination);
 }
+
+void RecorderImpl::recordPaintVideoFrame(VideoFrame&, const FloatRect&, bool /* shouldDiscardAlpha */)
+{
+    // FIXME: TODO
+}
 #endif // ENABLE(VIDEO)
 
 void RecorderImpl::recordStrokeRect(const FloatRect& rect, float width)
@@ -367,6 +372,11 @@ void RecorderImpl::recordStrokeEllipse(const FloatRect& rect)
 void RecorderImpl::recordClearRect(const FloatRect& rect)
 {
     append<ClearRect>(rect);
+}
+
+void RecorderImpl::recordDrawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
+{
+    append<DrawControlPart>(part, borderRect, deviceScaleFactor, style);
 }
 
 #if USE(CG)
@@ -421,16 +431,6 @@ bool RecorderImpl::recordResourceUse(DecomposedGlyphs& decomposedGlyphs)
 {
     m_displayList.cacheDecomposedGlyphs(decomposedGlyphs);
     return true;
-}
-
-// FIXME: share with ShadowData
-static inline float shadowPaintingExtent(float blurRadius)
-{
-    // Blurring uses a Gaussian function whose std. deviation is m_radius/2, and which in theory
-    // extends to infinity. In 8-bit contexts, however, rounding causes the effect to become
-    // undetectable at around 1.4x the radius.
-    const float radiusExtentMultiplier = 1.4;
-    return ceilf(blurRadius * radiusExtentMultiplier);
 }
 
 } // namespace DisplayList
