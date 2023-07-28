@@ -85,8 +85,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         func(TextArea.DOCUMENT_END, c::end); // TODO move to behavior
         func(TextArea.DOCUMENT_START, c::home); // TODO move to behavior
         func(TextArea.DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false));
-        func(TextArea.HOME, () -> lineStart(false));
-        func(TextArea.END, () -> lineEnd(false));
+        func(TextArea.LINE_START, () -> lineStart(false));
+        func(TextArea.LINE_END, () -> lineEnd(false));
         func(TextArea.MOVE_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
         func(TextArea.MOVE_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
         func(TextArea.PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false));
@@ -109,9 +109,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         key(KeyCode.DOWN, TextArea.DOWN);
         key(KeyBinding2.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
         key(KeyBinding2.shift(KeyCode.END), TextArea.SELECT_LINE_END);
-        key(KeyCode.END, TextArea.END);
+        key(KeyCode.END, TextArea.LINE_END);
         key(KeyCode.ENTER, TextArea.INSERT_NEW_LINE);
-        key(KeyCode.HOME, TextArea.HOME);
+        key(KeyCode.HOME, TextArea.LINE_START);
         key(KeyBinding2.shift(KeyCode.HOME), TextArea.SELECT_LINE_START);
         key(KeyCode.PAGE_UP, TextArea.PAGE_UP);
         key(KeyBinding2.shift(KeyCode.PAGE_UP), TextArea.SELECT_PAGE_UP);
@@ -126,9 +126,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         key(KeyBinding2.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
         key(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
         key(KeyBinding2.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
-        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.HOME);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.LINE_START);
         key(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
-        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.END);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
         key(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
         key(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.MOVE_PARAGRAPH_UP);
         key(KeyBinding2.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
@@ -136,10 +136,10 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         key(KeyBinding2.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
 
         // non-macOS specific mappings
-        key(KeyBinding2.with(KeyCode.DOWN).ctrl().notForMac().build(), TextArea.MOVE_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(KeyCode.DOWN).ctrl().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(KeyCode.UP).ctrl().notForMac().build(), TextArea.MOVE_PARAGRAPH_UP);
-        key(KeyBinding2.with(KeyCode.UP).ctrl().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.DOWN).control().notForMac().build(), TextArea.MOVE_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.UP).control().notForMac().build(), TextArea.MOVE_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
 
         addKeyPadMappings();
     }

@@ -70,6 +70,7 @@ import javafx.scene.control.input.FunctionTag;
  * @since JavaFX 2.1
  */
 public abstract class ComboBoxBase<T> extends Control {
+    /** Denotes the function that toggles this combo box popup. */
     public static final FunctionTag TOGGLE_POPUP = new FunctionTag();
     //CANCEL_EDIT, // TODO forwards to parent, child class logic in the base class, looks poorly thought out
 

@@ -74,6 +74,10 @@ public class InputMap2<C extends Control> {
     // FunctionTag -> Entry with value=Runnable
     private final HashMap<Object,Entry> map = new HashMap<>();
 
+    /**
+     * The constructor.
+     * @param control the owner
+     */
     public InputMap2(C control) {
         if (control == null) {
             throw new IllegalArgumentException("control cannot be null");
@@ -219,6 +223,8 @@ public class InputMap2<C extends Control> {
     /**
      * Adds a user-specified function under the given function tag.
      * This function will override any function set by the behavior.
+     * @param tag the function tag
+     * @param function the function
      */
     public void func(FunctionTag tag, Runnable function) {
         Objects.requireNonNull(tag, "function tag must not be null");
@@ -230,9 +236,9 @@ public class InputMap2<C extends Control> {
      * Maps a function to the function tag, for use by the behavior.
      * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
      *
-     * @param behavior
-     * @param tag
-     * @param function
+     * @param behavior the owner
+     * @param tag the function tag
+     * @param function the function
      */
     void func(IBehavior behavior, FunctionTag tag, Runnable function) {
         Objects.requireNonNull(behavior, "behavior must not be null");
@@ -245,8 +251,8 @@ public class InputMap2<C extends Control> {
      * Link a key binding to the specified function tag.
      * This method will override a mapping set by the behavior.
      *
-     * @param k
-     * @param tag
+     * @param k the key binding
+     * @param tag the function tag
      */
     public void key(KeyBinding2 k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
@@ -259,9 +265,9 @@ public class InputMap2<C extends Control> {
      * A null key binding will result in no change to this input map.
      * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      *
-     * @param behavior
-     * @param k key binding, can be null
-     * @param tag function tag
+     * @param behavior the owner
+     * @param k the key binding, can be null TODO variant: KeyBinding.NA
+     * @param tag the function tag
      */
     void key(IBehavior behavior, KeyBinding2 k, FunctionTag tag) {
         if (k == null) {
@@ -276,9 +282,9 @@ public class InputMap2<C extends Control> {
      * Maps a key binding to the specified function tag, as a part of the behavior.
      * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      *
-     * @param behavior
-     * @param code key code to construct a {@link KeyBinding2}
-     * @param tag function tag
+     * @param behavior the owner
+     * @param code the key code to construct a {@link KeyBinding2}
+     * @param tag the function tag
      */
     void key(IBehavior behavior, KeyCode code, FunctionTag tag) {
         key(behavior, KeyBinding2.of(code), tag);
@@ -323,7 +329,8 @@ public class InputMap2<C extends Control> {
     /**
      * Returns a {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
      *
-     * @param tag
+     * @param tag the function tag
+     * @return the function, or null
      */
     public Runnable getFunction(FunctionTag tag) {
         Entry en = map.get(tag);
@@ -339,7 +346,8 @@ public class InputMap2<C extends Control> {
     /**
      * Returns a default {@code Runnable} mapped to the specified function tag, or null if no such mapping exists.
      *
-     * @param tag
+     * @param tag the function tag
+     * @return the function, or null
      */
     public Runnable getDefaultFunction(FunctionTag tag) {
         Entry en = map.get(tag);
@@ -356,7 +364,8 @@ public class InputMap2<C extends Control> {
      * Returns a {@code Runnable} mapped to the specified {@link KeyBinding2},
      * or null if no such mapping exists.
      *
-     * @param k
+     * @param k the key binding
+     * @return the function, or null
      */
     public Runnable getFunction(KeyBinding2 k) {
         Entry en = map.get(k);
@@ -373,7 +382,8 @@ public class InputMap2<C extends Control> {
      * Returns a default {@code Runnable} mapped to the specified {@link KeyBinding2},
      * or null if no such mapping exists.
      *
-     * @param k
+     * @param k the key binding
+     * @return the function, or null
      */
     public Runnable getDefaultFunction(KeyBinding2 k) {
         // TODO this needs to be tested
@@ -417,7 +427,7 @@ public class InputMap2<C extends Control> {
     /**
      * Unbinds the specified key binding.
      *
-     * @param k
+     * @param k the key binding
      */
     public void unbind(KeyBinding2 k) {
         Entry en = map.get(k);
@@ -443,7 +453,7 @@ public class InputMap2<C extends Control> {
     /**
      * Restores the specified key binding to the value set by the behavior, if any.
      *
-     * @param k
+     * @param k the key binding
      */
     public void restoreDefaultKeyBinding(KeyBinding2 k) {
         Entry en = map.get(k);
@@ -458,7 +468,7 @@ public class InputMap2<C extends Control> {
     /**
      * Restores the specified function tag to the value set by the behavior, if any.
      *
-     * @param tag
+     * @param tag the function tag
      */
     public void restoreDefaultFunction(FunctionTag tag) {
         Objects.requireNonNull(tag, "function tag must not be null");
@@ -474,7 +484,7 @@ public class InputMap2<C extends Control> {
     /**
      * Collects all mapped key bindings (set either by the user or the behavior).
      *
-     * @return a Set of KeyBindings
+     * @return a Set of key bindings
      */
     public Set<KeyBinding2> getKeyBindings() {
         return map.keySet().stream().

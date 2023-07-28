@@ -472,6 +472,7 @@ public abstract class Control extends Region implements Skinnable {
      * Returns the {@link InputMap2} for this {@code Control}.
      *
      * @since 22
+     * @return the input map
      */
     // TODO rename getInputMap()
     public InputMap2 getInputMap2() {
@@ -485,6 +486,7 @@ public abstract class Control extends Region implements Skinnable {
      * Executes function mapped to the {@link FunctionTag}, if any.
      * 
      * @since 22
+     * @param tag the function tag
      */
     protected void execute(FunctionTag tag) {
         Runnable f = getInputMap2().getFunction(tag);

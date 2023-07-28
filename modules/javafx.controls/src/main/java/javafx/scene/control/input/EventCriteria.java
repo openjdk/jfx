@@ -31,9 +31,16 @@ import javafx.event.EventType;
  * Determines whether an event passes certain criteria.
  */
 public interface EventCriteria<T extends Event> {
-    /** returns the event type for which criteria are valid */
+    /**
+     * Returns the event type for which this criteria are valid.
+     * @return the event type
+     */
     public EventType<T> getEventType();
 
-    /** returns true if event meets criteria */
+    /**
+     * Returns true if the specified event matches this criteria.
+     * @param ev the event
+     * @return true if match occurs
+     */
     public boolean isEventAcceptable(T ev);
 }

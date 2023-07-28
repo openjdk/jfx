@@ -49,26 +49,42 @@ import javafx.scene.input.KeyCode;
  */
 public abstract class BehaviorBase2<C extends Control> implements IBehavior {
     private C control;
-    
+
+    /** The constructor. */
     public BehaviorBase2() {
     }
     
-    // TODO rename getControl()
+    /**
+     * Returns the associated Control instance.
+     * TODO rename getControl()
+     * @return the owner
+     */
     protected final C getNode() {
         return control;
     }
 
-    // TODO rename getInputMap()
+    /**
+     * Returns the input map of the associated Control.
+     * TODO rename getInputMap()
+     * @return the input map
+     */
     protected final InputMap2 getInputMap2() {
         return control.getInputMap2();
     }
 
-    /** this method must be called in Skin.install() to actually install all the default mappings */
+    /**
+     * Installs this behavior.
+     * This method must be called in Skin.install() to actually install all the default mappings.
+     * @param skin the skin
+     */
     public void install(Skin<C> skin) {
         Objects.nonNull(skin);
         this.control = skin.getSkinnable();
     }
-    
+
+    /**
+     * Disposes of this behavior.
+     */
     public void dispose() {
         control.getInputMap2().unregister(this);
     }
@@ -77,8 +93,8 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * Maps a function to the function tag.
      * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
      *
-     * @param tag function tag
-     * @param function
+     * @param tag the function tag
+     * @param function the function
      */
     protected void func(FunctionTag tag, Runnable function) {
         getInputMap2().func(this, tag, function);
@@ -89,8 +105,8 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * A null key binding will result in no change to this input map.
      * This method will not override a user mapping.
      *
-     * @param k key binding, can be null
-     * @param tag function tag
+     * @param k the key binding, can be null (TODO or KB.NA)
+     * @param tag the function tag
      */
     protected void key(KeyBinding2 k, FunctionTag tag) {
         getInputMap2().key(this, k, tag);
@@ -100,8 +116,8 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * Maps a key binding to the specified function tag.
      * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
      *
-     * @param code key code to construct a {@link KeyBinding2}
-     * @param tag function tag
+     * @param code the key code to construct a {@link KeyBinding2}
+     * @param tag the function tag
      */
     protected void key(KeyCode code, FunctionTag tag) {
         getInputMap2().key(this, code, tag);
@@ -112,8 +128,9 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * The handler will get removed in {@link#dispose()} method.
      * This mapping always consumes the matching event.
      *
-     * @param type
-     * @param handler
+     * @param <T> the actual event type
+     * @param type the event type
+     * @param handler the event handler
      */
     protected <T extends Event> void map(EventType<T> type, EventHandler<T> handler) {
         getInputMap2().map(this, type, true, false, handler);
@@ -123,9 +140,10 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * Adds an event handler for the specified event type, in the context of this Behavior.
      * The handler will get removed in {@link#dispose()} method.
      *
-     * @param type
+     * @param <T> the actual event type
+     * @param type the event type
      * @param consume determines whether the matching event is consumed or not
-     * @param handler
+     * @param handler the event handler
      */
     protected <T extends Event> void map(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getInputMap2().map(this, type, consume, false, handler);
@@ -137,8 +155,9 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * The handler will get removed in {@link#dispose()} method.
      * This mapping always consumes the matching event.
      *
-     * @param type
-     * @param handler
+     * @param <T> the actual event type
+     * @param type the event type
+     * @param handler the event handler
      */
     protected <T extends Event> void mapTail(EventType<T> type, EventHandler<T> handler) {
         getInputMap2().map(this, type, true, true, handler);
@@ -149,9 +168,10 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * This event handler will get invoked after all handlers added via map() methods.
      * The handler will get removed in {@link#dispose()} method.
      *
-     * @param type
+     * @param <T> the actual event type
+     * @param type the event type
      * @param consume determines whether the matching event is consumed or not
-     * @param handler
+     * @param handler the event handler
      */
     protected <T extends Event> void mapTail(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getInputMap2().map(this, type, consume, true, handler);
@@ -162,18 +182,27 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
      * This is a more specific version of {@link #map(EventType,EventHandler)} method.
      * The handler will get removed in {@link#dispose()} method.
      *
-     * @param criteria matching criteria
+     * @param <T> the actual event type
+     * @param criteria the matching criteria
      * @param consume determines whether the matching event is consumed or not
-     * @param handler
+     * @param handler the event handler
      */
     protected <T extends Event> void map(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
         getInputMap2().map(this, criteria, consume, false, handler);
     }
 
+    /**
+     * Sets the code to be executed just before handling of the key events.
+     * @param action the action or null
+     */
     protected void setOnKeyEventEnter(Runnable action) {
         getInputMap2().setOnKeyEventEnter(this, action);
     }
 
+    /**
+     * Sets the code to be executed just after handling of the key events.
+     * @param action the action or null
+     */
     protected void setOnKeyEventExit(Runnable action) {
         getInputMap2().setOnKeyEventExit(this, action);
     }

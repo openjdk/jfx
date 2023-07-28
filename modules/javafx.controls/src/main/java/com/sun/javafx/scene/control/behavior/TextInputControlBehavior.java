@@ -117,8 +117,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         func(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
         func(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
         func(TextInputControl.DESELECT, c::deselect); // TODO move method to behavior
-        func(TextInputControl.HOME, c::home); // TODO move method to behavior
-        func(TextInputControl.END, c::end); // TODO move method to behavior
+        func(TextInputControl.DOCUMENT_START, c::home); // TODO move method to behavior
+        func(TextInputControl.DOCUMENT_END, c::end); // TODO move method to behavior
         func(TextInputControl.LEFT, () -> nextCharacterVisually(false));
         func(TextInputControl.LEFT_WORD, this::leftWord);
         func(TextInputControl.PASTE, this::paste);
@@ -147,12 +147,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         key(KeyBinding2.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
         key(KeyBinding2.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
         key(KeyBinding2.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.of(KeyCode.HOME), TextInputControl.HOME);
-        key(KeyBinding2.with(KeyCode.HOME).shortcut().build(), TextInputControl.HOME);
-        key(KeyBinding2.of(KeyCode.UP), TextInputControl.HOME);
-        key(KeyBinding2.of(KeyCode.DOWN), TextInputControl.END);
-        key(KeyBinding2.of(KeyCode.END), TextInputControl.END);
-        key(KeyBinding2.with(KeyCode.END).shortcut().build(), TextInputControl.END);
+        key(KeyBinding2.of(KeyCode.HOME), TextInputControl.DOCUMENT_START);
+        key(KeyBinding2.with(KeyCode.HOME).shortcut().build(), TextInputControl.DOCUMENT_START);
+        key(KeyBinding2.of(KeyCode.UP), TextInputControl.DOCUMENT_START);
+        key(KeyBinding2.of(KeyCode.DOWN), TextInputControl.DOCUMENT_END);
+        key(KeyBinding2.of(KeyCode.END), TextInputControl.DOCUMENT_END);
+        key(KeyBinding2.with(KeyCode.END).shortcut().build(), TextInputControl.DOCUMENT_END);
         key(KeyBinding2.of(KeyCode.LEFT), TextInputControl.LEFT);
         key(KeyBinding2.of(KeyCode.PASTE), TextInputControl.PASTE);
         key(KeyBinding2.shift(KeyCode.INSERT), TextInputControl.PASTE);
@@ -167,16 +167,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         key(KeyBinding2.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
         key(KeyBinding2.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
         key(KeyBinding2.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
-        key(KeyBinding2.with(KeyCode.TAB).ctrl().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
+        key(KeyBinding2.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
         key(KeyBinding2.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
         // macOS key bindings
         key(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
         key(KeyBinding2.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
         key(KeyBinding2.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        key(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.HOME);
-        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.HOME);
-        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.END);
+        key(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.DOCUMENT_START);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
         key(KeyBinding2.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
         key(KeyBinding2.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
         key(KeyBinding2.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
@@ -188,22 +188,22 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         key(KeyBinding2.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // windows key bindings
-        key(KeyBinding2.with(KeyCode.Y).ctrl().forWindows().build(), TextInputControl.REDO);
+        key(KeyBinding2.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
 
         // linux key bindings
-        key(KeyBinding2.with(KeyCode.Z).ctrl().shift().forLinux().build(), TextInputControl.REDO);
+        key(KeyBinding2.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
 
         // not-mac key bindings
-        key(KeyBinding2.with(KeyCode.DELETE).ctrl().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        key(KeyBinding2.with(KeyCode.H).ctrl().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.with(KeyCode.BACK_SPACE).ctrl().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        key(KeyBinding2.with(KeyCode.BACK_SLASH).ctrl().notForMac().build(), TextInputControl.DESELECT);
-        key(KeyBinding2.with(KeyCode.LEFT).ctrl().notForMac().build(), TextInputControl.LEFT_WORD);
-        key(KeyBinding2.with(KeyCode.RIGHT).ctrl().notForMac().build(), TextInputControl.RIGHT_WORD);
+        key(KeyBinding2.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        key(KeyBinding2.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        key(KeyBinding2.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        key(KeyBinding2.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
+        key(KeyBinding2.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
+        key(KeyBinding2.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
         key(KeyBinding2.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
         key(KeyBinding2.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
-        key(KeyBinding2.with(KeyCode.LEFT).ctrl().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        key(KeyBinding2.with(KeyCode.RIGHT).ctrl().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        key(KeyBinding2.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        key(KeyBinding2.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // key pad mappings
         addKeyPadMappings();
@@ -215,7 +215,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-            map(KeyBinding2.builder().with(KeyCode.DIGIT9).ctrl().shift().build(), true, (ev) -> {
+            map(KeyBinding2.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
                 FXVK.toggleUseVK(getNode());
             });
         }
@@ -261,7 +261,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                         with(newCode).
                         alt(k.isAlt()).
                         command(k.isCommand()).
-                        ctrl(k.isCtrl()).
+                        control(k.isControl()).
                         meta(k.isMeta()).
                         option(k.isOption()).
                         shift(k.isShift()).                        

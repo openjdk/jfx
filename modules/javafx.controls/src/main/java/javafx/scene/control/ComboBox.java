@@ -195,7 +195,9 @@ import com.sun.javafx.scene.control.FakeFocusTextField;
  * @since JavaFX 2.1
  */
 public class ComboBox<T> extends ComboBoxBase<T> {
+    /** Denotes the function that selects the next item. */
     public static final FunctionTag SELECT_NEXT = new FunctionTag();
+    /** Denotes the function that selects the previous item. */
     public static final FunctionTag SELECT_PREV = new FunctionTag();
 
     /* *************************************************************************
