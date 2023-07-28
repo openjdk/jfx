@@ -49,7 +49,7 @@ static StyledMarkedText resolveStyleForMarkedText(const MarkedText& markedText, 
         break;
     case MarkedText::Highlight:
         if (auto renderStyle = renderer.parent()->getUncachedPseudoStyle({ PseudoId::Highlight, markedText.highlightName }, &renderer.style())) {
-            style.backgroundColor = renderStyle->backgroundColor();
+            style.backgroundColor = renderStyle->colorResolvingCurrentColor(renderStyle->backgroundColor());
             style.textStyles.fillColor = renderStyle->computedStrokeColor();
             style.textStyles.strokeColor = renderStyle->computedStrokeColor();
 
@@ -58,16 +58,16 @@ static StyledMarkedText resolveStyleForMarkedText(const MarkedText& markedText, 
             auto decorations = renderStyle->textDecorationsInEffect();
 
             if (decorations.contains(TextDecorationLine::Underline)) {
-                style.textDecorationStyles.underlineColor = color;
-                style.textDecorationStyles.underlineStyle = decorationStyle;
+                style.textDecorationStyles.underline.color = color;
+                style.textDecorationStyles.underline.decorationStyle = decorationStyle;
             }
             if (decorations.contains(TextDecorationLine::Overline)) {
-                style.textDecorationStyles.overlineColor = color;
-                style.textDecorationStyles.overlineStyle = decorationStyle;
+                style.textDecorationStyles.overline.color = color;
+                style.textDecorationStyles.overline.decorationStyle = decorationStyle;
             }
             if (decorations.contains(TextDecorationLine::LineThrough)) {
-                style.textDecorationStyles.linethroughColor = color;
-                style.textDecorationStyles.linethroughStyle = decorationStyle;
+                style.textDecorationStyles.linethrough.color = color;
+                style.textDecorationStyles.linethrough.decorationStyle = decorationStyle;
             }
         }
         break;

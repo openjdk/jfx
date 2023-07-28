@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGDefsElement.h"
 
+#include "LegacyRenderSVGHiddenContainer.h"
 #include "RenderSVGHiddenContainer.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -31,7 +32,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGDefsElement);
 
 inline SVGDefsElement::SVGDefsElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+    : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::defsTag));
 }
@@ -48,7 +49,11 @@ bool SVGDefsElement::isValid() const
 
 RenderPtr<RenderElement> SVGDefsElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGHiddenContainer>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGHiddenContainer>(*this, WTFMove(style));
 }
 
 }

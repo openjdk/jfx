@@ -27,6 +27,7 @@
 
 #include "CSSCalcExpressionNode.h"
 #include "CalcOperator.h"
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -68,7 +69,8 @@ public:
     bool isRoundOperation() const { return m_operator == CalcOperator::Down || m_operator == CalcOperator::Up || m_operator == CalcOperator::ToZero || m_operator == CalcOperator::Nearest; }
     bool isRoundConstant() const { return (isRoundOperation()) && !m_children.size(); }
     bool isHypotNode() const { return m_operator == CalcOperator::Hypot; }
-    bool isPowOrSqrtNode() const { return m_operator == CalcOperator::Pow || m_operator == CalcOperator::Sqrt; }
+    bool isSqrtNode() const { return m_operator == CalcOperator::Sqrt; }
+    bool isPowOrSqrtNode() const { return m_operator == CalcOperator::Pow || isSqrtNode(); }
     bool shouldPreserveFunction() const { return isTrigNode() || isExpNode() || isInverseTrigNode() || isAtan2Node() || isSignNode() || isSignNode() || isSteppedNode() || isRoundOperation() || isPowOrSqrtNode() || isClampNode(); }
     bool isClampNode() const { return m_operator == CalcOperator::Clamp; }
 
@@ -115,8 +117,7 @@ private:
     double doubleValue(CSSUnitType) const final;
     double computeLengthPx(const CSSToLengthConversionData&) const final;
 
-    void collectDirectComputationalDependencies(HashSet<CSSPropertyID>&) const final;
-    void collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>&) const final;
+    void collectComputedStyleDependencies(ComputedStyleDependencies&) const final;
     bool convertingToLengthRequiresNonNullStyle(int lengthConversion) const final;
 
     void dump(TextStream&) const final;
@@ -132,7 +133,7 @@ private:
 
     static double convertToTopLevelValue(double value)
     {
-        if (isnan(value))
+        if (std::isnan(value))
             value = std::numeric_limits<double>::infinity();
         return value;
     }

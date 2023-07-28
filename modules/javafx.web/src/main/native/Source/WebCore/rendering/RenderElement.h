@@ -36,6 +36,15 @@ class RenderBlock;
 class RenderStyle;
 class RenderTreeBuilder;
 
+struct MarginRect {
+    LayoutRect marginRect;
+    LayoutRect anchorRect;
+};
+
+namespace Layout {
+class ElementBox;
+}
+
 class RenderElement : public RenderObject {
     WTF_MAKE_ISO_ALLOCATED(RenderElement);
 public:
@@ -81,6 +90,9 @@ public:
     RenderObject* firstInFlowChild() const;
     RenderObject* lastInFlowChild() const;
 
+    Layout::ElementBox* layoutBox();
+    const Layout::ElementBox* layoutBox() const;
+
     // Note that even if these 2 "canContain" functions return true for a particular renderer, it does not necessarily mean the renderer is the containing block (see containingBlockForAbsolute(Fixed)Position).
     bool canContainFixedPositionObjects() const;
     bool canContainAbsolutelyPositionedObjects() const;
@@ -89,11 +101,11 @@ public:
     bool shouldApplyLayoutContainment() const;
     bool shouldApplySizeContainment() const;
     bool shouldApplyInlineSizeContainment() const;
+    bool shouldApplySizeOrInlineSizeContainment() const;
     bool shouldApplyStyleContainment() const;
     bool shouldApplyPaintContainment() const;
+    bool shouldApplyLayoutOrPaintContainment() const;
     bool shouldApplyAnyContainment() const;
-    bool shouldApplyLayoutOrPaintContainment(OptionSet<Containment>) const;
-    bool shouldApplySizeOrStyleContainment(OptionSet<Containment>) const;
 
     Color selectionColor(CSSPropertyID) const;
     std::unique_ptr<RenderStyle> selectionPseudoStyle() const;
@@ -171,6 +183,9 @@ public:
         if (style().visibility() != Visibility::Visible)
             return false;
 
+        if (isSkippedContent())
+            return false;
+
         if ((!hitTestRequest || !hitTestRequest->ignoreCSSPointerEventsProperty()) && style().effectivePointerEvents() == PointerEvents::None)
             return false;
 
@@ -196,7 +211,7 @@ public:
 
     // absoluteAnchorRectWithScrollMargin() is similar to absoluteAnchorRect, but it also takes into account any
     // CSS scroll-margin that is set in the style of this RenderElement.
-    LayoutRect absoluteAnchorRectWithScrollMargin(bool* insideFixed = nullptr) const;
+    MarginRect absoluteAnchorRectWithScrollMargin(bool* insideFixed = nullptr) const;
 
     bool hasFilter() const { return style().hasFilter(); }
     bool hasBackdropFilter() const
@@ -227,6 +242,7 @@ public:
     bool didContibuteToVisuallyNonEmptyPixelCount() const { return m_didContributeToVisuallyNonEmptyPixelCount; }
     void setDidContibuteToVisuallyNonEmptyPixelCount() { m_didContributeToVisuallyNonEmptyPixelCount = true; }
 
+    bool allowsAnimation() const final;
     bool repaintForPausedImageAnimationsIfNeeded(const IntRect& visibleRect, CachedImage&);
     bool hasPausedImageAnimations() const { return m_hasPausedImageAnimations; }
     void setHasPausedImageAnimations(bool b) { m_hasPausedImageAnimations = b; }
@@ -236,8 +252,6 @@ public:
 
     bool hasCounterNodeMap() const { return m_hasCounterNodeMap; }
     void setHasCounterNodeMap(bool f) { m_hasCounterNodeMap = f; }
-
-    void drawLineForBoxSide(GraphicsContext&, const FloatRect&, BoxSide, Color, BorderStyle, float adjacentWidth1, float adjacentWidth2, bool antialias = false) const;
 
 #if ENABLE(TEXT_AUTOSIZING)
     void adjustComputedFontSizesOnBlocks(float size, float visibleWidth);
@@ -292,6 +306,12 @@ public:
     bool isDeprecatedFlexItem() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isDeprecatedFlexibleBox(); }
     bool isFlexItemIncludingDeprecated() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isFlexibleBoxIncludingDeprecated(); }
 
+    virtual LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) { return { }; }
+    void paintFocusRing(const PaintInfo&, const RenderStyle&, const Vector<LayoutRect>& focusRingRects) const;
+
+    virtual bool establishesIndependentFormattingContext() const;
+    bool createsNewFormattingContext() const;
+
 protected:
     enum BaseTypeFlag {
         RenderLayerModelObjectFlag  = 1 << 0,
@@ -336,7 +356,6 @@ protected:
     unsigned renderBlockFlowLineLayoutPath() const { return m_renderBlockFlowLineLayoutPath; }
     bool renderBlockFlowHasMarkupTruncation() const { return m_renderBlockFlowHasMarkupTruncation; }
 
-    void paintFocusRing(PaintInfo&, const RenderStyle&, const Vector<LayoutRect>& focusRingRects);
     void paintOutline(PaintInfo&, const LayoutRect&);
     void updateOutlineAutoAncestor(bool hasOutlineAuto);
 
@@ -345,8 +364,8 @@ protected:
 
     bool isVisibleInViewport() const;
 
-    bool createsNewFormattingContext() const;
-    virtual bool establishesIndependentFormattingContext() const;
+    bool shouldApplyLayoutOrPaintContainment(bool) const;
+    bool shouldApplySizeOrStyleContainment(bool) const;
 
 private:
     RenderElement(ContainerNode&, RenderStyle&&, BaseTypeFlags);
@@ -474,8 +493,8 @@ inline bool RenderElement::canContainFixedPositionObjects() const
     return isRenderView()
         || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
         || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned()) // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
-        || isSVGForeignObject()
-        || shouldApplyLayoutOrPaintContainment({ Containment::Layout, Containment::Paint });
+        || isSVGForeignObjectOrLegacySVGForeignObject()
+        || shouldApplyLayoutOrPaintContainment();
 }
 
 inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
@@ -484,8 +503,8 @@ inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
         || style().position() != PositionType::Static
         || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
         || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned()) // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
-        || isSVGForeignObject()
-        || shouldApplyLayoutOrPaintContainment({ Containment::Layout, Containment::Paint });
+        || isSVGForeignObjectOrLegacySVGForeignObject()
+        || shouldApplyLayoutOrPaintContainment();
 }
 
 inline bool RenderElement::canEstablishContainingBlockWithTransform() const
@@ -493,45 +512,54 @@ inline bool RenderElement::canEstablishContainingBlockWithTransform() const
     return isRenderBlock() || (isTablePart() && !isRenderTableCol());
 }
 
-inline bool RenderElement::shouldApplyLayoutOrPaintContainment(OptionSet<Containment> options) const
+inline bool RenderElement::shouldApplyLayoutOrPaintContainment(bool containsAccordingToStyle) const
 {
-    return style().effectiveContainment().containsAny(options) && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isRenderBlockFlow());
+    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isRenderBlockFlow());
 }
 
-inline bool RenderElement::shouldApplySizeOrStyleContainment(OptionSet<Containment> options) const
+inline bool RenderElement::shouldApplySizeOrStyleContainment(bool containsAccordingToStyle) const
 {
-    return style().effectiveContainment().containsAny(options) && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isTableCaption()) && !isTable();
+    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isTableCaption()) && !isTable();
 }
 
 inline bool RenderElement::shouldApplyLayoutContainment() const
 {
-    return shouldApplyLayoutOrPaintContainment(Containment::Layout);
+    return shouldApplyLayoutOrPaintContainment(style().containsLayout() || style().contentVisibility() != ContentVisibility::Visible);
 }
 
 inline bool RenderElement::shouldApplyPaintContainment() const
 {
-    return shouldApplyLayoutOrPaintContainment(Containment::Paint);
+    return shouldApplyLayoutOrPaintContainment(style().containsPaint() || style().contentVisibility() != ContentVisibility::Visible);
+}
+
+inline bool RenderElement::shouldApplyLayoutOrPaintContainment() const
+{
+    return shouldApplyLayoutOrPaintContainment(style().containsLayoutOrPaint() || style().contentVisibility() != ContentVisibility::Visible);
 }
 
 inline bool RenderElement::shouldApplySizeContainment() const
 {
-    return shouldApplySizeOrStyleContainment(Containment::Size);
+    return shouldApplySizeOrStyleContainment(style().containsSize() || style().contentVisibility() == ContentVisibility::Hidden);
 }
 
 inline bool RenderElement::shouldApplyInlineSizeContainment() const
 {
-    return shouldApplySizeOrStyleContainment(Containment::InlineSize);
+    return shouldApplySizeOrStyleContainment(style().containsInlineSize());
+}
+
+inline bool RenderElement::shouldApplySizeOrInlineSizeContainment() const
+{
+    return shouldApplySizeOrStyleContainment(style().containsSizeOrInlineSize() || style().contentVisibility() == ContentVisibility::Hidden);
 }
 
 inline bool RenderElement::shouldApplyStyleContainment() const
 {
-    return shouldApplySizeOrStyleContainment(Containment::Style);
+    return shouldApplySizeOrStyleContainment(style().containsStyle() || style().contentVisibility() != ContentVisibility::Visible);
 }
 
 inline bool RenderElement::shouldApplyAnyContainment() const
 {
-    return shouldApplyLayoutOrPaintContainment({ Containment::Layout, Containment::Paint })
-        || shouldApplySizeOrStyleContainment({ Containment::Size, Containment::InlineSize, Containment::Style });
+    return shouldApplyLayoutOrPaintContainment() || shouldApplySizeOrStyleContainment(style().containsSizeOrInlineSize() || style().containsStyle());
 }
 
 inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)

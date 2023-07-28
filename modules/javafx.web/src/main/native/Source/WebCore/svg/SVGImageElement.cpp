@@ -25,6 +25,7 @@
 #include "SVGImageElement.h"
 
 #include "CSSPropertyNames.h"
+#include "LegacyRenderSVGImage.h"
 #include "RenderImageResource.h"
 #include "RenderSVGImage.h"
 #include "RenderSVGResource.h"
@@ -39,10 +40,12 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGImageElement);
 
 inline SVGImageElement::SVGImageElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+    : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGURIReference(this)
     , m_imageLoader(*this)
 {
+    ASSERT(hasTagName(SVGNames::imageTag));
+
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGImageElement::m_x>();
@@ -58,13 +61,32 @@ Ref<SVGImageElement> SVGImageElement::create(const QualifiedName& tagName, Docum
     return adoptRef(*new SVGImageElement(tagName, document));
 }
 
-bool SVGImageElement::hasSingleSecurityOrigin() const
+CachedImage* SVGImageElement::cachedImage() const
 {
-    auto* renderer = downcast<RenderSVGImage>(this->renderer());
-    if (!renderer || !renderer->imageResource().cachedImage())
-        return true;
-    auto* image = renderer->imageResource().cachedImage()->image();
-    return !image || image->hasSingleSecurityOrigin();
+    const RenderImageResource* resource = nullptr;
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (auto* renderer = dynamicDowncast<RenderSVGImage>(this->renderer()); renderer && renderer->imageResource().cachedImage())
+        resource = &renderer->imageResource();
+#endif
+    if (!resource) {
+        if (auto* renderer = dynamicDowncast<LegacyRenderSVGImage>(this->renderer()); renderer && renderer->imageResource().cachedImage())
+            resource = &renderer->imageResource();
+    }
+
+    if (!resource)
+        return nullptr;
+
+    return resource->cachedImage();
+}
+
+bool SVGImageElement::renderingTaintsOrigin() const
+{
+    auto cachedImage = this->cachedImage();
+    if (!cachedImage)
+        return false;
+
+    auto* image = cachedImage->image();
+    return image && image->renderingTaintsOrigin();
 }
 
 void SVGImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -98,8 +120,12 @@ void SVGImageElement::svgAttributeChanged(const QualifiedName& attrName)
         if (attrName == SVGNames::xAttr || attrName == SVGNames::yAttr) {
             updateRelativeLengthsInformation();
 
-            if (auto* renderer = this->renderer()) {
-                if (!downcast<RenderSVGImage>(*renderer).updateImageViewport())
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+            if (is<RenderSVGImage>(renderer()))
+                updateSVGRendererForElementChange();
+#endif
+            if (auto* image = dynamicDowncast<LegacyRenderSVGImage>(renderer())) {
+                if (!image->updateImageViewport())
                     return;
                 updateSVGRendererForElementChange();
             }
@@ -122,7 +148,11 @@ void SVGImageElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RenderPtr<RenderElement> SVGImageElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGImage>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGImage>(*this, WTFMove(style));
 }
 
 bool SVGImageElement::haveLoadedRequiredResources()
@@ -132,11 +162,18 @@ bool SVGImageElement::haveLoadedRequiredResources()
 
 void SVGImageElement::didAttachRenderers()
 {
-    if (auto* imageObj = downcast<RenderSVGImage>(renderer())) {
-        if (imageObj->imageResource().cachedImage())
-            return;
+    SVGGraphicsElement::didAttachRenderers();
 
-        imageObj->imageResource().setCachedImage(m_imageLoader.image());
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (auto* image = dynamicDowncast<RenderSVGImage>(renderer()); image && !image->imageResource().cachedImage()) {
+        image->imageResource().setCachedImage(m_imageLoader.image());
+            return;
+    }
+#endif
+
+    if (auto* image = dynamicDowncast<LegacyRenderSVGImage>(renderer()); image && !image->imageResource().cachedImage()) {
+        image->imageResource().setCachedImage(m_imageLoader.image());
+        return;
     }
 }
 

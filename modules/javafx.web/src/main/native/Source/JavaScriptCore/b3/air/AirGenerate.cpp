@@ -111,7 +111,7 @@ void prepareForGeneration(Code& code)
     eliminateDeadCode(code);
 
     size_t numTmps = code.numTmps(Bank::GP) + code.numTmps(Bank::FP);
-    if (code.optLevel() == 1 || numTmps > Options::maximumTmpsForGraphColoring()) {
+    if (!code.usesSIMD() && (code.optLevel() == 1 || numTmps > Options::maximumTmpsForGraphColoring())) {
         // When we're compiling quickly, we do register and stack allocation in one linear scan
         // phase. It's fast because it computes liveness only once.
         allocateRegistersAndStackByLinearScan(code);
@@ -193,7 +193,9 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
 {
     CompilerTimingScope timingScope("Air", "generateWithAlreadyAllocatedRegisters");
 
+#if !CPU(ARM)
     DisallowMacroScratchRegisterUsage disallowScratch(jit);
+#endif
 
     // And now, we generate code.
     GenerationContext context;

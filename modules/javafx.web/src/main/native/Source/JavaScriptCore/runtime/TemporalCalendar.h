@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +26,7 @@
 
 #pragma once
 
+#include "ISO8601.h"
 #include "IntlObject.h"
 #include "JSObject.h"
 
@@ -45,12 +47,22 @@ public:
 
     DECLARE_INFO;
 
+    static JSObject* toTemporalCalendarWithISODefault(JSGlobalObject*, JSValue);
+    static JSObject* getTemporalCalendarWithISODefault(JSGlobalObject*, JSValue);
+    static ISO8601::PlainDate isoDateFromFields(JSGlobalObject*, JSObject*, TemporalOverflow);
+    static ISO8601::PlainDate isoDateFromFields(JSGlobalObject*, double year, double month, double day, TemporalOverflow);
+    static ISO8601::PlainDate isoDateAdd(JSGlobalObject*, const ISO8601::PlainDate&, const ISO8601::Duration&, TemporalOverflow);
+    static ISO8601::Duration isoDateDifference(JSGlobalObject*, const ISO8601::PlainDate&, const ISO8601::PlainDate&, TemporalUnit);
+    static int32_t isoDateCompare(const ISO8601::PlainDate&, const ISO8601::PlainDate&);
+
     CalendarID identifier() const { return m_identifier; }
     bool isISO8601() const { return m_identifier == iso8601CalendarID(); }
 
     static std::optional<CalendarID> isBuiltinCalendar(StringView);
 
     static JSObject* from(JSGlobalObject*, JSValue);
+
+    bool equals(JSGlobalObject*, TemporalCalendar*);
 
 private:
     TemporalCalendar(VM&, Structure*, CalendarID);

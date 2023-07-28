@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,15 @@
 #include "RemoteInspector.h"
 #endif
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/Entitlements.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 using namespace Inspector;
 
-static bool remoteInspectionEnabledByDefault = true;
+static std::optional<bool> remoteInspectionEnabledByDefault = std::nullopt;
+static bool inspectionFollowsInternalPolicies = true;
 
 void JSRemoteInspectorDisableAutoStart(void)
 {
@@ -68,12 +74,68 @@ void JSRemoteInspectorSetLogToSystemConsole(bool logToSystemConsole)
     JSGlobalObjectConsoleClient::setLogToSystemConsole(logToSystemConsole);
 }
 
+#if PLATFORM(COCOA)
+static bool mainProcessHasEntitlement(ASCIILiteral entitlement, std::optional<audit_token_t> parentProcessAuditToken)
+{
+    if (parentProcessAuditToken)
+        return WTF::hasEntitlement(*parentProcessAuditToken, entitlement);
+
+    return WTF::processHasEntitlement(entitlement);
+}
+#endif
+
+static bool defaultStateForRemoteInspectionEnabledByDefault(void)
+{
+#if PLATFORM(COCOA)
+    auto parentProcessAuditToken = RemoteInspector::singleton().parentProcessAuditToken();
+
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::InspectableDefaultsToDisabled)) {
+#if PLATFORM(MAC)
+        auto developerProvisioningEntitlement = "com.apple.security.get-task-allow"_s;
+#else
+        auto developerProvisioningEntitlement = "get-task-allow"_s;
+#endif
+        if (mainProcessHasEntitlement(developerProvisioningEntitlement, parentProcessAuditToken)) {
+            WTFLogAlways("Inspection is enabled by default for process or parent application with '%s' entitlement linked against old SDK. Use `inspectable` API to enable inspection on newer SDKs.", developerProvisioningEntitlement.characters());
+            return true;
+        }
+    }
+
+#if PLATFORM(MAC)
+    auto deprecatedWebInspectorAllowEntitlement = "com.apple.webinspector.allow"_s;
+#else
+    auto deprecatedWebInspectorAllowEntitlement = "com.apple.private.webinspector.allow-remote-inspection"_s;
+#endif
+    if (mainProcessHasEntitlement(deprecatedWebInspectorAllowEntitlement, parentProcessAuditToken)) {
+        WTFLogAlways("Inspection is enabled by default for process or parent application with deprecated '%s' entitlement. Use `inspectable` API to enable inspection instead.", deprecatedWebInspectorAllowEntitlement.characters());
+        return true;
+    }
+
+    return false;
+#else
+    return true;
+#endif // not PLATFORM(COCOA)
+}
+
 bool JSRemoteInspectorGetInspectionEnabledByDefault(void)
 {
-    return remoteInspectionEnabledByDefault;
+    if (!remoteInspectionEnabledByDefault)
+        remoteInspectionEnabledByDefault = defaultStateForRemoteInspectionEnabledByDefault();
+
+    return remoteInspectionEnabledByDefault.value();
 }
 
 void JSRemoteInspectorSetInspectionEnabledByDefault(bool enabledByDefault)
 {
     remoteInspectionEnabledByDefault = enabledByDefault;
+}
+
+bool JSRemoteInspectorGetInspectionFollowsInternalPolicies(void)
+{
+    return inspectionFollowsInternalPolicies;
+}
+
+void JSRemoteInspectorSetInspectionFollowsInternalPolicies(bool followsInternalPolicies)
+{
+    inspectionFollowsInternalPolicies = followsInternalPolicies;
 }

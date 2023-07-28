@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 # Copyright (C) 2021 Igalia S.L. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -156,9 +156,19 @@ wasmOp(ref_is_null, WasmRefIsNull, macro(ctx)
     returni(ctx, t0)
 end)
 
+wasmOp(ref_as_non_null, WasmRefAsNonNull, macro(ctx)
+    mload2i(ctx, m_ref, t1, t0)
+    bieq t1, NullTag, .nullRef
+    return2i(ctx, t1, t0)
+
+.nullRef:
+    throwException(NullRefAsNonNull)
+end)
+
 wasmOp(get_global, WasmGetGlobal, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     load2ia [t0, t1, 8], t0, t1
     return2i(ctx, t1, t0)
 end)
@@ -166,6 +176,7 @@ end)
 wasmOp(set_global, WasmSetGlobal, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     mload2i(ctx, m_value, t3, t2)
     store2ia t2, t3, [t0, t1, 8]
     dispatch(ctx)
@@ -174,6 +185,7 @@ end)
 wasmOp(get_global_portable_binding, WasmGetGlobalPortableBinding, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     loadp [t0, t1, 8], t0
     load2ia [t0], t0, t1
     return2i(ctx, t1, t0)
@@ -182,6 +194,7 @@ end)
 wasmOp(set_global_portable_binding, WasmSetGlobalPortableBinding, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     mload2i(ctx, m_value, t3, t2)
     loadp [t0, t1, 8], t0
     store2ia t2, t3, [t0]
@@ -214,7 +227,7 @@ wasmOp(i32_div_s, WasmI32DivS, macro (ctx)
     bieq a0, constexpr INT32_MIN, .throwIntegerOverflow
 
 .safe:
-    callDivRem(_slow_path_wasm_i32_div_s)
+    callDivRem(_i32_div_s)
     returni(ctx, r0)
 
 .throwDivisionByZero:
@@ -230,7 +243,7 @@ wasmOp(i32_div_u, WasmI32DivU, macro (ctx)
 
     btiz a1, .throwDivisionByZero
 
-    callDivRem(_slow_path_wasm_i32_div_u)
+    callDivRem(_i32_div_u)
     returni(ctx, r0)
 
 .throwDivisionByZero:
@@ -250,7 +263,7 @@ wasmOp(i32_rem_s, WasmI32RemS, macro (ctx)
     jmp .return
 
 .safe:
-    callDivRem(_slow_path_wasm_i32_rem_s)
+    callDivRem(_i32_rem_s)
 
 .return:
     returni(ctx, r0)
@@ -265,7 +278,7 @@ wasmOp(i32_rem_u, WasmI32RemU, macro (ctx)
 
     btiz a1, .throwDivisionByZero
 
-    callDivRem(_slow_path_wasm_i32_rem_u)
+    callDivRem(_i32_rem_u)
     returni(ctx, r0)
 
 .throwDivisionByZero:
@@ -315,7 +328,7 @@ wasmOp(i64_div_s, WasmI64DivS, macro (ctx)
     btiz a0, .throwIntegerOverflow
 
 .safe:
-    callDivRem(_slow_path_wasm_i64_div_s)
+    callDivRem(_i64_div_s)
     return2i(ctx, r1, r0)
 
 .throwDivisionByZero:
@@ -333,7 +346,7 @@ wasmOp(i64_div_u, WasmI64DivU, macro (ctx)
     btiz a2, .throwDivisionByZero
 
 .nonZeroDivisor:
-    callDivRem(_slow_path_wasm_i64_div_u)
+    callDivRem(_i64_div_u)
     return2i(ctx, r1, r0)
 
 .throwDivisionByZero:
@@ -358,7 +371,7 @@ wasmOp(i64_rem_s, WasmI64RemS, macro (ctx)
     jmp .return
 
 .safe:
-    callDivRem(_slow_path_wasm_i64_rem_s)
+    callDivRem(_i64_rem_s)
 
 .return:
     return2i(ctx, r1, r0)
@@ -375,7 +388,7 @@ wasmOp(i64_rem_u, WasmI64RemU, macro (ctx)
     btiz a2, .throwDivisionByZero
 
 .nonZeroDivisor:
-    callDivRem(_slow_path_wasm_i64_rem_u)
+    callDivRem(_i64_rem_u)
     return2i(ctx, r1, r0)
 
 .throwDivisionByZero:
@@ -565,7 +578,6 @@ wasmOp(i64_lt_s, WasmI64LtS, macro(ctx)
     move 0, t6
     bigt t1, t3, .return
     cib t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -578,7 +590,6 @@ wasmOp(i64_le_s, WasmI64LeS, macro(ctx)
     move 0, t6
     bigt t1, t3, .return
     cibeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -591,7 +602,6 @@ wasmOp(i64_lt_u, WasmI64LtU, macro(ctx)
     move 0, t6
     bia t1, t3, .return
     cib t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -604,7 +614,6 @@ wasmOp(i64_le_u, WasmI64LeU, macro(ctx)
     move 0, t6
     bia t1, t3, .return
     cibeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -617,7 +626,6 @@ wasmOp(i64_gt_s, WasmI64GtS, macro(ctx)
     move 0, t6
     bilt t1, t3, .return
     cia t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -630,7 +638,6 @@ wasmOp(i64_ge_s, WasmI64GeS, macro(ctx)
     move 0, t6
     bilt t1, t3, .return
     ciaeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -643,7 +650,6 @@ wasmOp(i64_gt_u, WasmI64GtU, macro(ctx)
     move 0, t6
     bib t1, t3, .return
     cia t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -656,7 +662,6 @@ wasmOp(i64_ge_u, WasmI64GeU, macro(ctx)
     move 1, t6
     bia t1, t3, .return
     ciaeq t0, t2, t6
-    andi 1, t6
 .return:
     returni(ctx, t6)
 end)
@@ -1136,22 +1141,26 @@ wasmOp(i31_new, WasmI31New, macro(ctx)
     return2i(ctx, t1, t0)
 end)
 
-wasmOp(i31_get_s, WasmI31GetS, macro(ctx)
+wasmOp(i31_get, WasmI31Get, macro(ctx)
     mload2i(ctx, m_ref, t1, t0)
     bieq t1, NullTag, .throw
+    wgetu(ctx, m_isSigned, t1)
+    btiz t1, .unsigned
     lshifti 0x1, t0
     rshifti 0x1, t0
+.unsigned:
     returni(ctx, t0)
 
 .throw:
     throwException(NullI31Get)
 end)
 
-wasmOp(i31_get_u, WasmI31GetU, macro(ctx)
-    mload2i(ctx, m_ref, t1, t0)
-    bieq t1, NullTag, .throw
+wasmOp(array_len, WasmArrayLen, macro(ctx)
+    mload2i(ctx, m_arrayref, t1, t0)
+    bieq t1, NullTag, .nullArray
+    loadi JSWebAssemblyArray::m_size[t0], t0
     returni(ctx, t0)
 
-.throw:
-    throwException(NullI31Get)
+.nullArray:
+    throwException(NullArrayLen)
 end)

@@ -25,12 +25,12 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
 
 namespace WebCore {
+
+class CSSFunctionValue;
 
 template<typename> class ExceptionOr;
 
@@ -39,6 +39,7 @@ class CSSRotate : public CSSTransformComponent {
 public:
     static ExceptionOr<Ref<CSSRotate>> create(CSSNumberish, CSSNumberish, CSSNumberish, Ref<CSSNumericValue>);
     static ExceptionOr<Ref<CSSRotate>> create(Ref<CSSNumericValue>);
+    static ExceptionOr<Ref<CSSRotate>> create(CSSFunctionValue&);
 
     CSSNumberish x() { return { m_x.ptr() }; }
     CSSNumberish y() { return { m_y.ptr() }; }
@@ -55,6 +56,8 @@ public:
 
     CSSTransformType getType() const final { return CSSTransformType::Rotate; }
 
+    RefPtr<CSSValue> toCSSValue() const final;
+
 private:
     CSSRotate(CSSTransformComponent::Is2D, Ref<CSSNumericValue>, Ref<CSSNumericValue>, Ref<CSSNumericValue>, Ref<CSSNumericValue>);
 
@@ -69,5 +72,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSRotate)
     static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Rotate; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

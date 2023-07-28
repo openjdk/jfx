@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutPoint.h"
@@ -98,10 +96,9 @@ inline LayoutUnit FloatAvoider::right() const
 {
     auto right = left() + borderBoxWidth();
     if (isFloatingBox())
-        right += marginAfter();
+        right += marginEnd();
     return right;
 }
 
 }
 }
-#endif

@@ -43,7 +43,7 @@ JavaRuntimeObject::JavaRuntimeObject(JSGlobalObject* globalObject, Structure* st
 void JavaRuntimeObject::finishCreation(JSGlobalObject* globalObject)
 {
     Base::finishCreation(globalObject->vm());
-    ASSERT(inherits(globalObject->vm(), &s_info));
+    ASSERT(inherits(&s_info));
 }
 
 JavaInstance* JavaRuntimeObject::getInternalJavaInstance() const

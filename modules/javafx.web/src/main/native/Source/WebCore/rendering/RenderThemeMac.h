@@ -24,10 +24,6 @@
 
 #import "RenderThemeCocoa.h"
 
-#if ENABLE(SERVICE_CONTROLS)
-OBJC_CLASS NSServicesRolloverButtonCell;
-#endif
-
 OBJC_CLASS WebCoreRenderThemeNotificationObserver;
 
 namespace WebCore {
@@ -67,7 +63,7 @@ public:
     Color platformAnnotationHighlightColor(OptionSet<StyleColorOptions>) const final;
     Color platformDefaultButtonTextColor(OptionSet<StyleColorOptions>) const final;
 
-    ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return ScrollbarControlSize::Small; }
+    ScrollbarControlSize scrollbarControlSizeForPart(StyleAppearance) final { return ScrollbarControlSize::Small; }
 
     int minimumMenuListSize(const RenderStyle&) const final;
 
@@ -83,13 +79,12 @@ public:
 
     bool popsMenuByArrowKeys() const final { return true; }
 
-    IntSize meterSizeForBounds(const RenderMeter&, const IntRect&) const final;
-    bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) final;
-    bool supportsMeter(ControlPart, const HTMLMeterElement&) const final;
+    FloatSize meterSizeForBounds(const RenderMeter&, const FloatRect&) const final;
+    bool supportsMeter(StyleAppearance, const HTMLMeterElement&) const final;
 
     // Returns the repeat interval of the animation for the progress bar.
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const final;
-    IntRect progressBarRectForBounds(const RenderObject&, const IntRect&) const final;
+    IntRect progressBarRectForBounds(const RenderProgress&, const IntRect&) const final;
 
     // Controls color values returned from platformFocusRingColor(). systemColor() will be used when false.
     bool usesTestModeFocusRingColor() const;
@@ -101,46 +96,39 @@ public:
 private:
     RenderThemeMac();
 
-    bool canPaint(const PaintInfo&, const Settings&) const final;
+    bool canPaint(const PaintInfo&, const Settings&, StyleAppearance) const final;
+    bool canCreateControlPartForRenderer(const RenderObject&) const final;
+    bool canCreateControlPartForBorderOnly(const RenderObject&) const final;
+    bool canCreateControlPartForDecorations(const RenderObject&) const final;
 
-    bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) final;
+    bool useFormSemanticContext() const final;
+    bool supportsLargeFormControls() const final;
+
     void adjustTextFieldStyle(RenderStyle&, const Element*) const final;
 
-    bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustTextAreaStyle(RenderStyle&, const Element*) const final;
 
-    bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) final;
     void adjustMenuListStyle(RenderStyle&, const Element*) const final;
 
-    void paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) final;
     void adjustMenuListButtonStyle(RenderStyle&, const Element*) const final;
 
     void adjustProgressBarStyle(RenderStyle&, const Element*) const final;
-    bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
-    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) final;
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const final;
 
-    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) final;
     void adjustSliderThumbStyle(RenderStyle&, const Element*) const final;
 
-    bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) final;
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const final;
 
     void adjustSearchFieldCancelButtonStyle(RenderStyle&, const Element*) const final;
-    bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) final;
 
     void adjustSearchFieldDecorationPartStyle(RenderStyle&, const Element*) const final;
-    bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) final;
 
     void adjustSearchFieldResultsDecorationPartStyle(RenderStyle&, const Element*) const final;
-    bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) final;
 
     void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const final;
-    bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) final;
 
 #if ENABLE(DATALIST_ELEMENT)
-    void paintListButtonForInput(const RenderObject&, GraphicsContext&, const FloatRect&);
     void adjustListButtonStyle(RenderStyle&, const Element*) const final;
 #endif
 
@@ -150,14 +138,11 @@ private:
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     LayoutSize attachmentIntrinsicSize(const RenderAttachment&) const final;
-    int attachmentBaseline(const RenderAttachment&) const final;
     bool paintAttachment(const RenderObject&, const PaintInfo&, const IntRect&) final;
 #endif
 
 private:
     String fileListNameForWidth(const FileList*, const FontCascade&, int width, bool multipleFilesAllowed) const final;
-
-    bool shouldPaintCustomTextField(const RenderObject&) const;
 
     Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const final;
 
@@ -178,57 +163,25 @@ private:
 
     // Helpers for adjusting appearance and for painting
 
-    void paintCellAndSetFocusedElementNeedsRepaintIfNecessary(NSCell*, const RenderObject&, const PaintInfo&, const FloatRect&);
     void setPopupButtonCellState(const RenderObject&, const IntSize&);
     const IntSize* popupButtonSizes() const;
     const int* popupButtonMargins() const;
     const int* popupButtonPadding(NSControlSize, bool isRTL) const;
-    void paintMenuListButtonGradients(const RenderObject&, const PaintInfo&, const IntRect&);
     const IntSize* menuListSizes() const;
 
     const IntSize* searchFieldSizes() const;
     const IntSize* cancelButtonSizes() const;
     const IntSize* resultsButtonSizes() const;
-    void setSearchCellState(const RenderObject&, const IntRect&);
     void setSearchFieldSize(RenderStyle&) const;
 
     NSPopUpButtonCell *popupButton() const;
-    NSSearchFieldCell *search() const;
-    NSMenu *searchMenuTemplate() const;
-    NSSliderCell *sliderThumbHorizontal() const;
-    NSSliderCell *sliderThumbVertical() const;
-    NSTextFieldCell *textField() const;
-#if ENABLE(DATALIST_ELEMENT)
-    NSCell *listButton() const;
-#endif
-
-    NSLevelIndicatorCell *levelIndicatorFor(const RenderMeter&) const;
-
-    int minimumProgressBarHeight(const RenderStyle&) const;
-    const IntSize* progressBarSizes() const;
-    const int* progressBarMargins(NSControlSize) const;
 
 #if ENABLE(SERVICE_CONTROLS)
-    bool paintImageControlsButton(const RenderObject&, const PaintInfo&, const IntRect&) final;
     IntSize imageControlsButtonSize() const final;
-    bool isImageControl(const Element&) const final;
-
-    NSServicesRolloverButtonCell *servicesRolloverButtonCell() const;
+    bool isImageControlsButton(const Element&) const final;
 #endif
 
     mutable RetainPtr<NSPopUpButtonCell> m_popupButton;
-    mutable RetainPtr<NSSearchFieldCell> m_search;
-    mutable RetainPtr<NSMenu> m_searchMenuTemplate;
-    mutable RetainPtr<NSSliderCell> m_sliderThumbHorizontal;
-    mutable RetainPtr<NSSliderCell> m_sliderThumbVertical;
-    mutable RetainPtr<NSLevelIndicatorCell> m_levelIndicator;
-    mutable RetainPtr<NSTextFieldCell> m_textField;
-#if ENABLE(SERVICE_CONTROLS)
-    mutable RetainPtr<NSServicesRolloverButtonCell> m_servicesRolloverButton;
-#endif
-#if ENABLE(DATALIST_ELEMENT)
-    mutable RetainPtr<NSCell> m_listButton;
-#endif
 
     bool m_isSliderThumbHorizontalPressed { false };
     bool m_isSliderThumbVerticalPressed { false };

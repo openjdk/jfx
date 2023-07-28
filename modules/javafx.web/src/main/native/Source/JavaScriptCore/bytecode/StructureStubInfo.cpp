@@ -258,8 +258,14 @@ void StructureStubInfo::reset(const ConcurrentJSLockerBase& locker, CodeBlock* c
     case AccessType::GetByVal:
         resetGetBy(codeBlock, *this, GetByKind::ByVal);
         break;
+    case AccessType::GetByValWithThis:
+        resetGetBy(codeBlock, *this, GetByKind::ByValWithThis);
+        break;
     case AccessType::GetPrivateName:
         resetGetBy(codeBlock, *this, GetByKind::PrivateName);
+        break;
+    case AccessType::GetPrivateNameById:
+        resetGetBy(codeBlock, *this, GetByKind::PrivateNameById);
         break;
     case AccessType::PutById:
         resetPutBy(codeBlock, *this, PutByKind::ById);
@@ -411,7 +417,7 @@ ALWAYS_INLINE void StructureStubInfo::setCacheType(const ConcurrentJSLockerBase&
     m_cacheType = newCacheType;
 }
 
-static FunctionPtr<OperationPtrTag> slowOperationFromUnlinkedStructureStubInfo(const UnlinkedStructureStubInfo& unlinkedStubInfo)
+static CodePtr<OperationPtrTag> slowOperationFromUnlinkedStructureStubInfo(const UnlinkedStructureStubInfo& unlinkedStubInfo)
 {
     switch (unlinkedStubInfo.accessType) {
     case AccessType::DeleteByVal:
@@ -434,12 +440,16 @@ static FunctionPtr<OperationPtrTag> slowOperationFromUnlinkedStructureStubInfo(c
         return operationGetByIdDirectOptimize;
     case AccessType::GetByIdWithThis:
         return operationGetByIdWithThisOptimize;
+    case AccessType::GetByValWithThis:
+        return operationGetByValWithThisOptimize;
     case AccessType::HasPrivateName:
         return operationHasPrivateNameOptimize;
     case AccessType::HasPrivateBrand:
         return operationHasPrivateBrandOptimize;
     case AccessType::GetPrivateName:
         return operationGetPrivateNameOptimize;
+    case AccessType::GetPrivateNameById:
+        return operationGetPrivateNameByIdOptimize;
     case AccessType::PutById:
         switch (unlinkedStubInfo.putKind) {
         case PutKind::NotDirect:
@@ -496,11 +506,12 @@ void StructureStubInfo::initializeFromUnlinkedStructureStubInfo(const BaselineUn
     tookSlowPath = unlinkedStubInfo.tookSlowPath;
     useDataIC = true;
 
-    usedRegisters = RegisterSet::stubUnavailableRegisters();
+    auto usedJSRs = RegisterSetBuilder::stubUnavailableRegisters();
     if (accessType == AccessType::GetById && unlinkedStubInfo.bytecodeIndex.checkpoint()) {
         // For iterator_next, we can't clobber the "dontClobberJSR" register either.
-        usedRegisters.set(BaselineJITRegisters::GetById::FastPath::dontClobberJSR);
+        usedJSRs.add(BaselineJITRegisters::GetById::FastPath::dontClobberJSR, IgnoreVectors);
     }
+    usedRegisters = usedJSRs.buildScalarRegisterSet();
 
     m_slowOperation = slowOperationFromUnlinkedStructureStubInfo(unlinkedStubInfo);
 
@@ -584,6 +595,7 @@ void StructureStubInfo::initializeFromUnlinkedStructureStubInfo(const BaselineUn
     case AccessType::TryGetById:
     case AccessType::GetByIdDirect:
     case AccessType::GetById:
+    case AccessType::GetPrivateNameById:
         hasConstantIdentifier = true;
         m_extraGPR = InvalidGPRReg;
         m_baseGPR = BaselineJITRegisters::GetById::baseJSR.payloadGPR();
@@ -605,6 +617,19 @@ void StructureStubInfo::initializeFromUnlinkedStructureStubInfo(const BaselineUn
         m_baseTagGPR = BaselineJITRegisters::GetByIdWithThis::baseJSR.tagGPR();
         m_valueTagGPR = BaselineJITRegisters::GetByIdWithThis::resultJSR.tagGPR();
         m_extraTagGPR = BaselineJITRegisters::GetByIdWithThis::thisJSR.tagGPR();
+#endif
+        break;
+    case AccessType::GetByValWithThis:
+        hasConstantIdentifier = false;
+#if USE(JSVALUE64)
+        m_baseGPR = BaselineJITRegisters::GetByValWithThis::baseJSR.payloadGPR();
+        m_valueGPR = BaselineJITRegisters::GetByValWithThis::resultJSR.payloadGPR();
+        m_extraGPR = BaselineJITRegisters::GetByValWithThis::thisJSR.payloadGPR();
+        m_extra2GPR = BaselineJITRegisters::GetByValWithThis::propertyJSR.payloadGPR();
+        m_stubInfoGPR = BaselineJITRegisters::GetByValWithThis::FastPath::stubInfoGPR;
+#else
+        // Registers are exhausted, we cannot have this IC on 32bit.
+        RELEASE_ASSERT_NOT_REACHED();
 #endif
         break;
     case AccessType::PutById:
@@ -672,6 +697,7 @@ void StructureStubInfo::initializeFromDFGUnlinkedStructureStubInfo(const DFG::Un
 
     m_baseGPR = unlinkedStubInfo.m_baseGPR;
     m_extraGPR = unlinkedStubInfo.m_extraGPR;
+    m_extra2GPR = unlinkedStubInfo.m_extra2GPR;
     m_valueGPR = unlinkedStubInfo.m_valueGPR;
     m_stubInfoGPR = unlinkedStubInfo.m_stubInfoGPR;
 
@@ -683,10 +709,15 @@ void StructureStubInfo::initializeFromDFGUnlinkedStructureStubInfo(const DFG::Un
 #if ASSERT_ENABLED
 void StructureStubInfo::checkConsistency()
 {
-    if (thisValueIsInExtraGPR()) {
+    switch (accessType) {
+    case AccessType::GetByIdWithThis:
         // We currently use a union for both "thisGPR" and "propertyGPR". If this were
         // not the case, we'd need to take one of them out of the union.
         RELEASE_ASSERT(hasConstantIdentifier);
+        break;
+    case AccessType::GetByValWithThis:
+    default:
+        break;
     }
 }
 #endif // ASSERT_ENABLED

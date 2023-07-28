@@ -64,7 +64,7 @@ class IDBConnectionProxy;
 class TransactionOperation;
 }
 
-class IDBTransaction final : public ThreadSafeRefCounted<IDBTransaction>, public EventTargetWithInlineData, public IDBActiveDOMObject {
+class IDBTransaction final : public ThreadSafeRefCounted<IDBTransaction>, public EventTarget, public IDBActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(IDBTransaction, WEBCORE_EXPORT);
 public:
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&);
@@ -97,7 +97,7 @@ public:
     const IDBTransactionInfo& info() const { return m_info; }
     IDBDatabase& database() { return m_database.get(); }
     const IDBDatabase& database() const { return m_database.get(); }
-    IDBDatabaseInfo* originalDatabaseInfo() const { return m_info.originalDatabaseInfo(); }
+    IDBDatabaseInfo* originalDatabaseInfo() const { return m_info.originalDatabaseInfo().get(); }
 
     void didStart(const IDBError&);
     void didAbort(const IDBError&);

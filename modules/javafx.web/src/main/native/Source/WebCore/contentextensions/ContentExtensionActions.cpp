@@ -113,30 +113,36 @@ Expected<ModifyHeadersAction, std::error_code> ModifyHeadersAction::parse(const 
     if (!responseHeaders)
         return makeUnexpected(responseHeaders.error());
 
-    return ModifyHeadersAction { WTFMove(*requestHeaders), WTFMove(*responseHeaders) };
+    auto priority = modifyHeaders.getInteger("priority"_s);
+    if (!priority || priority.value() < 0)
+        return makeUnexpected(ContentExtensionError::JSONModifyHeadersInvalidPriority);
+
+    return ModifyHeadersAction { WTFMove(*requestHeaders), WTFMove(*responseHeaders), static_cast<uint32_t>(priority.value()) };
 }
 
 ModifyHeadersAction ModifyHeadersAction::isolatedCopy() const &
 {
-    return { crossThreadCopy(requestHeaders), crossThreadCopy(responseHeaders) };
+    return { crossThreadCopy(requestHeaders), crossThreadCopy(responseHeaders), crossThreadCopy(priority) };
 }
 
 ModifyHeadersAction ModifyHeadersAction::isolatedCopy() &&
 {
-    return { crossThreadCopy(WTFMove(requestHeaders)), crossThreadCopy(WTFMove(responseHeaders)) };
+    return { crossThreadCopy(WTFMove(requestHeaders)), crossThreadCopy(WTFMove(responseHeaders)), crossThreadCopy(priority) };
 }
 
 bool ModifyHeadersAction::operator==(const ModifyHeadersAction& other) const
 {
     return other.hashTableType == this->hashTableType
         && other.requestHeaders == this->requestHeaders
-        && other.responseHeaders == this->responseHeaders;
+        && other.responseHeaders == this->responseHeaders
+        && other.priority == this->priority;
 }
 
 void ModifyHeadersAction::serialize(Vector<uint8_t>& vector) const
 {
     auto beginIndex = vector.size();
     append(vector, 0);
+    append(vector, priority);
     auto requestHeadersLengthIndex = vector.size();
     append(vector, 0);
     for (auto& headerInfo : requestHeaders)
@@ -150,23 +156,23 @@ void ModifyHeadersAction::serialize(Vector<uint8_t>& vector) const
 ModifyHeadersAction ModifyHeadersAction::deserialize(Span<const uint8_t> span)
 {
     auto serializedLength = deserializeLength(span, 0);
-    auto requestHeadersLength = deserializeLength(span, sizeof(uint32_t));
-    size_t progress = sizeof(uint32_t) * 2;
+    uint32_t priority = deserializeLength(span, sizeof(uint32_t));
+    auto requestHeadersLength = deserializeLength(span, sizeof(uint32_t) * 2);
+    size_t progress = sizeof(uint32_t) * 3;
     Vector<ModifyHeaderInfo> requestHeaders;
-    while (progress < requestHeadersLength + sizeof(uint32_t)) {
+    while (progress < requestHeadersLength + sizeof(uint32_t) * 2) {
         auto subspan = span.subspan(progress);
         progress += ModifyHeaderInfo::serializedLength(subspan);
         requestHeaders.append(ModifyHeaderInfo::deserialize(subspan));
     }
-    RELEASE_ASSERT(progress == requestHeadersLength + sizeof(uint32_t));
+    RELEASE_ASSERT(progress == requestHeadersLength + sizeof(uint32_t) * 2);
     Vector<ModifyHeaderInfo> responseHeaders;
     while (progress < serializedLength) {
         auto subspan = span.subspan(progress);
         progress += ModifyHeaderInfo::serializedLength(subspan);
         responseHeaders.append(ModifyHeaderInfo::deserialize(subspan));
     }
-    RELEASE_ASSERT(progress == serializedLength);
-    return { WTFMove(requestHeaders), WTFMove(responseHeaders) };
+    return { WTFMove(requestHeaders), WTFMove(responseHeaders), priority };
 }
 
 size_t ModifyHeadersAction::serializedLength(Span<const uint8_t> span)
@@ -174,24 +180,39 @@ size_t ModifyHeadersAction::serializedLength(Span<const uint8_t> span)
     return deserializeLength(span, 0);
 }
 
-void ModifyHeadersAction::applyToRequest(ResourceRequest& request)
+void ModifyHeadersAction::applyToRequest(ResourceRequest& request, HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
     for (auto& info : requestHeaders)
-        info.applyToRequest(request);
+        info.applyToRequest(request, headerNameToFirstOperationApplied);
 }
 
-void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request)
+void ModifyHeadersAction::ModifyHeaderInfo::applyToRequest(ResourceRequest& request, HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType>& headerNameToFirstOperationApplied)
 {
     std::visit(WTF::makeVisitor([&] (const AppendOperation& operation) {
+        ModifyHeadersOperationType previouslyAppliedHeaderOperation = headerNameToFirstOperationApplied.get(operation.header);
+        if (previouslyAppliedHeaderOperation == ModifyHeadersAction::ModifyHeadersOperationType::Remove)
+            return;
+
         auto existingValue = request.httpHeaderField(operation.header);
         if (existingValue.isEmpty())
             request.setHTTPHeaderField(operation.header, operation.value);
         else
             request.setHTTPHeaderField(operation.header, makeString(existingValue, "; ", operation.value));
+
+        if (previouslyAppliedHeaderOperation == ModifyHeadersAction::ModifyHeadersOperationType::Unknown)
+            headerNameToFirstOperationApplied.add(operation.header, ModifyHeadersAction::ModifyHeadersOperationType::Append);
     }, [&] (const SetOperation& operation) {
+        if (headerNameToFirstOperationApplied.contains(operation.header))
+            return;
+
         request.setHTTPHeaderField(operation.header, operation.value);
+        headerNameToFirstOperationApplied.add(operation.header, ModifyHeadersAction::ModifyHeadersOperationType::Set);
     }, [&] (const RemoveOperation& operation) {
+        if (headerNameToFirstOperationApplied.contains(operation.header))
+            return;
+
         request.removeHTTPHeaderField(operation.header);
+        headerNameToFirstOperationApplied.add(operation.header, ModifyHeadersAction::ModifyHeadersOperationType::Remove);
     }), operation);
 }
 
@@ -761,34 +782,65 @@ void RedirectAction::URLTransformAction::applyToURL(URL& url) const
 
 void RedirectAction::URLTransformAction::QueryTransform::applyToURL(URL& url) const
 {
-    auto form = WTF::URLParser::parseURLEncodedForm(url.query());
+    if (!url.hasQuery())
+        return;
 
     HashSet<String> keysToRemove;
     for (auto& key : removeParams)
         keysToRemove.add(key);
-    form.removeAllMatching([&] (auto& keyValue) {
-        return keysToRemove.contains(keyValue.key);
-    });
 
-    Vector<WTF::KeyValuePair<String, String>> keysToAdd;
+    Vector<KeyValuePair<String, String>> keysToAdd;
     HashMap<String, String> keysToReplace;
-    for (auto& keyValue : addOrReplaceParams) {
-        if (keyValue.replaceOnly)
-            keysToReplace.add(keyValue.key, keyValue.value);
+    for (auto& [key, replaceOnly, value] : addOrReplaceParams) {
+        if (replaceOnly)
+            keysToReplace.add(key, value);
         else
-            keysToAdd.append({ keyValue.key, keyValue.value });
+            keysToAdd.append({ key, value });
     }
-    for (auto& keyValue : form) {
-        auto iterator = keysToReplace.find(keyValue.key);
-        if (iterator != keysToReplace.end())
-            keyValue.value = iterator->value;
-    }
-    form.appendVector(WTFMove(keysToAdd));
 
+    bool modifiedQuery = false;
     StringBuilder transformedQuery;
-    for (auto& keyValue : form)
-        transformedQuery.append(transformedQuery.isEmpty() ? "" : "&", keyValue.key, !!keyValue.value ? "=" : "", keyValue.value);
-    url.setQuery(transformedQuery);
+    for (auto bytes : url.query().split('&')) {
+        auto nameAndValue = WTF::URLParser::parseQueryNameAndValue(bytes);
+        if (!nameAndValue) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+
+        auto& key = nameAndValue->key;
+        if (key.isEmpty()) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+
+        // Removal takes precedence over replacement.
+        if (keysToRemove.contains(key)) {
+            modifiedQuery = true;
+            continue;
+        }
+
+        if (!transformedQuery.isEmpty())
+            transformedQuery.append('&');
+
+        if (auto iterator = keysToReplace.find(key); iterator != keysToReplace.end()) {
+            modifiedQuery = true;
+            transformedQuery.append(key, '=', iterator->value);
+            continue;
+        }
+
+        transformedQuery.append(bytes);
+    }
+
+    // Adding takes precedence over both removal and replacement.
+    for (auto& [keyToAdd, valueToAdd] : keysToAdd) {
+        if (!transformedQuery.isEmpty())
+            transformedQuery.append('&');
+        transformedQuery.append(keyToAdd, '=', valueToAdd);
+        modifiedQuery = true;
+    }
+
+    if (modifiedQuery)
+        url.setQuery(transformedQuery.toString());
 }
 
 auto RedirectAction::URLTransformAction::QueryTransform::isolatedCopy() const & -> QueryTransform

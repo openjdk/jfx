@@ -30,11 +30,11 @@
 #include "config.h"
 #include "CSSUnparsedValue.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSOMVariableReferenceValue.h"
 #include "CSSParserToken.h"
 #include "CSSParserTokenRange.h"
+#include "CSSTokenizer.h"
+#include "CSSVariableReferenceValue.h"
 #include "ExceptionOr.h"
 #include <variant>
 #include <wtf/IsoMallocInlines.h>
@@ -139,12 +139,19 @@ ExceptionOr<CSSUnparsedSegment> CSSUnparsedValue::item(size_t index)
 
 ExceptionOr<CSSUnparsedSegment> CSSUnparsedValue::setItem(size_t index, CSSUnparsedSegment&& val)
 {
-    if (index >= m_segments.size())
+    if (index > m_segments.size())
         return Exception { RangeError, makeString("Index ", index, " exceeds index range for unparsed segments.") };
+    if (index == m_segments.size())
+        m_segments.append(WTFMove(val));
+    else
     m_segments[index] = WTFMove(val);
     return CSSUnparsedSegment { m_segments[index] };
 }
 
-} // namespace WebCore
+RefPtr<CSSValue> CSSUnparsedValue::toCSSValue() const
+{
+    CSSTokenizer tokenizer(toString());
+    return CSSVariableReferenceValue::create(tokenizer.tokenRange(), strictCSSParserContext());
+}
 
-#endif
+} // namespace WebCore

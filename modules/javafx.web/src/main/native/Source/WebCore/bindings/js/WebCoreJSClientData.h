@@ -28,6 +28,9 @@
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/WeakHashSet.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -59,6 +62,7 @@ private:
     Lock m_lock;
 
     JSC::IsoHeapCellType m_runtimeArrayHeapCellType;
+    JSC::IsoHeapCellType m_observableArrayHeapCellType;
     JSC::IsoHeapCellType m_runtimeObjectHeapCellType;
     JSC::IsoHeapCellType m_windowProxyHeapCellType;
 public:
@@ -86,6 +90,7 @@ private:
     JSC::IsoSubspace m_domNamespaceObjectSpace;
     JSC::IsoSubspace m_domWindowPropertiesSpace;
     JSC::IsoSubspace m_runtimeArraySpace;
+    JSC::IsoSubspace m_observableArraySpace;
     JSC::IsoSubspace m_runtimeMethodSpace;
     JSC::IsoSubspace m_runtimeObjectSpace;
     JSC::IsoSubspace m_windowProxySpace;
@@ -135,12 +140,20 @@ public:
     JSC::GCClient::IsoSubspace& domNamespaceObjectSpace() { return m_domNamespaceObjectSpace; }
     JSC::GCClient::IsoSubspace& domWindowPropertiesSpace() { return m_domWindowPropertiesSpace; }
     JSC::GCClient::IsoSubspace& runtimeArraySpace() { return m_runtimeArraySpace; }
+    JSC::GCClient::IsoSubspace& observableArraySpace() { return m_observableArraySpace; }
     JSC::GCClient::IsoSubspace& runtimeMethodSpace() { return m_runtimeMethodSpace; }
     JSC::GCClient::IsoSubspace& runtimeObjectSpace() { return m_runtimeObjectSpace; }
     JSC::GCClient::IsoSubspace& windowProxySpace() { return m_windowProxySpace; }
     JSC::GCClient::IsoSubspace& idbSerializationSpace() { return m_idbSerializationSpace; }
 
     ExtendedDOMClientIsoSubspaces& clientSubspaces() { return *m_clientSubspaces.get(); }
+
+    class Client : public CanMakeWeakPtr<Client> {
+    public:
+        virtual ~Client() = default;
+        virtual void willDestroyVM() = 0;
+    };
+    void addClient(Client& client) { m_clients.add(client); }
 
 private:
     HashSet<DOMWrapperWorld*> m_worldSet;
@@ -155,12 +168,15 @@ private:
     JSC::GCClient::IsoSubspace m_domNamespaceObjectSpace;
     JSC::GCClient::IsoSubspace m_domWindowPropertiesSpace;
     JSC::GCClient::IsoSubspace m_runtimeArraySpace;
+    JSC::GCClient::IsoSubspace m_observableArraySpace;
     JSC::GCClient::IsoSubspace m_runtimeMethodSpace;
     JSC::GCClient::IsoSubspace m_runtimeObjectSpace;
     JSC::GCClient::IsoSubspace m_windowProxySpace;
     JSC::GCClient::IsoSubspace m_idbSerializationSpace;
 
     std::unique_ptr<ExtendedDOMClientIsoSubspaces> m_clientSubspaces;
+
+    WeakHashSet<Client> m_clients;
 };
 
 
@@ -192,7 +208,7 @@ ALWAYS_INLINE JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm, GetClient
                 uniqueSubspace = makeUnique<JSC::IsoSubspace> ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, T);
         }
         space = uniqueSubspace.get();
-        setServer(subspaces, uniqueSubspace);
+        setServer(subspaces, WTFMove(uniqueSubspace));
 
 IGNORE_WARNINGS_BEGIN("unreachable-code")
 IGNORE_WARNINGS_BEGIN("tautological-compare")
@@ -206,7 +222,7 @@ IGNORE_WARNINGS_END
 
     auto uniqueClientSubspace = makeUnique<JSC::GCClient::IsoSubspace>(*space);
     auto* clientSpace = uniqueClientSubspace.get();
-    setClient(clientSubspaces, uniqueClientSubspace);
+    setClient(clientSubspaces, WTFMove(uniqueClientSubspace));
     return clientSpace;
 }
 

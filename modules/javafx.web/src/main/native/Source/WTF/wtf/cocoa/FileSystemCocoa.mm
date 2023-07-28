@@ -32,6 +32,10 @@
 #import <wtf/SoftLinking.h>
 #import <sys/resource.h>
 
+#if HAVE(APFS_CACHEDELETE_PURGEABLE)
+#import <apfs/apfs_fsctl.h>
+#endif
+
 typedef struct _BOMCopier* BOMCopier;
 
 SOFT_LINK_PRIVATE_FRAMEWORK(Bom)
@@ -227,6 +231,9 @@ bool makeSafeToUseMemoryMapForPath(const String& path)
 
 bool setExcludedFromBackup(const String& path, bool excluded)
 {
+    if (path.isEmpty())
+        return false;
+
     NSError *error;
     if (![[NSURL fileURLWithPath:(NSString *)path isDirectory:YES] setResourceValue:[NSNumber numberWithBool:excluded] forKey:NSURLIsExcludedFromBackupKey error:&error]) {
         LOG_ERROR("Cannot exclude path '%s' from backup with error '%@'", path.utf8().data(), error.localizedDescription);
@@ -234,6 +241,20 @@ bool setExcludedFromBackup(const String& path, bool excluded)
     }
 
     return true;
+}
+
+bool markPurgeable(const String& path)
+{
+    CString fileSystemPath = fileSystemRepresentation(path);
+    if (fileSystemPath.isNull())
+        return false;
+
+#if HAVE(APFS_CACHEDELETE_PURGEABLE)
+    uint64_t flags = APFS_MARK_PURGEABLE | APFS_PURGEABLE_DATA_TYPE | APFS_PURGEABLE_MARK_CHILDREN;
+    return !fsctl(fileSystemPath.data(), APFSIOC_MARK_PURGEABLE, &flags, 0);
+#else
+    return false;
+#endif
 }
 
 NSString *systemDirectoryPath()

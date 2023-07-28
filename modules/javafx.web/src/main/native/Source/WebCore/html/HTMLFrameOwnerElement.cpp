@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +25,8 @@
 #include "DOMWindow.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "RemoteFrame.h"
+#include "RemoteFrameClient.h"
 #include "RenderWidget.h"
 #include "SVGDocument.h"
 #include "SVGElementTypeHelpers.h"
@@ -51,7 +54,7 @@ RenderWidget* HTMLFrameOwnerElement::renderWidget() const
     return downcast<RenderWidget>(renderer());
 }
 
-void HTMLFrameOwnerElement::setContentFrame(Frame& frame)
+void HTMLFrameOwnerElement::setContentFrame(AbstractFrame& frame)
 {
     // Make sure we will not end up with two frames referencing the same owner element.
     ASSERT(!m_contentFrame || m_contentFrame->ownerElement() != this);
@@ -76,8 +79,8 @@ void HTMLFrameOwnerElement::clearContentFrame()
 
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
-    if (RefPtr<Frame> frame = m_contentFrame.get()) {
-        frame->loader().frameDetached();
+    if (RefPtr frame = m_contentFrame.get()) {
+        frame->frameDetached();
         frame->disconnectOwnerElement();
     }
 }
@@ -90,7 +93,9 @@ HTMLFrameOwnerElement::~HTMLFrameOwnerElement()
 
 Document* HTMLFrameOwnerElement::contentDocument() const
 {
-    return m_contentFrame ? m_contentFrame->document() : nullptr;
+    if (auto* localFrame = dynamicDowncast<LocalFrame>(m_contentFrame.get()))
+        return localFrame->document();
+    return nullptr;
 }
 
 WindowProxy* HTMLFrameOwnerElement::contentWindow() const
@@ -108,13 +113,12 @@ bool HTMLFrameOwnerElement::isKeyboardFocusable(KeyboardEvent* event) const
     return m_contentFrame && HTMLElement::isKeyboardFocusable(event);
 }
 
-ExceptionOr<Document&> HTMLFrameOwnerElement::getSVGDocument() const
+Document* HTMLFrameOwnerElement::getSVGDocument() const
 {
     auto* document = contentDocument();
     if (is<SVGDocument>(document))
-        return *document;
-    // Spec: http://www.w3.org/TR/SVG/struct.html#InterfaceGetSVGDocument
-    return Exception { NotSupportedError };
+        return document;
+    return nullptr;
 }
 
 void HTMLFrameOwnerElement::scheduleInvalidateStyleAndLayerComposition()
@@ -132,9 +136,12 @@ bool HTMLFrameOwnerElement::isProhibitedSelfReference(const URL& completeURL) co
 {
     // We allow one level of self-reference because some websites depend on that, but we don't allow more than one.
     bool foundOneSelfReference = false;
-    for (auto* frame = document().frame(); frame; frame = frame->tree().parent()) {
+    for (AbstractFrame* frame = document().frame(); frame; frame = frame->tree().parent()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
         // Use creationURL() because url() can be changed via History.replaceState() so it's not reliable.
-        if (equalIgnoringFragmentIdentifier(frame->document()->creationURL(), completeURL)) {
+        if (equalIgnoringFragmentIdentifier(localFrame->document()->creationURL(), completeURL)) {
             if (foundOneSelfReference)
                 return true;
             foundOneSelfReference = true;

@@ -107,6 +107,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_SharedBuffer_twkDispose
 {
     FragmentedSharedBuffer* p = static_cast<FragmentedSharedBuffer*>(jlong_to_ptr(nativePointer));
     ASSERT(p);
+        UNUSED_PARAM(p);
 }
 
 }

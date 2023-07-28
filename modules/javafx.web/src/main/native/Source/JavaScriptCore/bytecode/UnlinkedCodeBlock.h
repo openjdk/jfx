@@ -76,6 +76,8 @@ class CachedCodeBlock;
 typedef unsigned UnlinkedArrayAllocationProfile;
 typedef unsigned UnlinkedObjectAllocationProfile;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(UnlinkedCodeBlock_RareData);
+
 struct UnlinkedStringJumpTable {
     struct OffsetLocation {
         int32_t m_branchOffset;
@@ -143,8 +145,6 @@ public:
     void initializeLoopHintExecutionCounter();
 
     bool isConstructor() const { return m_isConstructor; }
-    bool usesCallEval() const { return m_usesCallEval; }
-    void setUsesCallEval() { m_usesCallEval = true; }
     SourceParseMode parseMode() const { return m_parseMode; }
     bool isArrowFunction() const { return isArrowFunctionParseMode(parseMode()); }
     DerivedContextType derivedContextType() const { return static_cast<DerivedContextType>(m_derivedContextType); }
@@ -154,6 +154,7 @@ public:
     bool hasTailCalls() const { return m_hasTailCalls; }
     void setHasTailCalls() { m_hasTailCalls = true; }
     bool allowDirectEvalCache() const { return !(m_features & NoEvalCacheFeature); }
+    bool usesImportMeta() const { return m_features & ImportMetaFeature; }
 
     bool hasExpressionInfo() { return m_expressionInfo.size(); }
     const FixedVector<ExpressionRangeInfo>& expressionInfo() { return m_expressionInfo; }
@@ -401,7 +402,6 @@ private:
     VirtualRegister m_scopeRegister;
 
     unsigned m_numVars : 31;
-    unsigned m_usesCallEval : 1;
     unsigned m_numCalleeLocals : 31;
     unsigned m_isConstructor : 1;
     unsigned m_numParameters : 31;
@@ -457,7 +457,7 @@ private:
 
 public:
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UnlinkedCodeBlock_RareData);
 
         size_t sizeInBytes(const AbstractLocker&) const;
 

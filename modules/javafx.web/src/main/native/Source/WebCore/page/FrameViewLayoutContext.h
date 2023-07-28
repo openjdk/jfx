@@ -42,19 +42,17 @@ class RenderObject;
 class RenderElement;
 class RenderLayoutState;
 class RenderView;
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 namespace Layout {
 class LayoutState;
 class LayoutTree;
 }
-#endif
 
 class FrameViewLayoutContext {
 public:
     FrameViewLayoutContext(FrameView&);
     ~FrameViewLayoutContext();
 
-    void layout();
+    WEBCORE_EXPORT void layout();
     bool needsLayout() const;
 
     // We rely on the side-effects of layout, like compositing updates, to update state in various subsystems
@@ -116,9 +114,7 @@ public:
 #endif
     using LayoutStateStack = Vector<std::unique_ptr<RenderLayoutState>>;
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     const Layout::LayoutState* layoutFormattingState() const { return m_layoutState.get(); }
-#endif
 
 private:
     friend class LayoutScope;
@@ -144,9 +140,6 @@ private:
 #endif
     void updateStyleForLayout();
 
-    bool handleLayoutWithFrameFlatteningIfNeeded();
-    void startLayoutAtMainFrameViewIfNeeded();
-
     // These functions may only be accessed by LayoutStateMaintainer.
     // Subtree push/pop
     void pushLayoutState(RenderElement&);
@@ -161,9 +154,7 @@ private:
     // These functions may only be accessed by LayoutStateMaintainer or LayoutStateDisabler.
     void disablePaintOffsetCache() { m_paintOffsetCacheDisableCount++; }
     void enablePaintOffsetCache() { ASSERT(m_paintOffsetCacheDisableCount > 0); m_paintOffsetCacheDisableCount--; }
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     void layoutUsingFormattingContext();
-#endif
 
     Frame& frame() const;
     FrameView& view() const;
@@ -188,10 +179,8 @@ private:
     int m_layoutDisallowedCount { 0 };
     unsigned m_paintOffsetCacheDisableCount { 0 };
     LayoutStateStack m_layoutStateStack;
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     std::unique_ptr<Layout::LayoutTree> m_layoutTree;
     std::unique_ptr<Layout::LayoutState> m_layoutState;
-#endif
 };
 
 } // namespace WebCore

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineItem.h"
 #include "LayoutInlineTextBox.h"
 
@@ -51,7 +49,8 @@ public:
     bool isWhitespace() const { return m_textItemType == TextItemType::Whitespace; }
     bool isWordSeparator() const { return m_isWordSeparator; }
     bool isZeroWidthSpaceSeparator() const;
-    bool isCollapsibleNonBreakingSpace() const;
+    bool isQuirkNonBreakingSpace() const;
+    bool isFullyTrimmable() const;
     bool hasTrailingSoftHyphen() const { return m_hasTrailingSoftHyphen; }
     std::optional<InlineLayoutUnit> width() const { return m_hasWidth ? std::make_optional(m_width) : std::optional<InlineLayoutUnit> { }; }
 
@@ -94,4 +93,3 @@ inline InlineTextItem InlineTextItem::createEmptyItem(const InlineTextBox& inlin
 
 SPECIALIZE_TYPE_TRAITS_INLINE_ITEM(InlineTextItem, isText())
 
-#endif

@@ -96,10 +96,14 @@ void fastSetMaxSingleAllocationSize(size_t size)
     maxSingleAllocationSize = size;
 }
 
+#if ASSERT_ENABLED
 #define ASSERT_IS_WITHIN_LIMIT(size) do { \
         size_t size__ = (size); \
         ASSERT_WITH_MESSAGE((size__) <= maxSingleAllocationSize, "Requested size (%zu) exceeds max single allocation size set for testing (%zu)", (size__), maxSingleAllocationSize); \
     } while (false)
+#else
+#define ASSERT_IS_WITHIN_LIMIT(size)
+#endif // ASSERT_ENABLED
 
 #define FAIL_IF_EXCEEDS_LIMIT(size) do { \
         if (UNLIKELY((size) > maxSingleAllocationSize)) \
@@ -566,17 +570,26 @@ void fastFree(void* object)
 #endif
 }
 
-size_t fastMallocSize(const void*)
+size_t fastMallocSize(const void* p)
 {
+#if BENABLE(MALLOC_SIZE)
+    return bmalloc::api::mallocSize(p);
+#else
     // FIXME: This is incorrect; best fix is probably to remove this function.
     // Caller currently are all using this for assertion, not to actually check
     // the size of the allocation, so maybe we can come up with something for that.
+    UNUSED_PARAM(p);
     return 1;
+#endif
 }
 
 size_t fastMallocGoodSize(size_t size)
 {
+#if BENABLE(MALLOC_GOOD_SIZE)
+    return bmalloc::api::mallocGoodSize(size);
+#else
     return size;
+#endif
 }
 
 void* fastAlignedMalloc(size_t alignment, size_t size)

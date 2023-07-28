@@ -13,6 +13,7 @@ any-link
 autofill
 before, PseudoClassUnknown, PseudoElementBefore
 checked
+closed
 corner-present
 decrement
 default
@@ -56,6 +57,7 @@ nth-last-of-type
 nth-of-type
 only-child
 only-of-type
+open
 optional
 out-of-range
 placeholder-shown
@@ -67,6 +69,8 @@ scope
 single-button
 start
 target
+user-invalid
+user-valid
 valid
 vertical
 visited
@@ -74,8 +78,9 @@ where
 window-inactive
 
 #if ENABLE(FULLSCREEN_API)
+fullscreen
 -webkit-animating-full-screen-transition
--webkit-full-screen
+-webkit-full-screen, PseudoClassWebkitFullScreen, PseudoElementUnknown
 -webkit-full-screen-ancestor
 -webkit-full-screen-document
 -webkit-full-screen-controls-hidden

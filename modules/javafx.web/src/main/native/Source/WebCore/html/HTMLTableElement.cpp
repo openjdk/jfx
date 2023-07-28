@@ -37,9 +37,9 @@
 #include "HTMLTableRowElement.h"
 #include "HTMLTableRowsCollection.h"
 #include "HTMLTableSectionElement.h"
+#include "MutableStyleProperties.h"
 #include "NodeRareData.h"
 #include "RenderTable.h"
-#include "StyleProperties.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 
@@ -327,12 +327,6 @@ void HTMLTableElement::collectPresentationalHintsForAttribute(const QualifiedNam
     } else if (name == cellspacingAttr) {
         if (!value.isEmpty())
             addHTMLPixelsToStyle(style, CSSPropertyBorderSpacing, value);
-    } else if (name == vspaceAttr) {
-        addHTMLLengthToStyle(style, CSSPropertyMarginTop, value);
-        addHTMLLengthToStyle(style, CSSPropertyMarginBottom, value);
-    } else if (name == hspaceAttr) {
-        addHTMLLengthToStyle(style, CSSPropertyMarginLeft, value);
-        addHTMLLengthToStyle(style, CSSPropertyMarginRight, value);
     } else if (name == alignAttr) {
         if (!value.isEmpty()) {
             if (equalLettersIgnoringASCIICase(value, "center"_s)) {
@@ -417,7 +411,7 @@ void HTMLTableElement::parseAttribute(const QualifiedName& name, const AtomStrin
     }
 }
 
-static StyleProperties* leakBorderStyle(CSSValueID value)
+static MutableStyleProperties* leakBorderStyle(CSSValueID value)
 {
     auto style = MutableStyleProperties::create();
     style->setProperty(CSSPropertyBorderTopStyle, value);
@@ -427,26 +421,26 @@ static StyleProperties* leakBorderStyle(CSSValueID value)
     return &style.leakRef();
 }
 
-const StyleProperties* HTMLTableElement::additionalPresentationalHintStyle() const
+const MutableStyleProperties* HTMLTableElement::additionalPresentationalHintStyle() const
 {
     if (m_frameAttr)
-        return 0;
+        return nullptr;
 
     if (!m_borderAttr && !m_borderColorAttr) {
         // Setting the border to 'hidden' allows it to win over any border
         // set on the table's cells during border-conflict resolution.
         if (m_rulesAttr != UnsetRules) {
-            static StyleProperties* solidBorderStyle = leakBorderStyle(CSSValueHidden);
+            static auto* solidBorderStyle = leakBorderStyle(CSSValueHidden);
             return solidBorderStyle;
         }
-        return 0;
+        return nullptr;
     }
 
     if (m_borderColorAttr) {
-        static StyleProperties* solidBorderStyle = leakBorderStyle(CSSValueSolid);
+        static auto* solidBorderStyle = leakBorderStyle(CSSValueSolid);
         return solidBorderStyle;
     }
-    static StyleProperties* outsetBorderStyle = leakBorderStyle(CSSValueOutset);
+    static auto* outsetBorderStyle = leakBorderStyle(CSSValueOutset);
     return outsetBorderStyle;
 }
 
@@ -473,35 +467,34 @@ HTMLTableElement::CellBorders HTMLTableElement::cellBorders() const
     return NoBorders;
 }
 
-Ref<StyleProperties> HTMLTableElement::createSharedCellStyle() const
+Ref<MutableStyleProperties> HTMLTableElement::createSharedCellStyle() const
 {
     auto style = MutableStyleProperties::create();
 
-    auto& cssValuePool = CSSValuePool::singleton();
     switch (cellBorders()) {
     case SolidBordersColsOnly:
         style->setProperty(CSSPropertyBorderLeftWidth, CSSValueThin);
         style->setProperty(CSSPropertyBorderRightWidth, CSSValueThin);
         style->setProperty(CSSPropertyBorderLeftStyle, CSSValueSolid);
         style->setProperty(CSSPropertyBorderRightStyle, CSSValueSolid);
-        style->setProperty(CSSPropertyBorderColor, cssValuePool.createIdentifierValue(CSSValueInherit));
+        style->setProperty(CSSPropertyBorderColor, CSSPrimitiveValue::create(CSSValueInherit));
         break;
     case SolidBordersRowsOnly:
         style->setProperty(CSSPropertyBorderTopWidth, CSSValueThin);
         style->setProperty(CSSPropertyBorderBottomWidth, CSSValueThin);
         style->setProperty(CSSPropertyBorderTopStyle, CSSValueSolid);
         style->setProperty(CSSPropertyBorderBottomStyle, CSSValueSolid);
-        style->setProperty(CSSPropertyBorderColor, cssValuePool.createIdentifierValue(CSSValueInherit));
+        style->setProperty(CSSPropertyBorderColor, CSSPrimitiveValue::create(CSSValueInherit));
         break;
     case SolidBorders:
-        style->setProperty(CSSPropertyBorderWidth, cssValuePool.createValue(1, CSSUnitType::CSS_PX));
-        style->setProperty(CSSPropertyBorderStyle, cssValuePool.createIdentifierValue(CSSValueSolid));
-        style->setProperty(CSSPropertyBorderColor, cssValuePool.createIdentifierValue(CSSValueInherit));
+        style->setProperty(CSSPropertyBorderWidth, CSSPrimitiveValue::create(1, CSSUnitType::CSS_PX));
+        style->setProperty(CSSPropertyBorderStyle, CSSPrimitiveValue::create(CSSValueSolid));
+        style->setProperty(CSSPropertyBorderColor, CSSPrimitiveValue::create(CSSValueInherit));
         break;
     case InsetBorders:
-        style->setProperty(CSSPropertyBorderWidth, cssValuePool.createValue(1, CSSUnitType::CSS_PX));
-        style->setProperty(CSSPropertyBorderStyle, cssValuePool.createIdentifierValue(CSSValueInset));
-        style->setProperty(CSSPropertyBorderColor, cssValuePool.createIdentifierValue(CSSValueInherit));
+        style->setProperty(CSSPropertyBorderWidth, CSSPrimitiveValue::create(1, CSSUnitType::CSS_PX));
+        style->setProperty(CSSPropertyBorderStyle, CSSPrimitiveValue::create(CSSValueInset));
+        style->setProperty(CSSPropertyBorderColor, CSSPrimitiveValue::create(CSSValueInherit));
         break;
     case NoBorders:
         // If 'rules=none' then allow any borders set at cell level to take effect.
@@ -509,19 +502,19 @@ Ref<StyleProperties> HTMLTableElement::createSharedCellStyle() const
     }
 
     if (m_padding)
-        style->setProperty(CSSPropertyPadding, cssValuePool.createValue(m_padding, CSSUnitType::CSS_PX));
+        style->setProperty(CSSPropertyPadding, CSSPrimitiveValue::create(m_padding, CSSUnitType::CSS_PX));
 
     return style;
 }
 
-const StyleProperties* HTMLTableElement::additionalCellStyle() const
+const MutableStyleProperties* HTMLTableElement::additionalCellStyle() const
 {
     if (!m_sharedCellStyle)
         m_sharedCellStyle = createSharedCellStyle();
     return m_sharedCellStyle.get();
 }
 
-static StyleProperties* leakGroupBorderStyle(int rows)
+static MutableStyleProperties* leakGroupBorderStyle(int rows)
 {
     auto style = MutableStyleProperties::create();
     if (rows) {
@@ -538,15 +531,15 @@ static StyleProperties* leakGroupBorderStyle(int rows)
     return &style.leakRef();
 }
 
-const StyleProperties* HTMLTableElement::additionalGroupStyle(bool rows) const
+const MutableStyleProperties* HTMLTableElement::additionalGroupStyle(bool rows) const
 {
     if (m_rulesAttr != GroupsRules)
         return nullptr;
     if (rows) {
-        static StyleProperties* rowBorderStyle = leakGroupBorderStyle(true);
+        static auto* rowBorderStyle = leakGroupBorderStyle(true);
         return rowBorderStyle;
     }
-    static StyleProperties* columnBorderStyle = leakGroupBorderStyle(false);
+    static auto* columnBorderStyle = leakGroupBorderStyle(false);
     return columnBorderStyle;
 }
 

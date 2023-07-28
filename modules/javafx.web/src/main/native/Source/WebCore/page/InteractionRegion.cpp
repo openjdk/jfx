@@ -27,13 +27,18 @@
 #include "InteractionRegion.h"
 
 #include "Document.h"
+#include "ElementAncestorIterator.h"
 #include "ElementInlines.h"
 #include "Frame.h"
 #include "FrameSnapshotting.h"
 #include "FrameView.h"
 #include "GeometryUtilities.h"
 #include "HTMLAnchorElement.h"
+#include "HTMLAttachmentElement.h"
+#include "HTMLButtonElement.h"
+#include "HTMLFieldSetElement.h"
 #include "HTMLFormControlElement.h"
+#include "HTMLInputElement.h"
 #include "HitTestResult.h"
 #include "Page.h"
 #include "PathUtilities.h"
@@ -42,6 +47,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "SimpleRange.h"
+#include "SliderThumbElement.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -60,58 +66,126 @@ static CursorType cursorTypeForElement(Element& element)
     return cursorType;
 }
 
+static bool shouldAllowElement(const Element& element)
+{
+    if (is<HTMLFieldSetElement>(element))
+        return false;
+
+    if (auto* input = dynamicDowncast<HTMLInputElement>(element)) {
+        // Do not allow regions for the <input type='range'>, because we make one for the thumb.
+        if (input->isRangeControl())
+            return false;
+
+        // Do not allow regions for the <input type='file'>, because we make one for the button.
+        if (input->isFileUpload())
+            return false;
+    }
+
+    return true;
+}
+
+static bool shouldAllowNonPointerCursorForElement(const Element& element)
+{
+#if ENABLE(ATTACHMENT_ELEMENT)
+    if (is<HTMLAttachmentElement>(element))
+        return true;
+#endif
+
+    if (is<HTMLFormControlElement>(element))
+        return true;
+
+    if (is<SliderThumbElement>(element))
+        return true;
+
+    return false;
+}
+
 std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject& regionRenderer, const Region& region)
 {
     if (!regionRenderer.node())
         return std::nullopt;
 
     auto bounds = region.bounds();
-
     if (bounds.isEmpty())
         return std::nullopt;
 
-    auto& mainFrameView = *regionRenderer.document().frame()->mainFrame().view();
-    auto layoutArea = mainFrameView.layoutSize().area();
+    auto* localFrame = dynamicDowncast<LocalFrame>(regionRenderer.document().frame()->mainFrame());
+    if (!localFrame)
+        return std::nullopt;
+
+    auto& mainFrameView = *localFrame->view();
+
+    FloatSize frameViewSize = mainFrameView.size();
+    // Adding some wiggle room, we use this to avoid extreme cases.
+    auto scale = 1 / mainFrameView.visibleContentScaleFactor() + 0.2;
+    frameViewSize.scale(scale, scale);
+    auto frameViewArea = frameViewSize.area();
 
     auto checkedRegionArea = bounds.area<RecordOverflow>();
     if (checkedRegionArea.hasOverflowed())
         return std::nullopt;
 
-    if (checkedRegionArea.value() > layoutArea / 2)
-        return std::nullopt;
-
     auto element = dynamicDowncast<Element>(regionRenderer.node());
     if (!element)
         element = regionRenderer.node()->parentElement();
+    if (!element)
+        return std::nullopt;
+
     if (auto* linkElement = element->enclosingLinkEventParentOrSelf())
         element = linkElement;
+    if (auto* buttonElement = ancestorsOfType<HTMLButtonElement>(*element).first())
+        element = buttonElement;
 
-    if (!element || !element->renderer())
+    if (!shouldAllowElement(*element))
+        return std::nullopt;
+
+    if (!element->renderer())
         return std::nullopt;
     auto& renderer = *element->renderer();
 
-    // FIXME: Consider also allowing elements that only receive touch events.
-    if (!renderer.style().eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick))
+    if (renderer.style().effectivePointerEvents() == PointerEvents::None)
         return std::nullopt;
 
-    auto cursor = cursorTypeForElement(*element);
-    if (cursor != CursorType::Pointer && !is<HTMLFormControlElement>(element))
+    // FIXME: Consider also allowing elements that only receive touch events.
+    bool hasListener = renderer.style().eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick);
+    bool hasPointer = cursorTypeForElement(*element) == CursorType::Pointer || shouldAllowNonPointerCursorForElement(*element);
+    if (!hasListener || !hasPointer) {
+        bool isOverlay = checkedRegionArea.value() <= frameViewArea && (renderer.style().specifiedZIndex() > 0 || renderer.isFixedPositioned());
+        if (isOverlay) {
+            Region boundsRegion;
+            boundsRegion.unite(bounds);
+
+            return { {
+                element->identifier(),
+                boundsRegion,
+                0,
+                InteractionRegion::Type::Occlusion
+            } };
+        }
+
+        return std::nullopt;
+    }
+
+    if (checkedRegionArea.value() > frameViewArea / 2)
         return std::nullopt;
 
     bool isInlineNonBlock = renderer.isInline() && !renderer.isReplacedOrInlineBlock();
 
-    if (isInlineNonBlock) {
-        static constexpr float inlinePadding = 3;
-        bounds.inflate(inlinePadding);
-    }
-
-    bool hasLightBackground = true;
-    if (auto linkRange = makeRangeSelectingNode(*element))
-        hasLightBackground = estimatedBackgroundColorForRange(*linkRange, *element->document().frame()).luminance() > 0.5;
+    if (isInlineNonBlock)
+        bounds.inflate(regionRenderer.document().settings().interactionRegionInlinePadding());
 
     float borderRadius = 0;
-    if (const auto& renderBox = dynamicDowncast<RenderBox>(renderer))
+    if (auto* renderBox = dynamicDowncast<RenderBox>(renderer)) {
         borderRadius = renderBox->borderRadii().minimumRadius();
+
+        auto* input = dynamicDowncast<HTMLInputElement>(element);
+        if (input && input->containerElement()) {
+            auto borderBoxRect = renderBox->borderBoxRect();
+            auto contentBoxRect = renderBox->contentBoxRect();
+            bounds.move(IntSize(borderBoxRect.location() - contentBoxRect.location()));
+            bounds.expand(IntSize(borderBoxRect.size() - contentBoxRect.size()));
+        }
+    }
 
     Region boundsRegion;
     boundsRegion.unite(bounds);
@@ -119,15 +193,14 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     return { {
         element->identifier(),
         boundsRegion,
-        hasLightBackground,
-        borderRadius
+        borderRadius,
+        InteractionRegion::Type::Interaction
     } };
 }
 
 TextStream& operator<<(TextStream& ts, const InteractionRegion& interactionRegion)
 {
-    ts.dumpProperty("region", interactionRegion.regionInLayerCoordinates);
-    ts.dumpProperty("hasLightBackground", interactionRegion.hasLightBackground);
+    ts.dumpProperty(interactionRegion.type == InteractionRegion::Type::Occlusion ? "occlusion" : "interaction", interactionRegion.regionInLayerCoordinates);
     ts.dumpProperty("borderRadius", interactionRegion.borderRadius);
 
     return ts;

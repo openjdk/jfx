@@ -45,6 +45,7 @@
 #include "YarrJIT.h"
 #include <wtf/Bag.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/text/StringSearch.h>
 
 namespace JSC {
 
@@ -114,11 +115,6 @@ public:
 
     void clearWatchpoints();
 
-    OptimizingCallLinkInfo* addCallLinkInfo(CodeOrigin codeOrigin, CallLinkInfo::UseDataIC useDataIC = CallLinkInfo::UseDataIC::No)
-    {
-        return m_callLinkInfos.add(codeOrigin, useDataIC);
-    }
-
     RefPtr<InlineCallFrameSet> inlineCallFrames;
     Ref<CodeOriginPool> codeOrigins;
 
@@ -133,9 +129,10 @@ public:
     std::unique_ptr<PCToCodeOriginMap> m_pcToCodeOriginMap;
     RecordedStatuses recordedStatuses;
     FixedVector<JumpReplacement> m_jumpReplacements;
+    FixedVector<std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
     Bag<StructureStubInfo> m_stubInfos;
     Bag<OptimizingCallLinkInfo> m_callLinkInfos;
-    Yarr::YarrBoyerMoyerData m_boyerMooreData;
+    Yarr::YarrBoyerMooreData m_boyerMooreData;
 
     ScratchBuffer* catchOSREntryBuffer;
     RefPtr<Profiler::Compilation> compilation;

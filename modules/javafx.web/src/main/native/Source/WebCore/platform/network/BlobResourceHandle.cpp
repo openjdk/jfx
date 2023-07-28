@@ -379,7 +379,7 @@ int BlobResourceHandle::readDataSync(const BlobDataItem& item, void* buf, int le
     int bytesToRead = (length > remaining) ? static_cast<int>(remaining) : length;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = static_cast<int>(m_totalRemainingSize);
-    memcpy(buf, item.data().data()->data() + item.offset() + m_currentItemReadSize, bytesToRead);
+    memcpy(buf, item.data()->data() + item.offset() + m_currentItemReadSize, bytesToRead);
     m_totalRemainingSize -= bytesToRead;
 
     m_currentItemReadSize += bytesToRead;
@@ -452,7 +452,7 @@ void BlobResourceHandle::readAsync()
 void BlobResourceHandle::readDataAsync(const BlobDataItem& item)
 {
     ASSERT(isMainThread());
-    ASSERT(item.data().data());
+    ASSERT(item.data());
 
     Ref<BlobResourceHandle> protectedThis(*this);
 
@@ -461,7 +461,7 @@ void BlobResourceHandle::readDataAsync(const BlobDataItem& item)
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = m_totalRemainingSize;
 
-    auto* data = item.data().data()->data() + item.offset() + m_currentItemReadSize;
+    auto* data = item.data()->data() + item.offset() + m_currentItemReadSize;
     m_currentItemReadSize = 0;
 
     consumeData(data, static_cast<int>(bytesToRead));
@@ -575,9 +575,9 @@ void BlobResourceHandle::notifyResponseOnSuccess()
     response.setHTTPStatusText(isRangeRequest ? httpPartialContentText : httpOKText);
 
     response.setHTTPHeaderField(HTTPHeaderName::ContentType, m_blobData->contentType());
+    response.setTextEncodingName(extractCharsetFromMediaType(m_blobData->contentType()).toAtomString());
     response.setHTTPHeaderField(HTTPHeaderName::ContentLength, String::number(m_totalRemainingSize));
-    addCrossOriginOpenerPolicyHeaders(response, m_blobData->policyContainer().crossOriginOpenerPolicy);
-    addCrossOriginEmbedderPolicyHeaders(response, m_blobData->policyContainer().crossOriginEmbedderPolicy);
+    addPolicyContainerHeaders(response, m_blobData->policyContainer());
 
     if (isRangeRequest) {
         auto rangeEnd = m_rangeEnd;

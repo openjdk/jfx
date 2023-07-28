@@ -48,8 +48,11 @@ class JSRTCRtpScriptTransformerConstructor;
 class RTCRtpScriptTransformer;
 class RequestAnimationFrameCallback;
 class SerializedScriptValue;
-
 struct StructuredSerializeOptions;
+
+#if ENABLE(NOTIFICATIONS)
+class WorkerNotificationClient;
+#endif
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
 class WorkerAnimationController;
@@ -62,7 +65,7 @@ using TransferredMessagePort = std::pair<WebCore::MessagePortIdentifier, WebCore
 class DedicatedWorkerGlobalScope final : public WorkerGlobalScope {
     WTF_MAKE_ISO_ALLOCATED(DedicatedWorkerGlobalScope);
 public:
-    static Ref<DedicatedWorkerGlobalScope> create(const WorkerParameters&, Ref<SecurityOrigin>&&, DedicatedWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    static Ref<DedicatedWorkerGlobalScope> create(const WorkerParameters&, Ref<SecurityOrigin>&&, DedicatedWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<WorkerClient>&&);
     virtual ~DedicatedWorkerGlobalScope();
 
     const String& name() const { return m_name; }
@@ -70,6 +73,10 @@ public:
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
     DedicatedWorkerThread& thread();
+
+#if ENABLE(NOTIFICATIONS)
+    NotificationClient* notificationClient() final;
+#endif
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     CallbackId requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
@@ -85,11 +92,10 @@ public:
 private:
     using Base = WorkerGlobalScope;
 
-    DedicatedWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, DedicatedWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    DedicatedWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, DedicatedWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<WorkerClient>&&);
 
     Type type() const final { return Type::DedicatedWorker; }
 
-    ExceptionOr<void> importScripts(const FixedVector<String>& urls) final;
     EventTargetInterface eventTargetInterface() const final;
 
     void prepareForDestruction() final;
@@ -98,6 +104,9 @@ private:
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     RefPtr<WorkerAnimationController> m_workerAnimationController;
+#endif
+#if ENABLE(NOTIFICATIONS)
+    RefPtr<WorkerNotificationClient> m_notificationClient;
 #endif
 };
 

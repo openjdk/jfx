@@ -26,8 +26,6 @@
 #include "config.h"
 #include "FlexLayout.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FlexFormattingContext.h"
 #include "FlexRect.h"
 #include "LayoutContext.h"
@@ -35,7 +33,7 @@
 namespace WebCore {
 namespace Layout {
 
-FlexLayout::FlexLayout(const ContainerBox& flexBox)
+FlexLayout::FlexLayout(const ElementBox& flexBox)
     : m_flexBox(flexBox)
 {
 }
@@ -536,4 +534,3 @@ FlexLayout::LogicalFlexItemRects FlexLayout::layout(const LogicalConstraints& co
 }
 }
 
-#endif

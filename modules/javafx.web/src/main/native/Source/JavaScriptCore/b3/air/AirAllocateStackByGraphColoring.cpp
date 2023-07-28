@@ -76,6 +76,9 @@ protected:
         case MoveDouble:
             width = Width64;
             break;
+        case MoveVector:
+            width = Width128;
+            break;
         default:
             return false;
         }
@@ -90,7 +93,7 @@ protected:
             StackSlot* slot = arg.stackSlot();
             if (slot->kind() != StackSlotKind::Spill)
                 return false;
-            if (slot->byteSize() != bytes(width))
+            if (slot->byteSize() != bytesForWidth(width))
                 return false;
         }
 

@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_dispose(JNIEnv*, jcla
 JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->type();
+    return IMPL->typeForCSSOM();
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getCssTextImpl(JNIEnv* env, jclass, jlong peer)

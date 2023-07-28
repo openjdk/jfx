@@ -272,14 +272,8 @@ void RenderSVGShape::fillStrokeMarkers(PaintInfo& childPaintInfo)
 
 void RenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (paintInfo.context().paintingDisabled())
-        return;
-
-    // FIXME: [LBSE] Upstream SVGRenderSupport changes
-    // if (!SVGRenderSupport::shouldPaintHiddenRenderer(*this))
-    //    return;
-
-    if (!shouldPaintSVGRenderer(paintInfo) || isEmpty())
+    OptionSet<PaintPhase> relevantPaintPhases { PaintPhase::Foreground, PaintPhase::ClippingMask, PaintPhase::Mask, PaintPhase::Outline, PaintPhase::SelfOutline };
+    if (!shouldPaintSVGRenderer(paintInfo, relevantPaintPhases) || isEmpty())
         return;
 
     if (paintInfo.phase == PaintPhase::ClippingMask) {
@@ -306,6 +300,7 @@ void RenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         return;
     }
 
+    ASSERT(paintInfo.phase == PaintPhase::Foreground);
     GraphicsContextStateSaver stateSaver(paintInfo.context());
 
     auto coordinateSystemOriginTranslation = adjustedPaintOffset - nominalSVGLayoutLocation();
@@ -530,6 +525,11 @@ void RenderSVGShape::styleWillChange(StyleDifference diff, const RenderStyle& ne
     }
 
     RenderSVGModelObject::styleWillChange(diff, newStyle);
+}
+
+bool RenderSVGShape::needsHasSVGTransformFlags() const
+{
+    return graphicsElement().hasTransformRelatedAttributes();
 }
 
 void RenderSVGShape::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const

@@ -29,5 +29,6 @@
     PrivateIdentifier,
     PublicIdentifier
 ] interface WritableStreamDefaultController {
+    readonly attribute AbortSignal signal;
     undefined error(optional any e);
 };

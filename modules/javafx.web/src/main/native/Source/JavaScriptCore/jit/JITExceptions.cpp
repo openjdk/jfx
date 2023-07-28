@@ -44,7 +44,7 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
     auto scope = DECLARE_CATCH_SCOPE(vm);
     CallFrame* topJSCallFrame = vm.topJSCallFrame();
     if (UNLIKELY(Options::breakOnThrow())) {
-        CodeBlock* codeBlock = topJSCallFrame->codeBlock();
+        CodeBlock* codeBlock = topJSCallFrame->isWasmFrame() ? nullptr : topJSCallFrame->codeBlock();
         dataLog("In call frame ", RawPointer(topJSCallFrame), " for code block ", codeBlock, "\n");
         WTFBreakpointTrap();
     }
@@ -61,7 +61,7 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
     if (handler.m_valid) {
         catchPCForInterpreter = handler.m_catchPCForInterpreter;
 #if ENABLE(JIT)
-        catchRoutine = handler.m_nativeCode.executableAddress();
+        catchRoutine = handler.m_nativeCode.taggedPtr();
 #else
 #if ENABLE(WEBASSEMBLY)
 #error WASM requires the JIT, so this section assumes we are in JS
@@ -75,7 +75,7 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
             catchRoutine = LLInt::getCodePtr(pc->opcodeID());
 #endif
     } else
-        catchRoutine = LLInt::handleUncaughtException(vm).code().executableAddress();
+        catchRoutine = LLInt::handleUncaughtException(vm).code().taggedPtr();
 
     ASSERT(bitwise_cast<uintptr_t>(callFrame) < bitwise_cast<uintptr_t>(vm.topEntryFrame));
 

@@ -63,11 +63,11 @@ private:
 class XMLDocumentParser final : public ScriptableDocumentParser, public PendingScriptClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<XMLDocumentParser> create(Document& document, FrameView* view)
+    static Ref<XMLDocumentParser> create(Document& document, FrameView* view, OptionSet<ParserContentPolicy> policy = DefaultParserContentPolicy)
     {
-        return adoptRef(*new XMLDocumentParser(document, view));
+        return adoptRef(*new XMLDocumentParser(document, view, policy));
     }
-    static Ref<XMLDocumentParser> create(DocumentFragment& fragment, HashMap<AtomString, AtomString>&& prefixToNamespaceMap, const AtomString& defaultNamespaceURI, ParserContentPolicy parserContentPolicy)
+    static Ref<XMLDocumentParser> create(DocumentFragment& fragment, HashMap<AtomString, AtomString>&& prefixToNamespaceMap, const AtomString& defaultNamespaceURI, OptionSet<ParserContentPolicy> parserContentPolicy)
     {
         return adoptRef(*new XMLDocumentParser(fragment, WTFMove(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy));
     }
@@ -80,7 +80,7 @@ public:
     void setIsXHTMLDocument(bool isXHTML) { m_isXHTMLDocument = isXHTML; }
     bool isXHTMLDocument() const { return m_isXHTMLDocument; }
 
-    static bool parseDocumentFragment(const String&, DocumentFragment&, Element* parent = nullptr, ParserContentPolicy = AllowScriptingContent);
+    static bool parseDocumentFragment(const String&, DocumentFragment&, Element* parent = nullptr, OptionSet<ParserContentPolicy> = { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
 
     // Used by XMLHttpRequest to check if the responseXML was well formed.
     bool wellFormed() const final { return !m_sawError; }
@@ -88,8 +88,8 @@ public:
     static bool supportsXMLVersion(const String&);
 
 private:
-    explicit XMLDocumentParser(Document&, FrameView* = nullptr);
-    XMLDocumentParser(DocumentFragment&, HashMap<AtomString, AtomString>&&, const AtomString&, ParserContentPolicy);
+    explicit XMLDocumentParser(Document&, FrameView*, OptionSet<ParserContentPolicy>);
+    XMLDocumentParser(DocumentFragment&, HashMap<AtomString, AtomString>&&, const AtomString&, OptionSet<ParserContentPolicy>);
 
     void insert(SegmentedString&&) final;
     void append(RefPtr<StringImpl>&&) final;

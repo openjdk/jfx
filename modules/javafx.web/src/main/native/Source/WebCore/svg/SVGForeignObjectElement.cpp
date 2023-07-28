@@ -23,6 +23,7 @@
 #include "SVGForeignObjectElement.h"
 
 #include "CSSPropertyNames.h"
+#include "LegacyRenderSVGForeignObject.h"
 #include "RenderSVGForeignObject.h"
 #include "RenderSVGResource.h"
 #include "SVGElementInlines.h"
@@ -37,7 +38,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGForeignObjectElement);
 
 inline SVGForeignObjectElement::SVGForeignObjectElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+    : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::foreignObjectTag));
     static std::once_flag onceFlag;
@@ -92,7 +93,11 @@ void SVGForeignObjectElement::svgAttributeChanged(const QualifiedName& attrName)
 RenderPtr<RenderElement> SVGForeignObjectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     document().setMayHaveRenderedSVGForeignObjects();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGForeignObject>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGForeignObject>(*this, WTFMove(style));
 }
 
 bool SVGForeignObjectElement::childShouldCreateRenderer(const Node& child) const
@@ -117,7 +122,7 @@ bool SVGForeignObjectElement::rendererIsNeeded(const RenderStyle& style)
         return false;
 
     while (ancestor && ancestor->isSVGElement()) {
-        if (ancestor->renderer() && ancestor->renderer()->isSVGHiddenContainer())
+        if (ancestor->renderer() && (ancestor->renderer()->isSVGHiddenContainer() || ancestor->renderer()->isLegacySVGHiddenContainer()))
             return false;
 
         ancestor = ancestor->parentElement();

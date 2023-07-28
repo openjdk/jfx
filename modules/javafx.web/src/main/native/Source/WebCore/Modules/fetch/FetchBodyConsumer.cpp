@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc.
+ * Copyright (C) 2016-2023 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -36,6 +36,8 @@
 #include "HTTPParsers.h"
 #include "JSBlob.h"
 #include "JSDOMFormData.h"
+#include "JSDOMPromiseDeferred.h"
+#include "RFC7230.h"
 #include "TextResourceDecoder.h"
 #include <wtf/StringExtras.h>
 #include <wtf/URLParser.h>
@@ -125,6 +127,15 @@ static std::optional<MimeType> parseMIMEType(const String& contentType)
     return {{ WTFMove(type), WTFMove(subtype), parseParameters(StringView(input), semicolonIndex + 1) }};
 }
 
+FetchBodyConsumer::FetchBodyConsumer(Type type)
+    : m_type(type)
+{
+}
+
+FetchBodyConsumer::FetchBodyConsumer(FetchBodyConsumer&&) = default;
+FetchBodyConsumer::~FetchBodyConsumer() = default;
+FetchBodyConsumer& FetchBodyConsumer::operator=(FetchBodyConsumer&&) = default;
+
 // https://fetch.spec.whatwg.org/#concept-body-package-data
 RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* context, const String& contentType, const uint8_t* data, size_t length)
 {
@@ -183,7 +194,7 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         return std::nullopt;
     };
 
-    auto form = DOMFormData::create(PAL::UTF8Encoding());
+    auto form = DOMFormData::create(context, PAL::UTF8Encoding());
     auto mimeType = parseMIMEType(contentType);
     if (auto multipartBoundary = parseMultipartBoundary(mimeType)) {
         auto boundaryWithDashes = makeString("--", *multipartBoundary);
@@ -267,17 +278,18 @@ void FetchBodyConsumer::resolveWithFormData(Ref<DeferredPromise>&& promise, cons
     if (!context)
         return;
 
-    m_formDataConsumer = makeUnique<FormDataConsumer>(formData, *context, [this, capturedPromise = WTFMove(promise), contentType, builder = SharedBufferBuilder { }](auto&& result) mutable {
+    m_formDataConsumer = makeUnique<FormDataConsumer>(formData, *context, [this, promise = WTFMove(promise), contentType, builder = SharedBufferBuilder { }](auto&& result) mutable {
         if (result.hasException()) {
-            auto promise = WTFMove(capturedPromise);
-            promise->reject(result.releaseException());
+            auto protectedPromise = WTFMove(promise);
+            protectedPromise->reject(result.releaseException());
             return;
         }
 
         auto& value = result.returnValue();
         if (value.empty()) {
+            auto protectedPromise = WTFMove(promise);
             auto buffer = builder.takeAsContiguous();
-            resolveWithData(WTFMove(capturedPromise), contentType, buffer->data(), buffer->size());
+            resolveWithData(WTFMove(protectedPromise), contentType, buffer->data(), buffer->size());
             return;
         }
 
@@ -297,6 +309,7 @@ void FetchBodyConsumer::consumeFormDataAsStream(const FormData& formData, FetchB
         return;
 
     m_formDataConsumer = makeUnique<FormDataConsumer>(formData, *context, [this, source = Ref { source }](auto&& result) {
+        auto protectedSource = source;
         if (result.hasException()) {
             source->error(result.releaseException());
             return;
@@ -326,16 +339,20 @@ void FetchBodyConsumer::resolve(Ref<DeferredPromise>&& promise, const String& co
         ASSERT(!m_sink);
         m_sink = ReadableStreamToSharedBufferSink::create([promise = WTFMove(promise), data = SharedBufferBuilder(), type = m_type, contentType](auto&& result) mutable {
             if (result.hasException()) {
-                promise->reject(result.releaseException());
+                auto protectedPromise = WTFMove(promise);
+                protectedPromise->reject(result.releaseException());
                 return;
             }
 
-            if (auto* chunk = result.returnValue())
-                data.append(chunk->data(), chunk->size());
-            else {
+            auto* chunk = result.returnValue();
+            if (!chunk) {
+                auto protectedPromise = WTFMove(promise);
                 auto buffer = data.takeAsContiguous();
-                resolveWithTypeAndData(WTFMove(promise), type, contentType, buffer->data(), buffer->size());
+                resolveWithTypeAndData(WTFMove(protectedPromise), type, contentType, buffer->data(), buffer->size());
+                return;
             }
+
+            data.append(chunk->data(), chunk->size());
         });
         m_sink->pipeFrom(*stream);
         return;

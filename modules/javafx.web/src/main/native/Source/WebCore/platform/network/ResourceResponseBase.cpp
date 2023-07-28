@@ -49,19 +49,6 @@ bool isScriptAllowedByNosniff(const ResourceResponse& response)
 }
 
 ResourceResponseBase::ResourceResponseBase()
-    : m_haveParsedCacheControlHeader(false)
-    , m_haveParsedAgeHeader(false)
-    , m_haveParsedDateHeader(false)
-    , m_haveParsedExpiresHeader(false)
-    , m_haveParsedLastModifiedHeader(false)
-    , m_haveParsedContentRangeHeader(false)
-    , m_isRedirected(false)
-    , m_isRangeRequested(false)
-    , m_isNull(true)
-    , m_usedLegacyTLS(UsedLegacyTLS::No)
-    , m_tainting(Tainting::Basic)
-    , m_source(Source::Unknown)
-    , m_type(Type::Default)
 {
 }
 
@@ -71,20 +58,50 @@ ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeTyp
     , m_expectedContentLength(expectedLength)
     , m_textEncodingName(textEncodingName)
     , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
-    , m_haveParsedCacheControlHeader(false)
-    , m_haveParsedAgeHeader(false)
-    , m_haveParsedDateHeader(false)
-    , m_haveParsedExpiresHeader(false)
-    , m_haveParsedLastModifiedHeader(false)
-    , m_haveParsedContentRangeHeader(false)
-    , m_isRedirected(false)
-    , m_isRangeRequested(false)
     , m_isNull(false)
-    , m_usedLegacyTLS(UsedLegacyTLS::No)
-    , m_tainting(Tainting::Basic)
-    , m_source(Source::Unknown)
-    , m_type(Type::Default)
 {
+}
+
+ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseBase::ResponseData> data)
+    : m_url(data ? data->m_url : URL { })
+    , m_mimeType(data ? data->m_mimeType : AtomString { })
+    , m_expectedContentLength(data ? data->m_expectedContentLength : 0)
+    , m_textEncodingName(data ? data->m_textEncodingName : AtomString { })
+    , m_httpStatusText(data ? data->m_httpStatusText : AtomString { })
+    , m_httpVersion(data ? data->m_httpVersion : AtomString { })
+    , m_httpHeaderFields(data ? data->m_httpHeaderFields : HTTPHeaderMap { })
+    , m_networkLoadMetrics(data ? data->m_networkLoadMetrics : Box<WebCore::NetworkLoadMetrics> { })
+    , m_certificateInfo(data ? data->m_certificateInfo : std::nullopt)
+    , m_httpStatusCode(data ? data->m_httpStatusCode : 0)
+    , m_isNull(data ? false : true)
+    , m_usedLegacyTLS(data ? data->m_usedLegacyTLS : UsedLegacyTLS::No)
+    , m_wasPrivateRelayed(data ? data->m_wasPrivateRelayed : WasPrivateRelayed::No)
+    , m_isRedirected(data ? data->m_isRedirected : false)
+    , m_isRangeRequested(data ? data->m_isRangeRequested : false)
+    , m_tainting(data ? data->m_tainting : Tainting::Basic)
+    , m_source(data ? data->m_source : Source::Unknown)
+    , m_type(data ? data->m_type : Type::Default)
+{
+}
+
+ResourceResponseBase::CrossThreadData ResourceResponseBase::CrossThreadData::isolatedCopy() const
+{
+    ResourceResponseBase::CrossThreadData result;
+    result.url = url.isolatedCopy();
+    result.mimeType = mimeType.isolatedCopy();
+    result.expectedContentLength = expectedContentLength;
+    result.textEncodingName = textEncodingName.isolatedCopy();
+    result.httpStatusCode = httpStatusCode;
+    result.httpStatusText = httpStatusText.isolatedCopy();
+    result.httpVersion = httpVersion.isolatedCopy();
+    result.httpHeaderFields = httpHeaderFields.isolatedCopy();
+    if (networkLoadMetrics)
+        result.networkLoadMetrics = networkLoadMetrics->isolatedCopy();
+    result.type = type;
+    result.tainting = tainting;
+    result.isRedirected = isRedirected;
+    result.isRangeRequested = isRangeRequested;
+    return result;
 }
 
 ResourceResponseBase::CrossThreadData ResourceResponseBase::crossThreadData() const
@@ -116,13 +133,13 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     ResourceResponse response;
 
     response.setURL(data.url);
-    response.setMimeType(AtomString { data.mimeType });
+    response.setMimeType(AtomString { WTFMove(data.mimeType) });
     response.setExpectedContentLength(data.expectedContentLength);
     response.setTextEncodingName(AtomString { WTFMove(data.textEncodingName) });
 
     response.setHTTPStatusCode(data.httpStatusCode);
-    response.setHTTPStatusText(AtomString { data.httpStatusText });
-    response.setHTTPVersion(AtomString { data.httpVersion });
+    response.setHTTPStatusText(AtomString { WTFMove(data.httpStatusText) });
+    response.setHTTPVersion(AtomString { WTFMove(data.httpVersion) });
 
     response.m_httpHeaderFields = WTFMove(data.httpHeaderFields);
     if (data.networkLoadMetrics)
@@ -845,6 +862,36 @@ bool ResourceResponseBase::containsInvalidHTTPHeaders() const
             return true;
     }
     return false;
+}
+
+std::optional<ResourceResponseBase::ResponseData> ResourceResponseBase::getResponseData() const
+{
+    if (m_isNull)
+        return std::nullopt;
+    lazyInit(AllFields);
+
+    return { {
+        m_url,
+        m_mimeType,
+        m_expectedContentLength,
+        m_textEncodingName,
+        m_httpStatusText,
+        m_httpVersion,
+        m_httpHeaderFields,
+        m_networkLoadMetrics,
+
+        m_httpStatusCode,
+        m_certificateInfo,
+
+        m_source,
+        m_type,
+        m_tainting,
+
+        m_isRedirected,
+        m_usedLegacyTLS,
+        m_wasPrivateRelayed,
+        m_isRangeRequested
+    } };
 }
 
 }

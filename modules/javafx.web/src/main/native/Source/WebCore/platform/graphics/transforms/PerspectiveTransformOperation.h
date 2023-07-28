@@ -37,10 +37,7 @@ struct BlendingContext;
 
 class PerspectiveTransformOperation final : public TransformOperation {
 public:
-    static Ref<PerspectiveTransformOperation> create(const std::optional<Length>& p)
-    {
-        return adoptRef(*new PerspectiveTransformOperation(p));
-    }
+    WEBCORE_EXPORT static Ref<PerspectiveTransformOperation> create(const std::optional<Length>&);
 
     Ref<TransformOperation> clone() const override
     {
@@ -80,16 +77,11 @@ private:
 
     void dump(WTF::TextStream&) const final;
 
-    PerspectiveTransformOperation(const std::optional<Length>& p)
-        : TransformOperation(PERSPECTIVE)
-        , m_p(p)
-    {
-        ASSERT(!p || (*p).isFixed());
-    }
+    PerspectiveTransformOperation(const std::optional<Length>&);
 
     std::optional<Length> m_p;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::PerspectiveTransformOperation, type() == WebCore::TransformOperation::PERSPECTIVE)
+SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::PerspectiveTransformOperation, type() == WebCore::TransformOperation::Type::Perspective)

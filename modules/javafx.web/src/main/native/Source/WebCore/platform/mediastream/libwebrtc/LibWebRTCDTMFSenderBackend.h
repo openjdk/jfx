@@ -31,11 +31,12 @@
 #include <wtf/WeakPtr.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
-
+ALLOW_COMMA_BEGIN
 #include <webrtc/api/dtmf_sender_interface.h>
 #include <webrtc/api/scoped_refptr.h>
 
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 namespace WebCore {
 
@@ -49,8 +50,8 @@ public:
 private:
     // RTCDTMFSenderBackend
     bool canInsertDTMF() final;
-    void playTone(const String& tone, size_t duration, size_t interToneGap) final;
-    void onTonePlayed(Function<void(const String&)>&&) final;
+    void playTone(const char tone, size_t duration, size_t interToneGap) final;
+    void onTonePlayed(Function<void()>&&) final;
     String tones() const final;
     size_t duration() const final;
     size_t interToneGap() const final;
@@ -59,7 +60,7 @@ private:
     void OnToneChange(const std::string& tone, const std::string&) final;
 
     rtc::scoped_refptr<webrtc::DtmfSenderInterface> m_sender;
-    Function<void(const String&)> m_onTonePlayed;
+    Function<void()> m_onTonePlayed;
 };
 
 } // namespace WebCore

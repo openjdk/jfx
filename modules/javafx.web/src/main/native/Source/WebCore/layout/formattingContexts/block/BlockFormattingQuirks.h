@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingQuirks.h"
 
 namespace WebCore {
@@ -38,10 +36,10 @@ class BlockFormattingQuirks : public FormattingQuirks {
 public:
     BlockFormattingQuirks(const BlockFormattingContext&);
 
-    std::optional<LayoutUnit> stretchedInFlowHeightIfApplicable(const Box&, ContentHeightAndMargin) const;
-    static bool shouldIgnoreCollapsedQuirkMargin(const Box&);
-    static bool shouldCollapseMarginBeforeWithParentMarginBefore(const Box&);
-    static bool shouldCollapseMarginAfterWithParentMarginAfter(const Box&);
+    std::optional<LayoutUnit> stretchedInFlowHeightIfApplicable(const ElementBox&, ContentHeightAndMargin) const;
+    static bool shouldIgnoreCollapsedQuirkMargin(const ElementBox&);
+    static bool shouldCollapseMarginBeforeWithParentMarginBefore(const ElementBox&);
+    static bool shouldCollapseMarginAfterWithParentMarginAfter(const ElementBox&);
 };
 
 }
@@ -49,4 +47,3 @@ public:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_QUIRKS(BlockFormattingQuirks, isBlockFormattingQuirks())
 
-#endif

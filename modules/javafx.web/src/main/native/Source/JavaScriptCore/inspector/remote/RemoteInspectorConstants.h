@@ -29,16 +29,19 @@
 // the WebInspector framework on the OS X side, webinspectord, and
 // iOS WebKit on the device side.
 
-#define WIRSimulatorTCPPortNumber               27753
 #define WIRXPCMachPortName                      "com.apple.webinspector"
 #define WIRXPCDebuggerServiceName               "com.apple.webinspector.debugger"
 #define WIRServiceAvailableNotification         "com.apple.webinspectord.available"
 #define WIRServiceAvailabilityCheckNotification "com.apple.webinspectord.availability_check"
 #define WIRServiceEnabledNotification           "com.apple.webinspectord.enabled"
 #define WIRServiceDisabledNotification          "com.apple.webinspectord.disabled"
-#define WIRAutomaticInspectionEnabledState      "com.apple.webinspectord.automatic_inspection_enabled"
 #define WIRRemoteAutomationEnabledNotification  "com.apple.webinspectord.remote_automation_enabled"
 #define WIRRemoteAutomationDisabledNotification "com.apple.webinspectord.remote_automation_disabled"
+
+// COMPATIBILITY(macOS 13): The key string is intentionally mismatched to support old relays.
+#define WIRGlobalNotifyStateName                    "com.apple.webinspectord.automatic_inspection_enabled"
+#define WIRGlobalNotifyStateAutomaticInspection     1ULL << 0
+#define WIRGlobalNotifyStateSimulateCustomerInstall 1ULL << 63
 
 #define WIRApplicationIdentifierKey             @"WIRApplicationIdentifierKey"
 #define WIRApplicationBundleIdentifierKey       @"WIRApplicationBundleIdentifierKey"

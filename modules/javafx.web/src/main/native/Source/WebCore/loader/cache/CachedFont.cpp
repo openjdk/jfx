@@ -27,6 +27,7 @@
 #include "config.h"
 #include "CachedFont.h"
 
+#include "AllowedFonts.h"
 #include "CachedFontClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
@@ -34,11 +35,15 @@
 #include "FontCustomPlatformData.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
+#include "MemoryCache.h"
 #include "SharedBuffer.h"
+#include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
 #include "TypedElementDescendantIterator.h"
 #include "WOFFFileFormat.h"
+#include <pal/crypto/CryptoDigest.h>
 #include <wtf/Vector.h>
+#include <wtf/text/Base64.h>
 
 namespace WebCore {
 
@@ -64,10 +69,24 @@ void CachedFont::didAddClient(CachedResourceClient& client)
         downcast<CachedFontClient>(client).fontLoaded(*this);
 }
 
+
+bool CachedFont::shouldAllowCustomFont(const Ref<SharedBuffer>& data)
+{
+    if (!m_loader || !m_loader->frame())
+        return false;
+
+    return isFontBinaryAllowed(data->dataAsSpanForContiguousData(), m_loader->frame()->settings().downloadableBinaryFontAllowedTypes());
+}
+
 void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
     if (data) {
-        m_data = data->makeContiguous();
+        auto dataContiguous = data->makeContiguous();
+        if (!shouldAllowCustomFont(dataContiguous)) {
+            setErrorAndDeleteData();
+            return;
+        }
+        m_data = WTFMove(dataContiguous);
         setEncodedSize(m_data->size());
     } else {
         m_data = nullptr;
@@ -75,6 +94,16 @@ void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const Network
     }
     setLoading(false);
     checkNotify(metrics);
+}
+
+void CachedFont::setErrorAndDeleteData()
+{
+    setEncodedSize(0);
+    error(Status::DecodeError);
+    if (inCache())
+        MemoryCache::singleton().remove(*this);
+    if (m_loader)
+        m_loader->cancel();
 }
 
 void CachedFont::beginLoadIfNeeded(CachedResourceLoader& loader)
@@ -85,7 +114,7 @@ void CachedFont::beginLoadIfNeeded(CachedResourceLoader& loader)
     }
 }
 
-bool CachedFont::ensureCustomFontData(const AtomString&)
+bool CachedFont::ensureCustomFontData()
 {
     if (!m_data)
         return ensureCustomFontData(nullptr);
@@ -123,7 +152,7 @@ std::unique_ptr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedB
     return buffer ? createFontCustomPlatformData(*buffer, itemInCollection) : nullptr;
 }
 
-RefPtr<Font> CachedFont::createFont(const FontDescription& fontDescription, const AtomString&, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
+RefPtr<Font> CachedFont::createFont(const FontDescription& fontDescription, bool syntheticBold, bool syntheticItalic, const FontCreationContext& fontCreationContext)
 {
     return Font::create(platformDataFromCustomData(fontDescription, syntheticBold, syntheticItalic, fontCreationContext), Font::Origin::Remote);
 }

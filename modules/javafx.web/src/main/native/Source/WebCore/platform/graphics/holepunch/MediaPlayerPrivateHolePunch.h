@@ -83,7 +83,7 @@ public:
 
     bool didLoadingProgress() const final { return false; };
 
-    void setSize(const IntSize& size) final { m_size = size; };
+    void setPresentationSize(const IntSize& size) final { m_size = size; };
 
     void paint(GraphicsContext&, const FloatRect&) final { };
 
@@ -109,7 +109,7 @@ private:
 
     MediaPlayer* m_player;
     IntSize m_size;
-    RunLoop::Timer<MediaPlayerPrivateHolePunch> m_readyTimer;
+    RunLoop::Timer m_readyTimer;
     MediaPlayer::NetworkState m_networkState;
 #if USE(TEXTURE_MAPPER_GL)
 #if USE(NICOSIA)

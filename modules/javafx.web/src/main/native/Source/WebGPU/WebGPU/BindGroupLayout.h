@@ -26,13 +26,21 @@
 #pragma once
 
 #import <wtf/FastMalloc.h>
+#import <wtf/HashMap.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/Vector.h>
 
 struct WGPUBindGroupLayoutImpl {
 };
 
 namespace WebGPU {
+
+enum class ShaderStage {
+    Vertex = 0,
+    Fragment = 1,
+    Compute = 2
+};
 
 class Device;
 
@@ -40,38 +48,50 @@ class Device;
 class BindGroupLayout : public WGPUBindGroupLayoutImpl, public RefCounted<BindGroupLayout> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<BindGroupLayout> create(id<MTLArgumentEncoder> vertexArgumentEncoder, id<MTLArgumentEncoder> fragmentArgumentEncoder, id<MTLArgumentEncoder> computeArgumentEncoder, Device& device)
+    static Ref<BindGroupLayout> create(HashMap<uint32_t, WGPUShaderStageFlags>&& stageMapTable, id<MTLArgumentEncoder> vertexArgumentEncoder, id<MTLArgumentEncoder> fragmentArgumentEncoder, id<MTLArgumentEncoder> computeArgumentEncoder, Vector<WGPUBindGroupLayoutEntry>&& entries)
     {
-        return adoptRef(*new BindGroupLayout(vertexArgumentEncoder, fragmentArgumentEncoder, computeArgumentEncoder, device));
+        return adoptRef(*new BindGroupLayout(WTFMove(stageMapTable), vertexArgumentEncoder, fragmentArgumentEncoder, computeArgumentEncoder, WTFMove(entries)));
     }
-    static Ref<BindGroupLayout> createInvalid(Device& device)
+    static Ref<BindGroupLayout> createInvalid(Device&)
     {
-        return adoptRef(*new BindGroupLayout(device));
+        return adoptRef(*new BindGroupLayout());
     }
 
     ~BindGroupLayout();
 
     void setLabel(String&&);
 
-    bool isValid() const { return m_vertexArgumentEncoder || m_fragmentArgumentEncoder || m_computeArgumentEncoder; }
+    bool isValid() const { return m_shaderStageForBinding.size(); }
 
-    NSUInteger encodedLength() const;
+    NSUInteger encodedLength(ShaderStage) const;
 
     id<MTLArgumentEncoder> vertexArgumentEncoder() const { return m_vertexArgumentEncoder; }
     id<MTLArgumentEncoder> fragmentArgumentEncoder() const { return m_fragmentArgumentEncoder; }
     id<MTLArgumentEncoder> computeArgumentEncoder() const { return m_computeArgumentEncoder; }
 
-    Device& device() const { return m_device; }
+    bool bindingContainsStage(uint32_t bindingIndex, ShaderStage renderStage) const;
+
+#if HAVE(METAL_BUFFER_BINDING_REFLECTION)
+    static WGPUBindGroupLayoutEntry createEntryFromStructMember(MTLStructMember *, uint32_t&, WGPUShaderStage);
+#endif
+    static bool isPresent(const WGPUBufferBindingLayout&);
+    static bool isPresent(const WGPUSamplerBindingLayout&);
+    static bool isPresent(const WGPUTextureBindingLayout&);
+    static bool isPresent(const WGPUStorageTextureBindingLayout&);
+
+    const Vector<WGPUBindGroupLayoutEntry>& entries() const;
 
 private:
-    BindGroupLayout(id<MTLArgumentEncoder> vertexArgumentEncoder, id<MTLArgumentEncoder> fragmentArgumentEncoder, id<MTLArgumentEncoder> computeArgumentEncoder, Device&);
-    BindGroupLayout(Device&);
+    BindGroupLayout(HashMap<uint32_t, WGPUShaderStageFlags>&&, id<MTLArgumentEncoder>, id<MTLArgumentEncoder>, id<MTLArgumentEncoder>, Vector<WGPUBindGroupLayoutEntry>&&);
+    BindGroupLayout();
+
+    const HashMap<uint32_t, WGPUShaderStageFlags> m_shaderStageForBinding;
 
     const id<MTLArgumentEncoder> m_vertexArgumentEncoder { nil };
     const id<MTLArgumentEncoder> m_fragmentArgumentEncoder { nil };
     const id<MTLArgumentEncoder> m_computeArgumentEncoder { nil };
 
-    const Ref<Device> m_device;
+    const Vector<WGPUBindGroupLayoutEntry> m_bindGroupLayoutEntries;
 };
 
 } // namespace WebGPU

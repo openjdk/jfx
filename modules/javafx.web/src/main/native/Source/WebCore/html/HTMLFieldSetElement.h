@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,9 +28,6 @@
 
 namespace WebCore {
 
-class FormAssociatedElement;
-class HTMLFormControlsCollection;
-
 class HTMLFieldSetElement final : public HTMLFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLFieldSetElement);
 public:
@@ -40,8 +37,8 @@ public:
 
     Ref<HTMLCollection> elements();
 
-    void addInvalidDescendant(const HTMLFormControlElement&);
-    void removeInvalidDescendant(const HTMLFormControlElement&);
+    void addInvalidDescendant(const HTMLElement&);
+    void removeInvalidDescendant(const HTMLElement&);
 
 private:
     HTMLFieldSetElement(const QualifiedName&, Document&, HTMLFormElement*);
@@ -52,7 +49,7 @@ private:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     const AtomString& formControlType() const final;
     bool computeWillValidate() const final { return false; }
-    void disabledAttributeChanged() final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     void disabledStateChanged() final;
     void childrenChanged(const ChildChange&) final;
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
@@ -60,8 +57,7 @@ private:
     bool matchesValidPseudoClass() const final;
     bool matchesInvalidPseudoClass() const final;
 
-    WeakHashSet<HTMLFormControlElement> m_invalidDescendants;
-    bool m_hasDisabledAttribute { false };
+    WeakHashSet<HTMLElement, WeakPtrImplWithEventTargetData> m_invalidDescendants;
 };
 
 } // namespace

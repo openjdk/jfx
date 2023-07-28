@@ -30,6 +30,7 @@
 #include "IDLTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebAuthn {
 enum class Scope;
@@ -45,14 +46,14 @@ class Document;
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialRequestOptions;
 struct CredentialRequestOptions;
-struct SecurityOriginData;
+class SecurityOriginData;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
 using CredentialPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<BasicCredential>>>;
 using ScopeAndCrossOriginParent = std::pair<WebAuthn::Scope, std::optional<SecurityOriginData>>;
 
-class AuthenticatorCoordinator final {
+class AuthenticatorCoordinator final : public CanMakeWeakPtr<AuthenticatorCoordinator> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(AuthenticatorCoordinator);
 public:
@@ -60,10 +61,10 @@ public:
     WEBCORE_EXPORT void setClient(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
 
     // The following methods implement static methods of PublicKeyCredential.
-    void create(const Document&, const PublicKeyCredentialCreationOptions&, WebAuthn::Scope, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
-    void discoverFromExternalSource(const Document&, CredentialRequestOptions&&, const ScopeAndCrossOriginParent&, CredentialPromise&&) const;
-    void isUserVerifyingPlatformAuthenticatorAvailable(DOMPromiseDeferred<IDLBoolean>&&) const;
-    void isConditionalMediationAvailable(DOMPromiseDeferred<IDLBoolean>&&) const;
+    void create(const Document&, const PublicKeyCredentialCreationOptions&, WebAuthn::Scope, RefPtr<AbortSignal>&&, CredentialPromise&&);
+    void discoverFromExternalSource(const Document&, CredentialRequestOptions&&, const ScopeAndCrossOriginParent&, CredentialPromise&&);
+    void isUserVerifyingPlatformAuthenticatorAvailable(const Document&, DOMPromiseDeferred<IDLBoolean>&&) const;
+    void isConditionalMediationAvailable(const Document&, DOMPromiseDeferred<IDLBoolean>&&) const;
 
     void resetUserGestureRequirement();
 

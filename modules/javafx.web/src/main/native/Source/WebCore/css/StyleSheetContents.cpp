@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -498,6 +498,8 @@ bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedRe
         switch (rule.type()) {
         case StyleRuleType::Style:
             return downcast<StyleRule>(rule).properties().traverseSubresources(handler);
+        case StyleRuleType::StyleWithNesting:
+            return downcast<StyleRuleWithNesting>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::FontFace:
             return downcast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
         case StyleRuleType::Import:
@@ -517,8 +519,11 @@ bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedRe
         case StyleRuleType::LayerBlock:
         case StyleRuleType::LayerStatement:
         case StyleRuleType::Container:
+        case StyleRuleType::FontFeatureValues:
+        case StyleRuleType::FontFeatureValuesBlock:
         case StyleRuleType::FontPaletteValues:
         case StyleRuleType::Margin:
+        case StyleRuleType::Property:
             return false;
         };
         ASSERT_NOT_REACHED();

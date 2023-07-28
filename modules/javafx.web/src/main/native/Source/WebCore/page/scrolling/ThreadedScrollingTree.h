@@ -56,7 +56,7 @@ public:
 
     void invalidate() override;
 
-    WEBCORE_EXPORT void displayDidRefresh(PlatformDisplayID);
+    void displayDidRefresh(PlatformDisplayID) override;
 
     void didScheduleRenderingUpdate();
     void willStartRenderingUpdate();
@@ -71,13 +71,17 @@ protected:
     explicit ThreadedScrollingTree(AsyncScrollingCoordinator&);
 
     void scrollingTreeNodeDidScroll(ScrollingTreeScrollingNode&, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) override;
+    void scrollingTreeNodeWillStartAnimatedScroll(ScrollingTreeScrollingNode&) override;
     void scrollingTreeNodeDidStopAnimatedScroll(ScrollingTreeScrollingNode&) override;
+    void scrollingTreeNodeWillStartWheelEventScroll(ScrollingTreeScrollingNode&) override;
+    void scrollingTreeNodeDidStopWheelEventScroll(ScrollingTreeScrollingNode&) override;
     bool scrollingTreeNodeRequestsScroll(ScrollingNodeID, const RequestedScrollData&) override WTF_REQUIRES_LOCK(m_treeLock);
 
 #if PLATFORM(MAC)
     void handleWheelEventPhase(ScrollingNodeID, PlatformWheelEventPhase) override;
-    void setActiveScrollSnapIndices(ScrollingNodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex) override;
 #endif
+
+    void setActiveScrollSnapIndices(ScrollingNodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex) override;
 
 #if PLATFORM(COCOA)
     void currentSnapPointIndicesDidChange(ScrollingNodeID, std::optional<unsigned> horizontal, std::optional<unsigned> vertical) override;
@@ -110,15 +114,20 @@ private:
 
     bool isScrollingSynchronizedWithMainThread() final WTF_REQUIRES_LOCK(m_treeLock);
 
-    void serviceScrollAnimations(MonotonicTime) WTF_REQUIRES_LOCK(m_treeLock);
-
     Seconds frameDuration();
     Seconds maxAllowableRenderingUpdateDurationForSynchronization();
 
     bool scrollingThreadIsActive();
 
+
+    void receivedWheelEventWithPhases(PlatformWheelEventPhase, PlatformWheelEventPhase) final;
+    void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) final;
+    void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) final;
+
     void lockLayersForHitTesting() final WTF_ACQUIRES_LOCK(m_layerHitTestMutex);
     void unlockLayersForHitTesting() final WTF_RELEASES_LOCK(m_layerHitTestMutex);
+
+    void scrollingTreeNodeScrollUpdated(ScrollingTreeScrollingNode&, const ScrollUpdateType&);
 
     enum class SynchronizationState : uint8_t {
         Idle,
@@ -136,7 +145,7 @@ private:
     MonotonicTime m_lastDisplayDidRefreshTime;
 
     // Dynamically allocated because it has to use the ScrollingThread's runloop.
-    std::unique_ptr<RunLoop::Timer<ThreadedScrollingTree>> m_delayedRenderingUpdateDetectionTimer WTF_GUARDED_BY_LOCK(m_treeLock);
+    std::unique_ptr<RunLoop::Timer> m_delayedRenderingUpdateDetectionTimer WTF_GUARDED_BY_LOCK(m_treeLock);
 
     HashMap<ScrollingNodeID, RequestedScrollData> m_nodesWithPendingScrollAnimations WTF_GUARDED_BY_LOCK(m_treeLock);
     const bool m_scrollAnimatorEnabled { false };

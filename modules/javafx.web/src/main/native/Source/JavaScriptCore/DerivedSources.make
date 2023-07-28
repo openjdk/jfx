@@ -36,15 +36,14 @@ ifneq ($(SDKROOT),)
     SDK_FLAGS = -isysroot $(SDKROOT)
 endif
 
-ifeq ($(USE_LLVM_TARGET_TRIPLES_FOR_CLANG),YES)
-    WK_CURRENT_ARCH = $(word 1, $(ARCHS))
-    TARGET_TRIPLE_FLAGS = -target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
-endif
+WK_CURRENT_ARCH = $(word 1, $(ARCHS))
+TARGET_TRIPLE_FLAGS = -target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
 
-FRAMEWORK_FLAGS := $(shell echo $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) $(SYSTEM_FRAMEWORK_SEARCH_PATHS) | $(PERL) -e 'print "-F " . join(" -F ", split(" ", <>));')
-HEADER_FLAGS := $(shell echo $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) $(SYSTEM_HEADER_SEARCH_PATHS) | $(PERL) -e 'print "-I" . join(" -I", split(" ", <>));')
+FRAMEWORK_FLAGS := $(addprefix -F, $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) $(SYSTEM_FRAMEWORK_SEARCH_PATHS))
+HEADER_FLAGS := $(addprefix -I, $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) $(SYSTEM_HEADER_SEARCH_PATHS))
+EXTERNAL_FLAGS := -DRELEASE_WITHOUT_OPTIMIZATIONS $(addprefix -D, $(GCC_PREPROCESSOR_DEFINITIONS))
 
-platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null
+platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) $(EXTERNAL_FLAGS) -include "wtf/Platform.h" /dev/null
 
 FEATURE_AND_PLATFORM_DEFINES := $(shell $(call platform_h_compiler_command,-E -P -dM) | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
 
@@ -126,6 +125,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/PromiseConstructor.js \
     $(JavaScriptCore)/builtins/PromiseOperations.js \
     $(JavaScriptCore)/builtins/PromisePrototype.js \
+    $(JavaScriptCore)/builtins/ProxyHelpers.js \
     $(JavaScriptCore)/builtins/ReflectObject.js \
     $(JavaScriptCore)/builtins/RegExpPrototype.js \
     ${JavaScriptCore}/builtins/RegExpStringIteratorPrototype.js \
@@ -171,6 +171,8 @@ OBJECT_LUT_HEADERS = \
     IntlDateTimeFormatPrototype.lut.h \
     IntlDisplayNamesConstructor.lut.h \
     IntlDisplayNamesPrototype.lut.h \
+    IntlDurationFormatConstructor.lut.h \
+    IntlDurationFormatPrototype.lut.h \
     IntlListFormatConstructor.lut.h \
     IntlListFormatPrototype.lut.h \
     IntlLocalePrototype.lut.h \
@@ -188,7 +190,6 @@ OBJECT_LUT_HEADERS = \
     JSDataViewPrototype.lut.h \
     JSGlobalObject.lut.h \
     JSInternalPromiseConstructor.lut.h \
-    JSModuleLoader.lut.h \
     JSONObject.lut.h \
     JSPromiseConstructor.lut.h \
     JSPromisePrototype.lut.h \
@@ -213,10 +214,14 @@ OBJECT_LUT_HEADERS = \
     TemporalObject.lut.h \
     TemporalPlainDateConstructor.lut.h \
     TemporalPlainDatePrototype.lut.h \
+    TemporalPlainDateTimeConstructor.lut.h \
+    TemporalPlainDateTimePrototype.lut.h \
     TemporalPlainTimeConstructor.lut.h \
     TemporalPlainTimePrototype.lut.h \
     TemporalTimeZoneConstructor.lut.h \
     TemporalTimeZonePrototype.lut.h \
+    WebAssemblyArrayConstructor.lut.h \
+    WebAssemblyArrayPrototype.lut.h \
     WebAssemblyCompileErrorConstructor.lut.h \
     WebAssemblyCompileErrorPrototype.lut.h \
     WebAssemblyExceptionConstructor.lut.h \
@@ -233,6 +238,8 @@ OBJECT_LUT_HEADERS = \
     WebAssemblyModulePrototype.lut.h \
     WebAssemblyRuntimeErrorConstructor.lut.h \
     WebAssemblyRuntimeErrorPrototype.lut.h \
+    WebAssemblyStructConstructor.lut.h \
+    WebAssemblyStructPrototype.lut.h \
     WebAssemblyTableConstructor.lut.h \
     WebAssemblyTablePrototype.lut.h \
     WebAssemblyTagConstructor.lut.h \

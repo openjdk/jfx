@@ -59,7 +59,7 @@ CachedPage::CachedPage(Page& page)
     : m_page(page)
     , m_expirationTime(MonotonicTime::now() + page.settings().backForwardCacheExpirationInterval())
     , m_cachedMainFrame(makeUnique<CachedFrame>(page.mainFrame()))
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
     , m_loadedSubresourceDomains(page.mainFrame().loader().client().loadedSubresourceDomains())
 #endif
 {
@@ -83,8 +83,12 @@ static void firePageShowEvent(Page& page)
     // Dispatching JavaScript events can cause frame destruction.
     auto& mainFrame = page.mainFrame();
     Vector<Ref<Frame>> childFrames;
-    for (auto* child = mainFrame.tree().traverseNextInPostOrder(CanWrap::Yes); child; child = child->tree().traverseNextInPostOrder(CanWrap::No))
-        childFrames.append(*child);
+    for (auto* child = mainFrame.tree().traverseNextInPostOrder(CanWrap::Yes); child; child = child->tree().traverseNextInPostOrder(CanWrap::No)) {
+        auto* localChild = downcast<LocalFrame>(child);
+        if (!localChild)
+            continue;
+        childFrames.append(*localChild);
+    }
 
     for (auto& child : childFrames) {
         if (!child->tree().isDescendantOf(&mainFrame))
@@ -120,7 +124,11 @@ private:
 void CachedPage::restore(Page& page)
 {
     ASSERT(m_cachedMainFrame);
-    ASSERT(m_cachedMainFrame->view()->frame().isMainFrame());
+    ASSERT(m_cachedMainFrame->view());
+#if ASSERT_ENABLED
+    auto* localFrame = dynamicDowncast<LocalFrame>(m_cachedMainFrame->view()->frame());
+#endif
+    ASSERT(localFrame && localFrame->isMainFrame());
     ASSERT(!page.subframeCount());
 
     CachedPageRestorationScope restorationScope(page);
@@ -167,7 +175,7 @@ void CachedPage::restore(Page& page)
 
     firePageShowEvent(page);
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
     for (auto& domain : m_loadedSubresourceDomains)
         page.mainFrame().loader().client().didLoadFromRegistrableDomain(WTFMove(domain));
 #endif
@@ -185,7 +193,7 @@ void CachedPage::clear()
 #endif
     m_needsDeviceOrPageScaleChanged = false;
     m_needsUpdateContentsSize = false;
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
     m_loadedSubresourceDomains.clear();
 #endif
 }

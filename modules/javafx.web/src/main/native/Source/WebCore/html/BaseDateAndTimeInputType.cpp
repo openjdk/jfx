@@ -49,6 +49,7 @@
 #include "KeyboardEvent.h"
 #include "Page.h"
 #include "PlatformLocale.h"
+#include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "ShadowPseudoIds.h"
@@ -498,7 +499,7 @@ bool BaseDateAndTimeInputType::isEditControlOwnerReadOnly() const
 AtomString BaseDateAndTimeInputType::localeIdentifier() const
 {
     ASSERT(element());
-    return element()->computeInheritedLanguage();
+    return element()->effectiveLang();
 }
 
 void BaseDateAndTimeInputType::didChooseValue(StringView value)
@@ -530,7 +531,7 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     if (!document.settings().langAttributeAwareFormControlUIEnabled())
         parameters.locale = AtomString { defaultLanguage() };
     else {
-        AtomString computedLocale = element.computeInheritedLanguage();
+        AtomString computedLocale = element.effectiveLang();
         parameters.locale = computedLocale.isEmpty() ? AtomString(defaultLanguage()) : computedLocale;
     }
 

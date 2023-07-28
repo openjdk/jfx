@@ -21,13 +21,14 @@
 #include "config.h"
 #include "HTMLProgressElement.h"
 
-#include "ElementIterator.h"
+#include "AXObjectCache.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "ProgressShadowElement.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderProgress.h"
 #include "ShadowRoot.h"
+#include "TypedElementDescendantIterator.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -40,7 +41,7 @@ const double HTMLProgressElement::IndeterminatePosition = -1;
 const double HTMLProgressElement::InvalidPosition = -2;
 
 HTMLProgressElement::HTMLProgressElement(const QualifiedName& tagName, Document& document)
-    : LabelableElement(tagName, document)
+    : HTMLElement(tagName, document)
     , m_value(0)
     , m_isDeterminate(false)
 {
@@ -85,7 +86,7 @@ void HTMLProgressElement::parseAttribute(const QualifiedName& name, const AtomSt
     } else if (name == maxAttr)
         didElementStateChange();
     else
-        LabelableElement::parseAttribute(name, value);
+        HTMLElement::parseAttribute(name, value);
 }
 
 void HTMLProgressElement::didAttachRenderers()
@@ -138,6 +139,9 @@ void HTMLProgressElement::didElementStateChange()
     m_value->setWidthPercentage(position() * 100);
     if (RenderProgress* renderer = renderProgress())
         renderer->updateFromElement();
+
+    if (auto* cache = document().existingAXObjectCache())
+        cache->valueChanged(this);
 }
 
 void HTMLProgressElement::didAddUserAgentShadowRoot(ShadowRoot& root)

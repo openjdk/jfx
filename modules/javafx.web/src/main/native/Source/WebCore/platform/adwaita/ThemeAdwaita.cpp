@@ -26,6 +26,8 @@
 #include "config.h"
 #include "ThemeAdwaita.h"
 
+#if USE(THEME_ADWAITA)
+
 #include "Color.h"
 #include "ColorBlending.h"
 #include "ControlStates.h"
@@ -168,14 +170,14 @@ void ThemeAdwaita::paintArrow(GraphicsContext& graphicsContext, const FloatRect&
     graphicsContext.fillPath(path);
 }
 
-LengthSize ThemeAdwaita::controlSize(ControlPart part, const FontCascade& fontCascade, const LengthSize& zoomedSize, float zoomFactor) const
+LengthSize ThemeAdwaita::controlSize(StyleAppearance appearance, const FontCascade& fontCascade, const LengthSize& zoomedSize, float zoomFactor) const
 {
     if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
-        return Theme::controlSize(part, fontCascade, zoomedSize, zoomFactor);
+        return Theme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
 
-    switch (part) {
-    case CheckboxPart:
-    case RadioPart: {
+    switch (appearance) {
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio: {
         LengthSize buttonSize = zoomedSize;
         if (buttonSize.width.isIntrinsicOrAuto())
             buttonSize.width = Length(12 * zoomFactor, LengthType::Fixed);
@@ -183,7 +185,7 @@ LengthSize ThemeAdwaita::controlSize(ControlPart part, const FontCascade& fontCa
             buttonSize.height = Length(12 * zoomFactor, LengthType::Fixed);
         return buttonSize;
     }
-    case InnerSpinButtonPart: {
+    case StyleAppearance::InnerSpinButton: {
         LengthSize spinButtonSize = zoomedSize;
         if (spinButtonSize.width.isIntrinsicOrAuto())
             spinButtonSize.width = Length(static_cast<int>(arrowSize * zoomFactor), LengthType::Fixed);
@@ -195,10 +197,10 @@ LengthSize ThemeAdwaita::controlSize(ControlPart part, const FontCascade& fontCa
         break;
     }
 
-    return Theme::controlSize(part, fontCascade, zoomedSize, zoomFactor);
+    return Theme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
 }
 
-LengthSize ThemeAdwaita::minimumControlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float) const
+LengthSize ThemeAdwaita::minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize& zoomedSize, float) const
 {
     if (!zoomedSize.width.isIntrinsicOrAuto() && !zoomedSize.height.isIntrinsicOrAuto())
         return zoomedSize;
@@ -211,37 +213,37 @@ LengthSize ThemeAdwaita::minimumControlSize(ControlPart, const FontCascade&, con
     return minSize;
 }
 
-LengthBox ThemeAdwaita::controlBorder(ControlPart part, const FontCascade& font, const LengthBox& zoomedBox, float zoomFactor) const
+LengthBox ThemeAdwaita::controlBorder(StyleAppearance appearance, const FontCascade& font, const LengthBox& zoomedBox, float zoomFactor) const
 {
-    switch (part) {
-    case PushButtonPart:
-    case DefaultButtonPart:
-    case ButtonPart:
-    case SquareButtonPart:
+    switch (appearance) {
+    case StyleAppearance::PushButton:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button:
+    case StyleAppearance::SquareButton:
         return zoomedBox;
     default:
         break;
     }
 
-    return Theme::controlBorder(part, font, zoomedBox, zoomFactor);
+    return Theme::controlBorder(appearance, font, zoomedBox, zoomFactor);
 }
 
-void ThemeAdwaita::paint(ControlPart part, ControlStates& states, GraphicsContext& context, const FloatRect& zoomedRect, float, ScrollView*, float, float, bool, bool useDarkAppearance, const Color& effectiveAccentColor)
+void ThemeAdwaita::paint(StyleAppearance appearance, ControlStates& states, GraphicsContext& context, const FloatRect& zoomedRect, float, ScrollView*, float, float, bool, bool useDarkAppearance, const Color& effectiveAccentColor)
 {
-    switch (part) {
-    case CheckboxPart:
+    switch (appearance) {
+    case StyleAppearance::Checkbox:
         paintCheckbox(states, context, zoomedRect, useDarkAppearance, effectiveAccentColor);
         break;
-    case RadioPart:
+    case StyleAppearance::Radio:
         paintRadio(states, context, zoomedRect, useDarkAppearance, effectiveAccentColor);
         break;
-    case PushButtonPart:
-    case DefaultButtonPart:
-    case ButtonPart:
-    case SquareButtonPart:
+    case StyleAppearance::PushButton:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button:
+    case StyleAppearance::SquareButton:
         paintButton(states, context, zoomedRect, useDarkAppearance);
         break;
-    case InnerSpinButtonPart:
+    case StyleAppearance::InnerSpinButton:
         paintSpinButton(states, context, zoomedRect, useDarkAppearance);
         break;
     default:
@@ -310,21 +312,21 @@ void ThemeAdwaita::paintCheckbox(ControlStates& states, GraphicsContext& graphic
         }
 
         graphicsContext.setFillColor(foregroundColor);
-
         graphicsContext.fillPath(path);
-        path.clear();
     } else {
         path.addRoundedRect(fieldRect, corner);
-        fieldRect.inflate(-toggleBorderSize);
-        corner.expand(-buttonBorderSize, -buttonBorderSize);
-        path.addRoundedRect(fieldRect, corner);
-        graphicsContext.setFillRule(WindRule::EvenOdd);
         if (states.states().contains(ControlStates::States::Hovered) && states.states().contains(ControlStates::States::Enabled))
             graphicsContext.setFillColor(toggleBorderHoverColor);
         else
             graphicsContext.setFillColor(toggleBorderColor);
         graphicsContext.fillPath(path);
         path.clear();
+
+        fieldRect.inflate(-toggleBorderSize);
+        corner.expand(-buttonBorderSize, -buttonBorderSize);
+        path.addRoundedRect(fieldRect, corner);
+        graphicsContext.setFillColor(foregroundColor);
+        graphicsContext.fillPath(path);
     }
 
     if (states.states().contains(ControlStates::States::Focused))
@@ -383,15 +385,17 @@ void ThemeAdwaita::paintRadio(ControlStates& states, GraphicsContext& graphicsCo
         graphicsContext.fillPath(path);
     } else {
         path.addEllipse(fieldRect);
-        fieldRect.inflate(-toggleBorderSize);
-        path.addEllipse(fieldRect);
-        graphicsContext.setFillRule(WindRule::EvenOdd);
         if (states.states().contains(ControlStates::States::Hovered) && states.states().contains(ControlStates::States::Enabled))
             graphicsContext.setFillColor(toggleBorderHoverColor);
         else
             graphicsContext.setFillColor(toggleBorderColor);
         graphicsContext.fillPath(path);
         path.clear();
+
+        fieldRect.inflate(-toggleBorderSize);
+        path.addEllipse(fieldRect);
+        graphicsContext.setFillColor(foregroundColor);
+        graphicsContext.fillPath(path);
     }
 
     if (states.states().contains(ControlStates::States::Focused))
@@ -544,3 +548,5 @@ Color ThemeAdwaita::accentColor()
 }
 
 } // namespace WebCore
+
+#endif // USE(THEME_ADWAITA)

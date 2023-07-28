@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "ColorTypes.h"
 #include "HTMLNames.h"
 #include "InputMode.h"
 #include "StyledElement.h"
@@ -33,15 +34,23 @@
 
 namespace WebCore {
 
+class ElementInternals;
+class FormListedElement;
 class FormAssociatedElement;
-class FormNamedItem;
 class HTMLFormElement;
 class VisibleSelection;
+
 struct SimpleRange;
 struct TextRecognitionResult;
 
 enum class PageIsEditable : bool;
 enum class EnterKeyHint : uint8_t;
+
+enum class PopoverState : uint8_t {
+    None,
+    Auto,
+    Manual,
+};
 
 #if PLATFORM(IOS_FAMILY)
 enum class SelectionRenderingBehavior : bool;
@@ -83,24 +92,23 @@ public:
 
     bool rendererIsEverNeeded() final;
 
-    WEBCORE_EXPORT virtual HTMLFormElement* form() const;
-
     WEBCORE_EXPORT const AtomString& dir() const;
     WEBCORE_EXPORT void setDir(const AtomString&);
 
-    TextDirection computeDirectionality() const;
     bool hasDirectionAuto() const;
-    TextDirection directionalityIfhasDirAutoAttribute(bool& isAuto) const;
+
+    std::optional<TextDirection> directionalityIfDirIsAuto() const;
 
     virtual bool isTextControlInnerTextElement() const { return false; }
     virtual bool isSearchFieldResultsButtonElement() const { return false; }
 
     bool willRespondToMouseMoveEvents() const override;
-    bool willRespondToMouseWheelEvents() const override;
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
 
+    // Represents "labelable element": https://html.spec.whatwg.org/multipage/forms.html#category-label
     virtual bool isLabelable() const { return false; }
-    virtual FormNamedItem* asFormNamedItem();
+    WEBCORE_EXPORT RefPtr<NodeList> labels();
+
     virtual FormAssociatedElement* asFormAssociatedElement();
 
     virtual bool isInteractiveContent() const { return false; }
@@ -135,6 +143,17 @@ public:
 
     WEBCORE_EXPORT static bool shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate);
 
+    WEBCORE_EXPORT ExceptionOr<Ref<ElementInternals>> attachInternals();
+
+    ExceptionOr<void> showPopover();
+    ExceptionOr<void> hidePopover();
+    ExceptionOr<void> togglePopover(std::optional<bool> force);
+
+    PopoverState popoverState() const;
+    const AtomString& popover() const;
+    void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
+    void popoverAttributeChanged(const AtomString& value);
+
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
 #endif
@@ -161,12 +180,13 @@ protected:
     bool matchesReadWritePseudoClass() const override;
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     unsigned parseBorderWidthAttribute(const AtomString&) const;
 
     void childrenChanged(const ChildChange&) override;
-    void calculateAndAdjustDirectionality();
+    void updateEffectiveDirectionalityOfDirAuto();
 
     using EventHandlerNameMap = HashMap<AtomStringImpl*, AtomString>;
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
@@ -174,12 +194,22 @@ protected:
 private:
     String nodeName() const final;
 
+    enum class FocusPreviousElement : bool { No, Yes };
+    enum class FireEvents : bool { No, Yes };
+    ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
+
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);
 
     void dirAttributeChanged(const AtomString&);
+    void updateEffectiveDirectionality(TextDirection);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
     void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
-    TextDirection directionality(Node** strongDirectionalityTextNode= 0) const;
+
+    struct TextDirectionWithStrongDirectionalityNode {
+        TextDirection direction;
+        RefPtr<Node> strongDirectionalityNode;
+    };
+    TextDirectionWithStrongDirectionalityNode computeDirectionalityFromText() const;
 
     enum class AllowPercentage : bool { No, Yes };
     enum class UseCSSPXAsUnitType : bool { No, Yes };

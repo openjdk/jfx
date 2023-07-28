@@ -11,6 +11,7 @@ BroadcastChannel
 Clipboard
 DedicatedWorkerGlobalScope
 DOMApplicationCache
+DOMAudioSession conditional=DOM_AUDIO_SESSION
 DOMWindow
 EventSource
 FileReader
@@ -55,6 +56,7 @@ SharedWorker
 SharedWorkerGlobalScope
 SourceBuffer conditional=MEDIA_SOURCE
 SourceBufferList conditional=MEDIA_SOURCE
+ScreenOrientation
 SpeechRecognition
 SpeechSynthesis conditional=SPEECH_SYNTHESIS
 SpeechSynthesisUtterance conditional=SPEECH_SYNTHESIS
@@ -64,7 +66,10 @@ TextTrackCueGeneric conditional=VIDEO
 TextTrackList conditional=VIDEO
 VideoTrackList conditional=VIDEO
 VisualViewport
+WakeLockSentinel
 WebAnimation
+WebCodecsVideoDecoder conditional=WEB_CODECS
+WebCodecsVideoEncoder conditional=WEB_CODECS
 WebKitMediaKeySession conditional=LEGACY_ENCRYPTED_MEDIA
 WebSocket
 Worker

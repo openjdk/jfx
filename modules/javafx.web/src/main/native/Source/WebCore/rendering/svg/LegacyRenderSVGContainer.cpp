@@ -80,6 +80,9 @@ void LegacyRenderSVGContainer::layout()
         updateCachedBoundaries();
         m_needsBoundariesUpdate = false;
 
+        // New bounds can affect transforms, so recompute them here if needed.
+        calculateLocalTransform();
+
         // If our bounds changed, notify the parents.
         LegacyRenderSVGModelObject::setNeedsBoundariesUpdate();
     }
@@ -142,7 +145,7 @@ void LegacyRenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint&)
 }
 
 // addFocusRingRects is called from paintOutline and needs to be in the same coordinates as the paintOuline call
-void LegacyRenderSVGContainer::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint&, const RenderLayerModelObject*)
+void LegacyRenderSVGContainer::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint&, const RenderLayerModelObject*) const
 {
     LayoutRect paintRectInParent = LayoutRect(localToParentTransform().mapRect(repaintRectInLocalCoordinates()));
     if (!paintRectInParent.isEmpty())

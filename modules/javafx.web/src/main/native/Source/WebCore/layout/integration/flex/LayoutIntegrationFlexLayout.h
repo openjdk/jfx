@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FlexFormattingState.h"
 #include "LayoutIntegrationBoxTree.h"
 #include "LayoutState.h"
@@ -66,8 +64,8 @@ public:
 private:
     void updateRenderers() const;
 
-    const Layout::ContainerBox& flexBox() const { return m_boxTree.rootLayoutBox(); }
-    Layout::ContainerBox& flexBox() { return m_boxTree.rootLayoutBox(); }
+    const Layout::ElementBox& flexBox() const { return m_boxTree.rootLayoutBox(); }
+    Layout::ElementBox& flexBox() { return m_boxTree.rootLayoutBox(); }
 
     const RenderFlexibleBox& flexBoxRenderer() const { return downcast<RenderFlexibleBox>(m_boxTree.rootRenderer()); }
     RenderFlexibleBox& flexBoxRenderer() { return downcast<RenderFlexibleBox>(m_boxTree.rootRenderer()); }
@@ -80,4 +78,3 @@ private:
 }
 }
 
-#endif

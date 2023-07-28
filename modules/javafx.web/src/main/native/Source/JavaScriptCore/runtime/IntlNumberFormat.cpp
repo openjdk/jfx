@@ -168,7 +168,7 @@ static unsigned computeCurrencyDigits(const String& currency)
         { "XOF", 0 },
         { "XPF", 0 }
     };
-    auto* currencyMinorUnit = tryBinarySearch<std::pair<const char*, unsigned>>(currencyMinorUnits, WTF_ARRAY_LENGTH(currencyMinorUnits), computeCurrencySortKey(currency), extractCurrencySortKey);
+    auto* currencyMinorUnit = tryBinarySearch<std::pair<const char*, unsigned>>(currencyMinorUnits, std::size(currencyMinorUnits), computeCurrencySortKey(currency), extractCurrencySortKey);
     if (currencyMinorUnit)
         return currencyMinorUnit->second;
     return 2;
@@ -414,7 +414,7 @@ void IntlNumberFormat::initializeNumberFormat(JSGlobalObject* globalObject, JSVa
     if (m_notation == IntlNotation::Compact)
         defaultUseGrouping = UseGrouping::Min2;
 
-    m_useGrouping = intlStringOrBooleanOption<UseGrouping>(globalObject, options, Identifier::fromString(vm, "useGrouping"_s), UseGrouping::Always, UseGrouping::False, { { "min2"_s, UseGrouping::Min2 }, { "auto"_s, UseGrouping::Auto }, { "always"_s, UseGrouping::Always } }, defaultUseGrouping);
+    m_useGrouping = intlStringOrBooleanOption<UseGrouping>(globalObject, options, Identifier::fromString(vm, "useGrouping"_s), UseGrouping::Always, UseGrouping::False, { { "min2"_s, UseGrouping::Min2 }, { "auto"_s, UseGrouping::Auto }, { "always"_s, UseGrouping::Always } }, "useGrouping must be either true, false, \"min2\", \"auto\", or \"always\""_s, defaultUseGrouping);
     RETURN_IF_EXCEPTION(scope, void());
 
     m_signDisplay = intlOption<SignDisplay>(globalObject, options, Identifier::fromString(vm, "signDisplay"_s), { { "auto"_s, SignDisplay::Auto }, { "never"_s, SignDisplay::Never }, { "always"_s, SignDisplay::Always }, { "exceptZero"_s, SignDisplay::ExceptZero }, { "negative"_s, SignDisplay::Negative } }, "signDisplay must be either \"auto\", \"never\", \"always\", \"exceptZero\", or \"negative\""_s, SignDisplay::Auto);
@@ -765,6 +765,8 @@ JSValue IntlNumberFormat::format(JSGlobalObject* globalObject, double value) con
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    value = purifyNaN(value);
 
     Vector<UChar, 32> buffer;
 #if HAVE(ICU_U_NUMBER_FORMATTER)
@@ -1519,6 +1521,8 @@ JSValue IntlNumberFormat::formatToParts(JSGlobalObject* globalObject, double val
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    value = purifyNaN(value);
 
     UErrorCode status = U_ZERO_ERROR;
     auto fieldItr = std::unique_ptr<UFieldPositionIterator, UFieldPositionIteratorDeleter>(ufieldpositer_open(&status));

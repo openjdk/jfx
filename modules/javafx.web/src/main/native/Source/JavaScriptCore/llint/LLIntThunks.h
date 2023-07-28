@@ -94,6 +94,7 @@ MacroAssemblerCodeRef<NativeToJITGatePtrTag> jitCagePtrThunk();
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> createJSGateThunk(void*, PtrTag, const char*);
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> createWasmGateThunk(void*, PtrTag, const char*);
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> createTailCallGate(PtrTag, bool);
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> createWasmTailCallGate(PtrTag);
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> loopOSREntryGateThunk();
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> entryOSREntryGateThunk();
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> wasmOSREntryGateThunk();
@@ -112,6 +113,7 @@ MacroAssemblerCodeRef<JSEntryPtrTag> returnLocationThunk(OpcodeID, OpcodeSize);
 
 #if ENABLE(WEBASSEMBLY)
 MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD();
 #endif // ENABLE(WEBASSEMBLY)
 
 } } // namespace JSC::LLInt

@@ -36,14 +36,18 @@ public:
     LayoutRect replacedContentRect(const LayoutSize& intrinsicSize) const;
     LayoutRect replacedContentRect() const { return replacedContentRect(intrinsicSize()); }
 
-    bool hasReplacedLogicalWidth() const;
-    bool hasReplacedLogicalHeight() const;
     bool setNeedsLayoutIfNeededAfterIntrinsicSizeChange();
 
     LayoutSize intrinsicSize() const final
     {
-        if (shouldApplySizeContainment())
-            return LayoutSize();
+        if (shouldApplySizeContainment()) {
+            LayoutSize size;
+            if (auto width = explicitIntrinsicInnerWidth())
+                size.setWidth(width.value());
+            if (auto height = explicitIntrinsicInnerHeight())
+                size.setHeight(height.value());
+            return size;
+        }
         return m_intrinsicSize;
     }
 
@@ -54,6 +58,8 @@ public:
 
     double computeIntrinsicAspectRatio() const;
 
+    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const override;
+
 protected:
     RenderReplaced(Element&, RenderStyle&&);
     RenderReplaced(Element&, RenderStyle&&, const LayoutSize& intrinsicSize);
@@ -61,7 +67,6 @@ protected:
 
     void layout() override;
 
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const override;
 
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const final;
 
@@ -99,14 +104,18 @@ private:
     bool canBeSelectionLeaf() const override { return true; }
 
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
-    void computeAspectRatioInformationForRenderBox(RenderBox*, FloatSize& constrainedSize, double& intrinsicRatio) const;
+    void computeAspectRatioInformationForRenderBox(RenderBox*, FloatSize& constrainedSize, FloatSize& intrinsicRatio) const;
+    void computeIntrinsicSizesConstrainedByTransferredMinMaxSizes(RenderBox* contentRenderer, FloatSize& constrainedSize, FloatSize& intrinsicRatio) const;
 
     virtual bool shouldDrawSelectionTint() const;
 
     Color calculateHighlightColor() const;
     bool isHighlighted(HighlightState, const HighlightData&) const;
 
+    bool hasReplacedLogicalHeight() const;
+
     mutable LayoutSize m_intrinsicSize;
+    mutable FloatSize m_intrinsicRatio;
 };
 
 } // namespace WebCore

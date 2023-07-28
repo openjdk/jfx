@@ -37,7 +37,13 @@ struct WorkerParameters;
 class SharedWorkerGlobalScope final : public WorkerGlobalScope {
     WTF_MAKE_ISO_ALLOCATED(SharedWorkerGlobalScope);
 public:
-    template<typename... Args> static Ref<SharedWorkerGlobalScope> create(Args&&... args) { return adoptRef(*new SharedWorkerGlobalScope(std::forward<Args>(args)...)); }
+    template<typename... Args> static Ref<SharedWorkerGlobalScope> create(Args&&... args)
+    {
+        auto scope = adoptRef(*new SharedWorkerGlobalScope(std::forward<Args>(args)...));
+        scope->addToContextsMap();
+        return scope;
+    }
+    ~SharedWorkerGlobalScope();
 
     Type type() const final { return Type::SharedWorker; }
     const String& name() const { return m_name; }
@@ -46,7 +52,7 @@ public:
     void postConnectEvent(TransferredMessagePort&&, const String& sourceOrigin);
 
 private:
-    SharedWorkerGlobalScope(const String& name, const WorkerParameters&, Ref<SecurityOrigin>&&, SharedWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    SharedWorkerGlobalScope(const String& name, const WorkerParameters&, Ref<SecurityOrigin>&&, SharedWorkerThread&, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<WorkerClient>&&);
 
     EventTargetInterface eventTargetInterface() const final { return SharedWorkerGlobalScopeEventTargetInterfaceType; }
     FetchOptions::Destination destination() const final { return FetchOptions::Destination::Sharedworker; }

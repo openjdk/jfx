@@ -23,7 +23,7 @@
 #pragma once
 
 #include "CSSParserContext.h"
-#include "CSSRegisteredCustomProperty.h"
+#include "CSSSelectorParser.h"
 #include "CSSValue.h"
 #include "ColorTypes.h"
 #include "WritingMode.h"
@@ -33,8 +33,6 @@ namespace WebCore {
 
 class CSSParserObserver;
 class CSSSelectorList;
-class CSSValueList;
-class CSSValuePool;
 class Color;
 class Element;
 class ImmutableStyleProperties;
@@ -42,15 +40,6 @@ class MutableStyleProperties;
 class StyleRuleBase;
 class StyleRuleKeyframe;
 class StyleSheetContents;
-class RenderStyle;
-
-namespace CSSPropertyParserHelpers {
-struct FontRaw;
-}
-
-namespace Style {
-class BuilderState;
-}
 
 class CSSParser {
 public:
@@ -83,9 +72,7 @@ public:
     WEBCORE_EXPORT bool parseDeclaration(MutableStyleProperties&, const String&);
     static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element*);
 
-    std::optional<CSSSelectorList> parseSelector(const String&);
-
-    RefPtr<CSSValue> parseValueWithVariableReferences(CSSPropertyID, const CSSValue&, Style::BuilderState&);
+    WEBCORE_EXPORT std::optional<CSSSelectorList> parseSelector(const String&, StyleSheetContents* = nullptr, CSSSelectorParser::IsNestedContext = CSSSelectorParser::IsNestedContext::No);
 
     WEBCORE_EXPORT static Color parseColor(const String&, const CSSParserContext&);
     // FIXME: All callers are not getting the right Settings for parsing due to lack of CSSParserContext and should switch to the parseColor function above.

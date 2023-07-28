@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
@@ -31,6 +31,7 @@
 #include "CanvasBase.h"
 #include "Document.h"
 #include "FloatRect.h"
+#include "GraphicsTypes.h"
 #include "HTMLElement.h"
 #include <memory>
 #include <wtf/Forward.h>
@@ -44,15 +45,17 @@ namespace WebCore {
 class BlobCallback;
 class CanvasRenderingContext;
 class CanvasRenderingContext2D;
+class GPU;
+class GPUCanvasContext;
 class GraphicsContext;
 class Image;
+class ImageBitmapRenderingContext;
 class ImageBuffer;
 class ImageData;
 class MediaStream;
 class OffscreenCanvas;
 class VideoFrame;
 class WebGLRenderingContextBase;
-class GPUCanvasContext;
 class WebCoreOpaqueRoot;
 struct CanvasRenderingContext2DSettings;
 struct ImageBitmapRenderingContextSettings;
@@ -91,6 +94,10 @@ public:
     ImageBitmapRenderingContext* createContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&&);
     ImageBitmapRenderingContext* getContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&&);
 
+    static bool isWebGPUType(const String&);
+    GPUCanvasContext* createContextWebGPU(const String&, GPU*);
+    GPUCanvasContext* getContextWebGPU(const String&, GPU*);
+
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType, JSC::JSValue quality);
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType);
     ExceptionOr<void> toBlob(Ref<BlobCallback>&&, const String& mimeType, JSC::JSValue quality);
@@ -101,10 +108,12 @@ public:
     // Used for rendering
     void didDraw(const std::optional<FloatRect>&) final;
 
-    void paint(GraphicsContext&, const LayoutRect&);
+    void paint(GraphicsContext&, const LayoutRect&, CompositeOperator);
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
     RefPtr<VideoFrame> toVideoFrame();
+#endif
+#if ENABLE(MEDIA_STREAM)
     ExceptionOr<Ref<MediaStream>> captureStream(std::optional<double>&& frameRequestRate);
 #endif
 
@@ -114,17 +123,11 @@ public:
 
     SecurityOrigin* securityOrigin() const final;
 
-    bool shouldAccelerate(const IntSize&) const;
-    bool shouldAccelerate(unsigned area) const;
-
     WEBCORE_EXPORT void setUsesDisplayListDrawing(bool);
 
     // FIXME: Only some canvas rendering contexts need an ImageBuffer.
     // It would be better to have the contexts own the buffers.
-    void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&);
-
-    WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(std::optional<size_t>);
-    WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
+    void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) final;
 
     bool needsPreparationForDisplay();
     void prepareForDisplay();
@@ -133,8 +136,6 @@ public:
     bool isSnapshotting() const { return m_isSnapshotting; }
 
     bool isControlledByOffscreen() const;
-
-    WEBCORE_EXPORT static size_t maxActivePixelMemory();
 
 #if PLATFORM(COCOA)
     GraphicsContext* drawingContext() const final;

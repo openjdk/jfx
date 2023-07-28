@@ -723,7 +723,10 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         // Normal element pseudo class checking.
         switch (selector.pseudoClassType()) {
             // Pseudo classes:
+        case CSSSelector::PseudoClassNestingParent:
+            // This pseudo selector should have been replaced earlier.
         case CSSSelector::PseudoClassNot:
+            ASSERT_NOT_REACHED();
             break; // Already handled up above.
         case CSSSelector::PseudoClassEmpty:
             {
@@ -1037,13 +1040,13 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
                 return true;
             break;
         case CSSSelector::PseudoClassLang:
-            {
                 ASSERT(selector.argumentList() && !selector.argumentList()->isEmpty());
                 return matchesLangPseudoClass(element, *selector.argumentList());
-            }
 #if ENABLE(FULLSCREEN_API)
-        case CSSSelector::PseudoClassFullScreen:
-            return matchesFullScreenPseudoClass(element);
+        case CSSSelector::PseudoClassFullscreen:
+            return matchesFullscreenPseudoClass(element);
+        case CSSSelector::PseudoClassWebkitFullScreen:
+            return matchesWebkitFullScreenPseudoClass(element);
         case CSSSelector::PseudoClassAnimatingFullScreenTransition:
             return matchesFullScreenAnimatingFullScreenTransitionPseudoClass(element);
         case CSSSelector::PseudoClassFullScreenAncestor:
@@ -1124,9 +1127,20 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassHasAttachment:
             return hasAttachment(element);
 #endif
+        case CSSSelector::PseudoClassOpen:
+            return matchesOpenPseudoClass(element);
+
+        case CSSSelector::PseudoClassClosed:
+            return matchesClosedPseudoClass(element);
 
         case CSSSelector::PseudoClassModal:
             return matchesModalPseudoClass(element);
+
+        case CSSSelector::PseudoClassUserInvalid:
+            return matchesUserInvalidPseudoClass(element);
+
+        case CSSSelector::PseudoClassUserValid:
+            return matchesUserValidPseudoClass(element);
 
         case CSSSelector::PseudoClassUnknown:
             ASSERT_NOT_REACHED();
