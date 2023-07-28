@@ -45,12 +45,20 @@
 #endif
 
 #if USE(EGL)
+#if USE(LIBEPOXY)
+#include <epoxy/egl.h>
+#else
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #endif
+#endif
 
 #if USE(GLX)
+#if USE(LIBEPOXY)
+#include <epoxy/glx.h>
+#else
 #include <GL/glx.h>
+#endif
 #endif
 
 namespace WebCore {
@@ -284,7 +292,7 @@ cmsHPROFILE PlatformDisplayX11::colorProfile() const
 #endif
 
 #if USE(ATSPI)
-String PlatformDisplayX11::plartformAccessibilityBusAddress() const
+String PlatformDisplayX11::platformAccessibilityBusAddress() const
 {
     Atom atspiBusAtom = XInternAtom(m_display, "AT_SPI_BUS", False);
     Atom type;

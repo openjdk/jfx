@@ -32,23 +32,51 @@
 
 namespace JSC {
 
-void ScopeNode::analyzeModule(ModuleAnalyzer& analyzer)
+static Expected<RefPtr<ScriptFetchParameters>, String> tryCreateAssertion(VM& vm, ImportAssertionListNode* assertionList)
 {
-    m_statements->analyzeModule(analyzer);
+    if (!assertionList)
+        return RefPtr<ScriptFetchParameters> { };
+
+    // Currently, only "type" is supported.
+    std::optional<ScriptFetchParameters::Type> type;
+    for (auto& [key, value] : assertionList->assertions()) {
+        if (*key == vm.propertyNames->type) {
+            type = ScriptFetchParameters::parseType(value->impl());
+            if (!type)
+                return makeUnexpected(makeString("Import assertion type \""_s, StringView(value->impl()), "\" is not valid"_s));
+        }
+    }
+
+    if (type)
+        return RefPtr<ScriptFetchParameters>(ScriptFetchParameters::create(type.value()));
+    return RefPtr<ScriptFetchParameters> { };
 }
 
-void SourceElements::analyzeModule(ModuleAnalyzer& analyzer)
+bool ScopeNode::analyzeModule(ModuleAnalyzer& analyzer)
+{
+    return m_statements->analyzeModule(analyzer);
+}
+
+bool SourceElements::analyzeModule(ModuleAnalyzer& analyzer)
 {
     // In the module analyzer phase, only module declarations are included in the top-level SourceElements.
     for (StatementNode* statement = m_head; statement; statement = statement->next()) {
         ASSERT(statement->isModuleDeclarationNode());
-        static_cast<ModuleDeclarationNode*>(statement)->analyzeModule(analyzer);
+        if (!static_cast<ModuleDeclarationNode*>(statement)->analyzeModule(analyzer))
+            return false;
     }
+    return true;
 }
 
-void ImportDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
+bool ImportDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
 {
-    analyzer.moduleRecord()->appendRequestedModule(m_moduleName->moduleName());
+    auto result = tryCreateAssertion(analyzer.vm(), assertionList());
+    if (!result) {
+        analyzer.fail(WTFMove(result.error()));
+        return false;
+    }
+
+    analyzer.appendRequestedModule(m_moduleName->moduleName(), WTFMove(result.value()));
     for (auto* specifier : m_specifierList->specifiers()) {
         analyzer.moduleRecord()->addImportEntry(JSModuleRecord::ImportEntry {
             specifier->importedName() == analyzer.vm().propertyNames->timesIdentifier
@@ -58,26 +86,43 @@ void ImportDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
             specifier->localName(),
         });
     }
+    return true;
 }
 
-void ExportAllDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
+bool ExportAllDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
 {
-    analyzer.moduleRecord()->appendRequestedModule(m_moduleName->moduleName());
+    auto result = tryCreateAssertion(analyzer.vm(), assertionList());
+    if (!result) {
+        analyzer.fail(WTFMove(result.error()));
+        return false;
+    }
+
+    analyzer.appendRequestedModule(m_moduleName->moduleName(), WTFMove(result.value()));
     analyzer.moduleRecord()->addStarExportEntry(m_moduleName->moduleName());
+    return true;
 }
 
-void ExportDefaultDeclarationNode::analyzeModule(ModuleAnalyzer&)
+bool ExportDefaultDeclarationNode::analyzeModule(ModuleAnalyzer&)
 {
+    return true;
 }
 
-void ExportLocalDeclarationNode::analyzeModule(ModuleAnalyzer&)
+bool ExportLocalDeclarationNode::analyzeModule(ModuleAnalyzer&)
 {
+    return true;
 }
 
-void ExportNamedDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
+bool ExportNamedDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
 {
-    if (m_moduleName)
-        analyzer.moduleRecord()->appendRequestedModule(m_moduleName->moduleName());
+    if (m_moduleName) {
+        auto result = tryCreateAssertion(analyzer.vm(), assertionList());
+        if (!result) {
+            analyzer.fail(WTFMove(result.error()));
+            return false;
+        }
+
+        analyzer.appendRequestedModule(m_moduleName->moduleName(), WTFMove(result.value()));
+    }
 
     for (auto* specifier : m_specifierList->specifiers()) {
         if (m_moduleName) {
@@ -95,6 +140,7 @@ void ExportNamedDeclarationNode::analyzeModule(ModuleAnalyzer& analyzer)
                 analyzer.moduleRecord()->addExportEntry(JSModuleRecord::ExportEntry::createIndirect(specifier->exportedName(), specifier->localName(), m_moduleName->moduleName()));
         }
     }
+    return true;
 }
 
 } // namespace JSC

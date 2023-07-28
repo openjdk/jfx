@@ -32,18 +32,13 @@ namespace WebCore {
 
 class GeneratedImage : public Image {
 public:
-    bool hasSingleSecurityOrigin() const override { return true; }
-
     void setContainerSize(const FloatSize& size) override { m_size = size; }
     bool usesContainerSize() const override { return true; }
     bool hasRelativeWidth() const override { return true; }
     bool hasRelativeHeight() const override { return true; }
     void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) override;
 
-    FloatSize size(ImageOrientation = ImageOrientation::FromImage) const override { return m_size; }
-
-    // Assume that generated content has no decoded data we need to worry about
-    void destroyDecodedData(bool /*destroyAll*/ = true) override { }
+    FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const override { return m_size; }
 
 protected:
     ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) override = 0;

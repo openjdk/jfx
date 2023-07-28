@@ -256,6 +256,15 @@ void Node::convertToNewArrayBuffer(FrozenValue* immutableButterfly)
     m_opInfo2 = data.asQuadWord;
 }
 
+void Node::convertToNewArrayWithSize()
+{
+    ASSERT(op() == NewArrayWithSpecies);
+    IndexingType indexingType = this->indexingType();
+    setOpAndDefaultFlags(NewArrayWithSize);
+    children.child2() = Edge();
+    m_opInfo = indexingType;
+}
+
 void Node::convertToDirectCall(FrozenValue* executable)
 {
     NodeType newOp = LastNodeType;
@@ -279,6 +288,12 @@ void Node::convertToDirectCall(FrozenValue* executable)
 
     m_op = newOp;
     m_opInfo = executable;
+}
+
+void Node::convertToCallWasm(FrozenValue* callee)
+{
+    m_op = CallWasm;
+    m_opInfo = callee;
 }
 
 void Node::convertToCallDOM(Graph& graph)

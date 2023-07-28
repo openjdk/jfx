@@ -34,7 +34,6 @@
 #include <type_traits>
 #include <wtf/Assertions.h>
 #include <wtf/MainThread.h>
-#include <wtf/RandomNumber.h>
 
 namespace JSC {
 
@@ -206,7 +205,7 @@ inline void Heap::decrementDeferralDepthAndGCIfNeeded()
     }
 }
 
-inline HashSet<MarkedArgumentBufferBase*>& Heap::markListSet()
+inline HashSet<MarkedVectorBase*>& Heap::markListSet()
 {
     return m_markListSet;
 }

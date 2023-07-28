@@ -24,7 +24,6 @@
 #include "SVGGradientElement.h"
 
 #include "ElementIterator.h"
-#include "RenderSVGHiddenContainer.h"
 #include "RenderSVGResourceLinearGradient.h"
 #include "RenderSVGResourceRadialGradient.h"
 #include "SVGElementTypeHelpers.h"
@@ -38,8 +37,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGradientElement);
 
-SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGElement(tagName, document, WTFMove(propertyRegistry))
     , SVGURIReference(this)
 {
     static std::once_flag onceFlag;

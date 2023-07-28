@@ -484,7 +484,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
 
     if (!htmlString.isNull()) {
         if (RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
-                *frame.document(), htmlString, String(), DisallowScriptingContent))
+                *frame.document(), htmlString, emptyString(), ParserContentPolicy::AllowScriptingContent))
         {
             return fragment;
         }

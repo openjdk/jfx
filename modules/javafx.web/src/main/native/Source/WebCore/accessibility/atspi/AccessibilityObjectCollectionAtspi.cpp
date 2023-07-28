@@ -38,13 +38,13 @@ GDBusInterfaceVTable AccessibilityObjectAtspi::s_collectionFunctions = {
             int count;
             gboolean traverse;
             g_variant_get(parameters, "(@(aiia{ss}iaiiasib)uib)", &rule.outPtr(), &sortyBy, &count, &traverse);
-            if (sortyBy > Atspi::CollectionSortOrder::SortOrderReverseTab) {
+            if (sortyBy > static_cast<uint32_t>(Atspi::CollectionSortOrder::SortOrderReverseTab)) {
                 g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS, "Not a valid sort order: %u", sortyBy);
                 return;
             }
             CollectionMatchRule matchRule(rule.get());
             GVariantBuilder builder = G_VARIANT_BUILDER_INIT(G_VARIANT_TYPE("a(so)"));
-            for (const auto& wrapper : atspiObject->matches(matchRule, sortyBy, std::max<int>(0, count), traverse))
+            for (const auto& wrapper : atspiObject->matches(matchRule, static_cast<Atspi::CollectionSortOrder>(sortyBy), std::max<int>(0, count), traverse))
                 g_variant_builder_add(&builder, "@(so)", wrapper->reference());
             g_dbus_method_invocation_return_value(invocation, g_variant_new("(a(so))", &builder));
         } else if (!g_strcmp0(methodName, "GetMatchesTo") || !g_strcmp0(methodName, "GetMatchesFrom") || !g_strcmp0(methodName, "GetActiveDescendant"))
@@ -76,11 +76,11 @@ AccessibilityObjectAtspi::CollectionMatchRule::CollectionMatchRule(GVariant* rul
     while (g_variant_iter_next(statesIter.get(), "i", &state)) {
         for (int j = 0; j < 32; ++j) {
             if (state & (1 << j))
-                states.value |= G_GUINT64_CONSTANT(1) << (i * 32 + j);
+                states.value.add(static_cast<Atspi::State>(1 << j << i * 32));
         }
         i++;
     }
-    states.type = statesMatchType;
+    states.type = static_cast<Atspi::CollectionMatchType>(statesMatchType);
 
     const char* attributeName;
     const char* attributeValue;
@@ -107,23 +107,23 @@ AccessibilityObjectAtspi::CollectionMatchRule::CollectionMatchRule(GVariant* rul
             addResult.iterator->value.append(makeStringByReplacingAll(unescapedValue, "\\\\"_s, "\\"_s));
         }
     }
-    attributes.type = attributesMatchType;
+    attributes.type = static_cast<Atspi::CollectionMatchType>(attributesMatchType);
 
-    int role;
+    Atspi::Role role;
     i = 0;
     while (g_variant_iter_next(rolesIter.get(), "i", &role)) {
         for (int j = 0; j < 32; ++j) {
-            if (role & (1 << j))
-                roles.value.append(i * 32 + j);
+            if (static_cast<int>(role) & (1 << j))
+                roles.value.append(static_cast<Atspi::Role>(i * 32 + j));
         }
         i++;
     }
-    roles.type = rolesMatchType;
+    roles.type = static_cast<Atspi::CollectionMatchType>(rolesMatchType);
 
     const char* interface;
     while (g_variant_iter_next(interfacesIter.get(), "&s", &interface))
         interfaces.value.append(String::fromUTF8(interface));
-    interfaces.type = interfacesMatchType;
+    interfaces.type = static_cast<Atspi::CollectionMatchType>(interfacesMatchType);
 }
 
 bool AccessibilityObjectAtspi::CollectionMatchRule::matchInterfaces(AccessibilityObjectAtspi& axObject)
@@ -193,7 +193,7 @@ bool AccessibilityObjectAtspi::CollectionMatchRule::matchInterfaces(Accessibilit
 
 bool AccessibilityObjectAtspi::CollectionMatchRule::matchStates(AccessibilityObjectAtspi& axObject)
 {
-    if (!states.value)
+    if (states.value.isEmpty())
         return true;
 
     switch (states.type) {
@@ -201,11 +201,11 @@ bool AccessibilityObjectAtspi::CollectionMatchRule::matchStates(AccessibilityObj
     case Atspi::CollectionMatchType::MatchEmpty:
         return false;
     case Atspi::CollectionMatchType::MatchAll:
-        return (axObject.state() & states.value) == states.value;
+        return axObject.states().containsAll(states.value);
     case Atspi::CollectionMatchType::MatchAny:
-        return !!(axObject.state() & states.value);
+        return axObject.states().containsAny(states.value);
     case Atspi::CollectionMatchType::MatchNone:
-        return !(axObject.state() & states.value);
+        return !axObject.states().containsAny(states.value);
     }
 
     return false;
@@ -346,7 +346,7 @@ void AccessibilityObjectAtspi::addMatchesInCanonicalOrder(Vector<RefPtr<Accessib
     }
 }
 
-Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::matches(CollectionMatchRule& rule, uint32_t sortOrder, uint32_t maxResultCount, bool traverse)
+Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::matches(CollectionMatchRule& rule, Atspi::CollectionSortOrder sortOrder, uint32_t maxResultCount, bool traverse)
 {
     if (!m_coreObject)
         return { };
@@ -367,7 +367,7 @@ Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::matches(Colle
     case Atspi::CollectionSortOrder::SortOrderTab:
     case Atspi::CollectionSortOrder::SortOrderReverseFlow:
     case Atspi::CollectionSortOrder::SortOrderReverseTab:
-        g_warning("Atspi collection sort method %u not implemented yet", sortOrder);
+        g_warning("Atspi collection sort method %u not implemented yet", static_cast<uint32_t>(sortOrder));
         break;
 
     }

@@ -148,6 +148,28 @@ FinallyContext::FinallyContext(BytecodeGenerator& generator, Label& finallyLabel
     generator.moveEmptyValue(completionValueRegister());
 }
 
+template<typename EmitBytecodeFunctor>
+void BytecodeGenerator::asyncFuncParametersTryCatchWrap(const EmitBytecodeFunctor& emitBytecode)
+{
+    TryData* tryData = nullptr;
+    if (m_asyncFuncParametersTryCatchInfo) {
+        AsyncFuncParametersTryCatchInfo& info = m_asyncFuncParametersTryCatchInfo.value();
+        ASSERT(info.catchStartLabel && info.thrownValue);
+        Ref<Label> tryStartLabel = newEmittedLabel();
+        tryData = pushTry(tryStartLabel.get(), *info.catchStartLabel.get(), HandlerType::SynthesizedCatch);
+    }
+
+    emitBytecode();
+
+    if (m_asyncFuncParametersTryCatchInfo) {
+        AsyncFuncParametersTryCatchInfo& info = m_asyncFuncParametersTryCatchInfo.value();
+        Ref<Label> tryEndLabel = newEmittedLabel();
+        popTry(tryData, tryEndLabel.get());
+
+        emitOutOfLineCatchHandler(info.thrownValue.get(), nullptr, tryData);
+    }
+}
+
 ParserError BytecodeGenerator::generate(unsigned& size)
 {
     if (UNLIKELY(m_outOfMemoryDuringConstruction))
@@ -174,8 +196,13 @@ ParserError BytecodeGenerator::generate(unsigned& size)
         if (m_needToInitializeArguments)
             initializeVariable(variable(propertyNames().arguments), m_argumentsRegister);
 
-        if (m_restParameter)
+        if (m_restParameter) {
+            // We should move moving m_restParameter->emit(*this) to initializeDefaultParameterValuesAndSetupFunctionScopeStack
+            // as an optimization if we can prove that change has no side effect.
+            asyncFuncParametersTryCatchWrap([&] {
             m_restParameter->emit(*this);
+            });
+        }
 
         {
             RefPtr<RegisterID> temp = newTemporary();
@@ -242,6 +269,22 @@ ParserError BytecodeGenerator::generate(unsigned& size)
 
         emitJump(tryData->target.get());
         tryData->target = WTFMove(realCatchTarget);
+    }
+
+    if (m_asyncFuncParametersTryCatchInfo) {
+        AsyncFuncParametersTryCatchInfo& info = m_asyncFuncParametersTryCatchInfo.value();
+        ASSERT(info.catchStartLabel && info.thrownValue);
+        emitLabel(*info.catchStartLabel.get());
+        // @rejectPromiseWithFirstResolvingFunctionCallCheck(@promise, thrownValue);
+        // return @promise;
+        RefPtr<RegisterID> rejectPromise = moveLinkTimeConstant(nullptr, LinkTimeConstant::rejectPromiseWithFirstResolvingFunctionCallCheck);
+        CallArguments args(*this, nullptr, 2);
+        emitLoad(args.thisRegister(), jsUndefined());
+        move(args.argumentRegister(0), promiseRegister());
+        move(args.argumentRegister(1), info.thrownValue.get());
+        JSTextPosition divot(m_scopeNode->firstLine(), m_scopeNode->startOffset(), m_scopeNode->lineStartOffset());
+        emitCall(newTemporary(), rejectPromise.get(), NoExpectedFunction, args, divot, divot, divot, DebuggableCall::No);
+        emitReturn(promiseRegister());
     }
 
     m_staticPropertyAnalyzer.kill();
@@ -583,8 +626,10 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
             }
 
             ScopeOffset offset = functionSymbolTable->takeNextScopeOffset(NoLockingNecessary);
+IGNORE_GCC_WARNINGS_BEGIN("dangling-reference")
             const Identifier& ident =
                 static_cast<const BindingNode*>(parameters.at(i).first)->boundProperty();
+IGNORE_GCC_WARNINGS_END
             functionSymbolTable->set(NoLockingNecessary, name, SymbolTableEntry(VarOffset(offset)));
 
             OpPutToScope::emit(this, m_lexicalEnvironmentRegister, addConstant(ident), virtualRegisterForArgumentIncludingThis(1 + i), GetPutInfo(ThrowIfNotFound, ResolvedClosureVar, InitializationMode::NotInitialization, ecmaMode), SymbolTableOrScopeDepth::symbolTable(VirtualRegister { symbolTableConstantIndex }), offset.offset());
@@ -706,7 +751,11 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
         }
 
         emitNewGenerator(m_generatorRegister);
-        emitNewPromise(promiseRegister(), m_isBuiltinFunction);
+        bool isInternalPromise = false;
+        if (m_isBuiltinFunction)
+            isInternalPromise = !functionNode->ident().string().startsWith("defaultAsync"_s);
+        emitNewPromise(promiseRegister(), isInternalPromise);
+        emitPutInternalField(generatorRegister(), static_cast<unsigned>(JSGenerator::Field::Context), promiseRegister());
         break;
     }
 
@@ -797,40 +846,14 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
         emitPutDerivedConstructorToArrowFunctionContextScope();
     }
 
-    Ref<Label> catchLabel = newLabel();
-    TryData* tryFormalParametersData = nullptr;
-    bool needTryCatch = isAsyncFunctionWrapperParseMode(parseMode) && !isSimpleParameterList;
-    if (needTryCatch) {
-        Ref<Label> tryFormalParametersStart = newEmittedLabel();
-        tryFormalParametersData = pushTry(tryFormalParametersStart.get(), catchLabel.get(), HandlerType::SynthesizedCatch);
-    }
+    if (isAsyncFunctionWrapperParseMode(parseMode) && !isSimpleParameterList)
+        m_asyncFuncParametersTryCatchInfo = { newLabel(), newTemporary() };
 
+    asyncFuncParametersTryCatchWrap([&]() {
     // All "addVar()"s needs to happen before "initializeDefaultParameterValuesAndSetupFunctionScopeStack()" is called
     // because a function's default parameter ExpressionNodes will use temporary registers.
     initializeDefaultParameterValuesAndSetupFunctionScopeStack(parameters, isSimpleParameterList, functionNode, functionSymbolTable, symbolTableConstantIndex, captures, shouldCreateArgumentsVariableInParameterScope);
-
-    if (needTryCatch) {
-        Ref<Label> didNotThrow = newLabel();
-        emitJump(didNotThrow.get());
-        emitLabel(catchLabel.get());
-        popTry(tryFormalParametersData, catchLabel.get());
-
-        RefPtr<RegisterID> thrownValue = newTemporary();
-        emitOutOfLineCatchHandler(thrownValue.get(), nullptr, tryFormalParametersData);
-
-        // @rejectPromiseWithFirstResolvingFunctionCallCheck(@promise, thrownValue);
-        // return @promise;
-        RefPtr<RegisterID> rejectPromise = moveLinkTimeConstant(nullptr, LinkTimeConstant::rejectPromiseWithFirstResolvingFunctionCallCheck);
-        CallArguments args(*this, nullptr, 2);
-        emitLoad(args.thisRegister(), jsUndefined());
-        move(args.argumentRegister(0), promiseRegister());
-        move(args.argumentRegister(1), thrownValue.get());
-        JSTextPosition divot(functionNode->firstLine(), functionNode->startOffset(), functionNode->lineStartOffset());
-        emitCall(newTemporary(), rejectPromise.get(), NoExpectedFunction, args, divot, divot, divot, DebuggableCall::No);
-
-        emitReturn(promiseRegister());
-        emitLabel(didNotThrow.get());
-    }
+    });
 
     // If we don't have  default parameter expression, then loading |this| inside an arrow function must be done
     // after initializeDefaultParameterValuesAndSetupFunctionScopeStack() because that function sets up the
@@ -994,6 +1017,7 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, ModuleProgramNode* moduleProgramNod
     // Now declare all variables.
 
     createVariable(m_vm.propertyNames->starNamespacePrivateName, VarKind::Scope, moduleEnvironmentSymbolTable, VerifyExisting);
+    if (moduleProgramNode->features() & ImportMetaFeature)
     createVariable(m_vm.propertyNames->builtinNames().metaPrivateName(), VarKind::Scope, moduleEnvironmentSymbolTable, VerifyExisting);
 
     for (auto& entry : moduleProgramNode->varDeclarations()) {
@@ -2956,9 +2980,9 @@ RegisterID* BytecodeGenerator::emitCreateAsyncGenerator(RegisterID* dst, Registe
     return dst;
 }
 
-RegisterID* BytecodeGenerator::emitCreateArgumentsButterfly(RegisterID* dst)
+RegisterID* BytecodeGenerator::emitCreateArgumentsButterflyExcludingThis(RegisterID* dst, RegisterID* targetFunction)
 {
-    OpCreateArgumentsButterfly::emit(this, dst);
+    OpCreateArgumentsButterflyExcludingThis::emit(this, dst, targetFunction);
     return dst;
 }
 
@@ -3253,6 +3277,12 @@ RegisterID* BytecodeGenerator::emitNewArrayWithSize(RegisterID* dst, RegisterID*
     return dst;
 }
 
+RegisterID* BytecodeGenerator::emitNewArrayWithSpecies(RegisterID* dst, RegisterID* length, RegisterID* array)
+{
+    OpNewArrayWithSpecies::emit(this, dst, length, array);
+    return dst;
+}
+
 RegisterID* BytecodeGenerator::emitNewRegExp(RegisterID* dst, RegExp* regExp)
 {
     OpNewRegexp::emit(this, dst, addConstantValue(regExp));
@@ -3406,9 +3436,9 @@ RegisterID* BytecodeGenerator::emitCallInTailPosition(RegisterID* dst, RegisterI
     return emitCall<OpCall>(dst, func, expectedFunction, callArguments, divot, divotStart, divotEnd, debuggableCall);
 }
 
-RegisterID* BytecodeGenerator::emitCallEval(RegisterID* dst, RegisterID* func, CallArguments& callArguments, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd, DebuggableCall debuggableCall)
+RegisterID* BytecodeGenerator::emitCallDirectEval(RegisterID* dst, RegisterID* func, CallArguments& callArguments, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd, DebuggableCall debuggableCall)
 {
-    return emitCall<OpCallEval>(dst, func, NoExpectedFunction, callArguments, divot, divotStart, divotEnd, debuggableCall);
+    return emitCall<OpCallDirectEval>(dst, func, NoExpectedFunction, callArguments, divot, divotStart, divotEnd, debuggableCall);
 }
 
 ExpectedFunction BytecodeGenerator::expectedFunctionForIdentifier(const Identifier& identifier)
@@ -3473,7 +3503,7 @@ template<typename CallOp>
 RegisterID* BytecodeGenerator::emitCall(RegisterID* dst, RegisterID* func, ExpectedFunction expectedFunction, CallArguments& callArguments, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd, DebuggableCall debuggableCall)
 {
     constexpr auto opcodeID = CallOp::opcodeID;
-    ASSERT(opcodeID == op_call || opcodeID == op_call_eval || opcodeID == op_tail_call);
+    ASSERT(opcodeID == op_call || opcodeID == op_call_direct_eval || opcodeID == op_tail_call);
     ASSERT(func->refCount());
 
     // Generate code for arguments.
@@ -3521,10 +3551,9 @@ RegisterID* BytecodeGenerator::emitCall(RegisterID* dst, RegisterID* func, Expec
     // Emit call.
     ASSERT(dst);
     ASSERT(dst != ignoredResult());
-    if constexpr (opcodeID == op_call_eval) {
-        m_codeBlock->setUsesCallEval();
-        CallOp::emit(this, dst, func, callArguments.argumentCountIncludingThis(), callArguments.stackOffset(), ecmaMode());
-    } else
+    if constexpr (opcodeID == op_call_direct_eval)
+        CallOp::emit(this, dst, func, callArguments.argumentCountIncludingThis(), callArguments.stackOffset(), thisRegister(), scopeRegister(), ecmaMode());
+    else
         CallOp::emit(this, dst, func, callArguments.argumentCountIncludingThis(), callArguments.stackOffset());
 
     if (expectedFunction != NoExpectedFunction)
@@ -4397,12 +4426,14 @@ void BytecodeGenerator::emitEnumeration(ThrowableExpressionData* node, Expressio
     RefPtr<RegisterID> iterable = newTemporary();
     emitNode(iterable.get(), subjectNode);
 
-    RefPtr<RegisterID> iteratorSymbol = emitGetById(newTemporary(), iterable.get(), propertyNames().iteratorSymbol);
     RefPtr<RegisterID> nextOrIndex = newTemporary();
     RefPtr<RegisterID> iterator = newTemporary();
+    {
+        RefPtr<RegisterID> iteratorSymbol = emitGetById(newTemporary(), iterable.get(), propertyNames().iteratorSymbol);
     CallArguments args(*this, nullptr, 0);
     move(args.thisRegister(), iterable.get());
     emitIteratorOpen(iterator.get(), nextOrIndex.get(), iteratorSymbol.get(), args, node);
+    }
 
     Ref<Label> loopDone = newLabel();
     Ref<Label> tryStartLabel = newLabel();

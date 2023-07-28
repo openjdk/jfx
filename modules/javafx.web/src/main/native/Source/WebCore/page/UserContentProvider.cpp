@@ -26,6 +26,8 @@
 #include "config.h"
 #include "UserContentProvider.h"
 
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
@@ -47,7 +49,7 @@ UserContentProvider::UserContentProvider()
 
 UserContentProvider::~UserContentProvider()
 {
-    ASSERT(m_pages.computesEmpty());
+    ASSERT(m_pages.isEmptyIgnoringNullReferences());
 }
 
 void UserContentProvider::addPage(Page& page)
@@ -91,25 +93,65 @@ void UserContentProvider::invalidateInjectedStyleSheetCacheInAllFramesInAllPages
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)
-static bool contentRuleListsEnabled(const DocumentLoader& documentLoader)
+static DocumentLoader* mainDocumentLoader(DocumentLoader& loader)
 {
-    if (auto frame = documentLoader.frame()) {
+    if (auto frame = loader.frame()) {
         if (frame->isMainFrame())
-            return documentLoader.userContentExtensionsEnabled();
-        if (auto mainDocumentLoader = frame->mainFrame().loader().documentLoader())
-            return mainDocumentLoader->userContentExtensionsEnabled();
+            return &loader;
+
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+        if (localFrame)
+            return localFrame->loader().documentLoader();
+    }
+    return nullptr;
+}
+
+static ContentExtensions::ContentExtensionsBackend::RuleListFilter ruleListFilter(DocumentLoader& documentLoader)
+{
+    RefPtr mainLoader = mainDocumentLoader(documentLoader);
+    if (!mainLoader) {
+        return [](const String&) {
+            return ContentExtensions::ContentExtensionsBackend::ShouldSkipRuleList::No;
+        };
     }
 
-    return true;
+    auto& exceptions = mainLoader->contentExtensionEnablement().second;
+    switch (mainLoader->contentExtensionEnablement().first) {
+    case ContentExtensionDefaultEnablement::Disabled:
+        return [&](auto& identifier) {
+            return exceptions.contains(identifier)
+                ? ContentExtensions::ContentExtensionsBackend::ShouldSkipRuleList::No
+                : ContentExtensions::ContentExtensionsBackend::ShouldSkipRuleList::Yes;
+        };
+    case ContentExtensionDefaultEnablement::Enabled:
+        return [&](auto& identifier) {
+            return exceptions.contains(identifier)
+                ? ContentExtensions::ContentExtensionsBackend::ShouldSkipRuleList::Yes
+                : ContentExtensions::ContentExtensionsBackend::ShouldSkipRuleList::No;
+        };
+    }
+    ASSERT_NOT_REACHED();
+    return { };
+}
+
+static void sanitizeLookalikeCharactersIfNeeded(ContentRuleListResults& results, const Page& page, const URL& url, const DocumentLoader& initiatingDocumentLoader)
+{
+    if (RefPtr frame = initiatingDocumentLoader.frame(); !frame || !frame->isMainFrame())
+        return;
+
+    if (auto adjustedURL = page.chrome().client().sanitizeLookalikeCharacters(url, LookalikeCharacterSanitizationTrigger::Navigation); adjustedURL != url)
+        results.summary.redirectActions.append({ { ContentExtensions::RedirectAction::URLAction { adjustedURL.string() } }, adjustedURL });
 }
 
 ContentRuleListResults UserContentProvider::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ContentExtensions::ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom)
 {
-    if (!contentRuleListsEnabled(initiatingDocumentLoader))
-        return { };
+    auto results = userContentExtensionBackend().processContentRuleListsForLoad(page, url, resourceType, initiatingDocumentLoader, redirectFrom, ruleListFilter(initiatingDocumentLoader));
 
-    return userContentExtensionBackend().processContentRuleListsForLoad(page, url, resourceType, initiatingDocumentLoader, redirectFrom);
+    if (resourceType.contains(ContentExtensions::ResourceType::Document))
+        sanitizeLookalikeCharactersIfNeeded(results, page, url, initiatingDocumentLoader);
+
+    return results;
 }
-#endif
+#endif // ENABLE(CONTENT_EXTENSIONS)
 
 } // namespace WebCore

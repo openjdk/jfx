@@ -31,6 +31,7 @@
 #include "DataTransfer.h"
 #include "DeleteSelectionCommand.h"
 #include "DocumentInlines.h"
+#include "EditCommand.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "Element.h"
@@ -389,6 +390,11 @@ AtomString TypingCommand::inputEventTypeName() const
     return inputTypeNameForEditingAction(m_currentTypingEditAction);
 }
 
+bool TypingCommand::isInputMethodComposing() const
+{
+    return isInputMethodComposingForEditingAction(m_currentTypingEditAction);
+}
+
 bool TypingCommand::isBeforeInputEventCancelable() const
 {
     return m_currentTypingEditAction != EditAction::TypingInsertPendingComposition && m_currentTypingEditAction != EditAction::TypingDeletePendingComposition;
@@ -611,7 +617,7 @@ bool TypingCommand::makeEditableRootEmpty()
     if (!root || !root->firstChild())
         return false;
 
-    if (root->firstChild() == root->lastChild() && root->firstElementChild() && root->firstElementChild()->hasTagName(brTag)) {
+    if (root->firstChild() == root->lastChild() && root->firstChild()->hasTagName(brTag)) {
         // If there is a single child and it could be a placeholder, leave it alone.
         if (root->renderer() && root->renderer()->isRenderBlockFlow())
             return false;

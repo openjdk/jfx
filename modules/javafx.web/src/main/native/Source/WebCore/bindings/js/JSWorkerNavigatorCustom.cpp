@@ -27,7 +27,7 @@
 #include "JSWorkerNavigator.h"
 
 #include "WebCoreOpaqueRoot.h"
-#include "WebCoreOpaqueRoot.h"
+#include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 
 namespace WebCore {
 

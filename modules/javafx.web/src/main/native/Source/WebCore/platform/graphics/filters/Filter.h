@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -37,21 +37,19 @@ class FilterResults;
 
 class Filter : public FilterFunction {
     using FilterFunction::apply;
+    using FilterFunction::createFilterStyles;
 
 public:
-    enum class ClipOperation { Intersect, Unite };
+    RenderingMode renderingMode() const;
 
-    RenderingMode renderingMode() const { return m_renderingMode; }
-    void setRenderingMode(RenderingMode renderingMode) { m_renderingMode = renderingMode; }
+    OptionSet<FilterRenderingMode> filterRenderingModes() const { return m_filterRenderingModes; }
+    WEBCORE_EXPORT void setFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes);
 
     FloatSize filterScale() const { return m_filterScale; }
     void setFilterScale(const FloatSize& filterScale) { m_filterScale = filterScale; }
 
     FloatRect filterRegion() const { return m_filterRegion; }
     void setFilterRegion(const FloatRect& filterRegion) { m_filterRegion = filterRegion; }
-
-    ClipOperation clipOperation() const { return m_clipOperation; }
-    void setClipOperation(ClipOperation clipOperation) { m_clipOperation = clipOperation; }
 
     virtual FloatSize resolvedSize(const FloatSize& size) const { return size; }
     virtual FloatPoint3D resolvedPoint3D(const FloatPoint3D& point) const { return point; }
@@ -67,31 +65,24 @@ public:
 
     bool clampFilterRegionIfNeeded();
 
-    virtual RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) = 0;
     WEBCORE_EXPORT RefPtr<FilterImage> apply(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, FilterResults&);
+    WEBCORE_EXPORT FilterStyleVector createFilterStyles(const FloatRect& sourceImageRect) const;
 
 protected:
     using FilterFunction::FilterFunction;
-    Filter(Filter::Type, RenderingMode, const FloatSize& filterScale, ClipOperation, const FloatRect& filterRegion = { });
+    Filter(Filter::Type, const FloatSize& filterScale, const FloatRect& filterRegion = { });
+
+    virtual RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) = 0;
+    virtual FilterStyleVector createFilterStyles(const FilterStyle& sourceStyle) const = 0;
 
 private:
-    RenderingMode m_renderingMode;
+    OptionSet<FilterRenderingMode> m_filterRenderingModes { FilterRenderingMode::Software };
     FloatSize m_filterScale;
-    ClipOperation m_clipOperation;
     FloatRect m_filterRegion;
 };
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::Filter::ClipOperation> {
-    using values = EnumValues<
-        WebCore::Filter::ClipOperation,
-
-        WebCore::Filter::ClipOperation::Intersect,
-        WebCore::Filter::ClipOperation::Unite
-    >;
-};
-
-} // namespace WTF
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Filter)
+    static bool isType(const WebCore::FilterFunction& function) { return function.isFilter(); }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -210,26 +210,36 @@ template<typename T> struct CrossThreadCopierBase<false, false, std::optional<T>
     }
 };
 
+// Default specialization for Markable of CrossThreadCopyable class.
+template<typename T, typename U> struct CrossThreadCopierBase<false, false, Markable<T, U>> {
+    template<typename V> static Markable<T, U> copy(V&& source)
+    {
+        if (!source)
+            return std::nullopt;
+        return CrossThreadCopier<T>::copy(std::forward<V>(source).value());
+    }
+};
+
 // Default specialization for std::variant of CrossThreadCopyable classes.
 template<typename... Types> struct CrossThreadCopierBase<false, false, std::variant<Types...>> {
     using Type = std::variant<Types...>;
     static std::variant<Types...> copy(const Type& source)
     {
         return std::visit([] (auto& type) -> std::variant<Types...> {
-            return CrossThreadCopier<std::remove_const_t<std::remove_reference_t<decltype(type)>>>::copy(type);
+            return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(type);
         }, source);
     }
     static std::variant<Types...> copy(Type&& source)
     {
         return std::visit([] (auto&& type) -> std::variant<Types...> {
-            return CrossThreadCopier<std::remove_const_t<std::remove_reference_t<decltype(type)>>>::copy(std::forward<decltype(type)>(type));
+            return CrossThreadCopier<std::remove_cvref_t<decltype(type)>>::copy(std::forward<decltype(type)>(type));
         }, WTFMove(source));
     }
 };
 
 template<typename T> auto crossThreadCopy(T&& source)
 {
-    return CrossThreadCopier<std::remove_cv_t<std::remove_reference_t<T>>>::copy(std::forward<T>(source));
+    return CrossThreadCopier<std::remove_cvref_t<T>>::copy(std::forward<T>(source));
 }
 
 } // namespace WTF

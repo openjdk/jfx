@@ -26,16 +26,28 @@
 #include "config.h"
 #include "CSSFunctionValue.h"
 
+#include "CSSValueKeywords.h"
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-String CSSFunctionValue::customCSSText(Document* document) const
+CSSFunctionValue::CSSFunctionValue(CSSValueID name)
+    : CSSValueContainingVector(FunctionClass, CommaSeparator)
+    , m_name(name)
+{
+}
+
+Ref<CSSFunctionValue> CSSFunctionValue::create(CSSValueID name)
+{
+    return adoptRef(*new CSSFunctionValue(name));
+}
+
+String CSSFunctionValue::customCSSText() const
 {
     StringBuilder result;
-    result.append(getValueName(m_name));
-    result.append('(');
-    result.append(CSSValueList::customCSSText(document));
+    result.append(nameLiteral(m_name), '(');
+    serializeItems(result);
     result.append(')');
     return result.toString();
 }

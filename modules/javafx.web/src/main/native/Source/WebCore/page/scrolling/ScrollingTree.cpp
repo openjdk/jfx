@@ -97,7 +97,7 @@ OptionSet<WheelEventProcessingSteps> ScrollingTree::computeWheelProcessingSteps(
         // Event regions are affected by page scale, so no need to map through scale.
         bool isSynchronousDispatchRegion = m_treeState.eventTrackingRegions.trackingTypeForPoint(EventTrackingRegions::EventType::Wheel, roundedPosition) == TrackingType::Synchronous
             || m_treeState.eventTrackingRegions.trackingTypeForPoint(EventTrackingRegions::EventType::Mousewheel, roundedPosition) == TrackingType::Synchronous;
-        LOG_WITH_STREAM(Scrolling, stream << "\nScrollingTree::determineWheelEventProcessing: wheelEvent " << wheelEvent << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
+        LOG_WITH_STREAM(Scrolling, stream << "\nScrollingTree::computeWheelProcessingSteps: wheelEvent " << wheelEvent << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
 
         if (isSynchronousDispatchRegion)
             return { WheelEventProcessingSteps::MainThreadForScrolling, WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch };
@@ -135,7 +135,7 @@ OptionSet<WheelEventProcessingSteps> ScrollingTree::determineWheelEventProcessin
 
     m_latchingController.receivedWheelEvent(wheelEvent, processingSteps, m_allowLatching);
 
-    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::determineWheelEventProcessing: processingSteps " << processingSteps);
+    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::determineWheelEventProcessing: " << wheelEvent << " processingSteps " << processingSteps);
 
     return processingSteps;
 }
@@ -147,7 +147,7 @@ WheelEventHandlingResult ScrollingTree::handleWheelEvent(const PlatformWheelEven
     Locker locker { m_treeLock };
 
     if (isMonitoringWheelEvents())
-        receivedWheelEvent(wheelEvent);
+        receivedWheelEventWithPhases(wheelEvent.phase(), wheelEvent.momentumPhase());
 
     m_latchingController.receivedWheelEvent(wheelEvent, processingSteps, m_allowLatching);
 
@@ -199,9 +199,10 @@ WheelEventHandlingResult ScrollingTree::handleWheelEvent(const PlatformWheelEven
     return result;
 }
 
-WheelEventHandlingResult ScrollingTree::handleWheelEventWithNode(const PlatformWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps, ScrollingTreeNode* node, EventTargeting eventTargeting)
+WheelEventHandlingResult ScrollingTree::handleWheelEventWithNode(const PlatformWheelEvent& wheelEvent, OptionSet<WheelEventProcessingSteps> processingSteps, ScrollingTreeNode* startingNode, EventTargeting eventTargeting)
 {
     auto adjustedWheelEvent = wheelEvent;
+    RefPtr node = startingNode;
     while (node) {
         if (is<ScrollingTreeScrollingNode>(*node)) {
             auto& scrollingNode = downcast<ScrollingTreeScrollingNode>(*node);
@@ -292,7 +293,7 @@ void ScrollingTree::mainFrameViewportChangedViaDelegatedScrolling(const FloatPoi
     m_rootNode->wasScrolledByDelegatedScrolling(scrollPosition, layoutViewport);
 }
 
-void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scrollingStateTree)
+bool ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scrollingStateTree)
 {
     SetForScope inCommitTreeState(m_inCommitTreeState, true);
     Locker locker { m_treeLock };
@@ -339,7 +340,10 @@ void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scroll
     for (auto nodeID : m_nodeMap.keys())
         commitState.unvisitedNodes.add(nodeID);
 
-    updateTreeFromStateNodeRecursive(rootNode, commitState);
+    bool succeeded = updateTreeFromStateNodeRecursive(rootNode, commitState);
+    if (!succeeded)
+        return false;
+
     propagateSynchronousScrollingReasons(commitState.synchronousScrollingNodes);
 
     for (auto nodeID : commitState.unvisitedNodes) {
@@ -354,14 +358,15 @@ void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree>&& scroll
     didCommitTree();
 
     LOG_WITH_STREAM(ScrollingTree, stream << "committed ScrollingTree" << scrollingTreeAsText(debugScrollingStateTreeAsTextBehaviors));
+    return true;
 }
 
-void ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* stateNode, CommitTreeState& state)
+bool ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* stateNode, CommitTreeState& state)
 {
     if (!stateNode) {
         removeAllNodes();
         m_rootNode = nullptr;
-        return;
+        return true;
     }
 
     ScrollingNodeID nodeID = stateNode->scrollingNodeID();
@@ -377,7 +382,8 @@ void ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* s
         node = createScrollingTreeNode(stateNode->nodeType(), nodeID);
         if (!parentNodeID) {
             // This is the root node. Clear the node map.
-            ASSERT(stateNode->isFrameScrollingNode());
+            if (!is<ScrollingTreeFrameScrollingNode>(node.get()))
+                return false;
             m_rootNode = downcast<ScrollingTreeFrameScrollingNode>(node.get());
             removeAllNodes();
         }
@@ -388,14 +394,14 @@ void ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* s
         auto parentIt = m_nodeMap.find(parentNodeID);
         ASSERT_WITH_SECURITY_IMPLICATION(parentIt != m_nodeMap.end());
         if (parentIt != m_nodeMap.end()) {
-            auto* parent = parentIt->value.get();
+            RefPtr parent = parentIt->value.get();
 
-            auto* oldParent = node->parent();
+            RefPtr oldParent = node->parent();
             if (oldParent)
                 oldParent->removeChild(*node);
 
             if (oldParent != parent)
-                node->setParent(parent);
+                node->setParent(parent.copyRef());
 
             parent->appendChild(*node);
         } else {
@@ -404,7 +410,8 @@ void ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* s
         }
     }
 
-    node->commitStateBeforeChildren(*stateNode);
+    if (!node->commitStateBeforeChildren(*stateNode))
+        return false;
 
     // Move all children into the orphanNodes map. Live ones will get added back as we recurse over children.
     for (auto& childScrollingNode : node->children()) {
@@ -415,17 +422,22 @@ void ScrollingTree::updateTreeFromStateNodeRecursive(const ScrollingStateNode* s
 
     // Now update the children if we have any.
     if (auto children = stateNode->children()) {
-        for (auto& child : *children)
-            updateTreeFromStateNodeRecursive(child.get(), state);
+        for (auto& child : *children) {
+            if (!updateTreeFromStateNodeRecursive(child.get(), state))
+                return false;
+        }
     }
 
-    node->commitStateAfterChildren(*stateNode);
+    if (!node->commitStateAfterChildren(*stateNode))
+        return false;
+
     node->didCompleteCommitForNode();
 
 #if ENABLE(SCROLLING_THREAD)
     if (is<ScrollingTreeScrollingNode>(*node) && !downcast<ScrollingTreeScrollingNode>(*node).synchronousScrollingReasons().isEmpty())
         state.synchronousScrollingNodes.add(nodeID);
 #endif
+    return true;
 }
 
 void ScrollingTree::removeAllNodes()
@@ -650,6 +662,17 @@ HashSet<ScrollingNodeID> ScrollingTree::nodesWithActiveScrollAnimations()
 {
     Locker locker { m_treeStateLock };
     return m_treeState.nodesWithActiveScrollAnimations;
+}
+
+void ScrollingTree::serviceScrollAnimations(MonotonicTime currentTime)
+{
+    for (auto nodeID : nodesWithActiveScrollAnimations()) {
+        RefPtr targetNode = nodeForID(nodeID);
+        if (!is<ScrollingTreeScrollingNode>(targetNode))
+            continue;
+
+        downcast<ScrollingTreeScrollingNode>(*targetNode).serviceScrollAnimation(currentTime);
+    }
 }
 
 void ScrollingTree::setMainFramePinnedState(RectEdges<bool> edgePinningState)

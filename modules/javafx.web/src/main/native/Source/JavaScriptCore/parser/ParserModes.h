@@ -69,6 +69,7 @@ enum class SourceParseMode : uint8_t {
     AsyncGeneratorWrapperMethodMode   = 17,
     GeneratorWrapperMethodMode        = 18,
     ClassFieldInitializerMode         = 19,
+    ClassStaticBlockMode              = 20,
 };
 
 class SourceParseModeSet {
@@ -118,7 +119,8 @@ ALWAYS_INLINE bool isFunctionParseMode(SourceParseMode parseMode)
         SourceParseMode::AsyncGeneratorBodyMode,
         SourceParseMode::AsyncGeneratorWrapperFunctionMode,
         SourceParseMode::AsyncGeneratorWrapperMethodMode,
-        SourceParseMode::ClassFieldInitializerMode).contains(parseMode);
+        SourceParseMode::ClassFieldInitializerMode,
+        SourceParseMode::ClassStaticBlockMode).contains(parseMode);
 }
 
 ALWAYS_INLINE bool isAsyncFunctionParseMode(SourceParseMode parseMode)
@@ -206,7 +208,8 @@ ALWAYS_INLINE bool isMethodParseMode(SourceParseMode parseMode)
         SourceParseMode::SetterMode,
         SourceParseMode::MethodMode,
         SourceParseMode::AsyncMethodMode,
-        SourceParseMode::AsyncGeneratorWrapperMethodMode).contains(parseMode);
+        SourceParseMode::AsyncGeneratorWrapperMethodMode,
+        SourceParseMode::ClassStaticBlockMode).contains(parseMode);
 }
 
 ALWAYS_INLINE bool isGeneratorOrAsyncFunctionBodyParseMode(SourceParseMode parseMode)
@@ -330,9 +333,11 @@ const CodeFeatures SuperCallFeature =              1 << 8;
 const CodeFeatures SuperPropertyFeature =          1 << 9;
 const CodeFeatures NewTargetFeature =              1 << 10;
 const CodeFeatures NoEvalCacheFeature =            1 << 11;
+const CodeFeatures ImportMetaFeature =             1 << 12;
 
-const CodeFeatures AllFeatures = EvalFeature | ArgumentsFeature | WithFeature | ThisFeature | NonSimpleParameterListFeature | ShadowsArgumentsFeature | ArrowFunctionFeature | AwaitFeature | SuperCallFeature | SuperPropertyFeature | NewTargetFeature | NoEvalCacheFeature;
-static_assert(AllFeatures < (1 << 14), "CodeFeatures must be 14bits");
+const CodeFeatures AllFeatures = EvalFeature | ArgumentsFeature | WithFeature | ThisFeature | NonSimpleParameterListFeature | ShadowsArgumentsFeature | ArrowFunctionFeature | AwaitFeature | SuperCallFeature | SuperPropertyFeature | NewTargetFeature | NoEvalCacheFeature | ImportMetaFeature;
+static constexpr unsigned bitWidthOfCodeFeatures = 14;
+static_assert(AllFeatures <= (1 << bitWidthOfCodeFeatures) - 1, "CodeFeatures must fit within 14 bits");
 
 typedef uint8_t InnerArrowFunctionCodeFeatures;
 

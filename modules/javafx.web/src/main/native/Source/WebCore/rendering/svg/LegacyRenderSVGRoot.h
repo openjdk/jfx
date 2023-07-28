@@ -25,6 +25,7 @@
 #include "FloatRect.h"
 #include "RenderReplaced.h"
 #include "SVGRenderSupport.h"
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -43,7 +44,8 @@ public:
     bool isEmbeddedThroughSVGImage() const;
     bool isEmbeddedThroughFrameContainingSVGDocument() const;
 
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const override;
+    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const override;
+    bool hasIntrinsicAspectRatio() const final;
 
     bool isLayoutSizeChanged() const { return m_isLayoutSizeChanged; }
     bool isInLayout() const { return m_inLayout; }
@@ -115,7 +117,7 @@ private:
     FloatRect m_repaintBoundingBox;
     mutable AffineTransform m_localToParentTransform;
     AffineTransform m_localToBorderBoxTransform;
-    HashSet<RenderSVGResourceContainer*> m_resourcesNeedingToInvalidateClients;
+    WeakHashSet<RenderSVGResourceContainer> m_resourcesNeedingToInvalidateClients;
     bool m_isLayoutSizeChanged : 1;
     bool m_needsBoundariesOrTransformUpdate : 1;
     bool m_hasBoxDecorations : 1;

@@ -26,12 +26,11 @@
 #include "config.h"
 #include "CSSMathMax.h"
 
+#include "CSSCalcOperationNode.h"
 #include "CSSNumericArray.h"
-
-#if ENABLE(CSS_TYPED_OM)
-
 #include "ExceptionOr.h"
 #include <wtf/Algorithms.h>
+#include <wtf/FixedVector.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -100,6 +99,17 @@ auto CSSMathMax::toSumValue() const -> std::optional<SumValue>
     return currentMax;
 }
 
-} // namespace WebCore
+RefPtr<CSSCalcExpressionNode> CSSMathMax::toCalcExpressionNode() const
+{
+    Vector<Ref<CSSCalcExpressionNode>> values;
+    values.reserveInitialCapacity(m_values->length());
+    for (auto& value : m_values->array()) {
+        if (auto valueNode = value->toCalcExpressionNode())
+            values.append(valueNode.releaseNonNull());
+    }
+    if (values.isEmpty())
+        return nullptr;
+    return CSSCalcOperationNode::createMinOrMaxOrClamp(CalcOperator::Max, WTFMove(values), CalculationCategory::Length);
+}
 
-#endif
+} // namespace WebCore

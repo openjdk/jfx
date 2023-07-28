@@ -39,6 +39,12 @@ bool gigacageEnabledForProcess();
 inline bool gigacageEnabledForProcess() { return true; }
 #endif
 
+#if BOS(DARWIN) && !BPLATFORM_JAVA
+bool shouldAllowMiniMode();
+#else
+inline bool shouldAllowMiniMode() { return true; }
+#endif
+
 #if BPLATFORM(IOS_FAMILY)
 bool shouldProcessUnconditionallyUseBmalloc();
 #endif

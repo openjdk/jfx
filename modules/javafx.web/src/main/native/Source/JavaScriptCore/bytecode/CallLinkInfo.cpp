@@ -28,6 +28,7 @@
 
 #include "CCallHelpers.h"
 #include "CallFrameShuffleData.h"
+#include "DFGJITCode.h"
 #include "DisallowMacroScratchRegisterUsage.h"
 #include "FunctionCodeBlock.h"
 #include "JSCellInlines.h"
@@ -47,7 +48,7 @@ CallLinkInfo::CallType CallLinkInfo::callTypeFor(OpcodeID opcodeID)
         return TailCallVarargs;
 
     case op_call:
-    case op_call_eval:
+    case op_call_direct_eval:
     case op_iterator_open:
     case op_iterator_next:
         return Call;
@@ -108,7 +109,7 @@ CodeLocationLabel<JSInternalPtrTag> CallLinkInfo::doneLocation()
     return m_doneLocation;
 }
 
-void CallLinkInfo::setMonomorphicCallee(VM& vm, JSCell* owner, JSObject* callee, CodeBlock* codeBlock, MacroAssemblerCodePtr<JSEntryPtrTag> codePtr)
+void CallLinkInfo::setMonomorphicCallee(VM& vm, JSCell* owner, JSObject* callee, CodeBlock* codeBlock, CodePtr<JSEntryPtrTag> codePtr)
 {
     RELEASE_ASSERT(!isDirect());
     RELEASE_ASSERT(!(bitwise_cast<uintptr_t>(callee) & polymorphicCalleeMask));
@@ -206,13 +207,6 @@ ExecutableBase* CallLinkInfo::executable()
     return jsCast<ExecutableBase*>(m_lastSeenCalleeOrExecutable.get());
 }
 
-void CallLinkInfo::setMaxArgumentCountIncludingThis(unsigned value)
-{
-    RELEASE_ASSERT(isDirect());
-    RELEASE_ASSERT(value);
-    m_maxArgumentCountIncludingThis = value;
-}
-
 void CallLinkInfo::visitWeak(VM& vm)
 {
     auto handleSpecificCallee = [&] (JSFunction* callee) {
@@ -228,7 +222,7 @@ void CallLinkInfo::visitWeak(VM& vm)
             if (!stub()->visitWeak(vm)) {
                 if (UNLIKELY(Options::verboseOSR())) {
                     dataLog(
-                        "At ", m_codeOrigin, ", ", RawPointer(this), ": clearing call stub to ",
+                        "At ", codeOrigin(), ", ", RawPointer(this), ": clearing call stub to ",
                         listDump(stub()->variants()), ", stub routine ", RawPointer(stub()),
                         ".\n");
                 }
@@ -284,7 +278,7 @@ void CallLinkInfo::visitWeak(VM& vm)
     }
 }
 
-void CallLinkInfo::setSlowPathCallDestination(MacroAssemblerCodePtr<JSEntryPtrTag> codePtr)
+void CallLinkInfo::setSlowPathCallDestination(CodePtr<JSEntryPtrTag> codePtr)
 {
     m_slowPathCallDestination = codePtr;
 }
@@ -321,7 +315,7 @@ void BaselineCallLinkInfo::initialize(VM& vm, CallType callType, BytecodeIndex b
     ASSERT(Type::Baseline == type());
     m_useDataIC = static_cast<unsigned>(UseDataIC::Yes);
     ASSERT(UseDataIC::Yes == useDataIC());
-    m_codeOrigin = CodeOrigin(bytecodeIndex);
+    m_bytecodeIndex = bytecodeIndex;
     m_callType = callType;
     if (LIKELY(Options::useLLIntICs()))
     setSlowPathCallDestination(vm.getCTILinkCall().code());
@@ -441,6 +435,31 @@ void CallLinkInfo::emitDataICSlowPath(VM&, CCallHelpers& jit, GPRReg callLinkInf
 {
     jit.move(callLinkInfoGPR, GPRInfo::regT2);
     jit.call(CCallHelpers::Address(GPRInfo::regT2, offsetOfSlowPathCallDestination()), JSEntryPtrTag);
+}
+
+MacroAssembler::JumpList CallLinkInfo::emitFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, GPRReg calleeGPR, GPRReg callLinkInfoGPR)
+{
+    if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo))
+        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitFastPath(jit, calleeGPR, callLinkInfoGPR);
+
+    return CallLinkInfo::emitDataICFastPath(jit, calleeGPR, callLinkInfoGPR);
+}
+
+MacroAssembler::JumpList CallLinkInfo::emitTailCallFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, GPRReg calleeGPR, GPRReg callLinkInfoGPR, ScopedLambda<void()>&& prepareForTailCall)
+{
+    if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo))
+        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitTailCallFastPath(jit, calleeGPR, callLinkInfoGPR, WTFMove(prepareForTailCall));
+
+    return CallLinkInfo::emitTailCallDataICFastPath(jit, calleeGPR, callLinkInfoGPR, WTFMove(prepareForTailCall));
+}
+
+void CallLinkInfo::emitSlowPath(VM& vm, CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, GPRReg callLinkInfoGPR)
+{
+    if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo)) {
+        std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitSlowPath(vm, jit);
+        return;
+    }
+    emitDataICSlowPath(vm, jit, callLinkInfoGPR);
 }
 
 CCallHelpers::JumpList OptimizingCallLinkInfo::emitFastPath(CCallHelpers& jit, GPRReg calleeGPR, GPRReg callLinkInfoGPR)
@@ -565,6 +584,27 @@ void OptimizingCallLinkInfo::setDirectCallTarget(CodeBlock* codeBlock, CodeLocat
     MacroAssembler::repatchNearCall(m_callLocation, target);
     MacroAssembler::repatchPointer(u.codeIC.m_codeBlockLocation, codeBlock);
 }
+
+void OptimizingCallLinkInfo::setDirectCallMaxArgumentCountIncludingThis(unsigned value)
+{
+    RELEASE_ASSERT(isDirect());
+    RELEASE_ASSERT(value);
+    m_maxArgumentCountIncludingThisForDirectCall = value;
+}
+
+#if ENABLE(DFG_JIT)
+void OptimizingCallLinkInfo::initializeFromDFGUnlinkedCallLinkInfo(VM& vm, const DFG::UnlinkedCallLinkInfo& unlinkedCallLinkInfo)
+{
+    m_doneLocation = unlinkedCallLinkInfo.doneLocation;
+    setSlowPathCallDestination(vm.getCTILinkCall().code());
+    m_codeOrigin = unlinkedCallLinkInfo.codeOrigin;
+    m_callType = unlinkedCallLinkInfo.callType;
+    m_calleeGPR = unlinkedCallLinkInfo.calleeGPR;
+    m_callLinkInfoGPR = unlinkedCallLinkInfo.callLinkInfoGPR;
+    if (unlinkedCallLinkInfo.m_frameShuffleData)
+        m_frameShuffleData = makeUnique<CallFrameShuffleData>(*unlinkedCallLinkInfo.m_frameShuffleData);
+}
+#endif
 
 #endif
 

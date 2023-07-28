@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingQuirks.h"
 
 namespace WebCore {
@@ -38,7 +36,7 @@ class TableFormattingQuirks : public FormattingQuirks {
 public:
     TableFormattingQuirks(const TableFormattingContext&);
 
-    static bool shouldIgnoreChildContentVerticalMargin(const ContainerBox&);
+    static bool shouldIgnoreChildContentVerticalMargin(const ElementBox&);
     LayoutUnit heightValueOfNearestContainingBlockWithFixedHeight(const Box&) const final;
 
 private:
@@ -51,4 +49,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_QUIRKS(TableFormattingQuirks, isTableFormattingQuirks())
 
-#endif

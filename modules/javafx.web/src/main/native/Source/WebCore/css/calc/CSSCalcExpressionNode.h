@@ -27,13 +27,16 @@
 #pragma once
 
 #include "CalculationCategory.h"
-#include "CalculationValue.h"
-#include <wtf/RefCounted.h>
 #include <wtf/Forward.h>
+#include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 class CSSToLengthConversionData;
+class CalcExpressionNode;
+
+struct ComputedStyleDependencies;
 
 enum CSSPropertyID : uint16_t;
 
@@ -57,10 +60,8 @@ public:
     virtual Type type() const = 0;
     virtual CSSUnitType primitiveType() const = 0;
 
-    virtual void collectDirectComputationalDependencies(HashSet<CSSPropertyID>&) const = 0;
-    virtual void collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>&) const = 0;
+    virtual void collectComputedStyleDependencies(ComputedStyleDependencies&) const = 0;
     virtual bool convertingToLengthRequiresNonNullStyle(int lengthConversion) const = 0;
-
 
     CalculationCategory category() const { return m_category; }
 

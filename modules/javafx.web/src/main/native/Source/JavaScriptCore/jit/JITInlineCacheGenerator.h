@@ -57,7 +57,7 @@ using CompileTimeStructureStubInfo = std::variant<StructureStubInfo*, BaselineUn
 
 class JITInlineCacheGenerator {
 protected:
-    JITInlineCacheGenerator() { }
+    JITInlineCacheGenerator() = default;
     JITInlineCacheGenerator(CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, AccessType);
 
 public:
@@ -84,7 +84,7 @@ public:
     unsigned m_unlinkedStubInfoConstantIndex { std::numeric_limits<unsigned>::max() };
 
     template<typename StubInfo>
-    static void setUpStubInfoImpl(StubInfo& stubInfo, AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters)
+    static void setUpStubInfoImpl(StubInfo& stubInfo, AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters)
     {
         stubInfo.accessType = accessType;
         if constexpr (std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
@@ -94,7 +94,7 @@ public:
         } else {
             stubInfo.codeOrigin = codeOrigin;
             stubInfo.callSiteIndex = callSiteIndex;
-            stubInfo.usedRegisters = usedRegisters;
+            stubInfo.usedRegisters = usedRegisters.buildScalarRegisterSet();
             stubInfo.hasConstantIdentifier = true;
         }
     }
@@ -111,7 +111,7 @@ public:
 
 class JITByIdGenerator : public JITInlineCacheGenerator {
 protected:
-    JITByIdGenerator() { }
+    JITByIdGenerator() = default;
 
     JITByIdGenerator(
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, AccessType,
@@ -129,7 +129,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfoImpl(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
@@ -164,10 +164,10 @@ public:
 
 class JITGetByIdGenerator final : public JITByIdGenerator {
 public:
-    JITGetByIdGenerator() { }
+    JITGetByIdGenerator() = default;
 
     JITGetByIdGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR, AccessType);
 
     void generateFastPath(CCallHelpers&, GPRReg scratchGPR);
@@ -178,7 +178,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR)
     {
         JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
@@ -190,10 +190,10 @@ private:
 
 class JITGetByIdWithThisGenerator final : public JITByIdGenerator {
 public:
-    JITGetByIdWithThisGenerator() { }
+    JITGetByIdWithThisGenerator() = default;
 
     JITGetByIdWithThisGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs value, JSValueRegs base, JSValueRegs thisRegs, GPRReg stubInfoGPR);
 
     void generateFastPath(CCallHelpers&, GPRReg scratchGPR);
@@ -204,7 +204,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs valueRegs, JSValueRegs baseRegs, JSValueRegs thisRegs, GPRReg stubInfoGPR)
     {
         JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
@@ -223,7 +223,7 @@ public:
     JITPutByIdGenerator() = default;
 
     JITPutByIdGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR, GPRReg scratch, ECMAMode, PutKind);
 
     void generateFastPath(CCallHelpers&, GPRReg scratchGPR, GPRReg scratch2GPR);
@@ -236,12 +236,12 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR, GPRReg scratchGPR, ECMAMode ecmaMode, PutKind putKind)
     {
         JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>)
-            stubInfo.usedRegisters.clear(scratchGPR);
+            stubInfo.usedRegisters.remove(scratchGPR);
         else
             UNUSED_PARAM(scratchGPR);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, StructureStubInfo>) {
@@ -264,7 +264,7 @@ public:
     JITPutByValGenerator() = default;
 
     JITPutByValGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSet& usedRegisters,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
         JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg arrayProfileGPR, GPRReg stubInfoGPR, PutKind, ECMAMode, PrivateFieldPutKind);
 
     CCallHelpers::Jump slowPathJump() const
@@ -279,7 +279,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs valueRegs, GPRReg arrayProfileGPR, GPRReg stubInfoGPR, PutKind putKind, ECMAMode ecmaMode, PrivateFieldPutKind privateFieldPutKind)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
@@ -325,10 +325,10 @@ public:
 class JITDelByValGenerator final : public JITInlineCacheGenerator {
     using Base = JITInlineCacheGenerator;
 public:
-    JITDelByValGenerator() { }
+    JITDelByValGenerator() = default;
 
     JITDelByValGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
@@ -344,7 +344,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
@@ -373,10 +373,10 @@ public:
 class JITDelByIdGenerator final : public JITInlineCacheGenerator {
     using Base = JITInlineCacheGenerator;
 public:
-    JITDelByIdGenerator() { }
+    JITDelByIdGenerator() = default;
 
     JITDelByIdGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs result, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
@@ -392,7 +392,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
@@ -420,10 +420,10 @@ public:
 class JITInByValGenerator : public JITInlineCacheGenerator {
     using Base = JITInlineCacheGenerator;
 public:
-    JITInByValGenerator() { }
+    JITInByValGenerator() = default;
 
     JITInByValGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSet& usedRegisters,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
         JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
@@ -439,7 +439,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
@@ -467,10 +467,10 @@ public:
 
 class JITInByIdGenerator final : public JITByIdGenerator {
 public:
-    JITInByIdGenerator() { }
+    JITInByIdGenerator() = default;
 
     JITInByIdGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR);
 
     void generateFastPath(CCallHelpers&, GPRReg scratchGPR);
@@ -481,7 +481,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR)
     {
         JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
@@ -491,10 +491,10 @@ public:
 class JITInstanceOfGenerator final : public JITInlineCacheGenerator {
 public:
     using Base = JITInlineCacheGenerator;
-    JITInstanceOfGenerator() { }
+    JITInstanceOfGenerator() = default;
 
     JITInstanceOfGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, GPRReg result,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, GPRReg result,
         GPRReg value, GPRReg prototype, GPRReg stubInfoGPR,
         bool prototypeIsKnownObject = false);
 
@@ -510,7 +510,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         GPRReg resultGPR, GPRReg valueGPR, GPRReg prototypeGPR, GPRReg stubInfoGPR, bool prototypeIsKnownObject)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
@@ -525,7 +525,7 @@ public:
             stubInfo.m_valueTagGPR = InvalidGPRReg;
             stubInfo.m_extraTagGPR = InvalidGPRReg;
 #endif
-            stubInfo.usedRegisters.clear(resultGPR);
+            stubInfo.usedRegisters.remove(resultGPR);
             stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(valueGPR);
@@ -541,10 +541,10 @@ public:
 class JITGetByValGenerator final : public JITInlineCacheGenerator {
     using Base = JITInlineCacheGenerator;
 public:
-    JITGetByValGenerator() { }
+    JITGetByValGenerator() = default;
 
     JITGetByValGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSet& usedRegisters,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
         JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
@@ -562,7 +562,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
@@ -591,13 +591,68 @@ public:
     CCallHelpers::PatchableJump m_slowPathJump;
 };
 
+class JITGetByValWithThisGenerator final : public JITInlineCacheGenerator {
+    using Base = JITInlineCacheGenerator;
+public:
+    JITGetByValWithThisGenerator() = default;
+
+    JITGetByValWithThisGenerator(
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
+        JSValueRegs base, JSValueRegs property, JSValueRegs thisRegs, JSValueRegs result, GPRReg stubInfoGPR);
+
+    CCallHelpers::Jump slowPathJump() const
+    {
+        ASSERT(m_slowPathJump.m_jump.isSet());
+        return m_slowPathJump.m_jump;
+    }
+
+    void finalize(LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
+
+    void generateFastPath(CCallHelpers&);
+
+    void generateEmptyPath(CCallHelpers&);
+
+    template<typename StubInfo>
+    static void setUpStubInfo(StubInfo& stubInfo,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs thisRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
+    {
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
+            stubInfo.m_baseGPR = baseRegs.payloadGPR();
+            stubInfo.m_extraGPR = thisRegs.payloadGPR();
+            stubInfo.m_valueGPR = resultRegs.payloadGPR();
+            stubInfo.m_extra2GPR = propertyRegs.payloadGPR();
+            stubInfo.m_stubInfoGPR = stubInfoGPR;
+#if USE(JSVALUE32_64)
+            stubInfo.m_baseTagGPR = baseRegs.tagGPR();
+            stubInfo.m_valueTagGPR = resultRegs.tagGPR();
+            stubInfo.m_extraTagGPR = thisRegs.tagGPR();
+            stubInfo.m_extra2TagGPR = propertyRegs.tagGPR();
+#endif
+            stubInfo.hasConstantIdentifier = false;
+        } else {
+            UNUSED_PARAM(baseRegs);
+            UNUSED_PARAM(propertyRegs);
+            UNUSED_PARAM(thisRegs);
+            UNUSED_PARAM(resultRegs);
+            UNUSED_PARAM(stubInfoGPR);
+        }
+    }
+
+    JSValueRegs m_base;
+    JSValueRegs m_result;
+
+    CCallHelpers::PatchableJump m_slowPathJump;
+};
+
 class JITPrivateBrandAccessGenerator final : public JITInlineCacheGenerator {
     using Base = JITInlineCacheGenerator;
 public:
-    JITPrivateBrandAccessGenerator() { }
+    JITPrivateBrandAccessGenerator() = default;
 
     JITPrivateBrandAccessGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSet& usedRegisters,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
         JSValueRegs base, JSValueRegs brand, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
@@ -613,7 +668,7 @@ public:
 
     template<typename StubInfo>
     static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSet& usedRegisters,
+        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs brandRegs, GPRReg stubInfoGPR)
     {
         JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);

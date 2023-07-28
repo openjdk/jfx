@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ContentSecurityPolicy.h"
+#include "FrameIdentifier.h"
 #include "ShouldRelaxThirdPartyCookieBlocking.h"
 #include <pal/SessionID.h>
 #include <wtf/Forward.h>
@@ -51,6 +52,7 @@ class ApplicationCacheStorage;
 class AttachmentElementClient;
 class AuthenticatorCoordinatorClient;
 class BackForwardClient;
+class BadgeClient;
 class BroadcastChannelRegistry;
 class CacheStorageProvider;
 class ChromeClient;
@@ -66,9 +68,9 @@ class MediaRecorderProvider;
 class ModelPlayerProvider;
 class PaymentCoordinatorClient;
 class PerformanceLoggingClient;
-class PermissionController;
 class PluginInfoProvider;
 class ProgressTrackerClient;
+class ScreenOrientationManager;
 class SocketProvider;
 class SpeechRecognitionProvider;
 class SpeechSynthesisClient;
@@ -84,7 +86,7 @@ class WebRTCProvider;
 class PageConfiguration {
     WTF_MAKE_NONCOPYABLE(PageConfiguration); WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT PageConfiguration(PAL::SessionID, UniqueRef<EditorClient>&&, Ref<SocketProvider>&&, UniqueRef<WebRTCProvider>&&, Ref<CacheStorageProvider>&&, Ref<UserContentProvider>&&, Ref<BackForwardClient>&&, Ref<CookieJar>&&, UniqueRef<ProgressTrackerClient>&&, UniqueRef<FrameLoaderClient>&&, UniqueRef<SpeechRecognitionProvider>&&, UniqueRef<MediaRecorderProvider>&&, Ref<BroadcastChannelRegistry>&&, Ref<PermissionController>&&, UniqueRef<StorageProvider>&&, UniqueRef<ModelPlayerProvider>&&);
+    WEBCORE_EXPORT PageConfiguration(PAL::SessionID, UniqueRef<EditorClient>&&, Ref<SocketProvider>&&, UniqueRef<WebRTCProvider>&&, Ref<CacheStorageProvider>&&, Ref<UserContentProvider>&&, Ref<BackForwardClient>&&, Ref<CookieJar>&&, UniqueRef<ProgressTrackerClient>&&, UniqueRef<FrameLoaderClient>&&, UniqueRef<SpeechRecognitionProvider>&&, UniqueRef<MediaRecorderProvider>&&, Ref<BroadcastChannelRegistry>&&, UniqueRef<StorageProvider>&&, UniqueRef<ModelPlayerProvider>&&, Ref<BadgeClient>&&);
     WEBCORE_EXPORT ~PageConfiguration();
     PageConfiguration(PageConfiguration&&);
 
@@ -134,6 +136,7 @@ public:
     Ref<UserContentProvider> userContentProvider;
     RefPtr<VisitedLinkStore> visitedLinkStore;
     Ref<BroadcastChannelRegistry> broadcastChannelRegistry;
+    WeakPtr<ScreenOrientationManager> screenOrientationManager;
 
 #if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     RefPtr<DeviceOrientationUpdateProvider> deviceOrientationUpdateProvider;
@@ -150,7 +153,6 @@ public:
     ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
     bool httpsUpgradeEnabled { true };
 
-    Ref<PermissionController> permissionController;
     UniqueRef<StorageProvider> storageProvider;
 
     UniqueRef<ModelPlayerProvider> modelPlayerProvider;
@@ -158,7 +160,10 @@ public:
     std::unique_ptr<AttachmentElementClient> attachmentElementClient;
 #endif
 
+    Ref<BadgeClient> badgeClient;
+
     ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension { WebCore::ContentSecurityPolicyModeForExtension::None };
+    std::optional<FrameIdentifier> mainFrameIdentifier;
 };
 
 }

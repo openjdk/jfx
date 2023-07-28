@@ -42,6 +42,7 @@ public:
     {
     }
 
+    ErrorRecoveryMethod errorRecoveryMethod() const { return ErrorRecoveryMethod::NoRecovery; }
 private:
     friend class ResourceErrorBase;
     void doPlatformIsolatedCopy(const ResourceError&) { }

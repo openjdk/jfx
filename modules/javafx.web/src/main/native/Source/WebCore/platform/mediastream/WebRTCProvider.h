@@ -26,6 +26,7 @@
 #pragma once
 
 #include "MDNSRegisterError.h"
+#include "MediaCapabilitiesInfo.h"
 #include "RTCDataChannelRemoteHandlerConnection.h"
 #include "RTCRtpCapabilities.h"
 #include "ScriptExecutionContextIdentifier.h"
@@ -37,7 +38,6 @@
 namespace WebCore {
 
 class ContentType;
-struct MediaCapabilitiesInfo;
 struct VideoConfiguration;
 struct MediaCapabilitiesDecodingInfo;
 struct MediaCapabilitiesEncodingInfo;
@@ -63,8 +63,10 @@ public:
     void createDecodingConfiguration(MediaDecodingConfiguration&&, DecodingConfigurationCallback&&);
     void createEncodingConfiguration(MediaEncodingConfiguration&&, EncodingConfigurationCallback&&);
 
+    void setAV1Support(bool);
     void setH265Support(bool);
     void setVP9Support(bool supportsVP9Profile0, bool supportsVP9Profile2);
+    bool isSupportingAV1() const;
     bool isSupportingH265() const;
     bool isSupportingVP9Profile0() const;
     bool isSupportingVP9Profile2() const;
@@ -99,6 +101,7 @@ protected:
     virtual bool isVPXEncoderSmooth(const VideoConfiguration&);
     virtual bool isH264EncoderSmooth(const VideoConfiguration&);
 
+    bool m_supportsAV1 { false };
     bool m_supportsH265 { false };
     bool m_supportsVP9Profile0 { false };
     bool m_supportsVP9Profile2 { false };

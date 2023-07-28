@@ -36,6 +36,7 @@
 #include "AudioUtilities.h"
 #include "FloatConversion.h"
 #include "ScriptExecutionContext.h"
+#include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -505,7 +506,10 @@ ExceptionOr<void> AudioBufferSourceNode::startPlaying(double when, double grainO
     m_grainOffset = grainOffset;
     m_grainDuration = grainDuration.value_or(0);
     m_wasGrainDurationGiven = !!grainDuration;
-    m_startTime = when;
+
+    // If 0 is passed in for |when| or if the value is less than currentTime, then the sound will start playing immediately.
+    // https://webaudio.github.io/web-audio-api/#dom-audiobuffersourcenode-start-when-offset-duration-when
+    m_startTime = std::max(when, context().currentTime());
 
     adjustGrainParameters();
 

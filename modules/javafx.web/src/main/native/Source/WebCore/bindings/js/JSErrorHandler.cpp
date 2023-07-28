@@ -72,7 +72,11 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
     if (!jsFunction)
         return;
 
-    auto* globalObject = toJSDOMGlobalObject(scriptExecutionContext, isolatedWorld());
+    auto* isolatedWorld = this->isolatedWorld();
+    if (UNLIKELY(!isolatedWorld))
+        return;
+
+    auto* globalObject = toJSDOMGlobalObject(scriptExecutionContext, *isolatedWorld);
     if (!globalObject)
         return;
 
@@ -110,15 +114,15 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
 
         InspectorInstrumentation::didCallFunction(&scriptExecutionContext);
 
-        if (jsFunctionWindow)
-            jsFunctionWindow->setCurrentEvent(savedEvent.get());
-
         if (exception)
-            reportException(globalObject, exception);
+            reportException(jsFunction->globalObject(), exception);
         else {
             if (returnValue.isTrue())
                 event.preventDefault();
         }
+
+        if (jsFunctionWindow)
+            jsFunctionWindow->setCurrentEvent(savedEvent.get());
     }
 }
 

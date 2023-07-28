@@ -29,8 +29,6 @@
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineRunAndOffset.h"
-#include "LegacyInlineElementBox.h"
-#include "LegacyRootInlineBox.h"
 #include "LineSelection.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "RenderBlock.h"
@@ -189,15 +187,15 @@ void RenderLineBreak::collectSelectionGeometries(Vector<SelectionGeometry>& rect
     auto lineBox = run->lineBox();
 
     auto lineSelectionRect = LineSelection::logicalRect(*lineBox);
-    LayoutRect rect = IntRect(run->logicalLeft(), lineSelectionRect.y(), 0, lineSelectionRect.height());
+    LayoutRect rect = IntRect(run->logicalLeftIgnoringInlineDirection(), lineSelectionRect.y(), 0, lineSelectionRect.height());
     if (!lineBox->isHorizontal())
         rect = rect.transposedRect();
 
     if (lineBox->isFirstAfterPageBreak()) {
         if (run->isHorizontal())
-            rect.shiftYEdgeTo(lineBox->top());
+            rect.shiftYEdgeTo(lineBox->logicalTop());
         else
-            rect.shiftXEdgeTo(lineBox->top());
+            rect.shiftXEdgeTo(lineBox->logicalTop());
     }
 
     // FIXME: Out-of-flow positioned line breaks do not follow normal containing block chain.

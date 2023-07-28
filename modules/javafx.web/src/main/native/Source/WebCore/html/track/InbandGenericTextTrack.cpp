@@ -29,7 +29,6 @@
 #if ENABLE(VIDEO)
 
 #include "Document.h"
-#include "HTMLMediaElement.h"
 #include "InbandTextTrackPrivate.h"
 #include "Logging.h"
 #include "TextTrackList.h"
@@ -217,6 +216,7 @@ void InbandGenericTextTrack::newRegionsParsed()
 
 void InbandGenericTextTrack::newStyleSheetsParsed()
 {
+    m_styleSheets = parser().takeStyleSheets();
 }
 
 void InbandGenericTextTrack::fileFailedToParse()

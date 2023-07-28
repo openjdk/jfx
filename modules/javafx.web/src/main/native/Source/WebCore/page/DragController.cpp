@@ -70,6 +70,7 @@
 #include "ImageOverlay.h"
 #include "Model.h"
 #include "MoveSelectionCommand.h"
+#include "MutableStyleProperties.h"
 #include "Page.h"
 #include "Pasteboard.h"
 #include "PlatformKeyboardEvent.h"
@@ -88,7 +89,6 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "SimpleRange.h"
-#include "StyleProperties.h"
 #include "Text.h"
 #include "TextEvent.h"
 #include "VisiblePosition.h"
@@ -128,16 +128,8 @@ bool isDraggableLink(const Element& element)
 
 static PlatformMouseEvent createMouseEvent(const DragData& dragData)
 {
-    bool shiftKey = false;
-    bool ctrlKey = false;
-    bool altKey = false;
-    bool metaKey = false;
-
-    PlatformKeyboardEvent::getCurrentModifierState(shiftKey, ctrlKey, altKey, metaKey);
-
-    return PlatformMouseEvent(dragData.clientPosition(), dragData.globalPosition(),
-                              LeftButton, PlatformEvent::MouseMoved, 0, shiftKey, ctrlKey, altKey,
-                              metaKey, WallTime::now(), ForceAtClick, NoTap);
+    auto modifiers = PlatformKeyboardEvent::currentStateOfModifierKeys();
+    return PlatformMouseEvent(dragData.clientPosition(), dragData.globalPosition(), LeftButton, PlatformEvent::Type::MouseMoved, 0, modifiers, WallTime::now(), ForceAtClick, NoTap);
 }
 
 DragController::DragController(Page& page, std::unique_ptr<DragClient>&& client)
@@ -1218,7 +1210,6 @@ bool DragController::startDrag(Frame& src, const DragState& state, OptionSet<Dra
 #if ENABLE(ATTACHMENT_ELEMENT)
     if (is<HTMLAttachmentElement>(element) && m_dragSourceAction.contains(DragSourceAction::Attachment)) {
         auto& attachment = downcast<HTMLAttachmentElement>(element);
-        auto* attachmentRenderer = attachment.renderer();
 
         src.editor().setIgnoreSelectionChanges(true);
         auto previousSelection = src.selection().selection();
@@ -1242,6 +1233,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, OptionSet<Dra
 
         if (!dragImage) {
             TextIndicatorData textIndicator;
+            auto* attachmentRenderer = dynamicDowncast<RenderAttachment>(attachment.renderer());
             if (attachmentRenderer)
                 attachmentRenderer->setShouldDrawBorder(false);
             dragImage = DragImage { dissolveDragImageToFraction(createDragImageForSelection(src, textIndicator), DragImageAlpha) };
@@ -1508,7 +1500,7 @@ void DragController::insertDroppedImagePlaceholdersAtCaret(const Vector<IntSize>
         image->setAttributeWithoutSynchronization(HTMLNames::widthAttr, AtomString::number(size.width()));
         image->setAttributeWithoutSynchronization(HTMLNames::heightAttr, AtomString::number(size.height()));
         image->setInlineStyleProperty(CSSPropertyMaxWidth, 100, CSSUnitType::CSS_PERCENTAGE);
-        image->setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForCSS(Color::black.colorWithAlphaByte(13)));
+        image->setInlineStyleProperty(CSSPropertyBackgroundColor, serializationForCSS(Color { Color::black.colorWithAlphaByte(13) }));
         image->setIsDroppedImagePlaceholder();
         fragment->appendChild(WTFMove(image));
     }

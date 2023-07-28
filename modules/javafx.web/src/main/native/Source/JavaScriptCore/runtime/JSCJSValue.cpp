@@ -44,16 +44,14 @@ double JSValue::toIntegerPreserveNaN(JSGlobalObject* globalObject) const
     return trunc(toNumber(globalObject));
 }
 
-double JSValue::toLength(JSGlobalObject* globalObject) const
+uint64_t JSValue::toLength(JSGlobalObject* globalObject) const
 {
     // ECMA 7.1.15
     // http://www.ecma-international.org/ecma-262/6.0/#sec-tolength
     double d = toIntegerOrInfinity(globalObject);
     if (d <= 0)
-        return 0.0;
-    if (std::isinf(d))
-        return maxSafeInteger();
-    return std::min(d, maxSafeInteger());
+        return 0;
+    return static_cast<uint64_t>(std::min(d, maxSafeInteger()));
 }
 
 double JSValue::toNumberSlowCase(JSGlobalObject* globalObject) const
@@ -164,13 +162,8 @@ JSObject* JSValue::toObjectSlowCase(JSGlobalObject* globalObject) const
     return nullptr;
 }
 
-JSValue JSValue::toThisSlowCase(JSGlobalObject* globalObject, ECMAMode ecmaMode) const
+JSValue JSValue::toThisSloppySlowCase(JSGlobalObject* globalObject) const
 {
-    ASSERT(!isCell());
-
-    if (ecmaMode.isStrict())
-        return *this;
-
     if (isInt32() || isDouble())
         return constructNumber(globalObject, asValue());
     if (isTrue() || isFalse())
@@ -179,9 +172,8 @@ JSValue JSValue::toThisSlowCase(JSGlobalObject* globalObject, ECMAMode ecmaMode)
     if (isBigInt32())
         return BigIntObject::create(globalObject->vm(), globalObject, *this);
 #endif
-
-    ASSERT(isUndefinedOrNull());
-    return globalObject->globalThis();
+    ASSERT(isCell());
+    return toObject(globalObject);
 }
 
 JSObject* JSValue::synthesizePrototype(JSGlobalObject* globalObject) const
@@ -473,9 +465,11 @@ WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
     String result = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     if (isString())
-        return tryMakeString("\"", result, "\"");
+        return tryMakeString('"', result, '"');
     if (jsDynamicCast<JSArray*>(*this))
-        return tryMakeString("[", result, "]");
+        return tryMakeString('[', result, ']');
+    if (jsDynamicCast<JSBigInt*>(*this))
+        return tryMakeString(result, 'n');
     return result;
 }
 

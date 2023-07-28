@@ -1,7 +1,7 @@
 /*
  * This file is part of the internal font implementation.
  *
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,15 +23,12 @@
 #include "config.h"
 #include "FontPlatformData.h"
 
+#include "Font.h"
 #include "SharedBuffer.h"
 #include <CoreText/CoreText.h>
-#include <wtf/text/StringConcatenateNumbers.h>
-
-#if PLATFORM(COCOA)
 #include <pal/spi/cf/CoreTextSPI.h>
-#else
-#include <pal/spi/win/CoreTextSPIWin.h>
-#endif
+#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -39,11 +36,7 @@ FontPlatformData::FontPlatformData(RetainPtr<CTFontRef>&& font, float size, bool
     : FontPlatformData(size, syntheticBold, syntheticOblique, orientation, widthVariant, textRenderingMode, creationData)
 {
     ASSERT_ARG(font, font);
-#if PLATFORM(WIN)
-    m_ctFont = font;
-#else
     m_font = font;
-#endif
     m_isColorBitmapFont = CTFontGetSymbolicTraits(font.get()) & kCTFontColorGlyphsTrait;
     m_isSystemFont = WebCore::isSystemFont(font.get());
     auto variations = adoptCF(static_cast<CFDictionaryRef>(CTFontCopyAttribute(font.get(), kCTFontVariationAttribute)));
@@ -72,7 +65,6 @@ CTFontRef FontPlatformData::registeredFont() const
     return nullptr;
 }
 
-#if PLATFORM(COCOA)
 inline int mapFontWidthVariantToCTFeatureSelector(FontWidthVariant variant)
 {
     switch (variant) {
@@ -98,11 +90,11 @@ static RetainPtr<CFDictionaryRef> cascadeToLastResortAttributesDictionary()
     auto lastResort = adoptCF(CTFontDescriptorCreateWithNameAndSize(CFSTR("LastResort"), 0));
 
     CFTypeRef descriptors[] = { lastResort.get() };
-    RetainPtr<CFArrayRef> array = adoptCF(CFArrayCreate(kCFAllocatorDefault, descriptors, WTF_ARRAY_LENGTH(descriptors), &kCFTypeArrayCallBacks));
+    RetainPtr<CFArrayRef> array = adoptCF(CFArrayCreate(kCFAllocatorDefault, descriptors, std::size(descriptors), &kCFTypeArrayCallBacks));
 
     CFTypeRef keys[] = { kCTFontCascadeListAttribute };
     CFTypeRef values[] = { array.get() };
-    return adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+    return adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, std::size(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 }
 
 static CTFontDescriptorRef cascadeToLastResortAndVariationsFontDescriptor()
@@ -138,7 +130,6 @@ CTFontRef FontPlatformData::ctFont() const
 
     return m_ctFont.get();
 }
-#endif
 
 RetainPtr<CFTypeRef> FontPlatformData::objectForEqualityCheck(CTFontRef ctFont)
 {
@@ -181,6 +172,21 @@ String FontPlatformData::familyName() const
     if (auto platformFont = ctFont())
         return adoptCF(CTFontCopyFamilyName(platformFont)).get();
     return { };
+}
+
+FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source, float size)
+{
+    FontPlatformData copy(source);
+    copy.updateSize(size);
+    return copy;
+}
+
+void FontPlatformData::updateSize(float size)
+{
+    m_size = size;
+    ASSERT(m_font.get());
+    m_font = adoptCF(CTFontCreateCopyWithAttributes(m_font.get(), m_size, nullptr, nullptr));
+    m_ctFont = nullptr;
 }
 
 } // namespace WebCore

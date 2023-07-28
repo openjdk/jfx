@@ -201,7 +201,7 @@ JLObject URLLoader::load(bool asynchronous,
             (jstring) request.url().string().toJavaString(env),
             (jstring) request.httpMethod().toJavaString(env),
             (jstring) headerString.toJavaString(env),
-            (jobjectArray) toJava(request.httpBody()),
+            (jobjectArray) toJava(request.httpBody().get()),
             ptr_to_jlong(target));
     WTF::CheckAndClearException(env);
 
@@ -365,6 +365,7 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
 
 void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
+    UNUSED_PARAM(length);
     m_data.append(*data->data());
 }
 

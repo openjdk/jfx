@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -26,6 +26,7 @@
 #include "JSGlobalObjectFunctions.h"
 
 #include "CallFrame.h"
+#include "ImportMap.h"
 #include "IndirectEvalExecutable.h"
 #include "InlineCallFrame.h"
 #include "Interpreter.h"
@@ -412,6 +413,15 @@ double jsToNumber(StringView s)
         return PNaN;
     }
 
+    if (size == 2 && s[0] == '-') {
+        UChar c = s[1];
+        if (c == '0')
+            return -0.0;
+        if (isASCIIDigit(c))
+            return -static_cast<int32_t>(c - '0');
+        return PNaN;
+    }
+
     if (s.is8Bit())
         return toDouble(s.characters8(), size);
     return toDouble(s.characters16(), size);
@@ -499,7 +509,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     if (!eval)
         return encodedJSValue();
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(vm.interpreter.execute(eval, globalObject, globalObject->globalThis(), globalObject->globalScope())));
+    RELEASE_AND_RETURN(scope, JSValue::encode(vm.interpreter.executeEval(eval, globalObject, globalObject->globalThis(), globalObject->globalScope())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncParseInt, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -507,21 +517,9 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseInt, (JSGlobalObject* globalObject, Call
     JSValue value = callFrame->argument(0);
     JSValue radixValue = callFrame->argument(1);
 
-    // Optimized handling for numbers:
-    // If the argument is 0 or a number in range 10^-6 <= n < INT_MAX+1, then parseInt
-    // results in a truncation to integer. In the case of -0, this is converted to 0.
-    //
-    // This is also a truncation for values in the range INT_MAX+1 <= n < 10^21,
-    // however these values cannot be trivially truncated to int since 10^21 exceeds
-    // even the int64_t range. Negative numbers are a little trickier, the case for
-    // values in the range -10^21 < n <= -1 are similar to those for integer, but
-    // values in the range -1 < n <= -10^-6 need to truncate to -0, not 0.
-    static const double tenToTheMinus6 = 0.000001;
-    static const double intMaxPlusOne = 2147483648.0;
-    if (value.isNumber()) {
-        double n = value.asNumber();
-        if (((n < intMaxPlusOne && n >= tenToTheMinus6) || !n) && radixValue.isUndefinedOrNull())
-            return JSValue::encode(jsNumber(static_cast<int32_t>(n)));
+    if (value.isNumber() && radixValue.isUndefinedOrNull()) {
+        if (auto result = parseIntDouble(value.asNumber()))
+            return JSValue::encode(jsNumber(result.value()));
     }
 
     // If ToString throws, we shouldn't call ToInt32.
@@ -813,6 +811,15 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncBuiltinDescribe, (JSGlobalObject* globalObjec
     return JSValue::encode(jsString(globalObject->vm(), toString(callFrame->argument(0))));
 }
 
+JSC_DEFINE_HOST_FUNCTION(globalFuncImportMapStatus, (JSGlobalObject* globalObject, CallFrame*))
+{
+    // https://wicg.github.io/import-maps/#integration-wait-for-import-maps
+    globalObject->importMap().setAcquiringImportMaps();
+    if (auto* promise = globalObject->importMapStatusPromise())
+        return JSValue::encode(promise);
+    return JSValue::encode(jsUndefined());
+}
+
 JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -828,7 +835,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, 
 
     // We always specify parameters as undefined. Once dynamic import() starts accepting fetching parameters,
     // we should retrieve this from the arguments.
-    JSValue parameters = jsUndefined();
+    JSValue parameters = callFrame->argument(1);
     auto* internalPromise = globalObject->moduleLoader()->importModule(globalObject, specifier, parameters, sourceOrigin);
     RETURN_IF_EXCEPTION(scope, JSValue::encode(promise->rejectWithCaughtException(globalObject, scope)));
 
@@ -862,6 +869,8 @@ static CodeBlock* getCallerCodeBlock(CallFrame* callFrame)
     CodeOrigin codeOrigin = callerFrame->codeOrigin();
     if (codeOrigin && codeOrigin.inlineCallFrame())
         return baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame());
+    if (callerFrame->isWasmFrame())
+        return nullptr;
     return callerFrame->codeBlock();
 }
 

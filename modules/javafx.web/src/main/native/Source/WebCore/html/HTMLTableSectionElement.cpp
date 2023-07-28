@@ -25,6 +25,7 @@
 #include "config.h"
 #include "HTMLTableSectionElement.h"
 
+#include "ElementChildIterator.h"
 #include "GenericCachedHTMLCollection.h"
 #include "HTMLNames.h"
 #include "HTMLTableRowElement.h"
@@ -50,7 +51,7 @@ Ref<HTMLTableSectionElement> HTMLTableSectionElement::create(const QualifiedName
     return adoptRef(*new HTMLTableSectionElement(tagName, document));
 }
 
-const StyleProperties* HTMLTableSectionElement::additionalPresentationalHintStyle() const
+const MutableStyleProperties* HTMLTableSectionElement::additionalPresentationalHintStyle() const
 {
     auto table = findParentTable();
     if (!table)
@@ -58,7 +59,7 @@ const StyleProperties* HTMLTableSectionElement::additionalPresentationalHintStyl
     return table->additionalGroupStyle(true);
 }
 
-ExceptionOr<Ref<HTMLElement>> HTMLTableSectionElement::insertRow(int index)
+ExceptionOr<Ref<HTMLTableRowElement>> HTMLTableSectionElement::insertRow(int index)
 {
     if (index < -1)
         return Exception { IndexSizeError };
@@ -74,7 +75,7 @@ ExceptionOr<Ref<HTMLElement>> HTMLTableSectionElement::insertRow(int index)
         result = insertBefore(row, index < 1 ? firstChild() : children->item(index));
     if (result.hasException())
         return result.releaseException();
-    return Ref<HTMLElement> { WTFMove(row) };
+    return row;
 }
 
 ExceptionOr<void> HTMLTableSectionElement::deleteRow(int index)

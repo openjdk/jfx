@@ -12,6 +12,12 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
       list(APPEND _sourceListFileTruePaths "${CMAKE_CURRENT_SOURCE_DIR}/${_sourcesListFile}")
     endforeach ()
 
+    set(gusb_args --derived-sources-path ${_derivedSourcesPath} --source-tree-path ${CMAKE_CURRENT_SOURCE_DIR})
+    # Windows needs a larger bundle size because that helps keep WebCore.lib's size below the 4GB maximum in debug builds.
+    if (MSVC AND ${_framework} STREQUAL "WebCore" AND ${_framework}_LIBRARY_TYPE STREQUAL "STATIC")
+        list(APPEND gusb_args --max-bundle-size 16)
+    endif ()
+
     if (ENABLE_UNIFIED_BUILDS)
         execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
             "--derived-sources-path" "${_derivedSourcesPath}"
@@ -90,6 +96,7 @@ macro(WEBKIT_ADD_SOURCE_DEPENDENCIES _source _deps)
     unset(_tmp)
 endmacro()
 
+
 macro(WEBKIT_ADD_PRECOMPILED_HEADER _header _cpp _source)
     if (MSVC)
         get_filename_component(PrecompiledBasename ${_cpp} NAME_WE)
@@ -125,6 +132,16 @@ macro(WEBKIT_FRAMEWORK_DECLARE _target)
     add_library(${_target} ${${_target}_LIBRARY_TYPE} "${CMAKE_BINARY_DIR}/cmakeconfig.h")
 endmacro()
 
+macro(WEBKIT_LIBRARY_DECLARE _target)
+    # add_library() without any source files triggers CMake warning
+    # Addition of dummy "source" file does not result in any changes in generated build.ninja file
+    add_library(${_target} ${${_target}_LIBRARY_TYPE} "${CMAKE_BINARY_DIR}/cmakeconfig.h")
+
+    if (${_target}_LIBRARY_TYPE STREQUAL "OBJECT")
+        list(APPEND ${_target}_INTERFACE_LIBRARIES $<TARGET_OBJECTS:${_target}>)
+    endif ()
+endmacro()
+
 macro(WEBKIT_EXECUTABLE_DECLARE _target)
     add_executable(${_target} "${CMAKE_BINARY_DIR}/cmakeconfig.h")
 endmacro()
@@ -139,9 +156,24 @@ macro(_WEBKIT_TARGET _target_logical_name _target_cmake_name)
         ${${_target_logical_name}_HEADERS}
         ${${_target_logical_name}_SOURCES}
     )
+
+    if (PLAYSTATION AND CMAKE_GENERATOR MATCHES "Visual Studio")
+        set(${_target_logical_name}_SOURCES_C ${${_target_logical_name}_SOURCES})
+        list(FILTER ${_target_logical_name}_SOURCES_C INCLUDE REGEX "\\.c$")
+        set_source_files_properties(
+            ${${_target_logical_name}_SOURCES_C}
+            PROPERTIES LANGUAGE C
+            COMPILE_OPTIONS --std=gnu17
+        )
+    endif ()
+
     target_include_directories(${_target_cmake_name} PUBLIC "$<BUILD_INTERFACE:${${_target_logical_name}_INCLUDE_DIRECTORIES}>")
     target_include_directories(${_target_cmake_name} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_target_logical_name}_SYSTEM_INCLUDE_DIRECTORIES}>")
     target_include_directories(${_target_cmake_name} PRIVATE "$<BUILD_INTERFACE:${${_target_logical_name}_PRIVATE_INCLUDE_DIRECTORIES}>")
+
+    if (DEVELOPER_MODE_CXX_FLAGS)
+        target_compile_options(${_target_cmake_name} PRIVATE ${DEVELOPER_MODE_CXX_FLAGS})
+    endif ()
 
     target_compile_definitions(${_target_cmake_name} PRIVATE "BUILDING_${_target_logical_name}")
     if (${_target_logical_name}_DEFINITIONS)
@@ -193,7 +225,7 @@ macro(_WEBKIT_TARGET_ANALYZE _target)
     endif ()
 endmacro()
 
-function(_WEBKIT_LINK_FRAMEWORK_INTO target_name framework _public_frameworks_var _private_frameworks_var)
+function(_WEBKIT_TARGET_LINK_FRAMEWORK_INTO target_name framework _public_frameworks_var _private_frameworks_var)
     set_property(GLOBAL PROPERTY ${framework}_LINKED_INTO ${target_name})
 
     get_property(_framework_public_frameworks GLOBAL PROPERTY ${framework}_FRAMEWORKS)
@@ -204,7 +236,7 @@ function(_WEBKIT_LINK_FRAMEWORK_INTO target_name framework _public_frameworks_va
     get_property(_framework_private_frameworks GLOBAL PROPERTY ${framework}_PRIVATE_FRAMEWORKS)
     foreach (dependency IN LISTS _framework_private_frameworks)
         set(${_private_frameworks_var} "${${_private_frameworks_var}};${dependency}" PARENT_SCOPE)
-        _WEBKIT_LINK_FRAMEWORK_INTO(${target_name} ${dependency} ${_public_frameworks_var} ${_private_frameworks_var})
+        _WEBKIT_TARGET_LINK_FRAMEWORK_INTO(${target_name} ${dependency} ${_public_frameworks_var} ${_private_frameworks_var})
     endforeach ()
 endfunction()
 
@@ -233,7 +265,7 @@ macro(_WEBKIT_FRAMEWORK_LINK_FRAMEWORK _target_name)
     if (${_target_name}_LIBRARY_TYPE STREQUAL "SHARED")
         set_property(GLOBAL PROPERTY ${_target_name}_LINKED_INTO ${_target_name})
         foreach (framework IN LISTS _private_frameworks)
-            _WEBKIT_LINK_FRAMEWORK_INTO(${_target_name} ${framework} _public_frameworks _private_frameworks)
+            _WEBKIT_TARGET_LINK_FRAMEWORK_INTO(${_target_name} ${framework} _public_frameworks _private_frameworks)
         endforeach ()
     endif ()
 
@@ -277,11 +309,11 @@ macro(_WEBKIT_FRAMEWORK_LINK_FRAMEWORK _target_name)
     set_property(GLOBAL PROPERTY ${_target_name}_PRIVATE_FRAMEWORKS ${_private_frameworks})
 endmacro()
 
-macro(_WEBKIT_EXECUTABLE_LINK_FRAMEWORK _target)
+macro(_WEBKIT_TARGET_LINK_FRAMEWORK _target)
     foreach (framework IN LISTS ${_target}_FRAMEWORKS)
         get_property(_linked_into GLOBAL PROPERTY ${framework}_LINKED_INTO)
 
-        # See if the executable is linking a framework that the specified framework is already linked into
+        # See if the target is linking a framework that the specified framework is already linked into
         if ((NOT _linked_into) OR (${framework} STREQUAL ${_linked_into}) OR (NOT ${_linked_into} IN_LIST ${_target}_FRAMEWORKS))
             list(APPEND ${_target}_PRIVATE_LIBRARIES WebKit::${framework})
 
@@ -292,6 +324,34 @@ macro(_WEBKIT_EXECUTABLE_LINK_FRAMEWORK _target)
             endif ()
         endif ()
     endforeach ()
+endmacro()
+
+macro(_WEBKIT_LIBRARY_LINK_FRAMEWORK _target)
+    # See if the library is SHARED and if so just link frameworks the same as executables
+    if (${_target}_LIBRARY_TYPE STREQUAL SHARED)
+        _WEBKIT_TARGET_LINK_FRAMEWORK(${_target})
+    else ()
+        # Include the framework headers but don't try and link the frameworks
+        foreach (framework IN LISTS ${_target}_FRAMEWORKS)
+            list(APPEND ${_target}_INCLUDE_DIRECTORIES
+                ${${framework}_FRAMEWORK_HEADERS_DIR}
+                ${${framework}_PRIVATE_FRAMEWORK_HEADERS_DIR}
+            )
+        endforeach ()
+    endif ()
+endmacro()
+
+macro(_WEBKIT_TARGET_INTERFACE _target)
+    add_library(${_target}_PostBuild INTERFACE)
+    target_link_libraries(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_LIBRARIES})
+    target_include_directories(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_INCLUDE_DIRECTORIES})
+    if (${_target}_INTERFACE_DEPENDENCIES)
+        add_dependencies(${_target}_PostBuild ${${_target}_INTERFACE_DEPENDENCIES})
+    endif ()
+    if (NOT ${_target}_LIBRARY_TYPE STREQUAL "SHARED")
+        target_compile_definitions(${_target}_PostBuild INTERFACE "STATICALLY_LINKED_WITH_${_target}")
+    endif ()
+    add_library(WebKit::${_target} ALIAS ${_target}_PostBuild)
 endmacro()
 
 macro(WEBKIT_FRAMEWORK _target)
@@ -316,22 +376,24 @@ macro(WEBKIT_FRAMEWORK _target)
         set_target_properties(${_target} PROPERTIES FRAMEWORK TRUE)
         install(TARGETS ${_target} FRAMEWORK DESTINATION ${LIB_INSTALL_DIR})
     endif ()
+
+    _WEBKIT_TARGET_INTERFACE(${_target})
 endmacro()
 
-# FIXME Move into WEBKIT_FRAMEWORK after all libraries are using this macro
-macro(WEBKIT_FRAMEWORK_TARGET _target)
-    add_library(${_target}_PostBuild INTERFACE)
-    target_link_libraries(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_LIBRARIES})
-    target_include_directories(${_target}_PostBuild INTERFACE ${${_target}_INTERFACE_INCLUDE_DIRECTORIES})
-    add_dependencies(${_target}_PostBuild ${${_target}_INTERFACE_DEPENDENCIES})
-    if (NOT ${_target}_LIBRARY_TYPE STREQUAL "SHARED")
-        target_compile_definitions(${_target}_PostBuild INTERFACE "STATICALLY_LINKED_WITH_${_target}")
+macro(WEBKIT_LIBRARY _target)
+    _WEBKIT_LIBRARY_LINK_FRAMEWORK(${_target})
+    _WEBKIT_TARGET(${_target} ${_target})
+    _WEBKIT_TARGET_ANALYZE(${_target})
+
+    if (${_target}_OUTPUT_NAME)
+        set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${${_target}_OUTPUT_NAME})
     endif ()
-    add_library(WebKit::${_target} ALIAS ${_target}_PostBuild)
+
+    _WEBKIT_TARGET_INTERFACE(${_target})
 endmacro()
 
 macro(WEBKIT_EXECUTABLE _target)
-    _WEBKIT_EXECUTABLE_LINK_FRAMEWORK(${_target})
+    _WEBKIT_TARGET_LINK_FRAMEWORK(${_target})
     _WEBKIT_TARGET(${_target} ${_target})
     _WEBKIT_TARGET_ANALYZE(${_target})
 
@@ -363,7 +425,7 @@ macro(WEBKIT_WRAP_EXECUTABLE _target)
 
     add_library(${_wrapped_target_name} SHARED "${CMAKE_BINARY_DIR}/cmakeconfig.h")
 
-    _WEBKIT_EXECUTABLE_LINK_FRAMEWORK(${_target})
+    _WEBKIT_TARGET_LINK_FRAMEWORK(${_target})
     _WEBKIT_TARGET(${_target} ${_wrapped_target_name})
     _WEBKIT_TARGET_ANALYZE(${_wrapped_target_name})
 
@@ -382,70 +444,6 @@ macro(WEBKIT_WRAP_EXECUTABLE _target)
     set(${_target}_LIBRARIES ${opt_LIBRARIES})
     set(${_target}_DEPENDENCIES ${_wrapped_target_name})
 endmacro()
-
-macro(WEBKIT_CREATE_FORWARDING_HEADER _target_directory _file)
-    get_filename_component(_source_path "${CMAKE_SOURCE_DIR}/Source/" ABSOLUTE)
-    get_filename_component(_absolute "${_file}" ABSOLUTE)
-    get_filename_component(_name "${_file}" NAME)
-    set(_target_filename "${_target_directory}/${_name}")
-
-    # Try to make the path in the forwarding header relative to the Source directory
-    # so that these forwarding headers are compatible with the ones created by the
-    # WebKit2 generate-forwarding-headers script.
-    string(REGEX REPLACE "${_source_path}/" "" _relative ${_absolute})
-
-    set(_content "#include \"${_relative}\"\n")
-
-    if (EXISTS "${_target_filename}")
-        file(READ "${_target_filename}" _old_content)
-    endif ()
-
-    if (NOT _old_content STREQUAL _content)
-        file(WRITE "${_target_filename}" "${_content}")
-    endif ()
-endmacro()
-
-function(WEBKIT_MAKE_FORWARDING_HEADERS framework)
-    set(options FLATTENED)
-    set(oneValueArgs DESTINATION TARGET_NAME)
-    set(multiValueArgs DIRECTORIES FILES)
-    cmake_parse_arguments(opt "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-    set(headers ${opt_FILES})
-    file(MAKE_DIRECTORY ${opt_DESTINATION})
-    foreach (dir IN LISTS opt_DIRECTORIES)
-        file(GLOB files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${dir}/*.h)
-        list(APPEND headers ${files})
-    endforeach ()
-    set(fwd_headers)
-    foreach (header IN LISTS headers)
-        if (IS_ABSOLUTE ${header})
-            set(src_header ${header})
-        else ()
-            set(src_header ${CMAKE_CURRENT_SOURCE_DIR}/${header})
-        endif ()
-        if (opt_FLATTENED)
-            get_filename_component(header_filename ${header} NAME)
-            set(fwd_header ${opt_DESTINATION}/${header_filename})
-        else ()
-            get_filename_component(header_dir ${header} DIRECTORY)
-            file(MAKE_DIRECTORY ${opt_DESTINATION}/${header_dir})
-            set(fwd_header ${opt_DESTINATION}/${header})
-        endif ()
-        add_custom_command(OUTPUT ${fwd_header}
-            COMMAND ${CMAKE_COMMAND} -E copy ${src_header} ${fwd_header}
-            MAIN_DEPENDENCY ${header}
-            VERBATIM
-        )
-        list(APPEND fwd_headers ${fwd_header})
-    endforeach ()
-    if (opt_TARGET_NAME)
-        set(target_name ${opt_TARGET_NAME})
-    else ()
-        set(target_name ${framework}ForwardingHeaders)
-    endif ()
-    add_custom_target(${target_name} DEPENDS ${fwd_headers})
-    add_dependencies(${framework} ${target_name})
-endfunction()
 
 function(WEBKIT_COPY_FILES target_name)
     set(options FLATTENED)

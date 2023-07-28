@@ -56,8 +56,11 @@ public:
     using Init = std::variant<RefPtr<Blob>, RefPtr<ArrayBufferView>, RefPtr<ArrayBuffer>, RefPtr<DOMFormData>, RefPtr<URLSearchParams>, RefPtr<ReadableStream>, String>;
     static ExceptionOr<FetchBody> extract(Init&&, String&);
     FetchBody() = default;
+    FetchBody(FetchBody&&) = default;
+    WEBCORE_EXPORT ~FetchBody();
+    FetchBody& operator=(FetchBody&&) = default;
 
-    WEBCORE_EXPORT static std::optional<FetchBody> fromFormData(ScriptExecutionContext&, FormData&);
+    WEBCORE_EXPORT static std::optional<FetchBody> fromFormData(ScriptExecutionContext&, Ref<FormData>&&);
 
     void loadingFailed(const Exception&);
     void loadingSucceeded(const String& contentType);

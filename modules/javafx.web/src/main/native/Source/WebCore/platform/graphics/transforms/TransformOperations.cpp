@@ -36,6 +36,11 @@ TransformOperations::TransformOperations(bool makeIdentity)
         m_operations.append(IdentityTransformOperation::create());
 }
 
+TransformOperations::TransformOperations(Vector<RefPtr<TransformOperation>>&& operations)
+    : m_operations(WTFMove(operations))
+{
+}
+
 bool TransformOperations::operator==(const TransformOperations& o) const
 {
     if (m_operations.size() != o.m_operations.size())
@@ -106,9 +111,13 @@ TransformOperations TransformOperations::blend(const TransformOperations& from, 
     for (unsigned i = 0; i < maxOperationCount; i++) {
         RefPtr<TransformOperation> fromOperation = (i < fromOperationCount) ? from.operations()[i].get() : nullptr;
         RefPtr<TransformOperation> toOperation = (i < toOperationCount) ? operations()[i].get() : nullptr;
+
+        // If either of the transform list is empty, then we should not attempt to do a matrix blend.
+        if (fromOperationCount && toOperationCount) {
         if ((prefixLength && i >= *prefixLength) || (fromOperation && toOperation && !fromOperation->sharedPrimitiveType(toOperation.get()))) {
             result.operations().append(createBlendedMatrixOperationFromOperationsSuffix(from, i, context, boxSize));
             return result;
+        }
         }
 
         RefPtr<TransformOperation> blendedOperation;

@@ -40,6 +40,7 @@
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "ElementInlines.h"
+#include "ForcedAccessibilityValue.h"
 #include "Frame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
@@ -63,6 +64,7 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StyleScope.h"
+#include "Theme.h"
 #include <pal/text/TextEncoding.h>
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/ContentSearchUtilities.h>
@@ -284,11 +286,11 @@ InspectorPageAgent::ResourceType InspectorPageAgent::inspectorResourceType(const
 {
     if (cachedResource.type() == CachedResource::Type::RawResource) {
         switch (cachedResource.resourceRequest().requester()) {
-        case ResourceRequest::Requester::Fetch:
+        case ResourceRequestRequester::Fetch:
             return InspectorPageAgent::FetchResource;
-        case ResourceRequest::Requester::Main:
+        case ResourceRequestRequester::Main:
             return InspectorPageAgent::DocumentResource;
-        case ResourceRequest::Requester::EventSource:
+        case ResourceRequestRequester::EventSource:
             return InspectorPageAgent::EventSourceResource;
         default:
             return InspectorPageAgent::XHRResource;
@@ -305,9 +307,12 @@ Protocol::Page::ResourceType InspectorPageAgent::cachedResourceTypeJSON(const Ca
 
 Frame* InspectorPageAgent::findFrameWithSecurityOrigin(Page& page, const String& originRawString)
 {
-    for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (frame->document()->securityOrigin().toRawString() == originRawString)
-            return frame;
+    for (AbstractFrame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        if (localFrame->document()->securityOrigin().toRawString() == originRawString)
+            return localFrame;
     }
     return nullptr;
 }
@@ -353,9 +358,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::enable()
     stopwatch.reset();
     stopwatch.start();
 
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-    defaultAppearanceDidChange(m_inspectedPage.defaultUseDarkAppearance());
-#endif
+    defaultUserPreferencesDidChange();
 
     return { };
 }
@@ -370,9 +373,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::disable()
 #endif
     overrideUserAgent(nullString());
     setEmulatedMedia(emptyString());
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-    setForcedAppearance(std::nullopt);
-#endif
+    overridePrefersColorScheme(std::nullopt);
 
     auto& inspectedPageSettings = m_inspectedPage.settings();
     inspectedPageSettings.setAuthorAndUserStylesEnabledInspectorOverride(std::nullopt);
@@ -386,6 +387,8 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::disable()
     inspectedPageSettings.setShowRepaintCounterInspectorOverride(std::nullopt);
     inspectedPageSettings.setWebRTCEncryptionEnabledInspectorOverride(std::nullopt);
     inspectedPageSettings.setWebSecurityEnabledInspectorOverride(std::nullopt);
+    inspectedPageSettings.setForcedPrefersReducedMotionAccessibilityValue(ForcedAccessibilityValue::System);
+    inspectedPageSettings.setForcedPrefersContrastAccessibilityValue(ForcedAccessibilityValue::System);
 
     m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::PrivateClickMeasurementDebugModeEnabled, std::nullopt);
     m_client->setDeveloperPreferenceOverride(InspectorClient::DeveloperPreference::ITPDebugModeEnabled, std::nullopt);
@@ -495,6 +498,66 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::overrideSetting(Protocol::Page
     return { };
 }
 
+Protocol::ErrorStringOr<void> InspectorPageAgent::overrideUserPreference(Protocol::Page::UserPreferenceName preference, std::optional<Protocol::Page::UserPreferenceValue>&& value)
+{
+    switch (preference) {
+    case Protocol::Page::UserPreferenceName::PrefersReducedMotion:
+        overridePrefersReducedMotion(WTFMove(value));
+        return { };
+
+    case Protocol::Page::UserPreferenceName::PrefersContrast:
+        overridePrefersContrast(WTFMove(value));
+        return { };
+
+    case Protocol::Page::UserPreferenceName::PrefersColorScheme:
+        overridePrefersColorScheme(WTFMove(value));
+        return { };
+    }
+
+    ASSERT_NOT_REACHED();
+    return { };
+}
+
+void InspectorPageAgent::overridePrefersReducedMotion(std::optional<Protocol::Page::UserPreferenceValue>&& value)
+{
+    ForcedAccessibilityValue forcedValue = ForcedAccessibilityValue::System;
+
+    if (value == Protocol::Page::UserPreferenceValue::Reduce)
+        forcedValue = ForcedAccessibilityValue::On;
+    else if (value == Protocol::Page::UserPreferenceValue::NoPreference)
+        forcedValue = ForcedAccessibilityValue::Off;
+
+    m_inspectedPage.settings().setForcedPrefersReducedMotionAccessibilityValue(forcedValue);
+    m_inspectedPage.accessibilitySettingsDidChange();
+}
+
+void InspectorPageAgent::overridePrefersContrast(std::optional<Protocol::Page::UserPreferenceValue>&& value)
+{
+    ForcedAccessibilityValue forcedValue = ForcedAccessibilityValue::System;
+
+    if (value == Protocol::Page::UserPreferenceValue::More)
+        forcedValue = ForcedAccessibilityValue::On;
+    else if (value == Protocol::Page::UserPreferenceValue::NoPreference)
+        forcedValue = ForcedAccessibilityValue::Off;
+
+    m_inspectedPage.settings().setForcedPrefersContrastAccessibilityValue(forcedValue);
+    m_inspectedPage.accessibilitySettingsDidChange();
+}
+
+void InspectorPageAgent::overridePrefersColorScheme(std::optional<Protocol::Page::UserPreferenceValue>&& value)
+{
+#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
+    if (!value)
+        m_inspectedPage.setUseDarkAppearanceOverride(std::nullopt);
+    else if (value == Protocol::Page::UserPreferenceValue::Light)
+        m_inspectedPage.setUseDarkAppearanceOverride(false);
+    else if (value == Protocol::Page::UserPreferenceValue::Dark)
+        m_inspectedPage.setUseDarkAppearanceOverride(true);
+#else
+    UNUSED_PARAM(value);
+#endif
+}
+
 static Protocol::Page::CookieSameSitePolicy cookieSameSitePolicyJSON(Cookie::SameSitePolicy policy)
 {
     switch (policy) {
@@ -550,12 +613,15 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Page::Cookie>>> InspectorPag
 {
     ListHashSet<Cookie> allRawCookies;
 
-    for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        Document* document = frame->document();
+    for (AbstractFrame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        auto* document = localFrame->document();
         if (!document || !document->page())
             continue;
 
-        for (auto& url : allResourcesURLsForFrame(frame)) {
+        for (auto& url : allResourcesURLsForFrame(localFrame)) {
             Vector<Cookie> rawCookiesForURLInDocument;
             if (!document->page()->cookieJar().getRawCookies(*document, url, rawCookiesForURLInDocument))
                 continue;
@@ -658,12 +724,18 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setCookie(Ref<JSON::Object>&& 
     if (!cookie)
         return makeUnexpected(errorString);
 
-    for (auto* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (auto* document = frame->document()) {
-            if (auto* page = document->page())
+    for (AbstractFrame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        auto* document = localFrame->document();
+        if (!document)
+            continue;
+        auto* page = document->page();
+        if (!page)
+            continue;
                 page->cookieJar().setRawCookie(*document, cookie.value());
         }
-    }
 
     return { };
 }
@@ -671,12 +743,18 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setCookie(Ref<JSON::Object>&& 
 Protocol::ErrorStringOr<void> InspectorPageAgent::deleteCookie(const String& cookieName, const String& url)
 {
     URL parsedURL({ }, url);
-    for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (auto* document = frame->document()) {
-            if (auto* page = document->page())
+    for (AbstractFrame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        auto* document = localFrame->document();
+        if (!document)
+            continue;
+        auto* page = document->page();
+        if (!page)
+            continue;
                 page->cookieJar().deleteCookie(*document, parsedURL, cookieName, [] { });
         }
-    }
 
     return { };
 }
@@ -769,12 +847,15 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::Page::SearchResult>>> Inspec
     auto searchStringType = (isRegex && *isRegex) ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ContainsString;
     auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(text, caseSensitive && *caseSensitive, searchStringType);
 
-    for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        for (auto* cachedResource : cachedResourcesForFrame(frame)) {
+    for (AbstractFrame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        for (auto* cachedResource : cachedResourcesForFrame(localFrame)) {
             if (auto textContent = InspectorNetworkAgent::textContentForCachedResource(*cachedResource)) {
                 int matchesCount = ContentSearchUtilities::countRegularExpressionMatches(regex, *textContent);
                 if (matchesCount)
-                    result->addItem(buildObjectForSearchResult(frameId(frame), cachedResource->url().string(), matchesCount));
+                    result->addItem(buildObjectForSearchResult(frameId(localFrame), cachedResource->url().string(), matchesCount));
             }
         }
     }
@@ -890,10 +971,57 @@ void InspectorPageAgent::frameClearedScheduledNavigation(Frame& frame)
     m_frontendDispatcher->frameClearedScheduledNavigation(frameId(&frame));
 }
 
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-void InspectorPageAgent::defaultAppearanceDidChange(bool useDarkAppearance)
+void InspectorPageAgent::accessibilitySettingsDidChange()
 {
-    m_frontendDispatcher->defaultAppearanceDidChange(useDarkAppearance ? Protocol::Page::Appearance::Dark : Protocol::Page::Appearance::Light);
+    defaultUserPreferencesDidChange();
+}
+
+void InspectorPageAgent::defaultUserPreferencesDidChange()
+{
+    auto defaultUserPreferences = JSON::ArrayOf<Protocol::Page::UserPreference>::create();
+
+#if USE(NEW_THEME)
+    bool prefersReducedMotion = Theme::singleton().userPrefersReducedMotion();
+#else
+    bool prefersReducedMotion = false;
+#endif
+
+    auto prefersReducedMotionUserPreference = Protocol::Page::UserPreference::create()
+        .setName(Protocol::Page::UserPreferenceName::PrefersReducedMotion)
+        .setValue(prefersReducedMotion ? Protocol::Page::UserPreferenceValue::Reduce : Protocol::Page::UserPreferenceValue::NoPreference)
+        .release();
+
+    defaultUserPreferences->addItem(WTFMove(prefersReducedMotionUserPreference));
+
+#if USE(NEW_THEME)
+    bool prefersContrast = Theme::singleton().userPrefersContrast();
+#else
+    bool prefersContrast = false;
+#endif
+
+    auto prefersContrastUserPreference = Protocol::Page::UserPreference::create()
+        .setName(Protocol::Page::UserPreferenceName::PrefersContrast)
+        .setValue(prefersContrast ? Protocol::Page::UserPreferenceValue::More : Protocol::Page::UserPreferenceValue::NoPreference)
+        .release();
+
+    defaultUserPreferences->addItem(WTFMove(prefersContrastUserPreference));
+
+#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
+    auto prefersColorSchemeUserPreference = Protocol::Page::UserPreference::create()
+        .setName(Protocol::Page::UserPreferenceName::PrefersColorScheme)
+        .setValue(m_inspectedPage.defaultUseDarkAppearance() ? Protocol::Page::UserPreferenceValue::Dark : Protocol::Page::UserPreferenceValue::Light)
+        .release();
+
+    defaultUserPreferences->addItem(WTFMove(prefersColorSchemeUserPreference));
+#endif
+
+    m_frontendDispatcher->defaultUserPreferencesDidChange(WTFMove(defaultUserPreferences));
+}
+
+#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
+void InspectorPageAgent::defaultAppearanceDidChange()
+{
+    defaultUserPreferencesDidChange();
 }
 #endif
 
@@ -917,9 +1045,13 @@ void InspectorPageAgent::didPaint(RenderObject& renderer, const LayoutRect& rect
     FrameView* view = renderer.document().view();
 
     LayoutRect rootRect = absoluteRect;
-    if (!view->frame().isMainFrame()) {
+    auto* localFrame = dynamicDowncast<LocalFrame>(view->frame());
+    if (localFrame && !localFrame->isMainFrame()) {
         IntRect rootViewRect = view->contentsToRootView(snappedIntRect(absoluteRect));
-        rootRect = view->frame().mainFrame().view()->rootViewToContents(rootViewRect);
+        auto* localMainFrame = dynamicDowncast<LocalFrame>(localFrame->mainFrame());
+        if (!localMainFrame)
+            return;
+        rootRect = localMainFrame->view()->rootViewToContents(rootViewRect);
     }
 
     if (m_client->overridesShowPaintRects()) {
@@ -961,7 +1093,7 @@ Ref<Protocol::Page::Frame> InspectorPageAgent::buildObjectForFrame(Frame* frame)
         .setSecurityOrigin(frame->document()->securityOrigin().toRawString())
         .release();
     if (frame->tree().parent())
-        frameObject->setParentId(frameId(frame->tree().parent()));
+        frameObject->setParentId(frameId(dynamicDowncast<LocalFrame>(frame->tree().parent())));
     if (frame->ownerElement()) {
         String name = frame->ownerElement()->getNameAttribute();
         if (name.isEmpty())
@@ -1003,12 +1135,15 @@ Ref<Protocol::Page::FrameResourceTree> InspectorPageAgent::buildObjectForFrameTr
     }
 
     RefPtr<JSON::ArrayOf<Protocol::Page::FrameResourceTree>> childrenArray;
-    for (Frame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+    for (AbstractFrame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         if (!childrenArray) {
             childrenArray = JSON::ArrayOf<Protocol::Page::FrameResourceTree>::create();
             result->setChildFrames(*childrenArray);
         }
-        childrenArray->addItem(buildObjectForFrameTree(child));
+        auto* localChild = dynamicDowncast<LocalFrame>(child);
+        if (!localChild)
+            continue;
+        childrenArray->addItem(buildObjectForFrameTree(localChild));
     }
     return result;
 }
@@ -1018,7 +1153,7 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setEmulatedMedia(const String&
     if (media == m_emulatedMedia)
         return { };
 
-    m_emulatedMedia = media;
+    m_emulatedMedia = AtomString(media);
 
     // FIXME: Schedule a rendering update instead of synchronously updating the layout.
     m_inspectedPage.updateStyleAfterChangeInEnvironment();
@@ -1033,36 +1168,13 @@ Protocol::ErrorStringOr<void> InspectorPageAgent::setEmulatedMedia(const String&
     return { };
 }
 
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-Protocol::ErrorStringOr<void> InspectorPageAgent::setForcedAppearance(std::optional<Protocol::Page::Appearance>&& appearance)
-{
-    if (!appearance) {
-        m_inspectedPage.setUseDarkAppearanceOverride(std::nullopt);
-        return { };
-    }
-
-    switch (*appearance) {
-    case Protocol::Page::Appearance::Light:
-        m_inspectedPage.setUseDarkAppearanceOverride(false);
-        return { };
-
-    case Protocol::Page::Appearance::Dark:
-        m_inspectedPage.setUseDarkAppearanceOverride(true);
-        return { };
-    }
-
-    ASSERT_NOT_REACHED();
-    return { };
-}
-#endif
-
 void InspectorPageAgent::applyUserAgentOverride(String& userAgent)
 {
     if (!m_userAgentOverride.isEmpty())
         userAgent = m_userAgentOverride;
 }
 
-void InspectorPageAgent::applyEmulatedMedia(String& media)
+void InspectorPageAgent::applyEmulatedMedia(AtomString& media)
 {
     if (!m_emulatedMedia.isEmpty())
         media = m_emulatedMedia;

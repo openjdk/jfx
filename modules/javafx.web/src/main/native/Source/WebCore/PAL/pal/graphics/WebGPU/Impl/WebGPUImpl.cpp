@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,10 @@
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
 #include "WebGPUAdapterImpl.h"
+#include "WebGPUCompositorIntegrationImpl.h"
 #include "WebGPUDowncastConvertToBackingContext.h"
+#include "WebGPUPresentationContextDescriptor.h"
+#include "WebGPUPresentationContextImpl.h"
 #include <WebGPU/WebGPUExt.h>
 #include <wtf/BlockPtr.h>
 
@@ -55,9 +58,50 @@ void GPUImpl::requestAdapter(const RequestAdapterOptions& options, CompletionHan
         options.forceFallbackAdapter,
     };
 
-    wgpuInstanceRequestAdapterWithBlock(m_backing, &backingOptions, makeBlockPtr([convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPURequestAdapterStatus, WGPUAdapter adapter, const char*) mutable {
+    wgpuInstanceRequestAdapterWithBlock(m_backing, &backingOptions, makeBlockPtr([convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char*) mutable {
+        if (status == WGPURequestAdapterStatus_Success)
         callback(AdapterImpl::create(adapter, convertToBackingContext));
+        else
+            callback(nullptr);
     }).get());
+}
+
+static WTF::Function<void(CompletionHandler<void()>&&)> convert(WGPUOnSubmittedWorkScheduledCallback&& onSubmittedWorkScheduledCallback)
+{
+    return [onSubmittedWorkScheduledCallback = makeBlockPtr(WTFMove(onSubmittedWorkScheduledCallback))](CompletionHandler<void()>&& completionHandler) {
+        onSubmittedWorkScheduledCallback(makeBlockPtr(WTFMove(completionHandler)).get());
+    };
+}
+
+Ref<PresentationContext> GPUImpl::createPresentationContext(const PresentationContextDescriptor& presentationContextDescriptor)
+{
+    auto& compositorIntegration = m_convertToBackingContext->convertToBacking(presentationContextDescriptor.compositorIntegration);
+
+    auto registerCallbacksBlock = makeBlockPtr([&](WGPURenderBuffersWereRecreatedBlockCallback renderBuffersWereRecreatedCallback, WGPUOnSubmittedWorkScheduledCallback onSubmittedWorkScheduledCallback) {
+        compositorIntegration.registerCallbacks(makeBlockPtr(WTFMove(renderBuffersWereRecreatedCallback)), convert(WTFMove(onSubmittedWorkScheduledCallback)));
+    });
+
+    WGPUSurfaceDescriptorCocoaCustomSurface cocoaSurface {
+        {
+            nullptr,
+            static_cast<WGPUSType>(WGPUSTypeExtended_SurfaceDescriptorCocoaSurfaceBacking),
+        },
+        registerCallbacksBlock.get(),
+    };
+
+    WGPUSurfaceDescriptor surfaceDescriptor {
+        &cocoaSurface.chain,
+        nullptr,
+    };
+
+    auto result = PresentationContextImpl::create(wgpuInstanceCreateSurface(m_backing, &surfaceDescriptor), m_convertToBackingContext);
+    compositorIntegration.setPresentationContext(result);
+    return result;
+}
+
+Ref<CompositorIntegration> GPUImpl::createCompositorIntegration()
+{
+    return CompositorIntegrationImpl::create(m_convertToBackingContext);
 }
 
 } // namespace PAL::WebGPU

@@ -43,8 +43,10 @@ public:
     TextureMapperLayer();
     virtual ~TextureMapperLayer();
 
+#if USE(COORDINATED_GRAPHICS)
     void setID(uint32_t id) { m_id = id; }
     uint32_t id() { return m_id; }
+#endif
 
     const Vector<TextureMapperLayer*>& children() const { return m_children; }
 
@@ -111,7 +113,9 @@ private:
             return m_parent->rootLayer();
         return const_cast<TextureMapperLayer&>(*this);
     }
-    void computeTransformsRecursive();
+
+    struct ComputeTransformData;
+    void computeTransformsRecursive(ComputeTransformData&);
 
     static void sortByZOrder(Vector<TextureMapperLayer* >& array);
 
@@ -133,6 +137,7 @@ private:
     void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
 
     void paintRecursive(TextureMapperPaintOptions&);
+    void paintWith3DRenderingContext(TextureMapperPaintOptions&);
     void paintSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&);
     void paintUsingOverlapRegions(TextureMapperPaintOptions&);
     void paintIntoSurface(TextureMapperPaintOptions&);
@@ -217,8 +222,8 @@ private:
 
     State m_state;
     Nicosia::Animations m_animations;
-    uint32_t m_id { 0 };
 #if USE(COORDINATED_GRAPHICS)
+    uint32_t m_id { 0 };
     RefPtr<Nicosia::AnimatedBackingStoreClient> m_animatedBackingStoreClient;
 #endif
     bool m_isBackdrop { false };

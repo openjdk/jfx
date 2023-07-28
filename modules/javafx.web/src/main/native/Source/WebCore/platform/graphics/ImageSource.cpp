@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ ImageSource::ImageSource(Ref<NativeImage>&& nativeImage)
     m_decodedSize = m_frames[0].frameBytes();
 
     m_size = m_frames[0].size();
-    m_orientation = ImageOrientation(ImageOrientation::None);
+    m_orientation = ImageOrientation(ImageOrientation::Orientation::None);
     m_cachedMetadata.add({ MetadataType::Orientation, MetadataType::Size });
 }
 
@@ -76,9 +76,9 @@ bool ImageSource::ensureDecoderAvailable(FragmentedSharedBuffer* data)
     if (!isDecoderAvailable())
         return false;
 
-    m_decoder->setEncodedDataStatusChangeCallback([weakThis = WeakPtr { *this }] (auto status) {
-        if (weakThis)
-            weakThis->encodedDataStatusChanged(status);
+    m_decoder->setEncodedDataStatusChangeCallback([weakThis = ThreadSafeWeakPtr { *this }] (auto status) {
+        if (RefPtr strongThis = weakThis.get())
+            strongThis->encodedDataStatusChanged(status);
     });
 
     if (auto expectedContentSize = expectedContentLength())
@@ -258,17 +258,12 @@ void ImageSource::setNativeImage(Ref<NativeImage>&& nativeImage)
     frame.m_hasAlpha = frame.m_nativeImage->hasAlpha();
 }
 
-void ImageSource::cacheMetadataAtIndex(size_t index, SubsamplingLevel subsamplingLevel, DecodingStatus decodingStatus)
+void ImageSource::cacheMetadataAtIndex(size_t index, SubsamplingLevel subsamplingLevel)
 {
     ASSERT(index < m_frames.size());
     ImageFrame& frame = m_frames[index];
 
     ASSERT(isDecoderAvailable());
-    if (decodingStatus == DecodingStatus::Invalid)
-        frame.m_decodingStatus = m_decoder->frameIsCompleteAtIndex(index) ? DecodingStatus::Complete : DecodingStatus::Partial;
-    else
-        frame.m_decodingStatus = decodingStatus;
-
     if (frame.hasMetadata())
         return;
 
@@ -289,7 +284,7 @@ void ImageSource::cacheMetadataAtIndex(size_t index, SubsamplingLevel subsamplin
         frame.m_duration = m_decoder->frameDurationAtIndex(index);
 }
 
-void ImageSource::cachePlatformImageAtIndex(PlatformImagePtr&& platformImage, size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& decodingOptions, DecodingStatus decodingStatus)
+void ImageSource::cachePlatformImageAtIndex(PlatformImagePtr&& platformImage, size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& decodingOptions)
 {
     ASSERT(index < m_frames.size());
     ImageFrame& frame = m_frames[index];
@@ -302,16 +297,19 @@ void ImageSource::cachePlatformImageAtIndex(PlatformImagePtr&& platformImage, si
     if (!isInBounds<unsigned>(frameBytes + decodedSize()))
         return;
 
+    auto decodingStatus = m_decoder->frameIsCompleteAtIndex(index) ? DecodingStatus::Complete : DecodingStatus::Partial;
+
     // Move the new image to the cache.
     frame.m_nativeImage = NativeImage::create(WTFMove(platformImage));
     frame.m_decodingOptions = decodingOptions;
-    cacheMetadataAtIndex(index, subsamplingLevel, decodingStatus);
+    frame.m_decodingStatus = decodingStatus;
+    cacheMetadataAtIndex(index, subsamplingLevel);
 
     // Update the observer with the new image frame bytes.
     decodedSizeIncreased(frame.frameBytes());
 }
 
-void ImageSource::cachePlatformImageAtIndexAsync(PlatformImagePtr&& platformImage, size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& decodingOptions, DecodingStatus decodingStatus)
+void ImageSource::cachePlatformImageAtIndexAsync(PlatformImagePtr&& platformImage, size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& decodingOptions)
 {
     if (!isDecoderAvailable())
         return;
@@ -319,7 +317,7 @@ void ImageSource::cachePlatformImageAtIndexAsync(PlatformImagePtr&& platformImag
     ASSERT(index < m_frames.size());
 
     // Clean the old native image and set a new one
-    cachePlatformImageAtIndex(WTFMove(platformImage), index, subsamplingLevel, decodingOptions, decodingStatus);
+    cachePlatformImageAtIndex(WTFMove(platformImage), index, subsamplingLevel, decodingOptions);
     LOG(Images, "ImageSource::%s - %p - url: %s [frame %ld has been cached]", __FUNCTION__, this, sourceURL().string().utf8().data(), index);
 
     // Notify the image with the readiness of the new frame NativeImage.
@@ -390,7 +388,7 @@ void ImageSource::startAsyncDecodingQueue()
                 if (protectedDecodingQueue.ptr() == protectedThis->m_decodingQueue && protectedDecoder.ptr() == protectedThis->m_decoder) {
                     ASSERT(protectedThis->m_frameCommitQueue.first() == frameRequest);
                     protectedThis->m_frameCommitQueue.removeFirst();
-                    protectedThis->cachePlatformImageAtIndexAsync(WTFMove(platformImage), frameRequest.index, frameRequest.subsamplingLevel, frameRequest.decodingOptions, frameRequest.decodingStatus);
+                    protectedThis->cachePlatformImageAtIndexAsync(WTFMove(platformImage), frameRequest.index, frameRequest.subsamplingLevel, frameRequest.decodingOptions);
                 } else
                     LOG(Images, "ImageSource::%s - %p - url: %s [frame %ld will not cached]", __FUNCTION__, protectedThis.ptr(), sourceURL.utf8().data(), frameRequest.index);
             });
@@ -408,11 +406,11 @@ void ImageSource::requestFrameAsyncDecodingAtIndex(size_t index, SubsamplingLeve
         startAsyncDecodingQueue();
 
     ASSERT(index < m_frames.size());
-    DecodingStatus decodingStatus = m_decoder->frameIsCompleteAtIndex(index) ? DecodingStatus::Complete : DecodingStatus::Partial;
 
     LOG(Images, "ImageSource::%s - %p - url: %s [enqueuing frame %ld for decoding]", __FUNCTION__, this, sourceURL().string().utf8().data(), index);
-    m_frameRequestQueue->enqueue({ index, subsamplingLevel, sizeForDrawing, decodingStatus });
-    m_frameCommitQueue.append({ index, subsamplingLevel, sizeForDrawing, decodingStatus });
+    DecodingOptions decodingOptions = { DecodingMode::Asynchronous, sizeForDrawing };
+    m_frameRequestQueue->enqueue({ index, subsamplingLevel, decodingOptions });
+    m_frameCommitQueue.append({ index, subsamplingLevel, decodingOptions });
 }
 
 bool ImageSource::isAsyncDecodingQueueIdle() const
@@ -442,7 +440,7 @@ void ImageSource::stopAsyncDecodingQueue()
     LOG(Images, "ImageSource::%s - %p - url: %s [decoding has been stopped]", __FUNCTION__, this, sourceURL().string().utf8().data());
 }
 
-const ImageFrame& ImageSource::frameAtIndexCacheIfNeeded(size_t index, ImageFrame::Caching caching, const std::optional<SubsamplingLevel>& subsamplingLevel)
+const ImageFrame& ImageSource::frameAtIndexCacheIfNeeded(size_t index, ImageFrame::Caching caching, const std::optional<SubsamplingLevel>& subsamplingLevel, const DecodingOptions& decodingOptions)
 {
     if (index >= m_frames.size())
         return ImageFrame::defaultFrame();
@@ -463,10 +461,11 @@ const ImageFrame& ImageSource::frameAtIndexCacheIfNeeded(size_t index, ImageFram
 
     case ImageFrame::Caching::MetadataAndImage:
         // Cache the image and retrieve the metadata from ImageDecoder only if there was not valid image stored.
-        if (frame.hasFullSizeNativeImage(subsamplingLevel))
+        if (frame.isComplete() && frame.hasFullSizeNativeImage(subsamplingLevel))
             break;
+
         // We have to perform synchronous image decoding in this code.
-        auto platformImage = m_decoder->createFrameImageAtIndex(index, subsamplingLevelValue);
+        auto platformImage = m_decoder->createFrameImageAtIndex(index, subsamplingLevelValue, decodingOptions);
         // Clean the old native image and set a new one.
         cachePlatformImageAtIndex(WTFMove(platformImage), index, subsamplingLevelValue, DecodingOptions(DecodingMode::Synchronous));
         break;
@@ -583,7 +582,7 @@ std::optional<IntSize> ImageSource::densityCorrectedSize(ImageOrientation orient
     if (!size)
         return std::nullopt;
 
-    if (orientation == ImageOrientation::FromImage)
+    if (orientation == ImageOrientation::Orientation::FromImage)
         orientation = this->orientation();
 
     return orientation.usesWidthAsHeight() ? std::optional<IntSize>(size.value().transposedSize()) : size;
@@ -607,7 +606,7 @@ IntSize ImageSource::sourceSize(ImageOrientation orientation)
 #endif
         size = firstFrameMetadataCacheIfNeeded(m_size, MetadataType::Size, &ImageFrame::size, ImageFrame::Caching::Metadata, SubsamplingLevel::Default);
 
-    if (orientation == ImageOrientation::FromImage)
+    if (orientation == ImageOrientation::Orientation::FromImage)
         orientation = this->orientation();
 
     return orientation.usesWidthAsHeight() ? size.transposedSize() : size;
@@ -650,7 +649,7 @@ SubsamplingLevel ImageSource::maximumSubsamplingLevel()
 bool ImageSource::frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(size_t index, const DecodingOptions& decodingOptions)
 {
     auto it = std::find_if(m_frameCommitQueue.begin(), m_frameCommitQueue.end(), [index, &decodingOptions](const ImageFrameRequest& frameRequest) {
-        return frameRequest.index == index && frameRequest.decodingOptions.isAsynchronousCompatibleWith(decodingOptions);
+        return frameRequest.index == index && frameRequest.decodingOptions.isCompatibleWith(decodingOptions);
     });
     return it != m_frameCommitQueue.end();
 }
@@ -712,9 +711,9 @@ RefPtr<NativeImage> ImageSource::frameImageAtIndex(size_t index)
     return frameAtIndex(index).nativeImage();
 }
 
-RefPtr<NativeImage> ImageSource::frameImageAtIndexCacheIfNeeded(size_t index, SubsamplingLevel subsamplingLevel)
+RefPtr<NativeImage> ImageSource::frameImageAtIndexCacheIfNeeded(size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& decodingOptions)
 {
-    return frameAtIndexCacheIfNeeded(index, ImageFrame::Caching::MetadataAndImage, subsamplingLevel).nativeImage();
+    return frameAtIndexCacheIfNeeded(index, ImageFrame::Caching::MetadataAndImage, subsamplingLevel, decodingOptions).nativeImage();
 }
 
 void ImageSource::dump(TextStream& ts)
@@ -725,8 +724,8 @@ void ImageSource::dump(TextStream& ts)
     ts.dumpProperty("solid-color", singlePixelSolidColor());
 
     ImageOrientation orientation = frameOrientationAtIndex(0);
-    if (orientation != ImageOrientation::None)
+    if (orientation != ImageOrientation::Orientation::None)
         ts.dumpProperty("orientation", orientation);
 }
 
-}
+} // namespace WebCore

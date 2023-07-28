@@ -39,9 +39,9 @@ static JGClass jMainThreadCls;
 static jmethodID fwkScheduleDispatchFunctions;
 
 #if OS(UNIX)
-static pthread_t mainThread;
+static pthread_t s_mainThread;
 #elif OS(WINDOWS)
-static ThreadIdentifier mainThread { 0 };
+static ThreadIdentifier s_mainThread { 0 };
 #endif
 
 void scheduleDispatchFunctionsOnMainThread()
@@ -89,9 +89,9 @@ void initializeMainThreadPlatform()
     ASSERT(fwkScheduleDispatchFunctions);
 
 #if OS(UNIX)
-    mainThread = pthread_self();
+    s_mainThread = pthread_self();
 #elif OS(WINDOWS)
-    mainThread = Thread::currentID();
+    s_mainThread = Thread::currentID();
     RunLoop::registerRunLoopMessageWindowClass();
 #endif
 }
@@ -99,12 +99,12 @@ void initializeMainThreadPlatform()
 #if OS(UNIX)
 bool isMainThread()
 {
-    return pthread_equal(pthread_self(), mainThread);
+    return pthread_equal(pthread_self(), s_mainThread);
 }
 #elif OS(WINDOWS)
 bool isMainThread()
 {
-    return mainThread == Thread::currentID();
+    return s_mainThread == Thread::currentID();
 }
 #endif
 

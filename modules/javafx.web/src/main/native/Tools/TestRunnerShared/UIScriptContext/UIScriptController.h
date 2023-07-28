@@ -73,7 +73,7 @@ public:
 
     virtual void doAsyncTask(JSValueRef) { notImplemented(); }
     virtual void doAfterPresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
-    virtual void doAfterNextStablePresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
+    virtual void doAfterNextStablePresentationUpdate(JSValueRef callback) { doAfterPresentationUpdate(callback); }
     virtual void ensurePositionInformationIsUpToDateAt(long, long, JSValueRef callback) { doAsyncTask(callback); }
     virtual void doAfterVisibleContentRectUpdate(JSValueRef callback) { doAsyncTask(callback); }
 
@@ -148,8 +148,11 @@ public:
     virtual double contentOffsetX() const { notImplemented(); return 0; }
     virtual double contentOffsetY() const { notImplemented(); return 0; }
 
+    virtual JSObjectRef adjustedContentInset() const { notImplemented(); return nullptr; }
+
     virtual JSRetainPtr<JSStringRef> scrollingTreeAsText() const { notImplemented(); return nullptr; }
     virtual JSRetainPtr<JSStringRef> uiViewTreeAsText() const { notImplemented(); return nullptr; }
+    virtual JSRetainPtr<JSStringRef> caLayerTreeAsText() const { notImplemented(); return nullptr; }
 
     // Touches
 
@@ -261,6 +264,9 @@ public:
     // Find in Page
 
     virtual void findString(JSStringRef, unsigned long, unsigned long) { notImplemented(); }
+
+    virtual void presentFindNavigator() { notImplemented(); }
+    virtual void dismissFindNavigator() { notImplemented(); }
 
     // Accessibility
 

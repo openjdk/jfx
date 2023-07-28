@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2004-2007, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -356,7 +357,7 @@ bool isAmbiguousBoundaryCharacter(UChar character)
     return character == '\'' || character == '@' || character == rightSingleQuotationMark || character == hebrewPunctuationGershayim;
 }
 
-String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfParagraph, bool endIsEndOfParagraph)
+String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfParagraph, bool shouldEmitNBSPbeforeEnd)
 {
     StringBuilder rebalancedString;
 
@@ -369,7 +370,8 @@ String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfP
             continue;
         }
         LChar selectedWhitespaceCharacter;
-        if (previousCharacterWasSpace || (!i && startIsStartOfParagraph) || (i == length - 1 && endIsEndOfParagraph)) {
+        // We need to ensure there is no next sibling text node. See https://bugs.webkit.org/show_bug.cgi?id=123163
+        if (previousCharacterWasSpace || (!i && startIsStartOfParagraph) || (i == length - 1 && shouldEmitNBSPbeforeEnd)) {
             selectedWhitespaceCharacter = noBreakSpace;
             previousCharacterWasSpace = false;
         } else {
@@ -692,9 +694,8 @@ static Node* previousNodeConsideringAtomicNodes(const Node* node)
             n = n->lastChild();
         return n;
     }
-    if (node->parentNode())
+
         return node->parentNode();
-    return nullptr;
 }
 
 static Node* nextNodeConsideringAtomicNodes(const Node* node)

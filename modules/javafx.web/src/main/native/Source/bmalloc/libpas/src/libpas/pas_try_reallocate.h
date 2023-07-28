@@ -29,6 +29,7 @@
 #include "pas_bitfit_directory.h"
 #include "pas_deallocate.h"
 #include "pas_large_map.h"
+#include "pas_malloc_stack_logging.h"
 #include "pas_reallocate_free_mode.h"
 #include "pas_reallocate_heap_teleport_rule.h"
 #include "pas_try_allocate.h"
@@ -180,8 +181,10 @@ pas_try_reallocate_table_bitfit_case(pas_page_base* page_base,
     result = pas_try_allocate_for_reallocate_and_copy(
         old_heap, heap, (void*)begin, old_size, new_size, teleport_rule,
         allocate_callback, allocate_callback_arg);
-    if (result.begin || free_mode == pas_reallocate_free_always)
+    if (result.begin || free_mode == pas_reallocate_free_always) {
         bitfit_config.specialized_page_deallocate_with_page(page, begin);
+        pas_msl_free_logging((void*)begin); /* This will not go to TLC, thus, we need to record deallocation here. */
+    }
     return result;
 }
 
@@ -330,9 +333,11 @@ pas_try_reallocate(void* old_ptr,
         entry = pas_large_map_find(begin);
 
         if (pas_large_map_entry_is_empty(entry)) {
-            pas_reallocation_did_fail(
-                "Source object not allocated",
-                NULL, heap, old_ptr, 0, new_size);
+            // Check for PGM case
+            if (config.pgm_enabled && pas_probabilistic_guard_malloc_check_exists(begin))
+                entry = pas_probabilistic_guard_malloc_return_as_large_map_entry(begin);
+            else
+                pas_reallocation_did_fail("Source object not allocated", NULL, heap, old_ptr, 0, new_size);
         }
 
         PAS_ASSERT(entry.begin == begin);
@@ -347,8 +352,10 @@ pas_try_reallocate(void* old_ptr,
             source_heap, heap, old_ptr, old_size, new_size, teleport_rule,
             allocate_callback, allocate_callback_arg);
 
-        if (result.begin || free_mode == pas_reallocate_free_always)
+        if (result.begin || free_mode == pas_reallocate_free_always) {
             pas_deallocate_known_large(old_ptr, config.config_ptr);
+            pas_msl_free_logging(old_ptr); /* This will not go to TLC, thus, we need to record deallocation here. */
+        }
 
         return result;
     } }

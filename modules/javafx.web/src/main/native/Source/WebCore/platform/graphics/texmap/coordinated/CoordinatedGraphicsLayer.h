@@ -22,7 +22,6 @@
 
 #if USE(COORDINATED_GRAPHICS)
 
-#include "CoordinatedGraphicsState.h"
 #include "FloatPoint3D.h"
 #include "GraphicsLayer.h"
 #include "GraphicsLayerTransform.h"
@@ -75,7 +74,9 @@ public:
     bool replaceChild(GraphicsLayer*, Ref<GraphicsLayer>&&) override;
     void removeFromParent() override;
     void setEventRegion(EventRegion&&) override;
+#if ENABLE(SCROLLING_THREAD)
     void setScrollingNodeID(ScrollingNodeID) override;
+#endif
     void setPosition(const FloatPoint&) override;
     void syncPosition(const FloatPoint&) override;
     void setAnchorPoint(const FloatPoint3D&) override;
@@ -233,7 +234,7 @@ private:
     RefPtr<NativeImage> m_compositedNativeImage;
 
     Timer m_animationStartedTimer;
-    RunLoop::Timer<CoordinatedGraphicsLayer> m_requestPendingTileCreationTimer;
+    RunLoop::Timer m_requestPendingTileCreationTimer;
     Nicosia::Animations m_animations;
     MonotonicTime m_lastAnimationStartTime;
 

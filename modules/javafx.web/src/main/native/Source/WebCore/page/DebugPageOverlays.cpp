@@ -114,12 +114,15 @@ bool MouseWheelRegionOverlay::updateRegion()
 #else
     auto region = makeUnique<Region>();
 
-    for (const Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->view() || !frame->document())
+    for (const AbstractFrame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        if (!localFrame->view() || !localFrame->document())
             continue;
 
-        auto frameRegion = frame->document()->absoluteRegionForEventTargets(frame->document()->wheelEventTargets());
-        frameRegion.first.translate(toIntSize(frame->view()->contentsToRootView(IntPoint())));
+        auto frameRegion = localFrame->document()->absoluteRegionForEventTargets(localFrame->document()->wheelEventTargets());
+        frameRegion.first.translate(toIntSize(localFrame->view()->contentsToRootView(IntPoint())));
         region->unite(frameRegion.first);
     }
 
@@ -281,7 +284,6 @@ private:
         { "constrain"_s, "Constrain to Regions"_s, true },
         { "clip"_s, "Clip to Regions"_s, true },
         { "wash"_s, "Draw Wash"_s, false },
-        { "contextualColor"_s, "Contextual Color"_s, true },
         { "contextualSize"_s, "Contextual Size"_s, true },
         { "cursor"_s, "Show Cursor"_s, true },
         { "hover"_s, "CSS Hover"_s, false },
@@ -500,11 +502,11 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
             return gradientData;
         };
 
-        auto makeGradient = [&] (bool hasLightBackground, Gradient::RadialData gradientData) {
+        auto makeGradient = [&] (Gradient::RadialData gradientData) {
             auto gradient = Gradient::create(WTFMove(gradientData), { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied });
             if (region && valueForSetting("wash"_s) && valueForSetting("clip"_s)) {
                 gradient->addColorStop({ 0.1, Color(Color::white).colorWithAlpha(0.5) });
-                gradient->addColorStop({ 1, hasLightBackground ? Color(Color::black).colorWithAlpha(0.05) : Color(Color::white).colorWithAlpha(0.1) });
+                gradient->addColorStop({ 1, Color(Color::white).colorWithAlpha(0.1) });
             } else if (!valueForSetting("clip"_s) || !valueForSetting("constrain"_s)) {
                 gradient->addColorStop({ 0.1, Color(Color::white).colorWithAlpha(0.2) });
                 gradient->addColorStop({ 1, Color(Color::white).colorWithAlpha(0) });
@@ -546,18 +548,14 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
             }
         }
 
-        bool hasLightBackground = false;
-        if (!shouldUseBackdropGradient && valueForSetting("contextualColor"_s))
-            hasLightBackground = region->hasLightBackground;
-
         if (shouldClip) {
             for (const auto& path : clipPaths) {
                 float radius = valueForSetting("contextualSize"_s) ? 1.5 * path.boundingRect().size().minDimension() : defaultRadius;
-                context.setFillGradient(makeGradient(hasLightBackground, gradientData(radius)));
+                context.setFillGradient(makeGradient(gradientData(radius)));
                 context.fillPath(path);
             }
         } else {
-            context.setFillGradient(makeGradient(hasLightBackground, gradientData(defaultRadius)));
+            context.setFillGradient(makeGradient(gradientData(defaultRadius)));
             context.fillRect(dirtyRect);
         }
     }
@@ -583,7 +581,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
         if (!rectForSettingAtIndex(i).contains(eventInContentsCoordinates))
             continue;
         cursorToSet = handCursor();
-        if (event.button() == LeftButton && event.type() == PlatformEvent::MousePressed) {
+        if (event.button() == LeftButton && event.type() == PlatformEvent::Type::MousePressed) {
             m_settings[i].value = !m_settings[i].value;
             m_page.forceRepaintAllFrames();
             return true;
@@ -596,7 +594,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
     m_mouseLocationInContentCoordinates = eventInContentsCoordinates;
     overlay.setNeedsDisplay();
 
-    if (event.type() == PlatformEvent::MouseMoved && !event.buttons() && !valueForSetting("hover"_s))
+    if (event.type() == PlatformEvent::Type::MouseMoved && !event.buttons() && !valueForSetting("hover"_s))
         return true;
 
     return false;

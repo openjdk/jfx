@@ -156,7 +156,7 @@ public:
 
     unsigned numParameters() const { return m_numParameters; }
 private:
-    void setNumParameters(unsigned newValue);
+    void setNumParameters(unsigned newValue, bool allocateArgumentValueProfiles);
 public:
 
     unsigned numberOfArgumentsToSkip() const { return m_numberOfArgumentsToSkip; }
@@ -367,8 +367,6 @@ public:
 
     VirtualRegister thisRegister() const { return m_unlinkedCode->thisRegister(); }
 
-    bool usesCallEval() const { return m_unlinkedCode->usesCallEval(); }
-
     void setScopeRegister(VirtualRegister scopeRegister)
     {
         ASSERT(scopeRegister.isLocal() || !scopeRegister.isValid());
@@ -399,13 +397,14 @@ public:
     static ptrdiff_t offsetOfArgumentValueProfiles() { return OBJECT_OFFSETOF(CodeBlock, m_argumentValueProfiles); }
     unsigned numberOfArgumentValueProfiles()
     {
-        ASSERT(m_argumentValueProfiles.size() == static_cast<unsigned>(m_numParameters) || !Options::useJIT());
+        ASSERT(m_argumentValueProfiles.size() == static_cast<unsigned>(m_numParameters) || !Options::useJIT() || !JITCode::isBaselineCode(jitType()));
         return m_argumentValueProfiles.size();
     }
 
     ValueProfile& valueProfileForArgument(unsigned argumentIndex)
     {
         ASSERT(Options::useJIT()); // This is only called from the various JIT compilers or places that first check numberOfArgumentValueProfiles before calling this.
+        ASSERT(JITCode::isBaselineCode(jitType()));
         ValueProfile& result = m_argumentValueProfiles[argumentIndex];
         return result;
     }
@@ -426,7 +425,6 @@ public:
     bool couldTakeSpecialArithFastCase(BytecodeIndex bytecodeOffset);
 
     ArrayProfile* getArrayProfile(const ConcurrentJSLocker&, BytecodeIndex);
-    ArrayProfile* getArrayProfile(BytecodeIndex);
 
     // Exception handling support
 
@@ -524,6 +522,12 @@ public:
 #if ENABLE(JIT)
     SimpleJumpTable& baselineSwitchJumpTable(int tableIndex);
     StringJumpTable& baselineStringSwitchJumpTable(int tableIndex);
+    void setBaselineJITData(std::unique_ptr<BaselineJITData>&& jitData)
+    {
+        ASSERT(!m_jitData);
+        WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
+        m_jitData = jitData.release();
+    }
     BaselineJITData* baselineJITData()
     {
         if (!JITCode::isOptimizingJIT(jitType()))
@@ -535,6 +539,7 @@ public:
     void setDFGJITData(std::unique_ptr<DFG::JITData>&& jitData)
     {
         ASSERT(!m_jitData);
+        WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
         m_jitData = jitData.release();
     }
 
@@ -619,7 +624,7 @@ public:
     void countReoptimization();
 
 #if !ENABLE(C_LOOP)
-    static unsigned numberOfLLIntBaselineCalleeSaveRegisters() { return RegisterSet::llintBaselineCalleeSaveRegisters().numberOfSetRegisters(); }
+    static unsigned numberOfLLIntBaselineCalleeSaveRegisters() { return RegisterSetBuilder::llintBaselineCalleeSaveRegisters().numberOfSetRegisters(); }
     static size_t llintBaselineCalleeSaveSpaceAsVirtualRegisters();
     static size_t calleeSaveSpaceAsVirtualRegisters(const RegisterAtOffsetList&);
 #else
@@ -715,9 +720,10 @@ public:
 #endif
 
     bool shouldOptimizeNow();
-    void updateAllValueProfilePredictions();
+    void updateAllNonLazyValueProfilePredictions(const ConcurrentJSLocker&);
+    void updateAllLazyValueProfilePredictions(const ConcurrentJSLocker&);
     void updateAllArrayProfilePredictions(const ConcurrentJSLocker&);
-    void updateAllArrayPredictions();
+    void updateAllArrayAllocationProfilePredictions();
     void updateAllPredictions();
 
     unsigned frameRegisterCount();
@@ -769,7 +775,15 @@ public:
     // concurrent compilation threads finish what they're doing.
     mutable ConcurrentJSLock m_lock;
 
-    bool m_shouldAlwaysBeInlined; // Not a bitfield because the JIT wants to store to it.
+    bool m_shouldAlwaysBeInlined { true }; // Not a bitfield because the JIT wants to store to it.
+
+#if USE(JSVALUE64)
+    // 64bit environment does not need a lock for ValueProfile operations.
+    NoLockingNecessaryTag valueProfileLock() { return NoLockingNecessary; }
+#else
+    ConcurrentJSLock& valueProfileLock() { return m_lock; }
+#endif
+
     static ptrdiff_t offsetOfShouldAlwaysBeInlined() { return OBJECT_OFFSETOF(CodeBlock, m_shouldAlwaysBeInlined); }
 
 #if ENABLE(JIT)
@@ -867,7 +881,7 @@ private:
 
     double optimizationThresholdScalingFactor();
 
-    void updateAllValueProfilePredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
+    void updateAllNonLazyValueProfilePredictionsAndCountLiveness(const ConcurrentJSLocker&, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 
     Vector<unsigned> setConstantRegisters(const FixedVector<WriteBarrier<Unknown>>& constants, const FixedVector<SourceCodeRepresentation>& constantsSourceCodeRepresentation);
     void initializeTemplateObjects(ScriptExecutable* topLevelExecutable, const Vector<unsigned>& templateObjectIndices);

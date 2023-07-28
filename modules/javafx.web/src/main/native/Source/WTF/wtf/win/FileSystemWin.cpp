@@ -37,6 +37,7 @@
 #include <windows.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/win/WCharStringExtras.h>
@@ -110,6 +111,18 @@ std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
         return std::nullopt;
 
     return getFileSizeFromByHandleFileInformationStructure(fileInformation);
+}
+
+std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
+{
+    // FIXME (246118): Implement this function properly.
+    return std::nullopt;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    // FIXME (246118): Implement this function properly.
+    return true;
 }
 
 std::optional<WallTime> fileCreationTime(const String& path)
@@ -193,8 +206,8 @@ static String cachedStorageDirectory(DWORD pathIdentifier)
 static String generateTemporaryPath(const Function<bool(const String&)>& action)
 {
     wchar_t tempPath[MAX_PATH];
-    int tempPathLength = ::GetTempPathW(WTF_ARRAY_LENGTH(tempPath), tempPath);
-    if (tempPathLength <= 0 || tempPathLength > WTF_ARRAY_LENGTH(tempPath))
+    int tempPathLength = ::GetTempPathW(std::size(tempPath), tempPath);
+    if (tempPathLength <= 0 || tempPathLength > std::size(tempPath))
         return String();
 
     String proposedPath;
@@ -209,7 +222,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
         for (int i = 0; i < randomPartLength; ++i)
             tempFile[i] = validChars[tempFile[i] % (sizeof(validChars) - 1)];
 
-        ASSERT(wcslen(tempFile) == WTF_ARRAY_LENGTH(tempFile) - 1);
+        ASSERT(wcslen(tempFile) == std::size(tempFile) - 1);
 
         proposedPath = pathByAppendingComponent(String(tempPath), String(tempFile));
         if (proposedPath.isEmpty())
@@ -250,7 +263,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
         creationDisposition = OPEN_EXISTING;
         shareMode = FILE_SHARE_READ;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         desiredAccess = GENERIC_WRITE;
         creationDisposition = CREATE_ALWAYS;
         break;
@@ -407,7 +420,7 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
         pageProtection = PAGE_READONLY;
         desiredAccess = FILE_MAP_READ;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         pageProtection = PAGE_READWRITE;
         desiredAccess = FILE_MAP_WRITE;
         break;
