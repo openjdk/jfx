@@ -1802,6 +1802,43 @@ public class Region extends Parent {
         return snapPortionY(value, isSnapToPixel());
     }
 
+    /**
+     * If this region's snapToPixel property is true, returns a value floored
+     * to the nearest pixel in the horizontal direction, else returns the
+     * same value, for any non-negative value.  For negative values returns 0.0.
+     * @param value the space value to be snapped
+     * @return value floored to nearest pixel
+     * @since 22
+     */
+    public double snapInnerSpaceX(double value) {
+        if (value > 0.0) {
+            return snapInnerSpaceX(value, isSnapToPixel());
+        }
+        return 0.0;
+    }
+
+    /**
+     * If this region's snapToPixel property is true, returns a value floored
+     * to the nearest pixel in the vertical direction, else returns the
+     * same value, for any non-negative value.  For negative values returns 0.0.
+     * @param value the space value to be snapped
+     * @return value floored to nearest pixel
+     * @since 22
+     */
+    public double snapInnerSpaceY(double value) {
+        if (value > 0.0) {
+            return snapInnerSpaceY(value, isSnapToPixel());
+        }
+        return 0.0;
+    }
+
+    private double snapInnerSpaceX(double value, boolean snapToPixel) {
+        return snapToPixel ? ScaledMath.floor(value, getSnapScaleX()) : value;
+    }
+
+    private double snapInnerSpaceY(double value, boolean snapToPixel) {
+        return snapToPixel ? ScaledMath.floor(value, getSnapScaleY()) : value;
+    }
 
     /**
      * Utility method to get the top inset which includes padding and border
