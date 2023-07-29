@@ -1812,7 +1812,10 @@ public class Region extends Parent {
      */
     public double snapInnerSpaceX(double value) {
         if (value > 0.0) {
-            return snapInnerSpaceX(value, isSnapToPixel());
+            if (isSnapToPixel()) {
+                return ScaledMath.floor(value, getSnapScaleX());
+            }
+            return value;
         }
         return 0.0;
     }
@@ -1827,17 +1830,11 @@ public class Region extends Parent {
      */
     public double snapInnerSpaceY(double value) {
         if (value > 0.0) {
-            return snapInnerSpaceY(value, isSnapToPixel());
+            if (isSnapToPixel()) {
+                return ScaledMath.floor(value, getSnapScaleY());
+            }
         }
         return 0.0;
-    }
-
-    private double snapInnerSpaceX(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.floor(value, getSnapScaleX()) : value;
-    }
-
-    private double snapInnerSpaceY(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.floor(value, getSnapScaleY()) : value;
     }
 
     /**
