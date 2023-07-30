@@ -1076,7 +1076,7 @@ public abstract class Animation {
      * immediately. </ul>
      * <p>
      * This method must be called on the JavaFX Application thread.
-     * 
+     *
      * @throws IllegalStateException if this method is called on a thread
      *                other than the JavaFX Application Thread, or if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
