@@ -109,5 +109,4 @@ public class AnimationTimerTest {
         };
         Platform.runLater(timer::start);
     }
-
 }

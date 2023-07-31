@@ -113,5 +113,4 @@ public class AnimationTest {
         });
         assertThrows(IllegalStateException.class, pause::stop);
     }
-
 }
