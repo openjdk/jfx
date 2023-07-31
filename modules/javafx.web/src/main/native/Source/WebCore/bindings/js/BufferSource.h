@@ -30,6 +30,7 @@
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <variant>
 #include <wtf/RefPtr.h>
+#include <wtf/Span.h>
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
 OBJC_CLASS NSData;
@@ -45,6 +46,8 @@ public:
     BufferSource(VariantType&& variant)
         : m_variant(WTFMove(variant))
     { }
+    explicit BufferSource(Span<const uint8_t> span)
+        : m_variant(JSC::ArrayBuffer::tryCreate(span.data(), span.size_bytes())) { }
 
     const VariantType& variant() const { return m_variant; }
 
@@ -69,42 +72,11 @@ public:
         }, m_variant);
     }
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<BufferSource> decode(Decoder&);
+    Span<const uint8_t> span() const { return { data(), length() }; }
 
 private:
     VariantType m_variant;
 };
-
-template<class Encoder>
-void BufferSource::encode(Encoder& encoder) const
-{
-    encoder << static_cast<uint64_t>(length());
-    if (!length())
-        return;
-
-    encoder.encodeFixedLengthData(data(), length() * sizeof(uint8_t), alignof(uint8_t));
-}
-
-template<class Decoder>
-std::optional<BufferSource> BufferSource::decode(Decoder& decoder)
-{
-    std::optional<uint64_t> size;
-    decoder >> size;
-    if (!size)
-        return std::nullopt;
-    if (!*size)
-        return BufferSource();
-
-    auto dataSize = CheckedSize { *size };
-    if (UNLIKELY(dataSize.hasOverflowed()))
-        return std::nullopt;
-
-    const uint8_t* data = decoder.decodeFixedLengthReference(dataSize, alignof(uint8_t));
-    if (!data)
-        return std::nullopt;
-    return BufferSource(JSC::ArrayBuffer::tryCreate(static_cast<const void*>(data), dataSize.value()));
-}
 
 inline BufferSource toBufferSource(const uint8_t* data, size_t length)
 {

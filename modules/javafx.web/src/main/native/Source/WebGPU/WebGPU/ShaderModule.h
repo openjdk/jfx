@@ -58,12 +58,14 @@ public:
     void getCompilationInfo(CompletionHandler<void(WGPUCompilationInfoRequestStatus, const WGPUCompilationInfo&)>&& callback);
     void setLabel(String&&);
 
+    id<MTLFunction> getNamedFunction(const String& name, const HashMap<String, double>& keyValueReplacements) const;
+
     bool isValid() const { return !std::holds_alternative<std::monostate>(m_checkResult); }
 
     static WGSL::PipelineLayout convertPipelineLayout(const PipelineLayout&);
     static id<MTLLibrary> createLibrary(id<MTLDevice>, const String& msl, String&& label);
 
-    const WGSL::AST::ShaderModule* ast() const;
+    WGSL::ShaderModule* ast() const;
 
     const PipelineLayout* pipelineLayoutHint(const String&) const;
     const WGSL::Reflection::EntryPointInformation* entryPointInformation(const String&) const;
@@ -84,6 +86,8 @@ private:
     const id<MTLLibrary> m_library { nil }; // This is only non-null if we could compile the module early.
 
     const Ref<Device> m_device;
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=250441 - this needs to be populated from the compiler
+    HashMap<String, String> m_constantIdentifiersToNames;
 };
 
 } // namespace WebGPU

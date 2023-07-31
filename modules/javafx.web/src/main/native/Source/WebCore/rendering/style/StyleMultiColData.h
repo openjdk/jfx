@@ -33,7 +33,9 @@ namespace WebCore {
 
 // CSS3 Multi Column Layout
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleMultiColData);
 class StyleMultiColData : public RefCounted<StyleMultiColData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleMultiColData);
 public:
     static Ref<StyleMultiColData> create() { return adoptRef(*new StyleMultiColData); }
     Ref<StyleMultiColData> copy() const;
@@ -51,7 +53,7 @@ public:
     float width { 0 };
     unsigned short count;
     BorderValue rule;
-    Color visitedLinkColumnRuleColor;
+    StyleColor visitedLinkColumnRuleColor;
 
     bool autoWidth : 1;
     bool autoCount : 1;

@@ -496,11 +496,10 @@ RefPtr<Frame> FrameLoaderClientJava::createFrame(const AtomString& name, HTMLFra
     JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
-    RefPtr<Frame> childFrame(Frame::create(page(), &ownerElement, makeUniqueRef<FrameLoaderClientJava>(m_webPage)));
+    RefPtr<Frame> childFrame(Frame::create(page(), &ownerElement, makeUniqueRef<FrameLoaderClientJava>(m_webPage),m_frame->loader().frameID()));
     static_cast<FrameLoaderClientJava&>(childFrame->loader().client()).setFrame(childFrame.get());
 
     childFrame->tree().setName(name);
-    m_frame->tree().appendChild(*childFrame);
     childFrame->init();
 
     env->CallVoidMethod(m_webPage, frameCreatedMID, ptr_to_jlong(childFrame.get()));
@@ -553,10 +552,10 @@ ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const
     return ObjectContentType::None;
 }
 
-String FrameLoaderClientJava::overrideMediaType() const
+AtomString FrameLoaderClientJava::overrideMediaType() const
 {
     notImplemented();
-    return String();
+    return AtomString();
 }
 
 void FrameLoaderClientJava::setMainFrameDocumentReady(bool)
@@ -660,7 +659,7 @@ void FrameLoaderClientJava::dispatchDidFailLoading(DocumentLoader* dl, ResourceL
     removeRequestURL(f, identifier);
 }
 
-void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& error, WillContinueLoading)
+void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& error, WillContinueLoading,WillInternallyHandleFailure)
 {
     ASSERT(frame());
     if (!frame()) {
@@ -684,7 +683,7 @@ void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& 
 
 void FrameLoaderClientJava::dispatchDidFailLoad(const ResourceError& error)
 {
-    dispatchDidFailProvisionalLoad(error, WillContinueLoading::No);
+    dispatchDidFailProvisionalLoad(error, WillContinueLoading::No, WillInternallyHandleFailure::No);
 }
 
 // client-side redirection
@@ -835,11 +834,6 @@ void FrameLoaderClientJava::didRunInsecureContent(SecurityOrigin&, const URL&)
     notImplemented();
 }
 
-void FrameLoaderClientJava::didDetectXSS(const URL&, bool)
-{
-    notImplemented();
-}
-
 void FrameLoaderClientJava::makeRepresentation(DocumentLoader*)
 {
     m_hasRepresentation = true;
@@ -866,7 +860,7 @@ void FrameLoaderClientJava::dispatchDidReceiveServerRedirectForProvisionalLoad()
 void FrameLoaderClientJava::dispatchDidCancelClientRedirect() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidChangeLocationWithinPage() { notImplemented(); }
 void FrameLoaderClientJava::dispatchWillClose() { notImplemented(); }
-void FrameLoaderClientJava::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>)
+void FrameLoaderClientJava::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>, std::optional<WasPrivateRelayed>)
 {
     // TODO: Look at GTK version
     notImplemented();
@@ -1131,9 +1125,5 @@ std::optional<PageIdentifier> FrameLoaderClientJava::pageID() const
     return std::nullopt;
 }
 
-std::optional<FrameIdentifier> FrameLoaderClientJava::frameID() const
-{
-    return std::nullopt;
-}
 
 }

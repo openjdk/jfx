@@ -179,12 +179,12 @@ public:
         return m_jref;
     }
 
-    ALWAYS_INLINE bool operator==(const JGlobalRef<T>& other)
+    ALWAYS_INLINE bool operator==(const JGlobalRef<T>& other) const
     {
         return m_jref==other.m_jref;
     }
 
-    ALWAYS_INLINE bool operator!=(const JGlobalRef<T>& other)
+    ALWAYS_INLINE bool operator!=(const JGlobalRef<T>& other) const
     {
         return m_jref!=other.m_jref;
     }

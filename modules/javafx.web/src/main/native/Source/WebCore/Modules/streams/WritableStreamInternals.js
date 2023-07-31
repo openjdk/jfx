@@ -52,7 +52,7 @@ function createWritableStream(startAlgorithm, writeAlgorithm, closeAlgorithm, ab
 
     const internalStream = { };
     @initializeWritableStreamSlots(internalStream, { });
-    const controller = new @WritableStreamDefaultController();
+    const controller = new @WritableStreamDefaultController(@isWritableStream);
 
     @setUpWritableStreamDefaultController(internalStream, controller, startAlgorithm, writeAlgorithm, closeAlgorithm, abortAlgorithm, highWaterMark, sizeAlgorithm);
 
@@ -185,6 +185,9 @@ function writableStreamAbort(stream, reason)
     const state = @getByIdDirectPrivate(stream, "state");
     if (state === "closed" || state === "errored")
         return @Promise.@resolve();
+
+    const controller = @getByIdDirectPrivate(stream, "controller");
+    @signalAbort(@getByIdDirectPrivate(controller, "signal"), reason);
 
     const pendingAbortRequest = @getByIdDirectPrivate(stream, "pendingAbortRequest");
     if (pendingAbortRequest !== @undefined)
@@ -579,6 +582,7 @@ function setUpWritableStreamDefaultController(stream, controller, startAlgorithm
 
     @resetQueue(@getByIdDirectPrivate(controller, "queue"));
 
+    @putByIdDirectPrivate(controller, "signal", @createAbortSignal());
     @putByIdDirectPrivate(controller, "started", false);
     @putByIdDirectPrivate(controller, "strategySizeAlgorithm", sizeAlgorithm);
     @putByIdDirectPrivate(controller, "strategyHWM", highWaterMark);
@@ -604,7 +608,7 @@ function setUpWritableStreamDefaultController(stream, controller, startAlgorithm
 
 function setUpWritableStreamDefaultControllerFromUnderlyingSink(stream, underlyingSink, underlyingSinkDict, highWaterMark, sizeAlgorithm)
 {
-    const controller = new @WritableStreamDefaultController();
+    const controller = new @WritableStreamDefaultController(@isWritableStream);
 
     let startAlgorithm = () => { };
     let writeAlgorithm = () => { return @Promise.@resolve(); };

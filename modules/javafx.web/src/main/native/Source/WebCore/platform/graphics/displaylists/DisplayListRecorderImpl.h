@@ -35,7 +35,7 @@ class RecorderImpl : public Recorder {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(RecorderImpl);
 public:
-    WEBCORE_EXPORT RecorderImpl(DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsMode = DrawGlyphsMode::Normal);
+    WEBCORE_EXPORT RecorderImpl(DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, const DestinationColorSpace& = DestinationColorSpace::SRGB(), DrawGlyphsMode = DrawGlyphsMode::Normal);
     WEBCORE_EXPORT virtual ~RecorderImpl();
 
     bool isEmpty() const { return m_displayList.isEmpty(); }
@@ -80,8 +80,8 @@ private:
     void recordDrawDotsForDocumentMarker(const FloatRect&, const DocumentMarkerLineStyle&) final;
     void recordDrawEllipse(const FloatRect&) final;
     void recordDrawPath(const Path&) final;
-    void recordDrawFocusRingPath(const Path&, float width, float offset, const Color&) final;
-    void recordDrawFocusRingRects(const Vector<FloatRect>&, float width, float offset, const Color&) final;
+    void recordDrawFocusRingPath(const Path&, float outlineWidth, const Color&) final;
+    void recordDrawFocusRingRects(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
     void recordFillRect(const FloatRect&) final;
     void recordFillRectWithColor(const FloatRect&, const Color&) final;
     void recordFillRectWithGradient(const FloatRect&, Gradient&) final;
@@ -98,6 +98,7 @@ private:
     void recordFillEllipse(const FloatRect&) final;
 #if ENABLE(VIDEO)
     void recordPaintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
+    void recordPaintVideoFrame(VideoFrame&, const FloatRect& destination, bool shouldDiscardAlpha) final;
 #endif
     void recordStrokeRect(const FloatRect&, float) final;
 #if ENABLE(INLINE_PATH_DATA)
@@ -110,6 +111,7 @@ private:
     void recordStrokePath(const Path&) final;
     void recordStrokeEllipse(const FloatRect&) final;
     void recordClearRect(const FloatRect&) final;
+    void recordDrawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) final;
 #if USE(CG)
     void recordApplyStrokePattern() final;
     void recordApplyFillPattern() final;

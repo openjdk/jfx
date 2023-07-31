@@ -43,6 +43,8 @@ class AudioNodeOutput;
 class AudioParam;
 class BaseAudioContext;
 
+enum class NoiseInjectionPolicy : bool;
+
 // An AudioNode is the basic building block for handling audio within an AudioContext.
 // It may be an audio source, an intermediate processing module, or an audio destination.
 // Each AudioNode can have inputs and/or outputs. An AudioSourceNode has no inputs and a single output.
@@ -50,7 +52,7 @@ class BaseAudioContext;
 // Most processing nodes such as filters will have one input and one output, although multiple inputs and outputs are possible.
 
 class AudioNode
-    : public EventTargetWithInlineData
+    : public EventTarget
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
@@ -195,6 +197,8 @@ public:
     bool isTailProcessing() const { return m_isTailProcessing; }
     void setIsTailProcessing(bool isTailProcessing) { m_isTailProcessing = isTailProcessing; }
 
+    NoiseInjectionPolicy noiseInjectionPolicy() const;
+
 protected:
     // Inputs and outputs must be created before the AudioNode is initialized.
     void addInput();
@@ -231,7 +235,7 @@ protected:
     virtual void updatePullStatus() { }
 
 private:
-    using WeakOrStrongContext = std::variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext>>;
+    using WeakOrStrongContext = std::variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData>>;
     static WeakOrStrongContext toWeakOrStrongContext(BaseAudioContext&, NodeType);
 
     // EventTarget

@@ -42,9 +42,6 @@
 namespace WebCore {
 namespace DisplayList {
 
-// Should match RenderTheme::platformFocusRingWidth()
-static const float platformFocusRingWidth = 3;
-
 void Save::apply(GraphicsContext& context) const
 {
     context.save();
@@ -102,7 +99,7 @@ SetState::SetState(const GraphicsContextState& state)
 
 void SetState::apply(GraphicsContext& context)
 {
-    context.updateState(m_state);
+    context.mergeLastChanges(m_state);
 }
 
 void SetLineCap::apply(GraphicsContext& context) const
@@ -196,7 +193,7 @@ void DrawImageBuffer::apply(GraphicsContext& context, WebCore::ImageBuffer& imag
 
 void DrawNativeImage::apply(GraphicsContext& context, NativeImage& image) const
 {
-    context.drawNativeImage(image, m_imageSize, m_destinationRect, m_srcRect, m_options);
+    context.drawNativeImageInternal(image, m_imageSize, m_destinationRect, m_srcRect, m_options);
 }
 
 void DrawSystemImage::apply(GraphicsContext& context) const
@@ -259,7 +256,7 @@ void DrawLinesForText::apply(GraphicsContext& context) const
 void DrawDotsForDocumentMarker::apply(GraphicsContext& context) const
 {
     context.drawDotsForDocumentMarker(m_rect, {
-        static_cast<DocumentMarkerLineStyle::Mode>(m_styleMode),
+        static_cast<DocumentMarkerLineStyleMode>(m_styleMode),
         m_styleShouldUseDarkAppearance,
     });
 }
@@ -276,20 +273,12 @@ void DrawPath::apply(GraphicsContext& context) const
 
 void DrawFocusRingPath::apply(GraphicsContext& context) const
 {
-    context.drawFocusRing(m_path, m_width, m_offset, m_color);
-}
-
-DrawFocusRingRects::DrawFocusRingRects(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
-    : m_rects(rects)
-    , m_width(width)
-    , m_offset(offset)
-    , m_color(color)
-{
+    context.drawFocusRing(m_path, m_outlineWidth, m_color);
 }
 
 void DrawFocusRingRects::apply(GraphicsContext& context) const
 {
-    context.drawFocusRing(m_rects, m_width, m_offset, m_color);
+    context.drawFocusRing(m_rects, m_outlineOffset, m_outlineWidth, m_color);
 }
 
 void FillRect::apply(GraphicsContext& context) const
@@ -421,6 +410,19 @@ void ClearRect::apply(GraphicsContext& context) const
     context.clearRect(m_rect);
 }
 
+DrawControlPart::DrawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
+    : m_part(part)
+    , m_borderRect(borderRect)
+    , m_deviceScaleFactor(deviceScaleFactor)
+    , m_style(style)
+{
+}
+
+void DrawControlPart::apply(GraphicsContext& context)
+{
+    context.drawControlPart(m_part, m_borderRect, m_deviceScaleFactor, m_style);
+}
+
 void BeginTransparencyLayer::apply(GraphicsContext& context) const
 {
     context.beginTransparencyLayer(m_opacity);
@@ -516,6 +518,7 @@ TextStream& operator<<(TextStream& ts, ItemType type)
     case ItemType::StrokePath: ts << "stroke-path"; break;
     case ItemType::StrokeEllipse: ts << "stroke-ellipse"; break;
     case ItemType::ClearRect: ts << "clear-rect"; break;
+    case ItemType::DrawControlPart: ts << "draw-control-part"; break;
     case ItemType::BeginTransparencyLayer: ts << "begin-transparency-layer"; break;
     case ItemType::EndTransparencyLayer: ts << "end-transparency-layer"; break;
 #if USE(CG)
@@ -635,6 +638,7 @@ void dumpItem(TextStream& ts, const DrawGlyphs& item, OptionSet<AsTextFlag>)
     // FIXME: dump more stuff.
     ts.dumpProperty("local-anchor", item.localAnchor());
     ts.dumpProperty("anchor-point", item.anchorPoint());
+    ts.dumpProperty("font-smoothing-mode", item.fontSmoothingMode());
     ts.dumpProperty("length", item.glyphs().size());
 }
 
@@ -721,16 +725,15 @@ void dumpItem(TextStream& ts, const DrawPath& item, OptionSet<AsTextFlag>)
 void dumpItem(TextStream& ts, const DrawFocusRingPath& item, OptionSet<AsTextFlag>)
 {
     ts.dumpProperty("path", item.path());
-    ts.dumpProperty("width", item.width());
-    ts.dumpProperty("offset", item.offset());
+    ts.dumpProperty("outline-width", item.outlineWidth());
     ts.dumpProperty("color", item.color());
 }
 
 void dumpItem(TextStream& ts, const DrawFocusRingRects& item, OptionSet<AsTextFlag>)
 {
     ts.dumpProperty("rects", item.rects());
-    ts.dumpProperty("width", item.width());
-    ts.dumpProperty("offset", item.offset());
+    ts.dumpProperty("outline-offset", item.outlineOffset());
+    ts.dumpProperty("outline-width", item.outlineWidth());
     ts.dumpProperty("color", item.color());
 }
 
@@ -857,6 +860,14 @@ void dumpItem(TextStream& ts, const StrokeLine& item, OptionSet<AsTextFlag>)
 void dumpItem(TextStream& ts, const ClearRect& item, OptionSet<AsTextFlag>)
 {
     ts.dumpProperty("rect", item.rect());
+}
+
+void dumpItem(TextStream& ts, const DrawControlPart& item, OptionSet<AsTextFlag>)
+{
+    ts.dumpProperty("type", item.type());
+    ts.dumpProperty("border-rect", item.borderRect());
+    ts.dumpProperty("device-scale-factor", item.deviceScaleFactor());
+    ts.dumpProperty("style", item.style());
 }
 
 void dumpItem(TextStream& ts, const BeginTransparencyLayer& item, OptionSet<AsTextFlag>)
@@ -1041,6 +1052,9 @@ void dumpItemHandle(TextStream& ts, const ItemHandle& item, OptionSet<AsTextFlag
         break;
     case ItemType::ClearRect:
         dumpItem(ts, item.get<ClearRect>(), flags);
+        break;
+    case ItemType::DrawControlPart:
+        dumpItem(ts, item.get<DrawControlPart>(), flags);
         break;
     case ItemType::BeginTransparencyLayer:
         dumpItem(ts, item.get<BeginTransparencyLayer>(), flags);

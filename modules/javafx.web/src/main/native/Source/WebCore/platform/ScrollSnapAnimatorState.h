@@ -98,7 +98,10 @@ public:
 
     void transitionToUserInteractionState();
     void transitionToDestinationReachedState();
-
+    bool preserveCurrentTargetForAxis(ScrollEventAxis, ElementIdentifier);
+    Vector<SnapOffset<LayoutUnit>> currentlySnappedOffsetsForAxis(ScrollEventAxis) const;
+    ElementIdentifier chooseBoxToResnapTo(const Vector<SnapOffset<LayoutUnit>>&, const Vector<SnapOffset<LayoutUnit>>&) const;
+    HashSet<ElementIdentifier> currentlySnappedBoxes(const Vector<SnapOffset<LayoutUnit>>&, const Vector<SnapOffset<LayoutUnit>>&) const;
 private:
     std::pair<float, std::optional<unsigned>> targetOffsetForStartOffset(ScrollEventAxis, const ScrollExtents&, float startOffset, FloatPoint predictedOffset, float pageScale, float initialDelta) const;
     bool setupAnimationForState(ScrollSnapState, const ScrollExtents&, float pageScale, const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta);
@@ -112,6 +115,7 @@ private:
 
     std::optional<unsigned> m_activeSnapIndexX;
     std::optional<unsigned> m_activeSnapIndexY;
+    HashSet<ElementIdentifier> m_currentlySnappedBoxes;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const ScrollSnapAnimatorState&);

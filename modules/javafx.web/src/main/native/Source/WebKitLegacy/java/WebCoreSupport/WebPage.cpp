@@ -470,7 +470,7 @@ void WebPage::paintContents(const GraphicsLayer*, GraphicsContext& context, cons
 
 bool WebPage::processKeyEvent(const PlatformKeyboardEvent& event)
 {
-    return event.type() == PlatformKeyboardEvent::Char
+    return event.type() == PlatformEvent::Type::Char
         ? charEvent(event)
         : keyEvent(event);
 }
@@ -491,9 +491,9 @@ static const int VKEY_DOWN = com_sun_webkit_event_WCKeyEvent_VK_DOWN;
 
 bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
 {
-    ASSERT((event.type() == PlatformKeyboardEvent::RawKeyDown)
-        || (event.type() == PlatformKeyboardEvent::KeyDown)
-        || (event.type() == PlatformKeyboardEvent::KeyUp));
+    ASSERT((event.type() == PlatformEvent::Type::RawKeyDown)
+        || (event.type() == PlatformEvent::Type::KeyDown)
+        || (event.type() == PlatformEvent::Type::KeyUp));
 
     // Please refer to the comments explaining the m_suppressNextKeypressEvent
     // member.
@@ -510,7 +510,7 @@ bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
     EventHandler& handler = frame->eventHandler();
 
     if (handler.keyEvent(event)) {
-        if (event.type() == PlatformKeyboardEvent::RawKeyDown) {
+        if (event.type() == PlatformEvent::Type::RawKeyDown) {
             // Suppress the next keypress event unless the focused node
             // is a plug-in node. (Flash needs these keypress events to
             // handle non-US keyboards.)
@@ -527,7 +527,7 @@ bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
 
 bool WebPage::charEvent(const PlatformKeyboardEvent& event)
 {
-    ASSERT(event.type() == PlatformKeyboardEvent::Char);
+    ASSERT(event.type() == PlatformEvent::Type::Char);
 
     // Please refer to the comments explaining the m_suppressNextKeypressEvent
     // member.  The m_suppressNextKeypressEvent is set if the KeyDown is
@@ -556,7 +556,7 @@ bool WebPage::keyEventDefault(const PlatformKeyboardEvent& event)
         return false;
 
     switch (event.type()) {
-    case PlatformKeyboardEvent::RawKeyDown:
+    case PlatformEvent::Type::RawKeyDown:
         if (event.modifiers() == PlatformKeyboardEvent::Modifier::ControlKey) {
             switch (event.windowsVirtualKeyCode()) {
             // Match FF behavior in the sense that Ctrl+home/end are the only
@@ -660,7 +660,7 @@ bool WebPage::propagateScroll(ScrollDirection scrollDirection,
     while (!scrollHandled && currentFrame) {
         scrollHandled = currentFrame->view()->scroll(scrollDirection,
                                                      scrollGranularity);
-        currentFrame = currentFrame->tree().parent();
+        currentFrame = dynamicDowncast<LocalFrame>(currentFrame->tree().parent());
     }
     return scrollHandled;
 }
@@ -801,11 +801,39 @@ public:
     }
 private:
     String m_localStorageDatabasePath;
+        WeakHashMap<WebCore::Page, HashMap<WebCore::SecurityOriginData, RefPtr<WebCore::StorageNamespace>>> m_sessionStorageNamespaces;
 
-    Ref<StorageNamespace> createSessionStorageNamespace(Page& page, unsigned quota) override
-    {
-        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota, page.sessionID());
+        RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin& topLevelOrigin, Page& page, ShouldCreateNamespace shouldCreate) override{
+            if (m_sessionStorageNamespaces.find(page) == m_sessionStorageNamespaces.end()) {
+        if (shouldCreate == ShouldCreateNamespace::No)
+            return nullptr;
+        HashMap<SecurityOriginData, RefPtr<StorageNamespace>> map;
+        m_sessionStorageNamespaces.set(page, map);
     }
+    auto& sessionStorageNamespaces = m_sessionStorageNamespaces.find(page)->value;
+
+    auto sessionStorageNamespaceIt = sessionStorageNamespaces.find(topLevelOrigin.data());
+    if (sessionStorageNamespaceIt == sessionStorageNamespaces.end()) {
+        if (shouldCreate == ShouldCreateNamespace::No)
+            return nullptr;
+        return sessionStorageNamespaces.add(topLevelOrigin.data(), WebKit::StorageNamespaceImpl::createSessionStorageNamespace(sessionStorageQuota(), page.sessionID())).iterator->value;
+    }
+    return sessionStorageNamespaceIt->value;
+        }
+
+    void copySessionStorageNamespace(WebCore::Page& srcPage, WebCore::Page& dstPage) override{
+        auto& srcSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(srcPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
+    auto srcPageIt = srcSessionStorageNamespaces.find(srcPage);
+    if (srcPageIt == srcSessionStorageNamespaces.end())
+        return;
+
+    auto& srcPageSessionStorageNamespaces = srcPageIt->value;
+    HashMap<SecurityOriginData, RefPtr<StorageNamespace>> dstPageSessionStorageNamespaces;
+    for (auto& [origin, srcNamespace] : srcPageSessionStorageNamespaces)
+        dstPageSessionStorageNamespaces.set(origin, srcNamespace->copy(dstPage));
+
+    auto& dstSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(dstPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
+        }
 
     Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota, PAL::SessionID sessionID) override
     {
@@ -978,7 +1006,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkGetParentFrame
     if (!frame) {
         return 0;
     }
-    Frame* parentFrame = frame->tree().parent();
+    Frame* parentFrame = dynamicDowncast<LocalFrame>(frame->tree().parent());
     if (!parentFrame) {
         return 0;
     }
@@ -998,8 +1026,11 @@ JNIEXPORT jlongArray JNICALL Java_com_sun_webkit_WebPage_twkGetChildFrames
     jlongArray jArray = env->NewLongArray(tree.childCount());
     jlong *arr = env->GetLongArrayElements(jArray, 0);
     int i = 0;
-    for (Frame* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
-        arr[i++] = ptr_to_jlong(child);
+    for (auto* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
+        auto* localChild = dynamicDowncast<LocalFrame>(child);
+        if (!localChild)
+               continue;
+                arr[i++] = ptr_to_jlong(child);
     }
     env->ReleaseLongArrayElements(jArray, arr, 0);
 
@@ -1383,7 +1414,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setDefaultFixedFontSize(13);
     settings.setMinimumFontSize(0);
     settings.setDefaultTextEncodingName("ISO-8859-1"_s);
-    settings.setJavaEnabled(false);
+    //settings.setJavaEnabled(false);
     settings.setFullScreenEnabled(true);
     settings.setScriptEnabled(true);
     settings.setEditableLinkBehavior(EditableLinkBehavior::OnlyLiveWithShiftKey);
@@ -2185,9 +2216,9 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
             com_sun_webkit_WebPage_DND_SRC_DROP!=actionId
                 ? LeftButton
                 : NoButton,
-            PlatformEvent::MouseMoved,
+            PlatformEvent::Type::MouseMoved,
             0,
-            false, false, false, false, WallTime {}, ForceAtClick, NoTap); // TODO-java: handle force?
+            { }, WallTime {}, ForceAtClick, NoTap); // TODO-java: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:

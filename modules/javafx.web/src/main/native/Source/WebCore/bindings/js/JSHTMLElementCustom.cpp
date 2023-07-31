@@ -29,6 +29,8 @@
 #include "CustomElementRegistry.h"
 #include "DOMWindow.h"
 #include "Document.h"
+#include "FormAssociatedElement.h"
+#include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "JSCustomElementInterface.h"
 #include "JSDOMConstructorBase.h"
@@ -85,7 +87,7 @@ EncodedJSValue constructJSHTMLElement(JSGlobalObject* lexicalGlobalObject, CallF
         auto* newElementStructure = InternalFunction::createSubclassStructure(lexicalGlobalObject, newTarget, baseStructure);
         RETURN_IF_EXCEPTION(scope, { });
 
-        Ref<HTMLElement> element = HTMLElement::create(elementInterface->name(), document);
+        Ref<HTMLElement> element = elementInterface->createElement(document);
         element->setIsDefinedCustomElement(*elementInterface);
         auto* jsElement = JSHTMLElement::create(newElementStructure, newTargetGlobalObject, element.get());
         cacheWrapper(newTargetGlobalObject->world(), element.ptr(), jsElement);
@@ -127,8 +129,10 @@ JSScope* JSHTMLElement::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObjec
     scope = JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(lexicalGlobalObject, globalObject(), element.document())));
 
     // The form is next, searched before the document, but after the element itself.
-    if (HTMLFormElement* form = element.form())
+    if (auto* formAssociated = element.asFormAssociatedElement()) {
+        if (RefPtr form = formAssociated->form())
         scope = JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(lexicalGlobalObject, globalObject(), *form)));
+    }
 
     // The element is on top, searched first.
     return JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(lexicalGlobalObject, globalObject(), element)));

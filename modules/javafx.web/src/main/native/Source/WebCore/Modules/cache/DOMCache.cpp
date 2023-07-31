@@ -27,10 +27,11 @@
 #include "DOMCache.h"
 
 #include "CacheQueryOptions.h"
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "EventLoop.h"
 #include "FetchResponse.h"
 #include "HTTPParsers.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSFetchRequest.h"
 #include "JSFetchResponse.h"
 #include "ScriptExecutionContext.h"
@@ -40,14 +41,14 @@
 namespace WebCore {
 using namespace WebCore::DOMCacheEngine;
 
-Ref<DOMCache> DOMCache::create(ScriptExecutionContext& context, String&& name, uint64_t identifier, Ref<CacheStorageConnection>&& connection)
+Ref<DOMCache> DOMCache::create(ScriptExecutionContext& context, String&& name, DOMCacheIdentifier identifier, Ref<CacheStorageConnection>&& connection)
 {
     auto cache = adoptRef(*new DOMCache(context, WTFMove(name), identifier, WTFMove(connection)));
     cache->suspendIfNeeded();
     return cache;
 }
 
-DOMCache::DOMCache(ScriptExecutionContext& context, String&& name, uint64_t identifier, Ref<CacheStorageConnection>&& connection)
+DOMCache::DOMCache(ScriptExecutionContext& context, String&& name, DOMCacheIdentifier identifier, Ref<CacheStorageConnection>&& connection)
     : ActiveDOMObject(&context)
     , m_name(WTFMove(name))
     , m_identifier(identifier)
@@ -340,7 +341,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
                 else
                     taskHandler->addResponseBody(recordPosition, response, data.takeAsContiguous());
             });
-        }, cachedResourceRequestInitiators().fetch);
+        }, cachedResourceRequestInitiatorTypes().fetch);
     }
 }
 
@@ -365,7 +366,7 @@ void DOMCache::putWithResponseData(DOMPromiseDeferred<void>&& promise, Ref<Fetch
 
 void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromiseDeferred<void>&& promise)
 {
-    if (UNLIKELY(!scriptExecutionContext()))
+    if (isContextStopped())
         return;
 
     bool ignoreMethod = false;

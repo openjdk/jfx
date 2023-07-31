@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,10 @@
 #include <wtf/Ref.h>
 #include <wtf/text/WTFString.h>
 
+#if HAVE(IOSURFACE)
+#include <IOSurface/IOSurfaceRef.h>
+#endif
+
 namespace PAL::WebGPU {
 
 class BindGroup;
@@ -56,6 +60,7 @@ class RenderPipeline;
 struct RenderPipelineDescriptor;
 class PipelineLayout;
 struct PipelineLayoutDescriptor;
+class PresentationContext;
 class QuerySet;
 struct QuerySetDescriptor;
 class Queue;
@@ -67,6 +72,7 @@ class Sampler;
 struct SamplerDescriptor;
 class ShaderModule;
 struct ShaderModuleDescriptor;
+class Surface;
 class Texture;
 struct TextureDescriptor;
 
@@ -87,7 +93,7 @@ public:
     SupportedLimits& limits() { return m_limits; }
     const SupportedLimits& limits() const { return m_limits; }
 
-    virtual Queue& queue() = 0;
+    virtual Ref<Queue> queue() = 0;
 
     virtual void destroy() = 0;
 
@@ -113,7 +119,6 @@ public:
 
     virtual void pushErrorScope(ErrorFilter) = 0;
     virtual void popErrorScope(CompletionHandler<void(std::optional<Error>&&)>&&) = 0;
-
     class DeviceLostClient {
         virtual ~DeviceLostClient() = default;
         virtual void deviceLost() = 0;

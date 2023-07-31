@@ -36,9 +36,7 @@ enum class EventHandling : uint8_t {
     DefaultHandled      = 1 << 2,
 };
 
-class PlatformEvent {
-public:
-    enum Type : uint8_t {
+enum class PlatformEventType : uint8_t {
         NoType = 0,
 
         // PlatformKeyboardEvent
@@ -74,9 +72,9 @@ public:
         GestureChange,
         GestureEnd,
 #endif
-    };
+};
 
-    enum class Modifier : uint8_t {
+enum class PlatformEventModifier : uint8_t {
         AltKey      = 1 << 0,
         ControlKey  = 1 << 1,
         MetaKey     = 1 << 2,
@@ -85,9 +83,16 @@ public:
 
         // Never used in native platforms but added for initEvent
         AltGraphKey = 1 << 5,
-    };
+};
 
-    Type type() const { return static_cast<Type>(m_type); }
+
+class PlatformEvent {
+public:
+
+    using Type = PlatformEventType;
+    using Modifier = PlatformEventModifier;
+
+    Type type() const { return m_type; }
 
     bool shiftKey() const { return m_modifiers.contains(Modifier::ShiftKey); }
     bool controlKey() const { return m_modifiers.contains(Modifier::ControlKey); }
@@ -100,7 +105,7 @@ public:
 
 protected:
     PlatformEvent()
-        : m_type(NoType)
+        : m_type(Type::NoType)
     {
     }
 
@@ -135,7 +140,7 @@ protected:
     ~PlatformEvent() = default;
 
     WallTime m_timestamp;
-    unsigned m_type;
+    Type m_type;
     OptionSet<Modifier> m_modifiers;
 };
 

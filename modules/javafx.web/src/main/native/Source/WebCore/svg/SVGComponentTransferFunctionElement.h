@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "ElementName.h"
 #include "FEComponentTransfer.h"
 #include "SVGElement.h"
 #include <wtf/SortedArrayMap.h>
@@ -54,7 +55,7 @@ struct SVGPropertyTraits<ComponentTransferType> {
 
     static ComponentTransferType fromString(const String& value)
     {
-        static constexpr std::pair<ComparableASCIILiteral, ComponentTransferType> mappings[] = {
+        static constexpr std::pair<PackedASCIILiteral<uint64_t>, ComponentTransferType> mappings[] = {
             { "discrete", FECOMPONENTTRANSFER_TYPE_DISCRETE },
             { "gamma", FECOMPONENTTRANSFER_TYPE_GAMMA },
             { "identity", FECOMPONENTTRANSFER_TYPE_IDENTITY },
@@ -69,6 +70,7 @@ struct SVGPropertyTraits<ComponentTransferType> {
 class SVGComponentTransferFunctionElement : public SVGElement {
     WTF_MAKE_ISO_ALLOCATED(SVGComponentTransferFunctionElement);
 public:
+    virtual ComponentTransferChannel channel() const = 0;
     ComponentTransferFunction transferFunction() const;
 
     ComponentTransferType type() const { return m_type->currentValue<ComponentTransferType>(); }
@@ -91,7 +93,6 @@ protected:
     SVGComponentTransferFunctionElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGComponentTransferFunctionElement, SVGElement>;
-    const SVGPropertyRegistry& propertyRegistry() const override { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
@@ -99,7 +100,6 @@ protected:
     bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
 private:
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedEnumeration> m_type { SVGAnimatedEnumeration::create(this, FECOMPONENTTRANSFER_TYPE_IDENTITY) };
     Ref<SVGAnimatedNumberList> m_tableValues { SVGAnimatedNumberList::create(this) };
     Ref<SVGAnimatedNumber> m_slope { SVGAnimatedNumber::create(this, 1) };

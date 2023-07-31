@@ -176,12 +176,14 @@ CCallHelpers::Jump CheckSpecial::generate(Inst& inst, CCallHelpers& jit, Generat
 
     context.latePaths.append(
         createSharedTask<GenerationContext::LatePathFunction>(
-            [=, this] (CCallHelpers& jit, GenerationContext& context) {
+            [=, this] (auto& jit, GenerationContext& context) {
                 fail.link(&jit);
 
                 // If necessary, undo the operation.
                 switch (m_checkKind.opcode) {
                 case BranchAdd32:
+                    // this instruction happens not to be used (and requires unimplemented assembler instructions) in 32-bit
+                    if constexpr (is64Bit()) {
                     if ((m_numCheckArgs == 4 && args[1] == args[2] && args[2] == args[3])
                         || (m_numCheckArgs == 3 && args[1] == args[2])) {
                         // This is ugly, but that's fine - we won't have to do this very often.
@@ -203,8 +205,12 @@ CCallHelpers::Jump CheckSpecial::generate(Inst& inst, CCallHelpers& jit, Generat
                             Inst(Sub32, nullptr, args[1], args[3]).generate(jit, context);
                     } else if (m_numCheckArgs == 3)
                         Inst(Sub32, nullptr, args[1], args[2]).generate(jit, context);
+                    } else
+                        UNREACHABLE_FOR_PLATFORM();
                     break;
                 case BranchAdd64:
+                    // this instruction is only selectable on 64-bit platforms
+                    if constexpr (is64Bit()) {
                     if ((m_numCheckArgs == 4 && args[1] == args[2] && args[2] == args[3])
                         || (m_numCheckArgs == 3 && args[1] == args[2])) {
                         // This is ugly, but that's fine - we won't have to do this very often.
@@ -226,26 +232,34 @@ CCallHelpers::Jump CheckSpecial::generate(Inst& inst, CCallHelpers& jit, Generat
                             Inst(Sub64, nullptr, args[1], args[3]).generate(jit, context);
                     } else if (m_numCheckArgs == 3)
                         Inst(Sub64, nullptr, args[1], args[2]).generate(jit, context);
+                    } else
+                        UNREACHABLE_FOR_PLATFORM();
                     break;
                 case BranchSub32:
                     Inst(Add32, nullptr, args[1], args[2]).generate(jit, context);
                     break;
                 case BranchSub64:
+                    // this instruction is only selectable on 64-bit platforms
+                    if constexpr (is64Bit())
                     Inst(Add64, nullptr, args[1], args[2]).generate(jit, context);
+                    else
+                        UNREACHABLE_FOR_PLATFORM();
                     break;
                 case BranchNeg32:
                     Inst(Neg32, nullptr, args[1]).generate(jit, context);
                     break;
                 case BranchNeg64:
+                    // this instruction is only selectable on 64-bit platforms
+                    if constexpr (is64Bit())
                     Inst(Neg64, nullptr, args[1]).generate(jit, context);
+                    else
+                        UNREACHABLE_FOR_PLATFORM();
                     break;
                 default:
                     break;
                 }
-
                 value->m_generator->run(jit, StackmapGenerationParams(value, reps, context));
             }));
-
     return CCallHelpers::Jump(); // As far as Air thinks, we are not a terminal.
 }
 

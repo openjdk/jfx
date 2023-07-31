@@ -72,34 +72,12 @@ RenderStyle resolveForDocument(const Document& document)
 
     Adjuster::adjustEventListenerRegionTypesForRootStyle(documentStyle, document);
 
-    Element* docElement = document.documentElement();
-    RenderObject* docElementRenderer = docElement ? docElement->renderer() : nullptr;
-    if (docElementRenderer) {
-        // Use the direction and writing-mode of the body to set the
-        // viewport's direction and writing-mode unless the property is set on the document element.
-        // If there is no body, then use the document element.
-        auto* body = document.bodyOrFrameset();
-        RenderObject* bodyRenderer = body ? body->renderer() : nullptr;
-        if (bodyRenderer && !docElementRenderer->style().hasExplicitlySetWritingMode())
-            documentStyle.setWritingMode(bodyRenderer->style().writingMode());
-        else
-            documentStyle.setWritingMode(docElementRenderer->style().writingMode());
-        if (bodyRenderer && !docElementRenderer->style().hasExplicitlySetDirection())
-            documentStyle.setDirection(bodyRenderer->style().direction());
-        else
-            documentStyle.setDirection(docElementRenderer->style().direction());
-    }
-
     const Pagination& pagination = renderView.frameView().pagination();
     if (pagination.mode != Pagination::Unpaginated) {
         documentStyle.setColumnStylesFromPaginationMode(pagination.mode);
         documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, LengthType::Fixed)));
         if (renderView.multiColumnFlow())
             renderView.updateColumnProgressionFromStyle(documentStyle);
-        if (renderView.page().paginationLineGridEnabled()) {
-            documentStyle.setLineGrid("-webkit-default-pagination-grid"_s);
-            documentStyle.setLineSnap(LineSnap::Contain);
-        }
     }
 
     const Settings& settings = renderView.frame().settings();

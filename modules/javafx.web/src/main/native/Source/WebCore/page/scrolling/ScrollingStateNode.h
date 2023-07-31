@@ -30,7 +30,7 @@
 #include "GraphicsLayer.h"
 #include "ScrollingCoordinator.h"
 #include <stdint.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
 
@@ -62,7 +62,7 @@ public:
 
     LayerRepresentation(GraphicsLayer* graphicsLayer)
         : m_graphicsLayer(graphicsLayer)
-        , m_layerID(graphicsLayer ? graphicsLayer->primaryLayerID() : 0)
+        , m_layerID(graphicsLayer ? graphicsLayer->primaryLayerID() : GraphicsLayer::PlatformLayerID { })
         , m_representation(GraphicsLayerRepresentation)
     { }
 
@@ -109,6 +109,12 @@ public:
     GraphicsLayer::PlatformLayerID layerID() const
     {
         return m_layerID;
+    }
+
+    std::optional<GraphicsLayer::PlatformLayerID> layerIDForEncoding() const
+    {
+        ASSERT(m_representation != PlatformLayerRepresentation);
+        return m_layerID ? std::optional<GraphicsLayer::PlatformLayerID>(m_layerID) : std::nullopt;
     }
 
     explicit operator GraphicsLayer::PlatformLayerID() const
@@ -193,31 +199,11 @@ private:
 
     RefPtr<GraphicsLayer> m_graphicsLayer;
     void* m_typelessPlatformLayer { nullptr };
-    GraphicsLayer::PlatformLayerID m_layerID { 0 };
+    GraphicsLayer::PlatformLayerID m_layerID;
     Type m_representation { EmptyRepresentation };
 };
 
-class ScrollingStateNode : public ThreadSafeRefCounted<ScrollingStateNode> {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    virtual ~ScrollingStateNode();
-
-    ScrollingNodeType nodeType() const { return m_nodeType; }
-
-    bool isFixedNode() const { return m_nodeType == ScrollingNodeType::Fixed; }
-    bool isStickyNode() const { return m_nodeType == ScrollingNodeType::Sticky; }
-    bool isPositionedNode() const { return m_nodeType == ScrollingNodeType::Positioned; }
-    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode(); }
-    bool isFrameScrollingNode() const { return m_nodeType == ScrollingNodeType::MainFrame || m_nodeType == ScrollingNodeType::Subframe; }
-    bool isFrameHostingNode() const { return m_nodeType == ScrollingNodeType::FrameHosting; }
-    bool isOverflowScrollingNode() const { return m_nodeType == ScrollingNodeType::Overflow; }
-    bool isOverflowScrollProxyNode() const { return m_nodeType == ScrollingNodeType::OverflowProxy; }
-
-    virtual Ref<ScrollingStateNode> clone(ScrollingStateTree& adoptiveTree) = 0;
-    Ref<ScrollingStateNode> cloneAndReset(ScrollingStateTree& adoptiveTree);
-    void cloneAndResetChildren(ScrollingStateNode&, ScrollingStateTree& adoptiveTree);
-
-    enum class Property : uint64_t {
+enum class ScrollingStateNodeProperty : uint64_t {
         // ScrollingStateNode
         Layer                                       = 1LLU << 0,
         ChildNodes                                  = 1LLU << 1,
@@ -268,7 +254,30 @@ public:
         ViewportConstraints                         = 1LLU << 42,
         // ScrollingStateOverflowScrollProxyNode
         OverflowScrollingNode                       = 1LLU << 43,
-    };
+    KeyboardScrollData                          = 1LLU << 44,
+};
+
+class ScrollingStateNode : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ScrollingStateNode> {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    virtual ~ScrollingStateNode();
+
+    using Property = ScrollingStateNodeProperty;
+
+    ScrollingNodeType nodeType() const { return m_nodeType; }
+
+    bool isFixedNode() const { return m_nodeType == ScrollingNodeType::Fixed; }
+    bool isStickyNode() const { return m_nodeType == ScrollingNodeType::Sticky; }
+    bool isPositionedNode() const { return m_nodeType == ScrollingNodeType::Positioned; }
+    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode(); }
+    bool isFrameScrollingNode() const { return m_nodeType == ScrollingNodeType::MainFrame || m_nodeType == ScrollingNodeType::Subframe; }
+    bool isFrameHostingNode() const { return m_nodeType == ScrollingNodeType::FrameHosting; }
+    bool isOverflowScrollingNode() const { return m_nodeType == ScrollingNodeType::Overflow; }
+    bool isOverflowScrollProxyNode() const { return m_nodeType == ScrollingNodeType::OverflowProxy; }
+
+    virtual Ref<ScrollingStateNode> clone(ScrollingStateTree& adoptiveTree) = 0;
+    Ref<ScrollingStateNode> cloneAndReset(ScrollingStateTree& adoptiveTree);
+    void cloneAndResetChildren(ScrollingStateNode&, ScrollingStateTree& adoptiveTree);
 
     bool hasChangedProperties() const { return !m_changedProperties.isEmpty(); }
     bool hasChangedProperty(Property property) const { return m_changedProperties.contains(property); }
@@ -289,9 +298,9 @@ public:
 
     ScrollingNodeID scrollingNodeID() const { return m_nodeID; }
 
-    ScrollingStateNode* parent() const { return m_parent; }
-    void setParent(ScrollingStateNode* parent) { m_parent = parent; }
-    ScrollingNodeID parentNodeID() const { return m_parent ? m_parent->scrollingNodeID() : 0; }
+    RefPtr<ScrollingStateNode> parent() const { return m_parent.get(); }
+    void setParent(RefPtr<ScrollingStateNode>&& parent) { m_parent = parent; }
+    ScrollingNodeID parentNodeID() const;
 
     Vector<RefPtr<ScrollingStateNode>>* children() const { return m_children.get(); }
     std::unique_ptr<Vector<RefPtr<ScrollingStateNode>>> takeChildren() { return WTFMove(m_children); }
@@ -327,11 +336,19 @@ private:
 
     ScrollingStateTree& m_scrollingStateTree;
 
-    ScrollingStateNode* m_parent { nullptr };
+    ThreadSafeWeakPtr<ScrollingStateNode> m_parent;
     std::unique_ptr<Vector<RefPtr<ScrollingStateNode>>> m_children;
 
     LayerRepresentation m_layer;
 };
+
+inline ScrollingNodeID ScrollingStateNode::parentNodeID() const
+{
+    auto parent = m_parent.get();
+    if (!parent)
+        return 0;
+    return parent->scrollingNodeID();
+}
 
 } // namespace WebCore
 

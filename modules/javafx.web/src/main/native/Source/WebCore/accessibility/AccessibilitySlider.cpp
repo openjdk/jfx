@@ -66,14 +66,14 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
 
     const RenderStyle& style = m_renderer->style();
 
-    ControlPart styleAppearance = style.effectiveAppearance();
+    auto styleAppearance = style.effectiveAppearance();
     switch (styleAppearance) {
-    case SliderThumbHorizontalPart:
-    case SliderHorizontalPart:
+    case StyleAppearance::SliderThumbHorizontal:
+    case StyleAppearance::SliderHorizontal:
         return AccessibilityOrientation::Horizontal;
 
-    case SliderThumbVerticalPart:
-    case SliderVerticalPart:
+    case StyleAppearance::SliderThumbVertical:
+    case StyleAppearance::SliderVertical:
         return AccessibilityOrientation::Vertical;
 
     default:

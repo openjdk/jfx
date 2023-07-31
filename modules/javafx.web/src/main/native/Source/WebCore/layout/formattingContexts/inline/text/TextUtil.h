@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "Font.h"
 #include "InlineItem.h"
 #include "InlineLine.h"
@@ -36,6 +34,7 @@
 namespace WebCore {
 
 class RenderStyle;
+class TextRun;
 
 namespace Layout {
 
@@ -47,11 +46,20 @@ public:
     static InlineLayoutUnit width(const InlineTextItem&, const FontCascade&, InlineLayoutUnit contentLogicalLeft);
     static InlineLayoutUnit width(const InlineTextItem&, const FontCascade&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft);
 
+    enum class UseTrailingWhitespaceMeasuringOptimization : uint8_t { Yes, No };
+    static InlineLayoutUnit width(const InlineTextBox&, const FontCascade&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft, UseTrailingWhitespaceMeasuringOptimization = UseTrailingWhitespaceMeasuringOptimization::Yes);
+
     static InlineLayoutUnit trailingWhitespaceWidth(const InlineTextBox&, const FontCascade&, size_t startPosition, size_t endPosition);
 
     using FallbackFontList = HashSet<const Font*>;
     enum class IncludeHyphen : uint8_t { No, Yes };
     static FallbackFontList fallbackFontsForText(StringView, const RenderStyle&, IncludeHyphen);
+
+    struct EnclosingAscentDescent {
+        InlineLayoutUnit ascent { 0.f };
+        InlineLayoutUnit descent { 0.f };
+    };
+    static EnclosingAscentDescent enclosingGlyphBoundsForText(StringView, const RenderStyle&);
 
     struct WordBreakLeft {
         size_t length { 0 };
@@ -68,10 +76,22 @@ public:
     static bool isWrappingAllowed(const RenderStyle&);
     static bool containsStrongDirectionalityText(StringView);
 
+    static TextRun ellipsisTextRun(bool isHorizontal = true);
+
     static size_t firstUserPerceivedCharacterLength(const InlineTextItem&);
+    static size_t firstUserPerceivedCharacterLength(const InlineTextBox&, size_t startPosition, size_t length);
     static TextDirection directionForTextContent(StringView);
+
+    static bool hasHangablePunctuationStart(const InlineTextItem&, const RenderStyle&);
+    static float hangablePunctuationStartWidth(const InlineTextItem&, const RenderStyle&);
+
+    static bool hasHangablePunctuationEnd(const InlineTextItem&, const RenderStyle&);
+    static float hangablePunctuationEndWidth(const InlineTextItem&, const RenderStyle&);
+
+    static bool hasHangableStopOrCommaEnd(const InlineTextItem&, const RenderStyle&);
+    static float hangableStopOrCommaEndWidth(const InlineTextItem&, const RenderStyle&);
+
 };
 
 }
 }
-#endif

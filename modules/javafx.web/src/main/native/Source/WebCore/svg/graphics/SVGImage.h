@@ -48,14 +48,17 @@ public:
     FrameView* frameView() const;
 
     bool isSVGImage() const final { return true; }
-    FloatSize size(ImageOrientation = ImageOrientation::FromImage) const final { return m_intrinsicSize; }
+    FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const final { return m_intrinsicSize; }
 
-    bool hasSingleSecurityOrigin() const final;
+    bool renderingTaintsOrigin() const final;
 
     bool hasRelativeWidth() const final;
     bool hasRelativeHeight() const final;
 
+    // Start the animation from the beginning.
     void startAnimation() final;
+    // Resume the animation from where it was last stopped.
+    void resumeAnimation();
     void stopAnimation() final;
     void resetAnimation() final;
     bool isAnimating() const final;
@@ -80,8 +83,7 @@ private:
     void reportApproximateMemoryCost() const;
     EncodedDataStatus dataChanged(bool allDataReceived) final;
 
-    // FIXME: SVGImages will be unable to prune because this function is not implemented yet.
-    void destroyDecodedData(bool) final { }
+    // FIXME: SVGImages will be unable to prune because destroyDecodedData() is not implemented yet.
 
     // FIXME: Implement this to be less conservative.
     bool currentFrameKnownToBeOpaque() const final { return false; }

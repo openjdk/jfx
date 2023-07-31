@@ -36,7 +36,10 @@
 namespace WebCore {
 
 class CSSPrimitiveValue;
+class CSSSegmentedFontFace;
 class FontFaceSet;
+
+template<typename> class ExceptionOr;
 
 class CSSFontFaceSet final : public RefCounted<CSSFontFaceSet>, public CSSFontFace::Client {
 public:
@@ -102,7 +105,7 @@ private:
     void fontStateChanged(CSSFontFace&, CSSFontFace::Status oldState, CSSFontFace::Status newState) final;
     void fontPropertyChanged(CSSFontFace&, CSSValueList* oldFamilies = nullptr) final;
 
-    void ensureLocalFontFacesForFamilyRegistered(const String&);
+    void ensureLocalFontFacesForFamilyRegistered(const AtomString&);
 
     static String familyNameFromPrimitive(const CSSPrimitiveValue&);
 

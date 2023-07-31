@@ -32,6 +32,7 @@
 
 namespace WebCore {
 
+class WeakPtrImplWithEventTargetData;
 class FileHandle;
 class FileSystemSyncAccessHandle;
 class WorkerGlobalScope;
@@ -46,12 +47,14 @@ public:
     void connectionClosed();
     void scopeClosed();
     void registerSyncAccessHandle(FileSystemSyncAccessHandleIdentifier, FileSystemSyncAccessHandle&);
+    void closeSyncAccessHandle(FileSystemHandleIdentifier, FileSystemSyncAccessHandleIdentifier);
+    std::optional<uint64_t> requestNewCapacityForSyncAccessHandle(FileSystemHandleIdentifier, FileSystemSyncAccessHandleIdentifier, uint64_t newCapacity);
     using CallbackIdentifier = WorkerFileSystemStorageConnectionCallbackIdentifier;
     void didIsSameEntry(CallbackIdentifier, ExceptionOr<bool>&&);
     void didGetHandle(CallbackIdentifier, ExceptionOr<Ref<FileSystemHandleCloseScope>>&&);
     void didResolve(CallbackIdentifier, ExceptionOr<Vector<String>>&&);
     void completeStringCallback(CallbackIdentifier, ExceptionOr<String>&&);
-    void didCreateSyncAccessHandle(CallbackIdentifier, ExceptionOr<std::pair<FileSystemSyncAccessHandleIdentifier, FileHandle>>&&);
+    void didCreateSyncAccessHandle(CallbackIdentifier, ExceptionOr<FileSystemStorageConnection::SyncAccessHandleInfo>&&);
     void completeVoidCallback(CallbackIdentifier, ExceptionOr<void>&& result);
     void didGetHandleNames(CallbackIdentifier, ExceptionOr<Vector<String>>&&);
 
@@ -71,12 +74,13 @@ private:
     void getHandle(FileSystemHandleIdentifier, const String& name, GetHandleCallback&&) final;
     void getFile(FileSystemHandleIdentifier, StringCallback&&) final;
     void createSyncAccessHandle(FileSystemHandleIdentifier, FileSystemStorageConnection::GetAccessHandleCallback&&) final;
-    void closeSyncAccessHandle(FileSystemHandleIdentifier, FileSystemSyncAccessHandleIdentifier, FileSystemStorageConnection::VoidCallback&&) final;
+    void closeSyncAccessHandle(FileSystemHandleIdentifier, FileSystemSyncAccessHandleIdentifier, EmptyCallback&&) final;
     void registerSyncAccessHandle(FileSystemSyncAccessHandleIdentifier, ScriptExecutionContextIdentifier) final { };
     void unregisterSyncAccessHandle(FileSystemSyncAccessHandleIdentifier) final;
     void invalidateAccessHandle(FileSystemSyncAccessHandleIdentifier) final;
+    void requestNewCapacityForSyncAccessHandle(FileSystemHandleIdentifier, FileSystemSyncAccessHandleIdentifier, uint64_t, RequestCapacityCallback&&) final;
 
-    WeakPtr<WorkerGlobalScope> m_scope;
+    WeakPtr<WorkerGlobalScope, WeakPtrImplWithEventTargetData> m_scope;
     RefPtr<FileSystemStorageConnection> m_mainThreadConnection;
     HashMap<CallbackIdentifier, FileSystemStorageConnection::SameEntryCallback> m_sameEntryCallbacks;
     HashMap<CallbackIdentifier, FileSystemStorageConnection::GetHandleCallback> m_getHandleCallbacks;

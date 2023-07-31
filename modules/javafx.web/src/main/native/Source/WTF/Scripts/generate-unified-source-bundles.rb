@@ -55,12 +55,10 @@ def usage(message)
     puts "--max-cpp-bundle-count               Use global sequential numbers for cpp bundle filenames and set the limit on the number"
     puts "--max-c-bundle-count                 Use global sequential numbers for c bundle filenames and set the limit on the number"
     puts "--max-obj-c-bundle-count             Use global sequential numbers for Obj-C bundle filenames and set the limit on the number"
+    puts "--max-bundle-size                    The number of files to merge into a single bundle"
     puts "--dense-bundle-filter                Densely bundle files matching the given path glob"
     exit 1
 end
-
-# Windows needs a larger bundle size because that helps keep WebCore.lib's size below the 4GB maximum in debug builds.
-MAX_BUNDLE_SIZE = (ENV['OS'] == 'Windows_NT') ? 16 : 8
 
 MAX_DENSE_BUNDLE_SIZE = 64
 $derivedSourcesPath = nil
@@ -73,7 +71,9 @@ $outputXCFilelistPath = nil
 $maxCppBundleCount = nil
 $maxCBundleCount = nil
 $maxObjCBundleCount = nil
+$maxBundleSize = 8
 $denseBundleFilters = []
+$bundleFilenamePrefix = ''
 
 def log(text)
     $stderr.puts text if $verbose
@@ -91,7 +91,9 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
                ['--max-cpp-bundle-count', GetoptLong::REQUIRED_ARGUMENT],
                ['--max-c-bundle-count', GetoptLong::REQUIRED_ARGUMENT],
                ['--max-obj-c-bundle-count', GetoptLong::REQUIRED_ARGUMENT],
-               ['--dense-bundle-filter', GetoptLong::REQUIRED_ARGUMENT]).each {
+               ['--max-bundle-size', GetoptLong::REQUIRED_ARGUMENT],
+               ['--dense-bundle-filter', GetoptLong::REQUIRED_ARGUMENT],
+               ['--bundle-filename-prefix', GetoptLong::REQUIRED_ARGUMENT]).each {
     | opt, arg |
     case opt
     when '--help'
@@ -119,8 +121,12 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
         $maxCBundleCount = arg.to_i
     when '--max-obj-c-bundle-count'
         $maxObjCBundleCount = arg.to_i
+    when '--max-bundle-size'
+        $maxBundleSize = arg.to_i
     when '--dense-bundle-filter'
         $denseBundleFilters.push(arg)
+    when '--bundle-filename-prefix'
+        $bundleFilenamePrefix = arg
     end
 }
 
@@ -225,7 +231,7 @@ class BundleManager
                 hash = Digest::SHA1.hexdigest(@currentDirectory.to_s)[0..7]
                 "-#{hash}-#{@bundleCount}"
             end
-        @extension == "cpp" ? "UnifiedSource#{id}.#{extension}" : "UnifiedSource#{id}-#{extension}.#{extension}"
+        @extension == "cpp" ? "#{$bundleFilenamePrefix}UnifiedSource#{id}.#{extension}" : "#{$bundleFilenamePrefix}UnifiedSource#{id}-#{extension}.#{extension}"
     end
 
     def flush
@@ -275,7 +281,7 @@ def BundlePrefixAndSizeForPath(path)
             return filter, MAX_DENSE_BUNDLE_SIZE
         end
     }
-    return topLevelDirectory, MAX_BUNDLE_SIZE
+    return topLevelDirectory, $maxBundleSize
 end
 
 def TopLevelDirectoryForPath(path)

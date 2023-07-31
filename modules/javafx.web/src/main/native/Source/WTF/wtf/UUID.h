@@ -35,6 +35,10 @@
 #include <wtf/Int128.h>
 #include <wtf/text/WTFString.h>
 
+#ifdef __OBJC__
+@class NSUUID;
+#endif
+
 namespace WTF {
 
 class StringView;
@@ -55,7 +59,12 @@ public:
         return UUID { generateWeakRandomUUIDVersion4() };
     }
 
-    static std::optional<UUID> parse(StringView);
+#ifdef __OBJC__
+    WTF_EXPORT_PRIVATE operator NSUUID *() const;
+    WTF_EXPORT_PRIVATE UUID(NSUUID *);
+#endif
+
+    WTF_EXPORT_PRIVATE static std::optional<UUID> parse(StringView);
     WTF_EXPORT_PRIVATE static std::optional<UUID> parseVersion4(StringView);
 
     explicit UUID(Span<const uint8_t, 16> span)
@@ -94,6 +103,11 @@ public:
     operator bool() const { return !!m_data; }
 
     UInt128 data() const { return m_data; }
+
+    struct MarkableTraits {
+        static bool isEmptyValue(const UUID& uuid) { return !uuid; }
+        static UUID emptyValue() { return UUID { UInt128 { 0 } }; }
+    };
 
 private:
     WTF_EXPORT_PRIVATE UUID();

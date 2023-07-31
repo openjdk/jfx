@@ -27,58 +27,31 @@
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "DeprecatedCSSOMPrimitiveValue.h"
 #include "Document.h"
 #include "Element.h"
 #include "StyleBuilderState.h"
+#include "StyleCachedImage.h"
 
 namespace WebCore {
 
-static bool operator==(const ResolvedURL& a, const ResolvedURL& b)
-{
-    return a.specifiedURLString == b.specifiedURLString && a.resolvedURL == b.resolvedURL;
-}
-
-// https://drafts.csswg.org/css-values/#url-local-url-flag
-bool ResolvedURL::isLocalURL() const
-{
-    return specifiedURLString.startsWith('#');
-}
-
-static ResolvedURL makeResolvedURL(URL&& resolvedURL)
-{
-    auto string = resolvedURL.string();
-    return { WTFMove(string), WTFMove(resolvedURL) };
-}
-
-CSSImageValue::CSSImageValue(ResolvedURL&& location, LoadedFromOpaqueSource loadedFromOpaqueSource)
+CSSImageValue::CSSImageValue(ResolvedURL&& location, LoadedFromOpaqueSource loadedFromOpaqueSource, AtomString&& initiatorType)
     : CSSValue(ImageClass)
     , m_location(WTFMove(location))
+    , m_initiatorType(WTFMove(initiatorType))
     , m_loadedFromOpaqueSource(loadedFromOpaqueSource)
 {
 }
 
-CSSImageValue::CSSImageValue(CachedImage& image)
-    : CSSValue(ImageClass)
-    , m_location { image.url().string(), image.url() }
-    , m_cachedImage(&image)
+Ref<CSSImageValue> CSSImageValue::create(ResolvedURL location, LoadedFromOpaqueSource loadedFromOpaqueSource, AtomString initiatorType)
 {
+    return adoptRef(*new CSSImageValue(WTFMove(location), loadedFromOpaqueSource, WTFMove(initiatorType)));
 }
 
-Ref<CSSImageValue> CSSImageValue::create(ResolvedURL&& location, LoadedFromOpaqueSource loadedFromOpaqueSource)
+Ref<CSSImageValue> CSSImageValue::create(URL imageURL, LoadedFromOpaqueSource loadedFromOpaqueSource, AtomString initiatorType)
 {
-    return adoptRef(*new CSSImageValue(WTFMove(location), loadedFromOpaqueSource));
-}
-
-Ref<CSSImageValue> CSSImageValue::create(URL&& imageURL, LoadedFromOpaqueSource loadedFromOpaqueSource)
-{
-    return create(makeResolvedURL(WTFMove(imageURL)), loadedFromOpaqueSource);
-}
-
-Ref<CSSImageValue> CSSImageValue::create(CachedImage& image)
-{
-    return adoptRef(*new CSSImageValue(image));
+    return create(makeResolvedURL(WTFMove(imageURL)), loadedFromOpaqueSource, WTFMove(initiatorType));
 }
 
 CSSImageValue::~CSSImageValue() = default;
@@ -101,16 +74,16 @@ URL CSSImageValue::reresolvedURL(const Document& document) const
     return document.completeURL(m_location.resolvedURL.string());
 }
 
-Ref<CSSImageValue> CSSImageValue::valueWithStylesResolved(Style::BuilderState& state)
+RefPtr<StyleImage> CSSImageValue::createStyleImage(Style::BuilderState& state) const
 {
     auto location = makeResolvedURL(reresolvedURL(state.document()));
     if (m_location == location)
-        return *this;
+        return StyleCachedImage::create(const_cast<CSSImageValue&>(*this));
     auto result = create(WTFMove(location), m_loadedFromOpaqueSource);
     result->m_cachedImage = m_cachedImage;
-    result->m_initiatorName = m_initiatorName;
-    result->m_unresolvedValue = this;
-    return result;
+    result->m_initiatorType = m_initiatorType;
+    result->m_unresolvedValue = const_cast<CSSImageValue*>(this);
+    return StyleCachedImage::create(WTFMove(result));
 }
 
 CachedImage* CSSImageValue::loadImage(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
@@ -119,10 +92,10 @@ CachedImage* CSSImageValue::loadImage(CachedResourceLoader& loader, const Resour
         ResourceLoaderOptions loadOptions = options;
         loadOptions.loadedFromOpaqueSource = m_loadedFromOpaqueSource;
         CachedResourceRequest request(ResourceRequest(reresolvedURL(*loader.document())), loadOptions);
-        if (m_initiatorName.isEmpty())
-            request.setInitiator(cachedResourceRequestInitiators().css);
+        if (m_initiatorType.isEmpty())
+            request.setInitiatorType(cachedResourceRequestInitiatorTypes().css);
         else
-            request.setInitiator(m_initiatorName);
+            request.setInitiatorType(m_initiatorType);
         if (options.mode == FetchOptions::Mode::Cors) {
             ASSERT(loader.document());
             request.updateForAccessControl(*loader.document());
@@ -134,9 +107,9 @@ CachedImage* CSSImageValue::loadImage(CachedResourceLoader& loader, const Resour
     return m_cachedImage.value().get();
 }
 
-bool CSSImageValue::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSImageValue::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
-    return m_cachedImage.value_or(nullptr) && handler(**m_cachedImage);
+    return m_cachedImage && *m_cachedImage && handler(**m_cachedImage);
 }
 
 bool CSSImageValue::equals(const CSSImageValue& other) const
@@ -151,8 +124,8 @@ String CSSImageValue::customCSSText() const
 
 Ref<DeprecatedCSSOMValue> CSSImageValue::createDeprecatedCSSOMWrapper(CSSStyleDeclaration& styleDeclaration) const
 {
-    // NOTE: We expose CSSImageValues as URI primitive values in CSSOM to maintain old behavior.
-    return DeprecatedCSSOMPrimitiveValue::create(CSSPrimitiveValue::create(m_location.resolvedURL.string(), CSSUnitType::CSS_URI), styleDeclaration);
+    // We expose CSSImageValues as URI primitive values in CSSOM to maintain old behavior.
+    return DeprecatedCSSOMPrimitiveValue::create(CSSPrimitiveValue::createURI(m_location.resolvedURL.string()), styleDeclaration);
 }
 
 bool CSSImageValue::knownToBeOpaque(const RenderElement& renderer) const

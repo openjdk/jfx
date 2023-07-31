@@ -20,6 +20,7 @@
 #include "DOMParser.h"
 
 #include "DOMImplementation.h"
+#include "FragmentScriptingPermission.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
 
@@ -38,13 +39,17 @@ Ref<DOMParser> DOMParser::create(Document& contextDocument)
     return adoptRef(*new DOMParser(contextDocument));
 }
 
-ExceptionOr<Ref<Document>> DOMParser::parseFromString(const String& string, const String& contentType)
+ExceptionOr<Ref<Document>> DOMParser::parseFromString(const String& string, const String& contentType, ParseFromStringOptions options)
 {
     if (contentType != "text/html"_s && contentType != "text/xml"_s && contentType != "application/xml"_s && contentType != "application/xhtml+xml"_s && contentType != "image/svg+xml"_s)
         return Exception { TypeError };
     auto document = DOMImplementation::createDocument(contentType, nullptr, m_settings, URL { });
     if (m_contextDocument)
         document->setContextDocument(*m_contextDocument.get());
+    if (options.includeShadowRoots && document->settings().declarativeShadowDOMInDOMParserEnabled())
+        document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent, ParserContentPolicy::AllowDeclarativeShadowDOM });
+    else
+        document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
     document->setContent(string);
     if (m_contextDocument) {
         document->setURL(m_contextDocument->url());

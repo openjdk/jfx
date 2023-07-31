@@ -23,6 +23,7 @@
 #include "Animation.h"
 
 #include "CommonAtomStrings.h"
+#include "WebAnimationUtilities.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/TextStream.h>
 
@@ -125,7 +126,7 @@ bool Animation::animationsMatch(const Animation& other, bool matchProperties) co
     if (!result)
         return false;
 
-    return !matchProperties || (m_property.mode == other.m_property.mode && m_property.id == other.m_property.id && m_propertySet == other.m_propertySet);
+    return !matchProperties || (m_property.mode == other.m_property.mode && m_property.animatableProperty == other.m_property.animatableProperty && m_propertySet == other.m_propertySet);
 }
 
 auto Animation::initialName() -> const Name&
@@ -139,7 +140,7 @@ TextStream& operator<<(TextStream& ts, Animation::TransitionProperty transitionP
     switch (transitionProperty.mode) {
     case Animation::TransitionMode::All: ts << "all"; break;
     case Animation::TransitionMode::None: ts << "none"; break;
-    case Animation::TransitionMode::SingleProperty: ts << getPropertyName(transitionProperty.id); break;
+    case Animation::TransitionMode::SingleProperty: ts << animatablePropertyAsString(transitionProperty.animatableProperty); break;
     case Animation::TransitionMode::UnknownProperty: ts << "unknown property"; break;
     }
     return ts;

@@ -35,6 +35,7 @@
 
 #include "RealtimeMediaSourceSupportedConstraints.h"
 #include <cstdlib>
+#include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
@@ -350,7 +351,14 @@ public:
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
-
+        static_assert(std::is_same_v<ValueType, int> || std::is_same_v<ValueType, double>);
+        if constexpr(std::is_same_v<ValueType, int>) {
+            if (!constraint.isInt())
+                return false;
+        } else if constexpr(std::is_same_v<ValueType, double>) {
+            if (!constraint.isDouble())
+                return false;
+        }
         if (!decoder.decode(constraint.m_min))
             return false;
         if (!decoder.decode(constraint.m_max))
@@ -524,6 +532,8 @@ public:
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
+        if (!constraint.isBoolean())
+            return false;
 
         if (!decoder.decode(constraint.m_exact))
             return false;
@@ -610,6 +620,8 @@ public:
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
+        if (!constraint.isString())
+            return false;
 
         if (!decoder.decode(constraint.m_exact))
             return false;
@@ -676,63 +688,8 @@ public:
     std::optional<StringConstraint> deviceId() const { return m_deviceId; }
     std::optional<StringConstraint> groupId() const { return m_groupId; }
 
-    template <class Encoder> void encode(Encoder& encoder) const
-    {
-        encoder << m_width;
-        encoder << m_height;
-        encoder << m_sampleRate;
-        encoder << m_sampleSize;
-
-        encoder << m_aspectRatio;
-        encoder << m_frameRate;
-        encoder << m_volume;
-
-        encoder << m_echoCancellation;
-        encoder << m_displaySurface;
-        encoder << m_logicalSurface;
-
-        encoder << m_facingMode;
-        encoder << m_deviceId;
-        encoder << m_groupId;
-    }
-
-    template <class Decoder> static std::optional<MediaTrackConstraintSetMap> decode(Decoder& decoder)
-    {
-        MediaTrackConstraintSetMap map;
-        if (!decoder.decode(map.m_width))
-            return std::nullopt;
-        if (!decoder.decode(map.m_height))
-            return std::nullopt;
-        if (!decoder.decode(map.m_sampleRate))
-            return std::nullopt;
-        if (!decoder.decode(map.m_sampleSize))
-            return std::nullopt;
-
-        if (!decoder.decode(map.m_aspectRatio))
-            return std::nullopt;
-        if (!decoder.decode(map.m_frameRate))
-            return std::nullopt;
-        if (!decoder.decode(map.m_volume))
-            return std::nullopt;
-
-        if (!decoder.decode(map.m_echoCancellation))
-            return std::nullopt;
-        if (!decoder.decode(map.m_displaySurface))
-            return std::nullopt;
-        if (!decoder.decode(map.m_logicalSurface))
-            return std::nullopt;
-
-        if (!decoder.decode(map.m_facingMode))
-            return std::nullopt;
-        if (!decoder.decode(map.m_deviceId))
-            return std::nullopt;
-        if (!decoder.decode(map.m_groupId))
-            return std::nullopt;
-
-        return map;
-    }
-
 private:
+    friend struct IPC::ArgumentCoder<MediaTrackConstraintSetMap, void>;
     std::optional<IntConstraint> m_width;
     std::optional<IntConstraint> m_height;
     std::optional<IntConstraint> m_sampleRate;

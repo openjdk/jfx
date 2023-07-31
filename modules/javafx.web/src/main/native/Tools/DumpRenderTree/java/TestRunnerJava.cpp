@@ -100,6 +100,16 @@ void TestRunner::dispatchPendingLoadRequests()
 {
     // FIXME: implement
 }
+void TestRunner::removeAllCookies(JSValueRef callback)
+{
+    //FIXME: Implement
+}
+
+void TestRunner::generateTestReport(JSStringRef message, JSStringRef group)
+{
+    //FIXME: Implement
+}
+
 
 void TestRunner::display()
 {

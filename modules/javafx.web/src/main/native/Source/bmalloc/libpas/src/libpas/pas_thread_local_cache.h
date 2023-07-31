@@ -28,36 +28,19 @@
 
 #include "pas_allocator_index.h"
 #include "pas_allocator_scavenge_action.h"
+#include "pas_darwin_spi.h"
 #include "pas_deallocator_scavenge_action.h"
 #include "pas_decommit_exclusion_range.h"
 #include "pas_fast_tls.h"
 #include "pas_internal_config.h"
 #include "pas_local_allocator.h"
 #include "pas_local_allocator_result.h"
+#include "pas_malloc_stack_logging.h"
 #include "pas_segregated_page_config_kind_and_role.h"
 #include "pas_utils.h"
 #include <pthread.h>
 
-#if defined(__has_include) && __has_include(<pthread/private.h>)
-PAS_BEGIN_EXTERN_C;
-#include <pthread/private.h>
-PAS_END_EXTERN_C;
-#define PAS_HAVE_PTHREAD_PRIVATE 1
-#else
-#define PAS_HAVE_PTHREAD_PRIVATE 0
-#endif
-
 #define PAS_THREAD_LOCAL_CACHE_DESTROYED 1
-
-#if PAS_HAVE_PTHREAD_PRIVATE
-#if (PAS_PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000) \
-    || (PAS_PLATFORM(MACCATALYST) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000) \
-    || (PAS_PLATFORM(IOS) && PAS_PLATFORM(IOS_FAMILY_SIMULATOR) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000) \
-    || (PAS_PLATFORM(WATCHOS) && PAS_PLATFORM(IOS_FAMILY_SIMULATOR) && __WATCH_OS_VERSION_MIN_REQUIRED >= 70000) \
-    || (PAS_PLATFORM(APPLETV) && PAS_PLATFORM(IOS_FAMILY_SIMULATOR) && __TV_OS_VERSION_MIN_REQUIRED >= 140000)
-#define PAS_THREAD_LOCAL_CACHE_CAN_DETECT_THREAD_EXIT 1
-#endif
-#endif
 
 PAS_BEGIN_EXTERN_C;
 
@@ -97,7 +80,14 @@ struct pas_thread_local_cache {
 
 PAS_API extern pas_fast_tls pas_thread_local_cache_fast_tls;
 
+#if PAS_HAVE_PTHREAD_MACHDEP_H
 #define PAS_THREAD_LOCAL_KEY __PTK_FRAMEWORK_JAVASCRIPTCORE_KEY4
+#endif
+
+#if PAS_HAVE_THREAD_KEYWORD
+PAS_API extern __thread void* pas_thread_local_cache_pointer;
+#define PAS_THREAD_LOCAL_KEY pas_thread_local_cache_pointer
+#endif
 
 static PAS_ALWAYS_INLINE pas_thread_local_cache* pas_thread_local_cache_try_get_impl(void)
 {
@@ -107,7 +97,7 @@ static PAS_ALWAYS_INLINE pas_thread_local_cache* pas_thread_local_cache_try_get_
 static inline pas_thread_local_cache* pas_thread_local_cache_try_get(void)
 {
     pas_thread_local_cache* cache = pas_thread_local_cache_try_get_impl();
-#ifndef PAS_THREAD_LOCAL_CACHE_CAN_DETECT_THREAD_EXIT
+#if !PAS_OS(DARWIN)
     if (((uintptr_t)cache) == PAS_THREAD_LOCAL_CACHE_DESTROYED)
         return NULL;
 #endif
@@ -116,8 +106,8 @@ static inline pas_thread_local_cache* pas_thread_local_cache_try_get(void)
 
 static inline bool pas_thread_local_cache_can_set(void)
 {
-#ifdef PAS_THREAD_LOCAL_CACHE_CAN_DETECT_THREAD_EXIT
-    return !pthread_self_is_exiting_np();
+#if PAS_OS(DARWIN)
+    return !pthread_self_is_exiting_np() && !pas_msl_is_enabled();
 #else
     return ((uintptr_t)pas_thread_local_cache_try_get_impl()) != PAS_THREAD_LOCAL_CACHE_DESTROYED;
 #endif

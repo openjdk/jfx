@@ -39,9 +39,9 @@ public:
         return &inst;
     }
     NotificationClientJava() {}
-    bool show(Notification&,  CompletionHandler<void()>&&) override { return false; }
-    void cancel(Notification&) override {}
-    void notificationObjectDestroyed(Notification&) override {}
+    bool show(ScriptExecutionContext&, NotificationData&&, RefPtr<NotificationResources>&&, CompletionHandler<void()>&&) override { return false; }
+    void cancel(NotificationData&&) override {}
+    void notificationObjectDestroyed(NotificationData&&) override {}
     void notificationControllerDestroyed() override {}
 #if ENABLE(LEGACY_NOTIFICATIONS)
     void requestPermission(ScriptExecutionContext*, RefPtr<VoidCallback>&&) override {}

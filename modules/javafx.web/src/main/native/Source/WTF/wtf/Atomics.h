@@ -133,6 +133,8 @@ struct Atomic {
 
     ALWAYS_INLINE T exchange(T newValue, std::memory_order order = std::memory_order_seq_cst) { return value.exchange(newValue, order); }
 
+    // func is supposed to return false if the value is already in the desired state.
+    // Returns true if the value was changed. Else returns false.
     template<typename Func>
     ALWAYS_INLINE bool transaction(const Func& func, std::memory_order order = std::memory_order_seq_cst)
     {
@@ -146,6 +148,8 @@ struct Atomic {
         }
     }
 
+    // func is supposed to return false if the value is already in the desired state.
+    // Returns true if the value was changed. Else returns false.
     template<typename Func>
     ALWAYS_INLINE bool transactionRelaxed(const Func& func)
     {
@@ -361,7 +365,7 @@ inline InternalDependencyType opaqueMixture(T value, Arguments... arguments)
 class Dependency {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Dependency()
+    constexpr Dependency()
         : m_value(0)
     {
     }

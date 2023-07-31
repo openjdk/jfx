@@ -36,16 +36,19 @@
 
 namespace WebCore {
 
-class FetchHeaders : public RefCounted<FetchHeaders> {
-public:
-    enum class Guard {
+class ScriptExecutionContext;
+
+enum class FetchHeadersGuard : uint8_t {
         None,
         Immutable,
         Request,
         RequestNoCors,
         Response
-    };
+};
 
+class FetchHeaders : public RefCounted<FetchHeaders> {
+public:
+    using Guard = FetchHeadersGuard;
     using Init = std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>>;
     static ExceptionOr<Ref<FetchHeaders>> create(std::optional<Init>&&);
 
@@ -75,8 +78,9 @@ public:
         Ref<FetchHeaders> m_headers;
         size_t m_currentIndex { 0 };
         Vector<String> m_keys;
+        size_t m_updateCounter { 0 };
     };
-    Iterator createIterator() { return Iterator { *this }; }
+    Iterator createIterator(ScriptExecutionContext*) { return Iterator { *this }; }
 
     void setInternalHeaders(HTTPHeaderMap&& headers) { m_headers = WTFMove(headers); }
     const HTTPHeaderMap& internalHeaders() const { return m_headers; }
@@ -90,6 +94,7 @@ private:
 
     Guard m_guard;
     HTTPHeaderMap m_headers;
+    uint64_t m_updateCounter { 0 };
 };
 
 inline FetchHeaders::FetchHeaders(Guard guard, HTTPHeaderMap&& headers)
@@ -115,7 +120,7 @@ inline void FetchHeaders::setGuard(Guard guard)
 
 namespace WTF {
 
-template<> struct EnumTraits<WebCore::FetchHeaders::Guard> {
+template<> struct EnumTraitsForPersistence<WebCore::FetchHeaders::Guard> {
     using values = EnumValues<
     WebCore::FetchHeaders::Guard,
     WebCore::FetchHeaders::Guard::None,

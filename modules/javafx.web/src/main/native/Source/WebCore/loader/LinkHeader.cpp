@@ -133,7 +133,7 @@ template<typename CharacterType> static bool parseParameterDelimiter(StringParsi
     return true;
 }
 
-static LinkHeader::LinkParameterName paramterNameFromString(StringView name)
+static LinkHeader::LinkParameterName parameterNameFromString(StringView name)
 {
     if (equalLettersIgnoringASCIICase(name, "rel"_s))
         return LinkHeader::LinkParameterRel;
@@ -159,6 +159,8 @@ static LinkHeader::LinkParameterName paramterNameFromString(StringView name)
         return LinkHeader::LinkParameterImageSizes;
     if (equalLettersIgnoringASCIICase(name, "nonce"_s))
         return LinkHeader::LinkParameterNonce;
+    if (equalLettersIgnoringASCIICase(name, "referrerpolicy"_s))
+        return LinkHeader::LinkParameterReferrerPolicy;
     return LinkHeader::LinkParameterUnknown;
 }
 
@@ -181,7 +183,7 @@ template<typename CharacterType> static std::optional<LinkHeader::LinkParameterN
     skipWhile<isSpaceOrTab>(buffer);
     bool hasEqual = skipExactly(buffer, '=');
     skipWhile<isSpaceOrTab>(buffer);
-    auto name = paramterNameFromString(StringView { nameStart, static_cast<unsigned>(nameEnd - nameStart) });
+    auto name = parameterNameFromString(StringView { nameStart, static_cast<unsigned>(nameEnd - nameStart) });
     if (hasEqual)
         return name;
     bool validParameterValueEnd = buffer.atEnd() || isParameterValueEnd(*buffer);
@@ -284,6 +286,9 @@ void LinkHeader::setValue(LinkParameterName name, String&& value)
         break;
     case LinkParameterNonce:
         m_nonce = WTFMove(value);
+        break;
+    case LinkParameterReferrerPolicy:
+        m_referrerPolicy = WTFMove(value);
         break;
     case LinkParameterTitle:
     case LinkParameterRev:

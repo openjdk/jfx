@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -253,7 +253,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
         if (exit.m_kind == BadCache || exit.m_kind == BadIndexingType) {
             CodeOrigin codeOrigin = exit.m_codeOriginForExitProfile;
             CodeBlock* codeBlock = jit.baselineCodeBlockFor(codeOrigin);
-            if (ArrayProfile* arrayProfile = codeBlock->getArrayProfile(codeOrigin.bytecodeIndex())) {
+            if (ArrayProfile* arrayProfile = codeBlock->getArrayProfile(ConcurrentJSLocker(codeBlock->m_lock), codeOrigin.bytecodeIndex())) {
                 const auto* instruction = codeBlock->instructions().at(codeOrigin.bytecodeIndex()).ptr();
                 CCallHelpers::Jump skipProfile;
                 if (instruction->is<OpGetById>()) {
@@ -474,11 +474,11 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     jit.checkStackPointerAlignment();
 
     {
-        RegisterSet allFTLCalleeSaves = RegisterSet::ftlCalleeSaveRegisters();
+        auto allFTLCalleeSaves = RegisterSetBuilder::ftlCalleeSaveRegisters();
         const RegisterAtOffsetList* baselineCalleeSaves = baselineCodeBlock->jitCode()->calleeSaveRegisters();
         auto iterateCalleeSavesImpl = [&](auto check, auto func) {
             for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
-                if (!allFTLCalleeSaves.get(reg))
+                if (!allFTLCalleeSaves.contains(reg, IgnoreVectors))
                     continue;
                 if (!check(reg))
                     continue;
@@ -501,23 +501,23 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             // This means that it also didn't use them. Their values at the beginning of OSR exit should
             // be the ones to retain. We saved all registers into the register scratch buffer at the beginning
             // of the thunk. So we can restore them from there.
-            ASSERT(!allFTLCalleeSaves.contains(GPRInfo::regT3));
-            ASSERT(!allFTLCalleeSaves.contains(GPRInfo::regT0));
-            ASSERT(!allFTLCalleeSaves.contains(GPRInfo::regT1));
-            ASSERT(!allFTLCalleeSaves.contains(FPRInfo::fpRegT0));
-            ASSERT(!allFTLCalleeSaves.contains(FPRInfo::fpRegT1));
+            ASSERT(!allFTLCalleeSaves.contains(GPRInfo::regT3, IgnoreVectors));
+            ASSERT(!allFTLCalleeSaves.contains(GPRInfo::regT0, IgnoreVectors));
+            ASSERT(!allFTLCalleeSaves.contains(GPRInfo::regT1, IgnoreVectors));
+            ASSERT(!allFTLCalleeSaves.contains(FPRInfo::fpRegT0, IgnoreVectors));
+            ASSERT(!allFTLCalleeSaves.contains(FPRInfo::fpRegT1, IgnoreVectors));
             jit.move(CCallHelpers::TrustedImmPtr(registerScratch), GPRInfo::regT3);
             {
                 // Load from registerScratch buffer to callee-save registers.
                 CCallHelpers::LoadRegSpooler spooler(jit, GPRInfo::regT3);
                 iterateGPRCalleeSaves([&](Reg reg, unsigned unwindIndex, const RegisterAtOffset* baselineRegisterOffset) {
                     if (unwindIndex == UINT_MAX && !baselineRegisterOffset)
-                        spooler.loadGPR({ reg, static_cast<ptrdiff_t>(offsetOfReg(reg)), });
+                        spooler.loadGPR({ reg, static_cast<ptrdiff_t>(offsetOfReg(reg)), conservativeWidthWithoutVectors(reg) });
                 });
                 spooler.finalizeGPR();
                 iterateFPRCalleeSaves([&](Reg reg, unsigned unwindIndex, const RegisterAtOffset* baselineRegisterOffset) {
                     if (unwindIndex == UINT_MAX && !baselineRegisterOffset)
-                        spooler.loadFPR({ reg, static_cast<ptrdiff_t>(offsetOfReg(reg)), });
+                        spooler.loadFPR({ reg, static_cast<ptrdiff_t>(offsetOfReg(reg)), conservativeWidthWithoutVectors(reg) });
                 });
                 spooler.finalizeFPR();
             }
@@ -552,12 +552,12 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 CCallHelpers::LoadRegSpooler spooler(jit, GPRInfo::regT3);
                 iterateGPRCalleeSaves([&](Reg reg, unsigned unwindIndex, const RegisterAtOffset* baselineRegisterOffset) {
                     if (unwindIndex != UINT_MAX && !baselineRegisterOffset)
-                        spooler.loadGPR({ reg, static_cast<ptrdiff_t>(unwindIndex * sizeof(uint64_t)), });
+                        spooler.loadGPR({ reg, static_cast<ptrdiff_t>(unwindIndex * sizeof(uint64_t)), conservativeWidthWithoutVectors(reg) });
                 });
                 spooler.finalizeGPR();
                 iterateFPRCalleeSaves([&](Reg reg, unsigned unwindIndex, const RegisterAtOffset* baselineRegisterOffset) {
                     if (unwindIndex != UINT_MAX && !baselineRegisterOffset)
-                        spooler.loadFPR({ reg, static_cast<ptrdiff_t>(unwindIndex * sizeof(uint64_t)), });
+                        spooler.loadFPR({ reg, static_cast<ptrdiff_t>(unwindIndex * sizeof(uint64_t)), conservativeWidthWithoutVectors(reg) });
                 });
                 spooler.finalizeFPR();
             }
@@ -681,7 +681,7 @@ JSC_DEFINE_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFram
     MacroAssembler::repatchJump(
         exit.codeLocationForRepatch(codeBlock), CodeLocationLabel<OSRExitPtrTag>(exit.m_code.code()));
 
-    return exit.m_code.code().executableAddress();
+    return exit.m_code.code().taggedPtr();
 }
 
 } } // namespace JSC::FTL

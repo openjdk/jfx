@@ -28,8 +28,10 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGArithMode.h"
+#include "IndexingType.h"
 #include "JITOperations.h"
 #include "TypedArrayType.h"
+#include <wtf/text/StringSearch.h>
 
 namespace JSC {
 
@@ -60,6 +62,8 @@ JSC_DECLARE_JIT_OPERATION(operationObjectCreate, JSCell*, (JSGlobalObject*, Enco
 JSC_DECLARE_JIT_OPERATION(operationObjectCreateObject, JSCell*, (JSGlobalObject*, JSObject*));
 JSC_DECLARE_JIT_OPERATION(operationObjectAssignObject, void, (JSGlobalObject*, JSObject*, JSObject*));
 JSC_DECLARE_JIT_OPERATION(operationObjectAssignUntyped, void, (JSGlobalObject*, JSObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationObjectToStringUntyped, JSString*, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationObjectToStringObjectSlow, JSString*, (JSGlobalObject*, JSObject*));
 JSC_DECLARE_JIT_OPERATION(operationCreateThis, JSCell*, (JSGlobalObject*, JSObject* constructor, uint32_t inlineCapacity));
 JSC_DECLARE_JIT_OPERATION(operationCreatePromise, JSCell*, (JSGlobalObject*, JSObject* constructor));
 JSC_DECLARE_JIT_OPERATION(operationCreateInternalPromise, JSCell*, (JSGlobalObject*, JSObject* constructor));
@@ -94,6 +98,8 @@ JSC_DECLARE_JIT_OPERATION(operationArithRound, EncodedJSValue, (JSGlobalObject*,
 JSC_DECLARE_JIT_OPERATION(operationArithFloor, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationArithCeil, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationArithTrunc, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationArithMinMultipleDouble, double, (const double* buffer, unsigned elementCount));
+JSC_DECLARE_JIT_OPERATION(operationArithMaxMultipleDouble, double, (const double* buffer, unsigned elementCount));
 JSC_DECLARE_JIT_OPERATION(operationGetByValObjectInt, EncodedJSValue, (JSGlobalObject*, JSObject*, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationGetByValStringInt, EncodedJSValue, (JSGlobalObject*, JSString*, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationGetByValObjectString, EncodedJSValue, (JSGlobalObject*, JSCell*, JSCell* string));
@@ -101,9 +107,9 @@ JSC_DECLARE_JIT_OPERATION(operationGetByValObjectSymbol, EncodedJSValue, (JSGlob
 JSC_DECLARE_JIT_OPERATION(operationToPrimitive, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationToPropertyKey, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationToNumber, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationToNumberString, EncodedJSValue, (JSGlobalObject*, JSString*));
 JSC_DECLARE_JIT_OPERATION(operationToNumeric, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationCallNumberConstructor, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
-JSC_DECLARE_JIT_OPERATION(operationGetByValWithThis, EncodedJSValue, (JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationGetPrototypeOf, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationGetPrototypeOfObject, EncodedJSValue, (JSGlobalObject*, JSObject*));
 JSC_DECLARE_JIT_OPERATION(operationHasIndexedProperty, size_t, (JSGlobalObject*, JSCell*, int32_t));
@@ -122,27 +128,27 @@ JSC_DECLARE_JIT_OPERATION(operationNewEmptyArray, char*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewArrayWithSize, char*, (JSGlobalObject*, Structure*, int32_t, Butterfly*));
 JSC_DECLARE_JIT_OPERATION(operationNewArrayWithSizeAndHint, char*, (JSGlobalObject*, Structure*, int32_t, int32_t, Butterfly*));
 JSC_DECLARE_JIT_OPERATION(operationNewInt8ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewInt8ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewInt8ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewInt16ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewInt16ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewInt16ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewInt32ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewInt32ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewInt32ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewUint8ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewUint8ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewUint8ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewUint8ClampedArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewUint8ClampedArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewUint8ClampedArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewUint16ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewUint16ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewUint16ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewUint32ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewUint32ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewUint32ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewFloat32ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewFloat32ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewFloat32ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewFloat64ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewFloat64ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewFloat64ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewBigInt64ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewBigInt64ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewBigInt64ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewBigUint64ArrayWithSize, char*, (JSGlobalObject*, Structure*, intptr_t, char*));
-JSC_DECLARE_JIT_OPERATION(operationNewBigUint64ArrayWithOneArgument, char*, (JSGlobalObject*, Structure*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationNewBigUint64ArrayWithOneArgument, char*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationNewArrayIterator, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewMapIterator, JSCell*, (VM*, Structure*));
 JSC_DECLARE_JIT_OPERATION(operationNewSetIterator, JSCell*, (VM*, Structure*));
@@ -181,6 +187,7 @@ JSC_DECLARE_JIT_OPERATION(operationDefineAccessorPropertyStringIdent, void, (JSG
 JSC_DECLARE_JIT_OPERATION(operationDefineAccessorPropertySymbol, void, (JSGlobalObject*, JSObject*, Symbol*, JSObject*, JSObject*, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationArrayPush, EncodedJSValue, (JSGlobalObject*, EncodedJSValue encodedValue, JSArray*));
 JSC_DECLARE_JIT_OPERATION(operationArrayPushMultiple, EncodedJSValue, (JSGlobalObject*, JSArray*, void* buffer, int32_t elementCount));
+JSC_DECLARE_JIT_OPERATION(operationArrayPushMultipleSlow, EncodedJSValue, (JSGlobalObject*, JSArray*, void* buffer, int32_t elementCount));
 JSC_DECLARE_JIT_OPERATION(operationArrayPushDouble, EncodedJSValue, (JSGlobalObject*, double value, JSArray*));
 JSC_DECLARE_JIT_OPERATION(operationArrayPushDoubleMultiple, EncodedJSValue, (JSGlobalObject*, JSArray*, void* buffer, int32_t elementCount));
 JSC_DECLARE_JIT_OPERATION(operationArrayPop, EncodedJSValue, (JSGlobalObject*, JSArray*));
@@ -215,11 +222,13 @@ JSC_DECLARE_JIT_OPERATION(operationCreateDirectArgumentsDuringExit, JSCell*, (VM
 JSC_DECLARE_JIT_OPERATION(operationCreateScopedArguments, JSCell*, (JSGlobalObject*, Structure*, Register* argumentStart, uint32_t length, JSFunction* callee, JSLexicalEnvironment*));
 JSC_DECLARE_JIT_OPERATION(operationCreateClonedArgumentsDuringExit, JSCell*, (VM*, InlineCallFrame*, JSFunction*, uint32_t argumentCount));
 JSC_DECLARE_JIT_OPERATION(operationCreateClonedArguments, JSCell*, (JSGlobalObject*, Structure*, Register* argumentStart, uint32_t length, JSFunction* callee));
-JSC_DECLARE_JIT_OPERATION(operationCreateArgumentsButterfly, JSCell*, (JSGlobalObject*, Register* argumentStart, uint32_t argumentCount));
+JSC_DECLARE_JIT_OPERATION(operationCreateArgumentsButterflyExcludingThis, JSCell*, (JSGlobalObject*, Register* argumentStart, uint32_t argumentCount, JSCell*));
 JSC_DECLARE_JIT_OPERATION(operationCreateRest, JSCell*, (JSGlobalObject*, Register* argumentStart, unsigned numberOfArgumentsToSkip, unsigned arraySize));
 JSC_DECLARE_JIT_OPERATION(operationNewArrayBuffer, JSCell*, (VM*, Structure*, JSCell*));
 JSC_DECLARE_JIT_OPERATION(operationSetAdd, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationMapSet, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue, EncodedJSValue, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationMapDelete, size_t, (JSGlobalObject*, JSCell*, EncodedJSValue, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationSetDelete, size_t, (JSGlobalObject*, JSCell*, EncodedJSValue, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationWeakSetAdd, void, (JSGlobalObject*, JSCell*, JSCell*, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationWeakMapSet, void, (JSGlobalObject*, JSCell*, JSCell*, EncodedJSValue, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationFModOnInts, double, (int32_t, int32_t));
@@ -241,9 +250,20 @@ JSC_DECLARE_JIT_OPERATION(operationResolveRopeString, JSString*, (JSGlobalObject
 JSC_DECLARE_JIT_OPERATION(operationSingleCharacterString, JSString*, (VM*, int32_t));
 
 JSC_DECLARE_JIT_OPERATION(operationStringSubstr, JSCell*, (JSGlobalObject*, JSCell*, int32_t, int32_t));
-JSC_DECLARE_JIT_OPERATION(operationStringSlice, JSCell*, (JSGlobalObject*, JSCell*, int32_t, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationStringSlice, JSString*, (JSGlobalObject*, JSString*, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationStringSliceWithEnd, JSString*, (JSGlobalObject*, JSString*, int32_t, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationStringValueOf, JSString*, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationStringReplaceStringString, JSString*, (JSGlobalObject*, JSString*, JSString*, JSString*));
+JSC_DECLARE_JIT_OPERATION(operationStringReplaceStringStringWithoutSubstitution, JSString*, (JSGlobalObject*, JSString*, JSString*, JSString*));
+JSC_DECLARE_JIT_OPERATION(operationStringReplaceStringEmptyString, JSString*, (JSGlobalObject*, JSString*, JSString*));
+JSC_DECLARE_JIT_OPERATION(operationStringReplaceStringStringWithTable8, JSString*, (JSGlobalObject*, JSString*, JSString*, JSString*, const BoyerMooreHorspoolTable<uint8_t>*));
+JSC_DECLARE_JIT_OPERATION(operationStringReplaceStringStringWithoutSubstitutionWithTable8, JSString*, (JSGlobalObject*, JSString*, JSString*, JSString*, const BoyerMooreHorspoolTable<uint8_t>*));
+JSC_DECLARE_JIT_OPERATION(operationStringReplaceStringEmptyStringWithTable8, JSString*, (JSGlobalObject*, JSString*, JSString*, const BoyerMooreHorspoolTable<uint8_t>*));
+JSC_DECLARE_JIT_OPERATION(operationStringReplaceStringGeneric, JSString*, (JSGlobalObject*, JSString*, JSString*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationStringSubstring, JSString*, (JSGlobalObject*, JSString*, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationStringSubstringWithEnd, JSString*, (JSGlobalObject*, JSString*, int32_t, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationToLowerCase, JSString*, (JSGlobalObject*, JSString*, uint32_t));
+JSC_DECLARE_JIT_OPERATION(operationStringLocaleCompare, UCPUStrictInt32, (JSGlobalObject*, JSString*, JSString*));
 
 JSC_DECLARE_JIT_OPERATION(operationInt32ToString, char*, (JSGlobalObject*, int32_t, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationInt52ToString, char*, (JSGlobalObject*, int64_t, int32_t));
@@ -259,8 +279,12 @@ JSC_DECLARE_JIT_OPERATION(operationMapHashHeapBigInt, UCPUStrictInt32, (VM*, JSB
 JSC_DECLARE_JIT_OPERATION(operationJSMapFindBucket, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationJSSetFindBucket, JSCell*, (JSGlobalObject*, JSCell*, EncodedJSValue, int32_t));
 
-JSC_DECLARE_JIT_OPERATION(operationParseIntNoRadixGeneric, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
+JSC_DECLARE_JIT_OPERATION(operationParseIntDoubleNoRadix, EncodedJSValue, (JSGlobalObject*, double));
 JSC_DECLARE_JIT_OPERATION(operationParseIntStringNoRadix, EncodedJSValue, (JSGlobalObject*, JSString*));
+JSC_DECLARE_JIT_OPERATION(operationParseIntGenericNoRadix, EncodedJSValue, (JSGlobalObject*, EncodedJSValue));
+
+JSC_DECLARE_JIT_OPERATION(operationParseIntInt32, EncodedJSValue, (JSGlobalObject*, int32_t, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationParseIntDouble, EncodedJSValue, (JSGlobalObject*, double, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationParseIntString, EncodedJSValue, (JSGlobalObject*, JSString*, int32_t));
 JSC_DECLARE_JIT_OPERATION(operationParseIntGeneric, EncodedJSValue, (JSGlobalObject*, EncodedJSValue, int32_t));
 
@@ -303,6 +327,8 @@ JSC_DECLARE_JIT_OPERATION(operationSpreadFastArray, JSCell*, (JSGlobalObject*, J
 JSC_DECLARE_JIT_OPERATION(operationSpreadGeneric, JSCell*, (JSGlobalObject*, JSCell*));
 JSC_DECLARE_JIT_OPERATION(operationNewArrayWithSpreadSlow, JSCell*, (JSGlobalObject*, void*, uint32_t));
 JSC_DECLARE_JIT_OPERATION(operationCreateImmutableButterfly, JSCell*, (JSGlobalObject*, unsigned length));
+JSC_DECLARE_JIT_OPERATION(operationNewArrayWithSpeciesInt32, JSObject*, (JSGlobalObject*, int32_t, JSObject*, IndexingType));
+JSC_DECLARE_JIT_OPERATION(operationNewArrayWithSpecies, JSObject*, (JSGlobalObject*, EncodedJSValue, JSObject*, IndexingType));
 
 JSC_DECLARE_JIT_OPERATION(operationResolveScope, JSCell*, (JSGlobalObject*, JSScope*, UniquedStringImpl*));
 JSC_DECLARE_JIT_OPERATION(operationResolveScopeForHoistingFuncDeclInEval, EncodedJSValue, (JSGlobalObject*, JSScope*, UniquedStringImpl*));
@@ -337,6 +363,8 @@ JSC_DECLARE_JIT_OPERATION(operationDateGetSeconds, EncodedJSValue, (VM*, DateIns
 JSC_DECLARE_JIT_OPERATION(operationDateGetUTCSeconds, EncodedJSValue, (VM*, DateInstance*));
 JSC_DECLARE_JIT_OPERATION(operationDateGetTimezoneOffset, EncodedJSValue, (VM*, DateInstance*));
 JSC_DECLARE_JIT_OPERATION(operationDateGetYear, EncodedJSValue, (VM*, DateInstance*));
+
+JSC_DECLARE_JIT_OPERATION(operationInt64ToBigInt, EncodedJSValue, (JSGlobalObject*, int64_t));
 
 JSC_DECLARE_JIT_OPERATION(operationProcessTypeProfilerLogDFG, void, (VM*));
 

@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "NavigationAction.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -48,7 +49,7 @@ public:
     void replaceDocumentWithResultOfExecutingJavascriptURL(const String&, Document* ownerDocument);
 
     bool begin();
-    bool begin(const URL&, bool dispatchWindowObjectAvailable = true, Document* ownerDocument = nullptr, ScriptExecutionContextIdentifier = { });
+    bool begin(const URL&, bool dispatchWindowObjectAvailable = true, Document* ownerDocument = nullptr, ScriptExecutionContextIdentifier = { }, const NavigationAction* triggeringAction = nullptr);
     void addData(const SharedBuffer&);
     void insertDataSynchronously(const String&); // For an internal use only to prevent the parser from yielding.
     WEBCORE_EXPORT void end();
@@ -73,16 +74,17 @@ private:
 
     WeakPtr<Frame> m_frame;
 
-    bool m_hasReceivedSomeData { false };
     String m_mimeType;
 
-    bool m_encodingWasChosenByUser { false };
     String m_encoding;
     RefPtr<TextResourceDecoder> m_decoder;
     RefPtr<DocumentParser> m_parser;
 
-    enum class State { NotStarted, Started, Finished };
+    enum class State : uint8_t { NotStarted, Started, Finished };
     State m_state { State::NotStarted };
+
+    bool m_hasReceivedSomeData { false };
+    bool m_encodingWasChosenByUser { false };
 };
 
 } // namespace WebCore

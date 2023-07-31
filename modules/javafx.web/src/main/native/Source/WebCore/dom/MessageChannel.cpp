@@ -35,8 +35,8 @@ namespace WebCore {
 
 static std::pair<Ref<MessagePort>, Ref<MessagePort>> generateMessagePorts(ScriptExecutionContext& context)
 {
-    MessagePortIdentifier id1 = { Process::identifier(), ObjectIdentifier<MessagePortIdentifier::PortIdentifierType>::generate() };
-    MessagePortIdentifier id2 = { Process::identifier(), ObjectIdentifier<MessagePortIdentifier::PortIdentifierType>::generate() };
+    MessagePortIdentifier id1 = { Process::identifier(), PortIdentifier::generate() };
+    MessagePortIdentifier id2 = { Process::identifier(), PortIdentifier::generate() };
 
     return { MessagePort::create(context, id1, id2), MessagePort::create(context, id2, id1) };
 }
@@ -50,12 +50,12 @@ MessageChannel::MessageChannel(ScriptExecutionContext& context)
     : m_ports(generateMessagePorts(context))
 {
     if (!context.activeDOMObjectsAreStopped()) {
-        ASSERT(!port1().closed());
-        ASSERT(!port2().closed());
+        ASSERT(!port1().isDetached());
+        ASSERT(!port2().isDetached());
         MessagePortChannelProvider::fromContext(context).createNewMessagePortChannel(port1().identifier(), port2().identifier());
     } else {
-        ASSERT(port1().closed());
-        ASSERT(port2().closed());
+        ASSERT(port1().isDetached());
+        ASSERT(port2().isDetached());
     }
 }
 

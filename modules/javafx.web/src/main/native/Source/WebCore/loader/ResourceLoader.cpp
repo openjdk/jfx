@@ -71,7 +71,7 @@
 
 #undef RESOURCELOADER_RELEASE_LOG
 #define PAGE_ID ((frame() ? valueOrDefault(frame()->pageID()) : PageIdentifier()).toUInt64())
-#define FRAME_ID ((frame() ? valueOrDefault(frame()->frameID()) : FrameIdentifier()).toUInt64())
+#define FRAME_ID ((frame() ? frame()->frameID() : FrameIdentifier()).object().toUInt64())
 #define RESOURCELOADER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 ", frameLoader=%p, resourceID=%" PRIu64 "] ResourceLoader::" fmt, this, PAGE_ID, FRAME_ID, frameLoader(), identifier().toUInt64(), ##__VA_ARGS__)
 
 namespace WebCore {
@@ -295,7 +295,7 @@ void ResourceLoader::loadDataURL()
         scheduleContext.scheduledPairs = *page->scheduledRunLoopPairs();
 #endif
     auto mode = DataURLDecoder::Mode::Legacy;
-    if (m_request.requester() == ResourceRequest::Requester::Fetch)
+    if (m_request.requester() == ResourceRequestRequester::Fetch)
         mode = DataURLDecoder::Mode::ForgivingBase64;
     DataURLDecoder::decode(url, scheduleContext, mode, [this, protectedThis = Ref { *this }, url](auto decodeResult) mutable {
         if (this->reachedTerminalState())
@@ -439,7 +439,7 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
     if (isRedirect) {
         RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: Processing cross-origin redirect");
         platformStrategies()->loaderStrategy()->crossOriginRedirectReceived(this, request.url());
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
         frameLoader()->client().didLoadFromRegistrableDomain(RegistrableDomain(request.url()));
 #endif
     }
@@ -508,7 +508,9 @@ static void logResourceResponseSource(Frame* frame, ResourceResponse::Source sou
 
 bool ResourceLoader::shouldAllowResourceToAskForCredentials() const
 {
-    return m_canCrossOriginRequestsAskUserForCredentials || m_frame->tree().top().document()->securityOrigin().canRequest(m_request.url());
+    auto* topFrame = dynamicDowncast<LocalFrame>(m_frame->tree().top());
+    return m_canCrossOriginRequestsAskUserForCredentials
+        || (topFrame && topFrame->document()->securityOrigin().canRequest(m_request.url()));
 }
 
 void ResourceLoader::didBlockAuthenticationChallenge()
@@ -538,6 +540,13 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHan
                 }
                 document->setUsedLegacyTLS(true);
             }
+        }
+    }
+
+    if (r.wasPrivateRelayed() && m_frame) {
+        if (auto* document = m_frame->document()) {
+            if (!document->wasPrivateRelayed())
+                document->setWasPrivateRelayed(true);
         }
     }
 

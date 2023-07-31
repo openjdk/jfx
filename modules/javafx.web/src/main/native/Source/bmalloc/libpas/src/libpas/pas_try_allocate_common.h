@@ -30,7 +30,9 @@
 #include "pas_heap_inlines.h"
 #include "pas_allocation_result.h"
 #include "pas_local_allocator_inlines.h"
+#include "pas_malloc_stack_logging.h"
 #include "pas_primitive_heap_ref.h"
+#include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_segregated_heap_inlines.h"
 #include "pas_utils.h"
 
@@ -165,15 +167,17 @@ pas_try_allocate_common_impl_slow(
             pas_physical_memory_transaction_begin(&transaction);
             pas_heap_lock_lock();
 
-            result = pas_large_heap_try_allocate(
-                &heap->large_heap, size, alignment, config.config_ptr, &transaction);
+            if (PAS_UNLIKELY(pas_probabilistic_guard_malloc_can_use && config.pgm_enabled && pas_probabilistic_guard_malloc_should_call_pgm()))
+                result = pas_large_heap_try_allocate_pgm(&heap->large_heap, size, alignment, config.config_ptr, &transaction);
+            else
+                result = pas_large_heap_try_allocate(&heap->large_heap, size, alignment, config.config_ptr, &transaction);
 
             pas_heap_lock_unlock();
         } while (!pas_physical_memory_transaction_end(&transaction));
 
         pas_scavenger_notify_eligibility_if_needed();
 
-        return result;
+        return pas_msl_malloc_logging(size, result);
     }
 
     if (verbose)
@@ -195,7 +199,7 @@ pas_try_allocate_common_impl_slow(
     if (baseline_allocator_result.lock)
         pas_lock_unlock(baseline_allocator_result.lock);
 
-    return result;
+    return pas_msl_malloc_logging(size, result);
 }
 
 static PAS_ALWAYS_INLINE pas_allocation_result

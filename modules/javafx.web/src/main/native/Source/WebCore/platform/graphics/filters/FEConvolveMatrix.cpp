@@ -49,6 +49,7 @@ FEConvolveMatrix::FEConvolveMatrix(const IntSize& kernelSize, float divisor, flo
 {
     ASSERT(m_kernelSize.width() > 0);
     ASSERT(m_kernelSize.height() > 0);
+    ASSERT(IntRect(IntPoint::zero(), kernelSize).contains(targetOffset));
 }
 
 void FEConvolveMatrix::setKernelSize(const IntSize& kernelSize)
@@ -114,7 +115,7 @@ bool FEConvolveMatrix::setPreserveAlpha(bool preserveAlpha)
     return true;
 }
 
-FloatRect FEConvolveMatrix::calculateImageRect(const Filter& filter, const FilterImageVector&, const FloatRect& primitiveSubregion) const
+FloatRect FEConvolveMatrix::calculateImageRect(const Filter& filter, Span<const FloatRect>, const FloatRect& primitiveSubregion) const
 {
     return filter.maxEffectRect(primitiveSubregion);
 }

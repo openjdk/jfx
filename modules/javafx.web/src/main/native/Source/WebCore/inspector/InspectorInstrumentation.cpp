@@ -185,6 +185,31 @@ void InspectorInstrumentation::didChangeRendererForDOMNodeImpl(InstrumentingAgen
         cssAgent->didChangeRendererForDOMNode(node);
 }
 
+void InspectorInstrumentation::didAddOrRemoveScrollbarsImpl(InstrumentingAgents& instrumentingAgents, FrameView& frameView)
+{
+    auto* localFrame = dynamicDowncast<LocalFrame>(frameView.frame());
+    if (!localFrame)
+        return;
+    auto* cssAgent = instrumentingAgents.enabledCSSAgent();
+    if (!cssAgent)
+        return;
+    auto* document = localFrame->document();
+    if (!document)
+        return;
+    auto* documentElement = document->documentElement();
+    if (!documentElement)
+        return;
+    cssAgent->didChangeRendererForDOMNode(*documentElement);
+}
+
+void InspectorInstrumentation::didAddOrRemoveScrollbarsImpl(InstrumentingAgents& instrumentingAgents, RenderObject& renderer)
+{
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent()) {
+        if (auto* node = renderer.node())
+            cssAgent->didChangeRendererForDOMNode(*node);
+    }
+}
+
 void InspectorInstrumentation::willModifyDOMAttrImpl(InstrumentingAgents& instrumentingAgents, Element& element, const AtomString& oldValue, const AtomString& newValue)
 {
     if (auto* pageDOMDebuggerAgent = instrumentingAgents.enabledPageDOMDebuggerAgent())
@@ -353,6 +378,8 @@ void InspectorInstrumentation::didAddEventListenerImpl(InstrumentingAgents& inst
         webDebuggerAgent->didAddEventListener(target, eventType, listener, capture);
     if (auto* domAgent = instrumentingAgents.persistentDOMAgent())
         domAgent->didAddEventListener(target);
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
+        cssAgent->didAddEventListener(target);
 }
 
 void InspectorInstrumentation::willRemoveEventListenerImpl(InstrumentingAgents& instrumentingAgents, EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
@@ -361,6 +388,8 @@ void InspectorInstrumentation::willRemoveEventListenerImpl(InstrumentingAgents& 
         webDebuggerAgent->willRemoveEventListener(target, eventType, listener, capture);
     if (auto* domAgent = instrumentingAgents.persistentDOMAgent())
         domAgent->willRemoveEventListener(target, eventType, listener, capture);
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
+        cssAgent->willRemoveEventListener(target);
 }
 
 bool InspectorInstrumentation::isEventListenerDisabledImpl(InstrumentingAgents& instrumentingAgents, EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
@@ -572,7 +601,7 @@ void InspectorInstrumentation::applyUserAgentOverrideImpl(InstrumentingAgents& i
         pageAgent->applyUserAgentOverride(userAgent);
 }
 
-void InspectorInstrumentation::applyEmulatedMediaImpl(InstrumentingAgents& instrumentingAgents, String& media)
+void InspectorInstrumentation::applyEmulatedMediaImpl(InstrumentingAgents& instrumentingAgents, AtomString& media)
 {
     if (auto* pageAgent = instrumentingAgents.enabledPageAgent())
         pageAgent->applyEmulatedMedia(media);
@@ -594,12 +623,16 @@ void InspectorInstrumentation::willSendRequestImpl(InstrumentingAgents& instrume
 {
     if (auto* networkAgent = instrumentingAgents.enabledNetworkAgent())
         networkAgent->willSendRequest(identifier, loader, request, redirectResponse, cachedResource, resourceLoader);
+    if (auto* domDebuggerAgent = instrumentingAgents.enabledDOMDebuggerAgent())
+        domDebuggerAgent->willSendRequest(request);
 }
 
 void InspectorInstrumentation::willSendRequestOfTypeImpl(InstrumentingAgents& instrumentingAgents, ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, LoadType loadType)
 {
     if (auto* networkAgent = instrumentingAgents.enabledNetworkAgent())
         networkAgent->willSendRequestOfType(identifier, loader, request, loadType);
+    if (auto* domDebuggerAgent = instrumentingAgents.enabledDOMDebuggerAgent())
+        domDebuggerAgent->willSendRequestOfType(request);
 }
 
 void InspectorInstrumentation::didLoadResourceFromMemoryCacheImpl(InstrumentingAgents& instrumentingAgents, DocumentLoader* loader, CachedResource* cachedResource)
@@ -819,11 +852,17 @@ void InspectorInstrumentation::frameClearedScheduledNavigationImpl(Instrumenting
         inspectorPageAgent->frameClearedScheduledNavigation(frame);
 }
 
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-void InspectorInstrumentation::defaultAppearanceDidChangeImpl(InstrumentingAgents& instrumentingAgents, bool useDarkAppearance)
+void InspectorInstrumentation::accessibilitySettingsDidChangeImpl(InstrumentingAgents& instrumentingAgents)
 {
     if (auto* inspectorPageAgent = instrumentingAgents.enabledPageAgent())
-        inspectorPageAgent->defaultAppearanceDidChange(useDarkAppearance);
+        inspectorPageAgent->accessibilitySettingsDidChange();
+}
+
+#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
+void InspectorInstrumentation::defaultAppearanceDidChangeImpl(InstrumentingAgents& instrumentingAgents)
+{
+    if (auto* inspectorPageAgent = instrumentingAgents.enabledPageAgent())
+        inspectorPageAgent->defaultAppearanceDidChange();
 }
 #endif
 
@@ -1132,7 +1171,7 @@ bool InspectorInstrumentation::isWebGLProgramHighlightedImpl(InstrumentingAgents
 }
 #endif
 
-void InspectorInstrumentation::willApplyKeyframeEffectImpl(InstrumentingAgents& instrumentingAgents, const Styleable& target, KeyframeEffect& effect, ComputedEffectTiming computedTiming)
+void InspectorInstrumentation::willApplyKeyframeEffectImpl(InstrumentingAgents& instrumentingAgents, const Styleable& target, KeyframeEffect& effect, const ComputedEffectTiming& computedTiming)
 {
     if (auto* animationAgent = instrumentingAgents.trackingAnimationAgent())
         animationAgent->willApplyKeyframeEffect(target, effect, computedTiming);

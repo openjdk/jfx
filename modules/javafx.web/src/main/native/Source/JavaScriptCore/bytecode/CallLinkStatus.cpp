@@ -35,9 +35,11 @@
 
 namespace JSC {
 
+#if ENABLE(JIT)
 namespace CallLinkStatusInternal {
 static constexpr bool verbose = false;
 }
+#endif
 
 CallLinkStatus::CallLinkStatus(JSValue value)
     : m_couldTakeSlowPath(false)
@@ -128,7 +130,7 @@ CallLinkStatus CallLinkStatus::computeFor(
     UNUSED_PARAM(profiledBlock);
 
     CallLinkStatus result = computeFromCallLinkInfo(locker, callLinkInfo);
-    result.m_maxArgumentCountIncludingThis = callLinkInfo.maxArgumentCountIncludingThis();
+    result.m_maxArgumentCountIncludingThisForVarargs = callLinkInfo.maxArgumentCountIncludingThisForVarargs();
     return result;
 }
 
@@ -444,8 +446,8 @@ void CallLinkStatus::dump(PrintStream& out) const
     if (!m_variants.isEmpty())
         out.print(comma, listDump(m_variants));
 
-    if (m_maxArgumentCountIncludingThis)
-        out.print(comma, "maxArgumentCountIncludingThis = ", m_maxArgumentCountIncludingThis);
+    if (m_maxArgumentCountIncludingThisForVarargs)
+        out.print(comma, "maxArgumentCountIncludingThisForVarargs = ", m_maxArgumentCountIncludingThisForVarargs);
 }
 
 } // namespace JSC

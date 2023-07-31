@@ -111,7 +111,7 @@ void StackVisitor::readFrame(CallFrame* callFrame)
         return;
     }
 
-    if (callFrame->isAnyWasmCallee()) {
+    if (callFrame->isWasmFrame()) {
         readNonInlinedFrame(callFrame);
         return;
     }
@@ -167,13 +167,13 @@ void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOri
     m_frame.m_inlineCallFrame = nullptr;
 #endif
 
-    m_frame.m_codeBlock = callFrame->codeBlock();
+    m_frame.m_codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
     m_frame.m_bytecodeIndex = !m_frame.codeBlock() ? BytecodeIndex(0)
         : codeOrigin ? codeOrigin->bytecodeIndex()
         : callFrame->bytecodeIndex();
 
 #if ENABLE(WEBASSEMBLY)
-    if (callFrame->isAnyWasmCallee()) {
+    if (callFrame->isWasmFrame()) {
         m_frame.m_isWasmFrame = true;
         m_frame.m_codeBlock = nullptr;
 
@@ -260,16 +260,13 @@ std::optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForU
 #if ENABLE(WEBASSEMBLY)
     if (isWasmFrame()) {
         if (callee().isCell()) {
-            RELEASE_ASSERT(isWebAssemblyModule(callee().asCell()));
+            RELEASE_ASSERT(isWebAssemblyInstance(callee().asCell()));
             return std::nullopt;
         }
         Wasm::Callee* wasmCallee = callee().asWasmCallee();
-        return *wasmCallee->calleeSaveRegisters();
-    }
-
-    if (callee().isCell()) {
-        if (auto* jsToWasmICCallee = jsDynamicCast<JSToWasmICCallee*>(callee().asCell()))
-            return jsToWasmICCallee->function()->usedCalleeSaveRegisters();
+        if (auto* calleeSaveRegisters = wasmCallee->calleeSaveRegisters())
+            return *calleeSaveRegisters;
+        return std::nullopt;
     }
 #endif // ENABLE(WEBASSEMBLY)
 
@@ -331,6 +328,28 @@ String StackVisitor::Frame::sourceURL() const
         traceLine = "[wasm code]"_s;
         break;
     }
+    return traceLine.isNull() ? emptyString() : traceLine;
+}
+
+String StackVisitor::Frame::preRedirectURL() const
+{
+    String traceLine;
+
+    switch (codeType()) {
+    case CodeType::Eval:
+    case CodeType::Module:
+    case CodeType::Function:
+    case CodeType::Global: {
+        String preRedirectURL = codeBlock()->ownerExecutable()->preRedirectURL();
+        if (!preRedirectURL.isEmpty())
+            traceLine = preRedirectURL.impl();
+        break;
+    }
+    case CodeType::Native:
+    case CodeType::Wasm:
+        break;
+    }
+
     return traceLine.isNull() ? emptyString() : traceLine;
 }
 
@@ -476,7 +495,7 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, WTF::Function<
 
         CallFrame* callFrame = m_callFrame;
         CallFrame* callerFrame = this->callerFrame();
-        const void* returnPC = callFrame->hasReturnPC() ? callFrame->returnPC().value() : nullptr;
+        const void* returnPC = callFrame->hasReturnPC() ? callFrame->returnPCForInspection() : nullptr;
 
         out.print(indent, "name: ", functionName(), "\n");
         out.print(indent, "sourceURL: ", sourceURL(), "\n");

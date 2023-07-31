@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InlineIteratorBox.h"
 
+#include "InlineIteratorInlineBox.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineIteratorTextBox.h"
 #include "LayoutIntegrationLineLayout.h"
@@ -81,23 +82,28 @@ LeafBoxIterator Box::previousOnLineIgnoringLineBreak() const
     return LeafBoxIterator(*this).traversePreviousOnLineIgnoringLineBreak();
 }
 
+InlineBoxIterator Box::parentInlineBox() const
+{
+    return WTF::switchOn(m_pathVariant, [](auto& path) -> InlineBoxIterator {
+        return { path.parentInlineBox() };
+    });
+}
+
 LineBoxIterator Box::lineBox() const
 {
     return WTF::switchOn(m_pathVariant, [](const BoxLegacyPath& path) {
         return LineBoxIterator(LineBoxIteratorLegacyPath(&path.rootInlineBox()));
     }
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     , [](const BoxModernPath& path) {
         return LineBoxIterator(LineBoxIteratorModernPath(path.inlineContent(), path.box().lineIndex()));
     }
-#endif
     );
 }
 
 FloatRect Box::visualRect() const
 {
     auto rect = visualRectIgnoringBlockDirection();
-    containingBlock().flipForWritingMode(rect);
+    formattingContextRoot().flipForWritingMode(rect);
     return rect;
 }
 
@@ -155,35 +161,27 @@ LeafBoxIterator& LeafBoxIterator::traversePreviousOnLineIgnoringLineBreak()
 
 LeafBoxIterator boxFor(const RenderLineBreak& renderer)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(renderer))
         return lineLayout->boxFor(renderer);
-#endif
     return { BoxLegacyPath(renderer.inlineBoxWrapper()) };
 }
 
 LeafBoxIterator boxFor(const RenderBox& renderer)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(renderer))
         return lineLayout->boxFor(renderer);
-#endif
     return { BoxLegacyPath(renderer.inlineBoxWrapper()) };
 }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 LeafBoxIterator boxFor(const LayoutIntegration::InlineContent& content, size_t boxIndex)
 {
     return { BoxModernPath { content, boxIndex } };
 }
-#endif
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 const BoxModernPath& Box::modernPath() const
 {
     return std::get<BoxModernPath>(m_pathVariant);
 }
-#endif
 
 const BoxLegacyPath& Box::legacyPath() const
 {

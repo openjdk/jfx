@@ -40,6 +40,7 @@
 #include "FrameDestructionObserver.h"
 #include "LinkIcon.h"
 #include "NavigationAction.h"
+#include "NetworkConnectionIntegrity.h"
 #include "ResourceError.h"
 #include "ResourceLoaderIdentifier.h"
 #include "ResourceLoaderOptions.h"
@@ -93,6 +94,7 @@ class SubresourceLoader;
 class SubstituteResource;
 class UserContentURLPattern;
 
+enum class ClearSiteDataValue : uint8_t;
 enum class ShouldContinue;
 
 using ResourceLoaderMap = HashMap<ResourceLoaderIdentifier, RefPtr<ResourceLoader>>;
@@ -155,6 +157,9 @@ enum class ColorSchemePreference : uint8_t {
     Light,
     Dark
 };
+
+enum class ContentExtensionDefaultEnablement : bool { Disabled, Enabled };
+using ContentExtensionEnablement = std::pair<ContentExtensionDefaultEnablement, HashSet<String>>;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentLoader);
 class DocumentLoader
@@ -307,12 +312,14 @@ public:
     bool isLoadingMainResource() const { return m_loadingMainResource; }
     bool isLoadingMultipartContent() const { return m_isLoadingMultipartContent; }
 
+    bool isLoadingInHeadlessMode() const;
+
     void stopLoadingPlugIns();
     void stopLoadingSubresources();
     WEBCORE_EXPORT void stopLoadingAfterXFrameOptionsOrContentSecurityPolicyDenied(ResourceLoaderIdentifier, const ResourceResponse&);
 
-    bool userContentExtensionsEnabled() const { return m_userContentExtensionsEnabled; }
-    void setUserContentExtensionsEnabled(bool enabled) { m_userContentExtensionsEnabled = enabled; }
+    const ContentExtensionEnablement& contentExtensionEnablement() const { return m_contentExtensionEnablement; }
+    void setContentExtensionEnablement(ContentExtensionEnablement&& enablement) { m_contentExtensionEnablement = WTFMove(enablement); }
 
     bool allowsActiveContentRuleListActionsForURL(const String& contentRuleListIdentifier, const URL&) const;
     WEBCORE_EXPORT void setActiveContentRuleListActionPatterns(const HashMap<String, Vector<String>>&);
@@ -327,6 +334,9 @@ public:
 
     void setCustomUserAgent(const String& customUserAgent) { m_customUserAgent = customUserAgent; }
     const String& customUserAgent() const { return m_customUserAgent; }
+
+    void setAllowPrivacyProxy(bool allow) { m_allowPrivacyProxy = allow; }
+    bool allowPrivacyProxy() const { return m_allowPrivacyProxy; }
 
     void setCustomUserAgentAsSiteSpecificQuirks(const String& customUserAgent) { m_customUserAgentAsSiteSpecificQuirks = customUserAgent; }
     const String& customUserAgentAsSiteSpecificQuirks() const { return m_customUserAgentAsSiteSpecificQuirks; }
@@ -358,6 +368,7 @@ public:
     ModalContainerObservationPolicy modalContainerObservationPolicy() const { return m_modalContainerObservationPolicy; }
     void setModalContainerObservationPolicy(ModalContainerObservationPolicy policy) { m_modalContainerObservationPolicy = policy; }
 
+    // FIXME: Why is this in a Loader?
     WEBCORE_EXPORT ColorSchemePreference colorSchemePreference() const;
     void setColorSchemePreference(ColorSchemePreference preference) { m_colorSchemePreference = preference; }
 
@@ -439,6 +450,9 @@ public:
     void setAllowContentChangeObserverQuirk(bool allow) { m_allowContentChangeObserverQuirk = allow; }
     bool allowContentChangeObserverQuirk() const { return m_allowContentChangeObserverQuirk; }
 
+    void setNetworkConnectionIntegrityPolicy(OptionSet<NetworkConnectionIntegrity> policy) { m_networkConnectionIntegrityPolicy = policy; }
+    OptionSet<NetworkConnectionIntegrity> networkConnectionIntegrityPolicy() const { return m_networkConnectionIntegrityPolicy; }
+
     void setIdempotentModeAutosizingOnlyHonorsPercentages(bool idempotentModeAutosizingOnlyHonorsPercentages) { m_idempotentModeAutosizingOnlyHonorsPercentages = idempotentModeAutosizingOnlyHonorsPercentages; }
     bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
 
@@ -452,6 +466,7 @@ public:
 
     ContentSecurityPolicy* contentSecurityPolicy() const { return m_contentSecurityPolicy.get(); }
     const std::optional<CrossOriginOpenerPolicy>& crossOriginOpenerPolicy() const { return m_responseCOOP; }
+    OptionSet<ClearSiteDataValue> responseClearSiteDataValues() const { return m_responseClearSiteDataValues; }
 
     bool isContinuingLoadAfterProvisionalLoadStarted() const { return m_isContinuingLoadAfterProvisionalLoadStarted; }
     void setIsContinuingLoadAfterProvisionalLoadStarted(bool isContinuingLoadAfterProvisionalLoadStarted) { m_isContinuingLoadAfterProvisionalLoadStarted = isContinuingLoadAfterProvisionalLoadStarted; }
@@ -469,8 +484,6 @@ protected:
     WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
 
     WEBCORE_EXPORT virtual void attachToFrame();
-
-    bool m_deferMainResourceDataLoad { true };
 
 private:
     class DataLoadToken : public CanMakeWeakPtr<DataLoadToken> {
@@ -502,10 +515,6 @@ private:
     bool maybeCreateArchive();
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
     void clearArchiveResources();
-#endif
-
-#if ENABLE(WEB_ARCHIVE)
-    bool isLoadingRemoteArchive() const;
 #endif
 
     void willSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
@@ -560,7 +569,6 @@ private:
 
     // ContentSecurityPolicyClient
     WEBCORE_EXPORT void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long requestIdentifier) final;
-    WEBCORE_EXPORT void sendCSPViolationReport(URL&&, Ref<FormData>&&) final;
     WEBCORE_EXPORT void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEventInit&&) final;
 
     bool disallowWebArchive() const;
@@ -594,42 +602,28 @@ private:
     // headers, cookie information, canonicalization and redirects.
     ResourceRequest m_request;
 
+    // The last request that we checked click policy for - kept around
+    // so we can avoid asking again needlessly.
+    ResourceRequest m_lastCheckedRequest;
+
     ResourceResponse m_response;
 
     ResourceError m_mainDocumentError;
 
-    bool m_originalSubstituteDataWasValid;
-    bool m_committed { false };
-    bool m_isStopping { false };
-    bool m_gotFirstByte { false };
-    bool m_isClientRedirect { false };
-    bool m_isLoadingMultipartContent { false };
-    bool m_isContinuingLoadAfterProvisionalLoadStarted { false };
-    bool m_isInFinishedLoadingOfEmptyDocument { false };
-
-    // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadDispatched are roughly the same
-    // and should be merged.
-    bool m_wasOnloadDispatched { false };
-
     StringWithDirection m_pageTitle;
-
     String m_overrideEncoding;
 
     // The action that triggered loading - we keep this around for the
     // benefit of the various policy handlers.
     NavigationAction m_triggeringAction;
 
-    // The last request that we checked click policy for - kept around
-    // so we can avoid asking again needlessly.
-    ResourceRequest m_lastCheckedRequest;
-
     // We retain all the received responses so we can play back the
     // WebResourceLoadDelegate messages if the item is loaded from the
     // back/forward cache.
     Vector<ResourceResponse> m_responses;
-    bool m_stopRecordingResponses { false };
 
     std::optional<CrossOriginOpenerPolicy> m_responseCOOP;
+    OptionSet<ClearSiteDataValue> m_responseClearSiteDataValues;
 
     typedef HashMap<RefPtr<ResourceLoader>, RefPtr<SubstituteResource>> SubstituteResourceMap;
     SubstituteResourceMap m_pendingSubstituteResources;
@@ -645,16 +639,11 @@ private:
     Vector<ResourceRequest> m_resourcesLoadedFromMemoryCacheForClientNotification;
 
     String m_clientRedirectSourceForHistory;
-    bool m_didCreateGlobalHistoryEntry { false };
-
-    bool m_loadingMainResource { false };
     DocumentLoadTiming m_loadTiming;
 
     ResourceLoaderIdentifier m_identifierForLoadWithoutResourceLoader;
 
     DataLoadToken m_dataLoadToken;
-    bool m_waitingForContentPolicy { false };
-    bool m_waitingForNavigationPolicy { false };
 
     HashMap<uint64_t, LinkIcon> m_iconsPendingLoadDecision;
     HashMap<std::unique_ptr<IconLoader>, CompletionHandler<void(FragmentedSharedBuffer*)>> m_iconLoaders;
@@ -663,12 +652,9 @@ private:
 #if ENABLE(APPLICATION_MANIFEST)
     std::unique_ptr<ApplicationManifestLoader> m_applicationManifestLoader;
     Vector<CompletionHandler<void(const std::optional<ApplicationManifest>&)>> m_loadApplicationManifestCallbacks;
-    bool m_finishedLoadingApplicationManifest { false };
 #endif
 
     Vector<CustomHeaderFields> m_customHeaderFields;
-
-    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
 
     std::unique_ptr<ApplicationCacheHost> m_applicationCacheHost;
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
@@ -676,7 +662,6 @@ private:
 #if ENABLE(CONTENT_FILTERING)
     std::unique_ptr<ContentFilter> m_contentFilter;
 #if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-    bool m_blockedByContentFilter { false };
     ResourceError m_blockedError;
     URL m_blockedPageURL;
     SubstituteData m_substituteDataFromContentFilter;
@@ -693,14 +678,21 @@ private:
 #endif
     String m_customUserAgent;
     String m_customUserAgentAsSiteSpecificQuirks;
-    bool m_allowContentChangeObserverQuirk { false };
-    bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
     String m_customNavigatorPlatform;
-    bool m_userContentExtensionsEnabled { true };
     MemoryCompactRobinHoodHashMap<String, Vector<UserContentURLPattern>> m_activeContentRuleListActionPatterns;
+    ContentExtensionEnablement m_contentExtensionEnablement { ContentExtensionDefaultEnablement::Enabled, { } };
+
+    ScriptExecutionContextIdentifier m_resultingClientId;
+
+#if ENABLE(SERVICE_WORKER)
+    std::unique_ptr<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
+#endif
+
 #if ENABLE(DEVICE_ORIENTATION)
     DeviceOrientationOrMotionPermissionState m_deviceOrientationAndMotionAccessState { DeviceOrientationOrMotionPermissionState::Prompt };
 #endif
+
+    OptionSet<NetworkConnectionIntegrity> m_networkConnectionIntegrityPolicy;
     AutoplayPolicy m_autoplayPolicy { AutoplayPolicy::Default };
     OptionSet<AutoplayQuirk> m_allowedAutoplayQuirks;
     PopUpPolicy m_popUpPolicy { PopUpPolicy::Default };
@@ -711,19 +703,51 @@ private:
     MouseEventPolicy m_mouseEventPolicy { MouseEventPolicy::Default };
     ModalContainerObservationPolicy m_modalContainerObservationPolicy { ModalContainerObservationPolicy::Disabled };
     ColorSchemePreference m_colorSchemePreference { ColorSchemePreference::NoPreference };
+    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
+
+    bool m_allowContentChangeObserverQuirk { false };
+    bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
+
+    bool m_isRequestFromClientOrUserInput { false };
+    bool m_lastNavigationWasAppInitiated { true };
+    bool m_allowPrivacyProxy { true };
+
+    bool m_deferMainResourceDataLoad { true };
+
+    bool m_originalSubstituteDataWasValid { false };
+    bool m_committed { false };
+    bool m_isStopping { false };
+    bool m_gotFirstByte { false };
+    bool m_isClientRedirect { false };
+    bool m_isLoadingMultipartContent { false };
+    bool m_isContinuingLoadAfterProvisionalLoadStarted { false };
+    bool m_isInFinishedLoadingOfEmptyDocument { false };
+
+    // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadDispatched are roughly the same
+    // and should be merged.
+    bool m_wasOnloadDispatched { false };
+    bool m_stopRecordingResponses { false };
+    bool m_didCreateGlobalHistoryEntry { false };
+    bool m_loadingMainResource { false };
+
+    bool m_waitingForContentPolicy { false };
+    bool m_waitingForNavigationPolicy { false };
+
+#if ENABLE(APPLICATION_MANIFEST)
+    bool m_finishedLoadingApplicationManifest { false };
+#endif
+
+#if ENABLE(CONTENT_FILTERING) && ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    bool m_blockedByContentFilter { false };
+#endif // ENABLE(CONTENT_FILTERING) && ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
 
 #if ENABLE(SERVICE_WORKER)
-    std::optional<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
     bool m_canUseServiceWorkers { true };
 #endif
-    ScriptExecutionContextIdentifier m_resultingClientId;
 
 #if ASSERT_ENABLED
     bool m_hasEverBeenAttached { false };
 #endif
-
-    bool m_isRequestFromClientOrUserInput { false };
-    bool m_lastNavigationWasAppInitiated { true };
 };
 
 inline void DocumentLoader::recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest& request)

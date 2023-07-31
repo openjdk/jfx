@@ -37,7 +37,7 @@ import com.sun.javafx.binding.OrElseBinding;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.Subscription;
+import javafx.util.Subscription;
 
 /**
  * An {@code ObservableValue} is an entity that wraps a value and allows to

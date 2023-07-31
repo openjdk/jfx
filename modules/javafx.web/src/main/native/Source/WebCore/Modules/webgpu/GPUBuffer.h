@@ -27,7 +27,7 @@
 
 #include "GPUIntegralTypes.h"
 #include "GPUMapMode.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <cstdint>
 #include <optional>
@@ -58,6 +58,7 @@ public:
     PAL::WebGPU::Buffer& backing() { return m_backing; }
     const PAL::WebGPU::Buffer& backing() const { return m_backing; }
 
+    ~GPUBuffer() { destroy(); }
 private:
     GPUBuffer(Ref<PAL::WebGPU::Buffer>&& backing)
         : m_backing(WTFMove(backing))
@@ -65,6 +66,8 @@ private:
     }
 
     Ref<PAL::WebGPU::Buffer> m_backing;
+    PAL::WebGPU::Buffer::MappedRange m_mappedRange;
+    JSC::ArrayBuffer* m_arrayBuffer { nullptr };
 };
 
 }

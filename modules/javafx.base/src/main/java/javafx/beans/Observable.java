@@ -27,6 +27,8 @@ package javafx.beans;
 
 import java.util.Objects;
 
+import javafx.util.Subscription;
+
 /**
  * An {@code Observable} is an entity that wraps content and allows to
  * observe the content for invalidations.

@@ -21,7 +21,7 @@
 
 #include "SVGAltGlyphItemElement.h"
 
-#include "ElementIterator.h"
+#include "ElementChildIterator.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGlyphRefElement.h"
 #include "SVGNames.h"
@@ -32,7 +32,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAltGlyphItemElement);
 
 inline SVGAltGlyphItemElement::SVGAltGlyphItemElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::altGlyphItemTag));
 }

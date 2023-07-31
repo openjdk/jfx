@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "LazyLoadFrameObserver.h"
+#include "Quirks.h"
 #include "RenderIFrame.h"
 #include "ScriptController.h"
 #include "ScriptableDocumentParser.h"
@@ -166,8 +167,11 @@ void HTMLIFrameElement::setLoadingForBindings(const AtomString& value)
     setAttributeWithoutSynchronization(loadingAttr, value);
 }
 
-static bool isFrameLazyLoadable(const Document& document, const AtomString& loadingAttributeValue)
+static bool isFrameLazyLoadable(const Document& document, const URL& url, const AtomString& loadingAttributeValue)
 {
+    if (!url.isValid() || url.isAboutBlank())
+        return false;
+
     if (!document.frame() || !document.frame()->script().canExecuteScripts(NotAboutToExecuteScript))
         return false;
 
@@ -176,10 +180,10 @@ static bool isFrameLazyLoadable(const Document& document, const AtomString& load
 
 bool HTMLIFrameElement::shouldLoadFrameLazily()
 {
-    if (!m_lazyLoadFrameObserver && document().settings().lazyIframeLoadingEnabled()) {
-        if (isFrameLazyLoadable(document(), attributeWithoutSynchronization(HTMLNames::loadingAttr))) {
-            auto currentReferrerPolicy = referrerPolicy();
+    if (!m_lazyLoadFrameObserver && document().settings().lazyIframeLoadingEnabled() && !document().quirks().shouldDisableLazyIframeLoadingQuirk()) {
             URL completeURL = document().completeURL(frameURL());
+        if (isFrameLazyLoadable(document(), completeURL, attributeWithoutSynchronization(HTMLNames::loadingAttr))) {
+            auto currentReferrerPolicy = referrerPolicy();
             lazyLoadFrameObserver().observe(AtomString { completeURL.string() }, currentReferrerPolicy);
             return true;
         }

@@ -90,6 +90,26 @@ public:
         return m_identifier != other.m_identifier;
     }
 
+    bool operator>(const ObjectIdentifier& other) const
+    {
+        return m_identifier > other.m_identifier;
+    }
+
+    bool operator>=(const ObjectIdentifier& other) const
+    {
+        return m_identifier >= other.m_identifier;
+    }
+
+    bool operator<(const ObjectIdentifier& other) const
+    {
+        return m_identifier < other.m_identifier;
+    }
+
+    bool operator<=(const ObjectIdentifier& other) const
+    {
+        return m_identifier <= other.m_identifier;
+    }
+
     uint64_t toUInt64() const { return m_identifier; }
     explicit operator bool() const { return m_identifier; }
 
@@ -153,6 +173,17 @@ TextStream& operator<<(TextStream& ts, const ObjectIdentifier<T>& identifier)
     ts << identifier.toUInt64();
     return ts;
 }
+
+template<typename T> class StringTypeAdapter<ObjectIdentifier<T>> {
+public:
+    StringTypeAdapter(ObjectIdentifier<T> identifier)
+        : m_identifier(identifier) { }
+    unsigned length() const { return lengthOfIntegerAsString(m_identifier.toUInt64()); }
+    bool is8Bit() const { return true; }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const { writeIntegerToBuffer(m_identifier.toUInt64(), destination); }
+private:
+    ObjectIdentifier<T> m_identifier;
+};
 
 } // namespace WTF
 

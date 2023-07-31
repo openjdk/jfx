@@ -492,7 +492,7 @@ Lexer<T>::Lexer(VM& vm, JSParserBuiltinMode builtinMode, JSParserScriptMode scri
     : m_positionBeforeLastNewline(0,0,0)
     , m_isReparsingFunction(false)
     , m_vm(vm)
-    , m_parsingBuiltinFunction(builtinMode == JSParserBuiltinMode::Builtin)
+    , m_parsingBuiltinFunction(builtinMode == JSParserBuiltinMode::Builtin || Options::exposePrivateIdentifiers())
     , m_scriptMode(scriptMode)
 {
 }
@@ -528,7 +528,7 @@ String Lexer<T>::invalidCharacterMessage() const
     case 96:
         return "Invalid character: '`'"_s;
     default:
-        return makeString("Invalid character '\\u", hex(m_current, 4, Lowercase), '\'');
+        return makeString("Invalid character '\\u"_s, hex(m_current, 4, Lowercase), '\'');
     }
 }
 
@@ -849,7 +849,7 @@ static inline bool isASCIIOctalDigitOrSeparator(CharacterType character)
 static inline LChar singleEscape(int c)
 {
     if (c < 128) {
-        ASSERT(static_cast<size_t>(c) < WTF_ARRAY_LENGTH(singleCharacterEscapeValuesForASCII));
+        ASSERT(static_cast<size_t>(c) < std::size(singleCharacterEscapeValuesForASCII));
         return singleCharacterEscapeValuesForASCII[c];
     }
     return 0;
@@ -987,7 +987,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
             ident = makeIdentifier(identifierStart, identifierLength);
             if (m_parsingBuiltinFunction) {
                 if (!isSafeBuiltinIdentifier(m_vm, ident)) {
-                    m_lexErrorMessage = makeString("The use of '", ident->string(), "' is disallowed in builtin functions.");
+                    m_lexErrorMessage = makeString("The use of '"_s, ident->string(), "' is disallowed in builtin functions."_s);
                     return ERRORTOK;
                 }
                 if (*ident == m_vm.propertyNames->undefinedKeyword)
@@ -1839,36 +1839,30 @@ ALWAYS_INLINE void Lexer<T>::parseCommentDirective()
     }
 }
 
-template <typename T>
-ALWAYS_INLINE String Lexer<T>::parseCommentDirectiveValue()
+IGNORE_WARNINGS_BEGIN("unused-but-set-variable")
+template<typename CharacterType> ALWAYS_INLINE String Lexer<CharacterType>::parseCommentDirectiveValue()
 {
     skipWhitespace();
-    bool hasNonLatin1 = false;
-    const T* stringStart = currentSourcePtr();
+    UChar mergedCharacterBits = 0;
+    auto stringStart = currentSourcePtr();
     while (!isWhiteSpace(m_current) && !isLineTerminator(m_current) && m_current != '"' && m_current != '\'' && !atEnd()) {
-        if (!isLatin1(m_current))
-            hasNonLatin1 = true;
+        if constexpr (std::is_same_v<CharacterType, UChar>)
+            mergedCharacterBits |= m_current;
         shift();
     }
-    const T* stringEnd = currentSourcePtr();
-    skipWhitespace();
+    unsigned length = currentSourcePtr() - stringStart;
 
+    skipWhitespace();
     if (!isLineTerminator(m_current) && !atEnd())
         return String();
 
-    unsigned length = stringEnd - stringStart;
-    if (hasNonLatin1) {
-        UChar* buffer = nullptr;
-        String result = StringImpl::createUninitialized(length, buffer);
-        StringImpl::copyCharacters(buffer, stringStart, length);
-        return result;
+    if constexpr (std::is_same_v<CharacterType, UChar>) {
+        if (isLatin1(mergedCharacterBits))
+            return String::make8Bit(stringStart, length);
     }
-
-    LChar* buffer = nullptr;
-    String result = StringImpl::createUninitialized(length, buffer);
-    StringImpl::copyCharacters(buffer, stringStart, length);
-    return result;
+    return { stringStart, length };
 }
+IGNORE_WARNINGS_END
 
 template <typename T>
 template <unsigned length>
@@ -2636,7 +2630,7 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
             JSTokenType token = UNTERMINATED_REGEXP_LITERAL_ERRORTOK;
             fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
             m_error = true;
-            m_lexErrorMessage = makeString("Unterminated regular expression literal '", getToken(*tokenRecord), "'");
+            m_lexErrorMessage = makeString("Unterminated regular expression literal '"_s, getToken(*tokenRecord), '\'');
             return token;
         }
 
@@ -2686,7 +2680,7 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
         String codePoint = String::fromCodePoint(currentCodePoint());
         if (!codePoint)
             codePoint = "`invalid unicode character`"_s;
-        m_lexErrorMessage = makeString("Invalid non-latin character in RexExp literal's flags '", getToken(*tokenRecord), codePoint, "'");
+        m_lexErrorMessage = makeString("Invalid non-latin character in RexExp literal's flags '"_s, getToken(*tokenRecord), codePoint, '\'');
         return token;
     }
 

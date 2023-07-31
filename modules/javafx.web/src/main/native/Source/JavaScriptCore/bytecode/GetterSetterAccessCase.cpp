@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,39 +49,27 @@ GetterSetterAccessCase::GetterSetterAccessCase(VM& vm, JSCell* owner, AccessType
 
 Ref<AccessCase> GetterSetterAccessCase::create(
     VM& vm, JSCell* owner, AccessType type, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet,
-    bool viaProxy, WatchpointSet* additionalSet, FunctionPtr<CustomAccessorPtrTag> customGetter, JSObject* customSlotBase,
+    bool viaProxy, WatchpointSet* additionalSet, CodePtr<CustomAccessorPtrTag> customGetter, JSObject* customSlotBase,
     std::optional<DOMAttributeAnnotation> domAttribute, RefPtr<PolyProtoAccessChain>&& prototypeAccessChain)
 {
-    switch (type) {
-    case Getter:
-    case CustomAccessorGetter:
-    case CustomValueGetter:
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-    };
-
+    ASSERT(type == Getter || type == CustomValueGetter || type == CustomAccessorGetter);
     auto result = adoptRef(*new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaProxy, additionalSet, customSlotBase, WTFMove(prototypeAccessChain)));
     result->m_domAttribute = domAttribute;
-    result->m_customAccessor = customGetter ? FunctionPtr<CustomAccessorPtrTag>(customGetter) : nullptr;
+    if (customGetter)
+        result->m_customAccessor = customGetter;
     return result;
 }
 
 Ref<AccessCase> GetterSetterAccessCase::create(VM& vm, JSCell* owner, AccessType type, Structure* structure, CacheableIdentifier identifier, PropertyOffset offset,
     const ObjectPropertyConditionSet& conditionSet, RefPtr<PolyProtoAccessChain>&& prototypeAccessChain, bool viaProxy,
-    FunctionPtr<CustomAccessorPtrTag> customSetter, JSObject* customSlotBase)
+    CodePtr<CustomAccessorPtrTag> customSetter, JSObject* customSlotBase)
 {
     ASSERT(type == Setter || type == CustomValueSetter || type == CustomAccessorSetter);
     auto result = adoptRef(*new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaProxy, nullptr, customSlotBase, WTFMove(prototypeAccessChain)));
-    result->m_customAccessor = customSetter ? FunctionPtr<CustomAccessorPtrTag>(customSetter) : nullptr;
+    if (customSetter)
+        result->m_customAccessor = customSetter;
     return result;
 }
-
-
-GetterSetterAccessCase::~GetterSetterAccessCase()
-{
-}
-
 
 GetterSetterAccessCase::GetterSetterAccessCase(const GetterSetterAccessCase& other)
     : Base(other)
@@ -91,25 +79,25 @@ GetterSetterAccessCase::GetterSetterAccessCase(const GetterSetterAccessCase& oth
     m_domAttribute = other.m_domAttribute;
 }
 
-Ref<AccessCase> GetterSetterAccessCase::clone() const
+Ref<AccessCase> GetterSetterAccessCase::cloneImpl() const
 {
     auto result = adoptRef(*new GetterSetterAccessCase(*this));
     result->resetState();
     return result;
 }
 
-bool GetterSetterAccessCase::hasAlternateBase() const
+bool GetterSetterAccessCase::hasAlternateBaseImpl() const
 {
     if (customSlotBase())
         return true;
-    return Base::hasAlternateBase();
+    return Base::hasAlternateBaseImpl();
 }
 
-JSObject* GetterSetterAccessCase::alternateBase() const
+JSObject* GetterSetterAccessCase::alternateBaseImpl() const
 {
     if (customSlotBase())
         return customSlotBase();
-    return Base::alternateBase();
+    return Base::alternateBaseImpl();
 }
 
 void GetterSetterAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma, Indenter& indent) const
@@ -118,15 +106,15 @@ void GetterSetterAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma, Ind
     out.print(comma, "customSlotBase = ", RawPointer(customSlotBase()));
     if (callLinkInfo())
         out.print(comma, "callLinkInfo = ", RawPointer(callLinkInfo()));
-    out.print(comma, "customAccessor = ", RawPointer(m_customAccessor.executableAddress()));
+    out.print(comma, "customAccessor = ", RawPointer(m_customAccessor.taggedPtr()));
 }
 
 void GetterSetterAccessCase::emitDOMJITGetter(AccessGenerationState& state, const DOMJIT::GetterSetter* domJIT, GPRReg baseForGetGPR)
 {
     CCallHelpers& jit = *state.jit;
     StructureStubInfo& stubInfo = *state.stubInfo;
-    JSValueRegs valueRegs = state.valueRegs;
-    GPRReg baseGPR = state.baseGPR;
+    JSValueRegs valueRegs = stubInfo.valueRegs();
+    GPRReg baseGPR = stubInfo.m_baseGPR;
     GPRReg scratchGPR = state.scratchGPR;
 
     // We construct the environment that can execute the DOMJIT::Snippet here.
@@ -205,23 +193,23 @@ void GetterSetterAccessCase::emitDOMJITGetter(AccessGenerationState& state, cons
     // they must be in the used register set passed by the callers (Baseline, DFG, and FTL) if they need to be kept.
     // Some registers can be locked, but not in the used register set. For example, the caller could make baseGPR
     // same to valueRegs, and not include it in the used registers since it will be changed.
-    RegisterSet registersToSpillForCCall;
+    RegisterSetBuilder usedRegisters;
     for (auto& value : regs) {
         SnippetReg reg = value.reg();
         if (reg.isJSValueRegs())
-            registersToSpillForCCall.set(reg.jsValueRegs());
+            usedRegisters.add(reg.jsValueRegs(), IgnoreVectors);
         else if (reg.isGPR())
-            registersToSpillForCCall.set(reg.gpr());
+            usedRegisters.add(reg.gpr(), IgnoreVectors);
         else
-            registersToSpillForCCall.set(reg.fpr());
+            usedRegisters.add(reg.fpr(), IgnoreVectors);
     }
     for (GPRReg reg : gpScratch)
-        registersToSpillForCCall.set(reg);
+        usedRegisters.add(reg, IgnoreVectors);
     for (FPRReg reg : fpScratch)
-        registersToSpillForCCall.set(reg);
+        usedRegisters.add(reg, IgnoreVectors);
     if (jit.codeBlock()->useDataIC())
-        registersToSpillForCCall.set(stubInfo.m_stubInfoGPR);
-    registersToSpillForCCall.exclude(RegisterSet::registersToNotSaveForCCall());
+        usedRegisters.add(stubInfo.m_stubInfoGPR, IgnoreVectors);
+    auto registersToSpillForCCall = RegisterSetBuilder::registersToSaveForCCall(usedRegisters);
 
     AccessCaseSnippetParams params(state.m_vm, WTFMove(regs), WTFMove(gpScratch), WTFMove(fpScratch));
     snippet->generator()->run(jit, params);

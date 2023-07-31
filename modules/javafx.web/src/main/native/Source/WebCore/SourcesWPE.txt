@@ -48,26 +48,25 @@ page/linux/ResourceUsageThreadLinux.cpp
 
 page/scrolling/nicosia/ScrollingCoordinatorNicosia.cpp
 page/scrolling/nicosia/ScrollingStateNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeFixedNode.cpp
+page/scrolling/nicosia/ScrollingTreeFixedNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeFrameScrollingNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNode.cpp
+page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreePositionedNode.cpp
+page/scrolling/nicosia/ScrollingTreePositionedNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.cpp
 
 platform/UserAgentQuirks.cpp
 
-platform/adwaita/ScrollbarThemeAdwaita.cpp
-platform/adwaita/ThemeAdwaita.cpp
+platform/gamepad/libwpe/GamepadLibWPE.cpp
+platform/gamepad/libwpe/GamepadProviderLibWPE.cpp
 
 platform/gamepad/wpe/WPEGamepad.cpp
 platform/gamepad/wpe/WPEGamepadProvider.cpp
 
 platform/generic/ScrollbarsControllerGeneric.cpp
 
-platform/graphics/ANGLEWebKitBridge.cpp
 platform/graphics/GLContext.cpp
 platform/graphics/PlatformDisplay.cpp
 
@@ -99,5 +98,3 @@ platform/unix/LoggingUnix.cpp
 platform/wpe/PlatformScreenWPE.cpp
 
 platform/xdg/MIMETypeRegistryXdg.cpp
-
-rendering/RenderThemeAdwaita.cpp

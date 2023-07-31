@@ -53,6 +53,7 @@ public:
 
     WEBCORE_EXPORT RefPtr<TextControlInnerTextElement> innerTextElement() const final;
 
+    bool shouldSaveAndRestoreFormControlState() const final { return true; }
 private:
     HTMLTextAreaElement(Document&, HTMLFormElement*);
 
@@ -78,7 +79,7 @@ private:
     void subtreeHasChanged() final;
 
     bool isEnumeratable() const final { return true; }
-    bool supportLabels() const final { return true; }
+    bool isLabelable() const final { return true; }
 
     bool isInteractiveContent() const final { return true; }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,12 +34,14 @@
 #include "WebGPUBufferImpl.h"
 #include "WebGPUCommandBufferImpl.h"
 #include "WebGPUCommandEncoderImpl.h"
+#include "WebGPUCompositorIntegrationImpl.h"
 #include "WebGPUComputePassEncoderImpl.h"
 #include "WebGPUComputePipelineImpl.h"
 #include "WebGPUDeviceImpl.h"
 #include "WebGPUExternalTextureImpl.h"
 #include "WebGPUImpl.h"
 #include "WebGPUPipelineLayoutImpl.h"
+#include "WebGPUPresentationContextImpl.h"
 #include "WebGPUQuerySetImpl.h"
 #include "WebGPUQueueImpl.h"
 #include "WebGPURenderBundleEncoderImpl.h"
@@ -108,6 +110,11 @@ WGPUPipelineLayout DowncastConvertToBackingContext::convertToBacking(const Pipel
     return static_cast<const PipelineLayoutImpl&>(pipelineLayout).backing();
 }
 
+WGPUSurface DowncastConvertToBackingContext::convertToBacking(const PresentationContext& presentationContext)
+{
+    return static_cast<const PresentationContextImpl&>(presentationContext).backing();
+}
+
 WGPUQuerySet DowncastConvertToBackingContext::convertToBacking(const QuerySet& querySet)
 {
     return static_cast<const QuerySetImpl&>(querySet).backing();
@@ -156,6 +163,11 @@ WGPUTexture DowncastConvertToBackingContext::convertToBacking(const Texture& tex
 WGPUTextureView DowncastConvertToBackingContext::convertToBacking(const TextureView& textureView)
 {
     return static_cast<const TextureViewImpl&>(textureView).backing();
+}
+
+CompositorIntegrationImpl& DowncastConvertToBackingContext::convertToBacking(CompositorIntegration& compositorIntegration)
+{
+    return static_cast<CompositorIntegrationImpl&>(compositorIntegration);
 }
 
 } // namespace PAL::WebGPU

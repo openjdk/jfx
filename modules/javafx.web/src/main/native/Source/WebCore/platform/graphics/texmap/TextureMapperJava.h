@@ -49,6 +49,7 @@ public:
     IntSize maxTextureSize() const final;
     Ref<BitmapTexture> createTexture() final { return BitmapTextureJava::create(); }
     Ref<BitmapTexture> createTexture(GCGLint) final { return createTexture(); }
+        void setDepthRange(double zNear, double zFar) final;
     void clearColor(const Color&) final;
 
     inline GraphicsContext* currentContext()
