@@ -36,6 +36,7 @@ import javafx.beans.InvalidationListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
@@ -45,6 +46,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.input.BehaviorBase2;
+import javafx.scene.control.input.EventCriteria;
 import javafx.scene.control.input.InputMap2;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.skin.TextInputControlSkin;
@@ -208,9 +210,30 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // key pad mappings
         addKeyPadMappings();
 
-        // TODO this consumes ENTER and ESC
-        //mapTail(KeyEvent.KEY_PRESSED, false, this::handleRemainingKeyPresses);
         map(KeyEvent.KEY_TYPED, this::defaultKeyTyped);
+
+        // However, we want to consume other key press / release events too, for
+        // things that would have been handled by the InputCharacter normally
+        mapTail(
+            new EventCriteria<KeyEvent>() {
+                @Override
+                public EventType<KeyEvent> getEventType() {
+                    return KeyEvent.KEY_PRESSED;
+                }
+
+                @Override
+                public boolean isEventAcceptable(KeyEvent ev) {
+                    return
+                        !ev.getCode().isFunctionKey() &&
+                        !ev.isAltDown() &&
+                        !ev.isControlDown() &&
+                        !ev.isMetaDown() &&
+                        !ev.isShortcutDown();
+                }
+            },
+            false,
+            (ev) -> ev.consume()
+        );
         
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?

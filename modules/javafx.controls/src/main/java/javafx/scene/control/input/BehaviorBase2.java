@@ -192,6 +192,20 @@ public abstract class BehaviorBase2<C extends Control> implements IBehavior {
     }
 
     /**
+     * Adds an event handler for the specific event criteria, in the context of this Behavior.
+     * This event handler will get invoked after all handlers added via map() methods.
+     * The handler will get removed in {@link#dispose()} method.
+     *
+     * @param <T> the actual event type
+     * @param criteria the matching criteria
+     * @param consume determines whether the matching event is consumed or not
+     * @param handler the event handler
+     */
+    protected <T extends Event> void mapTail(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
+        getInputMap2().map(this, criteria, consume, true, handler);
+    }
+
+    /**
      * Sets the code to be executed just before handling of the key events.
      * @param action the action or null
      */
