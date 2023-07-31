@@ -223,6 +223,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
                 @Override
                 public boolean isEventAcceptable(KeyEvent ev) {
+                    switch(ev.getCode()) {
+                    case ESCAPE:
+                    case ENTER:
+                        return false;
+                    };
                     return
                         !ev.getCode().isFunctionKey() &&
                         !ev.isAltDown() &&
