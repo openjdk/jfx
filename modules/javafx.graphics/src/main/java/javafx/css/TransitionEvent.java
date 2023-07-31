@@ -38,7 +38,7 @@ import javafx.util.Duration;
  *
  * @since 22
  */
-public class TransitionEvent extends Event {
+public final class TransitionEvent extends Event {
 
     private static final long serialVersionUID = 20220820L;
 
@@ -100,7 +100,7 @@ public class TransitionEvent extends Event {
      *
      * @return the {@code StyleableProperty}
      */
-    public final StyleableProperty<?> getProperty() {
+    public StyleableProperty<?> getProperty() {
         return property;
     }
 
@@ -110,7 +110,7 @@ public class TransitionEvent extends Event {
      *
      * @return the elapsed time
      */
-    public final Duration getElapsedTime() {
+    public Duration getElapsedTime() {
         return elapsedTime;
     }
 
