@@ -8934,6 +8934,8 @@ public abstract class Node implements EventTarget, Styleable {
      * Called by animatable {@link StyleableProperty} implementations in order to register
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
+     *
+     * @param timer the transition timer
      */
     private void addTransitionTimer(TransitionTimer<?, ?> timer) {
         if (transitionTimers == null) {
@@ -8947,6 +8949,8 @@ public abstract class Node implements EventTarget, Styleable {
      * Removes a timer that was previously registered with {@link #addTransitionTimer}.
      * This method is called by animatable {@link StyleableProperty} implementations
      * when their {@link TransitionTimer} has completed.
+     *
+     * @param timer the transition timer
      */
     private void removeTransitionTimer(TransitionTimer<?, ?> timer) {
         if (transitionTimers != null) {
@@ -8957,7 +8961,9 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Finds the transition timer that targets the specified {@code property}.
      *
-     * @return the transition timer, or {@code null}
+     * @param property the targeted property
+     * @return the transition timer, or {@code null} if the property is not
+     *         targeted by a transition timer
      */
     private TransitionTimer<?, ?> findTransitionTimer(Property<?> property) {
         if (transitionTimers == null || transitionTimers.isEmpty()) {
@@ -9011,6 +9017,10 @@ public abstract class Node implements EventTarget, Styleable {
         /**
          * Returns the transition for the property referenced by the specified CSS metadata,
          * or {@code null} if no transition was found.
+         *
+         * @param metadata the CSS metadata of the property
+         * @return the {@code TransitionDefinition} specified for the property referenced by the
+         *         CSS metadata, {@code null} otherwise
          */
         TransitionDefinition find(CssMetaData<? extends Styleable, ?> metadata) {
             int size = size();

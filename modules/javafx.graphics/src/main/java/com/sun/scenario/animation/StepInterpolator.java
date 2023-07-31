@@ -32,7 +32,7 @@ import java.util.Objects;
  * Implementation of a step interpolator as described by
  * <a href="https://www.w3.org/TR/css-easing-1/#step-easing-algo">CSS Easing Functions Level 1</a>
  */
-public class StepInterpolator extends Interpolator {
+public final class StepInterpolator extends Interpolator {
 
     private final int intervals;
     private final StepPosition position;

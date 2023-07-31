@@ -25,6 +25,7 @@
 
 package test.com.sun.scenario.animation;
 
+import com.sun.javafx.animation.InterpolatorHelper;
 import com.sun.scenario.animation.StepInterpolator;
 import javafx.animation.Interpolator.StepPosition;
 import org.junit.jupiter.api.Test;
@@ -120,17 +121,17 @@ public class StepInterpolatorTest {
         assertEquals(output + interpolator.stepSize, interpolator.curve(input + 0.001), 0.001);
     }
 
-    private static class StepInterpolatorMock extends StepInterpolator {
-        double stepSize;
+    private static class StepInterpolatorMock {
+        final double stepSize;
+        final StepInterpolator interpolator;
 
         StepInterpolatorMock(int intervals, double stepSize, StepPosition position) {
-            super(intervals, position);
+            this.interpolator = new StepInterpolator(intervals, position);
             this.stepSize = stepSize;
         }
 
-        @Override
-        public double curve(double t) {
-            return super.curve(t);
+        double curve(double t) {
+            return InterpolatorHelper.curve(interpolator, t);
         }
     }
 

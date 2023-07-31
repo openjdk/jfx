@@ -675,7 +675,7 @@ final public class CssParser {
                 if (LOGGER.isLoggable(Level.FINEST)) {
                     LOGGER.finest("Expected \'<duration>\'");
                 }
-                ParseException re = new ParseException("Expected \'<duration>\'",token, this);
+                ParseException re = new ParseException("Expected \'<duration>\'", token, this);
                 reportError(createError(re.toString()));
                 throw re;
             }
@@ -1012,14 +1012,14 @@ final public class CssParser {
         if (root.token.getType() != CssLexer.IDENT) {
             Size time = time(root.token);
             return new ParsedValueImpl<>(time, null);
-        } else {
-            String key = root.token.getText();
-            return switch (key) {
-                case "initial", "inherit" -> new ParsedValueImpl<>(new Size(0, SizeUnits.S), null);
-                case "indefinite" -> new ParsedValueImpl<>(new Size(Double.POSITIVE_INFINITY, SizeUnits.S), null);
-                default -> new ParsedValueImpl<>(key, null, true);
-            };
         }
+
+        String key = root.token.getText();
+        return switch (key) {
+            case "initial", "inherit" -> new ParsedValueImpl<>(new Size(0, SizeUnits.S), null);
+            case "indefinite" -> new ParsedValueImpl<>(new Size(Double.POSITIVE_INFINITY, SizeUnits.S), null);
+            default -> new ParsedValueImpl<>(key, null, true);
+        };
     }
 
     private ParsedValueImpl<ParsedValue<?, Size>, Duration> parseDuration(
@@ -3946,7 +3946,7 @@ final public class CssParser {
     }
 
     private ParsedValueImpl<ParsedValue[], TransitionDefinition> parseTransition(Term term)
-            throws ParseException{
+            throws ParseException {
         ParsedValue<?, String> parsedProperty = null;
         ParsedValue<ParsedValue<?, Size>, Duration> parsedDuration = null;
         ParsedValue<ParsedValue<?, Size>, Duration> parsedDelay = null;
@@ -3955,7 +3955,9 @@ final public class CssParser {
         for (int i = 0; i < 4; ++i) {
             if (term == null) {
                 break;
-            } else if (isEasingFunction(term.token)) {
+            }
+
+            if (isEasingFunction(term.token)) {
                 if (parsedTimingFunction != null) {
                     error(term, "Expected \'<single-transition-property>\' or \'<duration>\'");
                 }

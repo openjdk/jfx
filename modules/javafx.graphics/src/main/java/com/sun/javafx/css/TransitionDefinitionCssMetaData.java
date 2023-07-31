@@ -86,7 +86,7 @@ public class TransitionDefinitionCssMetaData extends CssMetaData<Node, Transitio
                     return null;
                 }
             },
-            new CssMetaData<S, Duration[]>( "transition-duration",
+            new CssMetaData<S, Duration[]>("transition-duration",
                     DurationConverter.SequenceConverter.getInstance(), DURATION_ZERO, false) {
                 @Override
                 public boolean isSettable(S styleable) {
@@ -98,7 +98,7 @@ public class TransitionDefinitionCssMetaData extends CssMetaData<Node, Transitio
                     return null;
                 }
             },
-            new CssMetaData<S, Duration[]>( "transition-delay",
+            new CssMetaData<S, Duration[]>("transition-delay",
                     DurationConverter.SequenceConverter.getInstance(), DURATION_ZERO, false) {
                 @Override
                 public boolean isSettable(S styleable) {
@@ -110,7 +110,7 @@ public class TransitionDefinitionCssMetaData extends CssMetaData<Node, Transitio
                     return null;
                 }
             },
-            new CssMetaData<S, Interpolator[]>( "transition-timing-function",
+            new CssMetaData<S, Interpolator[]>("transition-timing-function",
                     InterpolatorConverter.SequenceConverter.getInstance(), INTERPOLATOR_EASE, false) {
                 @Override
                 public boolean isSettable(S styleable) {

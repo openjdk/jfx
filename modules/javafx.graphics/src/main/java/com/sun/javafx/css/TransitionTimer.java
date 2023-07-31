@@ -41,14 +41,17 @@ import javafx.util.Duration;
 /**
  * {@code TransitionTimer} is the base class for timers that compute intermediate
  * values for implicit transitions of a {@link StyleableProperty}.
+ *
+ * @param <T> the value type
+ * @param <P> the property type
  */
 public abstract class TransitionTimer<T, P extends Property<T> & StyleableProperty<T>> extends AnimationTimer {
 
     private final P property;
     private Interpolator interpolator;
-    private long startTime, endTime, delay, duration;
     private double reversingShorteningFactor;
-    private long currentTime;
+    private long startTime, endTime, delay, duration; // in nanoseconds
+    private long currentTime; // in nanoseconds
     private boolean updating;
     private boolean started;
 
@@ -61,14 +64,18 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * If the combined duration of the transition is zero or if the targeted node is not
      * showing, no transition timer is started, no events are dispatched, and this method
      * returns {@code null}.
+     *
+     * @param timer the {@code TransitionTimer} that will be started
+     * @param transition the {@code TransitionDefinition} used to initialize the {@code timer}
+     * @return the {@code timer} instance if the timer was started, {@code null} otherwise
      */
     @SuppressWarnings("unchecked")
     public static <T, P extends Property<T> & StyleableProperty<T>> TransitionTimer<T, P> run(
             TransitionTimer<T, P> timer, TransitionDefinition transition) {
         long now = AnimationTimerHelper.getPrimaryTimer(timer).nanos();
         timer.interpolator = transition.interpolator();
-        timer.delay = (long)(transition.delay().toMillis() * 1_000_000);
-        timer.duration = (long)(transition.duration().toMillis() * 1_000_000);
+        timer.delay = millisToNanos(transition.delay().toMillis());
+        timer.duration = millisToNanos(transition.duration().toMillis());
         timer.currentTime = now;
         timer.startTime = now + timer.delay;
         timer.endTime = timer.startTime + timer.duration;
@@ -94,14 +101,14 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
                 // timer, which means that the new timer is a reversing timer that needs to be
                 // adjusted by the reversing shortening algorithm.
                 if (combinedDuration > 0) {
-                    adjustReversingTimer(existingTimer, timer, transition, now);
+                    adjustReversingTimer(existingTimer, timer, now);
                 }
 
                 existingTimer.stop(TransitionEvent.CANCEL);
             }
 
             if (combinedDuration > 0) {
-                timer.start();
+                timer.startImpl();
                 return timer;
             }
         }
@@ -151,10 +158,14 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * now takes the entire duration (4s) to progress just one quarter of the original value space,
      * which means that the transition speed is much slower than what would be expected.
      *
+     * @param existingTimer the timer of the running transition
+     * @param newTimer the timer of the new transition
+     * @param now the current time, in nanoseconds
      * @see <a href="https://www.w3.org/TR/css-transitions-1/#reversing">Faster reversing of interrupted transitions</a>
      */
-    private static void adjustReversingTimer(TransitionTimer<?, ?> existingTimer, TransitionTimer<?, ?> newTimer,
-                                             TransitionDefinition transition, long now) {
+    private static void adjustReversingTimer(TransitionTimer<?, ?> existingTimer,
+                                             TransitionTimer<?, ?> newTimer,
+                                             long now) {
         double progress = InterpolatorHelper.curve(existingTimer.interpolator, existingTimer.getProgress());
 
         if (progress > 0 && progress < 1) {
@@ -164,36 +175,63 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
         }
 
         if (newTimer.delay < 0) {
-            double adjustedDelay = transition.delay().toMillis() * newTimer.reversingShorteningFactor;
-            newTimer.startTime = now + (long)(adjustedDelay * 1_000_000);
+            double adjustedDelay = nanosToMillis(newTimer.delay) * newTimer.reversingShorteningFactor;
+            newTimer.startTime = now + millisToNanos(adjustedDelay);
         }
 
-        double adjustedDuration = transition.duration().toMillis() * newTimer.reversingShorteningFactor;
-        newTimer.endTime = newTimer.startTime + (long)(adjustedDuration * 1_000_000);
+        double adjustedDuration = nanosToMillis(newTimer.duration) * newTimer.reversingShorteningFactor;
+        newTimer.endTime = newTimer.startTime + millisToNanos(adjustedDuration);
+    }
+
+    /**
+     * Converts the specified duration in nanoseconds to fractional milliseconds.
+     *
+     * @param nanos the duration in nanoseconds
+     * @return the duration in fractional milliseconds
+     */
+    private static double nanosToMillis(long nanos) {
+        long millis = nanos / 1_000_000L;
+        double frac = (double)(nanos - (millis * 1_000_000L)) / 1_000_000D;
+        return (double)millis + frac;
+    }
+
+    /**
+     * Converts the specified duration in fractional milliseconds to nanoseconds.
+     *
+     * @param millis the duration in fractional milliseconds
+     * @return the duration in nanoseconds
+     */
+    private static long millisToNanos(double millis) {
+        long wholeMillis = (long)millis;
+        double frac = millis - (double)wholeMillis;
+        return wholeMillis * 1_000_000L + (long)(frac * 1_000_000D);
     }
 
     /**
      * Fires a {@link TransitionEvent} of the specified type.
      * The elapsed time is computed according to the CSS Transitions specification.
+     *
+     * @param timer the {@code TransitionTimer} that fires the event
+     * @param eventType the event type
      */
     private static <T, P extends Property<T> & StyleableProperty<T>> void fireTransitionEvent(
             TransitionTimer<T, P> timer, EventType<TransitionEvent> eventType) {
         try {
-            double elapsedTime;
+            Duration elapsedTime;
 
             // Elapsed time specification: https://www.w3.org/TR/css-transitions-1/#event-transitionevent
             if (eventType == TransitionEvent.RUN || eventType == TransitionEvent.START) {
-                elapsedTime = (double)Math.min(Math.max(-timer.delay, 0), timer.duration) / 1_000_000.0;
+                elapsedTime = Duration.millis(nanosToMillis(Math.min(Math.max(-timer.delay, 0), timer.duration)));
             } else if (eventType == TransitionEvent.CANCEL) {
-                elapsedTime = (double)Math.max(0, timer.currentTime - timer.startTime) / 1_000_000.0;
+                elapsedTime = Duration.millis(nanosToMillis(Math.max(0, timer.currentTime - timer.startTime)));
             } else if (eventType == TransitionEvent.END) {
-                elapsedTime = (double)timer.duration / 1_000_000.0;
+                elapsedTime = Duration.millis(nanosToMillis(timer.duration));
             } else {
                 throw new IllegalArgumentException("eventType");
             }
 
             Node node = (Node)timer.getProperty().getBean();
-            node.fireEvent(new TransitionEvent(eventType, timer.getProperty(), Duration.millis(elapsedTime)));
+            node.fireEvent(new TransitionEvent(eventType, timer.getProperty(), elapsedTime));
         } catch (Throwable ex) {
             Thread currentThread = Thread.currentThread();
             currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
@@ -202,6 +240,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
 
     /**
      * Gets the styleable property targeted by this {@code TransitionTimer}.
+     *
+     * @return the styleable property
      */
     public final P getProperty() {
         return property;
@@ -238,13 +278,11 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     }
 
     /**
-     * Starts this timer, and adds it to the list of running transitions.
+     * This method is unused, calling it will throw {@link UnsupportedOperationException}.
      */
     @Override
     public final void start() {
-        super.start();
-        NodeHelper.addTransitionTimer((Node)property.getBean(), this);
-        fireTransitionEvent(this, TransitionEvent.RUN);
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -259,6 +297,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
      * Stops the running transition and fires the specified event.
      * This happens when the value of a CSS property targeted by a transition is changed by the user,
      * when the transition is interrupted by another transition, or when it ends normally.
+     *
+     * @param eventType the event type that is fired after the timer is stopped
      */
     public final void stop(EventType<TransitionEvent> eventType) {
         super.stop();
@@ -274,6 +314,15 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     public final void complete() {
         update(1);
         stop(TransitionEvent.CANCEL);
+    }
+
+    /**
+     * Starts this timer, and adds it to the list of running transitions.
+     */
+    private void startImpl() {
+        super.start();
+        NodeHelper.addTransitionTimer((Node)property.getBean(), this);
+        fireTransitionEvent(this, TransitionEvent.RUN);
     }
 
     /**
@@ -298,6 +347,8 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     /**
      * Polls whether the timer is currently updating the value of the property.
      * After this method is called, the {@link #updating} flag is {@code false}.
+     *
+     * @return {@code true} if the timer is currently updating the property, {@code false} otherwise
      */
     private boolean pollUpdating() {
         boolean updating = this.updating;
@@ -306,7 +357,9 @@ public abstract class TransitionTimer<T, P extends Property<T> & StyleableProper
     }
 
     /**
-     * Gets the progress of this timer along the input progress axis, ranging from 0 to 1.
+     * Gets the progress of this timer along the input progress axis.
+     *
+     * @return the input progress, ranging from 0 to 1
      */
     private double getProgress() {
         if (currentTime <= startTime) {

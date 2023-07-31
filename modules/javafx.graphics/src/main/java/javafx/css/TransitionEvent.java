@@ -30,6 +30,7 @@ import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.util.Duration;
+import java.util.Objects;
 
 /**
  * An event that signals the creation, beginning, completion and cancellation of implicit CSS transitions.
@@ -40,7 +41,7 @@ import javafx.util.Duration;
  */
 public final class TransitionEvent extends Event {
 
-    private static final long serialVersionUID = 20220820L;
+    private static final long serialVersionUID = 1L;
 
     /**
      * Common supertype for all {@code TransitionEvent} types.
@@ -86,13 +87,14 @@ public final class TransitionEvent extends Event {
      * @param eventType the event type
      * @param property the {@code StyleableProperty} that is targeted by the transition
      * @param elapsedTime the time that has elapsed since the transition has entered its active period
+     * @throws NullPointerException if {@code property} or {@code elapsedTime} is {@code null}
      */
     public TransitionEvent(EventType<? extends Event> eventType,
                            StyleableProperty<?> property,
                            Duration elapsedTime) {
         super(eventType);
-        this.property = property;
-        this.elapsedTime = elapsedTime;
+        this.property = Objects.requireNonNull(property, "property cannot be null");
+        this.elapsedTime = Objects.requireNonNull(elapsedTime, "elapsedTime cannot be null");
     }
 
     /**
@@ -108,7 +110,7 @@ public final class TransitionEvent extends Event {
      * Gets the time that has elapsed since the transition has entered its active period,
      * not including the time spent in the delay phase.
      *
-     * @return the elapsed time
+     * @return the elapsed time, or zero if the transition has not entered its active period
      */
     public Duration getElapsedTime() {
         return elapsedTime;
