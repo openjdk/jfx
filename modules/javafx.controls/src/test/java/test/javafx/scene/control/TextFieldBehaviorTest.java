@@ -86,5 +86,11 @@ public class TextFieldBehaviorTest {
 
         Assert.assertTrue(kb.keyPressed(DOWN));
         Assert.assertFalse(kb.keyReleased(DOWN));
+
+        Assert.assertFalse(kb.keyPressed(F1));
+        Assert.assertFalse(kb.keyReleased(F1));
+
+        Assert.assertFalse(kb.keyPressed(ESCAPE));
+        Assert.assertFalse(kb.keyReleased(ESCAPE));
     }
 }
