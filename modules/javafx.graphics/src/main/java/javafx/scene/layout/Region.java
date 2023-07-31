@@ -1814,7 +1814,6 @@ public class Region extends Parent {
      *
      * @since 22
      * @param value The value that needs to be snapped
-     * @param snapToPixel Whether to snap to pixel
      * @return value either as passed, or floored or ceiled with scale, based on snapToPixel property
      */
     public double snapInnerSpaceX(double value) {
