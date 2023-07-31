@@ -82,18 +82,18 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         }
 
         // functions
-        func(TextArea.DOCUMENT_END, c::end); // TODO move to behavior
-        func(TextArea.DOCUMENT_START, c::home); // TODO move to behavior
+        func(TextArea.DOCUMENT_END, c::end); // TODO move end() to behavior
+        func(TextArea.DOCUMENT_START, c::home); // TODO move home() to behavior
         func(TextArea.DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false));
         func(TextArea.LINE_START, () -> lineStart(false));
         func(TextArea.LINE_END, () -> lineEnd(false));
-        func(TextArea.MOVE_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
-        func(TextArea.MOVE_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
+        func(TextArea.PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
+        func(TextArea.PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
         func(TextArea.PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false));
         func(TextArea.PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, false));
         func(TextArea.SELECT_DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true));
-        func(TextArea.SELECT_END_EXTEND, () -> selectEndExtend());
-        func(TextArea.SELECT_HOME_EXTEND, () -> selectHomeExtend());
+        //func(TextArea.SELECT_END_EXTEND, this::selectEndExtend);
+        //func(TextArea.SELECT_HOME_EXTEND, this::selectHomeExtend);
         func(TextArea.SELECT_LINE_END, () -> lineEnd(true));
         func(TextArea.SELECT_PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true));
         func(TextArea.SELECT_PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, true));
@@ -122,7 +122,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         key(KeyBinding2.shift(KeyCode.UP), TextArea.SELECT_UP);
         
         // macOS specific mappings
-        key(KeyBinding2.with(KeyCode.DOWN).alt().forMac().build(), TextArea.MOVE_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
         key(KeyBinding2.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
         key(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
         key(KeyBinding2.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
@@ -130,15 +130,15 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         key(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
         key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
         key(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
-        key(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.MOVE_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.PARAGRAPH_UP);
         key(KeyBinding2.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
         key(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
         key(KeyBinding2.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
 
         // non-macOS specific mappings
-        key(KeyBinding2.with(KeyCode.DOWN).control().notForMac().build(), TextArea.MOVE_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).control().notForMac().build(), TextArea.PARAGRAPH_DOWN);
         key(KeyBinding2.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(KeyCode.UP).control().notForMac().build(), TextArea.MOVE_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).control().notForMac().build(), TextArea.PARAGRAPH_UP);
         key(KeyBinding2.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
 
         addKeyPadMappings();

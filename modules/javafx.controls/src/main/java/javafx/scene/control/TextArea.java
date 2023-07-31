@@ -97,9 +97,9 @@ public class TextArea extends TextInputControl {
     /** Denotes the function that moves the caret to the start of the visible line. */
     public static final FunctionTag LINE_START = new FunctionTag();
     /** Denotes the function that moves the caret one paragraph down. */
-    public static final FunctionTag MOVE_PARAGRAPH_DOWN = new FunctionTag();
+    public static final FunctionTag PARAGRAPH_DOWN = new FunctionTag();
     /** Denotes the function that moves the caret one paragraph up. */
-    public static final FunctionTag MOVE_PARAGRAPH_UP = new FunctionTag();
+    public static final FunctionTag PARAGRAPH_UP = new FunctionTag();
     /** Denotes the function that moves the caret one page down. */
     public static final FunctionTag PAGE_DOWN = new FunctionTag();
     /** Denotes the function that moves the caret one page up. */
@@ -107,9 +107,9 @@ public class TextArea extends TextInputControl {
     /** Denotes the function that moves the caret and extends selection one line down. */
     public static final FunctionTag SELECT_DOWN = new FunctionTag();
     /** Denotes the function that moves the caret and extends selection to the end of the current paragraph. */
-    public static final FunctionTag SELECT_END_EXTEND = new FunctionTag();
+    //public static final FunctionTag SELECT_END_EXTEND = new FunctionTag();
     /** Denotes the function that moves the caret and extends selection to the start of the current paragraph. */
-    public static final FunctionTag SELECT_HOME_EXTEND = new FunctionTag();
+    //public static final FunctionTag SELECT_HOME_EXTEND = new FunctionTag();
     /** Denotes the function that moves the caret and extends selection to the end of the visible line. */
     public static final FunctionTag SELECT_LINE_END = new FunctionTag();
     /** Denotes the function that moves the caret and extends selection to the start of the visible line. */
