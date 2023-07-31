@@ -1803,38 +1803,40 @@ public class Region extends Parent {
     }
 
     /**
-     * If this region's snapToPixel property is true, returns a value floored
-     * to the nearest pixel in the horizontal direction, else returns the
-     * same value, for any non-negative value.  For negative values returns 0.0.
-     * @param value the space value to be snapped
-     * @return value floored to nearest pixel
+     * If this region's snapToPixel property is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. When the absolute value of the given value
+     * multiplied by the current scale is less than 10^15, then this method guarantees that:
+     *
+     * <pre>snapInnerSpaceX(snapInnerSpaceX(value)) == snapInnerSpaceX(value)</pre>
+     *
+     * The limit is about 10^15 because double values will no longer be able to represent
+     * larger integers with exact precision beyond this limit.
+     *
      * @since 22
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel property
      */
     public double snapInnerSpaceX(double value) {
-        if (value > 0.0) {
-            if (isSnapToPixel()) {
-                return ScaledMath.floor(value, getSnapScaleX());
-            }
-            return value;
-        }
-        return 0.0;
+        return snapPortionX(value, isSnapToPixel());
     }
 
     /**
-     * If this region's snapToPixel property is true, returns a value floored
-     * to the nearest pixel in the vertical direction, else returns the
-     * same value, for any non-negative value.  For negative values returns 0.0.
-     * @param value the space value to be snapped
-     * @return value floored to nearest pixel
+     * If this region's snapToPixel property is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. When the absolute value of the given value
+     * multiplied by the current scale is less than 10^15, then this method guarantees that:
+     *
+     * <pre>snapInnerSpaceY(snapInnerSpaceY(value)) == snapInnerSpaceY(value)</pre>
+     *
+     * The limit is about 10^15 because double values will no longer be able to represent
+     * larger integers with exact precision beyond this limit.
+     *
      * @since 22
+     * @param value The value that needs to be snapped
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel property
      */
     public double snapInnerSpaceY(double value) {
-        if (value > 0.0) {
-            if (isSnapToPixel()) {
-                return ScaledMath.floor(value, getSnapScaleY());
-            }
-        }
-        return 0.0;
+        return snapPortionY(value, isSnapToPixel());
     }
 
     /**
