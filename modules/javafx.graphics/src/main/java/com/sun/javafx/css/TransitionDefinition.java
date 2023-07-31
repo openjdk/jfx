@@ -26,14 +26,13 @@
 package com.sun.javafx.css;
 
 import javafx.animation.Interpolator;
-import javafx.css.StyleableProperty;
 import javafx.util.Duration;
 import java.util.Objects;
 
 /**
- * {@code TransitionDefinition} describes how a {@link StyleableProperty} changes from one value to
- * another when its value is changed implicitly by the CSS subsystem. The transition can be smooth,
- * for example using linear or Bézier interpolation, or discrete using stepwise interpolation.
+ * {@code TransitionDefinition} describes how a {@link javafx.css.StyleableProperty} changes from one
+ * value to another when its value is changed implicitly by the CSS subsystem. The transition can be
+ * smooth, for example using linear or Bézier interpolation, or discrete using stepwise interpolation.
  *
  * @param propertyName the CSS property name, or "all" to target any property
  * @param duration duration of the transition

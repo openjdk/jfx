@@ -69,25 +69,14 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
         ParsedValue<ParsedValue<?, Size>, Duration> parsedDelay = values[2];
         ParsedValue<?, Interpolator> parsedInterpolator = values[3];
 
-        String propertyName;
-        if (parsedProperty != null) {
-            propertyName = parsedProperty.convert(null);
-        } else {
-            propertyName = "all";
-        }
-
-        Duration duration;
-        if (parsedDuration != null) {
-            duration = parsedDuration.convert(null);
-        } else {
-            duration = Duration.ZERO;
-        }
+        String propertyName = parsedProperty != null ? parsedProperty.convert(null) : "all";
+        Duration duration = parsedDuration != null ? parsedDuration.convert(null) : Duration.ZERO;
+        Duration delay = parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO;
+        Interpolator interpolator = parsedInterpolator != null ?
+            parsedInterpolator.convert(null) : InterpolatorConverter.CSS_EASE;
 
         return new TransitionDefinition(
-            propertyName.intern(),
-            duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration,
-            parsedDelay != null ? parsedDelay.convert(null) : Duration.ZERO,
-            parsedInterpolator != null ? parsedInterpolator.convert(null) : InterpolatorConverter.CSS_EASE);
+            propertyName.intern(), duration.lessThan(Duration.ZERO) ? Duration.ZERO : duration, delay, interpolator);
     }
 
     /**
@@ -95,7 +84,10 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
      */
     public static final class SequenceConverter
             extends StyleConverter<ParsedValue<ParsedValue[], TransitionDefinition>[], TransitionDefinition[]> {
-        private static final TransitionDefinition[] EMPTY = new TransitionDefinition[0];
+        private static final TransitionDefinition[] EMPTY_TRANSITION = new TransitionDefinition[0];
+        private static final String[] EMPTY_STRING = new String[0];
+        private static final Duration[] EMPTY_DURATION = new Duration[0];
+        private static final Interpolator[] EMPTY_INTERPOLATOR = new Interpolator[0];
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
@@ -105,10 +97,10 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
 
         @Override
         public TransitionDefinition[] convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
-            String[] properties = null;
-            Duration[] durations = null;
-            Duration[] delays = null;
-            Interpolator[] timingFunctions = null;
+            String[] properties = EMPTY_STRING;
+            Duration[] durations = EMPTY_DURATION;
+            Duration[] delays = EMPTY_DURATION;
+            Interpolator[] timingFunctions = EMPTY_INTERPOLATOR;
 
             for (Map.Entry<CssMetaData<? extends Styleable, ?>, Object> entry : convertedValues.entrySet()) {
                 switch (entry.getKey().getProperty()) {
@@ -119,8 +111,8 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
                 }
             }
 
-            if (properties == null || properties.length == 0 || durations == null || durations.length == 0) {
-                return EMPTY;
+            if (properties.length == 0 || durations.length == 0) {
+                return EMPTY_TRANSITION;
             }
 
             // The length of the 'transition-property' list determines the number of transitions in the sequence.
@@ -129,22 +121,10 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
             // If any of the remaining sub-properties doesn't have enough values, missing values are filled in
             // by repeating the list of values until we have enough values for the sequence.
             for (int i = 0; i < transitions.length; ++i) {
-                Interpolator timingFunction;
-                Duration delay;
-
-                if (delays == null || delays.length == 0) {
-                    delay = Duration.ZERO;
-                } else {
-                    delay = delays[i % delays.length];
-                }
-
-                if (timingFunctions == null || timingFunctions.length == 0) {
-                    timingFunction = InterpolatorConverter.CSS_EASE;
-                } else {
-                    timingFunction = timingFunctions[i % timingFunctions.length];
-                }
-
+                Interpolator timingFunction = timingFunctions.length == 0 ?
+                    InterpolatorConverter.CSS_EASE : timingFunctions[i % timingFunctions.length];
                 Duration duration = durations[i % durations.length];
+                Duration delay = delays.length == 0 ? Duration.ZERO : delays[i % delays.length];
                 transitions[i] = new TransitionDefinition(properties[i], duration, delay, timingFunction);
             }
 
@@ -157,7 +137,7 @@ public final class TransitionDefinitionConverter extends StyleConverter<ParsedVa
                 Font font) {
             ParsedValue<ParsedValue[], TransitionDefinition>[] layers = value.getValue();
             if (layers.length == 0) {
-                return EMPTY;
+                return EMPTY_TRANSITION;
             }
 
             TransitionDefinition[] transitions = new TransitionDefinition[layers.length];
