@@ -24,8 +24,10 @@
  */
 package test.javafx.scene.control;
 
+import static javafx.scene.input.KeyCode.*;
+import javafx.event.EventType;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,7 +38,10 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 /**
  * Tests the TextField behavior using public APIs.
  */
-public class TextInputControlBehaviorTest {
+public class TextFieldBehaviorTest {
+    private static final EventType<KeyEvent> PRE = KeyEvent.KEY_PRESSED;
+    private static final EventType<KeyEvent> TYP = KeyEvent.KEY_TYPED;
+    private static final EventType<KeyEvent> REL = KeyEvent.KEY_RELEASED;
     private TextField control;
     private StageLoader stageLoader;
     private KeyEventFirer kb;
@@ -44,9 +49,7 @@ public class TextInputControlBehaviorTest {
     @Before
     public void before() {
         control = new TextField();
-
         stageLoader = new StageLoader(control);
-
         kb = new KeyEventFirer(control);
     }
 
@@ -55,16 +58,33 @@ public class TextInputControlBehaviorTest {
         stageLoader.dispose();
     }
 
+    /**
+     * Tests basic typing.
+     */
     @Test
     public void testTyping() {
         kb.type("hello");
         check("hello");
-        kb.type(KeyCode.BACK_SPACE, KeyCode.BACK_SPACE, "f");
+        kb.type(BACK_SPACE, BACK_SPACE, "f");
         check("helf");
     }
 
     private void check(String text) {
         String s = control.getText();
         Assert.assertEquals(text, s);
+    }
+    
+    /** tests event consumption logic */
+    @Test
+    public void testConsume() {
+        Assert.assertTrue(kb.keyPressed(HOME));
+        Assert.assertFalse(kb.keyReleased(HOME));
+
+        Assert.assertTrue(kb.keyPressed(A));
+        Assert.assertTrue(kb.keyTyped(A, "a"));
+        Assert.assertFalse(kb.keyReleased(A));
+
+        Assert.assertTrue(kb.keyPressed(DOWN));
+        Assert.assertFalse(kb.keyReleased(DOWN));
     }
 }
