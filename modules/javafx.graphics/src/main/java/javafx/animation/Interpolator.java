@@ -302,14 +302,14 @@ public abstract class Interpolator {
      *
      * @since 22
      */
-    public static Interpolator STEP_START = STEPS(1, StepPosition.START);
+    public static final Interpolator STEP_START = STEPS(1, StepPosition.START);
 
     /**
      * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
      *
      * @since 22
      */
-    public static Interpolator STEP_END = STEPS(1, StepPosition.END);
+    public static final Interpolator STEP_END = STEPS(1, StepPosition.END);
 
     /**
      * Creates a step interpolator that divides the input time into a series of intervals, each
@@ -318,6 +318,9 @@ public abstract class Interpolator {
      *
      * @param intervals the number of intervals in the step interpolator
      * @param position the {@code StepPosition} of the step interpolator
+     * @throws IllegalArgumentException if {@code intervals} is less than 1, or if {@code intervals} is
+     *                                  less than 2 when {@code position} is {@link StepPosition#NONE}
+     * @throws NullPointerException if {@code position} is {@code null}
      * @return a new step interpolator
      *
      * @since 22
