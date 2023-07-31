@@ -59,8 +59,8 @@ public interface Subscription {
     /**
      * Cancels this subscription, or does nothing if already cancelled.<p>
      *
-     * Implementors must ensure the implementation is idempotent (a no-op
-     * if called more than once).
+     * @implSpec Implementors must ensure the implementation is idempotent (a no-op
+     *     if called more than once).
      */
     void unsubscribe();
 
