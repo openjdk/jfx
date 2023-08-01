@@ -968,8 +968,10 @@ public class RichTextAreaBehavior {
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
                 Object src = Clipboard.getSystemClipboard().getContent(f);
                 StyledInput in = h.createStyledInput(src);
-                TextPos p = m.replace(vflow, start, end, in, true);
-                control.moveCaret(p, false);
+                if (in != null) {
+                    TextPos p = m.replace(vflow, start, end, in, true);
+                    control.moveCaret(p, false);
+                }
             }
         }
     }
@@ -990,9 +992,10 @@ public class RichTextAreaBehavior {
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
                 Object src = c.getContent(f);
                 StyledInput in = h.createStyledInput(src);
-
-                TextPos p = m.replace(vflow, start, end, in, true);
-                control.moveCaret(p, false);
+                if (in != null) {
+                    TextPos p = m.replace(vflow, start, end, in, true);
+                    control.moveCaret(p, false);
+                }
             }
         }
     }

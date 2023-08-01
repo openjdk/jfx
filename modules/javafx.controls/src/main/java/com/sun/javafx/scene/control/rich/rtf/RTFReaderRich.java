@@ -1,0 +1,81 @@
+/*
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.scene.control.rich.rtf;
+
+import java.io.IOException;
+import java.io.StringReader;
+import javafx.scene.control.rich.model.StyledInput;
+import com.sun.javafx.scene.control.rich.D;
+
+/**
+ * Produces a StyledInput from RTF input.
+ */
+public class RTFReaderRich extends RTFParser {
+    private final String text;
+
+    public RTFReaderRich(String text) {
+        this.text = text;
+        System.err.println(text); // FIX
+    }
+
+    @Override
+    public boolean handleKeyword(String keyword) {
+        D.p(keyword);
+        return true;
+    }
+
+    @Override
+    public boolean handleKeyword(String keyword, int parameter) {
+        D.p(keyword, parameter);
+        return true;
+    }
+
+    @Override
+    public void handleText(String text) {
+        D.p(text);
+    }
+
+    @Override
+    public void handleBinaryBlob(byte[] data) {
+        D.p(data.length);
+    }
+
+    @Override
+    public void begingroup() {
+        D.p();
+    }
+
+    @Override
+    public void endgroup() {
+        D.p();
+    }
+
+    public StyledInput generateStyledInput() throws IOException {
+        readFromReader(new StringReader(text));
+        // TODO
+        return null;
+    }
+}

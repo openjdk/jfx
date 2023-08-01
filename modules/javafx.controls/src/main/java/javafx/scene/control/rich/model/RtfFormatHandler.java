@@ -35,6 +35,7 @@ import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.input.DataFormat;
 import com.sun.javafx.scene.control.rich.RtfStyledOutput;
+import com.sun.javafx.scene.control.rich.rtf.RTFReaderRich;
 
 /**
  * This {@link DataFormatHandler} provides export/import support for RTF format.
@@ -47,14 +48,14 @@ public class RtfFormatHandler extends DataFormatHandler {
 
     @Override
     public StyledInput createStyledInput(Object src) {
-        if (src == null) {
-            return StyledInput.of("", StyleInfo.NONE);
+        if (src != null) {
+            try {
+                String text = src.toString();
+                return new RTFReaderRich(text).generateStyledInput();
+            } catch (Exception e) {
+            }
         }
-
-        // TODO parse RTF
-        String text = src.toString();
-        System.err.println(text);
-        return StyledInput.of(text);
+        return null;
     }
 
     @Override
